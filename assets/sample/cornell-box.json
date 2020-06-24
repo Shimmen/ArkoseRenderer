@@ -1,0 +1,40 @@
+{
+    "environment": {
+      "texture": "assets/sample/hdri/tiergarten_2k.hdr",
+      "multiplier": 3.0
+    },
+    "models": [
+      {
+        "name": "cornell-box",
+        "gltf": "assets/sample/models/CornellBox/CornellBox.gltf",
+        "transform": {
+          "translation": [ 0, 0, 0 ],
+          "rotation": {
+            "type": "axis-angle",
+            "axis": [ 0, 1, 0 ],
+            "angle": 0.0
+          },
+          "scale": [ 1.5, 1.5, 1.5 ]
+        }
+      }
+    ],
+    "lights": [
+      {
+        "name": "sun",
+        "type": "directional",
+        "color": [ 1, 1, 1 ],
+        "intensity": 20.0,
+        "direction": [ 0.4, 0.05, -0.6 ],
+        "worldExtent": 8.0,
+        "shadowMapSize": [ 4096, 4096 ]
+      }
+    ],
+    "cameras": [
+      {
+        "name": "main",
+        "origin": [ 0, 1.8, 5 ],
+        "target": [ 0, 1.0, 0 ]
+      }
+    ],
+    "camera": "main"
+  }

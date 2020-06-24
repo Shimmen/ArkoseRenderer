@@ -1,0 +1,40 @@
+{
+    "environment": {
+      "texture": "assets/sample/hdri/tiergarten_2k.hdr",
+      "multiplier": 2.5
+    },
+    "models": [
+      {
+        "name": "sponza",
+        "gltf": "assets/sample/models/Sponza/glTF/Sponza.gltf",
+        "transform": {
+          "translation": [ 0, 0, 0 ],
+          "rotation": {
+            "type": "axis-angle",
+            "axis": [ 0, 1, 0 ],
+            "angle": 0.0
+          },
+          "scale": [ 1, 1, 1 ]
+        }
+      }
+    ],
+    "lights": [
+      {
+        "name": "sun",
+        "type": "directional",
+        "color": [ 1, 1, 1 ],
+        "intensity": 40.0,
+        "direction": [ 0.2, -1.0, -0.4 ],
+        "worldExtent": 30.0,
+        "shadowMapSize": [ 8192, 8192 ]
+      }
+    ],
+    "cameras": [
+      {
+        "name": "main",
+        "origin": [ 5, 10, 16 ],
+        "target": [ 0, 5, 0 ]
+      }
+    ],
+    "camera": "main"
+}
