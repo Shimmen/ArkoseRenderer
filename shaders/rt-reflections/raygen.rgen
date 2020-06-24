@@ -1,0 +1,50 @@
+#version 460
+#extension GL_NV_ray_tracing : require
+
+#include <common.glsl>
+#include <shared/CameraState.h>
+#include <shared/RTData.h>
+
+layout(binding = 0, set = 0) uniform accelerationStructureNV topLevelAS;
+layout(binding = 1, set = 0, rgba16f) uniform writeonly image2D resultImage;
+layout(binding = 2, set = 0) uniform sampler2D gBufferColor;
+layout(binding = 3, set = 0) uniform sampler2D gBufferNormal;
+layout(binding = 4, set = 0) uniform sampler2D gBufferDepth;
+layout(binding = 5, set = 0) uniform CameraStateBlock { CameraState camera; };
+
+layout(location = 0) rayPayloadNV vec3 hitValue;
+
+void main()
+{
+	const vec2 pixelCenter = vec2(gl_LaunchIDNV.xy) + vec2(0.5);
+	const vec2 inUV = pixelCenter / vec2(gl_LaunchSizeNV.xy);
+
+	float nonLinearDepth = texture(gBufferDepth, inUV).r;
+	if (nonLinearDepth >= 1.0 - 1e-6) {
+		imageStore(resultImage, ivec2(gl_LaunchIDNV.xy), vec4(0.0));
+		return;
+	}
+
+	vec3 viewSpaceNormal = normalize(texture(gBufferNormal, inUV).rgb);
+	vec3 N = mat3(camera.worldFromView) * viewSpaceNormal;
+
+	vec4 cameraOrigin = camera.worldFromView * vec4(0, 0, 0, 1);
+	vec4 cameraTarget = camera.worldFromView * camera.viewFromProjection * vec4(inUV * 2.0 - 1.0, nonLinearDepth, 1.0);
+	cameraTarget.xyz /= cameraTarget.w;
+
+	vec3 rayOrigin = cameraTarget.xyz;
+
+	vec3 viewRay = normalize(cameraTarget.xyz - cameraOrigin.xyz);
+	vec3 rayDirection = reflect(viewRay, N);
+
+	uint rayFlags = gl_RayFlagsOpaqueNV | gl_RayFlagsCullBackFacingTrianglesNV;
+	uint cullMask = 0xff;
+	float tmin = 0.001;
+	float tmax = 10000.0;
+
+	traceNV(topLevelAS, rayFlags, cullMask, 0, 0, 0, rayOrigin, tmin, rayDirection, tmax, 0);
+	vec3 firstHitColor = texture(gBufferColor, inUV).rgb;
+	vec3 reflectionColor = firstHitColor * hitValue;
+
+	imageStore(resultImage, ivec2(gl_LaunchIDNV.xy), vec4(reflectionColor, 0.0));
+}

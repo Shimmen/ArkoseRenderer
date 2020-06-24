@@ -1,0 +1,12 @@
+# Build files
+.vs/
+.vscode/
+out/
+.idea/
+cmake-build-*/
+
+# Generated CMake files
+CMakeSettings.json
+
+# Application cache etc.
+imgui.ini

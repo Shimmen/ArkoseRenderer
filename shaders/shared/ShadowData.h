@@ -1,0 +1,6 @@
+#ifndef SHADOW_DATA_H
+#define SHADOW_DATA_H
+
+#define SHADOW_MAX_OCCLUDERS 256
+
+#endif // SHADOW_DATA_H
