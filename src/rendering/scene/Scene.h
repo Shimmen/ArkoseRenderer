@@ -20,10 +20,11 @@ public:
 class Scene {
 public:
     static constexpr const char* savedCamerasFile = "assets/cameras.json";
-    static std::unique_ptr<Scene> loadFromFile(const std::string&);
 
-    Scene(std::string);
+    Scene() = default;
     ~Scene();
+
+    void loadFromFile(const std::string&);
 
     Model* addModel(std::unique_ptr<Model>);
 

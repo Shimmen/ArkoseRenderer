@@ -15,23 +15,21 @@ mat4 SunLight::lightProjection() const
     return lightProjection * lightOrientation;
 }
 
-std::unique_ptr<Scene> Scene::loadFromFile(const std::string& path)
+void Scene::loadFromFile(const std::string& path)
 {
     using json = nlohmann::json;
 
-    if (!FileIO::isFileReadable(path)) {
+    if (!FileIO::isFileReadable(path))
         LogErrorAndExit("Could not read scene file '%s', exiting\n", path.c_str());
-    }
+    m_loadedPath = path;
 
     json jsonScene;
     std::ifstream fileStream(path);
     fileStream >> jsonScene;
 
-    auto scene = std::make_unique<Scene>(path);
-
     auto jsonEnv = jsonScene.at("environment");
-    scene->m_environmentMap = jsonEnv.at("texture");
-    scene->m_environmentMultiplier = jsonEnv.at("multiplier");
+    m_environmentMap = jsonEnv.at("texture");
+    m_environmentMultiplier = jsonEnv.at("multiplier");
 
     for (auto& jsonModel : jsonScene.at("models")) {
         std::string modelGltf = jsonModel.at("gltf");
@@ -72,7 +70,7 @@ std::unique_ptr<Scene> Scene::loadFromFile(const std::string& path)
             * rotationMatrix * moos::scale(vec3(scale[0], scale[1], scale[2]));
         model->transform().setLocalMatrix(localMatrix);
 
-        scene->addModel(std::move(model));
+        addModel(std::move(model));
     }
 
     for (auto& jsonLight : jsonScene.at("lights")) {
@@ -97,7 +95,7 @@ std::unique_ptr<Scene> Scene::loadFromFile(const std::string& path)
         sun.shadowMapSize = { mapSize[0], mapSize[1] };
 
         // TODO!
-        scene->m_sunLight = sun;
+        m_sunLight = sun;
     }
 
     for (auto& jsonCamera : jsonScene.at("cameras")) {
@@ -113,23 +111,16 @@ std::unique_ptr<Scene> Scene::loadFromFile(const std::string& path)
         jsonCamera.at("target").get_to(target);
 
         camera.lookAt({ origin[0], origin[1], origin[2] }, { target[0], target[1], target[2] }, moos::globalUp);
-        scene->m_allCameras[name] = camera;
+        m_allCameras[name] = camera;
     }
 
-    scene->loadAdditionalCameras();
+    loadAdditionalCameras();
 
     std::string mainCamera = jsonScene.at("camera");
-    auto entry = scene->m_allCameras.find(mainCamera);
-    if (entry != scene->m_allCameras.end()) {
-        scene->m_currentMainCamera = scene->m_allCameras[mainCamera];
+    auto entry = m_allCameras.find(mainCamera);
+    if (entry != m_allCameras.end()) {
+        m_currentMainCamera = m_allCameras[mainCamera];
     }
-
-    return scene;
-}
-
-Scene::Scene(std::string path)
-    : m_loadedPath(std::move(path))
-{
 }
 
 Scene::~Scene()
