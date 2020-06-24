@@ -2,6 +2,7 @@
 
 #include "rendering/nodes/FinalPostFxNode.h"
 #include "rendering/nodes/ForwardRenderNode.h"
+#include "rendering/nodes/GBufferNode.h"
 #include "rendering/nodes/RTAccelerationStructures.h"
 #include "rendering/nodes/RTAmbientOcclusion.h"
 #include "rendering/nodes/RTDiffuseGINode.h"
@@ -25,6 +26,7 @@ void TestApp::setup(RenderGraph& graph)
     bool firstHit = true;
 
     graph.addNode<SceneUniformNode>(*m_scene);
+    graph.addNode<GBufferNode>(*m_scene);
     graph.addNode<ShadowMapNode>(*m_scene);
     graph.addNode<SlowForwardRenderNode>(*m_scene);
     if (rtxOn) {

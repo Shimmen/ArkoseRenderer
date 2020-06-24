@@ -86,9 +86,9 @@ void RTDiffuseGINode::constructNode(Registry& nodeReg)
 
 RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) const
 {
-    const Texture* gBufferColor = reg.getTexture(ForwardRenderNode::name(), "baseColor").value();
-    const Texture* gBufferNormal = reg.getTexture(ForwardRenderNode::name(), "normal").value();
-    const Texture* gBufferDepth = reg.getTexture(ForwardRenderNode::name(), "depth").value();
+    const Texture* gBufferColor = reg.getTexture("g-buffer", "baseColor").value();
+    const Texture* gBufferNormal = reg.getTexture("g-buffer", "normal").value();
+    const Texture* gBufferDepth = reg.getTexture("g-buffer", "depth").value();
 
     auto createStateForTLAS = [&](const TopLevelAS& tlas) -> std::pair<BindingSet&, RayTracingState&> {
         BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &tlas },

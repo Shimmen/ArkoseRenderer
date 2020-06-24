@@ -44,7 +44,7 @@ FinalPostFxNode::ExecuteCallback FinalPostFxNode::constructFrame(Registry& reg) 
 
     BindingSet& envBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, reg.getBuffer(SceneUniformNode::name(), "camera") },
                                                        { 1, ShaderStageFragment, reg.getTexture(SceneUniformNode::name(), "environmentMap").value_or(&reg.createPixelTexture(vec4(1), true)) },
-                                                       { 2, ShaderStageFragment, reg.getTexture(ForwardRenderNode::name(), "depth").value() },
+                                                       { 2, ShaderStageFragment, reg.getTexture("g-buffer", "depth").value() },
                                                        { 3, ShaderStageFragment, reg.getBuffer(SceneUniformNode::name(), "environmentData") } });
 
     RenderStateBuilder renderStateBuilder { reg.windowRenderTarget(), shader, vertexLayout };

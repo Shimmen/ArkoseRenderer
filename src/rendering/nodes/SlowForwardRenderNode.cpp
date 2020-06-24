@@ -67,19 +67,11 @@ RenderGraphNode::ExecuteCallback SlowForwardRenderNode::constructFrame(Registry&
     Texture& colorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA16F, Texture::Usage::AttachAndSample);
     reg.publish("color", colorTexture);
 
-    Texture& normalTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA16F, Texture::Usage::AttachAndSample);
-    reg.publish("normal", normalTexture);
-
-    Texture& depthTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::Depth32F, Texture::Usage::AttachAndSample);
-    reg.publish("depth", depthTexture);
-
-    Texture& baseColorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA8, Texture::Usage::AttachAndSample);
-    reg.publish("baseColor", baseColorTexture);
-
+    // FIXME: Avoid const_cast and also make sure we can create render targets which doesn't automatically clear all input textures before writing
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture },
-                                                          { RenderTarget::AttachmentType::Color1, &normalTexture },
-                                                          { RenderTarget::AttachmentType::Color2, &baseColorTexture },
-                                                          { RenderTarget::AttachmentType::Depth, &depthTexture } });
+                                                          { RenderTarget::AttachmentType::Color1, const_cast<Texture*>(reg.getTexture("g-buffer", "normal").value()) },
+                                                          { RenderTarget::AttachmentType::Color2, const_cast<Texture*>(reg.getTexture("g-buffer", "baseColor").value()) },
+                                                          { RenderTarget::AttachmentType::Depth, const_cast<Texture*>(reg.getTexture("g-buffer", "depth").value()) } });
 
     const Buffer* cameraUniformBuffer = reg.getBuffer(SceneUniformNode::name(), "camera");
     BindingSet& fixedBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageVertex | ShaderStageFragment), cameraUniformBuffer } });

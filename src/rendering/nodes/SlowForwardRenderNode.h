@@ -10,7 +10,7 @@ class SlowForwardRenderNode final : public RenderGraphNode {
 public:
     explicit SlowForwardRenderNode(const Scene&);
 
-    std::optional<std::string> displayName() const override { return "Forward"; }
+    std::optional<std::string> displayName() const { return "Forward"; }
 
     void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;
