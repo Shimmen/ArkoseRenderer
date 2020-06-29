@@ -35,6 +35,7 @@ public:
     ///////////////////////////////////////////////////////////////////////////
     /// Public backend API
 
+    bool supportsFeature(Feature) const override;
     bool executeFrame(double elapsedTime, double deltaTime, bool renderGui) override;
 
     ///////////////////////////////////////////////////////////////////////////
@@ -98,6 +99,20 @@ public:
     std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>> createDescriptorSetLayoutForShader(const Shader&) const;
 
 private:
+    ///////////////////////////////////////////////////////////////////////////
+    /// Feature query metadata & utilities
+
+    struct FeatureInfo {
+        bool rtxRayTracing;
+        bool shader16BitFloat;
+        bool shaderTextureArrayDynamicIndexing;
+        bool shaderStorageBufferDynamicIndexing;
+        bool advancedValidationFeatures;
+    };
+
+    FeatureInfo initFeatureInfo() const;
+    mutable std::optional<FeatureInfo> m_featureInfo;
+
     ///////////////////////////////////////////////////////////////////////////
     /// Command translation & resource management
 

@@ -122,6 +122,68 @@ VulkanBackend::~VulkanBackend()
     m_core.reset();
 }
 
+bool VulkanBackend::supportsFeature(Feature feature) const
+{
+    if (!m_featureInfo.has_value())
+        m_featureInfo = initFeatureInfo();
+    const FeatureInfo& info = m_featureInfo.value();
+
+    switch (feature) {
+    case Feature::RtxRayTracing:
+        return info.rtxRayTracing;
+    case Feature::Shader16BitFloat:
+        return info.shader16BitFloat;
+    case Feature::ShaderTextureArrayDynamicIndexing:
+        // TODO!
+        break;
+    case Feature::ShaderStorageBufferDynamicIndexing:
+        // TODO!
+        break;
+    }
+}
+
+VulkanBackend::FeatureInfo VulkanBackend::initFeatureInfo() const
+{
+    VulkanBackend::FeatureInfo info {};
+
+    uint32_t extensionCount;
+    vkEnumerateDeviceExtensionProperties(physicalDevice(), nullptr, &extensionCount, nullptr);
+    std::vector<VkExtensionProperties> availableExtensions { extensionCount };
+    vkEnumerateDeviceExtensionProperties(physicalDevice(), nullptr, &extensionCount, availableExtensions.data());
+
+    bool rtxRayTracing = false;
+    bool memRequirements2 = false;
+
+    bool storageBufferClass = false;
+    bool storage16bits = false;
+    bool shader16bits = false;
+
+    bool advancedValidationFeatures = false;
+
+#define EXT_HAS_NAME(name) (std::strcmp(ext.extensionName, name) == 0)
+    for (auto& ext : availableExtensions) {
+        if (EXT_HAS_NAME(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
+            shader16bits = true;
+        else if (EXT_HAS_NAME(VK_KHR_16BIT_STORAGE_EXTENSION_NAME))
+            storage16bits = true;
+        else if (EXT_HAS_NAME(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME))
+            storageBufferClass = true;
+        else if (EXT_HAS_NAME(VK_NV_RAY_TRACING_EXTENSION_NAME))
+            rtxRayTracing = true;
+        else if (EXT_HAS_NAME(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME))
+            memRequirements2 = true;
+        else if (EXT_HAS_NAME(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME))
+            advancedValidationFeatures = true;
+    }
+#undef EXT_HAS_NAME
+
+    info.rtxRayTracing = rtxRayTracing && memRequirements2;
+    info.shader16BitFloat = storageBufferClass && storage16bits && shader16bits;
+    info.advancedValidationFeatures = advancedValidationFeatures;
+
+    return info;
+}
+
 std::unique_ptr<Buffer> VulkanBackend::createBuffer(size_t size, Buffer::Usage usage, Buffer::MemoryHint memoryHint)
 {
     return std::make_unique<VulkanBuffer>(*this, size, usage, memoryHint);
