@@ -59,6 +59,8 @@ inline void LogError(const char* format, ...)
         fflush(stderr);
         va_end(vaList);
     }
+#ifdef _MSC_VER
     __debugbreak();
+#endif
     exit(123);
 }

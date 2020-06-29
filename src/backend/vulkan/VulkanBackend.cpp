@@ -372,7 +372,7 @@ void VulkanBackend::createWindowRenderTargetFrontend()
 
     for (size_t i = 0; i < m_numSwapchainImages; ++i) {
 
-        auto& colorTexture = std::make_unique<VulkanTexture>();
+        auto colorTexture = std::make_unique<VulkanTexture>();
         {
             colorTexture->m_extent = m_swapchainExtent;
             colorTexture->m_format = Texture::Format::Unknown;
@@ -389,7 +389,7 @@ void VulkanBackend::createWindowRenderTargetFrontend()
         }
         m_swapchainMockColorTextures[i] = std::move(colorTexture);
 
-        auto& renderTarget = std::make_unique<VulkanRenderTarget>();
+        auto renderTarget = std::make_unique<VulkanRenderTarget>();
         {
             renderTarget->m_attachments = { { RenderTarget::AttachmentType::Color0, m_swapchainMockColorTextures[i].get() },
                                             { RenderTarget::AttachmentType::Depth, m_swapchainDepthTexture.get() } };

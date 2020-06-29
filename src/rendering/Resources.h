@@ -65,9 +65,9 @@ struct Texture : public Resource {
 
     enum class Format {
         Unknown,
+        R16F,
         RGBA8,
         sRGBA8,
-        R16F,
         RGBA16F,
         RGBA32F,
         Depth32F
@@ -108,10 +108,11 @@ struct Texture : public Resource {
     Texture() = default;
     Texture(Backend&, Extent2D, Format, Usage, MinFilter, MagFilter, Mipmap, Multisampling);
 
-    // FIXME: Actually make abstract later when we have the new resource system in place
-    virtual void setPixelData(vec4 pixel) { } // = 0;
-    virtual void setData(const std::byte* data, size_t size) { } // = 0;
-    virtual void setData(const float* data, size_t size) { } // = 0;
+    bool hasFloatingPointDataFormat() const;
+
+    virtual void setPixelData(vec4 pixel) = 0;
+    virtual void setData(const std::byte* data, size_t size) = 0;
+    virtual void setData(const float* data, size_t size) = 0;
 
     [[nodiscard]] const Extent2D& extent() const { return m_extent; }
     [[nodiscard]] Format format() const { return m_format; }
@@ -355,7 +356,7 @@ public:
                 Shader shader, const std::vector<const BindingSet*>& shaderBindingSets,
                 Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState)
         : Resource(backend)
-        , m_renderTarget(renderTarget)
+        , m_renderTarget(&renderTarget)
         , m_vertexLayout(vertexLayout)
         , m_shader(shader)
         , m_shaderBindingSets(shaderBindingSets)
@@ -367,7 +368,7 @@ public:
         ASSERT(shader.type() == ShaderType::Raster);
     }
 
-    const RenderTarget& renderTarget() const { return m_renderTarget; }
+    const RenderTarget& renderTarget() const { return *m_renderTarget; }
     const VertexLayout& vertexLayout() const { return m_vertexLayout; }
 
     const Shader& shader() const { return m_shader; }
@@ -379,7 +380,7 @@ public:
     const DepthState& depthState() const { return m_depthState; }
 
 private:
-    const RenderTarget& m_renderTarget;
+    const RenderTarget* m_renderTarget;
     VertexLayout m_vertexLayout;
 
     Shader m_shader;
@@ -508,6 +509,7 @@ public:
     // See https://www.willusher.io/graphics/2019/11/20/the-sbt-three-ways for all info you might want about SBT stuff!
     // TODO: Add support for ShaderRecord instead of just shader file, so we can include parameters to the records.
 
+    ShaderBindingTable() = default;
     ShaderBindingTable(ShaderFile rayGen, std::vector<HitGroup> hitGroups, std::vector<ShaderFile> missShaders);
 
     const ShaderFile& rayGen() const { return m_rayGen; }

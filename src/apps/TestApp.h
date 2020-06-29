@@ -11,6 +11,5 @@ public:
     void update(float elapsedTime, float deltaTime) override;
 
 private:
-    Model* m_spinningObject {};
     std::unique_ptr<Scene> m_scene {};
 };

@@ -5,6 +5,8 @@
 #include <optional>
 #include <vulkan/vulkan.h>
 
+class VulkanBackend;
+
 class VulkanRTX {
 public:
     VulkanRTX(VulkanBackend&, VkPhysicalDevice, VkDevice);

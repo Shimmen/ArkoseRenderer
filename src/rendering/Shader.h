@@ -16,6 +16,7 @@ enum class ShaderFileType {
 };
 
 struct ShaderFile {
+    ShaderFile() = default;
     explicit ShaderFile(std::string path);
     ShaderFile(std::string path, ShaderFileType);
 
@@ -26,7 +27,7 @@ struct ShaderFile {
 
 private:
     std::string m_path;
-    ShaderFileType m_type;
+    ShaderFileType m_type { ShaderFileType::Unknown };
 };
 
 enum class ShaderType {

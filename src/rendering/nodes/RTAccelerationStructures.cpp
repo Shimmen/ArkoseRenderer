@@ -19,8 +19,6 @@ void RTAccelerationStructures::constructNode(Registry& nodeReg)
     m_proxyInstances.clear();
 
     uint32_t nextTriangleInstanceId = 0;
-    uint32_t nextSphereInstanceId = 0;
-    uint32_t nextVoxelContourInstanceId = 0;
 
     m_scene.forEachModel([&](size_t, const Model& model) {
         model.forEachMesh([&](const Mesh& mesh) {

@@ -42,6 +42,23 @@ Texture::Texture(Backend& backend, Extent2D extent, Format format, Usage usage, 
     ASSERT(multisampling == Multisampling::None || mipmap == Mipmap::None);
 }
 
+bool Texture::hasFloatingPointDataFormat() const
+{
+    switch (format()) {
+    case Texture::Format::RGBA8:
+    case Texture::Format::sRGBA8:
+        return false;
+    case Texture::Format::R16F:
+    case Texture::Format::RGBA16F:
+    case Texture::Format::RGBA32F:
+    case Texture::Format::Depth32F:
+        return true;
+    case Texture::Format::Unknown:
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+}
+
 bool Texture::hasMipmaps() const
 {
     return m_mipmap != Mipmap::None;
@@ -319,8 +336,8 @@ const std::vector<ShaderBinding>& BindingSet::shaderBindings() const
 
 RenderStateBuilder::RenderStateBuilder(const RenderTarget& renderTarget, const Shader& shader, VertexLayout vertexLayout)
     : renderTarget(renderTarget)
-    , vertexLayout(vertexLayout)
     , shader(shader)
+    , vertexLayout(vertexLayout)
 {
 }
 
@@ -454,7 +471,7 @@ uint32_t RayTracingState::maxRecursionDepth() const
     return m_maxRecursionDepth;
 }
 
-const const ShaderBindingTable& RayTracingState::shaderBindingTable() const
+const ShaderBindingTable& RayTracingState::shaderBindingTable() const
 {
     return m_shaderBindingTable;
 }

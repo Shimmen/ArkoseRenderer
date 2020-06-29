@@ -116,9 +116,6 @@ VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, U
     case Texture::Format::sRGBA8:
         vkFormat = VK_FORMAT_R8G8B8A8_SRGB;
         break;
-    case Texture::Format::R16F:
-        vkFormat = VK_FORMAT_R16_SFLOAT;
-        break;
     case Texture::Format::RGBA16F:
         vkFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
         break;
@@ -337,6 +334,10 @@ void VulkanTexture::setPixelData(vec4 pixel)
     bool isHdr = false;
 
     switch (format()) {
+    case Texture::Format::R16F:
+        numChannels = 1;
+        isHdr = true;
+        break;
     case Texture::Format::RGBA8:
     case Texture::Format::sRGBA8:
         numChannels = 4;
@@ -349,11 +350,14 @@ void VulkanTexture::setPixelData(vec4 pixel)
         break;
     case Texture::Format::Depth32F:
         numChannels = 1;
+        isHdr = true;
         break;
     case Texture::Format::Unknown:
         ASSERT_NOT_REACHED();
         break;
     }
+
+    ASSERT(numChannels == 4);
 
     moos::u8 pixels[4];
     VkDeviceSize pixelsSize;
@@ -431,29 +435,7 @@ void VulkanTexture::setPixelData(vec4 pixel)
 
 void VulkanTexture::setData(const std::byte* data, size_t size)
 {
-    int numChannels;
-    bool isHdr = false;
-
-    switch (format()) {
-    case Texture::Format::RGBA8:
-    case Texture::Format::sRGBA8:
-        numChannels = 4;
-        isHdr = false;
-        break;
-    case Texture::Format::RGBA16F:
-    case Texture::Format::RGBA32F:
-        numChannels = 4;
-        isHdr = true;
-        break;
-    case Texture::Format::Depth32F:
-        numChannels = 1;
-        break;
-    case Texture::Format::Unknown:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-
-    MOOSLIB_ASSERT(!isHdr);
+    ASSERT(!hasFloatingPointDataFormat());
 
     auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
 
@@ -521,29 +503,7 @@ void VulkanTexture::setData(const std::byte* data, size_t size)
 
 void VulkanTexture::setData(const float* data, size_t size)
 {
-    int numChannels;
-    bool isHdr = false;
-
-    switch (format()) {
-    case Texture::Format::RGBA8:
-    case Texture::Format::sRGBA8:
-        numChannels = 4;
-        isHdr = false;
-        break;
-    case Texture::Format::RGBA16F:
-    case Texture::Format::RGBA32F:
-        numChannels = 4;
-        isHdr = true;
-        break;
-    case Texture::Format::Depth32F:
-        numChannels = 1;
-        break;
-    case Texture::Format::Unknown:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-
-    MOOSLIB_ASSERT(isHdr);
+    ASSERT(hasFloatingPointDataFormat());
 
     auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
 
@@ -945,12 +905,12 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
 
                     ASSERT(buffer);
                     ASSERT(buffer->usage() == Buffer::Usage::StorageBuffer);
-                    auto& buffer = dynamic_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
+                    auto& vulkanBuffer = dynamic_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
 
                     VkDescriptorBufferInfo descBufferInfo {};
                     descBufferInfo.offset = 0;
                     descBufferInfo.range = VK_WHOLE_SIZE;
-                    descBufferInfo.buffer = buffer.buffer;
+                    descBufferInfo.buffer = vulkanBuffer.buffer;
 
                     descBufferInfos.push_back(descBufferInfo);
                 }
@@ -1162,6 +1122,8 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
             case ShaderFileType::Compute:
                 stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
                 break;
+            default:
+                ASSERT_NOT_REACHED();
             }
             stageCreateInfo.stage = stageFlags;
 

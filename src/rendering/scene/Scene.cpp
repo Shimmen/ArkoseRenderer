@@ -169,7 +169,7 @@ Scene::~Scene()
     savedCameras[m_loadedPath] = jsonCameras;
 
     std::ofstream fileStream(savedCamerasFile);
-    savedCameras >> fileStream;
+    fileStream << savedCameras;
 }
 
 Model* Scene::addModel(std::unique_ptr<Model> model)
@@ -260,8 +260,6 @@ void Scene::loadAdditionalCameras()
 
 std::unique_ptr<Model> Scene::loadProxy(const std::string& path)
 {
-    using json = nlohmann::json;
-
     std::string extension = path.substr(path.length() - 4);
     if (extension == "json") {
         ASSERT(false);

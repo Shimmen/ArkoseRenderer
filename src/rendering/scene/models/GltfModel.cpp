@@ -247,7 +247,8 @@ const std::vector<vec2>& GltfMesh::texcoordData() const
 
     const tinygltf::Accessor* accessor = getAccessor("TEXCOORD_0");
     if (accessor == nullptr) {
-        return {};
+        m_texcoordData = std::vector<vec2>();
+        return m_texcoordData.value();
     }
 
     ASSERT(accessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
@@ -272,7 +273,8 @@ const std::vector<vec3>& GltfMesh::normalData() const
 
     const tinygltf::Accessor* accessor = getAccessor("NORMAL");
     if (accessor == nullptr) {
-        return {};
+        m_normalData = std::vector<vec3>();
+        return m_normalData.value();
     }
 
     ASSERT(accessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
@@ -298,7 +300,8 @@ const std::vector<vec4>& GltfMesh::tangentData() const
 
     const tinygltf::Accessor* accessor = getAccessor("TANGENT");
     if (accessor == nullptr) {
-        return {};
+        m_tangentData = std::vector<vec4>();
+        return m_tangentData.value();
     }
 
     ASSERT(accessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);

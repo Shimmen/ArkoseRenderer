@@ -100,10 +100,14 @@ RenderGraphNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg) c
     };
 
     const TopLevelAS& mainTLAS = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
-    auto& [frameBindingSet, rtState] = createStateForTLAS(mainTLAS);
+    auto [_frameBindingSet, _rtState] = createStateForTLAS(mainTLAS);
+    BindingSet& frameBindingSet = _frameBindingSet;
+    RayTracingState& rtState = _rtState;
 
     const TopLevelAS& proxyTLAS = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "proxy");
-    auto& [frameBindingSetProxy, rtStateProxy] = createStateForTLAS(proxyTLAS);
+    auto [_frameBindingSetProxy, _rtStateProxy] = createStateForTLAS(proxyTLAS);
+    BindingSet& frameBindingSetProxy = _frameBindingSetProxy;
+    RayTracingState& rtStateProxy = _rtStateProxy;
 
     return [&](const AppState& appState, CommandList& cmdList) {
         static bool useProxies = true;
