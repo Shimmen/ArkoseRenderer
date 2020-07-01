@@ -15,14 +15,14 @@ public:
         Vulkan
     };
 
-    enum class Feature {
+    enum class Capability {
         RtxRayTracing,
         Shader16BitFloat,
         ShaderTextureArrayDynamicIndexing,
         ShaderStorageBufferDynamicIndexing,
     };
 
-    virtual bool supportsFeature(Feature) const = 0;
+    virtual bool hasActiveCapability(Capability) const = 0;
     virtual bool executeFrame(double elapsedTime, double deltaTime, bool renderGui) = 0;
 
     virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) = 0;

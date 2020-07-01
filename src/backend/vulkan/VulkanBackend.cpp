@@ -122,21 +122,21 @@ VulkanBackend::~VulkanBackend()
     m_core.reset();
 }
 
-bool VulkanBackend::supportsFeature(Feature feature) const
+bool VulkanBackend::hasActiveCapability(Capability feature) const
 {
     if (!m_featureInfo.has_value())
         m_featureInfo = initFeatureInfo();
     const FeatureInfo& info = m_featureInfo.value();
 
     switch (feature) {
-    case Feature::RtxRayTracing:
+    case Capability::RtxRayTracing:
         return info.rtxRayTracing;
-    case Feature::Shader16BitFloat:
+    case Capability::Shader16BitFloat:
         return info.shader16BitFloat;
-    case Feature::ShaderTextureArrayDynamicIndexing:
+    case Capability::ShaderTextureArrayDynamicIndexing:
         // TODO!
         break;
-    case Feature::ShaderStorageBufferDynamicIndexing:
+    case Capability::ShaderStorageBufferDynamicIndexing:
         // TODO!
         break;
     }

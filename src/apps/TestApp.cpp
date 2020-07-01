@@ -17,6 +17,18 @@
 #include <imgui.h>
 #include <mooslib/transform.h>
 
+std::vector<Backend::Capability> TestApp::requiredCapabilities()
+{
+    return { Backend::Capability::RtxRayTracing,
+             Backend::Capability::ShaderTextureArrayDynamicIndexing,
+             Backend::Capability::ShaderStorageBufferDynamicIndexing };
+}
+
+std::vector<Backend::Capability> TestApp::optionalCapabilities()
+{
+    return {};
+}
+
 void TestApp::setup(RenderGraph& graph)
 {
     //m_scene = Scene::loadFromFile("assets/sample/sponza.json");

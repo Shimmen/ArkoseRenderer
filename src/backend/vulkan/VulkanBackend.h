@@ -35,7 +35,7 @@ public:
     ///////////////////////////////////////////////////////////////////////////
     /// Public backend API
 
-    bool supportsFeature(Feature) const override;
+    bool hasActiveCapability(Capability) const override;
     bool executeFrame(double elapsedTime, double deltaTime, bool renderGui) override;
 
     ///////////////////////////////////////////////////////////////////////////
@@ -100,7 +100,7 @@ public:
 
 private:
     ///////////////////////////////////////////////////////////////////////////
-    /// Feature query metadata & utilities
+    /// Capability query metadata & utilities
 
     struct FeatureInfo {
         bool rtxRayTracing;
