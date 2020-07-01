@@ -35,7 +35,39 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, App& app)
                                        s_unhandledWindowResize = true;
                                    }));
 
-    m_core = std::make_unique<VulkanCore>(window, vulkanDebugMode);
+    std::vector<const char*> validationLayers;
+
+    if (vulkanDebugMode) {
+        LogInfo("VulkanBackend: debug mode enabled!\n");
+
+        validationLayers.emplace_back("VK_LAYER_KHRONOS_validation");
+
+        auto dbgMessengerCreateInfo = debugMessengerCreateInfo();
+        m_instance = createInstance(validationLayers, &dbgMessengerCreateInfo);
+        m_messenger = createDebugMessenger(m_instance, &dbgMessengerCreateInfo);
+
+    } else {
+        m_instance = createInstance(validationLayers, nullptr);
+    }
+
+    if (!verifyValidationLayerSupport(validationLayers)) {
+        LogErrorAndExit("VulkanBackend: missing support for one or more validation layers, exiting.\n");
+    }
+
+    if (glfwCreateWindowSurface(m_instance, window, nullptr, &m_surface) != VK_SUCCESS) {
+        LogErrorAndExit("VulkanBackend: can't create window surface, exiting.\n");
+    }
+
+    m_physicalDevice = pickBestPhysicalDevice();
+
+    findQueueFamilyIndices(m_physicalDevice, m_surface);
+    m_device = createDevice(validationLayers, m_physicalDevice);
+
+    vkGetDeviceQueue(m_device, m_presentQueue.familyIndex, 0, &m_presentQueue.queue);
+    vkGetDeviceQueue(m_device, m_graphicsQueue.familyIndex, 0, &m_graphicsQueue.queue);
+    vkGetDeviceQueue(m_device, m_computeQueue.familyIndex, 0, &m_computeQueue.queue);
+
+    ////////////////////////////////////////////////////////////////////
 
     createSemaphoresAndFences(device());
 
@@ -51,20 +83,17 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, App& app)
         LogErrorAndExit("VulkanBackend::VulkanBackend(): could not create memory allocator, exiting.\n");
     }
 
-    m_presentQueue = m_core->presentQueue();
-    m_graphicsQueue = m_core->graphicsQueue();
-
     VkCommandPoolCreateInfo poolCreateInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
     poolCreateInfo.queueFamilyIndex = m_graphicsQueue.familyIndex;
     poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // (so we can easily reuse them each frame)
-    if (vkCreateCommandPool(m_core->device(), &poolCreateInfo, nullptr, &m_renderGraphFrameCommandPool) != VK_SUCCESS) {
+    if (vkCreateCommandPool(device(), &poolCreateInfo, nullptr, &m_renderGraphFrameCommandPool) != VK_SUCCESS) {
         LogErrorAndExit("VulkanBackend::VulkanBackend(): could not create command pool for the graphics queue, exiting.\n");
     }
 
     VkCommandPoolCreateInfo transientPoolCreateInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
     transientPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
     transientPoolCreateInfo.queueFamilyIndex = m_graphicsQueue.familyIndex;
-    if (vkCreateCommandPool(m_core->device(), &transientPoolCreateInfo, nullptr, &m_transientCommandPool) != VK_SUCCESS) {
+    if (vkCreateCommandPool(device(), &transientPoolCreateInfo, nullptr, &m_transientCommandPool) != VK_SUCCESS) {
         LogErrorAndExit("VulkanBackend::VulkanBackend(): could not create transient command pool, exiting.\n");
     }
 
@@ -80,7 +109,7 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, App& app)
         }
     }
 
-    createAndSetupSwapchain(physicalDevice(), device(), m_core->surface());
+    createAndSetupSwapchain(physicalDevice(), device(), m_surface);
     createWindowRenderTargetFrontend();
 
     setupDearImgui();
@@ -119,7 +148,16 @@ VulkanBackend::~VulkanBackend()
 
     vmaDestroyAllocator(m_memoryAllocator);
 
-    m_core.reset();
+    vkDestroyDevice(m_device, nullptr);
+    vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
+
+    if (m_messenger.has_value()) {
+        auto destroyFunc = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_instance, "vkDestroyDebugUtilsMessengerEXT");
+        ASSERT(destroyFunc != nullptr);
+        destroyFunc(m_instance, m_messenger.value(), nullptr);
+    }
+
+    vkDestroyInstance(m_instance, nullptr);
 }
 
 bool VulkanBackend::hasActiveCapability(Capability feature) const
@@ -140,6 +178,9 @@ bool VulkanBackend::hasActiveCapability(Capability feature) const
         // TODO!
         break;
     }
+
+    ASSERT_NOT_REACHED();
+    return false;
 }
 
 VulkanBackend::FeatureInfo VulkanBackend::initFeatureInfo() const
@@ -233,6 +274,355 @@ std::unique_ptr<ComputeState> VulkanBackend::createComputeState(const Shader& sh
     return std::make_unique<VulkanComputeState>(*this, shader, bidningSets);
 }
 
+VkSurfaceFormatKHR VulkanBackend::pickBestSurfaceFormat() const
+{
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_surface, &formatCount, nullptr);
+    std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_surface, &formatCount, surfaceFormats.data());
+
+    for (const auto& format : surfaceFormats) {
+        // We use the *_UNORM format since "working directly with SRGB colors is a little bit challenging"
+        // (https://vulkan-tutorial.com/Drawing_a_triangle/Presentation/Swap_chain). I don't really know what that's about..
+        if (format.format == VK_FORMAT_B8G8R8A8_UNORM && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            LogInfo("VulkanBackend::pickBestSurfaceFormat(): picked optimal RGBA8 sRGB surface format.\n");
+            return format;
+        }
+    }
+
+    // If we didn't find the optimal one, just chose an arbitrary one
+    LogInfo("VulkanBackend::pickBestSurfaceFormat(): couldn't find optimal surface format, so picked arbitrary supported format.\n");
+    VkSurfaceFormatKHR format = surfaceFormats[0];
+
+    if (format.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        LogWarning("VulkanBackend::pickBestSurfaceFormat(): could not find a sRGB surface format, so images won't be pretty!\n");
+    }
+
+    return format;
+}
+
+VkPresentModeKHR VulkanBackend::pickBestPresentMode() const
+{
+    uint32_t presentModeCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(m_physicalDevice, m_surface, &presentModeCount, nullptr);
+    std::vector<VkPresentModeKHR> presentModes(presentModeCount);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(m_physicalDevice, m_surface, &presentModeCount, presentModes.data());
+
+    for (const auto& mode : presentModes) {
+        // Try to chose the mailbox mode, i.e. use-last-fully-generated-image mode
+        if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {
+            LogInfo("VulkanBackend::pickBestPresentMode(): picked optimal mailbox present mode.\n");
+            return mode;
+        }
+    }
+
+    // VK_PRESENT_MODE_FIFO_KHR is guaranteed to be available and it basically corresponds to normal v-sync so it's fine
+    LogInfo("VulkanBackend::pickBestPresentMode(): picked standard FIFO present mode.\n");
+    return VK_PRESENT_MODE_FIFO_KHR;
+}
+
+VkExtent2D VulkanBackend::pickBestSwapchainExtent() const
+{
+    VkSurfaceCapabilitiesKHR surfaceCapabilities {};
+
+    if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physicalDevice, m_surface, &surfaceCapabilities) != VK_SUCCESS) {
+        LogErrorAndExit("VulkanBackend::pickBestSwapchainExtent(): could not get surface capabilities, exiting.\n");
+    }
+
+    if (surfaceCapabilities.currentExtent.width != UINT32_MAX) {
+        // The surface has specified the extent (probably to whatever the window extent is) and we should choose that
+        LogInfo("VulkanBackend::pickBestSwapchainExtent(): using optimal window extents for swap chain.\n");
+        return surfaceCapabilities.currentExtent;
+    }
+
+    // The drivers are flexible, so let's choose something good that is within the the legal extents
+    VkExtent2D extent = {};
+
+    int framebufferWidth, framebufferHeight;
+    glfwGetFramebufferSize(m_window, &framebufferWidth, &framebufferHeight);
+
+    extent.width = std::clamp(static_cast<uint32_t>(framebufferWidth), surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
+    extent.height = std::clamp(static_cast<uint32_t>(framebufferHeight), surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
+    LogInfo("VulkanBackend::pickBestSwapchainExtent(): using specified extents (%u x %u) for swap chain.\n", extent.width, extent.height);
+
+    return extent;
+}
+
+VkInstance VulkanBackend::createInstance(const std::vector<const char*>& layers, VkDebugUtilsMessengerCreateInfoEXT* debugMessengerCreateInfo) const
+{
+    VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
+    appInfo.pApplicationName = "ArkoseRenderer";
+    appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0); // NOLINT(hicpp-signed-bitwise)
+    appInfo.pEngineName = "ArkoseRendererEngine";
+    appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0); // NOLINT(hicpp-signed-bitwise)
+    appInfo.apiVersion = VK_API_VERSION_1_1; // NOLINT(hicpp-signed-bitwise)
+
+    // See https://www.lunarg.com/wp-content/uploads/2019/02/GPU-Assisted-Validation_v3_02_22_19.pdf for information
+    VkValidationFeatureEnableEXT enables[] = { VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT };
+    VkValidationFeaturesEXT validationFeatures { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
+    validationFeatures.enabledValidationFeatureCount = 1;
+    validationFeatures.pEnabledValidationFeatures = enables;
+
+    VkInstanceCreateInfo instanceCreateInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
+    instanceCreateInfo.pApplicationInfo = &appInfo;
+
+    if (debugMessengerCreateInfo) {
+        instanceCreateInfo.pNext = debugMessengerCreateInfo;
+        if (gpuAssistedValidation) {
+            debugMessengerCreateInfo->pNext = &validationFeatures;
+        }
+    }
+
+    const auto& extensions = instanceExtensions();
+    instanceCreateInfo.enabledExtensionCount = extensions.size();
+    instanceCreateInfo.ppEnabledExtensionNames = extensions.data();
+
+    // NOTE: Support for the active validation layers should already be checked!
+    instanceCreateInfo.enabledLayerCount = layers.size();
+    instanceCreateInfo.ppEnabledLayerNames = layers.data();
+
+    VkInstance instance;
+    if (vkCreateInstance(&instanceCreateInfo, nullptr, &instance) != VK_SUCCESS) {
+        LogErrorAndExit("VulkanBackend::createInstance(): could not create instance.\n");
+    }
+
+    return instance;
+}
+
+VkDevice VulkanBackend::createDevice(const std::vector<const char*>& layers, VkPhysicalDevice physicalDevice)
+{
+    // TODO: Allow users to specify beforehand that they e.g. might want 2 compute queues.
+    std::unordered_set<uint32_t> queueFamilyIndices = { m_graphicsQueue.familyIndex, m_presentQueue.familyIndex };
+    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+    const float queuePriority = 1.0f;
+    for (uint32_t familyIndex : queueFamilyIndices) {
+
+        VkDeviceQueueCreateInfo queueCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO };
+        queueCreateInfo.queueFamilyIndex = familyIndex;
+        queueCreateInfo.pQueuePriorities = &queuePriority;
+        queueCreateInfo.queueCount = 1;
+
+        queueCreateInfos.push_back(queueCreateInfo);
+    }
+
+    //
+
+    // TODO: How are we supposed to add and check support for these advanced features & extensions?
+
+    VkPhysicalDeviceFeatures requestedDeviceFeatures = {};
+    requestedDeviceFeatures.samplerAnisotropy = VK_TRUE;
+    requestedDeviceFeatures.fillModeNonSolid = VK_TRUE;
+    requestedDeviceFeatures.fragmentStoresAndAtomics = VK_TRUE;
+    requestedDeviceFeatures.vertexPipelineStoresAndAtomics = VK_TRUE;
+    requestedDeviceFeatures.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+    requestedDeviceFeatures.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+
+    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES };
+    indexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
+    indexingFeatures.runtimeDescriptorArray = VK_TRUE;
+
+    VkPhysicalDevice8BitStorageFeatures eightBitStorageFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES };
+    eightBitStorageFeatures.storageBuffer8BitAccess = VK_TRUE; // (required if the extention is available)
+    eightBitStorageFeatures.uniformAndStorageBuffer8BitAccess = VK_TRUE;
+    eightBitStorageFeatures.storagePushConstant8 = VK_TRUE;
+
+    VkPhysicalDevice16BitStorageFeatures sixteenBitStorageFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES };
+    sixteenBitStorageFeatures.storageBuffer16BitAccess = VK_TRUE;
+    sixteenBitStorageFeatures.uniformAndStorageBuffer16BitAccess = VK_TRUE;
+    sixteenBitStorageFeatures.storagePushConstant16 = VK_TRUE;
+    sixteenBitStorageFeatures.storageInputOutput16 = VK_FALSE;
+
+    VkPhysicalDeviceShaderFloat16Int8Features shaderSmallTypeFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES };
+    shaderSmallTypeFeatures.shaderFloat16 = VK_FALSE;
+    shaderSmallTypeFeatures.shaderInt8 = VK_TRUE;
+
+    std::vector<const char*> deviceExtensions {};
+    deviceExtensions.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    //deviceExtensions.emplace_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+    deviceExtensions.emplace_back(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME);
+    //deviceExtensions.emplace_back(VK_KHR_8BIT_STORAGE_EXTENSION_NAME);
+    deviceExtensions.emplace_back(VK_KHR_16BIT_STORAGE_EXTENSION_NAME);
+    deviceExtensions.emplace_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
+
+    //
+
+    VkDeviceCreateInfo deviceCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
+
+    deviceCreateInfo.queueCreateInfoCount = queueCreateInfos.size();
+    deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
+
+    // (the support of these layers should already have been checked)
+    deviceCreateInfo.enabledLayerCount = layers.size();
+    deviceCreateInfo.ppEnabledLayerNames = layers.data();
+
+    deviceCreateInfo.enabledExtensionCount = deviceExtensions.size();
+    deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
+
+    deviceCreateInfo.pEnabledFeatures = &requestedDeviceFeatures;
+
+    // Device features extension chain
+    deviceCreateInfo.pNext = &indexingFeatures;
+    indexingFeatures.pNext = &eightBitStorageFeatures;
+    eightBitStorageFeatures.pNext = &sixteenBitStorageFeatures;
+    sixteenBitStorageFeatures.pNext = &shaderSmallTypeFeatures;
+
+    VkDevice device;
+    if (vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device) != VK_SUCCESS) {
+        LogErrorAndExit("VulkanBackend::createDevice(): could not create a device, exiting.\n");
+    }
+
+    return device;
+}
+
+std::vector<const char*> VulkanBackend::instanceExtensions() const
+{
+    std::vector<const char*> extensions;
+
+    // GLFW requires a few for basic presenting etc.
+    uint32_t requiredCount;
+    const char** requiredExtensions = glfwGetRequiredInstanceExtensions(&requiredCount);
+    while (requiredCount--) {
+        extensions.emplace_back(requiredExtensions[requiredCount]);
+    }
+
+    // For debug messages etc.
+    extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+    // For later spec (e.g. ray tracing stuff) queries
+    extensions.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+
+    return extensions;
+}
+
+bool VulkanBackend::verifyValidationLayerSupport(const std::vector<const char*>& layers) const
+{
+    uint32_t availableLayerCount;
+    vkEnumerateInstanceLayerProperties(&availableLayerCount, nullptr);
+    std::vector<VkLayerProperties> availableLayers(availableLayerCount);
+    vkEnumerateInstanceLayerProperties(&availableLayerCount, availableLayers.data());
+
+    bool fullSupport = true;
+    for (const char* layer : layers) {
+        bool found = false;
+        for (auto availableLayer : availableLayers) {
+            if (std::strcmp(layer, availableLayer.layerName) == 0) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            LogError("VulkanBackend::checkValidationLayerSupport(): layer '%s' is not supported.\n", layer);
+            fullSupport = false;
+        }
+    }
+
+    return fullSupport;
+}
+
+void VulkanBackend::findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
+{
+    uint32_t count;
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);
+    std::vector<VkQueueFamilyProperties> queueFamilies(count);
+    vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, queueFamilies.data());
+
+    bool foundGraphicsQueue = false;
+    bool foundComputeQueue = false;
+    bool foundPresentQueue = false;
+
+    for (uint32_t idx = 0; idx < count; ++idx) {
+        const auto& queueFamily = queueFamilies[idx];
+
+        if (!foundGraphicsQueue && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            m_graphicsQueue.familyIndex = idx;
+            foundGraphicsQueue = true;
+        }
+
+        if (!foundComputeQueue && queueFamily.queueCount > 0 && queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) {
+            m_computeQueue.familyIndex = idx;
+            foundComputeQueue = true;
+        }
+
+        if (!foundPresentQueue) {
+            VkBool32 presentSupportForQueue;
+            vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevice, idx, surface, &presentSupportForQueue);
+            if (presentSupportForQueue) {
+                m_presentQueue.familyIndex = idx;
+                foundPresentQueue = true;
+            }
+        }
+    }
+
+    if (!foundGraphicsQueue) {
+        LogErrorAndExit("VulkanBackend::findQueueFamilyIndices(): could not find a graphics queue, exiting.\n");
+    }
+    if (!foundComputeQueue) {
+        LogErrorAndExit("VulkanBackend::findQueueFamilyIndices(): could not find a compute queue, exiting.\n");
+    }
+    if (!foundPresentQueue) {
+        LogErrorAndExit("VulkanBackend::findQueueFamilyIndices(): could not find a present queue, exiting.\n");
+    }
+}
+
+VkBool32 VulkanBackend::debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+                                             const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+{
+    LogError("VulkanBackend::debugMessageCallback(): %s\n", pCallbackData->pMessage);
+    return VK_FALSE;
+}
+
+VkDebugUtilsMessengerCreateInfoEXT VulkanBackend::debugMessengerCreateInfo() const
+{
+    VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
+
+    debugMessengerCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT; // NOLINT(hicpp-signed-bitwise)
+    debugMessengerCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT; // NOLINT(hicpp-signed-bitwise)
+    debugMessengerCreateInfo.pfnUserCallback = debugMessageCallback;
+    debugMessengerCreateInfo.pUserData = nullptr;
+
+    return debugMessengerCreateInfo;
+}
+
+VkDebugUtilsMessengerEXT VulkanBackend::createDebugMessenger(VkInstance instance, VkDebugUtilsMessengerCreateInfoEXT* createInfo) const
+{
+    auto createFunc = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+    if (!createFunc) {
+        LogErrorAndExit("VulkanBackend::createDebugMessenger(): could not get function 'vkCreateDebugUtilsMessengerEXT', exiting.\n");
+    }
+
+    VkDebugUtilsMessengerEXT messenger;
+    if (createFunc(instance, createInfo, nullptr, &messenger) != VK_SUCCESS) {
+        LogErrorAndExit("VulkanBackend::createDebugMessenger(): could not create the debug messenger, exiting.\n");
+    }
+
+    return messenger;
+}
+
+VkPhysicalDevice VulkanBackend::pickBestPhysicalDevice() const
+{
+    uint32_t count;
+    vkEnumeratePhysicalDevices(m_instance, &count, nullptr);
+    if (count < 1) {
+        LogErrorAndExit("VulkanBackend::pickBestPhysicalDevice(): could not find any physical devices with Vulkan support, exiting.\n");
+    }
+
+    std::vector<VkPhysicalDevice> devices(count);
+    vkEnumeratePhysicalDevices(m_instance, &count, devices.data());
+
+    if (count > 1) {
+        LogWarning("VulkanBackend::pickBestPhysicalDevice(): more than one physical device available, one will be chosen arbitrarily (FIXME!)\n");
+    }
+
+    // FIXME: Don't just pick the first one if there are more than one!
+    VkPhysicalDevice physicalDevice = devices[0];
+
+    VkPhysicalDeviceProperties props;
+    vkGetPhysicalDeviceProperties(physicalDevice, &props);
+    LogInfo("VulkanBackend::pickBestPhysicalDevice(): using physical device '%s'\n", props.deviceName);
+
+    return physicalDevice;
+}
+
 void VulkanBackend::createSemaphoresAndFences(VkDevice device)
 {
     VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
@@ -283,14 +673,14 @@ void VulkanBackend::createAndSetupSwapchain(VkPhysicalDevice physicalDevice, VkD
         createInfo.minImageCount = std::min(createInfo.minImageCount, surfaceCapabilities.maxImageCount);
     }
 
-    VkSurfaceFormatKHR surfaceFormat = m_core->pickBestSurfaceFormat();
+    VkSurfaceFormatKHR surfaceFormat = pickBestSurfaceFormat();
     createInfo.imageFormat = surfaceFormat.format;
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
 
-    VkPresentModeKHR presentMode = m_core->pickBestPresentMode();
+    VkPresentModeKHR presentMode = pickBestPresentMode();
     createInfo.presentMode = presentMode;
 
-    VkExtent2D swapchainExtent = m_core->pickBestSwapchainExtent();
+    VkExtent2D swapchainExtent = pickBestSwapchainExtent();
     createInfo.imageExtent = swapchainExtent;
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT; // TODO: What do we want here? Maybe this suffices?
@@ -302,7 +692,7 @@ void VulkanBackend::createAndSetupSwapchain(VkPhysicalDevice physicalDevice, VkD
     }
 
     uint32_t queueFamilyIndices[] = { m_graphicsQueue.familyIndex, m_presentQueue.familyIndex };
-    if (!m_core->hasCombinedGraphicsComputeQueue()) {
+    if (m_graphicsQueue.familyIndex != m_computeQueue.familyIndex) {
         createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         createInfo.pQueueFamilyIndices = queueFamilyIndices;
         createInfo.queueFamilyIndexCount = 2;
@@ -417,7 +807,7 @@ Extent2D VulkanBackend::recreateSwapchain()
     vkDeviceWaitIdle(device());
 
     destroySwapchain();
-    createAndSetupSwapchain(physicalDevice(), device(), m_core->surface());
+    createAndSetupSwapchain(physicalDevice(), device(), m_surface);
     createWindowRenderTargetFrontend();
 
     s_unhandledWindowResize = false;
@@ -562,7 +952,7 @@ void VulkanBackend::setupDearImgui()
         }
     };
 
-    initInfo.Instance = m_core->instance();
+    initInfo.Instance = m_instance;
     initInfo.PhysicalDevice = physicalDevice();
     initInfo.Device = device();
     initInfo.Allocator = nullptr;

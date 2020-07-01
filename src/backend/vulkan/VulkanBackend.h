@@ -1,6 +1,5 @@
 #pragma once
 
-#include "VulkanCore.h"
 #include "VulkanRTX.h"
 #include "backend/Backend.h"
 #include "backend/vulkan/VulkanResources.h"
@@ -14,11 +13,8 @@
 
 struct GLFWwindow;
 
-#ifdef NDEBUG
 static constexpr bool vulkanDebugMode = true;
-#else
-static constexpr bool vulkanDebugMode = true;
-#endif
+static constexpr bool gpuAssistedValidation = false;
 
 class VulkanBackend final : public Backend {
 public:
@@ -62,12 +58,12 @@ public:
 
     VkDevice device() const
     {
-        return m_core->device();
+        return m_device;
     }
 
     VkPhysicalDevice physicalDevice() const
     {
-        return m_core->physicalDevice();
+        return m_physicalDevice;
     }
 
     bool hasRtxSupport() const
@@ -157,12 +153,48 @@ private:
     void transitionImageLayoutDEBUG(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags, VkCommandBuffer) const;
 
     ///////////////////////////////////////////////////////////////////////////
-    /// Window and swapchain related members
+    /// Instance & surface
+
+    VkSurfaceFormatKHR pickBestSurfaceFormat() const;
+    VkPresentModeKHR pickBestPresentMode() const;
+    VkExtent2D pickBestSwapchainExtent() const;
+    VkPhysicalDevice pickBestPhysicalDevice() const;
+
+    static VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT,
+                                                               const VkDebugUtilsMessengerCallbackDataEXT*, void* userData);
+    VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo() const;
+    VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance, VkDebugUtilsMessengerCreateInfoEXT*) const;
+
+    std::vector<const char*> instanceExtensions() const;
+    bool verifyValidationLayerSupport(const std::vector<const char*>& layers) const;
+    VkInstance createInstance(const std::vector<const char*>& layers, VkDebugUtilsMessengerCreateInfoEXT*) const;
+    VkDevice createDevice(const std::vector<const char*>& layers, VkPhysicalDevice);
 
     GLFWwindow* m_window;
 
-    VkSwapchainKHR m_swapchain {};
+    std::optional<VkDebugUtilsMessengerEXT> m_messenger {};
+
+    VkInstance m_instance {};
+    VkPhysicalDevice m_physicalDevice {};
+    VkDevice m_device {};
+
+    VkSurfaceKHR m_surface {};
+
+    struct VulkanQueue {
+        uint32_t familyIndex;
+        VkQueue queue;
+    };
+
+    void findQueueFamilyIndices(VkPhysicalDevice, VkSurfaceKHR);
+
     VulkanQueue m_presentQueue {};
+    VulkanQueue m_graphicsQueue {};
+    VulkanQueue m_computeQueue {};
+
+    ///////////////////////////////////////////////////////////////////////////
+    /// Window and swapchain related members
+
+    VkSwapchainKHR m_swapchain {};
 
     Extent2D m_swapchainExtent {};
     uint32_t m_numSwapchainImages {};
@@ -186,10 +218,8 @@ private:
     std::array<VkFence, maxFramesInFlight> m_inFlightFrameFences {};
 
     ///////////////////////////////////////////////////////////////////////////
-    /// Sub-systems
+    /// Sub-systems / extensions
 
-    // TODO: Add swapchain management sub-system?
-    std::unique_ptr<VulkanCore> m_core {};
     std::unique_ptr<VulkanRTX> m_rtx {};
 
     ///////////////////////////////////////////////////////////////////////////
@@ -201,8 +231,6 @@ private:
 
     std::unique_ptr<Registry> m_nodeRegistry {};
     std::vector<std::unique_ptr<Registry>> m_frameRegistries {};
-
-    VulkanQueue m_graphicsQueue {};
 
     std::vector<VkEvent> m_events {};
 
