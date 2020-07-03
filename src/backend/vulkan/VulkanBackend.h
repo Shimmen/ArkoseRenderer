@@ -7,6 +7,7 @@
 #include "rendering/Resources.h"
 #include <array>
 #include <optional>
+#include <unordered_map>
 
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
@@ -14,7 +15,8 @@
 struct GLFWwindow;
 
 static constexpr bool vulkanDebugMode = true;
-static constexpr bool gpuAssistedValidation = false;
+static constexpr bool vulkanVerboseDebugMessages = false;
+static constexpr bool vulkanGpuAssistedValidation = false;
 
 class VulkanBackend final : public Backend {
 public:
@@ -98,16 +100,17 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     /// Capability query metadata & utilities
 
-    struct FeatureInfo {
-        bool rtxRayTracing;
-        bool shader16BitFloat;
-        bool shaderTextureArrayDynamicIndexing;
-        bool shaderStorageBufferDynamicIndexing;
-        bool advancedValidationFeatures;
-    };
+    std::unordered_set<std::string> m_availableLayers;
+    bool hasSupportForLayer(const std::string& name) const;
 
-    FeatureInfo initFeatureInfo() const;
-    mutable std::optional<FeatureInfo> m_featureInfo;
+    std::unordered_set<std::string> m_availableExtensions;
+    bool hasSupportForExtension(const std::string& name) const;
+
+    std::unordered_set<std::string> m_availableInstanceExtensions;
+    bool hasSupportForInstanceExtension(const std::string& name) const;
+
+    std::unordered_map<std::string, bool> m_activeCapabilities;
+    bool collectAndVerifyCapabilitySupport(App&);
 
     ///////////////////////////////////////////////////////////////////////////
     /// Command translation & resource management
@@ -153,7 +156,7 @@ private:
     void transitionImageLayoutDEBUG(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags, VkCommandBuffer) const;
 
     ///////////////////////////////////////////////////////////////////////////
-    /// Instance & surface
+    /// Vulkan core stuff (e.g. instance, device)
 
     VkSurfaceFormatKHR pickBestSurfaceFormat() const;
     VkPresentModeKHR pickBestPresentMode() const;
@@ -166,19 +169,13 @@ private:
     VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance, VkDebugUtilsMessengerCreateInfoEXT*) const;
 
     std::vector<const char*> instanceExtensions() const;
-    bool verifyValidationLayerSupport(const std::vector<const char*>& layers) const;
-    VkInstance createInstance(const std::vector<const char*>& layers, VkDebugUtilsMessengerCreateInfoEXT*) const;
-    VkDevice createDevice(const std::vector<const char*>& layers, VkPhysicalDevice);
-
-    GLFWwindow* m_window;
-
+    VkInstance createInstance(const std::vector<const char*>& requestedLayers, VkDebugUtilsMessengerCreateInfoEXT*) const;
+    VkDevice createDevice(const std::vector<const char*>& requestedLayers, VkPhysicalDevice);
     std::optional<VkDebugUtilsMessengerEXT> m_messenger {};
 
     VkInstance m_instance {};
     VkPhysicalDevice m_physicalDevice {};
     VkDevice m_device {};
-
-    VkSurfaceKHR m_surface {};
 
     struct VulkanQueue {
         uint32_t familyIndex;
@@ -193,6 +190,9 @@ private:
 
     ///////////////////////////////////////////////////////////////////////////
     /// Window and swapchain related members
+
+    GLFWwindow* m_window;
+    VkSurfaceKHR m_surface {};
 
     VkSwapchainKHR m_swapchain {};
 
@@ -242,6 +242,4 @@ private:
 
     std::vector<std::unique_ptr<VulkanTexture>> m_swapchainMockColorTextures {};
     std::vector<std::unique_ptr<VulkanRenderTarget>> m_swapchainMockRenderTargets {};
-
-    std::vector<VkDescriptorSetLayout> m_ownedDescriptorSetLayouts;
 };

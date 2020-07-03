@@ -7,8 +7,10 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 add_executable(ArkoseRenderer
     src/apps/TestApp.cpp
-    src/main.cpp
-    src/backend/vulkan/VulkanBackend.cpp
+        src/apps/SimpleApp.cpp
+        src/main.cpp
+        src/backend/Backend.cpp
+        src/backend/vulkan/VulkanBackend.cpp
     src/backend/vulkan/VulkanCommandList.cpp
     src/backend/vulkan/VulkanResources.cpp
     src/backend/vulkan/VulkanRTX.cpp

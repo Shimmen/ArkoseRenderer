@@ -19,9 +19,10 @@ public:
         RtxRayTracing,
         Shader16BitFloat,
         ShaderTextureArrayDynamicIndexing,
-        ShaderStorageBufferDynamicIndexing,
+        ShaderBufferArrayDynamicIndexing,
     };
 
+    static std::string capabilityName(Capability capability);
     virtual bool hasActiveCapability(Capability) const = 0;
     virtual bool executeFrame(double elapsedTime, double deltaTime, bool renderGui) = 0;
 

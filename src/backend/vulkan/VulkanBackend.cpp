@@ -17,7 +17,6 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 #include <spirv_cross.hpp>
-#include <stb_image.h>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -28,46 +27,70 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, App& app)
     , m_app(app)
 {
     int width, height;
-    glfwGetWindowSize(window, &width, &height);
+    glfwGetFramebufferSize(window, &width, &height);
     GlobalState::getMutable(backendBadge()).updateWindowExtent({ width, height });
     glfwSetFramebufferSizeCallback(window, static_cast<GLFWframebuffersizefun>([](GLFWwindow* window, int width, int height) {
                                        GlobalState::getMutable(backendBadge()).updateWindowExtent({ width, height });
                                        s_unhandledWindowResize = true;
                                    }));
 
-    std::vector<const char*> validationLayers;
+    {
+        uint32_t availableLayerCount;
+        vkEnumerateInstanceLayerProperties(&availableLayerCount, nullptr);
+        std::vector<VkLayerProperties> availableLayers(availableLayerCount);
+        vkEnumerateInstanceLayerProperties(&availableLayerCount, availableLayers.data());
+        for (auto& layer : availableLayers)
+            m_availableLayers.insert(layer.layerName);
+    }
+
+    {
+        uint32_t availableInstanceExtensionsCount;
+        vkEnumerateInstanceExtensionProperties(nullptr, &availableInstanceExtensionsCount, nullptr);
+        std::vector<VkExtensionProperties> availableInstanceExtensions(availableInstanceExtensionsCount);
+        vkEnumerateInstanceExtensionProperties(nullptr, &availableInstanceExtensionsCount, availableInstanceExtensions.data());
+        for (auto& extension : availableInstanceExtensions)
+            m_availableInstanceExtensions.insert(extension.extensionName);
+    }
+
+    std::vector<const char*> requestedLayers;
 
     if (vulkanDebugMode) {
         LogInfo("VulkanBackend: debug mode enabled!\n");
 
-        validationLayers.emplace_back("VK_LAYER_KHRONOS_validation");
+        ASSERT(hasSupportForLayer("VK_LAYER_KHRONOS_validation"));
+        requestedLayers.emplace_back("VK_LAYER_KHRONOS_validation");
 
         auto dbgMessengerCreateInfo = debugMessengerCreateInfo();
-        m_instance = createInstance(validationLayers, &dbgMessengerCreateInfo);
+        m_instance = createInstance(requestedLayers, &dbgMessengerCreateInfo);
         m_messenger = createDebugMessenger(m_instance, &dbgMessengerCreateInfo);
 
     } else {
-        m_instance = createInstance(validationLayers, nullptr);
+        m_instance = createInstance(requestedLayers, nullptr);
     }
 
-    if (!verifyValidationLayerSupport(validationLayers)) {
-        LogErrorAndExit("VulkanBackend: missing support for one or more validation layers, exiting.\n");
-    }
-
-    if (glfwCreateWindowSurface(m_instance, window, nullptr, &m_surface) != VK_SUCCESS) {
+    if (glfwCreateWindowSurface(m_instance, window, nullptr, &m_surface) != VK_SUCCESS)
         LogErrorAndExit("VulkanBackend: can't create window surface, exiting.\n");
-    }
 
     m_physicalDevice = pickBestPhysicalDevice();
-
     findQueueFamilyIndices(m_physicalDevice, m_surface);
-    m_device = createDevice(validationLayers, m_physicalDevice);
+
+    {
+        uint32_t extensionCount;
+        vkEnumerateDeviceExtensionProperties(physicalDevice(), nullptr, &extensionCount, nullptr);
+        std::vector<VkExtensionProperties> availableExtensions { extensionCount };
+        vkEnumerateDeviceExtensionProperties(physicalDevice(), nullptr, &extensionCount, availableExtensions.data());
+        for (auto& ext : availableExtensions)
+            m_availableExtensions.insert(ext.extensionName);
+    }
+
+    if (!collectAndVerifyCapabilitySupport(app))
+        LogErrorAndExit("VulkanBackend: could not verify support for all capabilities required by the app\n");
+
+    m_device = createDevice(requestedLayers, m_physicalDevice);
 
     vkGetDeviceQueue(m_device, m_presentQueue.familyIndex, 0, &m_presentQueue.queue);
     vkGetDeviceQueue(m_device, m_graphicsQueue.familyIndex, 0, &m_graphicsQueue.queue);
     vkGetDeviceQueue(m_device, m_computeQueue.familyIndex, 0, &m_computeQueue.queue);
-
-    ////////////////////////////////////////////////////////////////////
 
     createSemaphoresAndFences(device());
 
@@ -160,69 +183,100 @@ VulkanBackend::~VulkanBackend()
     vkDestroyInstance(m_instance, nullptr);
 }
 
-bool VulkanBackend::hasActiveCapability(Capability feature) const
+bool VulkanBackend::hasActiveCapability(Capability capability) const
 {
-    if (!m_featureInfo.has_value())
-        m_featureInfo = initFeatureInfo();
-    const FeatureInfo& info = m_featureInfo.value();
-
-    switch (feature) {
-    case Capability::RtxRayTracing:
-        return info.rtxRayTracing;
-    case Capability::Shader16BitFloat:
-        return info.shader16BitFloat;
-    case Capability::ShaderTextureArrayDynamicIndexing:
-        // TODO!
-        break;
-    case Capability::ShaderStorageBufferDynamicIndexing:
-        // TODO!
-        break;
-    }
-
-    ASSERT_NOT_REACHED();
-    return false;
+    std::string name = capabilityName(capability);
+    auto it = m_activeCapabilities.find(name);
+    if (it == m_activeCapabilities.end())
+        return false;
+    return it->second;
 }
 
-VulkanBackend::FeatureInfo VulkanBackend::initFeatureInfo() const
+bool VulkanBackend::hasSupportForLayer(const std::string& name) const
 {
-    VulkanBackend::FeatureInfo info {};
+    auto it = m_availableLayers.find(name);
+    if (it == m_availableLayers.end())
+        return false;
+    return true;
+}
 
-    uint32_t extensionCount;
-    vkEnumerateDeviceExtensionProperties(physicalDevice(), nullptr, &extensionCount, nullptr);
-    std::vector<VkExtensionProperties> availableExtensions { extensionCount };
-    vkEnumerateDeviceExtensionProperties(physicalDevice(), nullptr, &extensionCount, availableExtensions.data());
+bool VulkanBackend::hasSupportForExtension(const std::string& name) const
+{
+    if (m_device == VK_NULL_HANDLE)
+        LogErrorAndExit("Checking support for extention but no device exist yet. Maybe you meant to check for instance extensions?\n");
 
-    bool rtxRayTracing = false;
-    bool memRequirements2 = false;
+    auto it = m_availableExtensions.find(name);
+    if (it == m_availableExtensions.end())
+        return false;
+    return true;
+}
 
-    bool storageBufferClass = false;
-    bool storage16bits = false;
-    bool shader16bits = false;
+bool VulkanBackend::hasSupportForInstanceExtension(const std::string& name) const
+{
+    auto it = m_availableInstanceExtensions.find(name);
+    if (it == m_availableInstanceExtensions.end())
+        return false;
+    return true;
+}
 
-    bool advancedValidationFeatures = false;
+bool VulkanBackend::collectAndVerifyCapabilitySupport(App& app)
+{
+    VkPhysicalDeviceFeatures2 features2 { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+    const VkPhysicalDeviceFeatures& features = features2.features;
 
-#define EXT_HAS_NAME(name) (std::strcmp(ext.extensionName, name) == 0)
-    for (auto& ext : availableExtensions) {
-        if (EXT_HAS_NAME(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME))
-            shader16bits = true;
-        else if (EXT_HAS_NAME(VK_KHR_16BIT_STORAGE_EXTENSION_NAME))
-            storage16bits = true;
-        else if (EXT_HAS_NAME(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME))
-            storageBufferClass = true;
-        else if (EXT_HAS_NAME(VK_NV_RAY_TRACING_EXTENSION_NAME))
-            rtxRayTracing = true;
-        else if (EXT_HAS_NAME(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME))
-            memRequirements2 = true;
-        else if (EXT_HAS_NAME(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME))
-            advancedValidationFeatures = true;
+    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES };
+    features2.pNext = &indexingFeatures;
+
+    VkPhysicalDevice16BitStorageFeatures sixteenBitStorageFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES };
+    indexingFeatures.pNext = &sixteenBitStorageFeatures;
+
+    VkPhysicalDeviceShaderFloat16Int8Features shaderSmallTypeFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES };
+    sixteenBitStorageFeatures.pNext = &shaderSmallTypeFeatures;
+
+    vkGetPhysicalDeviceFeatures2(physicalDevice(), &features2);
+
+    auto isSupported = [&](Capability capability) -> bool {
+        switch (capability) {
+        case Capability::RtxRayTracing:
+            return hasSupportForExtension(VK_NV_RAY_TRACING_EXTENSION_NAME);
+        case Capability::Shader16BitFloat:
+            return hasSupportForExtension(VK_KHR_16BIT_STORAGE_EXTENSION_NAME) && hasSupportForExtension(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME)
+                && sixteenBitStorageFeatures.storageInputOutput16 && sixteenBitStorageFeatures.storagePushConstant16
+                && sixteenBitStorageFeatures.storageBuffer16BitAccess && sixteenBitStorageFeatures.uniformAndStorageBuffer16BitAccess
+                && shaderSmallTypeFeatures.shaderFloat16;
+        case Capability::ShaderTextureArrayDynamicIndexing:
+            return features.shaderSampledImageArrayDynamicIndexing && indexingFeatures.shaderSampledImageArrayNonUniformIndexing;
+        case Capability::ShaderBufferArrayDynamicIndexing:
+            return features.shaderStorageBufferArrayDynamicIndexing && features.shaderUniformBufferArrayDynamicIndexing
+                && indexingFeatures.shaderStorageBufferArrayNonUniformIndexing && indexingFeatures.shaderUniformBufferArrayNonUniformIndexing;
+        }
+    };
+
+    auto markCapabilityActive = [this](Capability capability) {
+        std::string name = capabilityName(capability);
+        m_activeCapabilities[name] = true;
+    };
+
+    bool allRequiredSupported = true;
+
+    for (auto& cap : app.requiredCapabilities()) {
+        if (isSupported(cap)) {
+            markCapabilityActive(cap);
+        } else {
+            LogError("VulkanBackend: no support for required '%s' capability\n", capabilityName(cap).c_str());
+            allRequiredSupported = false;
+        }
     }
-#undef EXT_HAS_NAME
 
-    info.rtxRayTracing = rtxRayTracing && memRequirements2;
-    info.shader16BitFloat = storageBufferClass && storage16bits && shader16bits;
-    info.advancedValidationFeatures = advancedValidationFeatures;
+    for (auto& cap : app.optionalCapabilities()) {
+        if (isSupported(cap)) {
+            markCapabilityActive(cap);
+        } else {
+            LogInfo("VulkanBackend: no support for optional '%s' capability\n", capabilityName(cap).c_str());
+        }
+    }
 
-    return info;
+    return allRequiredSupported;
 }
 
 std::unique_ptr<Buffer> VulkanBackend::createBuffer(size_t size, Buffer::Usage usage, Buffer::MemoryHint memoryHint)
@@ -285,17 +339,17 @@ VkSurfaceFormatKHR VulkanBackend::pickBestSurfaceFormat() const
         // We use the *_UNORM format since "working directly with SRGB colors is a little bit challenging"
         // (https://vulkan-tutorial.com/Drawing_a_triangle/Presentation/Swap_chain). I don't really know what that's about..
         if (format.format == VK_FORMAT_B8G8R8A8_UNORM && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-            LogInfo("VulkanBackend::pickBestSurfaceFormat(): picked optimal RGBA8 sRGB surface format.\n");
+            LogInfo("VulkanBackend: picked optimal RGBA8 sRGB surface format.\n");
             return format;
         }
     }
 
     // If we didn't find the optimal one, just chose an arbitrary one
-    LogInfo("VulkanBackend::pickBestSurfaceFormat(): couldn't find optimal surface format, so picked arbitrary supported format.\n");
+    LogInfo("VulkanBackend: couldn't find optimal surface format, so picked arbitrary supported format.\n");
     VkSurfaceFormatKHR format = surfaceFormats[0];
 
     if (format.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-        LogWarning("VulkanBackend::pickBestSurfaceFormat(): could not find a sRGB surface format, so images won't be pretty!\n");
+        LogWarning("VulkanBackend: could not find a sRGB surface format, so images won't be pretty!\n");
     }
 
     return format;
@@ -311,13 +365,13 @@ VkPresentModeKHR VulkanBackend::pickBestPresentMode() const
     for (const auto& mode : presentModes) {
         // Try to chose the mailbox mode, i.e. use-last-fully-generated-image mode
         if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {
-            LogInfo("VulkanBackend::pickBestPresentMode(): picked optimal mailbox present mode.\n");
+            LogInfo("VulkanBackend: picked optimal mailbox present mode.\n");
             return mode;
         }
     }
 
     // VK_PRESENT_MODE_FIFO_KHR is guaranteed to be available and it basically corresponds to normal v-sync so it's fine
-    LogInfo("VulkanBackend::pickBestPresentMode(): picked standard FIFO present mode.\n");
+    LogInfo("VulkanBackend: picked standard FIFO present mode.\n");
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
@@ -326,12 +380,12 @@ VkExtent2D VulkanBackend::pickBestSwapchainExtent() const
     VkSurfaceCapabilitiesKHR surfaceCapabilities {};
 
     if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physicalDevice, m_surface, &surfaceCapabilities) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend::pickBestSwapchainExtent(): could not get surface capabilities, exiting.\n");
+        LogErrorAndExit("VulkanBackend: could not get surface capabilities, exiting.\n");
     }
 
     if (surfaceCapabilities.currentExtent.width != UINT32_MAX) {
         // The surface has specified the extent (probably to whatever the window extent is) and we should choose that
-        LogInfo("VulkanBackend::pickBestSwapchainExtent(): using optimal window extents for swap chain.\n");
+        LogInfo("VulkanBackend: using optimal window extents for swap chain.\n");
         return surfaceCapabilities.currentExtent;
     }
 
@@ -343,12 +397,12 @@ VkExtent2D VulkanBackend::pickBestSwapchainExtent() const
 
     extent.width = std::clamp(static_cast<uint32_t>(framebufferWidth), surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
     extent.height = std::clamp(static_cast<uint32_t>(framebufferHeight), surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
-    LogInfo("VulkanBackend::pickBestSwapchainExtent(): using specified extents (%u x %u) for swap chain.\n", extent.width, extent.height);
+    LogInfo("VulkanBackend: using specified extents (%u x %u) for swap chain.\n", extent.width, extent.height);
 
     return extent;
 }
 
-VkInstance VulkanBackend::createInstance(const std::vector<const char*>& layers, VkDebugUtilsMessengerCreateInfoEXT* debugMessengerCreateInfo) const
+VkInstance VulkanBackend::createInstance(const std::vector<const char*>& requestedLayers, VkDebugUtilsMessengerCreateInfoEXT* debugMessengerCreateInfo) const
 {
     VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
     appInfo.pApplicationName = "ArkoseRenderer";
@@ -368,7 +422,7 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& layers,
 
     if (debugMessengerCreateInfo) {
         instanceCreateInfo.pNext = debugMessengerCreateInfo;
-        if (gpuAssistedValidation) {
+        if (vulkanGpuAssistedValidation) {
             debugMessengerCreateInfo->pNext = &validationFeatures;
         }
     }
@@ -377,19 +431,22 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& layers,
     instanceCreateInfo.enabledExtensionCount = extensions.size();
     instanceCreateInfo.ppEnabledExtensionNames = extensions.data();
 
-    // NOTE: Support for the active validation layers should already be checked!
-    instanceCreateInfo.enabledLayerCount = layers.size();
-    instanceCreateInfo.ppEnabledLayerNames = layers.data();
+    for (auto& layer : requestedLayers) {
+        if (!hasSupportForLayer(layer))
+            LogErrorAndExit("VulkanBackend: missing layer '%s'\n", layer);
+    }
+
+    instanceCreateInfo.enabledLayerCount = requestedLayers.size();
+    instanceCreateInfo.ppEnabledLayerNames = requestedLayers.data();
 
     VkInstance instance;
-    if (vkCreateInstance(&instanceCreateInfo, nullptr, &instance) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend::createInstance(): could not create instance.\n");
-    }
+    if (vkCreateInstance(&instanceCreateInfo, nullptr, &instance) != VK_SUCCESS)
+        LogErrorAndExit("VulkanBackend: could not create instance.\n");
 
     return instance;
 }
 
-VkDevice VulkanBackend::createDevice(const std::vector<const char*>& layers, VkPhysicalDevice physicalDevice)
+VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLayers, VkPhysicalDevice physicalDevice)
 {
     // TODO: Allow users to specify beforehand that they e.g. might want 2 compute queues.
     std::unordered_set<uint32_t> queueFamilyIndices = { m_graphicsQueue.familyIndex, m_presentQueue.familyIndex };
@@ -451,9 +508,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& layers, VkP
     deviceCreateInfo.queueCreateInfoCount = queueCreateInfos.size();
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
 
-    // (the support of these layers should already have been checked)
-    deviceCreateInfo.enabledLayerCount = layers.size();
-    deviceCreateInfo.ppEnabledLayerNames = layers.data();
+    // (the support of these requestedLayers should already have been checked)
+    deviceCreateInfo.enabledLayerCount = requestedLayers.size();
+    deviceCreateInfo.ppEnabledLayerNames = requestedLayers.data();
 
     deviceCreateInfo.enabledExtensionCount = deviceExtensions.size();
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
@@ -482,41 +539,21 @@ std::vector<const char*> VulkanBackend::instanceExtensions() const
     uint32_t requiredCount;
     const char** requiredExtensions = glfwGetRequiredInstanceExtensions(&requiredCount);
     while (requiredCount--) {
-        extensions.emplace_back(requiredExtensions[requiredCount]);
+        const char* name = requiredExtensions[requiredCount];
+        ASSERT(hasSupportForInstanceExtension(name));
+        extensions.emplace_back(name);
     }
 
     // For debug messages etc.
+    ASSERT(hasSupportForInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME));
     extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
-    // For later spec (e.g. ray tracing stuff) queries
+    // For later spec (e.g. ray tracing stuff) queries, but also for checking the support of it. So in our case
+    // we can probably always require it. If it doesn't exist, we deal with it then..
+    ASSERT(hasSupportForInstanceExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME));
     extensions.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
     return extensions;
-}
-
-bool VulkanBackend::verifyValidationLayerSupport(const std::vector<const char*>& layers) const
-{
-    uint32_t availableLayerCount;
-    vkEnumerateInstanceLayerProperties(&availableLayerCount, nullptr);
-    std::vector<VkLayerProperties> availableLayers(availableLayerCount);
-    vkEnumerateInstanceLayerProperties(&availableLayerCount, availableLayers.data());
-
-    bool fullSupport = true;
-    for (const char* layer : layers) {
-        bool found = false;
-        for (auto availableLayer : availableLayers) {
-            if (std::strcmp(layer, availableLayer.layerName) == 0) {
-                found = true;
-                break;
-            }
-        }
-        if (!found) {
-            LogError("VulkanBackend::checkValidationLayerSupport(): layer '%s' is not supported.\n", layer);
-            fullSupport = false;
-        }
-    }
-
-    return fullSupport;
 }
 
 void VulkanBackend::findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
@@ -567,18 +604,20 @@ void VulkanBackend::findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSu
 VkBool32 VulkanBackend::debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
                                              const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 {
-    LogError("VulkanBackend::debugMessageCallback(): %s\n", pCallbackData->pMessage);
+    LogError("Vulkan debug message; %s\n", pCallbackData->pMessage);
     return VK_FALSE;
 }
 
 VkDebugUtilsMessengerCreateInfoEXT VulkanBackend::debugMessengerCreateInfo() const
 {
     VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
-
-    debugMessengerCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT; // NOLINT(hicpp-signed-bitwise)
-    debugMessengerCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT; // NOLINT(hicpp-signed-bitwise)
     debugMessengerCreateInfo.pfnUserCallback = debugMessageCallback;
     debugMessengerCreateInfo.pUserData = nullptr;
+
+    debugMessengerCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT; // NOLINT(hicpp-signed-bitwise)
+    if (vulkanVerboseDebugMessages)
+        debugMessengerCreateInfo.messageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
+    debugMessengerCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT; // NOLINT(hicpp-signed-bitwise)
 
     return debugMessengerCreateInfo;
 }
@@ -603,14 +642,14 @@ VkPhysicalDevice VulkanBackend::pickBestPhysicalDevice() const
     uint32_t count;
     vkEnumeratePhysicalDevices(m_instance, &count, nullptr);
     if (count < 1) {
-        LogErrorAndExit("VulkanBackend::pickBestPhysicalDevice(): could not find any physical devices with Vulkan support, exiting.\n");
+        LogErrorAndExit("VulkanBackend: could not find any physical devices with Vulkan support, exiting.\n");
     }
 
     std::vector<VkPhysicalDevice> devices(count);
     vkEnumeratePhysicalDevices(m_instance, &count, devices.data());
 
     if (count > 1) {
-        LogWarning("VulkanBackend::pickBestPhysicalDevice(): more than one physical device available, one will be chosen arbitrarily (FIXME!)\n");
+        LogWarning("VulkanBackend: more than one physical device available, one will be chosen arbitrarily (FIXME!)\n");
     }
 
     // FIXME: Don't just pick the first one if there are more than one!
@@ -618,7 +657,7 @@ VkPhysicalDevice VulkanBackend::pickBestPhysicalDevice() const
 
     VkPhysicalDeviceProperties props;
     vkGetPhysicalDeviceProperties(physicalDevice, &props);
-    LogInfo("VulkanBackend::pickBestPhysicalDevice(): using physical device '%s'\n", props.deviceName);
+    LogInfo("VulkanBackend: using physical device '%s'\n", props.deviceName);
 
     return physicalDevice;
 }

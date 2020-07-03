@@ -12,6 +12,7 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
+#include "apps/SimpleApp.h"
 #include "apps/TestApp.h"
 
 enum class WindowType {
@@ -99,7 +100,7 @@ int main(int argc, char** argv)
     Input::registerWindow(window);
 
     {
-        auto app = std::make_unique<TestApp>();
+        auto app = std::make_unique<SimpleApp>();
         auto backend = createBackend(backendType, window, *app);
 
         bool renderGui = true;

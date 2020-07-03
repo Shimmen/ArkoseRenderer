@@ -21,7 +21,7 @@ std::vector<Backend::Capability> TestApp::requiredCapabilities()
 {
     return { Backend::Capability::RtxRayTracing,
              Backend::Capability::ShaderTextureArrayDynamicIndexing,
-             Backend::Capability::ShaderStorageBufferDynamicIndexing };
+             Backend::Capability::ShaderBufferArrayDynamicIndexing };
 }
 
 std::vector<Backend::Capability> TestApp::optionalCapabilities()
