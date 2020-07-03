@@ -27,7 +27,8 @@ public:
     VulkanBackend(VulkanBackend&) = delete;
     VulkanBackend& operator=(VulkanBackend&) = delete;
 
-    // There might be more elegant ways of giving access. We really don't need everything from here.
+    // FIXME: There might be more elegant ways of giving access. We really don't need everything from here.
+    //  Currently only VkEvent are accessed privately from the command list.
     friend class VulkanCommandList;
 
     ///////////////////////////////////////////////////////////////////////////
@@ -149,11 +150,6 @@ private:
     VkDescriptorPool m_guiDescriptorPool {};
     VkRenderPass m_guiRenderPass {};
     std::vector<VkFramebuffer> m_guiFramebuffers {};
-
-    ///////////////////////////////////////////////////////////////////////////
-    /// Internal and low level Vulkan resource API. Maybe to be removed at some later time.
-
-    void transitionImageLayoutDEBUG(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags, VkCommandBuffer) const;
 
     ///////////////////////////////////////////////////////////////////////////
     /// Vulkan core stuff (e.g. instance, device)

@@ -302,7 +302,7 @@ void VulkanCommandList::rebuildTopLevelAcceratationStructure(TopLevelAS& tlas)
     buildInfo.geometryCount = 0;
     buildInfo.pGeometries = nullptr;
 
-    m_backend.m_rtx->vkCmdBuildAccelerationStructureNV(
+    m_backend.rtx().vkCmdBuildAccelerationStructureNV(
         m_commandBuffer,
         &buildInfo,
         instanceBuffer, 0,
@@ -430,8 +430,8 @@ void VulkanCommandList::saveTextureToFile(const Texture& texture, const std::str
     }
 
     bool success = m_backend.issueSingleTimeCommand([&](VkCommandBuffer cmdBuffer) {
-        m_backend.transitionImageLayoutDEBUG(dstImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, cmdBuffer);
-        m_backend.transitionImageLayoutDEBUG(srcImage, prevSrcLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, cmdBuffer);
+        transitionImageLayoutDEBUG(dstImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, cmdBuffer);
+        transitionImageLayoutDEBUG(srcImage, prevSrcLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, cmdBuffer);
 
         VkImageCopy imageCopyRegion {};
         imageCopyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -448,8 +448,8 @@ void VulkanCommandList::saveTextureToFile(const Texture& texture, const std::str
                        1, &imageCopyRegion);
 
         // Transition destination image to general layout, which is the required layout for mapping the image memory
-        m_backend.transitionImageLayoutDEBUG(dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT, cmdBuffer);
-        m_backend.transitionImageLayoutDEBUG(srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, prevSrcLayout, VK_IMAGE_ASPECT_COLOR_BIT, cmdBuffer);
+        transitionImageLayoutDEBUG(dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT, cmdBuffer);
+        transitionImageLayoutDEBUG(srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, prevSrcLayout, VK_IMAGE_ASPECT_COLOR_BIT, cmdBuffer);
     });
 
     if (!success) {
@@ -532,4 +532,32 @@ VkPipelineStageFlags VulkanCommandList::stageFlags(PipelineStage stage) const
     default:
         ASSERT(false);
     }
+}
+
+void VulkanCommandList::transitionImageLayoutDEBUG(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags imageAspectMask, VkCommandBuffer commandBuffer) const
+{
+    VkImageMemoryBarrier imageMemoryBarrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+
+    imageMemoryBarrier.image = image;
+    imageMemoryBarrier.oldLayout = oldLayout;
+    imageMemoryBarrier.newLayout = newLayout;
+
+    imageMemoryBarrier.subresourceRange.aspectMask = imageAspectMask;
+    imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
+    imageMemoryBarrier.subresourceRange.layerCount = 1;
+    imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
+    imageMemoryBarrier.subresourceRange.levelCount = 1;
+
+    // Just do the strictest possible barrier so it should at least be valid, albeit slow.
+    imageMemoryBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT;
+    imageMemoryBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT;
+    VkPipelineStageFlagBits srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    VkPipelineStageFlagBits dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+    vkCmdPipelineBarrier(commandBuffer,
+                         srcStageMask, dstStageMask,
+                         0,
+                         0, nullptr,
+                         0, nullptr,
+                         1, &imageMemoryBarrier);
 }

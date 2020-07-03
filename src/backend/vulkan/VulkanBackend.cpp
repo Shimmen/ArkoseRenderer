@@ -1561,34 +1561,6 @@ bool VulkanBackend::setBufferDataUsingStagingBuffer(VkBuffer buffer, const void*
     return true;
 }
 
-void VulkanBackend::transitionImageLayoutDEBUG(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags imageAspectMask, VkCommandBuffer commandBuffer) const
-{
-    VkImageMemoryBarrier imageMemoryBarrier { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-
-    imageMemoryBarrier.image = image;
-    imageMemoryBarrier.oldLayout = oldLayout;
-    imageMemoryBarrier.newLayout = newLayout;
-
-    imageMemoryBarrier.subresourceRange.aspectMask = imageAspectMask;
-    imageMemoryBarrier.subresourceRange.baseArrayLayer = 0;
-    imageMemoryBarrier.subresourceRange.layerCount = 1;
-    imageMemoryBarrier.subresourceRange.baseMipLevel = 0;
-    imageMemoryBarrier.subresourceRange.levelCount = 1;
-
-    // Just do the strictest possible barrier so it should at least be valid, albeit slow.
-    imageMemoryBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT;
-    imageMemoryBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT | VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT;
-    VkPipelineStageFlagBits srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-    VkPipelineStageFlagBits dstStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-
-    vkCmdPipelineBarrier(commandBuffer,
-                         srcStageMask, dstStageMask,
-                         0,
-                         0, nullptr,
-                         0, nullptr,
-                         1, &imageMemoryBarrier);
-}
-
 bool VulkanBackend::transitionImageLayout(VkImage image, bool isDepthFormat, VkImageLayout oldLayout, VkImageLayout newLayout, VkCommandBuffer* currentCommandBuffer) const
 {
     if (oldLayout == newLayout) {

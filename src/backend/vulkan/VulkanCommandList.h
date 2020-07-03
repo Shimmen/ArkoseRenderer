@@ -45,6 +45,9 @@ private:
     VkEvent getEvent(uint8_t eventId);
     VkPipelineStageFlags stageFlags(PipelineStage) const;
 
+    // TODO: Remove this.. Make something more fine grained
+    void transitionImageLayoutDEBUG(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags, VkCommandBuffer) const;
+
 private:
     VulkanBackend& m_backend;
     VkCommandBuffer m_commandBuffer;
