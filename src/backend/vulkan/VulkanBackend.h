@@ -110,7 +110,7 @@ private:
     std::unordered_set<std::string> m_availableInstanceExtensions;
     bool hasSupportForInstanceExtension(const std::string& name) const;
 
-    std::unordered_map<std::string, bool> m_activeCapabilities;
+    std::unordered_map<Capability, bool> m_activeCapabilities;
     bool collectAndVerifyCapabilitySupport(App&);
 
     ///////////////////////////////////////////////////////////////////////////

@@ -185,8 +185,7 @@ VulkanBackend::~VulkanBackend()
 
 bool VulkanBackend::hasActiveCapability(Capability capability) const
 {
-    std::string name = capabilityName(capability);
-    auto it = m_activeCapabilities.find(name);
+    auto it = m_activeCapabilities.find(capability);
     if (it == m_activeCapabilities.end())
         return false;
     return it->second;
@@ -252,16 +251,11 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(App& app)
         }
     };
 
-    auto markCapabilityActive = [this](Capability capability) {
-        std::string name = capabilityName(capability);
-        m_activeCapabilities[name] = true;
-    };
-
     bool allRequiredSupported = true;
 
     for (auto& cap : app.requiredCapabilities()) {
         if (isSupported(cap)) {
-            markCapabilityActive(cap);
+            m_activeCapabilities[cap] = true;
         } else {
             LogError("VulkanBackend: no support for required '%s' capability\n", capabilityName(cap).c_str());
             allRequiredSupported = false;
@@ -270,7 +264,7 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(App& app)
 
     for (auto& cap : app.optionalCapabilities()) {
         if (isSupported(cap)) {
-            markCapabilityActive(cap);
+            m_activeCapabilities[cap] = true;
         } else {
             LogInfo("VulkanBackend: no support for optional '%s' capability\n", capabilityName(cap).c_str());
         }
