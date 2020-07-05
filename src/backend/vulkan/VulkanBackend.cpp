@@ -1093,7 +1093,7 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, uint32_t
     swapchainTexture.currentLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 }
 
-bool VulkanBackend::executeFrame(double elapsedTime, double deltaTime, bool renderGui)
+bool VulkanBackend::executeFrame(double elapsedTime, double deltaTime)
 {
     uint32_t currentFrameMod = m_currentFrameIndex % maxFramesInFlight;
 
@@ -1127,7 +1127,7 @@ bool VulkanBackend::executeFrame(double elapsedTime, double deltaTime, bool rend
     currentColorTexture.currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     m_swapchainDepthTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    drawFrame(appState, elapsedTime, deltaTime, renderGui, swapchainImageIndex);
+    drawFrame(appState, elapsedTime, deltaTime, swapchainImageIndex);
 
     submitQueue(swapchainImageIndex, &m_imageAvailableSemaphores[currentFrameMod], &m_renderFinishedSemaphores[currentFrameMod], &m_inFlightFrameFences[currentFrameMod]);
 
@@ -1156,7 +1156,7 @@ bool VulkanBackend::executeFrame(double elapsedTime, double deltaTime, bool rend
     return true;
 }
 
-void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, double deltaTime, bool renderGui, uint32_t swapchainImageIndex)
+void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, double deltaTime, uint32_t swapchainImageIndex)
 {
     ASSERT(m_renderGraph);
 
@@ -1186,12 +1186,8 @@ void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, doub
     });
     ImGui::End();
 
-    if (renderGui) {
-        ImGui::Render();
-        renderDearImguiFrame(commandBuffer, swapchainImageIndex);
-    } else {
-        ImGui::EndFrame();
-    }
+    ImGui::Render();
+    renderDearImguiFrame(commandBuffer, swapchainImageIndex);
     ImGui::UpdatePlatformWindows();
 
     // Explicitly tranfer the swapchain image to a present layout if not already

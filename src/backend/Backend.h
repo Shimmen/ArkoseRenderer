@@ -24,7 +24,7 @@ public:
 
     static std::string capabilityName(Capability capability);
     virtual bool hasActiveCapability(Capability) const = 0;
-    virtual bool executeFrame(double elapsedTime, double deltaTime, bool renderGui) = 0;
+    virtual bool executeFrame(double elapsedTime, double deltaTime) = 0;
 
     virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) = 0;
     virtual std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) = 0;

@@ -34,7 +34,7 @@ public:
     /// Public backend API
 
     bool hasActiveCapability(Capability) const override;
-    bool executeFrame(double elapsedTime, double deltaTime, bool renderGui) override;
+    bool executeFrame(double elapsedTime, double deltaTime) override;
 
     ///////////////////////////////////////////////////////////////////////////
     /// Backend-specific resource types
@@ -120,7 +120,7 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     /// Drawing
 
-    void drawFrame(const AppState&, double elapsedTime, double deltaTime, bool renderGui, uint32_t swapchainImageIndex);
+    void drawFrame(const AppState&, double elapsedTime, double deltaTime, uint32_t swapchainImageIndex);
 
     ///////////////////////////////////////////////////////////////////////////
     /// Swapchain management
