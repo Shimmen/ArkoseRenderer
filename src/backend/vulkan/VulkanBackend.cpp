@@ -201,8 +201,8 @@ bool VulkanBackend::hasSupportForLayer(const std::string& name) const
 
 bool VulkanBackend::hasSupportForExtension(const std::string& name) const
 {
-    if (m_device == VK_NULL_HANDLE)
-        LogErrorAndExit("Checking support for extention but no device exist yet. Maybe you meant to check for instance extensions?\n");
+    if (m_physicalDevice == VK_NULL_HANDLE)
+        LogErrorAndExit("Checking support for extension but no physical device exist yet. Maybe you meant to check for instance extensions?\n");
 
     auto it = m_availableExtensions.find(name);
     if (it == m_availableExtensions.end())
@@ -239,7 +239,9 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(App& app)
         case Capability::RtxRayTracing:
             return hasSupportForExtension(VK_NV_RAY_TRACING_EXTENSION_NAME);
         case Capability::Shader16BitFloat:
-            return hasSupportForExtension(VK_KHR_16BIT_STORAGE_EXTENSION_NAME) && hasSupportForExtension(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME)
+            return hasSupportForExtension(VK_KHR_16BIT_STORAGE_EXTENSION_NAME)
+                && hasSupportForExtension(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME)
+                && hasSupportForExtension(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME)
                 && sixteenBitStorageFeatures.storageInputOutput16 && sixteenBitStorageFeatures.storagePushConstant16
                 && sixteenBitStorageFeatures.storageBuffer16BitAccess && sixteenBitStorageFeatures.uniformAndStorageBuffer16BitAccess
                 && shaderSmallTypeFeatures.shaderFloat16;
@@ -252,6 +254,12 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(App& app)
     };
 
     bool allRequiredSupported = true;
+
+    // First check a few "common" features that are required in all cases
+    if (!features.samplerAnisotropy || !features.fillModeNonSolid || !features.fragmentStoresAndAtomics || !features.vertexPipelineStoresAndAtomics) {
+        LogError("VulkanBackend: no support for required common device feature\n");
+        allRequiredSupported = false;
+    }
 
     for (auto& cap : app.requiredCapabilities()) {
         if (isSupported(cap)) {
@@ -458,44 +466,53 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 
     //
 
-    // TODO: How are we supposed to add and check support for these advanced features & extensions?
-
-    VkPhysicalDeviceFeatures requestedDeviceFeatures = {};
-    requestedDeviceFeatures.samplerAnisotropy = VK_TRUE;
-    requestedDeviceFeatures.fillModeNonSolid = VK_TRUE;
-    requestedDeviceFeatures.fragmentStoresAndAtomics = VK_TRUE;
-    requestedDeviceFeatures.vertexPipelineStoresAndAtomics = VK_TRUE;
-    requestedDeviceFeatures.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
-    requestedDeviceFeatures.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
-
-    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES };
-    indexingFeatures.descriptorBindingPartiallyBound = VK_TRUE;
-    indexingFeatures.runtimeDescriptorArray = VK_TRUE;
-
-    VkPhysicalDevice8BitStorageFeatures eightBitStorageFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES };
-    eightBitStorageFeatures.storageBuffer8BitAccess = VK_TRUE; // (required if the extention is available)
-    eightBitStorageFeatures.uniformAndStorageBuffer8BitAccess = VK_TRUE;
-    eightBitStorageFeatures.storagePushConstant8 = VK_TRUE;
-
-    VkPhysicalDevice16BitStorageFeatures sixteenBitStorageFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES };
-    sixteenBitStorageFeatures.storageBuffer16BitAccess = VK_TRUE;
-    sixteenBitStorageFeatures.uniformAndStorageBuffer16BitAccess = VK_TRUE;
-    sixteenBitStorageFeatures.storagePushConstant16 = VK_TRUE;
-    sixteenBitStorageFeatures.storageInputOutput16 = VK_FALSE;
-
-    VkPhysicalDeviceShaderFloat16Int8Features shaderSmallTypeFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES };
-    shaderSmallTypeFeatures.shaderFloat16 = VK_FALSE;
-    shaderSmallTypeFeatures.shaderInt8 = VK_TRUE;
-
     std::vector<const char*> deviceExtensions {};
-    deviceExtensions.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-    //deviceExtensions.emplace_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
-    deviceExtensions.emplace_back(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME);
-    //deviceExtensions.emplace_back(VK_KHR_8BIT_STORAGE_EXTENSION_NAME);
-    deviceExtensions.emplace_back(VK_KHR_16BIT_STORAGE_EXTENSION_NAME);
-    deviceExtensions.emplace_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
 
-    //
+    ASSERT(hasSupportForExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
+    deviceExtensions.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+    VkPhysicalDeviceFeatures features = {};
+    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES };
+    VkPhysicalDevice16BitStorageFeatures sixteenBitStorageFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES };
+    VkPhysicalDeviceShaderFloat16Int8Features shaderSmallTypeFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES };
+
+    // Enable some "common" features expected to exist
+    features.samplerAnisotropy = VK_TRUE;
+    features.fillModeNonSolid = VK_TRUE;
+    features.fragmentStoresAndAtomics = VK_TRUE;
+    features.vertexPipelineStoresAndAtomics = VK_TRUE;
+
+    for (auto& [capability, active] : m_activeCapabilities) {
+        if (!active)
+            continue;
+        switch (capability) {
+        case Capability::RtxRayTracing:
+            deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+            break;
+        case Capability::Shader16BitFloat:
+            deviceExtensions.push_back(VK_KHR_16BIT_STORAGE_EXTENSION_NAME);
+            deviceExtensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
+            deviceExtensions.push_back(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME);
+            sixteenBitStorageFeatures.storageInputOutput16 = VK_TRUE;
+            sixteenBitStorageFeatures.storagePushConstant16 = VK_TRUE;
+            sixteenBitStorageFeatures.storageBuffer16BitAccess = VK_TRUE;
+            sixteenBitStorageFeatures.uniformAndStorageBuffer16BitAccess = VK_TRUE;
+            shaderSmallTypeFeatures.shaderFloat16 = VK_TRUE;
+            break;
+        case Capability::ShaderTextureArrayDynamicIndexing:
+            features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+            indexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+            break;
+        case Capability::ShaderBufferArrayDynamicIndexing:
+            features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+            features.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
+            indexingFeatures.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
+            indexingFeatures.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+    }
 
     VkDeviceCreateInfo deviceCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
 
@@ -509,18 +526,16 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     deviceCreateInfo.enabledExtensionCount = deviceExtensions.size();
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-    deviceCreateInfo.pEnabledFeatures = &requestedDeviceFeatures;
+    deviceCreateInfo.pEnabledFeatures = &features;
 
     // Device features extension chain
     deviceCreateInfo.pNext = &indexingFeatures;
-    indexingFeatures.pNext = &eightBitStorageFeatures;
-    eightBitStorageFeatures.pNext = &sixteenBitStorageFeatures;
+    indexingFeatures.pNext = &sixteenBitStorageFeatures;
     sixteenBitStorageFeatures.pNext = &shaderSmallTypeFeatures;
 
     VkDevice device;
-    if (vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend::createDevice(): could not create a device, exiting.\n");
-    }
+    if (vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device) != VK_SUCCESS)
+        LogErrorAndExit("VulkanBackend: could not create a device, exiting.\n");
 
     return device;
 }
