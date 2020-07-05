@@ -3,43 +3,32 @@
 #include <functional>
 #include <mutex>
 #include <optional>
+#include <shaderc/shaderc.hpp>
 #include <string>
 #include <thread>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
-#define NV_EXTENSIONS
-#include <shaderc/shaderc.hpp>
-
 class ShaderManager {
 public:
-    enum class ShaderStatus {
-        Good,
-        FileNotFound,
-        CompileError,
-    };
-
     static ShaderManager& instance();
+
+    std::optional<std::string> loadAndCompileImmediately(const std::string& name);
+    const std::vector<uint32_t>& spirv(const std::string& name) const;
+
+    void startFileWatching(unsigned msBetweenPolls, std::function<void()> fileChangeCallback = {});
+    void stopFileWatching();
 
     ShaderManager() = delete;
     ShaderManager(ShaderManager&) = delete;
     ShaderManager(ShaderManager&&) = delete;
 
-    void startFileWatching(unsigned msBetweenPolls, std::function<void()> fileChangeCallback = {});
-    void stopFileWatching();
-
-    [[nodiscard]] std::string resolvePath(const std::string& name) const;
-    [[nodiscard]] std::optional<std::string> shaderError(const std::string& name) const;
-
-    ShaderStatus loadAndCompileImmediately(const std::string& name);
-
-    const std::vector<uint32_t>& spirv(const std::string& name) const;
-
 private:
     explicit ShaderManager(std::string basePath);
     ~ShaderManager() = default;
 
+    std::string resolvePath(const std::string& name) const;
     uint64_t getFileEditTimestamp(const std::string&) const;
 
     struct ShaderData {

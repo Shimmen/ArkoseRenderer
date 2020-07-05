@@ -3,8 +3,8 @@
 #include "rendering/ShaderManager.h"
 #include <utility/Logging.h>
 
-ShaderFile::ShaderFile(std::string path)
-    : ShaderFile(path, shaderFileTypeFromPath(path))
+ShaderFile::ShaderFile(const std::string& path)
+    : ShaderFile(path, typeFromPath(path))
 {
 }
 
@@ -12,18 +12,10 @@ ShaderFile::ShaderFile(std::string path, ShaderFileType type)
     : m_path(std::move(path))
     , m_type(type)
 {
-    auto& manager = ShaderManager::instance();
-    switch (manager.loadAndCompileImmediately(m_path)) {
-    case ShaderManager::ShaderStatus::FileNotFound:
-        LogErrorAndExit("Shader file '%s' not found, exiting.\n", m_path.c_str());
-    case ShaderManager::ShaderStatus::CompileError: {
-        std::string errorMessage = manager.shaderError(m_path).value();
-        LogError("Shader file '%s' has compile errors:\n", m_path.c_str());
-        LogError("%s\n", errorMessage.c_str());
+    auto maybeError = ShaderManager::instance().loadAndCompileImmediately(m_path);
+    if (maybeError.has_value()) {
+        LogError("Shader file error: %s\n", maybeError.value().c_str());
         LogErrorAndExit("Exiting due to bad shader at startup.\n");
-    }
-    default:
-        break;
     }
 }
 
@@ -37,37 +29,33 @@ ShaderFileType ShaderFile::type() const
     return m_type;
 }
 
-ShaderFileType ShaderFile::shaderFileTypeFromPath(const std::string& path)
+ShaderFileType ShaderFile::typeFromPath(const std::string& path)
 {
-    if (path.length() < 5) {
+    if (path.length() < 5)
         return ShaderFileType::Unknown;
-    }
     std::string ext5 = path.substr(path.length() - 5);
 
-    if (ext5 == ".vert") {
+    if (ext5 == ".vert")
         return ShaderFileType::Vertex;
-    } else if (ext5 == ".frag") {
+    else if (ext5 == ".frag")
         return ShaderFileType::Fragment;
-    } else if (ext5 == ".rgen") {
+    else if (ext5 == ".rgen")
         return ShaderFileType::RTRaygen;
-    } else if (ext5 == ".comp") {
+    else if (ext5 == ".comp")
         return ShaderFileType::Compute;
-    } else if (ext5 == ".rint") {
+    else if (ext5 == ".rint")
         return ShaderFileType::RTIntersection;
-    }
 
-    if (path.length() < 6) {
+    if (path.length() < 6)
         return ShaderFileType::Unknown;
-    }
     std::string ext6 = path.substr(path.length() - 6);
 
-    if (ext6 == ".rmiss") {
+    if (ext6 == ".rmiss")
         return ShaderFileType::RTMiss;
-    } else if (ext6 == ".rchit") {
+    else if (ext6 == ".rchit")
         return ShaderFileType::RTClosestHit;
-    } else if (ext6 == ".rahit") {
+    else if (ext6 == ".rahit")
         return ShaderFileType::RTAnyHit;
-    }
 
     return ShaderFileType::Unknown;
 }
@@ -78,7 +66,7 @@ Shader Shader::createVertexOnly(std::string vertexName)
     return Shader({ vertexFile }, ShaderType::Raster);
 }
 
-Shader Shader::createBasic(std::string vertexName, std::string fragmentName)
+Shader Shader::createBasicRasterize(std::string vertexName, std::string fragmentName)
 {
     ShaderFile vertexFile { std::move(vertexName), ShaderFileType::Vertex };
     ShaderFile fragmentFile { std::move(fragmentName), ShaderFileType::Fragment };
@@ -95,11 +83,6 @@ Shader::Shader(std::vector<ShaderFile> files, ShaderType type)
     : m_files(std::move(files))
     , m_type(type)
 {
-}
-
-Shader::~Shader()
-{
-    // TODO: Maybe tell the resource manager that a shader was removed, so that it can reference count?
 }
 
 ShaderType Shader::type() const

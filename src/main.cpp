@@ -105,8 +105,12 @@ int main(int argc, char** argv)
 
         bool renderGui = true;
 
-        ShaderManager::instance().startFileWatching(250);
         LogInfo("ArkoseRenderer: main loop begin.\n");
+
+        ShaderManager::instance().startFileWatching(250, []() {
+            LogInfo("One or more shader files updated!\n");
+            LogError("FIXME: Respond to shader file updates!\n");
+        });
 
         glfwSetTime(0.0);
         double lastTime = 0.0;
@@ -129,8 +133,8 @@ int main(int argc, char** argv)
             }
         }
 
-        LogInfo("ArkoseRenderer: main loop end.\n");
         ShaderManager::instance().stopFileWatching();
+        LogInfo("ArkoseRenderer: main loop end.\n");
     }
 
     glfwDestroyWindow(window);

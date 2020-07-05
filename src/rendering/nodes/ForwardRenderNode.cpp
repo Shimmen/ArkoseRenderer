@@ -71,7 +71,7 @@ void ForwardRenderNode::constructNode(Registry& nodeReg)
 RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg) const
 {
     // TODO: Well, now it seems very reasonable to actually include this in the resource manager..
-    Shader shader = Shader::createBasic("forward/forward.vert", "forward/forward.frag");
+    Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag");
 
     VertexLayout vertexLayout = VertexLayout {
         sizeof(Vertex),

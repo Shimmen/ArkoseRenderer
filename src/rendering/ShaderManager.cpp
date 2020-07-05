@@ -12,8 +12,8 @@
 
 ShaderManager& ShaderManager::instance()
 {
-    static ShaderManager s_instance { "shaders" };
-    return s_instance;
+    static ShaderManager instance { "shaders" };
+    return instance;
 }
 
 ShaderManager::ShaderManager(std::string basePath)
@@ -23,22 +23,19 @@ ShaderManager::ShaderManager(std::string basePath)
 
 void ShaderManager::startFileWatching(unsigned msBetweenPolls, std::function<void()> fileChangeCallback)
 {
-    if (m_fileWatcherThread != nullptr || m_fileWatchingActive) {
+    if (m_fileWatcherThread != nullptr || m_fileWatchingActive)
         return;
-    }
 
     m_fileWatchingActive = true;
     m_fileWatcherThread = std::make_unique<std::thread>([this, msBetweenPolls, &fileChangeCallback]() {
         while (m_fileWatchingActive) {
-
-            int numChangedFiles = 0;
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(msBetweenPolls));
+            //LogInfo("ShaderManager: update!\n");
             {
-                //LogInfo("ShaderManager: update!\n");
                 std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
 
-                std::vector<std::string> filesToRemove {};
+                std::vector<std::string> filesToRemove;
+                int numChangedFiles = 0;
+
                 for (auto& [_, data] : m_loadedShaders) {
 
                     if (!FileIO::isFileReadable(data.filePath)) {
@@ -48,27 +45,27 @@ void ShaderManager::startFileWatching(unsigned msBetweenPolls, std::function<voi
                     }
 
                     uint64_t lastEdit = getFileEditTimestamp(data.filePath);
-                    if (lastEdit > data.lastEditTimestamp) {
-                        //LogInfo("Updating file '%s'\n", data.path.c_str());
-                        data.glslSource = FileIO::readEntireFile(data.filePath).value();
-                        data.lastEditTimestamp = lastEdit;
-                        if (compileGlslToSpirv(data)) {
-                            data.currentBinaryVersion += 1;
-                            numChangedFiles += 1;
-                        } else {
-                            LogError("Shader at path '%s' could not compile:\n\t%s\n", data.filePath.c_str(), data.lastCompileError.c_str());
-                        }
+                    if (lastEdit <= data.lastEditTimestamp)
+                        continue;
+
+                    //LogInfo("ShaderManager: updating file '%s'\n", data.path.c_str());
+                    data.glslSource = FileIO::readEntireFile(data.filePath).value();
+                    data.lastEditTimestamp = lastEdit;
+                    if (compileGlslToSpirv(data)) {
+                        data.currentBinaryVersion += 1;
+                        numChangedFiles += 1;
+                    } else {
+                        LogError("Shader at path '%s' could not compile:\n\t%s\n", data.filePath.c_str(), data.lastCompileError.c_str());
                     }
                 }
 
-                for (const auto& path : filesToRemove) {
+                for (const auto& path : filesToRemove)
                     m_loadedShaders.erase(path);
-                }
 
-                if (numChangedFiles > 0 && fileChangeCallback) {
+                if (numChangedFiles > 0 && fileChangeCallback)
                     fileChangeCallback();
-                }
             }
+            std::this_thread::sleep_for(std::chrono::milliseconds(msBetweenPolls));
         }
     });
 }
@@ -85,26 +82,7 @@ std::string ShaderManager::resolvePath(const std::string& name) const
     return resolvedPath;
 }
 
-std::optional<std::string> ShaderManager::shaderError(const std::string& name) const
-{
-    auto path = resolvePath(name);
-
-    std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
-    auto result = m_loadedShaders.find(path);
-
-    if (result == m_loadedShaders.end()) {
-        return {};
-    }
-
-    const ShaderData& data = result->second;
-    if (data.lastEditSuccessfullyCompiled) {
-        return {};
-    }
-
-    return data.lastCompileError;
-}
-
-ShaderManager::ShaderStatus ShaderManager::loadAndCompileImmediately(const std::string& name)
+std::optional<std::string> ShaderManager::loadAndCompileImmediately(const std::string& name)
 {
     auto path = resolvePath(name);
 
@@ -113,27 +91,24 @@ ShaderManager::ShaderStatus ShaderManager::loadAndCompileImmediately(const std::
     auto result = m_loadedShaders.find(path);
     if (result == m_loadedShaders.end()) {
 
-        if (!FileIO::isFileReadable(path)) {
-            return ShaderStatus::FileNotFound;
-        }
+        if (!FileIO::isFileReadable(path))
+            return "file '" + name + "' not found";
 
         ShaderData data { path };
         data.glslSource = FileIO::readEntireFile(path).value();
         data.lastEditTimestamp = getFileEditTimestamp(path);
 
         compileGlslToSpirv(data);
-
         m_loadedShaders[path] = std::move(data);
     }
 
     ShaderData& data = m_loadedShaders[path];
     if (data.lastEditSuccessfullyCompiled) {
         data.currentBinaryVersion = 1;
+        return {};
     } else {
-        return ShaderStatus::CompileError;
+        return data.lastCompileError;
     }
-
-    return ShaderStatus::Good;
 }
 
 const std::vector<uint32_t>& ShaderManager::spirv(const std::string& name) const
@@ -215,8 +190,11 @@ bool ShaderManager::compileGlslToSpirv(ShaderData& data) const
             std::string content;
         };
 
-        shaderc_include_result* GetInclude(const char* requested_source, shaderc_include_type type, const char* requesting_source, size_t include_depth) override
+        shaderc_include_result* GetInclude(const char* requested_source, shaderc_include_type include_type, const char* requesting_source, size_t include_depth) override
         {
+            // FIXME: Support relative includes!
+            ASSERT(include_type == shaderc_include_type_standard);
+
             auto* data = new shaderc_include_result();
 
             auto* fileData = new FileData();
@@ -243,9 +221,9 @@ bool ShaderManager::compileGlslToSpirv(ShaderData& data) const
         const ShaderManager& m_shaderManager;
     };
 
-    shaderc::Compiler compiler {};
+    shaderc::Compiler compiler;
 
-    shaderc::CompileOptions options {};
+    shaderc::CompileOptions options;
     options.SetIncluder(std::make_unique<Includer>(*this));
     options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
     options.SetTargetSpirv(shaderc_spirv_version_1_0);
@@ -253,16 +231,16 @@ bool ShaderManager::compileGlslToSpirv(ShaderData& data) const
     options.SetForcedVersionProfile(460, shaderc_profile_none);
 
     shaderc_shader_kind kind = shaderKindForPath(data.filePath);
-    shaderc::SpvCompilationResult module = compiler.CompileGlslToSpv(data.glslSource, kind, data.filePath.c_str(), options);
+    shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(data.glslSource, kind, data.filePath.c_str(), options);
 
     // Note that we only should overwrite the binary if it compiled correctly!
-    if (module.GetCompilationStatus() != shaderc_compilation_status_success) {
+    if (result.GetCompilationStatus() != shaderc_compilation_status_success) {
         data.lastEditSuccessfullyCompiled = false;
-        data.lastCompileError = module.GetErrorMessage();
+        data.lastCompileError = result.GetErrorMessage();
     } else {
         data.lastEditSuccessfullyCompiled = true;
         data.lastCompileError.clear();
-        data.spirvBinary = std::vector<uint32_t>(module.cbegin(), module.cend());
+        data.spirvBinary = std::vector<uint32_t>(result.cbegin(), result.cend());
     }
 
     return data.lastEditSuccessfullyCompiled;

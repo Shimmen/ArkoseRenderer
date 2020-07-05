@@ -80,7 +80,7 @@ RenderGraphNode::ExecuteCallback SlowForwardRenderNode::constructFrame(Registry&
     BindingSet& dirLightBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, shadowMap },
                                                             { 1, ShaderStageFragment, reg.getBuffer(SceneUniformNode::name(), "directionalLight") } });
 
-    Shader shader = Shader::createBasic("forward/forwardSlow.vert", "forward/forwardSlow.frag");
+    Shader shader = Shader::createBasicRasterize("forward/forwardSlow.vert", "forward/forwardSlow.frag");
     RenderStateBuilder renderStateBuilder { renderTarget, shader, Mesh::canonoicalVertexLayout() };
     renderStateBuilder.polygonMode = PolygonMode::Filled;
 
