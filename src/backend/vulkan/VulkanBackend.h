@@ -16,7 +16,6 @@ struct GLFWwindow;
 
 static constexpr bool vulkanDebugMode = true;
 static constexpr bool vulkanVerboseDebugMessages = false;
-static constexpr bool vulkanGpuAssistedValidation = false;
 
 class VulkanBackend final : public Backend {
 public:
@@ -164,7 +163,6 @@ private:
     VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo() const;
     VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance, VkDebugUtilsMessengerCreateInfoEXT*) const;
 
-    std::vector<const char*> instanceExtensions() const;
     VkInstance createInstance(const std::vector<const char*>& requestedLayers, VkDebugUtilsMessengerCreateInfoEXT*) const;
     VkDevice createDevice(const std::vector<const char*>& requestedLayers, VkPhysicalDevice);
     std::optional<VkDebugUtilsMessengerEXT> m_messenger {};

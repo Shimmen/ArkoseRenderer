@@ -406,6 +406,50 @@ VkExtent2D VulkanBackend::pickBestSwapchainExtent() const
 
 VkInstance VulkanBackend::createInstance(const std::vector<const char*>& requestedLayers, VkDebugUtilsMessengerCreateInfoEXT* debugMessengerCreateInfo) const
 {
+    for (auto& layer : requestedLayers) {
+        if (!hasSupportForLayer(layer))
+            LogErrorAndExit("VulkanBackend: missing layer '%s'\n", layer);
+    }
+
+    bool includeValidationFeatures = false;
+    std::vector<const char*> instanceExtensions;
+    {
+        uint32_t requiredCount;
+        const char** requiredExtensions = glfwGetRequiredInstanceExtensions(&requiredCount);
+        for (uint32_t i = 0; i < requiredCount; ++i) {
+            const char* name = requiredExtensions[i];
+            ASSERT(hasSupportForInstanceExtension(name));
+            instanceExtensions.emplace_back(name);
+        }
+
+        // Required for checking support of complex features. It's probably fine to always require it. If it doesn't exist, we deal with it then..
+        ASSERT(hasSupportForInstanceExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME));
+        instanceExtensions.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+
+        // For debug messages etc.
+        if (vulkanDebugMode) {
+            ASSERT(hasSupportForInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME));
+            instanceExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+            if (hasSupportForInstanceExtension(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
+                instanceExtensions.emplace_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
+                includeValidationFeatures = true;
+            }
+        }
+    }
+
+    VkValidationFeaturesEXT validationFeatures { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
+    std::vector<VkValidationFeatureEnableEXT> enabledValidationFeatures;
+    {
+        // See https://www.lunarg.com/wp-content/uploads/2019/02/GPU-Assisted-Validation_v3_02_22_19.pdf for information
+        enabledValidationFeatures.push_back(VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT);
+        enabledValidationFeatures.push_back(VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT);
+        enabledValidationFeatures.push_back(VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT);
+        enabledValidationFeatures.push_back(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT);
+        validationFeatures.enabledValidationFeatureCount = enabledValidationFeatures.size();
+        validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures.data();
+    }
+
     VkApplicationInfo appInfo = { VK_STRUCTURE_TYPE_APPLICATION_INFO };
     appInfo.pApplicationName = "ArkoseRenderer";
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0); // NOLINT(hicpp-signed-bitwise)
@@ -413,33 +457,21 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0); // NOLINT(hicpp-signed-bitwise)
     appInfo.apiVersion = VK_API_VERSION_1_1; // NOLINT(hicpp-signed-bitwise)
 
-    // See https://www.lunarg.com/wp-content/uploads/2019/02/GPU-Assisted-Validation_v3_02_22_19.pdf for information
-    VkValidationFeatureEnableEXT enables[] = { VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT };
-    VkValidationFeaturesEXT validationFeatures { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
-    validationFeatures.enabledValidationFeatureCount = 1;
-    validationFeatures.pEnabledValidationFeatures = enables;
-
     VkInstanceCreateInfo instanceCreateInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     instanceCreateInfo.pApplicationInfo = &appInfo;
 
-    if (debugMessengerCreateInfo) {
-        instanceCreateInfo.pNext = debugMessengerCreateInfo;
-        if (vulkanGpuAssistedValidation) {
-            debugMessengerCreateInfo->pNext = &validationFeatures;
-        }
-    }
-
-    const auto& extensions = instanceExtensions();
-    instanceCreateInfo.enabledExtensionCount = extensions.size();
-    instanceCreateInfo.ppEnabledExtensionNames = extensions.data();
-
-    for (auto& layer : requestedLayers) {
-        if (!hasSupportForLayer(layer))
-            LogErrorAndExit("VulkanBackend: missing layer '%s'\n", layer);
-    }
+    instanceCreateInfo.enabledExtensionCount = instanceExtensions.size();
+    instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.data();
 
     instanceCreateInfo.enabledLayerCount = requestedLayers.size();
     instanceCreateInfo.ppEnabledLayerNames = requestedLayers.data();
+
+    if (debugMessengerCreateInfo) {
+        instanceCreateInfo.pNext = debugMessengerCreateInfo;
+        if (includeValidationFeatures) {
+            debugMessengerCreateInfo->pNext = &validationFeatures;
+        }
+    }
 
     VkInstance instance;
     if (vkCreateInstance(&instanceCreateInfo, nullptr, &instance) != VK_SUCCESS)
@@ -538,31 +570,6 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
         LogErrorAndExit("VulkanBackend: could not create a device, exiting.\n");
 
     return device;
-}
-
-std::vector<const char*> VulkanBackend::instanceExtensions() const
-{
-    std::vector<const char*> extensions;
-
-    // GLFW requires a few for basic presenting etc.
-    uint32_t requiredCount;
-    const char** requiredExtensions = glfwGetRequiredInstanceExtensions(&requiredCount);
-    while (requiredCount--) {
-        const char* name = requiredExtensions[requiredCount];
-        ASSERT(hasSupportForInstanceExtension(name));
-        extensions.emplace_back(name);
-    }
-
-    // For debug messages etc.
-    ASSERT(hasSupportForInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME));
-    extensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
-    // For later spec (e.g. ray tracing stuff) queries, but also for checking the support of it. So in our case
-    // we can probably always require it. If it doesn't exist, we deal with it then..
-    ASSERT(hasSupportForInstanceExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME));
-    extensions.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-
-    return extensions;
 }
 
 void VulkanBackend::findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
