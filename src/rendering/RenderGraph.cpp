@@ -46,7 +46,7 @@ void RenderGraph::constructAll(Registry& nodeManager, std::vector<Registry*> fra
     }
 }
 
-void RenderGraph::forEachNodeInResolvedOrder(const Registry& frameManager, std::function<void(std::string nodeName, const RenderGraphNode::ExecuteCallback&)> callback) const
+void RenderGraph::forEachNodeInResolvedOrder(const Registry& frameManager, std::function<void(std::string nodeName, NodeTimer& timer, const RenderGraphNode::ExecuteCallback&)> callback) const
 {
     auto entry = m_frameContexts.find(&frameManager);
     ASSERT(entry != m_frameContexts.end());
@@ -57,6 +57,6 @@ void RenderGraph::forEachNodeInResolvedOrder(const Registry& frameManager, std::
     const FrameContext& frameContext = entry->second;
     for (auto& [node, execCallback] : frameContext.nodeContexts) {
         std::string nodeDisplayName = node->displayName().value_or(node->name());
-        callback(nodeDisplayName, execCallback);
+        callback(nodeDisplayName, node->timer(), execCallback);
     }
 }

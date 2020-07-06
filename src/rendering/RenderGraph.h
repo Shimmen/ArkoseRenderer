@@ -29,8 +29,8 @@ public:
     //! Construct all nodes & set up a per-frame context for each resource manager frameManagers
     void constructAll(Registry& nodeManager, std::vector<Registry*> frameManagers);
 
-    //! The callback is called for each node (in correct order). The provided resource manager is used to map to the
-    void forEachNodeInResolvedOrder(const Registry&, std::function<void(std::string, const RenderGraphNode::ExecuteCallback&)>) const;
+    //! The callback is called for each node (in correct order)
+    void forEachNodeInResolvedOrder(const Registry&, std::function<void(std::string, NodeTimer&, const RenderGraphNode::ExecuteCallback&)>) const;
 
 private:
     struct NodeContext {
