@@ -22,6 +22,8 @@ public:
 
     T runningAverage() const
     {
+        if (m_numReported < RunningAvgWindowSize)
+            return std::numeric_limits<T>::quiet_NaN();
         T sum = static_cast<T>(0.0);
         for (const T& sample : m_samples)
             sum += sample;
