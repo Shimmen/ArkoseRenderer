@@ -246,9 +246,11 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(App& app)
                 && sixteenBitStorageFeatures.storageBuffer16BitAccess && sixteenBitStorageFeatures.uniformAndStorageBuffer16BitAccess
                 && shaderSmallTypeFeatures.shaderFloat16;
         case Capability::ShaderTextureArrayDynamicIndexing:
-            return features.shaderSampledImageArrayDynamicIndexing && indexingFeatures.shaderSampledImageArrayNonUniformIndexing && indexingFeatures.runtimeDescriptorArray;
+            return hasSupportForExtension(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)
+                && features.shaderSampledImageArrayDynamicIndexing && indexingFeatures.shaderSampledImageArrayNonUniformIndexing && indexingFeatures.runtimeDescriptorArray;
         case Capability::ShaderBufferArrayDynamicIndexing:
-            return features.shaderStorageBufferArrayDynamicIndexing && features.shaderUniformBufferArrayDynamicIndexing
+            return hasSupportForExtension(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)
+                && features.shaderStorageBufferArrayDynamicIndexing && features.shaderUniformBufferArrayDynamicIndexing
                 && indexingFeatures.shaderStorageBufferArrayNonUniformIndexing && indexingFeatures.shaderUniformBufferArrayNonUniformIndexing
                 && indexingFeatures.runtimeDescriptorArray;
         }
@@ -533,11 +535,13 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
             shaderSmallTypeFeatures.shaderFloat16 = VK_TRUE;
             break;
         case Capability::ShaderTextureArrayDynamicIndexing:
+            deviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
             features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
             indexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
             indexingFeatures.runtimeDescriptorArray = VK_TRUE;
             break;
         case Capability::ShaderBufferArrayDynamicIndexing:
+            deviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
             features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
             features.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
             indexingFeatures.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
