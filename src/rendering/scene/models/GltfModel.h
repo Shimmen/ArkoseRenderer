@@ -46,6 +46,7 @@ public:
 
     [[nodiscard]] static std::unique_ptr<Model> load(const std::string& path);
 
+    size_t meshCount() const override;
     void forEachMesh(std::function<void(const Mesh&)>) const override;
 
     [[nodiscard]] std::string directory() const;

@@ -28,6 +28,9 @@ public:
 
     Model* addModel(std::unique_ptr<Model>);
 
+    size_t modelCount() const { return m_models.size(); }
+    size_t meshCount() const;
+
     void forEachModel(std::function<void(size_t, const Model&)> callback) const;
     int forEachMesh(std::function<void(size_t, const Mesh&)> callback) const;
 

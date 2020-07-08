@@ -172,6 +172,15 @@ Model* Scene::addModel(std::unique_ptr<Model> model)
     return nullptr;
 }
 
+size_t Scene::meshCount() const
+{
+    size_t count = 0u;
+    for (auto& model : m_models) {
+        count += model->meshCount();
+    }
+    return count;
+}
+
 void Scene::forEachModel(std::function<void(size_t, const Model&)> callback) const
 {
     for (size_t i = 0; i < m_models.size(); ++i) {

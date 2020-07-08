@@ -141,6 +141,11 @@ std::vector<Mesh::CanonoicalVertex> GltfMesh::canonoicalVertexData() const
     return m_canonoicalVertexData.value();
 }
 
+size_t GltfModel::meshCount() const
+{
+    return m_meshes.size();
+}
+
 void GltfModel::forEachMesh(std::function<void(const Mesh&)> callback) const
 {
     for (const Mesh& mesh : m_meshes) {
