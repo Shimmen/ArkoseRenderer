@@ -49,8 +49,8 @@ target_compile_features(ArkoseRenderer PRIVATE cxx_std_20)
 if (MSVC)
     # Both of these seem to be required for the VulkanSDK prebuilt libraries
     # Probably it's just something I haven't figured out with this..
-    add_compile_options(/MT)
-    target_compile_options(ArkoseRenderer PRIVATE /MT)
+    #add_compile_options(/MT)
+    #target_compile_options(ArkoseRenderer PRIVATE /MT)
 
     target_compile_definitions(ArkoseRenderer PRIVATE NOMINMAX)
     #target_compile_options(ArkoseRenderer PRIVATE /Wall)
