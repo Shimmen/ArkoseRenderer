@@ -12,6 +12,8 @@ const Input& Input::instance()
 void Input::registerWindow(GLFWwindow* window)
 {
     Input& input = s_instance;
+    input.m_associatedWindow = window;
+
     void* userPtr = static_cast<void*>(&input);
     glfwSetWindowUserPointer(window, userPtr);
 
@@ -66,10 +68,11 @@ bool Input::wasButtonReleased(int button) const
     return m_wasButtonReleased[button];
 }
 
-vec2 Input::mousePosition(GLFWwindow* window) const
+vec2 Input::mousePosition() const
 {
+    MOOSLIB_ASSERT(m_associatedWindow != nullptr);
     double x, y;
-    glfwGetCursorPos(window, &x, &y);
+    glfwGetCursorPos(m_associatedWindow, &x, &y);
     return vec2(float(x), float(y));
 }
 

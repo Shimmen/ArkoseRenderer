@@ -28,7 +28,7 @@ public:
     [[nodiscard]] bool wasButtonPressed(int button) const;
     [[nodiscard]] bool wasButtonReleased(int button) const;
 
-    [[nodiscard]] vec2 mousePosition(GLFWwindow* window) const;
+    [[nodiscard]] vec2 mousePosition() const;
     [[nodiscard]] vec2 mouseDelta() const;
     [[nodiscard]] float scrollDelta() const;
 
@@ -45,6 +45,8 @@ private:
     static constexpr int MOUSE_BUTTON_COUNT { GLFW_MOUSE_BUTTON_LAST };
 
     static constexpr float GAMEPAD_DEADZONE { 0.25f };
+
+    GLFWwindow* m_associatedWindow { nullptr };
 
     bool m_isKeyDown[KEYBOARD_KEY_COUNT] {};
     bool m_wasKeyPressed[KEYBOARD_KEY_COUNT] {};
