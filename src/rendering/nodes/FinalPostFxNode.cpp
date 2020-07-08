@@ -5,7 +5,7 @@
 #include "RTDiffuseGINode.h"
 #include "RTFirstHitNode.h"
 #include "RTReflectionsNode.h"
-#include "SceneUniformNode.h"
+#include "SceneNode.h"
 #include "imgui.h"
 
 FinalPostFxNode::FinalPostFxNode(const Scene& scene)
@@ -42,10 +42,10 @@ FinalPostFxNode::ExecuteCallback FinalPostFxNode::constructFrame(Registry& reg) 
     BindingSet& etcBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, diffuseGI },
                                                        { 1, ShaderStageFragment, ambientOcclusion } });
 
-    BindingSet& envBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, reg.getBuffer(SceneUniformNode::name(), "camera") },
-                                                       { 1, ShaderStageFragment, reg.getTexture(SceneUniformNode::name(), "environmentMap").value_or(&reg.createPixelTexture(vec4(1), true)) },
+    BindingSet& envBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, reg.getBuffer("scene", "camera") },
+                                                       { 1, ShaderStageFragment, reg.getTexture("scene", "environmentMap").value_or(&reg.createPixelTexture(vec4(1), true)) },
                                                        { 2, ShaderStageFragment, reg.getTexture("g-buffer", "depth").value() },
-                                                       { 3, ShaderStageFragment, reg.getBuffer(SceneUniformNode::name(), "environmentData") } });
+                                                       { 3, ShaderStageFragment, reg.getBuffer("scene", "environmentData") } });
 
     RenderStateBuilder renderStateBuilder { reg.windowRenderTarget(), shader, vertexLayout };
     renderStateBuilder.addBindingSet(sourceImage).addBindingSet(sourceImageRt).addBindingSet(etcBindingSet).addBindingSet(envBindingSet);

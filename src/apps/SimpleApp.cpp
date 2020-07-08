@@ -2,7 +2,7 @@
 
 #include "rendering/nodes/FinalPostFxNode.h"
 #include "rendering/nodes/GBufferNode.h"
-#include "rendering/nodes/SceneUniformNode.h"
+#include "rendering/nodes/SceneNode.h"
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SlowForwardRenderNode.h"
 #include "rendering/scene/models/GltfModel.h"
@@ -25,7 +25,7 @@ void SimpleApp::setup(RenderGraph& graph)
 {
     scene().loadFromFile("assets/sample/cornell-box.json");
 
-    graph.addNode<SceneUniformNode>(scene());
+    graph.addNode<SceneNode>(scene());
     graph.addNode<GBufferNode>(scene());
     graph.addNode<ShadowMapNode>(scene());
     graph.addNode<SlowForwardRenderNode>(scene());
@@ -34,12 +34,6 @@ void SimpleApp::setup(RenderGraph& graph)
 
 void SimpleApp::update(float elapsedTime, float deltaTime)
 {
-    ImGui::Begin("SimpleApp");
-    ImGui::ColorEdit3("Sun color", value_ptr(scene().sun().color));
-    ImGui::SliderFloat("Sun intensity", &scene().sun().intensity, 0.0f, 50.0f);
-    ImGui::SliderFloat("Environment", &scene().environmentMultiplier(), 0.0f, 5.0f);
-    ImGui::End();
-
     const Input& input = Input::instance();
     scene().camera().update(input, GlobalState::get().windowExtent(), deltaTime);
 }

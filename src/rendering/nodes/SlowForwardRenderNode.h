@@ -8,7 +8,7 @@
 
 class SlowForwardRenderNode final : public RenderGraphNode {
 public:
-    explicit SlowForwardRenderNode(const Scene&);
+    explicit SlowForwardRenderNode(Scene&);
 
     std::optional<std::string> displayName() const override { return "Forward"; }
 
@@ -26,5 +26,5 @@ private:
     };
 
     std::vector<Drawable> m_drawables {};
-    const Scene& m_scene;
+    Scene& m_scene;
 };

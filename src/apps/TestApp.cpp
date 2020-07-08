@@ -8,7 +8,7 @@
 #include "rendering/nodes/RTDiffuseGINode.h"
 #include "rendering/nodes/RTFirstHitNode.h"
 #include "rendering/nodes/RTReflectionsNode.h"
-#include "rendering/nodes/SceneUniformNode.h"
+#include "rendering/nodes/SceneNode.h"
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SlowForwardRenderNode.h"
 #include "rendering/scene/models/GltfModel.h"
@@ -37,13 +37,14 @@ void TestApp::setup(RenderGraph& graph)
     bool rtxOn = true;
     bool firstHit = true;
 
-    graph.addNode<SceneUniformNode>(scene());
+    graph.addNode<SceneNode>(scene());
     graph.addNode<GBufferNode>(scene());
     graph.addNode<ShadowMapNode>(scene());
     graph.addNode<SlowForwardRenderNode>(scene());
     if (rtxOn) {
         graph.addNode<RTAccelerationStructures>(scene());
         graph.addNode<RTAmbientOcclusion>(scene());
+        graph.addNode<RTReflectionsNode>(scene());
         graph.addNode<RTDiffuseGINode>(scene());
         if (firstHit) {
             graph.addNode<RTFirstHitNode>(scene());
@@ -54,18 +55,13 @@ void TestApp::setup(RenderGraph& graph)
 
 void TestApp::update(float elapsedTime, float deltaTime)
 {
-    ImGui::Begin("TestApp");
-    ImGui::ColorEdit3("Sun color", value_ptr(scene().sun().color));
-    ImGui::SliderFloat("Sun intensity", &scene().sun().intensity, 0.0f, 50.0f);
-    ImGui::SliderFloat("Environment", &scene().environmentMultiplier(), 0.0f, 5.0f);
-    if (ImGui::CollapsingHeader("Cameras")) {
-        scene().cameraGui();
-    }
-    ImGui::End();
+    m_frameTimeAvg.report(deltaTime);
 
-    ImGui::Begin("Metrics");
-    float ms = deltaTime * 1000.0f;
-    ImGui::Text("Frame time: %.3f ms/frame", ms);
+    ImGui::Begin("TestApp");
+    float avgFrameTime = m_frameTimeAvg.runningAverage() * 1000.0f;
+    ImGui::Text("Frame time: %.2f ms/frame", avgFrameTime);
+    if (ImGui::CollapsingHeader("Cameras"))
+        scene().cameraGui();
     ImGui::End();
 
     const Input& input = Input::instance();

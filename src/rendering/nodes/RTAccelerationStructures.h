@@ -36,7 +36,5 @@ private:
 
 private:
     const Scene& m_scene;
-
     std::vector<RTGeometryInstance> m_mainInstances {};
-    std::vector<RTGeometryInstance> m_proxyInstances {};
 };

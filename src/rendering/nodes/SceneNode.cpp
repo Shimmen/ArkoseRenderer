@@ -1,20 +1,22 @@
-#include "SceneUniformNode.h"
+#include "SceneNode.h"
 
 #include "CameraState.h"
 #include "LightData.h"
+#include <imgui.h>
+#include <mooslib/vector.h>
 
-std::string SceneUniformNode::name()
+std::string SceneNode::name()
 {
-    return "scene-uniforms";
+    return "scene";
 }
 
-SceneUniformNode::SceneUniformNode(const Scene& scene)
-    : RenderGraphNode(SceneUniformNode::name())
+SceneNode::SceneNode(Scene& scene)
+    : RenderGraphNode(SceneNode::name())
     , m_scene(scene)
 {
 }
 
-SceneUniformNode::ExecuteCallback SceneUniformNode::constructFrame(Registry& reg) const
+RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
 {
     const FpsCamera& camera = m_scene.camera();
     const SunLight& light = m_scene.sun();
@@ -34,6 +36,15 @@ SceneUniformNode::ExecuteCallback SceneUniformNode::constructFrame(Registry& reg
     reg.publish("directionalLight", dirLightBuffer);
 
     return [&](const AppState& appState, CommandList& cmdList) {
+        ImGui::ColorEdit3("Sun color", value_ptr(m_scene.sun().color));
+        ImGui::SliderFloat("Sun intensity", &m_scene.sun().intensity, 0.0f, 50.0f);
+        ImGui::SliderFloat("Environment", &m_scene.environmentMultiplier(), 0.0f, 5.0f);
+        ImGui::SliderFloat("Ambient", &m_scene.ambient(), 0.0f, 1.0f);
+        if (ImGui::TreeNode("Cameras")) {
+            m_scene.cameraGui();
+            ImGui::TreePop();
+        }
+
         // Camera uniforms
         mat4 projectionFromView = camera.projectionMatrix();
         mat4 viewFromWorld = camera.viewMatrix();

@@ -3,7 +3,6 @@
 #include "ForwardRenderNode.h"
 #include "LightData.h"
 #include "RTAccelerationStructures.h"
-#include "SceneUniformNode.h"
 
 RTReflectionsNode::RTReflectionsNode(const Scene& scene)
     : RenderGraphNode(RTReflectionsNode::name())
@@ -28,9 +27,9 @@ void RTReflectionsNode::constructNode(Registry& nodeReg)
             // TODO: Would be nice if this could be cached too!
             std::vector<RTVertex> vertices {};
             {
-                auto posData = mesh.positionData();
-                auto normalData = mesh.normalData();
-                auto texCoordData = mesh.texcoordData();
+                auto& posData = mesh.positionData();
+                auto& normalData = mesh.normalData();
+                auto& texCoordData = mesh.texcoordData();
 
                 ASSERT(posData.size() == normalData.size());
                 ASSERT(posData.size() == texCoordData.size());
@@ -63,7 +62,7 @@ void RTReflectionsNode::constructNode(Registry& nodeReg)
         });
     });
 
-    Buffer& meshBuffer = nodeReg.createBuffer(std::move(rtMeshes), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+    Buffer& meshBuffer = nodeReg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
     m_objectDataBindingSet = &nodeReg.createBindingSet({ { 0, ShaderStageRTClosestHit, &meshBuffer, ShaderBindingType::StorageBuffer },
                                                          { 1, ShaderStageRTClosestHit, vertexBuffers },
                                                          { 2, ShaderStageRTClosestHit, indexBuffers },
@@ -72,9 +71,9 @@ void RTReflectionsNode::constructNode(Registry& nodeReg)
 
 RenderGraphNode::ExecuteCallback RTReflectionsNode::constructFrame(Registry& reg) const
 {
-    const Texture* gBufferColor = reg.getTexture(ForwardRenderNode::name(), "baseColor").value();
-    const Texture* gBufferNormal = reg.getTexture(ForwardRenderNode::name(), "normal").value();
-    const Texture* gBufferDepth = reg.getTexture(ForwardRenderNode::name(), "depth").value();
+    const Texture* gBufferColor = reg.getTexture("g-buffer", "baseColor").value();
+    const Texture* gBufferNormal = reg.getTexture("g-buffer", "normal").value();
+    const Texture* gBufferDepth = reg.getTexture("g-buffer", "depth").value();
 
     Texture& reflections = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F, Texture::Usage::StorageAndSample);
     reg.publish("reflections", reflections);
@@ -85,10 +84,10 @@ RenderGraphNode::ExecuteCallback RTReflectionsNode::constructFrame(Registry& reg
                                                          { 2, ShaderStageRTRayGen, gBufferColor, ShaderBindingType::TextureSampler },
                                                          { 3, ShaderStageRTRayGen, gBufferNormal, ShaderBindingType::TextureSampler },
                                                          { 4, ShaderStageRTRayGen, gBufferDepth, ShaderBindingType::TextureSampler },
-                                                         { 5, ShaderStageRTRayGen, reg.getBuffer(SceneUniformNode::name(), "camera") },
-                                                         { 6, ShaderStageRTMiss, reg.getBuffer(SceneUniformNode::name(), "environmentData") },
-                                                         { 7, ShaderStageRTMiss, reg.getTexture(SceneUniformNode::name(), "environmentMap").value_or(&reg.createPixelTexture(vec4(1.0f), true)) },
-                                                         { 8, ShaderStageRTClosestHit, reg.getBuffer(SceneUniformNode::name(), "directionalLight") } });
+                                                         { 5, ShaderStageRTRayGen, reg.getBuffer("scene", "camera") },
+                                                         { 6, ShaderStageRTMiss, reg.getBuffer("scene", "environmentData") },
+                                                         { 7, ShaderStageRTMiss, reg.getTexture("scene", "environmentMap").value_or(&reg.createPixelTexture(vec4(1.0f), true)) },
+                                                         { 8, ShaderStageRTClosestHit, reg.getBuffer("scene", "directionalLight") } });
 
     ShaderFile raygen = ShaderFile("rt-reflections/raygen.rgen");
     HitGroup mainHitGroup { ShaderFile("rt-reflections/closestHit.rchit") };

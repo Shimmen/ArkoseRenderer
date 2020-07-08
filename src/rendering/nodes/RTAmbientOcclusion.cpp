@@ -2,7 +2,7 @@
 
 #include "ForwardRenderNode.h"
 #include "RTAccelerationStructures.h"
-#include "SceneUniformNode.h"
+#include "SceneNode.h"
 #include "utility/GlobalState.h"
 #include <imgui.h>
 
@@ -33,7 +33,7 @@ RenderGraphNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry& re
 
     const TopLevelAS& tlas = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStageRTRayGen, &tlas },
-                                                         { 1, ShaderStageRTRayGen, reg.getBuffer(SceneUniformNode::name(), "camera") },
+                                                         { 1, ShaderStageRTRayGen, reg.getBuffer("scene", "camera") },
                                                          { 2, ShaderStageRTRayGen, m_accumulatedAO, ShaderBindingType::StorageImage },
                                                          { 3, ShaderStageRTRayGen, gBufferNormal, ShaderBindingType::TextureSampler },
                                                          { 4, ShaderStageRTRayGen, gBufferDepth, ShaderBindingType::TextureSampler } });
@@ -59,13 +59,6 @@ RenderGraphNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry& re
         ImGui::SliderFloat("Max radius", &radius, 0.01f, 0.5f);
         static float darkening = 20.0f;
         ImGui::SliderFloat("Darkening", &darkening, 1.0f, 40.0f);
-
-        if (Input::instance().wasKeyPressed(GLFW_KEY_O)) {
-            enabled = false;
-        }
-        if (Input::instance().wasKeyPressed(GLFW_KEY_P)) {
-            enabled = true;
-        }
 
         if (!enabled) {
             cmdList.clearTexture(ambientOcclusion, ClearColor(1, 1, 1));

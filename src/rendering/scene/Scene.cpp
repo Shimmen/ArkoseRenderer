@@ -172,30 +172,17 @@ Model* Scene::addModel(std::unique_ptr<Model> model)
     return nullptr;
 }
 
-size_t Scene::modelCount() const
-{
-    return m_models.size();
-}
-
-const Model* Scene::operator[](size_t index) const
-{
-    if (index > modelCount()) {
-        return nullptr;
-    }
-    return m_models[index].get();
-}
-
 void Scene::forEachModel(std::function<void(size_t, const Model&)> callback) const
 {
-    for (size_t i = 0; i < modelCount(); ++i) {
+    for (size_t i = 0; i < m_models.size(); ++i) {
         const Model& model = *m_models[i];
         callback(i, model);
     }
 }
 
-int Scene::forEachDrawable(std::function<void(int, const Mesh&)> callback) const
+int Scene::forEachMesh(std::function<void(size_t, const Mesh&)> callback) const
 {
-    int nextIndex = 0;
+    size_t nextIndex = 0;
     for (auto& model : m_models) {
         model->forEachMesh([&](const Mesh& mesh) {
             callback(nextIndex++, mesh);

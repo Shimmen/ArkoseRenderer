@@ -28,18 +28,17 @@ public:
 
     Model* addModel(std::unique_ptr<Model>);
 
-    [[nodiscard]] size_t modelCount() const;
-    const Model* operator[](size_t index) const;
-
     void forEachModel(std::function<void(size_t, const Model&)> callback) const;
-    int forEachDrawable(std::function<void(int, const Mesh&)> callback) const;
+    int forEachMesh(std::function<void(size_t, const Mesh&)> callback) const;
 
-    void cameraGui();
     const FpsCamera& camera() const { return m_currentMainCamera; }
     FpsCamera& camera() { return m_currentMainCamera; }
+    void cameraGui();
 
     const SunLight& sun() const { return m_sunLight; }
     SunLight& sun() { return m_sunLight; }
+
+    float& ambient() { return m_ambient; }
 
     void setEnvironmentMap(std::string path) { m_environmentMap = std::move(path); }
     const std::string& environmentMap() const { return m_environmentMap; }
@@ -62,4 +61,6 @@ private:
 
     std::string m_environmentMap {};
     float m_environmentMultiplier { 1.0f };
+
+    float m_ambient { 0.0f };
 };

@@ -24,7 +24,7 @@ add_executable(ArkoseRenderer
     src/rendering/scene/Scene.cpp
     src/rendering/scene/Model.cpp
     src/rendering/scene/models/GltfModel.cpp
-    src/rendering/nodes/SceneUniformNode.cpp
+    src/rendering/nodes/SceneNode.cpp
     src/rendering/nodes/GBufferNode.cpp
     src/rendering/nodes/FinalPostFxNode.cpp
     src/rendering/nodes/ForwardRenderNode.cpp

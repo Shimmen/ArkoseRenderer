@@ -1,7 +1,6 @@
 #include "RTFirstHitNode.h"
 
 #include "RTAccelerationStructures.h"
-#include "SceneUniformNode.h"
 #include <half.hpp>
 #include <imgui.h>
 
@@ -27,9 +26,9 @@ void RTFirstHitNode::constructNode(Registry& nodeReg)
         // TODO: Would be nice if this could be cached too!
         std::vector<RTVertex> vertices {};
         {
-            auto posData = mesh.positionData();
-            auto normalData = mesh.normalData();
-            auto texCoordData = mesh.texcoordData();
+            auto& posData = mesh.positionData();
+            auto& normalData = mesh.normalData();
+            auto& texCoordData = mesh.texcoordData();
 
             ASSERT(posData.size() == normalData.size());
             ASSERT(posData.size() == texCoordData.size());
@@ -46,11 +45,12 @@ void RTFirstHitNode::constructNode(Registry& nodeReg)
             ? &nodeReg.createPixelTexture(material.baseColorFactor, false) // the color is already in linear sRGB so we don't want to make an sRGB texture for it!
             : &nodeReg.loadTexture2D(material.baseColor, true, true);
 
-        size_t texIndex = allTextures.size();
+        int texId = allTextures.size();
         allTextures.push_back(baseColorTexture);
 
-        rtMeshes.push_back({ .objectId = (int)rtMeshes.size(),
-                             .baseColor = (int)texIndex });
+        int meshId = rtMeshes.size();
+        rtMeshes.push_back({ .objectId = meshId,
+                             .baseColor = texId });
 
         // TODO: Later, we probably want to have combined vertex/ssbo and index/ssbo buffers instead!
         vertexBuffers.push_back(&nodeReg.createBuffer(vertices, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal));
@@ -61,13 +61,9 @@ void RTFirstHitNode::constructNode(Registry& nodeReg)
         model.forEachMesh([&](const Mesh& mesh) {
             createTriangleMeshVertexBuffer(mesh);
         });
-
-        model.proxy().forEachMesh([&](const Mesh& proxyMesh) {
-            createTriangleMeshVertexBuffer(proxyMesh);
-        });
     });
 
-    Buffer& meshBuffer = nodeReg.createBuffer(std::move(rtMeshes), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+    Buffer& meshBuffer = nodeReg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
     m_objectDataBindingSet = &nodeReg.createBindingSet({ { 0, ShaderStageRTClosestHit, &meshBuffer, ShaderBindingType::StorageBuffer },
                                                          { 1, ShaderStageRTClosestHit, vertexBuffers },
                                                          { 2, ShaderStageRTClosestHit, indexBuffers },
@@ -80,46 +76,25 @@ RenderGraphNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg) c
     reg.publish("image", storageImage);
 
     Buffer& timeBuffer = reg.createBuffer(sizeof(float), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
-    BindingSet& environmentBindingSet = reg.createBindingSet({ { 0, ShaderStageRTMiss, reg.getTexture(SceneUniformNode::name(), "environmentMap").value_or(&reg.createPixelTexture(vec4(1), true)) } });
+    BindingSet& environmentBindingSet = reg.createBindingSet({ { 0, ShaderStageRTMiss, reg.getTexture("scene", "environmentMap").value_or(&reg.createPixelTexture(vec4(1), true)) } });
 
-    auto createStateForTLAS = [&](const TopLevelAS& tlas) -> std::pair<BindingSet&, RayTracingState&> {
-        BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStageRTRayGen, &tlas },
-                                                             { 1, ShaderStageRTRayGen, &storageImage, ShaderBindingType::StorageImage },
-                                                             { 2, ShaderStageRTRayGen, reg.getBuffer(SceneUniformNode::name(), "camera") },
-                                                             { 3, ShaderStageRTMiss, &timeBuffer } });
+    const TopLevelAS& sceneTLAS = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
+    BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStageRTRayGen, &sceneTLAS },
+                                                         { 1, ShaderStageRTRayGen, &storageImage, ShaderBindingType::StorageImage },
+                                                         { 2, ShaderStageRTRayGen, reg.getBuffer("scene", "camera") },
+                                                         { 3, ShaderStageRTMiss, &timeBuffer } });
 
-        ShaderFile raygen = ShaderFile("rt-firsthit/raygen.rgen");
-        HitGroup mainHitGroup { ShaderFile("rt-firsthit/closestHit.rchit") };
-        ShaderFile missShader { ShaderFile("rt-firsthit/miss.rmiss") };
-        ShaderBindingTable sbt { raygen, { mainHitGroup }, { missShader } };
+    ShaderFile raygen = ShaderFile("rt-firsthit/raygen.rgen");
+    HitGroup mainHitGroup { ShaderFile("rt-firsthit/closestHit.rchit") };
+    ShaderFile missShader { ShaderFile("rt-firsthit/miss.rmiss") };
+    ShaderBindingTable sbt { raygen, { mainHitGroup }, { missShader } };
 
-        uint32_t maxRecursionDepth = 1;
-        RayTracingState& rtState = reg.createRayTracingState(sbt, { &frameBindingSet, m_objectDataBindingSet, &environmentBindingSet }, maxRecursionDepth);
-
-        return { frameBindingSet, rtState };
-    };
-
-    const TopLevelAS& mainTLAS = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
-    auto [_frameBindingSet, _rtState] = createStateForTLAS(mainTLAS);
-    BindingSet& frameBindingSet = _frameBindingSet;
-    RayTracingState& rtState = _rtState;
-
-    const TopLevelAS& proxyTLAS = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "proxy");
-    auto [_frameBindingSetProxy, _rtStateProxy] = createStateForTLAS(proxyTLAS);
-    BindingSet& frameBindingSetProxy = _frameBindingSetProxy;
-    RayTracingState& rtStateProxy = _rtStateProxy;
+    uint32_t maxRecursionDepth = 1;
+    RayTracingState& rtState = reg.createRayTracingState(sbt, { &frameBindingSet, m_objectDataBindingSet, &environmentBindingSet }, maxRecursionDepth);
 
     return [&](const AppState& appState, CommandList& cmdList) {
-        static bool useProxies = true;
-        ImGui::Checkbox("Use proxies", &useProxies);
-
-        if (useProxies) {
-            cmdList.setRayTracingState(rtStateProxy);
-            cmdList.bindSet(frameBindingSetProxy, 0);
-        } else {
-            cmdList.setRayTracingState(rtState);
-            cmdList.bindSet(frameBindingSet, 0);
-        }
+        cmdList.setRayTracingState(rtState);
+        cmdList.bindSet(frameBindingSet, 0);
 
         float time = appState.elapsedTime();
         timeBuffer.updateData(&time, sizeof(time));

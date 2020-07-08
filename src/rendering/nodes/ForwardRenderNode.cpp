@@ -1,6 +1,6 @@
 #include "ForwardRenderNode.h"
 
-#include "SceneUniformNode.h"
+#include "SceneNode.h"
 #include "utility/Logging.h"
 
 std::string ForwardRenderNode::name()
@@ -20,40 +20,36 @@ void ForwardRenderNode::constructNode(Registry& nodeReg)
     m_materials.clear();
     m_textures.clear();
 
-    for (int i = 0; i < m_scene.modelCount(); ++i) {
-        const Model& model = *m_scene[i];
-        model.forEachMesh([&](const Mesh& mesh) {
+    m_scene.forEachMesh([&](size_t, const Mesh& mesh) {
+        Drawable drawable {};
+        drawable.mesh = &mesh;
 
-            Drawable drawable {};
-            drawable.mesh = &mesh;
+        drawable.vertexBuffer = &nodeReg.createBuffer(mesh.canonoicalVertexData(), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+        drawable.indexBuffer = &nodeReg.createBuffer(mesh.indexData(), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+        drawable.indexCount = mesh.indexCount();
 
-            drawable.vertexBuffer = &nodeReg.createBuffer(mesh.canonoicalVertexData(), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-            drawable.indexBuffer = &nodeReg.createBuffer(mesh.indexData(), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
-            drawable.indexCount = mesh.indexCount();
+        // Create textures
+        // TODO: Remove redundant textures!
+        int baseColorIndex = m_textures.size();
+        std::string baseColorPath = mesh.material().baseColor;
+        Texture& baseColorTexture = nodeReg.loadTexture2D(baseColorPath, true, true);
+        m_textures.push_back(&baseColorTexture);
 
-            // Create textures
-            // TODO: Remove redundant textures!
-            int baseColorIndex = m_textures.size();
-            std::string baseColorPath = mesh.material().baseColor;
-            Texture& baseColorTexture = nodeReg.loadTexture2D(baseColorPath, true, true);
-            m_textures.push_back(&baseColorTexture);
+        int normalMapIndex = m_textures.size();
+        std::string normalMapPath = mesh.material().normalMap;
+        Texture& normalMapTexture = nodeReg.loadTexture2D(normalMapPath, false, true);
+        m_textures.push_back(&normalMapTexture);
 
-            int normalMapIndex = m_textures.size();
-            std::string normalMapPath = mesh.material().normalMap;
-            Texture& normalMapTexture = nodeReg.loadTexture2D(normalMapPath, false, true);
-            m_textures.push_back(&normalMapTexture);
+        // Create material
+        // TODO: Remove redundant materials!
+        ForwardMaterial material {};
+        material.baseColor = baseColorIndex;
+        material.normalMap = normalMapIndex;
+        drawable.materialIndex = m_materials.size();
+        m_materials.push_back(material);
 
-            // Create material
-            // TODO: Remove redundant materials!
-            ForwardMaterial material {};
-            material.baseColor = baseColorIndex;
-            material.normalMap = normalMapIndex;
-            drawable.materialIndex = m_materials.size();
-            m_materials.push_back(material);
-
-            m_drawables.push_back(drawable);
-        });
-    }
+        m_drawables.push_back(drawable);
+    });
 
     if (m_drawables.size() > FORWARD_MAX_DRAWABLES) {
         LogErrorAndExit("ForwardRenderNode: we need to up the number of max drawables that can be handled in the forward pass! "
@@ -87,7 +83,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     size_t materialBufferSize = m_materials.size() * sizeof(ForwardMaterial);
     Buffer& materialBuffer = reg.createBuffer(materialBufferSize, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
 
-    ShaderBinding cameraUniformBufferBinding = { 0, ShaderStageVertex, reg.getBuffer(SceneUniformNode::name(), "camera") };
+    ShaderBinding cameraUniformBufferBinding = { 0, ShaderStageVertex, reg.getBuffer("scene", "camera") };
     ShaderBinding perObjectBufferBinding = { 1, ShaderStageVertex, &perObjectBuffer };
     ShaderBinding materialBufferBinding = { 2, ShaderStageFragment, &materialBuffer };
     ShaderBinding textureSamplerBinding = { 3, ShaderStageFragment, m_textures, FORWARD_MAX_TEXTURES };

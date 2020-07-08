@@ -3,7 +3,6 @@
 #include "ForwardRenderNode.h"
 #include "LightData.h"
 #include "RTAccelerationStructures.h"
-#include "SceneUniformNode.h"
 #include "utility/GlobalState.h"
 #include <half.hpp>
 #include <imgui.h>
@@ -30,9 +29,9 @@ void RTDiffuseGINode::constructNode(Registry& nodeReg)
         // TODO: Would be nice if this could be cached too!
         std::vector<RTVertex> vertices {};
         {
-            auto posData = mesh.positionData();
-            auto normalData = mesh.normalData();
-            auto texCoordData = mesh.texcoordData();
+            auto& posData = mesh.positionData();
+            auto& normalData = mesh.normalData();
+            auto& texCoordData = mesh.texcoordData();
 
             ASSERT(posData.size() == normalData.size());
             ASSERT(posData.size() == texCoordData.size());
@@ -68,10 +67,6 @@ void RTDiffuseGINode::constructNode(Registry& nodeReg)
         model.forEachMesh([&](const Mesh& mesh) {
             createTriangleMeshVertexBuffer(mesh);
         });
-
-        model.proxy().forEachMesh([&](const Mesh& proxyMesh) {
-            createTriangleMeshVertexBuffer(proxyMesh);
-        });
     });
 
     Buffer& meshBuffer = nodeReg.createBuffer(std::move(rtMeshes), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
@@ -90,38 +85,25 @@ RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) 
     const Texture* gBufferNormal = reg.getTexture("g-buffer", "normal").value();
     const Texture* gBufferDepth = reg.getTexture("g-buffer", "depth").value();
 
-    auto createStateForTLAS = [&](const TopLevelAS& tlas) -> std::pair<BindingSet&, RayTracingState&> {
-        BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &tlas },
-                                                             { 1, ShaderStageRTRayGen, m_accumulationTexture, ShaderBindingType::StorageImage },
-                                                             { 2, ShaderStageRTRayGen, gBufferColor, ShaderBindingType::TextureSampler },
-                                                             { 3, ShaderStageRTRayGen, gBufferNormal, ShaderBindingType::TextureSampler },
-                                                             { 4, ShaderStageRTRayGen, gBufferDepth, ShaderBindingType::TextureSampler },
-                                                             { 5, ShaderStageRTRayGen, reg.getBuffer(SceneUniformNode::name(), "camera") },
-                                                             { 6, ShaderStageRTMiss, reg.getBuffer(SceneUniformNode::name(), "environmentData") },
-                                                             { 7, ShaderStageRTMiss, reg.getTexture(SceneUniformNode::name(), "environmentMap").value_or(&reg.createPixelTexture(vec4(1.0), true)) },
-                                                             { 8, ShaderStageRTClosestHit, reg.getBuffer(SceneUniformNode::name(), "directionalLight") } });
+    const TopLevelAS& sceneTLAS = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
+    BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },
+                                                         { 1, ShaderStageRTRayGen, m_accumulationTexture, ShaderBindingType::StorageImage },
+                                                         { 2, ShaderStageRTRayGen, gBufferColor, ShaderBindingType::TextureSampler },
+                                                         { 3, ShaderStageRTRayGen, gBufferNormal, ShaderBindingType::TextureSampler },
+                                                         { 4, ShaderStageRTRayGen, gBufferDepth, ShaderBindingType::TextureSampler },
+                                                         { 5, ShaderStageRTRayGen, reg.getBuffer("scene", "camera") },
+                                                         { 6, ShaderStageRTMiss, reg.getBuffer("scene", "environmentData") },
+                                                         { 7, ShaderStageRTMiss, reg.getTexture("scene", "environmentMap").value_or(&reg.createPixelTexture(vec4(1.0), true)) },
+                                                         { 8, ShaderStageRTClosestHit, reg.getBuffer("scene", "directionalLight") } });
 
-        ShaderFile raygen = ShaderFile("rt-diffuseGI/raygen.rgen");
-        HitGroup mainHitGroup { ShaderFile("rt-diffuseGI/closestHit.rchit") };
-        std::vector<ShaderFile> missShaders { ShaderFile("rt-diffuseGI/miss.rmiss"),
-                                              ShaderFile("rt-diffuseGI/shadow.rmiss") };
-        ShaderBindingTable sbt { raygen, { mainHitGroup }, missShaders };
+    ShaderFile raygen = ShaderFile("rt-diffuseGI/raygen.rgen");
+    HitGroup mainHitGroup { ShaderFile("rt-diffuseGI/closestHit.rchit") };
+    std::vector<ShaderFile> missShaders { ShaderFile("rt-diffuseGI/miss.rmiss"),
+                                          ShaderFile("rt-diffuseGI/shadow.rmiss") };
+    ShaderBindingTable sbt { raygen, { mainHitGroup }, missShaders };
 
-        uint32_t maxRecursionDepth = 2;
-        RayTracingState& rtState = reg.createRayTracingState(sbt, { &frameBindingSet, m_objectDataBindingSet }, maxRecursionDepth);
-
-        return { frameBindingSet, rtState };
-    };
-
-    const TopLevelAS& mainTLAS = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
-    auto [_frameBindingSet, _rtState] = createStateForTLAS(mainTLAS);
-    BindingSet& frameBindingSet = _frameBindingSet;
-    RayTracingState& rtState = _rtState;
-
-    const TopLevelAS& proxyTLAS = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "proxy");
-    auto [_frameBindingSetProxy, _rtStateProxy] = createStateForTLAS(proxyTLAS);
-    BindingSet& frameBindingSetProxy = _frameBindingSetProxy;
-    RayTracingState& rtStateProxy = _rtStateProxy;
+    uint32_t maxRecursionDepth = 2;
+    RayTracingState& rtState = reg.createRayTracingState(sbt, { &frameBindingSet, m_objectDataBindingSet }, maxRecursionDepth);
 
     Texture& diffuseGI = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F, Texture::Usage::StorageAndSample);
     reg.publish("diffuseGI", diffuseGI);
@@ -144,27 +126,12 @@ RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) 
         ImGui::Checkbox("Render", &doRender);
         static bool ignoreColor = false;
         ImGui::Checkbox("Ignore color", &ignoreColor);
-        static bool useProxies = false;
-        ImGui::Checkbox("Use proxies", &useProxies);
 
-        if (!doRender) {
+        if (!doRender)
             return;
-        }
 
-        if (Input::instance().wasKeyPressed(GLFW_KEY_O)) {
-            useProxies = false;
-        }
-        if (Input::instance().wasKeyPressed(GLFW_KEY_P)) {
-            useProxies = true;
-        }
-
-        if (useProxies) {
-            cmdList.setRayTracingState(rtStateProxy);
-            cmdList.bindSet(frameBindingSetProxy, 0);
-        } else {
-            cmdList.setRayTracingState(rtState);
-            cmdList.bindSet(frameBindingSet, 0);
-        }
+        cmdList.setRayTracingState(rtState);
+        cmdList.bindSet(frameBindingSet, 0);
 
         cmdList.bindSet(*m_objectDataBindingSet, 1);
         cmdList.pushConstant(ShaderStageRTRayGen, ignoreColor);

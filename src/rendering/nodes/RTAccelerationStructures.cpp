@@ -16,23 +16,15 @@ std::string RTAccelerationStructures::name()
 void RTAccelerationStructures::constructNode(Registry& nodeReg)
 {
     m_mainInstances.clear();
-    m_proxyInstances.clear();
 
     uint32_t nextTriangleInstanceId = 0;
 
     m_scene.forEachModel([&](size_t, const Model& model) {
         model.forEachMesh([&](const Mesh& mesh) {
             RTGeometry geometry = createGeometryForTriangleMesh(mesh, nodeReg);
-            uint8_t hitMask = model.hasProxy() ? HitMask::TriangleMeshWithProxy : HitMask::TriangleMeshWithoutProxy;
+            uint8_t hitMask = HitMask::TriangleMeshWithoutProxy;
             RTGeometryInstance instance = createGeometryInstance(geometry, model.transform(), nextTriangleInstanceId++, hitMask, HitGroupIndex::Triangle, nodeReg);
             m_mainInstances.push_back(instance);
-        });
-
-        // TODO: Maybe don't create a proxy in every case..? Could have a specific RTProxyAccelerationStructure node.
-        model.proxy().forEachMesh([&](const Mesh& proxyMesh) {
-            RTGeometry proxyGeometry = createGeometryForTriangleMesh(proxyMesh, nodeReg);
-            RTGeometryInstance instance = createGeometryInstance(proxyGeometry, model.transform(), nextTriangleInstanceId++, HitMask::TriangleMeshWithoutProxy, HitGroupIndex::Triangle, nodeReg);
-            m_proxyInstances.push_back(instance);
         });
     });
 }
@@ -42,12 +34,8 @@ RenderGraphNode::ExecuteCallback RTAccelerationStructures::constructFrame(Regist
     TopLevelAS& main = reg.createTopLevelAccelerationStructure(m_mainInstances);
     reg.publish("scene", main);
 
-    TopLevelAS& proxy = reg.createTopLevelAccelerationStructure(m_proxyInstances);
-    reg.publish("proxy", proxy);
-
     return [&](const AppState& appState, CommandList& cmdList) {
         cmdList.rebuildTopLevelAcceratationStructure(main);
-        cmdList.rebuildTopLevelAcceratationStructure(proxy);
     };
 }
 

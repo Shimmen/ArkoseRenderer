@@ -17,7 +17,7 @@ void ShadowMapNode::constructNode(Registry& nodeReg)
 {
     m_drawables.clear();
 
-    m_scene.forEachDrawable([&](int, const Mesh& mesh) {
+    m_scene.forEachMesh([&](size_t, const Mesh& mesh) {
         Drawable drawable {};
         drawable.mesh = &mesh;
 
