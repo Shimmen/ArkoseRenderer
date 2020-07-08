@@ -116,6 +116,9 @@ VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, U
     case Texture::Format::sRGBA8:
         vkFormat = VK_FORMAT_R8G8B8A8_SRGB;
         break;
+    case Texture::Format::R16F:
+        vkFormat = VK_FORMAT_R16_SFLOAT;
+        break;
     case Texture::Format::RGBA16F:
         vkFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
         break;

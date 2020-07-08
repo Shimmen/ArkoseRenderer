@@ -23,23 +23,23 @@ std::vector<Backend::Capability> SimpleApp::optionalCapabilities()
 
 void SimpleApp::setup(RenderGraph& graph)
 {
-    m_scene = Scene::loadFromFile("assets/sample/cornell-box.json");
+    scene().loadFromFile("assets/sample/cornell-box.json");
 
-    graph.addNode<SceneUniformNode>(*m_scene);
-    graph.addNode<GBufferNode>(*m_scene);
-    graph.addNode<ShadowMapNode>(*m_scene);
-    graph.addNode<SlowForwardRenderNode>(*m_scene);
-    graph.addNode<FinalPostFxNode>(*m_scene);
+    graph.addNode<SceneUniformNode>(scene());
+    graph.addNode<GBufferNode>(scene());
+    graph.addNode<ShadowMapNode>(scene());
+    graph.addNode<SlowForwardRenderNode>(scene());
+    graph.addNode<FinalPostFxNode>(scene());
 }
 
 void SimpleApp::update(float elapsedTime, float deltaTime)
 {
     ImGui::Begin("SimpleApp");
-    ImGui::ColorEdit3("Sun color", value_ptr(m_scene->sun().color));
-    ImGui::SliderFloat("Sun intensity", &m_scene->sun().intensity, 0.0f, 50.0f);
-    ImGui::SliderFloat("Environment", &m_scene->environmentMultiplier(), 0.0f, 5.0f);
+    ImGui::ColorEdit3("Sun color", value_ptr(scene().sun().color));
+    ImGui::SliderFloat("Sun intensity", &scene().sun().intensity, 0.0f, 50.0f);
+    ImGui::SliderFloat("Environment", &scene().environmentMultiplier(), 0.0f, 5.0f);
     ImGui::End();
 
     const Input& input = Input::instance();
-    m_scene->camera().update(input, GlobalState::get().windowExtent(), deltaTime);
+    scene().camera().update(input, GlobalState::get().windowExtent(), deltaTime);
 }
