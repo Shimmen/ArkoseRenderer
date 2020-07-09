@@ -63,7 +63,7 @@ void RTReflectionsNode::constructNode(Registry& nodeReg)
     });
 
     Buffer& meshBuffer = nodeReg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
-    m_objectDataBindingSet = &nodeReg.createBindingSet({ { 0, ShaderStageRTClosestHit, &meshBuffer, ShaderBindingType::StorageBuffer },
+    m_objectDataBindingSet = &nodeReg.createBindingSet({ { 0, ShaderStageRTClosestHit, &meshBuffer },
                                                          { 1, ShaderStageRTClosestHit, vertexBuffers },
                                                          { 2, ShaderStageRTClosestHit, indexBuffers },
                                                          { 3, ShaderStageRTClosestHit, allTextures, RT_MAX_TEXTURES } });
@@ -75,7 +75,7 @@ RenderGraphNode::ExecuteCallback RTReflectionsNode::constructFrame(Registry& reg
     const Texture* gBufferNormal = reg.getTexture("g-buffer", "normal").value();
     const Texture* gBufferDepth = reg.getTexture("g-buffer", "depth").value();
 
-    Texture& reflections = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F, Texture::Usage::StorageAndSample);
+    Texture& reflections = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("reflections", reflections);
 
     const TopLevelAS& tlas = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
@@ -86,7 +86,7 @@ RenderGraphNode::ExecuteCallback RTReflectionsNode::constructFrame(Registry& reg
                                                          { 4, ShaderStageRTRayGen, gBufferDepth, ShaderBindingType::TextureSampler },
                                                          { 5, ShaderStageRTRayGen, reg.getBuffer("scene", "camera") },
                                                          { 6, ShaderStageRTMiss, reg.getBuffer("scene", "environmentData") },
-                                                         { 7, ShaderStageRTMiss, reg.getTexture("scene", "environmentMap").value_or(&reg.createPixelTexture(vec4(1.0f), true)) },
+                                                         { 7, ShaderStageRTMiss, reg.getTexture("scene", "environmentMap").value_or(&reg.createPixelTexture(vec4(1.0f), true)), ShaderBindingType::TextureSampler },
                                                          { 8, ShaderStageRTClosestHit, reg.getBuffer("scene", "directionalLight") } });
 
     ShaderFile raygen = ShaderFile("rt-reflections/raygen.rgen");

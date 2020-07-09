@@ -50,11 +50,17 @@ VulkanBuffer::VulkanBuffer(Backend& backend, size_t size, Usage usage, MemoryHin
         break;
     case Buffer::MemoryHint::GpuOptimal:
         allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        usageFlags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         break;
     case Buffer::MemoryHint::TransferOptimal:
         allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU; // (ensures host visible!)
         allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        break;
+    case Buffer::MemoryHint::Readback:
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU; // (ensures host visible!)
+        allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         break;
     }
 
@@ -106,15 +112,24 @@ void VulkanBuffer::updateData(const std::byte* data, size_t updateSize)
     }
 }
 
-VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, Usage usage, MinFilter minFilter, MagFilter magFilter, Mipmap mip, Multisampling ms)
-    : Texture(backend, extent, format, usage, minFilter, magFilter, mip, ms)
+VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, MinFilter minFilter, MagFilter magFilter, Mipmap mip, Multisampling ms)
+    : Texture(backend, extent, format, minFilter, magFilter, mip, ms)
 {
+    // HACK: Now we longer specify what usage we want for the texture, and instead always select all
+    //  possible capabilities. However, some texture formats (e.g. sRGB formats) do not support being
+    //  used as a storage image, so we need to explicitly disable it for those formats.
+    bool storageCapable = true;
+
     switch (format) {
+    case Texture::Format::R32:
+        vkFormat = VK_FORMAT_R32_UINT;
+        break;
     case Texture::Format::RGBA8:
         vkFormat = VK_FORMAT_R8G8B8A8_UNORM;
         break;
     case Texture::Format::sRGBA8:
         vkFormat = VK_FORMAT_R8G8B8A8_SRGB;
+        storageCapable = false;
         break;
     case Texture::Format::R16F:
         vkFormat = VK_FORMAT_R16_SFLOAT;
@@ -127,6 +142,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, U
         break;
     case Texture::Format::Depth32F:
         vkFormat = VK_FORMAT_D32_SFLOAT;
+        storageCapable = false;
         break;
     case Texture::Format::Unknown:
         LogErrorAndExit("Trying to create new texture with format Unknown, which is not allowed!\n");
@@ -134,23 +150,11 @@ VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, U
         ASSERT_NOT_REACHED();
     }
 
+    // Since we don't specify usage we have to assume all of them may be used (at least the common operations)
     const VkImageUsageFlags attachmentFlags = hasDepthFormat() ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    const VkImageUsageFlags sampledFlags = VK_IMAGE_USAGE_SAMPLED_BIT;
-
-    VkImageUsageFlags usageFlags = 0u;
-    switch (usage) {
-    case Texture::Usage::Attachment:
-        usageFlags = attachmentFlags;
-        break;
-    case Texture::Usage::Sampled:
-        usageFlags = sampledFlags;
-        break;
-    case Texture::Usage::AttachAndSample:
-        usageFlags = attachmentFlags | sampledFlags;
-        break;
-    case Texture::Usage::StorageAndSample:
-        usageFlags = VK_IMAGE_USAGE_STORAGE_BIT | sampledFlags;
-    }
+    VkImageUsageFlags usageFlags = attachmentFlags | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    if (storageCapable)
+        usageFlags |= VK_IMAGE_USAGE_STORAGE_BIT;
 
     // (if we later want to generate mipmaps we need the ability to use each mip as a src & dst in blitting)
     if (hasMipmaps()) {
@@ -159,14 +163,14 @@ VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, U
     }
 
     if (vulkanDebugMode) {
-        // for nsight debugging & similar stuff)
-        usageFlags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        // for nsight debugging & similar stuff, which needs access to everything
+        usageFlags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+        usageFlags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     }
 
     // TODO: For now always keep images in device local memory.
     VmaAllocationCreateInfo allocCreateInfo = {};
     allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-    usageFlags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
 
     VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
     imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -180,14 +184,11 @@ VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, U
     imageCreateInfo.samples = static_cast<VkSampleCountFlagBits>(multisampling());
     imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-    // TODO: Add a to<VulkanBackend> utility, or something like that
-    auto& allocator = dynamic_cast<VulkanBackend&>(backend).globalAllocator();
-
+    auto& allocator = static_cast<VulkanBackend&>(backend).globalAllocator();
     if (vmaCreateImage(allocator, &imageCreateInfo, &allocCreateInfo, &image, &allocation, nullptr) != VK_SUCCESS) {
         LogError("VulkanBackend::newTexture(): could not create image.\n");
     }
 
-    // TODO: Handle things like mipmaps here!
     VkImageAspectFlags aspectFlags = 0u;
     if (hasDepthFormat()) {
         aspectFlags |= VK_IMAGE_ASPECT_DEPTH_BIT;
@@ -211,9 +212,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, U
     viewCreateInfo.subresourceRange.baseArrayLayer = 0;
     viewCreateInfo.subresourceRange.layerCount = 1;
 
-    // TODO: Add a to<VulkanBackend> utility, or something like that
-    VkDevice device = dynamic_cast<VulkanBackend&>(backend).device();
-
+    VkDevice device = static_cast<VulkanBackend&>(backend).device();
     if (vkCreateImageView(device, &viewCreateInfo, nullptr, &imageView) != VK_SUCCESS) {
         LogError("VulkanBackend::newTexture(): could not create image view.\n");
     }
@@ -272,53 +271,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, U
         LogError("VulkanBackend::newTexture(): could not create sampler for the image.\n");
     }
 
-    VkImageLayout layout;
-    switch (usage) {
-    case Texture::Usage::AttachAndSample:
-        // We probably want to render to it before sampling from it
-    case Texture::Usage::Attachment:
-        layout = hasDepthFormat() ? VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        break;
-    case Texture::Usage::Sampled:
-        layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        break;
-    case Texture::Usage::StorageAndSample:
-        layout = VK_IMAGE_LAYOUT_GENERAL;
-        break;
-    }
-    {
-        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageBarrier.newLayout = layout;
-        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-        imageBarrier.image = image;
-        imageBarrier.subresourceRange.aspectMask = hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-        imageBarrier.subresourceRange.baseMipLevel = 0;
-        imageBarrier.subresourceRange.levelCount = mipLevels();
-        imageBarrier.subresourceRange.baseArrayLayer = 0;
-        imageBarrier.subresourceRange.layerCount = 1;
-
-        // NOTE: This is very slow, since it blocks everything, but it should be fine for this purpose
-        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-
-        // TODO: Add a to<VulkanBackend> utility, or something like that
-        bool success = dynamic_cast<VulkanBackend&>(backend).issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
-            vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0,
-                                 0, nullptr,
-                                 0, nullptr,
-                                 1, &imageBarrier);
-        });
-        if (!success) {
-            LogErrorAndExit("VulkanBackend::newTexture():could not transition image to the preferred layout.\n");
-        }
-    }
-
-    currentLayout = layout;
+    currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 }
 
 VulkanTexture::~VulkanTexture()
@@ -413,27 +366,40 @@ void VulkanTexture::setPixelData(vec4 pixel)
         return;
     }
 
-    VkImageLayout finalLayout;
-    switch (usage()) {
-    case Texture::Usage::AttachAndSample:
-        // We probably want to render to it before sampling from it
-    case Texture::Usage::Attachment:
-        finalLayout = hasDepthFormat() ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        break;
-    case Texture::Usage::Sampled:
-        finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        break;
-    case Texture::Usage::StorageAndSample:
-        finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-        break;
-    }
-    currentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+    {
+        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-    if (!vulkanBackend.transitionImageLayout(image, hasDepthFormat(), currentLayout, finalLayout)) {
-        LogError("Could not transition the image to the final image layout.\n");
-        return;
+        imageBarrier.image = image;
+        imageBarrier.subresourceRange.aspectMask = hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+        imageBarrier.subresourceRange.baseMipLevel = 0;
+        imageBarrier.subresourceRange.levelCount = 1;
+        imageBarrier.subresourceRange.baseArrayLayer = 0;
+        imageBarrier.subresourceRange.layerCount = 1;
+
+        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+        imageBarrier.srcAccessMask = 0;
+        imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
     }
-    currentLayout = finalLayout;
+
+    bool success = static_cast<VulkanBackend&>(backend()).issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+        vkCmdPipelineBarrier(commandBuffer,
+                             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
+                             0, nullptr,
+                             0, nullptr,
+                             1, &imageBarrier);
+    });
+
+    if (!success) {
+        LogError("Error transitioning layout after setting pixel data\n");
+    }
+
+    currentLayout = VK_IMAGE_LAYOUT_GENERAL;
 }
 
 void VulkanTexture::setData(const std::byte* data, size_t size)
@@ -478,30 +444,44 @@ void VulkanTexture::setData(const std::byte* data, size_t size)
         return;
     }
 
-    VkImageLayout finalLayout;
-    switch (usage()) {
-    case Texture::Usage::AttachAndSample:
-        // We probably want to render to it before sampling from it
-    case Texture::Usage::Attachment:
-        finalLayout = hasDepthFormat() ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        break;
-    case Texture::Usage::Sampled:
-        finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        break;
-    case Texture::Usage::StorageAndSample:
-        finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-        break;
-    }
     currentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-
     if (mipmap() != Texture::Mipmap::None && extent().width() > 1 && extent().height() > 1) {
-        vulkanBackend.generateMipmaps(*this, finalLayout);
+        vulkanBackend.generateMipmaps(*this, VK_IMAGE_LAYOUT_GENERAL);
     } else {
-        if (!vulkanBackend.transitionImageLayout(image, hasDepthFormat(), currentLayout, finalLayout)) {
-            LogError("Could not transition the image to the final image layout.\n");
+        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        {
+            imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+            imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+            imageBarrier.image = image;
+            imageBarrier.subresourceRange.aspectMask = hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+            imageBarrier.subresourceRange.baseMipLevel = 0;
+            imageBarrier.subresourceRange.levelCount = 1;
+            imageBarrier.subresourceRange.baseArrayLayer = 0;
+            imageBarrier.subresourceRange.layerCount = 1;
+
+            VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+            imageBarrier.srcAccessMask = 0;
+            imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        }
+
+        bool success = static_cast<VulkanBackend&>(backend()).issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+            vkCmdPipelineBarrier(commandBuffer,
+                                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 1, &imageBarrier);
+        });
+
+        if (!success) {
+            LogError("Error transitioning layout after setting texture data\n");
         }
     }
-    currentLayout = finalLayout;
+    currentLayout = VK_IMAGE_LAYOUT_GENERAL;
 }
 
 void VulkanTexture::setData(const float* data, size_t size)
@@ -546,30 +526,44 @@ void VulkanTexture::setData(const float* data, size_t size)
         return;
     }
 
-    VkImageLayout finalLayout;
-    switch (usage()) {
-    case Texture::Usage::AttachAndSample:
-        // We probably want to render to it before sampling from it
-    case Texture::Usage::Attachment:
-        finalLayout = hasDepthFormat() ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        break;
-    case Texture::Usage::Sampled:
-        finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        break;
-    case Texture::Usage::StorageAndSample:
-        finalLayout = VK_IMAGE_LAYOUT_GENERAL;
-        break;
-    }
     currentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-
     if (mipmap() != Texture::Mipmap::None && extent().width() > 1 && extent().height() > 1) {
-        vulkanBackend.generateMipmaps(*this, finalLayout);
+        vulkanBackend.generateMipmaps(*this, VK_IMAGE_LAYOUT_GENERAL);
     } else {
-        if (!vulkanBackend.transitionImageLayout(image, hasDepthFormat(), currentLayout, finalLayout)) {
-            LogError("Could not transition the image to the final image layout.\n");
+        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        {
+            imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+            imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+            imageBarrier.image = image;
+            imageBarrier.subresourceRange.aspectMask = hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+            imageBarrier.subresourceRange.baseMipLevel = 0;
+            imageBarrier.subresourceRange.levelCount = 1;
+            imageBarrier.subresourceRange.baseArrayLayer = 0;
+            imageBarrier.subresourceRange.layerCount = 1;
+
+            VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+
+            imageBarrier.srcAccessMask = 0;
+            imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+        }
+
+        bool success = static_cast<VulkanBackend&>(backend()).issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+            vkCmdPipelineBarrier(commandBuffer,
+                                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 1, &imageBarrier);
+        });
+
+        if (!success) {
+            LogError("Error transitioning layout after setting texture data\n");
         }
     }
-    currentLayout = finalLayout;
+    currentLayout = VK_IMAGE_LAYOUT_GENERAL;
 }
 
 VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment> attachments)
@@ -937,7 +931,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 descImageInfo.sampler = texture.sampler;
                 descImageInfo.imageView = texture.imageView;
 
-                ASSERT(texture.usage() == Texture::Usage::StorageAndSample);
+                // The runtime systems make sure that the input texture is in the layout!
                 descImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 
                 descImageInfos.push_back(descImageInfo);
@@ -960,9 +954,8 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 descImageInfo.sampler = texture.sampler;
                 descImageInfo.imageView = texture.imageView;
 
-                //ASSERT(texInfo.currentLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-                ASSERT(texture.usage() == Texture::Usage::Sampled || texture.usage() == Texture::Usage::AttachAndSample || texture.usage() == Texture::Usage::StorageAndSample);
-                descImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; //texInfo.currentLayout;
+                // The runtime systems make sure that the input texture is in the layout!
+                descImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
                 descImageInfos.push_back(descImageInfo);
                 write.pImageInfo = &descImageInfos.back();
@@ -991,7 +984,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                     descImageInfo.sampler = texture.sampler;
                     descImageInfo.imageView = texture.imageView;
 
-                    ASSERT(texture.usage() == Texture::Usage::Sampled || texture.usage() == Texture::Usage::AttachAndSample);
+                    // The runtime systems make sure that the input texture is in the layout!
                     descImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
                     descImageInfos.push_back(descImageInfo);

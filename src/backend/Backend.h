@@ -28,7 +28,7 @@ public:
 
     virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) = 0;
     virtual std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) = 0;
-    virtual std::unique_ptr<Texture> createTexture(Extent2D, Texture::Format, Texture::Usage, Texture::MinFilter, Texture::MagFilter, Texture::Mipmap, Texture::Multisampling) = 0;
+    virtual std::unique_ptr<Texture> createTexture(Extent2D, Texture::Format, Texture::MinFilter, Texture::MagFilter, Texture::Mipmap, Texture::Multisampling) = 0;
     virtual std::unique_ptr<BindingSet> createBindingSet(std::vector<ShaderBinding>) = 0;
     virtual std::unique_ptr<RenderState> createRenderState(const RenderTarget&, const VertexLayout&, const Shader&, std::vector<const BindingSet*>,
                                                            const Viewport&, const BlendState&, const RasterState&, const DepthState&)

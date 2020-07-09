@@ -65,19 +65,13 @@ struct Texture : public Resource {
 
     enum class Format {
         Unknown,
+        R32,
         R16F,
         RGBA8,
         sRGBA8,
         RGBA16F,
         RGBA32F,
-        Depth32F
-    };
-
-    enum class Usage {
-        Attachment,
-        Sampled,
-        AttachAndSample,
-        StorageAndSample,
+        Depth32F,
     };
 
     enum class MinFilter {
@@ -106,7 +100,7 @@ struct Texture : public Resource {
     };
 
     Texture() = default;
-    Texture(Backend&, Extent2D, Format, Usage, MinFilter, MagFilter, Mipmap, Multisampling);
+    Texture(Backend&, Extent2D, Format, MinFilter, MagFilter, Mipmap, Multisampling);
 
     bool hasFloatingPointDataFormat() const;
 
@@ -116,7 +110,6 @@ struct Texture : public Resource {
 
     [[nodiscard]] const Extent2D& extent() const { return m_extent; }
     [[nodiscard]] Format format() const { return m_format; }
-    [[nodiscard]] Usage usage() const { return m_usage; }
     [[nodiscard]] MinFilter minFilter() const { return m_minFilter; }
     [[nodiscard]] MagFilter magFilter() const { return m_magFilter; }
 
@@ -132,10 +125,14 @@ struct Texture : public Resource {
         return m_format == Format::Depth32F;
     }
 
+    [[nodiscard]] bool hasSrgbFormat() const
+    {
+        return m_format == Format::sRGBA8;
+    }
+
 private:
     Extent2D m_extent;
     Format m_format;
-    Usage m_usage;
     MinFilter m_minFilter;
     MagFilter m_magFilter;
     Mipmap m_mipmap;
@@ -203,6 +200,7 @@ struct Buffer : public Resource {
         TransferOptimal,
         GpuOptimal,
         GpuOnly,
+        Readback,
     };
 
     Buffer() = default;
@@ -313,10 +311,10 @@ class TopLevelAS;
 struct ShaderBinding {
 
     // Single uniform or storage buffer
-    ShaderBinding(uint32_t index, ShaderStage, const Buffer*, ShaderBindingType = ShaderBindingType::UniformBuffer);
+    ShaderBinding(uint32_t index, ShaderStage, const Buffer*);
 
     // Single sampled texture or storage image
-    ShaderBinding(uint32_t index, ShaderStage, const Texture*, ShaderBindingType = ShaderBindingType::TextureSampler);
+    ShaderBinding(uint32_t index, ShaderStage, const Texture*, ShaderBindingType);
 
     // Single top level acceleration structures
     ShaderBinding(uint32_t index, ShaderStage, const TopLevelAS*);

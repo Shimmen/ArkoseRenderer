@@ -41,7 +41,7 @@ public:
 
     std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) override;
     std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) override;
-    std::unique_ptr<Texture> createTexture(Extent2D, Texture::Format, Texture::Usage, Texture::MinFilter, Texture::MagFilter, Texture::Mipmap, Texture::Multisampling) override;
+    std::unique_ptr<Texture> createTexture(Extent2D, Texture::Format, Texture::MinFilter, Texture::MagFilter, Texture::Mipmap, Texture::Multisampling) override;
     std::unique_ptr<BindingSet> createBindingSet(std::vector<ShaderBinding>) override;
     std::unique_ptr<RenderState> createRenderState(const RenderTarget&, const VertexLayout&, const Shader&, std::vector<const BindingSet*>,
                                                    const Viewport&, const BlendState&, const RasterState&, const DepthState&) override;

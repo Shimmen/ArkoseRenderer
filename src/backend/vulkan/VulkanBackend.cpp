@@ -294,11 +294,11 @@ std::unique_ptr<RenderTarget> VulkanBackend::createRenderTarget(std::vector<Rend
     return std::make_unique<VulkanRenderTarget>(*this, attachments);
 }
 
-std::unique_ptr<Texture> VulkanBackend::createTexture(Extent2D extent, Texture::Format format, Texture::Usage usage,
+std::unique_ptr<Texture> VulkanBackend::createTexture(Extent2D extent, Texture::Format format,
                                                       Texture::MinFilter minFilter, Texture::MagFilter magFilter,
                                                       Texture::Mipmap mipmap, Texture::Multisampling multisampling)
 {
-    return std::make_unique<VulkanTexture>(*this, extent, format, usage, minFilter, magFilter, mipmap, multisampling);
+    return std::make_unique<VulkanTexture>(*this, extent, format, minFilter, magFilter, mipmap, multisampling);
 }
 
 std::unique_ptr<BindingSet> VulkanBackend::createBindingSet(std::vector<ShaderBinding> shaderBindings)
@@ -807,7 +807,7 @@ void VulkanBackend::createAndSetupSwapchain(VkPhysicalDevice physicalDevice, VkD
 
     m_swapchainExtent = { swapchainExtent.width, swapchainExtent.height };
     m_swapchainImageFormat = surfaceFormat.format;
-    m_swapchainDepthTexture = std::make_unique<VulkanTexture>(*this, m_swapchainExtent, Texture::Format::Depth32F, Texture::Usage::Attachment,
+    m_swapchainDepthTexture = std::make_unique<VulkanTexture>(*this, m_swapchainExtent, Texture::Format::Depth32F,
                                                               Texture::MinFilter::Nearest, Texture::MagFilter::Nearest,
                                                               Texture::Mipmap::None, Texture::Multisampling::None);
     setupWindowRenderTargets();
@@ -890,7 +890,6 @@ void VulkanBackend::createWindowRenderTargetFrontend()
         {
             colorTexture->m_extent = m_swapchainExtent;
             colorTexture->m_format = Texture::Format::Unknown;
-            colorTexture->m_usage = Texture::Usage::Attachment;
             colorTexture->m_minFilter = Texture::MinFilter::Nearest;
             colorTexture->m_magFilter = Texture::MagFilter::Nearest;
             colorTexture->m_mipmap = Texture::Mipmap::None;
@@ -1329,7 +1328,7 @@ void VulkanBackend::generateMipmaps(const Texture& genTexture, VkImageLayout fin
         barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         barrier.newLayout = finalLayout;
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
 
         vkCmdPipelineBarrier(commandBuffer,
                              VK_PIPELINE_STAGE_TRANSFER_BIT, dstStage, 0,
@@ -1611,6 +1610,8 @@ bool VulkanBackend::transitionImageLayout(VkImage image, bool isDepthFormat, VkI
 
     VkPipelineStageFlags sourceStage;
     VkPipelineStageFlags destinationStage;
+
+    // TODO: This whole function needs to be scrapped, really..
 
     if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
 

@@ -107,13 +107,13 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     DepthState depthState;
     depthState.writeDepth = true;
 
-    Texture& colorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA8, Texture::Usage::AttachAndSample);
+    Texture& colorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA8);
     reg.publish("color", colorTexture);
 
-    Texture& normalTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA8, Texture::Usage::AttachAndSample);
+    Texture& normalTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA8);
     reg.publish("normal", normalTexture);
 
-    Texture& depthTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::Depth32F, Texture::Usage::AttachAndSample);
+    Texture& depthTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::Depth32F);
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture },
                                                           { RenderTarget::AttachmentType::Color1, &normalTexture },
                                                           { RenderTarget::AttachmentType::Depth, &depthTexture } });

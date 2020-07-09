@@ -70,13 +70,13 @@ void RTDiffuseGINode::constructNode(Registry& nodeReg)
     });
 
     Buffer& meshBuffer = nodeReg.createBuffer(std::move(rtMeshes), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
-    m_objectDataBindingSet = &nodeReg.createBindingSet({ { 0, ShaderStageRTClosestHit, &meshBuffer, ShaderBindingType::StorageBuffer },
+    m_objectDataBindingSet = &nodeReg.createBindingSet({ { 0, ShaderStageRTClosestHit, &meshBuffer },
                                                          { 1, ShaderStageRTClosestHit, vertexBuffers },
                                                          { 2, ShaderStageRTClosestHit, indexBuffers },
                                                          { 3, ShaderStageRTClosestHit, allTextures, RT_MAX_TEXTURES } });
 
     Extent2D windowExtent = GlobalState::get().windowExtent();
-    m_accumulationTexture = &nodeReg.createTexture2D(windowExtent, Texture::Format::RGBA16F, Texture::Usage::StorageAndSample);
+    m_accumulationTexture = &nodeReg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
 }
 
 RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) const
@@ -93,7 +93,7 @@ RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) 
                                                          { 4, ShaderStageRTRayGen, gBufferDepth, ShaderBindingType::TextureSampler },
                                                          { 5, ShaderStageRTRayGen, reg.getBuffer("scene", "camera") },
                                                          { 6, ShaderStageRTMiss, reg.getBuffer("scene", "environmentData") },
-                                                         { 7, ShaderStageRTMiss, reg.getTexture("scene", "environmentMap").value_or(&reg.createPixelTexture(vec4(1.0), true)) },
+                                                         { 7, ShaderStageRTMiss, reg.getTexture("scene", "environmentMap").value_or(&reg.createPixelTexture(vec4(1.0), true)), ShaderBindingType::TextureSampler },
                                                          { 8, ShaderStageRTClosestHit, reg.getBuffer("scene", "directionalLight") } });
 
     ShaderFile raygen = ShaderFile("rt-diffuseGI/raygen.rgen");
@@ -105,7 +105,7 @@ RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) 
     uint32_t maxRecursionDepth = 2;
     RayTracingState& rtState = reg.createRayTracingState(sbt, { &frameBindingSet, m_objectDataBindingSet }, maxRecursionDepth);
 
-    Texture& diffuseGI = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F, Texture::Usage::StorageAndSample);
+    Texture& diffuseGI = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("diffuseGI", diffuseGI);
 
     BindingSet& avgAccumBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, m_accumulationTexture, ShaderBindingType::StorageImage },

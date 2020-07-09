@@ -33,18 +33,18 @@ FinalPostFxNode::ExecuteCallback FinalPostFxNode::constructFrame(Registry& reg) 
     const Texture* sourceTexture = reg.getTexture(ForwardRenderNode::name(), "color").value_or(&placeholder);
     const Texture* sourceTextureRt = reg.getTexture(RTFirstHitNode::name(), "image").value_or(&placeholder);
 
-    BindingSet& sourceImage = reg.createBindingSet({ { 0, ShaderStageFragment, sourceTexture } });
-    BindingSet& sourceImageRt = reg.createBindingSet({ { 0, ShaderStageFragment, sourceTextureRt } });
+    BindingSet& sourceImage = reg.createBindingSet({ { 0, ShaderStageFragment, sourceTexture, ShaderBindingType::TextureSampler } });
+    BindingSet& sourceImageRt = reg.createBindingSet({ { 0, ShaderStageFragment, sourceTextureRt, ShaderBindingType::TextureSampler } });
 
     // TODO: Maybe return an optional instead, so we can use value_or(..)
     const Texture* diffuseGI = reg.getTexture(RTDiffuseGINode::name(), "diffuseGI").value_or(&reg.createPixelTexture(vec4(0, 0, 0, 1), true));
     const Texture* ambientOcclusion = reg.getTexture(RTAmbientOcclusion::name(), "AO").value_or(&reg.createPixelTexture(vec4(1, 1, 1, 1), true));
-    BindingSet& etcBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, diffuseGI },
-                                                       { 1, ShaderStageFragment, ambientOcclusion } });
+    BindingSet& etcBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, diffuseGI, ShaderBindingType::TextureSampler },
+                                                       { 1, ShaderStageFragment, ambientOcclusion, ShaderBindingType::TextureSampler } });
 
     BindingSet& envBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, reg.getBuffer("scene", "camera") },
-                                                       { 1, ShaderStageFragment, reg.getTexture("scene", "environmentMap").value_or(&reg.createPixelTexture(vec4(1), true)) },
-                                                       { 2, ShaderStageFragment, reg.getTexture("g-buffer", "depth").value() },
+                                                       { 1, ShaderStageFragment, reg.getTexture("scene", "environmentMap").value_or(&reg.createPixelTexture(vec4(1), true)), ShaderBindingType::TextureSampler },
+                                                       { 2, ShaderStageFragment, reg.getTexture("g-buffer", "depth").value(), ShaderBindingType::TextureSampler },
                                                        { 3, ShaderStageFragment, reg.getBuffer("scene", "environmentData") } });
 
     RenderStateBuilder renderStateBuilder { reg.windowRenderTarget(), shader, vertexLayout };
@@ -75,7 +75,7 @@ FinalPostFxNode::ExecuteCallback FinalPostFxNode::constructFrame(Registry& reg) 
         if (ImGui::Button("Take screenshot")) {
             static int imageIdx = 0;
             const Texture& finalColor = *reg.windowRenderTarget().attachment(RenderTarget::AttachmentType::Color0);
-            cmdList.saveTextureToFile(finalColor, "assets/Screenshots/screenshot_" + std::to_string(imageIdx++) + ".png");
+            cmdList.saveTextureToFile(finalColor, "assets/screenshot_" + std::to_string(imageIdx++) + ".png");
         }
     };
 }

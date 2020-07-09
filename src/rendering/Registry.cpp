@@ -30,9 +30,9 @@ RenderTarget& Registry::createRenderTarget(std::vector<RenderTarget::Attachment>
     return *m_renderTargets.back();
 }
 
-Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Usage usage, Texture::Multisampling ms)
+Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Multisampling ms)
 {
-    auto texture = backend().createTexture(extent, format, usage, Texture::MinFilter::Linear, Texture::MagFilter::Linear, Texture::Mipmap::None, ms);
+    auto texture = backend().createTexture(extent, format, Texture::MinFilter::Linear, Texture::MagFilter::Linear, Texture::Mipmap::None, ms);
     m_textures.push_back(std::move(texture));
     return *m_textures.back();
 }
@@ -65,9 +65,8 @@ Texture& Registry::createPixelTexture(vec4 pixelValue, bool srgb)
     auto format = srgb
         ? Texture::Format::sRGBA8
         : Texture::Format::RGBA8;
-    auto usage = Texture::Usage::Sampled;
 
-    auto texture = backend().createTexture({ 1, 1 }, format, usage, Texture::MinFilter::Nearest, Texture::MagFilter::Nearest, Texture::Mipmap::None, Texture::Multisampling::None);
+    auto texture = backend().createTexture({ 1, 1 }, format, Texture::MinFilter::Nearest, Texture::MagFilter::Nearest, Texture::Mipmap::None, Texture::Multisampling::None);
     texture->setPixelData(pixelValue);
 
     m_textures.push_back(std::move(texture));
@@ -100,10 +99,8 @@ Texture& Registry::loadTexture2D(const std::string& imagePath, bool srgb, bool g
         LogErrorAndExit("Currently no support for other than (s)RGB(F) and (s)RGBA(F) texture loading!\n");
     }
 
-    // TODO: Maybe we want to allow more stuff..?
-    auto usage = Texture::Usage::Sampled;
-    auto mipmapMode = generateMipmaps ? Texture::Mipmap::Linear : Texture::Mipmap::None;
-    auto texture = backend().createTexture({ width, height }, format, usage, Texture::MinFilter::Linear, Texture::MagFilter::Linear, mipmapMode, Texture::Multisampling::None);
+    auto mipmapMode = generateMipmaps && width > 1 && height > 1 ? Texture::Mipmap::Linear : Texture::Mipmap::None;
+    auto texture = backend().createTexture({ width, height }, format, Texture::MinFilter::Linear, Texture::MagFilter::Linear, mipmapMode, Texture::Multisampling::None);
 
     // FIXME: Add async functionality though the Registry (i.e., every new frame it checks for new data and sees if it may update some)
 

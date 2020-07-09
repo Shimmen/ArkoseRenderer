@@ -28,11 +28,10 @@ Resource& Resource::operator=(Resource&& other) noexcept
     return *this;
 }
 
-Texture::Texture(Backend& backend, Extent2D extent, Format format, Usage usage, MinFilter minFilter, MagFilter magFilter, Mipmap mipmap, Multisampling multisampling)
+Texture::Texture(Backend& backend, Extent2D extent, Format format, MinFilter minFilter, MagFilter magFilter, Mipmap mipmap, Multisampling multisampling)
     : Resource(backend)
     , m_extent(extent)
     , m_format(format)
-    , m_usage(usage)
     , m_minFilter(minFilter)
     , m_magFilter(magFilter)
     , m_mipmap(mipmap)
@@ -97,13 +96,6 @@ RenderTarget::RenderTarget(Backend& backend, std::vector<Attachment> attachments
 
     if (totalAttachmentCount() < 1) {
         LogErrorAndExit("RenderTarget error: tried to create with less than one attachments!\n");
-    }
-
-    for (auto& attachment : m_attachments) {
-        const Texture& texture = *attachment.texture;
-        if (texture.usage() != Texture::Usage::Attachment && texture.usage() != Texture::Usage::AttachAndSample) {
-            LogErrorAndExit("RenderTarget error: tried to create with texture that can't be used as attachment\n");
-        }
     }
 
     if (totalAttachmentCount() < 2) {
@@ -208,11 +200,10 @@ Buffer::Buffer(Backend& backend, size_t size, Usage usage, MemoryHint memoryHint
 {
 }
 
-ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const Buffer* buffer, ShaderBindingType type)
+ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const Buffer* buffer)
     : bindingIndex(index)
     , count(1)
     , shaderStage(shaderStage)
-    , type(type)
     , buffers({ buffer })
     , textures()
 {
@@ -220,8 +211,15 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const Buff
         LogErrorAndExit("ShaderBinding error: null buffer\n");
     }
 
-    if (type != ShaderBindingType::UniformBuffer && type != ShaderBindingType::StorageBuffer) {
-        LogErrorAndExit("ShaderBinding error: invalid shader binding type for buffer\n");
+    switch (buffer->usage()) {
+    case Buffer::Usage::UniformBuffer:
+        type = ShaderBindingType::UniformBuffer;
+        break;
+    case Buffer::Usage::StorageBuffer:
+        type = ShaderBindingType::StorageBuffer;
+        break;
+    default:
+        LogErrorAndExit("ShaderBinding error: invalid buffer for shader binding (not index or uniform buffer)\n");
     }
 }
 
@@ -237,22 +235,8 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const Text
         LogErrorAndExit("ShaderBinding error: null texture\n");
     }
 
-    auto usage = texture->usage();
-
-    switch (type) {
-    case ShaderBindingType::TextureSampler:
-        if (usage != Texture::Usage::Sampled && usage != Texture::Usage::AttachAndSample && usage != Texture::Usage::StorageAndSample) {
-            LogErrorAndExit("ShaderBinding error: texture does not have a usage valid for being sampled\n");
-        }
-        break;
-    case ShaderBindingType::StorageImage:
-        if (usage != Texture::Usage::StorageAndSample) {
-            LogErrorAndExit("ShaderBinding error: texture is not a storage image\n");
-        }
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-        break;
+    if (type == ShaderBindingType::StorageImage && (texture->hasSrgbFormat() || texture->hasDepthFormat())) {
+        LogErrorAndExit("ShaderBinding error: can't use texture with sRGB or depth format as storage image\n");
     }
 }
 
@@ -285,9 +269,6 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std:
     for (auto texture : textures) {
         if (!texture) {
             LogErrorAndExit("ShaderBinding error: null texture in list\n");
-        }
-        if (texture->usage() != Texture::Usage::Sampled && texture->usage() != Texture::Usage::AttachAndSample) {
-            LogErrorAndExit("ShaderBinding error: texture in list does not support sampling\n");
         }
     }
 }

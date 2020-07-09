@@ -46,10 +46,10 @@ void SlowForwardRenderNode::constructNode(Registry& nodeReg)
         // Create binding set
         drawable.bindingSet = &nodeReg.createBindingSet(
             { { 0, ShaderStageVertex, drawable.objectDataBuffer },
-              { 1, ShaderStageFragment, baseColorTexture },
-              { 2, ShaderStageFragment, &normalMapTexture },
-              { 3, ShaderStageFragment, &metallicRoughnessTexture },
-              { 4, ShaderStageFragment, &emissiveTexture } });
+              { 1, ShaderStageFragment, baseColorTexture, ShaderBindingType::TextureSampler },
+              { 2, ShaderStageFragment, &normalMapTexture, ShaderBindingType::TextureSampler },
+              { 3, ShaderStageFragment, &metallicRoughnessTexture, ShaderBindingType::TextureSampler },
+              { 4, ShaderStageFragment, &emissiveTexture, ShaderBindingType::TextureSampler } });
 
         m_drawables.push_back(drawable);
     });
@@ -59,7 +59,7 @@ RenderGraphNode::ExecuteCallback SlowForwardRenderNode::constructFrame(Registry&
 {
     const RenderTarget& windowTarget = reg.windowRenderTarget();
 
-    Texture& colorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA16F, Texture::Usage::AttachAndSample);
+    Texture& colorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA16F);
     reg.publish("color", colorTexture);
 
     // FIXME: Avoid const_cast and also make sure we can create render targets which doesn't automatically clear all input textures before writing
@@ -72,7 +72,7 @@ RenderGraphNode::ExecuteCallback SlowForwardRenderNode::constructFrame(Registry&
     BindingSet& fixedBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageVertex | ShaderStageFragment), cameraUniformBuffer } });
 
     const Texture* shadowMap = reg.getTexture(ShadowMapNode::name(), "directional").value_or(&reg.createPixelTexture(vec4(1.0), false));
-    BindingSet& dirLightBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, shadowMap },
+    BindingSet& dirLightBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, shadowMap, ShaderBindingType::TextureSampler },
                                                             { 1, ShaderStageFragment, reg.getBuffer("scene", "directionalLight") } });
 
     Shader shader = Shader::createBasicRasterize("forward/forwardSlow.vert", "forward/forwardSlow.frag");
