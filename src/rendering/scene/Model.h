@@ -1,7 +1,7 @@
 #pragma once
 
+#include "backend/Resources.h"
 #include "rendering/Registry.h"
-#include "rendering/Resources.h"
 #include "rendering/camera/FpsCamera.h"
 #include "rendering/scene/Material.h"
 #include "rendering/scene/Transform.h"

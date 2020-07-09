@@ -2,9 +2,9 @@
 
 #include "VulkanRTX.h"
 #include "backend/Backend.h"
+#include "backend/Resources.h"
 #include "backend/vulkan/VulkanResources.h"
 #include "rendering/App.h"
-#include "rendering/Resources.h"
 #include <array>
 #include <optional>
 #include <unordered_map>

@@ -10,6 +10,7 @@ add_executable(ArkoseRenderer
     src/apps/SimpleApp.cpp
     src/main.cpp
     src/backend/Backend.cpp
+    src/backend/Resources.cpp
     src/backend/vulkan/VulkanBackend.cpp
     src/backend/vulkan/VulkanCommandList.cpp
     src/backend/vulkan/VulkanResources.cpp
@@ -17,7 +18,6 @@ add_executable(ArkoseRenderer
     src/rendering/Shader.cpp
     src/rendering/ShaderManager.cpp
     src/rendering/Registry.cpp
-    src/rendering/Resources.cpp
     src/rendering/RenderGraphNode.cpp
     src/rendering/RenderGraph.cpp
     src/rendering/camera/FpsCamera.cpp

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rendering/Resources.h"
+#include <backend/Resources.h>
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Resources.h"
+#include "utility/Extent.h"
 
 class AppState {
 public:

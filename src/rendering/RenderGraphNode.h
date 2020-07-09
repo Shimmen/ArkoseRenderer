@@ -2,8 +2,8 @@
 
 #include "AppState.h"
 #include "Registry.h"
-#include "Resources.h"
-#include "rendering/CommandList.h"
+#include "backend/CommandList.h"
+#include "backend/Resources.h"
 #include "utility/AvgAccumulator.h"
 #include <functional>
 #include <memory>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rendering/Resources.h"
+#include <backend/Resources.h>
 #include <string>
 
 class CommandList {
@@ -8,6 +8,8 @@ public:
     virtual void clearTexture(Texture&, ClearColor) = 0;
 
     virtual void setRenderState(const RenderState&, ClearColor, float clearDepth, uint32_t clearStencil = 0) = 0;
+    virtual void endRenderState() = 0;
+
     virtual void setRayTracingState(const RayTracingState&) = 0;
     virtual void setComputeState(const ComputeState&) = 0;
 
@@ -32,6 +34,8 @@ public:
 
     //! A barrier for all commands and memory, which probably only should be used for debug stuff.
     virtual void debugBarrier() = 0;
+
+    virtual void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) = 0;
 
     virtual void saveTextureToFile(const Texture&, const std::string&) = 0;
 };

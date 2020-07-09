@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Shader.h"
+#include "rendering/Shader.h"
 #include "rendering/scene/Transform.h"
 #include "utility/Badge.h"
 #include "utility/Extent.h"

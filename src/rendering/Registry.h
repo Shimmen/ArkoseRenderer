@@ -2,8 +2,8 @@
 
 #include "AppState.h"
 #include "NodeDependency.h"
-#include "Resources.h"
 #include "backend/Backend.h"
+#include "backend/Resources.h"
 #include "utility/util.h"
 #include <unordered_map>
 #include <unordered_set>
