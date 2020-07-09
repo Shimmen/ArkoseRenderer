@@ -84,15 +84,43 @@ void VulkanCommandList::setRenderState(const RenderState& genRenderState, ClearC
     // Explicitly transition the layouts of the sampled textures to an optimal layout (if it isn't already)
     {
         for (const Texture* genTexture : renderState.sampledTextures) {
-            auto& constTexture = dynamic_cast<const VulkanTexture&>(*genTexture);
+            auto& constTexture = static_cast<const VulkanTexture&>(*genTexture);
             auto& texture = const_cast<VulkanTexture&>(constTexture); // FIXME: const_cast
-            if (texture.currentLayout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-                m_backend.transitionImageLayout(texture.image, texture.hasDepthFormat(), texture.currentLayout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, &m_commandBuffer);
-            }
-            texture.currentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-            // TODO: We probably want to support storage images here as well!
+            constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            if (texture.currentLayout != targetLayout) {
+
+                VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+                imageBarrier.oldLayout = texture.currentLayout;
+                imageBarrier.newLayout = targetLayout;
+                imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+                imageBarrier.image = texture.image;
+                imageBarrier.subresourceRange.aspectMask = texture.hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+                imageBarrier.subresourceRange.baseMipLevel = 0;
+                imageBarrier.subresourceRange.levelCount = texture.mipLevels();
+                imageBarrier.subresourceRange.baseArrayLayer = 0;
+                imageBarrier.subresourceRange.layerCount = 1;
+
+                VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                imageBarrier.srcAccessMask = 0;
+
+                VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+                imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT; // FIXME: Maybe VK_ACCESS_MEMORY_READ_BIT?
+
+                vkCmdPipelineBarrier(m_commandBuffer,
+                                     sourceStage, destinationStage, 0,
+                                     0, nullptr,
+                                     0, nullptr,
+                                     1, &imageBarrier);
+            }
+
+            texture.currentLayout = targetLayout;
         }
+
+        // TODO: We probably want to support storage images here as well!
+        // for (const Texture* genTexture : renderState.storageImages) {}
     }
 
     renderPassBeginInfo.renderPass = renderTarget.compatibleRenderPass;
