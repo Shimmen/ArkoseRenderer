@@ -93,6 +93,7 @@ GltfModel::GltfModel(std::string path, const tinygltf::Model& model)
                 }
 
                 m_meshes.emplace_back(meshName, this, model, mesh.primitives[i], matrix);
+                m_meshes.back().setModel(this);
             }
         }
 
@@ -144,6 +145,13 @@ std::vector<Mesh::CanonoicalVertex> GltfMesh::canonoicalVertexData() const
 size_t GltfModel::meshCount() const
 {
     return m_meshes.size();
+}
+
+void GltfModel::forEachMesh(std::function<void(Mesh&)> callback)
+{
+    for (Mesh& mesh : m_meshes) {
+        callback(mesh);
+    }
 }
 
 void GltfModel::forEachMesh(std::function<void(const Mesh&)> callback) const

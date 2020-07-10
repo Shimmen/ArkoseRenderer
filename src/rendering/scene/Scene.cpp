@@ -200,6 +200,17 @@ int Scene::forEachMesh(std::function<void(size_t, const Mesh&)> callback) const
     return nextIndex;
 }
 
+int Scene::forEachMesh(std::function<void(size_t, Mesh&)> callback)
+{
+    size_t nextIndex = 0;
+    for (auto& model : m_models) {
+        model->forEachMesh([&](Mesh& mesh) {
+            callback(nextIndex++, mesh);
+        });
+    }
+    return nextIndex;
+}
+
 void Scene::cameraGui()
 {
     for (const auto& [name, camera] : m_allCameras) {

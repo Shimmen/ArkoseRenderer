@@ -32,7 +32,12 @@ public:
     size_t meshCount() const;
 
     void forEachModel(std::function<void(size_t, const Model&)> callback) const;
+    
     int forEachMesh(std::function<void(size_t, const Mesh&)> callback) const;
+    int forEachMesh(std::function<void(size_t, Mesh&)> callback);
+
+    void setSelectedModel(Model* model) { m_selectedModel = model; }
+    void setSelectedMesh(Mesh* mesh) { m_selectedMesh = mesh; }
 
     const FpsCamera& camera() const { return m_currentMainCamera; }
     FpsCamera& camera() { return m_currentMainCamera; }
@@ -66,4 +71,7 @@ private:
     float m_environmentMultiplier { 1.0f };
 
     float m_ambient { 0.0f };
+
+    Model* m_selectedModel { nullptr };
+    Mesh* m_selectedMesh { nullptr };
 };

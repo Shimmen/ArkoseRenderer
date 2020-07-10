@@ -8,6 +8,8 @@
 #include <functional>
 #include <mooslib/vector.h>
 
+class Model;
+
 class Mesh {
 public:
     Mesh(Transform transform)
@@ -15,6 +17,10 @@ public:
     {
     }
     virtual ~Mesh() = default;
+
+    virtual void setModel(Model* model) { m_owner = model; }
+    virtual Model* model() { return m_owner; }
+    virtual const Model* model() const { return m_owner; }
 
     virtual const Transform& transform() const { return m_transform; }
     // TODO: Don't recreate new material on each request
@@ -53,6 +59,7 @@ protected:
 
 private:
     Transform m_transform {};
+    Model* m_owner { nullptr };
 };
 
 class Model {
@@ -67,6 +74,7 @@ public:
     const Transform& transform() const { return m_transform; }
 
     virtual size_t meshCount() const = 0;
+    virtual void forEachMesh(std::function<void(Mesh&)>) = 0;
     virtual void forEachMesh(std::function<void(const Mesh&)>) const = 0;
 
     bool hasProxy() const;
