@@ -2,6 +2,7 @@
 
 #include "rendering/nodes/FinalPostFxNode.h"
 #include "rendering/nodes/GBufferNode.h"
+#include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/SceneNode.h"
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SlowForwardRenderNode.h"
@@ -26,6 +27,7 @@ void SimpleApp::setup(RenderGraph& graph)
     scene().loadFromFile("assets/sample/cornell-box.json");
 
     graph.addNode<SceneNode>(scene());
+    graph.addNode<PickingNode>(scene());
     graph.addNode<GBufferNode>(scene());
     graph.addNode<ShadowMapNode>(scene());
     graph.addNode<SlowForwardRenderNode>(scene());
