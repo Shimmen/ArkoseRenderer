@@ -62,7 +62,7 @@ FinalPostFxNode::ExecuteCallback FinalPostFxNode::constructFrame(Registry& reg) 
         static float exposure = 0.45f;
         ImGui::SliderFloat("Exposure", &exposure, 0.01f, 10.0f, "%.3f", 3.0f);
 
-        cmdList.setRenderState(renderState, ClearColor(0.5f, 0.1f, 0.5f), 1.0f);
+        cmdList.beginRendering(renderState, ClearColor(0.5f, 0.1f, 0.5f), 1.0f);
         cmdList.bindSet(useRtFirstHit ? sourceImageRt : sourceImage, 0);
         cmdList.bindSet(etcBindingSet, 1);
         cmdList.bindSet(envBindingSet, 2);

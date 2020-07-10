@@ -121,7 +121,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     RenderState& renderState = reg.createRenderState(renderTarget, vertexLayout, shader, { &bindingSet }, viewport, blendState, rasterState, depthState);
 
     return [&](const AppState& appState, CommandList& cmdList) {
-        cmdList.setRenderState(renderState, ClearColor(0.1f, 0.1f, 0.1f), 1.0f);
+        cmdList.beginRendering(renderState, ClearColor(0.1f, 0.1f, 0.1f), 1.0f);
         cmdList.bindSet(bindingSet, 0);
 
         perObjectBuffer.updateData(m_materials.data(), m_materials.size() * sizeof(ForwardMaterial));

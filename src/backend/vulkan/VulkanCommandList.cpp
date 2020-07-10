@@ -44,7 +44,7 @@ void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
     }
 }
 
-void VulkanCommandList::setRenderState(const RenderState& genRenderState, ClearColor clearColor, float clearDepth, uint32_t clearStencil)
+void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearColor clearColor, float clearDepth, uint32_t clearStencil)
 {
     if (activeRenderState) {
         LogWarning("setRenderState: already active render state!\n");
@@ -136,6 +136,14 @@ void VulkanCommandList::setRenderState(const RenderState& genRenderState, ClearC
     // TODO: Handle subpasses properly!
     vkCmdBeginRenderPass(m_commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderState.pipeline);
+}
+
+void VulkanCommandList::endRendering()
+{
+    if (activeRenderState) {
+        vkCmdEndRenderPass(m_commandBuffer);
+        activeRenderState = nullptr;
+    }
 }
 
 void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)

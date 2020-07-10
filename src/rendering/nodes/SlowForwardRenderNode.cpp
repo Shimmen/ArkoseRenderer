@@ -94,7 +94,7 @@ RenderGraphNode::ExecuteCallback SlowForwardRenderNode::constructFrame(Registry&
         static bool forceDiffuse = false;
         ImGui::Checkbox("Force diffuse materials", &forceDiffuse);
 
-        cmdList.setRenderState(renderState, ClearColor(0, 0, 0, 0), 1.0f);
+        cmdList.beginRendering(renderState, ClearColor(0, 0, 0, 0), 1.0f);
         cmdList.bindSet(fixedBindingSet, 0);
         cmdList.bindSet(dirLightBindingSet, 2);
 

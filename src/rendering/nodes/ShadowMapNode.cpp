@@ -54,7 +54,7 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
     return [&](const AppState& appState, CommandList& cmdList) {
-        cmdList.setRenderState(renderState, ClearColor(1, 0, 1), 1.0f);
+        cmdList.beginRendering(renderState, ClearColor(1, 0, 1), 1.0f);
 
         mat4 lightProjectionFromWorld = sunLight.lightProjection();
         lightDataBuffer.updateData(&lightProjectionFromWorld, sizeof(mat4));

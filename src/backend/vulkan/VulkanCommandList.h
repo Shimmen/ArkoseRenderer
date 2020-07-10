@@ -8,7 +8,9 @@ public:
 
     void clearTexture(Texture&, ClearColor) override;
 
-    void setRenderState(const RenderState&, ClearColor, float clearDepth, uint32_t clearStencil) override;
+    void beginRendering(const RenderState&, ClearColor, float clearDepth, uint32_t clearStencil) override;
+    void endRendering() override;
+
     void setRayTracingState(const RayTracingState&) override;
     void setComputeState(const ComputeState&) override;
 
