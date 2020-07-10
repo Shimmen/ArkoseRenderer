@@ -19,18 +19,20 @@ public:
 
     void draw(Buffer& vertexBuffer, uint32_t vertexCount) override;
     void drawIndexed(Buffer& vertexBuffer, Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex) override;
-    
+
     void rebuildTopLevelAcceratationStructure(TopLevelAS&) override;
     void traceRays(Extent2D) override;
 
     void dispatch(Extent3D globalSize, Extent3D localSize) override;
     void dispatch(uint32_t x, uint32_t y, uint32_t z = 1) override;
-    
+
     void waitEvent(uint8_t eventId, PipelineStage) override;
     void resetEvent(uint8_t eventId, PipelineStage) override;
     void signalEvent(uint8_t eventId, PipelineStage) override;
 
     void debugBarrier() override;
+
+    void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) override;
 
     void saveTextureToFile(const Texture&, const std::string&) override;
 

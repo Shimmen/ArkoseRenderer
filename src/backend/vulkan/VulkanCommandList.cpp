@@ -434,6 +434,87 @@ void VulkanCommandList::signalEvent(uint8_t eventId, PipelineStage stage)
     vkCmdSetEvent(m_commandBuffer, event, stageFlags(stage));
 }
 
+void VulkanCommandList::slowBlockingReadFromBuffer(const Buffer& buffer, size_t offset, size_t size, void* dst)
+{
+    MOOSLIB_ASSERT(offset < buffer.size());
+    MOOSLIB_ASSERT(size > 0);
+    MOOSLIB_ASSERT(size < buffer.size() - offset);
+
+    auto& srcBuffer = static_cast<const VulkanBuffer&>(buffer);
+    auto dstGenericBuffer = m_backend.createBuffer(buffer.size(), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::Readback);
+    auto& dstBuffer = static_cast<VulkanBuffer&>(*dstGenericBuffer);
+
+    m_backend.issueSingleTimeCommand([&](VkCommandBuffer cmdBuffer) {
+        {
+            VkBufferMemoryBarrier bufferMemoryBarrier { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+
+            bufferMemoryBarrier.buffer = srcBuffer.buffer;
+            bufferMemoryBarrier.offset = static_cast<VkDeviceSize>(offset);
+            bufferMemoryBarrier.size = static_cast<VkDeviceSize>(size);
+
+            bufferMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            bufferMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+            bufferMemoryBarrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+            bufferMemoryBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+
+            VkPipelineStageFlagBits srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+            VkPipelineStageFlagBits dstStageMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+
+            vkCmdPipelineBarrier(cmdBuffer,
+                                 srcStageMask, dstStageMask,
+                                 0,
+                                 0, nullptr,
+                                 1, &bufferMemoryBarrier,
+                                 0, nullptr);
+        }
+
+        {
+            VkBufferCopy bufferCopyRegion = {};
+            bufferCopyRegion.size = size;
+            bufferCopyRegion.srcOffset = offset;
+            bufferCopyRegion.dstOffset = offset;
+
+            vkCmdCopyBuffer(cmdBuffer, srcBuffer.buffer, dstBuffer.buffer, 1, &bufferCopyRegion);
+        }
+
+        {
+            VkBufferMemoryBarrier bufferMemoryBarrier { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+
+            bufferMemoryBarrier.buffer = dstBuffer.buffer;
+            bufferMemoryBarrier.offset = static_cast<VkDeviceSize>(offset);
+            bufferMemoryBarrier.size = static_cast<VkDeviceSize>(size);
+
+            bufferMemoryBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            bufferMemoryBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+            bufferMemoryBarrier.srcAccessMask = VK_PIPELINE_STAGE_TRANSFER_BIT;
+            bufferMemoryBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_HOST_READ_BIT;
+
+            VkPipelineStageFlagBits srcStageMask = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+            VkPipelineStageFlagBits dstStageMask = VK_PIPELINE_STAGE_HOST_BIT;
+
+            vkCmdPipelineBarrier(cmdBuffer,
+                                 srcStageMask, dstStageMask,
+                                 0,
+                                 0, nullptr,
+                                 1, &bufferMemoryBarrier,
+                                 0, nullptr);
+        }
+    });
+
+    VmaAllocator allocator = m_backend.globalAllocator();
+    VmaAllocation allocation = dstBuffer.allocation;
+
+    moos::u8* mappedBuffer;
+    if (vmaMapMemory(allocator, allocation, (void**)&mappedBuffer) != VK_SUCCESS)
+        LogError("Failed to map readback buffer memory...\n");
+    vmaInvalidateAllocation(allocator, allocation, offset, size);
+
+    std::memcpy(dst, mappedBuffer + offset, size);
+    vmaUnmapMemory(allocator, allocation);
+}
+
 void VulkanCommandList::saveTextureToFile(const Texture& texture, const std::string& filePath)
 {
     const VkFormat targetFormat = VK_FORMAT_R8G8B8A8_UNORM;
