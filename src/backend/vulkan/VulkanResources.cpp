@@ -109,6 +109,9 @@ void VulkanBuffer::updateData(const std::byte* data, size_t updateSize)
     case Buffer::MemoryHint::GpuOnly:
         LogError("Can't update buffer with GpuOnly memory hint, ignoring\n");
         break;
+    case Buffer::MemoryHint::Readback:
+        LogError("Can't update buffer with Readback memory hint, ignoring\n");
+        break;
     }
 }
 
@@ -290,6 +293,10 @@ void VulkanTexture::setPixelData(vec4 pixel)
     bool isHdr = false;
 
     switch (format()) {
+    case Texture::Format::R32:
+        numChannels = 1;
+        isHdr = false;
+        break;
     case Texture::Format::R16F:
         numChannels = 1;
         isHdr = true;
@@ -380,9 +387,6 @@ void VulkanTexture::setPixelData(vec4 pixel)
         imageBarrier.subresourceRange.baseArrayLayer = 0;
         imageBarrier.subresourceRange.layerCount = 1;
 
-        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-
         imageBarrier.srcAccessMask = 0;
         imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
     }
@@ -462,9 +466,6 @@ void VulkanTexture::setData(const std::byte* data, size_t size)
             imageBarrier.subresourceRange.baseArrayLayer = 0;
             imageBarrier.subresourceRange.layerCount = 1;
 
-            VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-
             imageBarrier.srcAccessMask = 0;
             imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
         }
@@ -543,9 +544,6 @@ void VulkanTexture::setData(const float* data, size_t size)
             imageBarrier.subresourceRange.levelCount = 1;
             imageBarrier.subresourceRange.baseArrayLayer = 0;
             imageBarrier.subresourceRange.layerCount = 1;
-
-            VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
 
             imageBarrier.srcAccessMask = 0;
             imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;

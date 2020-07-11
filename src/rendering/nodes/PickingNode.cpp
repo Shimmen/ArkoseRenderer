@@ -114,7 +114,7 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
         if (selectedIndex < numMeshes) {
             m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
                 if (index == selectedIndex) {
-                    LogInfo("Selected mesh (global index %u) of model '%s'\n", selectedIndex, mesh.model()->name());
+                    LogInfo("Selected mesh (global index %u) of model '%s'\n", selectedIndex, mesh.model()->name().c_str());
                     m_scene.setSelectedMesh(&mesh);
                     m_scene.setSelectedModel(mesh.model());
                 }

@@ -44,6 +44,7 @@ Texture::Texture(Backend& backend, Extent2D extent, Format format, MinFilter min
 bool Texture::hasFloatingPointDataFormat() const
 {
     switch (format()) {
+    case Texture::Format::R32:
     case Texture::Format::RGBA8:
     case Texture::Format::sRGBA8:
         return false;
@@ -53,6 +54,7 @@ bool Texture::hasFloatingPointDataFormat() const
     case Texture::Format::Depth32F:
         return true;
     case Texture::Format::Unknown:
+    default:
         ASSERT_NOT_REACHED();
         return false;
     }
