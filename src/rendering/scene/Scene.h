@@ -21,7 +21,7 @@ class Scene {
 public:
     static constexpr const char* savedCamerasFile = "assets/cameras.json";
 
-    Scene() = default;
+    Scene(std::unique_ptr<Registry>);
     ~Scene();
 
     void loadFromFile(const std::string&);
@@ -32,7 +32,7 @@ public:
     size_t meshCount() const;
 
     void forEachModel(std::function<void(size_t, const Model&)> callback) const;
-    
+
     int forEachMesh(std::function<void(size_t, const Mesh&)> callback) const;
     int forEachMesh(std::function<void(size_t, Mesh&)> callback);
 
@@ -60,6 +60,8 @@ private:
 
 private:
     std::string m_loadedPath {};
+
+    std::unique_ptr<Registry> m_registry {};
 
     std::vector<std::unique_ptr<Model>> m_models;
     SunLight m_sunLight;

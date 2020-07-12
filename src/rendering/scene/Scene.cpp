@@ -15,6 +15,11 @@ mat4 SunLight::lightProjection() const
     return lightProjection * lightOrientation;
 }
 
+Scene::Scene(std::unique_ptr<Registry> registry)
+    : m_registry(std::move(registry))
+{
+}
+
 void Scene::loadFromFile(const std::string& path)
 {
     using json = nlohmann::json;

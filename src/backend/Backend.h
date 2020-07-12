@@ -39,8 +39,7 @@ public:
     virtual std::unique_ptr<ComputeState> createComputeState(const Shader&, std::vector<const BindingSet*>) = 0;
 
 protected:
-    // FIXME: Remove this once we no longer have the resource ID lookup system
-    [[nodiscard]] static Badge<Backend> backendBadge()
+    [[nodiscard]] static Badge<Backend> badge()
     {
         return {};
     }

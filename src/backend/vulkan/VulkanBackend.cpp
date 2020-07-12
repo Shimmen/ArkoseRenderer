@@ -26,11 +26,13 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, App& app)
     : m_window(window)
     , m_app(app)
 {
+    app.createScene(badge(), std::make_unique<Registry>(*this));
+
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
-    GlobalState::getMutable(backendBadge()).updateWindowExtent({ width, height });
+    GlobalState::getMutable(badge()).updateWindowExtent({ width, height });
     glfwSetFramebufferSizeCallback(window, static_cast<GLFWframebuffersizefun>([](GLFWwindow* window, int width, int height) {
-                                       GlobalState::getMutable(backendBadge()).updateWindowExtent({ width, height });
+                                       GlobalState::getMutable(badge()).updateWindowExtent({ width, height });
                                        s_unhandledWindowResize = true;
                                    }));
 
