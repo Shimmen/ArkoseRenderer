@@ -38,10 +38,8 @@ public:
     virtual const std::vector<vec3>& normalData() const = 0;
     virtual const std::vector<vec4>& tangentData() const = 0;
 
-    virtual VertexFormat vertexFormat() const = 0;
-    virtual IndexType indexType() const = 0;
-
     virtual const std::vector<uint32_t>& indexData() const = 0;
+    virtual IndexType indexType() const = 0;
     virtual size_t indexCount() const = 0;
     virtual bool isIndexed() const = 0;
 

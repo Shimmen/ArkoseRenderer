@@ -22,11 +22,9 @@ public:
     const std::vector<vec4>& tangentData() const override;
 
     const std::vector<uint32_t>& indexData() const override;
+    IndexType indexType() const override;
     size_t indexCount() const override;
     bool isIndexed() const override;
-
-    VertexFormat vertexFormat() const override;
-    IndexType indexType() const override;
 
 private:
     const tinygltf::Accessor* getAccessor(const char* name) const;

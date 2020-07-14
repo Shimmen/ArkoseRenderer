@@ -417,14 +417,13 @@ private:
     std::vector<const BindingSet*> m_bindingSets {};
 };
 
-// TODO: Probably remove this later.. shouldn't be needed, I think.
-enum class VertexFormat {
+enum class RTVertexFormat {
     XYZ32F
 };
 
 struct RTTriangleGeometry {
     const Buffer& vertexBuffer;
-    VertexFormat vertexFormat;
+    RTVertexFormat vertexFormat;
     size_t vertexStride;
 
     const Buffer& indexBuffer;

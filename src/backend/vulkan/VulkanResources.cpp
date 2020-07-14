@@ -1449,7 +1449,7 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
             triangles.vertexStride = triGeo.vertexStride;
             triangles.vertexCount = triGeo.vertexBuffer.size() / triangles.vertexStride;
             switch (triGeo.vertexFormat) {
-            case VertexFormat::XYZ32F:
+            case RTVertexFormat::XYZ32F:
                 triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
                 break;
             }
