@@ -13,6 +13,7 @@
 #include "utility/util.h"
 #include <algorithm>
 #include <cstring>
+#include <fmt/format.h>
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
@@ -1187,10 +1188,12 @@ void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, doub
     VulkanCommandList cmdList { *this, commandBuffer };
 
     ImGui::Begin("Nodes (in order)");
-    m_renderGraph->forEachNodeInResolvedOrder(associatedRegistry, [&](std::string nodeName, NodeTimer& nodeTimer, const RenderGraphNode::ExecuteCallback& nodeExecuteCallback) {
-        // TODO: Use fmt to create a nice formatted title so we can put the times in the header title!
-        ImGui::CollapsingHeader(nodeName.c_str(), ImGuiTreeNodeFlags_Leaf);
-        ImGui::TextColored(ImVec4(0.8f, 0.8f, 0.8f, 1.0f), "CPU: %.2f ms | GPU: %.2f ms", nodeTimer.averageCpuTime() * 1000.0, nodeTimer.averageGpuTime() * 1000.0);
+    m_renderGraph->forEachNodeInResolvedOrder(associatedRegistry, [&](const std::string& nodeName, NodeTimer& nodeTimer, const RenderGraphNode::ExecuteCallback& nodeExecuteCallback) {
+        double cpuTime = nodeTimer.averageCpuTime() * 1000.0;
+        std::string title = isnan(cpuTime)
+            ? fmt::format("{} | CPU: - ms", nodeName)
+            : fmt::format("{} | CPU: {:.2f} ms", nodeName, cpuTime);
+        ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_Leaf);
 
         double cpuStartTime = glfwGetTime();
 

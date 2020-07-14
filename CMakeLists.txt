@@ -79,6 +79,16 @@ if(NOT json_POPULATED)
 endif()
 target_link_libraries(ArkoseRenderer PRIVATE nlohmann_json::nlohmann_json)
 
+FetchContent_Declare(fmt
+        GIT_REPOSITORY https://github.com/fmtlib/fmt.git
+        GIT_TAG 7.0.1)
+FetchContent_GetProperties(fmt)
+if(NOT fmt_POPULATED)
+    FetchContent_Populate(fmt)
+    add_subdirectory(${fmt_SOURCE_DIR} ${fmt_BINARY_DIR} EXCLUDE_FROM_ALL)
+endif()
+target_link_libraries(ArkoseRenderer PRIVATE fmt)
+
 FetchContent_Declare(spirvcross
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
     GIT_TAG        "2020-02-26")
