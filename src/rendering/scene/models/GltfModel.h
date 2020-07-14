@@ -10,7 +10,7 @@ class GltfModel;
 class GltfMesh : public Mesh {
 public:
     explicit GltfMesh(std::string name, const GltfModel* parent, const tinygltf::Model&, const tinygltf::Primitive&, mat4 matrix);
-    ~GltfMesh() = default;
+    ~GltfMesh() override = default;
 
     Material material() const override;
 

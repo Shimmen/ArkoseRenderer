@@ -3,13 +3,15 @@
 #include "backend/Resources.h"
 #include "rendering/scene/Material.h"
 #include "rendering/scene/Transform.h"
+#include "rendering/scene/Vertex.h"
 #include <mooslib/vector.h>
+#include <unordered_map>
 
 class Model;
 
 class Mesh {
 public:
-    Mesh(Transform transform)
+    explicit Mesh(Transform transform)
         : m_transform(transform)
     {
     }
@@ -23,6 +25,13 @@ public:
     // TODO: Don't recreate new material on each request
     virtual Material material() const = 0;
 
+    void ensureVertexBuffer(const SemanticVertexLayout&);
+    const Buffer& vertexBuffer(const SemanticVertexLayout&);
+
+    void ensureIndexBuffer();
+    const Buffer& indexBuffer();
+
+    // TODO: Remove this vvvvv
     struct CanonoicalVertex {
         vec3 position;
         vec2 texCoord;
@@ -32,6 +41,7 @@ public:
 
     static VertexLayout canonoicalVertexLayout();
     virtual std::vector<CanonoicalVertex> canonoicalVertexData() const = 0;
+    // TODO: Remove this ^^^^^
 
     virtual const std::vector<vec3>& positionData() const = 0;
     virtual const std::vector<vec2>& texcoordData() const = 0;
@@ -44,13 +54,19 @@ public:
     virtual bool isIndexed() const = 0;
 
 protected:
-    // Data cache
+    // CPU data cache
+    // TODO: Remove this vvvvv
     mutable std::optional<std::vector<CanonoicalVertex>> m_canonoicalVertexData;
+    // TODO: Remove this ^^^^^
     mutable std::optional<std::vector<vec3>> m_positionData;
     mutable std::optional<std::vector<vec2>> m_texcoordData;
     mutable std::optional<std::vector<vec3>> m_normalData;
     mutable std::optional<std::vector<vec4>> m_tangentData;
     mutable std::optional<std::vector<uint32_t>> m_indexData;
+
+    // GPU Buffer cache
+    mutable const Buffer* m_indexBuffer { nullptr };
+    mutable std::unordered_map<SemanticVertexLayout, const Buffer*> m_vertexBuffers;
 
 private:
     Transform m_transform {};

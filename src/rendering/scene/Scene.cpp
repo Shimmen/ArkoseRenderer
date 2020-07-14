@@ -172,6 +172,7 @@ Scene::~Scene()
 Model& Scene::addModel(std::unique_ptr<Model> model)
 {
     MOOSLIB_ASSERT(model);
+    model->setScene({}, this);
     m_models.push_back(std::move(model));
     return *m_models.back().get();
 }

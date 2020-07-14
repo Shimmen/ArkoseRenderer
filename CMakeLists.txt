@@ -24,6 +24,7 @@ add_executable(ArkoseRenderer
     src/rendering/scene/Scene.cpp
     src/rendering/scene/Mesh.cpp
     src/rendering/scene/Model.cpp
+    src/rendering/scene/Vertex.cpp
     src/rendering/scene/models/GltfModel.cpp
     src/rendering/nodes/SceneNode.cpp
     src/rendering/nodes/PickingNode.cpp
