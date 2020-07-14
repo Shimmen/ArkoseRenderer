@@ -27,7 +27,8 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, App& app)
     : m_window(window)
     , m_app(app)
 {
-    app.createScene(badge(), std::make_unique<Registry>(*this));
+    m_sceneRegistry = std::make_unique<Registry>(*this);
+    app.createScene(badge(), *m_sceneRegistry);
 
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
@@ -156,6 +157,7 @@ VulkanBackend::~VulkanBackend()
 
     m_frameRegistries.clear();
     m_nodeRegistry.reset();
+    m_sceneRegistry.reset();
 
     destroySwapchain();
 

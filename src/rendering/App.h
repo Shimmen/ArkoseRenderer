@@ -18,9 +18,9 @@ public:
     Scene& scene() { return *m_scene; }
     const Scene& scene() const { return *m_scene; }
 
-    void createScene(Badge<Backend>, std::unique_ptr<Registry> sceneRegistry)
+    void createScene(Badge<Backend>, Registry& sceneRegistry)
     {
-        m_scene = std::make_unique<Scene>(std::move(sceneRegistry));
+        m_scene = std::make_unique<Scene>(sceneRegistry);
     }
 
 private:

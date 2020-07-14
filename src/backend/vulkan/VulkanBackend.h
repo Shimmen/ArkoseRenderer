@@ -223,6 +223,7 @@ private:
 
     App& m_app;
 
+    std::unique_ptr<Registry> m_sceneRegistry {};
     std::unique_ptr<Registry> m_nodeRegistry {};
     std::vector<std::unique_ptr<Registry>> m_frameRegistries {};
 

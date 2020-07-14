@@ -16,8 +16,8 @@ mat4 SunLight::lightProjection() const
     return lightProjection * lightOrientation;
 }
 
-Scene::Scene(std::unique_ptr<Registry> registry)
-    : m_registry(std::move(registry))
+Scene::Scene(Registry& registry)
+    : m_registry(registry)
 {
 }
 

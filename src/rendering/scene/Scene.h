@@ -19,12 +19,15 @@ public:
     float worldExtent;
 };
 
-class Scene {
+class Scene final {
 public:
     static constexpr const char* savedCamerasFile = "assets/cameras.json";
 
-    Scene(std::unique_ptr<Registry>);
+    explicit Scene(Registry&);
     ~Scene();
+
+    Registry& registry() { return m_registry; }
+    const Registry& registry() const { return m_registry; }
 
     void loadFromFile(const std::string&);
 
@@ -63,7 +66,7 @@ private:
 private:
     std::string m_loadedPath {};
 
-    std::unique_ptr<Registry> m_registry {};
+    Registry& m_registry;
 
     std::vector<std::unique_ptr<Model>> m_models;
     SunLight m_sunLight;
