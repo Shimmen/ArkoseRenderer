@@ -1,6 +1,7 @@
 #pragma once
 
 #include <mooslib/vector.h>
+#include <string>
 
 class Material {
 public:

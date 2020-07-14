@@ -3,7 +3,9 @@
 #include "Model.h"
 #include <memory>
 #include <nlohmann/json_fwd.hpp>
+#include <rendering/camera/FpsCamera.h>
 #include <string>
+#include <unordered_map>
 
 class SunLight {
 public:
@@ -26,7 +28,7 @@ public:
 
     void loadFromFile(const std::string&);
 
-    Model* addModel(std::unique_ptr<Model>);
+    Model& addModel(std::unique_ptr<Model>);
 
     size_t modelCount() const { return m_models.size(); }
     size_t meshCount() const;

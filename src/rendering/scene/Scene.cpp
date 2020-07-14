@@ -1,5 +1,6 @@
 #include "Scene.h"
 
+#include "rendering/Registry.h"
 #include "rendering/scene/models/GltfModel.h"
 #include "utility/FileIO.h"
 #include "utility/Logging.h"
@@ -168,13 +169,11 @@ Scene::~Scene()
     fileStream << savedCameras;
 }
 
-Model* Scene::addModel(std::unique_ptr<Model> model)
+Model& Scene::addModel(std::unique_ptr<Model> model)
 {
-    if (model) {
-        m_models.push_back(std::move(model));
-        return m_models.back().get();
-    }
-    return nullptr;
+    MOOSLIB_ASSERT(model);
+    m_models.push_back(std::move(model));
+    return *m_models.back().get();
 }
 
 size_t Scene::meshCount() const
