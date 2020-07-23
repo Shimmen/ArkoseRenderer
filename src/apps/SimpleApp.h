@@ -10,7 +10,4 @@ public:
 
     void setup(RenderGraph&) override;
     void update(float elapsedTime, float deltaTime) override;
-
-private:
-    std::unique_ptr<Scene> m_scene {};
 };
