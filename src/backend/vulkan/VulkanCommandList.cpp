@@ -17,9 +17,35 @@ void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
     ASSERT(!colorTexture.hasDepthFormat());
 
     std::optional<VkImageLayout> originalLayout;
-    if (colorTexture.currentLayout != VK_IMAGE_LAYOUT_GENERAL) {
+    if (colorTexture.currentLayout != VK_IMAGE_LAYOUT_GENERAL && colorTexture.currentLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         originalLayout = colorTexture.currentLayout;
-        m_backend.transitionImageLayout(colorTexture.image, false, originalLayout.value(), VK_IMAGE_LAYOUT_GENERAL, &m_commandBuffer);
+
+        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        imageBarrier.oldLayout = originalLayout.value();
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        imageBarrier.image = colorTexture.image;
+        imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageBarrier.subresourceRange.baseMipLevel = 0;
+        imageBarrier.subresourceRange.levelCount = colorTexture.mipLevels();
+        imageBarrier.subresourceRange.baseArrayLayer = 0;
+        imageBarrier.subresourceRange.layerCount = 1;
+
+        // FIXME: Probably overly aggressive barriers!
+
+        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+        vkCmdPipelineBarrier(m_commandBuffer,
+                             sourceStage, destinationStage, 0,
+                             0, nullptr,
+                             0, nullptr,
+                             1, &imageBarrier);
     }
 
     VkClearColorValue clearValue {};
@@ -39,8 +65,33 @@ void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
 
     vkCmdClearColorImage(m_commandBuffer, colorTexture.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &range);
 
-    if (originalLayout.has_value()) {
-        m_backend.transitionImageLayout(colorTexture.image, false, VK_IMAGE_LAYOUT_GENERAL, originalLayout.value(), &m_commandBuffer);
+    if (originalLayout.has_value() && originalLayout.value() != VK_IMAGE_LAYOUT_UNDEFINED && originalLayout.value() != VK_IMAGE_LAYOUT_PREINITIALIZED) {
+        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageBarrier.newLayout = originalLayout.value();
+        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        imageBarrier.image = colorTexture.image;
+        imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageBarrier.subresourceRange.baseMipLevel = 0;
+        imageBarrier.subresourceRange.levelCount = colorTexture.mipLevels();
+        imageBarrier.subresourceRange.baseArrayLayer = 0;
+        imageBarrier.subresourceRange.layerCount = 1;
+
+        // FIXME: Probably overly aggressive barriers!
+
+        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+        vkCmdPipelineBarrier(m_commandBuffer,
+                             sourceStage, destinationStage, 0,
+                             0, nullptr,
+                             0, nullptr,
+                             1, &imageBarrier);
     }
 }
 
@@ -166,19 +217,71 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)
         for (const Texture* texture : rtState.sampledTextures) {
             auto& constVulkanTexture = dynamic_cast<const VulkanTexture&>(*texture);
             auto& vulkanTexture = const_cast<VulkanTexture&>(constVulkanTexture); // FIXME: const_cast
-            if (vulkanTexture.currentLayout != VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-                m_backend.transitionImageLayout(vulkanTexture.image, texture->hasDepthFormat(), vulkanTexture.currentLayout, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, &m_commandBuffer);
+
+            constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            if (vulkanTexture.currentLayout != targetLayout) {
+
+                VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+                imageBarrier.oldLayout = vulkanTexture.currentLayout;
+                imageBarrier.newLayout = targetLayout;
+                imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+                imageBarrier.image = vulkanTexture.image;
+                imageBarrier.subresourceRange.aspectMask = vulkanTexture.hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+                imageBarrier.subresourceRange.baseMipLevel = 0;
+                imageBarrier.subresourceRange.levelCount = vulkanTexture.mipLevels();
+                imageBarrier.subresourceRange.baseArrayLayer = 0;
+                imageBarrier.subresourceRange.layerCount = 1;
+
+                VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                imageBarrier.srcAccessMask = 0;
+
+                VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV;
+                imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT; // FIXME: Maybe memory read & write?
+
+                vkCmdPipelineBarrier(m_commandBuffer,
+                                     sourceStage, destinationStage, 0,
+                                     0, nullptr,
+                                     0, nullptr,
+                                     1, &imageBarrier);
+                vulkanTexture.currentLayout = targetLayout;
             }
-            vulkanTexture.currentLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         }
 
         for (const Texture* texture : rtState.storageImages) {
             auto& constVulkanTexture = dynamic_cast<const VulkanTexture&>(*texture);
             auto& vulkanTexture = const_cast<VulkanTexture&>(constVulkanTexture); // FIXME: const_cast
-            if (vulkanTexture.currentLayout != VK_IMAGE_LAYOUT_GENERAL) {
-                m_backend.transitionImageLayout(vulkanTexture.image, texture->hasDepthFormat(), vulkanTexture.currentLayout, VK_IMAGE_LAYOUT_GENERAL, &m_commandBuffer);
+
+            constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_GENERAL;
+            if (vulkanTexture.currentLayout != targetLayout) {
+
+                VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+                imageBarrier.oldLayout = vulkanTexture.currentLayout;
+                imageBarrier.newLayout = targetLayout;
+                imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+                imageBarrier.image = vulkanTexture.image;
+                imageBarrier.subresourceRange.aspectMask = vulkanTexture.hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+                imageBarrier.subresourceRange.baseMipLevel = 0;
+                imageBarrier.subresourceRange.levelCount = vulkanTexture.mipLevels();
+                imageBarrier.subresourceRange.baseArrayLayer = 0;
+                imageBarrier.subresourceRange.layerCount = 1;
+
+                VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                imageBarrier.srcAccessMask = 0;
+
+                VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV;
+                imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT; // FIXME: Maybe memory read & write?
+
+                vkCmdPipelineBarrier(m_commandBuffer,
+                                     sourceStage, destinationStage, 0,
+                                     0, nullptr,
+                                     0, nullptr,
+                                     1, &imageBarrier);
+                vulkanTexture.currentLayout = targetLayout;
             }
-            vulkanTexture.currentLayout = VK_IMAGE_LAYOUT_GENERAL;
         }
     }
 
