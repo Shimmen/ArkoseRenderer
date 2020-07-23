@@ -57,24 +57,24 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
         int numMeshes;
         {
             mat4 objectTransforms[PICKING_MAX_DRAWABLES];
-            numMeshes = m_scene.forEachMesh([&](size_t index, const Mesh& mesh) {
+            numMeshes = m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
                 objectTransforms[index] = mesh.transform().worldMatrix();
 
                 // TODO!
-                //mesh.ensureVertexBuffer({ Position3F });
-                //mesh.ensureIndexBuffer();
+                mesh.ensureVertexBuffer({ VertexComponent::Position3F });
+                mesh.ensureIndexBuffer();
             });
             transformDataBuffer.updateData(objectTransforms, numMeshes * sizeof(mat4));
 
             cmdList.beginRendering(drawIndicesState, ClearColor(1, 0, 1), 1.0f);
             cmdList.bindSet(drawIndexBindingSet, 0);
 
-            m_scene.forEachMesh([&](size_t index, const Mesh& mesh) {
+            m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
                 // TODO!
-                //cmdList.drawIndexed(mesh.vertexBuffer({ Position3F }), mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(), static_cast<uint32_t>(index));
-                Buffer& vertexBuffer = *m_meshBuffers[index].first;
-                Buffer& indexBuffer = *m_meshBuffers[index].second;
-                cmdList.drawIndexed(vertexBuffer, indexBuffer, mesh.indexCount(), mesh.indexType(), static_cast<uint32_t>(index));
+                cmdList.drawIndexed(mesh.vertexBuffer({ VertexComponent::Position3F }), mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(), static_cast<uint32_t>(index));
+                //Buffer& vertexBuffer = *m_meshBuffers[index].first;
+                //Buffer& indexBuffer = *m_meshBuffers[index].second;
+                //cmdList.drawIndexed(vertexBuffer, indexBuffer, mesh.indexCount(), mesh.indexType(), static_cast<uint32_t>(index));
             });
 
             cmdList.endRendering();
