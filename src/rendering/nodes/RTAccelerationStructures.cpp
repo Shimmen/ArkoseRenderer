@@ -2,7 +2,7 @@
 
 #include "RTData.h"
 
-RTAccelerationStructures::RTAccelerationStructures(const Scene& scene)
+RTAccelerationStructures::RTAccelerationStructures(Scene& scene)
     : RenderGraphNode(RTAccelerationStructures::name())
     , m_scene(scene)
 {
@@ -19,8 +19,8 @@ void RTAccelerationStructures::constructNode(Registry& nodeReg)
 
     uint32_t nextTriangleInstanceId = 0;
 
-    m_scene.forEachModel([&](size_t, const Model& model) {
-        model.forEachMesh([&](const Mesh& mesh) {
+    m_scene.forEachModel([&](size_t, Model& model) {
+        model.forEachMesh([&](Mesh& mesh) {
             RTGeometry geometry = createGeometryForTriangleMesh(mesh, nodeReg);
             uint8_t hitMask = HitMask::TriangleMeshWithoutProxy;
             RTGeometryInstance instance = createGeometryInstance(geometry, model.transform(), nextTriangleInstanceId++, hitMask, HitGroupIndex::Triangle, nodeReg);
@@ -39,9 +39,9 @@ RenderGraphNode::ExecuteCallback RTAccelerationStructures::constructFrame(Regist
     };
 }
 
-RTGeometry RTAccelerationStructures::createGeometryForTriangleMesh(const Mesh& mesh, Registry& reg) const
+RTGeometry RTAccelerationStructures::createGeometryForTriangleMesh(Mesh& mesh, Registry& reg) const
 {
-    RTTriangleGeometry geometry { .vertexBuffer = reg.createBuffer(mesh.positionData(), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal),
+    RTTriangleGeometry geometry { .vertexBuffer = mesh.vertexBuffer({ VertexComponent::Position3F }),
                                   .vertexFormat = RTVertexFormat::XYZ32F,
                                   .vertexStride = sizeof(vec3),
                                   .indexBuffer = reg.createBuffer(mesh.indexData(), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal),

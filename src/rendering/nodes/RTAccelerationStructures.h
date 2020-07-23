@@ -8,7 +8,7 @@ class VoxelContourModel;
 
 class RTAccelerationStructures final : public RenderGraphNode {
 public:
-    explicit RTAccelerationStructures(const Scene&);
+    explicit RTAccelerationStructures(Scene&);
     ~RTAccelerationStructures() override = default;
 
     std::optional<std::string> displayName() const override { return "RT Acceleration Structures"; }
@@ -31,10 +31,10 @@ public:
     };
 
 private:
-    RTGeometry createGeometryForTriangleMesh(const Mesh&, Registry&) const;
+    RTGeometry createGeometryForTriangleMesh(Mesh&, Registry&) const;
     RTGeometryInstance createGeometryInstance(const RTGeometry&, const Transform&, uint32_t customId, uint8_t hitMask, uint32_t sbtOffset, Registry&) const;
 
 private:
-    const Scene& m_scene;
+    Scene& m_scene;
     std::vector<RTGeometryInstance> m_mainInstances {};
 };

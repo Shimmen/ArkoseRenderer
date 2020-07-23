@@ -20,16 +20,6 @@ PickingNode::PickingNode(Scene& scene)
 {
 }
 
-void PickingNode::constructNode(Registry& reg)
-{
-    m_meshBuffers.clear();
-    m_scene.forEachMesh([&](size_t index, const Mesh& mesh) {
-        Buffer& vertexBuffer = reg.createBuffer(mesh.positionData(), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-        Buffer& indexBuffer = reg.createBuffer(mesh.indexData(), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
-        m_meshBuffers.push_back({ &vertexBuffer, &indexBuffer });
-    });
-}
-
 RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) const
 {
     Buffer& transformDataBuffer = reg.createBuffer(PICKING_MAX_DRAWABLES * sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
@@ -59,8 +49,6 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
             mat4 objectTransforms[PICKING_MAX_DRAWABLES];
             numMeshes = m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
                 objectTransforms[index] = mesh.transform().worldMatrix();
-
-                // TODO!
                 mesh.ensureVertexBuffer({ VertexComponent::Position3F });
                 mesh.ensureIndexBuffer();
             });
@@ -70,11 +58,7 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
             cmdList.bindSet(drawIndexBindingSet, 0);
 
             m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
-                // TODO!
                 cmdList.drawIndexed(mesh.vertexBuffer({ VertexComponent::Position3F }), mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(), static_cast<uint32_t>(index));
-                //Buffer& vertexBuffer = *m_meshBuffers[index].first;
-                //Buffer& indexBuffer = *m_meshBuffers[index].second;
-                //cmdList.drawIndexed(vertexBuffer, indexBuffer, mesh.indexCount(), mesh.indexType(), static_cast<uint32_t>(index));
             });
 
             cmdList.endRendering();

@@ -16,13 +16,17 @@ public:
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:
+    struct ForwardVertex {
+        vec3 position;
+        vec2 texCoord;
+        vec3 normal;
+        vec4 tangent;
+    };
+
     struct Drawable {
-        Mesh* mesh {};
-        Buffer* vertexBuffer {};
-        Buffer* indexBuffer {};
-        uint32_t indexCount {};
-        Buffer* objectDataBuffer {};
-        BindingSet* bindingSet {};
+        Mesh* mesh;
+        Buffer* objectDataBuffer;
+        BindingSet* bindingSet;
     };
 
     std::vector<Drawable> m_drawables {};

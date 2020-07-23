@@ -18,12 +18,6 @@ void SlowForwardRenderNode::constructNode(Registry& nodeReg)
         Drawable drawable {};
         drawable.mesh = &mesh;
 
-        drawable.vertexBuffer = &nodeReg.createBuffer(mesh.canonoicalVertexData(), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-        drawable.indexBuffer = &nodeReg.createBuffer(mesh.indexData(), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
-        drawable.indexCount = mesh.indexCount();
-
-        drawable.objectDataBuffer = &nodeReg.createBuffer(sizeof(PerForwardObject), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
-
         const Material& material = mesh.material();
 
         // Create & load textures
@@ -43,7 +37,7 @@ void SlowForwardRenderNode::constructNode(Registry& nodeReg)
         std::string emissivePath = material.emissive;
         Texture& emissiveTexture = nodeReg.loadTexture2D(emissivePath, true, true);
 
-        // Create binding set
+        drawable.objectDataBuffer = &nodeReg.createBuffer(sizeof(PerForwardObject), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
         drawable.bindingSet = &nodeReg.createBindingSet(
             { { 0, ShaderStageVertex, drawable.objectDataBuffer },
               { 1, ShaderStageFragment, baseColorTexture, ShaderBindingType::TextureSampler },
@@ -75,13 +69,20 @@ RenderGraphNode::ExecuteCallback SlowForwardRenderNode::constructFrame(Registry&
     BindingSet& dirLightBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, shadowMap, ShaderBindingType::TextureSampler },
                                                             { 1, ShaderStageFragment, reg.getBuffer("scene", "directionalLight") } });
 
+    VertexLayout vertexLayout = VertexLayout {
+        sizeof(ForwardVertex),
+        { { 0, VertexAttributeType::Float3, offsetof(ForwardVertex, position) },
+          { 1, VertexAttributeType::Float2, offsetof(ForwardVertex, texCoord) },
+          { 2, VertexAttributeType ::Float3, offsetof(ForwardVertex, normal) },
+          { 3, VertexAttributeType ::Float4, offsetof(ForwardVertex, tangent) } }
+    };
+
     Shader shader = Shader::createBasicRasterize("forward/forwardSlow.vert", "forward/forwardSlow.frag");
-    RenderStateBuilder renderStateBuilder { renderTarget, shader, Mesh::canonoicalVertexLayout() };
+    RenderStateBuilder renderStateBuilder { renderTarget, shader, vertexLayout };
     renderStateBuilder.polygonMode = PolygonMode::Filled;
 
-    renderStateBuilder
-        .addBindingSet(fixedBindingSet)
-        .addBindingSet(dirLightBindingSet);
+    renderStateBuilder.addBindingSet(fixedBindingSet);
+    renderStateBuilder.addBindingSet(dirLightBindingSet);
     for (auto& drawable : m_drawables) {
         renderStateBuilder.addBindingSet(*drawable.bindingSet);
     }
@@ -109,7 +110,6 @@ RenderGraphNode::ExecuteCallback SlowForwardRenderNode::constructFrame(Registry&
 
         for (const Drawable& drawable : m_drawables) {
 
-            // TODO: Hmm, it still looks very much like it happens in line with the other commands..
             PerForwardObject objectData {
                 .worldFromLocal = drawable.mesh->transform().worldMatrix(),
                 .worldFromTangent = mat4(drawable.mesh->transform().worldNormalMatrix())
@@ -127,8 +127,7 @@ RenderGraphNode::ExecuteCallback SlowForwardRenderNode::constructFrame(Registry&
                                                                        VertexComponent::TexCoord2F,
                                                                        VertexComponent::Normal3F,
                                                                        VertexComponent::Tangent4F });
-            cmdList.drawIndexed(vertexBuffer, indexBuffer, drawable.indexCount, drawable.mesh->indexType());
-            //cmdList.drawIndexed(*drawable.vertexBuffer, *drawable.indexBuffer, drawable.indexCount, drawable.mesh->indexType());
+            cmdList.drawIndexed(vertexBuffer, indexBuffer, drawable.mesh->indexCount(), drawable.mesh->indexType());
         }
     };
 }
