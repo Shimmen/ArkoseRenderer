@@ -17,7 +17,7 @@ public:
 
 private:
     struct Drawable {
-        const Mesh* mesh {};
+        Mesh* mesh {};
         Buffer* vertexBuffer {};
         Buffer* indexBuffer {};
         uint32_t indexCount {};

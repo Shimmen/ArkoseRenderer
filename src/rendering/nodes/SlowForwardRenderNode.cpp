@@ -14,7 +14,7 @@ SlowForwardRenderNode::SlowForwardRenderNode(Scene& scene)
 void SlowForwardRenderNode::constructNode(Registry& nodeReg)
 {
     m_drawables.clear();
-    m_scene.forEachMesh([&](size_t, const Mesh& mesh) {
+    m_scene.forEachMesh([&](size_t, Mesh& mesh) {
         Drawable drawable {};
         drawable.mesh = &mesh;
 
@@ -94,6 +94,15 @@ RenderGraphNode::ExecuteCallback SlowForwardRenderNode::constructFrame(Registry&
         static bool forceDiffuse = false;
         ImGui::Checkbox("Force diffuse materials", &forceDiffuse);
 
+        // TODO: Is this even needed?? I think, yeah, in theory, but nothing is complaining.. Not a great metric, but yeah.
+        m_scene.forEachMesh([](size_t, Mesh& mesh) {
+            mesh.ensureIndexBuffer();
+            mesh.ensureVertexBuffer({ VertexComponent::Position3F,
+                                      VertexComponent::TexCoord2F,
+                                      VertexComponent::Normal3F,
+                                      VertexComponent::Tangent4F });
+        });
+
         cmdList.beginRendering(renderState, ClearColor(0, 0, 0, 0), 1.0f);
         cmdList.bindSet(fixedBindingSet, 0);
         cmdList.bindSet(dirLightBindingSet, 2);
@@ -112,7 +121,14 @@ RenderGraphNode::ExecuteCallback SlowForwardRenderNode::constructFrame(Registry&
             cmdList.pushConstant(ShaderStageFragment, m_scene.ambient(), 8);
 
             cmdList.bindSet(*drawable.bindingSet, 1);
-            cmdList.drawIndexed(*drawable.vertexBuffer, *drawable.indexBuffer, drawable.indexCount, drawable.mesh->indexType());
+
+            const Buffer& indexBuffer = drawable.mesh->indexBuffer();
+            const Buffer& vertexBuffer = drawable.mesh->vertexBuffer({ VertexComponent::Position3F,
+                                                                       VertexComponent::TexCoord2F,
+                                                                       VertexComponent::Normal3F,
+                                                                       VertexComponent::Tangent4F });
+            cmdList.drawIndexed(vertexBuffer, indexBuffer, drawable.indexCount, drawable.mesh->indexType());
+            //cmdList.drawIndexed(*drawable.vertexBuffer, *drawable.indexBuffer, drawable.indexCount, drawable.mesh->indexType());
         }
     };
 }
