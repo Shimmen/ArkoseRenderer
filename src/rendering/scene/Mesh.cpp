@@ -4,6 +4,7 @@
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 #include "utility/Logging.h"
+#include <array>
 
 void Mesh::ensureVertexBuffer(const SemanticVertexLayout& layout)
 {
