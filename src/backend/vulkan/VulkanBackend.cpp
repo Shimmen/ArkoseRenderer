@@ -11,6 +11,7 @@
 #include "utility/GlobalState.h"
 #include "utility/Logging.h"
 #include "utility/util.h"
+#include <ImGuizmo.h>
 #include <algorithm>
 #include <cstring>
 #include <fmt/format.h>
@@ -1207,6 +1208,23 @@ void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, doub
         cmdList.endNode({});
     });
     ImGui::End();
+
+    Model* selectedModel = m_app.scene().selectedModel();
+    if (selectedModel) {
+
+        ImGuizmo::BeginFrame();
+        ImGuizmo::SetRect(0, 0, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
+
+        ImGuizmo::MODE mode = ImGuizmo::LOCAL; // FIXME: Support world transforms!
+        ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
+
+        mat4 viewMatrix = m_app.scene().camera().viewMatrix();
+        mat4 projMatrix = m_app.scene().camera().projectionMatrix();
+
+        mat4 matrix = selectedModel->transform().localMatrix();
+        ImGuizmo::Manipulate(value_ptr(viewMatrix), value_ptr(projMatrix), operation, mode, value_ptr(matrix));
+        selectedModel->transform().setLocalMatrix(matrix);
+    }
 
     ImGui::Render();
     renderDearImguiFrame(commandBuffer, swapchainImageIndex);
