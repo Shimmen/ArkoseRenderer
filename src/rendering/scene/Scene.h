@@ -37,12 +37,16 @@ public:
     size_t meshCount() const;
 
     void forEachModel(std::function<void(size_t, const Model&)> callback) const;
+    void forEachModel(std::function<void(size_t, Model&)> callback);
 
     int forEachMesh(std::function<void(size_t, const Mesh&)> callback) const;
     int forEachMesh(std::function<void(size_t, Mesh&)> callback);
 
     void setSelectedModel(Model* model) { m_selectedModel = model; }
+    Model* selectedModel() { return m_selectedModel; }
+
     void setSelectedMesh(Mesh* mesh) { m_selectedMesh = mesh; }
+    Mesh* selectedMesh() { return m_selectedMesh; }
 
     const FpsCamera& camera() const { return m_currentMainCamera; }
     FpsCamera& camera() { return m_currentMainCamera; }

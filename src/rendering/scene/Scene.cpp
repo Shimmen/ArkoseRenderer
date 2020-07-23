@@ -194,6 +194,14 @@ void Scene::forEachModel(std::function<void(size_t, const Model&)> callback) con
     }
 }
 
+void Scene::forEachModel(std::function<void(size_t, Model&)> callback)
+{
+    for (size_t i = 0; i < m_models.size(); ++i) {
+        Model& model = *m_models[i];
+        callback(i, model);
+    }
+}
+
 int Scene::forEachMesh(std::function<void(size_t, const Mesh&)> callback) const
 {
     size_t nextIndex = 0;
