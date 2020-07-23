@@ -316,14 +316,14 @@ void VulkanCommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount)
     vkCmdDraw(m_commandBuffer, vertexCount, 1, 0, 0);
 }
 
-void VulkanCommandList::drawIndexed(Buffer& vertexBuffer, Buffer& indexBuffer, uint32_t indexCount, IndexType indexType, uint32_t instanceIndex)
+void VulkanCommandList::drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType indexType, uint32_t instanceIndex)
 {
     if (!activeRenderState) {
         LogErrorAndExit("drawIndexed: no active render state!\n");
     }
 
-    VkBuffer vertBuffer = dynamic_cast<VulkanBuffer&>(vertexBuffer).buffer;
-    VkBuffer idxBuffer = dynamic_cast<VulkanBuffer&>(indexBuffer).buffer;
+    VkBuffer vertBuffer = static_cast<const VulkanBuffer&>(vertexBuffer).buffer;
+    VkBuffer idxBuffer = static_cast<const VulkanBuffer&>(indexBuffer).buffer;
 
     VkBuffer vertexBuffers[] = { vertBuffer };
     VkDeviceSize offsets[] = { 0 };

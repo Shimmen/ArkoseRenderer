@@ -18,7 +18,7 @@ public:
     void pushConstants(ShaderStage, void*, size_t size, size_t byteOffset = 0u) override;
 
     void draw(Buffer& vertexBuffer, uint32_t vertexCount) override;
-    void drawIndexed(Buffer& vertexBuffer, Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex) override;
+    void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex) override;
 
     void rebuildTopLevelAcceratationStructure(TopLevelAS&) override;
     void traceRays(Extent2D) override;
