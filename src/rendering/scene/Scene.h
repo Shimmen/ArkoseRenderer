@@ -64,8 +64,6 @@ private:
     std::vector<std::unique_ptr<Model>> m_models;
 
     std::vector<DirectionalLight> m_directionalLights;
-    //DirectionalLight m_directionalLight;
-    //SunLight m_sunLight;
 
     FpsCamera m_currentMainCamera;
     std::unordered_map<std::string, FpsCamera> m_allCameras {};
