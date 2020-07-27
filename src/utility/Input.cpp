@@ -2,6 +2,9 @@
 
 #include <cstring>
 
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+
 Input Input::s_instance {};
 
 const Input& Input::instance()
@@ -27,45 +30,51 @@ void Input::preEventPoll()
 {
     Input& input = s_instance;
 
-    memset(input.m_wasKeyPressed, false, KEYBOARD_KEY_COUNT * sizeof(bool));
-    memset(input.m_wasKeyReleased, false, KEYBOARD_KEY_COUNT * sizeof(bool));
+    memset(input.m_wasKeyPressed, false, KeyboardKeyCount * sizeof(bool));
+    memset(input.m_wasKeyReleased, false, KeyboardKeyCount * sizeof(bool));
 
-    memset(input.m_wasButtonPressed, false, MOUSE_BUTTON_COUNT * sizeof(bool));
-    memset(input.m_wasButtonReleased, false, MOUSE_BUTTON_COUNT * sizeof(bool));
+    memset(input.m_wasButtonPressed, false, MouseButtonCount * sizeof(bool));
+    memset(input.m_wasButtonReleased, false, MouseButtonCount * sizeof(bool));
 
     input.m_lastXPosition = input.m_currentXPosition;
     input.m_lastYPosition = input.m_currentYPosition;
     input.m_lastScrollOffset = input.m_currentScollOffset;
 }
 
-bool Input::isKeyDown(int key) const
+bool Input::isKeyDown(Key key) const
 {
-    return m_isKeyDown[key];
+    int val = static_cast<int>(key);
+    return m_isKeyDown[val];
 }
 
-bool Input::wasKeyPressed(int key) const
+bool Input::wasKeyPressed(Key key) const
 {
-    return m_wasKeyPressed[key];
+    int val = static_cast<int>(key);
+    return m_wasKeyPressed[val];
 }
 
-bool Input::wasKeyReleased(int key) const
+bool Input::wasKeyReleased(Key key) const
 {
-    return m_wasKeyPressed[key];
+    int val = static_cast<int>(key);
+    return m_wasKeyPressed[val];
 }
 
-bool Input::isButtonDown(int button) const
+bool Input::isButtonDown(Button button) const
 {
-    return m_isButtonDown[button];
+    int val = static_cast<int>(button);
+    return m_isButtonDown[val];
 }
 
-bool Input::wasButtonPressed(int button) const
+bool Input::wasButtonPressed(Button button) const
 {
-    return m_wasButtonPressed[button];
+    int val = static_cast<int>(button);
+    return m_wasButtonPressed[val];
 }
 
-bool Input::wasButtonReleased(int button) const
+bool Input::wasButtonReleased(Button button) const
 {
-    return m_wasButtonReleased[button];
+    int val = static_cast<int>(button);
+    return m_wasButtonReleased[val];
 }
 
 vec2 Input::mousePosition() const
@@ -99,10 +108,10 @@ vec2 Input::leftStick() const
     float y = state.axes[GLFW_GAMEPAD_AXIS_LEFT_Y];
     vec2 stick { x, -y };
 
-    if (length(stick) < GAMEPAD_DEADZONE) {
+    if (length(stick) < GamepadDeadzone) {
         return { 0, 0 };
     } else {
-        return normalize(stick) * ((length(stick) - GAMEPAD_DEADZONE) / (1.0f - GAMEPAD_DEADZONE));
+        return normalize(stick) * ((length(stick) - GamepadDeadzone) / (1.0f - GamepadDeadzone));
     }
 }
 
@@ -119,10 +128,10 @@ vec2 Input::rightStick() const
     float y = state.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y];
     vec2 stick { x, -y };
 
-    if (length(stick) < GAMEPAD_DEADZONE) {
+    if (length(stick) < GamepadDeadzone) {
         return { 0, 0 };
     } else {
-        return normalize(stick) * ((length(stick) - GAMEPAD_DEADZONE) / (1.0f - GAMEPAD_DEADZONE));
+        return normalize(stick) * ((length(stick) - GamepadDeadzone) / (1.0f - GamepadDeadzone));
     }
 }
 
@@ -169,7 +178,7 @@ void Input::mouseButtonEventCallback(GLFWwindow* window, int button, int action,
         break;
     }
 
-    glfwSetInputMode(window, GLFW_CURSOR, input->isButtonDown(GLFW_MOUSE_BUTTON_2) ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+    glfwSetInputMode(window, GLFW_CURSOR, input->isButtonDown(Button::Right) ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
 }
 
 void Input::mouseMovementEventCallback(GLFWwindow* window, double xPos, double yPos)

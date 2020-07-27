@@ -21,19 +21,19 @@ void FpsCamera::update(const Input& input, const Extent2D& screenExtent, float d
     acceleration += controllerMovement.x * moos::globalRight;
     acceleration += controllerMovement.y * moos::globalForward;
 
-    if (input.isKeyDown(GLFW_KEY_W))
+    if (input.isKeyDown(Key::W))
         acceleration += moos::globalForward;
-    if (input.isKeyDown(GLFW_KEY_S))
+    if (input.isKeyDown(Key::S))
         acceleration -= moos::globalForward;
 
-    if (input.isKeyDown(GLFW_KEY_D))
+    if (input.isKeyDown(Key::D))
         acceleration += moos::globalRight;
-    if (input.isKeyDown(GLFW_KEY_A))
+    if (input.isKeyDown(Key::A))
         acceleration -= moos::globalRight;
 
-    if (input.isKeyDown(GLFW_KEY_SPACE))
+    if (input.isKeyDown(Key::Space))
         acceleration += moos::globalUp;
-    if (input.isKeyDown(GLFW_KEY_LEFT_SHIFT))
+    if (input.isKeyDown(Key::LeftShift))
         acceleration -= moos::globalUp;
 
     if (usingController) {
@@ -75,7 +75,7 @@ void FpsCamera::update(const Input& input, const Extent2D& screenExtent, float d
     m_pitchYawRoll.x -= controllerRotation.x * fovMultiplier * dt;
     m_pitchYawRoll.y += controllerRotation.y * fovMultiplier * dt;
 
-    if (input.isButtonDown(GLFW_MOUSE_BUTTON_2) && !GlobalState::get().guiIsUsingTheMouse()) {
+    if (input.isButtonDown(Button::Right) && !GlobalState::get().guiIsUsingTheMouse()) {
         // Screen size independent but also aspect ratio dependent!
         vec2 mouseDelta = input.mouseDelta() / float(screenExtent.width());
 

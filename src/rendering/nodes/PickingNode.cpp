@@ -74,13 +74,13 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
             cmdList.dispatch(indexMap.extent(), { 16, 16, 1 });
         }
 
-        auto didClick = [this](int mouseButton) -> bool {
+        auto didClick = [this](Button button) -> bool {
             auto& input = Input::instance();
 
-            if (input.wasButtonPressed(mouseButton))
+            if (input.wasButtonPressed(button))
                 m_mouseDownLocation = input.mousePosition();
 
-            if (input.wasButtonReleased(mouseButton) && m_mouseDownLocation.has_value()) {
+            if (input.wasButtonReleased(button) && m_mouseDownLocation.has_value()) {
                 float distance = moos::distance(input.mousePosition(), m_mouseDownLocation.value());
                 m_mouseDownLocation.reset();
                 if (distance < 4.0f)
@@ -90,7 +90,7 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
             return false;
         };
 
-        if (!didClick(GLFW_MOUSE_BUTTON_MIDDLE))
+        if (!didClick(Button::Middle))
             return;
 
         moos::u32 selectedIndex;

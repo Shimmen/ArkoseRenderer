@@ -140,7 +140,7 @@ RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) 
         cmdList.waitEvent(0, appState.frameIndex() == 0 ? PipelineStage::Host : PipelineStage::RayTracing);
         cmdList.resetEvent(0, PipelineStage::RayTracing);
         {
-            if (m_scene.camera().didModify() || Input::instance().isKeyDown(GLFW_KEY_R)) {
+            if (m_scene.camera().didModify() || Input::instance().isKeyDown(Key::R)) {
                 cmdList.clearTexture(*m_accumulationTexture, ClearColor(0, 0, 0));
                 m_numAccumulatedFrames = 0;
             }

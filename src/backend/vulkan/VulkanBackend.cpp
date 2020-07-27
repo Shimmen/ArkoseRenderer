@@ -1213,11 +1213,11 @@ void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, doub
         static ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
 
         auto& input = Input::instance();
-        if (input.wasKeyPressed(GLFW_KEY_T))
+        if (input.wasKeyPressed(Key::T))
             operation = ImGuizmo::TRANSLATE;
-        else if (input.wasKeyPressed(GLFW_KEY_R))
+        else if (input.wasKeyPressed(Key::R))
             operation = ImGuizmo::ROTATE;
-        else if (input.wasKeyPressed(GLFW_KEY_Y))
+        else if (input.wasKeyPressed(Key::Y))
             operation = ImGuizmo::SCALE;
 
         Model* selectedModel = m_app.scene().selectedModel();
