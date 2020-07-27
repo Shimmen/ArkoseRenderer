@@ -92,8 +92,10 @@ GltfModel::GltfModel(std::string path, const tinygltf::Model& model)
                     meshName += "_" + std::to_string(i);
                 }
 
-                m_meshes.emplace_back(meshName, this, model, mesh.primitives[i], matrix);
-                m_meshes.back().setModel(this);
+                auto gltfMesh = std::make_unique<GltfMesh>(meshName, this, model, mesh.primitives[i], matrix);
+                gltfMesh->setModel(this);
+
+                m_meshes.push_back(std::move(gltfMesh));
             }
         }
 
@@ -149,15 +151,15 @@ size_t GltfModel::meshCount() const
 
 void GltfModel::forEachMesh(std::function<void(Mesh&)> callback)
 {
-    for (Mesh& mesh : m_meshes) {
-        callback(mesh);
+    for (auto& mesh : m_meshes) {
+        callback(*mesh);
     }
 }
 
 void GltfModel::forEachMesh(std::function<void(const Mesh&)> callback) const
 {
-    for (const Mesh& mesh : m_meshes) {
-        callback(mesh);
+    for (auto& mesh : m_meshes) {
+        callback(*mesh);
     }
 }
 
@@ -189,7 +191,7 @@ GltfMesh::GltfMesh(std::string name, const GltfModel* parent, const tinygltf::Mo
     //meshInfo.aabb = mathkit::aabb(position.minValues, position.maxValues);
 }
 
-Material GltfMesh::material() const
+std::unique_ptr<Material> GltfMesh::createMaterial()
 {
     auto& gltfMaterial = m_model->materials[m_primitive->material];
 
@@ -206,18 +208,17 @@ Material GltfMesh::material() const
         }
     };
 
-    // TODO: Cache this maybe?
-    Material material {};
+    auto material = std::make_unique<Material>();
 
     if (gltfMaterial.pbrMetallicRoughness.baseColorTexture.index != -1) {
-        material.baseColor = textureUri(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index, "assets/default-baseColor.png");
+        material->baseColor = textureUri(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index, "assets/default-baseColor.png");
     }
     std::vector<double> c = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
-    material.baseColorFactor = vec4(c[0], c[1], c[2], c[3]);
+    material->baseColorFactor = vec4(c[0], c[1], c[2], c[3]);
 
-    material.normalMap = textureUri(gltfMaterial.normalTexture.index, "assets/default-normal.png");
-    material.metallicRoughness = textureUri(gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index, "assets/default-black.png");
-    material.emissive = textureUri(gltfMaterial.emissiveTexture.index, "assets/default-black.png");
+    material->normalMap = textureUri(gltfMaterial.normalTexture.index, "assets/default-normal.png");
+    material->metallicRoughness = textureUri(gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index, "assets/default-black.png");
+    material->emissive = textureUri(gltfMaterial.emissiveTexture.index, "assets/default-black.png");
 
     return material;
 }

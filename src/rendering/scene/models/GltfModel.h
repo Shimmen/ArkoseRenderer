@@ -12,8 +12,6 @@ public:
     explicit GltfMesh(std::string name, const GltfModel* parent, const tinygltf::Model&, const tinygltf::Primitive&, mat4 matrix);
     ~GltfMesh() override = default;
 
-    Material material() const override;
-
     std::vector<CanonoicalVertex> canonoicalVertexData() const override;
 
     const std::vector<vec3>& positionData() const override;
@@ -25,6 +23,9 @@ public:
     IndexType indexType() const override;
     size_t indexCount() const override;
     bool isIndexed() const override;
+
+protected:
+    std::unique_ptr<Material> createMaterial() override;
 
 private:
     const tinygltf::Accessor* getAccessor(const char* name) const;
@@ -53,5 +54,5 @@ public:
 private:
     std::string m_path {};
     const tinygltf::Model* m_model {};
-    std::vector<GltfMesh> m_meshes {};
+    std::vector<std::unique_ptr<GltfMesh>> m_meshes {};
 };

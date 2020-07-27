@@ -22,8 +22,8 @@ public:
     virtual const Model* model() const { return m_owner; }
 
     virtual const Transform& transform() const { return m_transform; }
-    // TODO: Don't recreate new material on each request
-    virtual Material material() const = 0;
+
+    Material& material();
 
     void ensureVertexBuffer(const SemanticVertexLayout&);
     const Buffer& vertexBuffer(const SemanticVertexLayout&);
@@ -67,6 +67,9 @@ protected:
     // GPU Buffer cache
     mutable const Buffer* m_indexBuffer { nullptr };
     mutable std::unordered_map<SemanticVertexLayout, const Buffer*> m_vertexBuffers;
+
+    virtual std::unique_ptr<Material> createMaterial() = 0;
+    std::unique_ptr<Material> m_material {};
 
 private:
     Transform m_transform {};

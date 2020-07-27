@@ -6,6 +6,13 @@
 #include "utility/Logging.h"
 #include <array>
 
+Material& Mesh::material()
+{
+    if (!m_material)
+        m_material = createMaterial();
+    return *m_material;
+}
+
 void Mesh::ensureVertexBuffer(const SemanticVertexLayout& layout)
 {
     // NOTE: Will create & cache the buffer (if it doesn't already exist)
