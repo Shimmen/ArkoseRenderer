@@ -7,7 +7,7 @@
 
 class RTFirstHitNode final : public RenderGraphNode {
 public:
-    explicit RTFirstHitNode(const Scene&);
+    explicit RTFirstHitNode(Scene&);
     ~RTFirstHitNode() override = default;
 
     std::optional<std::string> displayName() const override { return "RT first-hit"; }
@@ -18,6 +18,6 @@ public:
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:
-    const Scene& m_scene;
+    Scene& m_scene;
     BindingSet* m_objectDataBindingSet {};
 };

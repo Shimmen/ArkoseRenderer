@@ -4,7 +4,7 @@
 #include <half.hpp>
 #include <imgui.h>
 
-RTFirstHitNode::RTFirstHitNode(const Scene& scene)
+RTFirstHitNode::RTFirstHitNode(Scene& scene)
     : RenderGraphNode(RTFirstHitNode::name())
     , m_scene(scene)
 {
@@ -22,7 +22,7 @@ void RTFirstHitNode::constructNode(Registry& nodeReg)
     std::vector<Texture*> allTextures {};
     std::vector<RTMesh> rtMeshes {};
 
-    auto createTriangleMeshVertexBuffer = [&](const Mesh& mesh) {
+    auto createTriangleMeshVertexBuffer = [&](Mesh& mesh) {
         // TODO: Would be nice if this could be cached too!
         std::vector<RTVertex> vertices {};
         {
@@ -57,8 +57,8 @@ void RTFirstHitNode::constructNode(Registry& nodeReg)
         indexBuffers.push_back(&nodeReg.createBuffer(mesh.indexData(), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal));
     };
 
-    m_scene.forEachModel([&](size_t, const Model& model) {
-        model.forEachMesh([&](const Mesh& mesh) {
+    m_scene.forEachModel([&](size_t, Model& model) {
+        model.forEachMesh([&](Mesh& mesh) {
             createTriangleMeshVertexBuffer(mesh);
         });
     });

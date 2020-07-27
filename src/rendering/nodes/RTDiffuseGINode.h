@@ -7,7 +7,7 @@
 
 class RTDiffuseGINode final : public RenderGraphNode {
 public:
-    explicit RTDiffuseGINode(const Scene&);
+    explicit RTDiffuseGINode(Scene&);
     ~RTDiffuseGINode() override = default;
 
     std::optional<std::string> displayName() const override { return "Diffuse GI"; }
@@ -20,7 +20,7 @@ public:
     static constexpr int maxSamplesPerPixel = 1024;
 
 private:
-    const Scene& m_scene;
+    Scene& m_scene;
 
     Texture* m_accumulationTexture;
     mutable uint32_t m_numAccumulatedFrames { 0 };

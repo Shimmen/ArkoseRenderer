@@ -7,7 +7,7 @@
 
 class RTReflectionsNode final : public RenderGraphNode {
 public:
-    explicit RTReflectionsNode(const Scene&);
+    explicit RTReflectionsNode(Scene&);
     ~RTReflectionsNode() override = default;
 
     std::optional<std::string> displayName() const override { return "RT Reflections"; }
@@ -18,6 +18,6 @@ public:
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:
-    const Scene& m_scene;
+    Scene& m_scene;
     BindingSet* m_objectDataBindingSet {};
 };

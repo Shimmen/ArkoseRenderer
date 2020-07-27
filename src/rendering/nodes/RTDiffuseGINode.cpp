@@ -7,7 +7,7 @@
 #include <half.hpp>
 #include <imgui.h>
 
-RTDiffuseGINode::RTDiffuseGINode(const Scene& scene)
+RTDiffuseGINode::RTDiffuseGINode(Scene& scene)
     : RenderGraphNode(RTDiffuseGINode::name())
     , m_scene(scene)
 {
@@ -25,7 +25,7 @@ void RTDiffuseGINode::constructNode(Registry& nodeReg)
     std::vector<Texture*> allTextures {};
     std::vector<RTMesh> rtMeshes {};
 
-    auto createTriangleMeshVertexBuffer = [&](const Mesh& mesh) {
+    auto createTriangleMeshVertexBuffer = [&](Mesh& mesh) {
         // TODO: Would be nice if this could be cached too!
         std::vector<RTVertex> vertices {};
         {
@@ -63,8 +63,8 @@ void RTDiffuseGINode::constructNode(Registry& nodeReg)
         indexBuffers.push_back(&nodeReg.createBuffer(mesh.indexData(), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal));
     };
 
-    m_scene.forEachModel([&](size_t, const Model& model) {
-        model.forEachMesh([&](const Mesh& mesh) {
+    m_scene.forEachModel([&](size_t, Model& model) {
+        model.forEachMesh([&](Mesh& mesh) {
             createTriangleMeshVertexBuffer(mesh);
         });
     });

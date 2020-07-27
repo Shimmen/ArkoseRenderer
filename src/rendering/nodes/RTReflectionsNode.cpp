@@ -4,7 +4,7 @@
 #include "LightData.h"
 #include "RTAccelerationStructures.h"
 
-RTReflectionsNode::RTReflectionsNode(const Scene& scene)
+RTReflectionsNode::RTReflectionsNode(Scene& scene)
     : RenderGraphNode(RTReflectionsNode::name())
     , m_scene(scene)
 {
@@ -22,8 +22,8 @@ void RTReflectionsNode::constructNode(Registry& nodeReg)
     std::vector<RTMesh> rtMeshes {};
     std::vector<Texture*> allTextures {};
 
-    m_scene.forEachModel([&](size_t, const Model& model) {
-        model.forEachMesh([&](const Mesh& mesh) {
+    m_scene.forEachModel([&](size_t, Model& model) {
+        model.forEachMesh([&](Mesh& mesh) {
             // TODO: Would be nice if this could be cached too!
             std::vector<RTVertex> vertices {};
             {
@@ -41,7 +41,7 @@ void RTReflectionsNode::constructNode(Registry& nodeReg)
                 }
             }
 
-            const Material& material = mesh.material();
+            Material& material = mesh.material();
             Texture* baseColorTexture { nullptr };
             if (material.baseColor.empty()) {
                 // the color is already in linear sRGB so we don't want to make an sRGB texture for it!
