@@ -20,9 +20,9 @@ std::string RTDiffuseGINode::name()
 
 void RTDiffuseGINode::constructNode(Registry& nodeReg)
 {
-    std::vector<const Buffer*> vertexBuffers {};
-    std::vector<const Buffer*> indexBuffers {};
-    std::vector<const Texture*> allTextures {};
+    std::vector<Buffer*> vertexBuffers {};
+    std::vector<Buffer*> indexBuffers {};
+    std::vector<Texture*> allTextures {};
     std::vector<RTMesh> rtMeshes {};
 
     auto createTriangleMeshVertexBuffer = [&](const Mesh& mesh) {
@@ -81,11 +81,11 @@ void RTDiffuseGINode::constructNode(Registry& nodeReg)
 
 RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) const
 {
-    const Texture* gBufferColor = reg.getTexture("g-buffer", "baseColor").value();
-    const Texture* gBufferNormal = reg.getTexture("g-buffer", "normal").value();
-    const Texture* gBufferDepth = reg.getTexture("g-buffer", "depth").value();
+    Texture* gBufferColor = reg.getTexture("g-buffer", "baseColor").value();
+    Texture* gBufferNormal = reg.getTexture("g-buffer", "normal").value();
+    Texture* gBufferDepth = reg.getTexture("g-buffer", "depth").value();
 
-    const TopLevelAS& sceneTLAS = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
+    TopLevelAS& sceneTLAS = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },
                                                          { 1, ShaderStageRTRayGen, m_accumulationTexture, ShaderBindingType::StorageImage },
                                                          { 2, ShaderStageRTRayGen, gBufferColor, ShaderBindingType::TextureSampler },

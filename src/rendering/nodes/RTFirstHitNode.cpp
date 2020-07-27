@@ -17,9 +17,9 @@ std::string RTFirstHitNode::name()
 
 void RTFirstHitNode::constructNode(Registry& nodeReg)
 {
-    std::vector<const Buffer*> vertexBuffers {};
-    std::vector<const Buffer*> indexBuffers {};
-    std::vector<const Texture*> allTextures {};
+    std::vector<Buffer*> vertexBuffers {};
+    std::vector<Buffer*> indexBuffers {};
+    std::vector<Texture*> allTextures {};
     std::vector<RTMesh> rtMeshes {};
 
     auto createTriangleMeshVertexBuffer = [&](const Mesh& mesh) {
@@ -78,7 +78,7 @@ RenderGraphNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg) c
     Buffer& timeBuffer = reg.createBuffer(sizeof(float), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     BindingSet& environmentBindingSet = reg.createBindingSet({ { 0, ShaderStageRTMiss, reg.getTexture("scene", "environmentMap").value_or(&reg.createPixelTexture(vec4(1), true)), ShaderBindingType::TextureSampler } });
 
-    const TopLevelAS& sceneTLAS = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
+    TopLevelAS& sceneTLAS = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStageRTRayGen, &sceneTLAS },
                                                          { 1, ShaderStageRTRayGen, &storageImage, ShaderBindingType::StorageImage },
                                                          { 2, ShaderStageRTRayGen, reg.getBuffer("scene", "camera") },

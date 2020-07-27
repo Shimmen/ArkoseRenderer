@@ -17,10 +17,10 @@ std::string RTReflectionsNode::name()
 
 void RTReflectionsNode::constructNode(Registry& nodeReg)
 {
-    std::vector<const Buffer*> vertexBuffers {};
-    std::vector<const Buffer*> indexBuffers {};
+    std::vector<Buffer*> vertexBuffers {};
+    std::vector<Buffer*> indexBuffers {};
     std::vector<RTMesh> rtMeshes {};
-    std::vector<const Texture*> allTextures {};
+    std::vector<Texture*> allTextures {};
 
     m_scene.forEachModel([&](size_t, const Model& model) {
         model.forEachMesh([&](const Mesh& mesh) {
@@ -71,14 +71,14 @@ void RTReflectionsNode::constructNode(Registry& nodeReg)
 
 RenderGraphNode::ExecuteCallback RTReflectionsNode::constructFrame(Registry& reg) const
 {
-    const Texture* gBufferColor = reg.getTexture("g-buffer", "baseColor").value();
-    const Texture* gBufferNormal = reg.getTexture("g-buffer", "normal").value();
-    const Texture* gBufferDepth = reg.getTexture("g-buffer", "depth").value();
+    Texture* gBufferColor = reg.getTexture("g-buffer", "baseColor").value();
+    Texture* gBufferNormal = reg.getTexture("g-buffer", "normal").value();
+    Texture* gBufferDepth = reg.getTexture("g-buffer", "depth").value();
 
     Texture& reflections = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("reflections", reflections);
 
-    const TopLevelAS& tlas = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
+    TopLevelAS& tlas = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &tlas },
                                                          { 1, ShaderStageRTRayGen, &reflections, ShaderBindingType::StorageImage },
                                                          { 2, ShaderStageRTRayGen, gBufferColor, ShaderBindingType::TextureSampler },

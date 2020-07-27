@@ -44,7 +44,7 @@ public:
     VkFramebuffer framebuffer;
     VkRenderPass compatibleRenderPass;
 
-    std::vector<std::pair<const Texture*, VkImageLayout>> attachedTextures;
+    std::vector<std::pair<Texture*, VkImageLayout>> attachedTextures;
 };
 
 struct VulkanBindingSet : public BindingSet {
@@ -66,7 +66,7 @@ public:
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
 
-    std::vector<const Texture*> sampledTextures;
+    std::vector<Texture*> sampledTextures;
 };
 
 struct VulkanTopLevelAS final : public TopLevelAS {
@@ -104,8 +104,8 @@ public:
     VkBuffer sbtBuffer;
     VmaAllocation sbtBufferAllocation;
 
-    std::vector<const Texture*> sampledTextures;
-    std::vector<const Texture*> storageImages;
+    std::vector<Texture*> sampledTextures;
+    std::vector<Texture*> storageImages;
 };
 
 struct VulkanComputeState final : public ComputeState {
@@ -116,5 +116,5 @@ public:
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
 
-    std::vector<const Texture*> storageImages;
+    std::vector<Texture*> storageImages;
 };

@@ -126,17 +126,15 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
 
     // (there is automatic image layout transitions for attached textures, so when we bind the
     //  render target here, make sure to also swap to the new layout in the cache variable)
-    for (const auto& [genAttachedTexture, implicitTransitionLayout] : renderTarget.attachedTextures) {
-        auto& constAttachedTexture = dynamic_cast<const VulkanTexture&>(*genAttachedTexture);
-        auto& attachedTexture = const_cast<VulkanTexture&>(constAttachedTexture); // FIXME: const_cast
+    for (auto& [genAttachedTexture, implicitTransitionLayout] : renderTarget.attachedTextures) {
+        auto& attachedTexture = static_cast<VulkanTexture&>(*genAttachedTexture);
         attachedTexture.currentLayout = implicitTransitionLayout;
     }
 
     // Explicitly transition the layouts of the sampled textures to an optimal layout (if it isn't already)
     {
-        for (const Texture* genTexture : renderState.sampledTextures) {
-            auto& constTexture = static_cast<const VulkanTexture&>(*genTexture);
-            auto& texture = const_cast<VulkanTexture&>(constTexture); // FIXME: const_cast
+        for (Texture* genTexture : renderState.sampledTextures) {
+            auto& texture = static_cast<VulkanTexture&>(*genTexture);
 
             constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             if (texture.currentLayout != targetLayout) {
@@ -214,9 +212,8 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)
 
     // Explicitly transition the layouts of the referenced textures to an optimal layout (if it isn't already)
     {
-        for (const Texture* texture : rtState.sampledTextures) {
-            auto& constVulkanTexture = dynamic_cast<const VulkanTexture&>(*texture);
-            auto& vulkanTexture = const_cast<VulkanTexture&>(constVulkanTexture); // FIXME: const_cast
+        for (Texture* texture : rtState.sampledTextures) {
+            auto& vulkanTexture = static_cast<VulkanTexture&>(*texture);
 
             constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             if (vulkanTexture.currentLayout != targetLayout) {
@@ -249,9 +246,8 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)
             }
         }
 
-        for (const Texture* texture : rtState.storageImages) {
-            auto& constVulkanTexture = dynamic_cast<const VulkanTexture&>(*texture);
-            auto& vulkanTexture = const_cast<VulkanTexture&>(constVulkanTexture); // FIXME: const_cast
+        for (Texture* texture : rtState.storageImages) {
+            auto& vulkanTexture = static_cast<VulkanTexture&>(*texture);
 
             constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_GENERAL;
             if (vulkanTexture.currentLayout != targetLayout) {
@@ -300,9 +296,8 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
     activeRayTracingState = nullptr;
 
     // Explicitly transition the layouts of the referenced textures to an optimal layout (if it isn't already)
-    for (const Texture* genTexture : computeState.storageImages) {
-        auto& constTexture = dynamic_cast<const VulkanTexture&>(*genTexture);
-        auto& texture = const_cast<VulkanTexture&>(constTexture); // FIXME: const_cast
+    for (Texture* genTexture : computeState.storageImages) {
+        auto& texture = static_cast<VulkanTexture&>(*genTexture);
 
         constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_GENERAL;
         if (texture.currentLayout != targetLayout) {

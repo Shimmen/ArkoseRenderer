@@ -170,7 +170,7 @@ bool RenderTarget::hasDepthAttachment() const
     return last.type == AttachmentType::Depth;
 }
 
-const Texture* RenderTarget::attachment(AttachmentType requestedType) const
+Texture* RenderTarget::attachment(AttachmentType requestedType) const
 {
     for (const auto& [type, texture, _, __] : m_attachments) {
         if (type == requestedType) {
@@ -202,7 +202,7 @@ Buffer::Buffer(Backend& backend, size_t size, Usage usage, MemoryHint memoryHint
 {
 }
 
-ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const Buffer* buffer)
+ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Buffer* buffer)
     : bindingIndex(index)
     , count(1)
     , shaderStage(shaderStage)
@@ -225,7 +225,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const Buff
     }
 }
 
-ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const Texture* texture, ShaderBindingType type)
+ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Texture* texture, ShaderBindingType type)
     : bindingIndex(index)
     , count(1)
     , shaderStage(shaderStage)
@@ -242,7 +242,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const Text
     }
 }
 
-ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const TopLevelAS* tlas)
+ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, TopLevelAS* tlas)
     : bindingIndex(index)
     , count(1)
     , shaderStage(shaderStage)
@@ -256,7 +256,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const TopL
     }
 }
 
-ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std::vector<const Texture*>& textures, uint32_t count)
+ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std::vector<Texture*>& textures, uint32_t count)
     : bindingIndex(index)
     , count(count)
     , shaderStage(shaderStage)
@@ -275,7 +275,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std:
     }
 }
 
-ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std::vector<const Buffer*>& buffers)
+ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std::vector<Buffer*>& buffers)
     : bindingIndex(index)
     , count(buffers.size())
     , shaderStage(shaderStage)

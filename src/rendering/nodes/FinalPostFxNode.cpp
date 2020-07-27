@@ -30,15 +30,14 @@ FinalPostFxNode::ExecuteCallback FinalPostFxNode::constructFrame(Registry& reg) 
     // TODO: Consider placing something like this in the Registry itself so we can just do value_or(reg.placeholderTexture())
     Texture& placeholder = reg.loadTexture2D("assets/test-pattern.png", true, true);
 
-    const Texture* sourceTexture = reg.getTexture(ForwardRenderNode::name(), "color").value_or(&placeholder);
-    const Texture* sourceTextureRt = reg.getTexture(RTFirstHitNode::name(), "image").value_or(&placeholder);
+    Texture* sourceTexture = reg.getTexture(ForwardRenderNode::name(), "color").value_or(&placeholder);
+    Texture* sourceTextureRt = reg.getTexture(RTFirstHitNode::name(), "image").value_or(&placeholder);
 
     BindingSet& sourceImage = reg.createBindingSet({ { 0, ShaderStageFragment, sourceTexture, ShaderBindingType::TextureSampler } });
     BindingSet& sourceImageRt = reg.createBindingSet({ { 0, ShaderStageFragment, sourceTextureRt, ShaderBindingType::TextureSampler } });
 
-    // TODO: Maybe return an optional instead, so we can use value_or(..)
-    const Texture* diffuseGI = reg.getTexture(RTDiffuseGINode::name(), "diffuseGI").value_or(&reg.createPixelTexture(vec4(0, 0, 0, 1), true));
-    const Texture* ambientOcclusion = reg.getTexture(RTAmbientOcclusion::name(), "AO").value_or(&reg.createPixelTexture(vec4(1, 1, 1, 1), true));
+    Texture* diffuseGI = reg.getTexture(RTDiffuseGINode::name(), "diffuseGI").value_or(&reg.createPixelTexture(vec4(0, 0, 0, 1), true));
+    Texture* ambientOcclusion = reg.getTexture(RTAmbientOcclusion::name(), "AO").value_or(&reg.createPixelTexture(vec4(1, 1, 1, 1), true));
     BindingSet& etcBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, diffuseGI, ShaderBindingType::TextureSampler },
                                                        { 1, ShaderStageFragment, ambientOcclusion, ShaderBindingType::TextureSampler } });
 

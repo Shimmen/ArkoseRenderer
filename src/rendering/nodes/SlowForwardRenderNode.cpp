@@ -56,13 +56,13 @@ RenderGraphNode::ExecuteCallback SlowForwardRenderNode::constructFrame(Registry&
     Texture& colorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA16F);
     reg.publish("color", colorTexture);
 
-    // FIXME: Avoid const_cast and also make sure we can create render targets which doesn't automatically clear all input textures before writing
+    // FIXME: Make sure we can create render targets which doesn't automatically clear all input textures before writing
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture },
-                                                          { RenderTarget::AttachmentType::Color1, const_cast<Texture*>(reg.getTexture("g-buffer", "normal").value()) },
-                                                          { RenderTarget::AttachmentType::Color2, const_cast<Texture*>(reg.getTexture("g-buffer", "baseColor").value()) },
-                                                          { RenderTarget::AttachmentType::Depth, const_cast<Texture*>(reg.getTexture("g-buffer", "depth").value()) } });
+                                                          { RenderTarget::AttachmentType::Color1, reg.getTexture("g-buffer", "normal").value() },
+                                                          { RenderTarget::AttachmentType::Color2, reg.getTexture("g-buffer", "baseColor").value() },
+                                                          { RenderTarget::AttachmentType::Depth, reg.getTexture("g-buffer", "depth").value() } });
 
-    const Buffer* cameraUniformBuffer = reg.getBuffer("scene", "camera");
+    Buffer* cameraUniformBuffer = reg.getBuffer("scene", "camera");
     BindingSet& fixedBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageVertex | ShaderStageFragment), cameraUniformBuffer } });
 
     Texture& shadowMap = m_scene.sun().shadowMap();

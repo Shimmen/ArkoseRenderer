@@ -177,7 +177,7 @@ struct RenderTarget : public Resource {
     [[nodiscard]] size_t totalAttachmentCount() const;
     [[nodiscard]] bool hasDepthAttachment() const;
 
-    [[nodiscard]] const Texture* attachment(AttachmentType) const;
+    [[nodiscard]] Texture* attachment(AttachmentType) const;
 
     [[nodiscard]] const std::vector<Attachment>& sortedAttachments() const;
 
@@ -311,19 +311,19 @@ class TopLevelAS;
 struct ShaderBinding {
 
     // Single uniform or storage buffer
-    ShaderBinding(uint32_t index, ShaderStage, const Buffer*);
+    ShaderBinding(uint32_t index, ShaderStage, Buffer*);
 
     // Single sampled texture or storage image
-    ShaderBinding(uint32_t index, ShaderStage, const Texture*, ShaderBindingType);
+    ShaderBinding(uint32_t index, ShaderStage, Texture*, ShaderBindingType);
 
     // Single top level acceleration structures
-    ShaderBinding(uint32_t index, ShaderStage, const TopLevelAS*);
+    ShaderBinding(uint32_t index, ShaderStage, TopLevelAS*);
 
     // Multiple sampled textures in an array of fixed size (count)
-    ShaderBinding(uint32_t index, ShaderStage, const std::vector<const Texture*>&, uint32_t count);
+    ShaderBinding(uint32_t index, ShaderStage, const std::vector<Texture*>&, uint32_t count);
 
     // Multiple storage buffers in a dynamic array
-    ShaderBinding(uint32_t index, ShaderStage, const std::vector<const Buffer*>&);
+    ShaderBinding(uint32_t index, ShaderStage, const std::vector<Buffer*>&);
 
     uint32_t bindingIndex;
     uint32_t count;
@@ -331,9 +331,9 @@ struct ShaderBinding {
     ShaderStage shaderStage;
 
     ShaderBindingType type;
-    const TopLevelAS* tlas;
-    std::vector<const Buffer*> buffers;
-    std::vector<const Texture*> textures;
+    TopLevelAS* tlas;
+    std::vector<Buffer*> buffers;
+    std::vector<Texture*> textures;
 };
 
 struct BindingSet : public Resource {

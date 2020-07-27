@@ -37,13 +37,13 @@ public:
 
     [[nodiscard]] ComputeState& createComputeState(const Shader&, std::vector<const BindingSet*>);
 
-    void publish(const std::string& name, const Buffer&);
-    void publish(const std::string& name, const Texture&);
-    void publish(const std::string& name, const TopLevelAS&);
+    void publish(const std::string& name, Buffer&);
+    void publish(const std::string& name, Texture&);
+    void publish(const std::string& name, TopLevelAS&);
 
-    [[nodiscard]] std::optional<const Texture*> getTexture(const std::string& renderPass, const std::string& name);
-    [[nodiscard]] const Buffer* getBuffer(const std::string& renderPass, const std::string& name);
-    [[nodiscard]] const TopLevelAS* getTopLevelAccelerationStructure(const std::string& renderPass, const std::string& name);
+    [[nodiscard]] std::optional<Texture*> getTexture(const std::string& renderPass, const std::string& name);
+    [[nodiscard]] Buffer* getBuffer(const std::string& renderPass, const std::string& name);
+    [[nodiscard]] TopLevelAS* getTopLevelAccelerationStructure(const std::string& renderPass, const std::string& name);
 
     [[nodiscard]] const std::unordered_set<NodeDependency>& nodeDependencies() const;
 
@@ -62,9 +62,9 @@ private:
 
     const RenderTarget* m_windowRenderTarget;
 
-    std::unordered_map<std::string, const Buffer*> m_nameBufferMap;
-    std::unordered_map<std::string, const Texture*> m_nameTextureMap;
-    std::unordered_map<std::string, const TopLevelAS*> m_nameTopLevelASMap;
+    std::unordered_map<std::string, Buffer*> m_nameBufferMap;
+    std::unordered_map<std::string, Texture*> m_nameTextureMap;
+    std::unordered_map<std::string, TopLevelAS*> m_nameTopLevelASMap;
 
     std::vector<std::unique_ptr<Buffer>> m_buffers;
     std::vector<std::unique_ptr<Texture>> m_textures;
