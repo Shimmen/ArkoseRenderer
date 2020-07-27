@@ -41,8 +41,8 @@ add_executable(ArkoseRenderer
     src/rendering/nodes/RTAmbientOcclusion.cpp
     src/utility/GlobalState.cpp
     src/utility/Input.cpp
-    src/utility/FileIO.cpp
-    )
+    src/utility/Image.cpp
+    src/utility/FileIO.cpp)
 
 target_include_directories(ArkoseRenderer PRIVATE src/)
 target_include_directories(ArkoseRenderer PRIVATE shaders/shared)

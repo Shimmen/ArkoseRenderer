@@ -406,7 +406,7 @@ void VulkanTexture::setPixelData(vec4 pixel)
     currentLayout = VK_IMAGE_LAYOUT_GENERAL;
 }
 
-void VulkanTexture::setData(const std::byte* data, size_t size)
+void VulkanTexture::setData(const void* data, size_t size)
 {
     ASSERT(!hasFloatingPointDataFormat());
 
@@ -426,86 +426,7 @@ void VulkanTexture::setData(const std::byte* data, size_t size)
         LogError("VulkanBackend::updateTexture(): could not create staging buffer.\n");
     }
 
-    if (!vulkanBackend.setBufferMemoryUsingMapping(stagingAllocation, (void*)data, size)) {
-        LogError("VulkanBackend::updateTexture(): could set the buffer memory for the staging buffer.\n");
-        return;
-    }
-
-    AT_SCOPE_EXIT([&]() {
-        vmaDestroyBuffer(vulkanBackend.globalAllocator(), stagingBuffer, stagingAllocation);
-    });
-
-    // NOTE: Since we are updating the texture we don't care what was in the image before. For these cases undefined
-    //  works fine, since it will simply discard/ignore whatever data is in it before.
-    VkImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    if (!vulkanBackend.transitionImageLayout(image, hasDepthFormat(), oldLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)) {
-        LogError("Could not transition the image to transfer layout.\n");
-        return;
-    }
-    if (!vulkanBackend.copyBufferToImage(stagingBuffer, image, extent().width(), extent().height(), hasDepthFormat())) {
-        LogError("Could not copy the staging buffer to the image.\n");
-        return;
-    }
-
-    currentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    if (mipmap() != Texture::Mipmap::None && extent().width() > 1 && extent().height() > 1) {
-        vulkanBackend.generateMipmaps(*this, VK_IMAGE_LAYOUT_GENERAL);
-    } else {
-        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-        {
-            imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-            imageBarrier.image = image;
-            imageBarrier.subresourceRange.aspectMask = hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-            imageBarrier.subresourceRange.baseMipLevel = 0;
-            imageBarrier.subresourceRange.levelCount = 1;
-            imageBarrier.subresourceRange.baseArrayLayer = 0;
-            imageBarrier.subresourceRange.layerCount = 1;
-
-            imageBarrier.srcAccessMask = 0;
-            imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-        }
-
-        bool success = static_cast<VulkanBackend&>(backend()).issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
-            vkCmdPipelineBarrier(commandBuffer,
-                                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
-                                 0, nullptr,
-                                 0, nullptr,
-                                 1, &imageBarrier);
-        });
-
-        if (!success) {
-            LogError("Error transitioning layout after setting texture data\n");
-        }
-    }
-    currentLayout = VK_IMAGE_LAYOUT_GENERAL;
-}
-
-void VulkanTexture::setData(const float* data, size_t size)
-{
-    ASSERT(hasFloatingPointDataFormat());
-
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
-
-    VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    bufferCreateInfo.size = size;
-
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-
-    VkBuffer stagingBuffer;
-    VmaAllocation stagingAllocation;
-    if (vmaCreateBuffer(vulkanBackend.globalAllocator(), &bufferCreateInfo, &allocCreateInfo, &stagingBuffer, &stagingAllocation, nullptr) != VK_SUCCESS) {
-        LogError("VulkanBackend::updateTexture(): could not create staging buffer.\n");
-    }
-
-    if (!vulkanBackend.setBufferMemoryUsingMapping(stagingAllocation, (void*)data, size)) {
+    if (!vulkanBackend.setBufferMemoryUsingMapping(stagingAllocation, data, size)) {
         LogError("VulkanBackend::updateTexture(): could set the buffer memory for the staging buffer.\n");
         return;
     }

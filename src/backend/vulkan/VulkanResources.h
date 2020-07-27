@@ -22,9 +22,7 @@ public:
     virtual ~VulkanTexture() override;
 
     void setPixelData(vec4 pixel) override;
-    void setData(const std::byte* data, size_t size) override;
-    void setData(const float* data, size_t size) override;
-
+    void setData(const void* data, size_t size) override;
     VkImage image;
     VmaAllocation allocation;
 

@@ -1,6 +1,7 @@
 #include "Registry.h"
 
 #include "utility/FileIO.h"
+#include "utility/Image.h"
 #include "utility/Logging.h"
 #include "utility/util.h"
 #include <stb_image.h>
@@ -75,48 +76,36 @@ Texture& Registry::createPixelTexture(vec4 pixelValue, bool srgb)
 
 Texture& Registry::loadTexture2D(const std::string& imagePath, bool srgb, bool generateMipmaps)
 {
-    if (!FileIO::isFileReadable(imagePath)) {
-        LogErrorAndExit("Could not read image at path '%s'.\n", imagePath.c_str());
-    }
+    // FIXME (maybe): Add async functionality though the Registry (i.e., every new frame it checks for new data and sees if it may update some)
 
-    int width, height, componentCount;
-    stbi_info(imagePath.c_str(), &width, &height, &componentCount);
-    bool hdr = stbi_is_hdr(imagePath.c_str());
+    Image::Info* info = Image::getInfo(imagePath);
+    if (!info)
+        LogErrorAndExit("Registry: could not read image '%s', exiting\n", imagePath.c_str());
 
     Texture::Format format;
-    int desiredNumberOfComponents;
+    Image::PixelType pixelTypeToUse;
 
-    switch (componentCount) {
-    case 3:
-    case 4:
-        desiredNumberOfComponents = 4;
-        if (hdr)
-            format = Texture::Format::RGBA32F;
-        else
-            format = (srgb) ? Texture::Format::sRGBA8 : Texture::Format::RGBA8;
+    switch (info->pixelType) {
+    case Image::PixelType::RGB:
+    case Image::PixelType::RGBA:
+        // Honestly, this is easier to read than the if-based equivalent..
+        format = (info->isHdr())
+            ? Texture::Format::RGBA32F
+            : (srgb)
+                ? Texture::Format::sRGBA8
+                : Texture::Format::RGBA8;
+        // RGB formats aren't always supported, so always use RGBA for 3-component data
+        pixelTypeToUse = Image::PixelType::RGBA;
         break;
     default:
-        LogErrorAndExit("Currently no support for other than (s)RGB(F) and (s)RGBA(F) texture loading!\n");
+        LogErrorAndExit("Registry: currently no support for other than (s)RGB(F) and (s)RGBA(F) texture loading!\n");
     }
 
-    auto mipmapMode = generateMipmaps && width > 1 && height > 1 ? Texture::Mipmap::Linear : Texture::Mipmap::None;
-    auto texture = backend().createTexture({ width, height }, format, Texture::MinFilter::Linear, Texture::MagFilter::Linear, mipmapMode, Texture::Multisampling::None);
+    auto mipmapMode = generateMipmaps && info->width > 1 && info->height > 1 ? Texture::Mipmap::Linear : Texture::Mipmap::None;
+    auto texture = backend().createTexture({ info->width, info->height }, format, Texture::MinFilter::Linear, Texture::MagFilter::Linear, mipmapMode, Texture::Multisampling::None);
 
-    // FIXME: Add async functionality though the Registry (i.e., every new frame it checks for new data and sees if it may update some)
-
-    int w, h;
-
-    if (hdr) {
-        float* hdrPixels = stbi_loadf(imagePath.c_str(), &w, &h, nullptr, desiredNumberOfComponents);
-        size_t pixelsSize = width * height * desiredNumberOfComponents * sizeof(float);
-        texture->setData(hdrPixels, pixelsSize);
-        stbi_image_free(hdrPixels);
-    } else {
-        stbi_uc* pixels = stbi_load(imagePath.c_str(), &width, &height, nullptr, desiredNumberOfComponents);
-        size_t pixelsSize = width * height * desiredNumberOfComponents * sizeof(stbi_uc);
-        texture->setData((std::byte*)pixels, pixelsSize);
-        stbi_image_free(pixels);
-    }
+    Image* image = Image::load(imagePath, pixelTypeToUse);
+    texture->setData(image->data(), image->size());
 
     m_textures.push_back(std::move(texture));
     return *m_textures.back();

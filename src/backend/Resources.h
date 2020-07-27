@@ -105,8 +105,7 @@ struct Texture : public Resource {
     bool hasFloatingPointDataFormat() const;
 
     virtual void setPixelData(vec4 pixel) = 0;
-    virtual void setData(const std::byte* data, size_t size) = 0;
-    virtual void setData(const float* data, size_t size) = 0;
+    virtual void setData(const void* data, size_t size) = 0;
 
     [[nodiscard]] const Extent2D& extent() const { return m_extent; }
     [[nodiscard]] Format format() const { return m_format; }
