@@ -15,10 +15,8 @@ ShadowMapNode::ShadowMapNode(Scene& scene)
 
 RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) const
 {
-    // TODO: Make lights own their own shadow maps
-    const SunLight& sunLight = m_scene.sun();
-    Texture& shadowMap = reg.createTexture2D(sunLight.shadowMapSize, Texture::Format::Depth32F);
-    reg.publish("directional", shadowMap);
+    // TODO: Render all applicable shadow maps here, not just the default 'sun' as we do now.
+    DirectionalLight& sunLight = m_scene.sun();
 
     Buffer& lightDataBuffer = reg.createBuffer(sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &lightDataBuffer } });
@@ -26,7 +24,7 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
     Buffer& transformDataBuffer = reg.createBuffer(m_scene.meshCount() * sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     BindingSet& transformBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &transformDataBuffer } });
 
-    const RenderTarget& shadowRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &shadowMap } });
+    const RenderTarget& shadowRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &sunLight.shadowMap() } });
     Shader shader = Shader::createVertexOnly("shadow/shadowSun.vert");
     VertexLayout vertexLayout = VertexLayout { sizeof(vec3), { { 0, VertexAttributeType::Float3, 0 } } };
 
@@ -46,7 +44,7 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
         });
         transformDataBuffer.updateData(objectTransforms, meshCount * sizeof(mat4));
 
-        mat4 lightProjectionFromWorld = sunLight.lightProjection();
+        mat4 lightProjectionFromWorld = sunLight.viewProjection();
         lightDataBuffer.updateData(&lightProjectionFromWorld, sizeof(mat4));
 
         cmdList.beginRendering(renderState, ClearColor(1, 0, 1), 1.0f);

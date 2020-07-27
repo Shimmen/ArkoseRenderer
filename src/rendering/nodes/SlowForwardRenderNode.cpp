@@ -65,9 +65,10 @@ RenderGraphNode::ExecuteCallback SlowForwardRenderNode::constructFrame(Registry&
     const Buffer* cameraUniformBuffer = reg.getBuffer("scene", "camera");
     BindingSet& fixedBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageVertex | ShaderStageFragment), cameraUniformBuffer } });
 
-    const Texture* shadowMap = reg.getTexture(ShadowMapNode::name(), "directional").value_or(&reg.createPixelTexture(vec4(1.0), false));
-    BindingSet& dirLightBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, shadowMap, ShaderBindingType::TextureSampler },
-                                                            { 1, ShaderStageFragment, reg.getBuffer("scene", "directionalLight") } });
+    Texture& shadowMap = m_scene.sun().shadowMap();
+    Buffer& dirLightBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+    BindingSet& dirLightBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &shadowMap, ShaderBindingType::TextureSampler },
+                                                            { 1, ShaderStageFragment, &dirLightBuffer } });
 
     VertexLayout vertexLayout = VertexLayout {
         sizeof(ForwardVertex),
@@ -103,6 +104,17 @@ RenderGraphNode::ExecuteCallback SlowForwardRenderNode::constructFrame(Registry&
                                       VertexComponent::Normal3F,
                                       VertexComponent::Tangent4F });
         });
+
+        // Directional light uniforms
+        // TODO: Upload all relevant light here, not just the default 'sun' as we do now.
+        DirectionalLight& light = m_scene.sun();
+        DirectionalLightData dirLightData {
+            .colorAndIntensity = { light.color, light.illuminance },
+            .worldSpaceDirection = vec4(normalize(light.direction), 0.0),
+            .viewSpaceDirection = m_scene.camera().viewMatrix() * vec4(normalize(m_scene.sun().direction), 0.0),
+            .lightProjectionFromWorld = light.viewProjection()
+        };
+        dirLightBuffer.updateData(&dirLightData, sizeof(DirectionalLightData));
 
         cmdList.beginRendering(renderState, ClearColor(0, 0, 0, 0), 1.0f);
         cmdList.bindSet(fixedBindingSet, 0);

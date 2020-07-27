@@ -1,23 +1,12 @@
 #pragma once
 
+#include "DirectionalLight.h"
 #include "Model.h"
 #include <memory>
 #include <nlohmann/json_fwd.hpp>
 #include <rendering/camera/FpsCamera.h>
 #include <string>
 #include <unordered_map>
-
-class SunLight {
-public:
-    mat4 lightProjection() const;
-
-    vec3 color;
-    float intensity;
-
-    vec3 direction;
-    Extent2D shadowMapSize;
-    float worldExtent;
-};
 
 class Scene final {
 public:
@@ -52,8 +41,8 @@ public:
     FpsCamera& camera() { return m_currentMainCamera; }
     void cameraGui();
 
-    const SunLight& sun() const { return m_sunLight; }
-    SunLight& sun() { return m_sunLight; }
+    const DirectionalLight& sun() const { return m_directionalLights[0]; }
+    DirectionalLight& sun() { return m_directionalLights[0]; }
 
     float& ambient() { return m_ambient; }
 
@@ -73,7 +62,10 @@ private:
     Registry& m_registry;
 
     std::vector<std::unique_ptr<Model>> m_models;
-    SunLight m_sunLight;
+
+    std::vector<DirectionalLight> m_directionalLights;
+    //DirectionalLight m_directionalLight;
+    //SunLight m_sunLight;
 
     FpsCamera m_currentMainCamera;
     std::unordered_map<std::string, FpsCamera> m_allCameras {};

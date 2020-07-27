@@ -1,7 +1,7 @@
 #ifndef LIGHT_DATA_H
 #define LIGHT_DATA_H
 
-struct DirectionalLight {
+struct DirectionalLightData {
     vec4 colorAndIntensity;
     vec4 worldSpaceDirection;
     vec4 viewSpaceDirection;

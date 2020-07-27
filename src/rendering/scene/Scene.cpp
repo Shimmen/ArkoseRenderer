@@ -9,13 +9,6 @@
 #include <mooslib/transform.h>
 #include <nlohmann/json.hpp>
 
-mat4 SunLight::lightProjection() const
-{
-    mat4 lightOrientation = moos::lookAt({ 0, 0, 0 }, normalize(direction)); // (note: currently just centered on the origin)
-    mat4 lightProjection = moos::orthographicProjectionToVulkanClipSpace(worldExtent, -worldExtent, worldExtent);
-    return lightProjection * lightOrientation;
-}
-
 Scene::Scene(Registry& registry)
     : m_registry(registry)
 {
@@ -82,26 +75,29 @@ void Scene::loadFromFile(const std::string& path)
     for (auto& jsonLight : jsonScene.at("lights")) {
         ASSERT(jsonLight.at("type") == "directional");
 
-        SunLight sun;
-
         float color[3];
         jsonLight.at("color").get_to(color);
-        sun.color = { color[0], color[1], color[2] };
 
-        sun.intensity = jsonLight.at("intensity");
+        float intensity = jsonLight.at("intensity");
 
         float dir[3];
         jsonLight.at("direction").get_to(dir);
-        sun.direction = normalize(vec3(dir[0], dir[1], dir[2]));
 
-        sun.worldExtent = jsonLight.at("worldExtent");
+        DirectionalLight sun({ color[0], color[1], color[2] },
+                             intensity,
+                             { dir[0], dir[1], dir[2] });
+
+        sun.shadowMapWorldOrigin = { 0, 0, 0 };
+        sun.shadowMapWorldExtent = jsonLight.at("worldExtent");
 
         int mapSize[2];
         jsonLight.at("shadowMapSize").get_to(mapSize);
-        sun.shadowMapSize = { mapSize[0], mapSize[1] };
+        sun.setShadowMapSize({ mapSize[0], mapSize[1] });
+
+        sun.setScene({}, this);
 
         // TODO!
-        m_sunLight = sun;
+        m_directionalLights.push_back(sun);
     }
 
     for (auto& jsonCamera : jsonScene.at("cameras")) {

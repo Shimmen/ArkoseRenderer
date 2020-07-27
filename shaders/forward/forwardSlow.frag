@@ -24,7 +24,7 @@ layout(set = 1, binding = 4) uniform sampler2D uEmissive;
 layout(set = 2, binding = 0) uniform sampler2D uDirLightShadowMap;
 layout(set = 2, binding = 1) uniform DirLightBlock
 {
-    DirectionalLight dirLight;
+    DirectionalLightData dirLight;
 };
 
 layout(location = 0) out vec4 oColor;
@@ -61,7 +61,7 @@ float evaluateShadow(sampler2D shadowMap, mat4 lightProjectionFromView, vec3 vie
     return (mapDepth < posInShadowMap.z - bias) ? 0.0 : 1.0;
 }
 
-vec3 evaluateDirectionalLight(DirectionalLight light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
     vec3 lightColor = light.colorAndIntensity.a * light.colorAndIntensity.rgb;
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
