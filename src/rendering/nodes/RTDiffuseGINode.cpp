@@ -85,6 +85,8 @@ RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) 
     Texture* gBufferNormal = reg.getTexture("g-buffer", "normal").value();
     Texture* gBufferDepth = reg.getTexture("g-buffer", "depth").value();
 
+    Buffer& dirLightBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+
     TopLevelAS& sceneTLAS = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },
                                                          { 1, ShaderStageRTRayGen, m_accumulationTexture, ShaderBindingType::StorageImage },
@@ -94,7 +96,7 @@ RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) 
                                                          { 5, ShaderStageRTRayGen, reg.getBuffer("scene", "camera") },
                                                          { 6, ShaderStageRTMiss, reg.getBuffer("scene", "environmentData") },
                                                          { 7, ShaderStageRTMiss, reg.getTexture("scene", "environmentMap").value_or(&reg.createPixelTexture(vec4(1.0), true)), ShaderBindingType::TextureSampler },
-                                                         { 8, ShaderStageRTClosestHit, reg.getBuffer("scene", "directionalLight") } });
+                                                         { 8, ShaderStageRTClosestHit, &dirLightBuffer } });
 
     ShaderFile raygen = ShaderFile("rt-diffuseGI/raygen.rgen");
     HitGroup mainHitGroup { ShaderFile("rt-diffuseGI/closestHit.rchit") };
@@ -129,6 +131,15 @@ RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) 
 
         if (!doRender)
             return;
+
+        const DirectionalLight& light = m_scene.sun();
+        DirectionalLightData dirLightData {
+            .colorAndIntensity = { light.color, light.illuminance },
+            .worldSpaceDirection = vec4(normalize(light.direction), 0.0),
+            .viewSpaceDirection = m_scene.camera().viewMatrix() * vec4(normalize(m_scene.sun().direction), 0.0),
+            .lightProjectionFromWorld = light.viewProjection()
+        };
+        dirLightBuffer.updateData(&dirLightData, sizeof(DirectionalLightData));
 
         cmdList.setRayTracingState(rtState);
         cmdList.bindSet(frameBindingSet, 0);

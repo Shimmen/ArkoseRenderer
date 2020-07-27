@@ -13,7 +13,7 @@ hitAttributeNV vec3 attribs;
 layout(location = 1) rayPayloadNV bool inShadow;
 
 layout(binding = 0, set = 0) uniform accelerationStructureNV topLevelAS;
-layout(binding = 8, set = 0) uniform DirLightBlock { DirectionalLight dirLight; };
+layout(binding = 8, set = 0) uniform DirLightBlock { DirectionalLightData dirLight; };
 
 layout(binding = 0, set = 1, scalar) buffer readonly Meshes   { RTMesh meshes[]; };
 layout(binding = 1, set = 1, scalar) buffer readonly Vertices { RTVertex x[]; } vertices[];
@@ -57,7 +57,7 @@ bool hitPointInShadow()
 	return inShadow;
 }
 
-vec3 evaluateDirectionalLight(DirectionalLight light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
     vec3 lightColor = light.colorAndIntensity.a * light.colorAndIntensity.rgb;
     vec3 L = -normalize(light.worldSpaceDirection.xyz);

@@ -78,6 +78,8 @@ RenderGraphNode::ExecuteCallback RTReflectionsNode::constructFrame(Registry& reg
     Texture& reflections = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("reflections", reflections);
 
+    Buffer& dirLightBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+
     TopLevelAS& tlas = *reg.getTopLevelAccelerationStructure(RTAccelerationStructures::name(), "scene");
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &tlas },
                                                          { 1, ShaderStageRTRayGen, &reflections, ShaderBindingType::StorageImage },
@@ -87,7 +89,7 @@ RenderGraphNode::ExecuteCallback RTReflectionsNode::constructFrame(Registry& reg
                                                          { 5, ShaderStageRTRayGen, reg.getBuffer("scene", "camera") },
                                                          { 6, ShaderStageRTMiss, reg.getBuffer("scene", "environmentData") },
                                                          { 7, ShaderStageRTMiss, reg.getTexture("scene", "environmentMap").value_or(&reg.createPixelTexture(vec4(1.0f), true)), ShaderBindingType::TextureSampler },
-                                                         { 8, ShaderStageRTClosestHit, reg.getBuffer("scene", "directionalLight") } });
+                                                         { 8, ShaderStageRTClosestHit, &dirLightBuffer } });
 
     ShaderFile raygen = ShaderFile("rt-reflections/raygen.rgen");
     HitGroup mainHitGroup { ShaderFile("rt-reflections/closestHit.rchit") };
@@ -99,6 +101,16 @@ RenderGraphNode::ExecuteCallback RTReflectionsNode::constructFrame(Registry& reg
     RayTracingState& rtState = reg.createRayTracingState(sbt, { &frameBindingSet, m_objectDataBindingSet }, maxRecursionDepth);
 
     return [&](const AppState& appState, CommandList& cmdList) {
+
+        const DirectionalLight& light = m_scene.sun();
+        DirectionalLightData dirLightData {
+            .colorAndIntensity = { light.color, light.illuminance },
+            .worldSpaceDirection = vec4(normalize(light.direction), 0.0),
+            .viewSpaceDirection = m_scene.camera().viewMatrix() * vec4(normalize(m_scene.sun().direction), 0.0),
+            .lightProjectionFromWorld = light.viewProjection()
+        };
+        dirLightBuffer.updateData(&dirLightData, sizeof(DirectionalLightData));
+
         cmdList.setRayTracingState(rtState);
 
         cmdList.bindSet(frameBindingSet, 0);

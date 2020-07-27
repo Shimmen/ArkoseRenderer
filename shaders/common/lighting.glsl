@@ -5,7 +5,7 @@
 #include <shared/LightData.h>
 #include <common/brdf.glsl>
 
-vec3 evaluateDirectionalLight(DirectionalLight light, vec3 baseColor, vec3 L, vec3 N, float shadowFactor)
+vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 baseColor, vec3 L, vec3 N, float shadowFactor)
 {
     vec3 lightColor = light.colorAndIntensity.a * light.colorAndIntensity.rgb;
 
