@@ -18,32 +18,15 @@ void SlowForwardRenderNode::constructNode(Registry& nodeReg)
         Drawable drawable {};
         drawable.mesh = &mesh;
 
-        const Material& material = mesh.material();
-
-        // Create & load textures
-        std::string baseColorPath = material.baseColor;
-        Texture* baseColorTexture { nullptr };
-        if (baseColorPath.empty()) {
-            // the color is already in linear sRGB so we don't want to make an sRGB texture for it!
-            baseColorTexture = &nodeReg.createPixelTexture(material.baseColorFactor, false);
-        } else {
-            baseColorTexture = &nodeReg.loadTexture2D(baseColorPath, true, true);
-        }
-
-        std::string normalMapPath = material.normalMap;
-        Texture& normalMapTexture = nodeReg.loadTexture2D(normalMapPath, false, true);
-        std::string metallicRoughnessPath = material.metallicRoughness;
-        Texture& metallicRoughnessTexture = nodeReg.loadTexture2D(metallicRoughnessPath, false, true);
-        std::string emissivePath = material.emissive;
-        Texture& emissiveTexture = nodeReg.loadTexture2D(emissivePath, true, true);
+        Material& material = mesh.material();
 
         drawable.objectDataBuffer = &nodeReg.createBuffer(sizeof(PerForwardObject), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
         drawable.bindingSet = &nodeReg.createBindingSet(
             { { 0, ShaderStageVertex, drawable.objectDataBuffer },
-              { 1, ShaderStageFragment, baseColorTexture, ShaderBindingType::TextureSampler },
-              { 2, ShaderStageFragment, &normalMapTexture, ShaderBindingType::TextureSampler },
-              { 3, ShaderStageFragment, &metallicRoughnessTexture, ShaderBindingType::TextureSampler },
-              { 4, ShaderStageFragment, &emissiveTexture, ShaderBindingType::TextureSampler } });
+              { 1, ShaderStageFragment, material.baseColorTexture() , ShaderBindingType::TextureSampler },
+              { 2, ShaderStageFragment, material.normalMapTexture(), ShaderBindingType::TextureSampler },
+              { 3, ShaderStageFragment, material.metallicRoughnessTexture(), ShaderBindingType::TextureSampler },
+              { 4, ShaderStageFragment, material.emissiveTexture(), ShaderBindingType::TextureSampler } });
 
         m_drawables.push_back(drawable);
     });

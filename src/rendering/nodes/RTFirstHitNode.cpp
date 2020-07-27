@@ -40,13 +40,8 @@ void RTFirstHitNode::constructNode(Registry& nodeReg)
             }
         }
 
-        const Material& material = mesh.material();
-        Texture* baseColorTexture = material.baseColor.empty()
-            ? &nodeReg.createPixelTexture(material.baseColorFactor, false) // the color is already in linear sRGB so we don't want to make an sRGB texture for it!
-            : &nodeReg.loadTexture2D(material.baseColor, true, true);
-
         int texId = allTextures.size();
-        allTextures.push_back(baseColorTexture);
+        allTextures.push_back(mesh.material().baseColorTexture());
 
         int meshId = rtMeshes.size();
         rtMeshes.push_back({ .objectId = meshId,
