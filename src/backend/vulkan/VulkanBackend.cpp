@@ -1209,21 +1209,38 @@ void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, doub
     });
     ImGui::End();
 
-    Model* selectedModel = m_app.scene().selectedModel();
-    if (selectedModel) {
+    {
+        static ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
 
-        ImGuizmo::BeginFrame();
-        ImGuizmo::SetRect(0, 0, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
+        auto& input = Input::instance();
+        if (input.wasKeyPressed(GLFW_KEY_T))
+            operation = ImGuizmo::TRANSLATE;
+        else if (input.wasKeyPressed(GLFW_KEY_R))
+            operation = ImGuizmo::ROTATE;
+        else if (input.wasKeyPressed(GLFW_KEY_Y))
+            operation = ImGuizmo::SCALE;
 
-        ImGuizmo::MODE mode = ImGuizmo::LOCAL; // FIXME: Support world transforms!
-        ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
+        Model* selectedModel = m_app.scene().selectedModel();
+        if (selectedModel) {
 
-        mat4 viewMatrix = m_app.scene().camera().viewMatrix();
-        mat4 projMatrix = m_app.scene().camera().projectionMatrix();
+            ImGuizmo::BeginFrame();
+            ImGuizmo::SetRect(0, 0, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
 
-        mat4 matrix = selectedModel->transform().localMatrix();
-        ImGuizmo::Manipulate(value_ptr(viewMatrix), value_ptr(projMatrix), operation, mode, value_ptr(matrix));
-        selectedModel->transform().setLocalMatrix(matrix);
+            // FIXME: Support world transforms! Well, we don't really have hierarchies right now, so it doesn't really matter.
+            //  What we do have is meshes with their own transform under a model, and we are modifying the model's transform here.
+            //  Maybe in the future we want to be able to modify meshes too?
+            ImGuizmo::MODE mode = ImGuizmo::LOCAL;
+
+            mat4 viewMatrix = m_app.scene().camera().viewMatrix();
+            mat4 projMatrix = m_app.scene().camera().projectionMatrix();
+
+            // Silly stuff, since ImGuizmo doesn't seem to like my projection matrix..
+            projMatrix.y = -projMatrix.y;
+
+            mat4 matrix = selectedModel->transform().localMatrix();
+            ImGuizmo::Manipulate(value_ptr(viewMatrix), value_ptr(projMatrix), operation, mode, value_ptr(matrix));
+            selectedModel->transform().setLocalMatrix(matrix);
+        }
     }
 
     ImGui::Render();
