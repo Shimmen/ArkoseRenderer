@@ -209,6 +209,7 @@ std::unique_ptr<Material> GltfMesh::createMaterial()
     };
 
     auto material = std::make_unique<Material>();
+    material->setMesh(this);
 
     if (gltfMaterial.pbrMetallicRoughness.baseColorTexture.index != -1) {
         material->baseColor = textureUri(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index, "assets/default-baseColor.png");
