@@ -501,8 +501,13 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
         VkAttachmentDescription attachment = {};
         attachment.format = texture.vkFormat;
 
-        // TODO: Handle multisampling and stencil stuff!
-        attachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        if (!attachInfo.texture->isMultisampled() && attachInfo.multisampleResolveTexture != nullptr)
+            LogErrorAndExit("Error trying to create render target with texture that isn't multisampled but has a resolve texture\n");
+        if (attachInfo.texture->isMultisampled() && attachInfo.multisampleResolveTexture == nullptr)
+            LogErrorAndExit("Error trying to create render target with multisample texture but no resolve texture\n");
+        attachment.samples = static_cast<VkSampleCountFlagBits>(attachInfo.texture->multisampling());
+
+        // TODO: Handle stencil stuff!
         attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
@@ -1150,8 +1155,8 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     }
 
     VkPipelineMultisampleStateCreateInfo multisampling = { VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO };
+    multisampling.rasterizationSamples = static_cast<VkSampleCountFlagBits>(renderTarget.multisampling());
     multisampling.sampleShadingEnable = VK_FALSE;
-    multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
     VkPipelineColorBlendStateCreateInfo colorBlending = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
     std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments {};

@@ -186,9 +186,15 @@ struct RenderTarget : public Resource {
     [[nodiscard]] Texture* attachment(AttachmentType) const;
     void forEachAttachmentInOrder(std::function<void(const Attachment&)>) const;
 
+    bool requiresMultisampling() const;
+    Texture::Multisampling multisampling() const;
+
 private:
     std::vector<Attachment> m_colorAttachments {};
     std::optional<Attachment> m_depthAttachment {};
+
+    Extent2D m_extent;
+    Texture::Multisampling m_multisampling;
 };
 
 struct Buffer : public Resource {

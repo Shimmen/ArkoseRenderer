@@ -104,19 +104,42 @@ RenderTarget::RenderTarget(Backend& backend, std::vector<Attachment> attachments
         LogErrorAndExit("RenderTarget error: tried to create with less than one attachments!\n");
     }
 
-    if (totalAttachmentCount() < 2) {
-        return;
-    }
+    auto checkMultisamplingProperties = [](Attachment& attachment) {
+        if (!attachment.texture->isMultisampled() && attachment.multisampleResolveTexture != nullptr)
+            LogErrorAndExit("RenderTarget error: tried to create render target with texture that isn't multisampled but has a resolve texture\n");
+        if (attachment.texture->isMultisampled() && attachment.multisampleResolveTexture == nullptr)
+            LogErrorAndExit("RenderTarget error: tried to create render target with multisample texture but no resolve texture\n");
+    };
+
+    for (auto& colorAttachment : m_colorAttachments)
+        checkMultisamplingProperties(colorAttachment);
+    if (m_depthAttachment.has_value())
+        checkMultisamplingProperties(m_depthAttachment.value());
 
     Extent2D firstExtent = m_depthAttachment.has_value()
         ? m_depthAttachment.value().texture->extent()
         : m_colorAttachments.front().texture->extent();
+    Texture::Multisampling firstMultisampling = m_depthAttachment.has_value()
+        ? m_depthAttachment.value().texture->multisampling()
+        : m_colorAttachments.front().texture->multisampling();
+
     for (auto& attachment : m_colorAttachments) {
         if (attachment.texture->extent() != firstExtent) {
             LogErrorAndExit("RenderTarget error: tried to create with attachments of different sizes: (%ix%i) vs (%ix%i)\n",
                             attachment.texture->extent().width(), attachment.texture->extent().height(),
                             firstExtent.width(), firstExtent.height());
         }
+        if (attachment.texture->multisampling() != firstMultisampling) {
+            LogErrorAndExit("RenderTarget error: tried to create with attachments of different multisampling sample counts: %u vs %u\n",
+                            static_cast<unsigned>(attachment.texture->multisampling()), static_cast<unsigned>(firstMultisampling));
+        }
+    }
+
+    m_extent = firstExtent;
+    m_multisampling = firstMultisampling;
+
+    if (colorAttachmentCount() == 0) {
+        return;
     }
 
     // Keep color attachments sorted from Color0, Color1, .. ColorN
@@ -140,9 +163,7 @@ RenderTarget::RenderTarget(Backend& backend, std::vector<Attachment> attachments
 
 const Extent2D& RenderTarget::extent() const
 {
-    return m_depthAttachment.has_value()
-        ? m_depthAttachment.value().texture->extent()
-        : m_colorAttachments.front().texture->extent();
+    return m_extent;
 }
 
 size_t RenderTarget::colorAttachmentCount() const
@@ -196,6 +217,16 @@ void RenderTarget::forEachAttachmentInOrder(std::function<void(const Attachment&
     }
     if (hasDepthAttachment())
         callback(depthAttachment().value());
+}
+
+bool RenderTarget::requiresMultisampling() const
+{
+    return m_multisampling != Texture::Multisampling::None;
+}
+
+Texture::Multisampling RenderTarget::multisampling() const
+{
+    return m_multisampling;
 }
 
 Buffer::Buffer(Backend& backend, size_t size, Usage usage, MemoryHint memoryHint)

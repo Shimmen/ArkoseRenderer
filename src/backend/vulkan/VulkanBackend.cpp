@@ -913,6 +913,9 @@ void VulkanBackend::createWindowRenderTargetFrontend()
             renderTarget->m_colorAttachments = { { RenderTarget::AttachmentType::Color0, m_swapchainMockColorTextures[i].get() } };
             renderTarget->m_depthAttachment = { RenderTarget::AttachmentType::Depth, m_swapchainDepthTexture.get() };
 
+            renderTarget->m_multisampling = Texture::Multisampling::None;
+            renderTarget->m_extent = m_swapchainExtent;
+
             renderTarget->compatibleRenderPass = m_swapchainRenderPass;
             renderTarget->framebuffer = m_swapchainFramebuffers[i];
             renderTarget->attachedTextures = {
