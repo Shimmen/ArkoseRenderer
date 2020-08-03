@@ -15,6 +15,8 @@ public:
     void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;
 
+    static constexpr Texture::Multisampling multisamplingLevel() { return Texture::Multisampling::X8; }
+
 private:
     struct ForwardVertex {
         vec3 position;

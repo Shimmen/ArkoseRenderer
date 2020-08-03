@@ -16,19 +16,16 @@ layout(set = 1, binding = 3) uniform EnvBlock { float envMultiplier; };
 layout(location = 0) out vec4 oColor;
 
 layout(push_constant) uniform PushConstants {
-	float exposure;
+    float exposure;
+    int multisampleLevel;
 };
 
 void main()
 {
-    vec3 hdrColor;
-
-    //float depth = texture(uDepth, vTexCoord).r;
-
     float geoToEnv = 0.0;
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < multisampleLevel; ++i)
         geoToEnv += (texelFetch(uDepth, ivec2(gl_FragCoord.xy), i).r >= (1.0 - 1e-6)) ? 0.0 : 1.0;
-    geoToEnv /= 4.0;
+    geoToEnv /= float(multisampleLevel);
 
     vec3 geoColor = texture(uTexture, vTexCoord).rgb;
 
@@ -36,20 +33,7 @@ void main()
     vec3 envColor = texture(uEnvironment, sampleUv).rgb;
     envColor *= envMultiplier;
 
-    hdrColor = mix(envColor, geoColor, geoToEnv);
-
-    //float depth = 0.0;
-    //for (int i = 0; i < 4; ++i)
-    //    depth += texelFetch(uDepth, ivec2(gl_FragCoord.xy), i).r;
-    //depth /= 4.0;
-
-    //if (depth >= 1.0 - 1e-6) {
-    //    vec2 sampleUv = sphericalUvFromDirection(normalize(vViewRay));
-    //    hdrColor = texture(uEnvironment, sampleUv).rgb;
-    //    hdrColor *= envMultiplier;
-    //} else {
-    //    hdrColor = texture(uTexture, vTexCoord).rgb;
-    //}
+    vec3 hdrColor = mix(envColor, geoColor, geoToEnv);
 
     hdrColor *= exposure;
     vec3 ldrColor = ACES_tonemap(hdrColor);

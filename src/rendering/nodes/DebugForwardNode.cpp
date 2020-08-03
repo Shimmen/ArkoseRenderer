@@ -34,20 +34,18 @@ RenderGraphNode::ExecuteCallback DebugForwardNode::constructFrame(Registry& reg)
 
     // NOTE: We currently don't support multisampled window render targets, so for now this type of procedure works.
 
-    auto multisampling = Texture::Multisampling::X8;
-
     Texture& colorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA16F);
     reg.publish("color", colorTexture);
 
-    Texture& depthTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::Depth32F, multisampling);
+    Texture& depthTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::Depth32F, multisamplingLevel());
     reg.publish("depth", depthTexture);
 
     RenderTarget* renderTarget;
-    if (multisampling == Texture::Multisampling::None) {
+    if (multisamplingLevel() == Texture::Multisampling::None) {
         renderTarget = &reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture },
                                                  { RenderTarget::AttachmentType::Depth, &depthTexture } });
     } else {
-        Texture& msaaColorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA16F, multisampling);
+        Texture& msaaColorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA16F, multisamplingLevel());
         renderTarget = &reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &msaaColorTexture, LoadOp::Clear, StoreOp::Store, &colorTexture },
                                                  { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Clear, StoreOp::Store } });
     }

@@ -54,9 +54,26 @@ void MultisampleTest::setup(RenderGraph& graph)
             ImGui::SliderFloat("Exposure", &exposure, 0.01f, 10.0f, "%.3f", 3.0f);
 
             cmdList.beginRendering(renderState, ClearColor(0.5f, 0.1f, 0.5f), 1.0f);
+            
             cmdList.bindSet(sourceBindingSet, 0);
             cmdList.bindSet(envBindingSet, 1);
+            
             cmdList.pushConstant(ShaderStageFragment, exposure);
+
+            constexpr int maxMultisampling = static_cast<int>(DebugForwardNode::multisamplingLevel());
+            static int multisamplingLevel = maxMultisampling;
+
+            ImGui::Text("Num samples of multisampling (in final)");
+            ImGui::RadioButton("1X", &multisamplingLevel, 1);
+            ImGui::SameLine();
+            ImGui::RadioButton("2X", &multisamplingLevel, 2);
+            ImGui::SameLine();
+            ImGui::RadioButton("4X", &multisamplingLevel, 4);
+            ImGui::SameLine();
+            ImGui::RadioButton("8X", &multisamplingLevel, 8);
+            MOOSLIB_ASSERT(multisamplingLevel > 1); // (since we use a sampler2DMS)
+            cmdList.pushConstant(ShaderStageFragment, multisamplingLevel, 4);
+            
             cmdList.draw(vertexBuffer, 3);
         };
     });
