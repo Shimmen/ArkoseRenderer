@@ -490,18 +490,13 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
 {
     std::vector<VkImageView> allAttachmentImageViews {};
     std::vector<VkAttachmentDescription> allAttachments {};
+
     std::vector<VkAttachmentReference> colorAttachmentRefs {};
     std::optional<VkAttachmentReference> depthAttachmentRef {};
 
-    for (auto& [type, genTexture, loadOp, storeOp] : sortedAttachments()) {
-
-        // If the attachments are sorted properly (i.e. depth very last) then this should never happen!
-        // This is important for the VkAttachmentReference attachment index later in this loop.
-        ASSERT(!depthAttachmentRef.has_value());
-
-        // FIXME: Add is<Type> and to<Type> utilities!
-        MOOSLIB_ASSERT(genTexture);
-        auto& texture = dynamic_cast<VulkanTexture&>(*genTexture);
+    auto createAttachmentData = [&](const Attachment attachInfo) -> VkAttachmentReference {
+        MOOSLIB_ASSERT(attachInfo.texture);
+        auto& texture = static_cast<VulkanTexture&>(*attachInfo.texture);
 
         VkAttachmentDescription attachment = {};
         attachment.format = texture.vkFormat;
@@ -511,16 +506,15 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
         attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-        switch (loadOp) {
+        switch (attachInfo.loadOp) {
         case LoadOp::Load:
             attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-
             // TODO/FIXME: For LOAD_OP_LOAD we actually need to provide a valid initialLayout! Using texInfo.currentLayout
             //  won't work since we only use the layout at the time of creating this render pass, and not what it is in
             //  runtime. Not sure what the best way of doing this is. What about always using explicit transitions before
             //  binding this render target, and then here have the same initialLayout and finalLayout so nothing(?) happens.
             //  Could maybe work, but we have to figure out if it's actually a noop if initial & final are equal!
-            attachment.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; //texInfo.currentLayout;
+            attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             ASSERT_NOT_REACHED();
             break;
         case LoadOp::Clear:
@@ -529,7 +523,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
             break;
         }
 
-        switch (storeOp) {
+        switch (attachInfo.storeOp) {
         case StoreOp::Store:
             attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             break;
@@ -538,7 +532,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
             break;
         }
 
-        if (type == RenderTarget::AttachmentType::Depth) {
+        if (attachInfo.type == RenderTarget::AttachmentType::Depth) {
             attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         } else {
             attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -551,11 +545,24 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
         VkAttachmentReference attachmentRef = {};
         attachmentRef.attachment = attachmentIndex;
         attachmentRef.layout = attachment.finalLayout;
-        if (type == RenderTarget::AttachmentType::Depth) {
+
+        return attachmentRef;
+
+        if (attachInfo.type == RenderTarget::AttachmentType::Depth) {
             depthAttachmentRef = attachmentRef;
         } else {
             colorAttachmentRefs.push_back(attachmentRef);
         }
+    };
+
+    for (const Attachment& colorAttachment : colorAttachments()) {
+        VkAttachmentReference ref = createAttachmentData(colorAttachment);
+        colorAttachmentRefs.push_back(ref);
+    }
+
+    if (hasDepthAttachment()) {
+        VkAttachmentReference ref = createAttachmentData(depthAttachment().value());
+        depthAttachmentRef = ref;
     }
 
     // TODO: How do we want to support multiple subpasses in the future?
@@ -575,9 +582,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
     renderPassCreateInfo.dependencyCount = 0;
     renderPassCreateInfo.pDependencies = nullptr;
 
-    // TODO: Add a to<VulkanBackend> utility, or something like that
-    VkDevice device = dynamic_cast<VulkanBackend&>(backend).device();
-
+    VkDevice device = static_cast<VulkanBackend&>(backend).device();
     if (vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &compatibleRenderPass) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to create render pass\n");
     }
@@ -594,11 +599,16 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
         LogErrorAndExit("Error trying to create framebuffer\n");
     }
 
-    for (auto& attachment : sortedAttachments()) {
-        VkImageLayout finalLayout = (attachment.type == RenderTarget::AttachmentType::Depth)
-            ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
-            : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        attachedTextures.push_back({ attachment.texture, finalLayout });
+    for (auto& colorAttachment : colorAttachments()) {
+        // FIXME: Add multisample resolve textures here too?
+        VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachedTextures.push_back({ colorAttachment.texture, finalLayout });
+    }
+
+    if (hasDepthAttachment()) {
+        // FIXME: Add multisample resolve textures here too?
+        VkImageLayout finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachedTextures.push_back({ depthAttachment().value().texture, finalLayout });
     }
 }
 
@@ -1149,12 +1159,12 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
         // TODO: Implement blending!
         ASSERT_NOT_REACHED();
     } else {
-        renderTarget.forEachColorAttachment([&](const RenderTarget::Attachment& attachment) {
+        for (const auto& attachment : renderTarget.colorAttachments()) {
             VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
             colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT; // NOLINT(hicpp-signed-bitwise)
             colorBlendAttachment.blendEnable = VK_FALSE;
             colorBlendAttachments.push_back(colorBlendAttachment);
-        });
+        }
     }
     colorBlending.logicOpEnable = VK_FALSE;
     colorBlending.attachmentCount = colorBlendAttachments.size();

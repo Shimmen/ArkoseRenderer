@@ -110,17 +110,15 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
     auto& renderTarget = dynamic_cast<const VulkanRenderTarget&>(renderState.renderTarget());
 
     std::vector<VkClearValue> clearValues {};
-    {
-        for (auto& attachment : renderTarget.sortedAttachments()) {
-            VkClearValue value = {};
-            if (attachment.type == RenderTarget::AttachmentType::Depth) {
-                value.depthStencil = { clearDepth, clearStencil };
-            } else {
-                value.color = { { clearColor.r, clearColor.g, clearColor.b, clearColor.a } };
-            }
-            clearValues.push_back(value);
+    renderTarget.forEachAttachmentInOrder([&](const RenderTarget::Attachment& attachment) {
+        VkClearValue value = {};
+        if (attachment.type == RenderTarget::AttachmentType::Depth) {
+            value.depthStencil = { clearDepth, clearStencil };
+        } else {
+            value.color = { { clearColor.r, clearColor.g, clearColor.b, clearColor.a } };
         }
-    }
+        clearValues.push_back(value);
+    });
 
     VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 

@@ -88,12 +88,16 @@ Texture::Multisampling Texture::multisampling() const
 
 RenderTarget::RenderTarget(Backend& backend, std::vector<Attachment> attachments)
     : Resource(backend)
-    , m_attachments {}
 {
     // TODO: This is all very messy and could probably be cleaned up a fair bit!
 
     for (const Attachment& attachment : attachments) {
-        m_attachments.emplace_back(attachment);
+        if (attachment.type == AttachmentType::Depth) {
+            MOOSLIB_ASSERT(!m_depthAttachment.has_value());
+            m_depthAttachment = attachment;
+        } else {
+            m_colorAttachments.push_back(attachment);
+        }
     }
 
     if (totalAttachmentCount() < 1) {
@@ -104,9 +108,10 @@ RenderTarget::RenderTarget(Backend& backend, std::vector<Attachment> attachments
         return;
     }
 
-    Extent2D firstExtent = m_attachments.front().texture->extent();
-
-    for (auto& attachment : m_attachments) {
+    Extent2D firstExtent = m_depthAttachment.has_value()
+        ? m_depthAttachment.value().texture->extent()
+        : m_colorAttachments.front().texture->extent();
+    for (auto& attachment : m_colorAttachments) {
         if (attachment.texture->extent() != firstExtent) {
             LogErrorAndExit("RenderTarget error: tried to create with attachments of different sizes: (%ix%i) vs (%ix%i)\n",
                             attachment.texture->extent().width(), attachment.texture->extent().height(),
@@ -114,84 +119,83 @@ RenderTarget::RenderTarget(Backend& backend, std::vector<Attachment> attachments
         }
     }
 
-    // Keep attachments sorted from Color0, Color1, .. ColorN, Depth
-    std::sort(m_attachments.begin(), m_attachments.end(), [](const Attachment& left, const Attachment& right) {
+    // Keep color attachments sorted from Color0, Color1, .. ColorN
+    std::sort(m_colorAttachments.begin(), m_colorAttachments.end(), [](const Attachment& left, const Attachment& right) {
         return left.type < right.type;
     });
 
     // Make sure we don't have duplicated attachment types & that the color attachments aren't sparse
-    if (m_attachments.front().type != AttachmentType::Depth && m_attachments.front().type != AttachmentType::Color0) {
+    if (m_colorAttachments[0].type != AttachmentType::Color0)
         LogErrorAndExit("RenderTarget error: sparse color attachments in render target\n");
-    }
-    std::optional<AttachmentType> lastType {};
-    for (auto& attachment : m_attachments) {
-        if (lastType.has_value()) {
-            if (attachment.type == lastType.value()) {
-                LogErrorAndExit("RenderTarget error: duplicate attachment types in render target\n");
-            }
-            if (attachment.type != AttachmentType::Depth) {
-                auto lastVal = static_cast<unsigned int>(attachment.type);
-                auto currVal = static_cast<unsigned int>(lastType.value());
-                if (currVal != lastVal + 1) {
-                    LogErrorAndExit("RenderTarget error: sparse color attachments in render target\n");
-                }
-            }
-        }
+    auto lastType = AttachmentType::Color0;
+    for (size_t i = 1; i < m_colorAttachments.size(); ++i) {
+        const Attachment& attachment = m_colorAttachments[i];
+        if (attachment.type == lastType)
+            LogErrorAndExit("RenderTarget error: duplicate attachment types in render target\n");
+        if (static_cast<unsigned>(attachment.type) != static_cast<unsigned>(lastType) + 1)
+            LogErrorAndExit("RenderTarget error: sparse color attachments in render target\n");
+        lastType = attachment.type;
     }
 }
 
 const Extent2D& RenderTarget::extent() const
 {
-    return m_attachments.front().texture->extent();
+    return m_depthAttachment.has_value()
+        ? m_depthAttachment.value().texture->extent()
+        : m_colorAttachments.front().texture->extent();
 }
 
 size_t RenderTarget::colorAttachmentCount() const
 {
-    size_t total = totalAttachmentCount();
-    if (hasDepthAttachment()) {
-        return total - 1;
-    } else {
-        return total;
-    }
+    return m_colorAttachments.size();
 }
 
 size_t RenderTarget::totalAttachmentCount() const
 {
-    return m_attachments.size();
+    size_t total = colorAttachmentCount();
+    if (hasDepthAttachment())
+        total += 1;
+    return total;
 }
 
 bool RenderTarget::hasDepthAttachment() const
 {
-    if (m_attachments.empty()) {
-        return false;
-    }
+    return m_depthAttachment.has_value();
+}
 
-    const Attachment& last = m_attachments.back();
-    return last.type == AttachmentType::Depth;
+const std::optional<RenderTarget::Attachment>& RenderTarget::depthAttachment() const
+{
+    return m_depthAttachment;
+}
+
+const std::vector<RenderTarget::Attachment>& RenderTarget::colorAttachments() const
+{
+    return m_colorAttachments;
 }
 
 Texture* RenderTarget::attachment(AttachmentType requestedType) const
 {
-    for (const auto& [type, texture, _, __] : m_attachments) {
-        if (type == requestedType) {
-            return texture;
-        }
+    if (requestedType == AttachmentType::Depth) {
+        if (m_depthAttachment.has_value())
+            return m_depthAttachment.value().texture;
+        return nullptr;
     }
+
+    for (const RenderTarget::Attachment& attachment : m_colorAttachments) {
+        if (attachment.type == requestedType)
+            return attachment.texture;
+    }
+
     return nullptr;
 }
 
-const std::vector<RenderTarget::Attachment>& RenderTarget::sortedAttachments() const
+void RenderTarget::forEachAttachmentInOrder(std::function<void(const Attachment&)> callback) const
 {
-    return m_attachments;
-}
-
-void RenderTarget::forEachColorAttachment(std::function<void(const Attachment&)> callback) const
-{
-    for (const auto& attachment : m_attachments) {
-        if (attachment.type != AttachmentType::Depth) {
-            callback(attachment);
-        }
+    for (auto& colorAttachment : m_colorAttachments) {
+        callback(colorAttachment);
     }
+    if (hasDepthAttachment())
+        callback(depthAttachment().value());
 }
 
 Buffer::Buffer(Backend& backend, size_t size, Usage usage, MemoryHint memoryHint)

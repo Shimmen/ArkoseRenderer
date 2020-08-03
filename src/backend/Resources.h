@@ -153,7 +153,7 @@ struct RenderTarget : public Resource {
     // (required for now, so we can create the mockup RenderTarget objects)
     friend class VulkanBackend;
 
-    enum class AttachmentType : unsigned int {
+    enum class AttachmentType : unsigned {
         Color0 = 0,
         Color1 = 1,
         Color2 = 2,
@@ -161,11 +161,14 @@ struct RenderTarget : public Resource {
         Depth = UINT_MAX
     };
 
+    // TODO: Create helper functions for creating these, e.g., basicColorAttachment(tex, AttachmentType),
+    //  multisampleAttachment(msTex, resolveTex, AttachmentType). This makes is way more readable in the end.
     struct Attachment {
         AttachmentType type { AttachmentType::Color0 };
         Texture* texture { nullptr };
         LoadOp loadOp { LoadOp::Clear };
         StoreOp storeOp { StoreOp::Store };
+        Texture* multisampleResolveTexture { nullptr };
     };
 
     RenderTarget() = default;
@@ -174,16 +177,18 @@ struct RenderTarget : public Resource {
     [[nodiscard]] const Extent2D& extent() const;
     [[nodiscard]] size_t colorAttachmentCount() const;
     [[nodiscard]] size_t totalAttachmentCount() const;
+
     [[nodiscard]] bool hasDepthAttachment() const;
+    const std::optional<Attachment>& depthAttachment() const;
+
+    const std::vector<Attachment>& colorAttachments() const;
 
     [[nodiscard]] Texture* attachment(AttachmentType) const;
-
-    [[nodiscard]] const std::vector<Attachment>& sortedAttachments() const;
-
-    void forEachColorAttachment(std::function<void(const Attachment&)>) const;
+    void forEachAttachmentInOrder(std::function<void(const Attachment&)>) const;
 
 private:
-    std::vector<Attachment> m_attachments {};
+    std::vector<Attachment> m_colorAttachments {};
+    std::optional<Attachment> m_depthAttachment {};
 };
 
 struct Buffer : public Resource {

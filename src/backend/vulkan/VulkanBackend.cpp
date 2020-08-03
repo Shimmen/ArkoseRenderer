@@ -910,8 +910,8 @@ void VulkanBackend::createWindowRenderTargetFrontend()
 
         auto renderTarget = std::make_unique<VulkanRenderTarget>();
         {
-            renderTarget->m_attachments = { { RenderTarget::AttachmentType::Color0, m_swapchainMockColorTextures[i].get() },
-                                            { RenderTarget::AttachmentType::Depth, m_swapchainDepthTexture.get() } };
+            renderTarget->m_colorAttachments = { { RenderTarget::AttachmentType::Color0, m_swapchainMockColorTextures[i].get() } };
+            renderTarget->m_depthAttachment = { RenderTarget::AttachmentType::Depth, m_swapchainDepthTexture.get() };
 
             renderTarget->compatibleRenderPass = m_swapchainRenderPass;
             renderTarget->framebuffer = m_swapchainFramebuffers[i];
