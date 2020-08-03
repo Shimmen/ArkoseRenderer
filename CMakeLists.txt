@@ -8,6 +8,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 add_executable(ArkoseRenderer
     src/apps/TestApp.cpp
     src/apps/SimpleApp.cpp
+    src/apps/MultisampleTest.cpp
     src/main.cpp
     src/backend/Backend.cpp
     src/backend/Resources.cpp
@@ -28,6 +29,7 @@ add_executable(ArkoseRenderer
     src/rendering/scene/Vertex.cpp
     src/rendering/scene/models/GltfModel.cpp
     src/rendering/scene/Light.cpp
+    src/rendering/nodes/DebugForwardNode.cpp
     src/rendering/nodes/SceneNode.cpp
     src/rendering/nodes/PickingNode.cpp
     src/rendering/nodes/GBufferNode.cpp

@@ -117,7 +117,10 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
         } else {
             value.color = { { clearColor.r, clearColor.g, clearColor.b, clearColor.a } };
         }
+
         clearValues.push_back(value);
+        if (attachment.multisampleResolveTexture)
+            clearValues.push_back(value);
     });
 
     VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };

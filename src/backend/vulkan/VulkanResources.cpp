@@ -153,6 +153,12 @@ VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, M
         ASSERT_NOT_REACHED();
     }
 
+    // Unless we want to enable the multisampled storage images feature we can't have that.. So let's just not, for now..
+    // The Vulkan spec states: If the multisampled storage images feature is not enabled, and usage contains VK_IMAGE_USAGE_STORAGE_BIT, samples must be VK_SAMPLE_COUNT_1_BIT
+    if (multisampling() != Texture::Multisampling::None) {
+        storageCapable = false;
+    }
+
     // Since we don't specify usage we have to assume all of them may be used (at least the common operations)
     const VkImageUsageFlags attachmentFlags = hasDepthFormat() ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
     VkImageUsageFlags usageFlags = attachmentFlags | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
@@ -493,25 +499,21 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
 
     std::vector<VkAttachmentReference> colorAttachmentRefs {};
     std::optional<VkAttachmentReference> depthAttachmentRef {};
+    std::vector<VkAttachmentReference> resolveAttachmentRefs {};
 
-    auto createAttachmentData = [&](const Attachment attachInfo) -> VkAttachmentReference {
-        MOOSLIB_ASSERT(attachInfo.texture);
-        auto& texture = static_cast<VulkanTexture&>(*attachInfo.texture);
+    auto createAttachmentDescription = [&](Texture* genTexture, VkImageLayout finalLayout, LoadOp loadOp, StoreOp storeOp) -> uint32_t {
+        MOOSLIB_ASSERT(genTexture);
+        auto& texture = static_cast<VulkanTexture&>(*genTexture);
 
         VkAttachmentDescription attachment = {};
         attachment.format = texture.vkFormat;
-
-        if (!attachInfo.texture->isMultisampled() && attachInfo.multisampleResolveTexture != nullptr)
-            LogErrorAndExit("Error trying to create render target with texture that isn't multisampled but has a resolve texture\n");
-        if (attachInfo.texture->isMultisampled() && attachInfo.multisampleResolveTexture == nullptr)
-            LogErrorAndExit("Error trying to create render target with multisample texture but no resolve texture\n");
-        attachment.samples = static_cast<VkSampleCountFlagBits>(attachInfo.texture->multisampling());
+        attachment.samples = static_cast<VkSampleCountFlagBits>(texture.multisampling());
 
         // TODO: Handle stencil stuff!
         attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
 
-        switch (attachInfo.loadOp) {
+        switch (loadOp) {
         case LoadOp::Load:
             attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
             // TODO/FIXME: For LOAD_OP_LOAD we actually need to provide a valid initialLayout! Using texInfo.currentLayout
@@ -528,7 +530,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
             break;
         }
 
-        switch (attachInfo.storeOp) {
+        switch (storeOp) {
         case StoreOp::Store:
             attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             break;
@@ -537,36 +539,52 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
             break;
         }
 
-        if (attachInfo.type == RenderTarget::AttachmentType::Depth) {
-            attachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        } else {
-            attachment.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        }
+        attachment.finalLayout = finalLayout;
 
         uint32_t attachmentIndex = allAttachments.size();
         allAttachments.push_back(attachment);
         allAttachmentImageViews.push_back(texture.imageView);
 
+        return attachmentIndex;
+    };
+
+    auto createAttachmentData = [&](const Attachment attachInfo, bool considerResolve) -> VkAttachmentReference {
+
+        VkImageLayout finalLayout = (attachInfo.type == AttachmentType::Depth)
+            ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
+            : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        uint32_t attachmentIndex = createAttachmentDescription(attachInfo.texture, finalLayout, attachInfo.loadOp, attachInfo.storeOp);
+
         VkAttachmentReference attachmentRef = {};
         attachmentRef.attachment = attachmentIndex;
-        attachmentRef.layout = attachment.finalLayout;
+        attachmentRef.layout = finalLayout;
+
+        if (considerResolve && attachInfo.multisampleResolveTexture) {
+
+            // FIXME: Should we use "Don't care" for load op?
+            uint32_t attachmentIndex = createAttachmentDescription(attachInfo.multisampleResolveTexture, finalLayout, attachInfo.loadOp, attachInfo.storeOp);
+
+            VkAttachmentReference attachmentRef = {};
+            attachmentRef.attachment = attachmentIndex;
+            attachmentRef.layout = finalLayout;
+
+            resolveAttachmentRefs.push_back(attachmentRef);
+        }
 
         return attachmentRef;
-
-        if (attachInfo.type == RenderTarget::AttachmentType::Depth) {
-            depthAttachmentRef = attachmentRef;
-        } else {
-            colorAttachmentRefs.push_back(attachmentRef);
-        }
     };
 
     for (const Attachment& colorAttachment : colorAttachments()) {
-        VkAttachmentReference ref = createAttachmentData(colorAttachment);
+
+        MOOSLIB_ASSERT((colorAttachment.texture->isMultisampled() && colorAttachment.multisampleResolveTexture)
+                       || (!colorAttachment.texture->isMultisampled() && !colorAttachment.multisampleResolveTexture));
+
+        VkAttachmentReference ref = createAttachmentData(colorAttachment, true);
         colorAttachmentRefs.push_back(ref);
     }
 
     if (hasDepthAttachment()) {
-        VkAttachmentReference ref = createAttachmentData(depthAttachment().value());
+        VkAttachmentReference ref = createAttachmentData(depthAttachment().value(), false);
         depthAttachmentRef = ref;
     }
 
@@ -575,6 +593,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = colorAttachmentRefs.size();
     subpass.pColorAttachments = colorAttachmentRefs.data();
+    subpass.pResolveAttachments = resolveAttachmentRefs.data();
     if (depthAttachmentRef.has_value()) {
         subpass.pDepthStencilAttachment = &depthAttachmentRef.value();
     }
@@ -605,13 +624,13 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
     }
 
     for (auto& colorAttachment : colorAttachments()) {
-        // FIXME: Add multisample resolve textures here too?
         VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         attachedTextures.push_back({ colorAttachment.texture, finalLayout });
+        if (colorAttachment.multisampleResolveTexture)
+            attachedTextures.push_back({ colorAttachment.multisampleResolveTexture, finalLayout });
     }
 
     if (hasDepthAttachment()) {
-        // FIXME: Add multisample resolve textures here too?
         VkImageLayout finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         attachedTextures.push_back({ depthAttachment().value().texture, finalLayout });
     }

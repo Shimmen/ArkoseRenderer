@@ -104,17 +104,12 @@ RenderTarget::RenderTarget(Backend& backend, std::vector<Attachment> attachments
         LogErrorAndExit("RenderTarget error: tried to create with less than one attachments!\n");
     }
 
-    auto checkMultisamplingProperties = [](Attachment& attachment) {
-        if (!attachment.texture->isMultisampled() && attachment.multisampleResolveTexture != nullptr)
+    for (auto& colorAttachment : m_colorAttachments) {
+        if (!colorAttachment.texture->isMultisampled() && colorAttachment.multisampleResolveTexture != nullptr)
             LogErrorAndExit("RenderTarget error: tried to create render target with texture that isn't multisampled but has a resolve texture\n");
-        if (attachment.texture->isMultisampled() && attachment.multisampleResolveTexture == nullptr)
+        if (colorAttachment.texture->isMultisampled() && colorAttachment.multisampleResolveTexture == nullptr)
             LogErrorAndExit("RenderTarget error: tried to create render target with multisample texture but no resolve texture\n");
-    };
-
-    for (auto& colorAttachment : m_colorAttachments)
-        checkMultisamplingProperties(colorAttachment);
-    if (m_depthAttachment.has_value())
-        checkMultisamplingProperties(m_depthAttachment.value());
+    }
 
     Extent2D firstExtent = m_depthAttachment.has_value()
         ? m_depthAttachment.value().texture->extent()
