@@ -2,11 +2,12 @@
 
 #include "VulkanBackend.h"
 
-class VulkanCommandList : public CommandList {
+class VulkanCommandList final : public CommandList {
 public:
     explicit VulkanCommandList(VulkanBackend&, VkCommandBuffer);
 
     void clearTexture(Texture&, ClearColor) override;
+    void generateMipmaps(Texture&) override;
 
     void beginRendering(const RenderState&, ClearColor, float clearDepth, uint32_t clearStencil) override;
     void endRendering() override;
