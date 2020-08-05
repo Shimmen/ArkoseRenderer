@@ -107,6 +107,8 @@ struct Texture : public Resource {
     virtual void setPixelData(vec4 pixel) = 0;
     virtual void setData(const void* data, size_t size) = 0;
 
+    virtual void generateMipmaps() = 0;
+
     [[nodiscard]] const Extent2D& extent() const { return m_extent; }
     [[nodiscard]] Format format() const { return m_format; }
     [[nodiscard]] MinFilter minFilter() const { return m_minFilter; }

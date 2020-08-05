@@ -23,6 +23,9 @@ public:
 
     void setPixelData(vec4 pixel) override;
     void setData(const void* data, size_t size) override;
+
+    void generateMipmaps() override;
+
     VkImage image;
     VmaAllocation allocation;
 

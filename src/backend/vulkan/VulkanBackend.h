@@ -92,7 +92,6 @@ public:
 
     bool transitionImageLayout(VkImage, bool isDepthFormat, VkImageLayout oldLayout, VkImageLayout newLayout, VkCommandBuffer* = nullptr) const;
     bool copyBufferToImage(VkBuffer, VkImage, uint32_t width, uint32_t height, bool isDepthImage) const;
-    void generateMipmaps(const Texture&, VkImageLayout finalLayout); // FIXME: Keet the abstraction level consistent and don't take a Texture& here!
 
     std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>> createDescriptorSetLayoutForShader(const Shader&) const;
 

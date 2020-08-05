@@ -456,7 +456,7 @@ void VulkanTexture::setData(const void* data, size_t size)
 
     currentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     if (mipmap() != Texture::Mipmap::None && extent().width() > 1 && extent().height() > 1) {
-        vulkanBackend.generateMipmaps(*this, VK_IMAGE_LAYOUT_GENERAL);
+        generateMipmaps();
     } else {
         VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
         {
@@ -489,6 +489,136 @@ void VulkanTexture::setData(const void* data, size_t size)
         }
     }
     currentLayout = VK_IMAGE_LAYOUT_GENERAL;
+}
+
+void VulkanTexture::generateMipmaps()
+{
+    if (!hasMipmaps()) {
+        LogError("VulkanTexture: generateMipmaps() called on texture which doesn't have space for mipmaps allocated. Ignoring request.\n");
+        return;
+    }
+
+    if (currentLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
+        LogError("VulkanTexture: generateMipmaps() called on texture which currently has the layout VK_IMAGE_LAYOUT_UNDEFINED. Ignoring request.\n");
+        return;
+    }
+
+    VkImageAspectFlagBits aspectMask = hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+
+    VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+    barrier.subresourceRange.aspectMask = aspectMask;
+    barrier.image = image;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.levelCount = 1;
+
+    uint32_t levels = mipLevels();
+    int32_t mipWidth = extent().width();
+    int32_t mipHeight = extent().height();
+
+    // We have to be very general in this function..
+    VkPipelineStageFlags dstStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+    VkImageLayout finalLayout = VK_IMAGE_LAYOUT_GENERAL;
+    VkAccessFlags finalAccess = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+    bool success = static_cast<VulkanBackend&>(backend()).issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+        // Transition mips 1-n to transfer dst optimal
+        {
+            VkImageMemoryBarrier initialBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+            initialBarrier.image = image;
+            initialBarrier.subresourceRange.aspectMask = aspectMask;
+            initialBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            initialBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+            initialBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            initialBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            initialBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            initialBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            initialBarrier.subresourceRange.baseArrayLayer = 0;
+            initialBarrier.subresourceRange.layerCount = 1;
+            initialBarrier.subresourceRange.baseMipLevel = 1;
+            initialBarrier.subresourceRange.levelCount = levels - 1;
+
+            vkCmdPipelineBarrier(commandBuffer,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 1, &initialBarrier);
+        }
+
+        for (uint32_t i = 1; i < levels; ++i) {
+
+            int32_t nextWidth = mipWidth > 1 ? mipWidth / 2 : 1;
+            int32_t nextHeight = mipHeight > 1 ? mipHeight / 2 : 1;
+
+            // The 'currentLayout' keeps track of the whole image (or kind of mip0) but when we are messing
+            // with it here, it will have to be different for the different mip levels.
+            VkImageLayout oldLayout = (i == 1) ? currentLayout : VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+
+            barrier.subresourceRange.baseMipLevel = i - 1;
+            barrier.oldLayout = oldLayout;
+            barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+            vkCmdPipelineBarrier(commandBuffer,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 1, &barrier);
+
+            VkImageBlit blit = {};
+            blit.srcOffsets[0] = { 0, 0, 0 };
+            blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
+            blit.srcSubresource.aspectMask = aspectMask;
+            blit.srcSubresource.mipLevel = i - 1;
+            blit.srcSubresource.baseArrayLayer = 0;
+            blit.srcSubresource.layerCount = 1;
+            blit.dstOffsets[0] = { 0, 0, 0 };
+            blit.dstOffsets[1] = { nextWidth, nextHeight, 1 };
+            blit.dstSubresource.aspectMask = aspectMask;
+            blit.dstSubresource.mipLevel = i;
+            blit.dstSubresource.baseArrayLayer = 0;
+            blit.dstSubresource.layerCount = 1;
+
+            vkCmdBlitImage(commandBuffer,
+                           image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                           image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           1, &blit,
+                           VK_FILTER_LINEAR);
+
+            barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+            barrier.newLayout = finalLayout;
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            barrier.dstAccessMask = finalAccess;
+
+            vkCmdPipelineBarrier(commandBuffer,
+                                 VK_PIPELINE_STAGE_TRANSFER_BIT, dstStage, 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 1, &barrier);
+
+            mipWidth = nextWidth;
+            mipHeight = nextHeight;
+        }
+
+        barrier.subresourceRange.baseMipLevel = levels - 1;
+        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barrier.newLayout = finalLayout;
+        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barrier.dstAccessMask = finalAccess;
+
+        vkCmdPipelineBarrier(commandBuffer,
+                             VK_PIPELINE_STAGE_TRANSFER_BIT, dstStage, 0,
+                             0, nullptr,
+                             0, nullptr,
+                             1, &barrier);
+    });
+
+    if (!success) {
+        LogError("VulkanTexture: error while generating mipmaps\n");
+    }
 }
 
 VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment> attachments)
