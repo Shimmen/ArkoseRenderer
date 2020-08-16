@@ -48,7 +48,7 @@ RenderGraphNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry& re
 
     BindingSet& avgAccumBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, m_accumulatedAO, ShaderBindingType::StorageImage },
                                                             { 1, ShaderStageCompute, &ambientOcclusion, ShaderBindingType::StorageImage } });
-    ComputeState& compAvgAccumState = reg.createComputeState(Shader::createCompute("common/averageAccum.comp"), { &avgAccumBindingSet });
+    ComputeState& compAvgAccumState = reg.createComputeState(Shader::createCompute("rt-ao/averageAccum.comp"), { &avgAccumBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList) {
         static bool enabled = false;

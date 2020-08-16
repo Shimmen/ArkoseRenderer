@@ -67,7 +67,7 @@ void RTDiffuseGINode::constructNode(Registry& nodeReg)
                                                          { 3, ShaderStageRTClosestHit, allTextures, RT_MAX_TEXTURES } });
 
     Extent2D windowExtent = GlobalState::get().windowExtent();
-    m_accumulationTexture = &nodeReg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
+    m_accumulationTexture = &nodeReg.createTexture2D(windowExtent, Texture::Format::RGBA32F);
 }
 
 RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) const
@@ -103,7 +103,7 @@ RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) 
 
     BindingSet& avgAccumBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, m_accumulationTexture, ShaderBindingType::StorageImage },
                                                             { 1, ShaderStageCompute, &diffuseGI, ShaderBindingType::StorageImage } });
-    ComputeState& compAvgAccumState = reg.createComputeState(Shader::createCompute("common/averageAccum.comp"), { &avgAccumBindingSet });
+    ComputeState& compAvgAccumState = reg.createComputeState(Shader::createCompute("rt-diffuseGI/averageAccum.comp"), { &avgAccumBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList) {
         constexpr int samplesPerPass = 1; // (I don't wanna pass in a uniform for optimization reasons, so keep this up to date!)
