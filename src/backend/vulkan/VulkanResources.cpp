@@ -137,6 +137,9 @@ VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, M
     case Texture::Format::R16F:
         vkFormat = VK_FORMAT_R16_SFLOAT;
         break;
+    case Texture::Format::R32F:
+        vkFormat = VK_FORMAT_R32_SFLOAT;
+        break;
     case Texture::Format::RGBA16F:
         vkFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
         break;
@@ -304,6 +307,7 @@ void VulkanTexture::setPixelData(vec4 pixel)
         isHdr = false;
         break;
     case Texture::Format::R16F:
+    case Texture::Format::R32F:
         numChannels = 1;
         isHdr = true;
         break;
@@ -2013,6 +2017,9 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
                 switch (bindingInfo.type) {
                 case ShaderBindingType::StorageImage:
                     storageImages.push_back(texture);
+                    break;
+                case ShaderBindingType::TextureSampler:
+                    sampledTextures.push_back(texture);
                     break;
                 default:
                     ASSERT_NOT_REACHED();

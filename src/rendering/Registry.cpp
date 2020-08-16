@@ -31,9 +31,9 @@ RenderTarget& Registry::createRenderTarget(std::vector<RenderTarget::Attachment>
     return *m_renderTargets.back();
 }
 
-Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Multisampling ms)
+Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Mipmap mipmap, Texture::Multisampling ms)
 {
-    auto texture = backend().createTexture(extent, format, Texture::MinFilter::Linear, Texture::MagFilter::Linear, Texture::Mipmap::None, ms);
+    auto texture = backend().createTexture(extent, format, Texture::MinFilter::Linear, Texture::MagFilter::Linear, mipmap, ms);
     m_textures.push_back(std::move(texture));
     return *m_textures.back();
 }

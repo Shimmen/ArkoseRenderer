@@ -29,6 +29,15 @@ public:
     [[nodiscard]] mat4 viewMatrix() const { return m_viewFromWorld; }
     [[nodiscard]] mat4 projectionMatrix() const { return m_projectionFromView; }
 
+    // Default manual values according to the "sunny 16 rule" (https://en.wikipedia.org/wiki/Sunny_16_rule)
+    float aperture { 16.0f }; // i.e. f/16
+    float iso { 400.0f };
+    float shutterSpeed { 1.0f / iso };
+
+    bool useAutomaticExposure { true };
+    float exposureCompensation { 0.0f };
+    float adaptionRate { 0.0018f };
+
 private:
     vec3 m_position {};
     vec3 m_velocity {};

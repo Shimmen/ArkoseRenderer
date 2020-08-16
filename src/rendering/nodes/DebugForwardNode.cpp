@@ -37,7 +37,7 @@ RenderGraphNode::ExecuteCallback DebugForwardNode::constructFrame(Registry& reg)
     Texture& colorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA16F);
     reg.publish("color", colorTexture);
 
-    Texture& depthTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::Depth32F, multisamplingLevel());
+    Texture& depthTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::Depth32F, Texture::Mipmap::None, multisamplingLevel());
     reg.publish("depth", depthTexture);
 
     RenderTarget* renderTarget;
@@ -45,7 +45,7 @@ RenderGraphNode::ExecuteCallback DebugForwardNode::constructFrame(Registry& reg)
         renderTarget = &reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture },
                                                  { RenderTarget::AttachmentType::Depth, &depthTexture } });
     } else {
-        Texture& msaaColorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA16F, multisamplingLevel());
+        Texture& msaaColorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA16F, Texture::Mipmap::None, multisamplingLevel());
         renderTarget = &reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &msaaColorTexture, LoadOp::Clear, StoreOp::Store, &colorTexture },
                                                  { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Clear, StoreOp::Store } });
     }

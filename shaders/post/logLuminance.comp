@@ -1,0 +1,25 @@
+#version 460
+
+layout(set = 0, binding = 0) uniform sampler2D sourceTexture;
+layout(set = 0, binding = 1, r32f) restrict writeonly uniform image2D targetImg;
+
+layout(local_size_x = 16, local_size_y = 16) in;
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(pixelCoord, imageSize(targetImg))))
+        return;
+
+    // target image is probably some power-of-two image for good mips, but source will probably not be
+    // so to get some interpolation we use the hardware bilinear op. Not perfect, in case target is much
+    // smaller, since we might skip over whole pixels (which may be very bright) in that case.
+    vec2 uv = (vec2(pixelCoord) + vec2(0.5)) / imageSize(targetImg);
+    vec3 color = texture(sourceTexture, uv).rgb;
+
+    float sRGB_luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+
+    const float epsilon = 0.0001;
+    float sRGB_logLuminance = log(sRGB_luminance + epsilon);
+
+    imageStore(targetImg, pixelCoord, vec4(sRGB_logLuminance));
+}

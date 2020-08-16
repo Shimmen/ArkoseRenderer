@@ -67,6 +67,7 @@ struct Texture : public Resource {
         Unknown,
         R32,
         R16F,
+        R32F,
         RGBA8,
         sRGBA8,
         RGBA16F,

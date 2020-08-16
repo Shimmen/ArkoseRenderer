@@ -1,5 +1,6 @@
 #include "SimpleApp.h"
 
+#include "rendering/nodes/ExposureNode.h"
 #include "rendering/nodes/GBufferNode.h"
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/SceneNode.h"
@@ -33,6 +34,8 @@ void SimpleApp::setup(RenderGraph& graph)
     graph.addNode<GBufferNode>(scene());
     graph.addNode<SlowForwardRenderNode>(scene());
 
+    graph.addNode<ExposureNode>(scene());
+
     graph.addNode("final", [](Registry& reg) {
         std::vector<vec2> fullScreenTriangle { { -1, -3 }, { -1, 1 }, { 3, 1 } };
         Buffer& vertexBuffer = reg.createBuffer(std::move(fullScreenTriangle), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
@@ -53,13 +56,9 @@ void SimpleApp::setup(RenderGraph& graph)
         RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
         return [&](const AppState& appState, CommandList& cmdList) {
-            static float exposure = 0.45f;
-            ImGui::SliderFloat("Exposure", &exposure, 0.01f, 10.0f, "%.3f", 3.0f);
-
             cmdList.beginRendering(renderState, ClearColor(0.5f, 0.1f, 0.5f), 1.0f);
             cmdList.bindSet(sourceBindingSet, 0);
             cmdList.bindSet(envBindingSet, 1);
-            cmdList.pushConstant(ShaderStageFragment, exposure);
             cmdList.draw(vertexBuffer, 3);
         };
     });

@@ -15,10 +15,6 @@ layout(set = 1, binding = 3) uniform EnvBlock { float envMultiplier; };
 
 layout(location = 0) out vec4 oColor;
 
-layout(push_constant) uniform PushConstants {
-	float exposure;
-};
-
 void main()
 {
     vec3 hdrColor;
@@ -32,7 +28,6 @@ void main()
         hdrColor = texture(uTexture, vTexCoord).rgb;
     }
 
-    hdrColor *= exposure;
     vec3 ldrColor = ACES_tonemap(hdrColor);
     ldrColor = pow(ldrColor, vec3(1.0 / 2.2));
 

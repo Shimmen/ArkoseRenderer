@@ -18,7 +18,6 @@ SceneNode::SceneNode(Scene& scene)
 
 RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
 {
-    const FpsCamera& camera = m_scene.camera();
     const DirectionalLight& light = m_scene.sun();
 
     Buffer& cameraUniformBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
@@ -43,6 +42,7 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
         }
 
         // Camera uniforms
+        const FpsCamera& camera = m_scene.camera();
         mat4 projectionFromView = camera.projectionMatrix();
         mat4 viewFromWorld = camera.viewMatrix();
         CameraState cameraState {
@@ -50,6 +50,11 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
             .viewFromProjection = inverse(projectionFromView),
             .viewFromWorld = viewFromWorld,
             .worldFromView = inverse(viewFromWorld),
+
+            .iso = camera.iso,
+            .aperture = camera.aperture,
+            .shutterSpeed = camera.shutterSpeed,
+            .exposureCompensation = camera.exposureCompensation,
         };
         cameraUniformBuffer.updateData(&cameraState, sizeof(CameraState));
 
