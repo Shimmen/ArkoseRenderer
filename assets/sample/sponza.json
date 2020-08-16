@@ -1,7 +1,7 @@
 {
     "environment": {
       "texture": "assets/sample/hdri/tiergarten_2k.hdr",
-      "multiplier": 2.5
+      "illuminance": 8000.0
     },
     "models": [
       {
@@ -23,10 +23,14 @@
         "name": "sun",
         "type": "directional",
         "color": [ 1, 1, 1 ],
-        "intensity": 40.0,
+        "illuminance": 90000.0,
         "direction": [ 0.2, -1.0, -0.4 ],
         "worldExtent": 30.0,
         "shadowMapSize": [ 8192, 8192 ]
+      },
+      {
+        "type": "ambient",
+        "illuminance": 150.0
       }
     ],
     "cameras": [
