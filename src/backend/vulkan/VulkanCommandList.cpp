@@ -957,10 +957,12 @@ VkPipelineStageFlags VulkanCommandList::stageFlags(PipelineStage stage) const
     switch (stage) {
     case PipelineStage::Host:
         return VK_PIPELINE_STAGE_HOST_BIT;
+    case PipelineStage::Compute:
+        return VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
     case PipelineStage::RayTracing:
         return VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV;
     default:
-        ASSERT(false);
+        ASSERT_NOT_REACHED();
     }
 }
 

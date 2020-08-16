@@ -294,6 +294,7 @@ struct Viewport {
 
 enum class PipelineStage {
     Host,
+    Compute,
     RayTracing,
     // TODO: Add more obviously
 };

@@ -94,15 +94,18 @@ void ExposureNode::automaticExposureGUI(FpsCamera& camera) const
     ImGui::SliderFloat("ECs", &camera.exposureCompensation, -5.0f, +5.0f, "%.1f");
 }
 
+void ExposureNode::constructNode(Registry& reg)
+{
+    // Stores the last average luminance, after exposure, so we can do soft exposure transitions
+    // TODO: Maybe use a storage buffer instead? Not sure what is faster for this.. note that we need read & write capabilities
+    m_lastAvgLuminanceTexture = &reg.createTexture2D({ 1, 1 }, Texture::Format::R32F);
+}
+
 RenderGraphNode::ExecuteCallback ExposureNode::constructFrame(Registry& reg) const
 {
     // Stores the current luminance for the image before exposure
     const Extent2D logLuminanceSize = { 1024, 1024 };
     Texture& logLuminanceTexture = reg.createTexture2D(logLuminanceSize, Texture::Format::R32F, Texture::Mipmap::Nearest);
-
-    // Stores the last average luminance, after exposure, so we can do soft exposure transitions
-    // TODO: Maybe use a storage buffer instead? Not sure what is faster for this.. note that we need read & write capabilities
-    Texture& lastAvgLuminanceTexture = reg.createTexture2D({ 1, 1 }, Texture::Format::R32F);
 
     // TODO: Maybe we should generalize the concept of the "main image where we accululate light etc." so we don't need to refer to "forward"?
     Texture& targetImage = *reg.getTexture("forward", "color").value();
@@ -114,7 +117,7 @@ RenderGraphNode::ExecuteCallback ExposureNode::constructFrame(Registry& reg) con
     BindingSet& exposeBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, reg.getBuffer("scene", "camera") },
                                                           { 1, ShaderStageCompute, &logLuminanceTexture, ShaderBindingType::TextureSampler },
                                                           { 2, ShaderStageCompute, &targetImage, ShaderBindingType::StorageImage },
-                                                          { 3, ShaderStageCompute, &lastAvgLuminanceTexture, ShaderBindingType::StorageImage } });
+                                                          { 3, ShaderStageCompute, m_lastAvgLuminanceTexture, ShaderBindingType::StorageImage } });
     ComputeState& exposeComputeState = reg.createComputeState(Shader::createCompute("post/expose.comp"), { &exposeBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList) {
@@ -129,12 +132,18 @@ RenderGraphNode::ExecuteCallback ExposureNode::constructFrame(Registry& reg) con
         // Compute average log-luminance by creating mipmaps
         cmdList.generateMipmaps(logLuminanceTexture);
 
-        // Perform the exposure pass
-        cmdList.setComputeState(exposeComputeState);
-        cmdList.bindSet(exposeBindingSet, 0);
-        cmdList.pushConstant(ShaderStageCompute, (float)appState.deltaTime(), 0);
-        cmdList.pushConstant(ShaderStageCompute, camera.adaptionRate, 1 * sizeof(float));
-        cmdList.pushConstant(ShaderStageCompute, camera.useAutomaticExposure, 2 * sizeof(float));
-        cmdList.dispatch(targetImage.extent(), { 16, 16, 1 });
+        // Perform the exposure pass (since we use a node-resource, m_lastAvgLuminanceTexture, we must synchronize its access here)
+        // FIXME: Don't use the hardcoded 1 for event index! Maybe we should have some event resource type?
+        cmdList.waitEvent(1, appState.frameIndex() == 0 ? PipelineStage::Host : PipelineStage::Compute);
+        cmdList.resetEvent(1, PipelineStage::Compute);
+        {
+            cmdList.setComputeState(exposeComputeState);
+            cmdList.bindSet(exposeBindingSet, 0);
+            cmdList.pushConstant(ShaderStageCompute, (float)appState.deltaTime(), 0);
+            cmdList.pushConstant(ShaderStageCompute, camera.adaptionRate, 1 * sizeof(float));
+            cmdList.pushConstant(ShaderStageCompute, camera.useAutomaticExposure, 2 * sizeof(float));
+            cmdList.dispatch(targetImage.extent(), { 16, 16, 1 });
+        }
+        cmdList.signalEvent(1, PipelineStage::Compute);
     };
 }
