@@ -44,7 +44,7 @@ public:
     const DirectionalLight& sun() const { return m_directionalLights[0]; }
     DirectionalLight& sun() { return m_directionalLights[0]; }
 
-    float& ambient() { return m_ambient; }
+    float& ambient() { return m_ambientIlluminance; }
 
     void setEnvironmentMap(std::string path) { m_environmentMap = std::move(path); }
     const std::string& environmentMap() const { return m_environmentMap; }
@@ -71,7 +71,7 @@ private:
     std::string m_environmentMap {};
     float m_environmentMultiplier { 1.0f };
 
-    float m_ambient { 0.0f };
+    float m_ambientIlluminance { 0.0f };
 
     Model* m_selectedModel { nullptr };
     Mesh* m_selectedMesh { nullptr };

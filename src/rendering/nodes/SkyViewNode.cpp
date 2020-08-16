@@ -29,7 +29,7 @@ RenderGraphNode::ExecuteCallback SkyViewNode::constructFrame(Registry& reg) cons
         cmdList.setComputeState(skyViewComputeState);
         cmdList.bindSet(skyViewBindingSet, 0);
 
-        ImGui::SliderFloat("Multiplier", &m_scene.environmentMultiplier(), 0.0f, 5.0f);
+        ImGui::SliderFloat("Illuminance (lx)", &m_scene.environmentMultiplier(), 1000.0f, 15000.0f);
         float envMultiplier = m_scene.environmentMultiplier();
         cmdList.pushConstant(ShaderStageCompute, envMultiplier);
 

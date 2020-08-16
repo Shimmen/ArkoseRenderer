@@ -28,7 +28,7 @@ void Scene::loadFromFile(const std::string& path)
 
     auto jsonEnv = jsonScene.at("environment");
     m_environmentMap = jsonEnv.at("texture");
-    m_environmentMultiplier = jsonEnv.at("multiplier");
+    m_environmentMultiplier = jsonEnv.at("illuminance");
 
     for (auto& jsonModel : jsonScene.at("models")) {
         std::string modelGltf = jsonModel.at("gltf");
@@ -73,31 +73,42 @@ void Scene::loadFromFile(const std::string& path)
     }
 
     for (auto& jsonLight : jsonScene.at("lights")) {
-        ASSERT(jsonLight.at("type") == "directional");
 
-        float color[3];
-        jsonLight.at("color").get_to(color);
+        auto type = jsonLight.at("type");
+        if (type == "directional") {
 
-        float intensity = jsonLight.at("intensity");
+            float color[3];
+            jsonLight.at("color").get_to(color);
 
-        float dir[3];
-        jsonLight.at("direction").get_to(dir);
+            float illuminance = jsonLight.at("illuminance");
 
-        DirectionalLight sun({ color[0], color[1], color[2] },
-                             intensity,
-                             { dir[0], dir[1], dir[2] });
+            float dir[3];
+            jsonLight.at("direction").get_to(dir);
 
-        sun.shadowMapWorldOrigin = { 0, 0, 0 };
-        sun.shadowMapWorldExtent = jsonLight.at("worldExtent");
+            DirectionalLight sun({ color[0], color[1], color[2] },
+                                 illuminance,
+                                 { dir[0], dir[1], dir[2] });
 
-        int mapSize[2];
-        jsonLight.at("shadowMapSize").get_to(mapSize);
-        sun.setShadowMapSize({ mapSize[0], mapSize[1] });
+            sun.shadowMapWorldOrigin = { 0, 0, 0 };
+            sun.shadowMapWorldExtent = jsonLight.at("worldExtent");
 
-        sun.setScene({}, this);
+            int mapSize[2];
+            jsonLight.at("shadowMapSize").get_to(mapSize);
+            sun.setShadowMapSize({ mapSize[0], mapSize[1] });
 
-        // TODO!
-        m_directionalLights.push_back(sun);
+            sun.setScene({}, this);
+
+            // TODO!
+            m_directionalLights.push_back(sun);
+
+        } else if (type == "ambient") {
+
+            float illuminance = jsonLight.at("illuminance");
+            m_ambientIlluminance = illuminance;
+
+        } else {
+            ASSERT_NOT_REACHED();
+        }
     }
 
     for (auto& jsonCamera : jsonScene.at("cameras")) {

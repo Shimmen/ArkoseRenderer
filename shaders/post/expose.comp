@@ -41,11 +41,6 @@ void main()
 
         exposure = valueForManualExposure(camera.aperture, camera.shutterSpeed, camera.iso);
 
-        // FIXME: Since we are using physically based camera maths but not physically based light units (for now!)
-        //  we are not going to have exposure values that make any sense here. For now, we simply adjust the exposure
-        //  value to get something that isn't pitch black. To be continued!
-        exposure *= 12000.0;
-
     }
 
     vec4 hdrColor = imageLoad(lightBufferImg, pixelCoord);
