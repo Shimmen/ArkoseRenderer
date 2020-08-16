@@ -31,7 +31,7 @@ void main()
 
     vec2 sampleUv = sphericalUvFromDirection(normalize(vViewRay));
     vec3 envColor = texture(uEnvironment, sampleUv).rgb;
-    envColor *= envMultiplier;
+    //envColor *= envMultiplier;
 
     vec3 hdrColor = mix(envColor, geoColor, geoToEnv);
 
