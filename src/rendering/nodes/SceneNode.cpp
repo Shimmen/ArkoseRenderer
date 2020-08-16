@@ -34,7 +34,6 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     return [&](const AppState& appState, CommandList& cmdList) {
         ImGui::ColorEdit3("Sun color", value_ptr(m_scene.sun().color));
         ImGui::SliderFloat("Sun intensity", &m_scene.sun().illuminance, 0.0f, 50.0f);
-        ImGui::SliderFloat("Environment", &m_scene.environmentMultiplier(), 0.0f, 5.0f);
         ImGui::SliderFloat("Ambient", &m_scene.ambient(), 0.0f, 1.0f);
         if (ImGui::TreeNode("Cameras")) {
             m_scene.cameraGui();

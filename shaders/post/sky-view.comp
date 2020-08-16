@@ -1,0 +1,43 @@
+#version 460
+
+#include <shared/CameraState.h>
+#include <common/spherical.glsl>
+
+layout(set = 0, binding = 0) uniform CameraStateBlock {
+    CameraState camera;
+};
+
+layout(set = 0, binding = 1, rgba16f) restrict uniform writeonly image2D targetImg;
+layout(set = 0, binding = 2) uniform sampler2D depthTex;
+layout(set = 0, binding = 3) uniform sampler2D environmentTex;
+
+layout(push_constant) uniform PushConstants {
+    float environmentMultiplier;
+};
+
+layout(local_size_x = 16, local_size_y = 16) in;
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(pixelCoord, imageSize(targetImg))))
+        return;
+
+    float depth = texelFetch(depthTex, pixelCoord, 0).r;
+
+    const float epsilon = 1e-6;
+    if (depth >= 1.0 - epsilon) {
+
+        // FIXME: Maybe use vert+frag shaders & use interpolation to do this instead?
+        vec2 uv = (vec2(pixelCoord) + vec2(0.5)) / vec2(imageSize(targetImg));
+        vec4 projPosition = vec4(uv * 2.0 - 1.0, 1.0, 1.0); // TODO: should depth (i.e., z) be 1 here? Yeah? Does it matter? Maybe not..
+        vec4 viewSpacePos = camera.viewFromProjection * projPosition;
+        vec3 viewRay = mat3(camera.worldFromView) * (viewSpacePos.xyz / viewSpacePos.w);
+
+        vec2 sampleUv = sphericalUvFromDirection(normalize(viewRay));
+        vec3 environment = texture(environmentTex, sampleUv).rgb;
+        environment *= environmentMultiplier;
+
+        imageStore(targetImg, pixelCoord, vec4(environment, 1.0));
+
+    }
+}
