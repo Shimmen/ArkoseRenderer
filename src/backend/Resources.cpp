@@ -28,17 +28,19 @@ Resource& Resource::operator=(Resource&& other) noexcept
     return *this;
 }
 
-Texture::Texture(Backend& backend, Extent2D extent, Format format, MinFilter minFilter, MagFilter magFilter, Mipmap mipmap, Multisampling multisampling)
+Texture::Texture(Backend& backend, TextureDescription desc)
     : Resource(backend)
-    , m_extent(extent)
-    , m_format(format)
-    , m_minFilter(minFilter)
-    , m_magFilter(magFilter)
-    , m_mipmap(mipmap)
-    , m_multisampling(multisampling)
+    , m_type(desc.type)
+    , m_extent(desc.extent)
+    , m_format(desc.format)
+    , m_minFilter(desc.minFilter)
+    , m_magFilter(desc.magFilter)
+    , m_wrapMode(desc.wrapMode)
+    , m_mipmap(desc.mipmap)
+    , m_multisampling(desc.multisampling)
 {
     // (according to most specifications we can't have both multisampling and mipmapping)
-    ASSERT(multisampling == Multisampling::None || mipmap == Mipmap::None);
+    ASSERT(m_multisampling == Multisampling::None || m_mipmap == Mipmap::None);
 }
 
 bool Texture::hasFloatingPointDataFormat() const

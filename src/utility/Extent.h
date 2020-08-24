@@ -57,8 +57,8 @@ struct Extent3D {
         : Extent3D(other.m_width, other.m_height, other.m_depth)
     {
     }
-    Extent3D(const Extent2D& extent2d)
-        : Extent3D(extent2d.width(), extent2d.height(), 1)
+    Extent3D(const Extent2D& extent2d, uint32_t depth = 1)
+        : Extent3D(extent2d.width(), extent2d.height(), depth)
     {
     }
 

@@ -33,7 +33,21 @@ RenderTarget& Registry::createRenderTarget(std::vector<RenderTarget::Attachment>
 
 Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Mipmap mipmap, Texture::Multisampling ms)
 {
-    auto texture = backend().createTexture(extent, format, Texture::MinFilter::Linear, Texture::MagFilter::Linear, mipmap, ms);
+    Texture::TextureDescription desc {
+        .type = Texture::Type::Texture2D,
+        .extent = Extent3D(extent, 1),
+        .format = format,
+        .minFilter = Texture::MinFilter::Linear,
+        .magFilter = Texture::MagFilter::Linear,
+        .wrapMode = {
+            Texture::WrapMode::Repeat,
+            Texture::WrapMode::Repeat,
+            Texture::WrapMode::Repeat },
+        .mipmap = mipmap,
+        .multisampling = ms
+    };
+
+    auto texture = backend().createTexture(desc);
     m_textures.push_back(std::move(texture));
     return *m_textures.back();
 }
@@ -63,11 +77,23 @@ BindingSet& Registry::createBindingSet(std::vector<ShaderBinding> shaderBindings
 
 Texture& Registry::createPixelTexture(vec4 pixelValue, bool srgb)
 {
-    auto format = srgb
-        ? Texture::Format::sRGBA8
-        : Texture::Format::RGBA8;
+    Texture::TextureDescription desc {
+        .type = Texture::Type::Texture2D,
+        .extent = Extent3D(1, 1, 1),
+        .format = srgb
+            ? Texture::Format::sRGBA8
+            : Texture::Format::RGBA8,
+        .minFilter = Texture::MinFilter::Nearest,
+        .magFilter = Texture::MagFilter::Nearest,
+        .wrapMode = {
+            Texture::WrapMode::Repeat,
+            Texture::WrapMode::Repeat,
+            Texture::WrapMode::Repeat },
+        .mipmap = Texture::Mipmap::None,
+        .multisampling = Texture::Multisampling::None
+    };
 
-    auto texture = backend().createTexture({ 1, 1 }, format, Texture::MinFilter::Nearest, Texture::MagFilter::Nearest, Texture::Mipmap::None, Texture::Multisampling::None);
+    auto texture = backend().createTexture(desc);
     texture->setPixelData(pixelValue);
 
     m_textures.push_back(std::move(texture));
@@ -101,8 +127,25 @@ Texture& Registry::loadTexture2D(const std::string& imagePath, bool srgb, bool g
         LogErrorAndExit("Registry: currently no support for other than (s)RGB(F) and (s)RGBA(F) texture loading!\n");
     }
 
-    auto mipmapMode = generateMipmaps && info->width > 1 && info->height > 1 ? Texture::Mipmap::Linear : Texture::Mipmap::None;
-    auto texture = backend().createTexture({ info->width, info->height }, format, Texture::MinFilter::Linear, Texture::MagFilter::Linear, mipmapMode, Texture::Multisampling::None);
+    auto mipmapMode = (generateMipmaps && info->width > 1 && info->height > 1)
+        ? Texture::Mipmap::Linear
+        : Texture::Mipmap::None;
+
+    Texture::TextureDescription desc {
+        .type = Texture::Type::Texture2D,
+        .extent = { (uint32_t)info->width, (uint32_t)info->height, 1 },
+        .format = format,
+        .minFilter = Texture::MinFilter::Linear,
+        .magFilter = Texture::MagFilter::Linear,
+        .wrapMode = {
+            Texture::WrapMode::Repeat,
+            Texture::WrapMode::Repeat,
+            Texture::WrapMode::Repeat },
+        .mipmap = mipmapMode,
+        .multisampling = Texture::Multisampling::None
+    };
+
+    auto texture = backend().createTexture(desc);
 
     Image* image = Image::load(imagePath, pixelTypeToUse);
     texture->setData(image->data(), image->size());

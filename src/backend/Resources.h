@@ -63,6 +63,11 @@ struct Texture : public Resource {
     // (required for now, so we can create the mockup Texture objects)
     friend class VulkanBackend;
 
+    enum class Type {
+        Texture2D,
+        Cubemap,
+    };
+
     enum class Format {
         Unknown,
         R32,
@@ -85,6 +90,17 @@ struct Texture : public Resource {
         Nearest,
     };
 
+    enum class WrapMode {
+        Repeat,
+        ClampToEdge,
+    };
+
+    struct WrapModes {
+        WrapMode u;
+        WrapMode v;
+        WrapMode w;
+    };
+
     enum class Mipmap {
         None,
         Nearest,
@@ -100,8 +116,23 @@ struct Texture : public Resource {
         X32 = 32,
     };
 
+    struct TextureDescription {
+        Type type;
+
+        Extent3D extent;
+        Format format;
+
+        MinFilter minFilter;
+        MagFilter magFilter;
+
+        WrapModes wrapMode;
+
+        Mipmap mipmap;
+        Multisampling multisampling;
+    };
+
     Texture() = default;
-    Texture(Backend&, Extent2D, Format, MinFilter, MagFilter, Mipmap, Multisampling);
+    Texture(Backend&, TextureDescription);
 
     bool hasFloatingPointDataFormat() const;
 
@@ -110,10 +141,16 @@ struct Texture : public Resource {
 
     virtual void generateMipmaps() = 0;
 
-    [[nodiscard]] const Extent2D& extent() const { return m_extent; }
+    [[nodiscard]] const Type& type() const { return m_type; }
+
+    [[nodiscard]] const Extent2D& extent() const { return { m_extent.width(), m_extent.height() }; }
+    [[nodiscard]] const Extent3D& extent3D() const { return m_extent; }
+
     [[nodiscard]] Format format() const { return m_format; }
+
     [[nodiscard]] MinFilter minFilter() const { return m_minFilter; }
     [[nodiscard]] MagFilter magFilter() const { return m_magFilter; }
+    [[nodiscard]] WrapModes wrapMode() const { return m_wrapMode; }
 
     [[nodiscard]] Mipmap mipmap() const { return m_mipmap; }
     [[nodiscard]] bool hasMipmaps() const;
@@ -133,10 +170,16 @@ struct Texture : public Resource {
     }
 
 private:
-    Extent2D m_extent;
+    Type m_type;
+
+    Extent3D m_extent;
     Format m_format;
+
     MinFilter m_minFilter;
     MagFilter m_magFilter;
+
+    WrapModes m_wrapMode;
+
     Mipmap m_mipmap;
     Multisampling m_multisampling;
 };

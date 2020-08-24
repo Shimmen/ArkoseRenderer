@@ -115,15 +115,17 @@ void VulkanBuffer::updateData(const std::byte* data, size_t updateSize)
     }
 }
 
-VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, MinFilter minFilter, MagFilter magFilter, Mipmap mip, Multisampling ms)
-    : Texture(backend, extent, format, minFilter, magFilter, mip, ms)
+VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
+    : Texture(backend, desc)
 {
+    MOOSLIB_ASSERT(desc.type == Texture::Type::Texture2D);
+
     // HACK: Now we longer specify what usage we want for the texture, and instead always select all
     //  possible capabilities. However, some texture formats (e.g. sRGB formats) do not support being
     //  used as a storage image, so we need to explicitly disable it for those formats.
     bool storageCapable = true;
 
-    switch (format) {
+    switch (format()) {
     case Texture::Format::R32:
         vkFormat = VK_FORMAT_R32_UINT;
         break;
@@ -186,7 +188,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, M
 
     VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
     imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageCreateInfo.extent = { .width = extent.width(), .height = extent.height(), .depth = 1 };
+    imageCreateInfo.extent = { .width = extent().width(), .height = extent().height(), .depth = 1 };
     imageCreateInfo.mipLevels = mipLevels();
     imageCreateInfo.arrayLayers = 1;
     imageCreateInfo.usage = usageFlags;
@@ -230,7 +232,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, M
     }
 
     VkFilter vkMinFilter;
-    switch (minFilter) {
+    switch (minFilter()) {
     case Texture::MinFilter::Linear:
         vkMinFilter = VK_FILTER_LINEAR;
         break;
@@ -240,7 +242,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, M
     }
 
     VkFilter vkMagFilter;
-    switch (magFilter) {
+    switch (magFilter()) {
     case Texture::MagFilter::Linear:
         vkMagFilter = VK_FILTER_LINEAR;
         break;
@@ -249,13 +251,24 @@ VulkanTexture::VulkanTexture(Backend& backend, Extent2D extent, Format format, M
         break;
     }
 
+    auto wrapModeToAddressMode = [](WrapMode mode) -> VkSamplerAddressMode {
+        switch (mode) {
+        case WrapMode::Repeat:
+            return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        case WrapMode::ClampToEdge:
+            return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+    };
+
     VkSamplerCreateInfo samplerCreateInfo = { VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO };
     samplerCreateInfo.unnormalizedCoordinates = VK_FALSE;
     samplerCreateInfo.magFilter = vkMagFilter;
     samplerCreateInfo.minFilter = vkMinFilter;
-    samplerCreateInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerCreateInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerCreateInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    samplerCreateInfo.addressModeU = wrapModeToAddressMode(wrapMode().u);
+    samplerCreateInfo.addressModeV = wrapModeToAddressMode(wrapMode().v);
+    samplerCreateInfo.addressModeW = wrapModeToAddressMode(wrapMode().w);
     samplerCreateInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     samplerCreateInfo.anisotropyEnable = VK_TRUE;
     samplerCreateInfo.maxAnisotropy = 16.0f;

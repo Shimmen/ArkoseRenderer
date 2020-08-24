@@ -18,7 +18,7 @@ public:
 struct VulkanTexture final : public Texture {
 public:
     VulkanTexture() = default;
-    VulkanTexture(Backend&, Extent2D, Format, MinFilter, MagFilter, Mipmap, Multisampling);
+    VulkanTexture(Backend&, TextureDescription);
     virtual ~VulkanTexture() override;
 
     void setPixelData(vec4 pixel) override;

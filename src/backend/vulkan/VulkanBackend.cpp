@@ -300,11 +300,9 @@ std::unique_ptr<RenderTarget> VulkanBackend::createRenderTarget(std::vector<Rend
     return std::make_unique<VulkanRenderTarget>(*this, attachments);
 }
 
-std::unique_ptr<Texture> VulkanBackend::createTexture(Extent2D extent, Texture::Format format,
-                                                      Texture::MinFilter minFilter, Texture::MagFilter magFilter,
-                                                      Texture::Mipmap mipmap, Texture::Multisampling multisampling)
+std::unique_ptr<Texture> VulkanBackend::createTexture(Texture::TextureDescription desc)
 {
-    return std::make_unique<VulkanTexture>(*this, extent, format, minFilter, magFilter, mipmap, multisampling);
+    return std::make_unique<VulkanTexture>(*this, desc);
 }
 
 std::unique_ptr<BindingSet> VulkanBackend::createBindingSet(std::vector<ShaderBinding> shaderBindings)
@@ -813,9 +811,21 @@ void VulkanBackend::createAndSetupSwapchain(VkPhysicalDevice physicalDevice, VkD
 
     m_swapchainExtent = { swapchainExtent.width, swapchainExtent.height };
     m_swapchainImageFormat = surfaceFormat.format;
-    m_swapchainDepthTexture = std::make_unique<VulkanTexture>(*this, m_swapchainExtent, Texture::Format::Depth32F,
-                                                              Texture::MinFilter::Nearest, Texture::MagFilter::Nearest,
-                                                              Texture::Mipmap::None, Texture::Multisampling::None);
+
+    Texture::TextureDescription depthDesc {
+        .type = Texture::Type::Texture2D,
+        .extent = m_swapchainExtent,
+        .format = Texture::Format::Depth32F,
+        .minFilter = Texture::MinFilter::Nearest,
+        .magFilter = Texture::MagFilter::Nearest,
+        .wrapMode = {
+            Texture::WrapMode::Repeat,
+            Texture::WrapMode::Repeat,
+            Texture::WrapMode::Repeat },
+        .mipmap = Texture::Mipmap::None,
+        .multisampling = Texture::Multisampling::None
+    };
+    m_swapchainDepthTexture = std::make_unique<VulkanTexture>(*this, depthDesc);
     setupWindowRenderTargets();
 
     if (m_guiIsSetup) {
@@ -894,10 +904,16 @@ void VulkanBackend::createWindowRenderTargetFrontend()
 
         auto colorTexture = std::make_unique<VulkanTexture>();
         {
+            colorTexture->m_type = Texture::Type::Texture2D;
             colorTexture->m_extent = m_swapchainExtent;
             colorTexture->m_format = Texture::Format::Unknown;
             colorTexture->m_minFilter = Texture::MinFilter::Nearest;
             colorTexture->m_magFilter = Texture::MagFilter::Nearest;
+            colorTexture->m_wrapMode = {
+                Texture::WrapMode::Repeat,
+                Texture::WrapMode::Repeat,
+                Texture::WrapMode::Repeat
+            };
             colorTexture->m_mipmap = Texture::Mipmap::None;
             colorTexture->m_multisampling = Texture::Multisampling::None;
 
