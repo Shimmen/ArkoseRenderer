@@ -7,6 +7,7 @@ public:
     explicit VulkanCommandList(VulkanBackend&, VkCommandBuffer);
 
     void clearTexture(Texture&, ClearColor) override;
+    void copyTexture(Texture& src, Texture& dst) override;
     void generateMipmaps(Texture&) override;
 
     void beginRendering(const RenderState&, ClearColor, float clearDepth, uint32_t clearStencil) override;

@@ -95,6 +95,119 @@ void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
     }
 }
 
+void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst)
+{
+    auto& src = static_cast<VulkanTexture&>(genSrc);
+    auto& dst = static_cast<VulkanTexture&>(genDst);
+
+    // NOTE: Texture3D should also be supported here
+    MOOSLIB_ASSERT(src.type() == Texture::Type::Texture2D && dst.type() == Texture::Type::Texture2D);
+    MOOSLIB_ASSERT(!src.hasMipmaps() && !dst.hasMipmaps());
+
+    MOOSLIB_ASSERT(src.hasDepthFormat() == dst.hasDepthFormat());
+    VkImageAspectFlags aspectMask = src.hasDepthFormat()
+        ? VK_IMAGE_ASPECT_DEPTH_BIT
+        : VK_IMAGE_ASPECT_COLOR_BIT;
+
+    MOOSLIB_ASSERT(src.currentLayout != VK_IMAGE_LAYOUT_UNDEFINED && src.currentLayout != VK_IMAGE_LAYOUT_PREINITIALIZED);
+    VkImageLayout initialSrcLayout = src.currentLayout;
+
+    VkImageLayout finalDstLayout = dst.currentLayout;
+    if (finalDstLayout == VK_IMAGE_LAYOUT_UNDEFINED || finalDstLayout == VK_IMAGE_LAYOUT_PREINITIALIZED)
+        finalDstLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+    {
+        VkImageMemoryBarrier genBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        genBarrier.subresourceRange.aspectMask = aspectMask;
+        genBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        genBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        genBarrier.subresourceRange.baseMipLevel = 0;
+        genBarrier.subresourceRange.levelCount = 1;
+        genBarrier.subresourceRange.baseArrayLayer = 0;
+        genBarrier.subresourceRange.layerCount = 1;
+        genBarrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+
+        std::array<VkImageMemoryBarrier, 2> barriers { genBarrier, genBarrier };
+
+        barriers[0].image = src.image;
+        barriers[0].oldLayout = src.currentLayout;
+        barriers[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barriers[0].dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+        barriers[1].image = dst.image;
+        barriers[1].oldLayout = dst.currentLayout;
+        barriers[1].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barriers[1].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        vkCmdPipelineBarrier(m_commandBuffer,
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+                             0, nullptr,
+                             0, nullptr,
+                             barriers.size(), barriers.data());
+    }
+
+    {
+        auto extentToOffset = [](Extent3D extent) -> VkOffset3D {
+            return {
+                static_cast<int32_t>(extent.width()),
+                static_cast<int32_t>(extent.height()),
+                static_cast<int32_t>(extent.depth()),
+            };
+        };
+
+        VkImageBlit blit = {};
+
+        blit.srcOffsets[0] = { 0, 0, 0 };
+        blit.srcOffsets[1] = extentToOffset(src.extent3D());
+        blit.srcSubresource.aspectMask = aspectMask;
+        blit.srcSubresource.mipLevel = 0;
+        blit.srcSubresource.baseArrayLayer = 0;
+        blit.srcSubresource.layerCount = 1;
+
+        blit.dstOffsets[0] = { 0, 0, 0 };
+        blit.dstOffsets[1] = extentToOffset(dst.extent3D());
+        blit.dstSubresource.aspectMask = aspectMask;
+        blit.dstSubresource.mipLevel = 0;
+        blit.dstSubresource.baseArrayLayer = 0;
+        blit.dstSubresource.layerCount = 1;
+
+        vkCmdBlitImage(m_commandBuffer,
+                       src.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                       dst.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                       1, &blit,
+                       VK_FILTER_LINEAR);
+    }
+
+    {
+        VkImageMemoryBarrier genBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        genBarrier.subresourceRange.aspectMask = aspectMask;
+        genBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        genBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        genBarrier.subresourceRange.baseMipLevel = 0;
+        genBarrier.subresourceRange.levelCount = 1;
+        genBarrier.subresourceRange.baseArrayLayer = 0;
+        genBarrier.subresourceRange.layerCount = 1;
+        genBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT;
+        genBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+        std::array<VkImageMemoryBarrier, 2> barriers { genBarrier, genBarrier };
+
+        barriers[0].image = src.image;
+        barriers[0].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        barriers[0].newLayout = initialSrcLayout;
+
+        barriers[1].image = dst.image;
+        barriers[1].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        barriers[1].newLayout = finalDstLayout;
+
+        vkCmdPipelineBarrier(m_commandBuffer,
+                             VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
+                             0, nullptr,
+                             0, nullptr,
+                             barriers.size(), barriers.data());
+    }
+}
+
 void VulkanCommandList::generateMipmaps(Texture& genTexture)
 {
     auto& texture = static_cast<VulkanTexture&>(genTexture);
