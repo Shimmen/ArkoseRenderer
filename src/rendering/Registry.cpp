@@ -31,7 +31,7 @@ RenderTarget& Registry::createRenderTarget(std::vector<RenderTarget::Attachment>
     return *m_renderTargets.back();
 }
 
-Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Mipmap mipmap, Texture::Multisampling ms)
+Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Mipmap mipmap)
 {
     Texture::TextureDescription desc {
         .type = Texture::Type::Texture2D,
@@ -44,7 +44,28 @@ Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Text
             Texture::WrapMode::Repeat,
             Texture::WrapMode::Repeat },
         .mipmap = mipmap,
-        .multisampling = ms
+        .multisampling = Texture::Multisampling::None
+    };
+
+    auto texture = backend().createTexture(desc);
+    m_textures.push_back(std::move(texture));
+    return *m_textures.back();
+}
+
+Texture& Registry::createMultisampledTexture2D(Extent2D extent, Texture::Format format, Texture::Multisampling multisampling, Texture::Mipmap mipmap)
+{
+    Texture::TextureDescription desc {
+        .type = Texture::Type::Texture2D,
+        .extent = Extent3D(extent, 1),
+        .format = format,
+        .minFilter = Texture::MinFilter::Linear,
+        .magFilter = Texture::MagFilter::Linear,
+        .wrapMode = {
+            Texture::WrapMode::Repeat,
+            Texture::WrapMode::Repeat,
+            Texture::WrapMode::Repeat },
+        .mipmap = mipmap,
+        .multisampling = multisampling
     };
 
     auto texture = backend().createTexture(desc);
