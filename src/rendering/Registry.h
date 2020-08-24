@@ -19,7 +19,7 @@ public:
 
     [[nodiscard]] Texture& createPixelTexture(vec4 pixelValue, bool srgb);
     [[nodiscard]] Texture& loadTexture2D(const std::string& imagePath, bool srgb, bool generateMipmaps);
-    [[nodiscard]] Texture& createTexture2D(Extent2D, Texture::Format, Texture::Mipmap = Texture::Mipmap::None);
+    [[nodiscard]] Texture& createTexture2D(Extent2D, Texture::Format, Texture::Mipmap = Texture::Mipmap::None, Texture::WrapModes = Texture::WrapModes::repeatAll());
     [[nodiscard]] Texture& createMultisampledTexture2D(Extent2D, Texture::Format, Texture::Multisampling, Texture::Mipmap = Texture::Mipmap::None);
 
     [[nodiscard]] Buffer& createBuffer(size_t size, Buffer::Usage, Buffer::MemoryHint);

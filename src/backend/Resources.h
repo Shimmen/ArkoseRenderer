@@ -99,6 +99,32 @@ struct Texture : public Resource {
         WrapMode u;
         WrapMode v;
         WrapMode w;
+
+        WrapModes() = delete;
+        WrapModes(WrapMode u, WrapMode v, WrapMode w)
+            : u(u)
+            , v(v)
+            , w(w)
+        {
+        }
+
+        static WrapModes repeatAll()
+        {
+            return {
+                WrapMode::Repeat,
+                WrapMode::Repeat,
+                WrapMode::Repeat
+            };
+        }
+
+        static WrapModes clampAllToEdge()
+        {
+            return {
+                WrapMode::ClampToEdge,
+                WrapMode::ClampToEdge,
+                WrapMode::ClampToEdge
+            };
+        }
     };
 
     enum class Mipmap {
@@ -178,7 +204,7 @@ private:
     MinFilter m_minFilter;
     MagFilter m_magFilter;
 
-    WrapModes m_wrapMode;
+    WrapModes m_wrapMode { WrapModes::repeatAll() };
 
     Mipmap m_mipmap;
     Multisampling m_multisampling;
