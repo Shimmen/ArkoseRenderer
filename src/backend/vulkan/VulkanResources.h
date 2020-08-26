@@ -111,7 +111,7 @@ public:
 
 struct VulkanComputeState final : public ComputeState {
 public:
-    VulkanComputeState(Backend&, Shader, std::vector<const BindingSet*>);
+    VulkanComputeState(Backend&, Shader, std::vector<BindingSet*>);
     virtual ~VulkanComputeState() override;
 
     VkPipelineLayout pipelineLayout;

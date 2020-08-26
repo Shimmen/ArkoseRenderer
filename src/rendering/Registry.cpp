@@ -209,7 +209,7 @@ RayTracingState& Registry::createRayTracingState(const ShaderBindingTable& sbt, 
     return *m_rayTracingStates.back();
 }
 
-ComputeState& Registry::createComputeState(const Shader& shader, std::vector<const BindingSet*> bindingSets)
+ComputeState& Registry::createComputeState(const Shader& shader, std::vector<BindingSet*> bindingSets)
 {
     auto computeState = backend().createComputeState(shader, bindingSets);
     m_computeStates.push_back(std::move(computeState));

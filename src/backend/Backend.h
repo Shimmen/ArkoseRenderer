@@ -36,7 +36,7 @@ public:
     virtual std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(std::vector<RTGeometry>) = 0;
     virtual std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(std::vector<RTGeometryInstance>) = 0;
     virtual std::unique_ptr<RayTracingState> createRayTracingState(const ShaderBindingTable& sbt, std::vector<const BindingSet*>, uint32_t maxRecursionDepth) = 0;
-    virtual std::unique_ptr<ComputeState> createComputeState(const Shader&, std::vector<const BindingSet*>) = 0;
+    virtual std::unique_ptr<ComputeState> createComputeState(const Shader&, std::vector<BindingSet*>) = 0;
 
 protected:
     [[nodiscard]] static Badge<Backend> badge()

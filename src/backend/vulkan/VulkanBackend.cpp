@@ -332,7 +332,7 @@ std::unique_ptr<RayTracingState> VulkanBackend::createRayTracingState(const Shad
     return std::make_unique<VulkanRayTracingState>(*this, sbt, bidningSets, maxRecursionDepth);
 }
 
-std::unique_ptr<ComputeState> VulkanBackend::createComputeState(const Shader& shader, std::vector<const BindingSet*> bidningSets)
+std::unique_ptr<ComputeState> VulkanBackend::createComputeState(const Shader& shader, std::vector<BindingSet*> bidningSets)
 {
     return std::make_unique<VulkanComputeState>(*this, shader, bidningSets);
 }

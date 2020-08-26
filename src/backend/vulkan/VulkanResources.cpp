@@ -1950,7 +1950,7 @@ VulkanRayTracingState::~VulkanRayTracingState()
     vkDestroyPipelineLayout(vulkanBackend.device(), pipelineLayout, nullptr);
 }
 
-VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vector<const BindingSet*> bindingSets)
+VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vector<BindingSet*> bindingSets)
     : ComputeState(backend, shader, bindingSets)
 {
     auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend);

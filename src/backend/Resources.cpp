@@ -496,7 +496,7 @@ const std::vector<const BindingSet*>& RayTracingState::bindingSets() const
     return m_bindingSets;
 }
 
-ComputeState::ComputeState(Backend& backend, Shader shader, std::vector<const BindingSet*> bindingSets)
+ComputeState::ComputeState(Backend& backend, Shader shader, std::vector<BindingSet*> bindingSets)
     : Resource(backend)
     , m_shader(shader)
     , m_bindingSets(bindingSets)
