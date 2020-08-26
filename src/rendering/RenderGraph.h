@@ -16,7 +16,7 @@ public:
     RenderGraph(RenderGraph&) = delete;
     RenderGraph& operator=(RenderGraph&) = delete;
 
-    void addNode(const std::string& name, const RenderGraphBasicNode::ConstructorFunction&);
+    void addNode(const std::string& name, RenderGraphBasicNode::ConstructorFunction);
     void addNode(std::unique_ptr<RenderGraphNode>&&);
 
     template<typename NodeType, typename... Args>

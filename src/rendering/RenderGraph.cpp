@@ -2,7 +2,7 @@
 
 #include <utility/Logging.h>
 
-void RenderGraph::addNode(const std::string& name, const RenderGraphBasicNode::ConstructorFunction& constructorFunction)
+void RenderGraph::addNode(const std::string& name, RenderGraphBasicNode::ConstructorFunction constructorFunction)
 {
     // All nodes should be added before construction!
     ASSERT(m_frameContexts.empty());
