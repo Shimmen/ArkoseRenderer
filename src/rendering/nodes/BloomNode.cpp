@@ -113,12 +113,17 @@ RenderGraphNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
 
         // Blend the bloom contribution back into the target texture
 
-        static float bloomBlend = 0.04f;
-        ImGui::SliderFloat("Bloom blend", &bloomBlend, 0.0f, 1.0f, "%.6f", 4.0f);
+        static bool enabled = true;
+        ImGui::Checkbox("Enabled", &enabled);
 
-        cmdList.setComputeState(bloomBlendComputeState);
-        cmdList.bindSet(blendBindingSet, 0);
-        cmdList.pushConstant(ShaderStageCompute, bloomBlend, 0);
-        cmdList.dispatch(targetTexture.extent(), localSizeForComp);
+        if (enabled) {
+            static float bloomBlend = 0.04f;
+            ImGui::SliderFloat("Bloom blend", &bloomBlend, 0.0f, 1.0f, "%.6f", 4.0f);
+
+            cmdList.setComputeState(bloomBlendComputeState);
+            cmdList.bindSet(blendBindingSet, 0);
+            cmdList.pushConstant(ShaderStageCompute, bloomBlend, 0);
+            cmdList.dispatch(targetTexture.extent(), localSizeForComp);
+        }
     };
 }
