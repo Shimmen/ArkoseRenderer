@@ -80,10 +80,7 @@ RenderGraphNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
 
             cmdList.bindSet(downsampleBindingSet, 0);
             cmdList.dispatch(targetTexture.extent(), localSizeForComp);
-
-            // FIXME: Add better barrier here! E.g.:
-            //  cmdList.imageWriteBarrier(targetTexture);
-            cmdList.debugBarrier();
+            cmdList.textureWriteBarrier(targetTexture);
         }
 
         // Copy from (the bottom level of) the downsample stack to the upsample stack
@@ -105,10 +102,7 @@ RenderGraphNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
 
             cmdList.bindSet(upsampleBindingSet, 0);
             cmdList.dispatch(targetTexture.extent(), localSizeForComp);
-
-            // FIXME: Add better barrier here! E.g.:
-            //  cmdList.imageWriteBarrier(targetTexture);
-            cmdList.debugBarrier();
+            cmdList.textureWriteBarrier(targetTexture);
         }
 
         // Blend the bloom contribution back into the target texture

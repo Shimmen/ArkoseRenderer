@@ -37,6 +37,8 @@ public:
     //! A barrier for all commands and memory, which probably only should be used for debug stuff.
     virtual void debugBarrier() = 0;
 
+    virtual void textureWriteBarrier(const Texture&) = 0;
+
     virtual void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) = 0;
 
     virtual void saveTextureToFile(const Texture&, const std::string&) = 0;

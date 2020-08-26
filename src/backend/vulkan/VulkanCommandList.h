@@ -33,6 +33,7 @@ public:
     void signalEvent(uint8_t eventId, PipelineStage) override;
 
     void debugBarrier() override;
+    void textureWriteBarrier(const Texture&) override;
 
     void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) override;
 

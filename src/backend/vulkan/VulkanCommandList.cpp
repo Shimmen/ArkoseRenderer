@@ -1041,6 +1041,38 @@ void VulkanCommandList::debugBarrier()
     vkCmdPipelineBarrier(m_commandBuffer, sourceStage, destinationStage, 0, 1, &barrier, 0, nullptr, 0, nullptr);
 }
 
+void VulkanCommandList::textureWriteBarrier(const Texture& genTexture)
+{
+    auto& texture = static_cast<const VulkanTexture&>(genTexture);
+
+    VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+    barrier.image = texture.image;
+
+    // no layout transitions
+    barrier.oldLayout = texture.currentLayout;
+    barrier.newLayout = texture.currentLayout;
+
+    // all texture writes must finish before any later memory access (r/w)
+    barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+    barrier.subresourceRange.aspectMask = texture.hasDepthFormat()
+        ? VK_IMAGE_ASPECT_DEPTH_BIT
+        : VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.baseArrayLayer = 0;
+    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.baseMipLevel = 0;
+    barrier.subresourceRange.levelCount = texture.mipLevels();
+
+    vkCmdPipelineBarrier(m_commandBuffer,
+                         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                         0,
+                         0, nullptr,
+                         0, nullptr,
+                         1, &barrier);
+}
+
 void VulkanCommandList::endNode(Badge<class VulkanBackend>)
 {
     endCurrentRenderPassIfAny();
