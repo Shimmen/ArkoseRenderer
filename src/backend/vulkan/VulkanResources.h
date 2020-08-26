@@ -60,7 +60,7 @@ public:
 
 struct VulkanRenderState final : public RenderState {
 public:
-    VulkanRenderState(Backend&, const RenderTarget&, VertexLayout, Shader, const std::vector<const BindingSet*>&,
+    VulkanRenderState(Backend&, const RenderTarget&, VertexLayout, Shader, const std::vector<BindingSet*>&,
                       Viewport, BlendState, RasterState, DepthState);
     virtual ~VulkanRenderState() override;
 
@@ -96,7 +96,7 @@ public:
 
 struct VulkanRayTracingState final : public RayTracingState {
 public:
-    VulkanRayTracingState(Backend&, ShaderBindingTable, std::vector<const BindingSet*>, uint32_t maxRecursionDepth);
+    VulkanRayTracingState(Backend&, ShaderBindingTable, std::vector<BindingSet*>, uint32_t maxRecursionDepth);
     virtual ~VulkanRayTracingState() override;
 
     VkPipelineLayout pipelineLayout;

@@ -311,7 +311,7 @@ std::unique_ptr<BindingSet> VulkanBackend::createBindingSet(std::vector<ShaderBi
 }
 
 std::unique_ptr<RenderState> VulkanBackend::createRenderState(const RenderTarget& renderTarget, const VertexLayout& vertexLayout,
-                                                              const Shader& shader, std::vector<const BindingSet*> bindingSets,
+                                                              const Shader& shader, std::vector<BindingSet*> bindingSets,
                                                               const Viewport& viewport, const BlendState& blendState, const RasterState& rasterState, const DepthState& depthState)
 {
     return std::make_unique<VulkanRenderState>(*this, renderTarget, vertexLayout, shader, bindingSets, viewport, blendState, rasterState, depthState);
@@ -327,7 +327,7 @@ std::unique_ptr<TopLevelAS> VulkanBackend::createTopLevelAccelerationStructure(s
     return std::make_unique<VulkanTopLevelAS>(*this, instances);
 }
 
-std::unique_ptr<RayTracingState> VulkanBackend::createRayTracingState(const ShaderBindingTable& sbt, std::vector<const BindingSet*> bidningSets, uint32_t maxRecursionDepth)
+std::unique_ptr<RayTracingState> VulkanBackend::createRayTracingState(ShaderBindingTable& sbt, std::vector<BindingSet*> bidningSets, uint32_t maxRecursionDepth)
 {
     return std::make_unique<VulkanRayTracingState>(*this, sbt, bidningSets, maxRecursionDepth);
 }

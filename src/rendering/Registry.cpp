@@ -180,7 +180,7 @@ RenderState& Registry::createRenderState(const RenderStateBuilder& builder)
 
 RenderState& Registry::createRenderState(
     const RenderTarget& renderTarget, const VertexLayout& vertexLayout,
-    const Shader& shader, std::vector<const BindingSet*> bindingSets,
+    const Shader& shader, std::vector<BindingSet*> bindingSets,
     const Viewport& viewport, const BlendState& blendState, const RasterState& rasterState, const DepthState& depthState)
 {
     auto renderState = backend().createRenderState(renderTarget, vertexLayout, shader, bindingSets, viewport, blendState, rasterState, depthState);
@@ -202,7 +202,7 @@ TopLevelAS& Registry::createTopLevelAccelerationStructure(std::vector<RTGeometry
     return *m_topLevelAS.back();
 }
 
-RayTracingState& Registry::createRayTracingState(const ShaderBindingTable& sbt, std::vector<const BindingSet*> bindingSets, uint32_t maxRecursionDepth)
+RayTracingState& Registry::createRayTracingState(ShaderBindingTable& sbt, std::vector<BindingSet*> bindingSets, uint32_t maxRecursionDepth)
 {
     auto rtState = backend().createRayTracingState(sbt, bindingSets, maxRecursionDepth);
     m_rayTracingStates.push_back(std::move(rtState));

@@ -43,11 +43,11 @@ public:
     std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) override;
     std::unique_ptr<Texture> createTexture(Texture::TextureDescription) override;
     std::unique_ptr<BindingSet> createBindingSet(std::vector<ShaderBinding>) override;
-    std::unique_ptr<RenderState> createRenderState(const RenderTarget&, const VertexLayout&, const Shader&, std::vector<const BindingSet*>,
+    std::unique_ptr<RenderState> createRenderState(const RenderTarget&, const VertexLayout&, const Shader&, std::vector<BindingSet*>,
                                                    const Viewport&, const BlendState&, const RasterState&, const DepthState&) override;
     std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(std::vector<RTGeometry>) override;
     std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(std::vector<RTGeometryInstance>) override;
-    std::unique_ptr<RayTracingState> createRayTracingState(const ShaderBindingTable& sbt, std::vector<const BindingSet*>, uint32_t maxRecursionDepth) override;
+    std::unique_ptr<RayTracingState> createRayTracingState(ShaderBindingTable& sbt, std::vector<BindingSet*>, uint32_t maxRecursionDepth) override;
     std::unique_ptr<ComputeState> createComputeState(const Shader&, std::vector<BindingSet*>) override;
 
     ///////////////////////////////////////////////////////////////////////////

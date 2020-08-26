@@ -405,13 +405,13 @@ DepthState RenderStateBuilder::depthState() const
     return state;
 }
 
-RenderStateBuilder& RenderStateBuilder::addBindingSet(const BindingSet& bindingSet)
+RenderStateBuilder& RenderStateBuilder::addBindingSet(BindingSet& bindingSet)
 {
     m_bindingSets.emplace_back(&bindingSet);
     return *this;
 }
 
-const std::vector<const BindingSet*>& RenderStateBuilder::bindingSets() const
+const std::vector<BindingSet*>& RenderStateBuilder::bindingSets() const
 {
     return m_bindingSets;
 }
@@ -473,7 +473,7 @@ uint32_t TopLevelAS::instanceCount() const
     return m_instances.size();
 }
 
-RayTracingState::RayTracingState(Backend& backend, ShaderBindingTable sbt, std::vector<const BindingSet*> bindingSets, uint32_t maxRecursionDepth)
+RayTracingState::RayTracingState(Backend& backend, ShaderBindingTable sbt, std::vector<BindingSet*> bindingSets, uint32_t maxRecursionDepth)
     : Resource(backend)
     , m_shaderBindingTable(sbt)
     , m_bindingSets(bindingSets)
@@ -491,7 +491,7 @@ const ShaderBindingTable& RayTracingState::shaderBindingTable() const
     return m_shaderBindingTable;
 }
 
-const std::vector<const BindingSet*>& RayTracingState::bindingSets() const
+const std::vector<BindingSet*>& RayTracingState::bindingSets() const
 {
     return m_bindingSets;
 }

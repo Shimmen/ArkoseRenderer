@@ -434,7 +434,7 @@ public:
     RenderState() = default;
     RenderState(Backend& backend,
                 const RenderTarget& renderTarget, VertexLayout vertexLayout,
-                Shader shader, const std::vector<const BindingSet*>& shaderBindingSets,
+                Shader shader, const std::vector<BindingSet*>& shaderBindingSets,
                 Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState)
         : Resource(backend)
         , m_renderTarget(&renderTarget)
@@ -453,7 +453,7 @@ public:
     const VertexLayout& vertexLayout() const { return m_vertexLayout; }
 
     const Shader& shader() const { return m_shader; }
-    const std::vector<const BindingSet*>& bindingSets() const { return m_shaderBindingSets; }
+    const std::vector<BindingSet*>& bindingSets() const { return m_shaderBindingSets; }
 
     const Viewport& fixedViewport() const { return m_viewport; }
     const BlendState& blendState() const { return m_blendState; }
@@ -465,7 +465,7 @@ private:
     VertexLayout m_vertexLayout;
 
     Shader m_shader;
-    std::vector<const BindingSet*> m_shaderBindingSets;
+    std::vector<BindingSet*> m_shaderBindingSets;
 
     Viewport m_viewport;
     BlendState m_blendState;
@@ -490,14 +490,14 @@ public:
     [[nodiscard]] RasterState rasterState() const;
     [[nodiscard]] DepthState depthState() const;
 
-    RenderStateBuilder& addBindingSet(const BindingSet&);
-    [[nodiscard]] const std::vector<const BindingSet*>& bindingSets() const;
+    RenderStateBuilder& addBindingSet(BindingSet&);
+    [[nodiscard]] const std::vector<BindingSet*>& bindingSets() const;
 
 private:
     std::optional<Viewport> m_viewport {};
     std::optional<BlendState> m_blendState {};
     std::optional<RasterState> m_rasterState {};
-    std::vector<const BindingSet*> m_bindingSets {};
+    std::vector<BindingSet*> m_bindingSets {};
 };
 
 enum class RTVertexFormat {
@@ -608,15 +608,15 @@ private:
 class RayTracingState : public Resource {
 public:
     RayTracingState() = default;
-    RayTracingState(Backend&, ShaderBindingTable, std::vector<const BindingSet*>, uint32_t maxRecursionDepth);
+    RayTracingState(Backend&, ShaderBindingTable, std::vector<BindingSet*>, uint32_t maxRecursionDepth);
 
     [[nodiscard]] uint32_t maxRecursionDepth() const;
     [[nodiscard]] const ShaderBindingTable& shaderBindingTable() const;
-    [[nodiscard]] const std::vector<const BindingSet*>& bindingSets() const;
+    [[nodiscard]] const std::vector<BindingSet*>& bindingSets() const;
 
 private:
     ShaderBindingTable m_shaderBindingTable;
-    std::vector<const BindingSet*> m_bindingSets;
+    std::vector<BindingSet*> m_bindingSets;
     uint32_t m_maxRecursionDepth;
 };
 

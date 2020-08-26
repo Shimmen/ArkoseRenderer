@@ -1145,7 +1145,7 @@ VulkanBindingSet::~VulkanBindingSet()
 }
 
 VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& renderTarget, VertexLayout vertexLayout,
-                                     Shader shader, const std::vector<const BindingSet*>& bindingSets,
+                                     Shader shader, const std::vector<BindingSet*>& bindingSets,
                                      Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState)
     : RenderState(backend, renderTarget, vertexLayout, shader, bindingSets, viewport, blendState, rasterState, depthState)
 {
@@ -1688,7 +1688,7 @@ VulkanBottomLevelAS::~VulkanBottomLevelAS()
     }
 }
 
-VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTable sbt, std::vector<const BindingSet*> bindingSets, uint32_t maxRecursionDepth)
+VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTable sbt, std::vector<BindingSet*> bindingSets, uint32_t maxRecursionDepth)
     : RayTracingState(backend, sbt, bindingSets, maxRecursionDepth)
 {
     auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend);
