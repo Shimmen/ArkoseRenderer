@@ -11,8 +11,8 @@ BloomNode::BloomNode(Scene& scene)
 
 RenderGraphNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
 {
-    Texture& targetTexture = *reg.getTexture("forward", "color").value();
-    Extent2D baseExtent = targetTexture.extent();
+    Texture& mainTexture = *reg.getTexture("forward", "color").value();
+    Extent2D baseExtent = mainTexture.extent();
 
     const size_t numDownsamples = 6;
     const size_t numLevels = numDownsamples + 1;
@@ -59,16 +59,16 @@ RenderGraphNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
     Shader upsampleShader = Shader::createCompute("bloom/upsample.comp");
     ComputeState& upsampleState = reg.createComputeState(upsampleShader, captures.upsampleSets);
 
-    BindingSet& blendBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &targetTexture, ShaderBindingType::StorageImage },
+    BindingSet& blendBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &mainTexture, ShaderBindingType::StorageImage },
                                                          { 1, ShaderStageCompute, captures.upsampleTextures[0], ShaderBindingType::StorageImage } });
     Shader bloomBlendShader = Shader::createCompute("bloom/blend.comp");
     ComputeState& bloomBlendComputeState = reg.createComputeState(bloomBlendShader, { &blendBindingSet });
 
-    return [&targetTexture, &downsampleState, &upsampleState, &bloomBlendComputeState, &blendBindingSet, captures](const AppState& appState, CommandList& cmdList) {
+    return [&mainTexture, &downsampleState, &upsampleState, &bloomBlendComputeState, &blendBindingSet, captures](const AppState& appState, CommandList& cmdList) {
         const Extent3D localSizeForComp { 16, 16, 1 };
 
         // Copy image to the top level of the downsample stack
-        cmdList.copyTexture(targetTexture, *captures.downsampleTextures[0]);
+        cmdList.copyTexture(mainTexture, *captures.downsampleTextures[0]);
 
         // Iteratively downsample the stack
 
@@ -123,7 +123,7 @@ RenderGraphNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
             cmdList.setComputeState(bloomBlendComputeState);
             cmdList.bindSet(blendBindingSet, 0);
             cmdList.pushConstant(ShaderStageCompute, bloomBlend, 0);
-            cmdList.dispatch(targetTexture.extent(), localSizeForComp);
+            cmdList.dispatch(mainTexture.extent(), localSizeForComp);
         }
     };
 }
