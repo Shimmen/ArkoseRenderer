@@ -29,6 +29,7 @@ add_executable(ArkoseRenderer
     src/rendering/scene/Vertex.cpp
     src/rendering/scene/models/GltfModel.cpp
     src/rendering/scene/Light.cpp
+    src/rendering/nodes/BloomNode.cpp
     src/rendering/nodes/DebugForwardNode.cpp
     src/rendering/nodes/ExposureNode.cpp
     src/rendering/nodes/SceneNode.cpp

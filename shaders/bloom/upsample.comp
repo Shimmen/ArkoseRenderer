@@ -1,0 +1,64 @@
+#version 460
+
+#include <common/sampling.glsl>
+
+layout(set = 0, binding = 0, rgba16f) restrict writeonly uniform image2D targetImg;              // A' : level0 upsampled     |
+layout(set = 0, binding = 1, rgba16f) restrict readonly uniform image2D nextLevelUpsampledImg;   // B' : level1 upsampled     |=>  A' = A + blur(B')
+layout(set = 0, binding = 2, rgba16f) restrict readonly uniform image2D sameLevelDownsampledImg; // A  : level0 downsampled   |
+
+layout(push_constant) uniform PushConstants {
+    float blurRadius;
+};
+
+vec4 sampleNextLevelUpsampledBilinear(vec2 uv)
+{
+    vec2 clampedUv = clamp(uv, vec2(0.0), vec2(1.0));
+    vec2 coord = clampedUv * (imageSize(nextLevelUpsampledImg) - ivec2(1));
+
+    ivec2 iCoord = ivec2(floor(coord));
+    vec2 fCoord = fract(coord);
+
+    vec4 bl = imageLoad(nextLevelUpsampledImg, iCoord + ivec2(0, 0));
+    vec4 br = imageLoad(nextLevelUpsampledImg, iCoord + ivec2(1, 0));
+    vec4 tl = imageLoad(nextLevelUpsampledImg, iCoord + ivec2(0, 1));
+    vec4 tr = imageLoad(nextLevelUpsampledImg, iCoord + ivec2(1, 1));
+    return bilinearFilter(tl, tr, bl, br, fCoord);
+}
+
+// See https://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare
+vec4 tent3x3Upsample(vec2 uv, vec2 offset)
+{
+    vec4 color = 6.0 * sampleNextLevelUpsampledBilinear(uv);
+
+    color += 2.0 * sampleNextLevelUpsampledBilinear(uv + vec2(-offset.x, 0.0));
+    color += 2.0 * sampleNextLevelUpsampledBilinear(uv + vec2(+offset.x, 0.0));
+    color += 2.0 * sampleNextLevelUpsampledBilinear(uv + vec2(0.0, -offset.y));
+    color += 2.0 * sampleNextLevelUpsampledBilinear(uv + vec2(0.0, +offset.y));
+
+    color += 1.0 * sampleNextLevelUpsampledBilinear(uv + vec2(-offset.x, -offset.y));
+    color += 1.0 * sampleNextLevelUpsampledBilinear(uv + vec2(-offset.x, +offset.y));
+    color += 1.0 * sampleNextLevelUpsampledBilinear(uv + vec2(+offset.x, -offset.y));
+    color += 1.0 * sampleNextLevelUpsampledBilinear(uv + vec2(+offset.x, +offset.y));
+
+    return color / vec4(18.0);
+}
+
+layout(local_size_x = 16, local_size_y = 16) in;
+void main()
+{
+    ivec2 targetSize = imageSize(targetImg);
+
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(pixelCoord, targetSize)))
+        return;
+
+    vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(targetSize);
+    vec2 offset = vec2(1.0, targetSize.x / targetSize.y) * vec2(blurRadius);
+    vec4 blurred = tent3x3Upsample(uv, offset);
+
+    vec4 original = imageLoad(sameLevelDownsampledImg, pixelCoord);
+
+    // A' = A + blur(B')
+    vec4 target = original + blurred;
+    imageStore(targetImg, pixelCoord, target);
+}

@@ -1,5 +1,6 @@
 #include "SimpleApp.h"
 
+#include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/ExposureNode.h"
 #include "rendering/nodes/GBufferNode.h"
 #include "rendering/nodes/PickingNode.h"
@@ -34,8 +35,10 @@ void SimpleApp::setup(RenderGraph& graph)
 
     graph.addNode<GBufferNode>(scene());
     graph.addNode<SlowForwardRenderNode>(scene());
-
     graph.addNode<SkyViewNode>(scene());
+
+    graph.addNode<BloomNode>(scene());
+
     graph.addNode<ExposureNode>(scene());
 
     graph.addNode("final", [](Registry& reg) {
