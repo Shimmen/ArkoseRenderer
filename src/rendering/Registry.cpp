@@ -70,6 +70,27 @@ Texture& Registry::createMultisampledTexture2D(Extent2D extent, Texture::Format 
     return *m_textures.back();
 }
 
+Texture& Registry::createCubemapTexture(Extent2D extent, Texture::Format format)
+{
+    Texture::TextureDescription desc {
+        .type = Texture::Type::Cubemap,
+        .extent = Extent3D(extent, 1),
+        .format = format,
+        .minFilter = Texture::MinFilter::Linear,
+        .magFilter = Texture::MagFilter::Linear,
+        .wrapMode = {
+            Texture::WrapMode::ClampToEdge,
+            Texture::WrapMode::ClampToEdge,
+            Texture::WrapMode::ClampToEdge },
+        .mipmap = Texture::Mipmap::None,
+        .multisampling = Texture::Multisampling::None
+    };
+
+    auto texture = backend().createTexture(desc);
+    m_textures.push_back(std::move(texture));
+    return *m_textures.back();
+}
+
 Buffer& Registry::createBuffer(size_t size, Buffer::Usage usage, Buffer::MemoryHint memoryHint)
 {
     if (size == 0)

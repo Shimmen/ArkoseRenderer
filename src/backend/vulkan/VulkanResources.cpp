@@ -118,8 +118,6 @@ void VulkanBuffer::updateData(const std::byte* data, size_t updateSize)
 VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
     : Texture(backend, desc)
 {
-    MOOSLIB_ASSERT(desc.type == Texture::Type::Texture2D);
-
     // HACK: Now we longer specify what usage we want for the texture, and instead always select all
     //  possible capabilities. However, some texture formats (e.g. sRGB formats) do not support being
     //  used as a storage image, so we need to explicitly disable it for those formats.
@@ -187,16 +185,28 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
     allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
     VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-    imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
     imageCreateInfo.extent = { .width = extent().width(), .height = extent().height(), .depth = 1 };
     imageCreateInfo.mipLevels = mipLevels();
-    imageCreateInfo.arrayLayers = 1;
     imageCreateInfo.usage = usageFlags;
     imageCreateInfo.format = vkFormat;
     imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     imageCreateInfo.samples = static_cast<VkSampleCountFlagBits>(multisampling());
     imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    switch (type()) {
+    case Type::Texture2D:
+        imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageCreateInfo.arrayLayers = 1;
+        break;
+    case Type::Cubemap:
+        imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+        imageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
+        imageCreateInfo.arrayLayers = 6;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+    }
 
     auto& allocator = static_cast<VulkanBackend&>(backend).globalAllocator();
     if (vmaCreateImage(allocator, &imageCreateInfo, &allocCreateInfo, &image, &allocation, nullptr) != VK_SUCCESS) {
@@ -211,7 +221,6 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
     }
 
     VkImageViewCreateInfo viewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-    viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
     viewCreateInfo.subresourceRange.aspectMask = aspectFlags;
     viewCreateInfo.image = image;
     viewCreateInfo.format = vkFormat;
@@ -223,8 +232,21 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
     };
     viewCreateInfo.subresourceRange.baseMipLevel = 0;
     viewCreateInfo.subresourceRange.levelCount = mipLevels();
-    viewCreateInfo.subresourceRange.baseArrayLayer = 0;
-    viewCreateInfo.subresourceRange.layerCount = 1;
+
+    switch (type()) {
+    case Type::Texture2D:
+        viewCreateInfo.subresourceRange.baseArrayLayer = 0;
+        viewCreateInfo.subresourceRange.layerCount = 1;
+        viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        break;
+    case Type::Cubemap:
+        viewCreateInfo.subresourceRange.baseArrayLayer = 0;
+        viewCreateInfo.subresourceRange.layerCount = 6;
+        viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+    }
 
     VkDevice device = static_cast<VulkanBackend&>(backend).device();
     if (vkCreateImageView(device, &viewCreateInfo, nullptr, &imageView) != VK_SUCCESS) {
