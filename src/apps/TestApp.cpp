@@ -12,7 +12,6 @@
 #include "rendering/nodes/SceneNode.h"
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SkyViewNode.h"
-#include "rendering/nodes/SlowForwardRenderNode.h"
 #include "rendering/scene/models/GltfModel.h"
 #include "utility/GlobalState.h"
 #include "utility/Input.h"
@@ -43,7 +42,7 @@ void TestApp::setup(RenderGraph& graph)
     graph.addNode<PickingNode>(scene());
     graph.addNode<GBufferNode>(scene());
     graph.addNode<ShadowMapNode>(scene());
-    graph.addNode<SlowForwardRenderNode>(scene());
+    graph.addNode<ForwardRenderNode>(scene());
     if (rtxOn) {
         graph.addNode<RTAccelerationStructures>(scene());
         graph.addNode<RTAmbientOcclusion>(scene());

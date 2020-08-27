@@ -5,7 +5,6 @@
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/SceneNode.h"
 #include "rendering/nodes/ShadowMapNode.h"
-#include "rendering/nodes/SlowForwardRenderNode.h"
 #include "rendering/scene/models/GltfModel.h"
 #include "utility/GlobalState.h"
 #include "utility/Input.h"
