@@ -12,8 +12,6 @@ public:
     explicit GltfMesh(std::string name, const GltfModel* parent, const tinygltf::Model&, const tinygltf::Primitive&, mat4 matrix);
     ~GltfMesh() override = default;
 
-    std::vector<CanonoicalVertex> canonoicalVertexData() const override;
-
     const std::vector<vec3>& positionData() const override;
     const std::vector<vec2>& texcoordData() const override;
     const std::vector<vec3>& normalData() const override;

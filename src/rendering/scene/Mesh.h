@@ -31,18 +31,6 @@ public:
     void ensureIndexBuffer();
     const Buffer& indexBuffer();
 
-    // TODO: Remove this vvvvv
-    struct CanonoicalVertex {
-        vec3 position;
-        vec2 texCoord;
-        vec3 normal;
-        vec4 tangent;
-    };
-
-    static VertexLayout canonoicalVertexLayout();
-    virtual std::vector<CanonoicalVertex> canonoicalVertexData() const = 0;
-    // TODO: Remove this ^^^^^
-
     virtual const std::vector<vec3>& positionData() const = 0;
     virtual const std::vector<vec2>& texcoordData() const = 0;
     virtual const std::vector<vec3>& normalData() const = 0;
@@ -55,9 +43,6 @@ public:
 
 protected:
     // CPU data cache
-    // TODO: Remove this vvvvv
-    mutable std::optional<std::vector<CanonoicalVertex>> m_canonoicalVertexData;
-    // TODO: Remove this ^^^^^
     mutable std::optional<std::vector<vec3>> m_positionData;
     mutable std::optional<std::vector<vec2>> m_texcoordData;
     mutable std::optional<std::vector<vec3>> m_normalData;

@@ -111,39 +111,6 @@ GltfModel::GltfModel(std::string path, const tinygltf::Model& model)
     }
 }
 
-std::vector<Mesh::CanonoicalVertex> GltfMesh::canonoicalVertexData() const
-{
-    if (m_canonoicalVertexData.has_value())
-        return m_canonoicalVertexData.value();
-
-    auto& posData = positionData();
-    auto& texData = texcoordData();
-    auto& normData = normalData();
-    auto& tangData = tangentData();
-
-    size_t posSize = posData.size();
-    size_t texSize = texData.size();
-    size_t normalSize = normData.size();
-    size_t tangentSize = tangData.size();
-
-    m_canonoicalVertexData = std::vector<CanonoicalVertex>();
-    m_canonoicalVertexData.value().reserve(posSize);
-
-    for (int i = 0; i < posSize; ++i) {
-
-        vec2 tex = (i < texSize) ? texData[i] : vec2(0.0f);
-        vec3 norm = (i < normalSize) ? normData[i] : vec3(0.0f);
-        vec4 tang = (i < tangentSize) ? tangData[i] : vec4(0.0f);
-
-        m_canonoicalVertexData.value().push_back({ .position = posData[i],
-                                                   .texCoord = tex,
-                                                   .normal = norm,
-                                                   .tangent = tang });
-    }
-
-    return m_canonoicalVertexData.value();
-}
-
 size_t GltfModel::meshCount() const
 {
     return m_meshes.size();
