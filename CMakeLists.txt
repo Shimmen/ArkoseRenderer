@@ -6,8 +6,8 @@ include(FetchContent)
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 add_executable(ArkoseRenderer
-    src/apps/TestApp.cpp
-    src/apps/SimpleApp.cpp
+    src/apps/RayTracingApp.cpp
+    src/apps/ShowcaseApp.cpp
     src/apps/MultisampleTest.cpp
     src/main.cpp
     src/backend/Backend.cpp

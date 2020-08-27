@@ -1,4 +1,4 @@
-#include "SimpleApp.h"
+#include "ShowcaseApp.h"
 
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/ExposureNode.h"
@@ -11,22 +11,27 @@
 #include "rendering/scene/models/GltfModel.h"
 #include "utility/GlobalState.h"
 #include "utility/Input.h"
+#include "utility/Logging.h"
 #include <imgui.h>
 
-std::vector<Backend::Capability> SimpleApp::requiredCapabilities()
+std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
 {
     return {};
 }
 
-std::vector<Backend::Capability> SimpleApp::optionalCapabilities()
+std::vector<Backend::Capability> ShowcaseApp::optionalCapabilities()
 {
     return { Backend::Capability::ShaderTextureArrayDynamicIndexing,
              Backend::Capability::ShaderBufferArrayDynamicIndexing };
 }
 
-void SimpleApp::setup(RenderGraph& graph)
+void ShowcaseApp::setup(RenderGraph& graph)
 {
+    LogInfo("Loading scene\n");
     scene().loadFromFile("assets/sample/cornell-box.json");
+    LogInfo("Done loading scene\n");
+
+    LogInfo("Setting up render graph\n");
 
     graph.addNode<SceneNode>(scene());
     graph.addNode<PickingNode>(scene());
@@ -62,9 +67,11 @@ void SimpleApp::setup(RenderGraph& graph)
             cmdList.draw(vertexBuffer, 3);
         };
     });
+
+    LogInfo("Done setting up render graph\n");
 }
 
-void SimpleApp::update(float elapsedTime, float deltaTime)
+void ShowcaseApp::update(float elapsedTime, float deltaTime)
 {
     const Input& input = Input::instance();
     scene().camera().update(input, GlobalState::get().windowExtent(), deltaTime);

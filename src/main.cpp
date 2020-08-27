@@ -12,8 +12,9 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
-#include "apps/SimpleApp.h"
-#include "apps/TestApp.h"
+#include "apps/MultisampleTest.h"
+#include "apps/RayTracingApp.h"
+#include "apps/ShowcaseApp.h"
 
 enum class WindowType {
     Windowed,
@@ -100,7 +101,7 @@ int main(int argc, char** argv)
     Input::registerWindow(window);
 
     {
-        auto app = std::make_unique<SimpleApp>();
+        auto app = std::make_unique<ShowcaseApp>();
         auto backend = createBackend(backendType, window, *app);
 
         LogInfo("ArkoseRenderer: main loop begin.\n");

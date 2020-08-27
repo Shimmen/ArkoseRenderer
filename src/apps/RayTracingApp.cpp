@@ -1,4 +1,4 @@
-#include "TestApp.h"
+#include "RayTracingApp.h"
 
 #include "rendering/nodes/ExposureNode.h"
 #include "rendering/nodes/ForwardRenderNode.h"
@@ -18,19 +18,19 @@
 #include <imgui.h>
 #include <mooslib/transform.h>
 
-std::vector<Backend::Capability> TestApp::requiredCapabilities()
+std::vector<Backend::Capability> RayTracingApp::requiredCapabilities()
 {
     return { Backend::Capability::RtxRayTracing,
              Backend::Capability::ShaderTextureArrayDynamicIndexing,
              Backend::Capability::ShaderBufferArrayDynamicIndexing };
 }
 
-std::vector<Backend::Capability> TestApp::optionalCapabilities()
+std::vector<Backend::Capability> RayTracingApp::optionalCapabilities()
 {
     return {};
 }
 
-void TestApp::setup(RenderGraph& graph)
+void RayTracingApp::setup(RenderGraph& graph)
 {
     //scene().loadFromFile("assets/sample/sponza.json");
     scene().loadFromFile("assets/sample/cornell-box.json");
@@ -114,11 +114,11 @@ void TestApp::setup(RenderGraph& graph)
     });
 }
 
-void TestApp::update(float elapsedTime, float deltaTime)
+void RayTracingApp::update(float elapsedTime, float deltaTime)
 {
     m_frameTimeAvg.report(deltaTime);
 
-    ImGui::Begin("TestApp");
+    ImGui::Begin("RayTracingApp");
     float avgFrameTime = m_frameTimeAvg.runningAverage() * 1000.0f;
     ImGui::Text("Frame time: %.2f ms/frame", avgFrameTime);
     if (ImGui::CollapsingHeader("Cameras"))
