@@ -36,7 +36,6 @@ add_executable(ArkoseRenderer
     src/rendering/nodes/PickingNode.cpp
     src/rendering/nodes/GBufferNode.cpp
     src/rendering/nodes/ForwardRenderNode.cpp
-    src/rendering/nodes/SlowForwardRenderNode.cpp
     src/rendering/nodes/ShadowMapNode.cpp
     src/rendering/nodes/SkyViewNode.cpp
     src/rendering/nodes/RTAccelerationStructures.cpp
