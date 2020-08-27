@@ -8,7 +8,8 @@
 struct ForwardMaterial {
     int baseColor;
     int normalMap;
-    int pad0, pad1;
+    int metallicRoughness;
+    int emissive;
 };
 
 struct PerForwardObject {

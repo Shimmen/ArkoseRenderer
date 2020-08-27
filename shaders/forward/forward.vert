@@ -1,5 +1,4 @@
-#version 450
-#extension GL_KHR_vulkan_glsl : enable
+#version 460
 
 #include <shared/CameraState.h>
 #include <shared/ForwardData.h>
@@ -9,25 +8,20 @@ layout(location = 1) in vec2 aTexCoord;
 layout(location = 2) in vec3 aNormal;
 layout(location = 3) in vec4 aTangent;
 
-layout(binding = 0) uniform CameraStateBlock
-{
-    CameraState camera;
-};
-
-layout(binding = 1) uniform PerObjectBlock
-{
-    PerForwardObject perObject[FORWARD_MAX_DRAWABLES];
-};
+layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
+layout(set = 0, binding = 1) uniform PerObjectBlock { PerForwardObject perObject[FORWARD_MAX_DRAWABLES]; };
 
 layout(location = 0) out vec2 vTexCoord;
 layout(location = 1) out vec3 vPosition;
 layout(location = 2) out vec3 vNormal;
-layout(location = 3) out mat3 vTbnMatrix;
-layout(location = 10) flat out int vMaterialIndex;
+layout(location = 3 /*, 4, 5*/) out mat3 vTbnMatrix;
+layout(location = 6) flat out int vMaterialIndex;
 
 void main()
 {
+    // TODO: Get this from a vertex buffer instead!
     int objectIndex = gl_InstanceIndex;
+
     PerForwardObject object = perObject[objectIndex];
     vMaterialIndex = object.materialIndex;
 

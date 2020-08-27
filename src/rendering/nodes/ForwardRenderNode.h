@@ -8,7 +8,7 @@
 
 class ForwardRenderNode final : public RenderGraphNode {
 public:
-    explicit ForwardRenderNode(const Scene&);
+    explicit ForwardRenderNode(Scene&);
 
     std::optional<std::string> displayName() const override { return "Forward"; }
 
@@ -18,23 +18,33 @@ public:
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:
-    struct Vertex {
+    struct ForwardVertex {
         vec3 position;
         vec2 texCoord;
         vec3 normal;
         vec4 tangent;
     };
 
+    VertexLayout vertexLayout {
+        sizeof(ForwardVertex),
+        { { 0, VertexAttributeType::Float3, offsetof(ForwardVertex, position) },
+          { 1, VertexAttributeType::Float2, offsetof(ForwardVertex, texCoord) },
+          { 2, VertexAttributeType ::Float3, offsetof(ForwardVertex, normal) },
+          { 3, VertexAttributeType ::Float4, offsetof(ForwardVertex, tangent) } }
+    };
+
+    SemanticVertexLayout semanticVertexLayout { VertexComponent::Position3F,
+                                                VertexComponent::TexCoord2F,
+                                                VertexComponent::Normal3F,
+                                                VertexComponent::Tangent4F };
+
     struct Drawable {
-        const Mesh* mesh {};
-        Buffer* vertexBuffer {};
-        Buffer* indexBuffer {};
-        uint32_t indexCount {};
-        int materialIndex {};
+        Mesh& mesh;
+        int materialIndex;
     };
 
     std::vector<Drawable> m_drawables {};
-    std::vector<const Texture*> m_textures {};
+    std::vector<Texture*> m_textures {};
     std::vector<ForwardMaterial> m_materials {};
-    const Scene& m_scene;
+    Scene& m_scene;
 };
