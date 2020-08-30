@@ -4,23 +4,23 @@
 #include <cstdint>
 
 struct Extent2D {
-    Extent2D()
+    constexpr Extent2D()
         : Extent2D(0, 0)
     {
     }
-    Extent2D(uint32_t width, uint32_t height)
+    constexpr Extent2D(uint32_t width, uint32_t height)
         : m_width(width)
         , m_height(height)
     {
     }
-    Extent2D(int width, int height)
+    constexpr Extent2D(int width, int height)
         : m_width(width)
         , m_height(height)
     {
         ASSERT(width >= 0);
         ASSERT(height >= 0);
     }
-    Extent2D(const Extent2D& other)
+    constexpr Extent2D(const Extent2D& other)
         : Extent2D(other.m_width, other.m_height)
     {
     }
@@ -43,21 +43,21 @@ private:
 };
 
 struct Extent3D {
-    Extent3D(uint32_t val = 0)
+    constexpr Extent3D(uint32_t val = 0)
         : Extent3D(val, val, val)
     {
     }
-    Extent3D(uint32_t width, uint32_t height, uint32_t depth)
+    constexpr Extent3D(uint32_t width, uint32_t height, uint32_t depth)
         : m_width(width)
         , m_height(height)
         , m_depth(depth)
     {
     }
-    Extent3D(const Extent3D& other)
+    constexpr Extent3D(const Extent3D& other)
         : Extent3D(other.m_width, other.m_height, other.m_depth)
     {
     }
-    Extent3D(const Extent2D& extent2d, uint32_t depth = 1)
+    constexpr Extent3D(const Extent2D& extent2d, uint32_t depth = 1)
         : Extent3D(extent2d.width(), extent2d.height(), depth)
     {
     }
