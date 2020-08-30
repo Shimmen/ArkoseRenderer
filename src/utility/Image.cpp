@@ -48,7 +48,7 @@ Image* Image::load(const std::string& imagePath, PixelType pixelType)
         Image* image = entry->second.get();
         // For now we only load RGBA images, but later we might wanna do some more advanced caching,
         //  where e.g. (path, RGBA) is loaded differently to a (path, RGB) (i.e., same path, different types)
-        MOOSLIB_ASSERT(image.info().pixelType == pixelType);
+        MOOSLIB_ASSERT(image->info().pixelType == pixelType);
         return image;
     }
 
