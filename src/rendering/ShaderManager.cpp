@@ -72,6 +72,8 @@ void ShaderManager::startFileWatching(unsigned msBetweenPolls, std::function<voi
 
 void ShaderManager::stopFileWatching()
 {
+    if (!m_fileWatchingActive)
+        return;
     m_fileWatchingActive = false;
     m_fileWatcherThread->join();
 }
