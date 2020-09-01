@@ -12,22 +12,6 @@ DebugForwardNode::DebugForwardNode(Scene& scene)
 {
 }
 
-void DebugForwardNode::constructNode(Registry& nodeReg)
-{
-    m_drawables.clear();
-    m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-        Drawable drawable {};
-        drawable.mesh = &mesh;
-
-        drawable.objectDataBuffer = &nodeReg.createBuffer(sizeof(PerForwardObject), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
-        drawable.bindingSet = &nodeReg.createBindingSet(
-            { { 0, ShaderStageVertex, drawable.objectDataBuffer },
-              { 1, ShaderStageFragment, mesh.material().baseColorTexture(), ShaderBindingType::TextureSampler } });
-
-        m_drawables.push_back(drawable);
-    });
-}
-
 RenderGraphNode::ExecuteCallback DebugForwardNode::constructFrame(Registry& reg) const
 {
     const RenderTarget& windowTarget = reg.windowRenderTarget();
@@ -50,25 +34,30 @@ RenderGraphNode::ExecuteCallback DebugForwardNode::constructFrame(Registry& reg)
                                                  { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Clear, StoreOp::Store } });
     }
 
-    Buffer* cameraUniformBuffer = reg.getBuffer("scene", "camera");
-    BindingSet& fixedBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageVertex | ShaderStageFragment), cameraUniformBuffer } });
+    BindingSet& cameraBindingSet = *reg.getBindingSet("scene", "cameraSet");
+    BindingSet& objectBindingSet = *reg.getBindingSet("scene", "objectSet");
+
+    struct Vertex {
+        vec3 position;
+        vec2 texCoord;
+        vec3 normal;
+        vec4 tangent;
+    };
 
     VertexLayout vertexLayout = VertexLayout {
-        sizeof(ForwardVertex),
-        { { 0, VertexAttributeType::Float3, offsetof(ForwardVertex, position) },
-          { 1, VertexAttributeType::Float2, offsetof(ForwardVertex, texCoord) },
-          { 2, VertexAttributeType ::Float3, offsetof(ForwardVertex, normal) },
-          { 3, VertexAttributeType ::Float4, offsetof(ForwardVertex, tangent) } }
+        sizeof(Vertex),
+        { { 0, VertexAttributeType::Float3, offsetof(Vertex, position) },
+          { 1, VertexAttributeType::Float2, offsetof(Vertex, texCoord) },
+          { 2, VertexAttributeType ::Float3, offsetof(Vertex, normal) },
+          { 3, VertexAttributeType ::Float4, offsetof(Vertex, tangent) } }
     };
 
     Shader shader = Shader::createBasicRasterize("forward/debug.vert", "forward/debug.frag");
 
     RenderStateBuilder renderStateBuilder { *renderTarget, shader, vertexLayout };
     renderStateBuilder.polygonMode = PolygonMode::Filled;
-
-    renderStateBuilder.addBindingSet(fixedBindingSet);
-    for (auto& drawable : m_drawables)
-        renderStateBuilder.addBindingSet(*drawable.bindingSet);
+    renderStateBuilder.addBindingSet(cameraBindingSet);
+    renderStateBuilder.addBindingSet(objectBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
     return [&](const AppState& appState, CommandList& cmdList) {
@@ -81,24 +70,15 @@ RenderGraphNode::ExecuteCallback DebugForwardNode::constructFrame(Registry& reg)
         });
 
         cmdList.beginRendering(renderState, ClearColor(0, 0, 0, 0), 1.0f);
-        cmdList.bindSet(fixedBindingSet, 0);
+        cmdList.bindSet(cameraBindingSet, 0);
+        cmdList.bindSet(objectBindingSet, 1);
 
-        for (const Drawable& drawable : m_drawables) {
-
-            PerForwardObject objectData {
-                .worldFromLocal = drawable.mesh->transform().worldMatrix(),
-                .worldFromTangent = mat4(drawable.mesh->transform().worldNormalMatrix())
-            };
-            drawable.objectDataBuffer->updateData(&objectData, sizeof(PerForwardObject));
-
-            cmdList.bindSet(*drawable.bindingSet, 1);
-
-            const Buffer& indexBuffer = drawable.mesh->indexBuffer();
-            const Buffer& vertexBuffer = drawable.mesh->vertexBuffer({ VertexComponent::Position3F,
-                                                                       VertexComponent::TexCoord2F,
-                                                                       VertexComponent::Normal3F,
-                                                                       VertexComponent::Tangent4F });
-            cmdList.drawIndexed(vertexBuffer, indexBuffer, drawable.mesh->indexCount(), drawable.mesh->indexType());
-        }
+        m_scene.forEachMesh([&](size_t meshIndex, Mesh& mesh) {
+            const Buffer& vertexBuffer = mesh.vertexBuffer({ VertexComponent::Position3F,
+                                                             VertexComponent::TexCoord2F,
+                                                             VertexComponent::Normal3F,
+                                                             VertexComponent::Tangent4F });
+            cmdList.drawIndexed(vertexBuffer, mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(), meshIndex);
+        });
     };
 }
