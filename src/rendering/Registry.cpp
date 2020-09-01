@@ -239,80 +239,45 @@ ComputeState& Registry::createComputeState(const Shader& shader, std::vector<Bin
 
 void Registry::publish(const std::string& name, Buffer& buffer)
 {
-    ASSERT(m_currentNodeName.has_value());
-    std::string fullName = makeQualifiedName(m_currentNodeName.value(), name);
-    auto entry = m_nameBufferMap.find(fullName);
-    ASSERT(entry == m_nameBufferMap.end());
-    m_nameBufferMap[fullName] = &buffer;
+    publishResource(name, buffer, m_nameBufferMap);
 }
 
 void Registry::publish(const std::string& name, Texture& texture)
 {
-    ASSERT(m_currentNodeName.has_value());
-    std::string fullName = makeQualifiedName(m_currentNodeName.value(), name);
-    auto entry = m_nameTextureMap.find(fullName);
-    ASSERT(entry == m_nameTextureMap.end());
-    m_nameTextureMap[fullName] = &texture;
+    publishResource(name, texture, m_nameTextureMap);
+}
+
+void Registry::publish(const std::string& name, BindingSet& bindingSet)
+{
+    publishResource(name, bindingSet, m_nameBindingSetMap);
 }
 
 void Registry::publish(const std::string& name, TopLevelAS& tlas)
 {
-    ASSERT(m_currentNodeName.has_value());
-    std::string fullName = makeQualifiedName(m_currentNodeName.value(), name);
-    auto entry = m_nameTopLevelASMap.find(fullName);
-    ASSERT(entry == m_nameTopLevelASMap.end());
-    m_nameTopLevelASMap[fullName] = &tlas;
+    publishResource(name, tlas, m_nameTopLevelASMap);
 }
 
-std::optional<Texture*> Registry::getTexture(const std::string& renderPass, const std::string& name)
+std::optional<Texture*> Registry::getTexture(const std::string& node, const std::string& name)
 {
-    std::string fullName = makeQualifiedName(renderPass, name);
-    auto entry = m_nameTextureMap.find(fullName);
-
-    if (entry == m_nameTextureMap.end()) {
+    Texture* texture = getResource(node, name, m_nameTextureMap);
+    if (!texture)
         return {};
-    }
-
-    ASSERT(m_currentNodeName.has_value());
-    NodeDependency dependency { m_currentNodeName.value(), renderPass };
-    m_nodeDependencies.insert(dependency);
-
-    Texture* texture = entry->second;
     return texture;
 }
 
-Buffer* Registry::getBuffer(const std::string& renderPass, const std::string& name)
+Buffer* Registry::getBuffer(const std::string& node, const std::string& name)
 {
-    std::string fullName = makeQualifiedName(renderPass, name);
-    auto entry = m_nameBufferMap.find(fullName);
-
-    if (entry == m_nameBufferMap.end()) {
-        return nullptr;
-    }
-
-    ASSERT(m_currentNodeName.has_value());
-    NodeDependency dependency { m_currentNodeName.value(), renderPass };
-    m_nodeDependencies.insert(dependency);
-
-    Buffer* buffer = entry->second;
-    return buffer;
+    return getResource(node, name, m_nameBufferMap);
 }
 
-TopLevelAS* Registry::getTopLevelAccelerationStructure(const std::string& renderPass, const std::string& name)
+BindingSet* Registry::getBindingSet(const std::string& node, const std::string& name)
 {
-    std::string fullName = makeQualifiedName(renderPass, name);
-    auto entry = m_nameTopLevelASMap.find(fullName);
+    return getResource(node, name, m_nameBindingSetMap);
+}
 
-    if (entry == m_nameTopLevelASMap.end()) {
-        return nullptr;
-    }
-
-    ASSERT(m_currentNodeName.has_value());
-    NodeDependency dependency { m_currentNodeName.value(), renderPass };
-    m_nodeDependencies.insert(dependency);
-
-    TopLevelAS* tlas = entry->second;
-    return tlas;
+TopLevelAS* Registry::getTopLevelAccelerationStructure(const std::string& node, const std::string& name)
+{
+    return getResource(node, name, m_nameTopLevelASMap);
 }
 
 const std::unordered_set<NodeDependency>& Registry::nodeDependencies() const

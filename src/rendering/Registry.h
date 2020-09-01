@@ -8,7 +8,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
-class Registry {
+class Registry final {
 public:
     explicit Registry(Backend&, const RenderTarget* windowRenderTarget = nullptr);
 
@@ -41,19 +41,18 @@ public:
 
     void publish(const std::string& name, Buffer&);
     void publish(const std::string& name, Texture&);
+    void publish(const std::string& name, BindingSet&);
     void publish(const std::string& name, TopLevelAS&);
 
-    [[nodiscard]] std::optional<Texture*> getTexture(const std::string& renderPass, const std::string& name);
-    [[nodiscard]] Buffer* getBuffer(const std::string& renderPass, const std::string& name);
-    [[nodiscard]] TopLevelAS* getTopLevelAccelerationStructure(const std::string& renderPass, const std::string& name);
+    [[nodiscard]] std::optional<Texture*> getTexture(const std::string& node, const std::string& name);
+    [[nodiscard]] Buffer* getBuffer(const std::string& node, const std::string& name);
+    [[nodiscard]] BindingSet* getBindingSet(const std::string& node, const std::string& name);
+    [[nodiscard]] TopLevelAS* getTopLevelAccelerationStructure(const std::string& node, const std::string& name);
 
     [[nodiscard]] const std::unordered_set<NodeDependency>& nodeDependencies() const;
 
     // REMOVE: not needed now/soon, I think..
     [[nodiscard]] Badge<Registry> exchangeBadges(Badge<Backend>) const;
-
-protected:
-    std::string makeQualifiedName(const std::string& node, const std::string& name);
 
 private:
     Backend& m_backend;
@@ -66,7 +65,16 @@ private:
 
     std::unordered_map<std::string, Buffer*> m_nameBufferMap;
     std::unordered_map<std::string, Texture*> m_nameTextureMap;
+    std::unordered_map<std::string, BindingSet*> m_nameBindingSetMap;
     std::unordered_map<std::string, TopLevelAS*> m_nameTopLevelASMap;
+
+    std::string makeQualifiedName(const std::string& node, const std::string& name);
+
+    template<typename T>
+    void publishResource(const std::string& name, T& resource, std::unordered_map<std::string, T*>& map);
+
+    template<typename T>
+    T* getResource(const std::string& node, const std::string& name, const std::unordered_map<std::string, T*>& map);
 
     std::vector<std::unique_ptr<Buffer>> m_buffers;
     std::vector<std::unique_ptr<Texture>> m_textures;
@@ -85,4 +93,30 @@ template<typename T>
     size_t dataSize = inData.size() * sizeof(T);
     auto* binaryData = reinterpret_cast<const std::byte*>(inData.data());
     return createBuffer(binaryData, dataSize, usage, memoryHint);
+}
+
+template<typename T>
+void Registry::publishResource(const std::string& name, T& resource, std::unordered_map<std::string, T*>& map)
+{
+    ASSERT(m_currentNodeName.has_value());
+    auto fullName = makeQualifiedName(m_currentNodeName.value(), name);
+    auto entry = map.find(fullName);
+    ASSERT(entry == map.end());
+    map[fullName] = &resource;
+}
+
+template<typename T>
+T* Registry::getResource(const std::string& node, const std::string& name, const std::unordered_map<std::string, T*>& map)
+{
+    std::string fullName = makeQualifiedName(node, name);
+    auto entry = map.find(fullName);
+    if (entry == map.end())
+        return nullptr;
+
+    ASSERT(m_currentNodeName.has_value());
+    NodeDependency dependency { m_currentNodeName.value(), node };
+    m_nodeDependencies.insert(dependency);
+
+    T* resource = entry->second;
+    return resource;
 }
