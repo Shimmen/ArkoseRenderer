@@ -418,7 +418,7 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
                 imageBarrier.subresourceRange.baseMipLevel = 0;
                 imageBarrier.subresourceRange.levelCount = texture.mipLevels();
                 imageBarrier.subresourceRange.baseArrayLayer = 0;
-                imageBarrier.subresourceRange.layerCount = 1;
+                imageBarrier.subresourceRange.layerCount = texture.layerCount();
 
                 VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
                 imageBarrier.srcAccessMask = 0;
@@ -497,7 +497,7 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)
                 imageBarrier.subresourceRange.baseMipLevel = 0;
                 imageBarrier.subresourceRange.levelCount = vulkanTexture.mipLevels();
                 imageBarrier.subresourceRange.baseArrayLayer = 0;
-                imageBarrier.subresourceRange.layerCount = 1;
+                imageBarrier.subresourceRange.layerCount = vulkanTexture.layerCount();
 
                 VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
                 imageBarrier.srcAccessMask = 0;
@@ -531,7 +531,7 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)
                 imageBarrier.subresourceRange.baseMipLevel = 0;
                 imageBarrier.subresourceRange.levelCount = vulkanTexture.mipLevels();
                 imageBarrier.subresourceRange.baseArrayLayer = 0;
-                imageBarrier.subresourceRange.layerCount = 1;
+                imageBarrier.subresourceRange.layerCount = vulkanTexture.layerCount();
 
                 VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
                 imageBarrier.srcAccessMask = 0;
@@ -582,7 +582,7 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
                 imageBarrier.subresourceRange.baseMipLevel = 0;
                 imageBarrier.subresourceRange.levelCount = texture.mipLevels();
                 imageBarrier.subresourceRange.baseArrayLayer = 0;
-                imageBarrier.subresourceRange.layerCount = 1;
+                imageBarrier.subresourceRange.layerCount = texture.layerCount();
 
                 VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
                 imageBarrier.srcAccessMask = 0;
@@ -616,7 +616,7 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
                 imageBarrier.subresourceRange.baseMipLevel = 0;
                 imageBarrier.subresourceRange.levelCount = texture.mipLevels();
                 imageBarrier.subresourceRange.baseArrayLayer = 0;
-                imageBarrier.subresourceRange.layerCount = 1;
+                imageBarrier.subresourceRange.layerCount = texture.layerCount();
 
                 VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
                 imageBarrier.srcAccessMask = 0;

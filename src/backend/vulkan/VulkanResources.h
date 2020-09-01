@@ -26,6 +26,8 @@ public:
 
     void generateMipmaps() override;
 
+    uint32_t layerCount() const;
+
     VkImage image;
     VmaAllocation allocation;
 

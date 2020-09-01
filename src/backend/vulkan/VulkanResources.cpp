@@ -667,6 +667,18 @@ void VulkanTexture::generateMipmaps()
     }
 }
 
+uint32_t VulkanTexture::layerCount() const
+{
+    switch (type()) {
+    case Texture::Type::Texture2D:
+        return 1;
+    case Texture::Type::Cubemap:
+        return 6;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+}
+
 VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment> attachments)
     : RenderTarget(backend, std::move(attachments))
 {
