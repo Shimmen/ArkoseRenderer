@@ -6,7 +6,7 @@
 class CommandList {
 public:
     virtual void clearTexture(Texture&, ClearColor) = 0;
-    virtual void copyTexture(Texture& src, Texture& dst) = 0;
+    virtual void copyTexture(Texture& src, Texture& dst, uint32_t srcLayer = 0, uint32_t dstLayer = 0) = 0;
     virtual void generateMipmaps(Texture&) = 0;
 
     virtual void beginRendering(const RenderState&, ClearColor, float clearDepth, uint32_t clearStencil = 0) = 0;

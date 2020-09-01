@@ -1,6 +1,7 @@
 #include "ShowcaseApp.h"
 
 #include "rendering/nodes/BloomNode.h"
+#include "rendering/nodes/DiffuseGINode.h"
 #include "rendering/nodes/ExposureNode.h"
 #include "rendering/nodes/ForwardRenderNode.h"
 #include "rendering/nodes/GBufferNode.h"
@@ -16,13 +17,13 @@
 
 std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
 {
-    return {};
+    return { Backend::Capability::ShaderTextureArrayDynamicIndexing,
+             Backend::Capability::ShaderBufferArrayDynamicIndexing };
 }
 
 std::vector<Backend::Capability> ShowcaseApp::optionalCapabilities()
 {
-    return { Backend::Capability::ShaderTextureArrayDynamicIndexing,
-             Backend::Capability::ShaderBufferArrayDynamicIndexing };
+    return {};
 }
 
 void ShowcaseApp::setup(RenderGraph& graph)
@@ -41,6 +42,13 @@ void ShowcaseApp::setup(RenderGraph& graph)
     graph.addNode<GBufferNode>(scene());
     graph.addNode<ForwardRenderNode>(scene());
     graph.addNode<SkyViewNode>(scene());
+
+    auto probeGridDescription = DiffuseGINode::ProbeGridDescription {
+        .gridDimensions = { 8, 8, 8 },
+        .probeSpacing = { 1, 1, 1 },
+        .offsetToFirst = vec3(-4, -2, -4)
+    };
+    graph.addNode<DiffuseGINode>(scene(), probeGridDescription);
 
     graph.addNode<BloomNode>(scene());
 

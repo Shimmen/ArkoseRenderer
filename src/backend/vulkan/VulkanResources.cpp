@@ -140,6 +140,9 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
     case Texture::Format::R32F:
         vkFormat = VK_FORMAT_R32_SFLOAT;
         break;
+    case Texture::Format::RG16F:
+        vkFormat = VK_FORMAT_R16G16_SFLOAT;
+        break;
     case Texture::Format::RGBA16F:
         vkFormat = VK_FORMAT_R16G16B16A16_SFLOAT;
         break;
@@ -344,6 +347,10 @@ void VulkanTexture::setPixelData(vec4 pixel)
     case Texture::Format::R16F:
     case Texture::Format::R32F:
         numChannels = 1;
+        isHdr = true;
+        break;
+    case Texture::Format::RG16F:
+        numChannels = 2;
         isHdr = true;
         break;
     case Texture::Format::RGBA8:

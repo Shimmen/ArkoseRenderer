@@ -73,6 +73,7 @@ struct Texture : public Resource {
         R32,
         R16F,
         R32F,
+        RG16F,
         RGBA8,
         sRGBA8,
         RGBA16F,
@@ -219,6 +220,17 @@ enum class StoreOp {
     Ignore,
     Store,
 };
+
+enum class CubemapSide : uint32_t {
+    PositiveX = 0,
+    NegativeX = 1,
+    PositiveY = 2,
+    NegativeY = 3,
+    PositiveZ = 4,
+    NegativeZ = 5,
+};
+
+void forEachCubemapSide(std::function<void(CubemapSide, uint32_t)> callback);
 
 struct RenderTarget : public Resource {
 

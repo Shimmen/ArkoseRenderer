@@ -88,6 +88,14 @@ Texture::Multisampling Texture::multisampling() const
     return m_multisampling;
 }
 
+void forEachCubemapSide(std::function<void(CubemapSide, uint32_t)> callback)
+{
+    for (uint32_t idx = 0; idx < 6; ++idx) {
+        auto side = static_cast<CubemapSide>(idx);
+        callback(side, idx);
+    }
+}
+
 RenderTarget::RenderTarget(Backend& backend, std::vector<Attachment> attachments)
     : Resource(backend)
 {

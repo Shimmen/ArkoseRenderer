@@ -95,13 +95,11 @@ void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
     }
 }
 
-void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst)
+void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t srcLayer, uint32_t dstLayer)
 {
     auto& src = static_cast<VulkanTexture&>(genSrc);
     auto& dst = static_cast<VulkanTexture&>(genDst);
 
-    // NOTE: Texture3D should also be supported here
-    MOOSLIB_ASSERT(src.type() == Texture::Type::Texture2D && dst.type() == Texture::Type::Texture2D);
     MOOSLIB_ASSERT(!src.hasMipmaps() && !dst.hasMipmaps());
 
     MOOSLIB_ASSERT(src.hasDepthFormat() == dst.hasDepthFormat());
@@ -133,11 +131,13 @@ void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst)
         barriers[0].oldLayout = src.currentLayout;
         barriers[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         barriers[0].dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        barriers[0].subresourceRange.baseArrayLayer = srcLayer;
 
         barriers[1].image = dst.image;
         barriers[1].oldLayout = dst.currentLayout;
         barriers[1].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         barriers[1].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        barriers[1].subresourceRange.baseArrayLayer = dstLayer;
 
         vkCmdPipelineBarrier(m_commandBuffer,
                              VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
@@ -161,14 +161,14 @@ void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst)
         blit.srcOffsets[1] = extentToOffset(src.extent3D());
         blit.srcSubresource.aspectMask = aspectMask;
         blit.srcSubresource.mipLevel = 0;
-        blit.srcSubresource.baseArrayLayer = 0;
+        blit.srcSubresource.baseArrayLayer = srcLayer;
         blit.srcSubresource.layerCount = 1;
 
         blit.dstOffsets[0] = { 0, 0, 0 };
         blit.dstOffsets[1] = extentToOffset(dst.extent3D());
         blit.dstSubresource.aspectMask = aspectMask;
         blit.dstSubresource.mipLevel = 0;
-        blit.dstSubresource.baseArrayLayer = 0;
+        blit.dstSubresource.baseArrayLayer = dstLayer;
         blit.dstSubresource.layerCount = 1;
 
         vkCmdBlitImage(m_commandBuffer,
@@ -195,10 +195,12 @@ void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst)
         barriers[0].image = src.image;
         barriers[0].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
         barriers[0].newLayout = initialSrcLayout;
+        barriers[0].subresourceRange.baseArrayLayer = srcLayer;
 
         barriers[1].image = dst.image;
         barriers[1].oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         barriers[1].newLayout = finalDstLayout;
+        barriers[1].subresourceRange.baseArrayLayer = dstLayer;
 
         vkCmdPipelineBarrier(m_commandBuffer,
                              VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
