@@ -60,23 +60,15 @@ void SceneNode::constructNode(Registry& reg)
 
 RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
 {
-    Buffer& cameraUniformBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
-    reg.publish("camera", cameraUniformBuffer);
-
-    // Light data stuff
-    // TODO: Support any (reasonable) number of shadow maps & lights!
-    const DirectionalLight& light = m_scene.sun();
-    Buffer& lightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
-    BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &m_scene.sun().shadowMap(), ShaderBindingType::TextureSampler },
-                                                         { 1, ShaderStageFragment, &lightDataBuffer } });
-    reg.publish("lightData", lightDataBuffer);
-    reg.publish("shadowMap", m_scene.sun().shadowMap()); // FIXME: This won't work later when we have multiple shadow maps!
+    Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+    BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageVertex | ShaderStageFragment), &cameraBuffer } });
+    reg.publish("camera", cameraBuffer);
+    reg.publish("cameraSet", cameraBindingSet);
 
     // Environment mapping stuff
     // TODO: Remove this! Barely used anyway, and not the most convenient format anyway..
     Buffer& envDataBuffer = reg.createBuffer(sizeof(float), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     reg.publish("environmentData", envDataBuffer);
-
     Texture& envTexture = m_scene.environmentMap().empty()
         ? reg.createPixelTexture(vec4(1.0f), true)
         : reg.loadTexture2D(m_scene.environmentMap(), true, false);
@@ -88,13 +80,23 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     materialDataBuffer.updateData(m_materials.data(), materialBufferSize); // TODO: Update in exec?
     reg.publish("materialData", materialDataBuffer);
 
-    // Hmm, this is tricky.. Maybe just publish the binding set?
-    //reg.publish("materialTextures", m_textures);
-
     // Object data stuff
     size_t objectDataBufferSize = m_drawables.size() * sizeof(ShaderDrawable);
     Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     reg.publish("objectData", objectDataBuffer);
+
+    BindingSet& objectBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &objectDataBuffer },
+                                                          { 1, ShaderStageFragment, &materialDataBuffer },
+                                                          { 2, ShaderStageFragment, m_textures, SCENE_MAX_TEXTURES } });
+    reg.publish("objectSet", objectBindingSet);
+
+    // Light data stuff
+    // TODO: Support any (reasonable) number of shadow maps & lights!
+    const DirectionalLight& light = m_scene.sun();
+    Buffer& lightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+    BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &m_scene.sun().shadowMap(), ShaderBindingType::TextureSampler },
+                                                         { 1, ShaderStageFragment, &lightDataBuffer } });
+    reg.publish("lightSet", lightBindingSet);
 
     return [&](const AppState& appState, CommandList& cmdList) {
         ImGui::ColorEdit3("Sun color", value_ptr(m_scene.sun().color));
@@ -121,7 +123,7 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
                 .shutterSpeed = camera.shutterSpeed,
                 .exposureCompensation = camera.exposureCompensation,
             };
-            cameraUniformBuffer.updateData(&cameraState, sizeof(CameraState));
+            cameraBuffer.updateData(&cameraState, sizeof(CameraState));
         }
 
         // Update object data

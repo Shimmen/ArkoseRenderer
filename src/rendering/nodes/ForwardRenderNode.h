@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../RenderGraphNode.h"
-#include "ForwardData.h"
 #include "rendering/camera/FpsCamera.h"
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
@@ -11,10 +10,8 @@ public:
     explicit ForwardRenderNode(Scene&);
 
     std::optional<std::string> displayName() const override { return "Forward"; }
-
     static std::string name();
 
-    void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:
@@ -38,13 +35,5 @@ private:
                                                 VertexComponent::Normal3F,
                                                 VertexComponent::Tangent4F };
 
-    struct Drawable {
-        Mesh& mesh;
-        int materialIndex;
-    };
-
-    std::vector<Drawable> m_drawables {};
-    std::vector<Texture*> m_textures {};
-    std::vector<ForwardMaterial> m_materials {};
     Scene& m_scene;
 };

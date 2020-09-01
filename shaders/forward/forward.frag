@@ -3,7 +3,7 @@
 #include <common/brdf.glsl>
 #include <common/shadow.glsl>
 #include <shared/CameraState.h>
-#include <shared/ForwardData.h>
+#include <shared/SceneData.h>
 #include <shared/LightData.h>
 
 layout(location = 0) in vec2 vTexCoord;
@@ -13,11 +13,12 @@ layout(location = 3) in mat3 vTbnMatrix;
 layout(location = 6) flat in int vMaterialIndex;
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
-layout(set = 0, binding = 2) uniform MaterialBlock { ForwardMaterial materials[FORWARD_MAX_MATERIALS]; };
-layout(set = 0, binding = 3) uniform sampler2D textures[FORWARD_MAX_TEXTURES];
 
-layout(set = 1, binding = 0) uniform sampler2D dirLightShadowMapTex;
-layout(set = 1, binding = 1) uniform LightDataBlock { DirectionalLightData dirLight; };
+layout(set = 1, binding = 1) uniform MaterialBlock { ShaderMaterial materials[SCENE_MAX_MATERIALS]; };
+layout(set = 1, binding = 2) uniform sampler2D textures[SCENE_MAX_TEXTURES];
+
+layout(set = 2, binding = 0) uniform sampler2D dirLightShadowMapTex;
+layout(set = 2, binding = 1) uniform LightDataBlock { DirectionalLightData dirLight; };
 
 layout(push_constant) uniform PushConstants {
     float ambientAmount;
@@ -44,7 +45,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
 
 void main()
 {
-    ForwardMaterial material = materials[vMaterialIndex];
+    ShaderMaterial material = materials[vMaterialIndex];
 
     vec4 inputBaseColor = texture(textures[material.baseColor], vTexCoord).rgba;
     if (inputBaseColor.a < 1e-2) {

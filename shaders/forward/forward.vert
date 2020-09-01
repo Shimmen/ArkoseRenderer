@@ -1,7 +1,7 @@
 #version 460
 
 #include <shared/CameraState.h>
-#include <shared/ForwardData.h>
+#include <shared/SceneData.h>
 
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec2 aTexCoord;
@@ -9,7 +9,7 @@ layout(location = 2) in vec3 aNormal;
 layout(location = 3) in vec4 aTangent;
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
-layout(set = 0, binding = 1) uniform PerObjectBlock { PerForwardObject perObject[FORWARD_MAX_DRAWABLES]; };
+layout(set = 1, binding = 0) uniform PerObjectBlock { ShaderDrawable perObject[SCENE_MAX_DRAWABLES]; };
 
 layout(location = 0) out vec2 vTexCoord;
 layout(location = 1) out vec3 vPosition;
@@ -22,7 +22,7 @@ void main()
     // TODO: Get this from a vertex buffer instead!
     int objectIndex = gl_InstanceIndex;
 
-    PerForwardObject object = perObject[objectIndex];
+    ShaderDrawable object = perObject[objectIndex];
     vMaterialIndex = object.materialIndex;
 
     vec4 viewSpacePos = camera.viewFromWorld * object.worldFromLocal * vec4(aPosition, 1.0);
