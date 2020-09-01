@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../RenderGraphNode.h"
-#include "ForwardData.h"
 #include "rendering/camera/FpsCamera.h"
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
@@ -19,7 +18,6 @@ public:
     static std::string name();
     std::optional<std::string> displayName() const override { return "Diffuse GI"; }
 
-    void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;
 
     int probeCount() const;
@@ -43,15 +41,6 @@ private:
     SemanticVertexLayout semanticVertexLayout { VertexComponent::Position3F,
                                                 VertexComponent::TexCoord2F,
                                                 VertexComponent::Normal3F };
-
-    struct Drawable {
-        Mesh& mesh;
-        int materialIndex;
-    };
-
-    std::vector<Drawable> m_drawables {};
-    std::vector<Texture*> m_textures {};
-    std::vector<ForwardMaterial> m_materials {};
 
     Scene& m_scene;
     ProbeGridDescription m_grid;

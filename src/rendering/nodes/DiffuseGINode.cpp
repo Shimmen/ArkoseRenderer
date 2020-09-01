@@ -1,7 +1,6 @@
 #include "DiffuseGINode.h"
 
 #include "CameraState.h"
-#include "ForwardData.h"
 #include "LightData.h"
 #include "utility/Logging.h"
 #include <imgui.h>
@@ -17,53 +16,6 @@ DiffuseGINode::DiffuseGINode(Scene& scene, ProbeGridDescription gridDescription)
     , m_scene(scene)
     , m_grid(gridDescription)
 {
-}
-
-void DiffuseGINode::constructNode(Registry& reg)
-{
-    m_drawables.clear();
-    m_materials.clear();
-    m_textures.clear();
-
-    m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-        mesh.ensureVertexBuffer(semanticVertexLayout);
-        mesh.ensureIndexBuffer();
-
-        // TODO: Remove redundant textures & materials with fancy indexing!
-        //  We can't even load Sponza right now without setting up >400 texture
-        //  which is obviously stupid. Texture reuse is most critical (more than
-        //  material reuse, I think). Texture reuse would have to be done by the
-        //  material class, as we ask the material for the texture object.
-
-        Material& material = mesh.material();
-
-        auto pushTexture = [&](Texture* texture) -> size_t {
-            size_t textureIndex = m_textures.size();
-            m_textures.push_back(texture);
-            return textureIndex;
-        };
-
-        ForwardMaterial forwardMaterial {};
-        forwardMaterial.baseColor = pushTexture(material.baseColorTexture());
-        forwardMaterial.emissive = pushTexture(material.emissiveTexture());
-        forwardMaterial.metallicRoughness = pushTexture(material.metallicRoughnessTexture());
-
-        int materialIndex = (int)m_materials.size();
-        m_materials.push_back(forwardMaterial);
-
-        m_drawables.push_back({ .mesh = mesh,
-                                .materialIndex = materialIndex });
-    });
-
-    if (m_drawables.size() > FORWARD_MAX_DRAWABLES) {
-        LogErrorAndExit("DiffuseGINode: we need to up the number of max drawables that can be handled in the forward pass! We have %u, the capacity is %u.\n",
-                        m_drawables.size(), FORWARD_MAX_DRAWABLES);
-    }
-
-    if (m_textures.size() > FORWARD_MAX_TEXTURES) {
-        LogErrorAndExit("DiffuseGINode: we need to up the number of max textures that can be handled in the forward pass! We have %u, the capacity is %u.\n",
-                        m_textures.size(), FORWARD_MAX_TEXTURES);
-    }
 }
 
 RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) const
@@ -96,21 +48,8 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     Buffer& cameraBuffer = reg.createBuffer(6 * sizeof(CameraMatrices), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageVertex | ShaderStageFragment), &cameraBuffer } });
 
-    size_t perObjectBufferSize = m_drawables.size() * sizeof(PerForwardObject);
-    Buffer& perObjectBuffer = reg.createBuffer(perObjectBufferSize, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
-
-    size_t materialBufferSize = m_materials.size() * sizeof(ForwardMaterial);
-    Buffer& materialBuffer = reg.createBuffer(materialBufferSize, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
-    materialBuffer.updateData(m_materials.data(), materialBufferSize);
-
-    BindingSet& objectBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &perObjectBuffer },
-                                                          { 1, ShaderStageFragment, &materialBuffer },
-                                                          { 2, ShaderStageFragment, m_textures, FORWARD_MAX_TEXTURES } });
-
-    // TODO: Support any (reasonable) number of shadow maps & lights!
-    Buffer& lightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
-    BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &m_scene.sun().shadowMap(), ShaderBindingType::TextureSampler },
-                                                         { 1, ShaderStageFragment, &lightDataBuffer } });
+    BindingSet& objectBindingSet = *reg.getBindingSet("scene", "objectSet");
+    BindingSet& lightBindingSet = *reg.getBindingSet("scene", "lightSet");
 
     Shader renderShader = Shader::createBasicRasterize("diffuse-gi/forward.vert", "diffuse-gi/forward.frag");
     RenderStateBuilder renderStateBuilder { renderTarget, renderShader, vertexLayout };
@@ -119,37 +58,14 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     renderStateBuilder.addBindingSet(lightBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
+    m_scene.forEachMesh([&](size_t, Mesh& mesh) {
+        mesh.ensureVertexBuffer(semanticVertexLayout);
+        mesh.ensureIndexBuffer();
+    });
+
     return [&](const AppState& appState, CommandList& cmdList) {
         static float ambientLx = 0.0f;
         ImGui::SliderFloat("Injected ambient (lx)", &ambientLx, 0.0f, 1000.0f, "%.1f");
-
-        // Update object data
-        {
-            size_t numDrawables = m_drawables.size();
-            std::vector<PerForwardObject> perObjectData { numDrawables };
-            for (int i = 0; i < numDrawables; ++i) {
-                auto& drawable = m_drawables[i];
-                perObjectData[i] = {
-                    .worldFromLocal = drawable.mesh.transform().worldMatrix(),
-                    .worldFromTangent = mat4(drawable.mesh.transform().worldNormalMatrix()),
-                    .materialIndex = drawable.materialIndex
-                };
-            }
-            perObjectBuffer.updateData(perObjectData.data(), numDrawables * sizeof(PerForwardObject));
-        }
-
-        // Update light data
-        {
-            // TODO: Upload all relevant light here, not just the default 'sun' as we do now.
-            DirectionalLight& light = m_scene.sun();
-            DirectionalLightData dirLightData {
-                .colorAndIntensity = { light.color, light.illuminance },
-                .worldSpaceDirection = vec4(normalize(light.direction), 0.0),
-                .viewSpaceDirection = m_scene.camera().viewMatrix() * vec4(normalize(m_scene.sun().direction), 0.0),
-                .lightProjectionFromWorld = light.viewProjection()
-            };
-            lightDataBuffer.updateData(&dirLightData, sizeof(DirectionalLightData));
-        }
 
         // FIXME: Render them in a random order, but all renders once before any gets a second render (like in tetris!)
         static int s_nextProbeToRender = 0;

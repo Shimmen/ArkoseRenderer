@@ -1,14 +1,14 @@
 #version 460
 
 #include <shared/CameraState.h>
-#include <shared/ForwardData.h>
+#include <shared/SceneData.h>
 
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec2 aTexCoord;
 layout(location = 2) in vec3 aNormal;
 
 layout(set = 0, binding = 0) uniform CameraBlock { CameraMatrices cameras[6]; };
-layout(set = 1, binding = 0) uniform ObjectBlock { PerForwardObject perObject[FORWARD_MAX_DRAWABLES]; };
+layout(set = 1, binding = 0) uniform ObjectBlock { ShaderDrawable perObject[SCENE_MAX_DRAWABLES]; };
 
 layout(location = 0) out vec3 vPosition;
 layout(location = 1) out vec2 vTexCoord;
@@ -27,7 +27,7 @@ void main()
 
     CameraMatrices camera = cameras[sideIndex];
 
-    PerForwardObject object = perObject[objectIndex];
+    ShaderDrawable object = perObject[objectIndex];
     vMaterialIndex = object.materialIndex;
 
     vec4 viewSpacePos = camera.viewFromWorld * object.worldFromLocal * vec4(aPosition, 1.0);
