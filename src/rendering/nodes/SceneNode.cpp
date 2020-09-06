@@ -24,25 +24,33 @@ void SceneNode::constructNode(Registry& reg)
     m_materials.clear();
     m_textures.clear();
 
-    // TODO: Also similarly remove redundant materials!
-    std::unordered_map<Texture*, size_t> textureIndices;
+    std::unordered_map<Texture*, int> textureIndices;
+    auto pushTexture = [&](Texture* texture) -> int {
+        auto entry = textureIndices.find(texture);
+        if (entry != textureIndices.end())
+            return entry->second;
 
-    // TODO: Remove redundant textures & materials with fancy indexing!
+        int textureIndex = static_cast<int>(m_textures.size());
+        textureIndices[texture] = textureIndex;
+        m_textures.push_back(texture);
+
+        return textureIndex;
+    };
+
+    auto pushMaterial = [&](ShaderMaterial shaderMaterial) -> int {
+        for (int idx = 0; idx < m_materials.size(); ++idx) {
+            if (m_materials[idx] == shaderMaterial)
+                return idx;
+        }
+
+        int materialIndex = static_cast<int>(m_materials.size());
+        m_materials.push_back(shaderMaterial);
+
+        return materialIndex;
+    };
 
     m_scene.forEachMesh([&](size_t, Mesh& mesh) {
         Material& material = mesh.material();
-
-        auto pushTexture = [&](Texture* texture) -> size_t {
-            auto entry = textureIndices.find(texture);
-            if (entry != textureIndices.end())
-                return entry->second;
-
-            size_t textureIndex = m_textures.size();
-            textureIndices[texture] = textureIndex;
-            m_textures.push_back(texture);
-
-            return textureIndex;
-        };
 
         ShaderMaterial shaderMaterial {};
         shaderMaterial.baseColor = pushTexture(material.baseColorTexture());
@@ -50,8 +58,7 @@ void SceneNode::constructNode(Registry& reg)
         shaderMaterial.emissive = pushTexture(material.emissiveTexture());
         shaderMaterial.metallicRoughness = pushTexture(material.metallicRoughnessTexture());
 
-        int materialIndex = (int)m_materials.size();
-        m_materials.push_back(shaderMaterial);
+        int materialIndex = pushMaterial(shaderMaterial);
 
         m_drawables.push_back({ .mesh = mesh,
                                 .materialIndex = materialIndex });
