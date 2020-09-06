@@ -7,8 +7,8 @@ namespace geometry {
 
 struct Frustum {
 public:
+    Frustum() = default;
     static Frustum createFromProjectionMatrix(mat4);
-
 
     bool includesSphere(const Sphere&);
 
