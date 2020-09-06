@@ -3,7 +3,7 @@
 
 // These limits are arbitrary, and should be changed!
 #define SCENE_MAX_DRAWABLES 128
-#define SCENE_MAX_MATERIALS 64
+#define SCENE_MAX_MATERIALS 128
 #define SCENE_MAX_TEXTURES 256
 
 struct ShaderDrawable {

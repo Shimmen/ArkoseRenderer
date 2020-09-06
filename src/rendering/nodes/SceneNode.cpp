@@ -5,6 +5,7 @@
 #include "utility/Logging.h"
 #include <imgui.h>
 #include <mooslib/vector.h>
+#include <unordered_map>
 
 std::string SceneNode::name()
 {
@@ -23,14 +24,23 @@ void SceneNode::constructNode(Registry& reg)
     m_materials.clear();
     m_textures.clear();
 
+    // TODO: Also similarly remove redundant materials!
+    std::unordered_map<Texture*, size_t> textureIndices;
+
     // TODO: Remove redundant textures & materials with fancy indexing!
 
     m_scene.forEachMesh([&](size_t, Mesh& mesh) {
         Material& material = mesh.material();
 
         auto pushTexture = [&](Texture* texture) -> size_t {
+            auto entry = textureIndices.find(texture);
+            if (entry != textureIndices.end())
+                return entry->second;
+
             size_t textureIndex = m_textures.size();
+            textureIndices[texture] = textureIndex;
             m_textures.push_back(texture);
+
             return textureIndex;
         };
 
@@ -47,9 +57,16 @@ void SceneNode::constructNode(Registry& reg)
                                 .materialIndex = materialIndex });
     });
 
+    LogInfo("Scene: using %u materials & %u textures for %u drawables\n", m_materials.size(), m_textures.size(), m_drawables.size());
+
     if (m_drawables.size() > SCENE_MAX_DRAWABLES) {
         LogErrorAndExit("SceneNode: we need to up the number of max drawables that can be handled by the scene! We have %u, the capacity is %u.\n",
                         m_drawables.size(), SCENE_MAX_DRAWABLES);
+    }
+
+    if (m_materials.size() > SCENE_MAX_MATERIALS) {
+        LogErrorAndExit("SceneNode: we need to up the number of max materials that can be handled by the scene! We have %u, the capacity is %u.\n",
+                        m_materials.size(), SCENE_MAX_MATERIALS);
     }
 
     if (m_textures.size() > SCENE_MAX_TEXTURES) {
