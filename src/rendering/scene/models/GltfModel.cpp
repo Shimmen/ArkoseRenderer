@@ -154,8 +154,15 @@ GltfMesh::GltfMesh(std::string name, const GltfModel* parent, const tinygltf::Mo
         LogErrorAndExit("glTF mesh: primitive with mode other than triangles is not yet supported\n");
     }
 
-    // TODO: Add bounding boxes so we can do sorting, etc.
-    //meshInfo.aabb = mathkit::aabb(position.minValues, position.maxValues);
+    const tinygltf::Accessor& position = *getAccessor("POSITION");
+    ASSERT(position.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && position.type == TINYGLTF_TYPE_VEC3);
+    vec3 posMin = { (float)position.minValues[0], (float)position.minValues[1], (float)position.minValues[2] };
+    vec3 posMax = { (float)position.maxValues[0], (float)position.maxValues[1], (float)position.maxValues[2] };
+    m_aabb = moos::aabb3(posMin, posMax);
+
+    vec3 center = (posMax + posMin) / 2.0f;
+    float radius = length(posMax - posMin) / 2.0f;
+    m_boundingSphere = geometry::Sphere(center, radius);
 }
 
 std::unique_ptr<Material> GltfMesh::createMaterial()

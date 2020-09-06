@@ -16,6 +16,7 @@ add_executable(ArkoseRenderer
     src/backend/vulkan/VulkanCommandList.cpp
     src/backend/vulkan/VulkanResources.cpp
     src/backend/vulkan/VulkanRTX.cpp
+    src/geometry/Frustum.cpp
     src/rendering/Shader.cpp
     src/rendering/ShaderManager.cpp
     src/rendering/Registry.cpp

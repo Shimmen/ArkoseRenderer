@@ -2,7 +2,9 @@
 
 #include "LightData.h"
 #include "SceneNode.h"
+#include "geometry/Frustum.h"
 #include "utility/Logging.h"
+#include <imgui.h>
 
 std::string ForwardRenderNode::name()
 {
@@ -49,10 +51,23 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
         cmdList.bindSet(objectBindingSet, 1);
         cmdList.bindSet(lightBindingSet, 2);
 
+        // Perform frustum culling & draw non-culled meshes
+
+        int numDrawCallsIssued = 0;
+        mat4 cameraViewProjection = m_scene.camera().projectionMatrix() * m_scene.camera().viewMatrix();
+        auto cameraFrustum = geometry::Frustum::createFromProjectionMatrix(cameraViewProjection);
+
         m_scene.forEachMesh([&](size_t meshIndex, Mesh& mesh) {
+            geometry::Sphere sphere = mesh.boundingSphere().transformed(mesh.transform().worldMatrix());
+            if (!cameraFrustum.includesSphere(sphere))
+                return;
+
             cmdList.drawIndexed(mesh.vertexBuffer(semanticVertexLayout),
                                 mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(),
                                 meshIndex);
+            numDrawCallsIssued += 1;
         });
+
+        ImGui::Text("Issued draw calls: %i", numDrawCallsIssued);
     };
 }

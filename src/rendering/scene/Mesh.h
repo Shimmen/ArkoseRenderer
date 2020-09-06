@@ -1,9 +1,11 @@
 #pragma once
 
 #include "backend/Resources.h"
+#include "geometry/Sphere.h"
 #include "rendering/scene/Material.h"
 #include "rendering/scene/Transform.h"
 #include "rendering/scene/Vertex.h"
+#include <mooslib/aabb.h>
 #include <mooslib/vector.h>
 #include <unordered_map>
 
@@ -21,9 +23,11 @@ public:
     virtual Model* model() { return m_owner; }
     virtual const Model* model() const { return m_owner; }
 
+    Material& material();
     virtual const Transform& transform() const { return m_transform; }
 
-    Material& material();
+    virtual moos::aabb3 boundingBox() const = 0;
+    virtual geometry::Sphere boundingSphere() const = 0;
 
     void ensureVertexBuffer(const SemanticVertexLayout&);
     const Buffer& vertexBuffer(const SemanticVertexLayout&);

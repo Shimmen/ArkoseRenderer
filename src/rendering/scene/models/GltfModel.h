@@ -22,6 +22,9 @@ public:
     size_t indexCount() const override;
     bool isIndexed() const override;
 
+    moos::aabb3 boundingBox() const override { return m_aabb; }
+    geometry::Sphere boundingSphere() const override { return m_boundingSphere; }
+
 protected:
     std::unique_ptr<Material> createMaterial() override;
 
@@ -30,6 +33,8 @@ private:
 
 private:
     std::string m_name;
+    moos::aabb3 m_aabb;
+    geometry::Sphere m_boundingSphere;
     const GltfModel* m_parentModel;
     const tinygltf::Model* m_model;
     const tinygltf::Primitive* m_primitive;
