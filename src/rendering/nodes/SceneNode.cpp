@@ -64,8 +64,6 @@ void SceneNode::constructNode(Registry& reg)
                                 .materialIndex = materialIndex });
     });
 
-    LogInfo("Scene: using %u materials & %u textures for %u drawables\n", m_materials.size(), m_textures.size(), m_drawables.size());
-
     if (m_drawables.size() > SCENE_MAX_DRAWABLES) {
         LogErrorAndExit("SceneNode: we need to up the number of max drawables that can be handled by the scene! We have %u, the capacity is %u.\n",
                         m_drawables.size(), SCENE_MAX_DRAWABLES);
@@ -123,9 +121,26 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     reg.publish("lightSet", lightBindingSet);
 
     return [&](const AppState& appState, CommandList& cmdList) {
-        ImGui::ColorEdit3("Sun color", value_ptr(m_scene.sun().color));
-        ImGui::SliderFloat("Sun illuminance (lx)", &m_scene.sun().illuminance, 1.0f, 150000.0f);
-        ImGui::SliderFloat("Ambient (lx)", &m_scene.ambient(), 0.0f, 1000.0f);
+
+        if (ImGui::TreeNode("Metainfo")) {
+            ImGui::Text("Number of managed resources:");
+            ImGui::Columns(3);
+            ImGui::Text("meshes: %u", m_drawables.size());
+            ImGui::NextColumn();
+            ImGui::Text("materials: %u", m_materials.size());
+            ImGui::NextColumn();
+            ImGui::Text("textures: %u", m_textures.size());
+            ImGui::Columns(1);
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Lighting")) {
+            ImGui::ColorEdit3("Sun color", value_ptr(m_scene.sun().color));
+            ImGui::SliderFloat("Sun illuminance (lx)", &m_scene.sun().illuminance, 1.0f, 150000.0f);
+            ImGui::SliderFloat("Ambient (lx)", &m_scene.ambient(), 0.0f, 1000.0f);
+            ImGui::TreePop();
+        }
+
         if (ImGui::TreeNode("Cameras")) {
             m_scene.cameraGui();
             ImGui::TreePop();
