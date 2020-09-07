@@ -100,14 +100,14 @@ void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t s
     auto& src = static_cast<VulkanTexture&>(genSrc);
     auto& dst = static_cast<VulkanTexture&>(genDst);
 
-    MOOSLIB_ASSERT(!src.hasMipmaps() && !dst.hasMipmaps());
+    ASSERT(!src.hasMipmaps() && !dst.hasMipmaps());
 
-    MOOSLIB_ASSERT(src.hasDepthFormat() == dst.hasDepthFormat());
+    ASSERT(src.hasDepthFormat() == dst.hasDepthFormat());
     VkImageAspectFlags aspectMask = src.hasDepthFormat()
         ? VK_IMAGE_ASPECT_DEPTH_BIT
         : VK_IMAGE_ASPECT_COLOR_BIT;
 
-    MOOSLIB_ASSERT(src.currentLayout != VK_IMAGE_LAYOUT_UNDEFINED && src.currentLayout != VK_IMAGE_LAYOUT_PREINITIALIZED);
+    ASSERT(src.currentLayout != VK_IMAGE_LAYOUT_UNDEFINED && src.currentLayout != VK_IMAGE_LAYOUT_PREINITIALIZED);
     VkImageLayout initialSrcLayout = src.currentLayout;
 
     VkImageLayout finalDstLayout = dst.currentLayout;
@@ -864,9 +864,9 @@ void VulkanCommandList::signalEvent(uint8_t eventId, PipelineStage stage)
 
 void VulkanCommandList::slowBlockingReadFromBuffer(const Buffer& buffer, size_t offset, size_t size, void* dst)
 {
-    MOOSLIB_ASSERT(offset < buffer.size());
-    MOOSLIB_ASSERT(size > 0);
-    MOOSLIB_ASSERT(size < buffer.size() - offset);
+    ASSERT(offset < buffer.size());
+    ASSERT(size > 0);
+    ASSERT(size < buffer.size() - offset);
 
     auto& srcBuffer = static_cast<const VulkanBuffer&>(buffer);
     auto dstGenericBuffer = m_backend.createBuffer(buffer.size(), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::Readback);

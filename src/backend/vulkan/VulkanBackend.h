@@ -75,7 +75,7 @@ public:
 
     VulkanRTX& rtx()
     {
-        MOOSLIB_ASSERT(hasRtxSupport());
+        ASSERT(hasRtxSupport());
         return *m_rtx;
     }
 

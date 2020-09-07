@@ -52,7 +52,7 @@ const Buffer& Mesh::vertexBuffer(const SemanticVertexLayout& layout)
     size_t bufferSize = vertexCount * packedVertexSize;
 
     auto* data = (moos::u8*)malloc(bufferSize);
-    MOOSLIB_ASSERT(data);
+    ASSERT(data);
 
     // FIXME: This only really works for float components. Later we need a way of doing this for other types as well,
     //  but right now we only have floating point components anyway.

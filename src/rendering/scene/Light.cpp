@@ -20,7 +20,7 @@ Texture& Light::shadowMap()
     if (!scene())
         LogErrorAndExit("Light: can't request shadow map for light that is not part of a scene, exiting\n");
 
-    MOOSLIB_ASSERT(m_shadowMapSize.width() > 0 && m_shadowMapSize.height() > 0);
+    ASSERT(m_shadowMapSize.width() > 0 && m_shadowMapSize.height() > 0);
     Texture& shadowMap = scene()->registry().createTexture2D(m_shadowMapSize, Texture::Format::Depth32F);
     m_shadowMap = &shadowMap;
 

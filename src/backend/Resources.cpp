@@ -103,7 +103,7 @@ RenderTarget::RenderTarget(Backend& backend, std::vector<Attachment> attachments
 
     for (const Attachment& attachment : attachments) {
         if (attachment.type == AttachmentType::Depth) {
-            MOOSLIB_ASSERT(!m_depthAttachment.has_value());
+            ASSERT(!m_depthAttachment.has_value());
             m_depthAttachment = attachment;
         } else {
             m_colorAttachments.push_back(attachment);

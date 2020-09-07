@@ -460,8 +460,6 @@ void VulkanTexture::setPixelData(vec4 pixel)
 
 void VulkanTexture::setData(const void* data, size_t size)
 {
-    ASSERT(!hasFloatingPointDataFormat());
-
     auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
 
     VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -690,7 +688,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
     std::vector<VkAttachmentReference> resolveAttachmentRefs {};
 
     auto createAttachmentDescription = [&](Texture* genTexture, VkImageLayout finalLayout, LoadOp loadOp, StoreOp storeOp) -> uint32_t {
-        MOOSLIB_ASSERT(genTexture);
+        ASSERT(genTexture);
         auto& texture = static_cast<VulkanTexture&>(*genTexture);
 
         VkAttachmentDescription attachment = {};
@@ -737,7 +735,6 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
     };
 
     auto createAttachmentData = [&](const Attachment attachInfo, bool considerResolve) -> VkAttachmentReference {
-
         VkImageLayout finalLayout = (attachInfo.type == AttachmentType::Depth)
             ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
             : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -764,8 +761,8 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
 
     for (const Attachment& colorAttachment : colorAttachments()) {
 
-        MOOSLIB_ASSERT((colorAttachment.texture->isMultisampled() && colorAttachment.multisampleResolveTexture)
-                       || (!colorAttachment.texture->isMultisampled() && !colorAttachment.multisampleResolveTexture));
+        ASSERT((colorAttachment.texture->isMultisampled() && colorAttachment.multisampleResolveTexture)
+               || (!colorAttachment.texture->isMultisampled() && !colorAttachment.multisampleResolveTexture));
 
         VkAttachmentReference ref = createAttachmentData(colorAttachment, true);
         colorAttachmentRefs.push_back(ref);
@@ -1452,7 +1449,7 @@ VulkanTopLevelAS::VulkanTopLevelAS(Backend& backend, std::vector<RTGeometryInsta
     : TopLevelAS(backend, std::move(inst))
 {
     auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend);
-    MOOSLIB_ASSERT(vulkanBackend.hasRtxSupport());
+    ASSERT(vulkanBackend.hasRtxSupport());
 
     // Something more here maybe? Like fast to build/traverse, can be compacted, etc.
     auto flags = VkBuildAccelerationStructureFlagBitsNV(VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_NV | VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_NV);
@@ -1541,7 +1538,7 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
     : BottomLevelAS(backend, std::move(geos))
 {
     auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend);
-    MOOSLIB_ASSERT(vulkanBackend.hasRtxSupport());
+    ASSERT(vulkanBackend.hasRtxSupport());
 
     // All geometries in a BLAS must have the same type (i.e. AABB/triangles)
     bool isTriangleBLAS = geometries().front().hasTriangles();
@@ -1733,7 +1730,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     : RayTracingState(backend, sbt, bindingSets, maxRecursionDepth)
 {
     auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend);
-    MOOSLIB_ASSERT(vulkanBackend.hasRtxSupport());
+    ASSERT(vulkanBackend.hasRtxSupport());
 
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts {};
     for (auto& set : bindingSets) {

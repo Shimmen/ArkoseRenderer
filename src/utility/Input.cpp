@@ -1,5 +1,6 @@
 #include "Input.h"
 
+#include "utility/util.h"
 #include <cstring>
 
 #define GLFW_INCLUDE_NONE
@@ -79,7 +80,7 @@ bool Input::wasButtonReleased(Button button) const
 
 vec2 Input::mousePosition() const
 {
-    MOOSLIB_ASSERT(m_associatedWindow != nullptr);
+    ASSERT(m_associatedWindow != nullptr);
     double x, y;
     glfwGetCursorPos(m_associatedWindow, &x, &y);
     return vec2(float(x), float(y));

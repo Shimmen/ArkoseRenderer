@@ -23,14 +23,14 @@ Image::Info* Image::getInfo(const std::string& imagePath)
     }
 
     FILE* file = fopen(imagePath.c_str(), "rb");
-    MOOSLIB_ASSERT(file);
+    ASSERT(file);
 
     Image::Info& info = s_infoCache[imagePath];
 
     int componentCount;
     stbi_info_from_file(file, &info.width, &info.height, &componentCount);
 
-    MOOSLIB_ASSERT(componentCount >= 1 && componentCount <= 4);
+    ASSERT(componentCount >= 1 && componentCount <= 4);
     info.pixelType = static_cast<PixelType>(componentCount);
 
     // FIXME: Add support for 16-bit images (e.g. some PNGs)
@@ -48,7 +48,7 @@ Image* Image::load(const std::string& imagePath, PixelType pixelType)
         Image* image = entry->second.get();
         // For now we only load RGBA images, but later we might wanna do some more advanced caching,
         //  where e.g. (path, RGBA) is loaded differently to a (path, RGB) (i.e., same path, different types)
-        MOOSLIB_ASSERT(image->info().pixelType == pixelType);
+        ASSERT(image->info().pixelType == pixelType);
         return image;
     }
 
@@ -59,10 +59,10 @@ Image* Image::load(const std::string& imagePath, PixelType pixelType)
     //LogInfo("Image: actually loading texture '%s'\n", imagePath.c_str());
 
     FILE* file = fopen(imagePath.c_str(), "rb");
-    MOOSLIB_ASSERT(file);
+    ASSERT(file);
 
     int desiredNumberOfComponents = static_cast<int>(pixelType);
-    MOOSLIB_ASSERT(desiredNumberOfComponents >= 1 && desiredNumberOfComponents <= 4);
+    ASSERT(desiredNumberOfComponents >= 1 && desiredNumberOfComponents <= 4);
 
     Info info;
     info.pixelType = pixelType;
