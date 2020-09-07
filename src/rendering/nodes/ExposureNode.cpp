@@ -140,7 +140,7 @@ RenderGraphNode::ExecuteCallback ExposureNode::constructFrame(Registry& reg) con
             cmdList.setComputeState(exposeComputeState);
             cmdList.bindSet(exposeBindingSet, 0);
             cmdList.pushConstant(ShaderStageCompute, (float)appState.deltaTime(), 0);
-            cmdList.pushConstant(ShaderStageCompute, (appState.frameIndex() == 0) ? 9999.99f : camera.adaptionRate, 1 * sizeof(float));
+            cmdList.pushConstant(ShaderStageCompute, appState.isRelativeFirstFrame() ? 9999.99f : camera.adaptionRate, 1 * sizeof(float));
             cmdList.pushConstant(ShaderStageCompute, camera.useAutomaticExposure, 2 * sizeof(float));
             cmdList.dispatch(targetImage.extent(), { 16, 16, 1 });
         }

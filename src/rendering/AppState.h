@@ -5,8 +5,9 @@
 class AppState {
 public:
     AppState() = default;
-    AppState(const Extent2D& windowExtent, double deltaTime, double timeSinceStartup, uint32_t frameIndex)
+    AppState(const Extent2D& windowExtent, double deltaTime, double timeSinceStartup, uint32_t frameIndex, bool isRelativeFirstFrame)
         : m_frameIndex(frameIndex)
+        , m_isRelativeFirstFrame(isRelativeFirstFrame)
         , m_windowExtent(windowExtent)
         , m_deltaTime(deltaTime)
         , m_timeSinceStartup(timeSinceStartup)
@@ -15,6 +16,7 @@ public:
     }
 
     uint32_t frameIndex() const { return m_frameIndex; }
+    bool isRelativeFirstFrame() const { return m_isRelativeFirstFrame; }
     const Extent2D& windowExtent() const { return m_windowExtent; }
     double deltaTime() const { return m_deltaTime; }
     double elapsedTime() const { return m_timeSinceStartup; }
@@ -28,6 +30,7 @@ public:
 
 private:
     uint32_t m_frameIndex {};
+    bool m_isRelativeFirstFrame {};
     Extent2D m_windowExtent {};
 
     double m_deltaTime {};

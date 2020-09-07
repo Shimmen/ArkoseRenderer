@@ -205,6 +205,7 @@ private:
 
     static constexpr size_t maxFramesInFlight { 2 };
     uint32_t m_currentFrameIndex { 0 };
+    uint32_t m_lastSwapchainRecreationFrameIndex { 0 };
 
     std::array<VkSemaphore, maxFramesInFlight> m_imageAvailableSemaphores {};
     std::array<VkSemaphore, maxFramesInFlight> m_renderFinishedSemaphores {};

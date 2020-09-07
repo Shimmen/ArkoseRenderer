@@ -888,6 +888,7 @@ Extent2D VulkanBackend::recreateSwapchain()
     createAndSetupSwapchain(physicalDevice(), device(), m_surface);
     createWindowRenderTargetFrontend();
 
+    m_lastSwapchainRecreationFrameIndex = m_currentFrameIndex;
     s_unhandledWindowResize = false;
 
     return m_swapchainExtent;
@@ -1132,7 +1133,8 @@ bool VulkanBackend::executeFrame(double elapsedTime, double deltaTime)
         LogError("VulkanBackend::executeFrame(): error while waiting for in-flight frame fence (frame %u).\n", m_currentFrameIndex);
     }
 
-    AppState appState { m_swapchainExtent, deltaTime, elapsedTime, m_currentFrameIndex };
+    bool isRelativeFirstFrame = m_currentFrameIndex == (m_lastSwapchainRecreationFrameIndex + 1);
+    AppState appState { m_swapchainExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
 
     uint32_t swapchainImageIndex;
     VkResult acquireResult = vkAcquireNextImageKHR(device(), m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[currentFrameMod], VK_NULL_HANDLE, &swapchainImageIndex);
