@@ -1,5 +1,6 @@
 #pragma once
 
+#include "VulkanDebugUtils.h"
 #include "VulkanRTX.h"
 #include "backend/Backend.h"
 #include "backend/Resources.h"
@@ -10,6 +11,8 @@
 #include <unordered_map>
 
 #include <vk_mem_alloc.h>
+
+#define VK_NO_PROTOTYPES
 #include <vulkan/vulkan.h>
 
 struct GLFWwindow;
@@ -77,6 +80,17 @@ public:
     {
         ASSERT(hasRtxSupport());
         return *m_rtx;
+    }
+
+    bool hasDebugUtilsSupport() const
+    {
+        return m_debugUtils != nullptr;
+    }
+
+    VulkanDebugUtils& debugUtils()
+    {
+        ASSERT(hasDebugUtilsSupport());
+        return *m_debugUtils;
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -157,14 +171,9 @@ private:
     VkExtent2D pickBestSwapchainExtent() const;
     VkPhysicalDevice pickBestPhysicalDevice() const;
 
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT, VkDebugUtilsMessageTypeFlagsEXT,
-                                                               const VkDebugUtilsMessengerCallbackDataEXT*, void* userData);
-    VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo() const;
-    VkDebugUtilsMessengerEXT createDebugMessenger(VkInstance, VkDebugUtilsMessengerCreateInfoEXT*) const;
-
     VkInstance createInstance(const std::vector<const char*>& requestedLayers, VkDebugUtilsMessengerCreateInfoEXT*) const;
     VkDevice createDevice(const std::vector<const char*>& requestedLayers, VkPhysicalDevice);
-    std::optional<VkDebugUtilsMessengerEXT> m_messenger {};
+    VkDebugUtilsMessengerEXT m_messenger {};
 
     VkInstance m_instance {};
     VkPhysicalDevice m_physicalDevice {};
@@ -215,6 +224,7 @@ private:
     /// Sub-systems / extensions
 
     std::unique_ptr<VulkanRTX> m_rtx {};
+    std::unique_ptr<VulkanDebugUtils> m_debugUtils {};
 
     ///////////////////////////////////////////////////////////////////////////
     /// Resource & resource management members

@@ -65,9 +65,13 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, App& app)
         ASSERT(hasSupportForLayer("VK_LAYER_KHRONOS_validation"));
         requestedLayers.emplace_back("VK_LAYER_KHRONOS_validation");
 
-        auto dbgMessengerCreateInfo = debugMessengerCreateInfo();
+        auto dbgMessengerCreateInfo = VulkanDebugUtils::debugMessengerCreateInfo();
         m_instance = createInstance(requestedLayers, &dbgMessengerCreateInfo);
-        m_messenger = createDebugMessenger(m_instance, &dbgMessengerCreateInfo);
+
+        m_debugUtils = std::make_unique<VulkanDebugUtils>(*this, m_instance);
+        if (debugUtils().vkCreateDebugUtilsMessengerEXT(m_instance, &dbgMessengerCreateInfo, nullptr, &m_messenger) != VK_SUCCESS) {
+            LogErrorAndExit("VulkanBackend: could not create the debug messenger, exiting.\n");
+        }
 
     } else {
         m_instance = createInstance(requestedLayers, nullptr);
@@ -180,10 +184,8 @@ VulkanBackend::~VulkanBackend()
     vkDestroyDevice(m_device, nullptr);
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 
-    if (m_messenger.has_value()) {
-        auto destroyFunc = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(m_instance, "vkDestroyDebugUtilsMessengerEXT");
-        ASSERT(destroyFunc != nullptr);
-        destroyFunc(m_instance, m_messenger.value(), nullptr);
+    if (vulkanDebugMode) {
+        debugUtils().vkDestroyDebugUtilsMessengerEXT(m_instance, m_messenger, nullptr);
     }
 
     vkDestroyInstance(m_instance, nullptr);
@@ -627,42 +629,6 @@ void VulkanBackend::findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSu
     if (!foundPresentQueue) {
         LogErrorAndExit("VulkanBackend::findQueueFamilyIndices(): could not find a present queue, exiting.\n");
     }
-}
-
-VkBool32 VulkanBackend::debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-                                             const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
-{
-    LogError("Vulkan debug message; %s\n", pCallbackData->pMessage);
-    return VK_FALSE;
-}
-
-VkDebugUtilsMessengerCreateInfoEXT VulkanBackend::debugMessengerCreateInfo() const
-{
-    VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
-    debugMessengerCreateInfo.pfnUserCallback = debugMessageCallback;
-    debugMessengerCreateInfo.pUserData = nullptr;
-
-    debugMessengerCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT; // NOLINT(hicpp-signed-bitwise)
-    if (vulkanVerboseDebugMessages)
-        debugMessengerCreateInfo.messageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
-    debugMessengerCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT; // NOLINT(hicpp-signed-bitwise)
-
-    return debugMessengerCreateInfo;
-}
-
-VkDebugUtilsMessengerEXT VulkanBackend::createDebugMessenger(VkInstance instance, VkDebugUtilsMessengerCreateInfoEXT* createInfo) const
-{
-    auto createFunc = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-    if (!createFunc) {
-        LogErrorAndExit("VulkanBackend::createDebugMessenger(): could not get function 'vkCreateDebugUtilsMessengerEXT', exiting.\n");
-    }
-
-    VkDebugUtilsMessengerEXT messenger;
-    if (createFunc(instance, createInfo, nullptr, &messenger) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend::createDebugMessenger(): could not create the debug messenger, exiting.\n");
-    }
-
-    return messenger;
 }
 
 VkPhysicalDevice VulkanBackend::pickBestPhysicalDevice() const
