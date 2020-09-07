@@ -64,7 +64,7 @@ VkBuffer VulkanRTX::createInstanceBuffer(const std::vector<RTGeometryInstance>& 
 
         data.transform = transpose(instance.transform.worldMatrix());
 
-        auto& vulkanBlas = dynamic_cast<const VulkanBottomLevelAS&>(instance.blas);
+        auto& vulkanBlas = static_cast<const VulkanBottomLevelAS&>(instance.blas);
         data.accelerationStructureHandle = vulkanBlas.handle;
 
         // TODO: We already have gl_InstanceID for this running index, and this sets gl_InstanceCustomIndexNV.

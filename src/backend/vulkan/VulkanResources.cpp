@@ -70,7 +70,7 @@ VulkanBuffer::VulkanBuffer(Backend& backend, size_t size, Usage usage, MemoryHin
     bufferCreateInfo.usage = usageFlags;
 
     // TODO: Add a to<VulkanBackend> utility, or something like that
-    auto& allocator = dynamic_cast<VulkanBackend&>(backend).globalAllocator();
+    auto& allocator = static_cast<VulkanBackend&>(backend).globalAllocator();
 
     VmaAllocationInfo allocationInfo;
     if (vmaCreateBuffer(allocator, &bufferCreateInfo, &allocCreateInfo, &buffer, &allocation, &allocationInfo) != VK_SUCCESS) {
@@ -82,7 +82,7 @@ VulkanBuffer::~VulkanBuffer()
 {
     if (!hasBackend())
         return;
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vmaDestroyBuffer(vulkanBackend.globalAllocator(), buffer, allocation);
 }
 
@@ -93,7 +93,7 @@ void VulkanBuffer::updateData(const std::byte* data, size_t updateSize)
     if (updateSize > size())
         LogErrorAndExit("Attempt at updating buffer outside of bounds!\n");
 
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
     switch (memoryHint()) {
     case Buffer::MemoryHint::GpuOptimal:
@@ -328,7 +328,7 @@ VulkanTexture::~VulkanTexture()
 {
     if (!hasBackend())
         return;
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vkDestroySampler(vulkanBackend.device(), sampler, nullptr);
     vkDestroyImageView(vulkanBackend.device(), imageView, nullptr);
     vmaDestroyImage(vulkanBackend.globalAllocator(), image, allocation);
@@ -395,7 +395,7 @@ void VulkanTexture::setPixelData(vec4 pixel)
     VmaAllocationCreateInfo allocCreateInfo = {};
     allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
 
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
     VkBuffer stagingBuffer;
     VmaAllocation stagingAllocation;
@@ -460,7 +460,7 @@ void VulkanTexture::setPixelData(vec4 pixel)
 
 void VulkanTexture::setData(const void* data, size_t size)
 {
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
     VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
     bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
@@ -825,7 +825,7 @@ VulkanRenderTarget::~VulkanRenderTarget()
 {
     if (!hasBackend())
         return;
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vkDestroyFramebuffer(vulkanBackend.device(), framebuffer, nullptr);
     vkDestroyRenderPass(vulkanBackend.device(), compatibleRenderPass, nullptr);
 }
@@ -833,7 +833,7 @@ VulkanRenderTarget::~VulkanRenderTarget()
 VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> bindings)
     : BindingSet(backend, std::move(bindings))
 {
-    const auto& device = dynamic_cast<VulkanBackend&>(backend).device();
+    const auto& device = static_cast<VulkanBackend&>(backend).device();
 
     {
         std::vector<VkDescriptorSetLayoutBinding> layoutBindings {};
@@ -990,7 +990,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
 
                 ASSERT(bindingInfo.buffers.size() == 1);
                 ASSERT(bindingInfo.buffers[0]);
-                auto& buffer = dynamic_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
+                auto& buffer = static_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
 
                 VkDescriptorBufferInfo descBufferInfo {};
                 descBufferInfo.offset = 0;
@@ -1011,7 +1011,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
 
                 ASSERT(bindingInfo.buffers.size() == 1);
                 ASSERT(bindingInfo.buffers[0]);
-                auto& buffer = dynamic_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
+                auto& buffer = static_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
 
                 VkDescriptorBufferInfo descBufferInfo {};
                 descBufferInfo.offset = 0;
@@ -1040,7 +1040,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
 
                     ASSERT(buffer);
                     ASSERT(buffer->usage() == Buffer::Usage::StorageBuffer);
-                    auto& vulkanBuffer = dynamic_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
+                    auto& vulkanBuffer = static_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
 
                     VkDescriptorBufferInfo descBufferInfo {};
                     descBufferInfo.offset = 0;
@@ -1063,7 +1063,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
 
                 ASSERT(bindingInfo.textures.size() == 1);
                 ASSERT(bindingInfo.textures[0]);
-                auto& texture = dynamic_cast<const VulkanTexture&>(*bindingInfo.textures[0]);
+                auto& texture = static_cast<const VulkanTexture&>(*bindingInfo.textures[0]);
 
                 VkDescriptorImageInfo descImageInfo {};
                 descImageInfo.sampler = texture.sampler;
@@ -1086,7 +1086,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
 
                 ASSERT(bindingInfo.textures.size() == 1);
                 ASSERT(bindingInfo.textures[0]);
-                auto& texture = dynamic_cast<const VulkanTexture&>(*bindingInfo.textures[0]);
+                auto& texture = static_cast<const VulkanTexture&>(*bindingInfo.textures[0]);
 
                 VkDescriptorImageInfo descImageInfo {};
                 descImageInfo.sampler = texture.sampler;
@@ -1116,7 +1116,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                     const Texture* genTexture = (i >= numTextures) ? bindingInfo.textures.front() : bindingInfo.textures[i];
                     ASSERT(genTexture);
 
-                    auto& texture = dynamic_cast<const VulkanTexture&>(*genTexture);
+                    auto& texture = static_cast<const VulkanTexture&>(*genTexture);
 
                     VkDescriptorImageInfo descImageInfo {};
                     descImageInfo.sampler = texture.sampler;
@@ -1144,7 +1144,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 ASSERT(bindingInfo.tlas != nullptr);
 
                 ASSERT(bindingInfo.tlas);
-                auto& vulkanTlas = dynamic_cast<const VulkanTopLevelAS&>(*bindingInfo.tlas);
+                auto& vulkanTlas = static_cast<const VulkanTopLevelAS&>(*bindingInfo.tlas);
 
                 VkWriteDescriptorSetAccelerationStructureNV descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV };
                 descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
@@ -1178,7 +1178,7 @@ VulkanBindingSet::~VulkanBindingSet()
 {
     if (!hasBackend())
         return;
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vkDestroyDescriptorPool(vulkanBackend.device(), descriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(vulkanBackend.device(), descriptorSetLayout, nullptr);
 }
@@ -1188,7 +1188,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
                                      Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState)
     : RenderState(backend, renderTarget, vertexLayout, shader, bindingSets, viewport, blendState, rasterState, depthState)
 {
-    const auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend);
+    const auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
     const auto& device = vulkanBackend.device();
 
     VkVertexInputBindingDescription bindingDescription = {};
@@ -1411,7 +1411,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     pipelineCreateInfo.layout = pipelineLayout;
 
     // render pass stuff
-    auto& vulkanRenderTarget = dynamic_cast<const VulkanRenderTarget&>(renderTarget);
+    auto& vulkanRenderTarget = static_cast<const VulkanRenderTarget&>(renderTarget);
     pipelineCreateInfo.renderPass = vulkanRenderTarget.compatibleRenderPass;
     pipelineCreateInfo.subpass = 0; // TODO: How should this be handled?
 
@@ -1441,7 +1441,7 @@ VulkanRenderState::~VulkanRenderState()
 {
     if (!hasBackend())
         return;
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vkDestroyPipeline(vulkanBackend.device(), pipeline, nullptr);
     vkDestroyPipelineLayout(vulkanBackend.device(), pipelineLayout, nullptr);
 }
@@ -1449,7 +1449,7 @@ VulkanRenderState::~VulkanRenderState()
 VulkanTopLevelAS::VulkanTopLevelAS(Backend& backend, std::vector<RTGeometryInstance> inst)
     : TopLevelAS(backend, std::move(inst))
 {
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend);
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
     ASSERT(vulkanBackend.hasRtxSupport());
 
     // Something more here maybe? Like fast to build/traverse, can be compacted, etc.
@@ -1526,7 +1526,7 @@ VulkanTopLevelAS::~VulkanTopLevelAS()
     if (!hasBackend())
         return;
 
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vulkanBackend.rtx().vkDestroyAccelerationStructureNV(vulkanBackend.device(), accelerationStructure, nullptr);
     vkFreeMemory(vulkanBackend.device(), memory, nullptr);
 
@@ -1538,7 +1538,7 @@ VulkanTopLevelAS::~VulkanTopLevelAS()
 VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometry> geos)
     : BottomLevelAS(backend, std::move(geos))
 {
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend);
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
     ASSERT(vulkanBackend.hasRtxSupport());
 
     // All geometries in a BLAS must have the same type (i.e. AABB/triangles)
@@ -1585,7 +1585,7 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
 
             VkGeometryTrianglesNV triangles { VK_STRUCTURE_TYPE_GEOMETRY_TRIANGLES_NV };
 
-            triangles.vertexData = dynamic_cast<const VulkanBuffer&>(triGeo.vertexBuffer).buffer;
+            triangles.vertexData = static_cast<const VulkanBuffer&>(triGeo.vertexBuffer).buffer;
             triangles.vertexOffset = 0;
             triangles.vertexStride = triGeo.vertexStride;
             triangles.vertexCount = triGeo.vertexBuffer.size() / triangles.vertexStride;
@@ -1595,7 +1595,7 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
                 break;
             }
 
-            triangles.indexData = dynamic_cast<const VulkanBuffer&>(triGeo.indexBuffer).buffer;
+            triangles.indexData = static_cast<const VulkanBuffer&>(triGeo.indexBuffer).buffer;
             triangles.indexOffset = 0;
             switch (triGeo.indexType) {
             case IndexType::UInt16:
@@ -1630,7 +1630,7 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
             VkGeometryAABBNV aabbs { VK_STRUCTURE_TYPE_GEOMETRY_AABB_NV };
             aabbs.offset = 0;
             aabbs.stride = aabbGeo.aabbStride;
-            aabbs.aabbData = dynamic_cast<const VulkanBuffer&>(aabbGeo.aabbBuffer).buffer;
+            aabbs.aabbData = static_cast<const VulkanBuffer&>(aabbGeo.aabbBuffer).buffer;
             aabbs.numAABBs = aabbGeo.aabbBuffer.size() / aabbGeo.aabbStride;
 
             VkGeometryNV geometry { VK_STRUCTURE_TYPE_GEOMETRY_NV };
@@ -1718,7 +1718,7 @@ VulkanBottomLevelAS::~VulkanBottomLevelAS()
     if (!hasBackend())
         return;
 
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vulkanBackend.rtx().vkDestroyAccelerationStructureNV(vulkanBackend.device(), accelerationStructure, nullptr);
     vkFreeMemory(vulkanBackend.device(), memory, nullptr);
 
@@ -1730,12 +1730,12 @@ VulkanBottomLevelAS::~VulkanBottomLevelAS()
 VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTable sbt, std::vector<BindingSet*> bindingSets, uint32_t maxRecursionDepth)
     : RayTracingState(backend, sbt, bindingSets, maxRecursionDepth)
 {
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend);
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
     ASSERT(vulkanBackend.hasRtxSupport());
 
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts {};
     for (auto& set : bindingSets) {
-        auto& vulkanBindingSet = dynamic_cast<const VulkanBindingSet&>(*set);
+        auto& vulkanBindingSet = static_cast<const VulkanBindingSet&>(*set);
         descriptorSetLayouts.push_back(vulkanBindingSet.descriptorSetLayout);
     }
 
@@ -1983,7 +1983,7 @@ VulkanRayTracingState::~VulkanRayTracingState()
 {
     if (!hasBackend())
         return;
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vmaDestroyBuffer(vulkanBackend.globalAllocator(), sbtBuffer, sbtBufferAllocation);
     vkDestroyPipeline(vulkanBackend.device(), pipeline, nullptr);
     vkDestroyPipelineLayout(vulkanBackend.device(), pipelineLayout, nullptr);
@@ -1992,7 +1992,7 @@ VulkanRayTracingState::~VulkanRayTracingState()
 VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vector<BindingSet*> bindingSets)
     : ComputeState(backend, shader, bindingSets)
 {
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend);
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
 
     VkPipelineShaderStageCreateInfo computeShaderStage { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
     computeShaderStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
@@ -2085,7 +2085,7 @@ VulkanComputeState::~VulkanComputeState()
 {
     if (!hasBackend())
         return;
-    auto& vulkanBackend = dynamic_cast<VulkanBackend&>(backend());
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vkDestroyPipeline(vulkanBackend.device(), pipeline, nullptr);
     vkDestroyPipelineLayout(vulkanBackend.device(), pipelineLayout, nullptr);
 }

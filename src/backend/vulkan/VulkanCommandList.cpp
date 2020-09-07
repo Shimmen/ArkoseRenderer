@@ -13,7 +13,7 @@ VulkanCommandList::VulkanCommandList(VulkanBackend& backend, VkCommandBuffer com
 
 void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
 {
-    auto& colorTexture = dynamic_cast<VulkanTexture&>(genColorTexture);
+    auto& colorTexture = static_cast<VulkanTexture&>(genColorTexture);
     ASSERT(!colorTexture.hasDepthFormat());
 
     std::optional<VkImageLayout> originalLayout;
@@ -368,13 +368,13 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
         LogWarning("setRenderState: already active render state!\n");
         endCurrentRenderPassIfAny();
     }
-    auto& renderState = dynamic_cast<const VulkanRenderState&>(genRenderState);
+    auto& renderState = static_cast<const VulkanRenderState&>(genRenderState);
     activeRenderState = &renderState;
 
     activeRayTracingState = nullptr;
     activeComputeState = nullptr;
 
-    auto& renderTarget = dynamic_cast<const VulkanRenderTarget&>(renderState.renderTarget());
+    auto& renderTarget = static_cast<const VulkanRenderTarget&>(renderState.renderTarget());
 
     std::vector<VkClearValue> clearValues {};
     renderTarget.forEachAttachmentInOrder([&](const RenderTarget::Attachment& attachment) {
@@ -474,7 +474,7 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)
         endCurrentRenderPassIfAny();
     }
 
-    auto& rtState = dynamic_cast<const VulkanRayTracingState&>(genRtState);
+    auto& rtState = static_cast<const VulkanRayTracingState&>(genRtState);
     activeRayTracingState = &rtState;
     activeComputeState = nullptr;
 
@@ -559,7 +559,7 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
         endCurrentRenderPassIfAny();
     }
 
-    auto& computeState = dynamic_cast<const VulkanComputeState&>(genComputeState);
+    auto& computeState = static_cast<const VulkanComputeState&>(genComputeState);
     activeComputeState = &computeState;
     activeRayTracingState = nullptr;
 
@@ -661,7 +661,7 @@ void VulkanCommandList::bindSet(BindingSet& bindingSet, uint32_t index)
         bindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_NV;
     }
 
-    auto& vulkanBindingSet = dynamic_cast<VulkanBindingSet&>(bindingSet);
+    auto& vulkanBindingSet = static_cast<VulkanBindingSet&>(bindingSet);
     vkCmdBindDescriptorSets(m_commandBuffer, bindPoint, pipelineLayout, index, 1, &vulkanBindingSet.descriptorSet, 0, nullptr);
 }
 
@@ -708,7 +708,7 @@ void VulkanCommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount)
         LogErrorAndExit("draw: no active render state!\n");
     }
 
-    VkBuffer vertBuffer = dynamic_cast<VulkanBuffer&>(vertexBuffer).buffer;
+    VkBuffer vertBuffer = static_cast<VulkanBuffer&>(vertexBuffer).buffer;
 
     VkBuffer vertexBuffers[] = { vertBuffer };
     VkDeviceSize offsets[] = { 0 };
@@ -749,7 +749,7 @@ void VulkanCommandList::rebuildTopLevelAcceratationStructure(TopLevelAS& tlas)
     if (!backend().hasRtxSupport())
         LogErrorAndExit("Trying to rebuild a top level acceleration structure but there is no ray tracing support!\n");
 
-    auto& vulkanTlas = dynamic_cast<VulkanTopLevelAS&>(tlas);
+    auto& vulkanTlas = static_cast<VulkanTopLevelAS&>(tlas);
 
     // TODO: Maybe don't throw the allocation away (when building the first time), so we can reuse it here?
     //  However, it's a different size, though! So maybe not. Or if we use the max(build, rebuild) size?
@@ -799,7 +799,7 @@ void VulkanCommandList::traceRays(Extent2D extent)
     if (!backend().hasRtxSupport())
         LogErrorAndExit("Trying to trace rays but there is no ray tracing support!\n");
 
-    VkBuffer sbtBuffer = dynamic_cast<const VulkanRayTracingState&>(*activeRayTracingState).sbtBuffer;
+    VkBuffer sbtBuffer = static_cast<const VulkanRayTracingState&>(*activeRayTracingState).sbtBuffer;
 
     uint32_t baseAlignment = backend().rtx().properties().shaderGroupBaseAlignment;
 
@@ -947,7 +947,7 @@ void VulkanCommandList::saveTextureToFile(const Texture& texture, const std::str
 {
     const VkFormat targetFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
-    auto& srcTex = dynamic_cast<const VulkanTexture&>(texture);
+    auto& srcTex = static_cast<const VulkanTexture&>(texture);
     VkImageLayout prevSrcLayout = srcTex.currentLayout;
     VkImage srcImage = srcTex.image;
 
