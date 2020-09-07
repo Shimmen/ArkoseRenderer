@@ -37,6 +37,10 @@ public:
     //! A barrier for all commands and memory, which probably only should be used for debug stuff.
     virtual void debugBarrier() = 0;
 
+    //! Debug scopes for display in e.g. RenderDoc
+    virtual void beginDebugLabel(const std::string&) = 0;
+    virtual void endDebugLabel() = 0;
+
     virtual void textureWriteBarrier(const Texture&) = 0;
 
     virtual void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) = 0;

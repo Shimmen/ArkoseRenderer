@@ -1043,6 +1043,25 @@ void VulkanCommandList::debugBarrier()
     vkCmdPipelineBarrier(m_commandBuffer, sourceStage, destinationStage, 0, 1, &barrier, 0, nullptr, 0, nullptr);
 }
 
+void VulkanCommandList::beginDebugLabel(const std::string& scopeName)
+{
+    if (!backend().hasDebugUtilsSupport())
+        LogErrorAndExit("Trying to use debug utils stuff but there is no support!\n");
+
+    VkDebugUtilsLabelEXT label { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
+    label.pLabelName = scopeName.c_str();
+
+    m_backend.debugUtils().vkCmdBeginDebugUtilsLabelEXT(m_commandBuffer, &label);
+}
+
+void VulkanCommandList::endDebugLabel()
+{
+    if (!backend().hasDebugUtilsSupport())
+        LogErrorAndExit("Trying to use debug utils stuff but there is no support!\n");
+
+    m_backend.debugUtils().vkCmdEndDebugUtilsLabelEXT(m_commandBuffer);
+}
+
 void VulkanCommandList::textureWriteBarrier(const Texture& genTexture)
 {
     auto& texture = static_cast<const VulkanTexture&>(genTexture);

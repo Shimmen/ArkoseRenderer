@@ -1188,15 +1188,17 @@ void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, doub
 
         double cpuStartTime = glfwGetTime();
 
+        cmdList.beginDebugLabel(nodeName);
         nodeExecuteCallback(appState, cmdList);
+        cmdList.endNode({});
+        cmdList.endDebugLabel();
 
         double cpuElapsed = glfwGetTime() - cpuStartTime;
         nodeTimer.reportCpuTime(cpuElapsed);
-
-        cmdList.endNode({});
     });
     ImGui::End();
 
+    cmdList.beginDebugLabel("GUI");
     {
         static ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
 
@@ -1229,11 +1231,12 @@ void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, doub
             ImGuizmo::Manipulate(value_ptr(viewMatrix), value_ptr(projMatrix), operation, mode, value_ptr(matrix));
             selectedModel->transform().setLocalMatrix(matrix);
         }
-    }
 
-    ImGui::Render();
-    renderDearImguiFrame(commandBuffer, swapchainImageIndex);
-    ImGui::UpdatePlatformWindows();
+        ImGui::Render();
+        renderDearImguiFrame(commandBuffer, swapchainImageIndex);
+        ImGui::UpdatePlatformWindows();
+    }
+    cmdList.endDebugLabel();
 
     // Explicitly transfer the swapchain image to a present layout if not already
     // In most cases it should always be, but with nsight it seems to do weird things.
