@@ -309,11 +309,11 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
         break;
     case Texture::Mipmap::Nearest:
         samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        samplerCreateInfo.maxLod = mipLevels();
+        samplerCreateInfo.maxLod = static_cast<float>(mipLevels());
         break;
     case Texture::Mipmap::Linear:
         samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        samplerCreateInfo.maxLod = mipLevels();
+        samplerCreateInfo.maxLod = static_cast<float>(mipLevels());
         break;
     }
 
@@ -1143,6 +1143,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 ASSERT(bindingInfo.buffers.empty());
                 ASSERT(bindingInfo.tlas != nullptr);
 
+                ASSERT(bindingInfo.tlas);
                 auto& vulkanTlas = dynamic_cast<const VulkanTopLevelAS&>(*bindingInfo.tlas);
 
                 VkWriteDescriptorSetAccelerationStructureNV descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV };
@@ -1308,8 +1309,8 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     VkViewport vkViewport = {};
     vkViewport.x = fixedViewport().x;
     vkViewport.y = fixedViewport().y;
-    vkViewport.width = fixedViewport().extent.width();
-    vkViewport.height = fixedViewport().extent.height();
+    vkViewport.width = static_cast<float>(fixedViewport().extent.width());
+    vkViewport.height = static_cast<float>(fixedViewport().extent.height());
     vkViewport.minDepth = 0.0f;
     vkViewport.maxDepth = 1.0f;
 

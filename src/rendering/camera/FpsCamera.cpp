@@ -138,8 +138,8 @@ void FpsCamera::update(const Input& input, const Extent2D& screenExtent, float d
 
     // Create the projection matrix
 
-    float width = screenExtent.width();
-    float height = screenExtent.height();
+    float width = static_cast<float>(screenExtent.width());
+    float height = static_cast<float>(screenExtent.height());
     float aspectRatio = (height > 1e-6f) ? (width / height) : 1.0f;
     m_projectionFromView = moos::perspectiveProjectionToVulkanClipSpace(m_fieldOfView, aspectRatio, zNear, 10000.0f);
 }

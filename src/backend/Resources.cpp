@@ -71,7 +71,7 @@ uint32_t Texture::mipLevels() const
 {
     if (hasMipmaps()) {
         uint32_t size = std::max(extent().width(), extent().height());
-        uint32_t levels = std::floor(std::log2(size)) + 1;
+        uint32_t levels = static_cast<uint32_t>(std::floor(std::log2(size)) + 1);
         return levels;
     } else {
         return 1;
@@ -246,6 +246,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Buffer* bu
     : bindingIndex(index)
     , count(1)
     , shaderStage(shaderStage)
+    , tlas(nullptr)
     , buffers({ buffer })
     , textures()
 {
@@ -270,6 +271,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Texture* t
     , count(1)
     , shaderStage(shaderStage)
     , type(type)
+    , tlas(nullptr)
     , buffers()
     , textures({ texture })
 {

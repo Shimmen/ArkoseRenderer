@@ -28,14 +28,14 @@ public:
 
     uint32_t layerCount() const;
 
-    VkImage image;
-    VmaAllocation allocation;
+    VkImage image { VK_NULL_HANDLE };
+    VmaAllocation allocation { VK_NULL_HANDLE };
 
-    VkFormat vkFormat;
-    VkImageView imageView;
-    VkSampler sampler;
+    VkFormat vkFormat { VK_FORMAT_R8G8B8A8_UINT };
+    VkImageView imageView { VK_NULL_HANDLE };
+    VkSampler sampler { VK_NULL_HANDLE };
 
-    VkImageLayout currentLayout;
+    VkImageLayout currentLayout { VK_IMAGE_LAYOUT_UNDEFINED };
 };
 
 struct VulkanRenderTarget final : public RenderTarget {
@@ -78,8 +78,8 @@ public:
     virtual ~VulkanTopLevelAS() override;
 
     VkAccelerationStructureNV accelerationStructure;
-    VkDeviceMemory memory;
-    uint64_t handle;
+    VkDeviceMemory memory { VK_NULL_HANDLE };
+    uint64_t handle { 0u };
 
     std::vector<std::pair<VkBuffer, VmaAllocation>> associatedBuffers;
 };
@@ -90,8 +90,8 @@ public:
     virtual ~VulkanBottomLevelAS() override;
 
     VkAccelerationStructureNV accelerationStructure;
-    VkDeviceMemory memory;
-    uint64_t handle;
+    VkDeviceMemory memory { VK_NULL_HANDLE };
+    uint64_t handle { 0u };
 
     std::vector<std::pair<VkBuffer, VmaAllocation>> associatedBuffers;
 };

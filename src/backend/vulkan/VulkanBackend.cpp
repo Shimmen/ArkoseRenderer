@@ -260,6 +260,7 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(App& app)
                 && indexingFeatures.shaderStorageBufferArrayNonUniformIndexing && indexingFeatures.shaderUniformBufferArrayNonUniformIndexing
                 && indexingFeatures.runtimeDescriptorArray;
         }
+        ASSERT_NOT_REACHED();
     };
 
     bool allRequiredSupported = true;
@@ -1785,7 +1786,7 @@ std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>
         }
     }
 
-    std::vector<VkDescriptorSetLayout> setLayouts { maxSetId + 1 };
+    std::vector<VkDescriptorSetLayout> setLayouts { (size_t)maxSetId + 1 };
     for (uint32_t setId = 0; setId <= maxSetId; ++setId) {
 
         VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };

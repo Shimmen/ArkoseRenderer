@@ -170,8 +170,8 @@ struct Texture : public Resource {
 
     [[nodiscard]] const Type& type() const { return m_type; }
 
-    [[nodiscard]] const Extent2D& extent() const { return { m_extent.width(), m_extent.height() }; }
-    [[nodiscard]] const Extent3D& extent3D() const { return m_extent; }
+    [[nodiscard]] const Extent2D extent() const { return { m_extent.width(), m_extent.height() }; }
+    [[nodiscard]] const Extent3D extent3D() const { return m_extent; }
 
     [[nodiscard]] Format format() const { return m_format; }
 
@@ -197,18 +197,18 @@ struct Texture : public Resource {
     }
 
 private:
-    Type m_type;
+    Type m_type { Type::Texture2D };
 
-    Extent3D m_extent;
-    Format m_format;
+    Extent3D m_extent { 0, 0, 0 };
+    Format m_format { Format::RGBA8 };
 
-    MinFilter m_minFilter;
-    MagFilter m_magFilter;
+    MinFilter m_minFilter { MinFilter::Nearest };
+    MagFilter m_magFilter { MagFilter::Nearest };
 
     WrapModes m_wrapMode { WrapModes::repeatAll() };
 
-    Mipmap m_mipmap;
-    Multisampling m_multisampling;
+    Mipmap m_mipmap { Mipmap::None };
+    Multisampling m_multisampling { Multisampling::None };
 };
 
 enum class LoadOp {
