@@ -3,12 +3,15 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Assert & similar
 
+// We want normal assert behaviour in release mode too!
 #ifdef NDEBUG
-#define ASSERT(x) (void)(x)
-#else
-// TODO: Use own assert so we don't have to include <cassert>!
+#undef NDEBUG
+#define DO_SET_NDEBUG
+#endif
 #include <cassert>
 #define ASSERT(x) assert(x)
+#ifdef DO_SET_NDEBUG
+#define NDEBUG
 #endif
 
 #define ASSERT_NOT_REACHED()                  \
