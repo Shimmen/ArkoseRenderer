@@ -69,7 +69,7 @@ void ShowcaseApp::setup(RenderGraph& graph)
 #endif
 
         BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("forward", "color").value(), ShaderBindingType::TextureSampler } });
-        Shader tonemapShader = Shader::createBasicRasterize("final/simple.vert", "final/simple.frag");
+        Shader tonemapShader = Shader::createBasicRasterize("final/showcase/tonemap.vert", "final/showcase/tonemap.frag");
         RenderStateBuilder tonemapStateBuilder { ldrTarget, tonemapShader, vertexLayout };
         tonemapStateBuilder.addBindingSet(tonemapBindingSet);
         tonemapStateBuilder.writeDepth = false;
@@ -78,7 +78,7 @@ void ShowcaseApp::setup(RenderGraph& graph)
 
 #if USE_FXAA
         BindingSet& fxaaBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &ldrTexture, ShaderBindingType::TextureSampler } });
-        Shader fxaaShader = Shader::createBasicRasterize("fxaa/fxaa.vert", "fxaa/fxaa.frag");
+        Shader fxaaShader = Shader::createBasicRasterize("final/showcase/anti-alias.vert", "final/showcase/anti-alias.frag");
         RenderStateBuilder fxaaStateBuilder { reg.windowRenderTarget(), fxaaShader, vertexLayout };
         fxaaStateBuilder.addBindingSet(fxaaBindingSet);
         fxaaStateBuilder.writeDepth = false;
@@ -99,17 +99,21 @@ void ShowcaseApp::setup(RenderGraph& graph)
                 vec2 pixelSize = vec2(1.0f / ldrTexture.extent().width(), 1.0f / ldrTexture.extent().height());
                 cmdList.pushConstant(ShaderStageFragment, pixelSize, 0);
 
-                // TODO: Add UI!
                 static float subpix = 0.75f;
                 cmdList.pushConstant(ShaderStageFragment, subpix, sizeof(vec2));
 
-                // TODO: Add UI!
                 static float edgeThreshold = 0.166f;
                 cmdList.pushConstant(ShaderStageFragment, edgeThreshold, sizeof(vec2) + sizeof(float));
 
-                // TODO: Add UI!
                 static float edgeThresholdMin = 0.0833f;
                 cmdList.pushConstant(ShaderStageFragment, edgeThresholdMin, sizeof(vec2) + 2 * sizeof(float));
+
+                if (ImGui::TreeNode("FXAA")) {
+                    ImGui::SliderFloat("Sub-pixel AA", &subpix, 0.0f, 1.0f, "%.2f");
+                    ImGui::SliderFloat("Edge threshold", &edgeThreshold, 0.063f, 0.333f, "%.3f");
+                    ImGui::SliderFloat("Edge threshold min", &edgeThresholdMin, 0.0312f, 0.0833f, "%.4f");
+                    ImGui::TreePop();
+                }
             }
             cmdList.draw(vertexBuffer, 3);
             cmdList.endRendering();

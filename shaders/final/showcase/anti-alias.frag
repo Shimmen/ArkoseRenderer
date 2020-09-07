@@ -78,5 +78,10 @@ void main()
         fxaaConsoleEdgeThreshold,
         fxaaConsoleEdgeThresholdMin,
         fxaaConsole360ConstDir);
-    oColor = vec4(aaColor.rgb, 1.0);
+
+    // TODO: Add dithering (blue noise)
+    vec3 dither = vec3(0.0);
+    vec3 color = aaColor.rgb + dither;
+
+    oColor = vec4(color, 1.0);
 }
