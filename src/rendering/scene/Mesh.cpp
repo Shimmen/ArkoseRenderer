@@ -56,7 +56,7 @@ const Buffer& Mesh::vertexBuffer(const SemanticVertexLayout& layout)
 
     // FIXME: This only really works for float components. Later we need a way of doing this for other types as well,
     //  but right now we only have floating point components anyway.
-    constexpr std::array<float, 4> floatZeros {};
+    constexpr std::array<float, 4> floatOnes { 1, 1, 1, 1 };
 
     size_t offsetInFirstVertex = 0u;
 
@@ -66,7 +66,7 @@ const Buffer& Mesh::vertexBuffer(const SemanticVertexLayout& layout)
             moos::u8* destination = data + offsetInFirstVertex + vertexIdx * packedVertexSize;
             const moos::u8* source = (vertexIdx < inputCount)
                 ? &input[vertexIdx * componentSize]
-                : (moos::u8*)floatZeros.data();
+                : (moos::u8*)floatOnes.data();
             std::memcpy(destination, source, componentSize);
         }
         return componentSize;
