@@ -1,6 +1,7 @@
 #include "GltfModel.h"
 
 #include "utility/FileIO.h"
+#include "utility/Image.h"
 #include "utility/Logging.h"
 #include <mooslib/transform.h>
 #include <string>
@@ -27,8 +28,12 @@ std::unique_ptr<Model> GltfModel::load(const std::string& path)
     std::string error;
     std::string warning;
 
-    // TODO: Check if ASCII or binary!
-    bool result = loader.LoadASCIIFromFile(&internal, &error, &warning, path);
+    bool result;
+    if (path.ends_with(".gltf")) {
+        result = loader.LoadASCIIFromFile(&internal, &error, &warning, path);
+    } else if (path.ends_with(".glb")) {
+        result = loader.LoadBinaryFromFile(&internal, &error, &warning, path);
+    }
 
     if (!warning.empty()) {
         LogWarning("glTF loader warning: %s\n", warning.c_str());
@@ -169,31 +174,68 @@ std::unique_ptr<Material> GltfMesh::createMaterial()
 {
     auto& gltfMaterial = m_model->materials[m_primitive->material];
 
-    auto textureUri = [&](int texIndex, std::string defaultPath) -> std::string {
-        if (texIndex == -1) {
-            return defaultPath;
-        }
+    auto getTexture = [&](int texIndex) -> Material::PathOrImage {
+        if (texIndex == -1)
+            return { "", nullptr };
+
         auto& texture = m_model->textures[texIndex];
         auto& image = m_model->images[texture.source];
+
         if (!image.uri.empty()) {
-            return m_parentModel->directory() + image.uri;
+            return { m_parentModel->directory() + image.uri, nullptr };
         } else {
-            return defaultPath;
+
+            Image::Info info;
+            info.width = image.width;
+            info.height = image.height;
+
+            // TODO: Generalize!
+            switch (image.pixel_type) {
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                info.componentType = Image::ComponentType::UInt8;
+                break;
+            case TINYGLTF_COMPONENT_TYPE_FLOAT:
+                info.componentType = Image::ComponentType::Float;
+                break;
+            default:
+                ASSERT_NOT_REACHED();
+            }
+
+            switch (image.component) {
+            case 1:
+                info.pixelType = Image::PixelType::Grayscale;
+                break;
+            case 2:
+                info.pixelType = Image::PixelType::RG;
+                break;
+            case 3:
+                info.pixelType = Image::PixelType::RGB;
+                break;
+            case 4:
+                info.pixelType = Image::PixelType::RGBA;
+                break;
+            }
+
+            const tinygltf::BufferView& bufferView = m_model->bufferViews[image.bufferView];
+            const tinygltf::Buffer& buffer = m_model->buffers[bufferView.buffer];
+
+            size_t dataSize = bufferView.byteLength;
+            const uint8_t* data = buffer.data.data() + bufferView.byteOffset;
+
+            return { "", std::make_unique<Image>(Image::DataOwner::External, info, (void*)data, dataSize) };
         }
     };
 
     auto material = std::make_unique<Material>();
     material->setMesh(this);
 
-    if (gltfMaterial.pbrMetallicRoughness.baseColorTexture.index != -1) {
-        material->baseColor = textureUri(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index, "assets/default-baseColor.png");
-    }
+    material->baseColor = getTexture(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index);
     std::vector<double> c = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
     material->baseColorFactor = vec4(c[0], c[1], c[2], c[3]);
 
-    material->normalMap = textureUri(gltfMaterial.normalTexture.index, "assets/default-normal.png");
-    material->metallicRoughness = textureUri(gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index, "assets/default-black.png");
-    material->emissive = textureUri(gltfMaterial.emissiveTexture.index, "assets/default-black.png");
+    material->normalMap = getTexture(gltfMaterial.normalTexture.index);
+    material->metallicRoughness = getTexture(gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index);
+    material->emissive = getTexture(gltfMaterial.emissiveTexture.index);
 
     return material;
 }

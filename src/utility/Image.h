@@ -26,6 +26,11 @@ public:
         bool isHdr() const { return componentType == ComponentType::Float; }
     };
 
+    enum class DataOwner {
+        External,
+        StbImage,
+    };
+
     static Info* getInfo(const std::string& imagePath);
     static Image* load(const std::string& imagePath, PixelType);
 
@@ -37,13 +42,12 @@ public:
     Image(Image&) = delete;
     Image& operator=(Image&) = delete;
 
-    // These two should be private, but then the compiler complains:
-    //  C224 'Image::~Image': cannot access private member declared in class 'Image'
-    Image(Info, void* data, size_t size);
+    Image(DataOwner, Info, void* data, size_t size);
     ~Image();
 
 private:
     Info m_info;
     void* m_data;
     size_t m_size;
+    DataOwner m_owner;
 };

@@ -4,6 +4,7 @@
 #include "NodeDependency.h"
 #include "backend/Backend.h"
 #include "backend/Resources.h"
+#include "utility/Image.h"
 #include "utility/util.h"
 #include <unordered_map>
 #include <unordered_set>
@@ -20,6 +21,7 @@ public:
     [[nodiscard]] Texture& createPixelTexture(vec4 pixelValue, bool srgb);
     [[nodiscard]] Texture& loadTexture2D(const std::string& imagePath, bool srgb, bool generateMipmaps);
     [[nodiscard]] Texture& createTexture2D(Extent2D, Texture::Format, Texture::Mipmap = Texture::Mipmap::None, Texture::WrapModes = Texture::WrapModes::repeatAll());
+    [[nodiscard]] Texture& createTextureFromImage(const Image&, bool srgb, bool generateMipmaps, Texture::WrapModes = Texture::WrapModes::repeatAll());
     [[nodiscard]] Texture& createMultisampledTexture2D(Extent2D, Texture::Format, Texture::Multisampling, Texture::Mipmap = Texture::Mipmap::None);
     [[nodiscard]] Texture& createCubemapTexture(Extent2D, Texture::Format);
 

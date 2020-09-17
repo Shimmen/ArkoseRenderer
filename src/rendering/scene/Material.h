@@ -1,6 +1,7 @@
 #pragma once
 
 #include "backend/Resources.h"
+#include "utility/Image.h"
 #include <memory>
 #include <mooslib/vector.h>
 #include <string>
@@ -11,12 +12,20 @@ class Registry;
 
 class Material {
 public:
-    std::string baseColor {};
+    struct PathOrImage {
+        std::string path;
+        std::unique_ptr<Image> image;
+
+        bool hasPath() const { return !path.empty(); }
+        bool hasImage() const { return image != nullptr; }
+    };
+
+    PathOrImage baseColor {};
     vec4 baseColorFactor { 1.0f };
 
-    std::string normalMap {};
-    std::string metallicRoughness {};
-    std::string emissive {};
+    PathOrImage normalMap {};
+    PathOrImage metallicRoughness {};
+    PathOrImage emissive {};
 
     void setMesh(Mesh* mesh) { m_owner = mesh; }
     const Mesh* mesh() const { return m_owner; }

@@ -49,6 +49,63 @@ Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Text
     return *m_textures.back();
 }
 
+Texture& Registry::createTextureFromImage(const Image& image, bool srgb, bool generateMipmaps, Texture::WrapModes wrapMode)
+{
+    auto mipmapMode = (generateMipmaps && image.info().width > 1 && image.info().height > 1)
+        ? Texture::Mipmap::Linear
+        : Texture::Mipmap::None;
+
+    Texture::Format format;
+    int numDesiredComponents;
+    int pixelSizeBytes;
+
+    switch (image.info().pixelType) {
+    case Image::PixelType::RGB:
+    case Image::PixelType::RGBA:
+        numDesiredComponents = 4;
+        if (image.info().isHdr()) {
+            format = Texture::Format::RGBA32F;
+            pixelSizeBytes = 4 * sizeof(float);
+        } else {
+            format = (srgb)
+                ? Texture::Format::sRGBA8
+                : Texture::Format::RGBA8;
+            pixelSizeBytes = 4 * sizeof(uint8_t);
+        }
+        break;
+    default:
+        LogErrorAndExit("Registry: currently no support for other than (s)RGB(F) and (s)RGBA(F) texture loading (from image)!\n");
+    }
+
+    Texture::TextureDescription desc {
+        .type = Texture::Type::Texture2D,
+        .extent = { (uint32_t)image.info().width, (uint32_t)image.info().height, 1 },
+        .format = format,
+        .minFilter = Texture::MinFilter::Linear,
+        .magFilter = Texture::MagFilter::Linear,
+        .wrapMode = wrapMode,
+        .mipmap = mipmapMode,
+        .multisampling = Texture::Multisampling::None
+    };
+
+    int width, height;
+    void* rawPixelData;
+    if (image.info().isHdr())
+        rawPixelData = (void*)stbi_loadf_from_memory((const stbi_uc*)image.data(), image.size(), &width, &height, nullptr, numDesiredComponents);
+    else
+        rawPixelData = (void*)stbi_load_from_memory((const stbi_uc*)image.data(), image.size(), &width, &height, nullptr, numDesiredComponents);
+    ASSERT(width == image.info().width);
+    ASSERT(height == image.info().height);
+
+    uint32_t rawDataSize = width * height * pixelSizeBytes;
+    auto texture = backend().createTexture(desc);
+    texture->setData(rawPixelData, rawDataSize);
+    stbi_image_free(rawPixelData);
+
+    m_textures.push_back(std::move(texture));
+    return *m_textures.back();
+}
+
 Texture& Registry::createMultisampledTexture2D(Extent2D extent, Texture::Format format, Texture::Multisampling multisampling, Texture::Mipmap mipmap)
 {
     Texture::TextureDescription desc {

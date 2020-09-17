@@ -22,11 +22,15 @@ Registry& Material::sceneRegistry()
 Texture* Material::baseColorTexture()
 {
     if (!m_baseColorTexture) {
-        m_baseColorTexture = baseColor.empty()
-            // FIXME: The comment below applied for glTF 2.0 materials only, so we should standardize it here!
-            // (the constant color/factor is already in linear sRGB so we don't want to make an sRGB texture for it)
-            ? MaterialTextureCache::global({}).getPixelColorTexture(sceneRegistry(), baseColorFactor, false)
-            : MaterialTextureCache::global({}).getLoadedTexture(sceneRegistry(), baseColor, true);
+        if (baseColor.hasImage()) {
+            m_baseColorTexture = &sceneRegistry().createTextureFromImage(*baseColor.image, true, true);
+        } else {
+            m_baseColorTexture = baseColor.hasPath()
+                // FIXME: The comment below applied for glTF 2.0 materials only, so we should standardize it here!
+                // (the constant color/factor is already in linear sRGB so we don't want to make an sRGB texture for it)
+                ? MaterialTextureCache::global({}).getLoadedTexture(sceneRegistry(), baseColor.path, true)
+                : MaterialTextureCache::global({}).getPixelColorTexture(sceneRegistry(), baseColorFactor, false);
+        }
     }
     return m_baseColorTexture;
 }
@@ -34,9 +38,13 @@ Texture* Material::baseColorTexture()
 Texture* Material::normalMapTexture()
 {
     if (!m_normalMapTexture) {
-        m_normalMapTexture = normalMap.empty()
-            ? MaterialTextureCache::global({}).getLoadedTexture(sceneRegistry(), "default-normal.png", false)
-            : MaterialTextureCache::global({}).getLoadedTexture(sceneRegistry(), normalMap, false);
+        if (normalMap.hasImage()) {
+            m_normalMapTexture = &sceneRegistry().createTextureFromImage(*normalMap.image, false, true);
+        } else {
+            m_normalMapTexture = normalMap.hasPath()
+                ? MaterialTextureCache::global({}).getLoadedTexture(sceneRegistry(), normalMap.path, false)
+                : MaterialTextureCache::global({}).getLoadedTexture(sceneRegistry(), "assets/default-normal.png", false);
+        }
     }
     return m_normalMapTexture;
 }
@@ -44,9 +52,13 @@ Texture* Material::normalMapTexture()
 Texture* Material::metallicRoughnessTexture()
 {
     if (!m_metallicRoughnessTexture) {
-        m_metallicRoughnessTexture = metallicRoughness.empty()
-            ? MaterialTextureCache::global({}).getPixelColorTexture(sceneRegistry(), { 0, 0, 0, 0 }, true)
-            : MaterialTextureCache::global({}).getLoadedTexture(sceneRegistry(), metallicRoughness, false);
+        if (metallicRoughness.hasImage()) {
+            m_metallicRoughnessTexture = &sceneRegistry().createTextureFromImage(*metallicRoughness.image, false, true);
+        } else {
+            m_metallicRoughnessTexture = metallicRoughness.hasPath()
+                ? MaterialTextureCache::global({}).getLoadedTexture(sceneRegistry(), metallicRoughness.path, false)
+                : MaterialTextureCache::global({}).getPixelColorTexture(sceneRegistry(), { 0, 0, 0, 0 }, true);
+        }
     }
     return m_metallicRoughnessTexture;
 }
@@ -54,9 +66,13 @@ Texture* Material::metallicRoughnessTexture()
 Texture* Material::emissiveTexture()
 {
     if (!m_emissiveTexture) {
-        m_emissiveTexture = emissive.empty()
-            ? MaterialTextureCache::global({}).getPixelColorTexture(sceneRegistry(), { 0, 0, 0, 0 }, true)
-            : MaterialTextureCache::global({}).getLoadedTexture(sceneRegistry(), emissive, true);
+        if (emissive.hasImage()) {
+            m_emissiveTexture = &sceneRegistry().createTextureFromImage(*emissive.image, true, true);
+        } else {
+            m_emissiveTexture = emissive.hasPath()
+                ? MaterialTextureCache::global({}).getLoadedTexture(sceneRegistry(), emissive.path, true)
+                : MaterialTextureCache::global({}).getPixelColorTexture(sceneRegistry(), { 0, 0, 0, 0 }, true);
+        }
     }
     return m_emissiveTexture;
 }
