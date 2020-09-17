@@ -866,7 +866,7 @@ void VulkanCommandList::slowBlockingReadFromBuffer(const Buffer& buffer, size_t 
 {
     ASSERT(offset < buffer.size());
     ASSERT(size > 0);
-    ASSERT(size < buffer.size() - offset);
+    ASSERT(size <= buffer.size() - offset);
 
     auto& srcBuffer = static_cast<const VulkanBuffer&>(buffer);
     auto dstGenericBuffer = m_backend.createBuffer(buffer.size(), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::Readback);
