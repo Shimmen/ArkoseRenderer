@@ -1,5 +1,7 @@
 #version 460
 
+#include <common/noise.glsl>
+
 #define FXAA_PC 1
 #define FXAA_GLSL_130 1
 
@@ -40,6 +42,9 @@ layout(push_constant) uniform PushConstants {
     //   0.0625 - high quality (faster)
     //   0.0312 - visible limit (slower)
     FxaaFloat fxaaQualityEdgeThresholdMin;
+
+    float filmGrainGain;
+    uint frameIndex;
 };
 
 layout(location = 0) out vec4 oColor;
@@ -79,9 +84,11 @@ void main()
         fxaaConsoleEdgeThresholdMin,
         fxaaConsole360ConstDir);
 
-    // TODO: Add dithering (blue noise)
-    vec3 dither = vec3(0.0);
-    vec3 color = aaColor.rgb + dither;
+    // TODO: Use blue noise (or something even better)
+    // TODO: Make filmGrainGain a function of the camera ISO: higher ISO -> more digital sensor noise!
+    float noise = hash_2u_to_1f(uvec2(gl_FragCoord.xy) + frameIndex * uvec2(textureSize(uTexture, 0)));
+    vec3 filmGrain = vec3(filmGrainGain * (2.0 * noise - 1.0));
+    vec3 color = aaColor.rgb + filmGrain;
 
     oColor = vec4(color, 1.0);
 }

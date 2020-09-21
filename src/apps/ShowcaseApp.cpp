@@ -114,6 +114,15 @@ void ShowcaseApp::setup(RenderGraph& graph)
                     ImGui::SliderFloat("Edge threshold min", &edgeThresholdMin, 0.0312f, 0.0833f, "%.4f");
                     ImGui::TreePop();
                 }
+
+                static float filmGrainGain = 0.035f;
+                cmdList.pushConstant(ShaderStageFragment, filmGrainGain, sizeof(vec2) + 3 * sizeof(float));
+                cmdList.pushConstant(ShaderStageFragment, appState.frameIndex(), sizeof(vec2) + 4 * sizeof(float));
+
+                if (ImGui::TreeNode("Film grain")) {
+                    ImGui::SliderFloat("Grain gain", &filmGrainGain, 0.0f, 1.0f);
+                    ImGui::TreePop();
+                }
             }
             cmdList.draw(vertexBuffer, 3);
             cmdList.endRendering();
