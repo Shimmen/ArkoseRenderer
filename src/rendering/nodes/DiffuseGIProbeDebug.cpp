@@ -67,20 +67,14 @@ void DiffuseGIProbeDebug::constructNode(Registry& reg)
 
 RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& reg) const
 {
-    BindingSet& cameraBindingSet = *reg.getBindingSet("scene", "cameraSet");
     Texture& depthTexture = *reg.getTexture("g-buffer", "depth").value();
     Texture& colorTexture = *reg.getTexture("forward", "color").value();
-
-    // TODO: Don't clear the imported textures!!
-    //RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture, LoadOp::Load },
-    //                                                      { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Clear } });
-    RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture, LoadOp::Clear },
-                                                          { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Clear } });
-
-    
+    RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture, LoadOp::Load, StoreOp::Store },
+                                                          { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Load, StoreOp::Discard } });
 
     Shader debugShader = Shader::createBasicRasterize("diffuse-gi/probe-debug.vert", "diffuse-gi/probe-debug.frag");
     RenderStateBuilder stateBuilder { renderTarget, debugShader, VertexLayout::positionOnly() };
+    BindingSet& cameraBindingSet = *reg.getBindingSet("scene", "cameraSet");
     stateBuilder.addBindingSet(cameraBindingSet);
     stateBuilder.writeDepth = true;
     stateBuilder.testDepth = true;
@@ -90,7 +84,7 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
         static float probeScale = 0.1f;
         ImGui::SliderFloat("Probe size (m)", &probeScale, 0.01f, 1.0f);
 
-        cmdList.beginRendering(renderState, ClearColor(1.0f, 0.0f, 1.0f), 1.0f);
+        cmdList.beginRendering(renderState);
         cmdList.bindSet(cameraBindingSet, 0);
         cmdList.pushConstant(ShaderStageVertex, probeScale, sizeof(vec4));
         {
