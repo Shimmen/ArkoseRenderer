@@ -80,8 +80,7 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
     
 
     Shader debugShader = Shader::createBasicRasterize("diffuse-gi/probe-debug.vert", "diffuse-gi/probe-debug.frag");
-    VertexLayout vertexLayout { sizeof(vec3), { { 0, VertexAttributeType::Float3, 0 } } };
-    RenderStateBuilder stateBuilder { renderTarget, debugShader, vertexLayout };
+    RenderStateBuilder stateBuilder { renderTarget, debugShader, VertexLayout::positionOnly() };
     stateBuilder.addBindingSet(cameraBindingSet);
     stateBuilder.writeDepth = true;
     stateBuilder.testDepth = true;

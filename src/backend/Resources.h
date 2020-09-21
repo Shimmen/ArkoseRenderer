@@ -334,6 +334,11 @@ struct VertexAttribute {
 struct VertexLayout {
     size_t vertexStride {};
     std::vector<VertexAttribute> attributes {};
+
+    static VertexLayout positionOnly()
+    {
+        return VertexLayout { sizeof(vec3), { { 0, VertexAttributeType::Float3, 0 } } };
+    }
 };
 
 enum class IndexType {
