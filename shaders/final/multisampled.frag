@@ -2,6 +2,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 #include <common/aces.glsl>
+#include <common/srgb.glsl>
 #include <common/spherical.glsl>
 
 layout(location = 0) in vec2 vTexCoord;
@@ -37,7 +38,7 @@ void main()
 
     hdrColor *= exposure;
     vec3 ldrColor = ACES_tonemap(hdrColor);
-    ldrColor = pow(ldrColor, vec3(1.0 / 2.2));
+    ldrColor = sRGB_gammaEncode(ldrColor);
 
     oColor = vec4(ldrColor, 1.0);
 }
