@@ -41,10 +41,10 @@ vec4 codCustomDownsample(vec2 uv, vec2 targetTexelSize)
     color += (0.125 / 4.0) * sampleSourceBilinear(uv + vec2(+off.x, +off.y));
 
     // Centered "plus sign", where every sample is shared by two 4x4 boxes, weight 0.125
-    color += (0.125 / 2.0) * sampleSourceBilinear(uv + vec2(-off.x, 0.0));
-    color += (0.125 / 2.0) * sampleSourceBilinear(uv + vec2(+off.x, 0.0));
-    color += (0.125 / 2.0) * sampleSourceBilinear(uv + vec2(0.0, -off.y));
-    color += (0.125 / 2.0) * sampleSourceBilinear(uv + vec2(0.0, +off.y));
+    color += (0.125 / 4.0) * sampleSourceBilinear(uv + vec2(-off.x, 0.0));
+    color += (0.125 / 4.0) * sampleSourceBilinear(uv + vec2(+off.x, 0.0));
+    color += (0.125 / 4.0) * sampleSourceBilinear(uv + vec2(0.0, -off.y));
+    color += (0.125 / 4.0) * sampleSourceBilinear(uv + vec2(0.0, +off.y));
 
     // Center sample, shared by all four offset 4x4 boxes, weight 0.125
     // (divide by 4 to get each sample in the 4x4, but then multiply with 4 since the overlap)
