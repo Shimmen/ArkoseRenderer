@@ -720,7 +720,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
         case StoreOp::Store:
             attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
             break;
-        case StoreOp::Ignore:
+        case StoreOp::Discard:
             attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
             break;
         }

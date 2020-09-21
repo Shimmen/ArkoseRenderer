@@ -217,7 +217,7 @@ enum class LoadOp {
 };
 
 enum class StoreOp {
-    Ignore,
+    Discard,
     Store,
 };
 
