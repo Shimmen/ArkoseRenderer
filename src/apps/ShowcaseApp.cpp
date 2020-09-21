@@ -30,11 +30,20 @@ std::vector<Backend::Capability> ShowcaseApp::optionalCapabilities()
 void ShowcaseApp::setup(RenderGraph& graph)
 {
     scene().loadFromFile("assets/sample/cornell-box.json");
+#define USE_DENSE_GRID 0
+#if USE_DENSE_GRID > 0
+    auto probeGridDescription = DiffuseGINode::ProbeGridDescription {
+        .gridDimensions = { 8, 4, 8 },
+        .probeSpacing = { 0.50, 1.3, 0.65 },
+        .offsetToFirst = vec3(-1.75f, -0.5f, -1.90f)
+    };
+#else
     auto probeGridDescription = DiffuseGINode::ProbeGridDescription {
         .gridDimensions = { 4, 4, 4 },
         .probeSpacing = { 1.3, 1.3, 1.3 },
         .offsetToFirst = vec3(-2.0f, -0.5f, -2.0f)
     };
+#endif
 
     // System nodes
     graph.addNode<SceneNode>(scene());
@@ -47,7 +56,7 @@ void ShowcaseApp::setup(RenderGraph& graph)
     graph.addNode<GBufferNode>(scene());
     graph.addNode<ForwardRenderNode>(scene());
     graph.addNode<SkyViewNode>(scene());
-    //graph.addNode<DiffuseGINode>(scene(), probeGridDescription);
+    graph.addNode<DiffuseGINode>(scene(), probeGridDescription);
     graph.addNode<BloomNode>(scene());
 
     // Exposure & post-exposure additions (e.g. debug viz)
