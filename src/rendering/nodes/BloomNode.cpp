@@ -89,7 +89,7 @@ RenderGraphNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
 
         // Iteratively upsample the stack
 
-        static float upsampleBlurRadius = 0.001f;
+        static float upsampleBlurRadius = 0.0036f;
         ImGui::SliderFloat("Upsample blur radius", &upsampleBlurRadius, 0.0f, 0.01f, "%.4f");
 
         cmdList.setComputeState(upsampleState);
