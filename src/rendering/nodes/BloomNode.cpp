@@ -27,14 +27,13 @@ RenderGraphNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
 
     Extent2D extent = baseExtent;
     for (size_t i = 0; i < numLevels; ++i) {
+        extent = { extent.width() / 2, extent.height() / 2 };
 
         Texture& downsampleTex = reg.createTexture2D(extent, Texture::Format::RGBA16F, Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
         Texture& upsampleTex = reg.createTexture2D(extent, Texture::Format::RGBA16F, Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
 
         captures.downsampleTextures.push_back(&downsampleTex);
         captures.upsampleTextures.push_back(&upsampleTex);
-
-        extent = { extent.width() / 2, extent.height() / 2 };
     }
 
     for (size_t i = 1; i <= numDownsamples; ++i) {
@@ -60,7 +59,7 @@ RenderGraphNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
     ComputeState& upsampleState = reg.createComputeState(upsampleShader, captures.upsampleSets);
 
     BindingSet& blendBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &mainTexture, ShaderBindingType::StorageImage },
-                                                         { 1, ShaderStageCompute, captures.upsampleTextures[0], ShaderBindingType::StorageImage } });
+                                                         { 1, ShaderStageCompute, captures.upsampleTextures[0], ShaderBindingType::TextureSampler } });
     Shader bloomBlendShader = Shader::createCompute("bloom/blend.comp");
     ComputeState& bloomBlendComputeState = reg.createComputeState(bloomBlendShader, { &blendBindingSet });
 
