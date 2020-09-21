@@ -92,7 +92,7 @@ void RayTracingApp::setup(RenderGraph& graph)
         VertexLayout vertexLayout = VertexLayout { sizeof(vec2), { { 0, VertexAttributeType::Float2, 0 } } };
 
         BindingSet& bindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("forward", "color").value(), ShaderBindingType::TextureSampler } });
-        Shader shader = Shader::createBasicRasterize("final/simple.vert", "final/simple.frag");
+        Shader shader = Shader::createBasicRasterize("final/showcase/tonemap.vert", "final/showcase/tonemap.frag");
         RenderStateBuilder renderStateBuilder { reg.windowRenderTarget(), shader, vertexLayout };
         renderStateBuilder.addBindingSet(bindingSet);
         renderStateBuilder.writeDepth = false;
