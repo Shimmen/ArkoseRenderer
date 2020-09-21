@@ -2,6 +2,7 @@
 
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/DiffuseGINode.h"
+#include "rendering/nodes/DiffuseGIProbeDebug.h"
 #include "rendering/nodes/ExposureNode.h"
 #include "rendering/nodes/ForwardRenderNode.h"
 #include "rendering/nodes/GBufferNode.h"
@@ -32,8 +33,6 @@ void ShowcaseApp::setup(RenderGraph& graph)
     scene().loadFromFile("assets/sample/cornell-box.json");
     LogInfo("Done loading scene\n");
 
-    LogInfo("Setting up render graph\n");
-
     graph.addNode<SceneNode>(scene());
     graph.addNode<PickingNode>(scene());
 
@@ -44,11 +43,12 @@ void ShowcaseApp::setup(RenderGraph& graph)
     graph.addNode<SkyViewNode>(scene());
 
     auto probeGridDescription = DiffuseGINode::ProbeGridDescription {
-        .gridDimensions = { 8, 8, 8 },
-        .probeSpacing = { 1, 1, 1 },
+        .gridDimensions = { 8, 4, 8 },
+        .probeSpacing = { 2, 2, 2 },
         .offsetToFirst = vec3(-4, -2, -4)
     };
     graph.addNode<DiffuseGINode>(scene(), probeGridDescription);
+    graph.addNode<DiffuseGIProbeDebug>(scene(), probeGridDescription);
 
     graph.addNode<BloomNode>(scene());
 
@@ -129,8 +129,6 @@ void ShowcaseApp::setup(RenderGraph& graph)
 #endif
         };
     });
-
-    LogInfo("Done setting up render graph\n");
 }
 
 void ShowcaseApp::update(float elapsedTime, float deltaTime)
