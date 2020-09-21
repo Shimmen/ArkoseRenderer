@@ -362,6 +362,28 @@ void VulkanCommandList::generateMipmaps(Texture& genTexture)
                          1, &barrier);
 }
 
+void VulkanCommandList::beginRendering(const RenderState& genRenderState)
+{
+    if (activeRenderState) {
+        LogWarning("setRenderState: already active render state!\n");
+        endCurrentRenderPassIfAny();
+    }
+
+    genRenderState.renderTarget().forEachAttachmentInOrder([](const RenderTarget::Attachment& attachment) {
+        if (attachment.loadOp == LoadOp::Clear) {
+            LogErrorAndExit("CommandList: calling beginRendering (with no extra arguments) for rendering to a render target with LoadOp::Clear textures. "
+                            "For these render targets always use beginRendering with clear colors etc. specified. Exiting!");
+        }
+    });
+
+    // NOTE: These will not be used, but we need to pass something in for the current API
+    ClearColor clearColor { 0, 0, 0, 1 };
+    float clearDepth = 1.0f;
+    uint32_t clearStencil = 0;
+
+    beginRendering(genRenderState, clearColor, clearDepth, clearStencil);
+}
+
 void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearColor clearColor, float clearDepth, uint32_t clearStencil)
 {
     if (activeRenderState) {
@@ -390,12 +412,42 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
             clearValues.push_back(value);
     });
 
-    VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
-
-    // (there is automatic image layout transitions for attached textures, so when we bind the
-    //  render target here, make sure to also swap to the new layout in the cache variable)
     for (auto& [genAttachedTexture, implicitTransitionLayout] : renderTarget.attachedTextures) {
         auto& attachedTexture = static_cast<VulkanTexture&>(*genAttachedTexture);
+
+        VkImageLayout requiredIngoingLayout = attachedTexture.hasDepthFormat()
+            ? VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL
+            : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        if (attachedTexture.currentLayout != targetLayout) {
+
+            VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+            imageBarrier.oldLayout = texture.currentLayout;
+            imageBarrier.newLayout = targetLayout;
+            imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+            imageBarrier.image = texture.image;
+            imageBarrier.subresourceRange.aspectMask = texture.hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+            imageBarrier.subresourceRange.baseMipLevel = 0;
+            imageBarrier.subresourceRange.levelCount = texture.mipLevels();
+            imageBarrier.subresourceRange.baseArrayLayer = 0;
+            imageBarrier.subresourceRange.layerCount = texture.layerCount();
+
+            VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            imageBarrier.srcAccessMask = 0;
+
+            VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+            imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT; // FIXME: Maybe VK_ACCESS_MEMORY_READ_BIT?
+
+            vkCmdPipelineBarrier(m_commandBuffer,
+                                 sourceStage, destinationStage, 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 1, &imageBarrier);
+        }
+
+        // (there is automatic image layout transitions for attached textures, so when we bind the
+        //  render target here, make sure to also swap to the new layout in the cache variable)
         attachedTexture.currentLayout = implicitTransitionLayout;
     }
 
@@ -439,6 +491,8 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
         // TODO: We probably want to support storage images here as well!
         // for (const Texture* genTexture : renderState.storageImages) {}
     }
+
+    VkRenderPassBeginInfo renderPassBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO };
 
     renderPassBeginInfo.renderPass = renderTarget.compatibleRenderPass;
     renderPassBeginInfo.framebuffer = renderTarget.framebuffer;
