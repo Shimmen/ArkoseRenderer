@@ -29,32 +29,32 @@ std::vector<Backend::Capability> ShowcaseApp::optionalCapabilities()
 
 void ShowcaseApp::setup(RenderGraph& graph)
 {
-    LogInfo("Loading scene\n");
     scene().loadFromFile("assets/sample/cornell-box.json");
-    LogInfo("Done loading scene\n");
+    auto probeGridDescription = DiffuseGINode::ProbeGridDescription {
+        .gridDimensions = { 4, 4, 4 },
+        .probeSpacing = { 1.3, 1.3, 1.3 },
+        .offsetToFirst = vec3(-2.0f, -0.5f, -2.0f)
+    };
 
+    // System nodes
     graph.addNode<SceneNode>(scene());
     graph.addNode<PickingNode>(scene());
 
+    // Prepass nodes
     graph.addNode<ShadowMapNode>(scene());
 
+    // Main nodes (pre-exposure)
     graph.addNode<GBufferNode>(scene());
     graph.addNode<ForwardRenderNode>(scene());
     graph.addNode<SkyViewNode>(scene());
-
-    auto probeGridDescription = DiffuseGINode::ProbeGridDescription {
-        .gridDimensions = { 8, 4, 8 },
-        .probeSpacing = { 2, 2, 2 },
-        .offsetToFirst = vec3(-4, -2, -4)
-    };
-    graph.addNode<DiffuseGINode>(scene(), probeGridDescription);
-    graph.addNode<DiffuseGIProbeDebug>(scene(), probeGridDescription);
-
+    //graph.addNode<DiffuseGINode>(scene(), probeGridDescription);
     graph.addNode<BloomNode>(scene());
 
+    // Exposure & post-exposure additions (e.g. debug viz)
     graph.addNode<ExposureNode>(scene());
+    graph.addNode<DiffuseGIProbeDebug>(scene(), probeGridDescription);
 
-    graph.addNode("Final", [](Registry& reg) {
+    graph.addNode("final", [](Registry& reg) {
         // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.
         std::vector<vec2> fullScreenTriangle { { -1, -3 }, { -1, 1 }, { 3, 1 } };
         Buffer& vertexBuffer = reg.createBuffer(std::move(fullScreenTriangle), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
