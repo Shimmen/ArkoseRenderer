@@ -412,43 +412,39 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
             clearValues.push_back(value);
     });
 
-    for (auto& [genAttachedTexture, implicitTransitionLayout] : renderTarget.attachedTextures) {
+    for (auto& [genAttachedTexture, requiredLayout] : renderTarget.attachedTextures) {
         auto& attachedTexture = static_cast<VulkanTexture&>(*genAttachedTexture);
 
-        VkImageLayout requiredIngoingLayout = attachedTexture.hasDepthFormat()
-            ? VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL
-            : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        if (attachedTexture.currentLayout != targetLayout) {
+        // We require textures that we render to to always have the optimal layout both as initial and final, so that we can
+        // do things like LoadOp::Load and then just always assume that we have e.g. color target optimal.
+        if (attachedTexture.currentLayout != requiredLayout) {
 
             VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-            imageBarrier.oldLayout = texture.currentLayout;
-            imageBarrier.newLayout = targetLayout;
+            imageBarrier.oldLayout = attachedTexture.currentLayout;
+            imageBarrier.newLayout = requiredLayout;
             imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-            imageBarrier.image = texture.image;
-            imageBarrier.subresourceRange.aspectMask = texture.hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+            imageBarrier.image = attachedTexture.image;
+            imageBarrier.subresourceRange.aspectMask = attachedTexture.hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
             imageBarrier.subresourceRange.baseMipLevel = 0;
-            imageBarrier.subresourceRange.levelCount = texture.mipLevels();
+            imageBarrier.subresourceRange.levelCount = attachedTexture.mipLevels();
             imageBarrier.subresourceRange.baseArrayLayer = 0;
-            imageBarrier.subresourceRange.layerCount = texture.layerCount();
+            imageBarrier.subresourceRange.layerCount = attachedTexture.layerCount();
 
-            VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-            imageBarrier.srcAccessMask = 0;
+            VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+            imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
 
             VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-            imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT; // FIXME: Maybe VK_ACCESS_MEMORY_READ_BIT?
+            imageBarrier.dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
 
             vkCmdPipelineBarrier(m_commandBuffer,
                                  sourceStage, destinationStage, 0,
                                  0, nullptr,
                                  0, nullptr,
                                  1, &imageBarrier);
+            attachedTexture.currentLayout = requiredLayout;
         }
-
-        // (there is automatic image layout transitions for attached textures, so when we bind the
-        //  render target here, make sure to also swap to the new layout in the cache variable)
-        attachedTexture.currentLayout = implicitTransitionLayout;
     }
 
     // Explicitly transition the layouts of the sampled textures to an optimal layout (if it isn't already)

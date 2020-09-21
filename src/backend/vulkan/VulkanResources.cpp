@@ -702,13 +702,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
         switch (loadOp) {
         case LoadOp::Load:
             attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-            // TODO/FIXME: For LOAD_OP_LOAD we actually need to provide a valid initialLayout! Using texInfo.currentLayout
-            //  won't work since we only use the layout at the time of creating this render pass, and not what it is in
-            //  runtime. Not sure what the best way of doing this is. What about always using explicit transitions before
-            //  binding this render target, and then here have the same initialLayout and finalLayout so nothing(?) happens.
-            //  Could maybe work, but we have to figure out if it's actually a noop if initial & final are equal!
-            attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            ASSERT_NOT_REACHED();
+            attachment.initialLayout = finalLayout;
             break;
         case LoadOp::Clear:
             attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
