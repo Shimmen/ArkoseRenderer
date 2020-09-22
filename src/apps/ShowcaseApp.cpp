@@ -30,12 +30,18 @@ std::vector<Backend::Capability> ShowcaseApp::optionalCapabilities()
 void ShowcaseApp::setup(RenderGraph& graph)
 {
     scene().loadFromFile("assets/sample/cornell-box.json");
-#define USE_DENSE_GRID 0
+#define USE_DENSE_GRID -1
 #if USE_DENSE_GRID > 0
     auto probeGridDescription = DiffuseGINode::ProbeGridDescription {
         .gridDimensions = { 8, 4, 8 },
         .probeSpacing = { 0.50, 1.3, 0.65 },
         .offsetToFirst = vec3(-1.75f, -0.5f, -1.90f)
+    };
+#elif USE_DENSE_GRID < 0
+    auto probeGridDescription = DiffuseGINode::ProbeGridDescription {
+        .gridDimensions = { 1, 1, 1 },
+        .probeSpacing = { 0, 0, 0 },
+        .offsetToFirst = vec3(0, 1.8, 3)
     };
 #else
     auto probeGridDescription = DiffuseGINode::ProbeGridDescription {
@@ -57,11 +63,12 @@ void ShowcaseApp::setup(RenderGraph& graph)
     graph.addNode<ForwardRenderNode>(scene());
     graph.addNode<SkyViewNode>(scene());
     graph.addNode<DiffuseGINode>(scene(), probeGridDescription);
+    graph.addNode<DiffuseGIProbeDebug>(scene(), probeGridDescription);
     graph.addNode<BloomNode>(scene());
 
     // Exposure & post-exposure additions (e.g. debug viz)
     graph.addNode<ExposureNode>(scene());
-    graph.addNode<DiffuseGIProbeDebug>(scene(), probeGridDescription);
+    //graph.addNode<DiffuseGIProbeDebug>(scene(), probeGridDescription);
 
     graph.addNode("final", [](Registry& reg) {
         // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.

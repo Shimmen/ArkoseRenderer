@@ -72,10 +72,14 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture, LoadOp::Load, StoreOp::Store },
                                                           { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Load, StoreOp::Discard } });
 
+    // NOTE: This is just some temporary testing stuff!
+    Texture& probeColorCubemap = *reg.getTexture("diffuse-gi", "probeColorCubemap").value();
+    BindingSet& probeDataBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &probeColorCubemap, ShaderBindingType::TextureSampler } });
+
     Shader debugShader = Shader::createBasicRasterize("diffuse-gi/probe-debug.vert", "diffuse-gi/probe-debug.frag");
     RenderStateBuilder stateBuilder { renderTarget, debugShader, VertexLayout::positionOnly() };
     BindingSet& cameraBindingSet = *reg.getBindingSet("scene", "cameraSet");
-    stateBuilder.addBindingSet(cameraBindingSet);
+    stateBuilder.addBindingSet(cameraBindingSet).addBindingSet(probeDataBindingSet);
     stateBuilder.writeDepth = true;
     stateBuilder.testDepth = true;
     RenderState& renderState = reg.createRenderState(stateBuilder);
@@ -86,6 +90,7 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
 
         cmdList.beginRendering(renderState);
         cmdList.bindSet(cameraBindingSet, 0);
+        cmdList.bindSet(probeDataBindingSet, 1);
         cmdList.pushConstant(ShaderStageVertex, probeScale, sizeof(vec4));
         {
             for (int z = 0; z < m_grid.gridDimensions.depth(); ++z) {
