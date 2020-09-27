@@ -93,6 +93,7 @@ struct Texture : public Resource {
 
     enum class WrapMode {
         Repeat,
+        MirroredRepeat,
         ClampToEdge,
     };
 
@@ -115,6 +116,15 @@ struct Texture : public Resource {
                 WrapMode::Repeat,
                 WrapMode::Repeat,
                 WrapMode::Repeat
+            };
+        }
+
+        static WrapModes mirroredRepeatAll()
+        {
+            return {
+                WrapMode::MirroredRepeat,
+                WrapMode::MirroredRepeat,
+                WrapMode::MirroredRepeat
             };
         }
 

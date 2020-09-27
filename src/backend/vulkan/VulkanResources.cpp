@@ -280,6 +280,8 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
         switch (mode) {
         case WrapMode::Repeat:
             return VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        case WrapMode::MirroredRepeat:
+            return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
         case WrapMode::ClampToEdge:
             return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         default:
