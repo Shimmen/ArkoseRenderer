@@ -31,14 +31,14 @@ RenderTarget& Registry::createRenderTarget(std::vector<RenderTarget::Attachment>
     return *m_renderTargets.back();
 }
 
-Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
+Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
 {
     Texture::TextureDescription desc {
         .type = Texture::Type::Texture2D,
         .extent = Extent3D(extent, 1),
         .format = format,
-        .minFilter = Texture::MinFilter::Linear,
-        .magFilter = Texture::MagFilter::Linear,
+        .minFilter = filters.min,
+        .magFilter = filters.mag,
         .wrapMode = wrapMode,
         .mipmap = mipmap,
         .multisampling = Texture::Multisampling::None

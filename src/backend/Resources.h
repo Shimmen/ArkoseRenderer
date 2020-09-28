@@ -91,6 +91,34 @@ struct Texture : public Resource {
         Nearest,
     };
 
+    struct Filters {
+        MinFilter min;
+        MagFilter mag;
+
+        Filters() = delete;
+        Filters(MinFilter min, MagFilter mag)
+            : min(min)
+            , mag(mag)
+        {
+        }
+
+        static Filters linear()
+        {
+            return {
+                MinFilter::Linear,
+                MagFilter::Linear
+            };
+        }
+
+        static Filters nearest()
+        {
+            return {
+                MinFilter::Nearest,
+                MagFilter::Nearest
+            };
+        }
+    };
+
     enum class WrapMode {
         Repeat,
         MirroredRepeat,

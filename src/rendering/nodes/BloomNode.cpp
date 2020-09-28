@@ -29,8 +29,8 @@ RenderGraphNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
     for (size_t i = 0; i < numLevels; ++i) {
         extent = { extent.width() / 2, extent.height() / 2 };
 
-        Texture& downsampleTex = reg.createTexture2D(extent, Texture::Format::RGBA16F, Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
-        Texture& upsampleTex = reg.createTexture2D(extent, Texture::Format::RGBA16F, Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
+        Texture& downsampleTex = reg.createTexture2D(extent, Texture::Format::RGBA16F, Texture::Filters::linear(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
+        Texture& upsampleTex = reg.createTexture2D(extent, Texture::Format::RGBA16F, Texture::Filters::linear(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
 
         captures.downsampleTextures.push_back(&downsampleTex);
         captures.upsampleTextures.push_back(&upsampleTex);

@@ -105,7 +105,7 @@ RenderGraphNode::ExecuteCallback ExposureNode::constructFrame(Registry& reg) con
 {
     // Stores the current luminance for the image before exposure
     const Extent2D logLuminanceSize = { 1024, 1024 };
-    Texture& logLuminanceTexture = reg.createTexture2D(logLuminanceSize, Texture::Format::R32F, Texture::Mipmap::Nearest);
+    Texture& logLuminanceTexture = reg.createTexture2D(logLuminanceSize, Texture::Format::R32F, Texture::Filters::linear(), Texture::Mipmap::Nearest);
 
     // TODO: Maybe we should generalize the concept of the "main image where we accululate light etc." so we don't need to refer to "forward"?
     Texture& targetImage = *reg.getTexture("forward", "color").value();
