@@ -21,9 +21,9 @@ DiffuseGINode::DiffuseGINode(Scene& scene, ProbeGridDescription gridDescription)
 
 RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) const
 {
-#if 0
-    static constexpr Extent2D cubemapFaceSize { 256, 256 };
-    static constexpr Extent2D probeDataTexSize { 64, 64 };
+#if 1
+    static constexpr Extent2D cubemapFaceSize { 16, 16 };
+    static constexpr Extent2D probeDataTexSize { 32, 32 };
 #else
     static constexpr Extent2D cubemapFaceSize { 1024, 1024 };
     static constexpr Extent2D probeDataTexSize { 1024, 512 };
@@ -45,11 +45,11 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     Texture& probeColorCubemap = reg.createCubemapTexture(cubemapFaceSize, colorFormat);
     Texture& probeDistCubemap = reg.createCubemapTexture(cubemapFaceSize, distanceFormat);
 
-    reg.publish("probeColorCubemap", probeColorCubemap);
-
     // Texture arrays for storing final probe data
     // NOTE: We also have to do stuff like filtering on the depth beforehand..
-    Texture& irradianceProbe = reg.createTexture2D(probeDataTexSize, colorFormat, Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge()); // FIXME: Use a texture array!
+    auto sphereWrapping = Texture::WrapModes(Texture::WrapMode::Repeat, Texture::WrapMode::ClampToEdge);
+    Texture& irradianceProbe = reg.createTexture2D(probeDataTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
+    reg.publish("irradianceProbe", irradianceProbe);
     //Texture& irradianceProbes = reg.createTextureArray(probeCount(), probeDataTexSize, colorFormat);
     //Texture& filteredDistanceProbes = reg.createTextureArray(probeCount(), probeDataTexSize, distanceFormat);
 
@@ -67,6 +67,12 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     renderStateBuilder.addBindingSet(objectBindingSet);
     renderStateBuilder.addBindingSet(lightBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
+
+    BindingSet& irradianceFilterBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &irradianceProbe, ShaderBindingType::StorageImage },
+                                                                    { 1, ShaderStageCompute, &probeColorCubemap, ShaderBindingType::TextureSampler },
+                                                                    { 2, ShaderStageCompute, reg.getTexture("scene", "environmentMap").value(), ShaderBindingType::TextureSampler } });
+    Shader irradianceFilterShader = Shader::createCompute("diffuse-gi/filterIrradiance.comp");
+    ComputeState& irradianceFilterState = reg.createComputeState(irradianceFilterShader, { &irradianceFilterBindingSet });
 
     m_scene.forEachMesh([&](size_t, Mesh& mesh) {
         mesh.ensureVertexBuffer(semanticVertexLayout);
@@ -167,8 +173,20 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
             }
         });
 
-        // TODO: Prefilter irradiance and map to octahedral
-        // TODO: Chebychev stuff (filter distances) and map to octahedral
+        // Prefilter irradiance and map to spherical
+        cmdList.setComputeState(irradianceFilterState);
+        cmdList.bindSet(irradianceFilterBindingSet, 0);
+        cmdList.pushConstant(ShaderStageCompute, m_scene.environmentMultiplier());
+        cmdList.pushConstant(ShaderStageCompute, appState.frameIndex(), 4);
+        cmdList.dispatch(probeDataTexSize, { 16, 16, 1 });
+
+        // TODO: Chebychev stuff (filter distances) and map to spherical
+
+        // Copy color & distance+distance2 textures to the probe data arrays
+        {
+            //cmdList.copyTexture(probeColorTex, irradianceProbes, 0, probeToRender);
+            //cmdList.copyTexture(probeDistTex, filteredDistanceProbes, 0, probeToRender);
+        }
     };
 }
 

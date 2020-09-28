@@ -18,8 +18,8 @@ DiffuseGIProbeDebug::DiffuseGIProbeDebug(Scene& scene, DiffuseGINode::ProbeGridD
 
 void DiffuseGIProbeDebug::constructNode(Registry& reg)
 {
-    constexpr int rings = 16;
-    constexpr int sectors = 16;
+    constexpr int rings = 48;
+    constexpr int sectors = 48;
 
     using namespace moos;
 
@@ -73,8 +73,8 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
                                                           { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Load, StoreOp::Discard } });
 
     // NOTE: This is just some temporary testing stuff!
-    Texture& probeColorCubemap = *reg.getTexture("diffuse-gi", "probeColorCubemap").value();
-    BindingSet& probeDataBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &probeColorCubemap, ShaderBindingType::TextureSampler } });
+    Texture& irradianceProbe = *reg.getTexture("diffuse-gi", "irradianceProbe").value();
+    BindingSet& probeDataBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &irradianceProbe, ShaderBindingType::TextureSampler } });
 
     Shader debugShader = Shader::createBasicRasterize("diffuse-gi/probe-debug.vert", "diffuse-gi/probe-debug.frag");
     RenderStateBuilder stateBuilder { renderTarget, debugShader, VertexLayout::positionOnly() };
