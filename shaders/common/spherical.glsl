@@ -26,4 +26,13 @@ vec3 directionFromSphericalUv(vec2 uv)
     );
 }
 
+float sphericalMappingPixelSolidAngle(vec3 dir, float uniformPixelSolidAngleRef)
+{
+    // TODO: This is measured by eye and is completely arbitrary really. I know for sure
+    //  that the peak at the poles should be much more intense (i.e., lower solid angle)
+    //  but this simple formula seems sufficient for now.. If I ever get a response to
+    //  https://twitter.com/SimonMoos/status/1310589288883552258 that would help :)
+    return mix(uniformPixelSolidAngleRef, 0.6 * uniformPixelSolidAngleRef, pow(abs(dir.y), 4.0));
+}
+
 #endif // SPHERICAL_GLSL

@@ -37,6 +37,11 @@ void main()
         vec3 environment = texture(environmentTex, sampleUv).rgb;
         environment *= environmentMultiplier;
 
+        // Account for the smaller solid angle of pixels near the poles
+        // Note that we don't actually get a solid angle out, since we plug 1.0 in as reference.
+        float sampleWeight = sphericalMappingPixelSolidAngle(normalize(viewRay), 1.0);
+        environment *= sampleWeight;
+
         imageStore(targetImg, pixelCoord, vec4(environment, 1.0));
 
     }
