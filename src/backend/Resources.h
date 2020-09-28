@@ -131,6 +131,12 @@ struct Texture : public Resource {
         WrapMode w;
 
         WrapModes() = delete;
+        WrapModes(WrapMode u, WrapMode v)
+            : u(u)
+            , v(v)
+            , w(WrapMode::ClampToEdge)
+        {
+        }
         WrapModes(WrapMode u, WrapMode v, WrapMode w)
             : u(u)
             , v(v)
