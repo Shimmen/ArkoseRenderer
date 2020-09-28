@@ -22,11 +22,15 @@ DiffuseGINode::DiffuseGINode(Scene& scene, ProbeGridDescription gridDescription)
 RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) const
 {
 #if 1
+    // TODO: Consider if the distance probes require higher resolution. It seems so, and it makes a bit of sense
+    //  (consider human luma vs chroma sensitivity and that shadows kind of is luma and irradiance mostly is chroma)
     static constexpr Extent2D cubemapFaceSize { 16, 16 };
-    static constexpr Extent2D probeDataTexSize { 32, 32 };
+    static constexpr Extent2D probeDataTexSize { 32, 16 };
 #else
-    static constexpr Extent2D cubemapFaceSize { 1024, 1024 };
-    static constexpr Extent2D probeDataTexSize { 1024, 512 };
+    //static constexpr Extent2D cubemapFaceSize { 1024, 1024 };
+    //static constexpr Extent2D probeDataTexSize { 1024, 512 };
+    static constexpr Extent2D cubemapFaceSize { 256, 256 };
+    static constexpr Extent2D probeDataTexSize { 256, 128};
 #endif
 
     static constexpr Texture::Format colorFormat = Texture::Format::RGBA16F;
@@ -49,7 +53,9 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     // NOTE: We also have to do stuff like filtering on the depth beforehand..
     auto sphereWrapping = Texture::WrapModes(Texture::WrapMode::Repeat, Texture::WrapMode::ClampToEdge);
     Texture& irradianceProbe = reg.createTexture2D(probeDataTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
+    Texture& filteredDistanceProbe = reg.createTexture2D(probeDataTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
     reg.publish("irradianceProbe", irradianceProbe);
+    reg.publish("filteredDistanceProbe", filteredDistanceProbe);
     //Texture& irradianceProbes = reg.createTextureArray(probeCount(), probeDataTexSize, colorFormat);
     //Texture& filteredDistanceProbes = reg.createTextureArray(probeCount(), probeDataTexSize, distanceFormat);
 
@@ -73,6 +79,11 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
                                                                     { 2, ShaderStageCompute, reg.getTexture("scene", "environmentMap").value(), ShaderBindingType::TextureSampler } });
     Shader irradianceFilterShader = Shader::createCompute("diffuse-gi/filterIrradiance.comp");
     ComputeState& irradianceFilterState = reg.createComputeState(irradianceFilterShader, { &irradianceFilterBindingSet });
+
+    BindingSet& distanceFilterBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &filteredDistanceProbe, ShaderBindingType::StorageImage },
+                                                                  { 1, ShaderStageCompute, &probeDistCubemap, ShaderBindingType::TextureSampler } });
+    Shader distanceFilterShader = Shader::createCompute("diffuse-gi/filterDistances.comp");
+    ComputeState& distanceFilterState = reg.createComputeState(distanceFilterShader, { &distanceFilterBindingSet });
 
     m_scene.forEachMesh([&](size_t, Mesh& mesh) {
         mesh.ensureVertexBuffer(semanticVertexLayout);
@@ -180,7 +191,15 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         cmdList.pushConstant(ShaderStageCompute, appState.frameIndex(), 4);
         cmdList.dispatch(probeDataTexSize, { 16, 16, 1 });
 
-        // TODO: Chebychev stuff (filter distances) and map to spherical
+        // Prefilter distances and map to spherical
+        static float distanceBlurRadius = 0.1f;
+        ImGui::SliderFloat("Distance blur radius", &distanceBlurRadius, 0.01, 1.0);
+
+        cmdList.setComputeState(distanceFilterState);
+        cmdList.bindSet(distanceFilterBindingSet, 0);
+        cmdList.pushConstant(ShaderStageCompute, distanceBlurRadius, 0);
+        cmdList.pushConstant(ShaderStageCompute, appState.frameIndex(), 4);
+        cmdList.dispatch(probeDataTexSize, { 16, 16, 1 });
 
         // Copy color & distance+distance2 textures to the probe data arrays
         {

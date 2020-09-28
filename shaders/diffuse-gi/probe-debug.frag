@@ -18,8 +18,12 @@ void main()
     vec3 probeSampleDir = vec3(N.x, -N.y, N.z);
     vec2 probeSampleUV = sphericalUvFromDirection(probeSampleDir);
     //vec2 probeSampleUV = octahedralEncode(probeSampleDir) * 0.5 + 0.5;
-    vec3 irradiance = texture(probeDataTex, probeSampleUV).rgb;
 
-    //oColor = vec4(N * 0.5 + 0.5, 1.0);
+#if 0
+    vec3 irradiance = texture(probeDataTex, probeSampleUV).rgb;
     oColor = vec4(irradiance, 1.0);
+#else
+    vec2 distances = texture(probeDataTex, probeSampleUV).rg;
+    oColor = vec4(100.0 * vec3(distances.x), 1.0);
+#endif
 }

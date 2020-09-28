@@ -73,8 +73,13 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
                                                           { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Load, StoreOp::Discard } });
 
     // NOTE: This is just some temporary testing stuff!
+#if 0
     Texture& irradianceProbe = *reg.getTexture("diffuse-gi", "irradianceProbe").value();
     BindingSet& probeDataBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &irradianceProbe, ShaderBindingType::TextureSampler } });
+#else
+    Texture& filteredDistanceProbe = *reg.getTexture("diffuse-gi", "filteredDistanceProbe").value();
+    BindingSet& probeDataBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &filteredDistanceProbe, ShaderBindingType::TextureSampler } });
+#endif
 
     Shader debugShader = Shader::createBasicRasterize("diffuse-gi/probe-debug.vert", "diffuse-gi/probe-debug.frag");
     RenderStateBuilder stateBuilder { renderTarget, debugShader, VertexLayout::positionOnly() };
