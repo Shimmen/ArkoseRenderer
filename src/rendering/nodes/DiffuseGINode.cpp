@@ -223,17 +223,22 @@ int DiffuseGINode::ProbeGridDescription::probeCount() const
 
 moos::ivec3 DiffuseGINode::ProbeGridDescription::probeIndexFromLinear(int index) const
 {
-    int xySize = gridDimensions.width() * gridDimensions.height();
-    int zIndex = index / xySize;
-    index %= xySize;
+    auto findMSB = [](uint32_t val) -> int {
+        ASSERT(val != 0);
+        int index = 0;
+        while ((val & 0x01) == 0 && index < 32) {
+            val >>= 1;
+            index += 1;
+        }
+        return index;
+    };
 
-    int ySize = gridDimensions.height();
-    int yIndex = index / ySize;
-    index %= ySize;
+    moos::ivec3 probeIndex;
+    probeIndex.x = index & (gridDimensions.width() - 1);
+    probeIndex.y = (index & ((gridDimensions.width() * gridDimensions.height()) - 1)) >> findMSB(gridDimensions.width());
+    probeIndex.z = index >> findMSB(gridDimensions.width() * gridDimensions.height());
 
-    int xIndex = index;
-
-    return { xIndex, yIndex, zIndex };
+    return probeIndex;
 }
 
 vec3 DiffuseGINode::ProbeGridDescription::probePositionForIndex(moos::ivec3 index) const
