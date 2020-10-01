@@ -2,6 +2,7 @@
 
 #include "CameraState.h"
 #include "LightData.h"
+#include "ProbeDebug.h"
 #include "geometry/Frustum.h"
 #include "utility/Logging.h"
 #include <imgui.h>
@@ -21,16 +22,16 @@ DiffuseGINode::DiffuseGINode(Scene& scene, ProbeGridDescription gridDescription)
 
 RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) const
 {
-#if 1
+#if PROBE_DEBUG_HIGH_RES_VIZ
+    //static constexpr Extent2D cubemapFaceSize { 1024, 1024 };
+    //static constexpr Extent2D probeDataTexSize { 1024, 512 };
+    static constexpr Extent2D cubemapFaceSize { 256, 256 };
+    static constexpr Extent2D probeDataTexSize { 256, 128 };
+#else
     // TODO: Consider if the distance probes require higher resolution. It seems so, and it makes a bit of sense
     //  (consider human luma vs chroma sensitivity and that shadows kind of is luma and irradiance mostly is chroma)
     static constexpr Extent2D cubemapFaceSize { 16, 16 };
     static constexpr Extent2D probeDataTexSize { 32, 16 };
-#else
-    //static constexpr Extent2D cubemapFaceSize { 1024, 1024 };
-    //static constexpr Extent2D probeDataTexSize { 1024, 512 };
-    static constexpr Extent2D cubemapFaceSize { 256, 256 };
-    static constexpr Extent2D probeDataTexSize { 256, 128};
 #endif
 
     static constexpr Texture::Format colorFormat = Texture::Format::RGBA16F;
@@ -52,12 +53,14 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     // Texture arrays for storing final probe data
     // NOTE: We also have to do stuff like filtering on the depth beforehand..
     auto sphereWrapping = Texture::WrapModes(Texture::WrapMode::Repeat, Texture::WrapMode::ClampToEdge);
-    Texture& irradianceProbe = reg.createTexture2D(probeDataTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
-    Texture& filteredDistanceProbe = reg.createTexture2D(probeDataTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
-    reg.publish("irradianceProbe", irradianceProbe);
-    reg.publish("filteredDistanceProbe", filteredDistanceProbe);
-    //Texture& irradianceProbes = reg.createTextureArray(probeCount(), probeDataTexSize, colorFormat);
-    //Texture& filteredDistanceProbes = reg.createTextureArray(probeCount(), probeDataTexSize, distanceFormat);
+    Texture& tempIrradianceProbe = reg.createTexture2D(probeDataTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
+    Texture& tempFilteredDistanceProbe = reg.createTexture2D(probeDataTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
+
+    Texture& irradianceProbes = reg.createTextureArray(m_grid.probeCount(), probeDataTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
+    Texture& filteredDistanceProbes = reg.createTextureArray(m_grid.probeCount(), probeDataTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
+
+    reg.publish("irradianceProbes", irradianceProbes);
+    reg.publish("filteredDistanceProbes", filteredDistanceProbes);
 
     // The main render pass, for rendering to the probe textures
 
@@ -74,13 +77,13 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     renderStateBuilder.addBindingSet(lightBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
-    BindingSet& irradianceFilterBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &irradianceProbe, ShaderBindingType::StorageImage },
+    BindingSet& irradianceFilterBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &tempIrradianceProbe, ShaderBindingType::StorageImage },
                                                                     { 1, ShaderStageCompute, &probeColorCubemap, ShaderBindingType::TextureSampler },
                                                                     { 2, ShaderStageCompute, reg.getTexture("scene", "environmentMap").value(), ShaderBindingType::TextureSampler } });
     Shader irradianceFilterShader = Shader::createCompute("diffuse-gi/filterIrradiance.comp");
     ComputeState& irradianceFilterState = reg.createComputeState(irradianceFilterShader, { &irradianceFilterBindingSet });
 
-    BindingSet& distanceFilterBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &filteredDistanceProbe, ShaderBindingType::StorageImage },
+    BindingSet& distanceFilterBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &tempFilteredDistanceProbe, ShaderBindingType::StorageImage },
                                                                   { 1, ShaderStageCompute, &probeDistCubemap, ShaderBindingType::TextureSampler } });
     Shader distanceFilterShader = Shader::createCompute("diffuse-gi/filterDistances.comp");
     ComputeState& distanceFilterState = reg.createComputeState(distanceFilterShader, { &distanceFilterBindingSet });
@@ -97,13 +100,13 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         // FIXME: Render them in a random order, but all renders once before any gets a second render (like in tetris!)
         static int s_nextProbeToRender = 0;
         int probeToRender = s_nextProbeToRender++;
-        if (s_nextProbeToRender >= probeCount()) {
+        if (s_nextProbeToRender >= m_grid.probeCount()) {
             s_nextProbeToRender = 0;
             //LogInfo(" (full GI probe pass completed)\n");
         }
 
-        moos::ivec3 probeIndex = probeIndexFromLinear(probeToRender);
-        vec3 probePosition = probePositionForIndex(probeIndex);
+        moos::ivec3 probeIndex = m_grid.probeIndexFromLinear(probeToRender);
+        vec3 probePosition = m_grid.probePositionForIndex(probeIndex);
 
         // Set up camera matrices for rendering all sides
         // NOTE: Can be compacted, if needed
@@ -202,27 +205,29 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         cmdList.dispatch(probeDataTexSize, { 16, 16, 1 });
 
         // Copy color & distance+distance2 textures to the probe data arrays
+        // TODO: Later, if we put this in another queue, we have to be very careful here,
+        //  because this needs to be done in sync with the main queue while the rest lives on the async compute queue.
         {
-            //cmdList.copyTexture(probeColorTex, irradianceProbes, 0, probeToRender);
-            //cmdList.copyTexture(probeDistTex, filteredDistanceProbes, 0, probeToRender);
+            cmdList.copyTexture(tempIrradianceProbe, irradianceProbes, 0, probeToRender);
+            cmdList.copyTexture(tempFilteredDistanceProbe, filteredDistanceProbes, 0, probeToRender);
         }
     };
 }
 
-int DiffuseGINode::probeCount() const
+int DiffuseGINode::ProbeGridDescription::probeCount() const
 {
-    return m_grid.gridDimensions.width()
-        * m_grid.gridDimensions.height()
-        * m_grid.gridDimensions.depth();
+    return gridDimensions.width()
+        * gridDimensions.height()
+        * gridDimensions.depth();
 }
 
-moos::ivec3 DiffuseGINode::probeIndexFromLinear(int index) const
+moos::ivec3 DiffuseGINode::ProbeGridDescription::probeIndexFromLinear(int index) const
 {
-    int xySize = m_grid.gridDimensions.width() * m_grid.gridDimensions.height();
+    int xySize = gridDimensions.width() * gridDimensions.height();
     int zIndex = index / xySize;
     index %= xySize;
 
-    int ySize = m_grid.gridDimensions.height();
+    int ySize = gridDimensions.height();
     int yIndex = index / ySize;
     index %= ySize;
 
@@ -231,10 +236,10 @@ moos::ivec3 DiffuseGINode::probeIndexFromLinear(int index) const
     return { xIndex, yIndex, zIndex };
 }
 
-vec3 DiffuseGINode::probePositionForIndex(moos::ivec3 index) const
+vec3 DiffuseGINode::ProbeGridDescription::probePositionForIndex(moos::ivec3 index) const
 {
     vec3 floatIndex = { (float)index.x,
                         (float)index.y,
                         (float)index.z };
-    return m_grid.offsetToFirst + (floatIndex * m_grid.probeSpacing);
+    return offsetToFirst + (floatIndex * probeSpacing);
 }

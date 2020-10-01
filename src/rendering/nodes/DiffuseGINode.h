@@ -11,6 +11,10 @@ public:
         Extent3D gridDimensions;
         vec3 probeSpacing;
         vec3 offsetToFirst;
+
+        int probeCount() const;
+        moos::ivec3 probeIndexFromLinear(int index) const;
+        vec3 probePositionForIndex(moos::ivec3) const;
     };
 
     DiffuseGINode(Scene&, ProbeGridDescription);
@@ -19,10 +23,6 @@ public:
     std::optional<std::string> displayName() const override { return "Diffuse GI"; }
 
     ExecuteCallback constructFrame(Registry&) const override;
-
-    int probeCount() const;
-    moos::ivec3 probeIndexFromLinear(int index) const;
-    vec3 probePositionForIndex(moos::ivec3) const;
 
 private:
     struct Vertex {

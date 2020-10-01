@@ -30,7 +30,7 @@ std::vector<Backend::Capability> ShowcaseApp::optionalCapabilities()
 void ShowcaseApp::setup(RenderGraph& graph)
 {
     scene().loadFromFile("assets/sample/cornell-box.json");
-#define USE_DENSE_GRID -1
+#define USE_DENSE_GRID 0
 #if USE_DENSE_GRID > 0
     auto probeGridDescription = DiffuseGINode::ProbeGridDescription {
         .gridDimensions = { 8, 4, 8 },

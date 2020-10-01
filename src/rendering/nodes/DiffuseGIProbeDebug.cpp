@@ -1,6 +1,7 @@
 #include "DiffuseGIProbeDebug.h"
 
 #include "CameraState.h"
+#include "ProbeDebug.h"
 #include "utility/Logging.h"
 #include <imgui.h>
 
@@ -72,13 +73,12 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture, LoadOp::Load, StoreOp::Store },
                                                           { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Load, StoreOp::Discard } });
 
-    // NOTE: This is just some temporary testing stuff!
-#if 0
-    Texture& irradianceProbe = *reg.getTexture("diffuse-gi", "irradianceProbe").value();
-    BindingSet& probeDataBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &irradianceProbe, ShaderBindingType::TextureSampler } });
-#else
-    Texture& filteredDistanceProbe = *reg.getTexture("diffuse-gi", "filteredDistanceProbe").value();
-    BindingSet& probeDataBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &filteredDistanceProbe, ShaderBindingType::TextureSampler } });
+#if PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_COLOR
+    Texture& irradianceProbes = *reg.getTexture("diffuse-gi", "irradianceProbes").value();
+    BindingSet& probeDataBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &irradianceProbes, ShaderBindingType::TextureSampler } });
+#elif (PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_DISTANCE) || (PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_DISTANCE2)
+    Texture& filteredDistanceProbes = *reg.getTexture("diffuse-gi", "filteredDistanceProbes").value();
+    BindingSet& probeDataBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &filteredDistanceProbes, ShaderBindingType::TextureSampler } });
 #endif
 
     Shader debugShader = Shader::createBasicRasterize("diffuse-gi/probe-debug.vert", "diffuse-gi/probe-debug.frag");
@@ -96,18 +96,16 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
         cmdList.beginRendering(renderState);
         cmdList.bindSet(cameraBindingSet, 0);
         cmdList.bindSet(probeDataBindingSet, 1);
-        cmdList.pushConstant(ShaderStageVertex, probeScale, sizeof(vec4));
+        cmdList.pushConstant(ShaderStageVertex, probeScale, 0);
         {
-            for (int z = 0; z < m_grid.gridDimensions.depth(); ++z) {
-                for (int y = 0; y < m_grid.gridDimensions.height(); ++y) {
-                    for (int x = 0; x < m_grid.gridDimensions.width(); ++x) {
+            for (size_t probeIdx = 0; probeIdx < m_grid.probeCount(); ++probeIdx) {
+                auto probeIdx3D = m_grid.probeIndexFromLinear(probeIdx);
+                vec4 probeLocation = vec4(m_grid.probePositionForIndex(probeIdx3D), 0.0f);
 
-                        vec4 probeLocation = vec4(m_grid.offsetToFirst + vec3(x, y, z) * m_grid.probeSpacing, 0.0);
-                        cmdList.pushConstant(ShaderStageVertex, probeLocation, 0);
+                cmdList.pushConstant(ShaderStageVertex, probeLocation, 1 * sizeof(vec4));
+                cmdList.pushConstant(ShaderStageVertex, (int)probeIdx, 2 * sizeof(vec4));
 
-                        cmdList.drawIndexed(*m_sphereVertexBuffer, *m_sphereIndexBuffer, m_indexCount, IndexType::UInt16);
-                    }
-                }
+                cmdList.drawIndexed(*m_sphereVertexBuffer, *m_sphereIndexBuffer, m_indexCount, IndexType::UInt16);
             }
         }
         cmdList.endRendering();

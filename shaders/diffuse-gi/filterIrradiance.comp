@@ -5,6 +5,7 @@
 #include <common/octahedral.glsl>
 #include <common/random.glsl>
 #include <common/spherical.glsl>
+#include <shared/ProbeDebug.h>
 
 layout(set = 0, binding = 0, rgba16f) uniform writeonly image2D     irradianceImg;
 layout(set = 0, binding = 1)          uniform           samplerCube radianceCube;
@@ -139,7 +140,9 @@ void main()
     vec2 uv = (vec2(pixelCoord) + vec2(0.5)) / vec2(targetSize);
     vec3 direction = normalize(directionFromSphericalUv(uv));
 
-#if 0
+#if PROBE_DEBUG_HIGH_RES_VIZ
+    // To save your GPU from crashing, when doing a high res visualization (for debugging)
+    // don't do the expensive irradiance filtering which is super slow for large textures.
     float sampleWeight;
     vec3 radiance = sampleRadianceInDirection(direction, sampleWeight);
     imageStore(irradianceImg, pixelCoord, vec4(sampleWeight * radiance, 1.0));
