@@ -31,7 +31,7 @@ void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
         imageBarrier.subresourceRange.baseMipLevel = 0;
         imageBarrier.subresourceRange.levelCount = colorTexture.mipLevels();
         imageBarrier.subresourceRange.baseArrayLayer = 0;
-        imageBarrier.subresourceRange.layerCount = 1;
+        imageBarrier.subresourceRange.layerCount = colorTexture.layerCount();
 
         // FIXME: Probably overly aggressive barriers!
 
@@ -61,7 +61,7 @@ void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
     range.levelCount = colorTexture.mipLevels();
 
     range.baseArrayLayer = 0;
-    range.layerCount = 1;
+    range.layerCount = colorTexture.layerCount();
 
     vkCmdClearColorImage(m_commandBuffer, colorTexture.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &range);
 
@@ -77,7 +77,7 @@ void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
         imageBarrier.subresourceRange.baseMipLevel = 0;
         imageBarrier.subresourceRange.levelCount = colorTexture.mipLevels();
         imageBarrier.subresourceRange.baseArrayLayer = 0;
-        imageBarrier.subresourceRange.layerCount = 1;
+        imageBarrier.subresourceRange.layerCount = colorTexture.layerCount();
 
         // FIXME: Probably overly aggressive barriers!
 
@@ -235,7 +235,7 @@ void VulkanCommandList::generateMipmaps(Texture& genTexture)
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.layerCount = texture.layerCount();
     barrier.subresourceRange.levelCount = 1;
 
     uint32_t levels = texture.mipLevels();
@@ -258,7 +258,7 @@ void VulkanCommandList::generateMipmaps(Texture& genTexture)
         initialBarrierMip0.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         initialBarrierMip0.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         initialBarrierMip0.subresourceRange.baseArrayLayer = 0;
-        initialBarrierMip0.subresourceRange.layerCount = 1;
+        initialBarrierMip0.subresourceRange.layerCount = texture.layerCount();
         initialBarrierMip0.subresourceRange.baseMipLevel = 0;
         initialBarrierMip0.subresourceRange.levelCount = 1;
 
@@ -281,7 +281,7 @@ void VulkanCommandList::generateMipmaps(Texture& genTexture)
         initialBarrierMip1plus.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         initialBarrierMip1plus.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         initialBarrierMip1plus.subresourceRange.baseArrayLayer = 0;
-        initialBarrierMip1plus.subresourceRange.layerCount = 1;
+        initialBarrierMip1plus.subresourceRange.layerCount = texture.layerCount();
         initialBarrierMip1plus.subresourceRange.baseMipLevel = 1;
         initialBarrierMip1plus.subresourceRange.levelCount = levels - 1;
 
@@ -319,14 +319,14 @@ void VulkanCommandList::generateMipmaps(Texture& genTexture)
         blit.srcSubresource.aspectMask = aspectMask;
         blit.srcSubresource.mipLevel = i - 1;
         blit.srcSubresource.baseArrayLayer = 0;
-        blit.srcSubresource.layerCount = 1;
+        blit.srcSubresource.layerCount = texture.layerCount();
 
         blit.dstOffsets[0] = { 0, 0, 0 };
         blit.dstOffsets[1] = { nextWidth, nextHeight, 1 };
         blit.dstSubresource.aspectMask = aspectMask;
         blit.dstSubresource.mipLevel = i;
         blit.dstSubresource.baseArrayLayer = 0;
-        blit.dstSubresource.layerCount = 1;
+        blit.dstSubresource.layerCount = texture.layerCount();
 
         vkCmdBlitImage(m_commandBuffer,
                        texture.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
@@ -1032,7 +1032,7 @@ void VulkanCommandList::saveTextureToFile(const Texture& texture, const std::str
         imageCopyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         imageCopyRegion.srcSubresource.layerCount = 1;
         imageCopyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        imageCopyRegion.dstSubresource.layerCount = 1;
+        imageCopyRegion.dstSubresource.layerCount = 1; // FIXME: Maybe assert that the texture is not an array?
         imageCopyRegion.extent.width = texture.extent().width();
         imageCopyRegion.extent.height = texture.extent().height();
         imageCopyRegion.extent.depth = 1;
@@ -1131,7 +1131,7 @@ void VulkanCommandList::textureWriteBarrier(const Texture& genTexture)
         ? VK_IMAGE_ASPECT_DEPTH_BIT
         : VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.layerCount = texture.layerCount();
     barrier.subresourceRange.baseMipLevel = 0;
     barrier.subresourceRange.levelCount = texture.mipLevels();
 

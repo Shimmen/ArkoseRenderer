@@ -31,6 +31,7 @@ Resource& Resource::operator=(Resource&& other) noexcept
 Texture::Texture(Backend& backend, TextureDescription desc)
     : Resource(backend)
     , m_type(desc.type)
+    , m_arrayCount(desc.arrayCount)
     , m_extent(desc.extent)
     , m_format(desc.format)
     , m_minFilter(desc.minFilter)
@@ -41,6 +42,9 @@ Texture::Texture(Backend& backend, TextureDescription desc)
 {
     // (according to most specifications we can't have both multisampling and mipmapping)
     ASSERT(m_multisampling == Multisampling::None || m_mipmap == Mipmap::None);
+
+    // At least one item in an implicit array
+    ASSERT(m_arrayCount > 0);
 }
 
 bool Texture::hasFloatingPointDataFormat() const

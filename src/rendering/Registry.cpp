@@ -35,6 +35,26 @@ Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Text
 {
     Texture::TextureDescription desc {
         .type = Texture::Type::Texture2D,
+        .arrayCount = 1u,
+        .extent = Extent3D(extent, 1),
+        .format = format,
+        .minFilter = filters.min,
+        .magFilter = filters.mag,
+        .wrapMode = wrapMode,
+        .mipmap = mipmap,
+        .multisampling = Texture::Multisampling::None
+    };
+
+    auto texture = backend().createTexture(desc);
+    m_textures.push_back(std::move(texture));
+    return *m_textures.back();
+}
+
+Texture& Registry::createTextureArray(uint32_t itemCount, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
+{
+    Texture::TextureDescription desc {
+        .type = Texture::Type::Texture2D,
+        .arrayCount = itemCount,
         .extent = Extent3D(extent, 1),
         .format = format,
         .minFilter = filters.min,
@@ -79,6 +99,7 @@ Texture& Registry::createTextureFromImage(const Image& image, bool srgb, bool ge
 
     Texture::TextureDescription desc {
         .type = Texture::Type::Texture2D,
+        .arrayCount = 1u,
         .extent = { (uint32_t)image.info().width, (uint32_t)image.info().height, 1 },
         .format = format,
         .minFilter = Texture::MinFilter::Linear,
@@ -110,6 +131,7 @@ Texture& Registry::createMultisampledTexture2D(Extent2D extent, Texture::Format 
 {
     Texture::TextureDescription desc {
         .type = Texture::Type::Texture2D,
+        .arrayCount = 1u,
         .extent = Extent3D(extent, 1),
         .format = format,
         .minFilter = Texture::MinFilter::Linear,
@@ -131,6 +153,7 @@ Texture& Registry::createCubemapTexture(Extent2D extent, Texture::Format format)
 {
     Texture::TextureDescription desc {
         .type = Texture::Type::Cubemap,
+        .arrayCount = 1u,
         .extent = Extent3D(extent, 1),
         .format = format,
         .minFilter = Texture::MinFilter::Linear,
@@ -175,6 +198,7 @@ Texture& Registry::createPixelTexture(vec4 pixelValue, bool srgb)
 {
     Texture::TextureDescription desc {
         .type = Texture::Type::Texture2D,
+        .arrayCount = 1u,
         .extent = Extent3D(1, 1, 1),
         .format = srgb
             ? Texture::Format::sRGBA8
@@ -229,6 +253,7 @@ Texture& Registry::loadTexture2D(const std::string& imagePath, bool srgb, bool g
 
     Texture::TextureDescription desc {
         .type = Texture::Type::Texture2D,
+        .arrayCount = 1u,
         .extent = { (uint32_t)info->width, (uint32_t)info->height, 1 },
         .format = format,
         .minFilter = Texture::MinFilter::Linear,

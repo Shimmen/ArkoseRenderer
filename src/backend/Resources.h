@@ -189,6 +189,7 @@ struct Texture : public Resource {
 
     struct TextureDescription {
         Type type;
+        uint32_t arrayCount;
 
         Extent3D extent;
         Format format;
@@ -212,7 +213,10 @@ struct Texture : public Resource {
 
     virtual void generateMipmaps() = 0;
 
-    [[nodiscard]] const Type& type() const { return m_type; }
+    [[nodiscard]] Type type() const { return m_type; }
+
+    [[nodiscard]] bool isArray() const { return m_arrayCount > 1; };
+    [[nodiscard]] uint32_t arrayCount() const { return m_arrayCount; };
 
     [[nodiscard]] const Extent2D extent() const { return { m_extent.width(), m_extent.height() }; }
     [[nodiscard]] const Extent3D extent3D() const { return m_extent; }
@@ -242,6 +246,7 @@ struct Texture : public Resource {
 
 private:
     Type m_type { Type::Texture2D };
+    uint32_t m_arrayCount { 1u };
 
     Extent3D m_extent { 0, 0, 0 };
     Format m_format { Format::RGBA8 };

@@ -200,12 +200,12 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
     switch (type()) {
     case Type::Texture2D:
         imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageCreateInfo.arrayLayers = 1;
+        imageCreateInfo.arrayLayers = arrayCount();
         break;
     case Type::Cubemap:
         imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
         imageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-        imageCreateInfo.arrayLayers = 6;
+        imageCreateInfo.arrayLayers = 6 * arrayCount();
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -239,13 +239,17 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
     switch (type()) {
     case Type::Texture2D:
         viewCreateInfo.subresourceRange.baseArrayLayer = 0;
-        viewCreateInfo.subresourceRange.layerCount = 1;
-        viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+        viewCreateInfo.subresourceRange.layerCount = arrayCount();
+        viewCreateInfo.viewType = isArray()
+            ? VK_IMAGE_VIEW_TYPE_2D_ARRAY
+            : VK_IMAGE_VIEW_TYPE_2D;
         break;
     case Type::Cubemap:
         viewCreateInfo.subresourceRange.baseArrayLayer = 0;
-        viewCreateInfo.subresourceRange.layerCount = 6;
-        viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_CUBE;
+        viewCreateInfo.subresourceRange.layerCount = 6 * arrayCount();
+        viewCreateInfo.viewType = isArray()
+            ? VK_IMAGE_VIEW_TYPE_CUBE_ARRAY
+            : VK_IMAGE_VIEW_TYPE_CUBE;
         break;
     default:
         ASSERT_NOT_REACHED();
@@ -671,9 +675,9 @@ uint32_t VulkanTexture::layerCount() const
 {
     switch (type()) {
     case Texture::Type::Texture2D:
-        return 1;
+        return arrayCount();
     case Texture::Type::Cubemap:
-        return 6;
+        return 6 * arrayCount();
     default:
         ASSERT_NOT_REACHED();
     }

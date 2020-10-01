@@ -781,6 +781,7 @@ void VulkanBackend::createAndSetupSwapchain(VkPhysicalDevice physicalDevice, VkD
 
     Texture::TextureDescription depthDesc {
         .type = Texture::Type::Texture2D,
+        .arrayCount = 1u,
         .extent = m_swapchainExtent,
         .format = Texture::Format::Depth32F,
         .minFilter = Texture::MinFilter::Nearest,
