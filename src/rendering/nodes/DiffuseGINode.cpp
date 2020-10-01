@@ -94,8 +94,14 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     });
 
     return [&](const AppState& appState, CommandList& cmdList) {
-        static float ambientLx = 0.0f;
-        ImGui::SliderFloat("Injected ambient (lx)", &ambientLx, 0.0f, 1000.0f, "%.1f");
+        float ambientLx = m_scene.ambient();
+        static bool useSceneAmbient = true;
+        ImGui::Checkbox("Use scene ambient light", &useSceneAmbient);
+        if (!useSceneAmbient) {
+            static float injectedAmbientLx = 0.0f;
+            ImGui::SliderFloat("Injected ambient (lx)", &injectedAmbientLx, 0.0f, 1000.0f, "%.1f");
+            ambientLx = injectedAmbientLx;
+        }
 
         // FIXME: Render them in a random order, but all renders once before any gets a second render (like in tetris!)
         static int s_nextProbeToRender = 0;
