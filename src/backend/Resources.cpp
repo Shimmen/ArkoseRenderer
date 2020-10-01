@@ -21,6 +21,12 @@ Resource::Resource(Resource&& other) noexcept
     other.m_backend = nullptr;
 }
 
+void Resource::setOwningRegistry(Badge<Registry>, Registry* registry)
+{
+    ASSERT(m_owningRegistry == nullptr);
+    m_owningRegistry = registry;
+}
+
 Resource& Resource::operator=(Resource&& other) noexcept
 {
     m_backend = other.m_backend;

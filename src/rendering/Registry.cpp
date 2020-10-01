@@ -27,6 +27,8 @@ const RenderTarget& Registry::windowRenderTarget()
 RenderTarget& Registry::createRenderTarget(std::vector<RenderTarget::Attachment> attachments)
 {
     auto renderTarget = backend().createRenderTarget(attachments);
+    renderTarget->setOwningRegistry({}, this);
+
     m_renderTargets.push_back(std::move(renderTarget));
     return *m_renderTargets.back();
 }
@@ -46,6 +48,8 @@ Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Text
     };
 
     auto texture = backend().createTexture(desc);
+    texture->setOwningRegistry({}, this);
+
     m_textures.push_back(std::move(texture));
     return *m_textures.back();
 }
@@ -65,6 +69,8 @@ Texture& Registry::createTextureArray(uint32_t itemCount, Extent2D extent, Textu
     };
 
     auto texture = backend().createTexture(desc);
+    texture->setOwningRegistry({}, this);
+
     m_textures.push_back(std::move(texture));
     return *m_textures.back();
 }
@@ -118,8 +124,10 @@ Texture& Registry::createTextureFromImage(const Image& image, bool srgb, bool ge
     ASSERT(width == image.info().width);
     ASSERT(height == image.info().height);
 
-    uint32_t rawDataSize = width * height * pixelSizeBytes;
     auto texture = backend().createTexture(desc);
+    texture->setOwningRegistry({}, this);
+
+    uint32_t rawDataSize = width * height * pixelSizeBytes;
     texture->setData(rawPixelData, rawDataSize);
     stbi_image_free(rawPixelData);
 
@@ -145,6 +153,8 @@ Texture& Registry::createMultisampledTexture2D(Extent2D extent, Texture::Format 
     };
 
     auto texture = backend().createTexture(desc);
+    texture->setOwningRegistry({}, this);
+
     m_textures.push_back(std::move(texture));
     return *m_textures.back();
 }
@@ -167,6 +177,8 @@ Texture& Registry::createCubemapTexture(Extent2D extent, Texture::Format format)
     };
 
     auto texture = backend().createTexture(desc);
+    texture->setOwningRegistry({}, this);
+
     m_textures.push_back(std::move(texture));
     return *m_textures.back();
 }
@@ -175,7 +187,10 @@ Buffer& Registry::createBuffer(size_t size, Buffer::Usage usage, Buffer::MemoryH
 {
     if (size == 0)
         LogWarning("Warning: creating buffer of size 0!\n");
+
     auto buffer = backend().createBuffer(size, usage, memoryHint);
+    buffer->setOwningRegistry({}, this);
+
     m_buffers.push_back(std::move(buffer));
     return *m_buffers.back();
 }
@@ -190,6 +205,8 @@ Buffer& Registry::createBuffer(const std::byte* data, size_t size, Buffer::Usage
 BindingSet& Registry::createBindingSet(std::vector<ShaderBinding> shaderBindings)
 {
     auto bindingSet = backend().createBindingSet(shaderBindings);
+    bindingSet->setOwningRegistry({}, this);
+
     m_bindingSets.push_back(std::move(bindingSet));
     return *m_bindingSets.back();
 }
@@ -214,6 +231,8 @@ Texture& Registry::createPixelTexture(vec4 pixelValue, bool srgb)
     };
 
     auto texture = backend().createTexture(desc);
+    texture->setOwningRegistry({}, this);
+
     texture->setPixelData(pixelValue);
 
     m_textures.push_back(std::move(texture));
@@ -267,6 +286,7 @@ Texture& Registry::loadTexture2D(const std::string& imagePath, bool srgb, bool g
     };
 
     auto texture = backend().createTexture(desc);
+    texture->setOwningRegistry({}, this);
 
     Image* image = Image::load(imagePath, pixelTypeToUse);
     texture->setData(image->data(), image->size());
@@ -287,6 +307,8 @@ RenderState& Registry::createRenderState(
     const Viewport& viewport, const BlendState& blendState, const RasterState& rasterState, const DepthState& depthState)
 {
     auto renderState = backend().createRenderState(renderTarget, vertexLayout, shader, bindingSets, viewport, blendState, rasterState, depthState);
+    renderState->setOwningRegistry({}, this);
+
     m_renderStates.push_back(std::move(renderState));
     return *m_renderStates.back();
 }
@@ -294,6 +316,8 @@ RenderState& Registry::createRenderState(
 BottomLevelAS& Registry::createBottomLevelAccelerationStructure(std::vector<RTGeometry> geometries)
 {
     auto blas = backend().createBottomLevelAccelerationStructure(geometries);
+    blas->setOwningRegistry({}, this);
+
     m_bottomLevelAS.push_back(std::move(blas));
     return *m_bottomLevelAS.back();
 }
@@ -301,6 +325,8 @@ BottomLevelAS& Registry::createBottomLevelAccelerationStructure(std::vector<RTGe
 TopLevelAS& Registry::createTopLevelAccelerationStructure(std::vector<RTGeometryInstance> instances)
 {
     auto tlas = backend().createTopLevelAccelerationStructure(instances);
+    tlas->setOwningRegistry({}, this);
+
     m_topLevelAS.push_back(std::move(tlas));
     return *m_topLevelAS.back();
 }
@@ -308,6 +334,8 @@ TopLevelAS& Registry::createTopLevelAccelerationStructure(std::vector<RTGeometry
 RayTracingState& Registry::createRayTracingState(ShaderBindingTable& sbt, std::vector<BindingSet*> bindingSets, uint32_t maxRecursionDepth)
 {
     auto rtState = backend().createRayTracingState(sbt, bindingSets, maxRecursionDepth);
+    rtState->setOwningRegistry({}, this);
+
     m_rayTracingStates.push_back(std::move(rtState));
     return *m_rayTracingStates.back();
 }
@@ -315,6 +343,8 @@ RayTracingState& Registry::createRayTracingState(ShaderBindingTable& sbt, std::v
 ComputeState& Registry::createComputeState(const Shader& shader, std::vector<BindingSet*> bindingSets)
 {
     auto computeState = backend().createComputeState(shader, bindingSets);
+    computeState->setOwningRegistry({}, this);
+
     m_computeStates.push_back(std::move(computeState));
     return *m_computeStates.back();
 }

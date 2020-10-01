@@ -102,7 +102,15 @@ template<typename T>
 void Registry::publishResource(const std::string& name, T& resource, std::unordered_map<std::string, T*>& map)
 {
     ASSERT(m_currentNodeName.has_value());
-    auto fullName = makeQualifiedName(m_currentNodeName.value(), name);
+    auto nodeName = m_currentNodeName.value();
+
+    if (resource.owningRegistry({}) != this) {
+        LogErrorAndExit("Registry: Attempt to publish the resource '%s' in node %s, but the resource is not owned by this registry. "
+                        "This could be caused by a per-node resource being published as a per-frame node, or similar.\n",
+                        name.c_str(), nodeName.c_str());
+    }
+
+    auto fullName = makeQualifiedName(nodeName, name);
     auto entry = map.find(fullName);
     ASSERT(entry == map.end());
     map[fullName] = &resource;
