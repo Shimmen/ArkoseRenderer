@@ -20,24 +20,35 @@ DiffuseGINode::DiffuseGINode(Scene& scene, ProbeGridDescription gridDescription)
 {
 }
 
-RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) const
-{
 #if PROBE_DEBUG_HIGH_RES_VIZ
-    //static constexpr Extent2D cubemapFaceSize { 1024, 1024 };
-    //static constexpr Extent2D probeDataTexSize { 1024, 512 };
-    static constexpr Extent2D cubemapFaceSize { 256, 256 };
-    static constexpr Extent2D probeDataTexSize { 256, 128 };
+//static constexpr Extent2D cubemapFaceSize { 1024, 1024 };
+//static constexpr Extent2D probeDataTexSize { 1024, 512 };
+static constexpr Extent2D cubemapFaceSize { 256, 256 };
+static constexpr Extent2D probeDataTexSize { 256, 128 };
 #else
-    // TODO: Consider if the distance probes require higher resolution. It seems so, and it makes a bit of sense
-    //  (consider human luma vs chroma sensitivity and that shadows kind of is luma and irradiance mostly is chroma)
-    static constexpr Extent2D cubemapFaceSize { 16, 16 };
-    static constexpr Extent2D probeDataTexSize { 32, 16 };
+// TODO: Consider if the distance probes require higher resolution. It seems so, and it makes a bit of sense
+//  (consider human luma vs chroma sensitivity and that shadows kind of is luma and irradiance mostly is chroma)
+static constexpr Extent2D cubemapFaceSize { 16, 16 };
+static constexpr Extent2D probeDataTexSize { 32, 16 };
 #endif
 
-    static constexpr Texture::Format colorFormat = Texture::Format::RGBA16F;
-    static constexpr Texture::Format distanceFormat = Texture::Format::RG16F;
-    static constexpr Texture::Format depthFormat = Texture::Format::Depth32F;
+static constexpr Texture::Format colorFormat = Texture::Format::RGBA16F;
+static constexpr Texture::Format distanceFormat = Texture::Format::RG16F;
+static constexpr Texture::Format depthFormat = Texture::Format::Depth32F;
 
+static const auto sphereWrapping = Texture::WrapModes(Texture::WrapMode::Repeat, Texture::WrapMode::ClampToEdge);
+
+void DiffuseGINode::constructNode(Registry& reg)
+{
+    m_irradianceProbes = &reg.createTextureArray(m_grid.probeCount(), probeDataTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
+    m_filteredDistanceProbes = &reg.createTextureArray(m_grid.probeCount(), probeDataTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
+
+    reg.publish("irradianceProbes", *m_irradianceProbes);
+    reg.publish("filteredDistanceProbes", *m_filteredDistanceProbes);
+}
+
+RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) const
+{
     // Textures to render to
     Texture& probeColorTex = reg.createTexture2D(cubemapFaceSize, colorFormat);
     Texture& probeDistTex = reg.createCubemapTexture(cubemapFaceSize, distanceFormat);
@@ -51,16 +62,8 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     Texture& probeDistCubemap = reg.createCubemapTexture(cubemapFaceSize, distanceFormat);
 
     // Texture arrays for storing final probe data
-    // NOTE: We also have to do stuff like filtering on the depth beforehand..
-    auto sphereWrapping = Texture::WrapModes(Texture::WrapMode::Repeat, Texture::WrapMode::ClampToEdge);
     Texture& tempIrradianceProbe = reg.createTexture2D(probeDataTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
     Texture& tempFilteredDistanceProbe = reg.createTexture2D(probeDataTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
-
-    Texture& irradianceProbes = reg.createTextureArray(m_grid.probeCount(), probeDataTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
-    Texture& filteredDistanceProbes = reg.createTextureArray(m_grid.probeCount(), probeDataTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
-
-    reg.publish("irradianceProbes", irradianceProbes);
-    reg.publish("filteredDistanceProbes", filteredDistanceProbes);
 
     // The main render pass, for rendering to the probe textures
 
@@ -214,8 +217,8 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         // TODO: Later, if we put this in another queue, we have to be very careful here,
         //  because this needs to be done in sync with the main queue while the rest lives on the async compute queue.
         {
-            cmdList.copyTexture(tempIrradianceProbe, irradianceProbes, 0, probeToRender);
-            cmdList.copyTexture(tempFilteredDistanceProbe, filteredDistanceProbes, 0, probeToRender);
+            cmdList.copyTexture(tempIrradianceProbe, *m_irradianceProbes, 0, probeToRender);
+            cmdList.copyTexture(tempFilteredDistanceProbe, *m_filteredDistanceProbes, 0, probeToRender);
         }
     };
 }

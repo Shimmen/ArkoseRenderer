@@ -17,6 +17,9 @@ private:
     Scene& m_scene;
     DiffuseGINode::ProbeGridDescription m_grid;
 
+    Texture* m_probeData;
+
+    void setUpSphereRenderData(Registry&);
     Buffer* m_sphereVertexBuffer { nullptr };
     Buffer* m_sphereIndexBuffer { nullptr };
     uint32_t m_indexCount { 0u };

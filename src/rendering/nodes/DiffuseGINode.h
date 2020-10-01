@@ -22,6 +22,7 @@ public:
     static std::string name();
     std::optional<std::string> displayName() const override { return "Diffuse GI"; }
 
+    void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:
@@ -44,4 +45,7 @@ private:
 
     Scene& m_scene;
     ProbeGridDescription m_grid;
+
+    Texture* m_irradianceProbes;
+    Texture* m_filteredDistanceProbes;
 };
