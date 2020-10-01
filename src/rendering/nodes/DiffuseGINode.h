@@ -46,6 +46,8 @@ private:
     Scene& m_scene;
     ProbeGridDescription m_grid;
 
+    int getProbeIndexForNextToRender() const;
+
     Texture* m_irradianceProbes;
     Texture* m_filteredDistanceProbes;
 };

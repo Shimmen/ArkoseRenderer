@@ -6,6 +6,7 @@
 #include "geometry/Frustum.h"
 #include "utility/Logging.h"
 #include <imgui.h>
+#include <mooslib/random.h>
 #include <mooslib/transform.h>
 
 std::string DiffuseGINode::name()
@@ -106,14 +107,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
             ambientLx = injectedAmbientLx;
         }
 
-        // FIXME: Render them in a random order, but all renders once before any gets a second render (like in tetris!)
-        static int s_nextProbeToRender = 0;
-        int probeToRender = s_nextProbeToRender++;
-        if (s_nextProbeToRender >= m_grid.probeCount()) {
-            s_nextProbeToRender = 0;
-            //LogInfo(" (full GI probe pass completed)\n");
-        }
-
+        int probeToRender = getProbeIndexForNextToRender();
         moos::ivec3 probeIndex = m_grid.probeIndexFromLinear(probeToRender);
         vec3 probePosition = m_grid.probePositionForIndex(probeIndex);
 
@@ -221,6 +215,37 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
             cmdList.copyTexture(tempFilteredDistanceProbe, *m_filteredDistanceProbes, 0, probeToRender);
         }
     };
+}
+
+int DiffuseGINode::getProbeIndexForNextToRender() const
+{
+    // Render the probes in a random order, but make sure that all N probes are rendered once
+    // before any node is rendered a second time (like the random tetrominos in tetris)
+
+    static int s_orderedProbeIndex = 0;
+    static std::vector<int> s_shuffledProbeIndices {};
+
+    int orderedIndex = s_orderedProbeIndex++;
+    int probeCount = m_grid.probeCount();
+    s_orderedProbeIndex %= probeCount;
+
+    if (orderedIndex == 0) {
+        // Fill vector if empty
+        if (s_shuffledProbeIndices.empty()) {
+            for (int i = 0; i < m_grid.probeCount(); ++i)
+                s_shuffledProbeIndices.push_back(i);
+        }
+
+        // Shuffle the array
+        moos::Random random {};
+        for (int i = 0; i < probeCount - 1; ++i) {
+            int otherIndex = random.randomIntInRange(i + 1, probeCount);
+            std::swap(s_shuffledProbeIndices[i], s_shuffledProbeIndices[otherIndex]);
+        }
+    }
+
+    int probeIndex = s_shuffledProbeIndices[orderedIndex];
+    return probeIndex;
 }
 
 int DiffuseGINode::ProbeGridDescription::probeCount() const
