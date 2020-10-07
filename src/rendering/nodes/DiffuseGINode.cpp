@@ -14,10 +14,9 @@ std::string DiffuseGINode::name()
     return "diffuse-gi";
 }
 
-DiffuseGINode::DiffuseGINode(Scene& scene, ProbeGridDescription gridDescription)
+DiffuseGINode::DiffuseGINode(Scene& scene)
     : RenderGraphNode(DiffuseGINode::name())
     , m_scene(scene)
-    , m_grid(gridDescription)
 {
 }
 
@@ -41,8 +40,8 @@ static const auto sphereWrapping = Texture::WrapModes(Texture::WrapMode::Repeat,
 
 void DiffuseGINode::constructNode(Registry& reg)
 {
-    m_irradianceProbes = &reg.createTextureArray(m_grid.probeCount(), probeDataTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
-    m_filteredDistanceProbes = &reg.createTextureArray(m_grid.probeCount(), probeDataTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
+    m_irradianceProbes = &reg.createTextureArray(m_scene.probeGrid().probeCount(), probeDataTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
+    m_filteredDistanceProbes = &reg.createTextureArray(m_scene.probeGrid().probeCount(), probeDataTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
 
     reg.publish("irradianceProbes", *m_irradianceProbes);
     reg.publish("filteredDistanceProbes", *m_filteredDistanceProbes);
@@ -108,8 +107,8 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         }
 
         uint32_t probeToRender = getProbeIndexForNextToRender();
-        moos::ivec3 probeIndex = m_grid.probeIndexFromLinear(probeToRender);
-        vec3 probePosition = m_grid.probePositionForIndex(probeIndex);
+        moos::ivec3 probeIndex = m_scene.probeGrid().probeIndexFromLinear(probeToRender);
+        vec3 probePosition = m_scene.probeGrid().probePositionForIndex(probeIndex);
 
         // Set up camera matrices for rendering all sides
         // NOTE: Can be compacted, if needed
@@ -226,7 +225,7 @@ uint32_t DiffuseGINode::getProbeIndexForNextToRender() const
     static std::vector<uint32_t> s_shuffledProbeIndices {};
 
     uint32_t orderedIndex = s_orderedProbeIndex++;
-    uint32_t probeCount = m_grid.probeCount();
+    uint32_t probeCount = m_scene.probeGrid().probeCount();
     s_orderedProbeIndex %= probeCount;
 
     if (orderedIndex == 0) {
@@ -246,39 +245,4 @@ uint32_t DiffuseGINode::getProbeIndexForNextToRender() const
 
     uint32_t probeIndex = s_shuffledProbeIndices[orderedIndex];
     return probeIndex;
-}
-
-int DiffuseGINode::ProbeGridDescription::probeCount() const
-{
-    return gridDimensions.width()
-        * gridDimensions.height()
-        * gridDimensions.depth();
-}
-
-moos::ivec3 DiffuseGINode::ProbeGridDescription::probeIndexFromLinear(int index) const
-{
-    auto findMSB = [](uint32_t val) -> int {
-        ASSERT(val != 0);
-        int index = 0;
-        while ((val & 0x01) == 0 && index < 32) {
-            val >>= 1;
-            index += 1;
-        }
-        return index;
-    };
-
-    moos::ivec3 probeIndex;
-    probeIndex.x = index & (gridDimensions.width() - 1);
-    probeIndex.y = (index & ((gridDimensions.width() * gridDimensions.height()) - 1)) >> findMSB(gridDimensions.width());
-    probeIndex.z = index >> findMSB(gridDimensions.width() * gridDimensions.height());
-
-    return probeIndex;
-}
-
-vec3 DiffuseGINode::ProbeGridDescription::probePositionForIndex(moos::ivec3 index) const
-{
-    vec3 floatIndex = { (float)index.x,
-                        (float)index.y,
-                        (float)index.z };
-    return offsetToFirst + (floatIndex * probeSpacing);
 }

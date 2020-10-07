@@ -7,17 +7,7 @@
 
 class DiffuseGINode final : public RenderGraphNode {
 public:
-    struct ProbeGridDescription {
-        Extent3D gridDimensions;
-        vec3 probeSpacing;
-        vec3 offsetToFirst;
-
-        int probeCount() const;
-        moos::ivec3 probeIndexFromLinear(int index) const;
-        vec3 probePositionForIndex(moos::ivec3) const;
-    };
-
-    DiffuseGINode(Scene&, ProbeGridDescription);
+    DiffuseGINode(Scene&);
 
     static std::string name();
     std::optional<std::string> displayName() const override { return "Diffuse GI"; }
@@ -44,7 +34,6 @@ private:
                                                 VertexComponent::Normal3F };
 
     Scene& m_scene;
-    ProbeGridDescription m_grid;
 
     uint32_t getProbeIndexForNextToRender() const;
 

@@ -2,9 +2,11 @@
 
 #include "DirectionalLight.h"
 #include "Model.h"
+#include "rendering/camera/FpsCamera.h"
+#include "rendering/scene/ProbeGrid.h"
 #include <memory>
 #include <nlohmann/json_fwd.hpp>
-#include <rendering/camera/FpsCamera.h>
+#include <optional>
 #include <string>
 #include <unordered_map>
 
@@ -44,6 +46,10 @@ public:
     const DirectionalLight& sun() const { return m_directionalLights[0]; }
     DirectionalLight& sun() { return m_directionalLights[0]; }
 
+    bool hasProbeGrid() { return m_probeGrid.has_value(); }
+    void setProbeGrid(ProbeGrid probeGrid) { m_probeGrid = probeGrid; }
+    ProbeGrid& probeGrid() { return m_probeGrid.value(); }
+
     float& ambient() { return m_ambientIlluminance; }
 
     void setEnvironmentMap(std::string path) { m_environmentMap = std::move(path); }
@@ -64,6 +70,8 @@ private:
     std::vector<std::unique_ptr<Model>> m_models;
 
     std::vector<DirectionalLight> m_directionalLights;
+
+    std::optional<ProbeGrid> m_probeGrid;
 
     FpsCamera m_currentMainCamera;
     std::unordered_map<std::string, FpsCamera> m_allCameras {};

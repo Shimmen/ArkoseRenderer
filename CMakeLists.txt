@@ -28,6 +28,7 @@ add_executable(ArkoseRenderer
     src/rendering/scene/Material.cpp
     src/rendering/scene/Mesh.cpp
     src/rendering/scene/Model.cpp
+    src/rendering/scene/ProbeGrid.cpp
     src/rendering/scene/Vertex.cpp
     src/rendering/scene/models/GltfModel.cpp
     src/rendering/scene/Light.cpp

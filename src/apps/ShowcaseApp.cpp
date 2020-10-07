@@ -30,45 +30,34 @@ std::vector<Backend::Capability> ShowcaseApp::optionalCapabilities()
 void ShowcaseApp::setup(RenderGraph& graph)
 {
     scene().loadFromFile("assets/sample/cornell-box.json");
-#define USE_DENSE_GRID 0
+#define USE_DENSE_GRID 1
 #if USE_DENSE_GRID > 0
-    auto probeGridDescription = DiffuseGINode::ProbeGridDescription {
-        .gridDimensions = { 8, 4, 8 },
-        .probeSpacing = { 0.50, 1.3, 0.65 },
-        .offsetToFirst = vec3(-1.75f, -0.5f, -1.90f)
-    };
-#elif USE_DENSE_GRID < 0
-    auto probeGridDescription = DiffuseGINode::ProbeGridDescription {
-        .gridDimensions = { 1, 1, 1 },
-        .probeSpacing = { 0, 0, 0 },
-        .offsetToFirst = vec3(0, 1.8, 3)
-    };
+    scene().setProbeGrid({ .gridDimensions = { 8, 4, 8 },
+                           .probeSpacing = { 0.50, 1.3, 0.65 },
+                           .offsetToFirst = vec3(-1.75f, -0.5f, -1.90f) });
 #else
-    auto probeGridDescription = DiffuseGINode::ProbeGridDescription {
-        .gridDimensions = { 4, 4, 4 },
-        .probeSpacing = { 1.3, 1.3, 1.3 },
-        .offsetToFirst = vec3(-2.0f, -0.5f, -2.0f)
-    };
+    scene().setProbeGrid({ .gridDimensions = { 4, 4, 4 },
+                           .probeSpacing = { 1.3, 1.3, 1.3 },
+                           .offsetToFirst = vec3(-2.0f, -0.5f, -2.0f) });
 #endif
 
-    // System nodes
+    // System & resource nodes
     graph.addNode<SceneNode>(scene());
+    graph.addNode<GBufferNode>(scene());
     graph.addNode<PickingNode>(scene());
 
     // Prepass nodes
     graph.addNode<ShadowMapNode>(scene());
+    graph.addNode<DiffuseGINode>(scene());
 
     // Main nodes (pre-exposure)
-    graph.addNode<GBufferNode>(scene());
     graph.addNode<ForwardRenderNode>(scene());
     graph.addNode<SkyViewNode>(scene());
-    graph.addNode<DiffuseGINode>(scene(), probeGridDescription);
-    graph.addNode<DiffuseGIProbeDebug>(scene(), probeGridDescription);
+    graph.addNode<DiffuseGIProbeDebug>(scene());
     graph.addNode<BloomNode>(scene());
 
-    // Exposure & post-exposure additions (e.g. debug viz)
+    // Exposure & post-exposure additions (e.g. debug visualizations)
     graph.addNode<ExposureNode>(scene());
-    //graph.addNode<DiffuseGIProbeDebug>(scene(), probeGridDescription);
 
     graph.addNode("final", [](Registry& reg) {
         // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.

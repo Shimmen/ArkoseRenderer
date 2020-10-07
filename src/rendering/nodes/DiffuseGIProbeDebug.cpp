@@ -10,10 +10,9 @@ std::string DiffuseGIProbeDebug::name()
     return "diffuse-gi-probe-debug";
 }
 
-DiffuseGIProbeDebug::DiffuseGIProbeDebug(Scene& scene, DiffuseGINode::ProbeGridDescription gridDescription)
+DiffuseGIProbeDebug::DiffuseGIProbeDebug(Scene& scene)
     : RenderGraphNode(DiffuseGIProbeDebug::name())
     , m_scene(scene)
-    , m_grid(gridDescription)
 {
 }
 
@@ -54,9 +53,9 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
         cmdList.bindSet(probeDataBindingSet, 1);
         cmdList.pushConstant(ShaderStageVertex, probeScale, 0);
         {
-            for (size_t probeIdx = 0; probeIdx < m_grid.probeCount(); ++probeIdx) {
-                auto probeIdx3D = m_grid.probeIndexFromLinear(probeIdx);
-                vec4 probeLocation = vec4(m_grid.probePositionForIndex(probeIdx3D), 0.0f);
+            for (size_t probeIdx = 0; probeIdx < m_scene.probeGrid().probeCount(); ++probeIdx) {
+                auto probeIdx3D = m_scene.probeGrid().probeIndexFromLinear(probeIdx);
+                vec4 probeLocation = vec4(m_scene.probeGrid().probePositionForIndex(probeIdx3D), 0.0f);
 
                 cmdList.pushConstant(ShaderStageVertex, probeLocation, 1 * sizeof(vec4));
                 cmdList.pushConstant(ShaderStageVertex, (int)probeIdx, 2 * sizeof(vec4));

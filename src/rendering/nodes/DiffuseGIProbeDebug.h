@@ -5,7 +5,7 @@
 
 class DiffuseGIProbeDebug final : public RenderGraphNode {
 public:
-    DiffuseGIProbeDebug(Scene&, DiffuseGINode::ProbeGridDescription);
+    DiffuseGIProbeDebug(Scene&);
 
     static std::string name();
     std::optional<std::string> displayName() const override { return "Diffuse GI probe debug"; }
@@ -15,7 +15,6 @@ public:
 
 private:
     Scene& m_scene;
-    DiffuseGINode::ProbeGridDescription m_grid;
 
     Texture* m_probeData;
 
