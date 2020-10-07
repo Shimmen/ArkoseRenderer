@@ -40,7 +40,7 @@ vec3 specularBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float
     float LdotH = clamp(dot(L, H), 0.0, 1.0);
 
     // Use a which is perceptually linear for roughness
-    float a = square(roughness * roughness);
+    float a = square(roughness);
 
     vec3 f0 = mix(vec3(DIELECTRIC_REFLECTANCE), baseColor, metallic);
 
