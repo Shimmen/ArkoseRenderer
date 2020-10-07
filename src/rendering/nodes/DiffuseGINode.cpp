@@ -107,7 +107,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
             ambientLx = injectedAmbientLx;
         }
 
-        int probeToRender = getProbeIndexForNextToRender();
+        uint32_t probeToRender = getProbeIndexForNextToRender();
         moos::ivec3 probeIndex = m_grid.probeIndexFromLinear(probeToRender);
         vec3 probePosition = m_grid.probePositionForIndex(probeIndex);
 
@@ -217,34 +217,34 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     };
 }
 
-int DiffuseGINode::getProbeIndexForNextToRender() const
+uint32_t DiffuseGINode::getProbeIndexForNextToRender() const
 {
     // Render the probes in a random order, but make sure that all N probes are rendered once
     // before any node is rendered a second time (like the random tetrominos in tetris)
 
-    static int s_orderedProbeIndex = 0;
-    static std::vector<int> s_shuffledProbeIndices {};
+    static uint32_t s_orderedProbeIndex = 0;
+    static std::vector<uint32_t> s_shuffledProbeIndices {};
 
-    int orderedIndex = s_orderedProbeIndex++;
-    int probeCount = m_grid.probeCount();
+    uint32_t orderedIndex = s_orderedProbeIndex++;
+    uint32_t probeCount = m_grid.probeCount();
     s_orderedProbeIndex %= probeCount;
 
     if (orderedIndex == 0) {
         // Fill vector if empty
         if (s_shuffledProbeIndices.empty()) {
-            for (int i = 0; i < m_grid.probeCount(); ++i)
+            for (uint32_t i = 0; i < probeCount; ++i)
                 s_shuffledProbeIndices.push_back(i);
         }
 
         // Shuffle the array
         moos::Random random {};
-        for (int i = 0; i < probeCount - 1; ++i) {
-            int otherIndex = random.randomIntInRange(i + 1, probeCount);
+        for (uint32_t i = 0; i < probeCount - 1; ++i) {
+            int otherIndex = random.randomIntInRange(i + 1, probeCount - 1);
             std::swap(s_shuffledProbeIndices[i], s_shuffledProbeIndices[otherIndex]);
         }
     }
 
-    int probeIndex = s_shuffledProbeIndices[orderedIndex];
+    uint32_t probeIndex = s_shuffledProbeIndices[orderedIndex];
     return probeIndex;
 }
 
