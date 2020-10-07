@@ -377,6 +377,11 @@ std::optional<Texture*> Registry::getTexture(const std::string& node, const std:
     return texture;
 }
 
+Texture* Registry::getTextureWithoutDependency(const std::string& node, const std::string& name)
+{
+    return getResourceWithoutDependency(node, name, m_nameTextureMap);
+}
+
 Buffer* Registry::getBuffer(const std::string& node, const std::string& name)
 {
     return getResource(node, name, m_nameBufferMap);

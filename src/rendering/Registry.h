@@ -27,9 +27,11 @@ public:
     [[nodiscard]] Texture& createCubemapTexture(Extent2D, Texture::Format);
 
     [[nodiscard]] Buffer& createBuffer(size_t size, Buffer::Usage, Buffer::MemoryHint);
+    [[nodiscard]] Buffer& createBuffer(const std::byte* data, size_t size, Buffer::Usage, Buffer::MemoryHint);
     template<typename T>
     [[nodiscard]] Buffer& createBuffer(const std::vector<T>& inData, Buffer::Usage usage, Buffer::MemoryHint);
-    [[nodiscard]] Buffer& createBuffer(const std::byte* data, size_t size, Buffer::Usage, Buffer::MemoryHint);
+    template<typename T>
+    [[nodiscard]] Buffer& createBufferForData(const T& inData, Buffer::Usage usage, Buffer::MemoryHint);
 
     [[nodiscard]] BindingSet& createBindingSet(std::vector<ShaderBinding>);
 
@@ -51,6 +53,8 @@ public:
     [[nodiscard]] Buffer* getBuffer(const std::string& node, const std::string& name);
     [[nodiscard]] BindingSet* getBindingSet(const std::string& node, const std::string& name);
     [[nodiscard]] TopLevelAS* getTopLevelAccelerationStructure(const std::string& node, const std::string& name);
+
+    [[nodiscard]] Texture* getTextureWithoutDependency(const std::string& node, const std::string& name);
 
     [[nodiscard]] const std::unordered_set<NodeDependency>& nodeDependencies() const;
 
@@ -78,6 +82,8 @@ private:
 
     template<typename T>
     T* getResource(const std::string& node, const std::string& name, const std::unordered_map<std::string, T*>& map);
+    template<typename T>
+    T* getResourceWithoutDependency(const std::string& node, const std::string& name, const std::unordered_map<std::string, T*>& map);
 
     std::vector<std::unique_ptr<Buffer>> m_buffers;
     std::vector<std::unique_ptr<Texture>> m_textures;
@@ -95,6 +101,14 @@ template<typename T>
 {
     size_t dataSize = inData.size() * sizeof(T);
     auto* binaryData = reinterpret_cast<const std::byte*>(inData.data());
+    return createBuffer(binaryData, dataSize, usage, memoryHint);
+}
+
+template<typename T>
+[[nodiscard]] Buffer& Registry::createBufferForData(const T& inData, Buffer::Usage usage, Buffer::MemoryHint memoryHint)
+{
+    constexpr size_t dataSize = sizeof(T);
+    auto* binaryData = reinterpret_cast<const std::byte*>(&inData);
     return createBuffer(binaryData, dataSize, usage, memoryHint);
 }
 
@@ -119,15 +133,24 @@ void Registry::publishResource(const std::string& name, T& resource, std::unorde
 template<typename T>
 T* Registry::getResource(const std::string& node, const std::string& name, const std::unordered_map<std::string, T*>& map)
 {
+    T* resource = getResourceWithoutDependency(node, name, map);
+
+    if (resource) {
+        ASSERT(m_currentNodeName.has_value());
+        NodeDependency dependency { m_currentNodeName.value(), node };
+        m_nodeDependencies.insert(dependency);
+    }
+
+    return resource;
+}
+
+template<typename T>
+T* Registry::getResourceWithoutDependency(const std::string& node, const std::string& name, const std::unordered_map<std::string, T*>& map)
+{
     std::string fullName = makeQualifiedName(node, name);
     auto entry = map.find(fullName);
     if (entry == map.end())
         return nullptr;
-
-    ASSERT(m_currentNodeName.has_value());
-    NodeDependency dependency { m_currentNodeName.value(), node };
-    m_nodeDependencies.insert(dependency);
-
     T* resource = entry->second;
     return resource;
 }
