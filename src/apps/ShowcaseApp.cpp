@@ -30,16 +30,11 @@ std::vector<Backend::Capability> ShowcaseApp::optionalCapabilities()
 void ShowcaseApp::setup(RenderGraph& graph)
 {
     scene().loadFromFile("assets/sample/cornell-box.json");
-#define USE_DENSE_GRID 1
-#if USE_DENSE_GRID > 0
-    scene().setProbeGrid({ .gridDimensions = { 8, 4, 8 },
-                           .probeSpacing = { 0.50, 1.3, 0.65 },
-                           .offsetToFirst = vec3(-1.75f, -0.5f, -1.90f) });
-#else
-    scene().setProbeGrid({ .gridDimensions = { 4, 4, 4 },
-                           .probeSpacing = { 1.3, 1.3, 1.3 },
-                           .offsetToFirst = vec3(-2.0f, -0.5f, -2.0f) });
-#endif
+    
+    if (!scene().hasProbeGrid()) {
+        // TODO: It would probably be okay to create a grid description from the scene bounding box? For later..
+        LogErrorAndExit("ShowcaseApp requires scenes to have a probe grid to work correctly\n");
+    }
 
     // System & resource nodes
     graph.addNode<SceneNode>(scene());

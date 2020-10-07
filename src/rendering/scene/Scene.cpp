@@ -32,6 +32,12 @@ void Scene::loadFromFile(const std::string& path)
         return { values[0], values[1], values[2] };
     };
 
+    auto readExtent3D = [&](const json& val) -> Extent3D {
+        std::vector<uint32_t> values = val;
+        ASSERT(values.size() == 3);
+        return Extent3D(values[0], values[1], values[2]);
+    };
+
     auto jsonEnv = jsonScene.at("environment");
     m_environmentMap = jsonEnv.at("texture");
     m_environmentMultiplier = jsonEnv.at("illuminance");
@@ -105,6 +111,13 @@ void Scene::loadFromFile(const std::string& path)
         } else {
             ASSERT_NOT_REACHED();
         }
+    }
+
+    if (jsonScene.find("probe-grid") != jsonScene.end()) {
+        auto jsonProbeGrid = jsonScene.at("probe-grid");
+        setProbeGrid({ .gridDimensions = readExtent3D(jsonProbeGrid.at("dimensions")),
+                       .probeSpacing = readVec3(jsonProbeGrid.at("spacing")),
+                       .offsetToFirst = readVec3(jsonProbeGrid.at("offsetToFirst")) });
     }
 
     for (auto& jsonCamera : jsonScene.at("cameras")) {
