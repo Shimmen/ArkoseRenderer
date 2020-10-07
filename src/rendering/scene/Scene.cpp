@@ -26,6 +26,12 @@ void Scene::loadFromFile(const std::string& path)
     std::ifstream fileStream(path);
     fileStream >> jsonScene;
 
+    auto readVec3 = [&](const json& val) -> vec3 {
+        std::vector<float> values = val;
+        ASSERT(values.size() == 3);
+        return { values[0], values[1], values[2] };
+    };
+
     auto jsonEnv = jsonScene.at("environment");
     m_environmentMap = jsonEnv.at("texture");
     m_environmentMultiplier = jsonEnv.at("illuminance");
@@ -34,9 +40,8 @@ void Scene::loadFromFile(const std::string& path)
         std::string modelGltf = jsonModel.at("gltf");
 
         auto model = GltfModel::load(modelGltf);
-        if (!model) {
+        if (!model)
             continue;
-        }
 
         std::string name = jsonModel.at("name");
         model->setName(name);
@@ -50,23 +55,20 @@ void Scene::loadFromFile(const std::string& path)
         }
 
         auto transform = jsonModel.at("transform");
-
-        std::vector<float> translation = transform.at("translation");
-        std::vector<float> scale = transform.at("scale");
+        auto jsonRotation = transform.at("rotation");
 
         mat4 rotationMatrix;
-        auto jsonRotation = transform.at("rotation");
         std::string rotType = jsonRotation.at("type");
         if (rotType == "axis-angle") {
+            vec3 axis = readVec3(jsonRotation.at("axis"));
             float angle = jsonRotation.at("angle");
-            std::vector<float> axis = jsonRotation.at("axis");
-            rotationMatrix = moos::quatToMatrix(moos::axisAngle({ axis[0], axis[1], axis[2] }, angle));
+            rotationMatrix = moos::quatToMatrix(moos::axisAngle(axis, angle));
         } else {
             ASSERT_NOT_REACHED();
         }
 
-        mat4 localMatrix = moos::translate(vec3(translation[0], translation[1], translation[2]))
-            * rotationMatrix * moos::scale(vec3(scale[0], scale[1], scale[2]));
+        mat4 localMatrix = moos::translate(readVec3(transform.at("translation")))
+            * rotationMatrix * moos::scale(readVec3(transform.at("scale")));
         model->transform().setLocalMatrix(localMatrix);
 
         addModel(std::move(model));
@@ -77,29 +79,23 @@ void Scene::loadFromFile(const std::string& path)
         auto type = jsonLight.at("type");
         if (type == "directional") {
 
-            float color[3];
-            jsonLight.at("color").get_to(color);
-
+            vec3 color = readVec3(jsonLight.at("color"));
             float illuminance = jsonLight.at("illuminance");
+            vec3 direction = readVec3(jsonLight.at("direction"));
 
-            float dir[3];
-            jsonLight.at("direction").get_to(dir);
+            DirectionalLight light { color, illuminance, direction };
 
-            DirectionalLight sun({ color[0], color[1], color[2] },
-                                 illuminance,
-                                 { dir[0], dir[1], dir[2] });
-
-            sun.shadowMapWorldOrigin = { 0, 0, 0 };
-            sun.shadowMapWorldExtent = jsonLight.at("worldExtent");
+            light.shadowMapWorldOrigin = { 0, 0, 0 };
+            light.shadowMapWorldExtent = jsonLight.at("worldExtent");
 
             int mapSize[2];
             jsonLight.at("shadowMapSize").get_to(mapSize);
-            sun.setShadowMapSize({ mapSize[0], mapSize[1] });
+            light.setShadowMapSize({ mapSize[0], mapSize[1] });
 
-            sun.setScene({}, this);
+            light.setScene({}, this);
 
             // TODO!
-            m_directionalLights.push_back(sun);
+            m_directionalLights.push_back(light);
 
         } else if (type == "ambient") {
 
@@ -114,16 +110,11 @@ void Scene::loadFromFile(const std::string& path)
     for (auto& jsonCamera : jsonScene.at("cameras")) {
 
         FpsCamera camera;
+        vec3 origin = readVec3(jsonCamera.at("origin"));
+        vec3 target = readVec3(jsonCamera.at("target"));
+        camera.lookAt(origin, target, moos::globalUp);
 
         std::string name = jsonCamera.at("name");
-
-        float origin[3];
-        jsonCamera.at("origin").get_to(origin);
-
-        float target[3];
-        jsonCamera.at("target").get_to(target);
-
-        camera.lookAt({ origin[0], origin[1], origin[2] }, { target[0], target[1], target[2] }, moos::globalUp);
         m_allCameras[name] = camera;
     }
 
