@@ -2,7 +2,7 @@
 
 #include "CameraState.h"
 #include <imgui.h>
-#include <mooslib/vector.h>
+#include <moos/vector.h>
 
 ExposureNode::ExposureNode(Scene& scene)
     : RenderGraphNode(ExposureNode::name())

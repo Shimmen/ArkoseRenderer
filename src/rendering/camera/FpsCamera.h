@@ -2,9 +2,9 @@
 
 #include "utility/Extent.h"
 #include "utility/Input.h"
-#include <mooslib/matrix.h>
-#include <mooslib/quaternion.h>
-#include <mooslib/vector.h>
+#include <moos/matrix.h>
+#include <moos/quaternion.h>
+#include <moos/vector.h>
 
 class FpsCamera {
 public:

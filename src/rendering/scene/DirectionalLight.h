@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Light.h"
-#include <mooslib/transform.h>
+#include <moos/transform.h>
 
 class DirectionalLight : public Light {
 public:

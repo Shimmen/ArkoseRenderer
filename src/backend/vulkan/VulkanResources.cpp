@@ -4,7 +4,7 @@
 #include "rendering/ShaderManager.h"
 #include "utility/CapList.h"
 #include "utility/Logging.h"
-#include <mooslib/core.h>
+#include <moos/core.h>
 #include <stb_image.h>
 
 VulkanBuffer::VulkanBuffer(Backend& backend, size_t size, Usage usage, MemoryHint memoryHint)

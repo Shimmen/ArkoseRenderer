@@ -1,7 +1,7 @@
 #pragma once
 
-#include <mooslib/matrix.h>
-#include <mooslib/vector.h>
+#include <moos/matrix.h>
+#include <moos/vector.h>
 
 namespace geometry {
 

@@ -2,7 +2,7 @@
 
 #include "backend/Resources.h"
 #include "utility/Badge.h"
-#include <mooslib/matrix.h>
+#include <moos/matrix.h>
 
 class Scene;
 

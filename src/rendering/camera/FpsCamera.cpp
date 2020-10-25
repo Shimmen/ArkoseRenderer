@@ -1,7 +1,7 @@
 #include "FpsCamera.h"
 
 #include "utility/GlobalState.h"
-#include <mooslib/transform.h>
+#include <moos/transform.h>
 
 void FpsCamera::setMaxSpeed(float newMaxSpeed)
 {

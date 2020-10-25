@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mooslib/vector.h>
+#include <moos/vector.h>
 
 // Values map directly to GLFW's key defines
 enum class Key : int {

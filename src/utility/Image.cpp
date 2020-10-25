@@ -3,7 +3,7 @@
 #include "utility/FileIO.h"
 #include "utility/Logging.h"
 #include <memory>
-#include <mooslib/core.h>
+#include <moos/core.h>
 #include <stb_image.h>
 #include <unordered_map>
 

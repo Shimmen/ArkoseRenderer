@@ -6,8 +6,8 @@
 #include "geometry/Frustum.h"
 #include "utility/Logging.h"
 #include <imgui.h>
-#include <mooslib/random.h>
-#include <mooslib/transform.h>
+#include <moos/random.h>
+#include <moos/transform.h>
 
 std::string DiffuseGINode::name()
 {

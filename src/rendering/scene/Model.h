@@ -4,7 +4,7 @@
 #include "rendering/scene/Mesh.h"
 #include "rendering/scene/Transform.h"
 #include <functional>
-#include <mooslib/vector.h>
+#include <moos/vector.h>
 
 class Scene;
 

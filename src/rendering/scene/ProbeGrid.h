@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mooslib/vector.h>
+#include <moos/vector.h>
 #include <utility/Extent.h>
 
 struct ProbeGrid {

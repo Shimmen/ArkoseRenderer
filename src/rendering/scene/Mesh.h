@@ -5,8 +5,8 @@
 #include "rendering/scene/Material.h"
 #include "rendering/scene/Transform.h"
 #include "rendering/scene/Vertex.h"
-#include <mooslib/aabb.h>
-#include <mooslib/vector.h>
+#include <moos/aabb.h>
+#include <moos/vector.h>
 #include <unordered_map>
 
 class Model;

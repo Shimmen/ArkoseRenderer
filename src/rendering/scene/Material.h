@@ -3,7 +3,7 @@
 #include "backend/Resources.h"
 #include "utility/Image.h"
 #include <memory>
-#include <mooslib/vector.h>
+#include <moos/vector.h>
 #include <string>
 #include <unordered_map>
 

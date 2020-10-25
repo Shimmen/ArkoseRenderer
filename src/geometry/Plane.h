@@ -1,6 +1,6 @@
 #pragma once
 
-#include <mooslib/vector.h>
+#include <moos/vector.h>
 
 namespace geometry {
 

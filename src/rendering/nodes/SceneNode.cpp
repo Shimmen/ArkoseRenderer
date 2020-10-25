@@ -4,7 +4,7 @@
 #include "LightData.h"
 #include "utility/Logging.h"
 #include <imgui.h>
-#include <mooslib/vector.h>
+#include <moos/vector.h>
 #include <unordered_map>
 
 std::string SceneNode::name()
