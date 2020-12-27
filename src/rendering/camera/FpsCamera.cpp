@@ -31,9 +31,9 @@ void FpsCamera::update(const Input& input, const Extent2D& screenExtent, float d
     if (input.isKeyDown(Key::A))
         acceleration -= moos::globalRight;
 
-    if (input.isKeyDown(Key::Space))
+    if (input.isKeyDown(Key::Space) || input.isKeyDown(Key::E))
         acceleration += moos::globalUp;
-    if (input.isKeyDown(Key::LeftShift))
+    if (input.isKeyDown(Key::LeftShift) || input.isKeyDown(Key::Q))
         acceleration -= moos::globalUp;
 
     if (usingController) {
