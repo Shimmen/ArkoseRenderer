@@ -699,8 +699,12 @@ void VulkanBackend::createAndSetupSwapchain(VkPhysicalDevice physicalDevice, VkD
     VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
     createInfo.surface = surface;
 
-    // Request one more image than required, if possible (see https://github.com/KhronosGroup/Vulkan-Docs/issues/909 for information)
-    createInfo.minImageCount = surfaceCapabilities.minImageCount + 1;
+    // I'm honestly quite confused about the requirements here.. See this issue discussed here:
+    // https://github.com/KhronosGroup/Vulkan-Docs/issues/909 which says that you should always
+    // request one more image than required, if possible. On the other hand, that seems wasteful
+    // and I don't think we really should. And it works perfectly fine here. Maybe I will bump
+    // into some weird deadlock or synchronization error at some later stage, but this works now.
+    createInfo.minImageCount = surfaceCapabilities.minImageCount;
     if (surfaceCapabilities.minImageCount != 0) {
         // (max of zero means no upper limit, so don't clamp in that case)
         createInfo.minImageCount = std::min(createInfo.minImageCount, surfaceCapabilities.maxImageCount);
