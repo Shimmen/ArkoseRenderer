@@ -12,6 +12,7 @@ public:
     std::optional<std::string> displayName() const override { return "Forward"; }
     static std::string name();
 
+    void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:
@@ -34,6 +35,8 @@ private:
                                                 VertexComponent::TexCoord2F,
                                                 VertexComponent::Normal3F,
                                                 VertexComponent::Tangent4F };
+
+    BindingSet* m_indirectLightBindingSet { nullptr };
 
     Scene& m_scene;
 };

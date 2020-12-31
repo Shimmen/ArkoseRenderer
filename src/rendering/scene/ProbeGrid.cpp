@@ -34,3 +34,14 @@ vec3 ProbeGrid::probePositionForIndex(moos::ivec3 index) const
                         (float)index.z };
     return offsetToFirst + (floatIndex * probeSpacing);
 }
+
+ProbeGridData ProbeGrid::toProbeGridDataObject() const
+{
+    // TODO: This is some silly data shuffling. Could probably be unified to one, maybe?
+
+    ProbeGridData data;
+    data.gridDimensions = moos::ivec4(gridDimensions.width(), gridDimensions.height(), gridDimensions.depth(), 0);
+    data.probeSpacing = vec4(probeSpacing, 0.0);
+    data.offsetToFirst = vec4(offsetToFirst, 0.0);
+    return data;
+}

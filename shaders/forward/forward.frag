@@ -6,6 +6,9 @@
 #include <shared/SceneData.h>
 #include <shared/LightData.h>
 
+// TODO: Define this when compiling the shader instead of here!
+#define FORWARD_INCLUDE_INDIRECT_LIGHT 1
+
 layout(location = 0) in vec2 vTexCoord;
 layout(location = 1) in vec3 vPosition;
 layout(location = 2) in vec3 vNormal;
@@ -19,6 +22,14 @@ layout(set = 1, binding = 2) uniform sampler2D textures[SCENE_MAX_TEXTURES];
 
 layout(set = 2, binding = 0) uniform sampler2D dirLightShadowMapTex;
 layout(set = 2, binding = 1) uniform LightDataBlock { DirectionalLightData dirLight; };
+
+#if FORWARD_INCLUDE_INDIRECT_LIGHT
+#include <shared/ProbeGridData.h>
+#include <diffuse-gi/probeSampling.glsl>
+layout(set = 3, binding = 0) uniform ProbeGridDataBlock { ProbeGridData probeGridData; };
+layout(set = 3, binding = 1) uniform sampler2DArray probeIrradianceTex;
+layout(set = 3, binding = 2) uniform sampler2DArray probeDistanceTex;
+#endif
 
 layout(push_constant) uniform PushConstants {
     float ambientAmount;
@@ -42,6 +53,27 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
     float LdotN = max(dot(L, N), 0.0);
     return brdf * LdotN * directLight;
 }
+
+#if FORWARD_INCLUDE_INDIRECT_LIGHT
+vec3 evaluateIndirectLight(vec3 P, vec3 V, vec3 N, vec3 baseColor, float metallic, float roughness)
+{
+    vec3 worldSpacePos = vec3(camera.worldFromView * vec4(P, 1.0));
+    vec3 worldSpaceNormal = normalize(mat3(camera.worldFromView) * N);
+
+    // Assume glossy indirect light comes from the reflected direction L
+    //vec3 L = reflect(-V, N); TODO!
+    vec3 indirectGlossy = vec3(0.0);
+
+    // TODO: Use physically plausible amounts! For now we just use a silly estimate for F since we don't actually include glossy stuff at the moment.
+    float a = square(roughness);
+    float fakeF = pow(a, 5.0);
+
+    vec3 irradiance = computePrefilteredIrradiance(worldSpacePos, worldSpaceNormal, probeGridData, probeIrradianceTex, probeDistanceTex);
+    vec3 indirectDiffuse = vec3(1.0 - metallic) * vec3(1.0 - fakeF) * baseColor * irradiance;
+
+    return indirectDiffuse + indirectGlossy;
+}
+#endif
 
 void main()
 {
@@ -71,6 +103,10 @@ void main()
 
     // TODO: Evaluate ALL lights that will have an effect on this pixel/tile/cluster or whatever we go with
     color += evaluateDirectionalLight(dirLight, V, N, baseColor, roughness, metallic);
+
+#if FORWARD_INCLUDE_INDIRECT_LIGHT
+    color += evaluateIndirectLight(vPosition, V, N, baseColor, metallic, roughness);
+#endif
 
     oColor = vec4(color, 1.0);
     oNormal = vec4(N, 0.0);

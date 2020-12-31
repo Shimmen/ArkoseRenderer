@@ -24,12 +24,14 @@ DiffuseGINode::DiffuseGINode(Scene& scene)
 //static constexpr Extent2D cubemapFaceSize { 1024, 1024 };
 //static constexpr Extent2D probeDataTexSize { 1024, 512 };
 static constexpr Extent2D cubemapFaceSize { 256, 256 };
-static constexpr Extent2D probeDataTexSize { 256, 128 };
+static constexpr Extent2D probeDataColorTexSize { 256, 128 };
+static constexpr Extent2D probeDataDistanceTexSize { 256, 128 };
 #else
 // TODO: Consider if the distance probes require higher resolution. It seems so, and it makes a bit of sense
 //  (consider human luma vs chroma sensitivity and that shadows kind of is luma and irradiance mostly is chroma)
-static constexpr Extent2D cubemapFaceSize { 16, 16 };
-static constexpr Extent2D probeDataTexSize { 32, 16 };
+static constexpr Extent2D cubemapFaceSize { 64, 64 };
+static constexpr Extent2D probeDataColorTexSize { 32, 16 };
+static constexpr Extent2D probeDataDistanceTexSize { 64, 32 };
 #endif
 
 static constexpr Texture::Format colorFormat = Texture::Format::RGBA16F;
@@ -40,8 +42,8 @@ static const auto sphereWrapping = Texture::WrapModes(Texture::WrapMode::Repeat,
 
 void DiffuseGINode::constructNode(Registry& reg)
 {
-    m_irradianceProbes = &reg.createTextureArray(m_scene.probeGrid().probeCount(), probeDataTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
-    m_filteredDistanceProbes = &reg.createTextureArray(m_scene.probeGrid().probeCount(), probeDataTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
+    m_irradianceProbes = &reg.createTextureArray(m_scene.probeGrid().probeCount(), probeDataColorTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
+    m_filteredDistanceProbes = &reg.createTextureArray(m_scene.probeGrid().probeCount(), probeDataDistanceTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
 
     reg.publish("irradianceProbes", *m_irradianceProbes);
     reg.publish("filteredDistanceProbes", *m_filteredDistanceProbes);
@@ -62,8 +64,8 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     Texture& probeDistCubemap = reg.createCubemapTexture(cubemapFaceSize, distanceFormat);
 
     // Texture arrays for storing final probe data
-    Texture& tempIrradianceProbe = reg.createTexture2D(probeDataTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
-    Texture& tempFilteredDistanceProbe = reg.createTexture2D(probeDataTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
+    Texture& tempIrradianceProbe = reg.createTexture2D(probeDataColorTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
+    Texture& tempFilteredDistanceProbe = reg.createTexture2D(probeDataDistanceTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
 
     // The main render pass, for rendering to the probe textures
 
@@ -194,7 +196,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         cmdList.bindSet(irradianceFilterBindingSet, 0);
         cmdList.pushConstant(ShaderStageCompute, m_scene.environmentMultiplier());
         cmdList.pushConstant(ShaderStageCompute, appState.frameIndex(), 4);
-        cmdList.dispatch(probeDataTexSize, { 16, 16, 1 });
+        cmdList.dispatch(probeDataColorTexSize, { 16, 16, 1 });
 
         // Prefilter distances and map to spherical
         static float distanceBlurRadius = 0.1f;
@@ -204,7 +206,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         cmdList.bindSet(distanceFilterBindingSet, 0);
         cmdList.pushConstant(ShaderStageCompute, distanceBlurRadius, 0);
         cmdList.pushConstant(ShaderStageCompute, appState.frameIndex(), 4);
-        cmdList.dispatch(probeDataTexSize, { 16, 16, 1 });
+        cmdList.dispatch(probeDataDistanceTexSize, { 16, 16, 1 });
 
         // Copy color & distance+distance2 textures to the probe data arrays
         // TODO: Later, if we put this in another queue, we have to be very careful here,
@@ -229,6 +231,8 @@ uint32_t DiffuseGINode::getProbeIndexForNextToRender() const
     s_orderedProbeIndex %= probeCount;
 
     if (orderedIndex == 0) {
+        LogInfo("Reset!\n");
+
         // Fill vector if empty
         if (s_shuffledProbeIndices.empty()) {
             for (uint32_t i = 0; i < probeCount; ++i)

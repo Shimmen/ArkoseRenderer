@@ -34,9 +34,9 @@
       }
     ],
     "probe-grid": {
-      "dimensions": [ 8, 4, 8 ],
-      "spacing": [ 0.50, 1.30, 0.65],
-      "offsetToFirst": [ -1.75, -0.50, -1.90 ]
+      "dimensions": [ 8, 8, 8 ],
+      "spacing": [ 0.50, 0.50, 0.50],
+      "offsetToFirst": [ -1.75, -0.25, -1.90 ]
     },
     "cameras": [
       {
