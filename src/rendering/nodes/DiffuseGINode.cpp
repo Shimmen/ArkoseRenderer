@@ -20,29 +20,19 @@ DiffuseGINode::DiffuseGINode(Scene& scene)
 {
 }
 
-#if PROBE_DEBUG_HIGH_RES_VIZ
-//static constexpr Extent2D cubemapFaceSize { 1024, 1024 };
-//static constexpr Extent2D probeDataTexSize { 1024, 512 };
-static constexpr Extent2D cubemapFaceSize { 256, 256 };
-static constexpr Extent2D probeDataColorTexSize { 256, 128 };
-static constexpr Extent2D probeDataDistanceTexSize { 256, 128 };
-#else
-// TODO: Consider if the distance probes require higher resolution. It seems so, and it makes a bit of sense
-//  (consider human luma vs chroma sensitivity and that shadows kind of is luma and irradiance mostly is chroma)
 static constexpr Extent2D cubemapFaceSize { 64, 64 };
-static constexpr Extent2D probeDataColorTexSize { 32, 16 };
 static constexpr Extent2D probeDataDistanceTexSize { 64, 32 };
-#endif
+static constexpr Extent2D probeDataColorSHTexSize { 3, 3 };
 
-static constexpr Texture::Format colorFormat = Texture::Format::RGBA16F;
-static constexpr Texture::Format distanceFormat = Texture::Format::RG16F;
+static constexpr Texture::Format colorFormat = Texture::Format::RGBA32F;
+static constexpr Texture::Format distanceFormat = Texture::Format::RG32F;
 static constexpr Texture::Format depthFormat = Texture::Format::Depth32F;
 
-static const auto sphereWrapping = Texture::WrapModes(Texture::WrapMode::Repeat, Texture::WrapMode::ClampToEdge);
+static const auto sphereWrapping = Texture::WrapModes(Texture::WrapMode::ClampToEdge, Texture::WrapMode::ClampToEdge);
 
 void DiffuseGINode::constructNode(Registry& reg)
 {
-    m_irradianceProbes = &reg.createTextureArray(m_scene.probeGrid().probeCount(), probeDataColorTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
+    m_irradianceProbes = &reg.createTextureArray(m_scene.probeGrid().probeCount(), probeDataColorSHTexSize, colorFormat, Texture::Filters::nearest(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
     m_filteredDistanceProbes = &reg.createTextureArray(m_scene.probeGrid().probeCount(), probeDataDistanceTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
 
     reg.publish("irradianceProbes", *m_irradianceProbes);
@@ -64,8 +54,8 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     Texture& probeDistCubemap = reg.createCubemapTexture(cubemapFaceSize, distanceFormat);
 
     // Texture arrays for storing final probe data
-    Texture& tempIrradianceProbe = reg.createTexture2D(probeDataColorTexSize, colorFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
-    Texture& tempFilteredDistanceProbe = reg.createTexture2D(probeDataDistanceTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping); // FIXME: Use a texture array!
+    Texture& tempIrradianceProbe = reg.createTexture2D(probeDataColorSHTexSize, colorFormat, Texture::Filters::nearest(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
+    Texture& tempFilteredDistanceProbe = reg.createTexture2D(probeDataDistanceTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
 
     // The main render pass, for rendering to the probe textures
 
@@ -117,7 +107,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         std::array<CameraMatrices, 6> sideMatrices;
         std::array<geometry::Frustum, 6> sideFrustums;
         {
-            mat4 projectionFromView = moos::perspectiveProjectionToVulkanClipSpace(moos::HALF_PI, 1.0f, 0.01f, 10.0f);
+            mat4 projectionFromView = moos::perspectiveProjectionToVulkanClipSpace(moos::HALF_PI, 1.0f, 0.1f, 10.0f);
             mat4 viewFromProjection = inverse(projectionFromView);
 
             forEachCubemapSide([&](CubemapSide side, uint32_t idx) {
@@ -191,12 +181,12 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
             }
         });
 
-        // Prefilter irradiance and map to spherical
+        // Prefilter irradiance and encode as SH
         cmdList.setComputeState(irradianceFilterState);
         cmdList.bindSet(irradianceFilterBindingSet, 0);
         cmdList.pushConstant(ShaderStageCompute, m_scene.environmentMultiplier());
         cmdList.pushConstant(ShaderStageCompute, appState.frameIndex(), 4);
-        cmdList.dispatch(probeDataColorTexSize, { 16, 16, 1 });
+        cmdList.dispatch(probeDataColorSHTexSize, { 1, 1, 1 });
 
         // Prefilter distances and map to spherical
         static float distanceBlurRadius = 0.1f;

@@ -78,6 +78,7 @@ struct Texture : public Resource {
         R16F,
         R32F,
         RG16F,
+        RG32F,
         RGBA8,
         sRGBA8,
         RGBA16F,
@@ -436,17 +437,6 @@ enum class PipelineStage {
     Compute,
     RayTracing,
     // TODO: Add more obviously
-};
-
-enum ShaderStage : uint8_t {
-    ShaderStageVertex = 0x01,
-    ShaderStageFragment = 0x02,
-    ShaderStageCompute = 0x04,
-    ShaderStageRTRayGen = 0x08,
-    ShaderStageRTMiss = 0x10,
-    ShaderStageRTClosestHit = 0x20,
-    ShaderStageRTAnyHit = 0x40,
-    ShaderStageRTIntersection = 0x80,
 };
 
 enum class ShaderBindingType {

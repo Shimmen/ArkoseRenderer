@@ -1,13 +1,12 @@
 #version 460
 
 #include <common.glsl>
-#include <common/brdf.glsl>
-#include <common/octahedral.glsl>
 #include <common/random.glsl>
+#include <common/sh.glsl>
 #include <common/spherical.glsl>
 #include <shared/ProbeDebug.h>
 
-layout(set = 0, binding = 0, rgba16f) uniform writeonly image2D     irradianceImg;
+layout(set = 0, binding = 0, rgba16f) uniform writeonly image2D     irradianceShImg;
 layout(set = 0, binding = 1)          uniform           samplerCube radianceCube;
 layout(set = 0, binding = 2)          uniform           sampler2D   skyViewTex;
 
@@ -16,6 +15,50 @@ layout(push_constant) uniform PushConstants {
     uint frameIndex;
 };
 
+float areaElement(float x, float y)
+{
+    return atan(x * y, sqrt(x * x + y * y + 1.0));
+}
+
+float texelCoordSolidAngle(vec2 uv, int cubeFaceSize)
+{
+   //scale up to [-1, 1] range (inclusive), offset by 0.5 to point to texel center.
+   float U = 2.0 * uv.x - 1.0;
+   float V = 2.0 * uv.y - 1.0;
+
+   float invResolution = 1.0 / cubeFaceSize;
+
+    // U and V are the -1..1 texture coordinate on the current face.
+    // Get projected area for this texel
+    float x0 = U - invResolution;
+    float y0 = V - invResolution;
+    float x1 = U + invResolution;
+    float y1 = V + invResolution;
+    float solidAngle = areaElement(x0, y0) - areaElement(x0, y1) - areaElement(x1, y0) + areaElement(x1, y1);
+
+    return solidAngle;
+}
+
+vec2 cubemapFaceUV(vec3 direction)
+{
+    // NOTE: I'm pretty sure this is very wrong but it should suffice for calculating cubemap texel solid angles
+
+    float x = abs(direction.x);
+    float y = abs(direction.y);
+    float z = abs(direction.z);
+
+    if (x > y && x > z) {
+        // face is +x or -x
+        return vec2(y, z);
+    } else if (y > x && y > z) {
+        // face is +y or -y
+        return vec2(x, z);
+    } else {
+        // face is +z or -z (or something undefined)
+        return vec2(x, y);
+    }
+}
+
 vec3 sampleRadianceInDirection(vec3 direction, out float weight)
 {
     vec4 radianceFull = texture(radianceCube, direction);
@@ -23,7 +66,7 @@ vec3 sampleRadianceInDirection(vec3 direction, out float weight)
 
     // TODO: Cubemap solid angles should go here!! Well, at least a relative solid angle in [0, 1]
     //  Something based on this: http://www.rorydriscoll.com/2012/01/15/cubemap-texel-solid-angle/
-    weight = 1.0;
+    weight = texelCoordSolidAngle(cubemapFaceUV(direction), 1);
 
     // TODO: It probably be faster if we didn't sample the sky-view here.
     //  We should probably put it in the cube texture to begin with..
@@ -39,116 +82,66 @@ vec3 sampleRadianceInDirection(vec3 direction, out float weight)
     return radiance;
 }
 
-vec3 sampleIrradianceForNormal(vec3 N)
+SHVectorRGB mapCubemapToSphericalHarmonics()
 {
-    const int numSamples = 1024;
+    const int numSamples = 4096;
 
-    vec3 irradiance = vec3(0.0);
+    SHVectorRGB sh = createSphericalHarmonicsZeroRGB();
     float weight = 0.0;
 
     for (int i = 0; i < numSamples; ++i) {
 
         vec3 rayDirection = randomPointOnSphere();
-        if (dot(rayDirection, N) < 0.0) {
-            rayDirection = -rayDirection;
-        }
+        SHVector basis = createSphericalHarmonicsBasis(rayDirection);
 
         float sampleWeight;
-        vec3 radiance = sampleRadianceInDirection(rayDirection, sampleWeight);
+        vec3 L = sampleRadianceInDirection(rayDirection, sampleWeight);
 
-        float LdotN = max(0.0, dot(N, rayDirection));
-        irradiance += LdotN * diffuseBRDF() * radiance;
+        sh.e00  += L * basis.e00;
+        sh.e11  += L * basis.e11;
+        sh.e10  += L * basis.e10;
+        sh.e1_1 += L * basis.e1_1;
+        sh.e21  += L * basis.e21;
+        sh.e2_1 += L * basis.e2_1;
+        sh.e2_2 += L * basis.e2_2;
+        sh.e20  += L * basis.e20;
+        sh.e22  += L * basis.e22;
 
         weight += sampleWeight;
     }
 
-    return irradiance / weight;
+    // Hmmm..
+    sh.e00  /= weight;
+    sh.e11  /= weight;
+    sh.e10  /= weight;
+    sh.e1_1 /= weight;
+    sh.e21  /= weight;
+    sh.e2_1 /= weight;
+    sh.e2_2 /= weight;
+    sh.e20  /= weight;
+    sh.e22  /= weight;
+
+    return sh;
 }
 
-vec3 sampleIrradianceForNormalSphericalFibonacci(vec3 N)
-{
-    const int numSamples = 256;
-
-    // Create TBN frame for rotating spherical fibonacci points in direction of N.
-    // The rotation around N doesn't really matter, as long as it temporaly consistent
-
-    vec3 tangent = vec3(1, 0, 0);
-    if ((abs(dot(tangent, N)) - 1.0) < 1e-4)
-        tangent = vec3(0, 1, 0);
-    vec3 bitangent = cross(N, tangent);
-    tangent = cross(bitangent, N);
-    mat3 tbn = mat3(tangent, bitangent, N);
-
-    // From Spherical Fibonacci Point Sets for Illumination Integrals (https://mribar03.bitbucket.io/articles/2013/CGF_SF.pdf)
-
-    const float deltaPhi = PI * (3.0 * - sqrt(5.0)); // (golden angle)
-    const float deltaZ =  1.0 / float(numSamples);
-
-    float z = 1.0 - (deltaZ / 2.0);
-    float phi = 0.0;
-
-    vec3 irradiance = vec3(0.0);
-    float weight = 0.0;
-
-    for (int j = 1; j <= numSamples; ++j) {
-
-        // Spherical coordinates for point j
-        float z_j = z;
-        float theta_j = acos(z_j);
-        float phi_j = mod(phi, TWO_PI);
-
-        // Sample radiance
-        {
-            float sinTheta_j = sin(theta_j);
-            vec3 dir = vec3(
-                sinTheta_j * cos(phi_j),
-                sinTheta_j * sin(phi_j),
-                z_j
-            );
-
-            vec3 worldRayDirection = tbn * normalize(dir);
-
-            float sampleWeight;
-            vec3 radiance = sampleRadianceInDirection(worldRayDirection, sampleWeight);
-
-            float LdotN = max(0.0, dot(N, worldRayDirection));
-            irradiance += LdotN * diffuseBRDF() * radiance;
-
-            weight += sampleWeight;
-        }
-
-        // Step to next point
-        z -= deltaZ;
-        phi += deltaPhi;
-    }
-
-    return irradiance / weight;
-}
-
-layout(local_size_x = 16, local_size_y = 16) in;
+// TODO: We could probably do this in parallel some more and merge in the end?
+layout(local_size_x = 1, local_size_y = 1) in;
 void main()
 {
-    ivec2 targetSize = imageSize(irradianceImg);
-
-    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
-    if (any(greaterThanEqual(pixelCoord, targetSize)))
-        return;
-
-    uint seed = (pixelCoord.x + targetSize.x * pixelCoord.y) + frameIndex * (targetSize.x * targetSize.y);
+    uint seed = frameIndex;
     seedRandom(seed);
 
-    vec2 uv = (vec2(pixelCoord) + vec2(0.5)) / vec2(targetSize);
-    vec3 direction = normalize(directionFromSphericalUv(uv));
+    SHVectorRGB sh = mapCubemapToSphericalHarmonics();
 
-#if PROBE_DEBUG_HIGH_RES_VIZ
-    // To save your GPU from crashing, when doing a high res visualization (for debugging)
-    // don't do the expensive irradiance filtering which is super slow for large textures.
-    float sampleWeight;
-    vec3 radiance = sampleRadianceInDirection(direction, sampleWeight);
-    imageStore(irradianceImg, pixelCoord, vec4(sampleWeight * radiance, 1.0));
-#else
-    vec3 irradiance = sampleIrradianceForNormal(direction);
-    //vec3 irradiance = sampleIrradianceForNormalSphericalFibonacci(direction);
-    imageStore(irradianceImg, pixelCoord, vec4(irradiance, 1.0));
-#endif
+    // Can't seem to pass my image.. so I inlined it here
+    //storeSphericalHarmonicsRGB(sh, irradianceShImg);
+    imageStore(irradianceShImg, ivec2(0,0), vec4(sh.e00,  0.0));
+    imageStore(irradianceShImg, ivec2(1,0), vec4(sh.e11,  0.0));
+    imageStore(irradianceShImg, ivec2(2,0), vec4(sh.e10,  0.0));
+    imageStore(irradianceShImg, ivec2(0,1), vec4(sh.e1_1, 0.0));
+    imageStore(irradianceShImg, ivec2(1,1), vec4(sh.e21,  0.0));
+    imageStore(irradianceShImg, ivec2(2,1), vec4(sh.e2_1, 0.0));
+    imageStore(irradianceShImg, ivec2(0,2), vec4(sh.e2_2, 0.0));
+    imageStore(irradianceShImg, ivec2(1,2), vec4(sh.e20,  0.0));
+    imageStore(irradianceShImg, ivec2(2,2), vec4(sh.e22,  0.0));
 }

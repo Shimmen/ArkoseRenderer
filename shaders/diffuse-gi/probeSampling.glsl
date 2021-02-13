@@ -12,6 +12,8 @@
 //
 
 #include <common.glsl>
+#include <common/octahedral.glsl>
+#include <common/sh.glsl>
 #include <common/spherical.glsl>
 #include <shared/ProbeGridData.h>
 
@@ -82,8 +84,8 @@ vec3 computePrefilteredIrradiance(vec3 wsPosition, vec3 wsNormal, in ProbeGridDa
 
         sumWeight += weight;
 
-        vec2 irradianceProbeUV = sphericalUvFromDirection(normalize(wsNormal));
-        vec3 probeIrradiance = texture(irradianceProbes, vec3(irradianceProbeUV, p)).rgb;
+        SHVectorRGB probeSh = loadSphericalHarmonicsRGB(irradianceProbes, p);
+        vec3 probeIrradiance = sampleIrradianceFromSphericalHarmonics(probeSh, normalize(wsNormal));
 
         sumIrradiance += weight * probeIrradiance;
     }

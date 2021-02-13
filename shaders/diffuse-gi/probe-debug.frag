@@ -1,6 +1,7 @@
 #version 460
 
 #include <common/octahedral.glsl>
+#include <common/sh.glsl>
 #include <common/spherical.glsl>
 #include <shared/CameraState.h>
 #include <shared/ProbeDebug.h>
@@ -23,8 +24,9 @@ void main()
 
     vec3 uvWithArrayIdx = vec3(probeSampleUV, float(vProbeIdx));
 
-#if PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_COLOR
-    vec3 irradiance = texture(probeDataTex, uvWithArrayIdx).rgb;
+#if PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_IRRADIANCE
+    SHVectorRGB sh = loadSphericalHarmonicsRGB(probeDataTex, vProbeIdx);
+    vec3 irradiance = sampleIrradianceFromSphericalHarmonics(sh, probeSampleDir);
     oColor = vec4(irradiance, 1.0);
 #elif PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_DISTANCE
     vec2 distances = texture(probeDataTex, uvWithArrayIdx).rg;
