@@ -717,24 +717,10 @@ void VulkanCommandList::bindSet(BindingSet& bindingSet, uint32_t index)
 
 void VulkanCommandList::pushConstants(ShaderStage shaderStage, void* data, size_t size, size_t byteOffset)
 {
-    if (!activeRenderState && !activeRayTracingState && !activeComputeState) {
-        LogErrorAndExit("pushConstants: no active render or compute or ray tracing state to bind to!\n");
-    }
+    requireExactlyOneStateToBeSet("pushConstants");
+    VkPipelineLayout pipelineLayout = getCurrentlyBoundPipelineLayout();
 
-    ASSERT(!(activeRenderState && activeRayTracingState && activeComputeState));
-
-    VkPipelineLayout pipelineLayout;
-    if (activeRenderState) {
-        pipelineLayout = activeRenderState->pipelineLayout;
-    }
-    if (activeComputeState) {
-        pipelineLayout = activeComputeState->pipelineLayout;
-    }
-    if (activeRayTracingState) {
-        pipelineLayout = activeRayTracingState->pipelineLayout;
-    }
-
-    // TODO: This isn't the only occurance of this shady table. We probably want a function for doing this translation!
+    // TODO: This isn't the only occurrence of this shady table. We probably want a function for doing this translation!
     VkShaderStageFlags stageFlags = 0u;
     if (shaderStage & ShaderStageVertex)
         stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
@@ -750,6 +736,45 @@ void VulkanCommandList::pushConstants(ShaderStage shaderStage, void* data, size_
         stageFlags |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
 
     vkCmdPushConstants(m_commandBuffer, pipelineLayout, stageFlags, byteOffset, size, data);
+}
+
+void VulkanCommandList::setNamedUniform(const std::string& name, void* data, size_t size)
+{
+    requireExactlyOneStateToBeSet("setNamedUniform");
+    if (activeRayTracingState != nullptr) {
+        LogErrorAndExit("setNamedUniform: don't call setNamedUniform for a ray tracing state (for now)!\n");
+    }
+
+    const Shader& shader = getCurrentlyBoundShader();
+
+    // TODO: Don't do it lazily like this
+    if (!shader.hasUniformBindingsSetup()) {
+
+        std::unordered_map<std::string, Shader::UniformBinding> bindings;
+
+        const std::vector<VulkanBackend::PushConstantInfo>& pushConstants = m_backend.identifyAllPushConstants(shader);
+        for (auto& constant : pushConstants) {
+
+            Shader::UniformBinding binding;
+            binding.stages = constant.stages;
+            binding.offset = constant.offset;
+            binding.size = constant.size;
+
+            bindings[constant.name] = binding;
+        }
+
+        const_cast<Shader&>(shader).setUniformBindings(bindings);
+    }
+
+    std::optional<Shader::UniformBinding> binding = shader.uniformBindingForName(name);
+    if (binding.has_value()) {
+        if (size != binding->size) {
+            LogErrorAndExit("setNamedUniform: size mismatch for uniform named '%s' (provided=%u, actual=%u), ignoring.\n", name.c_str(), size, binding->size);
+        }
+        pushConstants(binding->stages, data, binding->size, binding->offset);
+    } else {
+        LogError("setNamedUniform: no corresponding uniform for name '%s', ignoring.\n", name.c_str());
+    }
 }
 
 void VulkanCommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount)
@@ -786,6 +811,10 @@ void VulkanCommandList::drawIndexed(const Buffer& vertexBuffer, const Buffer& in
         break;
     case IndexType::UInt32:
         vkIndexType = VK_INDEX_TYPE_UINT32;
+        break;
+    default:
+        vkIndexType = VK_INDEX_TYPE_MAX_ENUM;
+        ASSERT_NOT_REACHED();
         break;
     }
 
@@ -1208,4 +1237,44 @@ void VulkanCommandList::transitionImageLayoutDEBUG(VkImage image, VkImageLayout 
                          0, nullptr,
                          0, nullptr,
                          1, &imageMemoryBarrier);
+}
+
+void VulkanCommandList::requireExactlyOneStateToBeSet(const std::string& context) const
+{
+    if (!activeRenderState && !activeRayTracingState && !activeComputeState) {
+        LogErrorAndExit("%s: no active render or compute or ray tracing state to bind to!\n", context.c_str());
+    }
+
+    ASSERT(!(activeRenderState && activeRayTracingState && activeComputeState));
+}
+
+VkPipelineLayout VulkanCommandList::getCurrentlyBoundPipelineLayout()
+{
+    if (activeRenderState) {
+        return activeRenderState->pipelineLayout;
+    }
+    if (activeComputeState) {
+        return activeComputeState->pipelineLayout;
+    }
+    if (activeRayTracingState) {
+        return activeRayTracingState->pipelineLayout;
+    }
+
+    ASSERT_NOT_REACHED();
+}
+
+const Shader& VulkanCommandList::getCurrentlyBoundShader()
+{
+    if (activeRenderState) {
+        return activeRenderState->shader();
+    }
+    if (activeComputeState) {
+        return activeComputeState->shader();
+    }
+    if (activeRayTracingState) {
+        LogErrorAndExit("getCurrentlyBoundShader: undefined for ray tracing!\n");
+        ASSERT_NOT_REACHED();
+    }
+
+    ASSERT_NOT_REACHED();
 }

@@ -94,3 +94,21 @@ const std::vector<ShaderFile>& Shader::files() const
 {
     return m_files;
 }
+
+std::optional<Shader::UniformBinding> Shader::uniformBindingForName(const std::string& name) const
+{
+    auto entry = m_uniformBindings.find(name);
+    if (entry == m_uniformBindings.end()) {
+        return {};
+    }
+
+    const Shader::UniformBinding& binding = entry->second;
+    return binding;
+}
+
+void Shader::setUniformBindings(std::unordered_map<std::string, Shader::UniformBinding> bindings)
+{
+    ASSERT(m_uniformBindingsSet == false);
+    m_uniformBindings = std::move(bindings);
+    m_uniformBindingsSet = true;
+}

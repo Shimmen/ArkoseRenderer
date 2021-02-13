@@ -19,6 +19,7 @@ public:
 
     void bindSet(BindingSet&, uint32_t index) override;
     void pushConstants(ShaderStage, void*, size_t size, size_t byteOffset = 0u) override;
+    void setNamedUniform(const std::string& name, void* data, size_t size) override;
 
     void draw(Buffer& vertexBuffer, uint32_t vertexCount) override;
     void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex) override;
@@ -58,6 +59,10 @@ private:
 
     // TODO: Remove this.. Make something more fine grained
     void transitionImageLayoutDEBUG(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags, VkCommandBuffer) const;
+
+    void requireExactlyOneStateToBeSet(const std::string& context) const;
+    VkPipelineLayout getCurrentlyBoundPipelineLayout();
+    const Shader& getCurrentlyBoundShader();
 
 private:
     VulkanBackend& m_backend;

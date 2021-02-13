@@ -69,7 +69,7 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
             cmdList.bindSet(collectIndexBindingSet, 0);
 
             vec2 pickLocation = Input::instance().mousePosition();
-            cmdList.pushConstant(ShaderStageCompute, pickLocation, 0);
+            cmdList.setNamedUniform("mousePosition", pickLocation);
 
             cmdList.dispatch(indexMap.extent(), { 16, 16, 1 });
         }

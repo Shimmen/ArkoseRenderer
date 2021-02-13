@@ -6,6 +6,7 @@
 #include "VulkanCommandList.h"
 #include "backend/vulkan/VulkanResources.h"
 #include "rendering/Registry.h"
+#include "rendering/Shader.h"
 #include "rendering/ShaderManager.h"
 #include "utility/FileIO.h"
 #include "utility/GlobalState.h"
@@ -1787,6 +1788,100 @@ std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>
     }
 
     return { setLayouts, pushConstantRange };
+}
+
+std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConstants(const Shader& shader) const
+{
+    std::vector<VulkanBackend::PushConstantInfo> infos;
+
+    for (auto& file : shader.files()) {
+
+        ShaderStage stageFlag;
+        switch (file.type()) {
+        case ShaderFileType::Vertex:
+            stageFlag = ShaderStageVertex;
+            break;
+        case ShaderFileType::Fragment:
+            stageFlag = ShaderStageFragment;
+            break;
+        case ShaderFileType::Compute:
+            stageFlag = ShaderStageCompute;
+            break;
+        case ShaderFileType::RTRaygen:
+            stageFlag = ShaderStageRTRayGen;
+            break;
+        case ShaderFileType::RTClosestHit:
+            stageFlag = ShaderStageRTClosestHit;
+            break;
+        case ShaderFileType::RTAnyHit:
+            stageFlag = ShaderStageRTAnyHit;
+            break;
+        case ShaderFileType::RTMiss:
+            stageFlag = ShaderStageRTMiss;
+            break;
+        case ShaderFileType::RTIntersection:
+            stageFlag = ShaderStageRTIntersection;
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+
+        const auto& spv = ShaderManager::instance().spirv(file.path());
+        spirv_cross::Compiler compiler { spv };
+        spirv_cross::ShaderResources resources = compiler.get_shader_resources();
+
+        if (!resources.push_constant_buffers.empty()) {
+            ASSERT(resources.push_constant_buffers.size() == 1);
+
+            const spirv_cross::Resource& pc_res = resources.push_constant_buffers[0];
+            const spirv_cross::SPIRType& pc_type = compiler.get_type(pc_res.type_id);
+
+            // With the NAMED_UNIFORMS macro all push constant blocks will contain exactly one struct with named members
+            if (pc_type.member_types.size() != 1) {
+                LogErrorAndExit("identifyAllPushConstants: please use the NAMED_UNIFORMS macro to define push constants!");
+            }
+
+            const spirv_cross::TypeID& struct_type_id = pc_type.member_types[0];
+            const spirv_cross::SPIRType& struct_type = compiler.get_type(struct_type_id);
+            if (struct_type.basetype != spirv_cross::SPIRType::Struct) {
+                LogErrorAndExit("identifyAllPushConstants: please use the NAMED_UNIFORMS macro to define push constants!");
+            }
+
+            size_t memberCount = struct_type.member_types.size();
+            if (infos.size() > 0 && infos.size() != memberCount) {
+                LogErrorAndExit("identifyAllPushConstants: mismatch in push constant layout (different member counts!)!");
+            }
+
+            for (int i = 0; i < memberCount; ++i) {
+
+                const std::string& member_name = compiler.get_member_name(struct_type_id, i);
+                size_t offset = compiler.type_struct_member_offset(struct_type, i);
+                size_t size = compiler.get_declared_struct_member_size(struct_type, i);
+
+                if (infos.size() == i) {
+                    VulkanBackend::PushConstantInfo info;
+                    info.name = member_name;
+                    info.stages = stageFlag;
+                    info.offset = offset;
+                    info.size = size;
+
+                    infos.push_back(info);
+                }
+                else {
+                    // We've already seen push constants in another shader file, so just verify there is no mismatch
+                    VulkanBackend::PushConstantInfo& existing = infos[i];
+                    if (existing.name != member_name || existing.offset != offset || existing.size != size) {
+                        LogErrorAndExit("identifyAllPushConstants: mismatch in push constant layout!");
+                    } else {
+                        existing.stages = ShaderStage(existing.stages | stageFlag);
+                    }
+                }
+
+            }
+        }
+    }
+
+    return infos;
 }
 
 uint32_t VulkanBackend::findAppropriateMemory(uint32_t typeBits, VkMemoryPropertyFlags properties) const

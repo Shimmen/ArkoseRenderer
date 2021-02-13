@@ -18,9 +18,13 @@ public:
 
     virtual void bindSet(BindingSet&, uint32_t index) = 0;
     virtual void pushConstants(ShaderStage, void*, size_t size, size_t byteOffset = 0u) = 0;
+    virtual void setNamedUniform(const std::string& name, void*, size_t size) = 0;
 
     template<typename T>
     void pushConstant(ShaderStage, T, size_t byteOffset = 0u);
+
+    template<typename T>
+    void setNamedUniform(const std::string& name, T);
 
     virtual void draw(Buffer& vertexBuffer, uint32_t vertexCount) = 0;
     virtual void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex = 0) = 0;
@@ -60,4 +64,17 @@ inline void CommandList::pushConstant(ShaderStage shaderStage, bool value, size_
 {
     uint32_t intValue = (value) ? 1 : 0;
     pushConstant(shaderStage, intValue, byteOffset);
+}
+
+template<typename T>
+inline void CommandList::setNamedUniform(const std::string& name, T value)
+{
+    setNamedUniform(name, &value, sizeof(T));
+}
+
+template<>
+inline void CommandList::setNamedUniform(const std::string& name, bool value)
+{
+    uint32_t intValue = (value) ? 1 : 0;
+    setNamedUniform(name, &intValue, sizeof(uint32_t));
 }
