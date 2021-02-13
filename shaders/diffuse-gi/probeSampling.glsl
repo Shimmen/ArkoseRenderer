@@ -65,7 +65,9 @@ vec3 computePrefilteredIrradiance(vec3 wsPosition, vec3 wsNormal, in ProbeGridDa
         vec3 dir = normalize(pointToProbe);
 
         // Smooth back-face test
-        weight *= max(0.05, dot(dir, wsNormal));
+        const float smoothFloor = 0.02;
+        const float additionalSmoothening = 0.25;
+        weight *= smoothFloor + (1.0 - smoothFloor) * pow(saturate(dot(dir, wsNormal)), additionalSmoothening);
 
         vec2 distanceProbeUV = sphericalUvFromDirection(-dir);
         vec2 temp = texture(distanceProbes, vec3(distanceProbeUV, p)).rg;
