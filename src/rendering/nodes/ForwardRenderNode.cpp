@@ -63,7 +63,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
 
     return [&](const AppState& appState, CommandList& cmdList) {
         cmdList.beginRendering(renderState, ClearColor(0, 0, 0, 0), 1.0f);
-        cmdList.pushConstant(ShaderStageFragment, m_scene.ambient(), 0);
+        cmdList.setNamedUniform("ambientAmount", m_scene.ambient());
 
         cmdList.bindSet(cameraBindingSet, 0);
         cmdList.bindSet(objectBindingSet, 1);

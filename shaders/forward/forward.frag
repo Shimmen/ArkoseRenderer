@@ -1,6 +1,7 @@
 #version 460
 
 #include <common/brdf.glsl>
+#include <common/namedUniforms.glsl>
 #include <common/shadow.glsl>
 #include <shared/CameraState.h>
 #include <shared/SceneData.h>
@@ -31,9 +32,9 @@ layout(set = 3, binding = 1) uniform sampler2DArray probeIrradianceTex;
 layout(set = 3, binding = 2) uniform sampler2DArray probeDistanceTex;
 #endif
 
-layout(push_constant) uniform PushConstants {
+NAMED_UNIFORMS(pushConstants,
     float ambientAmount;
-};
+)
 
 layout(location = 0) out vec4 oColor;
 layout(location = 1) out vec4 oNormal;
@@ -98,7 +99,7 @@ void main()
 
     vec3 V = -normalize(vPosition);
 
-    vec3 ambient = ambientAmount * baseColor;
+    vec3 ambient = pushConstants.ambientAmount * baseColor;
     vec3 color = emissive + ambient;
 
     // TODO: Evaluate ALL lights that will have an effect on this pixel/tile/cluster or whatever we go with
