@@ -32,7 +32,7 @@ vec2 sampleFilteredDistancesForNormal(vec3 N)
     vec2 filteredDistances = vec2(0.0);
     for (int i = 0; i < numSamples; ++i) {
 
-        vec3 rayDirection = N + clamp(filterRadius, 0.01, 0.99) * randomPointOnSphere();
+        vec3 rayDirection = normalize(N + clamp(filterRadius, 0.01, 0.99) * randomPointOnSphere());
         vec2 distances = sampleDistancesInDirection(rayDirection);
         filteredDistances += distances;
     }

@@ -1,6 +1,5 @@
 #version 460
 
-#include <common/octahedral.glsl>
 #include <common/sh.glsl>
 #include <common/spherical.glsl>
 #include <shared/CameraState.h>
@@ -20,7 +19,6 @@ void main()
 
     vec3 probeSampleDir = vec3(N.x, -N.y, N.z);
     vec2 probeSampleUV = sphericalUvFromDirection(probeSampleDir);
-    //vec2 probeSampleUV = octahedralEncode(probeSampleDir) * 0.5 + 0.5;
 
     vec3 uvWithArrayIdx = vec3(probeSampleUV, float(vProbeIdx));
 

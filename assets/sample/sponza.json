@@ -33,6 +33,11 @@
         "illuminance": 150.0
       }
     ],
+    "probe-grid": {
+      "dimensions": [ 8, 8, 8 ],
+      "spacing": [ 2.00, 2.00, 2.00],
+      "offsetToFirst": [ -10.00, -1.00, -10.00 ]
+    },
     "cameras": [
       {
         "name": "main",

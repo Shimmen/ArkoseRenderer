@@ -53,11 +53,9 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     Texture& probeColorCubemap = reg.createCubemapTexture(cubemapFaceSize, colorFormat);
     Texture& probeDistCubemap = reg.createCubemapTexture(cubemapFaceSize, distanceFormat);
 
-    // Texture arrays for storing final probe data
+    // Temporary textures for filtering into (in theory we could filter straight into the array textures directly)
     Texture& tempIrradianceProbe = reg.createTexture2D(probeDataColorSHTexSize, colorFormat, Texture::Filters::nearest(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
     Texture& tempFilteredDistanceProbe = reg.createTexture2D(probeDataDistanceTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
-
-    // The main render pass, for rendering to the probe textures
 
     Buffer& cameraBuffer = reg.createBuffer(6 * sizeof(CameraMatrices), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageVertex | ShaderStageFragment), &cameraBuffer } });
@@ -107,7 +105,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         std::array<CameraMatrices, 6> sideMatrices;
         std::array<geometry::Frustum, 6> sideFrustums;
         {
-            mat4 projectionFromView = moos::perspectiveProjectionToVulkanClipSpace(moos::HALF_PI, 1.0f, 0.1f, 10.0f);
+            mat4 projectionFromView = moos::perspectiveProjectionToVulkanClipSpace(moos::HALF_PI, 1.0f, 0.01f, 10.0f);
             mat4 viewFromProjection = inverse(projectionFromView);
 
             forEachCubemapSide([&](CubemapSide side, uint32_t idx) {
@@ -221,8 +219,6 @@ uint32_t DiffuseGINode::getProbeIndexForNextToRender() const
     s_orderedProbeIndex %= probeCount;
 
     if (orderedIndex == 0) {
-        LogInfo("Reset!\n");
-
         // Fill vector if empty
         if (s_shuffledProbeIndices.empty()) {
             for (uint32_t i = 0; i < probeCount; ++i)
