@@ -30,7 +30,7 @@
       },
       {
         "type": "ambient",
-        "illuminance": 150.0
+        "illuminance": 0.0
       }
     ],
     "probe-grid": {

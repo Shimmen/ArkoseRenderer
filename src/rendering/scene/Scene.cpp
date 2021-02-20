@@ -6,6 +6,7 @@
 #include "utility/Logging.h"
 #include <fstream>
 #include <imgui.h>
+#include <moos/aabb.h>
 #include <moos/transform.h>
 #include <nlohmann/json.hpp>
 
@@ -289,4 +290,44 @@ std::unique_ptr<Model> Scene::loadProxy(const std::string& path)
 
     // Else, assume it's a gltf and simply fail if it isn't..
     return GltfModel::load(path);
+}
+
+void Scene::generateProbeGridFromBoundingBox()
+{
+    NOT_YET_IMPLEMENTED();
+
+    constexpr int maxGridSideSize = 16;
+    constexpr float boxPadding = 0.0f;
+
+    moos::aabb3 sceneBox {};
+    forEachMesh([&](size_t, Mesh& mesh) {
+        // TODO: Transform the bounding box first, obviously..
+        // But we aren't using this path right now so not going
+        // to spend time on it right now.
+        moos::aabb3 meshBox = mesh.boundingBox();
+        sceneBox.expandWithPoint(meshBox.min);
+        sceneBox.expandWithPoint(meshBox.max);
+    });
+    sceneBox.min -= vec3(boxPadding);
+    sceneBox.max += vec3(boxPadding);
+
+    vec3 dims = sceneBox.max - sceneBox.min;
+    int counts[3] = { maxGridSideSize, maxGridSideSize, maxGridSideSize };
+    int indexOfSmallest = 0;
+    if (dims.y < dims.x || dims.z < dims.x) {
+        if (dims.y < dims.z) {
+            indexOfSmallest = 1;
+        } else {
+            indexOfSmallest = 2;
+        }
+    }
+    counts[indexOfSmallest] /= 2;
+
+    vec3 spacing = dims / vec3(counts[0], counts[1], counts[2]);
+
+    ProbeGrid grid;
+    grid.offsetToFirst = sceneBox.min;
+    grid.gridDimensions = Extent3D(counts[0], counts[1], counts[2]);
+    grid.probeSpacing = spacing;
+    setProbeGrid(grid);
 }

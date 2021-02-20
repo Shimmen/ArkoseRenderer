@@ -45,8 +45,13 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
     RenderState& renderState = reg.createRenderState(stateBuilder);
 
     return [&](const AppState& appState, CommandList& cmdList) {
-        static float probeScale = 0.1f;
+        static bool enabled = false;
+        ImGui::Checkbox("Enabled##diffuse-gi", &enabled);
+        static float probeScale = 0.05f;
         ImGui::SliderFloat("Probe size (m)", &probeScale, 0.01f, 1.0f);
+
+        if (!enabled)
+            return;
 
         cmdList.beginRendering(renderState);
         cmdList.bindSet(cameraBindingSet, 0);

@@ -48,6 +48,7 @@ public:
 
     bool hasProbeGrid() { return m_probeGrid.has_value(); }
     void setProbeGrid(ProbeGrid probeGrid) { m_probeGrid = probeGrid; }
+    void generateProbeGridFromBoundingBox();
     ProbeGrid& probeGrid() { return m_probeGrid.value(); }
 
     float& ambient() { return m_ambientIlluminance; }

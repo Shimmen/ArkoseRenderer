@@ -30,13 +30,13 @@
       },
       {
         "type": "ambient",
-        "illuminance": 150.0
+        "illuminance": 0.0
       }
     ],
     "probe-grid": {
-      "dimensions": [ 8, 8, 8 ],
-      "spacing": [ 2.00, 2.00, 2.00],
-      "offsetToFirst": [ -10.00, -1.00, -10.00 ]
+      "dimensions": [ 16, 16, 8 ],
+      "spacing": [ 1.375, 0.7375, 1.2875 ],
+      "offsetToFirst": [ -10.0, 0.6, -4.8 ]
     },
     "cameras": [
       {

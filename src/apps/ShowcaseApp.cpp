@@ -29,18 +29,21 @@ std::vector<Backend::Capability> ShowcaseApp::optionalCapabilities()
 
 void ShowcaseApp::setup(RenderGraph& graph)
 {
-    constexpr bool debugVisualizations = false;
-    scene().loadFromFile("assets/sample/cornell-box.json");
+    constexpr bool fastMode = false;
+    constexpr bool enableDebugVisualizations = true;
+
+    scene().loadFromFile("assets/sample/sponza.json");
 
     if (!scene().hasProbeGrid()) {
-        // TODO: It would probably be okay to create a grid description from the scene bounding box? For later..
-        LogErrorAndExit("ShowcaseApp requires scenes to have a probe grid to work correctly\n");
+        scene().generateProbeGridFromBoundingBox();
     }
 
     // System & resource nodes
     graph.addNode<SceneNode>(scene());
     graph.addNode<GBufferNode>(scene());
-    graph.addNode<PickingNode>(scene());
+    if (!fastMode) {
+        graph.addNode<PickingNode>(scene());
+    }
 
     // Prepass nodes
     graph.addNode<ShadowMapNode>(scene());
@@ -51,7 +54,7 @@ void ShowcaseApp::setup(RenderGraph& graph)
     graph.addNode<SkyViewNode>(scene());
     graph.addNode<BloomNode>(scene());
 
-    if (debugVisualizations) {
+    if (!fastMode && enableDebugVisualizations) {
         graph.addNode<DiffuseGIProbeDebug>(scene());
     }
 

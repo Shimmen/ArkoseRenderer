@@ -20,6 +20,12 @@
         exit(0); /* for noreturn behaviour */ \
     } while (false)
 
+#define NOT_YET_IMPLEMENTED()                 \
+    do {                                      \
+        ASSERT(false);                        \
+        exit(0); /* for noreturn behaviour */ \
+    } while (false)
+
 ///////////////////////////////////////////////////////////////////////////////
 // Scoped exit, i.e. kind of like defer but instead of function scopes it works for all scopes
 // From: http://the-witness.net/news/2012/11/scopeexit-in-c11/
