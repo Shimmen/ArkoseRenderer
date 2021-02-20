@@ -1,7 +1,7 @@
 #pragma once
 
-#include "DirectionalLight.h"
 #include "Model.h"
+#include "lights/DirectionalLight.h"
 #include "rendering/camera/FpsCamera.h"
 #include "rendering/scene/ProbeGrid.h"
 #include <memory>

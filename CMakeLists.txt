@@ -31,7 +31,7 @@ add_executable(ArkoseRenderer
     src/rendering/scene/ProbeGrid.cpp
     src/rendering/scene/Vertex.cpp
     src/rendering/scene/models/GltfModel.cpp
-    src/rendering/scene/Light.cpp
+    src/rendering/scene/lights/Light.cpp
     src/rendering/nodes/BloomNode.cpp
     src/rendering/nodes/DebugForwardNode.cpp
     src/rendering/nodes/ExposureNode.cpp
@@ -60,7 +60,7 @@ target_include_directories(ArkoseRenderer PRIVATE shaders/shared)
 target_compile_features(ArkoseRenderer PRIVATE cxx_std_20)
 
 if (MSVC)
-    target_compile_options(ArkoseRenderer PUBLIC /W2
+    target_compile_options(ArkoseRenderer PUBLIC
         /wd26812 # prefer scoped enum class
         )
     target_compile_definitions(ArkoseRenderer PRIVATE
