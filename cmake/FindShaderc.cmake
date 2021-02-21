@@ -26,16 +26,22 @@
 #
 
 if(WIN32)
+
+  set(Shaderc_LIB_NAME "shaderc_combined")
+  if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+    set(Shaderc_LIB_NAME "${Shaderc_LIB_NAME}d")
+  endif()
+
   find_path(Shaderc_INCLUDE_DIR
     NAMES shaderc/shaderc.h
     PATHS "$ENV{VULKAN_SDK}/Include")
   if(CMAKE_SIZEOF_VOID_P EQUAL 8)
     find_library(Shaderc_LIBRARY
-      NAMES shaderc_combined
+      NAMES ${Shaderc_LIB_NAME}
       PATHS "$ENV{VULKAN_SDK}/Lib")
   elseif(CMAKE_SIZEOF_VOID_P EQUAL 4)
     find_library(Shaderc_LIBRARY
-      NAMES shaderc_combined
+      NAMES ${Shaderc_LIB_NAME}
       PATHS "$ENV{VULKAN_SDK}/Lib32")
   endif()
 else()
