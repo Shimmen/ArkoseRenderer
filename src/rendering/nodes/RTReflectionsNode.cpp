@@ -98,7 +98,8 @@ RenderGraphNode::ExecuteCallback RTReflectionsNode::constructFrame(Registry& reg
             .colorAndIntensity = { light.color, light.illuminance },
             .worldSpaceDirection = vec4(normalize(light.direction), 0.0),
             .viewSpaceDirection = m_scene.camera().viewMatrix() * vec4(normalize(m_scene.sun().direction), 0.0),
-            .lightProjectionFromWorld = light.viewProjection()
+            .lightProjectionFromWorld = light.viewProjection(),
+            .lightProjectionFromView = light.viewProjection() * inverse(m_scene.camera().viewMatrix())
         };
         dirLightBuffer.updateData(&dirLightData, sizeof(DirectionalLightData));
 

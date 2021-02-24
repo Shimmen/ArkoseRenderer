@@ -184,13 +184,16 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
 
         // Update light data
         {
+            mat4 worldFromView = inverse(m_scene.camera().viewMatrix());
+
             // TODO: Upload all relevant light here, not just the default 'sun' as we do now.
             DirectionalLight& light = m_scene.sun();
             DirectionalLightData dirLightData {
                 .colorAndIntensity = { light.color, light.illuminance },
                 .worldSpaceDirection = vec4(normalize(light.direction), 0.0),
                 .viewSpaceDirection = m_scene.camera().viewMatrix() * vec4(normalize(m_scene.sun().direction), 0.0),
-                .lightProjectionFromWorld = light.viewProjection()
+                .lightProjectionFromWorld = light.viewProjection(),
+                .lightProjectionFromView = light.viewProjection() * worldFromView
             };
 
             lightDataBuffer.updateData(&dirLightData, sizeof(DirectionalLightData));

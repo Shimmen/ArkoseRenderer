@@ -197,11 +197,18 @@ bool ShaderManager::compileGlslToSpirv(ShaderData& data) const
             // FIXME: Support relative includes!
             ASSERT(include_type == shaderc_include_type_standard);
 
+            std::string path = m_shaderManager.resolvePath(requested_source);
+            auto maybeFileContent = FileIO::readEntireFile(path);
+            if (!maybeFileContent.has_value()) {
+                LogErrorAndExit("ShaderManager: could not find file '%s' included by '%s', exiting", requested_source, requesting_source);
+                return nullptr;
+            }
+
             auto* data = new shaderc_include_result();
 
             auto* fileData = new FileData();
-            fileData->path = m_shaderManager.resolvePath(requested_source);
-            fileData->content = FileIO::readEntireFile(fileData->path).value();
+            fileData->path = path;
+            fileData->content = maybeFileContent.value();
             data->user_data = fileData;
 
             data->source_name = fileData->path.c_str();

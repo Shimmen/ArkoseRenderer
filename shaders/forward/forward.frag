@@ -45,8 +45,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
     vec3 lightColor = light.colorAndIntensity.a * light.colorAndIntensity.rgb;
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
-    mat4 lightProjectionFromView = light.lightProjectionFromWorld * camera.worldFromView;
-    float shadowFactor = evaluateShadow(dirLightShadowMapTex, lightProjectionFromView, vPosition);
+    float shadowFactor = evaluateShadow(dirLightShadowMapTex, light.lightProjectionFromView, vPosition);
 
     vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
     vec3 directLight = lightColor * shadowFactor;
@@ -104,6 +103,9 @@ void main()
 
     // TODO: Evaluate ALL lights that will have an effect on this pixel/tile/cluster or whatever we go with
     color += evaluateDirectionalLight(dirLight, V, N, baseColor, roughness, metallic);
+
+    // TODO..
+    //color += evaluateSpotLight(spotLights[idx], V, N, baseColor, roughness, metallic);
 
 #if FORWARD_INCLUDE_INDIRECT_LIGHT
     color += evaluateIndirectLight(vPosition, V, N, baseColor, metallic, roughness);
