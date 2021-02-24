@@ -36,6 +36,7 @@ public:
 
     const Info& info() const { return m_info; }
 
+    DataOwner dataOwner() const { return m_owner; }
     const void* data() const { return m_data; }
     size_t size() const { return m_size; }
 

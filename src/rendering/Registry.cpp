@@ -86,6 +86,15 @@ Texture& Registry::createTextureFromImage(const Image& image, bool srgb, bool ge
     int pixelSizeBytes;
 
     switch (image.info().pixelType) {
+    case Image::PixelType::Grayscale:
+        numDesiredComponents = 1;
+        if (!srgb && image.info().isHdr()) {
+            format = Texture::Format::R32F;
+            pixelSizeBytes = sizeof(float);
+        } else {
+            LogErrorAndExit("Registry: no support for grayscale non-HDR or sRGB texture loading (from image)!\n");
+        }
+        break;
     case Image::PixelType::RGB:
     case Image::PixelType::RGBA:
         numDesiredComponents = 4;
@@ -100,7 +109,7 @@ Texture& Registry::createTextureFromImage(const Image& image, bool srgb, bool ge
         }
         break;
     default:
-        LogErrorAndExit("Registry: currently no support for other than (s)RGB(F) and (s)RGBA(F) texture loading (from image)!\n");
+        LogErrorAndExit("Registry: currently no support for other than R32F, (s)RGB(F), and (s)RGBA(F) texture loading (from image)!\n");
     }
 
     Texture::TextureDescription desc {
@@ -115,21 +124,35 @@ Texture& Registry::createTextureFromImage(const Image& image, bool srgb, bool ge
         .multisampling = Texture::Multisampling::None
     };
 
-    int width, height;
-    void* rawPixelData;
-    if (image.info().isHdr())
-        rawPixelData = (void*)stbi_loadf_from_memory((const stbi_uc*)image.data(), image.size(), &width, &height, nullptr, numDesiredComponents);
-    else
-        rawPixelData = (void*)stbi_load_from_memory((const stbi_uc*)image.data(), image.size(), &width, &height, nullptr, numDesiredComponents);
-    ASSERT(width == image.info().width);
-    ASSERT(height == image.info().height);
-
     auto texture = backend().createTexture(desc);
     texture->setOwningRegistry({}, this);
 
+    int width, height;
+    const void* rawPixelData;
+    switch (image.dataOwner()) {
+    case Image::DataOwner::StbImage:
+        if (image.info().isHdr())
+            rawPixelData = (void*)stbi_loadf_from_memory((const stbi_uc*)image.data(), image.size(), &width, &height, nullptr, numDesiredComponents);
+        else
+            rawPixelData = (void*)stbi_load_from_memory((const stbi_uc*)image.data(), image.size(), &width, &height, nullptr, numDesiredComponents);
+        ASSERT(width == image.info().width);
+        ASSERT(height == image.info().height);
+        break;
+    case Image::DataOwner::External:
+        rawPixelData = image.data();
+        width = image.info().width;
+        height = image.info().height;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+
     uint32_t rawDataSize = width * height * pixelSizeBytes;
     texture->setData(rawPixelData, rawDataSize);
-    stbi_image_free(rawPixelData);
+
+    if (image.dataOwner() == Image::DataOwner::StbImage)
+        stbi_image_free(const_cast<void*>(rawPixelData));
 
     m_textures.push_back(std::move(texture));
     return *m_textures.back();
