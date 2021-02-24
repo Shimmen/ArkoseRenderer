@@ -3,17 +3,19 @@
 #include "Light.h"
 #include <moos/transform.h>
 
-class DirectionalLight : public Light {
+class DirectionalLight final : public Light {
 public:
     DirectionalLight() = default;
     DirectionalLight(vec3 color, float illuminance, vec3 direction)
-        : Light(color)
+        : Light(Type::DirectionalLight, color)
         , illuminance(illuminance)
         , direction(normalize(direction))
         , shadowMapWorldOrigin(0, 0, 0)
         , shadowMapWorldExtent(50.0f)
     {
     }
+
+    virtual ~DirectionalLight() { }
 
     mat4 viewProjection() const final
     {

@@ -15,26 +15,15 @@ ShadowMapNode::ShadowMapNode(Scene& scene)
 
 RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) const
 {
-    // TODO: Render all applicable shadow maps here, not just the default 'sun' as we do now.
-    DirectionalLight& sunLight = m_scene.sun();
-
-    Buffer& lightDataBuffer = reg.createBuffer(sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
-    BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &lightDataBuffer } });
-
+    // TODO: This should be managed from some central location, e.g. the scene node or similar.
     Buffer& transformDataBuffer = reg.createBuffer(m_scene.meshCount() * sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     BindingSet& transformBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &transformDataBuffer } });
 
-    const RenderTarget& shadowRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &sunLight.shadowMap() } });
-    Shader shader = Shader::createVertexOnly("shadow/shadowSun.vert");
+    Shader shadowMapShader = Shader::createVertexOnly("shadow/defaultShadowMap.vert");
 
-    RenderStateBuilder renderStateBuilder { shadowRenderTarget, shader, VertexLayout::positionOnly() };
-    renderStateBuilder
-        .addBindingSet(lightBindingSet)
-        .addBindingSet(transformBindingSet);
+    return [&, shadowMapShader](const AppState& appState, CommandList& cmdList) {
 
-    RenderState& renderState = reg.createRenderState(renderStateBuilder);
-
-    return [&](const AppState& appState, CommandList& cmdList) {
+        // TODO: This should be managed from some central location, e.g. the scene node or similar.
         mat4 objectTransforms[SHADOW_MAX_OCCLUDERS];
         int meshCount = m_scene.forEachMesh([&](size_t idx, Mesh& mesh) {
             objectTransforms[idx] = mesh.transform().worldMatrix();
@@ -43,15 +32,38 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
         });
         transformDataBuffer.updateData(objectTransforms, meshCount * sizeof(mat4));
 
-        mat4 lightProjectionFromWorld = sunLight.viewProjection();
-        lightDataBuffer.updateData(&lightProjectionFromWorld, sizeof(mat4));
-
-        cmdList.beginRendering(renderState, ClearColor(1, 0, 1), 1.0f);
-        cmdList.bindSet(lightBindingSet, 0);
-        cmdList.bindSet(transformBindingSet, 1);
-
         m_scene.forEachMesh([&](size_t idx, Mesh& mesh) {
-            cmdList.drawIndexed(mesh.vertexBuffer({ VertexComponent::Position3F }), mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(), idx);
+            mesh.ensureVertexBuffer({ VertexComponent::Position3F });
+            mesh.ensureIndexBuffer();
+        });
+
+        m_scene.forEachLight([&](size_t, Light& light) {
+
+            if (!light.castsShadows())
+                return;
+
+            // TODO: Use a proper cache instead of just using a name as a "cache identifier". This will require implementing operator== on a lot of
+            // objects though, which I have barely done at all, so this is a very simple and quick hack to get around that.
+            RenderState& renderState = light.getOrCreateCachedShadowMapRenderState("ShadowMapNode::defaultShadowMapping", [&](Registry& sceneRegistry) -> RenderState& {
+                RenderStateBuilder renderStateBuilder { light.shadowMapRenderTarget(), shadowMapShader, VertexLayout::positionOnly() };
+                renderStateBuilder.addBindingSet(transformBindingSet);
+                return sceneRegistry.createRenderState(renderStateBuilder);
+            });
+
+            constexpr float clearDepth = 1.0f;
+            cmdList.beginRendering(renderState, ClearColor(0, 0, 0), clearDepth);
+            {
+                cmdList.bindSet(transformBindingSet, 0);
+
+                mat4 lightProjectionFromWorld = light.viewProjection();
+                cmdList.setNamedUniform("lightProjectionFromWorld", lightProjectionFromWorld);
+
+                // TODO: Implement frustum culling! Maybe wait until we do that on the GPU for forward with indirect etc.
+                m_scene.forEachMesh([&](size_t idx, Mesh& mesh) {
+                    cmdList.drawIndexed(mesh.vertexBuffer({ VertexComponent::Position3F }), mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(), idx);
+                });
+            }
+            cmdList.endRendering();
         });
     };
 }

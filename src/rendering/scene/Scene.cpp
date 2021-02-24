@@ -236,6 +236,30 @@ int Scene::forEachMesh(std::function<void(size_t, Mesh&)> callback)
     return nextIndex;
 }
 
+int Scene::forEachLight(std::function<void(size_t, const Light&)> callback) const
+{
+    size_t nextIndex = 0;
+    for (auto& light : m_directionalLights) {
+        callback(nextIndex++, light);
+    }
+    for (auto& light : m_spotLights) {
+        callback(nextIndex++, light);
+    }
+    return nextIndex;
+}
+
+int Scene::forEachLight(std::function<void(size_t, Light&)> callback)
+{
+    size_t nextIndex = 0;
+    for (auto& light : m_directionalLights) {
+        callback(nextIndex++, light);
+    }
+    for (auto& light : m_spotLights) {
+        callback(nextIndex++, light);
+    }
+    return nextIndex;
+}
+
 void Scene::cameraGui()
 {
     for (const auto& [name, camera] : m_allCameras) {

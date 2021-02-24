@@ -26,3 +26,32 @@ Texture& Light::shadowMap()
 
     return shadowMap;
 }
+
+RenderTarget& Light::shadowMapRenderTarget()
+{
+    if (m_shadowMapRenderTarget)
+        return *m_shadowMapRenderTarget;
+
+    if (!scene())
+        LogErrorAndExit("Light: can't request shadow map render target for light that is not part of a scene, exiting\n");
+
+    RenderTarget& renderTarget = scene()->registry().createRenderTarget({ { RenderTarget::AttachmentType::Depth, &shadowMap() } });
+    m_shadowMapRenderTarget = &renderTarget;
+
+    return renderTarget;
+}
+
+RenderState& Light::getOrCreateCachedShadowMapRenderState(const std::string& cacheIdentifier, std::function<RenderState&(Registry& sceneRegistry)> creationCallback)
+{
+    if (!scene())
+        LogErrorAndExit("Light: can't get or create shadow map render state for light that is not part of a scene, exiting\n");
+
+    auto entry = m_cachedRenderStates.find(cacheIdentifier);
+    if (entry != m_cachedRenderStates.end())
+        return *entry->second;
+
+    RenderState& newRenderState = creationCallback(scene()->registry());
+    m_cachedRenderStates[cacheIdentifier] = &newRenderState;
+
+    return newRenderState;
+}

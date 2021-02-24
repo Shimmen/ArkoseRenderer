@@ -1,7 +1,8 @@
 #pragma once
 
 #include "Model.h"
-#include "lights/DirectionalLight.h"
+#include "rendering/scene/lights/DirectionalLight.h"
+#include "rendering/scene/lights/SpotLight.h"
 #include "rendering/camera/FpsCamera.h"
 #include "rendering/scene/ProbeGrid.h"
 #include <memory>
@@ -46,6 +47,12 @@ public:
     const DirectionalLight& sun() const { return m_directionalLights[0]; }
     DirectionalLight& sun() { return m_directionalLights[0]; }
 
+    const std::vector<DirectionalLight>& directionalLights() const { return m_directionalLights; }
+    const std::vector<SpotLight>& spotLights() const { return m_spotLights; }
+
+    int forEachLight(std::function<void(size_t, const Light&)>) const;
+    int forEachLight(std::function<void(size_t, Light&)>);
+
     bool hasProbeGrid() { return m_probeGrid.has_value(); }
     void setProbeGrid(ProbeGrid probeGrid) { m_probeGrid = probeGrid; }
     void generateProbeGridFromBoundingBox();
@@ -71,6 +78,7 @@ private:
     std::vector<std::unique_ptr<Model>> m_models;
 
     std::vector<DirectionalLight> m_directionalLights;
+    std::vector<SpotLight> m_spotLights;
 
     std::optional<ProbeGrid> m_probeGrid;
 
