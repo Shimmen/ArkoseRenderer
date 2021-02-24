@@ -1,5 +1,6 @@
 #include "FileIO.h"
 
+#include "Logging.h"
 #include <fstream>
 
 std::optional<FileIO::BinaryData> FileIO::readEntireFileAsByteBuffer(const std::string& filePath)
@@ -40,9 +41,82 @@ std::optional<std::string> FileIO::readEntireFile(const std::string& filePath)
     return contents;
 }
 
+bool FileIO::readFileLineByLine(const std::string& filePath, std::function<NextAction(const std::string&)> lineCallback)
+{
+    std::ifstream file(filePath);
+
+    if (!file.is_open())
+        return false;
+
+    std::string line;
+    while (std::getline(file, line)) {
+        NextAction nextAction = lineCallback(line);
+        if (nextAction == NextAction::Stop) {
+            break;
+        }
+    }
+
+    return true;
+}
+
 bool FileIO::isFileReadable(const std::string& filePath)
 {
     std::ifstream file(filePath);
     bool isGood = file.good();
     return isGood;
+}
+
+
+FileIO::ParseContext::ParseContext(const std::string& fileType, const std::string& filePath)
+    : m_fileType(fileType)
+    , m_path(filePath)
+    , m_stream(filePath)
+{
+}
+
+bool FileIO::ParseContext::isValid() const
+{
+    return m_stream.good();
+}
+
+std::string FileIO::ParseContext::nextLine()
+{
+    std::string line;
+    if (std::getline(m_stream, line))
+        return line;
+    return {};
+}
+
+std::optional<int> FileIO::ParseContext::nextAsInt()
+{
+    int intValue;
+    if (m_stream >> intValue)
+        return intValue;
+    return {};
+}
+
+std::optional<float> FileIO::ParseContext::nextAsFloat()
+{
+    float floatValue;
+    if (m_stream >> floatValue)
+        return floatValue;
+    return {};
+}
+
+int FileIO::ParseContext::nextAsInt(const char* token)
+{
+    auto maybeInt = nextAsInt();
+    if (maybeInt)
+        return maybeInt.value();
+    LogErrorAndExit("Error parsing <%s> in %s file \"%s\"\n", token, m_fileType.c_str(), m_path.c_str());
+    return -1;
+}
+
+float FileIO::ParseContext::nextAsFloat(const char* token)
+{
+    auto maybeFloat = nextAsFloat();
+    if (maybeFloat)
+        return maybeFloat.value();
+    LogErrorAndExit("Error parsing <%s> in %s file \"%s\"\n", token, m_fileType.c_str(), m_path.c_str());
+    return -1.0f;
 }
