@@ -17,9 +17,7 @@ void main()
     vec3 color = texture(sourceTexture, uv).rgb;
 
     float sRGB_luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-
-    const float epsilon = 0.0001;
-    float sRGB_logLuminance = log(sRGB_luminance + epsilon);
+    float sRGB_logLuminance = log(clamp(sRGB_luminance, 0.0001, 1e8));
 
     imageStore(targetImg, pixelCoord, vec4(sRGB_logLuminance));
 }
