@@ -1,5 +1,6 @@
 #include "ShadowMapNode.h"
 
+#include "geometry/Frustum.h"
 #include "ShadowData.h"
 
 std::string ShadowMapNode::name()
@@ -53,13 +54,16 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
             constexpr float clearDepth = 1.0f;
             cmdList.beginRendering(renderState, ClearColor(0, 0, 0), clearDepth);
             {
+                mat4 lightProjectionFromWorld = light.viewProjection();
+                auto lightFrustum = geometry::Frustum::createFromProjectionMatrix(lightProjectionFromWorld);
+
+                cmdList.setNamedUniform("lightProjectionFromWorld", lightProjectionFromWorld);
                 cmdList.bindSet(transformBindingSet, 0);
 
-                mat4 lightProjectionFromWorld = light.viewProjection();
-                cmdList.setNamedUniform("lightProjectionFromWorld", lightProjectionFromWorld);
-
-                // TODO: Implement frustum culling! Maybe wait until we do that on the GPU for forward with indirect etc.
                 m_scene.forEachMesh([&](size_t idx, Mesh& mesh) {
+                    geometry::Sphere sphere = mesh.boundingSphere().transformed(mesh.transform().worldMatrix());
+                    if (!lightFrustum.includesSphere(sphere))
+                        return;
                     cmdList.drawIndexed(mesh.vertexBuffer({ VertexComponent::Position3F }), mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(), idx);
                 });
             }
