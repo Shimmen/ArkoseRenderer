@@ -21,8 +21,10 @@ layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 layout(set = 1, binding = 1) uniform MaterialBlock { ShaderMaterial materials[SCENE_MAX_MATERIALS]; };
 layout(set = 1, binding = 2) uniform sampler2D textures[SCENE_MAX_TEXTURES];
 
-layout(set = 2, binding = 0) uniform sampler2D dirLightShadowMapTex;
-layout(set = 2, binding = 1) uniform LightDataBlock { DirectionalLightData dirLight; };
+layout(set = 2, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
+layout(set = 2, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
+layout(set = 2, binding = 2) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
+layout(set = 2, binding = 3) uniform sampler2D shadowMaps[SCENE_MAX_SHADOW_MAPS];
 
 #if FORWARD_INCLUDE_INDIRECT_LIGHT
 #include <shared/ProbeGridData.h>
@@ -45,7 +47,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
     vec3 lightColor = light.colorAndIntensity.a * light.colorAndIntensity.rgb;
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
-    float shadowFactor = evaluateShadow(dirLightShadowMapTex, light.lightProjectionFromView, vPosition);
+    float shadowFactor = evaluateShadow(shadowMaps[light.shadowMap.textureIndex], light.lightProjectionFromView, vPosition);
 
     vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
     vec3 directLight = lightColor * shadowFactor;
@@ -101,11 +103,16 @@ void main()
     vec3 ambient = pushConstants.ambientAmount * baseColor;
     vec3 color = emissive + ambient;
 
-    // TODO: Evaluate ALL lights that will have an effect on this pixel/tile/cluster or whatever we go with
-    color += evaluateDirectionalLight(dirLight, V, N, baseColor, roughness, metallic);
+    // TODO: Use tiles or clusters to minimize number of light evaluations!
+    {
+        for (uint i = 0; i < lightMeta.numDirectionalLights; ++i) {
+            color += evaluateDirectionalLight(directionalLights[i], V, N, baseColor, roughness, metallic);
+        }
 
-    // TODO..
-    //color += evaluateSpotLight(spotLights[idx], V, N, baseColor, roughness, metallic);
+        for (uint i = 0; i < lightMeta.numSpotLights; ++i) {
+            //color += evaluateSpotLight(spotLights[i], V, N, baseColor, roughness, metallic);
+        }
+    }
 
 #if FORWARD_INCLUDE_INDIRECT_LIGHT
     color += evaluateIndirectLight(vPosition, V, N, baseColor, metallic, roughness);

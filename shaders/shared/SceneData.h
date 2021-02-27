@@ -1,10 +1,11 @@
 #ifndef SCENE_DATA_H
 #define SCENE_DATA_H
 
-// These limits are arbitrary, and should be changed!
+// These limits are arbitrary, and should be changed! Actually, we should try to not have any weird arbitrary limits..
 #define SCENE_MAX_DRAWABLES 128
 #define SCENE_MAX_MATERIALS 128
 #define SCENE_MAX_TEXTURES 256
+#define SCENE_MAX_SHADOW_MAPS 16
 
 struct ShaderDrawable {
     mat4 worldFromLocal;

@@ -11,6 +11,16 @@ public:
     SpotLight(vec3 color, float luminousIntensity, const std::string& iesProfilePath, vec3 position, vec3 direction);
     virtual ~SpotLight() { }
 
+    float intensityValue() const final
+    {
+        return luminousIntensity;
+    }
+
+    vec3 forwardDirection() const final
+    {
+        return m_direction;
+    }
+
     virtual mat4 viewProjection() const final;
 
     float outerConeAngle() const;

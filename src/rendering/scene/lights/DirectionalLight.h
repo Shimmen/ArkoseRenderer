@@ -17,6 +17,16 @@ public:
 
     virtual ~DirectionalLight() { }
 
+    float intensityValue() const final
+    {
+        return illuminance;
+    }
+
+    vec3 forwardDirection() const final
+    {
+        return direction;
+    }
+
     mat4 viewProjection() const final
     {
         mat4 lightOrientation = moos::lookAt(shadowMapWorldOrigin, shadowMapWorldOrigin + normalize(direction));

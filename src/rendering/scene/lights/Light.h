@@ -29,6 +29,8 @@ public:
 
     Type type() const { return m_type; }
 
+    virtual float intensityValue() const = 0;
+    virtual vec3 forwardDirection() const = 0;
     virtual mat4 viewProjection() const = 0;
 
     Extent2D shadowMapSize() const { return m_shadowMapSize; }

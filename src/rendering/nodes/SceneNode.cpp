@@ -113,11 +113,19 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     reg.publish("objectSet", objectBindingSet);
 
     // Light data stuff
-    // TODO: Support any (reasonable) number of shadow maps & lights!
-    const DirectionalLight& light = m_scene.sun();
-    Buffer& lightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
-    BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &m_scene.sun().shadowMap(), ShaderBindingType::TextureSampler },
-                                                         { 1, ShaderStageFragment, &lightDataBuffer } });
+    Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+    Buffer& dirLightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
+    Buffer& spotLightDataBuffer = reg.createBuffer(sizeof(SpotLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
+    std::vector<Texture*> shadowMaps;
+    // TODO: We need to be able to update the shadow map binding. Right now we can only do it once, at creation.
+    m_scene.forEachLight([&](size_t, Light& light) {
+        if (light.castsShadows())
+            shadowMaps.push_back(&light.shadowMap());
+    });
+    BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &lightMetaDataBuffer },
+                                                         { 1, ShaderStageFragment, &dirLightDataBuffer },
+                                                         { 2, ShaderStageFragment, &spotLightDataBuffer },
+                                                         { 3, ShaderStageFragment, shadowMaps, SCENE_MAX_SHADOW_MAPS } });
     reg.publish("lightSet", lightBindingSet);
 
     return [&](const AppState& appState, CommandList& cmdList) {
@@ -184,19 +192,51 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
 
         // Update light data
         {
-            mat4 worldFromView = inverse(m_scene.camera().viewMatrix());
+            mat4 viewFromWorld = m_scene.camera().viewMatrix();
+            mat4 worldFromView = inverse(viewFromWorld);
 
-            // TODO: Upload all relevant light here, not just the default 'sun' as we do now.
-            DirectionalLight& light = m_scene.sun();
-            DirectionalLightData dirLightData {
-                .colorAndIntensity = { light.color, light.illuminance },
-                .worldSpaceDirection = vec4(normalize(light.direction), 0.0),
-                .viewSpaceDirection = m_scene.camera().viewMatrix() * vec4(normalize(m_scene.sun().direction), 0.0),
-                .lightProjectionFromWorld = light.viewProjection(),
-                .lightProjectionFromView = light.viewProjection() * worldFromView
-            };
+            int nextShadowMapIndex = 0;
+            std::vector<DirectionalLightData> dirLightData;
+            std::vector<SpotLightData> spotLightData;
 
-            lightDataBuffer.updateData(&dirLightData, sizeof(DirectionalLightData));
+            m_scene.forEachLight([&](size_t, Light& light) {
+
+                int shadowMapIndex = light.castsShadows() ? nextShadowMapIndex++ : -1;
+                ShadowMapData shadowMapData { .textureIndex = shadowMapIndex };
+
+                switch (light.type()) {
+                case Light::Type::DirectionalLight:
+                    dirLightData.emplace_back(DirectionalLightData { .shadowMap = shadowMapData,
+                                                                     .colorAndIntensity = { light.color, light.intensityValue() },
+                                                                     .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0),
+                                                                     .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0),
+                                                                     .lightProjectionFromWorld = light.viewProjection(),
+                                                                     .lightProjectionFromView = light.viewProjection() * worldFromView });
+                    break;
+                case Light::Type::SpotLight:
+                    spotLightData.emplace_back(SpotLightData { .shadowMap = shadowMapData,
+                                                               .colorAndIntensity = { light.color, light.intensityValue() },
+                                                               .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0),
+                                                               .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0),
+                                                               .lightProjectionFromWorld = light.viewProjection(),
+                                                               .lightProjectionFromView = light.viewProjection() * worldFromView,
+                                                               .worldSpaceRight = vec4(/* todo */),
+                                                               .worldSpaceUp = vec3(/* todo */),
+                                                               .iesProfileIndex = -1 /* todo */ });
+                    break;
+                case Light::Type::PointLight:
+                default:
+                    ASSERT_NOT_REACHED();
+                    break;
+                }
+            });
+
+            dirLightDataBuffer.updateData(dirLightData.data(), dirLightData.size() * sizeof(DirectionalLightData));
+            spotLightDataBuffer.updateData(spotLightData.data(), spotLightData.size() * sizeof(SpotLightData));
+
+            LightMetaData metaData { .numDirectionalLights = (int)dirLightData.size(),
+                                     .numSpotLights = (int)spotLightData.size() };
+            lightMetaDataBuffer.updateData(&metaData, sizeof(LightMetaData));
         }
 
         // Environment mapping uniforms
