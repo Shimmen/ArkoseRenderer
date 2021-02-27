@@ -29,6 +29,7 @@ public:
 
     Type type() const { return m_type; }
 
+    virtual vec3 position() const { return vec3(); };
     virtual float intensityValue() const = 0;
     virtual vec3 forwardDirection() const = 0;
     virtual mat4 viewProjection() const = 0;

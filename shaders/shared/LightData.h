@@ -34,6 +34,9 @@ struct SpotLightData {
     mat4 lightProjectionFromWorld;
     mat4 lightProjectionFromView;
 
+    vec4 worldSpacePosition;
+    vec4 viewSpacePosition;
+
     // Is my padding correct here?
     vec4 worldSpaceRight;
     vec3 worldSpaceUp;

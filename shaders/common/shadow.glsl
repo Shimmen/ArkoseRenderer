@@ -1,7 +1,7 @@
 #ifndef SHADOW_GLSL
 #define SHADOW_GLSL
 
-float evaluateShadow(sampler2D shadowMap, mat4 lightProjectionFromView, vec3 viewSpacePos)
+float evaluateDirectionalShadow(sampler2D shadowMap, mat4 lightProjectionFromView, vec3 viewSpacePos)
 {
     vec4 posInShadowMap = lightProjectionFromView * vec4(viewSpacePos, 1.0);
     posInShadowMap.xyz /= posInShadowMap.w;
@@ -20,6 +20,19 @@ float evaluateShadow(sampler2D shadowMap, mat4 lightProjectionFromView, vec3 vie
     float bias = max(pixelSize.x, pixelSize.y) + 0.006;
 
     // (remember: 1 is furthest away, 0 is closest!)
+    return (mapDepth < posInShadowMap.z - bias) ? 0.0 : 1.0;
+}
+
+float evaluateShadow(sampler2D shadowMap, mat4 lightProjectionFromView, vec3 viewSpacePos)
+{
+    vec4 posInShadowMap = lightProjectionFromView * vec4(viewSpacePos, 1.0);
+    posInShadowMap.xyz /= posInShadowMap.w;
+
+    vec2 shadowMapUv = posInShadowMap.xy * 0.5 + 0.5;
+    float mapDepth = texture(shadowMap, shadowMapUv).x;
+
+    // TODO: Use smarter bias!
+    const float bias = 1e-4;
     return (mapDepth < posInShadowMap.z - bias) ? 0.0 : 1.0;
 }
 

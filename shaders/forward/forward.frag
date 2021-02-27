@@ -47,10 +47,31 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
     vec3 lightColor = light.colorAndIntensity.a * light.colorAndIntensity.rgb;
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
-    float shadowFactor = evaluateShadow(shadowMaps[light.shadowMap.textureIndex], light.lightProjectionFromView, vPosition);
+    float shadowFactor = evaluateDirectionalShadow(shadowMaps[light.shadowMap.textureIndex], light.lightProjectionFromView, vPosition);
 
     vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
     vec3 directLight = lightColor * shadowFactor;
+
+    float LdotN = max(dot(L, N), 0.0);
+    return brdf * LdotN * directLight;
+}
+
+vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+{
+    vec3 lightColor = light.colorAndIntensity.a * light.colorAndIntensity.rgb;
+    vec3 L = -normalize(light.viewSpaceDirection.xyz);
+
+    float shadowFactor = evaluateShadow(shadowMaps[light.shadowMap.textureIndex], light.lightProjectionFromView, vPosition);
+
+    vec3 toLight = light.viewSpacePosition.xyz - vPosition;
+    float dist = length(toLight);
+    float distanceAttenuation = 1.0 / square(dist);
+
+    // todo!!!!
+    float coneAttenuation = (dot(L, toLight / dist) > 0.75) ? 1.0 : 0.0;
+
+    vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+    vec3 directLight = lightColor * shadowFactor * distanceAttenuation * coneAttenuation;
 
     float LdotN = max(dot(L, N), 0.0);
     return brdf * LdotN * directLight;
@@ -110,7 +131,7 @@ void main()
         }
 
         for (uint i = 0; i < lightMeta.numSpotLights; ++i) {
-            //color += evaluateSpotLight(spotLights[i], V, N, baseColor, roughness, metallic);
+            color += evaluateSpotLight(spotLights[i], V, N, baseColor, roughness, metallic);
         }
     }
 

@@ -24,6 +24,8 @@ public:
     void loadFromFile(const std::string&);
 
     Model& addModel(std::unique_ptr<Model>);
+    DirectionalLight& addLight(std::unique_ptr<DirectionalLight>);
+    SpotLight& addLight(std::unique_ptr<SpotLight>);
 
     size_t modelCount() const { return m_models.size(); }
     size_t meshCount() const;
@@ -44,11 +46,8 @@ public:
     FpsCamera& camera() { return m_currentMainCamera; }
     void cameraGui();
 
-    const DirectionalLight& sun() const { return m_directionalLights[0]; }
-    DirectionalLight& sun() { return m_directionalLights[0]; }
-
-    const std::vector<DirectionalLight>& directionalLights() const { return m_directionalLights; }
-    const std::vector<SpotLight>& spotLights() const { return m_spotLights; }
+    const DirectionalLight& sun() const { return *m_directionalLights[0]; }
+    DirectionalLight& sun() { return *m_directionalLights[0]; }
 
     int forEachLight(std::function<void(size_t, const Light&)>) const;
     int forEachLight(std::function<void(size_t, Light&)>);
@@ -77,8 +76,8 @@ private:
 
     std::vector<std::unique_ptr<Model>> m_models;
 
-    std::vector<DirectionalLight> m_directionalLights;
-    std::vector<SpotLight> m_spotLights;
+    std::vector<std::unique_ptr<DirectionalLight>> m_directionalLights;
+    std::vector<std::unique_ptr<SpotLight>> m_spotLights;
 
     std::optional<ProbeGrid> m_probeGrid;
 

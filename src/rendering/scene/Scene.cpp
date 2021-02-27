@@ -90,19 +90,16 @@ void Scene::loadFromFile(const std::string& path)
             float illuminance = jsonLight.at("illuminance");
             vec3 direction = readVec3(jsonLight.at("direction"));
 
-            DirectionalLight light { color, illuminance, direction };
+            auto light = std::make_unique<DirectionalLight>(color, illuminance, direction);
 
-            light.shadowMapWorldOrigin = { 0, 0, 0 };
-            light.shadowMapWorldExtent = jsonLight.at("worldExtent");
+            light->shadowMapWorldOrigin = { 0, 0, 0 };
+            light->shadowMapWorldExtent = jsonLight.at("worldExtent");
 
             int mapSize[2];
             jsonLight.at("shadowMapSize").get_to(mapSize);
-            light.setShadowMapSize({ mapSize[0], mapSize[1] });
+            light->setShadowMapSize({ mapSize[0], mapSize[1] });
 
-            light.setScene({}, this);
-
-            // TODO!
-            m_directionalLights.push_back(light);
+            addLight(std::move(light));
 
         } else if (type == "ambient") {
 
@@ -189,6 +186,22 @@ Model& Scene::addModel(std::unique_ptr<Model> model)
     return *m_models.back().get();
 }
 
+DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)
+{
+    ASSERT(light);
+    light->setScene({}, this);
+    m_directionalLights.push_back(std::move(light));
+    return *m_directionalLights.back().get();
+}
+
+SpotLight& Scene::addLight(std::unique_ptr<SpotLight> light)
+{
+    ASSERT(light);
+    light->setScene({}, this);
+    m_spotLights.push_back(std::move(light));
+    return *m_spotLights.back().get();
+}
+
 size_t Scene::meshCount() const
 {
     size_t count = 0u;
@@ -240,10 +253,10 @@ int Scene::forEachLight(std::function<void(size_t, const Light&)> callback) cons
 {
     size_t nextIndex = 0;
     for (auto& light : m_directionalLights) {
-        callback(nextIndex++, light);
+        callback(nextIndex++, *light);
     }
     for (auto& light : m_spotLights) {
-        callback(nextIndex++, light);
+        callback(nextIndex++, *light);
     }
     return nextIndex;
 }
@@ -252,10 +265,10 @@ int Scene::forEachLight(std::function<void(size_t, Light&)> callback)
 {
     size_t nextIndex = 0;
     for (auto& light : m_directionalLights) {
-        callback(nextIndex++, light);
+        callback(nextIndex++, *light);
     }
     for (auto& light : m_spotLights) {
-        callback(nextIndex++, light);
+        callback(nextIndex++, *light);
     }
     return nextIndex;
 }

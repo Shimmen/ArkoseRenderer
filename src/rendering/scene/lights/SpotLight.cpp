@@ -20,7 +20,7 @@ mat4 SpotLight::viewProjection() const
 
 float SpotLight::outerConeAngle() const
 {
-    // TODO: Actually look to the 
+    // TODO: Actually look to the IES profile!
     //float requiredAngle = m_iesProfile.requiredSpotLightConeAngle();
     float requiredAngle = moos::HALF_PI;
 

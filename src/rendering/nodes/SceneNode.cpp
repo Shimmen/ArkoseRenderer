@@ -216,10 +216,12 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
                 case Light::Type::SpotLight:
                     spotLightData.emplace_back(SpotLightData { .shadowMap = shadowMapData,
                                                                .colorAndIntensity = { light.color, light.intensityValue() },
-                                                               .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0),
-                                                               .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0),
+                                                               .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0f),
+                                                               .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0f),
                                                                .lightProjectionFromWorld = light.viewProjection(),
                                                                .lightProjectionFromView = light.viewProjection() * worldFromView,
+                                                               .worldSpacePosition = vec4(light.position(), 0.0f),
+                                                               .viewSpacePosition = viewFromWorld * vec4(light.position(), 1.0f),
                                                                .worldSpaceRight = vec4(/* todo */),
                                                                .worldSpaceUp = vec3(/* todo */),
                                                                .iesProfileIndex = -1 /* todo */ });

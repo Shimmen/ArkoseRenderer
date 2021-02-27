@@ -35,7 +35,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
     vec3 L = -normalize(mat3(cameras[sideIndex].viewFromWorld) * light.worldSpaceDirection.xyz);
 
     mat4 lightProjectionFromView = light.lightProjectionFromWorld * cameras[sideIndex].worldFromView;
-    float shadowFactor = evaluateShadow(shadowMaps[light.shadowMap.textureIndex], lightProjectionFromView, vPosition);
+    float shadowFactor = evaluateDirectionalShadow(shadowMaps[light.shadowMap.textureIndex], lightProjectionFromView, vPosition);
 
     vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
     vec3 directLight = lightColor * shadowFactor;
