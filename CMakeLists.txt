@@ -5,7 +5,9 @@ include(FetchContent)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
+add_subdirectory(deps/tracy)
 add_executable(ArkoseRenderer
+    ${TRACY_CLIENT_SOURCE}
     src/apps/RayTracingApp.cpp
     src/apps/ShowcaseApp.cpp
     src/apps/MultisampleTest.cpp
@@ -58,6 +60,9 @@ add_executable(ArkoseRenderer
 
 target_include_directories(ArkoseRenderer PRIVATE src/)
 target_include_directories(ArkoseRenderer PRIVATE shaders/shared)
+
+target_link_libraries(ArkoseRenderer PUBLIC tracy)
+target_compile_definitions(ArkoseRenderer PUBLIC TRACY_ENABLE)
 
 # (C++20 is required for designated initializers in VC++)
 target_compile_features(ArkoseRenderer PRIVATE cxx_std_20)
