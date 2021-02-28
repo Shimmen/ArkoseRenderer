@@ -62,6 +62,15 @@ target_include_directories(ArkoseRenderer PRIVATE shaders/shared)
 # (C++20 is required for designated initializers in VC++)
 target_compile_features(ArkoseRenderer PRIVATE cxx_std_20)
 
+set(ARKOSE_ASSET_DIR_NAME "assets")
+set(ARKOSE_SHADER_DIR_NAME "shaders")
+
+add_custom_command(TARGET ArkoseRenderer PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/${ARKOSE_ASSET_DIR_NAME}" "${CMAKE_BINARY_DIR}/${ARKOSE_ASSET_DIR_NAME}"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/${ARKOSE_SHADER_DIR_NAME}" "${CMAKE_BINARY_DIR}/${ARKOSE_SHADER_DIR_NAME}"
+    COMMENT "Create symlinks to the assets & shaders so they will be locatable relative to the executable"
+    VERBATIM)
+
 if (MSVC)
     target_compile_options(ArkoseRenderer PUBLIC
         /wd26812 # prefer scoped enum class

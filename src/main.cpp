@@ -5,10 +5,6 @@
 #include "utility/Input.h"
 #include "utility/Logging.h"
 
-#if defined(_MSC_VER)
-#include <direct.h>
-#endif
-
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
@@ -68,28 +64,8 @@ std::unique_ptr<Backend> createBackend(Backend::Type backendType, GLFWwindow* wi
     return backend;
 }
 
-#if defined(_MSC_VER)
-void setApplicationWorkingDirectory(char* executableName)
-{
-    const std::string workingDirName = "Arkose";
-
-    char fullPathBuf[_MAX_PATH] = {};
-    ASSERT(_fullpath(fullPathBuf, executableName, sizeof(fullPathBuf)));
-    std::string fullPath { fullPathBuf };
-
-    size_t startOfWorkingDirName = fullPath.find(workingDirName);
-    std::string newWorkingDir = fullPath.substr(0, startOfWorkingDirName + workingDirName.length() + 1);
-    ASSERT(_chdir(newWorkingDir.c_str()) == 0);
-}
-#endif
-
 int main(int argc, char** argv)
 {
-#if defined(_MSC_VER)
-    char* executableName = argv[0];
-    setApplicationWorkingDirectory(executableName);
-#endif
-
     if (!glfwInit()) {
         LogErrorAndExit("ArkoseRenderer::main(): could not initialize GLFW, exiting.\n");
     }
