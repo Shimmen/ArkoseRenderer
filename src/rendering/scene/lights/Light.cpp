@@ -21,7 +21,7 @@ Texture& Light::shadowMap()
         LogErrorAndExit("Light: can't request shadow map for light that is not part of a scene, exiting\n");
 
     ASSERT(m_shadowMapSize.width() > 0 && m_shadowMapSize.height() > 0);
-    Texture& shadowMap = scene()->registry().createTexture2D(m_shadowMapSize, Texture::Format::Depth32F);
+    Texture& shadowMap = scene()->registry().createTexture2D(m_shadowMapSize, Texture::Format::Depth32F, Texture::Filters::linear(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
     m_shadowMap = &shadowMap;
 
     return shadowMap;

@@ -14,20 +14,15 @@ SpotLight::SpotLight(vec3 color, float luminousIntensity, const std::string& ies
 mat4 SpotLight::viewProjection() const
 {
     mat4 lightOrientation = moos::lookAt(m_position, m_position + normalize(m_direction));
-    mat4 lightProjection = moos::perspectiveProjectionToVulkanClipSpace(outerConeAngle(), 1.0f, 0.1f, 1000.0f);
+    mat4 lightProjection = moos::perspectiveProjectionToVulkanClipSpace(outerConeAngle, 1.0f, 0.1f, 1000.0f);
     return lightProjection * lightOrientation;
 }
 
-float SpotLight::outerConeAngle() const
+Texture& SpotLight::iesProfileLookupTexture()
 {
-    // TODO: Actually look to the IES profile!
-    //float requiredAngle = m_iesProfile.requiredSpotLightConeAngle();
-    float requiredAngle = moos::HALF_PI;
+    if (!scene())
+        LogErrorAndExit("SpotLight: can't request IES profile LUT for light that is not part of a scene, exiting\n");
 
-    if (requiredAngle >= moos::PI - 1e-2f) {
-        LogWarning("SpotLight: outer cone angle from .ies-file '%s' does not work for a spot light, contricting angle for shadows\n", m_iesProfile.path().c_str());
-        return moos::PI - 1e-2f;
-    }
-
-    return requiredAngle;
+    // TODO: Cache these!! Both loading of IES profiles & the LUTs
+    return m_iesProfile.createLookupTexture(*scene(), SpotLightIESLookupTextureSize);
 }

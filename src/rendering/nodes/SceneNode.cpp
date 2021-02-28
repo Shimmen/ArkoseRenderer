@@ -116,16 +116,20 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     Buffer& dirLightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
     Buffer& spotLightDataBuffer = reg.createBuffer(sizeof(SpotLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
+    std::vector<Texture*> iesProfileLUTs;
     std::vector<Texture*> shadowMaps;
     // TODO: We need to be able to update the shadow map binding. Right now we can only do it once, at creation.
     m_scene.forEachLight([&](size_t, Light& light) {
+        if (light.type() == Light::Type::SpotLight)
+            iesProfileLUTs.push_back(&((SpotLight&)light).iesProfileLookupTexture()); // all this light stuff needs cleanup...
         if (light.castsShadows())
             shadowMaps.push_back(&light.shadowMap());
     });
     BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &lightMetaDataBuffer },
                                                          { 1, ShaderStageFragment, &dirLightDataBuffer },
                                                          { 2, ShaderStageFragment, &spotLightDataBuffer },
-                                                         { 3, ShaderStageFragment, shadowMaps, SCENE_MAX_SHADOW_MAPS } });
+                                                         { 3, ShaderStageFragment, shadowMaps, SCENE_MAX_SHADOW_MAPS },
+                                                         { 4, ShaderStageFragment, iesProfileLUTs, SCENE_MAX_IES_LUT } });
     reg.publish("lightSet", lightBindingSet);
 
     return [&](const AppState& appState, CommandList& cmdList) {
@@ -205,7 +209,7 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
                 ShadowMapData shadowMapData { .textureIndex = shadowMapIndex };
 
                 switch (light.type()) {
-                case Light::Type::DirectionalLight:
+                case Light::Type::DirectionalLight: {
                     dirLightData.emplace_back(DirectionalLightData { .shadowMap = shadowMapData,
                                                                      .colorAndIntensity = { light.color, light.intensityValue() },
                                                                      .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0),
@@ -213,7 +217,9 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
                                                                      .lightProjectionFromWorld = light.viewProjection(),
                                                                      .lightProjectionFromView = light.viewProjection() * worldFromView });
                     break;
-                case Light::Type::SpotLight:
+                }
+                case Light::Type::SpotLight: {
+                    SpotLight& spotLight = static_cast<SpotLight&>(light);
                     spotLightData.emplace_back(SpotLightData { .shadowMap = shadowMapData,
                                                                .colorAndIntensity = { light.color, light.intensityValue() },
                                                                .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0f),
@@ -222,10 +228,12 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
                                                                .lightProjectionFromView = light.viewProjection() * worldFromView,
                                                                .worldSpacePosition = vec4(light.position(), 0.0f),
                                                                .viewSpacePosition = viewFromWorld * vec4(light.position(), 1.0f),
-                                                               .worldSpaceRight = vec4(/* todo */),
-                                                               .worldSpaceUp = vec3(/* todo */),
-                                                               .iesProfileIndex = -1 /* todo */ });
+                                                               .worldSpaceRight = vec3(/* todo: pass matrices */),
+                                                               .outerConeHalfAngle = spotLight.outerConeAngle / 2.0f,
+                                                               .worldSpaceUp = vec3(/* todo: pass matrices */),
+                                                               .iesProfileIndex = 0 /* todo: set correctly */ });
                     break;
+                }
                 case Light::Type::PointLight:
                 default:
                     ASSERT_NOT_REACHED();

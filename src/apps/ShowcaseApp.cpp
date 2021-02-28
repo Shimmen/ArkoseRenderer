@@ -31,18 +31,14 @@ std::vector<Backend::Capability> ShowcaseApp::optionalCapabilities()
 
 void ShowcaseApp::setup(RenderGraph& graph)
 {
-    //IESProfile iesProfile { "assets/sample/ies/trapezoid.ies" };
-    IESProfile iesProfile { "assets/sample/ies/three-lobe-umbrella.ies" };
-    //Texture& iesTexture = iesProfile.createLookupTexture(scene(), 1024);
-
     constexpr bool fastMode = false;
     constexpr bool enableDebugVisualizations = true;
 
     scene().loadFromFile("assets/sample/sponza.json");
-    
-    // TODO: Verify that we are rendering shadow maps for this and that the sun shadow still works fine
-    SpotLight& testSpot = scene().addLight(std::make_unique<SpotLight>(vec3(1, 0, 0), 25'000.0f, "assets/sample/ies/three-lobe-umbrella.ies", vec3(0, 1, 0), vec3(1, -1, 1)));
-    testSpot.setShadowMapSize({ 256, 256 });
+
+    // TODO: Move to the scene json
+    SpotLight& testSpot = scene().addLight(std::make_unique<SpotLight>(vec3(1.0f, 0.25f, 0.25f), 25.0f, "assets/sample/ies/three-lobe-umbrella.ies", vec3(0, 1, 0), vec3(1, -1, 1)));
+    testSpot.setShadowMapSize({ 512, 512 });
 
     if (!scene().hasProbeGrid()) {
         scene().generateProbeGridFromBoundingBox();

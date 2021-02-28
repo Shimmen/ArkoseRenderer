@@ -6,6 +6,7 @@
 #define SCENE_MAX_MATERIALS 128
 #define SCENE_MAX_TEXTURES 256
 #define SCENE_MAX_SHADOW_MAPS 16
+#define SCENE_MAX_IES_LUT 16
 
 struct ShaderDrawable {
     mat4 worldFromLocal;

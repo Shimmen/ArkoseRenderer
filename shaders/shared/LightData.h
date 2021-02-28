@@ -37,8 +37,8 @@ struct SpotLightData {
     vec4 worldSpacePosition;
     vec4 viewSpacePosition;
 
-    // Is my padding correct here?
-    vec4 worldSpaceRight;
+    vec3 worldSpaceRight;
+    float outerConeHalfAngle;
     vec3 worldSpaceUp;
     int iesProfileIndex;
 };

@@ -2,6 +2,7 @@
 
 #include <common/brdf.glsl>
 #include <common/namedUniforms.glsl>
+#include <common/iesProfile.glsl>
 #include <common/shadow.glsl>
 #include <shared/CameraState.h>
 #include <shared/SceneData.h>
@@ -25,6 +26,7 @@ layout(set = 2, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMet
 layout(set = 2, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
 layout(set = 2, binding = 2) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
 layout(set = 2, binding = 3) uniform sampler2D shadowMaps[SCENE_MAX_SHADOW_MAPS];
+layout(set = 2, binding = 4) uniform sampler2D iesLUTs[SCENE_MAX_IES_LUT];
 
 #if FORWARD_INCLUDE_INDIRECT_LIGHT
 #include <shared/ProbeGridData.h>
@@ -67,11 +69,11 @@ vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, floa
     float dist = length(toLight);
     float distanceAttenuation = 1.0 / square(dist);
 
-    // todo!!!!
-    float coneAttenuation = (dot(L, toLight / dist) > 0.75) ? 1.0 : 0.0;
+    float cosConeAngle = dot(L, toLight / dist);
+    float iesValue = evaluateIESLookupTable(iesLUTs[light.iesProfileIndex], light.outerConeHalfAngle, cosConeAngle);
 
     vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
-    vec3 directLight = lightColor * shadowFactor * distanceAttenuation * coneAttenuation;
+    vec3 directLight = lightColor * shadowFactor * distanceAttenuation * iesValue;
 
     float LdotN = max(dot(L, N), 0.0);
     return brdf * LdotN * directLight;

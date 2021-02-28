@@ -1,6 +1,7 @@
 #version 460
 
 #include <common/brdf.glsl>
+#include <common/iesProfile.glsl>
 #include <common/shadow.glsl>
 #include <shared/CameraState.h>
 #include <shared/SceneData.h>
@@ -20,6 +21,7 @@ layout(set = 2, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMet
 layout(set = 2, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
 layout(set = 2, binding = 2) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
 layout(set = 2, binding = 3) uniform sampler2D shadowMaps[SCENE_MAX_SHADOW_MAPS];
+layout(set = 2, binding = 4) uniform sampler2D iesLUTs[SCENE_MAX_IES_LUT];
 
 layout(push_constant) uniform PushConstants {
     uint sideIndex;
@@ -39,6 +41,29 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
 
     vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
     vec3 directLight = lightColor * shadowFactor;
+
+    float LdotN = max(dot(L, N), 0.0);
+    return brdf * LdotN * directLight;
+}
+
+vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+{
+    vec3 lightColor = light.colorAndIntensity.a * light.colorAndIntensity.rgb;
+    vec3 L = -normalize(mat3(cameras[sideIndex].viewFromWorld) * light.worldSpaceDirection.xyz);
+
+    mat4 lightProjectionFromView = light.lightProjectionFromWorld * cameras[sideIndex].worldFromView;
+    float shadowFactor = evaluateShadow(shadowMaps[light.shadowMap.textureIndex], lightProjectionFromView, vPosition);
+
+    vec4 viewSpaceLightPosition = cameras[sideIndex].viewFromWorld * vec4(light.worldSpacePosition.xyz, 1);
+    vec3 toLight = viewSpaceLightPosition.xyz - vPosition;
+    float dist = length(toLight);
+    float distanceAttenuation = 1.0 / square(dist);
+
+    float cosConeAngle = dot(L, toLight / dist);
+    float iesValue = evaluateIESLookupTable(iesLUTs[light.iesProfileIndex], light.outerConeHalfAngle, cosConeAngle);
+
+    vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+    vec3 directLight = lightColor * shadowFactor * distanceAttenuation * iesValue;
 
     float LdotN = max(dot(L, N), 0.0);
     return brdf * LdotN * directLight;
@@ -74,7 +99,7 @@ void main()
         }
 
         for (uint i = 0; i < lightMeta.numSpotLights; ++i) {
-            //color += evaluateSpotLight(spotLights[i], V, N, baseColor, roughness, metallic);
+            color += evaluateSpotLight(spotLights[i], V, N, baseColor, roughness, metallic);
         }
     }
 

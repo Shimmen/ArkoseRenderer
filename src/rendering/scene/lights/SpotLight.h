@@ -28,11 +28,15 @@ public:
 
     virtual mat4 viewProjection() const final;
 
-    float outerConeAngle() const;
+    static constexpr int SpotLightIESLookupTextureSize = 256;
+    Texture& iesProfileLookupTexture();
 
     // Light luminous intensity (candelas)
     // TODO: Actually use physically based units!
     float luminousIntensity { 1.0f };
+
+    // This will scale the IES profile so that it fits within the given angle
+    float outerConeAngle { moos::toRadians(120.0f) };
 
 private:
 

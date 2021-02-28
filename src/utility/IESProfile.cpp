@@ -14,37 +14,45 @@ IESProfile::IESProfile(const std::string& path)
     parse(path);
 }
 
-float IESProfile::requiredSpotLightConeAngle() const
+/*
+float IESProfile::requiredSpotLightConeAngle(float minThreshold) const
 {
-    NOT_YET_IMPLEMENTED();
+    // This doesn't work.. at least as is. And almost all of these profiles cover a full hemisphere anyway,
+    // so just assuming a large cone angle works pretty nice.
+    ASSERT_NOT_REACHED();
 
-    /*
-
-    if (m_requiredSpotLightConeAngleCache > 0.0f)
-        return m_requiredSpotLightConeAngleCache;
-
-    // No, we need to consider the largest angles where we have a signficant enough candelas that it's worth counting..
     float maxH = 0.0f;
     float maxV = 0.0f;
 
-    for (float angleH : m_anglesH) {
-        maxH = std::max(maxH, std::abs(angleH));
+    for (int hi = 0; hi < m_anglesH.size(); ++hi) {
+        for (int vi = 0; vi < m_anglesV.size(); ++vi) {
+            float value = m_candelaValues[vi + m_anglesV.size() * hi];
+            if (value > minThreshold) {
+                maxH = std::max(maxH, std::abs(m_anglesH[hi]));
+                maxV = std::max(maxV, std::abs(m_anglesV[vi]));
+            }
+        }
     }
 
-    for (float angleV : m_anglesV) {
-        maxV = std::max(maxV, std::abs(angleV));
-    }
+    // IES uses degrees for everything
+    float phi = moos::toRadians(maxH);
+    float theta = moos::toRadians(maxV);
+    ASSERT(phi >= 0.0f && phi <= moos::TWO_PI);
+    ASSERT(theta >= 0.0f && theta <= moos::PI);
 
     // Map to spherical
-    NOT_YET_IMPLEMENTED();
+    float sinTheta = sin(theta);
+    vec3 direction = vec3(sinTheta * cos(phi),
+                          sinTheta * sin(phi),
+                          cos(theta));
 
     // Figure out angle
-    NOT_YET_IMPLEMENTED();
-    
-    return m_requiredSpotLightConeAngleCache;
+    float cosHalfAngle = dot(direction, vec3(0, 0, 1));
+    float angle = 2.0f * acos(cosHalfAngle);
 
-    */
+    return angle;
 }
+*/
 
 Texture& IESProfile::createLookupTexture(Scene& scene, int size)
 {

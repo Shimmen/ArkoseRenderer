@@ -31,8 +31,10 @@ float evaluateShadow(sampler2D shadowMap, mat4 lightProjectionFromView, vec3 vie
     vec2 shadowMapUv = posInShadowMap.xy * 0.5 + 0.5;
     float mapDepth = texture(shadowMap, shadowMapUv).x;
 
-    // TODO: Use smarter bias!
-    const float bias = 1e-4;
+    // TODO: Use smarter bias! It should be relative to:
+    //  - Texel size
+    //  - Normal / gradient
+    const float bias = 2e-3;
     return (mapDepth < posInShadowMap.z - bias) ? 0.0 : 1.0;
 }
 

@@ -40,7 +40,7 @@ public:
     UnitsType unitsType() const { return m_unitsType; }
     PhotometricType photometricType() const { return m_photometricType; }
 
-    float requiredSpotLightConeAngle() const;
+    //float requiredSpotLightConeAngle(float minThreshold) const;
 
     Texture& createLookupTexture(Scene&, int size = 256);
 
@@ -74,7 +74,5 @@ private:
     std::vector<float> m_anglesV {};
     std::vector<float> m_anglesH {};
     std::vector<float> m_candelaValues {};
-
-    float m_requiredSpotLightConeAngleCache {-1.0f };
 
 };
