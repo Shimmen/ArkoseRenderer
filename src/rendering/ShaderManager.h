@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utility/Badge.h"
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -7,15 +8,24 @@
 #include <string>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
+
+class Backend;
 
 class ShaderManager {
 public:
     static ShaderManager& instance();
 
+    using SpirvData = std::vector<uint32_t>;
+
+    std::string resolvePath(const std::string& name) const;
+
     std::optional<std::string> loadAndCompileImmediately(const std::string& name);
-    const std::vector<uint32_t>& spirv(const std::string& name) const;
+
+
+    const SpirvData& spirv(const std::string& name) const;
 
     void startFileWatching(unsigned msBetweenPolls, std::function<void()> fileChangeCallback = {});
     void stopFileWatching();
@@ -28,32 +38,26 @@ private:
     explicit ShaderManager(std::string basePath);
     ~ShaderManager() = default;
 
-    std::string resolvePath(const std::string& name) const;
-    uint64_t getFileEditTimestamp(const std::string&) const;
+    struct CompiledShader {
+        CompiledShader() = default;
+        explicit CompiledShader(std::string path);
 
-    struct ShaderData {
-        ShaderData() = default;
-        explicit ShaderData(std::string path)
-            : filePath(std::move(path))
-        {
-        }
+        bool recompile();
+
+        uint64_t findLatestEditTimestampInIncludeTree();
 
         std::string filePath {};
+        std::vector<std::string> includedFilePaths {};
 
         uint64_t lastEditTimestamp { 0 };
-        uint32_t currentBinaryVersion { 0 };
-        bool lastEditSuccessfullyCompiled { false };
-        std::string lastCompileError {};
+        uint64_t compiledTimestamp { 0 };
 
-        std::string glslSource {};
-        std::vector<uint32_t> spirvBinary {};
+        SpirvData currentSpirvBinary {};
+        std::string lastCompileError {};
     };
 
-    shaderc_shader_kind shaderKindForPath(const std::string&) const;
-    bool compileGlslToSpirv(ShaderData& data) const;
-
     std::string m_shaderBasePath;
-    std::unordered_map<std::string, ShaderData> m_loadedShaders {};
+    std::unordered_map<std::string, std::unique_ptr<CompiledShader>> m_compiledShaders {};
 
     std::unique_ptr<std::thread> m_fileWatcherThread {};
     mutable std::mutex m_shaderDataMutex {};
