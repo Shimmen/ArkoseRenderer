@@ -110,6 +110,7 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, App& app)
     }
 
     VmaAllocatorCreateInfo allocatorInfo = {};
+    allocatorInfo.instance = m_instance;
     allocatorInfo.physicalDevice = physicalDevice();
     allocatorInfo.device = device();
     allocatorInfo.flags = 0u;
