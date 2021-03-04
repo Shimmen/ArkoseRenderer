@@ -4,6 +4,7 @@
 #include "rendering/ShaderManager.h"
 #include "utility/Input.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -17,6 +18,8 @@ enum class WindowType {
 
 GLFWwindow* createWindow(Backend::Type backendType, WindowType windowType, const Extent2D& windowSize)
 {
+    SCOPED_PROFILE_ZONE();
+
     std::string windowTitle = "Arkose Renderer";
 
     switch (backendType) {
@@ -53,6 +56,8 @@ GLFWwindow* createWindow(Backend::Type backendType, WindowType windowType, const
 
 std::unique_ptr<Backend> createBackend(Backend::Type backendType, GLFWwindow* window, App& app)
 {
+    SCOPED_PROFILE_ZONE();
+
     std::unique_ptr<Backend> backend;
 
     switch (backendType) {
@@ -66,6 +71,8 @@ std::unique_ptr<Backend> createBackend(Backend::Type backendType, GLFWwindow* wi
 
 int main(int argc, char** argv)
 {
+    SCOPED_PROFILE_ZONE();
+
     if (!glfwInit()) {
         LogErrorAndExit("ArkoseRenderer::main(): could not initialize GLFW, exiting.\n");
     }
@@ -80,7 +87,7 @@ int main(int argc, char** argv)
 
         LogInfo("ArkoseRenderer: main loop begin.\n");
 
-        ShaderManager::instance().startFileWatching(250, []() {
+        ShaderManager::instance().startFileWatching(1'000, []() {
             LogInfo("One or more shader files updated!\n");
             LogError("FIXME: Respond to shader file updates!\n");
         });
@@ -100,6 +107,8 @@ int main(int argc, char** argv)
             while (!frameExecuted) {
                 frameExecuted = backend->executeFrame(elapsedTime, deltaTime);
             }
+
+            END_OF_FRAME_PROFILE_MARKER();
         }
 
         ShaderManager::instance().stopFileWatching();

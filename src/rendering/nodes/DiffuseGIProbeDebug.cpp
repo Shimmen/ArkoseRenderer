@@ -3,6 +3,7 @@
 #include "CameraState.h"
 #include "ProbeDebug.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include <imgui.h>
 
 std::string DiffuseGIProbeDebug::name()
@@ -18,6 +19,8 @@ DiffuseGIProbeDebug::DiffuseGIProbeDebug(Scene& scene)
 
 void DiffuseGIProbeDebug::constructNode(Registry& reg)
 {
+    SCOPED_PROFILE_ZONE();
+
 #if PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_COLOR
     m_probeData = reg.getTexture("diffuse-gi", "irradianceProbes").value();
 #elif (PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_DISTANCE) || (PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_DISTANCE2)
@@ -29,6 +32,8 @@ void DiffuseGIProbeDebug::constructNode(Registry& reg)
 
 RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& reg) const
 {
+    SCOPED_PROFILE_ZONE();
+
     Texture& depthTexture = *reg.getTexture("g-buffer", "depth").value();
     Texture& colorTexture = *reg.getTexture("forward", "color").value();
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture, LoadOp::Load, StoreOp::Store },
@@ -45,6 +50,8 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
     RenderState& renderState = reg.createRenderState(stateBuilder);
 
     return [&](const AppState& appState, CommandList& cmdList) {
+        SCOPED_PROFILE_ZONE();
+
         static bool enabled = false;
         ImGui::Checkbox("Enabled##diffuse-gi", &enabled);
         static float probeScale = 0.05f;

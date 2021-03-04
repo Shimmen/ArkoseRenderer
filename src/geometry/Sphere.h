@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utility/Profiling.h"
 #include <moos/matrix.h>
 #include <moos/vector.h>
 
@@ -17,6 +18,8 @@ struct Sphere {
 
     inline Sphere transformed(mat4 M) const
     {
+        SCOPED_PROFILE_ZONE();
+
         mat4 Mt = transpose(M);
         float scaleX2 = length2(Mt.x.xyz());
         float scaleY2 = length2(Mt.y.xyz());

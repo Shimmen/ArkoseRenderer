@@ -3,6 +3,7 @@
 #include "VulkanBackend.h"
 #include "VulkanResources.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include <stb_image_write.h>
 
 VulkanCommandList::VulkanCommandList(VulkanBackend& backend, VkCommandBuffer commandBuffer)
@@ -13,6 +14,8 @@ VulkanCommandList::VulkanCommandList(VulkanBackend& backend, VkCommandBuffer com
 
 void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     auto& colorTexture = static_cast<VulkanTexture&>(genColorTexture);
     ASSERT(!colorTexture.hasDepthFormat());
 
@@ -97,6 +100,8 @@ void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
 
 void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t srcLayer, uint32_t dstLayer)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     auto& src = static_cast<VulkanTexture&>(genSrc);
     auto& dst = static_cast<VulkanTexture&>(genDst);
 
@@ -212,6 +217,8 @@ void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t s
 
 void VulkanCommandList::generateMipmaps(Texture& genTexture)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     auto& texture = static_cast<VulkanTexture&>(genTexture);
 
     if (!texture.hasMipmaps()) {
@@ -386,6 +393,8 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState)
 
 void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearColor clearColor, float clearDepth, uint32_t clearStencil)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     if (activeRenderState) {
         LogWarning("setRenderState: already active render state!\n");
         endCurrentRenderPassIfAny();
@@ -515,6 +524,8 @@ void VulkanCommandList::endRendering()
 
 void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     if (!backend().hasRtxSupport()) {
         LogErrorAndExit("Trying to set ray tracing state but there is no ray tracing support!\n");
     }
@@ -604,6 +615,8 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)
 
 void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     if (activeRenderState) {
         LogWarning("setComputeState: active render state when starting compute state.\n");
         endCurrentRenderPassIfAny();
@@ -689,6 +702,8 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
 
 void VulkanCommandList::bindSet(BindingSet& bindingSet, uint32_t index)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     if (!activeRenderState && !activeRayTracingState && !activeComputeState) {
         LogErrorAndExit("bindSet: no active render or compute or ray tracing state to bind to!\n");
     }
@@ -717,6 +732,8 @@ void VulkanCommandList::bindSet(BindingSet& bindingSet, uint32_t index)
 
 void VulkanCommandList::pushConstants(ShaderStage shaderStage, void* data, size_t size, size_t byteOffset)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     requireExactlyOneStateToBeSet("pushConstants");
     VkPipelineLayout pipelineLayout = getCurrentlyBoundPipelineLayout();
 
@@ -740,6 +757,8 @@ void VulkanCommandList::pushConstants(ShaderStage shaderStage, void* data, size_
 
 void VulkanCommandList::setNamedUniform(const std::string& name, void* data, size_t size)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     requireExactlyOneStateToBeSet("setNamedUniform");
     if (activeRayTracingState != nullptr) {
         LogErrorAndExit("setNamedUniform: don't call setNamedUniform for a ray tracing state (for now)!\n");
@@ -779,6 +798,8 @@ void VulkanCommandList::setNamedUniform(const std::string& name, void* data, siz
 
 void VulkanCommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     if (!activeRenderState) {
         LogErrorAndExit("draw: no active render state!\n");
     }
@@ -794,6 +815,8 @@ void VulkanCommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount)
 
 void VulkanCommandList::drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType indexType, uint32_t instanceIndex)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     if (!activeRenderState) {
         LogErrorAndExit("drawIndexed: no active render state!\n");
     }
@@ -825,6 +848,8 @@ void VulkanCommandList::drawIndexed(const Buffer& vertexBuffer, const Buffer& in
 
 void VulkanCommandList::rebuildTopLevelAcceratationStructure(TopLevelAS& tlas)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     if (!backend().hasRtxSupport())
         LogErrorAndExit("Trying to rebuild a top level acceleration structure but there is no ray tracing support!\n");
 
@@ -873,6 +898,8 @@ void VulkanCommandList::rebuildTopLevelAcceratationStructure(TopLevelAS& tlas)
 
 void VulkanCommandList::traceRays(Extent2D extent)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     if (!activeRayTracingState)
         LogErrorAndExit("traceRays: no active ray tracing state!\n");
     if (!backend().hasRtxSupport())
@@ -903,6 +930,8 @@ void VulkanCommandList::traceRays(Extent2D extent)
 
 void VulkanCommandList::dispatch(Extent3D globalSize, Extent3D localSize)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     uint32_t x = (globalSize.width() + localSize.width() - 1) / localSize.width();
     uint32_t y = (globalSize.height() + localSize.height() - 1) / localSize.height();
     uint32_t z = (globalSize.depth() + localSize.depth() - 1) / localSize.depth();
@@ -911,6 +940,8 @@ void VulkanCommandList::dispatch(Extent3D globalSize, Extent3D localSize)
 
 void VulkanCommandList::dispatch(uint32_t x, uint32_t y, uint32_t z)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     if (!activeComputeState) {
         LogErrorAndExit("Trying to dispatch compute but there is no active compute state!\n");
     }
@@ -919,6 +950,8 @@ void VulkanCommandList::dispatch(uint32_t x, uint32_t y, uint32_t z)
 
 void VulkanCommandList::waitEvent(uint8_t eventId, PipelineStage stage)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     VkEvent event = getEvent(eventId);
     VkPipelineStageFlags flags = stageFlags(stage);
 
@@ -931,18 +964,24 @@ void VulkanCommandList::waitEvent(uint8_t eventId, PipelineStage stage)
 
 void VulkanCommandList::resetEvent(uint8_t eventId, PipelineStage stage)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     VkEvent event = getEvent(eventId);
     vkCmdResetEvent(m_commandBuffer, event, stageFlags(stage));
 }
 
 void VulkanCommandList::signalEvent(uint8_t eventId, PipelineStage stage)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     VkEvent event = getEvent(eventId);
     vkCmdSetEvent(m_commandBuffer, event, stageFlags(stage));
 }
 
 void VulkanCommandList::slowBlockingReadFromBuffer(const Buffer& buffer, size_t offset, size_t size, void* dst)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     ASSERT(offset < buffer.size());
     ASSERT(size > 0);
     ASSERT(size <= buffer.size() - offset);
@@ -1024,6 +1063,8 @@ void VulkanCommandList::slowBlockingReadFromBuffer(const Buffer& buffer, size_t 
 
 void VulkanCommandList::saveTextureToFile(const Texture& texture, const std::string& filePath)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     const VkFormat targetFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
     auto& srcTex = static_cast<const VulkanTexture&>(texture);

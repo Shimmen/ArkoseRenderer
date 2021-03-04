@@ -1,5 +1,7 @@
 #include "GBufferNode.h"
 
+#include "utility/Profiling.h"
+
 GBufferNode::GBufferNode(const Scene&)
     : RenderGraphNode(GBufferNode::name())
 {
@@ -12,6 +14,8 @@ std::string GBufferNode::name()
 
 RenderGraphNode::ExecuteCallback GBufferNode::constructFrame(Registry& reg) const
 {
+    SCOPED_PROFILE_ZONE();
+
     const RenderTarget& windowTarget = reg.windowRenderTarget();
 
     Texture& normalTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA16F);

@@ -1,5 +1,6 @@
 #include "Frustum.h"
 
+#include "utility/Profiling.h"
 #include "utility/util.h"
 
 namespace geometry {
@@ -26,6 +27,8 @@ Frustum::Frustum(Plane planes[6])
 
 bool Frustum::includesSphere(const Sphere& sphere)
 {
+    SCOPED_PROFILE_ZONE();
+
     for (const Plane& plane : m_planes) {
         float distance = dot(plane.normal(), sphere.center()) + plane.distance();
         if (distance > sphere.radius())

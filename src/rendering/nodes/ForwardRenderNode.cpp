@@ -5,6 +5,7 @@
 #include "SceneNode.h"
 #include "geometry/Frustum.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include <imgui.h>
 
 std::string ForwardRenderNode::name()
@@ -20,6 +21,8 @@ ForwardRenderNode::ForwardRenderNode(Scene& scene)
 
 void ForwardRenderNode::constructNode(Registry& reg)
 {
+    SCOPED_PROFILE_ZONE();
+
     Texture* irradianceProbeTex = reg.getTextureWithoutDependency("diffuse-gi", "irradianceProbes");
     Texture* distanceProbeTex = reg.getTextureWithoutDependency("diffuse-gi", "filteredDistanceProbes");
 
@@ -35,6 +38,8 @@ void ForwardRenderNode::constructNode(Registry& reg)
 
 RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg) const
 {
+    SCOPED_PROFILE_ZONE();
+
     Texture& colorTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("color", colorTexture);
 

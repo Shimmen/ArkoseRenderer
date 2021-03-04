@@ -1,6 +1,7 @@
 #include "BloomNode.h"
 
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include <imgui.h>
 
 BloomNode::BloomNode(Scene& scene)
@@ -11,6 +12,8 @@ BloomNode::BloomNode(Scene& scene)
 
 RenderGraphNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
 {
+    SCOPED_PROFILE_ZONE();
+
     Texture& mainTexture = *reg.getTexture("forward", "color").value();
     Extent2D baseExtent = mainTexture.extent();
 

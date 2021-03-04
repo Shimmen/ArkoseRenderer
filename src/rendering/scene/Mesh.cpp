@@ -4,6 +4,7 @@
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include <array>
 
 Material& Mesh::material()
@@ -15,12 +16,16 @@ Material& Mesh::material()
 
 void Mesh::ensureVertexBuffer(const SemanticVertexLayout& layout)
 {
+    SCOPED_PROFILE_ZONE()
+
     // NOTE: Will create & cache the buffer (if it doesn't already exist)
     vertexBuffer(layout);
 }
 
 const Buffer& Mesh::vertexBuffer(const SemanticVertexLayout& layout)
 {
+    SCOPED_PROFILE_ZONE()
+
     auto entry = m_vertexBuffers.find(layout);
     if (entry != m_vertexBuffers.end())
         return *entry->second;
@@ -106,12 +111,16 @@ const Buffer& Mesh::vertexBuffer(const SemanticVertexLayout& layout)
 
 void Mesh::ensureIndexBuffer()
 {
+    SCOPED_PROFILE_ZONE()
+
     // NOTE: Will create & cache the buffer (if it doesn't already exist)
     indexBuffer();
 }
 
 const Buffer& Mesh::indexBuffer()
 {
+    SCOPED_PROFILE_ZONE()
+
     if (m_indexBuffer != nullptr)
         return *m_indexBuffer;
 

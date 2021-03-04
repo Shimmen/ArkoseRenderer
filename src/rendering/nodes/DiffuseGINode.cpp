@@ -5,6 +5,7 @@
 #include "ProbeDebug.h"
 #include "geometry/Frustum.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include <imgui.h>
 #include <moos/random.h>
 #include <moos/transform.h>
@@ -32,6 +33,8 @@ static const auto sphereWrapping = Texture::WrapModes(Texture::WrapMode::ClampTo
 
 void DiffuseGINode::constructNode(Registry& reg)
 {
+    SCOPED_PROFILE_ZONE();
+
     m_irradianceProbes = &reg.createTextureArray(m_scene.probeGrid().probeCount(), probeDataColorSHTexSize, colorFormat, Texture::Filters::nearest(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
     m_filteredDistanceProbes = &reg.createTextureArray(m_scene.probeGrid().probeCount(), probeDataDistanceTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
 
@@ -41,6 +44,8 @@ void DiffuseGINode::constructNode(Registry& reg)
 
 RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) const
 {
+    SCOPED_PROFILE_ZONE();
+
     // Textures to render to
     Texture& probeColorTex = reg.createTexture2D(cubemapFaceSize, colorFormat);
     Texture& probeDistTex = reg.createCubemapTexture(cubemapFaceSize, distanceFormat);
@@ -105,6 +110,8 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         std::array<CameraMatrices, 6> sideMatrices;
         std::array<geometry::Frustum, 6> sideFrustums;
         {
+            SCOPED_PROFILE_ZONE_NAMED("Setting up camera matrices");
+
             mat4 projectionFromView = moos::perspectiveProjectionToVulkanClipSpace(moos::HALF_PI, 1.0f, 0.01f, 10.0f);
             mat4 viewFromProjection = inverse(projectionFromView);
 
@@ -144,6 +151,8 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         }
 
         forEachCubemapSide([&](CubemapSide side, uint32_t sideIndex) {
+            SCOPED_PROFILE_ZONE_NAMED("Drawing cube side");
+
             // Render this side of the cube
             // NOTE: If we in the future do this recursively (to get N bounces) we don't have to do fancy lighting for this pass,
             //  making it potentially a bit faster. All we have to render is the 0th bounce (everything is black, except light emitters

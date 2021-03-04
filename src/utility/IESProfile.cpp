@@ -6,6 +6,7 @@
 #include "utility/FileIO.h"
 #include "utility/Image.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include <moos/vector.h>
 
 IESProfile::IESProfile(const std::string& path)
@@ -56,6 +57,8 @@ float IESProfile::requiredSpotLightConeAngle(float minThreshold) const
 
 Texture& IESProfile::createLookupTexture(Scene& scene, int size)
 {
+    SCOPED_PROFILE_ZONE();
+
     std::vector<float> pixels {};
     pixels.reserve((size_t)size * (size_t)size);
 

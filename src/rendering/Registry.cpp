@@ -77,6 +77,8 @@ Texture& Registry::createTextureArray(uint32_t itemCount, Extent2D extent, Textu
 
 Texture& Registry::createTextureFromImage(const Image& image, bool srgb, bool generateMipmaps, Texture::WrapModes wrapMode)
 {
+    SCOPED_PROFILE_ZONE()
+
     auto mipmapMode = (generateMipmaps && image.info().width > 1 && image.info().height > 1)
         ? Texture::Mipmap::Linear
         : Texture::Mipmap::None;
@@ -264,6 +266,8 @@ Texture& Registry::createPixelTexture(vec4 pixelValue, bool srgb)
 
 Texture& Registry::loadTexture2D(const std::string& imagePath, bool srgb, bool generateMipmaps)
 {
+    SCOPED_PROFILE_ZONE()
+
     // FIXME (maybe): Add async functionality though the Registry (i.e., every new frame it checks for new data and sees if it may update some)
 
     Image::Info* info = Image::getInfo(imagePath);

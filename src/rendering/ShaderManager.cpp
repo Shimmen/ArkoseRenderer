@@ -2,6 +2,7 @@
 
 #include "utility/FileIO.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include "utility/util.h"
 #include <chrono>
 #include <cstddef>
@@ -28,9 +29,10 @@ void ShaderManager::startFileWatching(unsigned msBetweenPolls, std::function<voi
 
     m_fileWatchingActive = true;
     m_fileWatcherThread = std::make_unique<std::thread>([this, msBetweenPolls, &fileChangeCallback]() {
+        Profiling::setNameForActiveThread("Shader file watcher");
         while (m_fileWatchingActive) {
-            //LogInfo("ShaderManager: update!\n");
             {
+                SCOPED_PROFILE_ZONE_NAMED("Shader file watching");
                 std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
 
                 std::vector<std::string> filesToRemove;
@@ -178,6 +180,7 @@ shaderc_shader_kind ShaderManager::shaderKindForPath(const std::string& path) co
 
 bool ShaderManager::compileGlslToSpirv(ShaderData& data) const
 {
+    SCOPED_PROFILE_ZONE();
     ASSERT(!data.glslSource.empty());
 
     class Includer : public shaderc::CompileOptions::IncluderInterface {
@@ -194,6 +197,8 @@ bool ShaderManager::compileGlslToSpirv(ShaderData& data) const
 
         shaderc_include_result* GetInclude(const char* requested_source, shaderc_include_type include_type, const char* requesting_source, size_t include_depth) override
         {
+            SCOPED_PROFILE_ZONE();
+
             // FIXME: Support relative includes!
             ASSERT(include_type == shaderc_include_type_standard);
 
@@ -240,7 +245,11 @@ bool ShaderManager::compileGlslToSpirv(ShaderData& data) const
     options.SetForcedVersionProfile(460, shaderc_profile_none);
 
     shaderc_shader_kind kind = shaderKindForPath(data.filePath);
-    shaderc::SpvCompilationResult result = compiler.CompileGlslToSpv(data.glslSource, kind, data.filePath.c_str(), options);
+    shaderc::SpvCompilationResult result;
+    {
+        SCOPED_PROFILE_ZONE_NAMED("ShaderC work");
+        result = compiler.CompileGlslToSpv(data.glslSource, kind, data.filePath.c_str(), options);
+    }
 
     // Note that we only should overwrite the binary if it compiled correctly!
     if (result.GetCompilationStatus() != shaderc_compilation_status_success) {

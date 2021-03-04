@@ -11,6 +11,7 @@
 #include "utility/FileIO.h"
 #include "utility/GlobalState.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include "utility/util.h"
 #include <ImGuizmo.h>
 #include <algorithm>
@@ -417,6 +418,8 @@ VkExtent2D VulkanBackend::pickBestSwapchainExtent() const
 
 VkInstance VulkanBackend::createInstance(const std::vector<const char*>& requestedLayers, VkDebugUtilsMessengerCreateInfoEXT* debugMessengerCreateInfo) const
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     for (auto& layer : requestedLayers) {
         if (!hasSupportForLayer(layer))
             LogErrorAndExit("VulkanBackend: missing layer '%s'\n", layer);
@@ -493,6 +496,8 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
 
 VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLayers, VkPhysicalDevice physicalDevice)
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     // TODO: Allow users to specify beforehand that they e.g. might want 2 compute queues.
     std::unordered_set<uint32_t> queueFamilyIndices = { m_graphicsQueue.familyIndex, m_presentQueue.familyIndex };
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
@@ -589,6 +594,8 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 
 void VulkanBackend::findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     uint32_t count;
     vkGetPhysicalDeviceQueueFamilyProperties(physicalDevice, &count, nullptr);
     std::vector<VkQueueFamilyProperties> queueFamilies(count);
@@ -634,6 +641,8 @@ void VulkanBackend::findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSu
 
 VkPhysicalDevice VulkanBackend::pickBestPhysicalDevice() const
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     uint32_t count;
     vkEnumeratePhysicalDevices(m_instance, &count, nullptr);
     if (count < 1) {
@@ -659,6 +668,8 @@ VkPhysicalDevice VulkanBackend::pickBestPhysicalDevice() const
 
 void VulkanBackend::createSemaphoresAndFences(VkDevice device)
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
     VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
@@ -692,6 +703,8 @@ void VulkanBackend::createSemaphoresAndFences(VkDevice device)
 
 void VulkanBackend::createAndSetupSwapchain(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface)
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     VkSurfaceCapabilitiesKHR surfaceCapabilities;
     if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCapabilities) != VK_SUCCESS) {
         LogErrorAndExit("VulkanBackend::createAndSetupSwapchain(): could not get surface capabilities, exiting.\n");
@@ -822,6 +835,8 @@ void VulkanBackend::createAndSetupSwapchain(VkPhysicalDevice physicalDevice, VkD
 
 void VulkanBackend::destroySwapchain()
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     m_swapchainDepthTexture.reset();
 
     // TODO: Could this be rewritten to only use our existing deleteRenderTarget method?
@@ -842,6 +857,8 @@ void VulkanBackend::destroySwapchain()
 
 Extent2D VulkanBackend::recreateSwapchain()
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     while (true) {
         // As long as we are minimized, don't do anything
         int windowFramebufferWidth, windowFramebufferHeight;
@@ -869,6 +886,8 @@ Extent2D VulkanBackend::recreateSwapchain()
 
 void VulkanBackend::createWindowRenderTargetFrontend()
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     ASSERT(m_numSwapchainImages > 0);
 
     m_swapchainMockColorTextures.resize(m_numSwapchainImages);
@@ -919,6 +938,8 @@ void VulkanBackend::createWindowRenderTargetFrontend()
 
 void VulkanBackend::setupDearImgui()
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
@@ -1100,17 +1121,26 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, uint32_t
 
 bool VulkanBackend::executeFrame(double elapsedTime, double deltaTime)
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     uint32_t currentFrameMod = m_currentFrameIndex % maxFramesInFlight;
 
-    if (vkWaitForFences(device(), 1, &m_inFlightFrameFences[currentFrameMod], VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
-        LogError("VulkanBackend::executeFrame(): error while waiting for in-flight frame fence (frame %u).\n", m_currentFrameIndex);
+    {
+        SCOPED_PROFILE_ZONE_BACKEND_NAMED("Waiting for fence");
+        if (vkWaitForFences(device(), 1, &m_inFlightFrameFences[currentFrameMod], VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
+            LogError("VulkanBackend::executeFrame(): error while waiting for in-flight frame fence (frame %u).\n", m_currentFrameIndex);
+        }
     }
 
     bool isRelativeFirstFrame = m_currentFrameIndex == (m_lastSwapchainRecreationFrameIndex + 1);
     AppState appState { m_swapchainExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
 
     uint32_t swapchainImageIndex;
-    VkResult acquireResult = vkAcquireNextImageKHR(device(), m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[currentFrameMod], VK_NULL_HANDLE, &swapchainImageIndex);
+    VkResult acquireResult;
+    {
+        SCOPED_PROFILE_ZONE_BACKEND_NAMED("Waiting for fence");
+        acquireResult = vkAcquireNextImageKHR(device(), m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[currentFrameMod], VK_NULL_HANDLE, &swapchainImageIndex);
+    }
 
     if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) {
         // Since we couldn't acquire an image to draw to, recreate the swapchain and report that it didn't work
@@ -1164,6 +1194,8 @@ bool VulkanBackend::executeFrame(double elapsedTime, double deltaTime)
 
 void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, double deltaTime, uint32_t swapchainImageIndex)
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     ASSERT(m_renderGraph);
 
     ImGui_ImplVulkan_NewFrame();
@@ -1192,6 +1224,7 @@ void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, doub
             : fmt::format("{} | CPU: {:.2f} ms", nodeName, cpuTime);
         ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_Leaf);
 
+        SCOPED_PROFILE_ZONE_DYNAMIC(nodeName, 0x00ffff);
         double cpuStartTime = glfwGetTime();
 
         cmdList.beginDebugLabel(nodeName);
@@ -1206,6 +1239,8 @@ void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, doub
 
     cmdList.beginDebugLabel("GUI");
     {
+        SCOPED_PROFILE_ZONE_BACKEND_NAMED("GUI Rendering");
+
         static ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
 
         auto& input = Input::instance();
@@ -1260,6 +1295,8 @@ void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, doub
 
 void VulkanBackend::setupWindowRenderTargets()
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     // TODO: Could this be rewritten to use the common functions?
     //  I.e. createRenderTarget, passing in the manually created color textures etc.
     //  The only "problem" is probably the specific layouts (VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
@@ -1354,6 +1391,8 @@ void VulkanBackend::setupWindowRenderTargets()
 
 void VulkanBackend::reconstructRenderGraphResources(RenderGraph& renderGraph)
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     uint32_t numFrameManagers = m_numSwapchainImages;
 
     // Create new resource managers

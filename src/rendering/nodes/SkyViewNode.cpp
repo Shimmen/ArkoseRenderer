@@ -1,5 +1,6 @@
 #include "SkyViewNode.h"
 
+#include "utility/Profiling.h"
 #include <imgui.h>
 
 SkyViewNode::SkyViewNode(Scene& scene)
@@ -10,6 +11,8 @@ SkyViewNode::SkyViewNode(Scene& scene)
 
 RenderGraphNode::ExecuteCallback SkyViewNode::constructFrame(Registry& reg) const
 {
+    SCOPED_PROFILE_ZONE();
+
     Texture& targetImage = *reg.getTexture("forward", "color").value();
     Texture& depthImage = *reg.getTexture("g-buffer", "depth").value();
 

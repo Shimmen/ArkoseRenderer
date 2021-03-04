@@ -3,6 +3,7 @@
 #include "CameraState.h"
 #include "LightData.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include <imgui.h>
 #include <moos/vector.h>
 
@@ -22,6 +23,8 @@ PickingNode::PickingNode(Scene& scene)
 
 RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) const
 {
+    SCOPED_PROFILE_ZONE();
+
     Buffer& transformDataBuffer = reg.createBuffer(PICKING_MAX_DRAWABLES * sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
 
     Texture& indexMap = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R32);
@@ -46,25 +49,33 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
     return [&](const AppState& appState, CommandList& cmdList) {
         int numMeshes;
         {
-            mat4 objectTransforms[PICKING_MAX_DRAWABLES];
-            numMeshes = m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
-                objectTransforms[index] = mesh.transform().worldMatrix();
-                mesh.ensureVertexBuffer({ VertexComponent::Position3F });
-                mesh.ensureIndexBuffer();
-            });
-            transformDataBuffer.updateData(objectTransforms, numMeshes * sizeof(mat4));
+            {
+                SCOPED_PROFILE_ZONE_NAMED("Updating transform data");
+                mat4 objectTransforms[PICKING_MAX_DRAWABLES];
+                numMeshes = m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
+                    objectTransforms[index] = mesh.transform().worldMatrix();
+                    mesh.ensureVertexBuffer({ VertexComponent::Position3F });
+                    mesh.ensureIndexBuffer();
+                });
+                transformDataBuffer.updateData(objectTransforms, numMeshes * sizeof(mat4));
+            }
 
             cmdList.beginRendering(drawIndicesState, ClearColor(1, 0, 1), 1.0f);
             cmdList.bindSet(drawIndexBindingSet, 0);
 
-            m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
-                cmdList.drawIndexed(mesh.vertexBuffer({ VertexComponent::Position3F }), mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(), static_cast<uint32_t>(index));
-            });
+            {
+                SCOPED_PROFILE_ZONE_NAMED("Issuing draw calls");
+                m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
+                    cmdList.drawIndexed(mesh.vertexBuffer({ VertexComponent::Position3F }), mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(), static_cast<uint32_t>(index));
+                });
+            }
 
             cmdList.endRendering();
         }
 
         {
+            SCOPED_PROFILE_ZONE_NAMED("Picking");
+
             cmdList.setComputeState(collectState);
             cmdList.bindSet(collectIndexBindingSet, 0);
 
@@ -96,6 +107,7 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
         moos::u32 selectedIndex;
         cmdList.slowBlockingReadFromBuffer(pickedIndexBuffer, 0, sizeof(moos::u32), &selectedIndex);
         if (selectedIndex < numMeshes) {
+            SCOPED_PROFILE_ZONE_NAMED("Finding mesh");
             m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
                 if (index == selectedIndex) {
                     //LogInfo("Selected mesh (global index %u) of model '%s'\n", selectedIndex, mesh.model()->name().c_str());

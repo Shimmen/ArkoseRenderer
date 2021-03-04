@@ -2,6 +2,7 @@
 
 #include "utility/FileIO.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include <memory>
 #include <moos/core.h>
 #include <stb_image.h>
@@ -12,6 +13,8 @@ static std::unordered_map<std::string, std::unique_ptr<Image>> s_imageCache {};
 
 Image::Info* Image::getInfo(const std::string& imagePath)
 {
+    SCOPED_PROFILE_ZONE();
+
     auto entry = s_infoCache.find(imagePath);
     if (entry != s_infoCache.end())
         return &entry->second;
@@ -43,6 +46,8 @@ Image::Info* Image::getInfo(const std::string& imagePath)
 
 Image* Image::load(const std::string& imagePath, PixelType pixelType)
 {
+    SCOPED_PROFILE_ZONE();
+
     auto entry = s_imageCache.find(imagePath);
     if (entry != s_imageCache.end()) {
         Image* image = entry->second.get();

@@ -1,6 +1,7 @@
 #include "ExposureNode.h"
 
 #include "CameraState.h"
+#include "utility/Profiling.h"
 #include <imgui.h>
 #include <moos/vector.h>
 
@@ -96,6 +97,8 @@ void ExposureNode::automaticExposureGUI(FpsCamera& camera) const
 
 void ExposureNode::constructNode(Registry& reg)
 {
+    SCOPED_PROFILE_ZONE();
+
     // Stores the last average luminance, after exposure, so we can do soft exposure transitions
     // TODO: Maybe use a storage buffer instead? Not sure what is faster for this.. note that we need read & write capabilities
     m_lastAvgLuminanceTexture = &reg.createTexture2D({ 1, 1 }, Texture::Format::R32F);
@@ -103,6 +106,8 @@ void ExposureNode::constructNode(Registry& reg)
 
 RenderGraphNode::ExecuteCallback ExposureNode::constructFrame(Registry& reg) const
 {
+    SCOPED_PROFILE_ZONE();
+
     // Stores the current luminance for the image before exposure
     const Extent2D logLuminanceSize = { 1024, 1024 };
     Texture& logLuminanceTexture = reg.createTexture2D(logLuminanceSize, Texture::Format::R32F, Texture::Filters::linear(), Texture::Mipmap::Nearest);

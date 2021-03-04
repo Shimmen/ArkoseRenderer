@@ -3,6 +3,7 @@
 #include "rendering/Registry.h"
 #include "rendering/scene/Scene.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 
 void Light::setShadowMapSize(Extent2D size)
 {
@@ -14,6 +15,8 @@ void Light::setShadowMapSize(Extent2D size)
 
 Texture& Light::shadowMap()
 {
+    SCOPED_PROFILE_ZONE();
+
     if (m_shadowMap)
         return *m_shadowMap;
 
@@ -29,6 +32,8 @@ Texture& Light::shadowMap()
 
 RenderTarget& Light::shadowMapRenderTarget()
 {
+    SCOPED_PROFILE_ZONE();
+
     if (m_shadowMapRenderTarget)
         return *m_shadowMapRenderTarget;
 
@@ -43,6 +48,8 @@ RenderTarget& Light::shadowMapRenderTarget()
 
 RenderState& Light::getOrCreateCachedShadowMapRenderState(const std::string& cacheIdentifier, std::function<RenderState&(Registry& sceneRegistry)> creationCallback)
 {
+    SCOPED_PROFILE_ZONE();
+
     if (!scene())
         LogErrorAndExit("Light: can't get or create shadow map render state for light that is not part of a scene, exiting\n");
 

@@ -1,10 +1,18 @@
 #include "FileIO.h"
 
-#include "Logging.h"
+#include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include <fstream>
+
+#ifdef WIN32
+#include <sys/stat.h>
+#else
+#endif
 
 std::optional<FileIO::BinaryData> FileIO::readEntireFileAsByteBuffer(const std::string& filePath)
 {
+    SCOPED_PROFILE_ZONE();
+
     // Open file as binary and immediately seek to the end
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
@@ -23,6 +31,8 @@ std::optional<FileIO::BinaryData> FileIO::readEntireFileAsByteBuffer(const std::
 
 std::optional<std::string> FileIO::readEntireFile(const std::string& filePath)
 {
+    SCOPED_PROFILE_ZONE();
+
     // Open file as binary and immediately seek to the end
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
@@ -61,9 +71,20 @@ bool FileIO::readFileLineByLine(const std::string& filePath, std::function<NextA
 
 bool FileIO::isFileReadable(const std::string& filePath)
 {
+    SCOPED_PROFILE_ZONE();
+
+#ifdef WIN32
+    struct _stat statObject;
+    int result = _stat(filePath.c_str(), &statObject);
+    return result == 0;
+#else
+    // TODO: Use stat for other platforms too. Should work the same, but can't test that now..
     std::ifstream file(filePath);
     bool isGood = file.good();
     return isGood;
+#endif
+
+    
 }
 
 

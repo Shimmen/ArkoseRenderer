@@ -4,12 +4,15 @@
 #include "rendering/ShaderManager.h"
 #include "utility/CapList.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include <moos/core.h>
 #include <stb_image.h>
 
 VulkanBuffer::VulkanBuffer(Backend& backend, size_t size, Usage usage, MemoryHint memoryHint)
     : Buffer(backend, size, usage, memoryHint)
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     // NOTE: Vulkan doesn't seem to like to create buffers of size 0. Of course, it's correct
     //  in that it is stupid, but it can be useful when debugging and testing to just not supply
     //  any data and create an empty buffer while not having to change any shader code or similar.
@@ -88,6 +91,8 @@ VulkanBuffer::~VulkanBuffer()
 
 void VulkanBuffer::updateData(const std::byte* data, size_t updateSize)
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     if (updateSize == 0)
         return;
     if (updateSize > size())
@@ -118,6 +123,8 @@ void VulkanBuffer::updateData(const std::byte* data, size_t updateSize)
 VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
     : Texture(backend, desc)
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     // HACK: Now we longer specify what usage we want for the texture, and instead always select all
     //  possible capabilities. However, some texture formats (e.g. sRGB formats) do not support being
     //  used as a storage image, so we need to explicitly disable it for those formats.
@@ -214,9 +221,12 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
         ASSERT_NOT_REACHED();
     }
 
-    auto& allocator = static_cast<VulkanBackend&>(backend).globalAllocator();
-    if (vmaCreateImage(allocator, &imageCreateInfo, &allocCreateInfo, &image, &allocation, nullptr) != VK_SUCCESS) {
-        LogError("VulkanBackend::newTexture(): could not create image.\n");
+    {
+        SCOPED_PROFILE_ZONE_NAMED("vmaCreateImage");
+        auto& allocator = static_cast<VulkanBackend&>(backend).globalAllocator();
+        if (vmaCreateImage(allocator, &imageCreateInfo, &allocCreateInfo, &image, &allocation, nullptr) != VK_SUCCESS) {
+            LogError("VulkanBackend::newTexture(): could not create image.\n");
+        }
     }
 
     VkImageAspectFlags aspectFlags = 0u;
@@ -345,6 +355,8 @@ VulkanTexture::~VulkanTexture()
 
 void VulkanTexture::setPixelData(vec4 pixel)
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     int numChannels;
     bool isHdr = false;
 
@@ -470,6 +482,8 @@ void VulkanTexture::setPixelData(vec4 pixel)
 
 void VulkanTexture::setData(const void* data, size_t size)
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
     VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -547,6 +561,8 @@ void VulkanTexture::setData(const void* data, size_t size)
 
 void VulkanTexture::generateMipmaps()
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     if (!hasMipmaps()) {
         LogError("VulkanTexture: generateMipmaps() called on texture which doesn't have space for mipmaps allocated. Ignoring request.\n");
         return;
@@ -690,6 +706,8 @@ uint32_t VulkanTexture::layerCount() const
 VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment> attachments)
     : RenderTarget(backend, std::move(attachments))
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     std::vector<VkImageView> allAttachmentImageViews {};
     std::vector<VkAttachmentDescription> allAttachments {};
 
@@ -837,6 +855,8 @@ VulkanRenderTarget::~VulkanRenderTarget()
 VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> bindings)
     : BindingSet(backend, std::move(bindings))
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     const auto& device = static_cast<VulkanBackend&>(backend).device();
 
     {
@@ -1192,6 +1212,8 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
                                      Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState)
     : RenderState(backend, renderTarget, vertexLayout, shader, bindingSets, viewport, blendState, rasterState, depthState)
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     const auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
     const auto& device = vulkanBackend.device();
 
@@ -1453,6 +1475,8 @@ VulkanRenderState::~VulkanRenderState()
 VulkanTopLevelAS::VulkanTopLevelAS(Backend& backend, std::vector<RTGeometryInstance> inst)
     : TopLevelAS(backend, std::move(inst))
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
     ASSERT(vulkanBackend.hasRtxSupport());
 
@@ -1542,6 +1566,8 @@ VulkanTopLevelAS::~VulkanTopLevelAS()
 VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometry> geos)
     : BottomLevelAS(backend, std::move(geos))
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
     ASSERT(vulkanBackend.hasRtxSupport());
 
@@ -1734,6 +1760,8 @@ VulkanBottomLevelAS::~VulkanBottomLevelAS()
 VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTable sbt, std::vector<BindingSet*> bindingSets, uint32_t maxRecursionDepth)
     : RayTracingState(backend, sbt, bindingSets, maxRecursionDepth)
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
     ASSERT(vulkanBackend.hasRtxSupport());
 
@@ -1996,6 +2024,8 @@ VulkanRayTracingState::~VulkanRayTracingState()
 VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vector<BindingSet*> bindingSets)
     : ComputeState(backend, shader, bindingSets)
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
 
     VkPipelineShaderStageCreateInfo computeShaderStage { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };

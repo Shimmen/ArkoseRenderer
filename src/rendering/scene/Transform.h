@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utility/Profiling.h"
 #include <moos/matrix.h>
 #include <moos/vector.h>
 
@@ -23,6 +24,8 @@ public:
 
     mat4 worldMatrix() const
     {
+        SCOPED_PROFILE_ZONE();
+
         if (!m_parent) {
             return m_localMatrix;
         }
@@ -31,6 +34,8 @@ public:
 
     mat3 worldNormalMatrix() const
     {
+        SCOPED_PROFILE_ZONE();
+
         mat3 world3x3 = mat3(worldMatrix());
         mat3 normalMatrix = transpose(inverse(world3x3));
         return normalMatrix;
@@ -38,6 +43,8 @@ public:
 
     mat3 localNormalMatrix() const
     {
+        SCOPED_PROFILE_ZONE();
+
         mat3 local3x3 = mat3(localMatrix());
         mat3 normalMatrix = transpose(inverse(local3x3));
         return normalMatrix;

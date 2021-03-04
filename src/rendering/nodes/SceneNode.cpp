@@ -3,6 +3,7 @@
 #include "CameraState.h"
 #include "LightData.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include <imgui.h>
 #include <moos/vector.h>
 #include <unordered_map>
@@ -20,6 +21,8 @@ SceneNode::SceneNode(Scene& scene)
 
 void SceneNode::constructNode(Registry& reg)
 {
+    SCOPED_PROFILE_ZONE();
+
     m_drawables.clear();
     m_materials.clear();
     m_textures.clear();
@@ -82,6 +85,8 @@ void SceneNode::constructNode(Registry& reg)
 
 RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
 {
+    SCOPED_PROFILE_ZONE();
+
     Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageVertex | ShaderStageFragment), &cameraBuffer } });
     reg.publish("camera", cameraBuffer);

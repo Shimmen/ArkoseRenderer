@@ -1,6 +1,7 @@
 #include "ShadowMapNode.h"
 
 #include "geometry/Frustum.h"
+#include "utility/Profiling.h"
 #include "ShadowData.h"
 
 std::string ShadowMapNode::name()
@@ -16,6 +17,8 @@ ShadowMapNode::ShadowMapNode(Scene& scene)
 
 RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) const
 {
+    SCOPED_PROFILE_ZONE();
+
     // TODO: This should be managed from some central location, e.g. the scene node or similar.
     Buffer& transformDataBuffer = reg.createBuffer(m_scene.meshCount() * sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     BindingSet& transformBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &transformDataBuffer } });
@@ -39,6 +42,7 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
         });
 
         m_scene.forEachLight([&](size_t, Light& light) {
+            SCOPED_PROFILE_ZONE_NAMED("Processing light");
 
             if (!light.castsShadows())
                 return;

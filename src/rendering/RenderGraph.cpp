@@ -1,6 +1,8 @@
 #include "RenderGraph.h"
 
-#include <utility/Logging.h>
+#include "utility/Logging.h"
+#include "utility/Profiling.h"
+#include <fmt/format.h>
 
 void RenderGraph::addNode(const std::string& name, RenderGraphBasicNode::ConstructorFunction constructorFunction)
 {
@@ -18,6 +20,8 @@ void RenderGraph::addNode(std::unique_ptr<RenderGraphNode>&& node)
 
 void RenderGraph::constructAll(Registry& nodeManager, std::vector<Registry*> frameManagers)
 {
+    SCOPED_PROFILE_ZONE();
+
     m_frameContexts.clear();
 
     // TODO: For debugability it would be nice if the frame resources were constructed right after the node resources, for each node
@@ -25,30 +29,37 @@ void RenderGraph::constructAll(Registry& nodeManager, std::vector<Registry*> fra
     LogInfo("Constructing per-node stuff:\n");
     int nextNodeIdx = 1;
 
-    for (auto& node : m_allNodes) {
-        LogInfo("  node=%i (%s)\n", nextNodeIdx++, node->name().c_str());
-        nodeManager.setCurrentNode(node->name());
-        node->constructNode(nodeManager);
+    {
+        SCOPED_PROFILE_ZONE_NAMED("Node resources");
+        for (auto& node : m_allNodes) {
+            LogInfo("  node=%i (%s)\n", nextNodeIdx++, node->name().c_str());
+            nodeManager.setCurrentNode(node->name());
+            node->constructNode(nodeManager);
+        }
     }
 
     LogInfo("Constructing per-frame stuff:\n");
     int nextFrameIdx = 1;
 
-    for (auto& frameManager : frameManagers) {
-        FrameContext frameCtx {};
+    {
+        SCOPED_PROFILE_ZONE_NAMED("Frame resources");
+        for (auto& frameManager : frameManagers) {
+            SCOPED_PROFILE_ZONE_DYNAMIC(fmt::format("Frame {}", nextFrameIdx), 0x252515)
+            FrameContext frameCtx {};
 
-        LogInfo("  frame=%i\n", nextFrameIdx++);
-        int nextNodeIdx = 1;
+            LogInfo("  frame=%i\n", nextFrameIdx++);
+            int nextNodeIdx = 1;
 
-        for (auto& node : m_allNodes) {
-            LogInfo("    node=%i (%s)\n", nextNodeIdx++, node->name().c_str());
-            frameManager->setCurrentNode(node->name());
-            auto executeCallback = node->constructFrame(*frameManager);
-            frameCtx.nodeContexts.push_back({ .node = node.get(),
-                                              .executeCallback = executeCallback });
+            for (auto& node : m_allNodes) {
+                LogInfo("    node=%i (%s)\n", nextNodeIdx++, node->name().c_str());
+                frameManager->setCurrentNode(node->name());
+                auto executeCallback = node->constructFrame(*frameManager);
+                frameCtx.nodeContexts.push_back({ .node = node.get(),
+                                                  .executeCallback = executeCallback });
+            }
+
+            m_frameContexts[frameManager] = frameCtx;
         }
-
-        m_frameContexts[frameManager] = frameCtx;
     }
 
     nodeManager.setCurrentNode("-");

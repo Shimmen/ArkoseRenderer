@@ -3,6 +3,7 @@
 #include "utility/FileIO.h"
 #include "utility/Image.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include <moos/transform.h>
 #include <string>
 #include <unordered_map>
@@ -11,6 +12,8 @@ static std::unordered_map<std::string, tinygltf::Model> s_loadedModels {};
 
 std::unique_ptr<Model> GltfModel::load(const std::string& path)
 {
+    SCOPED_PROFILE_ZONE();
+
     if (!FileIO::isFileReadable(path)) {
         LogError("Could not find glTF model file at path '%s'\n", path.c_str());
         return nullptr;
@@ -28,11 +31,14 @@ std::unique_ptr<Model> GltfModel::load(const std::string& path)
     std::string error;
     std::string warning;
 
-    bool result;
-    if (path.ends_with(".gltf")) {
-        result = loader.LoadASCIIFromFile(&internal, &error, &warning, path);
-    } else if (path.ends_with(".glb")) {
-        result = loader.LoadBinaryFromFile(&internal, &error, &warning, path);
+    bool result = false;
+    {
+        SCOPED_PROFILE_ZONE_NAMED("TinyGLTF work");
+        if (path.ends_with(".gltf")) {
+            result = loader.LoadASCIIFromFile(&internal, &error, &warning, path);
+        } else if (path.ends_with(".glb")) {
+            result = loader.LoadBinaryFromFile(&internal, &error, &warning, path);
+        }
     }
 
     if (!warning.empty()) {
@@ -59,6 +65,8 @@ GltfModel::GltfModel(std::string path, const tinygltf::Model& model)
     : m_path(std::move(path))
     , m_model(&model)
 {
+    SCOPED_PROFILE_ZONE();
+
     const tinygltf::Scene& scene = (m_model->defaultScene != -1)
         ? m_model->scenes[m_model->defaultScene]
         : m_model->scenes.front();
@@ -155,6 +163,8 @@ GltfMesh::GltfMesh(std::string name, const GltfModel* parent, const tinygltf::Mo
     , m_model(&model)
     , m_primitive(&primitive)
 {
+    SCOPED_PROFILE_ZONE();
+
     if (primitive.mode != TINYGLTF_MODE_TRIANGLES) {
         LogErrorAndExit("glTF mesh: primitive with mode other than triangles is not yet supported\n");
     }
@@ -172,6 +182,8 @@ GltfMesh::GltfMesh(std::string name, const GltfModel* parent, const tinygltf::Mo
 
 std::unique_ptr<Material> GltfMesh::createMaterial()
 {
+    SCOPED_PROFILE_ZONE();
+
     auto& gltfMaterial = m_model->materials[m_primitive->material];
 
     auto getTexture = [&](int texIndex) -> Material::PathOrImage {
@@ -252,6 +264,8 @@ const tinygltf::Accessor* GltfMesh::getAccessor(const char* name) const
 
 const std::vector<vec3>& GltfMesh::positionData() const
 {
+    SCOPED_PROFILE_ZONE();
+
     if (m_positionData.has_value())
         return m_positionData.value();
 
@@ -273,6 +287,8 @@ const std::vector<vec3>& GltfMesh::positionData() const
 
 const std::vector<vec2>& GltfMesh::texcoordData() const
 {
+    SCOPED_PROFILE_ZONE();
+
     if (m_texcoordData.has_value())
         return m_texcoordData.value();
 
@@ -299,6 +315,8 @@ const std::vector<vec2>& GltfMesh::texcoordData() const
 
 const std::vector<vec3>& GltfMesh::normalData() const
 {
+    SCOPED_PROFILE_ZONE();
+
     if (m_normalData.has_value())
         return m_normalData.value();
 
@@ -326,6 +344,8 @@ const std::vector<vec3>& GltfMesh::normalData() const
 
 const std::vector<vec4>& GltfMesh::tangentData() const
 {
+    SCOPED_PROFILE_ZONE();
+
     if (m_tangentData.has_value())
         return m_tangentData.value();
 
@@ -352,6 +372,8 @@ const std::vector<vec4>& GltfMesh::tangentData() const
 
 const std::vector<uint32_t>& GltfMesh::indexData() const
 {
+    SCOPED_PROFILE_ZONE();
+
     if (m_indexData.has_value())
         return m_indexData.value();
 
