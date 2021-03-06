@@ -20,7 +20,8 @@ public:
 
     using SpirvData = std::vector<uint32_t>;
 
-    std::string resolvePath(const std::string& name) const;
+    std::string resolveGlslPath(const std::string& name) const;
+    std::string resolveSpirvPath(const std::string& name) const;
 
     std::optional<std::string> loadAndCompileImmediately(const std::string& name);
 
@@ -40,12 +41,17 @@ private:
 
     struct CompiledShader {
         CompiledShader() = default;
-        explicit CompiledShader(std::string path);
+        explicit CompiledShader(ShaderManager&, std::string name, std::string path);
 
+        bool tryLoadingFromBinaryCache();
         bool recompile();
 
-        uint64_t findLatestEditTimestampInIncludeTree();
+        uint64_t findLatestEditTimestampInIncludeTree(bool scanForNewIncludes = false);
+        std::vector<std::string> findAllIncludedFiles() const;
 
+        const ShaderManager& shaderManager;
+
+        std::string shaderName {};
         std::string filePath {};
         std::vector<std::string> includedFilePaths {};
 

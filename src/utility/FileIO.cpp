@@ -6,27 +6,53 @@
 
 #ifdef WIN32
 #include <sys/stat.h>
+#include <Windows.h>
 #else
 #endif
 
-std::optional<FileIO::BinaryData> FileIO::readEntireFileAsByteBuffer(const std::string& filePath)
+void FileIO::ensureDirectory(const std::string& directoryPath)
 {
     SCOPED_PROFILE_ZONE();
 
-    // Open file as binary and immediately seek to the end
-    std::ifstream file(filePath, std::ios::ate | std::ios::binary);
+#if defined(WIN32)
+    // Well, this is fucking stupid..
+    size_t index = directoryPath.find_first_of('/');
+    size_t offset = 0;
+    while (index != std::string::npos) {
+        std::string directoryBasePath = directoryPath.substr(0, index);
+        CreateDirectory(directoryBasePath.c_str(), NULL);
 
-    if (!file.is_open())
-        return {};
+        offset = index + 1;
+        index = directoryPath.find_first_of('/', offset);
+    }
+    CreateDirectory(directoryPath.c_str(), NULL);
+#else
+#error Create a directory if it doesn't exist
+#endif
+}
 
-    size_t sizeInBytes = file.tellg();
-    FileIO::BinaryData binaryData(sizeInBytes);
+void FileIO::ensureDirectoryForFile(const std::string& filePath)
+{
+    std::string directoryPath = filePath.substr(0, filePath.find_last_of('/'));
+    ensureDirectory(directoryPath);
+}
 
-    file.seekg(0);
-    file.read(binaryData.data(), sizeInBytes);
+void FileIO::writeBinaryDataToFile(const std::string& filePath, const char* data, size_t size)
+{
+    SCOPED_PROFILE_ZONE();
 
+    ensureDirectoryForFile(filePath);
+
+    std::ofstream file;
+    file.open(filePath, std::ios::out | std::ios::trunc | std::ios::binary);
+
+    if (!file.is_open()) {
+        LogErrorAndExit("Could not create file '%s' for writing binary data\n", filePath.c_str());
+        return;
+    }
+
+    file.write(data, size);
     file.close();
-    return binaryData;
 }
 
 std::optional<std::string> FileIO::readEntireFile(const std::string& filePath)
@@ -83,8 +109,6 @@ bool FileIO::isFileReadable(const std::string& filePath)
     bool isGood = file.good();
     return isGood;
 #endif
-
-    
 }
 
 

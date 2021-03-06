@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utility/Profiling.h"
 #include <optional>
 #include <functional>
 #include <fstream>
@@ -8,8 +9,39 @@
 
 namespace FileIO {
 
-using BinaryData = std::vector<char>;
-std::optional<BinaryData> readEntireFileAsByteBuffer(const std::string& filePath);
+void ensureDirectory(const std::string& directoryPath);
+void ensureDirectoryForFile(const std::string& filePath);
+
+template<typename T>
+std::optional<std::vector<T>> readBinaryDataFromFile(const std::string& filePath)
+{
+    SCOPED_PROFILE_ZONE();
+
+    // Open file as binary and immediately seek to the end
+    std::ifstream file(filePath, std::ios::ate | std::ios::binary);
+    if (!file.is_open())
+        return {};
+
+    size_t sizeInBytes = file.tellg();
+    size_t sizeInTs = sizeInBytes / sizeof(T);
+    std::vector<T> binaryData(sizeInTs);
+
+    file.seekg(0);
+    file.read((char*)binaryData.data(), sizeInBytes);
+
+    file.close();
+    return binaryData;
+}
+
+template<typename T>
+void writeBinaryDataToFile(const std::string& filePath, const std::vector<T>& vector)
+{
+    const char* data = (const char*)vector.data();
+    size_t size = sizeof(T) * vector.size();
+    writeBinaryDataToFile(filePath, data, size);
+}
+
+void writeBinaryDataToFile(const std::string& filePath, const char* data, size_t size);
 
 std::optional<std::string> readEntireFile(const std::string& filePath);
 

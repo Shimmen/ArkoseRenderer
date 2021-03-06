@@ -69,13 +69,13 @@ public:
         std::string path;
         switch (include_type) {
         case shaderc_include_type_standard:
-            path = m_shaderManager.resolvePath(requested_source);
+            path = m_shaderManager.resolveGlslPath(requested_source);
             break;
         case shaderc_include_type_relative:
             // FIXME: Support relative includes!
             NOT_YET_IMPLEMENTED();
             break;
-        }        
+        }
 
         auto* data = new shaderc_include_result();
         auto* dataOwner = new FileData();
@@ -84,7 +84,7 @@ public:
         dataOwner->path = path;
         data->source_name = dataOwner->path.c_str();
         data->source_name_length = dataOwner->path.size();
-        
+
         auto maybeFileContent = FileIO::readEntireFile(path);
         if (maybeFileContent.has_value()) {
 
@@ -171,15 +171,22 @@ void ShaderManager::stopFileWatching()
     m_fileWatcherThread->join();
 }
 
-std::string ShaderManager::resolvePath(const std::string& name) const
+std::string ShaderManager::resolveGlslPath(const std::string& name) const
 {
     std::string resolvedPath = m_shaderBasePath + "/" + name;
     return resolvedPath;
 }
 
+std::string ShaderManager::resolveSpirvPath(const std::string& name) const
+{
+    std::string spirvName = name + ".spv";
+    std::string resolvedPath = m_shaderBasePath + "/.cache/" + spirvName;
+    return resolvedPath;
+}
+
 std::optional<std::string> ShaderManager::loadAndCompileImmediately(const std::string& name)
 {
-    auto path = resolvePath(name);
+    std::string path = resolveGlslPath(name);
 
     std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
 
@@ -189,10 +196,12 @@ std::optional<std::string> ShaderManager::loadAndCompileImmediately(const std::s
         if (!FileIO::isFileReadable(path))
             return "file '" + name + "' not found";
 
-        auto data = std::make_unique<CompiledShader>(path);
-        data->recompile();
+        auto compiledShader = std::make_unique<CompiledShader>(*this, name, path);
+        if (compiledShader->tryLoadingFromBinaryCache() == false) {
+            compiledShader->recompile();
+        }
 
-        m_compiledShaders[path] = std::move(data);
+        m_compiledShaders[path] = std::move(compiledShader);
     }
 
     CompiledShader& compiledShader = *m_compiledShaders[path];
@@ -205,7 +214,7 @@ std::optional<std::string> ShaderManager::loadAndCompileImmediately(const std::s
 
 const std::vector<uint32_t>& ShaderManager::spirv(const std::string& name) const
 {
-    auto path = resolvePath(name);
+    auto path = resolveGlslPath(name);
 
     std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
     auto result = m_compiledShaders.find(path);
@@ -220,9 +229,34 @@ const std::vector<uint32_t>& ShaderManager::spirv(const std::string& name) const
 }
 
 
-ShaderManager::CompiledShader::CompiledShader(std::string path)
-    : filePath(std::move(path))
+ShaderManager::CompiledShader::CompiledShader(ShaderManager& manager, std::string name, std::string path)
+    : shaderManager(manager)
+    , shaderName(std::move(name))
+    , filePath(std::move(path))
 {
+}
+
+bool ShaderManager::CompiledShader::tryLoadingFromBinaryCache()
+{
+    SCOPED_PROFILE_ZONE();
+
+    std::string spirvPath = shaderManager.resolveSpirvPath(shaderName);
+
+    struct stat statResult {};
+    bool binaryCacheExists = stat(spirvPath.c_str(), &statResult) == 0;
+
+    if (!binaryCacheExists)
+        return false;
+
+    uint64_t cachedTimestamp = statResult.st_mtime;
+    if (cachedTimestamp < findLatestEditTimestampInIncludeTree(true))
+        return false;
+
+    currentSpirvBinary = FileIO::readBinaryDataFromFile<uint32_t>(spirvPath).value();
+    compiledTimestamp = cachedTimestamp;
+    lastCompileError.clear();
+
+    return true;
 }
 
 bool ShaderManager::CompiledShader::recompile()
@@ -255,7 +289,10 @@ bool ShaderManager::CompiledShader::recompile()
     bool compilationSuccess = result.GetCompilationStatus() == shaderc_compilation_status_success;
 
     if (compilationSuccess) {
+
         currentSpirvBinary = std::vector<uint32_t>(result.cbegin(), result.cend());
+        FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvPath(shaderName), currentSpirvBinary);
+
         includedFilePaths = std::move(newIncludedFiles);
         lastCompileError.clear();
     } else {
@@ -269,9 +306,11 @@ bool ShaderManager::CompiledShader::recompile()
     return compilationSuccess;
 }
 
-uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree()
+uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree(bool scanForNewIncludes)
 {
-    bool anyMissingFiles = false;    
+    SCOPED_PROFILE_ZONE();
+
+    bool anyMissingFiles = false;
     uint64_t latestTimestamp = 0;
 
     auto checkFile = [&](const std::string& file) {
@@ -284,6 +323,10 @@ uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree()
         }
     };
 
+    if (scanForNewIncludes) {
+        includedFilePaths = findAllIncludedFiles();
+    }
+
     checkFile(filePath);
     for (auto& file : includedFilePaths) {
         checkFile(file);
@@ -294,4 +337,45 @@ uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree()
 
     lastEditTimestamp = latestTimestamp;
     return latestTimestamp;
+}
+
+std::vector<std::string> ShaderManager::CompiledShader::findAllIncludedFiles() const
+{
+    SCOPED_PROFILE_ZONE();
+
+    std::vector<std::string> files {};
+
+    std::vector<std::string> filesToTest { filePath };
+    while (filesToTest.size() > 0) {
+
+        std::string fileToTest = filesToTest.back();
+        filesToTest.pop_back();
+
+        FileIO::readFileLineByLine(fileToTest, [&files, &filesToTest, this](const std::string& line) {
+
+            size_t includeIdx = line.find("#include");
+            if (includeIdx == std::string::npos)
+                return FileIO::NextAction::Continue;
+
+            size_t fileStartIdx = line.find('<', includeIdx);
+            size_t fileEndIdx = line.find('>', fileStartIdx);
+
+            if (fileStartIdx == std::string::npos && fileEndIdx == std::string::npos)
+                return FileIO::NextAction::Continue;
+
+            std::string newFile = line.substr(fileStartIdx + 1, fileEndIdx - fileStartIdx - 1);
+            std::string newFilePath = shaderManager.resolveGlslPath(newFile);
+
+            if (std::find(files.begin(), files.end(), newFilePath) == files.end()) {
+                files.push_back(newFilePath);
+                filesToTest.push_back(newFilePath);
+            }
+
+            return FileIO::NextAction::Continue;
+        });
+    }
+
+
+
+    return files;
 }
