@@ -1390,6 +1390,15 @@ void VulkanBackend::setupWindowRenderTargets()
     }
 }
 
+void VulkanBackend::shadersDidRecompile(const std::vector<std::string>& shaderNames)
+{
+    // Maybe figure out what nodes needs updating and only reconstruct that node & nodes depending on it?
+    // On the other hand, creatating these resources should be very fast anyway so maybe shouldn't bother.
+    if (m_renderGraph && shaderNames.size() > 0) {
+        reconstructRenderGraphResources(*m_renderGraph);
+    }
+}
+
 void VulkanBackend::reconstructRenderGraphResources(RenderGraph& renderGraph)
 {
     SCOPED_PROFILE_ZONE_BACKEND();

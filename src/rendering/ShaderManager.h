@@ -26,10 +26,10 @@ public:
 
     std::optional<std::string> loadAndCompileImmediately(const std::string& name);
 
-
     const SpirvData& spirv(const std::string& name) const;
 
-    void startFileWatching(unsigned msBetweenPolls, std::function<void()> fileChangeCallback = {});
+    using FilesChangedCallback = std::function<void(const std::vector<std::string>&)>;
+    void startFileWatching(unsigned msBetweenPolls, FilesChangedCallback filesChangedCallback = {});
     void stopFileWatching();
 
     ShaderManager() = delete;

@@ -124,20 +124,20 @@ ShaderManager::ShaderManager(std::string basePath)
 {
 }
 
-void ShaderManager::startFileWatching(unsigned msBetweenPolls, std::function<void()> fileChangeCallback)
+void ShaderManager::startFileWatching(unsigned msBetweenPolls, FilesChangedCallback filesChangedCallback)
 {
     if (m_fileWatcherThread != nullptr || m_fileWatchingActive)
         return;
 
     m_fileWatchingActive = true;
-    m_fileWatcherThread = std::make_unique<std::thread>([this, msBetweenPolls, fileChangeCallback]() {
+    m_fileWatcherThread = std::make_unique<std::thread>([this, msBetweenPolls, filesChangedCallback]() {
         Profiling::setNameForActiveThread("Shader file watcher");
         while (m_fileWatchingActive) {
             {
                 SCOPED_PROFILE_ZONE_NAMED("Shader file watching");
                 std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
 
-                int numChangedFiles = 0;
+                std::vector<std::string> recompiledFiles {};
                 for (auto& [_, compiledShader] : m_compiledShaders) {
 
                     uint64_t latestTimestamp = compiledShader->findLatestEditTimestampInIncludeTree();
@@ -148,15 +148,15 @@ void ShaderManager::startFileWatching(unsigned msBetweenPolls, std::function<voi
 
                     if (compiledShader->recompile()) {
                         LogInfo(" (success)\n");
-                        numChangedFiles += 1;
+                        recompiledFiles.push_back(compiledShader->shaderName);
                     } else {
                         // TODO: Pop an error window in the draw window instead.. that would be easier to keep track of
                         LogError(" (error):\n  %s", compiledShader->lastCompileError.c_str());
                     }
                 }
 
-                if (numChangedFiles > 0 && fileChangeCallback)
-                    fileChangeCallback();
+                if (recompiledFiles.size() > 0 && filesChangedCallback)
+                    filesChangedCallback(recompiledFiles);
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(msBetweenPolls));
         }

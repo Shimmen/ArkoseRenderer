@@ -35,6 +35,8 @@ public:
     /// Public backend API
 
     bool hasActiveCapability(Capability) const override;
+
+    void shadersDidRecompile(const std::vector<std::string>& shaderNames) override;
     bool executeFrame(double elapsedTime, double deltaTime) override;
 
     ///////////////////////////////////////////////////////////////////////////

@@ -24,6 +24,8 @@ public:
 
     static std::string capabilityName(Capability capability);
     virtual bool hasActiveCapability(Capability) const = 0;
+
+    virtual void shadersDidRecompile(const std::vector<std::string>& shaderNames) = 0;
     virtual bool executeFrame(double elapsedTime, double deltaTime) = 0;
 
     virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) = 0;

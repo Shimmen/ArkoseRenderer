@@ -87,14 +87,25 @@ int main(int argc, char** argv)
 
         LogInfo("ArkoseRenderer: main loop begin.\n");
 
-        ShaderManager::instance().startFileWatching(1'000, []() {
-            LogInfo("One or more shader files updated!\n");
-            LogError("FIXME: Respond to shader file updates!\n");
+        std::mutex shaderFileWatchMutex {};
+        std::vector<std::string> changedShaderFiles {};
+        ShaderManager::instance().startFileWatching(1'000, [&](const std::vector<std::string>& changedFiles) {
+            shaderFileWatchMutex.lock();
+            changedShaderFiles = changedFiles;
+            shaderFileWatchMutex.unlock();
         });
 
         glfwSetTime(0.0);
         double lastTime = 0.0;
         while (!glfwWindowShouldClose(window)) {
+
+            if (shaderFileWatchMutex.try_lock()) {
+                if (changedShaderFiles.size() > 0) {
+                    backend->shadersDidRecompile(changedShaderFiles);
+                    changedShaderFiles.clear();
+                }
+                shaderFileWatchMutex.unlock();
+            }
 
             Input::preEventPoll();
             glfwPollEvents();
