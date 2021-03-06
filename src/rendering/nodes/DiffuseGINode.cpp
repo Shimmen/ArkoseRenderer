@@ -69,7 +69,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     BindingSet& lightBindingSet = *reg.getBindingSet("scene", "lightSet");
 
     Shader renderShader = Shader::createBasicRasterize("diffuse-gi/forward.vert", "diffuse-gi/forward.frag");
-    RenderStateBuilder renderStateBuilder { renderTarget, renderShader, vertexLayout };
+    RenderStateBuilder renderStateBuilder { renderTarget, renderShader, m_vertexLayout };
     renderStateBuilder.addBindingSet(cameraBindingSet);
     renderStateBuilder.addBindingSet(objectBindingSet);
     renderStateBuilder.addBindingSet(lightBindingSet);
@@ -87,7 +87,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     ComputeState& distanceFilterState = reg.createComputeState(distanceFilterShader, { &distanceFilterBindingSet });
 
     m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-        mesh.ensureVertexBuffer(semanticVertexLayout);
+        mesh.ensureVertexBuffer(m_vertexLayout);
         mesh.ensureIndexBuffer();
     });
 
@@ -173,7 +173,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
                     if (!sideFrustums[sideIndex].includesSphere(sphere))
                         return;
 
-                    cmdList.drawIndexed(mesh.vertexBuffer(semanticVertexLayout),
+                    cmdList.drawIndexed(mesh.vertexBuffer(m_vertexLayout),
                                         mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(),
                                         meshIndex);
                 });

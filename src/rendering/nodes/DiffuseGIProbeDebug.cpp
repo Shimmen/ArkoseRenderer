@@ -42,7 +42,7 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
     BindingSet& probeDataBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, m_probeData, ShaderBindingType::TextureSampler } });
 
     Shader debugShader = Shader::createBasicRasterize("diffuse-gi/probe-debug.vert", "diffuse-gi/probe-debug.frag");
-    RenderStateBuilder stateBuilder { renderTarget, debugShader, VertexLayout::positionOnly() };
+    RenderStateBuilder stateBuilder { renderTarget, debugShader, VertexLayout { VertexComponent::Position3F }};
     BindingSet& cameraBindingSet = *reg.getBindingSet("scene", "cameraSet");
     stateBuilder.addBindingSet(cameraBindingSet).addBindingSet(probeDataBindingSet);
     stateBuilder.writeDepth = true;

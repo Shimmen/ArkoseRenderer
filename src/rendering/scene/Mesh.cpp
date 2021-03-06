@@ -14,7 +14,7 @@ Material& Mesh::material()
     return *m_material;
 }
 
-void Mesh::ensureVertexBuffer(const SemanticVertexLayout& layout)
+void Mesh::ensureVertexBuffer(const VertexLayout& layout)
 {
     SCOPED_PROFILE_ZONE()
 
@@ -22,7 +22,7 @@ void Mesh::ensureVertexBuffer(const SemanticVertexLayout& layout)
     vertexBuffer(layout);
 }
 
-const Buffer& Mesh::vertexBuffer(const SemanticVertexLayout& layout)
+const Buffer& Mesh::vertexBuffer(const VertexLayout& layout)
 {
     SCOPED_PROFILE_ZONE()
 

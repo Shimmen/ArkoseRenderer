@@ -17,4 +17,9 @@ public:
 
 private:
     Scene& m_scene;
+
+    VertexLayout m_vertexLayout = VertexLayout { VertexComponent::Position3F,
+                                                 VertexComponent::TexCoord2F,
+                                                 VertexComponent::Normal3F,
+                                                 VertexComponent::Tangent4F };
 };

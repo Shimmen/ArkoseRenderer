@@ -50,7 +50,7 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
             // TODO: Use a proper cache instead of just using a name as a "cache identifier". This will require implementing operator== on a lot of
             // objects though, which I have barely done at all, so this is a very simple and quick hack to get around that.
             RenderState& renderState = light.getOrCreateCachedShadowMapRenderState("ShadowMapNode::defaultShadowMapping", [&](Registry& sceneRegistry) -> RenderState& {
-                RenderStateBuilder renderStateBuilder { light.shadowMapRenderTarget(), shadowMapShader, VertexLayout::positionOnly() };
+                RenderStateBuilder renderStateBuilder { light.shadowMapRenderTarget(), shadowMapShader, VertexLayout { VertexComponent::Position3F } };
                 renderStateBuilder.addBindingSet(transformBindingSet);
                 return sceneRegistry.createRenderState(renderStateBuilder);
             });

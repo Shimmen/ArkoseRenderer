@@ -2,6 +2,7 @@
 
 #include "rendering/Shader.h"
 #include "rendering/scene/Transform.h"
+#include "rendering/scene/Vertex.h"
 #include "utility/Badge.h"
 #include "utility/Extent.h"
 #include "utility/util.h"
@@ -371,28 +372,6 @@ private:
     size_t m_size { 0 };
     Usage m_usage { Usage::Vertex };
     MemoryHint m_memoryHint { MemoryHint::GpuOptimal };
-};
-
-enum class VertexAttributeType {
-    Float2,
-    Float3,
-    Float4
-};
-
-struct VertexAttribute {
-    uint32_t location {};
-    VertexAttributeType type {};
-    size_t memoryOffset {};
-};
-
-struct VertexLayout {
-    size_t vertexStride {};
-    std::vector<VertexAttribute> attributes {};
-
-    static VertexLayout positionOnly()
-    {
-        return VertexLayout { sizeof(vec3), { { 0, VertexAttributeType::Float3, 0 } } };
-    }
 };
 
 enum class IndexType {

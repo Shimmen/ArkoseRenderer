@@ -16,25 +16,10 @@ public:
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:
-    struct ForwardVertex {
-        vec3 position;
-        vec2 texCoord;
-        vec3 normal;
-        vec4 tangent;
-    };
-
-    VertexLayout vertexLayout {
-        sizeof(ForwardVertex),
-        { { 0, VertexAttributeType::Float3, offsetof(ForwardVertex, position) },
-          { 1, VertexAttributeType::Float2, offsetof(ForwardVertex, texCoord) },
-          { 2, VertexAttributeType ::Float3, offsetof(ForwardVertex, normal) },
-          { 3, VertexAttributeType ::Float4, offsetof(ForwardVertex, tangent) } }
-    };
-
-    SemanticVertexLayout semanticVertexLayout { VertexComponent::Position3F,
-                                                VertexComponent::TexCoord2F,
-                                                VertexComponent::Normal3F,
-                                                VertexComponent::Tangent4F };
+    VertexLayout m_vertexLayout { VertexComponent::Position3F,
+                                  VertexComponent::TexCoord2F,
+                                  VertexComponent::Normal3F,
+                                  VertexComponent::Tangent4F };
 
     BindingSet* m_indirectLightBindingSet { nullptr };
 

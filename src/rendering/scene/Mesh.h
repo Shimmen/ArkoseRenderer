@@ -29,8 +29,8 @@ public:
     virtual moos::aabb3 boundingBox() const = 0;
     virtual geometry::Sphere boundingSphere() const = 0;
 
-    void ensureVertexBuffer(const SemanticVertexLayout&);
-    const Buffer& vertexBuffer(const SemanticVertexLayout&);
+    void ensureVertexBuffer(const VertexLayout&);
+    const Buffer& vertexBuffer(const VertexLayout&);
 
     void ensureIndexBuffer();
     const Buffer& indexBuffer();
@@ -55,7 +55,7 @@ protected:
 
     // GPU Buffer cache
     mutable const Buffer* m_indexBuffer { nullptr };
-    mutable std::unordered_map<SemanticVertexLayout, const Buffer*> m_vertexBuffers;
+    mutable std::unordered_map<VertexLayout, const Buffer*> m_vertexBuffers;
 
     virtual std::unique_ptr<Material> createMaterial() = 0;
     std::unique_ptr<Material> m_material {};

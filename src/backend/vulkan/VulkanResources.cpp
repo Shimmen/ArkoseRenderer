@@ -1224,30 +1224,40 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
         uint32_t binding = 0;
 
         bindingDescription.binding = binding;
-        bindingDescription.stride = vertexLayout.vertexStride;
+        bindingDescription.stride = vertexLayout.packedVertexSize();
         bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-        attributeDescriptions.reserve(vertexLayout.attributes.size());
-        for (const VertexAttribute& attribute : vertexLayout.attributes) {
+        attributeDescriptions.reserve(vertexLayout.components().size());
+
+        uint32_t nextLocation = 0;
+        uint32_t currentOffset = 0;
+
+        for (const VertexComponent& component : vertexLayout.components()) {
 
             VkVertexInputAttributeDescription description = {};
             description.binding = binding;
-            description.location = attribute.location;
-            description.offset = attribute.memoryOffset;
+            description.location = nextLocation;
+            description.offset = currentOffset;
+
+            nextLocation += 1;
+            currentOffset += vertexComponentSize(component);
 
             VkFormat format;
-            switch (attribute.type) {
-            case VertexAttributeType::Float2:
-                format = VK_FORMAT_R32G32_SFLOAT;
+            switch (component) {
+            case VertexComponent::Position2F:
+            case VertexComponent::TexCoord2F:
+                description.format = VK_FORMAT_R32G32_SFLOAT;
                 break;
-            case VertexAttributeType::Float3:
-                format = VK_FORMAT_R32G32B32_SFLOAT;
+            case VertexComponent::Position3F:
+            case VertexComponent::Normal3F:
+                description.format = VK_FORMAT_R32G32B32_SFLOAT;
                 break;
-            case VertexAttributeType::Float4:
-                format = VK_FORMAT_R32G32B32A32_SFLOAT;
+            case VertexComponent::Tangent4F:
+                description.format = VK_FORMAT_R32G32B32A32_SFLOAT;
                 break;
+            default:
+                ASSERT_NOT_REACHED();
             }
-            description.format = format;
 
             attributeDescriptions.push_back(description);
         }

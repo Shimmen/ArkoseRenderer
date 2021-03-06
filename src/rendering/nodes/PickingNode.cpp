@@ -33,10 +33,9 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
                                                                   { RenderTarget::AttachmentType::Depth, &indexDepthMap, LoadOp::Clear, StoreOp::Discard } });
 
     Shader drawIndexShader = Shader::createBasicRasterize("picking/drawIndices.vert", "picking/drawIndices.frag");
-    VertexLayout vertexLayout = { sizeof(vec3), { { 0, VertexAttributeType::Float3, 0 } } };
     BindingSet& drawIndexBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, reg.getBuffer("scene", "camera") },
                                                              { 1, ShaderStageVertex, &transformDataBuffer } });
-    RenderStateBuilder renderStateBuilder(indexMapRenderTarget, drawIndexShader, vertexLayout);
+    RenderStateBuilder renderStateBuilder(indexMapRenderTarget, drawIndexShader, VertexLayout { VertexComponent::Position3F });
     renderStateBuilder.addBindingSet(drawIndexBindingSet);
     RenderState& drawIndicesState = reg.createRenderState(renderStateBuilder);
 

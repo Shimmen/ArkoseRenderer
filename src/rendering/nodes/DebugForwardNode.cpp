@@ -37,36 +37,18 @@ RenderGraphNode::ExecuteCallback DebugForwardNode::constructFrame(Registry& reg)
     BindingSet& cameraBindingSet = *reg.getBindingSet("scene", "cameraSet");
     BindingSet& objectBindingSet = *reg.getBindingSet("scene", "objectSet");
 
-    struct Vertex {
-        vec3 position;
-        vec2 texCoord;
-        vec3 normal;
-        vec4 tangent;
-    };
-
-    VertexLayout vertexLayout = VertexLayout {
-        sizeof(Vertex),
-        { { 0, VertexAttributeType::Float3, offsetof(Vertex, position) },
-          { 1, VertexAttributeType::Float2, offsetof(Vertex, texCoord) },
-          { 2, VertexAttributeType ::Float3, offsetof(Vertex, normal) },
-          { 3, VertexAttributeType ::Float4, offsetof(Vertex, tangent) } }
-    };
-
     Shader shader = Shader::createBasicRasterize("forward/debug.vert", "forward/debug.frag");
 
-    RenderStateBuilder renderStateBuilder { *renderTarget, shader, vertexLayout };
+    RenderStateBuilder renderStateBuilder { *renderTarget, shader, m_vertexLayout };
     renderStateBuilder.polygonMode = PolygonMode::Filled;
     renderStateBuilder.addBindingSet(cameraBindingSet);
     renderStateBuilder.addBindingSet(objectBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
     return [&](const AppState& appState, CommandList& cmdList) {
-        m_scene.forEachMesh([](size_t, Mesh& mesh) {
+        m_scene.forEachMesh([&](size_t, Mesh& mesh) {
             mesh.ensureIndexBuffer();
-            mesh.ensureVertexBuffer({ VertexComponent::Position3F,
-                                      VertexComponent::TexCoord2F,
-                                      VertexComponent::Normal3F,
-                                      VertexComponent::Tangent4F });
+            mesh.ensureVertexBuffer(m_vertexLayout);
         });
 
         cmdList.beginRendering(renderState, ClearColor(0, 0, 0, 0), 1.0f);
@@ -74,10 +56,7 @@ RenderGraphNode::ExecuteCallback DebugForwardNode::constructFrame(Registry& reg)
         cmdList.bindSet(objectBindingSet, 1);
 
         m_scene.forEachMesh([&](size_t meshIndex, Mesh& mesh) {
-            const Buffer& vertexBuffer = mesh.vertexBuffer({ VertexComponent::Position3F,
-                                                             VertexComponent::TexCoord2F,
-                                                             VertexComponent::Normal3F,
-                                                             VertexComponent::Tangent4F });
+            const Buffer& vertexBuffer = mesh.vertexBuffer(m_vertexLayout);
             cmdList.drawIndexed(vertexBuffer, mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(), meshIndex);
         });
     };

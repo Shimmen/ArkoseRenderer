@@ -53,7 +53,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     BindingSet& lightBindingSet = *reg.getBindingSet("scene", "lightSet");
 
     Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag");
-    RenderStateBuilder renderStateBuilder { renderTarget, shader, vertexLayout };
+    RenderStateBuilder renderStateBuilder { renderTarget, shader, m_vertexLayout };
     renderStateBuilder.addBindingSet(cameraBindingSet);
     renderStateBuilder.addBindingSet(objectBindingSet);
     renderStateBuilder.addBindingSet(lightBindingSet);
@@ -62,7 +62,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
     m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-        mesh.ensureVertexBuffer(semanticVertexLayout);
+        mesh.ensureVertexBuffer(m_vertexLayout);
         mesh.ensureIndexBuffer();
     });
 
@@ -87,7 +87,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
             if (!cameraFrustum.includesSphere(sphere))
                 return;
 
-            cmdList.drawIndexed(mesh.vertexBuffer(semanticVertexLayout),
+            cmdList.drawIndexed(mesh.vertexBuffer(m_vertexLayout),
                                 mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(),
                                 meshIndex);
             numDrawCallsIssued += 1;

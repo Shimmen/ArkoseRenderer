@@ -16,22 +16,9 @@ public:
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:
-    struct Vertex {
-        vec3 position;
-        vec2 texCoord;
-        vec3 normal;
-    };
-
-    VertexLayout vertexLayout {
-        sizeof(Vertex),
-        { { 0, VertexAttributeType::Float3, offsetof(Vertex, position) },
-          { 1, VertexAttributeType::Float2, offsetof(Vertex, texCoord) },
-          { 2, VertexAttributeType ::Float3, offsetof(Vertex, normal) } }
-    };
-
-    SemanticVertexLayout semanticVertexLayout { VertexComponent::Position3F,
-                                                VertexComponent::TexCoord2F,
-                                                VertexComponent::Normal3F };
+    VertexLayout m_vertexLayout { VertexComponent::Position3F,
+                                  VertexComponent::TexCoord2F,
+                                  VertexComponent::Normal3F };
 
     Scene& m_scene;
 
