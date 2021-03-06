@@ -1455,7 +1455,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
     pipelineCreateInfo.basePipelineIndex = -1;
 
-    if (vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
+    if (vkCreateGraphicsPipelines(device, vulkanBackend.pipelineCache(), 1, &pipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to create graphics pipeline\n");
     }
 
@@ -1948,7 +1948,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     rtPipelineCreateInfo.pGroups = shaderGroups.data();
     rtPipelineCreateInfo.layout = pipelineLayout;
 
-    if (vulkanBackend.rtx().vkCreateRayTracingPipelinesNV(vulkanBackend.device(), VK_NULL_HANDLE, 1, &rtPipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
+    if (vulkanBackend.rtx().vkCreateRayTracingPipelinesNV(vulkanBackend.device(), vulkanBackend.pipelineCache(), 1, &rtPipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
         LogErrorAndExit("Error creating ray tracing pipeline\n");
     }
 
@@ -2100,7 +2100,7 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
     pipelineCreateInfo.layout = pipelineLayout;
     pipelineCreateInfo.flags = 0u;
 
-    if (vkCreateComputePipelines(vulkanBackend.device(), VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
+    if (vkCreateComputePipelines(vulkanBackend.device(), vulkanBackend.pipelineCache(), 1, &pipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to create compute pipeline\n");
     }
 

@@ -144,6 +144,12 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, App& app)
         }
     }
 
+    // TODO: Load from file if it exists!
+    VkPipelineCacheCreateInfo pipelineCacheInfo = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+    if (vkCreatePipelineCache(device(), &pipelineCacheInfo, nullptr, &m_pipelineCache) != VK_SUCCESS) {
+        LogErrorAndExit("VulkanBackend::VulkanBackend(): could not create pipeline cache, exiting.\n");
+    }
+
     createAndSetupSwapchain(physicalDevice(), device(), m_surface);
     createWindowRenderTargetFrontend();
 
@@ -168,6 +174,9 @@ VulkanBackend::~VulkanBackend()
     m_sceneRegistry.reset();
 
     destroySwapchain();
+
+    // TODO: Write to file!
+    vkDestroyPipelineCache(device(), m_pipelineCache, nullptr);
 
     for (VkEvent event : m_events) {
         vkDestroyEvent(device(), event, nullptr);

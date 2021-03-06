@@ -71,6 +71,11 @@ public:
         return m_physicalDevice;
     }
 
+    VkPipelineCache pipelineCache() const
+    {
+        return m_pipelineCache;
+    }
+
     bool hasRtxSupport() const
     {
         return m_rtx != nullptr;
@@ -186,6 +191,7 @@ private:
     VkInstance m_instance {};
     VkPhysicalDevice m_physicalDevice {};
     VkDevice m_device {};
+    VkPipelineCache m_pipelineCache {};
 
     struct VulkanQueue {
         uint32_t familyIndex;
