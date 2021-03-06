@@ -22,6 +22,7 @@ public:
 
     std::string resolveGlslPath(const std::string& name) const;
     std::string resolveSpirvPath(const std::string& name) const;
+    std::string resolveSpirvAssemblyPath(const std::string& name) const;
 
     std::optional<std::string> loadAndCompileImmediately(const std::string& name);
 

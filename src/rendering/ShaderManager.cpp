@@ -184,6 +184,13 @@ std::string ShaderManager::resolveSpirvPath(const std::string& name) const
     return resolvedPath;
 }
 
+std::string ShaderManager::resolveSpirvAssemblyPath(const std::string& name) const
+{
+    std::string asmName = name + ".spv-asm";
+    std::string resolvedPath = m_shaderBasePath + "/.cache/" + asmName;
+    return resolvedPath;
+}
+
 std::optional<std::string> ShaderManager::loadAndCompileImmediately(const std::string& name)
 {
     std::string path = resolveGlslPath(name);
@@ -278,11 +285,10 @@ bool ShaderManager::CompiledShader::recompile()
     shaderc_shader_kind shaderKind = glslShaderKindForPath(filePath);
     std::string glslSource = FileIO::readEntireFile(filePath).value();
 
+    shaderc::Compiler compiler {};
     shaderc::SpvCompilationResult result;
     {
-        SCOPED_PROFILE_ZONE_NAMED("ShaderC work");
-
-        shaderc::Compiler compiler;
+        SCOPED_PROFILE_ZONE_NAMED("ShaderC work")
         result = compiler.CompileGlslToSpv(glslSource, shaderKind, filePath.c_str(), options);
     }
 
@@ -295,6 +301,14 @@ bool ShaderManager::CompiledShader::recompile()
 
         includedFilePaths = std::move(newIncludedFiles);
         lastCompileError.clear();
+
+        {
+            // NOTE: This causes a weird crash in ShaderC for some reason *for some shader*
+            SCOPED_PROFILE_ZONE_NAMED("ShaderC ASM work");
+            shaderc::AssemblyCompilationResult asmResult = compiler.CompileGlslToSpvAssembly(glslSource, shaderKind, filePath.c_str(), options);
+            FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvAssemblyPath(shaderName), std::vector<char>(asmResult.cbegin(), asmResult.cend()));
+        }
+
     } else {
         lastCompileError = result.GetErrorMessage();
     }
