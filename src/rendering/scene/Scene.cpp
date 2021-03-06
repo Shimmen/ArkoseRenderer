@@ -143,6 +143,7 @@ Scene::~Scene()
     using json = nlohmann::json;
     json savedCameras;
 
+    FileIO::ensureDirectoryForFile(savedCamerasFile);
     if (FileIO::isFileReadable(savedCamerasFile)) {
         std::ifstream fileStream(savedCamerasFile);
         fileStream >> savedCameras;

@@ -13,7 +13,7 @@
 
 class Scene final {
 public:
-    static constexpr const char* savedCamerasFile = "assets/cameras.json";
+    static constexpr const char* savedCamerasFile = "assets/.cache/cameras.json";
 
     explicit Scene(Registry&);
     ~Scene();

@@ -10,4 +10,3 @@ CMakeSettings.json
 
 # Application cache etc.
 imgui.ini
-assets/cameras.json
