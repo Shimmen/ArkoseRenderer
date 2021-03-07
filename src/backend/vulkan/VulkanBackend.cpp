@@ -144,11 +144,7 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, App& app)
         }
     }
 
-    // TODO: Load from file if it exists!
-    VkPipelineCacheCreateInfo pipelineCacheInfo = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
-    if (vkCreatePipelineCache(device(), &pipelineCacheInfo, nullptr, &m_pipelineCache) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend::VulkanBackend(): could not create pipeline cache, exiting.\n");
-    }
+    m_pipelineCache = createAndLoadPipelineCacheFromDisk();
 
     createAndSetupSwapchain(physicalDevice(), device(), m_surface);
     createWindowRenderTargetFrontend();
@@ -175,7 +171,7 @@ VulkanBackend::~VulkanBackend()
 
     destroySwapchain();
 
-    // TODO: Write to file!
+    savePipelineCacheToDisk(m_pipelineCache);
     vkDestroyPipelineCache(device(), m_pipelineCache, nullptr);
 
     for (VkEvent event : m_events) {
@@ -674,6 +670,43 @@ VkPhysicalDevice VulkanBackend::pickBestPhysicalDevice() const
     LogInfo("VulkanBackend: using physical device '%s'\n", props.deviceName);
 
     return physicalDevice;
+}
+
+VkPipelineCache VulkanBackend::createAndLoadPipelineCacheFromDisk() const
+{
+    SCOPED_PROFILE_ZONE_BACKEND();
+
+    VkPipelineCacheCreateInfo pipelineCacheInfo = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
+
+    // TODO: Maybe do some validation on the data e.g. in case version change? On the other hand, it's easy to just delete the cache if it doesn't load properly..
+    auto maybeCacheData = FileIO::readBinaryDataFromFile<char>(piplineCacheFilePath);
+    if (maybeCacheData.has_value()) {
+        const std::vector<char>& cacheData = maybeCacheData.value();
+        pipelineCacheInfo.pInitialData = cacheData.data();
+        pipelineCacheInfo.initialDataSize = cacheData.size();
+    } else {
+        pipelineCacheInfo.pInitialData = nullptr;
+        pipelineCacheInfo.initialDataSize = 0;
+    }
+
+    VkPipelineCache pipelineCache;
+    if (vkCreatePipelineCache(device(), &pipelineCacheInfo, nullptr, &pipelineCache) != VK_SUCCESS) {
+        LogErrorAndExit("VulkanBackend: could not create pipeline cache, exiting.\n");
+    }
+    
+    return pipelineCache;
+}
+
+void VulkanBackend::savePipelineCacheToDisk(VkPipelineCache pipelineCache) const
+{
+    SCOPED_PROFILE_ZONE_BACKEND();
+
+    size_t size;
+    vkGetPipelineCacheData(device(), pipelineCache, &size, nullptr);
+    std::vector<char> data(size);
+    vkGetPipelineCacheData(device(), pipelineCache, &size, data.data());
+
+    FileIO::writeBinaryDataToFile(piplineCacheFilePath, data);
 }
 
 void VulkanBackend::createSemaphoresAndFences(VkDevice device)

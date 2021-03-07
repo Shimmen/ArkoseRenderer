@@ -184,6 +184,10 @@ private:
     VkExtent2D pickBestSwapchainExtent() const;
     VkPhysicalDevice pickBestPhysicalDevice() const;
 
+    static constexpr const char* piplineCacheFilePath = "assets/.cache/pipeline-cache.bin";
+    VkPipelineCache createAndLoadPipelineCacheFromDisk() const;
+    void savePipelineCacheToDisk(VkPipelineCache) const;
+
     VkInstance createInstance(const std::vector<const char*>& requestedLayers, VkDebugUtilsMessengerCreateInfoEXT*) const;
     VkDevice createDevice(const std::vector<const char*>& requestedLayers, VkPhysicalDevice);
     VkDebugUtilsMessengerEXT m_messenger {};
