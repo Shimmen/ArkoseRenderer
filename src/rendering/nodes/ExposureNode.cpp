@@ -102,6 +102,7 @@ void ExposureNode::constructNode(Registry& reg)
     // Stores the last average luminance, after exposure, so we can do soft exposure transitions
     // TODO: Maybe use a storage buffer instead? Not sure what is faster for this.. note that we need read & write capabilities
     m_lastAvgLuminanceTexture = &reg.createTexture2D({ 1, 1 }, Texture::Format::R32F);
+    m_lastAvgLuminanceTexture->setName("ExposureAvgLuminance");
 }
 
 RenderGraphNode::ExecuteCallback ExposureNode::constructFrame(Registry& reg) const

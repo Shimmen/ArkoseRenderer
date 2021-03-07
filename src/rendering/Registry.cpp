@@ -317,6 +317,7 @@ Texture& Registry::loadTexture2D(const std::string& imagePath, bool srgb, bool g
 
     Image* image = Image::load(imagePath, pixelTypeToUse);
     texture->setData(image->data(), image->size());
+    texture->setName("Texture:" + imagePath);
 
     m_textures.push_back(std::move(texture));
     return *m_textures.back();

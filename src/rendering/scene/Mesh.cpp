@@ -104,6 +104,7 @@ const Buffer& Mesh::vertexBuffer(const VertexLayout& layout)
 
     Registry& sceneRegistry = model()->scene()->registry();
     Buffer& vertexBuffer = sceneRegistry.createBuffer((std::byte*)data, bufferSize, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+    vertexBuffer.setName("MeshVertexBuffer");
 
     m_vertexBuffers[layout] = &vertexBuffer;
     return vertexBuffer;
@@ -130,6 +131,8 @@ const Buffer& Mesh::indexBuffer()
         LogErrorAndExit("Mesh: can't request index buffer for mesh/model that is not part of a scene, exiting\n");
 
     Registry& sceneRegistry = model()->scene()->registry();
-    m_indexBuffer = &sceneRegistry.createBuffer(indexData(), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+    Buffer& indexBuffer = sceneRegistry.createBuffer(indexData(), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+    indexBuffer.setName("MeshIndexBuffer");
+    m_indexBuffer = &indexBuffer;
     return *m_indexBuffer;
 }

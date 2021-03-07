@@ -41,6 +41,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     SCOPED_PROFILE_ZONE();
 
     Texture& colorTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
+    colorTexture.setName("ForwardColor");
     reg.publish("color", colorTexture);
 
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture },
@@ -60,6 +61,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     if (m_indirectLightBindingSet)
         renderStateBuilder.addBindingSet(*m_indirectLightBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
+    renderState.setName("ForwardOpaque");
 
     m_scene.forEachMesh([&](size_t, Mesh& mesh) {
         mesh.ensureVertexBuffer(m_vertexLayout);

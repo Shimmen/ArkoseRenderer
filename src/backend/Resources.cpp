@@ -21,6 +21,16 @@ Resource::Resource(Resource&& other) noexcept
     other.m_backend = nullptr;
 }
 
+const std::string& Resource::name() const
+{
+    return m_name;
+}
+
+void Resource::setName(const std::string& name)
+{
+    m_name = name;
+}
+
 void Resource::setOwningRegistry(Badge<Registry>, Registry* registry)
 {
     ASSERT(m_owningRegistry == nullptr);

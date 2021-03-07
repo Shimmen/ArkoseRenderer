@@ -9,6 +9,8 @@ public:
     VulkanBuffer(Backend&, size_t size, Usage, MemoryHint);
     virtual ~VulkanBuffer() override;
 
+    virtual void setName(const std::string& name) override;
+
     void updateData(const std::byte* data, size_t size) override;
 
     VkBuffer buffer;
@@ -20,6 +22,8 @@ public:
     VulkanTexture() = default;
     VulkanTexture(Backend&, TextureDescription);
     virtual ~VulkanTexture() override;
+
+    virtual void setName(const std::string& name) override;
 
     void setPixelData(vec4 pixel) override;
     void setData(const void* data, size_t size) override;
@@ -44,6 +48,8 @@ public:
     explicit VulkanRenderTarget(Backend&, std::vector<Attachment> attachments);
     virtual ~VulkanRenderTarget() override;
 
+    virtual void setName(const std::string& name) override;
+
     VkFramebuffer framebuffer;
     VkRenderPass compatibleRenderPass;
 
@@ -54,6 +60,8 @@ struct VulkanBindingSet : public BindingSet {
 public:
     VulkanBindingSet(Backend&, std::vector<ShaderBinding>);
     virtual ~VulkanBindingSet() override;
+
+    virtual void setName(const std::string& name) override;
 
     VkDescriptorPool descriptorPool;
     VkDescriptorSetLayout descriptorSetLayout;
@@ -66,6 +74,8 @@ public:
                       Viewport, BlendState, RasterState, DepthState);
     virtual ~VulkanRenderState() override;
 
+    virtual void setName(const std::string& name) override;
+
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
 
@@ -76,6 +86,8 @@ struct VulkanTopLevelAS final : public TopLevelAS {
 public:
     VulkanTopLevelAS(Backend&, std::vector<RTGeometryInstance>);
     virtual ~VulkanTopLevelAS() override;
+
+    virtual void setName(const std::string& name) override;
 
     VkAccelerationStructureNV accelerationStructure;
     VkDeviceMemory memory { VK_NULL_HANDLE };
@@ -89,6 +101,8 @@ public:
     VulkanBottomLevelAS(Backend&, std::vector<RTGeometry>);
     virtual ~VulkanBottomLevelAS() override;
 
+    virtual void setName(const std::string& name) override;
+
     VkAccelerationStructureNV accelerationStructure;
     VkDeviceMemory memory { VK_NULL_HANDLE };
     uint64_t handle { 0u };
@@ -100,6 +114,8 @@ struct VulkanRayTracingState final : public RayTracingState {
 public:
     VulkanRayTracingState(Backend&, ShaderBindingTable, std::vector<BindingSet*>, uint32_t maxRecursionDepth);
     virtual ~VulkanRayTracingState() override;
+
+    virtual void setName(const std::string& name) override;
 
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
@@ -115,6 +131,8 @@ struct VulkanComputeState final : public ComputeState {
 public:
     VulkanComputeState(Backend&, Shader, std::vector<BindingSet*>);
     virtual ~VulkanComputeState() override;
+
+    virtual void setName(const std::string& name) override;
 
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;

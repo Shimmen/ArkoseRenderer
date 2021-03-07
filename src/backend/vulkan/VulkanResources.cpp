@@ -89,6 +89,26 @@ VulkanBuffer::~VulkanBuffer()
     vmaDestroyBuffer(vulkanBackend.globalAllocator(), buffer, allocation);
 }
 
+void VulkanBuffer::setName(const std::string& name)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    Resource::setName(name);
+
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+    if (vulkanBackend.hasDebugUtilsSupport()) {
+
+        VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+        nameInfo.objectType = VK_OBJECT_TYPE_BUFFER;
+        nameInfo.objectHandle = reinterpret_cast<uint64_t>(buffer);
+        nameInfo.pObjectName = name.c_str();
+
+        if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+            LogWarning("Could not set debug name for vulkan buffer resource.\n");
+        }
+    }
+}
+
 void VulkanBuffer::updateData(const std::byte* data, size_t updateSize)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
@@ -351,6 +371,53 @@ VulkanTexture::~VulkanTexture()
     vkDestroySampler(vulkanBackend.device(), sampler, nullptr);
     vkDestroyImageView(vulkanBackend.device(), imageView, nullptr);
     vmaDestroyImage(vulkanBackend.globalAllocator(), image, allocation);
+}
+
+void VulkanTexture::setName(const std::string& name)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    Resource::setName(name);
+
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+    if (vulkanBackend.hasDebugUtilsSupport()) {
+
+        std::string imageViewName = name + "-view";
+        std::string samplerName = name + "-sampler";
+
+        {
+            VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            nameInfo.objectType = VK_OBJECT_TYPE_IMAGE;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(image);
+            nameInfo.pObjectName = name.c_str();
+
+            if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+                LogWarning("Could not set debug name for vulkan image resource.\n");
+            }
+        }
+
+        {
+            VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            nameInfo.objectType = VK_OBJECT_TYPE_IMAGE_VIEW;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(imageView);
+            nameInfo.pObjectName = imageViewName.c_str();
+
+            if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+                LogWarning("Could not set debug name for vulkan image view resource.\n");
+            }
+        }
+
+        {
+            VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            nameInfo.objectType = VK_OBJECT_TYPE_SAMPLER;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(sampler);
+            nameInfo.pObjectName = samplerName.c_str();
+
+            if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+                LogWarning("Could not set debug name for vulkan sampler resource.\n");
+            }
+        }
+    }
 }
 
 void VulkanTexture::setPixelData(vec4 pixel)
@@ -852,6 +919,42 @@ VulkanRenderTarget::~VulkanRenderTarget()
     vkDestroyRenderPass(vulkanBackend.device(), compatibleRenderPass, nullptr);
 }
 
+void VulkanRenderTarget::setName(const std::string& name)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    Resource::setName(name);
+
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+    if (vulkanBackend.hasDebugUtilsSupport()) {
+
+        std::string framebufferName = name + "-framebuffer";
+        std::string renderPassName = name + "-renderPass";
+
+        {
+            VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            nameInfo.objectType = VK_OBJECT_TYPE_FRAMEBUFFER;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(framebuffer);
+            nameInfo.pObjectName = framebufferName.c_str();
+
+            if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+                LogWarning("Could not set debug name for vulkan framebuffer resource.\n");
+            }
+        }
+
+        {
+            VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            nameInfo.objectType = VK_OBJECT_TYPE_RENDER_PASS;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(compatibleRenderPass);
+            nameInfo.pObjectName = renderPassName.c_str();
+
+            if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+                LogWarning("Could not set debug name for vulkan render pass resource.\n");
+            }
+        }
+    }
+}
+
 VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> bindings)
     : BindingSet(backend, std::move(bindings))
 {
@@ -1207,6 +1310,54 @@ VulkanBindingSet::~VulkanBindingSet()
     vkDestroyDescriptorSetLayout(vulkanBackend.device(), descriptorSetLayout, nullptr);
 }
 
+void VulkanBindingSet::setName(const std::string& name)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    Resource::setName(name);
+
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+    if (vulkanBackend.hasDebugUtilsSupport()) {
+
+        std::string descriptorSetName = name + "-descriptorSet";
+        std::string descriptorPoolName = name + "-descriptorPool";
+        std::string descriptorSetLayoutName = name + "-descriptorSetLayout";
+
+        {
+            VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            nameInfo.objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(descriptorSet);
+            nameInfo.pObjectName = descriptorSetName.c_str();
+
+            if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+                LogWarning("Could not set debug name for vulkan descriptor set resource.\n");
+            }
+        }
+
+        {
+            VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            nameInfo.objectType = VK_OBJECT_TYPE_DESCRIPTOR_POOL;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(descriptorPool);
+            nameInfo.pObjectName = descriptorPoolName.c_str();
+
+            if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+                LogWarning("Could not set debug name for vulkan descriptor pool resource.\n");
+            }
+        }
+
+        {
+            VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            nameInfo.objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(descriptorSetLayout);
+            nameInfo.pObjectName = descriptorSetLayoutName.c_str();
+
+            if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+                LogWarning("Could not set debug name for vulkan descriptor set layout resource.\n");
+            }
+        }
+    }
+}
+
 VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& renderTarget, VertexLayout vertexLayout,
                                      Shader shader, const std::vector<BindingSet*>& bindingSets,
                                      Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState)
@@ -1559,6 +1710,42 @@ VulkanTopLevelAS::VulkanTopLevelAS(Backend& backend, std::vector<RTGeometryInsta
     associatedBuffers.push_back({ instanceBuffer, instanceAllocation });
 }
 
+void VulkanRenderState::setName(const std::string& name)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    Resource::setName(name);
+
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+    if (vulkanBackend.hasDebugUtilsSupport()) {
+
+        std::string pipelineName = name + "-pipeline";
+        std::string pipelineLayoutName = name + "-pipelineLayout";
+
+        {
+            VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            nameInfo.objectType = VK_OBJECT_TYPE_PIPELINE;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(pipeline);
+            nameInfo.pObjectName = pipelineName.c_str();
+
+            if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+                LogWarning("Could not set debug name for vulkan graphics pipeline resource.\n");
+            }
+        }
+
+        {
+            VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            nameInfo.objectType = VK_OBJECT_TYPE_PIPELINE_LAYOUT;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(pipelineLayout);
+            nameInfo.pObjectName = pipelineLayoutName.c_str();
+
+            if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+                LogWarning("Could not set debug name for vulkan graphics pipeline layout resource.\n");
+            }
+        }
+    }
+}
+
 VulkanTopLevelAS::~VulkanTopLevelAS()
 {
     if (!hasBackend())
@@ -1570,6 +1757,24 @@ VulkanTopLevelAS::~VulkanTopLevelAS()
 
     for (auto& [buffer, allocation] : associatedBuffers) {
         vmaDestroyBuffer(vulkanBackend.globalAllocator(), buffer, allocation);
+    }
+}
+
+void VulkanTopLevelAS::setName(const std::string& name)
+{
+    Resource::setName(name);
+
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+    if (vulkanBackend.hasDebugUtilsSupport()) {
+
+        VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+        nameInfo.objectType = VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_NV;
+        nameInfo.objectHandle = reinterpret_cast<uint64_t>(accelerationStructure);
+        nameInfo.pObjectName = name.c_str();
+
+        if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+            LogWarning("Could not set debug name for vulkan top level acceleration structure resource.\n");
+        }
     }
 }
 
@@ -1764,6 +1969,26 @@ VulkanBottomLevelAS::~VulkanBottomLevelAS()
 
     for (auto& [buffer, allocation] : associatedBuffers) {
         vmaDestroyBuffer(vulkanBackend.globalAllocator(), buffer, allocation);
+    }
+}
+
+void VulkanBottomLevelAS::setName(const std::string& name)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    Resource::setName(name);
+
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+    if (vulkanBackend.hasDebugUtilsSupport()) {
+
+        VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+        nameInfo.objectType = VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_NV;
+        nameInfo.objectHandle = reinterpret_cast<uint64_t>(accelerationStructure);
+        nameInfo.pObjectName = name.c_str();
+
+        if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+            LogWarning("Could not set debug name for vulkan bottom level acceleration structure resource.\n");
+        }
     }
 }
 
@@ -2031,6 +2256,42 @@ VulkanRayTracingState::~VulkanRayTracingState()
     vkDestroyPipelineLayout(vulkanBackend.device(), pipelineLayout, nullptr);
 }
 
+void VulkanRayTracingState::setName(const std::string& name)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    Resource::setName(name);
+
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+    if (vulkanBackend.hasDebugUtilsSupport()) {
+
+        std::string pipelineName = name + "-pipeline";
+        std::string pipelineLayoutName = name + "-pipelineLayout";
+
+        {
+            VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            nameInfo.objectType = VK_OBJECT_TYPE_PIPELINE;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(pipeline);
+            nameInfo.pObjectName = pipelineName.c_str();
+
+            if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+                LogWarning("Could not set debug name for vulkan ray tracing pipeline resource.\n");
+            }
+        }
+
+        {
+            VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            nameInfo.objectType = VK_OBJECT_TYPE_PIPELINE_LAYOUT;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(pipelineLayout);
+            nameInfo.pObjectName = pipelineLayoutName.c_str();
+
+            if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+                LogWarning("Could not set debug name for vulkan ray tracing pipeline layout resource.\n");
+            }
+        }
+    }
+}
+
 VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vector<BindingSet*> bindingSets)
     : ComputeState(backend, shader, bindingSets)
 {
@@ -2132,4 +2393,40 @@ VulkanComputeState::~VulkanComputeState()
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vkDestroyPipeline(vulkanBackend.device(), pipeline, nullptr);
     vkDestroyPipelineLayout(vulkanBackend.device(), pipelineLayout, nullptr);
+}
+
+void VulkanComputeState::setName(const std::string& name)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    Resource::setName(name);
+
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+    if (vulkanBackend.hasDebugUtilsSupport()) {
+
+        std::string pipelineName = name + "-pipeline";
+        std::string pipelineLayoutName = name + "-pipelineLayout";
+
+        {
+            VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            nameInfo.objectType = VK_OBJECT_TYPE_PIPELINE;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(pipeline);
+            nameInfo.pObjectName = pipelineName.c_str();
+
+            if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+                LogWarning("Could not set debug name for vulkan compute pipeline resource.\n");
+            }
+        }
+
+        {
+            VkDebugUtilsObjectNameInfoEXT nameInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT };
+            nameInfo.objectType = VK_OBJECT_TYPE_PIPELINE_LAYOUT;
+            nameInfo.objectHandle = reinterpret_cast<uint64_t>(pipelineLayout);
+            nameInfo.pObjectName = pipelineLayoutName.c_str();
+
+            if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
+                LogWarning("Could not set debug name for vulkan compute pipeline layout resource.\n");
+            }
+        }
+    }
 }

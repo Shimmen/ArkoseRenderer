@@ -88,6 +88,7 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     SCOPED_PROFILE_ZONE();
 
     Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+    cameraBuffer.setName("SceneCameraData");
     BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageVertex | ShaderStageFragment), &cameraBuffer } });
     reg.publish("camera", cameraBuffer);
     reg.publish("cameraSet", cameraBindingSet);
@@ -95,21 +96,25 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     // Environment mapping stuff
     // TODO: Remove this! Barely used anyway, and not the most convenient format anyway..
     Buffer& envDataBuffer = reg.createBuffer(sizeof(float), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+    envDataBuffer.setName("SceneEnvironmentData");
     reg.publish("environmentData", envDataBuffer);
     Texture& envTexture = m_scene.environmentMap().empty()
         ? reg.createPixelTexture(vec4(1.0f), true)
         : reg.loadTexture2D(m_scene.environmentMap(), true, false);
+    envTexture.setName("SceneEnvironmentTexture");
     reg.publish("environmentMap", envTexture);
 
     // Material stuff
     size_t materialBufferSize = m_materials.size() * sizeof(ShaderMaterial);
     Buffer& materialDataBuffer = reg.createBuffer(materialBufferSize, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     materialDataBuffer.updateData(m_materials.data(), materialBufferSize); // TODO: Update in exec?
+    materialDataBuffer.setName("SceneMaterialData");
     reg.publish("materialData", materialDataBuffer);
 
     // Object data stuff
     size_t objectDataBufferSize = m_drawables.size() * sizeof(ShaderDrawable);
     Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+    objectDataBuffer.setName("SceneObjectData");
     reg.publish("objectData", objectDataBuffer);
 
     BindingSet& objectBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &objectDataBuffer },
@@ -119,8 +124,11 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
 
     // Light data stuff
     Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+    lightMetaDataBuffer.setName("SceneLightMetaData");
     Buffer& dirLightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
+    dirLightDataBuffer.setName("SceneDirectionalLightData");
     Buffer& spotLightDataBuffer = reg.createBuffer(sizeof(SpotLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
+    spotLightDataBuffer.setName("SceneSpotLightData");
     std::vector<Texture*> iesProfileLUTs;
     std::vector<Texture*> shadowMaps;
     // TODO: We need to be able to update the shadow map binding. Right now we can only do it once, at creation.

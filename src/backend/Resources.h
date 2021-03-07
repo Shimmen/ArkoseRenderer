@@ -29,6 +29,9 @@ public:
     Resource(Resource&&) noexcept;
     Resource& operator=(Resource&&) noexcept;
 
+    const std::string& name() const;
+    virtual void setName(const std::string&);
+
     void setOwningRegistry(Badge<Registry>, Registry* registry);
     Registry* owningRegistry(Badge<Registry>) { return m_owningRegistry; }
 
@@ -39,6 +42,7 @@ protected:
 private:
     Backend* m_backend { nullptr };
     Registry* m_owningRegistry { nullptr };
+    std::string m_name {};
 };
 
 struct ClearColor {

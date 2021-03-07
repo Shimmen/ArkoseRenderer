@@ -19,12 +19,15 @@ RenderGraphNode::ExecuteCallback GBufferNode::constructFrame(Registry& reg) cons
     const RenderTarget& windowTarget = reg.windowRenderTarget();
 
     Texture& normalTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA16F);
+    normalTexture.setName("GBufferNormal");
     reg.publish("normal", normalTexture);
 
     Texture& depthTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::Depth32F);
+    depthTexture.setName("GBufferDepth");
     reg.publish("depth", depthTexture);
 
     Texture& baseColorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA8);
+    baseColorTexture.setName("GBufferBaseColor");
     reg.publish("baseColor", baseColorTexture);
 
     return [&](const AppState& appState, CommandList& cmdList) {};

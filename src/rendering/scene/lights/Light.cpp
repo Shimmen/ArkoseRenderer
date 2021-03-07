@@ -27,6 +27,20 @@ Texture& Light::shadowMap()
     Texture& shadowMap = scene()->registry().createTexture2D(m_shadowMapSize, Texture::Format::Depth32F, Texture::Filters::linear(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
     m_shadowMap = &shadowMap;
 
+    std::string baseName;
+    switch (type()) {
+    case Type::DirectionalLight:
+        baseName = "DirectionalLight";
+        break;
+    case Type::SpotLight:
+        baseName = "SpotLight";
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+    shadowMap.setName(baseName + "ShadowMap");
+
     return shadowMap;
 }
 
