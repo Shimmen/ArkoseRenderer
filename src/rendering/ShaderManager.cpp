@@ -4,6 +4,7 @@
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include "utility/util.h"
+#include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <thread>
