@@ -5,7 +5,7 @@ inline void setNameForActiveThread(const char* name);
 }
 
 
-#ifdef TRACY_ENABLE
+#if defined(TRACY_ENABLE)
 
 #include <Tracy.hpp>
 
@@ -30,5 +30,24 @@ void Profiling::setNameForActiveThread(const char* name)
 {
     tracy::SetThreadName(name);
 }
+
+#else
+
+#define END_OF_FRAME_PROFILE_MARKER()
+
+#define SCOPED_PROFILE_ZONE()
+
+#define SCOPED_PROFILE_ZONE_COLOR(color)
+#define SCOPED_PROFILE_ZONE_NAMED(name)
+
+#define SCOPED_PROFILE_ZONE_DYNAMIC(nameStr, color)
+
+#define SCOPED_PROFILE_ZONE_BACKEND()
+#define SCOPED_PROFILE_ZONE_BACKEND_NAMED(name)
+
+#define SCOPED_PROFILE_ZONE_GPUCOMMAND()
+#define SCOPED_PROFILE_ZONE_GPURESOURCE()
+
+void Profiling::setNameForActiveThread(const char* name) {}
 
 #endif

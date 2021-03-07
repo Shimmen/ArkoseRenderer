@@ -62,7 +62,7 @@ target_include_directories(ArkoseRenderer PRIVATE src/)
 target_include_directories(ArkoseRenderer PRIVATE shaders/shared)
 
 target_link_libraries(ArkoseRenderer PUBLIC tracy)
-target_compile_definitions(ArkoseRenderer PUBLIC TRACY_ENABLE)
+#target_compile_definitions(ArkoseRenderer PUBLIC TRACY_ENABLE)
 
 # (C++20 is required for designated initializers in VC++)
 target_compile_features(ArkoseRenderer PRIVATE cxx_std_20)
