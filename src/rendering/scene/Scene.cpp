@@ -21,7 +21,7 @@ void Scene::loadFromFile(const std::string& path)
 
     if (!FileIO::isFileReadable(path))
         LogErrorAndExit("Could not read scene file '%s', exiting\n", path.c_str());
-    m_loadedPath = path;
+    m_filePath = path;
 
     json jsonScene;
     std::ifstream fileStream(path);
@@ -52,14 +52,6 @@ void Scene::loadFromFile(const std::string& path)
 
         std::string name = jsonModel.at("name");
         model->setName(name);
-
-        if (jsonModel.find("proxy") != jsonModel.end()) {
-            std::string proxyPath = jsonModel.at("proxy");
-            auto proxy = loadProxy(proxyPath);
-            if (proxy) {
-                model->setProxy(std::move(proxy));
-            }
-        }
 
         auto transform = jsonModel.at("transform");
         auto jsonRotation = transform.at("rotation");
@@ -129,8 +121,6 @@ void Scene::loadFromFile(const std::string& path)
         m_allCameras[name] = camera;
     }
 
-    loadAdditionalCameras();
-
     std::string mainCamera = jsonScene.at("camera");
     auto entry = m_allCameras.find(mainCamera);
     if (entry != m_allCameras.end()) {
@@ -138,45 +128,9 @@ void Scene::loadFromFile(const std::string& path)
     }
 }
 
-Scene::~Scene()
+void Scene::manageResources()
 {
-    using json = nlohmann::json;
-    json savedCameras;
-
-    FileIO::ensureDirectoryForFile(savedCamerasFile);
-    if (FileIO::isFileReadable(savedCamerasFile)) {
-        std::ifstream fileStream(savedCamerasFile);
-        fileStream >> savedCameras;
-    }
-
-    json jsonCameras = json::object();
-
-    for (const auto& [name, camera] : m_allCameras) {
-        if (name == "main") {
-            continue;
-        }
-
-        float posData[3];
-        posData[0] = camera.position().x;
-        posData[1] = camera.position().y;
-        posData[2] = camera.position().z;
-
-        float rotData[4];
-        rotData[0] = camera.orientation().w;
-        rotData[1] = camera.orientation().vec.x;
-        rotData[2] = camera.orientation().vec.y;
-        rotData[3] = camera.orientation().vec.z;
-
-        jsonCameras[name] = {
-            { "position", posData },
-            { "orientation", rotData }
-        };
-    }
-
-    savedCameras[m_loadedPath] = jsonCameras;
-
-    std::ofstream fileStream(savedCamerasFile);
-    fileStream << savedCameras;
+    // TODO: Move stuff from SceneNode to here!
 }
 
 Model& Scene::addModel(std::unique_ptr<Model> model)
@@ -272,62 +226,6 @@ int Scene::forEachLight(std::function<void(size_t, Light&)> callback)
         callback(nextIndex++, *light);
     }
     return nextIndex;
-}
-
-void Scene::cameraGui()
-{
-    for (const auto& [name, camera] : m_allCameras) {
-        if (ImGui::Button(name.c_str())) {
-            m_currentMainCamera = camera;
-        }
-    }
-
-    ImGui::Separator();
-    static char nameBuffer[63];
-    ImGui::InputText("Name", nameBuffer, sizeof(nameBuffer), ImGuiInputTextFlags_AutoSelectAll);
-
-    bool hasName = std::strlen(nameBuffer) > 0;
-    if (hasName && ImGui::Button("Save current")) {
-        m_allCameras[nameBuffer] = m_currentMainCamera;
-    }
-}
-
-void Scene::loadAdditionalCameras()
-{
-    using json = nlohmann::json;
-
-    json savedCameras;
-    if (FileIO::isFileReadable(savedCamerasFile)) {
-        std::ifstream fileStream(savedCamerasFile);
-        fileStream >> savedCameras;
-    }
-
-    auto savedCamerasForFile = savedCameras[m_loadedPath];
-
-    for (auto& [name, jsonCamera] : savedCamerasForFile.items()) {
-        FpsCamera camera {};
-
-        float posData[3];
-        jsonCamera.at("position").get_to(posData);
-        camera.setPosition({ posData[0], posData[1], posData[2] });
-
-        float rotData[4];
-        jsonCamera.at("orientation").get_to(rotData);
-        camera.setOrientation({ { rotData[0], rotData[1], rotData[2] }, rotData[3] });
-
-        m_allCameras[name] = camera;
-    }
-}
-
-std::unique_ptr<Model> Scene::loadProxy(const std::string& path)
-{
-    std::string extension = path.substr(path.length() - 4);
-    if (extension == "json") {
-        ASSERT(false);
-    }
-
-    // Else, assume it's a gltf and simply fail if it isn't..
-    return GltfModel::load(path);
 }
 
 void Scene::generateProbeGridFromBoundingBox()

@@ -123,6 +123,7 @@ int main(int argc, char** argv)
         lastTime = elapsedTime;
 
         app->update(*scene, elapsedTime, deltaTime);
+        scene->manageResources();
 
         bool frameExecuted = false;
         while (!frameExecuted) {

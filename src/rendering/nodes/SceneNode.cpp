@@ -166,11 +166,6 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Cameras")) {
-            m_scene.cameraGui();
-            ImGui::TreePop();
-        }
-
         // Update camera data
         {
             const FpsCamera& camera = m_scene.camera();

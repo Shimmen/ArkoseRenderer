@@ -121,8 +121,6 @@ void RayTracingApp::update(Scene& scene, float elapsedTime, float deltaTime)
     ImGui::Begin("RayTracingApp");
     float avgFrameTime = m_frameTimeAvg.runningAverage() * 1000.0f;
     ImGui::Text("Frame time: %.2f ms/frame", avgFrameTime);
-    if (ImGui::CollapsingHeader("Cameras"))
-        scene.cameraGui();
     ImGui::End();
 
     const Input& input = Input::instance();

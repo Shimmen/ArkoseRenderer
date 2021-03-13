@@ -13,19 +13,23 @@
 
 class Scene final {
 public:
-    static constexpr const char* savedCamerasFile = "assets/.cache/cameras.json";
-
     explicit Scene(Registry&);
-    ~Scene();
 
     Registry& registry() { return m_registry; }
     const Registry& registry() const { return m_registry; }
 
     void loadFromFile(const std::string&);
 
+    void manageResources();
+
+    // Camera & view
+
+    const FpsCamera& camera() const { return m_currentMainCamera; }
+    FpsCamera& camera() { return m_currentMainCamera; }
+
+    // Models & meshes
+
     Model& addModel(std::unique_ptr<Model>);
-    DirectionalLight& addLight(std::unique_ptr<DirectionalLight>);
-    SpotLight& addLight(std::unique_ptr<SpotLight>);
 
     size_t modelCount() const { return m_models.size(); }
     size_t meshCount() const;
@@ -36,21 +40,16 @@ public:
     int forEachMesh(std::function<void(size_t, const Mesh&)> callback) const;
     int forEachMesh(std::function<void(size_t, Mesh&)> callback);
 
-    void setSelectedModel(Model* model) { m_selectedModel = model; }
-    Model* selectedModel() { return m_selectedModel; }
+    // Lighting - direct & indirect
 
-    void setSelectedMesh(Mesh* mesh) { m_selectedMesh = mesh; }
-    Mesh* selectedMesh() { return m_selectedMesh; }
-
-    const FpsCamera& camera() const { return m_currentMainCamera; }
-    FpsCamera& camera() { return m_currentMainCamera; }
-    void cameraGui();
-
-    const DirectionalLight& sun() const { return *m_directionalLights[0]; }
-    DirectionalLight& sun() { return *m_directionalLights[0]; }
+    DirectionalLight& addLight(std::unique_ptr<DirectionalLight>);
+    SpotLight& addLight(std::unique_ptr<SpotLight>);
 
     int forEachLight(std::function<void(size_t, const Light&)>) const;
     int forEachLight(std::function<void(size_t, Light&)>);
+
+    const DirectionalLight& sun() const { return *m_directionalLights[0]; }
+    DirectionalLight& sun() { return *m_directionalLights[0]; }
 
     bool hasProbeGrid() { return m_probeGrid.has_value(); }
     void setProbeGrid(ProbeGrid probeGrid) { m_probeGrid = probeGrid; }
@@ -65,14 +64,21 @@ public:
     float environmentMultiplier() const { return m_environmentMultiplier; }
     float& environmentMultiplier() { return m_environmentMultiplier; }
 
-private:
-    void loadAdditionalCameras();
-    static std::unique_ptr<Model> loadProxy(const std::string&);
+    // Meta
+
+    void setSelectedModel(Model* model) { m_selectedModel = model; }
+    Model* selectedModel() { return m_selectedModel; }
+
+    void setSelectedMesh(Mesh* mesh) { m_selectedMesh = mesh; }
+    Mesh* selectedMesh() { return m_selectedMesh; }
 
 private:
-    std::string m_loadedPath {};
+    std::string m_filePath {};
 
     Registry& m_registry;
+
+    FpsCamera m_currentMainCamera;
+    std::unordered_map<std::string, FpsCamera> m_allCameras {};
 
     std::vector<std::unique_ptr<Model>> m_models;
 
@@ -80,9 +86,6 @@ private:
     std::vector<std::unique_ptr<SpotLight>> m_spotLights;
 
     std::optional<ProbeGrid> m_probeGrid;
-
-    FpsCamera m_currentMainCamera;
-    std::unordered_map<std::string, FpsCamera> m_allCameras {};
 
     std::string m_environmentMap {};
     float m_environmentMultiplier { 1.0f };
