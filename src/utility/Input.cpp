@@ -1,7 +1,7 @@
 #include "Input.h"
 
 #include "utility/util.h"
-#include <cstring>
+#include <imgui.h>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -94,6 +94,18 @@ vec2 Input::mouseDelta() const
 float Input::scrollDelta() const
 {
     return float(m_currentScollOffset - m_lastScrollOffset);
+}
+
+bool Input::isGuiUsingMouse() const
+{
+    ImGuiIO& io = ImGui::GetIO();
+    return io.WantCaptureMouse;
+}
+
+bool Input::isGuiUsingKeyboard() const
+{
+    ImGuiIO& io = ImGui::GetIO();
+    return io.WantCaptureKeyboard;
 }
 
 vec2 Input::leftStick() const

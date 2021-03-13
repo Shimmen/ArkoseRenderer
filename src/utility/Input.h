@@ -175,6 +175,9 @@ public:
     [[nodiscard]] vec2 mouseDelta() const;
     [[nodiscard]] float scrollDelta() const;
 
+    [[nodiscard]] bool isGuiUsingMouse() const;
+    [[nodiscard]] bool isGuiUsingKeyboard() const;
+
     [[nodiscard]] vec2 leftStick() const;
     [[nodiscard]] vec2 rightStick() const;
 

@@ -22,14 +22,3 @@ void GlobalState::updateWindowExtent(const Extent2D& newExtent)
 {
     m_windowExtent = newExtent;
 }
-
-bool GlobalState::guiIsUsingTheMouse() const
-{
-    ImGuiIO& io = ImGui::GetIO();
-    return io.WantCaptureMouse;
-}
-bool GlobalState::guiIsUsingTheKeyboard() const
-{
-    ImGuiIO& io = ImGui::GetIO();
-    return io.WantCaptureKeyboard;
-}

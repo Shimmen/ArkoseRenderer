@@ -39,7 +39,7 @@ void FpsCamera::update(const Input& input, const Extent2D& screenExtent, float d
     if (usingController) {
         m_velocity += moos::rotateVector(m_orientation, acceleration);
     } else {
-        if (moos::length2(acceleration) > 0.01f && !GlobalState::get().guiIsUsingTheKeyboard()) {
+        if (moos::length2(acceleration) > 0.01f && !input.isGuiUsingKeyboard()) {
             acceleration = normalize(acceleration) * (maxSpeed / timeToMaxSpeed) * dt;
             m_velocity += moos::rotateVector(m_orientation, acceleration);
         } else {
@@ -75,7 +75,7 @@ void FpsCamera::update(const Input& input, const Extent2D& screenExtent, float d
     m_pitchYawRoll.x -= controllerRotation.x * fovMultiplier * dt;
     m_pitchYawRoll.y += controllerRotation.y * fovMultiplier * dt;
 
-    if (input.isButtonDown(Button::Right) && !GlobalState::get().guiIsUsingTheMouse()) {
+    if (input.isButtonDown(Button::Right) && !input.isGuiUsingMouse()) {
         // Screen size independent but also aspect ratio dependent!
         vec2 mouseDelta = input.mouseDelta() / float(screenExtent.width());
 
@@ -118,7 +118,7 @@ void FpsCamera::update(const Input& input, const Extent2D& screenExtent, float d
 
     // Apply zoom
 
-    if (!GlobalState::get().guiIsUsingTheMouse()) {
+    if (!input.isGuiUsingMouse()) {
         m_targetFieldOfView += -input.scrollDelta() * zoomSensitivity;
         m_targetFieldOfView = moos::clamp(m_targetFieldOfView, minFieldOfView, maxFieldOfView);
     }
