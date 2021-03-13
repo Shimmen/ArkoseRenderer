@@ -8,7 +8,7 @@ const GlobalState& GlobalState::get()
     return s_globalState;
 }
 
-GlobalState& GlobalState::getMutable(Badge<Backend>)
+GlobalState& GlobalState::getMutable()
 {
     const GlobalState& constGlobalState = GlobalState::get();
     return const_cast<GlobalState&>(constGlobalState);

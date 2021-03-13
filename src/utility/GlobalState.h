@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Badge.h"
 #include "Extent.h"
 
 class Backend;
@@ -8,7 +7,7 @@ class Backend;
 class GlobalState {
 public:
     static const GlobalState& get();
-    static GlobalState& getMutable(Badge<Backend>);
+    static GlobalState& getMutable();
 
     [[nodiscard]] Extent2D windowExtent() const;
     void updateWindowExtent(const Extent2D&);

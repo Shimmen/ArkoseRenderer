@@ -6,6 +6,9 @@
 #include <memory>
 #include <vector>
 
+class RenderGraph;
+class Scene;
+
 class Backend {
 public:
     Backend() = default;
@@ -22,11 +25,19 @@ public:
         ShaderBufferArrayDynamicIndexing,
     };
 
+    struct AppSpecification {
+        std::vector<Backend::Capability> requiredCapabilities;
+        std::vector<Backend::Capability> optionalCapabilities;
+    };
+
     static std::string capabilityName(Capability capability);
     virtual bool hasActiveCapability(Capability) const = 0;
 
-    virtual void shadersDidRecompile(const std::vector<std::string>& shaderNames) = 0;
-    virtual bool executeFrame(double elapsedTime, double deltaTime) = 0;
+    virtual Registry& getPersistentRegistry() = 0;
+
+    virtual void renderGraphDidChange(RenderGraph&) = 0;
+    virtual void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderGraph&) = 0;
+    virtual bool executeFrame(const Scene&, RenderGraph&, double elapsedTime, double deltaTime) = 0;
 
     virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) = 0;
     virtual std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) = 0;
@@ -40,9 +51,4 @@ public:
     virtual std::unique_ptr<RayTracingState> createRayTracingState(ShaderBindingTable& sbt, std::vector<BindingSet*>, uint32_t maxRecursionDepth) = 0;
     virtual std::unique_ptr<ComputeState> createComputeState(const Shader&, std::vector<BindingSet*>) = 0;
 
-protected:
-    [[nodiscard]] static Badge<Backend> badge()
-    {
-        return {};
-    }
 };

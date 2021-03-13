@@ -21,13 +21,13 @@ std::vector<Backend::Capability> MultisampleTest::optionalCapabilities()
     return {};
 }
 
-void MultisampleTest::setup(RenderGraph& graph)
+void MultisampleTest::setup(Scene& scene, RenderGraph& graph)
 {
-    scene().loadFromFile("assets/sample/sponza.json");
+    scene.loadFromFile("assets/sample/sponza.json");
 
-    graph.addNode<SceneNode>(scene());
-    graph.addNode<PickingNode>(scene());
-    graph.addNode<DebugForwardNode>(scene());
+    graph.addNode<SceneNode>(scene);
+    graph.addNode<PickingNode>(scene);
+    graph.addNode<DebugForwardNode>(scene);
 
     graph.addNode("final", [](Registry& reg) {
         std::vector<vec2> fullScreenTriangle { { -1, -3 }, { -1, 1 }, { 3, 1 } };
@@ -78,8 +78,8 @@ void MultisampleTest::setup(RenderGraph& graph)
     });
 }
 
-void MultisampleTest::update(float elapsedTime, float deltaTime)
+void MultisampleTest::update(Scene& scene, float elapsedTime, float deltaTime)
 {
     const Input& input = Input::instance();
-    scene().camera().update(input, GlobalState::get().windowExtent(), deltaTime);
+    scene.camera().update(input, GlobalState::get().windowExtent(), deltaTime);
 }

@@ -29,43 +29,43 @@ std::vector<Backend::Capability> ShowcaseApp::optionalCapabilities()
     return {};
 }
 
-void ShowcaseApp::setup(RenderGraph& graph)
+void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
 {
     constexpr bool fastMode = false;
     constexpr bool enableDebugVisualizations = true;
 
-    scene().loadFromFile("assets/sample/sponza.json");
+    scene.loadFromFile("assets/sample/sponza.json");
 
     // TODO: Move to the scene json
-    SpotLight& testSpot = scene().addLight(std::make_unique<SpotLight>(vec3(1.0f, 0.25f, 0.25f), 25.0f, "assets/sample/ies/three-lobe-umbrella.ies", vec3(0, 1, 0), vec3(1, -1, 1)));
+    SpotLight& testSpot = scene.addLight(std::make_unique<SpotLight>(vec3(1.0f, 0.25f, 0.25f), 25.0f, "assets/sample/ies/three-lobe-umbrella.ies", vec3(0, 1, 0), vec3(1, -1, 1)));
     testSpot.setShadowMapSize({ 512, 512 });
 
-    if (!scene().hasProbeGrid()) {
-        scene().generateProbeGridFromBoundingBox();
+    if (!scene.hasProbeGrid()) {
+        scene.generateProbeGridFromBoundingBox();
     }
 
     // System & resource nodes
-    graph.addNode<SceneNode>(scene());
-    graph.addNode<GBufferNode>(scene());
+    graph.addNode<SceneNode>(scene);
+    graph.addNode<GBufferNode>(scene);
     if (!fastMode) {
-        graph.addNode<PickingNode>(scene());
+        graph.addNode<PickingNode>(scene);
     }
 
     // Prepass nodes
-    graph.addNode<ShadowMapNode>(scene());
-    graph.addNode<DiffuseGINode>(scene());
+    graph.addNode<ShadowMapNode>(scene);
+    graph.addNode<DiffuseGINode>(scene);
 
     // Main nodes (pre-exposure)
-    graph.addNode<ForwardRenderNode>(scene());
-    graph.addNode<SkyViewNode>(scene());
-    graph.addNode<BloomNode>(scene());
+    graph.addNode<ForwardRenderNode>(scene);
+    graph.addNode<SkyViewNode>(scene);
+    graph.addNode<BloomNode>(scene);
 
     if (!fastMode && enableDebugVisualizations) {
-        graph.addNode<DiffuseGIProbeDebug>(scene());
+        graph.addNode<DiffuseGIProbeDebug>(scene);
     }
 
     // Exposure & post-exposure additions (e.g. debug visualizations)
-    graph.addNode<ExposureNode>(scene());
+    graph.addNode<ExposureNode>(scene);
 
     graph.addNode("final", [](Registry& reg) {
         // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.
@@ -144,8 +144,8 @@ void ShowcaseApp::setup(RenderGraph& graph)
     });
 }
 
-void ShowcaseApp::update(float elapsedTime, float deltaTime)
+void ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
 {
     const Input& input = Input::instance();
-    scene().camera().update(input, GlobalState::get().windowExtent(), deltaTime);
+    scene.camera().update(input, GlobalState::get().windowExtent(), deltaTime);
 }

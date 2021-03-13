@@ -20,7 +20,7 @@ static constexpr bool vulkanVerboseDebugMessages = false;
 
 class VulkanBackend final : public Backend {
 public:
-    VulkanBackend(GLFWwindow*, App&);
+    VulkanBackend(GLFWwindow*, const AppSpecification& appSpecification);
     ~VulkanBackend() final;
 
     VulkanBackend(VulkanBackend&&) = delete;
@@ -36,8 +36,11 @@ public:
 
     bool hasActiveCapability(Capability) const override;
 
-    void shadersDidRecompile(const std::vector<std::string>& shaderNames) override;
-    bool executeFrame(double elapsedTime, double deltaTime) override;
+    Registry& getPersistentRegistry() override;
+
+    void renderGraphDidChange(RenderGraph&) override;
+    void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderGraph&) override;
+    bool executeFrame(const Scene&, RenderGraph&, double elapsedTime, double deltaTime) override;
 
     ///////////////////////////////////////////////////////////////////////////
     /// Backend-specific resource types
@@ -136,7 +139,7 @@ private:
     bool hasSupportForInstanceExtension(const std::string& name) const;
 
     std::unordered_map<Capability, bool> m_activeCapabilities;
-    bool collectAndVerifyCapabilitySupport(App&);
+    bool collectAndVerifyCapabilitySupport(const AppSpecification&);
 
     ///////////////////////////////////////////////////////////////////////////
     /// Command translation & resource management
@@ -146,7 +149,7 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     /// Drawing
 
-    void drawFrame(const AppState&, double elapsedTime, double deltaTime, uint32_t swapchainImageIndex);
+    void drawFrame(const Scene& scene, const RenderGraph&, const AppState&, double elapsedTime, double deltaTime, uint32_t swapchainImageIndex);
 
     ///////////////////////////////////////////////////////////////////////////
     /// Swapchain management
@@ -249,9 +252,7 @@ private:
 
     VmaAllocator m_memoryAllocator;
 
-    App& m_app;
-
-    std::unique_ptr<Registry> m_sceneRegistry {};
+    std::unique_ptr<Registry> m_persistentRegistry {};
     std::unique_ptr<Registry> m_nodeRegistry {};
     std::vector<std::unique_ptr<Registry>> m_frameRegistries {};
 
@@ -261,7 +262,6 @@ private:
     VkCommandPool m_transientCommandPool {};
 
     std::vector<VkCommandBuffer> m_frameCommandBuffers {};
-    std::unique_ptr<RenderGraph> m_renderGraph {};
 
     std::vector<std::unique_ptr<VulkanTexture>> m_swapchainMockColorTextures {};
     std::vector<std::unique_ptr<VulkanRenderTarget>> m_swapchainMockRenderTargets {};

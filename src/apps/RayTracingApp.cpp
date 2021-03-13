@@ -30,30 +30,30 @@ std::vector<Backend::Capability> RayTracingApp::optionalCapabilities()
     return {};
 }
 
-void RayTracingApp::setup(RenderGraph& graph)
+void RayTracingApp::setup(Scene& scene, RenderGraph& graph)
 {
     //scene().loadFromFile("assets/sample/sponza.json");
-    scene().loadFromFile("assets/sample/cornell-box.json");
+    scene.loadFromFile("assets/sample/cornell-box.json");
 
     bool rtxOn = true;
     //bool firstHit = true;
 
-    graph.addNode<SceneNode>(scene());
-    graph.addNode<PickingNode>(scene());
-    graph.addNode<GBufferNode>(scene());
-    graph.addNode<ShadowMapNode>(scene());
-    graph.addNode<ForwardRenderNode>(scene());
+    graph.addNode<SceneNode>(scene);
+    graph.addNode<PickingNode>(scene);
+    graph.addNode<GBufferNode>(scene);
+    graph.addNode<ShadowMapNode>(scene);
+    graph.addNode<ForwardRenderNode>(scene);
     if (rtxOn) {
-        graph.addNode<RTAccelerationStructures>(scene());
-        graph.addNode<RTAmbientOcclusion>(scene());
-        graph.addNode<RTReflectionsNode>(scene());
-        graph.addNode<RTDiffuseGINode>(scene());
+        graph.addNode<RTAccelerationStructures>(scene);
+        graph.addNode<RTAmbientOcclusion>(scene);
+        graph.addNode<RTReflectionsNode>(scene);
+        graph.addNode<RTDiffuseGINode>(scene);
         //if (firstHit) {
         //    graph.addNode<RTFirstHitNode>(scene());
         //}
     }
 
-    graph.addNode<SkyViewNode>(scene());
+    graph.addNode<SkyViewNode>(scene);
 
     graph.addNode("rt-combine", [](Registry& reg) {
         // TODO: Consider placing something like this in the Registry itself so we can just do value_or(reg.placeholderTexture())
@@ -83,7 +83,7 @@ void RayTracingApp::setup(RenderGraph& graph)
         };
     });
 
-    graph.addNode<ExposureNode>(scene());
+    graph.addNode<ExposureNode>(scene);
 
     graph.addNode("final", [](Registry& reg) {
         // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.
@@ -114,7 +114,7 @@ void RayTracingApp::setup(RenderGraph& graph)
     });
 }
 
-void RayTracingApp::update(float elapsedTime, float deltaTime)
+void RayTracingApp::update(Scene& scene, float elapsedTime, float deltaTime)
 {
     m_frameTimeAvg.report(deltaTime);
 
@@ -122,9 +122,9 @@ void RayTracingApp::update(float elapsedTime, float deltaTime)
     float avgFrameTime = m_frameTimeAvg.runningAverage() * 1000.0f;
     ImGui::Text("Frame time: %.2f ms/frame", avgFrameTime);
     if (ImGui::CollapsingHeader("Cameras"))
-        scene().cameraGui();
+        scene.cameraGui();
     ImGui::End();
 
     const Input& input = Input::instance();
-    scene().camera().update(input, GlobalState::get().windowExtent(), deltaTime);
+    scene.camera().update(input, GlobalState::get().windowExtent(), deltaTime);
 }

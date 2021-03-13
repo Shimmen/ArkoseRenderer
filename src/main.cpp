@@ -54,7 +54,7 @@ GLFWwindow* createWindow(Backend::Type backendType, WindowType windowType, const
     return window;
 }
 
-std::unique_ptr<Backend> createBackend(Backend::Type backendType, GLFWwindow* window, App& app)
+std::unique_ptr<Backend> createBackend(Backend::Type backendType, GLFWwindow* window, const Backend::AppSpecification& appSpecification)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -62,7 +62,7 @@ std::unique_ptr<Backend> createBackend(Backend::Type backendType, GLFWwindow* wi
 
     switch (backendType) {
     case Backend::Type::Vulkan:
-        backend = std::make_unique<VulkanBackend>(window, app);
+        backend = std::make_unique<VulkanBackend>(window, appSpecification);
         break;
     }
 
@@ -81,50 +81,62 @@ int main(int argc, char** argv)
     GLFWwindow* window = createWindow(backendType, WindowType::Windowed, { 1920, 1080 });
     Input::registerWindow(window);
 
-    {
-        auto app = std::make_unique<SelectedApp>();
-        auto backend = createBackend(backendType, window, *app);
+    auto app = std::make_unique<SelectedApp>();
 
-        LogInfo("ArkoseRenderer: main loop begin.\n");
+    Backend::AppSpecification appSpec;
+    appSpec.requiredCapabilities = app->requiredCapabilities();
+    appSpec.optionalCapabilities = app->optionalCapabilities();
+    auto backend = createBackend(backendType, window, appSpec);
 
-        std::mutex shaderFileWatchMutex {};
-        std::vector<std::string> changedShaderFiles {};
-        ShaderManager::instance().startFileWatching(1'000, [&](const std::vector<std::string>& changedFiles) {
-            shaderFileWatchMutex.lock();
-            changedShaderFiles = changedFiles;
+    auto scene = std::make_unique<Scene>(backend->getPersistentRegistry());
+    auto renderGraph = std::make_unique<RenderGraph>();
+    app->setup(*scene, *renderGraph);
+    backend->renderGraphDidChange(*renderGraph);
+
+    LogInfo("ArkoseRenderer: main loop begin.\n");
+
+    std::mutex shaderFileWatchMutex {};
+    std::vector<std::string> changedShaderFiles {};
+    ShaderManager::instance().startFileWatching(1'000, [&](const std::vector<std::string>& changedFiles) {
+        shaderFileWatchMutex.lock();
+        changedShaderFiles = changedFiles;
+        shaderFileWatchMutex.unlock();
+    });
+
+    glfwSetTime(0.0);
+    double lastTime = 0.0;
+    while (!glfwWindowShouldClose(window)) {
+
+        if (shaderFileWatchMutex.try_lock()) {
+            if (changedShaderFiles.size() > 0) {
+                backend->shadersDidRecompile(changedShaderFiles, *renderGraph);
+                changedShaderFiles.clear();
+            }
             shaderFileWatchMutex.unlock();
-        });
-
-        glfwSetTime(0.0);
-        double lastTime = 0.0;
-        while (!glfwWindowShouldClose(window)) {
-
-            if (shaderFileWatchMutex.try_lock()) {
-                if (changedShaderFiles.size() > 0) {
-                    backend->shadersDidRecompile(changedShaderFiles);
-                    changedShaderFiles.clear();
-                }
-                shaderFileWatchMutex.unlock();
-            }
-
-            Input::preEventPoll();
-            glfwPollEvents();
-
-            double elapsedTime = glfwGetTime();
-            double deltaTime = elapsedTime - lastTime;
-            lastTime = elapsedTime;
-
-            bool frameExecuted = false;
-            while (!frameExecuted) {
-                frameExecuted = backend->executeFrame(elapsedTime, deltaTime);
-            }
-
-            END_OF_FRAME_PROFILE_MARKER();
         }
 
-        ShaderManager::instance().stopFileWatching();
-        LogInfo("ArkoseRenderer: main loop end.\n");
+        Input::preEventPoll();
+        glfwPollEvents();
+
+        double elapsedTime = glfwGetTime();
+        double deltaTime = elapsedTime - lastTime;
+        lastTime = elapsedTime;
+
+        app->update(*scene, elapsedTime, deltaTime);
+
+        bool frameExecuted = false;
+        while (!frameExecuted) {
+            frameExecuted = backend->executeFrame(*scene, *renderGraph, elapsedTime, deltaTime);
+        }
+
+        END_OF_FRAME_PROFILE_MARKER();
     }
+
+    ShaderManager::instance().stopFileWatching();
+    LogInfo("ArkoseRenderer: main loop end.\n");
+
+    // Best to make sure the backend is destroyed before the window as it relies on it
+    backend.reset();
 
     glfwDestroyWindow(window);
     glfwTerminate();

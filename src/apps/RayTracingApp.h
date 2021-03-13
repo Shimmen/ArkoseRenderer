@@ -11,8 +11,8 @@ public:
     std::vector<Backend::Capability> requiredCapabilities() override;
     std::vector<Backend::Capability> optionalCapabilities() override;
 
-    void setup(RenderGraph&) override;
-    void update(float elapsedTime, float deltaTime) override;
+    void setup(Scene&, RenderGraph&) override;
+    void update(Scene&, float elapsedTime, float deltaTime) override;
 
     AvgAccumulator<float, 60> m_frameTimeAvg {};
 };

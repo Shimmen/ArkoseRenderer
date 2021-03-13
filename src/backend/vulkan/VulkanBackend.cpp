@@ -26,18 +26,14 @@
 
 static bool s_unhandledWindowResize = false;
 
-VulkanBackend::VulkanBackend(GLFWwindow* window, App& app)
+VulkanBackend::VulkanBackend(GLFWwindow* window, const AppSpecification& appSpecification)
     : m_window(window)
-    , m_app(app)
 {
-    m_sceneRegistry = std::make_unique<Registry>(*this);
-    app.createScene(badge(), *m_sceneRegistry);
-
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
-    GlobalState::getMutable(badge()).updateWindowExtent({ width, height });
+    GlobalState::getMutable().updateWindowExtent({ width, height });
     glfwSetFramebufferSizeCallback(window, static_cast<GLFWframebuffersizefun>([](GLFWwindow* window, int width, int height) {
-                                       GlobalState::getMutable(badge()).updateWindowExtent({ width, height });
+                                       GlobalState::getMutable().updateWindowExtent({ width, height });
                                        s_unhandledWindowResize = true;
                                    }));
 
@@ -94,7 +90,7 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, App& app)
             m_availableExtensions.insert(ext.extensionName);
     }
 
-    if (!collectAndVerifyCapabilitySupport(app))
+    if (!collectAndVerifyCapabilitySupport(appSpecification))
         LogErrorAndExit("VulkanBackend: could not verify support for all capabilities required by the app\n");
 
     m_device = createDevice(requestedLayers, m_physicalDevice);
@@ -151,9 +147,7 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, App& app)
 
     setupDearImgui();
 
-    m_renderGraph = std::make_unique<RenderGraph>();
-    m_app.setup(*m_renderGraph);
-    reconstructRenderGraphResources(*m_renderGraph);
+    m_persistentRegistry = std::make_unique<Registry>(*this);
 }
 
 VulkanBackend::~VulkanBackend()
@@ -167,7 +161,7 @@ VulkanBackend::~VulkanBackend()
 
     m_frameRegistries.clear();
     m_nodeRegistry.reset();
-    m_sceneRegistry.reset();
+    m_persistentRegistry.reset();
 
     destroySwapchain();
 
@@ -234,7 +228,7 @@ bool VulkanBackend::hasSupportForInstanceExtension(const std::string& name) cons
     return true;
 }
 
-bool VulkanBackend::collectAndVerifyCapabilitySupport(App& app)
+bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& appSpecification)
 {
     VkPhysicalDeviceFeatures2 features2 { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
     const VkPhysicalDeviceFeatures& features = features2.features;
@@ -281,7 +275,7 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(App& app)
         allRequiredSupported = false;
     }
 
-    for (auto& cap : app.requiredCapabilities()) {
+    for (auto& cap : appSpecification.requiredCapabilities) {
         if (isSupported(cap)) {
             m_activeCapabilities[cap] = true;
         } else {
@@ -290,7 +284,7 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(App& app)
         }
     }
 
-    for (auto& cap : app.optionalCapabilities()) {
+    for (auto& cap : appSpecification.optionalCapabilities) {
         if (isSupported(cap)) {
             m_activeCapabilities[cap] = true;
         } else {
@@ -693,7 +687,7 @@ VkPipelineCache VulkanBackend::createAndLoadPipelineCacheFromDisk() const
     if (vkCreatePipelineCache(device(), &pipelineCacheInfo, nullptr, &pipelineCache) != VK_SUCCESS) {
         LogErrorAndExit("VulkanBackend: could not create pipeline cache, exiting.\n");
     }
-    
+
     return pipelineCache;
 }
 
@@ -1162,7 +1156,7 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, uint32_t
     swapchainTexture.currentLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 }
 
-bool VulkanBackend::executeFrame(double elapsedTime, double deltaTime)
+bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, double elapsedTime, double deltaTime)
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
@@ -1189,7 +1183,7 @@ bool VulkanBackend::executeFrame(double elapsedTime, double deltaTime)
         // Since we couldn't acquire an image to draw to, recreate the swapchain and report that it didn't work
         Extent2D newWindowExtent = recreateSwapchain();
         appState = appState.updateWindowExtent(newWindowExtent);
-        reconstructRenderGraphResources(*m_renderGraph);
+        reconstructRenderGraphResources(renderGraph);
         return false;
     }
     if (acquireResult == VK_SUBOPTIMAL_KHR) {
@@ -1206,7 +1200,7 @@ bool VulkanBackend::executeFrame(double elapsedTime, double deltaTime)
     currentColorTexture.currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     m_swapchainDepthTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    drawFrame(appState, elapsedTime, deltaTime, swapchainImageIndex);
+    drawFrame(scene, renderGraph, appState, elapsedTime, deltaTime, swapchainImageIndex);
 
     submitQueue(swapchainImageIndex, &m_imageAvailableSemaphores[currentFrameMod], &m_renderFinishedSemaphores[currentFrameMod], &m_inFlightFrameFences[currentFrameMod]);
 
@@ -1225,7 +1219,7 @@ bool VulkanBackend::executeFrame(double elapsedTime, double deltaTime)
 
         if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || s_unhandledWindowResize) {
             recreateSwapchain();
-            reconstructRenderGraphResources(*m_renderGraph);
+            reconstructRenderGraphResources(renderGraph);
         } else if (presentResult != VK_SUCCESS) {
             LogError("VulkanBackend::executeFrame(): could not present swapchain (frame %u).\n", m_currentFrameIndex);
         }
@@ -1235,17 +1229,13 @@ bool VulkanBackend::executeFrame(double elapsedTime, double deltaTime)
     return true;
 }
 
-void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, double deltaTime, uint32_t swapchainImageIndex)
+void VulkanBackend::drawFrame(const Scene& scene, const RenderGraph& renderGraph, const AppState& appState, double elapsedTime, double deltaTime, uint32_t swapchainImageIndex)
 {
     SCOPED_PROFILE_ZONE_BACKEND();
-
-    ASSERT(m_renderGraph);
 
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
-
-    m_app.update(float(elapsedTime), float(deltaTime));
 
     VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     commandBufferBeginInfo.flags = 0u;
@@ -1260,7 +1250,7 @@ void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, doub
     VulkanCommandList cmdList { *this, commandBuffer };
 
     ImGui::Begin("Nodes (in order)");
-    m_renderGraph->forEachNodeInResolvedOrder(associatedRegistry, [&](const std::string& nodeName, NodeTimer& nodeTimer, const RenderGraphNode::ExecuteCallback& nodeExecuteCallback) {
+    renderGraph.forEachNodeInResolvedOrder(associatedRegistry, [&](const std::string& nodeName, NodeTimer& nodeTimer, const RenderGraphNode::ExecuteCallback& nodeExecuteCallback) {
         double cpuTime = nodeTimer.averageCpuTime() * 1000.0;
         std::string title = isnan(cpuTime)
             ? fmt::format("{} | CPU: - ms", nodeName)
@@ -1294,7 +1284,8 @@ void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, doub
         else if (input.wasKeyPressed(Key::Y))
             operation = ImGuizmo::SCALE;
 
-        Model* selectedModel = m_app.scene().selectedModel();
+        // TODO const_cast: This stuff shouldn't happen in here anyway and it shouldn't need to modify the scene..
+        Model* selectedModel = const_cast<Scene&>(scene).selectedModel();
         if (selectedModel) {
 
             ImGuizmo::BeginFrame();
@@ -1305,8 +1296,8 @@ void VulkanBackend::drawFrame(const AppState& appState, double elapsedTime, doub
             //  Maybe in the future we want to be able to modify meshes too?
             ImGuizmo::MODE mode = ImGuizmo::LOCAL;
 
-            mat4 viewMatrix = m_app.scene().camera().viewMatrix();
-            mat4 projMatrix = m_app.scene().camera().projectionMatrix();
+            mat4 viewMatrix = scene.camera().viewMatrix();
+            mat4 projMatrix = scene.camera().projectionMatrix();
 
             // Silly stuff, since ImGuizmo doesn't seem to like my projection matrix..
             projMatrix.y = -projMatrix.y;
@@ -1432,12 +1423,23 @@ void VulkanBackend::setupWindowRenderTargets()
     }
 }
 
-void VulkanBackend::shadersDidRecompile(const std::vector<std::string>& shaderNames)
+Registry& VulkanBackend::getPersistentRegistry()
+{
+    ASSERT(m_persistentRegistry);
+    return *m_persistentRegistry;
+}
+
+void VulkanBackend::renderGraphDidChange(RenderGraph& renderGraph)
+{
+    reconstructRenderGraphResources(renderGraph);
+}
+
+void VulkanBackend::shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderGraph& renderGraph)
 {
     // Maybe figure out what nodes needs updating and only reconstruct that node & nodes depending on it?
     // On the other hand, creatating these resources should be very fast anyway so maybe shouldn't bother.
-    if (m_renderGraph && shaderNames.size() > 0) {
-        reconstructRenderGraphResources(*m_renderGraph);
+    if (shaderNames.size() > 0) {
+        reconstructRenderGraphResources(renderGraph);
     }
 }
 
