@@ -14,6 +14,7 @@
 #include "utility/GlobalState.h"
 #include "utility/Input.h"
 #include "utility/Logging.h"
+#include "utility/Profiling.h"
 #include <imgui.h>
 
 #include "utility/IESProfile.h"
@@ -31,6 +32,8 @@ std::vector<Backend::Capability> ShowcaseApp::optionalCapabilities()
 
 void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
 {
+    SCOPED_PROFILE_ZONE();
+
     constexpr bool fastMode = false;
     constexpr bool enableDebugVisualizations = true;
 
