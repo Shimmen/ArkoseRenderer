@@ -109,25 +109,25 @@ void VulkanBuffer::setName(const std::string& name)
     }
 }
 
-void VulkanBuffer::updateData(const std::byte* data, size_t updateSize)
+void VulkanBuffer::updateData(const std::byte* data, size_t updateSize, size_t offset)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     if (updateSize == 0)
         return;
-    if (updateSize > size())
+    if (offset + updateSize > size())
         LogErrorAndExit("Attempt at updating buffer outside of bounds!\n");
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
     switch (memoryHint()) {
     case Buffer::MemoryHint::GpuOptimal:
-        if (!vulkanBackend.setBufferDataUsingStagingBuffer(buffer, data, updateSize)) {
+        if (!vulkanBackend.setBufferDataUsingStagingBuffer(buffer, (uint8_t*)data, updateSize, offset)) {
             LogError("Could not update the data of GPU-optimal buffer\n");
         }
         break;
     case Buffer::MemoryHint::TransferOptimal:
-        if (!vulkanBackend.setBufferMemoryUsingMapping(allocation, data, updateSize)) {
+        if (!vulkanBackend.setBufferMemoryUsingMapping(allocation, (uint8_t*)data, updateSize, offset)) {
             LogError("Could not update the data of transfer-optimal buffer\n");
         }
         break;
@@ -136,6 +136,21 @@ void VulkanBuffer::updateData(const std::byte* data, size_t updateSize)
         break;
     case Buffer::MemoryHint::Readback:
         LogError("Can't update buffer with Readback memory hint, ignoring\n");
+        break;
+    }
+}
+
+void VulkanBuffer::reallocateWithSize(size_t newSize, ReallocateStrategy strategy)
+{
+    if (strategy == ReallocateStrategy::CopyExistingData && newSize < size())
+        LogErrorAndExit("Can't reallocate buffer ReallocateStrategy::CopyExistingData if the new size is smaller than the current size!");
+
+    switch (strategy) {
+    case ReallocateStrategy::DiscardExistingData:
+        NOT_YET_IMPLEMENTED();
+        break;
+    case ReallocateStrategy::CopyExistingData:
+        NOT_YET_IMPLEMENTED();
         break;
     }
 }
@@ -492,7 +507,7 @@ void VulkanTexture::setPixelData(vec4 pixel)
         LogError("Could not create staging buffer for updating image with pixel-data.\n");
     }
 
-    if (!vulkanBackend.setBufferMemoryUsingMapping(stagingAllocation, isHdr ? (void*)value_ptr(pixel) : (void*)pixels, pixelsSize)) {
+    if (!vulkanBackend.setBufferMemoryUsingMapping(stagingAllocation, isHdr ? (uint8_t*)value_ptr(pixel) : (uint8_t*)pixels, pixelsSize)) {
         LogError("Could not set the buffer memory for the staging buffer for updating image with pixel-data.\n");
         return;
     }
@@ -567,7 +582,7 @@ void VulkanTexture::setData(const void* data, size_t size)
         LogError("VulkanBackend::updateTexture(): could not create staging buffer.\n");
     }
 
-    if (!vulkanBackend.setBufferMemoryUsingMapping(stagingAllocation, data, size)) {
+    if (!vulkanBackend.setBufferMemoryUsingMapping(stagingAllocation, (uint8_t*)data, size)) {
         LogError("VulkanBackend::updateTexture(): could set the buffer memory for the staging buffer.\n");
         return;
     }
@@ -1815,7 +1830,7 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
             LogErrorAndExit("Error trying to create buffer for the bottom level acceeration structure transforms.\n");
         }
 
-        if (!vulkanBackend.setBufferMemoryUsingMapping(transformBufferAllocation, transforms.data(), totalSize)) {
+        if (!vulkanBackend.setBufferMemoryUsingMapping(transformBufferAllocation, (uint8_t*)transforms.data(), totalSize)) {
             LogErrorAndExit("Error trying to copy data to the bottom level acceeration structure transform buffer.\n");
         }
     }
@@ -2222,7 +2237,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
             LogErrorAndExit("Error trying to create buffer for the shader binding table.\n");
         }
 
-        if (!vulkanBackend.setBufferMemoryUsingMapping(sbtBufferAllocation, sbtData.data(), sbtSize)) {
+        if (!vulkanBackend.setBufferMemoryUsingMapping(sbtBufferAllocation, (uint8_t*)sbtData.data(), sbtSize)) {
             LogErrorAndExit("Error trying to copy data to the shader binding table.\n");
         }
     }

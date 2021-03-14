@@ -363,14 +363,21 @@ struct Buffer : public Resource {
     Usage usage() const { return m_usage; }
     MemoryHint memoryHint() const { return m_memoryHint; }
 
-    virtual void updateData(const std::byte* data, size_t size) = 0;
+    virtual void updateData(const std::byte* data, size_t size, size_t offset = 0) = 0;
 
     template<typename T>
-    void updateData(const T* data, size_t size)
+    void updateData(const T* data, size_t size, size_t offset = 0)
     {
         auto* byteData = reinterpret_cast<const std::byte*>(data);
-        updateData(byteData, size);
+        updateData(byteData, size, offset);
     }
+
+    enum class ReallocateStrategy {
+        CopyExistingData,
+        DiscardExistingData,
+    };
+
+    virtual void reallocateWithSize(size_t newSize, ReallocateStrategy) = 0;
 
 private:
     size_t m_size { 0 };

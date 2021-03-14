@@ -1522,12 +1522,12 @@ bool VulkanBackend::issueSingleTimeCommand(const std::function<void(VkCommandBuf
     return true;
 }
 
-bool VulkanBackend::copyBuffer(VkBuffer source, VkBuffer destination, VkDeviceSize size, VkCommandBuffer* commandBuffer) const
+bool VulkanBackend::copyBuffer(VkBuffer source, VkBuffer destination, size_t size, size_t dstOffset, VkCommandBuffer* commandBuffer) const
 {
     VkBufferCopy bufferCopyRegion = {};
     bufferCopyRegion.size = size;
     bufferCopyRegion.srcOffset = 0;
-    bufferCopyRegion.dstOffset = 0;
+    bufferCopyRegion.dstOffset = dstOffset;
 
     if (commandBuffer) {
         vkCmdCopyBuffer(*commandBuffer, source, destination, 1, &bufferCopyRegion);
@@ -1544,7 +1544,7 @@ bool VulkanBackend::copyBuffer(VkBuffer source, VkBuffer destination, VkDeviceSi
     return true;
 }
 
-bool VulkanBackend::setBufferMemoryUsingMapping(VmaAllocation allocation, const void* data, VkDeviceSize size)
+bool VulkanBackend::setBufferMemoryUsingMapping(VmaAllocation allocation, const uint8_t* data, size_t size, size_t offset)
 {
     if (size == 0) {
         return true;
@@ -1555,12 +1555,16 @@ bool VulkanBackend::setBufferMemoryUsingMapping(VmaAllocation allocation, const 
         LogError("VulkanBackend::setBufferMemoryUsingMapping(): could not map staging buffer.\n");
         return false;
     }
-    std::memcpy(mappedMemory, data, size);
+
+    uint8_t* dst = ((uint8_t*)mappedMemory) + offset;
+    std::memcpy(dst, data, size);
+
     vmaUnmapMemory(globalAllocator(), allocation);
+
     return true;
 }
 
-bool VulkanBackend::setBufferDataUsingStagingBuffer(VkBuffer buffer, const void* data, VkDeviceSize size, VkCommandBuffer* commandBuffer)
+bool VulkanBackend::setBufferDataUsingStagingBuffer(VkBuffer buffer, const uint8_t* data, size_t size, size_t offset, VkCommandBuffer* commandBuffer)
 {
     if (size == 0) {
         return true;
@@ -1584,12 +1588,12 @@ bool VulkanBackend::setBufferDataUsingStagingBuffer(VkBuffer buffer, const void*
         vmaDestroyBuffer(globalAllocator(), stagingBuffer, stagingAllocation);
     });
 
-    if (!setBufferMemoryUsingMapping(stagingAllocation, data, size)) {
+    if (!setBufferMemoryUsingMapping(stagingAllocation, data, size, 0)) {
         LogError("VulkanBackend::setBufferDataUsingStagingBuffer(): could set staging buffer memory.\n");
         return false;
     }
 
-    if (!copyBuffer(stagingBuffer, buffer, size, commandBuffer)) {
+    if (!copyBuffer(stagingBuffer, buffer, size, offset, commandBuffer)) {
         LogError("VulkanBackend::setBufferDataUsingStagingBuffer(): could not copy from staging buffer to buffer.\n");
         return false;
     }

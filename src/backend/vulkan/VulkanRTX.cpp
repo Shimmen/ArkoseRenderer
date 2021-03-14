@@ -99,7 +99,7 @@ VkBuffer VulkanRTX::createInstanceBuffer(const std::vector<RTGeometryInstance>& 
         LogError("Could not create RTX instance buffer.\n");
     }
 
-    if (!m_backend.setBufferMemoryUsingMapping(allocation, instanceData.data(), totalSize)) {
+    if (!m_backend.setBufferMemoryUsingMapping(allocation, (uint8_t*)instanceData.data(), totalSize)) {
         LogError("Could not set RTX instance instance buffer data.\n");
     }
 
