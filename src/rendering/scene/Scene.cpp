@@ -1,5 +1,6 @@
 #include "Scene.h"
 
+#include "backend/Resources.h"
 #include "rendering/Registry.h"
 #include "rendering/scene/models/GltfModel.h"
 #include "utility/FileIO.h"
@@ -266,4 +267,92 @@ void Scene::generateProbeGridFromBoundingBox()
     grid.gridDimensions = Extent3D(counts[0], counts[1], counts[2]);
     grid.probeSpacing = spacing;
     setProbeGrid(grid);
+}
+
+DrawCall Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh& mesh, const VertexLayout& layout)
+{
+    // TODO: Maybe ensure we haven't already fitted this mesh+layout combo?
+
+    DrawCall drawCall {};
+    drawCall.type = DrawCall::Type::Indexed;
+
+    // Fit index data
+    {
+        std::vector<uint32_t> indexData = mesh.indexData();
+        size_t requiredAdditionalSize = indexData.size() * sizeof(uint32_t);
+
+        ResizableBuffer& indexBuffer = m_global32BitIndexBuffer;
+        if (indexBuffer.buffer == nullptr)
+            indexBuffer.buffer = &m_registry.createBuffer(std::max(InitialIndexBufferSize, requiredAdditionalSize), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+
+        size_t remainingSize = indexBuffer.buffer->size() - indexBuffer.offsetToNextFree;
+
+        if (requiredAdditionalSize > remainingSize) {
+            size_t currentSize = indexBuffer.buffer->size();
+            size_t newSize = std::max(2 * currentSize, currentSize + requiredAdditionalSize);
+            indexBuffer.buffer->reallocateWithSize(newSize, Buffer::ReallocateStrategy::CopyExistingData);
+        }
+
+        int firstIndex = indexBuffer.offsetToNextFree / sizeof(uint32_t);
+        indexBuffer.buffer->updateData(indexData.data(), requiredAdditionalSize, indexBuffer.offsetToNextFree);
+        indexBuffer.offsetToNextFree += requiredAdditionalSize;
+
+        drawCall.indexBuffer = indexBuffer.buffer;
+        drawCall.indexCount = indexData.size();
+        drawCall.indexType = IndexType::UInt32;
+        drawCall.firstIndex = firstIndex;
+    }
+
+    // Fit vertex data
+    {
+        std::vector<uint8_t> vertexData = mesh.vertexData(layout);
+        size_t requiredAdditionalSize = vertexData.size();
+        
+        auto entry = m_globalVertexBuffers.find(layout);
+        if (entry == m_globalVertexBuffers.end()) {
+            auto buffer = std::make_unique<ResizableBuffer>();
+            buffer->buffer = &m_registry.createBuffer(std::max(InitialVertexBufferSize, requiredAdditionalSize), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+            m_globalVertexBuffers[layout] = std::move(buffer);
+        }
+
+        ResizableBuffer& vertexBuffer = *m_globalVertexBuffers[layout];
+
+        size_t remainingSize = vertexBuffer.buffer->size() - vertexBuffer.offsetToNextFree;
+        if (requiredAdditionalSize > remainingSize) {
+            size_t currentSize = vertexBuffer.buffer->size();
+            size_t newSize = std::max(2 * currentSize, currentSize + requiredAdditionalSize);
+            vertexBuffer.buffer->reallocateWithSize(newSize, Buffer::ReallocateStrategy::CopyExistingData);
+        }
+
+        int vertexOffset = vertexBuffer.offsetToNextFree / layout.packedVertexSize();
+        vertexBuffer.buffer->updateData(vertexData.data(), requiredAdditionalSize, vertexBuffer.offsetToNextFree);
+        vertexBuffer.offsetToNextFree += requiredAdditionalSize;
+
+        drawCall.vertexBuffer = vertexBuffer.buffer;
+        drawCall.vertexCount = mesh.vertexCountForLayout(layout);
+        drawCall.vertexOffset = vertexOffset;
+    }
+
+    return drawCall;
+}
+
+Buffer& Scene::globalVertexBufferForLayout(const VertexLayout& layout) const
+{
+    auto entry = m_globalVertexBuffers.find(layout);
+    if (entry == m_globalVertexBuffers.end())
+        LogErrorAndExit("Can't get vertex buffer for layout since it has not been created! Please ensureDrawCall for at least one mesh before calling this.\n");
+    return *entry->second->buffer;
+}
+
+Buffer& Scene::globalIndexBuffer() const
+{
+    if (m_global32BitIndexBuffer.buffer == nullptr)
+        LogErrorAndExit("Can't get global index buffer since it has not been created! Please ensureDrawCall for at least one indexed mesh before calling this.\n");
+    return *m_global32BitIndexBuffer.buffer;
+}
+
+IndexType Scene::globalIndexBufferType() const
+{
+    // For simplicity we keep a single 32-bit index buffer, since every mesh should fit in there.
+    return IndexType::UInt32;
 }

@@ -47,8 +47,7 @@ RenderGraphNode::ExecuteCallback DebugForwardNode::constructFrame(Registry& reg)
 
     return [&](const AppState& appState, CommandList& cmdList) {
         m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-            mesh.ensureIndexBuffer();
-            mesh.ensureVertexBuffer(m_vertexLayout);
+            mesh.ensureDrawCall(m_vertexLayout, m_scene);
         });
 
         cmdList.beginRendering(renderState, ClearColor(0, 0, 0, 0), 1.0f);
@@ -56,8 +55,9 @@ RenderGraphNode::ExecuteCallback DebugForwardNode::constructFrame(Registry& reg)
         cmdList.bindSet(objectBindingSet, 1);
 
         m_scene.forEachMesh([&](size_t meshIndex, Mesh& mesh) {
-            const Buffer& vertexBuffer = mesh.vertexBuffer(m_vertexLayout);
-            cmdList.drawIndexed(vertexBuffer, mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(), meshIndex);
+            DrawCall drawCall = mesh.getDrawCall(m_vertexLayout, m_scene);
+            drawCall.firstInstance = meshIndex; // TODO: Put this in some buffer instead!
+            cmdList.issueDrawCall(drawCall);
         });
     };
 }

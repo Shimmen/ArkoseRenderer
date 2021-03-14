@@ -10,6 +10,7 @@
 #include <unordered_map>
 
 class Model;
+class Scene;
 
 class Mesh {
 public:
@@ -29,11 +30,11 @@ public:
     virtual moos::aabb3 boundingBox() const = 0;
     virtual geometry::Sphere boundingSphere() const = 0;
 
-    void ensureVertexBuffer(const VertexLayout&);
-    const Buffer& vertexBuffer(const VertexLayout&);
+    void ensureDrawCall(const VertexLayout&, Scene&);
+    const DrawCall& getDrawCall(const VertexLayout&, Scene&);
 
-    void ensureIndexBuffer();
-    const Buffer& indexBuffer();
+    std::vector<uint8_t> vertexData(const VertexLayout&) const;
+    size_t vertexCountForLayout(const VertexLayout&) const;
 
     virtual const std::vector<vec3>& positionData() const = 0;
     virtual const std::vector<vec2>& texcoordData() const = 0;
@@ -53,9 +54,7 @@ protected:
     mutable std::optional<std::vector<vec4>> m_tangentData;
     mutable std::optional<std::vector<uint32_t>> m_indexData;
 
-    // GPU Buffer cache
-    mutable const Buffer* m_indexBuffer { nullptr };
-    mutable std::unordered_map<VertexLayout, const Buffer*> m_vertexBuffers;
+    mutable std::unordered_map<VertexLayout, DrawCall> m_drawCalls;
 
     virtual std::unique_ptr<Material> createMaterial() = 0;
     std::unique_ptr<Material> m_material {};

@@ -29,6 +29,10 @@ public:
     virtual void draw(Buffer& vertexBuffer, uint32_t vertexCount) = 0;
     virtual void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex = 0) = 0;
 
+    virtual void bindVertexBuffer(const Buffer&) = 0;
+    virtual void bindIndexBuffer(const Buffer&, IndexType) = 0;
+    virtual void issueDrawCall(const DrawCall&) = 0;
+
     virtual void rebuildTopLevelAcceratationStructure(TopLevelAS&) = 0;
     virtual void traceRays(Extent2D) = 0;
 

@@ -804,12 +804,7 @@ void VulkanCommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount)
         LogErrorAndExit("draw: no active render state!\n");
     }
 
-    VkBuffer vertBuffer = static_cast<VulkanBuffer&>(vertexBuffer).buffer;
-
-    VkBuffer vertexBuffers[] = { vertBuffer };
-    VkDeviceSize offsets[] = { 0 };
-
-    vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, vertexBuffers, offsets);
+    bindVertexBuffer(vertexBuffer);
     vkCmdDraw(m_commandBuffer, vertexCount, 1, 0, 0);
 }
 
@@ -821,29 +816,83 @@ void VulkanCommandList::drawIndexed(const Buffer& vertexBuffer, const Buffer& in
         LogErrorAndExit("drawIndexed: no active render state!\n");
     }
 
-    VkBuffer vertBuffer = static_cast<const VulkanBuffer&>(vertexBuffer).buffer;
-    VkBuffer idxBuffer = static_cast<const VulkanBuffer&>(indexBuffer).buffer;
+    bindVertexBuffer(vertexBuffer);
+    bindIndexBuffer(indexBuffer, indexType);
+    vkCmdDrawIndexed(m_commandBuffer, indexCount, 1, 0, 0, instanceIndex);
+}
 
-    VkBuffer vertexBuffers[] = { vertBuffer };
+void VulkanCommandList::bindVertexBuffer(const Buffer& vertexBuffer)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    if (vertexBuffer.usage() != Buffer::Usage::Vertex)
+        LogErrorAndExit("bindVertexBuffer: not a vertex buffer!\n");
+
+    if (m_boundVertexBuffer == &vertexBuffer)
+        return;
+
+    VkBuffer vulkanBuffer = static_cast<const VulkanBuffer&>(vertexBuffer).buffer;
+
+    VkBuffer vertexBuffers[] = { vulkanBuffer };
     VkDeviceSize offsets[] = { 0 };
 
-    VkIndexType vkIndexType;
+    vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, vertexBuffers, offsets);
+    m_boundVertexBuffer = &vertexBuffer;
+}
+
+void VulkanCommandList::bindIndexBuffer(const Buffer& indexBuffer, IndexType indexType)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    if (indexBuffer.usage() != Buffer::Usage::Index)
+        LogErrorAndExit("bindIndexBuffer: not an index buffer!\n");
+
+    if (m_boundIndexBuffer == &indexBuffer) {
+        ASSERT(m_boundIndexBufferType == indexType);
+        return;
+    }
+
+    VkIndexType vulkanIndexType;
     switch (indexType) {
     case IndexType::UInt16:
-        vkIndexType = VK_INDEX_TYPE_UINT16;
+        vulkanIndexType = VK_INDEX_TYPE_UINT16;
         break;
     case IndexType::UInt32:
-        vkIndexType = VK_INDEX_TYPE_UINT32;
+        vulkanIndexType = VK_INDEX_TYPE_UINT32;
         break;
     default:
-        vkIndexType = VK_INDEX_TYPE_MAX_ENUM;
         ASSERT_NOT_REACHED();
         break;
     }
 
-    vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, vertexBuffers, offsets);
-    vkCmdBindIndexBuffer(m_commandBuffer, idxBuffer, 0, vkIndexType);
-    vkCmdDrawIndexed(m_commandBuffer, indexCount, 1, 0, 0, instanceIndex);
+    VkBuffer vulkanBuffer = static_cast<const VulkanBuffer&>(indexBuffer).buffer;
+    vkCmdBindIndexBuffer(m_commandBuffer, vulkanBuffer, 0, vulkanIndexType);
+
+    m_boundIndexBuffer = &indexBuffer;
+    m_boundIndexBufferType = indexType;
+}
+
+void VulkanCommandList::issueDrawCall(const DrawCall& drawCall)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    if (!activeRenderState)
+        LogErrorAndExit("issueDrawCall: no active render state!\n");
+    if (drawCall.vertexBuffer != m_boundVertexBuffer)
+        LogErrorAndExit("issueDrawCall: bind the correct vertex buffer before calling this!\n");
+    if (drawCall.indexBuffer != m_boundIndexBuffer)
+        LogErrorAndExit("issueDrawCall: bind the correct index buffer before calling this!\n");
+
+    ASSERT(drawCall.instanceCount > 0);
+
+    switch (drawCall.type) {
+    case DrawCall::Type::NonIndexed:
+        vkCmdDraw(m_commandBuffer, drawCall.vertexCount, drawCall.instanceCount, drawCall.firstVertex, drawCall.firstInstance);
+        break;
+    case DrawCall::Type::Indexed:
+        vkCmdDrawIndexed(m_commandBuffer, drawCall.indexCount, drawCall.instanceCount, drawCall.firstIndex, drawCall.vertexOffset, drawCall.firstInstance);
+        break;
+    }
 }
 
 void VulkanCommandList::rebuildTopLevelAcceratationStructure(TopLevelAS& tlas)

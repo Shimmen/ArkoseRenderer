@@ -24,6 +24,10 @@ public:
     void draw(Buffer& vertexBuffer, uint32_t vertexCount) override;
     void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex) override;
 
+    void bindVertexBuffer(const Buffer&) override;
+    void bindIndexBuffer(const Buffer&, IndexType) override;
+    void issueDrawCall(const DrawCall&) override;
+
     void rebuildTopLevelAcceratationStructure(TopLevelAS&) override;
     void traceRays(Extent2D) override;
 
@@ -67,6 +71,10 @@ private:
 private:
     VulkanBackend& m_backend;
     VkCommandBuffer m_commandBuffer;
+
+    const Buffer* m_boundVertexBuffer { nullptr };
+    const Buffer* m_boundIndexBuffer { nullptr };
+    IndexType m_boundIndexBufferType {};
 
     const VulkanRenderState* activeRenderState = nullptr;
     const VulkanComputeState* activeComputeState = nullptr;

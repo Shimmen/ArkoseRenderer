@@ -31,15 +31,9 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
         mat4 objectTransforms[SHADOW_MAX_OCCLUDERS];
         int meshCount = m_scene.forEachMesh([&](size_t idx, Mesh& mesh) {
             objectTransforms[idx] = mesh.transform().worldMatrix();
-            mesh.ensureVertexBuffer({ VertexComponent::Position3F });
-            mesh.ensureIndexBuffer();
+            mesh.ensureDrawCall({ VertexComponent::Position3F }, m_scene);
         });
         transformDataBuffer.updateData(objectTransforms, meshCount * sizeof(mat4));
-
-        m_scene.forEachMesh([&](size_t idx, Mesh& mesh) {
-            mesh.ensureVertexBuffer({ VertexComponent::Position3F });
-            mesh.ensureIndexBuffer();
-        });
 
         m_scene.forEachLight([&](size_t, Light& light) {
             SCOPED_PROFILE_ZONE_NAMED("Processing light");
@@ -64,11 +58,18 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
                 cmdList.setNamedUniform("lightProjectionFromWorld", lightProjectionFromWorld);
                 cmdList.bindSet(transformBindingSet, 0);
 
+                cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout({ VertexComponent::Position3F }));
+                cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
+
                 m_scene.forEachMesh([&](size_t idx, Mesh& mesh) {
                     geometry::Sphere sphere = mesh.boundingSphere().transformed(mesh.transform().worldMatrix());
                     if (!lightFrustum.includesSphere(sphere))
                         return;
-                    cmdList.drawIndexed(mesh.vertexBuffer({ VertexComponent::Position3F }), mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(), idx);
+
+                    DrawCall drawCall = mesh.getDrawCall({ VertexComponent::Position3F }, m_scene);
+                    drawCall.firstInstance = static_cast<uint32_t>(idx); // TODO: Put this in some buffer instead!
+
+                    cmdList.issueDrawCall(drawCall);
                 });
             }
             cmdList.endRendering();

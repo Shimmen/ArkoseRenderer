@@ -72,6 +72,14 @@ public:
     void setSelectedMesh(Mesh* mesh) { m_selectedMesh = mesh; }
     Mesh* selectedMesh() { return m_selectedMesh; }
 
+    // Managed GPU assets
+
+    DrawCall fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&, const VertexLayout&);
+
+    Buffer& globalVertexBufferForLayout(const VertexLayout&) const;
+    Buffer& globalIndexBuffer() const;
+    IndexType globalIndexBufferType() const;
+
 private:
     std::string m_filePath {};
 
@@ -94,4 +102,17 @@ private:
 
     Model* m_selectedModel { nullptr };
     Mesh* m_selectedMesh { nullptr };
+
+    // GPU data
+
+    static constexpr size_t InitialIndexBufferSize = 25 * 1024 * 1024;
+    static constexpr size_t InitialVertexBufferSize = 100 * 1024 * 1024;
+
+    struct ResizableBuffer {
+        Buffer* buffer { nullptr };
+        size_t offsetToNextFree { 0 };
+    };
+
+    ResizableBuffer m_global32BitIndexBuffer {};
+    std::unordered_map<VertexLayout, std::unique_ptr<ResizableBuffer>> m_globalVertexBuffers {};
 };

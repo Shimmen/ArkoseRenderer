@@ -64,8 +64,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     renderState.setName("ForwardOpaque");
 
     m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-        mesh.ensureVertexBuffer(m_vertexLayout);
-        mesh.ensureIndexBuffer();
+        mesh.ensureDrawCall(m_vertexLayout, m_scene);
     });
 
     return [&](const AppState& appState, CommandList& cmdList) {
@@ -78,7 +77,8 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
         if (m_indirectLightBindingSet)
             cmdList.bindSet(*m_indirectLightBindingSet, 3);
 
-        // Perform frustum culling & draw non-culled meshes
+        cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout(m_vertexLayout));
+        cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
 
         int numDrawCallsIssued = 0;
         mat4 cameraViewProjection = m_scene.camera().projectionMatrix() * m_scene.camera().viewMatrix();
@@ -89,9 +89,10 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
             if (!cameraFrustum.includesSphere(sphere))
                 return;
 
-            cmdList.drawIndexed(mesh.vertexBuffer(m_vertexLayout),
-                                mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(),
-                                meshIndex);
+            DrawCall drawCall = mesh.getDrawCall(m_vertexLayout, m_scene);
+            drawCall.firstInstance = meshIndex; // TODO: Put this in some buffer instead!
+
+            cmdList.issueDrawCall(drawCall);
             numDrawCallsIssued += 1;
         });
 

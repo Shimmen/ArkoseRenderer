@@ -14,27 +14,67 @@ Material& Mesh::material()
     return *m_material;
 }
 
-void Mesh::ensureVertexBuffer(const VertexLayout& layout)
+std::vector<uint8_t> Mesh::vertexData(const VertexLayout& layout) const
 {
     SCOPED_PROFILE_ZONE()
 
-    // NOTE: Will create & cache the buffer (if it doesn't already exist)
-    vertexBuffer(layout);
+    size_t vertexCount = vertexCountForLayout(layout);
+
+    size_t packedVertexSize = layout.packedVertexSize();
+    size_t bufferSize = vertexCount * packedVertexSize;
+
+    std::vector<uint8_t> dataVector {};
+    dataVector.resize(bufferSize);
+    uint8_t* data = dataVector.data();
+
+    // FIXME: This only really works for float components. Later we need a way of doing this for other types as well,
+    //  but right now we only have floating point components anyway.
+    constexpr std::array<float, 4> floatOnes { 1, 1, 1, 1 };
+
+    size_t offsetInFirstVertex = 0u;
+
+    auto copyComponentData = [&](const uint8_t* input, size_t inputCount, VertexComponent component) {
+        size_t componentSize = vertexComponentSize(component);
+        for (size_t vertexIdx = 0; vertexIdx < vertexCount; ++vertexIdx) {
+            uint8_t* destination = data + offsetInFirstVertex + vertexIdx * packedVertexSize;
+            const uint8_t* source = (vertexIdx < inputCount)
+                ? &input[vertexIdx * componentSize]
+                : (uint8_t*)floatOnes.data();
+            std::memcpy(destination, source, componentSize);
+        }
+        return componentSize;
+    };
+
+    for (auto& component : layout.components()) {
+        switch (component) {
+        case VertexComponent::Position3F: {
+            auto& inputVector = positionData();
+            auto* inputData = (const uint8_t*)value_ptr(*inputVector.data());
+            offsetInFirstVertex += copyComponentData(inputData, inputVector.size(), component);
+        } break;
+        case VertexComponent::Normal3F: {
+            auto& inputVector = normalData();
+            auto* inputData = (const uint8_t*)value_ptr(*inputVector.data());
+            offsetInFirstVertex += copyComponentData(inputData, inputVector.size(), component);
+        } break;
+        case VertexComponent::TexCoord2F: {
+            auto& inputVector = texcoordData();
+            auto* inputData = (const uint8_t*)value_ptr(*inputVector.data());
+            offsetInFirstVertex += copyComponentData(inputData, inputVector.size(), component);
+        } break;
+        case VertexComponent::Tangent4F: {
+            auto& inputVector = tangentData();
+            auto* inputData = (const uint8_t*)value_ptr(*inputVector.data());
+            offsetInFirstVertex += copyComponentData(inputData, inputVector.size(), component);
+        } break;
+        }
+    }
+
+    return dataVector;
 }
 
-const Buffer& Mesh::vertexBuffer(const VertexLayout& layout)
+size_t Mesh::vertexCountForLayout(const VertexLayout& layout) const
 {
-    SCOPED_PROFILE_ZONE()
-
-    auto entry = m_vertexBuffers.find(layout);
-    if (entry != m_vertexBuffers.end())
-        return *entry->second;
-
-    if (!model())
-        LogErrorAndExit("Mesh: can't request vertex buffer for mesh that is not part of a model, exiting\n");
-    if (!model()->scene())
-        LogErrorAndExit("Mesh: can't request vertex buffer for mesh that is not part of a scene, exiting\n");
-
     size_t vertexCount = 0u;
     for (auto& component : layout.components()) {
         switch (component) {
@@ -53,86 +93,26 @@ const Buffer& Mesh::vertexBuffer(const VertexLayout& layout)
         }
     }
 
-    size_t packedVertexSize = layout.packedVertexSize();
-    size_t bufferSize = vertexCount * packedVertexSize;
-
-    auto* data = (moos::u8*)malloc(bufferSize);
-    ASSERT(data);
-
-    // FIXME: This only really works for float components. Later we need a way of doing this for other types as well,
-    //  but right now we only have floating point components anyway.
-    constexpr std::array<float, 4> floatOnes { 1, 1, 1, 1 };
-
-    size_t offsetInFirstVertex = 0u;
-
-    auto copyComponentData = [&](const moos::u8* input, size_t inputCount, VertexComponent component) {
-        size_t componentSize = vertexComponentSize(component);
-        for (size_t vertexIdx = 0; vertexIdx < vertexCount; ++vertexIdx) {
-            moos::u8* destination = data + offsetInFirstVertex + vertexIdx * packedVertexSize;
-            const moos::u8* source = (vertexIdx < inputCount)
-                ? &input[vertexIdx * componentSize]
-                : (moos::u8*)floatOnes.data();
-            std::memcpy(destination, source, componentSize);
-        }
-        return componentSize;
-    };
-
-    for (auto& component : layout.components()) {
-        switch (component) {
-        case VertexComponent::Position3F: {
-            auto& inputVector = positionData();
-            auto* inputData = (const moos::u8*)value_ptr(*inputVector.data());
-            offsetInFirstVertex += copyComponentData(inputData, inputVector.size(), component);
-        } break;
-        case VertexComponent::Normal3F: {
-            auto& inputVector = normalData();
-            auto* inputData = (const moos::u8*)value_ptr(*inputVector.data());
-            offsetInFirstVertex += copyComponentData(inputData, inputVector.size(), component);
-        } break;
-        case VertexComponent::TexCoord2F: {
-            auto& inputVector = texcoordData();
-            auto* inputData = (const moos::u8*)value_ptr(*inputVector.data());
-            offsetInFirstVertex += copyComponentData(inputData, inputVector.size(), component);
-        } break;
-        case VertexComponent::Tangent4F: {
-            auto& inputVector = tangentData();
-            auto* inputData = (const moos::u8*)value_ptr(*inputVector.data());
-            offsetInFirstVertex += copyComponentData(inputData, inputVector.size(), component);
-        } break;
-        }
-    }
-
-    Registry& sceneRegistry = model()->scene()->registry();
-    Buffer& vertexBuffer = sceneRegistry.createBuffer((std::byte*)data, bufferSize, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-    vertexBuffer.setName("MeshVertexBuffer");
-
-    m_vertexBuffers[layout] = &vertexBuffer;
-    return vertexBuffer;
+    return vertexCount;
 }
 
-void Mesh::ensureIndexBuffer()
+void Mesh::ensureDrawCall(const VertexLayout& layout, Scene& scene)
+{
+    SCOPED_PROFILE_ZONE();
+    // Will create the relevant buffers & set their data (if it doesn't already exist)
+    getDrawCall(layout, scene);
+}
+
+const DrawCall& Mesh::getDrawCall(const VertexLayout& layout, Scene& scene)
 {
     SCOPED_PROFILE_ZONE()
 
-    // NOTE: Will create & cache the buffer (if it doesn't already exist)
-    indexBuffer();
-}
+    auto entry = m_drawCalls.find(layout);
+    if (entry != m_drawCalls.end())
+        return entry->second;
 
-const Buffer& Mesh::indexBuffer()
-{
-    SCOPED_PROFILE_ZONE()
-
-    if (m_indexBuffer != nullptr)
-        return *m_indexBuffer;
-
-    if (!model())
-        LogErrorAndExit("Mesh: can't request index buffer for mesh that is not part of a model, exiting\n");
-    if (!model()->scene())
-        LogErrorAndExit("Mesh: can't request index buffer for mesh/model that is not part of a scene, exiting\n");
-
-    Registry& sceneRegistry = model()->scene()->registry();
-    Buffer& indexBuffer = sceneRegistry.createBuffer(indexData(), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
-    indexBuffer.setName("MeshIndexBuffer");
-    m_indexBuffer = &indexBuffer;
-    return *m_indexBuffer;
+    DrawCall drawCall = scene.fitVertexAndIndexDataForMesh({}, *this, layout);
+    
+    m_drawCalls[layout] = drawCall;
+    return drawCall;
 }

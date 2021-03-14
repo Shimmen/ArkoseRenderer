@@ -16,6 +16,10 @@ public:
 
     VkBuffer buffer;
     VmaAllocation allocation;
+
+private:
+    void createInternal(size_t size, VkBuffer& buffer, VmaAllocation& allocation);
+    void destroyInternal(VkBuffer buffer, VmaAllocation allocation);
 };
 
 struct VulkanTexture final : public Texture {

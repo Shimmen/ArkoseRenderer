@@ -53,8 +53,7 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
                 mat4 objectTransforms[PICKING_MAX_DRAWABLES];
                 numMeshes = m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
                     objectTransforms[index] = mesh.transform().worldMatrix();
-                    mesh.ensureVertexBuffer({ VertexComponent::Position3F });
-                    mesh.ensureIndexBuffer();
+                    mesh.ensureDrawCall({ VertexComponent::Position3F }, m_scene);
                 });
                 transformDataBuffer.updateData(objectTransforms, numMeshes * sizeof(mat4));
             }
@@ -62,10 +61,17 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
             cmdList.beginRendering(drawIndicesState, ClearColor(1, 0, 1), 1.0f);
             cmdList.bindSet(drawIndexBindingSet, 0);
 
+            cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout({ VertexComponent::Position3F }));
+            cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
+
             {
                 SCOPED_PROFILE_ZONE_NAMED("Issuing draw calls");
                 m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
-                    cmdList.drawIndexed(mesh.vertexBuffer({ VertexComponent::Position3F }), mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(), static_cast<uint32_t>(index));
+
+                    DrawCall drawCall = mesh.getDrawCall({ VertexComponent::Position3F }, m_scene);
+                    drawCall.firstInstance = static_cast<uint32_t>(index); // TODO: Put this in some buffer instead!
+
+                    cmdList.issueDrawCall(drawCall);
                 });
             }
 

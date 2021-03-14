@@ -12,81 +12,12 @@ VulkanBuffer::VulkanBuffer(Backend& backend, size_t size, Usage usage, MemoryHin
     : Buffer(backend, size, usage, memoryHint)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
-
-    // NOTE: Vulkan doesn't seem to like to create buffers of size 0. Of course, it's correct
-    //  in that it is stupid, but it can be useful when debugging and testing to just not supply
-    //  any data and create an empty buffer while not having to change any shader code or similar.
-    //  To get around this here we simply force a size of 1 instead, but as far as the frontend
-    //  is conserned we don't have access to that one byte.
-    size_t bufferSize = size;
-    if (bufferSize == 0) {
-        bufferSize = 1;
-    }
-
-    VkBufferUsageFlags usageFlags = 0u;
-    switch (usage) {
-    case Buffer::Usage::Vertex:
-        usageFlags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        break;
-    case Buffer::Usage::Index:
-        usageFlags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-        break;
-    case Buffer::Usage::UniformBuffer:
-        usageFlags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-        break;
-    case Buffer::Usage::StorageBuffer:
-        usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-    }
-
-    if (vulkanDebugMode) {
-        // for nsight debugging & similar stuff)
-        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    }
-
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    switch (memoryHint) {
-    case Buffer::MemoryHint::GpuOnly:
-        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        break;
-    case Buffer::MemoryHint::GpuOptimal:
-        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        break;
-    case Buffer::MemoryHint::TransferOptimal:
-        allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU; // (ensures host visible!)
-        allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        break;
-    case Buffer::MemoryHint::Readback:
-        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU; // (ensures host visible!)
-        allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        break;
-    }
-
-    VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    bufferCreateInfo.size = bufferSize;
-    bufferCreateInfo.usage = usageFlags;
-
-    // TODO: Add a to<VulkanBackend> utility, or something like that
-    auto& allocator = static_cast<VulkanBackend&>(backend).globalAllocator();
-
-    VmaAllocationInfo allocationInfo;
-    if (vmaCreateBuffer(allocator, &bufferCreateInfo, &allocCreateInfo, &buffer, &allocation, &allocationInfo) != VK_SUCCESS) {
-        LogErrorAndExit("Could not create buffer of size %u.\n", size);
-    }
+    createInternal(size, buffer, allocation);
 }
 
 VulkanBuffer::~VulkanBuffer()
 {
-    if (!hasBackend())
-        return;
-    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
-    vmaDestroyBuffer(vulkanBackend.globalAllocator(), buffer, allocation);
+    destroyInternal(buffer, allocation);
 }
 
 void VulkanBuffer::setName(const std::string& name)
@@ -142,17 +73,116 @@ void VulkanBuffer::updateData(const std::byte* data, size_t updateSize, size_t o
 
 void VulkanBuffer::reallocateWithSize(size_t newSize, ReallocateStrategy strategy)
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     if (strategy == ReallocateStrategy::CopyExistingData && newSize < size())
         LogErrorAndExit("Can't reallocate buffer ReallocateStrategy::CopyExistingData if the new size is smaller than the current size!");
 
     switch (strategy) {
     case ReallocateStrategy::DiscardExistingData:
-        NOT_YET_IMPLEMENTED();
+
+        destroyInternal(buffer, allocation);
+        createInternal(newSize, buffer, allocation);
+        this->m_size = newSize;
+
         break;
+
     case ReallocateStrategy::CopyExistingData:
-        NOT_YET_IMPLEMENTED();
+
+        VkBuffer newBuffer;
+        VmaAllocation newAllocation;
+        createInternal(newSize, newBuffer, newAllocation);
+
+        auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+        vulkanBackend.copyBuffer(buffer, newBuffer, size());
+
+        destroyInternal(buffer, allocation);
+
+        buffer = newBuffer;
+        allocation = newAllocation;
+        this->m_size = newSize;
+
         break;
     }
+}
+
+void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocation& outAllocation)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    // NOTE: Vulkan doesn't seem to like to create buffers of size 0. Of course, it's correct
+    //  in that it is stupid, but it can be useful when debugging and testing to just not supply
+    //  any data and create an empty buffer while not having to change any shader code or similar.
+    //  To get around this here we simply force a size of 1 instead, but as far as the frontend
+    //  is conserned we don't have access to that one byte.
+    size_t bufferSize = size;
+    if (bufferSize == 0) {
+        bufferSize = 1;
+    }
+
+    VkBufferUsageFlags usageFlags = 0u;
+    switch (usage()) {
+    case Buffer::Usage::Vertex:
+        usageFlags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        break;
+    case Buffer::Usage::Index:
+        usageFlags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        break;
+    case Buffer::Usage::UniformBuffer:
+        usageFlags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        break;
+    case Buffer::Usage::StorageBuffer:
+        usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+
+    if (vulkanDebugMode) {
+        // for nsight debugging & similar stuff)
+        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    }
+
+    VmaAllocationCreateInfo allocCreateInfo = {};
+    switch (memoryHint()) {
+    case Buffer::MemoryHint::GpuOnly:
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+        break;
+    case Buffer::MemoryHint::GpuOptimal:
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        break;
+    case Buffer::MemoryHint::TransferOptimal:
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU; // (ensures host visible!)
+        allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        break;
+    case Buffer::MemoryHint::Readback:
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU; // (ensures host visible!)
+        allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        break;
+    }
+
+    VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    bufferCreateInfo.size = bufferSize;
+    bufferCreateInfo.usage = usageFlags;
+
+    auto& allocator = static_cast<VulkanBackend&>(backend()).globalAllocator();
+
+    VmaAllocationInfo allocationInfo;
+    if (vmaCreateBuffer(allocator, &bufferCreateInfo, &allocCreateInfo, &outBuffer, &outAllocation, &allocationInfo) != VK_SUCCESS) {
+        LogErrorAndExit("Could not create buffer of size %u.\n", size);
+    }
+}
+
+void VulkanBuffer::destroyInternal(VkBuffer inBuffer, VmaAllocation inAllocation)
+{
+    if (!hasBackend())
+        return;
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+    vmaDestroyBuffer(vulkanBackend.globalAllocator(), inBuffer, inAllocation);
 }
 
 VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)

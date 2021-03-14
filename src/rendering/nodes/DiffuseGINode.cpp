@@ -89,8 +89,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     ComputeState& distanceFilterState = reg.createComputeState(distanceFilterShader, { &distanceFilterBindingSet });
 
     m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-        mesh.ensureVertexBuffer(m_vertexLayout);
-        mesh.ensureIndexBuffer();
+        mesh.ensureDrawCall(m_vertexLayout, m_scene);
     });
 
     return [&](const AppState& appState, CommandList& cmdList) {
@@ -170,14 +169,18 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
                 cmdList.pushConstant(ShaderStage(ShaderStageVertex | ShaderStageFragment), sideIndex, 0);
                 cmdList.pushConstant(ShaderStage(ShaderStageVertex | ShaderStageFragment), ambientLx, 4);
 
+                cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout(m_vertexLayout));
+                cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
+
                 m_scene.forEachMesh([&](size_t meshIndex, Mesh& mesh) {
                     geometry::Sphere sphere = mesh.boundingSphere().transformed(mesh.transform().worldMatrix());
                     if (!sideFrustums[sideIndex].includesSphere(sphere))
                         return;
 
-                    cmdList.drawIndexed(mesh.vertexBuffer(m_vertexLayout),
-                                        mesh.indexBuffer(), mesh.indexCount(), mesh.indexType(),
-                                        meshIndex);
+                    DrawCall drawCall = mesh.getDrawCall(m_vertexLayout, m_scene);
+                    drawCall.firstInstance = meshIndex; // TODO: Put this in some buffer instead!
+
+                    cmdList.issueDrawCall(drawCall);
                 });
 
                 cmdList.endRendering();

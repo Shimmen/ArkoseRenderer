@@ -379,8 +379,9 @@ struct Buffer : public Resource {
 
     virtual void reallocateWithSize(size_t newSize, ReallocateStrategy) = 0;
 
-private:
+protected:
     size_t m_size { 0 };
+private:
     Usage m_usage { Usage::Vertex };
     MemoryHint m_memoryHint { MemoryHint::GpuOptimal };
 };
@@ -388,6 +389,30 @@ private:
 enum class IndexType {
     UInt16,
     UInt32,
+};
+
+struct DrawCall {
+
+    enum class Type {
+        Indexed,
+        NonIndexed,
+    };
+
+    const Buffer* vertexBuffer;
+    const Buffer* indexBuffer;
+
+    Type type;
+    uint32_t firstVertex { 0 };
+    uint32_t firstIndex { 0 };
+
+    uint32_t vertexCount;
+    int32_t vertexOffset;
+
+    IndexType indexType;
+    uint32_t indexCount;
+
+    uint32_t instanceCount { 1 };
+    uint32_t firstInstance { 0 };
 };
 
 struct BlendState {

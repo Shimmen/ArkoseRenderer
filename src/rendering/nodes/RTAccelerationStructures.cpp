@@ -41,7 +41,7 @@ RenderGraphNode::ExecuteCallback RTAccelerationStructures::constructFrame(Regist
 
 RTGeometry RTAccelerationStructures::createGeometryForTriangleMesh(Mesh& mesh, Registry& reg) const
 {
-    RTTriangleGeometry geometry { .vertexBuffer = mesh.vertexBuffer({ VertexComponent::Position3F }),
+    RTTriangleGeometry geometry { .vertexBuffer = reg.createBuffer(mesh.vertexData({ VertexComponent::Position3F }), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal),
                                   .vertexFormat = RTVertexFormat::XYZ32F,
                                   .vertexStride = sizeof(vec3),
                                   .indexBuffer = reg.createBuffer(mesh.indexData(), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal),
