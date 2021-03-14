@@ -278,8 +278,8 @@ bool ShaderManager::CompiledShader::recompile()
 
     shaderc::CompileOptions options;
     options.SetIncluder(std::move(includer));
-    options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_1);
-    options.SetTargetSpirv(shaderc_spirv_version_1_0);
+    options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
+    options.SetTargetSpirv(shaderc_spirv_version_1_5);
     options.SetSourceLanguage(shaderc_source_language_glsl);
     options.SetForcedVersionProfile(460, shaderc_profile_none);
 
@@ -305,9 +305,9 @@ bool ShaderManager::CompiledShader::recompile()
 
         {
             // NOTE: This causes a weird crash in ShaderC for some reason *for some shader*
-            SCOPED_PROFILE_ZONE_NAMED("ShaderC ASM work");
-            shaderc::AssemblyCompilationResult asmResult = compiler.CompileGlslToSpvAssembly(glslSource, shaderKind, filePath.c_str(), options);
-            FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvAssemblyPath(shaderName), std::vector<char>(asmResult.cbegin(), asmResult.cend()));
+            //SCOPED_PROFILE_ZONE_NAMED("ShaderC ASM work");
+            //shaderc::AssemblyCompilationResult asmResult = compiler.CompileGlslToSpvAssembly(glslSource, shaderKind, filePath.c_str(), options);
+            //FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvAssemblyPath(shaderName), std::vector<char>(asmResult.cbegin(), asmResult.cend()));
         }
 
     } else {

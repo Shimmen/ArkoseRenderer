@@ -469,7 +469,7 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0); // NOLINT(hicpp-signed-bitwise)
     appInfo.pEngineName = "ArkoseRendererEngine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0); // NOLINT(hicpp-signed-bitwise)
-    appInfo.apiVersion = VK_API_VERSION_1_1; // NOLINT(hicpp-signed-bitwise)
+    appInfo.apiVersion = VK_API_VERSION_1_2; // NOLINT(hicpp-signed-bitwise)
 
     VkInstanceCreateInfo instanceCreateInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     instanceCreateInfo.pApplicationInfo = &appInfo;
