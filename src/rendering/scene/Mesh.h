@@ -27,6 +27,9 @@ public:
     Material& material();
     virtual const Transform& transform() const { return m_transform; }
 
+    std::optional<int> materialIndex() const { return m_materialIndex; }
+    void setMaterialIndex(Badge<Scene>, int index) { m_materialIndex = index; }
+
     virtual moos::aabb3 boundingBox() const = 0;
     virtual geometry::Sphere boundingSphere() const = 0;
 
@@ -62,4 +65,6 @@ protected:
 private:
     Transform m_transform {};
     Model* m_owner { nullptr };
+
+    std::optional<int> m_materialIndex {};
 };

@@ -11,6 +11,9 @@
 #include <string>
 #include <unordered_map>
 
+// Shared shader data
+#include "SceneData.h"
+
 class Scene final {
 public:
     explicit Scene(Registry&);
@@ -20,7 +23,7 @@ public:
 
     void loadFromFile(const std::string&);
 
-    void manageResources();
+    void update(float elapsedTime, float deltaTime);
 
     // Camera & view
 
@@ -80,6 +83,10 @@ public:
     Buffer& globalIndexBuffer() const;
     IndexType globalIndexBufferType() const;
 
+    // TODO: maybe create a binding set for these instead and expose them that way only?
+    Buffer& globalMaterialBuffer() const;
+    const std::vector<Texture*>& globalTextureArray();
+
 private:
     std::string m_filePath {};
 
@@ -115,4 +122,11 @@ private:
 
     ResizableBuffer m_global32BitIndexBuffer {};
     std::unordered_map<VertexLayout, std::unique_ptr<ResizableBuffer>> m_globalVertexBuffers {};
+
+    std::vector<Texture*> m_usedTextures {};
+    std::vector<ShaderMaterial> m_usedMaterials {};
+
+    void rebuildGpuSceneData();
+    bool m_sceneDataNeedsRebuild { true };
+    Buffer* m_materialDataBuffer { nullptr };
 };

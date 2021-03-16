@@ -127,11 +127,49 @@ void Scene::loadFromFile(const std::string& path)
     if (entry != m_allCameras.end()) {
         m_currentMainCamera = m_allCameras[mainCamera];
     }
+
+    rebuildGpuSceneData();
+    m_sceneDataNeedsRebuild = false;
 }
 
-void Scene::manageResources()
+void Scene::update(float elapsedTime, float deltaTime)
 {
-    // TODO: Move stuff from SceneNode to here!
+    // TODO: Update the main camera and remove that code from the apps
+    //camera().update(Input::instance(), GlobalState::get().windowExtent(), deltaTime)
+    // This would also be a good place to e.g. update animations that are set up
+
+    if (m_sceneDataNeedsRebuild) {
+        // We shouldn't need to rebuild the whole thing, just append and potentially remove some stuff.. But the
+        // distinction here is that it wouldn't be enough to just update some matrices, e.g. if an object was moved
+        // If we save the vector of textures & materials we can probably resuse a lot of calculations. There is no
+        // rush with that though, as currently we can't even make changes that would require a rebuild..
+        rebuildGpuSceneData();
+        m_sceneDataNeedsRebuild = false;
+    }
+
+    /*
+    ImGui::Begin("SCENE");
+    {
+        if (ImGui::TreeNode("Metainfo")) {
+            ImGui::Text("Number of managed resources:");
+            ImGui::Columns(3);
+            ImGui::Text("meshes: %u", meshCount());
+            ImGui::NextColumn();
+            ImGui::Text("materials: %u", m_usedMaterials.size());
+            ImGui::NextColumn();
+            ImGui::Text("textures: %u", m_usedTextures.size());
+            ImGui::Columns(1);
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Lighting")) {
+            ImGui::ColorEdit3("Sun color", value_ptr(sun().color));
+            ImGui::SliderFloat("Sun illuminance (lx)", &sun().illuminance, 1.0f, 150000.0f);
+            ImGui::SliderFloat("Ambient (lx)", &ambient(), 0.0f, 1000.0f);
+            ImGui::TreePop();
+        }
+    }
+    ImGui::End();
+    */
 }
 
 Model& Scene::addModel(std::unique_ptr<Model> model)
@@ -307,7 +345,7 @@ DrawCall Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh& mesh, cons
     {
         std::vector<uint8_t> vertexData = mesh.vertexData(layout);
         size_t requiredAdditionalSize = vertexData.size();
-        
+
         auto entry = m_globalVertexBuffers.find(layout);
         if (entry == m_globalVertexBuffers.end()) {
             auto buffer = std::make_unique<ResizableBuffer>();
@@ -355,4 +393,84 @@ IndexType Scene::globalIndexBufferType() const
 {
     // For simplicity we keep a single 32-bit index buffer, since every mesh should fit in there.
     return IndexType::UInt32;
+}
+
+void Scene::rebuildGpuSceneData()
+{
+    m_usedTextures.clear();
+    m_usedMaterials.clear();
+
+    std::unordered_map<Texture*, int> textureIndices;
+    auto pushTexture = [&](Texture* texture) -> int {
+        auto entry = textureIndices.find(texture);
+        if (entry != textureIndices.end())
+            return entry->second;
+
+        int textureIndex = static_cast<int>(m_usedTextures.size());
+        textureIndices[texture] = textureIndex;
+        m_usedTextures.push_back(texture);
+
+        return textureIndex;
+    };
+
+    auto pushMaterial = [&](ShaderMaterial shaderMaterial) -> int {
+        // Would be nice if we could hash them..
+        for (int idx = 0; idx < m_usedMaterials.size(); ++idx) {
+            if (m_usedMaterials[idx] == shaderMaterial)
+                return idx;
+        }
+
+        int materialIndex = static_cast<int>(m_usedMaterials.size());
+        m_usedMaterials.push_back(shaderMaterial);
+
+        return materialIndex;
+    };
+
+    int numMeshes = forEachMesh([&](size_t meshIdx, Mesh& mesh) {
+
+        Material& material = mesh.material();
+        int materialIndex = pushMaterial(ShaderMaterial {
+            .baseColor = pushTexture(material.baseColorTexture()),
+            .normalMap = pushTexture(material.normalMapTexture()),
+            .metallicRoughness = pushTexture(material.metallicRoughnessTexture()),
+            .emissive = pushTexture(material.emissiveTexture()),
+        });
+
+        ASSERT(materialIndex >= 0);
+        mesh.setMaterialIndex({}, materialIndex);
+
+    });
+
+    if (numMeshes > SCENE_MAX_DRAWABLES) {
+        // TODO: Or use a storage buffer instead..
+        LogErrorAndExit("Scene: we need to up the number of max drawables that can be handled by the scene! We have %u, the capacity is %u.\n", numMeshes, SCENE_MAX_DRAWABLES);
+    }
+
+    if (m_usedTextures.size() > SCENE_MAX_TEXTURES) {
+        LogErrorAndExit("Scene: we need to up the number of max textures that can be handled by the scene! We have %u, the capacity is %u.\n",
+                        m_usedTextures.size(), SCENE_MAX_TEXTURES);
+    }
+
+    // Create material buffer
+    // TODO: Support changing materials! I.e. update this buffer when data has changed..
+    // TODO: Use shader storage buffer instead! Then we won't have an upper cap!
+    if (m_usedMaterials.size() > SCENE_MAX_MATERIALS) {
+        LogErrorAndExit("Scene: we need to up the number of max materials that can be handled by the scene! We have %u, the capacity is %u.\n",
+                        m_usedMaterials.size(), SCENE_MAX_MATERIALS);
+    }
+    size_t materialBufferSize = m_usedMaterials.size() * sizeof(ShaderMaterial);
+    m_materialDataBuffer = &m_registry.createBuffer(materialBufferSize, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOptimal);
+    m_materialDataBuffer->updateData(m_usedMaterials.data(), materialBufferSize);
+    m_materialDataBuffer->setName("SceneMaterialData");
+}
+
+Buffer& Scene::globalMaterialBuffer() const
+{
+    ASSERT(m_materialDataBuffer);
+    return *m_materialDataBuffer;
+}
+
+const std::vector<Texture*>& Scene::globalTextureArray()
+{
+    return m_usedTextures;
 }
