@@ -118,6 +118,8 @@ int main(int argc, char** argv)
         Input::preEventPoll();
         glfwPollEvents();
 
+        backend->newFrame(*scene);
+
         double elapsedTime = glfwGetTime();
         double deltaTime = elapsedTime - lastTime;
         lastTime = elapsedTime;

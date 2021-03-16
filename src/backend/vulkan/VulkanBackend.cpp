@@ -1156,6 +1156,15 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, uint32_t
     swapchainTexture.currentLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 }
 
+void VulkanBackend::newFrame(const Scene& scene)
+{
+    SCOPED_PROFILE_ZONE_BACKEND();
+
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+}
+
 bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, double elapsedTime, double deltaTime)
 {
     SCOPED_PROFILE_ZONE_BACKEND();
@@ -1232,10 +1241,6 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
 void VulkanBackend::drawFrame(const Scene& scene, const RenderGraph& renderGraph, const AppState& appState, double elapsedTime, double deltaTime, uint32_t swapchainImageIndex)
 {
     SCOPED_PROFILE_ZONE_BACKEND();
-
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
 
     VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
     commandBufferBeginInfo.flags = 0u;

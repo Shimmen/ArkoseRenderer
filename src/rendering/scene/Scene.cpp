@@ -147,8 +147,7 @@ void Scene::update(float elapsedTime, float deltaTime)
         m_sceneDataNeedsRebuild = false;
     }
 
-    /*
-    ImGui::Begin("SCENE");
+    ImGui::Begin("Scene");
     {
         if (ImGui::TreeNode("Metainfo")) {
             ImGui::Text("Number of managed resources:");
@@ -169,7 +168,6 @@ void Scene::update(float elapsedTime, float deltaTime)
         }
     }
     ImGui::End();
-    */
 }
 
 Model& Scene::addModel(std::unique_ptr<Model> model)

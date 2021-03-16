@@ -37,6 +37,8 @@ public:
 
     virtual void renderGraphDidChange(RenderGraph&) = 0;
     virtual void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderGraph&) = 0;
+
+    virtual void newFrame(const Scene&) = 0;
     virtual bool executeFrame(const Scene&, RenderGraph&, double elapsedTime, double deltaTime) = 0;
 
     virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) = 0;
