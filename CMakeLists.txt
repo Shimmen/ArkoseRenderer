@@ -51,7 +51,6 @@ add_executable(ArkoseRenderer
     src/rendering/nodes/RTReflectionsNode.cpp
     src/rendering/nodes/RTDiffuseGINode.cpp
     src/rendering/nodes/RTAmbientOcclusion.cpp
-    src/utility/GlobalState.cpp
     src/utility/Input.cpp
     src/utility/Image.cpp
     src/utility/FileIO.cpp

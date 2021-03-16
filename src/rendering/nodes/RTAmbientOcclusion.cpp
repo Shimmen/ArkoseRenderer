@@ -3,7 +3,6 @@
 #include "ForwardRenderNode.h"
 #include "RTAccelerationStructures.h"
 #include "SceneNode.h"
-#include "utility/GlobalState.h"
 #include <imgui.h>
 
 RTAmbientOcclusion::RTAmbientOcclusion(const Scene& scene)
@@ -19,8 +18,7 @@ std::string RTAmbientOcclusion::name()
 
 void RTAmbientOcclusion::constructNode(Registry& reg)
 {
-    Extent2D windowExtent = GlobalState::get().windowExtent();
-    m_accumulatedAO = &reg.createTexture2D(windowExtent, Texture::Format::R16F);
+    m_accumulatedAO = &reg.createTexture2D(m_scene.mainViewportSize(), Texture::Format::R16F);
 }
 
 RenderGraphNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry& reg) const

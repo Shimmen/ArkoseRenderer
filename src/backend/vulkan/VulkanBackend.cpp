@@ -9,7 +9,6 @@
 #include "rendering/Shader.h"
 #include "rendering/ShaderManager.h"
 #include "utility/FileIO.h"
-#include "utility/GlobalState.h"
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include "utility/util.h"
@@ -29,11 +28,8 @@ static bool s_unhandledWindowResize = false;
 VulkanBackend::VulkanBackend(GLFWwindow* window, const AppSpecification& appSpecification)
     : m_window(window)
 {
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-    GlobalState::getMutable().updateWindowExtent({ width, height });
     glfwSetFramebufferSizeCallback(window, static_cast<GLFWframebuffersizefun>([](GLFWwindow* window, int width, int height) {
-                                       GlobalState::getMutable().updateWindowExtent({ width, height });
+                                       // Is this even needed? Doesn't seem to be on Windows at least.
                                        s_unhandledWindowResize = true;
                                    }));
 

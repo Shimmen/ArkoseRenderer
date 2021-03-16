@@ -3,7 +3,6 @@
 #include "ForwardRenderNode.h"
 #include "LightData.h"
 #include "RTAccelerationStructures.h"
-#include "utility/GlobalState.h"
 #include <half.hpp>
 #include <imgui.h>
 
@@ -66,8 +65,7 @@ void RTDiffuseGINode::constructNode(Registry& nodeReg)
                                                          { 2, ShaderStageRTClosestHit, indexBuffers },
                                                          { 3, ShaderStageRTClosestHit, allTextures, RT_MAX_TEXTURES } });
 
-    Extent2D windowExtent = GlobalState::get().windowExtent();
-    m_accumulationTexture = &nodeReg.createTexture2D(windowExtent, Texture::Format::RGBA32F);
+    m_accumulationTexture = &nodeReg.createTexture2D(m_scene.mainViewportSize(), Texture::Format::RGBA32F);
 }
 
 RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) const
