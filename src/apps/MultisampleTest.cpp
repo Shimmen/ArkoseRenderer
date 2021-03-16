@@ -6,7 +6,6 @@
 #include "rendering/nodes/SceneNode.h"
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/scene/models/GltfModel.h"
-#include "utility/GlobalState.h"
 #include "utility/Input.h"
 #include "utility/Logging.h"
 #include <imgui.h>
@@ -80,6 +79,4 @@ void MultisampleTest::setup(Scene& scene, RenderGraph& graph)
 
 void MultisampleTest::update(Scene& scene, float elapsedTime, float deltaTime)
 {
-    const Input& input = Input::instance();
-    scene.camera().update(input, GlobalState::get().windowExtent(), deltaTime);
 }

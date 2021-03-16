@@ -13,7 +13,6 @@
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SkyViewNode.h"
 #include "rendering/scene/models/GltfModel.h"
-#include "utility/GlobalState.h"
 #include "utility/Input.h"
 #include <imgui.h>
 #include <moos/transform.h>
@@ -122,7 +121,4 @@ void RayTracingApp::update(Scene& scene, float elapsedTime, float deltaTime)
     float avgFrameTime = m_frameTimeAvg.runningAverage() * 1000.0f;
     ImGui::Text("Frame time: %.2f ms/frame", avgFrameTime);
     ImGui::End();
-
-    const Input& input = Input::instance();
-    scene.camera().update(input, GlobalState::get().windowExtent(), deltaTime);
 }

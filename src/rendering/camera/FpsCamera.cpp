@@ -1,6 +1,5 @@
 #include "FpsCamera.h"
 
-#include "utility/GlobalState.h"
 #include <moos/transform.h>
 
 void FpsCamera::setMaxSpeed(float newMaxSpeed)
@@ -8,7 +7,7 @@ void FpsCamera::setMaxSpeed(float newMaxSpeed)
     maxSpeed = newMaxSpeed;
 }
 
-void FpsCamera::update(const Input& input, const Extent2D& screenExtent, float dt)
+void FpsCamera::update(const Input& input, const Extent2D& viewportSize, float dt)
 {
     m_didModify = false;
 
@@ -77,7 +76,7 @@ void FpsCamera::update(const Input& input, const Extent2D& screenExtent, float d
 
     if (input.isButtonDown(Button::Right) && !input.isGuiUsingMouse()) {
         // Screen size independent but also aspect ratio dependent!
-        vec2 mouseDelta = input.mouseDelta() / float(screenExtent.width());
+        vec2 mouseDelta = input.mouseDelta() / float(viewportSize.width());
 
         m_pitchYawRoll.x += -mouseDelta.x * rotationMultiplier * fovMultiplier * dt;
         m_pitchYawRoll.y += -mouseDelta.y * rotationMultiplier * fovMultiplier * dt;
@@ -138,8 +137,8 @@ void FpsCamera::update(const Input& input, const Extent2D& screenExtent, float d
 
     // Create the projection matrix
 
-    float width = static_cast<float>(screenExtent.width());
-    float height = static_cast<float>(screenExtent.height());
+    float width = static_cast<float>(viewportSize.width());
+    float height = static_cast<float>(viewportSize.height());
     float aspectRatio = (height > 1e-6f) ? (width / height) : 1.0f;
     m_projectionFromView = moos::perspectiveProjectionToVulkanClipSpace(m_fieldOfView, aspectRatio, zNear, 10000.0f);
 }

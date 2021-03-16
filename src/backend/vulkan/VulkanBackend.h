@@ -41,7 +41,7 @@ public:
     void renderGraphDidChange(RenderGraph&) override;
     void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderGraph&) override;
 
-    void newFrame(const Scene&);
+    void newFrame(Scene&);
     bool executeFrame(const Scene&, RenderGraph&, double elapsedTime, double deltaTime) override;
 
     ///////////////////////////////////////////////////////////////////////////

@@ -1156,13 +1156,17 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, uint32_t
     swapchainTexture.currentLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 }
 
-void VulkanBackend::newFrame(const Scene& scene)
+void VulkanBackend::newFrame(Scene& scene)
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
+
+    int width, height;
+    glfwGetFramebufferSize(m_window, &width, &height);
+    scene.setMainViewportSize(badge(), { width, height });
 }
 
 bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, double elapsedTime, double deltaTime)

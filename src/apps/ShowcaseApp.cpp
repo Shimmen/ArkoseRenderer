@@ -11,7 +11,6 @@
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SkyViewNode.h"
 #include "rendering/scene/models/GltfModel.h"
-#include "utility/GlobalState.h"
 #include "utility/Input.h"
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
@@ -149,6 +148,4 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
 
 void ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
 {
-    const Input& input = Input::instance();
-    scene.camera().update(input, GlobalState::get().windowExtent(), deltaTime);
 }

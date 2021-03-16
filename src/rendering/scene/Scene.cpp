@@ -134,9 +134,7 @@ void Scene::loadFromFile(const std::string& path)
 
 void Scene::update(float elapsedTime, float deltaTime)
 {
-    // TODO: Update the main camera and remove that code from the apps
-    //camera().update(Input::instance(), GlobalState::get().windowExtent(), deltaTime)
-    // This would also be a good place to e.g. update animations that are set up
+    camera().update(Input::instance(), mainViewportSize(), deltaTime);
 
     if (m_sceneDataNeedsRebuild) {
         // We shouldn't need to rebuild the whole thing, just append and potentially remove some stuff.. But the

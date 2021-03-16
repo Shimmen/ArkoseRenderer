@@ -30,6 +30,9 @@ public:
     const FpsCamera& camera() const { return m_currentMainCamera; }
     FpsCamera& camera() { return m_currentMainCamera; }
 
+    Extent2D mainViewportSize() const { return m_mainViewportSize; }
+    void setMainViewportSize(Badge<Backend>, Extent2D size) { m_mainViewportSize = size; }
+
     // Models & meshes
 
     Model& addModel(std::unique_ptr<Model>);
@@ -92,6 +95,7 @@ private:
 
     Registry& m_registry;
 
+    Extent2D m_mainViewportSize {};
     FpsCamera m_currentMainCamera;
     std::unordered_map<std::string, FpsCamera> m_allCameras {};
 
