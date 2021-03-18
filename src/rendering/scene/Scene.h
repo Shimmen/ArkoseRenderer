@@ -86,9 +86,7 @@ public:
     Buffer& globalIndexBuffer() const;
     IndexType globalIndexBufferType() const;
 
-    // TODO: maybe create a binding set for these instead and expose them that way only?
-    Buffer& globalMaterialBuffer() const;
-    const std::vector<Texture*>& globalTextureArray();
+    BindingSet& globalMaterialBindingSet() const;
 
 private:
     std::string m_filePath {};
@@ -133,4 +131,6 @@ private:
     void rebuildGpuSceneData();
     bool m_sceneDataNeedsRebuild { true };
     Buffer* m_materialDataBuffer { nullptr };
+
+    BindingSet* m_materialBindingSet { nullptr };
 };

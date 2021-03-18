@@ -49,12 +49,14 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
                                                           { RenderTarget::AttachmentType::Color2, reg.getTexture("g-buffer", "baseColor").value() },
                                                           { RenderTarget::AttachmentType::Depth, reg.getTexture("g-buffer", "depth").value() } });
 
+    BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
     BindingSet& cameraBindingSet = *reg.getBindingSet("scene", "cameraSet");
     BindingSet& objectBindingSet = *reg.getBindingSet("scene", "objectSet");
     BindingSet& lightBindingSet = *reg.getBindingSet("scene", "lightSet");
 
     Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag");
     RenderStateBuilder renderStateBuilder { renderTarget, shader, m_vertexLayout };
+    renderStateBuilder.addBindingSet(materialBindingSet);
     renderStateBuilder.addBindingSet(cameraBindingSet);
     renderStateBuilder.addBindingSet(objectBindingSet);
     renderStateBuilder.addBindingSet(lightBindingSet);
@@ -63,17 +65,19 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
     renderState.setName("ForwardOpaque");
 
-    m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-        mesh.ensureDrawCall(m_vertexLayout, m_scene);
-    });
-
     return [&](const AppState& appState, CommandList& cmdList) {
+
+        m_scene.forEachMesh([&](size_t, Mesh& mesh) {
+            mesh.ensureDrawCall(m_vertexLayout, m_scene);
+        });
+
         cmdList.beginRendering(renderState, ClearColor(0, 0, 0, 0), 1.0f);
         cmdList.setNamedUniform("ambientAmount", m_scene.ambient());
 
         cmdList.bindSet(cameraBindingSet, 0);
-        cmdList.bindSet(objectBindingSet, 1);
+        cmdList.bindSet(materialBindingSet, 1);
         cmdList.bindSet(lightBindingSet, 2);
+        cmdList.bindSet(objectBindingSet, 4);
         if (m_indirectLightBindingSet)
             cmdList.bindSet(*m_indirectLightBindingSet, 3);
 

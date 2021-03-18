@@ -8,7 +8,7 @@ layout(location = 1) in vec2 aTexCoord;
 layout(location = 2) in vec3 aNormal;
 
 layout(set = 0, binding = 0) uniform CameraBlock { CameraMatrices cameras[6]; };
-layout(set = 1, binding = 0) uniform ObjectBlock { ShaderDrawable perObject[SCENE_MAX_DRAWABLES]; };
+layout(set = 3, binding = 0) uniform ObjectBlock { ShaderDrawable perObject[SCENE_MAX_DRAWABLES]; };
 
 layout(location = 0) out vec3 vPosition;
 layout(location = 1) out vec2 vTexCoord;

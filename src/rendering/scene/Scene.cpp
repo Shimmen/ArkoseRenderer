@@ -458,15 +458,13 @@ void Scene::rebuildGpuSceneData()
     m_materialDataBuffer = &m_registry.createBuffer(materialBufferSize, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOptimal);
     m_materialDataBuffer->updateData(m_usedMaterials.data(), materialBufferSize);
     m_materialDataBuffer->setName("SceneMaterialData");
+
+    m_materialBindingSet = &m_registry.createBindingSet({ { 0, ShaderStageFragment, m_materialDataBuffer },
+                                                          { 1, ShaderStageFragment, m_usedTextures, SCENE_MAX_TEXTURES } });
 }
 
-Buffer& Scene::globalMaterialBuffer() const
+BindingSet& Scene::globalMaterialBindingSet() const
 {
-    ASSERT(m_materialDataBuffer);
-    return *m_materialDataBuffer;
-}
-
-const std::vector<Texture*>& Scene::globalTextureArray()
-{
-    return m_usedTextures;
+    ASSERT(m_materialBindingSet);
+    return *m_materialBindingSet;
 }

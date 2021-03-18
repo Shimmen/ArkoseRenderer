@@ -67,11 +67,13 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     Buffer& cameraBuffer = reg.createBuffer(6 * sizeof(CameraMatrices), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageVertex | ShaderStageFragment), &cameraBuffer } });
 
+    BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
     BindingSet& objectBindingSet = *reg.getBindingSet("scene", "objectSet");
     BindingSet& lightBindingSet = *reg.getBindingSet("scene", "lightSet");
 
     Shader renderShader = Shader::createBasicRasterize("diffuse-gi/forward.vert", "diffuse-gi/forward.frag");
     RenderStateBuilder renderStateBuilder { renderTarget, renderShader, m_vertexLayout };
+    renderStateBuilder.addBindingSet(materialBindingSet);
     renderStateBuilder.addBindingSet(cameraBindingSet);
     renderStateBuilder.addBindingSet(objectBindingSet);
     renderStateBuilder.addBindingSet(lightBindingSet);
@@ -163,8 +165,9 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
                 cmdList.beginRendering(renderState, ClearColor(0, 0, 0, clearAlpha), 1);
 
                 cmdList.bindSet(cameraBindingSet, 0);
-                cmdList.bindSet(objectBindingSet, 1);
+                cmdList.bindSet(materialBindingSet, 1);
                 cmdList.bindSet(lightBindingSet, 2);
+                cmdList.bindSet(objectBindingSet, 3);
 
                 cmdList.pushConstant(ShaderStage(ShaderStageVertex | ShaderStageFragment), sideIndex, 0);
                 cmdList.pushConstant(ShaderStage(ShaderStageVertex | ShaderStageFragment), ambientLx, 4);

@@ -47,9 +47,7 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     objectDataBuffer.setName("SceneObjectData");
     reg.publish("objectData", objectDataBuffer);
 
-    BindingSet& objectBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &objectDataBuffer },
-                                                          { 1, ShaderStageFragment, &m_scene.globalMaterialBuffer() },
-                                                          { 2, ShaderStageFragment, m_scene.globalTextureArray(), SCENE_MAX_TEXTURES } });
+    BindingSet& objectBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &objectDataBuffer } });
     reg.publish("objectSet", objectBindingSet);
 
     // Light data stuff
