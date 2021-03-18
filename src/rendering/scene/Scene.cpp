@@ -391,6 +391,19 @@ IndexType Scene::globalIndexBufferType() const
     return IndexType::UInt32;
 }
 
+constexpr bool operator==(const ShaderMaterial& lhs, const ShaderMaterial& rhs)
+{
+    if (lhs.baseColor != rhs.baseColor)
+        return false;
+    if (lhs.normalMap != rhs.normalMap)
+        return false;
+    if (lhs.metallicRoughness != rhs.metallicRoughness)
+        return false;
+    if (lhs.emissive != rhs.emissive)
+        return false;
+    return true;
+}
+
 void Scene::rebuildGpuSceneData()
 {
     m_usedTextures.clear();
