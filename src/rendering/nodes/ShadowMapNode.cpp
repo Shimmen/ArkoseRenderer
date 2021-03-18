@@ -31,7 +31,7 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
         mat4 objectTransforms[SHADOW_MAX_OCCLUDERS];
         int meshCount = m_scene.forEachMesh([&](size_t idx, Mesh& mesh) {
             objectTransforms[idx] = mesh.transform().worldMatrix();
-            mesh.ensureDrawCall({ VertexComponent::Position3F }, m_scene);
+            mesh.ensureDrawCallIsReady({ VertexComponent::Position3F }, m_scene);
         });
         transformDataBuffer.updateData(objectTransforms, meshCount * sizeof(mat4));
 
@@ -66,7 +66,7 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
                     if (!lightFrustum.includesSphere(sphere))
                         return;
 
-                    DrawCall drawCall = mesh.getDrawCall({ VertexComponent::Position3F }, m_scene);
+                    DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, m_scene);
                     drawCall.firstInstance = static_cast<uint32_t>(idx); // TODO: Put this in some buffer instead!
 
                     cmdList.issueDrawCall(drawCall);

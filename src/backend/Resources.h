@@ -391,7 +391,7 @@ enum class IndexType {
     UInt32,
 };
 
-struct DrawCall {
+struct DrawCallDescription {
 
     enum class Type {
         Indexed,

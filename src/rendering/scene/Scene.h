@@ -80,7 +80,7 @@ public:
 
     // Managed GPU assets
 
-    DrawCall fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&, const VertexLayout&);
+    DrawCallDescription fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&, const VertexLayout&);
 
     Buffer& globalVertexBufferForLayout(const VertexLayout&) const;
     Buffer& globalIndexBuffer() const;

@@ -53,7 +53,7 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
                 mat4 objectTransforms[PICKING_MAX_DRAWABLES];
                 numMeshes = m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
                     objectTransforms[index] = mesh.transform().worldMatrix();
-                    mesh.ensureDrawCall({ VertexComponent::Position3F }, m_scene);
+                    mesh.ensureDrawCallIsReady({ VertexComponent::Position3F }, m_scene);
                 });
                 transformDataBuffer.updateData(objectTransforms, numMeshes * sizeof(mat4));
             }
@@ -68,7 +68,7 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
                 SCOPED_PROFILE_ZONE_NAMED("Issuing draw calls");
                 m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
 
-                    DrawCall drawCall = mesh.getDrawCall({ VertexComponent::Position3F }, m_scene);
+                    DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, m_scene);
                     drawCall.firstInstance = static_cast<uint32_t>(index); // TODO: Put this in some buffer instead!
 
                     cmdList.issueDrawCall(drawCall);

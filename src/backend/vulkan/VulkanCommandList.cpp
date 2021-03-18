@@ -872,7 +872,7 @@ void VulkanCommandList::bindIndexBuffer(const Buffer& indexBuffer, IndexType ind
     m_boundIndexBufferType = indexType;
 }
 
-void VulkanCommandList::issueDrawCall(const DrawCall& drawCall)
+void VulkanCommandList::issueDrawCall(const DrawCallDescription& drawCall)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
@@ -886,10 +886,10 @@ void VulkanCommandList::issueDrawCall(const DrawCall& drawCall)
     ASSERT(drawCall.instanceCount > 0);
 
     switch (drawCall.type) {
-    case DrawCall::Type::NonIndexed:
+    case DrawCallDescription::Type::NonIndexed:
         vkCmdDraw(m_commandBuffer, drawCall.vertexCount, drawCall.instanceCount, drawCall.firstVertex, drawCall.firstInstance);
         break;
-    case DrawCall::Type::Indexed:
+    case DrawCallDescription::Type::Indexed:
         vkCmdDrawIndexed(m_commandBuffer, drawCall.indexCount, drawCall.instanceCount, drawCall.firstIndex, drawCall.vertexOffset, drawCall.firstInstance);
         break;
     }

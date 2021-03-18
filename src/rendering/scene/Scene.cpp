@@ -303,12 +303,12 @@ void Scene::generateProbeGridFromBoundingBox()
     setProbeGrid(grid);
 }
 
-DrawCall Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh& mesh, const VertexLayout& layout)
+DrawCallDescription Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh& mesh, const VertexLayout& layout)
 {
     // TODO: Maybe ensure we haven't already fitted this mesh+layout combo?
 
-    DrawCall drawCall {};
-    drawCall.type = DrawCall::Type::Indexed;
+    DrawCallDescription drawCall {};
+    drawCall.type = DrawCallDescription::Type::Indexed;
 
     // Fit index data
     {

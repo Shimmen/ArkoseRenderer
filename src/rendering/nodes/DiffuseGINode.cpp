@@ -150,7 +150,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         }
 
         m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-            mesh.ensureDrawCall(m_vertexLayout, m_scene);
+            mesh.ensureDrawCallIsReady(m_vertexLayout, m_scene);
         });
 
         forEachCubemapSide([&](CubemapSide side, uint32_t sideIndex) {
@@ -180,7 +180,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
                     if (!sideFrustums[sideIndex].includesSphere(sphere))
                         return;
 
-                    DrawCall drawCall = mesh.getDrawCall(m_vertexLayout, m_scene);
+                    DrawCallDescription drawCall = mesh.drawCallDescription(m_vertexLayout, m_scene);
                     drawCall.firstInstance = meshIndex; // TODO: Put this in some buffer instead!
 
                     cmdList.issueDrawCall(drawCall);

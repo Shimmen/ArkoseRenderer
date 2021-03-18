@@ -31,7 +31,7 @@ public:
 
     virtual void bindVertexBuffer(const Buffer&) = 0;
     virtual void bindIndexBuffer(const Buffer&, IndexType) = 0;
-    virtual void issueDrawCall(const DrawCall&) = 0;
+    virtual void issueDrawCall(const DrawCallDescription&) = 0;
 
     virtual void rebuildTopLevelAcceratationStructure(TopLevelAS&) = 0;
     virtual void traceRays(Extent2D) = 0;

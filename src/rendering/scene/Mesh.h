@@ -33,8 +33,8 @@ public:
     virtual moos::aabb3 boundingBox() const = 0;
     virtual geometry::Sphere boundingSphere() const = 0;
 
-    void ensureDrawCall(const VertexLayout&, Scene&);
-    const DrawCall& getDrawCall(const VertexLayout&, Scene&);
+    void ensureDrawCallIsReady(const VertexLayout&, Scene&);
+    const DrawCallDescription& drawCallDescription(const VertexLayout&, Scene&);
 
     std::vector<uint8_t> vertexData(const VertexLayout&) const;
     size_t vertexCountForLayout(const VertexLayout&) const;
@@ -57,7 +57,7 @@ protected:
     mutable std::optional<std::vector<vec4>> m_tangentData;
     mutable std::optional<std::vector<uint32_t>> m_indexData;
 
-    mutable std::unordered_map<VertexLayout, DrawCall> m_drawCalls;
+    mutable std::unordered_map<VertexLayout, DrawCallDescription> m_drawCallDescriptions;
 
     virtual std::unique_ptr<Material> createMaterial() = 0;
     std::unique_ptr<Material> m_material {};

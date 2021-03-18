@@ -96,23 +96,23 @@ size_t Mesh::vertexCountForLayout(const VertexLayout& layout) const
     return vertexCount;
 }
 
-void Mesh::ensureDrawCall(const VertexLayout& layout, Scene& scene)
+void Mesh::ensureDrawCallIsReady(const VertexLayout& layout, Scene& scene)
 {
     SCOPED_PROFILE_ZONE();
     // Will create the relevant buffers & set their data (if it doesn't already exist)
-    getDrawCall(layout, scene);
+    drawCallDescription(layout, scene);
 }
 
-const DrawCall& Mesh::getDrawCall(const VertexLayout& layout, Scene& scene)
+const DrawCallDescription& Mesh::drawCallDescription(const VertexLayout& layout, Scene& scene)
 {
     SCOPED_PROFILE_ZONE()
 
-    auto entry = m_drawCalls.find(layout);
-    if (entry != m_drawCalls.end())
+    auto entry = m_drawCallDescriptions.find(layout);
+    if (entry != m_drawCallDescriptions.end())
         return entry->second;
 
-    DrawCall drawCall = scene.fitVertexAndIndexDataForMesh({}, *this, layout);
-    
-    m_drawCalls[layout] = drawCall;
-    return drawCall;
+    DrawCallDescription drawCallDescription = scene.fitVertexAndIndexDataForMesh({}, *this, layout);
+
+    m_drawCallDescriptions[layout] = drawCallDescription;
+    return drawCallDescription;
 }
