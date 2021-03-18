@@ -41,9 +41,9 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     reg.publish("environmentMap", envTexture);
 
     // Object data stuff
-    // TODO: Make into SSBO so we don't have to have a fixed size!
-    size_t objectDataBufferSize = SCENE_MAX_DRAWABLES * sizeof(ShaderDrawable);
-    Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+    // TODO: Resize the buffer if needed when more meshes are added
+    size_t objectDataBufferSize = m_scene.meshCount() * sizeof(ShaderDrawable);
+    Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
     objectDataBuffer.setName("SceneObjectData");
     reg.publish("objectData", objectDataBuffer);
 

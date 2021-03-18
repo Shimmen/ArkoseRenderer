@@ -9,7 +9,7 @@ layout(location = 2) in vec3 aNormal;
 layout(location = 3) in vec4 aTangent;
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
-layout(set = 4, binding = 0) uniform PerObjectBlock { ShaderDrawable perObject[SCENE_MAX_DRAWABLES]; };
+layout(set = 4, binding = 0) buffer readonly PerObjectBlock { ShaderDrawable perObject[]; };
 
 layout(location = 0) out vec2 vTexCoord;
 layout(location = 1) out vec3 vPosition;

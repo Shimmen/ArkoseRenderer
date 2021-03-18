@@ -437,25 +437,14 @@ void Scene::rebuildGpuSceneData()
 
     });
 
-    if (numMeshes > SCENE_MAX_DRAWABLES) {
-        // TODO: Or use a storage buffer instead..
-        LogErrorAndExit("Scene: we need to up the number of max drawables that can be handled by the scene! We have %u, the capacity is %u.\n", numMeshes, SCENE_MAX_DRAWABLES);
-    }
-
     if (m_usedTextures.size() > SCENE_MAX_TEXTURES) {
         LogErrorAndExit("Scene: we need to up the number of max textures that can be handled by the scene! We have %u, the capacity is %u.\n",
                         m_usedTextures.size(), SCENE_MAX_TEXTURES);
     }
 
     // Create material buffer
-    // TODO: Support changing materials! I.e. update this buffer when data has changed..
-    // TODO: Use shader storage buffer instead! Then we won't have an upper cap!
-    if (m_usedMaterials.size() > SCENE_MAX_MATERIALS) {
-        LogErrorAndExit("Scene: we need to up the number of max materials that can be handled by the scene! We have %u, the capacity is %u.\n",
-                        m_usedMaterials.size(), SCENE_MAX_MATERIALS);
-    }
     size_t materialBufferSize = m_usedMaterials.size() * sizeof(ShaderMaterial);
-    m_materialDataBuffer = &m_registry.createBuffer(materialBufferSize, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOptimal);
+    m_materialDataBuffer = &m_registry.createBuffer(materialBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
     m_materialDataBuffer->updateData(m_usedMaterials.data(), materialBufferSize);
     m_materialDataBuffer->setName("SceneMaterialData");
 

@@ -90,10 +90,6 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     Shader distanceFilterShader = Shader::createCompute("diffuse-gi/filterDistances.comp");
     ComputeState& distanceFilterState = reg.createComputeState(distanceFilterShader, { &distanceFilterBindingSet });
 
-    m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-        mesh.ensureDrawCall(m_vertexLayout, m_scene);
-    });
-
     return [&](const AppState& appState, CommandList& cmdList) {
         float ambientLx = m_scene.ambient();
         static bool useSceneAmbient = false;
@@ -152,6 +148,10 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
 
             cameraBuffer.updateData(sideMatrices.data(), sideMatrices.size() * sizeof(CameraMatrices));
         }
+
+        m_scene.forEachMesh([&](size_t, Mesh& mesh) {
+            mesh.ensureDrawCall(m_vertexLayout, m_scene);
+        });
 
         forEachCubemapSide([&](CubemapSide side, uint32_t sideIndex) {
             SCOPED_PROFILE_ZONE_NAMED("Drawing cube side");

@@ -14,7 +14,7 @@ layout(location = 3) flat in int vMaterialIndex;
 
 layout(set = 0, binding = 0) uniform CameraBlock { CameraMatrices cameras[6]; };
 
-layout(set = 1, binding = 0) uniform MaterialBlock { ShaderMaterial materials[SCENE_MAX_MATERIALS]; };
+layout(set = 1, binding = 0) buffer readonly MaterialBlock { ShaderMaterial materials[]; };
 layout(set = 1, binding = 1) uniform sampler2D textures[SCENE_MAX_TEXTURES];
 
 layout(set = 2, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
