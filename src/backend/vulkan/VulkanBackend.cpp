@@ -229,14 +229,11 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
     VkPhysicalDeviceFeatures2 features2 { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
     const VkPhysicalDeviceFeatures& features = features2.features;
 
-    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES };
-    features2.pNext = &indexingFeatures;
+    VkPhysicalDeviceVulkan11Features vk11features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
+    features2.pNext = &vk11features;
 
-    VkPhysicalDevice16BitStorageFeatures sixteenBitStorageFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES };
-    indexingFeatures.pNext = &sixteenBitStorageFeatures;
-
-    VkPhysicalDeviceShaderFloat16Int8Features shaderSmallTypeFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES };
-    sixteenBitStorageFeatures.pNext = &shaderSmallTypeFeatures;
+    VkPhysicalDeviceVulkan12Features vk12features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+    vk11features.pNext = &vk12features;
 
     vkGetPhysicalDeviceFeatures2(physicalDevice(), &features2);
 
@@ -245,29 +242,30 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         case Capability::RtxRayTracing:
             return hasSupportForExtension(VK_NV_RAY_TRACING_EXTENSION_NAME);
         case Capability::Shader16BitFloat:
-            return hasSupportForExtension(VK_KHR_16BIT_STORAGE_EXTENSION_NAME)
-                && hasSupportForExtension(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME)
-                && hasSupportForExtension(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME)
-                && sixteenBitStorageFeatures.storageInputOutput16 && sixteenBitStorageFeatures.storagePushConstant16
-                && sixteenBitStorageFeatures.storageBuffer16BitAccess && sixteenBitStorageFeatures.uniformAndStorageBuffer16BitAccess
-                && shaderSmallTypeFeatures.shaderFloat16;
-        case Capability::ShaderTextureArrayDynamicIndexing:
-            return hasSupportForExtension(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)
-                && features.shaderSampledImageArrayDynamicIndexing && indexingFeatures.shaderSampledImageArrayNonUniformIndexing && indexingFeatures.runtimeDescriptorArray;
-        case Capability::ShaderBufferArrayDynamicIndexing:
-            return hasSupportForExtension(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)
-                && features.shaderStorageBufferArrayDynamicIndexing && features.shaderUniformBufferArrayDynamicIndexing
-                && indexingFeatures.shaderStorageBufferArrayNonUniformIndexing && indexingFeatures.shaderUniformBufferArrayNonUniformIndexing
-                && indexingFeatures.runtimeDescriptorArray;
+            return vk11features.storageBuffer16BitAccess
+                && vk11features.uniformAndStorageBuffer16BitAccess
+                && vk11features.storageInputOutput16
+                && vk11features.storagePushConstant16
+                && vk12features.shaderFloat16;
+        default:
+            ASSERT_NOT_REACHED();
+            return false;
         }
-        ASSERT_NOT_REACHED();
     };
 
     bool allRequiredSupported = true;
 
-    // First check a few "common" features that are required in all cases
     if (!features.samplerAnisotropy || !features.fillModeNonSolid || !features.fragmentStoresAndAtomics || !features.vertexPipelineStoresAndAtomics) {
         LogError("VulkanBackend: no support for required common device feature\n");
+        allRequiredSupported = false;
+    }
+
+    if (!features.shaderUniformBufferArrayDynamicIndexing || !vk12features.shaderUniformBufferArrayNonUniformIndexing ||
+        !features.shaderStorageBufferArrayDynamicIndexing || !vk12features.shaderStorageBufferArrayNonUniformIndexing ||
+        !features.shaderStorageImageArrayDynamicIndexing || !vk12features.shaderStorageImageArrayNonUniformIndexing ||
+        !features.shaderSampledImageArrayDynamicIndexing || !vk12features.shaderSampledImageArrayNonUniformIndexing ||
+        !vk12features.runtimeDescriptorArray || !vk12features.descriptorBindingVariableDescriptorCount) {
+        LogError("VulkanBackend: no support for required common dynamic & non-uniform indexing device features\n");
         allRequiredSupported = false;
     }
 
@@ -515,16 +513,28 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     ASSERT(hasSupportForExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
     deviceExtensions.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-    VkPhysicalDeviceFeatures features = {};
-    VkPhysicalDeviceDescriptorIndexingFeatures indexingFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES };
-    VkPhysicalDevice16BitStorageFeatures sixteenBitStorageFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES };
-    VkPhysicalDeviceShaderFloat16Int8Features shaderSmallTypeFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES };
+    VkPhysicalDeviceFeatures2 features2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
+    VkPhysicalDeviceFeatures& features = features2.features;
+    VkPhysicalDeviceVulkan11Features vk11features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
+    VkPhysicalDeviceVulkan12Features vk12features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
 
-    // Enable some "common" features expected to exist
+    // Enable some very basic common features expected by everyone to exist
     features.samplerAnisotropy = VK_TRUE;
     features.fillModeNonSolid = VK_TRUE;
     features.fragmentStoresAndAtomics = VK_TRUE;
     features.vertexPipelineStoresAndAtomics = VK_TRUE;
+    
+    // Common dynamic & non-uniform indexing features that should be supported on a modern GPU
+    features.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
+    vk12features.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
+    features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+    vk12features.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
+    features.shaderStorageImageArrayDynamicIndexing = VK_TRUE;
+    vk12features.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
+    features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+    vk12features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+    vk12features.runtimeDescriptorArray = VK_TRUE;
+    vk12features.descriptorBindingVariableDescriptorCount = VK_TRUE;
 
     for (auto& [capability, active] : m_activeCapabilities) {
         if (!active)
@@ -534,28 +544,11 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
             deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
             break;
         case Capability::Shader16BitFloat:
-            deviceExtensions.push_back(VK_KHR_16BIT_STORAGE_EXTENSION_NAME);
-            deviceExtensions.push_back(VK_KHR_SHADER_FLOAT16_INT8_EXTENSION_NAME);
-            deviceExtensions.push_back(VK_KHR_STORAGE_BUFFER_STORAGE_CLASS_EXTENSION_NAME);
-            sixteenBitStorageFeatures.storageInputOutput16 = VK_TRUE;
-            sixteenBitStorageFeatures.storagePushConstant16 = VK_TRUE;
-            sixteenBitStorageFeatures.storageBuffer16BitAccess = VK_TRUE;
-            sixteenBitStorageFeatures.uniformAndStorageBuffer16BitAccess = VK_TRUE;
-            shaderSmallTypeFeatures.shaderFloat16 = VK_TRUE;
-            break;
-        case Capability::ShaderTextureArrayDynamicIndexing:
-            deviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
-            features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
-            indexingFeatures.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-            indexingFeatures.runtimeDescriptorArray = VK_TRUE;
-            break;
-        case Capability::ShaderBufferArrayDynamicIndexing:
-            deviceExtensions.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
-            features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
-            features.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
-            indexingFeatures.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
-            indexingFeatures.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
-            indexingFeatures.runtimeDescriptorArray = VK_TRUE;
+            vk11features.storageBuffer16BitAccess = VK_TRUE;
+            vk11features.uniformAndStorageBuffer16BitAccess = VK_TRUE;
+            vk11features.storageInputOutput16 = VK_TRUE;
+            vk11features.storagePushConstant16 = VK_TRUE;
+            vk12features.shaderFloat16 = VK_TRUE;
             break;
         default:
             ASSERT_NOT_REACHED();
@@ -574,12 +567,13 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     deviceCreateInfo.enabledExtensionCount = deviceExtensions.size();
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
-    deviceCreateInfo.pEnabledFeatures = &features;
+    // Since we use VkPhysicalDeviceFeatures2 this should be null according to spec
+    deviceCreateInfo.pEnabledFeatures = nullptr;
 
     // Device features extension chain
-    deviceCreateInfo.pNext = &indexingFeatures;
-    indexingFeatures.pNext = &sixteenBitStorageFeatures;
-    sixteenBitStorageFeatures.pNext = &shaderSmallTypeFeatures;
+    deviceCreateInfo.pNext = &features2;
+    features2.pNext = &vk11features;
+    vk11features.pNext = &vk12features;
 
     VkDevice device;
     if (vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device) != VK_SUCCESS)

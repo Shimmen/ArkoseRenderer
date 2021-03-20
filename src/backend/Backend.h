@@ -21,8 +21,6 @@ public:
     enum class Capability {
         RtxRayTracing,
         Shader16BitFloat,
-        ShaderTextureArrayDynamicIndexing,
-        ShaderBufferArrayDynamicIndexing,
     };
 
     struct AppSpecification {

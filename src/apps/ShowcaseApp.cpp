@@ -18,17 +18,6 @@
 
 #include "utility/IESProfile.h"
 
-std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
-{
-    return { Backend::Capability::ShaderTextureArrayDynamicIndexing,
-             Backend::Capability::ShaderBufferArrayDynamicIndexing };
-}
-
-std::vector<Backend::Capability> ShowcaseApp::optionalCapabilities()
-{
-    return {};
-}
-
 void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
 {
     SCOPED_PROFILE_ZONE();
@@ -144,8 +133,4 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
 #endif
         };
     });
-}
-
-void ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
-{
 }

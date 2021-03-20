@@ -9,9 +9,9 @@ public:
     App() = default;
     virtual ~App() = default;
 
-    virtual std::vector<Backend::Capability> requiredCapabilities() = 0;
-    virtual std::vector<Backend::Capability> optionalCapabilities() = 0;
+    virtual std::vector<Backend::Capability> requiredCapabilities() { return {}; };
+    virtual std::vector<Backend::Capability> optionalCapabilities() { return {}; };
 
     virtual void setup(Scene&, RenderGraph&) = 0;
-    virtual void update(Scene&, float elapsedTime, float deltaTime) = 0;
+    virtual void update(Scene&, float elapsedTime, float deltaTime) {};
 };

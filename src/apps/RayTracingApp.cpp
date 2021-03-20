@@ -19,9 +19,7 @@
 
 std::vector<Backend::Capability> RayTracingApp::requiredCapabilities()
 {
-    return { Backend::Capability::RtxRayTracing,
-             Backend::Capability::ShaderTextureArrayDynamicIndexing,
-             Backend::Capability::ShaderBufferArrayDynamicIndexing };
+    return { Backend::Capability::RtxRayTracing };
 }
 
 std::vector<Backend::Capability> RayTracingApp::optionalCapabilities()

@@ -10,16 +10,6 @@
 #include "utility/Logging.h"
 #include <imgui.h>
 
-std::vector<Backend::Capability> MultisampleTest::requiredCapabilities()
-{
-    return {};
-}
-
-std::vector<Backend::Capability> MultisampleTest::optionalCapabilities()
-{
-    return {};
-}
-
 void MultisampleTest::setup(Scene& scene, RenderGraph& graph)
 {
     scene.loadFromFile("assets/sample/sponza.json");
@@ -75,8 +65,4 @@ void MultisampleTest::setup(Scene& scene, RenderGraph& graph)
             cmdList.draw(vertexBuffer, 3);
         };
     });
-}
-
-void MultisampleTest::update(Scene& scene, float elapsedTime, float deltaTime)
-{
 }
