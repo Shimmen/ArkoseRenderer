@@ -33,7 +33,7 @@ public:
     virtual moos::aabb3 boundingBox() const = 0;
     virtual geometry::Sphere boundingSphere() const = 0;
 
-    void ensureDrawCallIsReady(const VertexLayout&, Scene&);
+    void ensureDrawCallIsAvailable(const VertexLayout&, Scene&);
     const DrawCallDescription& drawCallDescription(const VertexLayout&, Scene&);
 
     std::vector<uint8_t> vertexData(const VertexLayout&) const;

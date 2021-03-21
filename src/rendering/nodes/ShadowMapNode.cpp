@@ -31,7 +31,7 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
         mat4 objectTransforms[SHADOW_MAX_OCCLUDERS];
         int meshCount = m_scene.forEachMesh([&](size_t idx, Mesh& mesh) {
             objectTransforms[idx] = mesh.transform().worldMatrix();
-            mesh.ensureDrawCallIsReady({ VertexComponent::Position3F }, m_scene);
+            mesh.ensureDrawCallIsAvailable({ VertexComponent::Position3F }, m_scene);
         });
         transformDataBuffer.updateData(objectTransforms, meshCount * sizeof(mat4));
 

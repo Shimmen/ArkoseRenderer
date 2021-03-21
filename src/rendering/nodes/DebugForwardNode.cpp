@@ -47,7 +47,7 @@ RenderGraphNode::ExecuteCallback DebugForwardNode::constructFrame(Registry& reg)
 
     return [&](const AppState& appState, CommandList& cmdList) {
         m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-            mesh.ensureDrawCallIsReady(m_vertexLayout, m_scene);
+            mesh.ensureDrawCallIsAvailable(m_vertexLayout, m_scene);
         });
 
         cmdList.beginRendering(renderState, ClearColor(0, 0, 0, 0), 1.0f);

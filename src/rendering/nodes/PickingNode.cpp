@@ -53,7 +53,7 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
                 mat4 objectTransforms[PICKING_MAX_DRAWABLES];
                 numMeshes = m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
                     objectTransforms[index] = mesh.transform().worldMatrix();
-                    mesh.ensureDrawCallIsReady({ VertexComponent::Position3F }, m_scene);
+                    mesh.ensureDrawCallIsAvailable({ VertexComponent::Position3F }, m_scene);
                 });
                 transformDataBuffer.updateData(objectTransforms, numMeshes * sizeof(mat4));
             }

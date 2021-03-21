@@ -150,7 +150,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         }
 
         m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-            mesh.ensureDrawCallIsReady(m_vertexLayout, m_scene);
+            mesh.ensureDrawCallIsAvailable(m_vertexLayout, m_scene);
         });
 
         forEachCubemapSide([&](CubemapSide side, uint32_t sideIndex) {

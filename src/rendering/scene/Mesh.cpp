@@ -96,7 +96,7 @@ size_t Mesh::vertexCountForLayout(const VertexLayout& layout) const
     return vertexCount;
 }
 
-void Mesh::ensureDrawCallIsReady(const VertexLayout& layout, Scene& scene)
+void Mesh::ensureDrawCallIsAvailable(const VertexLayout& layout, Scene& scene)
 {
     SCOPED_PROFILE_ZONE();
     // Will create the relevant buffers & set their data (if it doesn't already exist)
