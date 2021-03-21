@@ -38,4 +38,11 @@ bool Frustum::includesSphere(const Sphere& sphere)
     return true;
 }
 
+const Plane* Frustum::rawPlaneData(size_t* outByteSize) const
+{
+    if (outByteSize)
+        *outByteSize = 6 * sizeof(Plane);
+    return m_planes;
+}
+
 }

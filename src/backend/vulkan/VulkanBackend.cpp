@@ -269,6 +269,11 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         allRequiredSupported = false;
     }
 
+    if (!vk12features.drawIndirectCount) {
+        LogError("VulkanBackend: no support for required common drawing related device features\n");
+        allRequiredSupported = false;
+    }
+
     for (auto& cap : appSpecification.requiredCapabilities) {
         if (isSupported(cap)) {
             m_activeCapabilities[cap] = true;
@@ -535,6 +540,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     vk12features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
     vk12features.runtimeDescriptorArray = VK_TRUE;
     vk12features.descriptorBindingVariableDescriptorCount = VK_TRUE;
+
+    // Common drawing related features
+    vk12features.drawIndirectCount = VK_TRUE;
 
     for (auto& [capability, active] : m_activeCapabilities) {
         if (!active)
@@ -1545,6 +1553,8 @@ bool VulkanBackend::copyBuffer(VkBuffer source, VkBuffer destination, size_t siz
 
 bool VulkanBackend::setBufferMemoryUsingMapping(VmaAllocation allocation, const uint8_t* data, size_t size, size_t offset)
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     if (size == 0) {
         return true;
     }
@@ -1565,6 +1575,8 @@ bool VulkanBackend::setBufferMemoryUsingMapping(VmaAllocation allocation, const 
 
 bool VulkanBackend::setBufferDataUsingStagingBuffer(VkBuffer buffer, const uint8_t* data, size_t size, size_t offset, VkCommandBuffer* commandBuffer)
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     if (size == 0) {
         return true;
     }
@@ -1602,6 +1614,8 @@ bool VulkanBackend::setBufferDataUsingStagingBuffer(VkBuffer buffer, const uint8
 
 bool VulkanBackend::transitionImageLayout(VkImage image, bool isDepthFormat, VkImageLayout oldLayout, VkImageLayout newLayout, VkCommandBuffer* currentCommandBuffer) const
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     if (oldLayout == newLayout) {
         LogWarning("VulkanBackend::transitionImageLayout(): old & new layout identical, ignoring.\n");
         return true;
@@ -1718,6 +1732,8 @@ bool VulkanBackend::transitionImageLayout(VkImage image, bool isDepthFormat, VkI
 
 bool VulkanBackend::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, bool isDepthImage) const
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     VkBufferImageCopy region = {};
     region.bufferOffset = 0;
 
@@ -1748,6 +1764,8 @@ bool VulkanBackend::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t w
 
 std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>> VulkanBackend::createDescriptorSetLayoutForShader(const Shader& shader) const
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     uint32_t maxSetId = 0;
     std::unordered_map<uint32_t, std::unordered_map<uint32_t, VkDescriptorSetLayoutBinding>> sets;
 
@@ -1888,6 +1906,8 @@ std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>
 
 std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConstants(const Shader& shader) const
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     std::vector<VulkanBackend::PushConstantInfo> infos;
 
     for (auto& file : shader.files()) {
@@ -1982,6 +2002,8 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
 
 uint32_t VulkanBackend::findAppropriateMemory(uint32_t typeBits, VkMemoryPropertyFlags properties) const
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     VkPhysicalDeviceMemoryProperties memoryProperties;
     vkGetPhysicalDeviceMemoryProperties(physicalDevice(), &memoryProperties);
 
@@ -2001,6 +2023,8 @@ uint32_t VulkanBackend::findAppropriateMemory(uint32_t typeBits, VkMemoryPropert
 
 void VulkanBackend::submitQueue(uint32_t imageIndex, VkSemaphore* waitFor, VkSemaphore* signal, VkFence* inFlight)
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 
     submitInfo.waitSemaphoreCount = 1;

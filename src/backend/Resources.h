@@ -347,6 +347,7 @@ struct Buffer : public Resource {
         Index,
         UniformBuffer,
         StorageBuffer,
+        IndirectBuffer,
     };
 
     enum class MemoryHint {

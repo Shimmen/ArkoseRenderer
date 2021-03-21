@@ -1,12 +1,15 @@
 #include "SceneNode.h"
 
-#include "CameraState.h"
-#include "LightData.h"
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 #include <moos/vector.h>
 #include <unordered_map>
+
+// Shader shader headers
+using uint = uint32_t;
+#include "LightData.h"
+#include "CameraState.h"
 
 std::string SceneNode::name()
 {

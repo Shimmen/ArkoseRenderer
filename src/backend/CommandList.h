@@ -28,6 +28,7 @@ public:
 
     virtual void draw(Buffer& vertexBuffer, uint32_t vertexCount) = 0;
     virtual void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex = 0) = 0;
+    virtual void drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer) = 0;
 
     virtual void bindVertexBuffer(const Buffer&) = 0;
     virtual void bindIndexBuffer(const Buffer&, IndexType) = 0;
@@ -51,6 +52,7 @@ public:
     virtual void endDebugLabel() = 0;
 
     virtual void textureWriteBarrier(const Texture&) = 0;
+    virtual void bufferWriteBarrier(std::vector<Buffer*>) = 0;
 
     virtual void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) = 0;
 

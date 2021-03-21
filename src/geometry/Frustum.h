@@ -12,6 +12,8 @@ public:
 
     bool includesSphere(const Sphere&);
 
+    const Plane* rawPlaneData(size_t* outByteSize) const;
+
 private:
     explicit Frustum(Plane planes[6]);
 

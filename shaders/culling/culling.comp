@@ -1,0 +1,70 @@
+#version 460
+
+#include <common.glsl>
+#include <common/namedUniforms.glsl>
+#include <shared/IndirectData.h>
+#include <shared/SceneData.h>
+
+layout(set = 0, binding = 0) readonly buffer CameraFrustums { vec4 frustumPlanes[6]; };
+layout(set = 0, binding = 1) readonly buffer InObjectData   { IndirectShaderDrawable inputDrawables[]; };
+
+layout(set = 0, binding = 2) writeonly buffer OutObjectData     { ShaderDrawable outputDrawables[]; };
+layout(set = 0, binding = 3) writeonly buffer OutIndirectData   { IndexedDrawCmd outputCmds[]; };
+layout(set = 0, binding = 4)           buffer ObjectDataCounter { uint nextOutObjectDataIdx; };
+
+NAMED_UNIFORMS(pushConstants,
+    uint numInputDrawables;
+)
+
+vec4 transformSphere(in vec4 sphere, mat4 M)
+{
+    mat4 Mt = transpose(M);
+    float scaleX2 = lengthSquared(Mt[0].xyz);
+    float scaleY2 = lengthSquared(Mt[1].xyz);
+    float scaleZ2 = lengthSquared(Mt[2].xyz);
+
+    float newRadius = sphere.w * sqrt(max(scaleX2, max(scaleY2, scaleZ2)));
+    vec3 newCenter = vec3(M * vec4(sphere.xyz, 1.0));
+
+    return vec4(newCenter, newRadius);
+}
+
+bool sphereIsIncludedInFrustum(vec4 sphere)
+{
+    bool isIncluded = true;
+    for (int i = 0; i < 6; ++i) {
+        float signedDist = dot(frustumPlanes[i].xyz, sphere.xyz) + frustumPlanes[i].w;
+        if (signedDist > sphere.w)
+            isIncluded = false;
+    }
+    return isIncluded;
+}
+
+layout(local_size_x = 64, local_size_y = 1) in;
+void main()
+{
+    const uint objectIdx = gl_GlobalInvocationID.x;
+    if (objectIdx >= pushConstants.numInputDrawables)
+        return;
+
+    IndirectShaderDrawable inputDrawable = inputDrawables[objectIdx];
+
+    mat4 transform = inputDrawable.drawable.worldFromLocal;
+    vec4 transformedSphere = transformSphere(inputDrawable.localBoundingSphere, transform);
+    if (!sphereIsIncludedInFrustum(transformedSphere))
+        return;
+
+    // This mesh should be included in the draw call, set up indirect buffer & data buffer
+    // Note: this count will also be used for the draw count
+    uint outIdx = atomicAdd(nextOutObjectDataIdx, 1u);
+
+    IndexedDrawCmd cmd;
+    cmd.indexCount = inputDrawable.indexCount;
+    cmd.firstIndex = inputDrawable.firstIndex;
+    cmd.vertexOffset = inputDrawable.vertexOffset;
+    cmd.firstInstance = 0;
+    cmd.instanceCount = 1;
+
+    outputCmds[outIdx] = cmd;
+    outputDrawables[outIdx] = inputDrawable.drawable;
+}

@@ -279,6 +279,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Buffer* bu
         type = ShaderBindingType::UniformBuffer;
         break;
     case Buffer::Usage::StorageBuffer:
+    case Buffer::Usage::IndirectBuffer:
         type = ShaderBindingType::StorageBuffer;
         break;
     default:
@@ -353,7 +354,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std:
         if (!buffer) {
             LogErrorAndExit("ShaderBinding error: null buffer in list\n");
         }
-        if (buffer->usage() != Buffer::Usage::StorageBuffer) {
+        if (buffer->usage() != Buffer::Usage::StorageBuffer || buffer->usage() != Buffer::Usage::IndirectBuffer) {
             LogErrorAndExit("ShaderBinding error: buffer in list is not a storage buffer\n");
         }
     }

@@ -19,10 +19,7 @@ layout(location = 6) flat out int vMaterialIndex;
 
 void main()
 {
-    // TODO: Get this from a vertex buffer instead!
-    int objectIndex = gl_InstanceIndex;
-
-    ShaderDrawable object = perObject[objectIndex];
+    ShaderDrawable object = perObject[gl_DrawID];
     vMaterialIndex = object.materialIndex;
 
     vec4 viewSpacePos = camera.viewFromWorld * object.worldFromLocal * vec4(aPosition, 1.0);

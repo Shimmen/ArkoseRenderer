@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../RenderGraphNode.h"
-#include "SceneData.h"
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 

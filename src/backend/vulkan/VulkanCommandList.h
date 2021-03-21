@@ -23,6 +23,7 @@ public:
 
     void draw(Buffer& vertexBuffer, uint32_t vertexCount) override;
     void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex) override;
+    void drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer) override;
 
     void bindVertexBuffer(const Buffer&) override;
     void bindIndexBuffer(const Buffer&, IndexType) override;
@@ -43,6 +44,7 @@ public:
     void endDebugLabel() override;
 
     void textureWriteBarrier(const Texture&) override;
+    void bufferWriteBarrier(std::vector<Buffer*>) override;
 
     void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) override;
 

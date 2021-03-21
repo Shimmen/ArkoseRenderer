@@ -19,4 +19,14 @@ struct ShaderMaterial {
     int emissive;
 };
 
+struct IndirectShaderDrawable {
+    ShaderDrawable drawable;
+    vec4 localBoundingSphere;
+
+    uint indexCount;
+    uint firstIndex;
+    int vertexOffset;
+    int _pad0;
+};
+
 #endif // SCENE_DATA_H

@@ -6,6 +6,10 @@
 #include "utility/Profiling.h"
 #include <stb_image_write.h>
 
+// Shared shader headers
+using uint = uint32_t;
+#include "IndirectData.h"
+
 VulkanCommandList::VulkanCommandList(VulkanBackend& backend, VkCommandBuffer commandBuffer)
     : m_backend(backend)
     , m_commandBuffer(commandBuffer)
@@ -821,6 +825,32 @@ void VulkanCommandList::drawIndexed(const Buffer& vertexBuffer, const Buffer& in
     vkCmdDrawIndexed(m_commandBuffer, indexCount, 1, 0, 0, instanceIndex);
 }
 
+void VulkanCommandList::drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    if (!activeRenderState)
+        LogErrorAndExit("drawIndirect: no active render state!\n");
+    if (!m_boundVertexBuffer)
+        LogErrorAndExit("drawIndirect: no bound vertex buffer!\n");
+    if (!m_boundIndexBuffer)
+        LogErrorAndExit("drawIndirect: no bound index buffer!\n");
+
+    if (indirectBuffer.usage() != Buffer::Usage::IndirectBuffer)
+        LogErrorAndExit("drawIndirect: supplied indirect buffer is not an indirect buffer!\n");
+    if (countBuffer.usage() != Buffer::Usage::IndirectBuffer)
+        LogErrorAndExit("drawIndirect: supplied count buffer is not an indirect buffer!\n");
+
+    VkBuffer vulkanIndirectBuffer = static_cast<const VulkanBuffer&>(indirectBuffer).buffer;
+    VkBuffer vulkanCountBuffer = static_cast<const VulkanBuffer&>(countBuffer).buffer;
+
+    // TODO: Parameterize these maybe? Now we assume that they are packed etc.
+    uint32_t indirectDataStride = sizeof(IndexedDrawCmd);
+    uint32_t maxDrawCount = indirectBuffer.size() / indirectDataStride;
+
+    vkCmdDrawIndexedIndirectCount(m_commandBuffer, vulkanIndirectBuffer, 0u, vulkanCountBuffer, 0u, maxDrawCount, indirectDataStride);
+}
+
 void VulkanCommandList::bindVertexBuffer(const Buffer& vertexBuffer)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
@@ -1261,6 +1291,40 @@ void VulkanCommandList::textureWriteBarrier(const Texture& genTexture)
                          0, nullptr,
                          0, nullptr,
                          1, &barrier);
+}
+
+void VulkanCommandList::bufferWriteBarrier(std::vector<Buffer*> buffers)
+{
+    if (buffers.size() == 0)
+        return;
+
+    std::vector<VkBufferMemoryBarrier> barriers {};
+    barriers.resize(buffers.size());
+
+    for (int i = 0; i < buffers.size(); ++i) {
+        Buffer& buffer = *buffers[i];
+
+        VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+        barrier.buffer = static_cast<VulkanBuffer&>(buffer).buffer;
+
+        // the whole range
+        barrier.offset = 0;
+        barrier.size = buffer.size();
+
+        // all writes must finish before any later memory access (r/w)
+        barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+        barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+        barriers[i] = barrier;
+    }
+
+    vkCmdPipelineBarrier(m_commandBuffer,
+                         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                         0,
+                         0, nullptr,
+                         barriers.size(), barriers.data(),
+                         0, nullptr);
 }
 
 void VulkanCommandList::endNode(Badge<class VulkanBackend>)

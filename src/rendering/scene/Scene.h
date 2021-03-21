@@ -12,6 +12,7 @@
 #include <unordered_map>
 
 // Shared shader data
+using uint = uint32_t;
 #include "SceneData.h"
 
 class Scene final {
