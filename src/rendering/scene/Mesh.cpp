@@ -75,6 +75,8 @@ std::vector<uint8_t> Mesh::vertexData(const VertexLayout& layout) const
 
 size_t Mesh::vertexCountForLayout(const VertexLayout& layout) const
 {
+    // TODO: Maybe we should let number of positions be authorative and just return that?
+
     size_t vertexCount = 0u;
     for (auto& component : layout.components()) {
         switch (component) {

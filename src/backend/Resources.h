@@ -371,12 +371,20 @@ struct Buffer : public Resource {
     MemoryHint memoryHint() const { return m_memoryHint; }
 
     virtual void updateData(const std::byte* data, size_t size, size_t offset = 0) = 0;
+    virtual bool updateDataAndGrowIfRequired(const std::byte* data, size_t size, size_t offset);
 
     template<typename T>
     void updateData(const T* data, size_t size, size_t offset = 0)
     {
         auto* byteData = reinterpret_cast<const std::byte*>(data);
         updateData(byteData, size, offset);
+    }
+
+    template<typename T>
+    bool updateDataAndGrowIfRequired(const T* data, size_t size, size_t offset = 0)
+    {
+        auto* byteData = reinterpret_cast<const std::byte*>(data);
+        return updateDataAndGrowIfRequired(byteData, size, offset);
     }
 
     enum class ReallocateStrategy {
@@ -404,6 +412,9 @@ struct DrawCallDescription {
         Indexed,
         NonIndexed,
     };
+
+    // (optional)
+    const class Mesh* sourceMesh { nullptr };
 
     const Buffer* vertexBuffer;
     const Buffer* indexBuffer;

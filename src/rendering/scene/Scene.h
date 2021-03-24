@@ -115,13 +115,11 @@ private:
 
     // GPU data
 
-    struct ResizableBuffer {
-        Buffer* buffer { nullptr };
-        size_t offsetToNextFree { 0 };
-    };
+    Buffer* m_global32BitIndexBuffer { nullptr };
+    uint32_t m_nextFreeIndex { 0 };
 
-    ResizableBuffer m_global32BitIndexBuffer {};
-    std::unordered_map<VertexLayout, std::unique_ptr<ResizableBuffer>> m_globalVertexBuffers {};
+    std::unordered_map<VertexLayout, Buffer*> m_globalVertexBuffers {};
+    uint32_t m_nextFreeVertexIndex { 0 };
 
     std::vector<Texture*> m_usedTextures {};
     std::vector<ShaderMaterial> m_usedMaterials {};
