@@ -303,21 +303,31 @@ void Scene::generateProbeGridFromBoundingBox()
     setProbeGrid(grid);
 }
 
-DrawCallDescription Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh& mesh, const VertexLayout& layout)
+DrawCallDescription Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh& mesh, const VertexLayout& layout, std::optional<DrawCallDescription> alignWith)
 {
     // TODO: Maybe ensure we haven't already fitted this mesh+layout combo?
+
+    // Note: these initial sizes causes some corruption. Many other sizes do not cause corruptions even when we do resize..
+    // I will make this growing mechanism more robust and in doing so, hopefully remove this bug :^)
+    const size_t initialIndexBufferSize = 100'000 * sizeof(uint32_t);
+    const size_t initialVertexBufferSize = 50'000 * layout.packedVertexSize();
+
+    bool doAlign = alignWith.has_value();
 
     DrawCallDescription drawCall {};
     drawCall.type = DrawCallDescription::Type::Indexed;
 
-    // Fit index data
+    // Fit index data (if doAlign we assume the alignWith description has already inserted indices)
+    if (!doAlign)
     {
         std::vector<uint32_t> indexData = mesh.indexData();
         size_t requiredAdditionalSize = indexData.size() * sizeof(uint32_t);
 
         ResizableBuffer& indexBuffer = m_global32BitIndexBuffer;
-        if (indexBuffer.buffer == nullptr)
-            indexBuffer.buffer = &m_registry.createBuffer(std::max(InitialIndexBufferSize, requiredAdditionalSize), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+        if (indexBuffer.buffer == nullptr) {
+            indexBuffer.buffer = &m_registry.createBuffer(std::max(initialIndexBufferSize, requiredAdditionalSize), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+            indexBuffer.buffer->setName("SceneIndexBuffer");
+        }
 
         size_t remainingSize = indexBuffer.buffer->size() - indexBuffer.offsetToNextFree;
 
@@ -338,14 +348,47 @@ DrawCallDescription Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&
     }
 
     // Fit vertex data
-    {
-        std::vector<uint8_t> vertexData = mesh.vertexData(layout);
+    std::vector<uint8_t> vertexData = mesh.vertexData(layout);
+    if (doAlign) {
+
+        size_t newDataStartOffset = alignWith->vertexOffset * layout.packedVertexSize();
+        size_t requiredBufferSize = newDataStartOffset + vertexData.size();
+
+        auto entry = m_globalVertexBuffers.find(layout);
+        if (entry == m_globalVertexBuffers.end()) {
+            auto buffer = std::make_unique<ResizableBuffer>();
+            buffer->buffer = &m_registry.createBuffer(std::max(initialVertexBufferSize, requiredBufferSize), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+            buffer->buffer->setName("SceneVertexBuffer");
+            m_globalVertexBuffers[layout] = std::move(buffer);
+        } else {
+
+            ResizableBuffer& vertexBuffer = *m_globalVertexBuffers[layout];
+            size_t currentSize = vertexBuffer.buffer->size();
+
+            if (requiredBufferSize > currentSize) {
+                size_t newSize = std::max(2 * currentSize, requiredBufferSize);
+                vertexBuffer.buffer->reallocateWithSize(newSize, Buffer::ReallocateStrategy::CopyExistingData);
+            }
+
+            vertexBuffer.buffer->updateData(vertexData.data(), vertexData.size(), newDataStartOffset);
+
+            // Set next free offset to immediately after this
+            vertexBuffer.offsetToNextFree = requiredBufferSize;
+        }
+
+        // We can just reuse the description we align with, but with the vertex buffer replaced
+        drawCall = alignWith.value();
+        drawCall.vertexBuffer = m_globalVertexBuffers[layout]->buffer;
+
+    } else {
+
         size_t requiredAdditionalSize = vertexData.size();
 
         auto entry = m_globalVertexBuffers.find(layout);
         if (entry == m_globalVertexBuffers.end()) {
             auto buffer = std::make_unique<ResizableBuffer>();
-            buffer->buffer = &m_registry.createBuffer(std::max(InitialVertexBufferSize, requiredAdditionalSize), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+            buffer->buffer = &m_registry.createBuffer(std::max(initialVertexBufferSize, requiredAdditionalSize), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+            buffer->buffer->setName("SceneVertexBuffer");
             m_globalVertexBuffers[layout] = std::move(buffer);
         }
 

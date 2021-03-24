@@ -89,6 +89,7 @@ struct Texture : public Resource {
         RGBA16F,
         RGBA32F,
         Depth32F,
+        Depth24Stencil8,
     };
 
     enum class MinFilter {
@@ -246,7 +247,12 @@ struct Texture : public Resource {
 
     [[nodiscard]] bool hasDepthFormat() const
     {
-        return m_format == Format::Depth32F;
+        return m_format == Format::Depth32F || m_format == Format::Depth24Stencil8;
+    }
+
+    [[nodiscard]] bool hasStencilFormat() const
+    {
+        return m_format == Format::Depth24Stencil8;
     }
 
     [[nodiscard]] bool hasSrgbFormat() const
@@ -420,9 +426,18 @@ struct BlendState {
     bool enabled { false };
 };
 
+enum class DepthCompareOp {
+    Less,
+    LessThanEqual,
+    Greater,
+    GreaterThanEqual,
+    Equal,
+};
+
 struct DepthState {
     bool writeDepth { true };
     bool testDepth { true };
+    DepthCompareOp compareOp { DepthCompareOp::Less };
 };
 
 enum class TriangleWindingOrder {
@@ -559,6 +574,7 @@ public:
 
     bool writeDepth { true };
     bool testDepth { true };
+    DepthCompareOp depthCompare { DepthCompareOp::Less };
     PolygonMode polygonMode { PolygonMode::Filled };
 
     [[nodiscard]] Viewport viewport() const;

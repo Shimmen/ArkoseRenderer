@@ -432,6 +432,7 @@ DepthState RenderStateBuilder::depthState() const
     DepthState state {
         .writeDepth = writeDepth,
         .testDepth = testDepth,
+        .compareOp = depthCompare,
     };
     return state;
 }

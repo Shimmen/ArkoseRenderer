@@ -74,8 +74,8 @@ private:
     VulkanBackend& m_backend;
     VkCommandBuffer m_commandBuffer;
 
-    const Buffer* m_boundVertexBuffer { nullptr };
-    const Buffer* m_boundIndexBuffer { nullptr };
+    VkBuffer m_boundVertexBuffer { VK_NULL_HANDLE };
+    VkBuffer m_boundIndexBuffer { VK_NULL_HANDLE };
     IndexType m_boundIndexBufferType {};
 
     const VulkanRenderState* activeRenderState = nullptr;

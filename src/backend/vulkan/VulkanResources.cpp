@@ -104,6 +104,10 @@ void VulkanBuffer::reallocateWithSize(size_t newSize, ReallocateStrategy strateg
 
         break;
     }
+
+    // Re-set GPU buffer name for the new resource
+    if (!name().empty())
+        setName(name());
 }
 
 void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocation& outAllocation)
@@ -232,6 +236,10 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
         vkFormat = VK_FORMAT_D32_SFLOAT;
         storageCapable = false;
         break;
+    case Texture::Format::Depth24Stencil8:
+        vkFormat = VK_FORMAT_D24_UNORM_S8_UINT;
+        storageCapable = false;
+        break;
     case Texture::Format::Unknown:
         LogErrorAndExit("Trying to create new texture with format Unknown, which is not allowed!\n");
     default:
@@ -300,6 +308,7 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
 
     VkImageAspectFlags aspectFlags = 0u;
     if (hasDepthFormat()) {
+        // Create view for the depth aspect only
         aspectFlags |= VK_IMAGE_ASPECT_DEPTH_BIT;
     } else {
         aspectFlags |= VK_IMAGE_ASPECT_COLOR_BIT;
@@ -571,7 +580,7 @@ void VulkanTexture::setPixelData(vec4 pixel)
         imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
         imageBarrier.image = image;
-        imageBarrier.subresourceRange.aspectMask = hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+        imageBarrier.subresourceRange.aspectMask = aspectMask();
         imageBarrier.subresourceRange.baseMipLevel = 0;
         imageBarrier.subresourceRange.levelCount = 1;
         imageBarrier.subresourceRange.baseArrayLayer = 0;
@@ -650,7 +659,7 @@ void VulkanTexture::setData(const void* data, size_t size)
             imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
             imageBarrier.image = image;
-            imageBarrier.subresourceRange.aspectMask = hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+            imageBarrier.subresourceRange.aspectMask = aspectMask();
             imageBarrier.subresourceRange.baseMipLevel = 0;
             imageBarrier.subresourceRange.levelCount = 1;
             imageBarrier.subresourceRange.baseArrayLayer = 0;
@@ -689,10 +698,8 @@ void VulkanTexture::generateMipmaps()
         return;
     }
 
-    VkImageAspectFlagBits aspectMask = hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-
     VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-    barrier.subresourceRange.aspectMask = aspectMask;
+    barrier.subresourceRange.aspectMask = aspectMask();
     barrier.image = image;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -714,7 +721,7 @@ void VulkanTexture::generateMipmaps()
         {
             VkImageMemoryBarrier initialBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
             initialBarrier.image = image;
-            initialBarrier.subresourceRange.aspectMask = aspectMask;
+            initialBarrier.subresourceRange.aspectMask = aspectMask();
             initialBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             initialBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
             initialBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -757,13 +764,13 @@ void VulkanTexture::generateMipmaps()
             VkImageBlit blit = {};
             blit.srcOffsets[0] = { 0, 0, 0 };
             blit.srcOffsets[1] = { mipWidth, mipHeight, 1 };
-            blit.srcSubresource.aspectMask = aspectMask;
+            blit.srcSubresource.aspectMask = aspectMask();
             blit.srcSubresource.mipLevel = i - 1;
             blit.srcSubresource.baseArrayLayer = 0;
             blit.srcSubresource.layerCount = 1;
             blit.dstOffsets[0] = { 0, 0, 0 };
             blit.dstOffsets[1] = { nextWidth, nextHeight, 1 };
-            blit.dstSubresource.aspectMask = aspectMask;
+            blit.dstSubresource.aspectMask = aspectMask();
             blit.dstSubresource.mipLevel = i;
             blit.dstSubresource.baseArrayLayer = 0;
             blit.dstSubresource.layerCount = 1;
@@ -817,6 +824,21 @@ uint32_t VulkanTexture::layerCount() const
     default:
         ASSERT_NOT_REACHED();
     }
+}
+
+VkImageAspectFlags VulkanTexture::aspectMask() const
+{
+    VkImageAspectFlags mask = 0u;
+
+    if (hasDepthFormat()) {
+        mask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+        if (hasStencilFormat())
+            mask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+    } else {
+        mask |= VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+
+    return mask;
 }
 
 VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment> attachments)
@@ -1616,10 +1638,31 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     colorBlending.attachmentCount = colorBlendAttachments.size();
     colorBlending.pAttachments = colorBlendAttachments.data();
 
+    VkCompareOp depthCompareOp;
+    switch (depthState.compareOp) {
+    case DepthCompareOp::Less:
+        depthCompareOp = VK_COMPARE_OP_LESS;
+        break;
+    case DepthCompareOp::LessThanEqual:
+        depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+        break;
+    case DepthCompareOp::Greater:
+        depthCompareOp = VK_COMPARE_OP_GREATER;
+        break;
+    case DepthCompareOp::GreaterThanEqual:
+        depthCompareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
+        break;
+    case DepthCompareOp::Equal:
+        depthCompareOp = VK_COMPARE_OP_EQUAL;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+
     VkPipelineDepthStencilStateCreateInfo depthStencilState = { VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO };
     depthStencilState.depthTestEnable = depthState.testDepth;
     depthStencilState.depthWriteEnable = depthState.writeDepth;
-    depthStencilState.depthCompareOp = VK_COMPARE_OP_LESS;
+    depthStencilState.depthCompareOp = depthCompareOp;
     depthStencilState.depthBoundsTestEnable = VK_FALSE;
     depthStencilState.minDepthBounds = 0.0f;
     depthStencilState.maxDepthBounds = 1.0f;

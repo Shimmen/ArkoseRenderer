@@ -81,7 +81,7 @@ public:
 
     // Managed GPU assets
 
-    DrawCallDescription fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&, const VertexLayout&);
+    DrawCallDescription fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&, const VertexLayout&, std::optional<DrawCallDescription> alignWith = {});
 
     Buffer& globalVertexBufferForLayout(const VertexLayout&) const;
     Buffer& globalIndexBuffer() const;
@@ -114,9 +114,6 @@ private:
     Mesh* m_selectedMesh { nullptr };
 
     // GPU data
-
-    static constexpr size_t InitialIndexBufferSize = 25 * 1024 * 1024;
-    static constexpr size_t InitialVertexBufferSize = 100 * 1024 * 1024;
 
     struct ResizableBuffer {
         Buffer* buffer { nullptr };

@@ -65,7 +65,21 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     ComputeState& cullingState = reg.createComputeState(Shader::createCompute("culling/culling.comp"), { &cullingBindingSet });
     cullingState.setName("ForwardCulling");
 
-    // Normal forward pass related
+    // Forward pass related
+
+    Texture& gBufferDepthTexture = *reg.getTexture("g-buffer", "depth").value();
+
+    BindingSet& drawableBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &drawableBuffer } });
+    BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
+    BindingSet& cameraBindingSet = *reg.getBindingSet("scene", "cameraSet");
+    BindingSet& lightBindingSet = *reg.getBindingSet("scene", "lightSet");
+
+    Shader prepassShader = Shader::createVertexOnly("forward/prepass.vert");
+    RenderTarget& prepassRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &gBufferDepthTexture, LoadOp::Clear, StoreOp::Store } });
+    RenderStateBuilder prepassRenderStateBuilder { prepassRenderTarget, prepassShader, m_prepassVertexLayout };
+    prepassRenderStateBuilder.addBindingSet(drawableBindingSet);
+    RenderState& prepassRenderState = reg.createRenderState(prepassRenderStateBuilder);
+    prepassRenderState.setName("ForwardZPrepass");
 
     Texture& colorTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     colorTexture.setName("ForwardColor");
@@ -74,15 +88,11 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture },
                                                           { RenderTarget::AttachmentType::Color1, reg.getTexture("g-buffer", "normal").value() },
                                                           { RenderTarget::AttachmentType::Color2, reg.getTexture("g-buffer", "baseColor").value() },
-                                                          { RenderTarget::AttachmentType::Depth, reg.getTexture("g-buffer", "depth").value() } });
-
-    BindingSet& drawableBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &drawableBuffer } });
-    BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
-    BindingSet& cameraBindingSet = *reg.getBindingSet("scene", "cameraSet");
-    BindingSet& lightBindingSet = *reg.getBindingSet("scene", "lightSet");
+                                                          { RenderTarget::AttachmentType::Depth, &gBufferDepthTexture, LoadOp::Load, StoreOp::Store } });
 
     Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag");
     RenderStateBuilder renderStateBuilder { renderTarget, shader, m_vertexLayout };
+    renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
     renderStateBuilder.addBindingSet(materialBindingSet);
     renderStateBuilder.addBindingSet(cameraBindingSet);
     renderStateBuilder.addBindingSet(drawableBindingSet);
@@ -130,7 +140,29 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
         }
         cmdList.endDebugLabel();
 
-        // Opaque forward
+        cmdList.beginDebugLabel("Z Prepass");
+        {
+            int numInputDrawables = m_scene.forEachMesh([&](size_t, Mesh& mesh) {
+                mesh.ensureDrawCallIsAvailable(m_prepassVertexLayout, m_scene);
+            });
+
+            cmdList.beginRendering(prepassRenderState, ClearColor(0, 0, 0, 0), 1.0f);
+            
+            cmdList.bindSet(drawableBindingSet, 0);
+
+            cmdList.setNamedUniform("depthOffset", 0.00005f);
+            cmdList.setNamedUniform("projectionFromWorld", m_scene.camera().viewProjectionMatrix());
+
+            cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout(m_prepassVertexLayout));
+            cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
+            cmdList.drawIndirect(indirectCmdBuffer, indirectCountBuffer);
+
+            cmdList.endRendering();
+
+            cmdList.textureWriteBarrier(gBufferDepthTexture);
+        }
+        cmdList.endDebugLabel();
+
         cmdList.beginDebugLabel("Opaque");
         {
             cmdList.beginRendering(renderState, ClearColor(0, 0, 0, 0), 1.0f);
@@ -148,7 +180,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
 
             cmdList.drawIndirect(indirectCmdBuffer, indirectCountBuffer);
 
-
+            cmdList.endRendering();
         }
         cmdList.endDebugLabel();
 

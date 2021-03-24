@@ -112,9 +112,9 @@ void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t s
     ASSERT(!src.hasMipmaps() && !dst.hasMipmaps());
 
     ASSERT(src.hasDepthFormat() == dst.hasDepthFormat());
-    VkImageAspectFlags aspectMask = src.hasDepthFormat()
-        ? VK_IMAGE_ASPECT_DEPTH_BIT
-        : VK_IMAGE_ASPECT_COLOR_BIT;
+    ASSERT(src.hasStencilFormat() == dst.hasStencilFormat());
+    ASSERT(src.aspectMask() == dst.aspectMask());
+    VkImageAspectFlags aspectMask = src.aspectMask();
 
     ASSERT(src.currentLayout != VK_IMAGE_LAYOUT_UNDEFINED && src.currentLayout != VK_IMAGE_LAYOUT_PREINITIALIZED);
     VkImageLayout initialSrcLayout = src.currentLayout;
@@ -238,7 +238,7 @@ void VulkanCommandList::generateMipmaps(Texture& genTexture)
     // Make sure that all mips have whatever layout the texture has before this function was called!
     VkImageLayout finalLayout = texture.currentLayout;
 
-    VkImageAspectFlagBits aspectMask = texture.hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+    VkImageAspectFlags aspectMask = texture.aspectMask();
 
     VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
     barrier.subresourceRange.aspectMask = aspectMask;
@@ -439,7 +439,7 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
             imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
             imageBarrier.image = attachedTexture.image;
-            imageBarrier.subresourceRange.aspectMask = attachedTexture.hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+            imageBarrier.subresourceRange.aspectMask = attachedTexture.aspectMask();
             imageBarrier.subresourceRange.baseMipLevel = 0;
             imageBarrier.subresourceRange.levelCount = attachedTexture.mipLevels();
             imageBarrier.subresourceRange.baseArrayLayer = 0;
@@ -475,7 +475,7 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
                 imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
                 imageBarrier.image = texture.image;
-                imageBarrier.subresourceRange.aspectMask = texture.hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+                imageBarrier.subresourceRange.aspectMask = texture.aspectMask();
                 imageBarrier.subresourceRange.baseMipLevel = 0;
                 imageBarrier.subresourceRange.levelCount = texture.mipLevels();
                 imageBarrier.subresourceRange.baseArrayLayer = 0;
@@ -558,7 +558,7 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)
                 imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
                 imageBarrier.image = vulkanTexture.image;
-                imageBarrier.subresourceRange.aspectMask = vulkanTexture.hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+                imageBarrier.subresourceRange.aspectMask = vulkanTexture.aspectMask();
                 imageBarrier.subresourceRange.baseMipLevel = 0;
                 imageBarrier.subresourceRange.levelCount = vulkanTexture.mipLevels();
                 imageBarrier.subresourceRange.baseArrayLayer = 0;
@@ -592,7 +592,7 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)
                 imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
                 imageBarrier.image = vulkanTexture.image;
-                imageBarrier.subresourceRange.aspectMask = vulkanTexture.hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+                imageBarrier.subresourceRange.aspectMask = vulkanTexture.aspectMask();
                 imageBarrier.subresourceRange.baseMipLevel = 0;
                 imageBarrier.subresourceRange.levelCount = vulkanTexture.mipLevels();
                 imageBarrier.subresourceRange.baseArrayLayer = 0;
@@ -645,7 +645,7 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
                 imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
                 imageBarrier.image = texture.image;
-                imageBarrier.subresourceRange.aspectMask = texture.hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+                imageBarrier.subresourceRange.aspectMask = texture.aspectMask();
                 imageBarrier.subresourceRange.baseMipLevel = 0;
                 imageBarrier.subresourceRange.levelCount = texture.mipLevels();
                 imageBarrier.subresourceRange.baseArrayLayer = 0;
@@ -679,7 +679,7 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
                 imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
                 imageBarrier.image = texture.image;
-                imageBarrier.subresourceRange.aspectMask = texture.hasDepthFormat() ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
+                imageBarrier.subresourceRange.aspectMask = texture.aspectMask();
                 imageBarrier.subresourceRange.baseMipLevel = 0;
                 imageBarrier.subresourceRange.levelCount = texture.mipLevels();
                 imageBarrier.subresourceRange.baseArrayLayer = 0;
@@ -792,7 +792,7 @@ void VulkanCommandList::setNamedUniform(const std::string& name, void* data, siz
     std::optional<Shader::UniformBinding> binding = shader.uniformBindingForName(name);
     if (binding.has_value()) {
         if (size != binding->size) {
-            LogErrorAndExit("setNamedUniform: size mismatch for uniform named '%s' (provided=%u, actual=%u), ignoring.\n", name.c_str(), size, binding->size);
+            LogErrorAndExit("setNamedUniform: size mismatch for uniform named '%s' (provided=%u, actual=%u).\n", name.c_str(), size, binding->size);
         }
         pushConstants(binding->stages, data, binding->size, binding->offset);
     } else {
@@ -858,16 +858,15 @@ void VulkanCommandList::bindVertexBuffer(const Buffer& vertexBuffer)
     if (vertexBuffer.usage() != Buffer::Usage::Vertex)
         LogErrorAndExit("bindVertexBuffer: not a vertex buffer!\n");
 
-    if (m_boundVertexBuffer == &vertexBuffer)
-        return;
-
     VkBuffer vulkanBuffer = static_cast<const VulkanBuffer&>(vertexBuffer).buffer;
+    if (m_boundVertexBuffer == vulkanBuffer)
+        return;
 
     VkBuffer vertexBuffers[] = { vulkanBuffer };
     VkDeviceSize offsets[] = { 0 };
 
     vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, vertexBuffers, offsets);
-    m_boundVertexBuffer = &vertexBuffer;
+    m_boundVertexBuffer = vulkanBuffer;
 }
 
 void VulkanCommandList::bindIndexBuffer(const Buffer& indexBuffer, IndexType indexType)
@@ -877,7 +876,8 @@ void VulkanCommandList::bindIndexBuffer(const Buffer& indexBuffer, IndexType ind
     if (indexBuffer.usage() != Buffer::Usage::Index)
         LogErrorAndExit("bindIndexBuffer: not an index buffer!\n");
 
-    if (m_boundIndexBuffer == &indexBuffer) {
+    VkBuffer vulkanBuffer = static_cast<const VulkanBuffer&>(indexBuffer).buffer;
+    if (m_boundIndexBuffer == vulkanBuffer) {
         ASSERT(m_boundIndexBufferType == indexType);
         return;
     }
@@ -895,10 +895,10 @@ void VulkanCommandList::bindIndexBuffer(const Buffer& indexBuffer, IndexType ind
         break;
     }
 
-    VkBuffer vulkanBuffer = static_cast<const VulkanBuffer&>(indexBuffer).buffer;
+    
     vkCmdBindIndexBuffer(m_commandBuffer, vulkanBuffer, 0, vulkanIndexType);
 
-    m_boundIndexBuffer = &indexBuffer;
+    m_boundIndexBuffer = vulkanBuffer;
     m_boundIndexBufferType = indexType;
 }
 
@@ -908,9 +908,9 @@ void VulkanCommandList::issueDrawCall(const DrawCallDescription& drawCall)
 
     if (!activeRenderState)
         LogErrorAndExit("issueDrawCall: no active render state!\n");
-    if (drawCall.vertexBuffer != m_boundVertexBuffer)
+    if (static_cast<const VulkanBuffer*>(drawCall.vertexBuffer)->buffer != m_boundVertexBuffer)
         LogErrorAndExit("issueDrawCall: bind the correct vertex buffer before calling this!\n");
-    if (drawCall.indexBuffer != m_boundIndexBuffer)
+    if (static_cast<const VulkanBuffer*>(drawCall.indexBuffer)->buffer != m_boundIndexBuffer)
         LogErrorAndExit("issueDrawCall: bind the correct index buffer before calling this!\n");
 
     ASSERT(drawCall.instanceCount > 0);
@@ -1276,9 +1276,7 @@ void VulkanCommandList::textureWriteBarrier(const Texture& genTexture)
     barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
 
-    barrier.subresourceRange.aspectMask = texture.hasDepthFormat()
-        ? VK_IMAGE_ASPECT_DEPTH_BIT
-        : VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.aspectMask = texture.aspectMask();
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount = texture.layerCount();
     barrier.subresourceRange.baseMipLevel = 0;

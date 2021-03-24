@@ -22,7 +22,7 @@ RenderGraphNode::ExecuteCallback GBufferNode::constructFrame(Registry& reg) cons
     normalTexture.setName("GBufferNormal");
     reg.publish("normal", normalTexture);
 
-    Texture& depthTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::Depth32F);
+    Texture& depthTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::Depth24Stencil8, Texture::Filters::nearest());
     depthTexture.setName("GBufferDepth");
     reg.publish("depth", depthTexture);
 

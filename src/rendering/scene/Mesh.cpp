@@ -105,13 +105,23 @@ void Mesh::ensureDrawCallIsAvailable(const VertexLayout& layout, Scene& scene)
 
 const DrawCallDescription& Mesh::drawCallDescription(const VertexLayout& layout, Scene& scene)
 {
-    SCOPED_PROFILE_ZONE()
+    SCOPED_PROFILE_ZONE();
 
     auto entry = m_drawCallDescriptions.find(layout);
     if (entry != m_drawCallDescriptions.end())
         return entry->second;
 
-    DrawCallDescription drawCallDescription = scene.fitVertexAndIndexDataForMesh({}, *this, layout);
+    // This specific vertex layout has not yet been fitted to the vertex buffer but there are at least one other layout setup.
+    // All subsequent layouts should replicate the offsets etc. since it means we can reuse index data & also can expect that
+    // vertex layouts line up w.r.t. the DrawCallDescription. This is good if you e.g. cull, then z-prepass with position-only,
+    // and then draw objects normally with a full layout. If they line up we can use the indirect culling draw commands for both!
+
+    std::optional<DrawCallDescription> previousToAlignWith {};
+    if (m_drawCallDescriptions.size() > 0) {
+        previousToAlignWith = m_drawCallDescriptions.begin()->second;
+    }
+
+    DrawCallDescription drawCallDescription = scene.fitVertexAndIndexDataForMesh({}, *this, layout, previousToAlignWith);
 
     m_drawCallDescriptions[layout] = drawCallDescription;
     return drawCallDescription;

@@ -37,6 +37,8 @@ public:
 
     uint32_t layerCount() const;
 
+    VkImageAspectFlags aspectMask() const;
+
     VkImage image { VK_NULL_HANDLE };
     VmaAllocation allocation { VK_NULL_HANDLE };
 
