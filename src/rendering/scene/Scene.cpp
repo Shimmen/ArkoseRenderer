@@ -11,6 +11,9 @@
 #include <moos/transform.h>
 #include <nlohmann/json.hpp>
 
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+
 Scene::Scene(Registry& registry)
     : m_registry(registry)
 {
@@ -114,9 +117,22 @@ void Scene::loadFromFile(const std::string& path)
     for (auto& jsonCamera : jsonScene.at("cameras")) {
 
         FpsCamera camera;
-        vec3 origin = readVec3(jsonCamera.at("origin"));
-        vec3 target = readVec3(jsonCamera.at("target"));
-        camera.lookAt(origin, target, moos::globalUp);
+        vec3 position = readVec3(jsonCamera.at("position"));
+        vec3 direction = normalize(readVec3(jsonCamera.at("direction")));
+        camera.lookAt(position, position + direction, moos::globalUp);
+
+        if (jsonCamera.find("exposure") != jsonCamera.end()) {
+            if (jsonCamera.at("exposure") == "manual") {
+                camera.useAutomaticExposure = false;
+                camera.iso = jsonCamera.at("ISO");
+                camera.aperture = jsonCamera.at("aperture");
+                camera.shutterSpeed = 1.0f / jsonCamera.at("shutter");
+            } else if (jsonCamera.at("exposure") == "auto") {
+                camera.useAutomaticExposure = true;
+                camera.exposureCompensation = jsonCamera.at("EC");
+                camera.adaptionRate = jsonCamera.at("adaptionRate");
+            }
+        }
 
         std::string name = jsonCamera.at("name");
         m_allCameras[name] = camera;
@@ -163,6 +179,34 @@ void Scene::update(float elapsedTime, float deltaTime)
             ImGui::SliderFloat("Sun illuminance (lx)", &sun().illuminance, 1.0f, 150000.0f);
             ImGui::SliderFloat("Ambient (lx)", &ambient(), 0.0f, 1000.0f);
             ImGui::TreePop();
+        }
+        if (ImGui::Button("Current camera to clipboard")) {
+            const auto& camera = m_currentMainCamera;
+            std::vector<float> cameraPosition = { camera.position().x,
+                                                  camera.position().y,
+                                                  camera.position().z };
+            std::vector<float> cameraDirection = { camera.forward().x,
+                                                   camera.forward().y,
+                                                   camera.forward().z };
+
+            nlohmann::json jsonCamera {};
+
+            jsonCamera["name"] = "copied-camera";
+            jsonCamera["position"] = cameraPosition;
+            jsonCamera["direction"] = cameraDirection;
+            if (camera.useAutomaticExposure) {
+                jsonCamera["exposure"] = "auto";
+                jsonCamera["adaptionRate"] = camera.adaptionRate;
+                jsonCamera["EC"] = camera.exposureCompensation;
+            } else {
+                jsonCamera["exposure"] = "manual";
+                jsonCamera["aperture"] = camera.aperture;
+                jsonCamera["shutter"] = 1.0f / camera.shutterSpeed;
+                jsonCamera["ISO"] = camera.iso;
+            }
+
+            std::string jsonString = jsonCamera.dump(0);
+            glfwSetClipboardString(nullptr, jsonString.c_str());
         }
     }
     ImGui::End();
@@ -310,7 +354,7 @@ DrawCallDescription Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&
 
     bool doAlign = alignWith.has_value();
     ASSERT(alignWith->sourceMesh == &mesh);
-    
+
     std::vector<uint8_t> vertexData = mesh.vertexData(layout);
 
     auto entry = m_globalVertexBuffers.find(layout);
@@ -343,7 +387,7 @@ DrawCallDescription Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&
     int vertexOffset = m_nextFreeVertexIndex;
     m_nextFreeVertexIndex += vertexCount;
 
-    
+
     DrawCallDescription drawCall {};
     drawCall.sourceMesh = &mesh;
 

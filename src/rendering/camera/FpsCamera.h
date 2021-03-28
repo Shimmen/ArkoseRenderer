@@ -26,6 +26,10 @@ public:
     quat orientation() const { return m_orientation; }
     void setOrientation(quat q) { m_orientation = q; }
 
+    vec3 forward() const { return moos::rotateVector(orientation(), moos::globalForward); }
+    vec3 right() const { return moos::rotateVector(orientation(), moos::globalRight); }
+    vec3 up() const { return moos::rotateVector(orientation(), moos::globalUp); }
+
     [[nodiscard]] mat4 viewMatrix() const { return m_viewFromWorld; }
     [[nodiscard]] mat4 projectionMatrix() const { return m_projectionFromView; }
     [[nodiscard]] mat4 viewProjectionMatrix() const { return m_projectionFromView * m_viewFromWorld; }

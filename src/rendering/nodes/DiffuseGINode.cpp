@@ -95,7 +95,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         static bool useSceneAmbient = false;
         ImGui::Checkbox("Use scene ambient light", &useSceneAmbient);
         if (!useSceneAmbient) {
-            static float injectedAmbientLx = 350.0f;
+            static float injectedAmbientLx = 100.0f;
             ImGui::SliderFloat("Injected ambient (lx)", &injectedAmbientLx, 0.0f, 1000.0f, "%.1f");
             ambientLx = injectedAmbientLx;
         }
