@@ -17,7 +17,9 @@ struct DirectionalLightData {
 
     ShadowMapData shadowMap;
 
-    vec4 colorAndIntensity;
+    vec3 color;
+    float exposure;
+
     vec4 worldSpaceDirection;
     vec4 viewSpaceDirection;
     mat4 lightProjectionFromWorld;
@@ -28,7 +30,9 @@ struct SpotLightData {
 
     ShadowMapData shadowMap;
 
-    vec4 colorAndIntensity;
+    vec3 color;
+    float exposure;
+
     vec4 worldSpaceDirection;
     vec4 viewSpaceDirection;
     mat4 lightProjectionFromWorld;

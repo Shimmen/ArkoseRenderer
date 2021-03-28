@@ -1,5 +1,6 @@
 #version 460
 
+#include <common/namedUniforms.glsl>
 #include <common/sh.glsl>
 #include <common/spherical.glsl>
 #include <shared/CameraState.h>
@@ -10,6 +11,13 @@ layout(location = 1) in flat int vProbeIdx;
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 layout(set = 1, binding = 0) uniform sampler2DArray probeDataTex;
+
+NAMED_UNIFORMS(pushConstants,
+    int probeIdx;
+    vec3 probeLocation;
+    float probeScale;
+    float indirectExposure;
+)
 
 layout(location = 0) out vec4 oColor;
 
@@ -25,7 +33,7 @@ void main()
 #if PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_IRRADIANCE
     SHVectorRGB sh = loadSphericalHarmonicsRGB(probeDataTex, vProbeIdx);
     vec3 irradiance = sampleIrradianceFromSphericalHarmonics(sh, probeSampleDir);
-    oColor = vec4(irradiance, 1.0);
+    oColor = vec4(irradiance * pushConstants.indirectExposure, 1.0);
 #elif PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_DISTANCE
     vec2 distances = texture(probeDataTex, uvWithArrayIdx).rg;
     oColor = vec4(100.0 * vec3(distances.x), 1.0);

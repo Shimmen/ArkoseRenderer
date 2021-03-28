@@ -122,10 +122,13 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
                 int shadowMapIndex = light.castsShadows() ? nextShadowMapIndex++ : -1;
                 ShadowMapData shadowMapData { .textureIndex = shadowMapIndex };
 
+                vec3 lightColor = light.color * light.intensityValue() * m_scene.lightPreExposureValue();
+
                 switch (light.type()) {
                 case Light::Type::DirectionalLight: {
                     dirLightData.emplace_back(DirectionalLightData { .shadowMap = shadowMapData,
-                                                                     .colorAndIntensity = { light.color, light.intensityValue() },
+                                                                     .color = lightColor,
+                                                                     .exposure = m_scene.lightPreExposureValue(),
                                                                      .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0),
                                                                      .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0),
                                                                      .lightProjectionFromWorld = light.viewProjection(),
@@ -135,7 +138,8 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
                 case Light::Type::SpotLight: {
                     SpotLight& spotLight = static_cast<SpotLight&>(light);
                     spotLightData.emplace_back(SpotLightData { .shadowMap = shadowMapData,
-                                                               .colorAndIntensity = { light.color, light.intensityValue() },
+                                                               .color = lightColor,
+                                                               .exposure = m_scene.lightPreExposureValue(),
                                                                .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0f),
                                                                .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0f),
                                                                .lightProjectionFromWorld = light.viewProjection(),

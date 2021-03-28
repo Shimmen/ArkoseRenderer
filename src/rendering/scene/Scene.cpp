@@ -161,6 +161,16 @@ void Scene::update(float elapsedTime, float deltaTime)
         m_sceneDataNeedsRebuild = false;
     }
 
+    if (camera().useAutomaticExposure) {
+        // TODO: Implement soon!
+        ASSERT_NOT_REACHED();
+    } else {
+        // See camera.glsl for reference
+        float ev100 = std::log2((camera().aperture * camera().aperture) / camera().shutterSpeed * 100.0 / camera().iso);
+        float maxLuminance = 1.2f * std::pow(2.0f, ev100);
+        m_lightPreExposure = 1.0f / maxLuminance;
+    }
+
     ImGui::Begin("Scene");
     {
         if (ImGui::TreeNode("Metainfo")) {

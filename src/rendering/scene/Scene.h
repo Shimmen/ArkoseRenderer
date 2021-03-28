@@ -34,6 +34,8 @@ public:
     Extent2D mainViewportSize() const { return m_mainViewportSize; }
     void setMainViewportSize(Badge<Backend>, Extent2D size) { m_mainViewportSize = size; }
 
+    float lightPreExposureValue() const { return m_lightPreExposure; }
+
     // Models & meshes
 
     Model& addModel(std::unique_ptr<Model>);
@@ -64,12 +66,14 @@ public:
     ProbeGrid& probeGrid() { return m_probeGrid.value(); }
 
     float& ambient() { return m_ambientIlluminance; }
+    float exposedAmbient() const { return m_ambientIlluminance * lightPreExposureValue(); }
 
     void setEnvironmentMap(std::string path) { m_environmentMap = std::move(path); }
     const std::string& environmentMap() const { return m_environmentMap; }
 
     float environmentMultiplier() const { return m_environmentMultiplier; }
     float& environmentMultiplier() { return m_environmentMultiplier; }
+    float exposedEnvironmentMultiplier() const { return environmentMultiplier() * lightPreExposureValue(); }
 
     // Meta
 
@@ -109,6 +113,8 @@ private:
     float m_environmentMultiplier { 1.0f };
 
     float m_ambientIlluminance { 0.0f };
+
+    float m_lightPreExposure { 1.0f };
 
     Model* m_selectedModel { nullptr };
     Mesh* m_selectedMesh { nullptr };

@@ -1,6 +1,7 @@
 #version 460
 
 #include <common/camera.glsl>
+#include <common/namedUniforms.glsl>
 #include <shared/CameraState.h>
 
 layout(set = 0, binding = 0) uniform CameraStateBlock {
@@ -11,11 +12,11 @@ layout(set = 0, binding = 1) uniform sampler2D avgLogLuminanceTex;
 layout(set = 0, binding = 2, rgba16f) restrict uniform image2D lightBufferImg;
 layout(set = 0, binding = 3, r32f)    restrict uniform image2D lastAvgLuminanceImg;
 
-layout(push_constant) uniform PushConstants {
+NAMED_UNIFORMS(pushConstants,
     float deltaTime;
     float adaptionRate;
     bool useAutoExposure;
-};
+)
 
 layout(local_size_x = 16, local_size_y = 16) in;
 void main()
@@ -25,14 +26,14 @@ void main()
         return;
 
     float exposure;
-    if (useAutoExposure) {
+    if (pushConstants.useAutoExposure) {
 
-        const int bottomMipLevel = 10; // for 1024x1024 image
+        const int bottomMipLevel = 9; // for 512x512 image
         float avgLuminance = exp(texelFetch(avgLogLuminanceTex, ivec2(0, 0), bottomMipLevel).r);
 
         float luminanceHistory = imageLoad(lastAvgLuminanceImg, ivec2(0, 0)).r;
 
-        AutoExposureResult result = valueForAutomaticExposure(avgLuminance, luminanceHistory, camera.exposureCompensation, adaptionRate, deltaTime);
+        AutoExposureResult result = valueForAutomaticExposure(avgLuminance, luminanceHistory, camera.exposureCompensation, pushConstants.adaptionRate, pushConstants.deltaTime);
         exposure = result.exposure;
 
         imageStore(lastAvgLuminanceImg, ivec2(0, 0), vec4(result.nextLuminanceHistory));
@@ -43,7 +44,8 @@ void main()
 
     }
 
+    // TODO: Remove this.. we will do pre-exposure instead, so this shader is only for auto exposure logic!
     vec4 hdrColor = imageLoad(lightBufferImg, pixelCoord);
-    vec4 exposedHdrColor = vec4(hdrColor.rgb * exposure, hdrColor.a);
+    vec4 exposedHdrColor = hdrColor;//vec4(hdrColor.rgb * exposure, hdrColor.a);
     imageStore(lightBufferImg, pixelCoord, exposedHdrColor);
 }

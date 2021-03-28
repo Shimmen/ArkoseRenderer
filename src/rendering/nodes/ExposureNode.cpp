@@ -109,13 +109,9 @@ RenderGraphNode::ExecuteCallback ExposureNode::constructFrame(Registry& reg) con
 {
     SCOPED_PROFILE_ZONE();
 
-    // Stores the current luminance for the image before exposure
-    const Extent2D logLuminanceSize = { 1024, 1024 };
-    Texture& logLuminanceTexture = reg.createTexture2D(logLuminanceSize, Texture::Format::R32F, Texture::Filters::linear(), Texture::Mipmap::Nearest);
+    Texture& logLuminanceTexture = reg.createTexture2D({ 512, 512 }, Texture::Format::R32F, Texture::Filters::linear(), Texture::Mipmap::Nearest);
 
-    // TODO: Maybe we should generalize the concept of the "main image where we accululate light etc." so we don't need to refer to "forward"?
     Texture& targetImage = *reg.getTexture("forward", "color").value();
-
     BindingSet& logLumBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &targetImage, ShaderBindingType::TextureSampler },
                                                           { 1, ShaderStageCompute, &logLuminanceTexture, ShaderBindingType::StorageImage } });
     ComputeState& logLumComputeState = reg.createComputeState(Shader::createCompute("post/logLuminance.comp"), { &logLumBindingSet });
@@ -133,6 +129,7 @@ RenderGraphNode::ExecuteCallback ExposureNode::constructFrame(Registry& reg) con
         // Calculate log-luminance over the whole image
         cmdList.setComputeState(logLumComputeState);
         cmdList.bindSet(logLumBindingSet, 0);
+        cmdList.setNamedUniform("targetSize", logLuminanceTexture.extent());
         cmdList.dispatch(logLuminanceTexture.extent(), { 16, 16, 1 });
 
         // Compute average log-luminance by creating mipmaps
@@ -145,9 +142,11 @@ RenderGraphNode::ExecuteCallback ExposureNode::constructFrame(Registry& reg) con
         {
             cmdList.setComputeState(exposeComputeState);
             cmdList.bindSet(exposeBindingSet, 0);
-            cmdList.pushConstant(ShaderStageCompute, (float)appState.deltaTime(), 0);
-            cmdList.pushConstant(ShaderStageCompute, appState.isRelativeFirstFrame() ? 9999.99f : camera.adaptionRate, 1 * sizeof(float));
-            cmdList.pushConstant(ShaderStageCompute, camera.useAutomaticExposure, 2 * sizeof(float));
+
+            cmdList.setNamedUniform("deltaTime", (float)appState.deltaTime());
+            cmdList.setNamedUniform("useAutoExposure", camera.useAutomaticExposure);
+            cmdList.setNamedUniform("adaptionRate", appState.isRelativeFirstFrame() ? 9999.99f : camera.adaptionRate);
+
             cmdList.dispatch(targetImage.extent(), { 16, 16, 1 });
         }
         cmdList.signalEvent(1, PipelineStage::Compute);

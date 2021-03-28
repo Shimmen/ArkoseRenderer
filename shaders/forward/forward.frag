@@ -38,6 +38,7 @@ layout(set = 3, binding = 2) uniform sampler2DArray probeDistanceTex;
 
 NAMED_UNIFORMS(pushConstants,
     float ambientAmount;
+    float indirectExposure;
 )
 
 layout(location = 0) out vec4 oColor;
@@ -46,13 +47,12 @@ layout(location = 2) out vec4 oBaseColor;
 
 vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
-    vec3 lightColor = light.colorAndIntensity.a * light.colorAndIntensity.rgb;
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
     float shadowFactor = evaluateDirectionalShadow(shadowMaps[light.shadowMap.textureIndex], light.lightProjectionFromView, vPosition);
 
     vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
-    vec3 directLight = lightColor * shadowFactor;
+    vec3 directLight = light.color * shadowFactor;
 
     float LdotN = max(dot(L, N), 0.0);
     return brdf * LdotN * directLight;
@@ -60,7 +60,6 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
 
 vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
-    vec3 lightColor = light.colorAndIntensity.a * light.colorAndIntensity.rgb;
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
     float shadowFactor = evaluateShadow(shadowMaps[light.shadowMap.textureIndex], light.lightProjectionFromView, vPosition);
@@ -73,7 +72,7 @@ vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, floa
     float iesValue = evaluateIESLookupTable(iesLUTs[light.iesProfileIndex], light.outerConeHalfAngle, cosConeAngle);
 
     vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
-    vec3 directLight = lightColor * shadowFactor * distanceAttenuation * iesValue;
+    vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;
 
     float LdotN = max(dot(L, N), 0.0);
     return brdf * LdotN * directLight;
@@ -96,7 +95,9 @@ vec3 evaluateIndirectLight(vec3 P, vec3 V, vec3 N, vec3 baseColor, float metalli
     vec3 irradiance = computePrefilteredIrradiance(worldSpacePos, worldSpaceNormal, probeGridData, probeIrradianceTex, probeDistanceTex);
     vec3 indirectDiffuse = vec3(1.0 - metallic) * vec3(1.0 - fakeF) * baseColor * irradiance;
 
-    return indirectDiffuse + indirectGlossy;
+    // TODO: Later we should probably pre-expose light when drawing indirect too, but since it's so slow now
+    // we do it here so we can get instant feedback to camera settings adjustment.
+    return pushConstants.indirectExposure * (indirectDiffuse + indirectGlossy);
 }
 #endif
 

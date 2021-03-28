@@ -1,23 +1,26 @@
 #version 460
 
+#include <common/srgb.glsl>
+#include <common/namedUniforms.glsl>
+
 layout(set = 0, binding = 0) uniform sampler2D sourceTexture;
 layout(set = 0, binding = 1, r32f) restrict writeonly uniform image2D targetImg;
+
+NAMED_UNIFORMS(pushConstants,
+    ivec2 targetSize;
+)
 
 layout(local_size_x = 16, local_size_y = 16) in;
 void main()
 {
     ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
-    if (any(greaterThanEqual(pixelCoord, imageSize(targetImg))))
+    if (any(greaterThanEqual(pixelCoord, pushConstants.targetSize)))
         return;
 
-    // target image is probably some power-of-two image for good mips, but source will probably not be
-    // so to get some interpolation we use the hardware bilinear op. Not perfect, in case target is much
-    // smaller, since we might skip over whole pixels (which may be very bright) in that case.
-    vec2 uv = (vec2(pixelCoord) + vec2(0.5)) / imageSize(targetImg);
+    // NOTE: If target is much smaller than the source we might skip over some important data here!
+    // Source is currently not mip mapped (maybe it should be..?)
+    vec2 uv = (vec2(pixelCoord) + vec2(0.5)) / vec2(pushConstants.targetSize);
     vec3 color = texture(sourceTexture, uv).rgb;
-
-    float sRGB_luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    float sRGB_logLuminance = log(clamp(sRGB_luminance, 0.0001, 1e8));
-
-    imageStore(targetImg, pixelCoord, vec4(sRGB_logLuminance));
+    float sRGB_logLuminance = log(clamp(sRGB_luminance(color), 1e-4, 1e8));
+    imageStore(targetImg, pixelCoord, vec4(sRGB_logLuminance, 0, 0, 0));
 }

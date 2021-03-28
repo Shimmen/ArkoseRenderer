@@ -123,7 +123,8 @@ RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) 
 
         const DirectionalLight& light = m_scene.sun();
         DirectionalLightData dirLightData {
-            .colorAndIntensity = { light.color, light.illuminance },
+            .color = light.color * light.intensityValue() * m_scene.lightPreExposureValue(),
+            .exposure = m_scene.lightPreExposureValue(),
             .worldSpaceDirection = vec4(normalize(light.direction), 0.0),
             .viewSpaceDirection = m_scene.camera().viewMatrix() * vec4(normalize(m_scene.sun().direction), 0.0),
             .lightProjectionFromWorld = light.viewProjection(),

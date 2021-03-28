@@ -33,7 +33,7 @@ layout(location = 1) out vec4 oDistance;
 
 vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
-    vec3 lightColor = light.colorAndIntensity.a * light.colorAndIntensity.rgb;
+    vec3 lightColor = light.color / light.exposure; // color is already pre-exposed, as a hack we want to undo that here..
     vec3 L = -normalize(mat3(cameras[sideIndex].viewFromWorld) * light.worldSpaceDirection.xyz);
 
     mat4 lightProjectionFromView = light.lightProjectionFromWorld * cameras[sideIndex].worldFromView;
@@ -48,7 +48,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
 
 vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
-    vec3 lightColor = light.colorAndIntensity.a * light.colorAndIntensity.rgb;
+    vec3 lightColor = light.color / light.exposure; // color is already pre-exposed, as a hack we want to undo that here..
     vec3 L = -normalize(mat3(cameras[sideIndex].viewFromWorld) * light.worldSpaceDirection.xyz);
 
     mat4 lightProjectionFromView = light.lightProjectionFromWorld * cameras[sideIndex].worldFromView;

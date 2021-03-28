@@ -1,6 +1,11 @@
 #ifndef SRGB_GLSL
 #define SRGB_GLSL
 
+float sRGB_luminance(vec3 linear)
+{
+    return dot(linear, vec3(0.2126, 0.7152, 0.0722));
+}
+
 float sRGB_gammaEncodeScalar(float linear)
 {
     return (linear < 0.0031308)

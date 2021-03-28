@@ -59,7 +59,7 @@ bool hitPointInShadow()
 
 vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
-    vec3 lightColor = light.colorAndIntensity.a * light.colorAndIntensity.rgb;
+	vec3 lightColor = light.color;
     vec3 L = -normalize(light.worldSpaceDirection.xyz);
 
     float shadowFactor = hitPointInShadow() ? 0.0 : 1.0;

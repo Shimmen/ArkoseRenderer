@@ -147,7 +147,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
             });
 
             cmdList.beginRendering(prepassRenderState, ClearColor(0, 0, 0, 0), 1.0f);
-            
+
             cmdList.bindSet(drawableBindingSet, 0);
 
             cmdList.setNamedUniform("depthOffset", 0.00005f);
@@ -166,7 +166,8 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
         cmdList.beginDebugLabel("Opaque");
         {
             cmdList.beginRendering(renderState, ClearColor(0, 0, 0, 0), 1.0f);
-            cmdList.setNamedUniform("ambientAmount", m_scene.ambient());
+            cmdList.setNamedUniform("ambientAmount", m_scene.exposedAmbient());
+            cmdList.setNamedUniform("indirectExposure", m_scene.lightPreExposureValue());
 
             cmdList.bindSet(cameraBindingSet, 0);
             cmdList.bindSet(materialBindingSet, 1);

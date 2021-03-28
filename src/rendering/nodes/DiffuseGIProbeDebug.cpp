@@ -63,18 +63,19 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
         cmdList.beginRendering(renderState);
         cmdList.bindSet(cameraBindingSet, 0);
         cmdList.bindSet(probeDataBindingSet, 1);
-        cmdList.pushConstant(ShaderStageVertex, probeScale, 0);
-        {
-            for (size_t probeIdx = 0; probeIdx < m_scene.probeGrid().probeCount(); ++probeIdx) {
-                auto probeIdx3D = m_scene.probeGrid().probeIndexFromLinear(probeIdx);
-                vec4 probeLocation = vec4(m_scene.probeGrid().probePositionForIndex(probeIdx3D), 0.0f);
+        cmdList.setNamedUniform("probeScale", probeScale);
+        cmdList.setNamedUniform("indirectExposure", m_scene.lightPreExposureValue());
 
-                cmdList.pushConstant(ShaderStageVertex, probeLocation, 1 * sizeof(vec4));
-                cmdList.pushConstant(ShaderStageVertex, (int)probeIdx, 2 * sizeof(vec4));
+        for (size_t probeIdx = 0; probeIdx < m_scene.probeGrid().probeCount(); ++probeIdx) {
+            auto probeIdx3D = m_scene.probeGrid().probeIndexFromLinear(probeIdx);
+            vec3 probeLocation = m_scene.probeGrid().probePositionForIndex(probeIdx3D);
 
-                cmdList.drawIndexed(*m_sphereVertexBuffer, *m_sphereIndexBuffer, m_indexCount, IndexType::UInt16);
-            }
+            cmdList.setNamedUniform("probeIdx", (int)probeIdx);
+            cmdList.setNamedUniform("probeLocation", probeLocation);
+
+            cmdList.drawIndexed(*m_sphereVertexBuffer, *m_sphereIndexBuffer, m_indexCount, IndexType::UInt16);
         }
+
         cmdList.endRendering();
     };
 }
