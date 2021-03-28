@@ -1,17 +1,17 @@
 #version 460
 
+#include <common/namedUniforms.glsl>
 #include <shared/CameraState.h>
-#include <shared/Picking.h>
 
 layout(location = 0) in vec3 aPosition;
 
-layout(set = 0, binding = 0) uniform CameraBlock {
-    CameraState camera;
+layout(set = 0, binding = 0) readonly buffer TransformDataBlock {
+    mat4 transforms[];
 };
 
-layout(set = 0, binding = 1) uniform TransformDataBlock{
-    mat4 transforms[PICKING_MAX_DRAWABLES];
-};
+NAMED_UNIFORMS(pushConstants,
+    mat4 projectionFromWorld;
+)
 
 layout(location = 0) flat out uint vIndex;
 
@@ -21,5 +21,5 @@ void main()
     vIndex = objectIndex;
 
     mat4 worldFromLocal = transforms[objectIndex];
-    gl_Position = camera.projectionFromView * camera.viewFromWorld * worldFromLocal * vec4(aPosition, 1.0);
+    gl_Position = pushConstants.projectionFromWorld * worldFromLocal * vec4(aPosition, 1.0);
 }

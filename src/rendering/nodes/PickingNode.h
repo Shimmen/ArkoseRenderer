@@ -15,5 +15,7 @@ public:
 
 private:
     Scene& m_scene;
-    mutable std::optional<vec2> m_mouseDownLocation {};
+    mutable std::optional<Buffer*> m_lastResultBuffer {};
+
+    bool didClick(Button) const;
 };

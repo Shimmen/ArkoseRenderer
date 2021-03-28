@@ -7,9 +7,6 @@
 #include <imgui.h>
 #include <moos/vector.h>
 
-// Shared with shaders
-#include "Picking.h"
-
 std::string PickingNode::name()
 {
     return "picking";
@@ -25,16 +22,15 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
 {
     SCOPED_PROFILE_ZONE();
 
-    Buffer& transformDataBuffer = reg.createBuffer(PICKING_MAX_DRAWABLES * sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
-
     Texture& indexMap = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R32);
     Texture& indexDepthMap = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth32F);
     RenderTarget& indexMapRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &indexMap, LoadOp::Clear, StoreOp::Store },
                                                                   { RenderTarget::AttachmentType::Depth, &indexDepthMap, LoadOp::Clear, StoreOp::Discard } });
 
+    Buffer& transformDataBuffer = reg.createBuffer(256 * sizeof(mat4), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
+    BindingSet& drawIndexBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &transformDataBuffer } });
+
     Shader drawIndexShader = Shader::createBasicRasterize("picking/drawIndices.vert", "picking/drawIndices.frag");
-    BindingSet& drawIndexBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, reg.getBuffer("scene", "camera") },
-                                                             { 1, ShaderStageVertex, &transformDataBuffer } });
     RenderStateBuilder renderStateBuilder(indexMapRenderTarget, drawIndexShader, VertexLayout { VertexComponent::Position3F });
     renderStateBuilder.addBindingSet(drawIndexBindingSet);
     RenderState& drawIndicesState = reg.createRenderState(renderStateBuilder);
@@ -46,40 +42,49 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
     ComputeState& collectState = reg.createComputeState(collectorShader, { &collectIndexBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList) {
-        int numMeshes;
-        {
-            {
-                SCOPED_PROFILE_ZONE_NAMED("Updating transform data");
-                mat4 objectTransforms[PICKING_MAX_DRAWABLES];
-                numMeshes = m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
-                    objectTransforms[index] = mesh.transform().worldMatrix();
-                    mesh.ensureDrawCallIsAvailable({ VertexComponent::Position3F }, m_scene);
+
+        if (m_lastResultBuffer.has_value()) {
+
+            moos::u32 selectedIndex;
+            cmdList.slowBlockingReadFromBuffer(*m_lastResultBuffer.value(), 0, sizeof(moos::u32), &selectedIndex);
+            if (selectedIndex < m_scene.meshCount()) {
+                m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
+                    if (index == selectedIndex) {
+                        m_scene.setSelectedMesh(&mesh);
+                        m_scene.setSelectedModel(mesh.model());
+                    }
                 });
-                transformDataBuffer.updateData(objectTransforms, numMeshes * sizeof(mat4));
+            } else {
+                m_scene.setSelectedMesh(nullptr);
+                m_scene.setSelectedModel(nullptr);
             }
+
+            m_lastResultBuffer.reset();
+        }
+
+        if (didClick(Button::Middle)) {
+
+            std::vector<mat4> objectTransforms {}; 
+            m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
+                objectTransforms.push_back(mesh.transform().worldMatrix());
+                mesh.ensureDrawCallIsAvailable({ VertexComponent::Position3F }, m_scene);
+            });
+            transformDataBuffer.updateDataAndGrowIfRequired(objectTransforms.data(), objectTransforms.size() * sizeof(mat4));
 
             cmdList.beginRendering(drawIndicesState, ClearColor(1, 0, 1), 1.0f);
             cmdList.bindSet(drawIndexBindingSet, 0);
+            cmdList.setNamedUniform("projectionFromWorld", m_scene.camera().viewProjectionMatrix());
 
             cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout({ VertexComponent::Position3F }));
             cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
 
-            {
-                SCOPED_PROFILE_ZONE_NAMED("Issuing draw calls");
-                m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
-
-                    DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, m_scene);
-                    drawCall.firstInstance = static_cast<uint32_t>(index); // TODO: Put this in some buffer instead!
-
-                    cmdList.issueDrawCall(drawCall);
-                });
-            }
+            m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
+                DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, m_scene);
+                drawCall.firstInstance = static_cast<uint32_t>(index);
+                cmdList.issueDrawCall(drawCall);
+            });
 
             cmdList.endRendering();
-        }
-
-        {
-            SCOPED_PROFILE_ZONE_NAMED("Picking");
 
             cmdList.setComputeState(collectState);
             cmdList.bindSet(collectIndexBindingSet, 0);
@@ -88,42 +93,25 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
             cmdList.setNamedUniform("mousePosition", pickLocation);
 
             cmdList.dispatch(indexMap.extent(), { 16, 16, 1 });
-        }
-
-        auto didClick = [this](Button button) -> bool {
-            auto& input = Input::instance();
-
-            if (input.wasButtonPressed(button))
-                m_mouseDownLocation = input.mousePosition();
-
-            if (input.wasButtonReleased(button) && m_mouseDownLocation.has_value()) {
-                float distance = moos::distance(input.mousePosition(), m_mouseDownLocation.value());
-                m_mouseDownLocation.reset();
-                if (distance < 4.0f)
-                    return true;
-            }
-
-            return false;
-        };
-
-        if (!didClick(Button::Middle))
-            return;
-
-        moos::u32 selectedIndex;
-        cmdList.slowBlockingReadFromBuffer(pickedIndexBuffer, 0, sizeof(moos::u32), &selectedIndex);
-        if (selectedIndex < numMeshes) {
-            SCOPED_PROFILE_ZONE_NAMED("Finding mesh");
-            m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
-                if (index == selectedIndex) {
-                    //LogInfo("Selected mesh (global index %u) of model '%s'\n", selectedIndex, mesh.model()->name().c_str());
-                    m_scene.setSelectedMesh(&mesh);
-                    m_scene.setSelectedModel(mesh.model());
-                }
-            });
-        } else {
-            //LogInfo("Unselecting mesh & model\n");
-            m_scene.setSelectedMesh(nullptr);
-            m_scene.setSelectedModel(nullptr);
+            m_lastResultBuffer = &pickedIndexBuffer;
         }
     };
+}
+
+bool PickingNode::didClick(Button button) const
+{
+    static std::optional<vec2> mouseDownLocation {};
+    auto& input = Input::instance();
+
+    if (input.wasButtonPressed(button))
+        mouseDownLocation = input.mousePosition();
+
+    if (input.wasButtonReleased(button) && mouseDownLocation.has_value()) {
+        float distance = moos::distance(input.mousePosition(), mouseDownLocation.value());
+        mouseDownLocation.reset();
+        if (distance < 4.0f)
+            return true;
+    }
+
+    return false;
 }
