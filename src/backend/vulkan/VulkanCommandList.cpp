@@ -5,6 +5,7 @@
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <stb_image_write.h>
+#include <fmt/format.h>
 
 // Shared shader headers
 using uint = uint32_t;
@@ -223,6 +224,8 @@ void VulkanCommandList::generateMipmaps(Texture& genTexture)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
+    beginDebugLabel(fmt::format("Generate Mipmaps ({}x{})", genTexture.extent().width(), genTexture.extent().height()));
+
     auto& texture = static_cast<VulkanTexture&>(genTexture);
 
     if (!texture.hasMipmaps()) {
@@ -371,6 +374,8 @@ void VulkanCommandList::generateMipmaps(Texture& genTexture)
                          0, nullptr,
                          0, nullptr,
                          1, &barrier);
+
+    endDebugLabel();
 }
 
 void VulkanCommandList::beginRendering(const RenderState& genRenderState)
