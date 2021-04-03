@@ -77,7 +77,6 @@ if (MSVC)
         )
     target_compile_definitions(ArkoseRenderer PRIVATE
         NOMINMAX _CRT_SECURE_NO_WARNINGS)
-    target_link_options(ArkoseRenderer PRIVATE /PROFILE)
 else()
     target_compile_options(ArkoseRenderer PRIVATE -Wall)
     target_compile_options(ArkoseRenderer PRIVATE -Wimplicit-fallthrough)

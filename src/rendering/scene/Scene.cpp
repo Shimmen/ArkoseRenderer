@@ -287,7 +287,7 @@ int Scene::forEachMesh(std::function<void(size_t, const Mesh&)> callback) const
             callback(nextIndex++, mesh);
         });
     }
-    return nextIndex;
+    return static_cast<int>(nextIndex);
 }
 
 int Scene::forEachMesh(std::function<void(size_t, Mesh&)> callback)
@@ -298,7 +298,7 @@ int Scene::forEachMesh(std::function<void(size_t, Mesh&)> callback)
             callback(nextIndex++, mesh);
         });
     }
-    return nextIndex;
+    return static_cast<int>(nextIndex);
 }
 
 int Scene::forEachLight(std::function<void(size_t, const Light&)> callback) const
@@ -310,7 +310,7 @@ int Scene::forEachLight(std::function<void(size_t, const Light&)> callback) cons
     for (auto& light : m_spotLights) {
         callback(nextIndex++, *light);
     }
-    return nextIndex;
+    return static_cast<int>(nextIndex);
 }
 
 int Scene::forEachLight(std::function<void(size_t, Light&)> callback)
@@ -322,7 +322,7 @@ int Scene::forEachLight(std::function<void(size_t, Light&)> callback)
     for (auto& light : m_spotLights) {
         callback(nextIndex++, *light);
     }
-    return nextIndex;
+    return static_cast<int>(nextIndex);
 }
 
 void Scene::generateProbeGridFromBoundingBox()
@@ -356,7 +356,7 @@ void Scene::generateProbeGridFromBoundingBox()
     }
     counts[indexOfSmallest] /= 2;
 
-    vec3 spacing = dims / vec3(counts[0], counts[1], counts[2]);
+    vec3 spacing = dims / vec3((float)counts[0], (float)counts[1], (float)counts[2]);
 
     ProbeGrid grid;
     grid.offsetToFirst = sceneBox.min;
@@ -401,8 +401,8 @@ DrawCallDescription Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&
         return reusedDrawCall;
     }
 
-    int vertexCount = mesh.vertexCountForLayout(layout);
-    int vertexOffset = m_nextFreeVertexIndex;
+    uint32_t vertexCount = (uint32_t)mesh.vertexCountForLayout(layout);
+    uint32_t vertexOffset = m_nextFreeVertexIndex;
     m_nextFreeVertexIndex += vertexCount;
 
 
@@ -423,13 +423,13 @@ DrawCallDescription Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&
             m_global32BitIndexBuffer->setName("SceneIndexBuffer");
         }
 
-        int firstIndex = m_nextFreeIndex;
-        m_nextFreeIndex += indexData.size();
+        uint32_t firstIndex = m_nextFreeIndex;
+        m_nextFreeIndex += (uint32_t)indexData.size();
 
         m_global32BitIndexBuffer->updateDataAndGrowIfRequired(indexData.data(), requiredAdditionalSize, firstIndex * sizeof(uint32_t));
 
         drawCall.indexBuffer = m_global32BitIndexBuffer;
-        drawCall.indexCount = indexData.size();
+        drawCall.indexCount = (uint32_t)indexData.size();
         drawCall.indexType = IndexType::UInt32;
         drawCall.firstIndex = firstIndex;
     }

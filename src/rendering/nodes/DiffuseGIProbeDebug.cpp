@@ -66,11 +66,11 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
         cmdList.setNamedUniform("probeScale", probeScale);
         cmdList.setNamedUniform("indirectExposure", m_scene.lightPreExposureValue());
 
-        for (size_t probeIdx = 0; probeIdx < m_scene.probeGrid().probeCount(); ++probeIdx) {
+        for (int probeIdx = 0; probeIdx < m_scene.probeGrid().probeCount(); ++probeIdx) {
             auto probeIdx3D = m_scene.probeGrid().probeIndexFromLinear(probeIdx);
             vec3 probeLocation = m_scene.probeGrid().probePositionForIndex(probeIdx3D);
 
-            cmdList.setNamedUniform("probeIdx", (int)probeIdx);
+            cmdList.setNamedUniform("probeIdx", probeIdx);
             cmdList.setNamedUniform("probeLocation", probeLocation);
 
             cmdList.drawIndexed(*m_sphereVertexBuffer, *m_sphereIndexBuffer, m_indexCount, IndexType::UInt16);
@@ -122,7 +122,7 @@ void DiffuseGIProbeDebug::setUpSphereRenderData(Registry& reg)
             }
         }
 
-        m_indexCount = indices.size();
+        m_indexCount = (uint32_t)indices.size();
     }
 
     m_sphereVertexBuffer = &reg.createBuffer(std::move(positions), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);

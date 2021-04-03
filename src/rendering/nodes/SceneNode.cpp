@@ -123,7 +123,7 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
             } else {
                 // See camera.glsl for reference
                 auto& camera = m_scene.camera();
-                float ev100 = std::log2((camera.aperture * camera.aperture) / camera.shutterSpeed * 100.0 / camera.iso);
+                float ev100 = std::log2f((camera.aperture * camera.aperture) / camera.shutterSpeed * 100.0f / camera.iso);
                 float maxLuminance = 1.2f * std::pow(2.0f, ev100);
                 m_scene.setLightPreExposureValue({}, 1.0f / maxLuminance);
             }

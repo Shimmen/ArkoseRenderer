@@ -126,5 +126,5 @@ const DrawCallDescription& Mesh::drawCallDescription(const VertexLayout& layout,
     DrawCallDescription drawCallDescription = scene.fitVertexAndIndexDataForMesh({}, *this, layout, previousToAlignWith);
 
     m_drawCallDescriptions[layout] = drawCallDescription;
-    return drawCallDescription;
+    return m_drawCallDescriptions[layout];
 }

@@ -355,9 +355,10 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std:
 
 ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std::vector<Buffer*>& buffers)
     : bindingIndex(index)
-    , count(buffers.size())
+    , count((uint32_t)buffers.size())
     , shaderStage(shaderStage)
     , type(ShaderBindingType::StorageBufferArray)
+    , tlas(nullptr)
     , buffers(buffers)
     , textures()
 {
@@ -369,7 +370,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std:
         if (!buffer) {
             LogErrorAndExit("ShaderBinding error: null buffer in list\n");
         }
-        if (buffer->usage() != Buffer::Usage::StorageBuffer || buffer->usage() != Buffer::Usage::IndirectBuffer) {
+        if (buffer->usage() != Buffer::Usage::StorageBuffer && buffer->usage() != Buffer::Usage::IndirectBuffer) {
             LogErrorAndExit("ShaderBinding error: buffer in list is not a storage buffer\n");
         }
     }
@@ -517,7 +518,7 @@ const std::vector<RTGeometryInstance>& TopLevelAS::instances() const
 
 uint32_t TopLevelAS::instanceCount() const
 {
-    return m_instances.size();
+    return static_cast<uint32_t>(m_instances.size());
 }
 
 RayTracingState::RayTracingState(Backend& backend, ShaderBindingTable sbt, std::vector<BindingSet*> bindingSets, uint32_t maxRecursionDepth)

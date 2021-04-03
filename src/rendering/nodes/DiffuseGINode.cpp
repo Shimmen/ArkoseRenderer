@@ -162,7 +162,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
             //  such as light sources, including the environment map. Directional lights are potentially a bit tricky, though..)
             {
                 float clearAlpha = 0.0f; // (important for drawing sky view in filtering stage)
-                cmdList.beginRendering(renderState, ClearColor(0, 0, 0, clearAlpha), 1);
+                cmdList.beginRendering(renderState, ClearColor(0, 0, 0, clearAlpha), 1.0f);
 
                 cmdList.bindSet(cameraBindingSet, 0);
                 cmdList.bindSet(materialBindingSet, 1);
@@ -181,7 +181,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
                         return;
 
                     DrawCallDescription drawCall = mesh.drawCallDescription(m_vertexLayout, m_scene);
-                    drawCall.firstInstance = meshIndex; // TODO: Put this in some buffer instead!
+                    drawCall.firstInstance = (uint32_t)meshIndex; // TODO: Put this in some buffer instead!
 
                     cmdList.issueDrawCall(drawCall);
                 });
@@ -205,7 +205,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
 
         // Prefilter distances and map to spherical
         static float distanceBlurRadius = 0.1f;
-        ImGui::SliderFloat("Distance blur radius", &distanceBlurRadius, 0.01, 1.0);
+        ImGui::SliderFloat("Distance blur radius", &distanceBlurRadius, 0.01f, 1.0f);
 
         cmdList.setComputeState(distanceFilterState);
         cmdList.bindSet(distanceFilterBindingSet, 0);

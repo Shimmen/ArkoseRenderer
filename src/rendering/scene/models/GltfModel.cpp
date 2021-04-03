@@ -75,20 +75,20 @@ GltfModel::GltfModel(std::string path, const tinygltf::Model& model)
         if (!node.matrix.empty()) {
             const auto& vals = node.matrix;
             ASSERT(vals.size() == 16);
-            return mat4(vec4(vals[0], vals[1], vals[2], vals[3]),
-                        vec4(vals[4], vals[5], vals[6], vals[7]),
-                        vec4(vals[8], vals[9], vals[10], vals[11]),
-                        vec4(vals[12], vals[13], vals[14], vals[15]));
+            return mat4(vec4((float)vals[0], (float)vals[1], (float)vals[2], (float)vals[3]),
+                        vec4((float)vals[4], (float)vals[5], (float)vals[6], (float)vals[7]),
+                        vec4((float)vals[8], (float)vals[9], (float)vals[10], (float)vals[11]),
+                        vec4((float)vals[12], (float)vals[13], (float)vals[14], (float)vals[15]));
         } else {
             mat4 translation = node.translation.empty()
                 ? mat4(1.0f)
-                : moos::translate(vec3(node.translation[0], node.translation[1], node.translation[2]));
+                : moos::translate(vec3((float)node.translation[0], (float)node.translation[1], (float)node.translation[2]));
             mat4 rotation = node.rotation.empty()
                 ? mat4(1.0f)
-                : moos::rotate(quat(vec3(node.rotation[0], node.rotation[1], node.rotation[2]), node.rotation[3]));
+                : moos::rotate(quat(vec3((float)node.rotation[0], (float)node.rotation[1], (float)node.rotation[2]), (float)node.rotation[3]));
             mat4 scale = node.scale.empty()
                 ? mat4(1.0f)
-                : moos::scale(vec3(node.scale[0], node.scale[1], node.scale[2]));
+                : moos::scale(vec3((float)node.scale[0], (float)node.scale[1], (float)node.scale[2]));
             return translation * rotation * scale;
         }
     };
@@ -145,10 +145,10 @@ void GltfModel::forEachMesh(std::function<void(const Mesh&)> callback) const
 
 std::string GltfModel::directory() const
 {
-    int lastSlash = m_path.rfind('/');
-    if (lastSlash == -1) {
+    size_t lastSlash = m_path.rfind('/');
+    if (lastSlash == std::string::npos) {
         lastSlash = m_path.rfind('\\');
-        if (lastSlash == -1) {
+        if (lastSlash == std::string::npos) {
             return "";
         }
     }
@@ -243,7 +243,7 @@ std::unique_ptr<Material> GltfMesh::createMaterial()
 
     material->baseColor = getTexture(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index);
     std::vector<double> c = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
-    material->baseColorFactor = vec4(c[0], c[1], c[2], c[3]);
+    material->baseColorFactor = vec4((float)c[0], (float)c[1], (float)c[2], (float)c[3]);
 
     material->normalMap = getTexture(gltfMaterial.normalTexture.index);
     material->metallicRoughness = getTexture(gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index);

@@ -88,7 +88,9 @@ vec2 Input::mousePosition() const
 
 vec2 Input::mouseDelta() const
 {
-    return vec2(m_currentXPosition - m_lastXPosition, m_currentYPosition - m_lastYPosition);
+    float dx = (float)(m_currentXPosition - m_lastXPosition);
+    float dy = (float)(m_currentYPosition - m_lastYPosition);
+    return vec2(dx, dy);
 }
 
 float Input::scrollDelta() const

@@ -153,7 +153,7 @@ void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t s
                              VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
                              0, nullptr,
                              0, nullptr,
-                             barriers.size(), barriers.data());
+                             (uint32_t)barriers.size(), barriers.data());
     }
 
     {
@@ -216,7 +216,7 @@ void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t s
                              VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
                              0, nullptr,
                              0, nullptr,
-                             barriers.size(), barriers.data());
+                             (uint32_t)barriers.size(), barriers.data());
     }
 }
 
@@ -515,7 +515,7 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
     renderPassBeginInfo.renderArea.offset = { 0, 0 };
     renderPassBeginInfo.renderArea.extent = { targetExtent.width(), targetExtent.height() };
 
-    renderPassBeginInfo.clearValueCount = clearValues.size();
+    renderPassBeginInfo.clearValueCount = (uint32_t)clearValues.size();
     renderPassBeginInfo.pClearValues = clearValues.data();
 
     // TODO: Handle subpasses properly!
@@ -761,7 +761,7 @@ void VulkanCommandList::pushConstants(ShaderStage shaderStage, void* data, size_
     if (shaderStage & ShaderStageRTClosestHit)
         stageFlags |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
 
-    vkCmdPushConstants(m_commandBuffer, pipelineLayout, stageFlags, byteOffset, size, data);
+    vkCmdPushConstants(m_commandBuffer, pipelineLayout, stageFlags, (uint32_t)byteOffset, (uint32_t)size, data);
 }
 
 void VulkanCommandList::setNamedUniform(const std::string& name, void* data, size_t size)
@@ -851,7 +851,7 @@ void VulkanCommandList::drawIndirect(const Buffer& indirectBuffer, const Buffer&
 
     // TODO: Parameterize these maybe? Now we assume that they are packed etc.
     uint32_t indirectDataStride = sizeof(IndexedDrawCmd);
-    uint32_t maxDrawCount = indirectBuffer.size() / indirectDataStride;
+    uint32_t maxDrawCount = (uint32_t)indirectBuffer.size() / indirectDataStride;
 
     vkCmdDrawIndexedIndirectCount(m_commandBuffer, vulkanIndirectBuffer, 0u, vulkanCountBuffer, 0u, maxDrawCount, indirectDataStride);
 }
@@ -995,11 +995,11 @@ void VulkanCommandList::traceRays(Extent2D extent)
 
     uint32_t raygenOffset = 0; // we always start with raygen
     uint32_t raygenStride = baseAlignment; // since we have no data => TODO!
-    size_t numRaygenShaders = 1; // for now, always just one
+    uint32_t numRaygenShaders = 1; // for now, always just one
 
     uint32_t hitGroupOffset = raygenOffset + (numRaygenShaders * raygenStride);
     uint32_t hitGroupStride = baseAlignment; // since we have no data and a single shader for now => TODO! ALSO CONSIDER IF THIS SHOULD SIMPLY BE PASSED IN TO HERE?!
-    size_t numHitGroups = activeRayTracingState->shaderBindingTable().hitGroups().size();
+    uint32_t numHitGroups = (uint32_t)activeRayTracingState->shaderBindingTable().hitGroups().size();
 
     uint32_t missOffset = hitGroupOffset + (numHitGroups * hitGroupStride);
     uint32_t missStride = baseAlignment; // since we have no data => TODO!
@@ -1227,7 +1227,7 @@ void VulkanCommandList::saveTextureToFile(const Texture& texture, const std::str
         }
     }
 
-    if (!stbi_write_png(filePath.c_str(), texture.extent().width(), texture.extent().height(), 4, data, subResourceLayout.rowPitch)) {
+    if (!stbi_write_png(filePath.c_str(), texture.extent().width(), texture.extent().height(), 4, data, (int)subResourceLayout.rowPitch)) {
         LogError("Failed to write screenshot to file...\n");
     }
 
@@ -1326,7 +1326,7 @@ void VulkanCommandList::bufferWriteBarrier(std::vector<Buffer*> buffers)
                          VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
                          0,
                          0, nullptr,
-                         barriers.size(), barriers.data(),
+                         (uint32_t)barriers.size(), barriers.data(),
                          0, nullptr);
 }
 

@@ -153,7 +153,7 @@ VulkanBackend::~VulkanBackend()
 
     destroyDearImgui();
 
-    vkFreeCommandBuffers(device(), m_renderGraphFrameCommandPool, m_frameCommandBuffers.size(), m_frameCommandBuffers.data());
+    vkFreeCommandBuffers(device(), m_renderGraphFrameCommandPool, (uint32_t)m_frameCommandBuffers.size(), m_frameCommandBuffers.data());
 
     m_frameRegistries.clear();
     m_nodeRegistry.reset();
@@ -459,7 +459,7 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
         enabledValidationFeatures.push_back(VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_RESERVE_BINDING_SLOT_EXT);
         enabledValidationFeatures.push_back(VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT);
         enabledValidationFeatures.push_back(VK_VALIDATION_FEATURE_ENABLE_DEBUG_PRINTF_EXT);
-        validationFeatures.enabledValidationFeatureCount = enabledValidationFeatures.size();
+        validationFeatures.enabledValidationFeatureCount = (uint32_t)enabledValidationFeatures.size();
         validationFeatures.pEnabledValidationFeatures = enabledValidationFeatures.data();
     }
 
@@ -473,10 +473,10 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
     VkInstanceCreateInfo instanceCreateInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     instanceCreateInfo.pApplicationInfo = &appInfo;
 
-    instanceCreateInfo.enabledExtensionCount = instanceExtensions.size();
+    instanceCreateInfo.enabledExtensionCount = (uint32_t)instanceExtensions.size();
     instanceCreateInfo.ppEnabledExtensionNames = instanceExtensions.data();
 
-    instanceCreateInfo.enabledLayerCount = requestedLayers.size();
+    instanceCreateInfo.enabledLayerCount = (uint32_t)requestedLayers.size();
     instanceCreateInfo.ppEnabledLayerNames = requestedLayers.data();
 
     if (debugMessengerCreateInfo) {
@@ -565,14 +565,14 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 
     VkDeviceCreateInfo deviceCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
 
-    deviceCreateInfo.queueCreateInfoCount = queueCreateInfos.size();
+    deviceCreateInfo.queueCreateInfoCount = (uint32_t)queueCreateInfos.size();
     deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
 
     // (the support of these requestedLayers should already have been checked)
-    deviceCreateInfo.enabledLayerCount = requestedLayers.size();
+    deviceCreateInfo.enabledLayerCount = (uint32_t)requestedLayers.size();
     deviceCreateInfo.ppEnabledLayerNames = requestedLayers.data();
 
-    deviceCreateInfo.enabledExtensionCount = deviceExtensions.size();
+    deviceCreateInfo.enabledExtensionCount = (uint32_t)deviceExtensions.size();
     deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
     // Since we use VkPhysicalDeviceFeatures2 this should be null according to spec
@@ -860,7 +860,7 @@ void VulkanBackend::createAndSetupSwapchain(VkPhysicalDevice physicalDevice, VkD
         VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
         commandBufferAllocateInfo.commandPool = m_renderGraphFrameCommandPool;
         commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; // (can be submitted to a queue for execution, but cannot be called from other command buffers)
-        commandBufferAllocateInfo.commandBufferCount = m_frameCommandBuffers.size();
+        commandBufferAllocateInfo.commandBufferCount = (uint32_t)m_frameCommandBuffers.size();
 
         if (vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, m_frameCommandBuffers.data()) != VK_SUCCESS) {
             LogErrorAndExit("VulkanBackend::createAndSetupSwapchain(): could not create the main command buffers, exiting.\n");
@@ -1392,7 +1392,7 @@ void VulkanBackend::setupWindowRenderTargets()
     subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 
     VkRenderPassCreateInfo renderPassCreateInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-    renderPassCreateInfo.attachmentCount = allAttachments.size();
+    renderPassCreateInfo.attachmentCount = (uint32_t)allAttachments.size();
     renderPassCreateInfo.pAttachments = allAttachments.data();
     renderPassCreateInfo.subpassCount = 1;
     renderPassCreateInfo.pSubpasses = &subpass;
@@ -1415,7 +1415,7 @@ void VulkanBackend::setupWindowRenderTargets()
 
         VkFramebufferCreateInfo framebufferCreateInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
         framebufferCreateInfo.renderPass = renderPass;
-        framebufferCreateInfo.attachmentCount = attachmentImageViews.size();
+        framebufferCreateInfo.attachmentCount = (uint32_t)attachmentImageViews.size();
         framebufferCreateInfo.pAttachments = attachmentImageViews.data();
         framebufferCreateInfo.width = m_swapchainExtent.width();
         framebufferCreateInfo.height = m_swapchainExtent.height();
@@ -1863,7 +1863,7 @@ std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>
             if (!pushConstantRange.has_value()) {
                 VkPushConstantRange range {};
                 range.stageFlags = stageFlag;
-                range.size = pushConstantSize;
+                range.size = (uint32_t)pushConstantSize;
                 range.offset = 0;
                 pushConstantRange = range;
             } else {
@@ -1892,7 +1892,7 @@ std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>
                 layoutBindings.push_back(binding);
             }
 
-            descriptorSetLayoutCreateInfo.bindingCount = layoutBindings.size();
+            descriptorSetLayoutCreateInfo.bindingCount = (uint32_t)layoutBindings.size();
             descriptorSetLayoutCreateInfo.pBindings = layoutBindings.data();
         }
 
@@ -1978,8 +1978,8 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
                     VulkanBackend::PushConstantInfo info;
                     info.name = member_name;
                     info.stages = stageFlag;
-                    info.offset = offset;
-                    info.size = size;
+                    info.offset = (uint32_t)offset;
+                    info.size = (int32_t)size;
 
                     infos.push_back(info);
                 }

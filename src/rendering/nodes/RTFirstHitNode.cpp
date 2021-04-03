@@ -40,10 +40,10 @@ void RTFirstHitNode::constructNode(Registry& nodeReg)
             }
         }
 
-        int texId = allTextures.size();
+        int texId = (int)allTextures.size();
         allTextures.push_back(mesh.material().baseColorTexture());
 
-        int meshId = rtMeshes.size();
+        int meshId = (int)rtMeshes.size();
         rtMeshes.push_back({ .objectId = meshId,
                              .baseColor = texId });
 
@@ -91,7 +91,7 @@ RenderGraphNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg) c
         cmdList.setRayTracingState(rtState);
         cmdList.bindSet(frameBindingSet, 0);
 
-        float time = appState.elapsedTime();
+        float time = (float)appState.elapsedTime();
         timeBuffer.updateData(&time, sizeof(time));
 
         cmdList.bindSet(*m_objectDataBindingSet, 1);

@@ -135,9 +135,9 @@ Texture& Registry::createTextureFromImage(const Image& image, bool srgb, bool ge
     switch (image.dataOwner()) {
     case Image::DataOwner::StbImage:
         if (image.info().isHdr())
-            rawPixelData = (void*)stbi_loadf_from_memory((const stbi_uc*)image.data(), image.size(), &width, &height, nullptr, numDesiredComponents);
+            rawPixelData = (void*)stbi_loadf_from_memory((const stbi_uc*)image.data(), (int)image.size(), &width, &height, nullptr, numDesiredComponents);
         else
-            rawPixelData = (void*)stbi_load_from_memory((const stbi_uc*)image.data(), image.size(), &width, &height, nullptr, numDesiredComponents);
+            rawPixelData = (void*)stbi_load_from_memory((const stbi_uc*)image.data(), (int)image.size(), &width, &height, nullptr, numDesiredComponents);
         ASSERT(width == image.info().width);
         ASSERT(height == image.info().height);
         break;

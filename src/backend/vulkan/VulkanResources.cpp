@@ -887,7 +887,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
 
         attachment.finalLayout = finalLayout;
 
-        uint32_t attachmentIndex = allAttachments.size();
+        uint32_t attachmentIndex = (uint32_t)allAttachments.size();
         allAttachments.push_back(attachment);
         allAttachmentImageViews.push_back(texture.imageView);
 
@@ -936,7 +936,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
     // TODO: How do we want to support multiple subpasses in the future?
     VkSubpassDescription subpass = {};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = colorAttachmentRefs.size();
+    subpass.colorAttachmentCount = (uint32_t)colorAttachmentRefs.size();
     subpass.pColorAttachments = colorAttachmentRefs.data();
     subpass.pResolveAttachments = resolveAttachmentRefs.data();
     if (depthAttachmentRef.has_value()) {
@@ -944,7 +944,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
     }
 
     VkRenderPassCreateInfo renderPassCreateInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-    renderPassCreateInfo.attachmentCount = allAttachments.size();
+    renderPassCreateInfo.attachmentCount = (uint32_t)allAttachments.size();
     renderPassCreateInfo.pAttachments = allAttachments.data();
     renderPassCreateInfo.subpassCount = 1;
     renderPassCreateInfo.pSubpasses = &subpass;
@@ -958,7 +958,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
 
     VkFramebufferCreateInfo framebufferCreateInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
     framebufferCreateInfo.renderPass = compatibleRenderPass;
-    framebufferCreateInfo.attachmentCount = allAttachmentImageViews.size();
+    framebufferCreateInfo.attachmentCount = (uint32_t)allAttachmentImageViews.size();
     framebufferCreateInfo.pAttachments = allAttachmentImageViews.data();
     framebufferCreateInfo.width = extent().width();
     framebufferCreateInfo.height = extent().height();
@@ -1090,7 +1090,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
         }
 
         VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-        descriptorSetLayoutCreateInfo.bindingCount = layoutBindings.size();
+        descriptorSetLayoutCreateInfo.bindingCount = (uint32_t)layoutBindings.size();
         descriptorSetLayoutCreateInfo.pBindings = layoutBindings.data();
 
         if (vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
@@ -1148,7 +1148,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
         }
 
         VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
-        descriptorPoolCreateInfo.poolSizeCount = descriptorPoolSizes.size();
+        descriptorPoolCreateInfo.poolSizeCount = (uint32_t)descriptorPoolSizes.size();
         descriptorPoolCreateInfo.pPoolSizes = descriptorPoolSizes.data();
         descriptorPoolCreateInfo.maxSets = 1;
 
@@ -1368,7 +1368,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
             descriptorSetWrites.push_back(write);
         }
 
-        vkUpdateDescriptorSets(device, descriptorSetWrites.size(), descriptorSetWrites.data(), 0, nullptr);
+        vkUpdateDescriptorSets(device, (uint32_t)descriptorSetWrites.size(), descriptorSetWrites.data(), 0, nullptr);
     }
 }
 
@@ -1446,7 +1446,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
         uint32_t binding = 0;
 
         bindingDescription.binding = binding;
-        bindingDescription.stride = vertexLayout.packedVertexSize();
+        bindingDescription.stride = (uint32_t)vertexLayout.packedVertexSize();
         bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
         attributeDescriptions.reserve(vertexLayout.components().size());
@@ -1462,9 +1462,8 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
             description.offset = currentOffset;
 
             nextLocation += 1;
-            currentOffset += vertexComponentSize(component);
+            currentOffset += (uint32_t)vertexComponentSize(component);
 
-            VkFormat format;
             switch (component) {
             case VertexComponent::Position2F:
             case VertexComponent::TexCoord2F:
@@ -1531,7 +1530,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
 
     const auto& [descriptorSetLayouts, pushConstantRange] = vulkanBackend.createDescriptorSetLayoutForShader(shader);
 
-    pipelineLayoutCreateInfo.setLayoutCount = descriptorSetLayouts.size();
+    pipelineLayoutCreateInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
     pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts.data();
 
     if (pushConstantRange.has_value()) {
@@ -1557,7 +1556,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     VkPipelineVertexInputStateCreateInfo vertInputState = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
     vertInputState.vertexBindingDescriptionCount = 1;
     vertInputState.pVertexBindingDescriptions = &bindingDescription;
-    vertInputState.vertexAttributeDescriptionCount = attributeDescriptions.size();
+    vertInputState.vertexAttributeDescriptionCount = (uint32_t)attributeDescriptions.size();
     vertInputState.pVertexAttributeDescriptions = attributeDescriptions.data();
 
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
@@ -1635,7 +1634,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
         }
     }
     colorBlending.logicOpEnable = VK_FALSE;
-    colorBlending.attachmentCount = colorBlendAttachments.size();
+    colorBlending.attachmentCount = (uint32_t)colorBlendAttachments.size();
     colorBlending.pAttachments = colorBlendAttachments.data();
 
     VkCompareOp depthCompareOp;
@@ -1673,7 +1672,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
 
     // stages
-    pipelineCreateInfo.stageCount = shaderStages.size();
+    pipelineCreateInfo.stageCount = (uint32_t)shaderStages.size();
     pipelineCreateInfo.pStages = shaderStages.data();
 
     // fixed function stuff
@@ -1924,8 +1923,8 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
 
             triangles.vertexData = static_cast<const VulkanBuffer&>(triGeo.vertexBuffer).buffer;
             triangles.vertexOffset = 0;
-            triangles.vertexStride = triGeo.vertexStride;
-            triangles.vertexCount = triGeo.vertexBuffer.size() / triangles.vertexStride;
+            triangles.vertexStride = (VkDeviceSize)triGeo.vertexStride;
+            triangles.vertexCount = (uint32_t)(triGeo.vertexBuffer.size() / triangles.vertexStride);
             switch (triGeo.vertexFormat) {
             case RTVertexFormat::XYZ32F:
                 triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
@@ -1937,11 +1936,11 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
             switch (triGeo.indexType) {
             case IndexType::UInt16:
                 triangles.indexType = VK_INDEX_TYPE_UINT16;
-                triangles.indexCount = triGeo.indexBuffer.size() / sizeof(uint16_t);
+                triangles.indexCount = (uint32_t)(triGeo.indexBuffer.size() / sizeof(uint16_t));
                 break;
             case IndexType::UInt32:
                 triangles.indexType = VK_INDEX_TYPE_UINT32;
-                triangles.indexCount = triGeo.indexBuffer.size() / sizeof(uint32_t);
+                triangles.indexCount = (uint32_t)(triGeo.indexBuffer.size() / sizeof(uint32_t));
                 break;
             }
 
@@ -1966,9 +1965,9 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
 
             VkGeometryAABBNV aabbs { VK_STRUCTURE_TYPE_GEOMETRY_AABB_NV };
             aabbs.offset = 0;
-            aabbs.stride = aabbGeo.aabbStride;
+            aabbs.stride = (uint32_t)aabbGeo.aabbStride;
             aabbs.aabbData = static_cast<const VulkanBuffer&>(aabbGeo.aabbBuffer).buffer;
-            aabbs.numAABBs = aabbGeo.aabbBuffer.size() / aabbGeo.aabbStride;
+            aabbs.numAABBs = (uint32_t)(aabbGeo.aabbBuffer.size() / aabbGeo.aabbStride);
 
             VkGeometryNV geometry { VK_STRUCTURE_TYPE_GEOMETRY_NV };
             geometry.flags = VK_GEOMETRY_OPAQUE_BIT_NV; // "indicates that this geometry does not invoke the any-hit shaders even if present in a hit group."
@@ -1989,7 +1988,7 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
     accelerationStructureInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV;
     accelerationStructureInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_NV;
     accelerationStructureInfo.instanceCount = 0;
-    accelerationStructureInfo.geometryCount = vkGeometries.size();
+    accelerationStructureInfo.geometryCount = (uint32_t)vkGeometries.size();
     accelerationStructureInfo.pGeometries = vkGeometries.data();
 
     VkAccelerationStructureCreateInfoNV accelerationStructureCreateInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_NV };
@@ -2028,7 +2027,7 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
     VkAccelerationStructureInfoNV buildInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV };
     buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV;
     buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_NV;
-    buildInfo.geometryCount = vkGeometries.size();
+    buildInfo.geometryCount = (uint32_t)vkGeometries.size();
     buildInfo.pGeometries = vkGeometries.data();
 
     vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
@@ -2111,7 +2110,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
 
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
-    pipelineLayoutCreateInfo.setLayoutCount = descriptorSetLayouts.size();
+    pipelineLayoutCreateInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
     pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts.data();
 
     if (pushConstantRange.has_value()) {
@@ -2147,7 +2146,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
         stageCreateInfo.module = shaderModule;
         stageCreateInfo.pName = "main";
 
-        uint32_t shaderIndex = shaderStages.size();
+        uint32_t shaderIndex = (uint32_t)shaderStages.size();
         shaderStages.push_back(stageCreateInfo);
         shaderModulesToRemove.push_back(shaderModule);
 
@@ -2193,7 +2192,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
             stageCreateInfo.module = shaderModule;
             stageCreateInfo.pName = "main";
 
-            shaderGroup.closestHitShader = shaderStages.size();
+            shaderGroup.closestHitShader = (uint32_t)shaderStages.size();
             shaderStages.push_back(stageCreateInfo);
             shaderModulesToRemove.push_back(shaderModule);
         }
@@ -2216,7 +2215,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
             stageCreateInfo.module = shaderModule;
             stageCreateInfo.pName = "main";
 
-            shaderGroup.intersectionShader = shaderStages.size();
+            shaderGroup.intersectionShader = (uint32_t)shaderStages.size();
             shaderStages.push_back(stageCreateInfo);
             shaderModulesToRemove.push_back(shaderModule);
         }
@@ -2242,7 +2241,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
         stageCreateInfo.module = shaderModule;
         stageCreateInfo.pName = "main";
 
-        uint32_t shaderIndex = shaderStages.size();
+        uint32_t shaderIndex = (uint32_t)shaderStages.size();
         shaderStages.push_back(stageCreateInfo);
         shaderModulesToRemove.push_back(shaderModule);
 
@@ -2259,9 +2258,9 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
 
     VkRayTracingPipelineCreateInfoNV rtPipelineCreateInfo { VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_NV };
     rtPipelineCreateInfo.maxRecursionDepth = maxRecursionDepth;
-    rtPipelineCreateInfo.stageCount = shaderStages.size();
+    rtPipelineCreateInfo.stageCount = (uint32_t)shaderStages.size();
     rtPipelineCreateInfo.pStages = shaderStages.data();
-    rtPipelineCreateInfo.groupCount = shaderGroups.size();
+    rtPipelineCreateInfo.groupCount = (uint32_t)shaderGroups.size();
     rtPipelineCreateInfo.pGroups = shaderGroups.data();
     rtPipelineCreateInfo.layout = pipelineLayout;
 
@@ -2277,18 +2276,18 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     // Create buffer for the shader binding table
     {
         uint32_t sizeOfSingleHandle = vulkanBackend.rtx().properties().shaderGroupHandleSize;
-        uint32_t sizeOfAllHandles = sizeOfSingleHandle * shaderGroups.size();
+        uint32_t sizeOfAllHandles = sizeOfSingleHandle * (uint32_t)shaderGroups.size();
         std::vector<std::byte> shaderGroupHandles { sizeOfAllHandles };
-        if (vulkanBackend.rtx().vkGetRayTracingShaderGroupHandlesNV(vulkanBackend.device(), pipeline, 0, shaderGroups.size(), sizeOfAllHandles, shaderGroupHandles.data()) != VK_SUCCESS) {
+        if (vulkanBackend.rtx().vkGetRayTracingShaderGroupHandlesNV(vulkanBackend.device(), pipeline, 0, (uint32_t)shaderGroups.size(), sizeOfAllHandles, shaderGroupHandles.data()) != VK_SUCCESS) {
             LogErrorAndExit("Error trying to get shader group handles for the shader binding table.\n");
         }
 
         // TODO: For now we don't have any data, only shader handles, but we still have to consider the alignments & strides
         uint32_t baseAlignment = vulkanBackend.rtx().properties().shaderGroupBaseAlignment;
-        uint32_t sbtSize = baseAlignment * shaderGroups.size();
+        uint32_t sbtSize = baseAlignment * (uint32_t)shaderGroups.size();
         std::vector<std::byte> sbtData { sbtSize };
 
-        for (size_t i = 0; i < shaderGroups.size(); ++i) {
+        for (uint32_t i = 0; i < shaderGroups.size(); ++i) {
 
             uint32_t srcOffset = i * sizeOfSingleHandle;
             uint32_t dstOffset = i * baseAlignment;
@@ -2423,7 +2422,7 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
 
     const auto& [descriptorSetLayouts, pushConstantRange] = vulkanBackend.createDescriptorSetLayoutForShader(shader);
 
-    pipelineLayoutCreateInfo.setLayoutCount = descriptorSetLayouts.size();
+    pipelineLayoutCreateInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
     pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts.data();
 
     if (pushConstantRange.has_value()) {
