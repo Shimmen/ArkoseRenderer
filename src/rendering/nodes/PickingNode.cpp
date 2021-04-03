@@ -75,7 +75,7 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
             });
             transformDataBuffer.updateDataAndGrowIfRequired(objectTransforms.data(), objectTransforms.size() * sizeof(mat4));
 
-            cmdList.beginRendering(drawIndicesState, ClearColor(1, 0, 1), 1.0f);
+            cmdList.beginRendering(drawIndicesState, ClearColor::srgbColor(1, 0, 1), 1.0f);
             cmdList.bindSet(drawIndexBindingSet, 0);
             cmdList.setNamedUniform("projectionFromWorld", m_scene.camera().viewProjectionMatrix());
 

@@ -83,7 +83,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
                 mesh.ensureDrawCallIsAvailable(m_vertexLayout, m_scene);
             });
 
-            cmdList.beginRendering(renderState, ClearColor(0, 0, 0, 0), 1.0f);
+            cmdList.beginRendering(renderState, ClearColor::srgbColor(0, 0, 0, 0), 1.0f);
             cmdList.setNamedUniform("ambientAmount", m_scene.exposedAmbient());
             cmdList.setNamedUniform("indirectExposure", m_scene.lightPreExposureValue());
 

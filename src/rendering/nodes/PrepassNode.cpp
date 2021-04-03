@@ -36,7 +36,7 @@ RenderGraphNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) cons
             mesh.ensureDrawCallIsAvailable(m_prepassVertexLayout, m_scene);
         });
 
-        cmdList.beginRendering(prepassRenderState, ClearColor(0, 0, 0, 0), 1.0f);
+        cmdList.beginRendering(prepassRenderState, ClearColor::srgbColor(0, 0, 0, 0), 1.0f);
 
         cmdList.bindSet(drawableBindingSet, 0);
 

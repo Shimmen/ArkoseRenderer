@@ -46,25 +46,35 @@ private:
 };
 
 struct ClearColor {
-    ClearColor(float rgb[3], float a = 1.0f)
-        : r(pow(rgb[0], 2.2f))
-        , g(pow(rgb[1], 2.2f))
-        , b(pow(rgb[2], 2.2f))
-        , a(a)
+
+    static ClearColor srgbColor(float r, float g, float b, float a = 1.0f)
     {
+        return ClearColor(pow(r, 2.2f), pow(g, 2.2f), pow(b, 2.2f), a);
     }
-    ClearColor(float r, float g, float b, float a = 1.0f)
-        : r(pow(r, 2.2f))
-        , g(pow(g, 2.2f))
-        , b(pow(b, 2.2f))
-        , a(a)
+
+    static ClearColor srgbColor(float rgb[3], float a = 1.0f)
     {
+        return srgbColor(rgb[0], rgb[1], rgb[2], a);
+    }
+
+    static ClearColor dataValues(float r, float g, float b, float a)
+    {
+        return ClearColor(r, g, b, a);
     }
 
     float r { 0.0f };
     float g { 0.0f };
     float b { 0.0f };
     float a { 0.0f };
+
+private:
+    ClearColor(float r, float g, float b, float a)
+        : r(r)
+        , g(g)
+        , b(b)
+        , a(a)
+    {
+    }
 };
 
 struct Texture : public Resource {

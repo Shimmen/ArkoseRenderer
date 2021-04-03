@@ -393,7 +393,7 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState)
     });
 
     // NOTE: These will not be used, but we need to pass something in for the current API
-    ClearColor clearColor { 0, 0, 0, 1 };
+    ClearColor clearColor = ClearColor::srgbColor(0, 0, 0);
     float clearDepth = 1.0f;
     uint32_t clearStencil = 0;
 

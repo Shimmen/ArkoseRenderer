@@ -162,7 +162,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
             //  such as light sources, including the environment map. Directional lights are potentially a bit tricky, though..)
             {
                 float clearAlpha = 0.0f; // (important for drawing sky view in filtering stage)
-                cmdList.beginRendering(renderState, ClearColor(0, 0, 0, clearAlpha), 1.0f);
+                cmdList.beginRendering(renderState, ClearColor::srgbColor(0, 0, 0, clearAlpha), 1.0f);
 
                 cmdList.bindSet(cameraBindingSet, 0);
                 cmdList.bindSet(materialBindingSet, 1);

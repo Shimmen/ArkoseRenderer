@@ -50,7 +50,7 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
             });
 
             constexpr float clearDepth = 1.0f;
-            cmdList.beginRendering(renderState, ClearColor(0, 0, 0), clearDepth);
+            cmdList.beginRendering(renderState, ClearColor::srgbColor(0, 0, 0), clearDepth);
             {
                 mat4 lightProjectionFromWorld = light.viewProjection();
                 auto lightFrustum = geometry::Frustum::createFromProjectionMatrix(lightProjectionFromWorld);

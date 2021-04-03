@@ -59,7 +59,7 @@ RenderGraphNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry& re
         ImGui::SliderFloat("Darkening", &darkening, 1.0f, 40.0f);
 
         if (!enabled) {
-            cmdList.clearTexture(ambientOcclusion, ClearColor(1, 1, 1));
+            cmdList.clearTexture(ambientOcclusion, ClearColor::srgbColor(1, 1, 1));
             return;
         }
 
@@ -67,7 +67,7 @@ RenderGraphNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry& re
         cmdList.resetEvent(1, PipelineStage::RayTracing);
         {
             if (m_scene.camera().didModify() || Input::instance().isKeyDown(Key::R)) {
-                cmdList.clearTexture(*m_accumulatedAO, ClearColor(0, 0, 0));
+                cmdList.clearTexture(*m_accumulatedAO, ClearColor::srgbColor(0, 0, 0));
                 m_numAccumulatedFrames = 0;
             }
 

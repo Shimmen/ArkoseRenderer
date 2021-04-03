@@ -98,7 +98,7 @@ void RayTracingApp::setup(Scene& scene, RenderGraph& graph)
         RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
         return [&](const AppState& appState, CommandList& cmdList) {
-            cmdList.beginRendering(renderState, ClearColor(0.5f, 0.1f, 0.5f), 1.0f);
+            cmdList.beginRendering(renderState, ClearColor::srgbColor(0.5f, 0.1f, 0.5f), 1.0f);
             cmdList.bindSet(bindingSet, 0);
             cmdList.draw(vertexBuffer, 3);
 
