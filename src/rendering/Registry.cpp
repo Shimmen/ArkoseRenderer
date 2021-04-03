@@ -12,9 +12,10 @@ Registry::Registry(Backend& backend, const RenderTarget* windowRenderTarget)
 {
 }
 
-void Registry::setCurrentNode(std::string node)
+void Registry::setCurrentNode(const std::string& node)
 {
-    m_currentNodeName = std::move(node);
+    m_currentNodeName = node;
+    m_allNodes.push_back(node);
 }
 
 const RenderTarget& Registry::windowRenderTarget()
@@ -375,6 +376,12 @@ ComputeState& Registry::createComputeState(const Shader& shader, std::vector<Bin
 
     m_computeStates.push_back(std::move(computeState));
     return *m_computeStates.back();
+}
+
+bool Registry::hasPreviousNode(const std::string& name) const
+{
+    auto entry = std::find(m_allNodes.begin(), m_allNodes.end(), name);
+    return entry != m_allNodes.end();
 }
 
 void Registry::publish(const std::string& name, Buffer& buffer)

@@ -2,10 +2,12 @@
 
 #include "rendering/nodes/AutoExposureNode.h"
 #include "rendering/nodes/BloomNode.h"
+#include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/DiffuseGINode.h"
 #include "rendering/nodes/DiffuseGIProbeDebug.h"
 #include "rendering/nodes/ForwardRenderNode.h"
 #include "rendering/nodes/GBufferNode.h"
+#include "rendering/nodes/PrepassNode.h"
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/SceneNode.h"
 #include "rendering/nodes/ShadowMapNode.h"
@@ -22,9 +24,6 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
 {
     SCOPED_PROFILE_ZONE();
 
-    constexpr bool fastMode = false;
-    constexpr bool enableDebugVisualizations = true;
-
     scene.loadFromFile("assets/sample/sponza.json");
 
     // TODO: Move to the scene json
@@ -35,28 +34,20 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
         scene.generateProbeGridFromBoundingBox();
     }
 
-    // System & resource nodes
     graph.addNode<SceneNode>(scene);
     graph.addNode<GBufferNode>(scene);
-    if (!fastMode) {
-        graph.addNode<PickingNode>(scene);
-    }
+    graph.addNode<PickingNode>(scene);
 
-    // Prepass nodes
     graph.addNode<ShadowMapNode>(scene);
     graph.addNode<DiffuseGINode>(scene);
-
-    // Main nodes (pre-exposure)
+    graph.addNode<CullingNode>(scene);
+    graph.addNode<PrepassNode>(scene);
     graph.addNode<ForwardRenderNode>(scene);
     graph.addNode<SkyViewNode>(scene);
     graph.addNode<BloomNode>(scene);
 
-    if (!fastMode && enableDebugVisualizations) {
-        graph.addNode<DiffuseGIProbeDebug>(scene);
-    }
-
-    // Exposure & post-exposure additions (e.g. debug visualizations)
     graph.addNode<AutoExposureNode>(scene);
+    graph.addNode<DiffuseGIProbeDebug>(scene);
 
     graph.addNode("final", [](Registry& reg) {
         // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.

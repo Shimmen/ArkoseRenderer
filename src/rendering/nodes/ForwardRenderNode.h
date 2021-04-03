@@ -16,7 +16,6 @@ public:
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:
-    VertexLayout m_prepassVertexLayout { VertexComponent::Position3F };
     VertexLayout m_vertexLayout { VertexComponent::Position3F,
                                   VertexComponent::TexCoord2F,
                                   VertexComponent::Normal3F,

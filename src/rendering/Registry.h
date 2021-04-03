@@ -13,7 +13,7 @@ class Registry final {
 public:
     explicit Registry(Backend&, const RenderTarget* windowRenderTarget = nullptr);
 
-    void setCurrentNode(std::string);
+    void setCurrentNode(const std::string&);
 
     [[nodiscard]] const RenderTarget& windowRenderTarget();
     [[nodiscard]] RenderTarget& createRenderTarget(std::vector<RenderTarget::Attachment>);
@@ -44,6 +44,8 @@ public:
 
     [[nodiscard]] ComputeState& createComputeState(const Shader&, std::vector<BindingSet*>);
 
+    bool hasPreviousNode(const std::string& name) const;
+
     void publish(const std::string& name, Buffer&);
     void publish(const std::string& name, Texture&);
     void publish(const std::string& name, BindingSet&);
@@ -67,6 +69,7 @@ private:
 
     std::optional<std::string> m_currentNodeName;
     std::unordered_set<NodeDependency> m_nodeDependencies;
+    std::vector<std::string> m_allNodes;
 
     const RenderTarget* m_windowRenderTarget;
 
