@@ -161,16 +161,6 @@ void Scene::update(float elapsedTime, float deltaTime)
         m_sceneDataNeedsRebuild = false;
     }
 
-    if (camera().useAutomaticExposure) {
-        // TODO: Implement soon!
-        ASSERT_NOT_REACHED();
-    } else {
-        // See camera.glsl for reference
-        float ev100 = std::log2((camera().aperture * camera().aperture) / camera().shutterSpeed * 100.0 / camera().iso);
-        float maxLuminance = 1.2f * std::pow(2.0f, ev100);
-        m_lightPreExposure = 1.0f / maxLuminance;
-    }
-
     ImGui::Begin("Scene");
     {
         if (ImGui::TreeNode("Metainfo")) {
@@ -220,6 +210,24 @@ void Scene::update(float elapsedTime, float deltaTime)
         }
     }
     ImGui::End();
+}
+
+bool Scene::isNextFrameExposureResultBufferReady(Badge<SceneNode>) const
+{
+    // TODO: Implement some proper CPU readback context so we know for sure that the previous result
+    // is ready at this point. Just because it's from the previous frame doesn't mean it must be done.
+    // What if we submit the queue and immediately start work on the next frame before the first is
+    // even started? And many more similar scenarios.
+    bool resultsReady = m_nextFrameExposureResultBuffer != nullptr;
+    return resultsReady;
+}
+
+const Buffer* Scene::popNextFrameExposureResultBuffer(Badge<SceneNode>)
+{
+    //ASSERT(isNextFrameExposureResultBufferReady({}));
+    const Buffer* buffer = m_nextFrameExposureResultBuffer;
+    m_nextFrameExposureResultBuffer = nullptr;
+    return buffer;
 }
 
 Model& Scene::addModel(std::unique_ptr<Model> model)

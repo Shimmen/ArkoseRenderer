@@ -1,6 +1,6 @@
 #include "RayTracingApp.h"
 
-#include "rendering/nodes/ExposureNode.h"
+#include "rendering/nodes/AutoExposureNode.h"
 #include "rendering/nodes/ForwardRenderNode.h"
 #include "rendering/nodes/GBufferNode.h"
 #include "rendering/nodes/PickingNode.h"
@@ -80,7 +80,7 @@ void RayTracingApp::setup(Scene& scene, RenderGraph& graph)
         };
     });
 
-    graph.addNode<ExposureNode>(scene);
+    graph.addNode<AutoExposureNode>(scene);
 
     graph.addNode("final", [](Registry& reg) {
         // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.

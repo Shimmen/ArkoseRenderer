@@ -43,6 +43,10 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
 
     return [&](const AppState& appState, CommandList& cmdList) {
 
+        // TODO: Implement some proper CPU readback context so we know for sure that the previous result
+        // is ready at this point. Just because it's from the previous frame doesn't mean it must be done.
+        // What if we submit the queue and immediately start work on the next frame before the first is
+        // even started? And many more similar scenarios.
         if (m_lastResultBuffer.has_value()) {
 
             moos::u32 selectedIndex;

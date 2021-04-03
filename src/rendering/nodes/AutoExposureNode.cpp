@@ -1,17 +1,17 @@
-#include "ExposureNode.h"
+#include "AutoExposureNode.h"
 
 #include "CameraState.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 #include <moos/vector.h>
 
-ExposureNode::ExposureNode(Scene& scene)
-    : RenderGraphNode(ExposureNode::name())
+AutoExposureNode::AutoExposureNode(Scene& scene)
+    : RenderGraphNode(AutoExposureNode::name())
     , m_scene(scene)
 {
 }
 
-void ExposureNode::exposureGUI(FpsCamera& camera) const
+void AutoExposureNode::exposureGUI(FpsCamera& camera) const
 {
     auto& useAutoExposure = camera.useAutomaticExposure;
     if (ImGui::RadioButton("Automatic exposure", useAutoExposure))
@@ -28,7 +28,7 @@ void ExposureNode::exposureGUI(FpsCamera& camera) const
         manualExposureGUI(camera);
 }
 
-void ExposureNode::manualExposureGUI(FpsCamera& camera) const
+void AutoExposureNode::manualExposureGUI(FpsCamera& camera) const
 {
     // Aperture
     {
@@ -86,7 +86,7 @@ void ExposureNode::manualExposureGUI(FpsCamera& camera) const
     }
 }
 
-void ExposureNode::automaticExposureGUI(FpsCamera& camera) const
+void AutoExposureNode::automaticExposureGUI(FpsCamera& camera) const
 {
     ImGui::Text("Adaption rate", &camera.adaptionRate);
     ImGui::SliderFloat("", &camera.adaptionRate, 0.0001f, 2.0f, "%.4f", 5.0f);
@@ -95,17 +95,7 @@ void ExposureNode::automaticExposureGUI(FpsCamera& camera) const
     ImGui::SliderFloat("ECs", &camera.exposureCompensation, -5.0f, +5.0f, "%.1f");
 }
 
-void ExposureNode::constructNode(Registry& reg)
-{
-    SCOPED_PROFILE_ZONE();
-
-    // Stores the last average luminance, after exposure, so we can do soft exposure transitions
-    // TODO: Maybe use a storage buffer instead? Not sure what is faster for this.. note that we need read & write capabilities
-    m_lastAvgLuminanceTexture = &reg.createTexture2D({ 1, 1 }, Texture::Format::R32F);
-    m_lastAvgLuminanceTexture->setName("ExposureAvgLuminance");
-}
-
-RenderGraphNode::ExecuteCallback ExposureNode::constructFrame(Registry& reg) const
+RenderGraphNode::ExecuteCallback AutoExposureNode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 
@@ -116,15 +106,20 @@ RenderGraphNode::ExecuteCallback ExposureNode::constructFrame(Registry& reg) con
                                                           { 1, ShaderStageCompute, &logLuminanceTexture, ShaderBindingType::StorageImage } });
     ComputeState& logLumComputeState = reg.createComputeState(Shader::createCompute("post/logLuminance.comp"), { &logLumBindingSet });
 
-    BindingSet& exposeBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, reg.getBuffer("scene", "camera") },
-                                                          { 1, ShaderStageCompute, &logLuminanceTexture, ShaderBindingType::TextureSampler },
-                                                          { 2, ShaderStageCompute, &targetImage, ShaderBindingType::StorageImage },
-                                                          { 3, ShaderStageCompute, m_lastAvgLuminanceTexture, ShaderBindingType::StorageImage } });
-    ComputeState& exposeComputeState = reg.createComputeState(Shader::createCompute("post/expose.comp"), { &exposeBindingSet });
+    Buffer& passDataBuffer = reg.createBuffer(2 * sizeof(float), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
+    passDataBuffer.setName("ExposurePassData");
+
+    BindingSet& sourceDataBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, reg.getBuffer("scene", "camera") },
+                                                              { 1, ShaderStageCompute, &logLuminanceTexture, ShaderBindingType::TextureSampler } });
+    BindingSet& targetDataBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &passDataBuffer } });
+    ComputeState& exposeComputeState = reg.createComputeState(Shader::createCompute("post/expose.comp"), { &sourceDataBindingSet, &targetDataBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList) {
         FpsCamera& camera = m_scene.camera();
         exposureGUI(camera);
+
+        if (!camera.useAutomaticExposure)
+            return;
 
         // Calculate log-luminance over the whole image
         cmdList.setComputeState(logLumComputeState);
@@ -135,20 +130,28 @@ RenderGraphNode::ExecuteCallback ExposureNode::constructFrame(Registry& reg) con
         // Compute average log-luminance by creating mipmaps
         cmdList.generateMipmaps(logLuminanceTexture);
 
-        // Perform the exposure pass (since we use a node-resource, m_lastAvgLuminanceTexture, we must synchronize its access here)
-        // FIXME: Don't use the hardcoded 1 for event index! Maybe we should have some event resource type?
-        cmdList.waitEvent(1, appState.frameIndex() == 0 ? PipelineStage::Host : PipelineStage::Compute);
+        // FIXME: Don't use hardcoded event index! Maybe we should have some event resource type?
+        static bool firstTimeAround  = true;
+        cmdList.waitEvent(1, firstTimeAround ? PipelineStage::Host : PipelineStage::Compute);
+        firstTimeAround = false;
         cmdList.resetEvent(1, PipelineStage::Compute);
         {
             cmdList.setComputeState(exposeComputeState);
-            cmdList.bindSet(exposeBindingSet, 0);
+            cmdList.bindSet(sourceDataBindingSet, 0);
+            cmdList.bindSet(targetDataBindingSet, 1);
+            BindingSet& prevData = m_lastFrameBindingSet.has_value()
+                ? *m_lastFrameBindingSet.value()
+                : targetDataBindingSet;
+            cmdList.bindSet(prevData, 2);
 
             cmdList.setNamedUniform("deltaTime", (float)appState.deltaTime());
-            cmdList.setNamedUniform("useAutoExposure", camera.useAutomaticExposure);
             cmdList.setNamedUniform("adaptionRate", appState.isRelativeFirstFrame() ? 9999.99f : camera.adaptionRate);
 
-            cmdList.dispatch(targetImage.extent(), { 16, 16, 1 });
+            cmdList.dispatch(1, 1, 1);
         }
         cmdList.signalEvent(1, PipelineStage::Compute);
+
+        m_lastFrameBindingSet = &targetDataBindingSet;
+        m_scene.setNextFrameExposureResultBuffer(passDataBuffer);
     };
 }

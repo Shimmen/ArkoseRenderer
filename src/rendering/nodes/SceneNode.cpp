@@ -108,6 +108,27 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
             objectDataBuffer.updateData(objectData.data(), objectData.size() * sizeof(ShaderDrawable));
         }
 
+        // Update exposure data
+        {
+            // TODO: hmm, I kinda wanna do this in Scene, not scene node.. this whole Scene/SceneNode split is stupid.
+
+            if (m_scene.camera().useAutomaticExposure) {
+                if (m_scene.isNextFrameExposureResultBufferReady({})) {
+                    float lastFrameExposure;
+                    cmdList.slowBlockingReadFromBuffer(*m_scene.popNextFrameExposureResultBuffer({}), 0, sizeof(lastFrameExposure), &lastFrameExposure);
+                    m_scene.setLightPreExposureValue({}, lastFrameExposure);
+                } else {
+                    // Let's just not touch the variable, it's probably going to be ready next frame anyway
+                }
+            } else {
+                // See camera.glsl for reference
+                auto& camera = m_scene.camera();
+                float ev100 = std::log2((camera.aperture * camera.aperture) / camera.shutterSpeed * 100.0 / camera.iso);
+                float maxLuminance = 1.2f * std::pow(2.0f, ev100);
+                m_scene.setLightPreExposureValue({}, 1.0f / maxLuminance);
+            }
+        }
+
         // Update light data
         {
             mat4 viewFromWorld = m_scene.camera().viewMatrix();

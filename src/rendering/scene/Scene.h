@@ -15,6 +15,8 @@
 using uint = uint32_t;
 #include "SceneData.h"
 
+class SceneNode;
+
 class Scene final {
 public:
     explicit Scene(Registry&);
@@ -35,6 +37,11 @@ public:
     void setMainViewportSize(Badge<Backend>, Extent2D size) { m_mainViewportSize = size; }
 
     float lightPreExposureValue() const { return m_lightPreExposure; }
+    void setLightPreExposureValue(Badge<SceneNode>, float value) { m_lightPreExposure = value; }
+
+    void setNextFrameExposureResultBuffer(const Buffer& buffer) { m_nextFrameExposureResultBuffer = &buffer; }
+    bool isNextFrameExposureResultBufferReady(Badge<SceneNode>) const;
+    const Buffer* popNextFrameExposureResultBuffer(Badge<SceneNode>);
 
     // Models & meshes
 
@@ -115,6 +122,7 @@ private:
     float m_ambientIlluminance { 0.0f };
 
     float m_lightPreExposure { 1.0f };
+    const Buffer* m_nextFrameExposureResultBuffer { nullptr };
 
     Model* m_selectedModel { nullptr };
     Mesh* m_selectedMesh { nullptr };

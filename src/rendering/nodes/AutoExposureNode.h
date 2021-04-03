@@ -5,14 +5,13 @@
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 
-class ExposureNode final : public RenderGraphNode {
+class AutoExposureNode final : public RenderGraphNode {
 public:
-    explicit ExposureNode(Scene&);
+    explicit AutoExposureNode(Scene&);
 
-    static std::string name() { return "exposure"; }
-    std::optional<std::string> displayName() const override { return "Exposure / camera"; }
+    static std::string name() { return "auto-exposure"; }
+    std::optional<std::string> displayName() const override { return "Auto Exposure"; }
 
-    void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:
@@ -21,5 +20,6 @@ private:
     void automaticExposureGUI(FpsCamera&) const;
 
     Scene& m_scene;
-    Texture* m_lastAvgLuminanceTexture;
+
+    mutable std::optional<BindingSet*> m_lastFrameBindingSet {};
 };
