@@ -25,9 +25,9 @@ static constexpr Extent2D cubemapFaceSize { 64, 64 };
 static constexpr Extent2D probeDataDistanceTexSize { 64, 32 };
 static constexpr Extent2D probeDataColorSHTexSize { 3, 3 };
 
-static constexpr Texture::Format colorFormat = Texture::Format::RGBA32F;
-static constexpr Texture::Format distanceFormat = Texture::Format::RG32F;
-static constexpr Texture::Format depthFormat = Texture::Format::Depth32F;
+static constexpr Texture::Format colorFormat = Texture::Format::RGBA16F;
+static constexpr Texture::Format distanceFormat = Texture::Format::RG16F;
+static constexpr Texture::Format depthFormat = Texture::Format::Depth24Stencil8;
 
 static const auto sphereWrapping = Texture::WrapModes(Texture::WrapMode::ClampToEdge, Texture::WrapMode::ClampToEdge);
 
