@@ -15,11 +15,6 @@ public:
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:
-    void exposureGUI(FpsCamera&) const;
-    void manualExposureGUI(FpsCamera&) const;
-    void automaticExposureGUI(FpsCamera&) const;
-
     Scene& m_scene;
-
     mutable std::optional<BindingSet*> m_lastFrameBindingSet {};
 };

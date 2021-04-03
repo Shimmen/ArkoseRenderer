@@ -127,6 +127,10 @@ private:
     Model* m_selectedModel { nullptr };
     Mesh* m_selectedMesh { nullptr };
 
+    void exposureGUI(FpsCamera&) const;
+    void manualExposureGUI(FpsCamera&) const;
+    void automaticExposureGUI(FpsCamera&) const;
+
     // GPU data
 
     Buffer* m_global32BitIndexBuffer { nullptr };
