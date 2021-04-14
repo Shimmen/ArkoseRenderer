@@ -120,10 +120,10 @@ public:
     std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>> createDescriptorSetLayoutForShader(const Shader&) const;
 
     struct PushConstantInfo {
-        std::string name;
-        int32_t offset;
-        int32_t size;
-        ShaderStage stages;
+        std::string name {};
+        int32_t offset { 0 };
+        int32_t size { 0 };
+        ShaderStage stages { 0 };
     };
     std::vector<PushConstantInfo> identifyAllPushConstants(const Shader&) const;
 

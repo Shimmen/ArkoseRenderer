@@ -57,8 +57,8 @@ public:
 
     virtual void setName(const std::string& name) override;
 
-    VkFramebuffer framebuffer;
-    VkRenderPass compatibleRenderPass;
+    VkFramebuffer framebuffer { VK_NULL_HANDLE };
+    VkRenderPass compatibleRenderPass { VK_NULL_HANDLE };
 
     std::vector<std::pair<Texture*, VkImageLayout>> attachedTextures;
 };
