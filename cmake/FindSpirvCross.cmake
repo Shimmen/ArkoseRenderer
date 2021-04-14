@@ -29,7 +29,7 @@ set(SpirvCross_LIB_NAME spirv-cross-core spirv-cross-glsl spirv-cross-hlsl spirv
 
 if(WIN32)
 
-  if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+  if(${CMAKE_BUILD_TYPE} MATCHES Debug)
     set(SpirvCross_LIB_NAME spirv-cross-cored spirv-cross-glsld spirv-cross-hlsld spirv-cross-msld spirv-cross-reflectd spirv-cross-utild)
   endif()
 

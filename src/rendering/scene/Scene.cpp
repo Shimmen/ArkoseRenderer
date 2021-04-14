@@ -377,7 +377,7 @@ DrawCallDescription Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&
     const size_t initialVertexBufferSize = 50'000 * layout.packedVertexSize();
 
     bool doAlign = alignWith.has_value();
-    ASSERT(alignWith->sourceMesh == &mesh);
+    ASSERT(!alignWith || alignWith->sourceMesh == &mesh);
 
     std::vector<uint8_t> vertexData = mesh.vertexData(layout);
 

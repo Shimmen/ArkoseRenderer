@@ -5,6 +5,7 @@
 #include "backend/Backend.h"
 #include "backend/Resources.h"
 #include "utility/Image.h"
+#include "utility/Logging.h"
 #include "utility/util.h"
 #include <unordered_map>
 #include <unordered_set>

@@ -28,7 +28,7 @@
 if(WIN32)
 
   set(Shaderc_LIB_NAME "shaderc_combined")
-  if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+  if(${CMAKE_BUILD_TYPE} MATCHES Debug)
     set(Shaderc_LIB_NAME "${Shaderc_LIB_NAME}d")
   endif()
 
