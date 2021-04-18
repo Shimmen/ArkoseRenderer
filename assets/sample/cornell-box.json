@@ -40,10 +40,14 @@
     },
     "cameras": [
       {
-        "name": "main",
-        "origin": [ 0, 1.8, 5 ],
-        "target": [ 0, 1.0, 0 ]
+        "name": "front-view",
+        "position": [ -0.29327085614204407, 1.9293341636657715, 4.532309532165527 ],
+        "direction": [ 0.031057415530085564, -0.10368391126394272, -0.9941253066062927 ],
+        "exposure": "manual",
+        "aperture": 16.0,
+        "shutter": 250,
+        "ISO": 800.0
       }
     ],
-    "camera": "main"
+    "camera": "front-view"
   }
