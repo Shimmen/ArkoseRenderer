@@ -28,6 +28,16 @@ float lengthSquared(vec3 v)
     return dot(v, v);
 }
 
+float distanceSquared(vec2 a, vec2 b)
+{
+    return lengthSquared(a - b);
+}
+
+float distanceSquared(vec3 a, vec3 b)
+{
+    return lengthSquared(a - b);
+}
+
 float square(float x)
 {
     return x * x;
