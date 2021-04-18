@@ -81,6 +81,7 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
         // Update camera data
         {
             const FpsCamera& camera = m_scene.camera();
+            mat4 pixelFromView = camera.pixelProjectionMatrix();
             mat4 projectionFromView = camera.projectionMatrix();
             mat4 viewFromWorld = camera.viewMatrix();
             CameraState cameraState {
@@ -88,6 +89,12 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
                 .viewFromProjection = inverse(projectionFromView),
                 .viewFromWorld = viewFromWorld,
                 .worldFromView = inverse(viewFromWorld),
+
+                .pixelFromView = pixelFromView,
+                .viewFromPixel = inverse(pixelFromView),
+
+                .near = camera.zNear,
+                .far = camera.zFar,
 
                 .iso = camera.iso,
                 .aperture = camera.aperture,

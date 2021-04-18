@@ -146,9 +146,11 @@ void FpsCamera::update(const Input& input, const Extent2D& viewportSize, float d
 
 mat4 FpsCamera::pixelProjectionMatrix() const
 {
-    float pixelsX = (float)m_currentViewportSize.width();
-    float pixelsY = (float)m_currentViewportSize.height();
-    mat4 pixelFromNDC = moos::scale(vec3(pixelsX, pixelsY, 1.0f)) * moos::translate(vec3(0.5f, 0.5f, 0.0f)) * moos::scale(vec3(0.5f, 0.5f, 1.0f));
+    // Ensures e.g. NDC (1,1) projects to (width-1,height-1)
+    float roundingPixelsX = (float)m_currentViewportSize.width() - 0.001f;
+    float roundingPixelsY = (float)m_currentViewportSize.height() - 0.001f;
+
+    mat4 pixelFromNDC = moos::scale(vec3(roundingPixelsX, roundingPixelsY, 1.0f)) * moos::translate(vec3(0.5f, 0.5f, 0.0f)) * moos::scale(vec3(0.5f, 0.5f, 1.0f));
     return pixelFromNDC * projectionMatrix();
 }
 

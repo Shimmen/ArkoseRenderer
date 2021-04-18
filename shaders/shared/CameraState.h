@@ -14,6 +14,14 @@ struct CameraState {
     mat4 viewFromWorld;
     mat4 worldFromView;
 
+    mat4 pixelFromView;
+    mat4 viewFromPixel;
+
+    float near;
+    float far;
+    float _pad1;
+    float _pad2;
+
     float iso;
     float aperture;
     float shutterSpeed;

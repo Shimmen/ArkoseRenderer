@@ -85,4 +85,16 @@ float valueForManualExposure(float aperture, float shutterSpeed, float ISO)
     return exposure;
 }
 
+vec3 unprojectPixelCoordAndDepthToViewSpace(ivec2 pixelCoord, float depth, CameraState camera)
+{
+    vec4 viewSpacePos = camera.viewFromPixel * vec4(pixelCoord + vec2(0.5), depth, 1.0);
+    viewSpacePos.xyz /= viewSpacePos.w;
+    return viewSpacePos.xyz;
+}
+
+float calculateLinearDepth(float nonlinearDepth, CameraState camera)
+{
+    return camera.near * camera.far / ((nonlinearDepth * (camera.far - camera.near)) - camera.far);
+}
+
 #endif // CAMERA_GLSL
