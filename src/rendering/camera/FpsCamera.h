@@ -34,6 +34,11 @@ public:
     [[nodiscard]] mat4 projectionMatrix() const { return m_projectionFromView; }
     [[nodiscard]] mat4 viewProjectionMatrix() const { return m_projectionFromView * m_viewFromWorld; }
 
+    mat4 pixelProjectionMatrix() const;
+
+    static constexpr float zNear { 0.25f };
+    static constexpr float zFar { 10000.0f };
+
     // Default manual values according to the "sunny 16 rule" (https://en.wikipedia.org/wiki/Sunny_16_rule)
     float aperture { 16.0f }; // i.e. f/16
     float iso { 400.0f };
@@ -56,10 +61,9 @@ private:
 
     mat4 m_viewFromWorld {};
     mat4 m_projectionFromView {};
+    Extent2D m_currentViewportSize {};
 
     bool m_didModify { true };
-
-    static constexpr float zNear { 0.25f };
 
     float maxSpeed { 10.0f };
     static constexpr float timeToMaxSpeed { 0.25f };

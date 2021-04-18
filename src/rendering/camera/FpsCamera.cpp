@@ -140,7 +140,16 @@ void FpsCamera::update(const Input& input, const Extent2D& viewportSize, float d
     float width = static_cast<float>(viewportSize.width());
     float height = static_cast<float>(viewportSize.height());
     float aspectRatio = (height > 1e-6f) ? (width / height) : 1.0f;
-    m_projectionFromView = moos::perspectiveProjectionToVulkanClipSpace(m_fieldOfView, aspectRatio, zNear, 10000.0f);
+    m_projectionFromView = moos::perspectiveProjectionToVulkanClipSpace(m_fieldOfView, aspectRatio, zNear, zFar);
+    m_currentViewportSize = viewportSize;
+}
+
+mat4 FpsCamera::pixelProjectionMatrix() const
+{
+    float pixelsX = (float)m_currentViewportSize.width();
+    float pixelsY = (float)m_currentViewportSize.height();
+    mat4 pixelFromNDC = moos::scale(vec3(pixelsX, pixelsY, 1.0f)) * moos::translate(vec3(0.5f, 0.5f, 0.0f)) * moos::scale(vec3(0.5f, 0.5f, 1.0f));
+    return pixelFromNDC * projectionMatrix();
 }
 
 void FpsCamera::setDidModify(bool value)
