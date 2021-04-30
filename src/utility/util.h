@@ -3,16 +3,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 // Assert & similar
 
-// We want normal assert behaviour in release mode too!
-#ifdef NDEBUG
-#undef NDEBUG
-#define DO_SET_NDEBUG
-#endif
 #include <cassert>
 #define ASSERT(x) assert(x)
-#ifdef DO_SET_NDEBUG
-#define NDEBUG
-#endif
 
 #define ASSERT_NOT_REACHED()                  \
     do {                                      \
@@ -30,29 +22,20 @@
 // Scoped exit, i.e. kind of like defer but instead of function scopes it works for all scopes
 // From: http://the-witness.net/news/2012/11/scopeexit-in-c11/
 
-template<typename F>
-class ScopeExit {
+template<typename Func>
+class AtScopeExit {
 public:
-    explicit ScopeExit(F f)
-        : m_f(f)
+    
+    explicit AtScopeExit(Func&& func)
+        : m_function(func)
     {
     }
-    ~ScopeExit() { m_f(); }
+
+    ~AtScopeExit()
+    {
+        m_function();
+    }
 
 private:
-    F m_f;
+    Func m_function;
 };
-
-template<typename F>
-ScopeExit<F> makeScopeExit(F f)
-{
-    return ScopeExit<F>(f);
-}
-
-#define STRING_CONCAT(x, y) x##y
-#define STRING_WITH_LINE(str) STRING_CONCAT(str, __LINE__)
-#define MAKE_UNIQUE_SCOPE_EXIT_NAME STRING_WITH_LINE(ScopeExitAtLine)
-#define AT_SCOPE_EXIT(lambda) auto MAKE_UNIQUE_SCOPE_EXIT_NAME = makeScopeExit(lambda);
-#undef MAKE_UNIQUE_SCOPE_EXIT_NAME
-#undef STRING_WITH_LINE
-#undef STRING_CONCAT

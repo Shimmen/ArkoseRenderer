@@ -51,8 +51,13 @@ public:
 
 struct VulkanRenderTarget final : public RenderTarget {
 public:
+    enum class QuirkMode {
+        None,
+        ForPresenting,
+    };
+
     VulkanRenderTarget() = default;
-    explicit VulkanRenderTarget(Backend&, std::vector<Attachment> attachments);
+    explicit VulkanRenderTarget(Backend&, std::vector<Attachment> attachments, QuirkMode = QuirkMode::None);
     virtual ~VulkanRenderTarget() override;
 
     virtual void setName(const std::string& name) override;
@@ -61,6 +66,8 @@ public:
     VkRenderPass compatibleRenderPass { VK_NULL_HANDLE };
 
     std::vector<std::pair<Texture*, VkImageLayout>> attachedTextures;
+
+    QuirkMode m_quirkMode;
 };
 
 struct VulkanBindingSet : public BindingSet {

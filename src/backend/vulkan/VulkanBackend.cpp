@@ -12,7 +12,6 @@
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include "utility/util.h"
-#include <ImGuizmo.h>
 #include <algorithm>
 #include <cstring>
 #include <fmt/format.h>
@@ -95,8 +94,7 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, const AppSpecification& appSpec
     vkGetDeviceQueue(m_device, m_graphicsQueue.familyIndex, 0, &m_graphicsQueue.queue);
     vkGetDeviceQueue(m_device, m_computeQueue.familyIndex, 0, &m_computeQueue.queue);
 
-    createSemaphoresAndFences(device());
-
+    // TODO: Only create if actually requested (in optional or required capabilities of appSpecification)
     if (VulkanRTX::isSupportedOnPhysicalDevice(physicalDevice())) {
         m_rtx = std::make_unique<VulkanRTX>(*this, physicalDevice(), device());
     }
@@ -107,21 +105,21 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, const AppSpecification& appSpec
     allocatorInfo.device = device();
     allocatorInfo.flags = 0u;
     if (vmaCreateAllocator(&allocatorInfo, &m_memoryAllocator) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend::VulkanBackend(): could not create memory allocator, exiting.\n");
+        LogErrorAndExit("VulkanBackend: could not create memory allocator, exiting.\n");
     }
 
     VkCommandPoolCreateInfo poolCreateInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
     poolCreateInfo.queueFamilyIndex = m_graphicsQueue.familyIndex;
     poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // (so we can easily reuse them each frame)
-    if (vkCreateCommandPool(device(), &poolCreateInfo, nullptr, &m_renderGraphFrameCommandPool) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend::VulkanBackend(): could not create command pool for the graphics queue, exiting.\n");
+    if (vkCreateCommandPool(device(), &poolCreateInfo, nullptr, &m_defaultCommandPool) != VK_SUCCESS) {
+        LogErrorAndExit("VulkanBackend: could not create command pool for the graphics queue, exiting.\n");
     }
 
     VkCommandPoolCreateInfo transientPoolCreateInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
     transientPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
     transientPoolCreateInfo.queueFamilyIndex = m_graphicsQueue.familyIndex;
     if (vkCreateCommandPool(device(), &transientPoolCreateInfo, nullptr, &m_transientCommandPool) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend::VulkanBackend(): could not create transient command pool, exiting.\n");
+        LogErrorAndExit("VulkanBackend: could not create transient command pool, exiting.\n");
     }
 
     size_t numEvents = 4;
@@ -129,17 +127,16 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, const AppSpecification& appSpec
     VkEventCreateInfo eventCreateInfo = { VK_STRUCTURE_TYPE_EVENT_CREATE_INFO };
     for (size_t i = 0; i < numEvents; ++i) {
         if (vkCreateEvent(device(), &eventCreateInfo, nullptr, &m_events[i]) != VK_SUCCESS) {
-            LogErrorAndExit("VulkanBackend::VulkanBackend(): could not create event, exiting.\n");
+            LogErrorAndExit("VulkanBackend: could not create event, exiting.\n");
         }
         if (vkSetEvent(device(), m_events[i]) != VK_SUCCESS) {
-            LogErrorAndExit("VulkanBackend::VulkanBackend(): could not signal event after creating it, exiting.\n");
+            LogErrorAndExit("VulkanBackend: could not signal event after creating it, exiting.\n");
         }
     }
 
     m_pipelineCache = createAndLoadPipelineCacheFromDisk();
 
-    createAndSetupSwapchain(physicalDevice(), device(), m_surface);
-    createWindowRenderTargetFrontend();
+    createSwapchain(physicalDevice(), device(), m_surface);
 
     setupDearImgui();
 
@@ -148,16 +145,13 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, const AppSpecification& appSpec
 
 VulkanBackend::~VulkanBackend()
 {
-    // Before destroying stuff, make sure it's done with all scheduled work
+    // Before destroying stuff, make sure we're done with all scheduled work
     vkDeviceWaitIdle(device());
 
-    destroyDearImgui();
-
-    vkFreeCommandBuffers(device(), m_renderGraphFrameCommandPool, (uint32_t)m_frameCommandBuffers.size(), m_frameCommandBuffers.data());
-
-    m_frameRegistries.clear();
     m_nodeRegistry.reset();
     m_persistentRegistry.reset();
+
+    destroyDearImgui();
 
     destroySwapchain();
 
@@ -168,14 +162,8 @@ VulkanBackend::~VulkanBackend()
         vkDestroyEvent(device(), event, nullptr);
     }
 
-    vkDestroyCommandPool(device(), m_renderGraphFrameCommandPool, nullptr);
+    vkDestroyCommandPool(device(), m_defaultCommandPool, nullptr);
     vkDestroyCommandPool(device(), m_transientCommandPool, nullptr);
-
-    for (size_t it = 0; it < maxFramesInFlight; ++it) {
-        vkDestroySemaphore(device(), m_imageAvailableSemaphores[it], nullptr);
-        vkDestroySemaphore(device(), m_renderFinishedSemaphores[it], nullptr);
-        vkDestroyFence(device(), m_inFlightFrameFences[it], nullptr);
-    }
 
     vmaDestroyAllocator(m_memoryAllocator);
 
@@ -627,13 +615,13 @@ void VulkanBackend::findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSu
     }
 
     if (!foundGraphicsQueue) {
-        LogErrorAndExit("VulkanBackend::findQueueFamilyIndices(): could not find a graphics queue, exiting.\n");
+        LogErrorAndExit("VulkanBackend: could not find a graphics queue, exiting.\n");
     }
     if (!foundComputeQueue) {
-        LogErrorAndExit("VulkanBackend::findQueueFamilyIndices(): could not find a compute queue, exiting.\n");
+        LogErrorAndExit("VulkanBackend: could not find a compute queue, exiting.\n");
     }
     if (!foundPresentQueue) {
-        LogErrorAndExit("VulkanBackend::findQueueFamilyIndices(): could not find a present queue, exiting.\n");
+        LogErrorAndExit("VulkanBackend: could not find a present queue, exiting.\n");
     }
 }
 
@@ -701,79 +689,41 @@ void VulkanBackend::savePipelineCacheToDisk(VkPipelineCache pipelineCache) const
     FileIO::writeBinaryDataToFile(piplineCacheFilePath, data);
 }
 
-void VulkanBackend::createSemaphoresAndFences(VkDevice device)
-{
-    SCOPED_PROFILE_ZONE_BACKEND();
-
-    VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-
-    VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-    fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-    bool allSemaphoresCreatedSuccessfully = true;
-    bool allFencesCreatedSuccessfully = true;
-
-    for (size_t it = 0; it < maxFramesInFlight; ++it) {
-        if (vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &m_imageAvailableSemaphores[it]) != VK_SUCCESS) {
-            allSemaphoresCreatedSuccessfully = false;
-            break;
-        }
-        if (vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &m_renderFinishedSemaphores[it]) != VK_SUCCESS) {
-            allSemaphoresCreatedSuccessfully = false;
-            break;
-        }
-        if (vkCreateFence(device, &fenceCreateInfo, nullptr, &m_inFlightFrameFences[it]) != VK_SUCCESS) {
-            allFencesCreatedSuccessfully = false;
-            break;
-        }
-    }
-
-    if (!allSemaphoresCreatedSuccessfully) {
-        LogErrorAndExit("VulkanBackend::createSemaphoresAndFences(): could not create one or more semaphores, exiting.\n");
-    }
-    if (!allFencesCreatedSuccessfully) {
-        LogErrorAndExit("VulkanBackend::createSemaphoresAndFences(): could not create one or more fence, exiting.\n");
-    }
-}
-
-void VulkanBackend::createAndSetupSwapchain(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface)
+void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface)
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
     VkSurfaceCapabilitiesKHR surfaceCapabilities;
     if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCapabilities) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend::createAndSetupSwapchain(): could not get surface capabilities, exiting.\n");
+        LogErrorAndExit("VulkanBackend: could not get surface capabilities, exiting.\n");
     }
 
     VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
     createInfo.surface = surface;
 
-    // I'm honestly quite confused about the requirements here.. See this issue discussed here:
-    // https://github.com/KhronosGroup/Vulkan-Docs/issues/909 which says that you should always
-    // request one more image than required, if possible. On the other hand, that seems wasteful
-    // and I don't think we really should. And it works perfectly fine here. Maybe I will bump
-    // into some weird deadlock or synchronization error at some later stage, but this works now.
-    createInfo.minImageCount = surfaceCapabilities.minImageCount;
-    if (surfaceCapabilities.minImageCount != 0) {
-        // (max of zero means no upper limit, so don't clamp in that case)
+    // See https://github.com/KhronosGroup/Vulkan-Docs/issues/909 for discussion regarding +1
+    createInfo.minImageCount = surfaceCapabilities.minImageCount + 1;
+    if (surfaceCapabilities.maxImageCount != 0) {
         createInfo.minImageCount = std::min(createInfo.minImageCount, surfaceCapabilities.maxImageCount);
     }
 
     VkSurfaceFormatKHR surfaceFormat = pickBestSurfaceFormat();
     createInfo.imageFormat = surfaceFormat.format;
     createInfo.imageColorSpace = surfaceFormat.colorSpace;
+    m_swapchainImageFormat = surfaceFormat.format;
 
     VkPresentModeKHR presentMode = pickBestPresentMode();
     createInfo.presentMode = presentMode;
 
     VkExtent2D swapchainExtent = pickBestSwapchainExtent();
+    m_swapchainExtent = { swapchainExtent.width, swapchainExtent.height };
     createInfo.imageExtent = swapchainExtent;
     createInfo.imageArrayLayers = 1;
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT; // TODO: What do we want here? Maybe this suffices?
     // TODO: Assure VK_IMAGE_USAGE_STORAGE_BIT is supported using vkGetPhysicalDeviceSurfaceCapabilitiesKHR & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT
 
     if (vulkanDebugMode) {
-        // for nsight debugging & similar stuff)
+        // (for nsight debugging & similar stuff)
         createInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
 
@@ -793,78 +743,153 @@ void VulkanBackend::createAndSetupSwapchain(VkPhysicalDevice physicalDevice, VkD
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
     if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &m_swapchain) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend::createAndSetupSwapchain(): could not create swapchain, exiting.\n");
+        LogErrorAndExit("VulkanBackend: could not create swapchain, exiting.\n");
     }
 
-    vkGetSwapchainImagesKHR(device, m_swapchain, &m_numSwapchainImages, nullptr);
-    m_swapchainImages.resize(m_numSwapchainImages);
-    vkGetSwapchainImagesKHR(device, m_swapchain, &m_numSwapchainImages, m_swapchainImages.data());
+    uint32_t numSwapchainImages;
+    vkGetSwapchainImagesKHR(device, m_swapchain, &numSwapchainImages, nullptr);
+    std::vector<VkImage> swapchainImages { numSwapchainImages };
+    vkGetSwapchainImagesKHR(device, m_swapchain, &numSwapchainImages, swapchainImages.data());
 
-    m_swapchainImageViews.resize(m_numSwapchainImages);
-    for (size_t i = 0; i < m_swapchainImages.size(); ++i) {
+    for (uint32_t imageIdx = 0; imageIdx < numSwapchainImages; ++imageIdx) {
 
-        VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+        auto frameContext = std::make_unique<FrameContext>();
+        frameContext->image = swapchainImages[imageIdx];
 
-        imageViewCreateInfo.image = m_swapchainImages[i];
-        imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        imageViewCreateInfo.format = surfaceFormat.format;
+        // Create image view
+        {
+            VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 
-        imageViewCreateInfo.components = {
-            .r = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .g = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .b = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .a = VK_COMPONENT_SWIZZLE_IDENTITY
-        };
+            imageViewCreateInfo.image = frameContext->image;
+            imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+            imageViewCreateInfo.format = surfaceFormat.format;
 
-        imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-        imageViewCreateInfo.subresourceRange.levelCount = 1;
+            imageViewCreateInfo.components = {
+                .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+                .a = VK_COMPONENT_SWIZZLE_IDENTITY
+            };
 
-        imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-        imageViewCreateInfo.subresourceRange.layerCount = 1;
+            imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+            imageViewCreateInfo.subresourceRange.levelCount = 1;
 
-        imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+            imageViewCreateInfo.subresourceRange.layerCount = 1;
 
-        if (vkCreateImageView(device, &imageViewCreateInfo, nullptr, &m_swapchainImageViews[i]) != VK_SUCCESS) {
-            LogErrorAndExit("VulkanBackend::createAndSetupSwapchain(): could not create image view %u (out of %u), exiting.\n", i, m_numSwapchainImages);
+            imageViewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+            VkImageView swapchainImageView;
+            if (vkCreateImageView(device, &imageViewCreateInfo, nullptr, &swapchainImageView) != VK_SUCCESS) {
+                LogErrorAndExit("VulkanBackend: could not create image view %u (out of %u), exiting.\n", imageIdx, numSwapchainImages);
+            }
+
+            frameContext->imageView = swapchainImageView;
         }
+
+        // Create mock VulkanTexture for the swapchain image & its image view
+        {
+            auto mockTexture = std::make_unique<VulkanTexture>();
+
+            mockTexture->m_type = Texture::Type::Texture2D;
+            mockTexture->m_extent = m_swapchainExtent;
+            mockTexture->m_format = Texture::Format::Unknown;
+            mockTexture->m_minFilter = Texture::MinFilter::Nearest;
+            mockTexture->m_magFilter = Texture::MagFilter::Nearest;
+            mockTexture->m_wrapMode = { Texture::WrapMode::Repeat,
+                                        Texture::WrapMode::Repeat,
+                                        Texture::WrapMode::Repeat };
+            mockTexture->m_mipmap = Texture::Mipmap::None;
+            mockTexture->m_multisampling = Texture::Multisampling::None;
+
+            mockTexture->vkFormat = m_swapchainImageFormat;
+            mockTexture->image = frameContext->image;
+            mockTexture->imageView = frameContext->imageView;
+            mockTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+            frameContext->mockColorTexture = std::move(mockTexture);
+        }
+
+        // Create depth texture
+        {
+            Texture::TextureDescription depthDesc { .type = Texture::Type::Texture2D,
+                                                    .arrayCount = 1u,
+                                                    .extent = m_swapchainExtent,
+                                                    .format = Texture::Format::Depth32F,
+                                                    .minFilter = Texture::MinFilter::Nearest,
+                                                    .magFilter = Texture::MagFilter::Nearest,
+                                                    .wrapMode = {
+                                                        Texture::WrapMode::Repeat,
+                                                        Texture::WrapMode::Repeat,
+                                                        Texture::WrapMode::Repeat },
+                                                    .mipmap = Texture::Mipmap::None,
+                                                    .multisampling = Texture::Multisampling::None };
+            frameContext->depthTexture = std::make_unique<VulkanTexture>(*this, depthDesc);
+        }
+
+        // Create command buffer for recoding this frame
+        {
+            VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+            commandBufferAllocateInfo.commandPool = m_defaultCommandPool;
+            commandBufferAllocateInfo.commandBufferCount = 1;
+
+            // Can be submitted to a queue for execution, but cannot be called from other command buffers
+            commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+            VkCommandBuffer commandBuffer;
+            if (vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer) != VK_SUCCESS) {
+                LogErrorAndExit("VulkanBackend: could not create command buffer, exiting.\n");
+            }
+
+            frameContext->commandBuffer = commandBuffer;
+        }
+
+        {
+            auto attachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, frameContext->mockColorTexture.get(), LoadOp::Clear, StoreOp::Store },
+                                                                       { RenderTarget::AttachmentType::Depth, frameContext->depthTexture.get(), LoadOp::Clear, StoreOp::Store } });
+            frameContext->clearingRenderTarget = std::make_unique<VulkanRenderTarget>(*this, attachments);
+
+            // NOTE: Does not handle depth & requires something to have already been written to the render target, as it has load op load on color0
+            auto finalAttachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, frameContext->mockColorTexture.get(), LoadOp::Load, StoreOp::Store } });
+            frameContext->guiRenderTargetForPresenting = std::make_unique<VulkanRenderTarget>(*this, finalAttachments, VulkanRenderTarget::QuirkMode::ForPresenting);
+        }
+
+        m_frameContexts.push_back(std::move(frameContext));
     }
 
-    m_swapchainExtent = { swapchainExtent.width, swapchainExtent.height };
-    m_swapchainImageFormat = surfaceFormat.format;
+    for (auto& frameContext : m_frameContexts) {
 
-    Texture::TextureDescription depthDesc {
-        .type = Texture::Type::Texture2D,
-        .arrayCount = 1u,
-        .extent = m_swapchainExtent,
-        .format = Texture::Format::Depth32F,
-        .minFilter = Texture::MinFilter::Nearest,
-        .magFilter = Texture::MagFilter::Nearest,
-        .wrapMode = {
-            Texture::WrapMode::Repeat,
-            Texture::WrapMode::Repeat,
-            Texture::WrapMode::Repeat },
-        .mipmap = Texture::Mipmap::None,
-        .multisampling = Texture::Multisampling::None
-    };
-    m_swapchainDepthTexture = std::make_unique<VulkanTexture>(*this, depthDesc);
-    setupWindowRenderTargets();
+        SyncContext syncContext;
+
+        // Create fence
+        {
+            VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+            fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+            if (vkCreateFence(device, &fenceCreateInfo, nullptr, &syncContext.frameFence) != VK_SUCCESS) {
+                LogErrorAndExit("VulkanBackend: could not create frame context fence, exiting.\n");
+            }
+        }
+
+        // Create semaphores
+        {
+            VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+
+            if (vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &syncContext.imageAvailableSemaphore) != VK_SUCCESS) {
+                LogErrorAndExit("VulkanBackend: could not create imageAvailableSemaphore, exiting.\n");
+            }
+
+            if (vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &syncContext.renderingFinishedSemaphore) != VK_SUCCESS) {
+                LogErrorAndExit("VulkanBackend: could not create renderingFinishedSemaphore, exiting.\n");
+            }
+        }
+
+        m_syncContexts.push_back(syncContext);
+
+    }
 
     if (m_guiIsSetup) {
-        ImGui_ImplVulkan_SetMinImageCount(m_numSwapchainImages);
-        updateDearImguiFramebuffers();
-    }
-
-    // Create main command buffers, one per swapchain image
-    m_frameCommandBuffers.resize(m_numSwapchainImages);
-    {
-        VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-        commandBufferAllocateInfo.commandPool = m_renderGraphFrameCommandPool;
-        commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY; // (can be submitted to a queue for execution, but cannot be called from other command buffers)
-        commandBufferAllocateInfo.commandBufferCount = (uint32_t)m_frameCommandBuffers.size();
-
-        if (vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, m_frameCommandBuffers.data()) != VK_SUCCESS) {
-            LogErrorAndExit("VulkanBackend::createAndSetupSwapchain(): could not create the main command buffers, exiting.\n");
-        }
+        ImGui_ImplVulkan_SetMinImageCount(numSwapchainImages);
     }
 }
 
@@ -872,20 +897,21 @@ void VulkanBackend::destroySwapchain()
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
-    m_swapchainDepthTexture.reset();
+    for (auto& frameContext : m_frameContexts) {
 
-    // TODO: Could this be rewritten to only use our existing deleteRenderTarget method?
-    vkDestroyRenderPass(device(), m_swapchainMockRenderTargets[0]->compatibleRenderPass, nullptr);
-    for (std::unique_ptr<VulkanRenderTarget>& renderTarget : m_swapchainMockRenderTargets) {
-        vkDestroyFramebuffer(device(), renderTarget->framebuffer, nullptr);
-        renderTarget->framebuffer = VK_NULL_HANDLE;
-        renderTarget->compatibleRenderPass = VK_NULL_HANDLE;
-        renderTarget.reset();
+        vkFreeCommandBuffers(device(), m_defaultCommandPool, 1, &frameContext->commandBuffer);
+        vkDestroyImageView(device(), frameContext->imageView, nullptr);
     }
 
-    for (size_t it = 0; it < m_numSwapchainImages; ++it) {
-        vkDestroyImageView(device(), m_swapchainImageViews[it], nullptr);
+    m_frameContexts.clear();
+
+    for (auto& syncContext : m_syncContexts) {
+        vkDestroySemaphore(device(), syncContext.imageAvailableSemaphore, nullptr);
+        vkDestroySemaphore(device(), syncContext.renderingFinishedSemaphore, nullptr);
+        vkDestroyFence(device(), syncContext.frameFence, nullptr);
     }
+
+    m_syncContexts.clear();
 
     vkDestroySwapchainKHR(device(), m_swapchain, nullptr);
 }
@@ -899,10 +925,10 @@ Extent2D VulkanBackend::recreateSwapchain()
         int windowFramebufferWidth, windowFramebufferHeight;
         glfwGetFramebufferSize(m_window, &windowFramebufferWidth, &windowFramebufferHeight);
         if (windowFramebufferWidth == 0 || windowFramebufferHeight == 0) {
-            LogInfo("VulkanBackend::recreateSwapchain(): rendering paused since there are no pixels to draw to.\n");
+            LogInfo("VulkanBackend: rendering paused since there are no pixels to draw to.\n");
             glfwWaitEvents();
         } else {
-            LogInfo("VulkanBackend::recreateSwapchain(): rendering resumed.\n");
+            LogInfo("VulkanBackend: rendering resumed.\n");
             break;
         }
     }
@@ -910,65 +936,12 @@ Extent2D VulkanBackend::recreateSwapchain()
     vkDeviceWaitIdle(device());
 
     destroySwapchain();
-    createAndSetupSwapchain(physicalDevice(), device(), m_surface);
-    createWindowRenderTargetFrontend();
+    createSwapchain(physicalDevice(), device(), m_surface);
 
-    m_lastSwapchainRecreationFrameIndex = m_currentFrameIndex;
+    m_relativeFrameIndex = 0;
     s_unhandledWindowResize = false;
 
     return m_swapchainExtent;
-}
-
-void VulkanBackend::createWindowRenderTargetFrontend()
-{
-    SCOPED_PROFILE_ZONE_BACKEND();
-
-    ASSERT(m_numSwapchainImages > 0);
-
-    m_swapchainMockColorTextures.resize(m_numSwapchainImages);
-    m_swapchainMockRenderTargets.resize(m_numSwapchainImages);
-
-    for (size_t i = 0; i < m_numSwapchainImages; ++i) {
-
-        auto colorTexture = std::make_unique<VulkanTexture>();
-        {
-            colorTexture->m_type = Texture::Type::Texture2D;
-            colorTexture->m_extent = m_swapchainExtent;
-            colorTexture->m_format = Texture::Format::Unknown;
-            colorTexture->m_minFilter = Texture::MinFilter::Nearest;
-            colorTexture->m_magFilter = Texture::MagFilter::Nearest;
-            colorTexture->m_wrapMode = {
-                Texture::WrapMode::Repeat,
-                Texture::WrapMode::Repeat,
-                Texture::WrapMode::Repeat
-            };
-            colorTexture->m_mipmap = Texture::Mipmap::None;
-            colorTexture->m_multisampling = Texture::Multisampling::None;
-
-            colorTexture->vkFormat = m_swapchainImageFormat;
-            colorTexture->image = m_swapchainImages[i];
-            colorTexture->imageView = m_swapchainImageViews[i];
-            colorTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        }
-        m_swapchainMockColorTextures[i] = std::move(colorTexture);
-
-        auto renderTarget = std::make_unique<VulkanRenderTarget>();
-        {
-            renderTarget->m_colorAttachments = { { RenderTarget::AttachmentType::Color0, m_swapchainMockColorTextures[i].get() } };
-            renderTarget->m_depthAttachment = { RenderTarget::AttachmentType::Depth, m_swapchainDepthTexture.get() };
-
-            renderTarget->m_multisampling = Texture::Multisampling::None;
-            renderTarget->m_extent = m_swapchainExtent;
-
-            renderTarget->compatibleRenderPass = m_swapchainRenderPass;
-            renderTarget->framebuffer = m_swapchainFramebuffers[i];
-            renderTarget->attachedTextures = {
-                { m_swapchainMockColorTextures[i].get(), VK_IMAGE_LAYOUT_PRESENT_SRC_KHR }, // this (layout) is important so that we know that we don't need to do an explicit transition before presenting
-                { m_swapchainDepthTexture.get(), VK_IMAGE_LAYOUT_UNDEFINED } // (this (layout) probably doesn't matter for the depth image)
-            };
-        }
-        m_swapchainMockRenderTargets[i] = std::move(renderTarget);
-    }
 }
 
 void VulkanBackend::setupDearImgui()
@@ -982,11 +955,7 @@ void VulkanBackend::setupDearImgui()
     ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     //ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
 
-    //
-
     ImGui_ImplGlfw_InitForVulkan(m_window, true);
-
-    //
 
     VkDescriptorPoolSize poolSizes[] = {
         { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -1010,57 +979,6 @@ void VulkanBackend::setupDearImgui()
         LogErrorAndExit("DearImGui error while setting up descriptor pool\n");
     }
 
-    //
-
-    VkAttachmentDescription colorAttachment = {};
-    colorAttachment.format = m_swapchainImageFormat;
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentReference colorAttachmentRef = {};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.pDepthStencilAttachment = VK_NULL_HANDLE;
-
-    // TODO: Is this needed here??
-    // Setup subpass dependency to make sure we have the right stuff before drawing to a swapchain image.
-    // see https://vulkan-tutorial.com/en/Drawing_a_triangle/Drawing/Rendering_and_presentation for info.
-    VkSubpassDependency subpassDependency = {};
-    subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    subpassDependency.dstSubpass = 0; // i.e. the first and only subpass we have here
-    subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    subpassDependency.srcAccessMask = 0;
-    subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-    VkRenderPassCreateInfo renderPassCreateInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-    renderPassCreateInfo.attachmentCount = 1;
-    renderPassCreateInfo.pAttachments = &colorAttachment;
-    renderPassCreateInfo.subpassCount = 1;
-    renderPassCreateInfo.pSubpasses = &subpass;
-    renderPassCreateInfo.dependencyCount = 1;
-    renderPassCreateInfo.pDependencies = &subpassDependency;
-
-    if (vkCreateRenderPass(device(), &renderPassCreateInfo, nullptr, &m_guiRenderPass) != VK_SUCCESS) {
-        LogErrorAndExit("DearImGui error while setting up render pass\n");
-    }
-
-    //
-
-    updateDearImguiFramebuffers();
-
-    //
-
     ImGui_ImplVulkan_InitInfo initInfo = {};
     initInfo.CheckVkResultFn = [](VkResult result) {
         if (result != VK_SUCCESS) {
@@ -1076,22 +994,20 @@ void VulkanBackend::setupDearImgui()
     initInfo.QueueFamily = m_graphicsQueue.familyIndex;
     initInfo.Queue = m_graphicsQueue.queue;
 
-    initInfo.MinImageCount = m_numSwapchainImages; // (todo: should this be something different than the actual count??)
-    initInfo.ImageCount = m_numSwapchainImages;
+    initInfo.MinImageCount = (uint32_t)m_frameContexts.size(); // (todo: should this be something different than the actual count??)
+    initInfo.ImageCount = (uint32_t)m_frameContexts.size();
 
     initInfo.DescriptorPool = m_guiDescriptorPool;
     initInfo.PipelineCache = VK_NULL_HANDLE;
 
-    ImGui_ImplVulkan_Init(&initInfo, m_guiRenderPass);
-
-    //
+    ASSERT(m_frameContexts.size() > 0); // make sure this is created after the swapchain is created!
+    VkRenderPass compatibleRenderPassForImGui = m_frameContexts[0]->guiRenderTargetForPresenting->compatibleRenderPass;
+    ImGui_ImplVulkan_Init(&initInfo, compatibleRenderPassForImGui);
 
     issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
         ImGui_ImplVulkan_CreateFontsTexture(commandBuffer);
     });
     ImGui_ImplVulkan_DestroyFontUploadObjects();
-
-    //
 
     m_guiIsSetup = true;
 }
@@ -1099,10 +1015,6 @@ void VulkanBackend::setupDearImgui()
 void VulkanBackend::destroyDearImgui()
 {
     vkDestroyDescriptorPool(device(), m_guiDescriptorPool, nullptr);
-    vkDestroyRenderPass(device(), m_guiRenderPass, nullptr);
-    for (VkFramebuffer framebuffer : m_guiFramebuffers) {
-        vkDestroyFramebuffer(device(), framebuffer, nullptr);
-    }
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
@@ -1111,36 +1023,12 @@ void VulkanBackend::destroyDearImgui()
     m_guiIsSetup = false;
 }
 
-void VulkanBackend::updateDearImguiFramebuffers()
-{
-    for (VkFramebuffer& framebuffer : m_guiFramebuffers) {
-        vkDestroyFramebuffer(device(), framebuffer, nullptr);
-    }
-    m_guiFramebuffers.clear();
-
-    for (uint32_t idx = 0; idx < m_numSwapchainImages; ++idx) {
-        VkFramebufferCreateInfo framebufferCreateInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-        framebufferCreateInfo.renderPass = m_guiRenderPass;
-        framebufferCreateInfo.attachmentCount = 1;
-        framebufferCreateInfo.pAttachments = &m_swapchainImageViews[idx];
-        framebufferCreateInfo.width = m_swapchainExtent.width();
-        framebufferCreateInfo.height = m_swapchainExtent.height();
-        framebufferCreateInfo.layers = 1;
-
-        VkFramebuffer framebuffer;
-        if (vkCreateFramebuffer(device(), &framebufferCreateInfo, nullptr, &framebuffer) != VK_SUCCESS) {
-            LogErrorAndExit("DearImGui error while setting up framebuffer\n");
-        }
-        m_guiFramebuffers.push_back(framebuffer);
-    }
-}
-
-void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, uint32_t swapchainImageIndex)
+void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameContext& frameContext)
 {
     VkRenderPassBeginInfo passBeginInfo = {};
     passBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    passBeginInfo.renderPass = m_guiRenderPass;
-    passBeginInfo.framebuffer = m_guiFramebuffers[swapchainImageIndex];
+    passBeginInfo.renderPass = frameContext.guiRenderTargetForPresenting->compatibleRenderPass;
+    passBeginInfo.framebuffer = frameContext.guiRenderTargetForPresenting->framebuffer;
     passBeginInfo.renderArea.extent.width = m_swapchainExtent.width();
     passBeginInfo.renderArea.extent.height = m_swapchainExtent.height();
     passBeginInfo.clearValueCount = 0;
@@ -1150,7 +1038,7 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, uint32_t
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
     vkCmdEndRenderPass(commandBuffer);
 
-    VulkanTexture& swapchainTexture = *m_swapchainMockColorTextures[swapchainImageIndex];
+    VulkanTexture& swapchainTexture = *frameContext.mockColorTexture;
     swapchainTexture.currentLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 }
 
@@ -1171,56 +1059,83 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
-    uint32_t currentFrameMod = m_currentFrameIndex % maxFramesInFlight;
+    bool isRelativeFirstFrame = m_relativeFrameIndex == 0;
+    AppState appState { m_swapchainExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
+
+    uint32_t frameContextIndex = m_relativeFrameIndex % m_frameContexts.size();
+    SyncContext& syncContext = m_syncContexts[frameContextIndex];
 
     {
         SCOPED_PROFILE_ZONE_BACKEND_NAMED("Waiting for fence");
-        if (vkWaitForFences(device(), 1, &m_inFlightFrameFences[currentFrameMod], VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
-            LogError("VulkanBackend::executeFrame(): error while waiting for in-flight frame fence (frame %u).\n", m_currentFrameIndex);
+        if (vkWaitForFences(device(), 1, &syncContext.frameFence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
+            LogError("VulkanBackend: error while waiting for in-flight frame fence (frame %u).\n", m_currentFrameIndex);
         }
     }
-
-    bool isRelativeFirstFrame = m_currentFrameIndex == (m_lastSwapchainRecreationFrameIndex + 1);
-    AppState appState { m_swapchainExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
 
     uint32_t swapchainImageIndex;
     VkResult acquireResult;
     {
-        SCOPED_PROFILE_ZONE_BACKEND_NAMED("Waiting for fence");
-        acquireResult = vkAcquireNextImageKHR(device(), m_swapchain, UINT64_MAX, m_imageAvailableSemaphores[currentFrameMod], VK_NULL_HANDLE, &swapchainImageIndex);
+        {
+            SCOPED_PROFILE_ZONE_BACKEND_NAMED("Acquiring next swapchain image");
+            acquireResult = vkAcquireNextImageKHR(device(), m_swapchain, UINT64_MAX, syncContext.imageAvailableSemaphore, VK_NULL_HANDLE, &swapchainImageIndex);
+        }
+
+        if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) {
+            // Since we couldn't acquire an image to draw to, recreate the swapchain and report that it didn't work
+            Extent2D newWindowExtent = recreateSwapchain();
+            appState = appState.updateWindowExtent(newWindowExtent);
+            reconstructRenderGraphResources(renderGraph);
+            return false;
+        }
+        if (acquireResult == VK_SUBOPTIMAL_KHR) {
+            // Since we did manage to acquire an image, just roll with it for now, but it will probably resolve itself after presenting
+            LogWarning("VulkanBackend: next image was acquired but it's suboptimal, ignoring.\n");
+        }
+
+        if (acquireResult != VK_SUCCESS && acquireResult != VK_SUBOPTIMAL_KHR) {
+            LogError("VulkanBackend: error acquiring next swapchain image.\n");
+        }
     }
 
-    if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) {
-        // Since we couldn't acquire an image to draw to, recreate the swapchain and report that it didn't work
-        Extent2D newWindowExtent = recreateSwapchain();
-        appState = appState.updateWindowExtent(newWindowExtent);
-        reconstructRenderGraphResources(renderGraph);
-        return false;
-    }
-    if (acquireResult == VK_SUBOPTIMAL_KHR) {
-        // Since we did manage to acquire an image, just roll with it for now, but it will probably resolve itself after presenting
-        LogWarning("VulkanBackend::executeFrame(): next image was acquired but it's suboptimal, ignoring.\n");
-    }
-
-    if (acquireResult != VK_SUCCESS && acquireResult != VK_SUBOPTIMAL_KHR) {
-        LogError("VulkanBackend::executeFrame(): error acquiring next swapchain image.\n");
-    }
+    FrameContext& frameContext = *m_frameContexts[swapchainImageIndex].get();
 
     // We shouldn't use the data from the swapchain image, so we set current layout accordingly (not sure about depth, but sure..)
-    VulkanTexture& currentColorTexture = *m_swapchainMockColorTextures[swapchainImageIndex];
-    currentColorTexture.currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    m_swapchainDepthTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    frameContext.mockColorTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    frameContext.depthTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    drawFrame(scene, renderGraph, appState, elapsedTime, deltaTime, swapchainImageIndex);
+    drawFrame(scene, renderGraph, appState, frameContext, elapsedTime, deltaTime);
 
-    submitQueue(swapchainImageIndex, &m_imageAvailableSemaphores[currentFrameMod], &m_renderFinishedSemaphores[currentFrameMod], &m_inFlightFrameFences[currentFrameMod]);
+    // Submit queue
+    {
+        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &frameContext.commandBuffer;
+
+        submitInfo.waitSemaphoreCount = 1;
+        submitInfo.pWaitSemaphores = &syncContext.imageAvailableSemaphore;
+        VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+        submitInfo.pWaitDstStageMask = waitStages;
+
+        submitInfo.signalSemaphoreCount = 1;
+        submitInfo.pSignalSemaphores = &syncContext.renderingFinishedSemaphore;
+
+        if (vkResetFences(device(), 1, &syncContext.frameFence) != VK_SUCCESS) {
+            LogError("VulkanBackend: error resetting in-flight frame fence.\n");
+        }
+
+        VkResult submitStatus = vkQueueSubmit(m_graphicsQueue.queue, 1, &submitInfo, syncContext.frameFence);
+        if (submitStatus != VK_SUCCESS) {
+            LogError("VulkanBackend: could not submit the graphics queue.\n");
+        }
+    }
 
     // Present results (synced on the semaphores)
     {
         VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &m_renderFinishedSemaphores[currentFrameMod];
+        presentInfo.pWaitSemaphores = &syncContext.renderingFinishedSemaphore;
 
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &m_swapchain;
@@ -1232,15 +1147,16 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
             recreateSwapchain();
             reconstructRenderGraphResources(renderGraph);
         } else if (presentResult != VK_SUCCESS) {
-            LogError("VulkanBackend::executeFrame(): could not present swapchain (frame %u).\n", m_currentFrameIndex);
+            LogError("VulkanBackend: could not present swapchain (frame %u).\n", m_currentFrameIndex);
         }
     }
 
     m_currentFrameIndex += 1;
+    m_relativeFrameIndex += 1;
     return true;
 }
 
-void VulkanBackend::drawFrame(const Scene& scene, const RenderGraph& renderGraph, const AppState& appState, double elapsedTime, double deltaTime, uint32_t swapchainImageIndex)
+void VulkanBackend::drawFrame(const Scene& scene, const RenderGraph& renderGraph, const AppState& appState, FrameContext& frameContext, double elapsedTime, double deltaTime)
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
@@ -1248,12 +1164,12 @@ void VulkanBackend::drawFrame(const Scene& scene, const RenderGraph& renderGraph
     commandBufferBeginInfo.flags = 0u;
     commandBufferBeginInfo.pInheritanceInfo = nullptr;
 
-    VkCommandBuffer commandBuffer = m_frameCommandBuffers[swapchainImageIndex];
+    VkCommandBuffer commandBuffer = frameContext.commandBuffer;
     if (vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo) != VK_SUCCESS) {
-        LogError("VulkanBackend::executeRenderGraph(): error beginning command buffer command!\n");
+        LogError("VulkanBackend: error beginning command buffer command!\n");
     }
 
-    Registry& associatedRegistry = *m_frameRegistries[swapchainImageIndex];
+    Registry& associatedRegistry = *frameContext.registry;
     VulkanCommandList cmdList { *this, commandBuffer };
 
     ImGui::Begin("Nodes (in order)");
@@ -1281,152 +1197,46 @@ void VulkanBackend::drawFrame(const Scene& scene, const RenderGraph& renderGraph
     {
         SCOPED_PROFILE_ZONE_BACKEND_NAMED("GUI Rendering");
 
-        static ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
-
-        auto& input = Input::instance();
-        if (input.wasKeyPressed(Key::T))
-            operation = ImGuizmo::TRANSLATE;
-        else if (input.wasKeyPressed(Key::R))
-            operation = ImGuizmo::ROTATE;
-        else if (input.wasKeyPressed(Key::Y))
-            operation = ImGuizmo::SCALE;
-
-        // TODO const_cast: This stuff shouldn't happen in here anyway and it shouldn't need to modify the scene..
-        Model* selectedModel = const_cast<Scene&>(scene).selectedModel();
-        if (selectedModel) {
-
-            ImGuizmo::BeginFrame();
-            ImGuizmo::SetRect(0, 0, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
-
-            // FIXME: Support world transforms! Well, we don't really have hierarchies right now, so it doesn't really matter.
-            //  What we do have is meshes with their own transform under a model, and we are modifying the model's transform here.
-            //  Maybe in the future we want to be able to modify meshes too?
-            ImGuizmo::MODE mode = ImGuizmo::LOCAL;
-
-            mat4 viewMatrix = scene.camera().viewMatrix();
-            mat4 projMatrix = scene.camera().projectionMatrix();
-
-            // Silly stuff, since ImGuizmo doesn't seem to like my projection matrix..
-            projMatrix.y = -projMatrix.y;
-
-            mat4 matrix = selectedModel->transform().localMatrix();
-            ImGuizmo::Manipulate(value_ptr(viewMatrix), value_ptr(projMatrix), operation, mode, value_ptr(matrix));
-            selectedModel->transform().setLocalMatrix(matrix);
-        }
-
         ImGui::Render();
-        renderDearImguiFrame(commandBuffer, swapchainImageIndex);
+        renderDearImguiFrame(commandBuffer, frameContext);
         ImGui::UpdatePlatformWindows();
     }
     cmdList.endDebugLabel();
 
-    // Explicitly transfer the swapchain image to a present layout if not already
-    // In most cases it should always be, but with nsight it seems to do weird things.
-    VulkanTexture& swapchainTexture = *m_swapchainMockColorTextures[swapchainImageIndex];
+    VulkanTexture& swapchainTexture = *frameContext.mockColorTexture;
     if (swapchainTexture.currentLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-        transitionImageLayout(swapchainTexture.image, false, swapchainTexture.currentLayout, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, &commandBuffer);
-        LogInfo("VulkanBackend::executeRenderGraph(): performing explicit swapchain layout transition. "
-                "This should only happen if we don't render to the window and don't draw any GUI.\n");
+
+        // Performing explicit swapchain layout transition. This should only happen if we don't render any GUI.
+
+        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        imageBarrier.oldLayout = swapchainTexture.currentLayout;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        imageBarrier.image = swapchainTexture.image;
+        imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageBarrier.subresourceRange.baseMipLevel = 0;
+        imageBarrier.subresourceRange.levelCount = 1;
+        imageBarrier.subresourceRange.baseArrayLayer = 0;
+        imageBarrier.subresourceRange.layerCount = 1;
+
+        // Wait for all color attachment writes ...
+        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        imageBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        // ... before allowing it can be read (by the OS I guess)
+        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+
+        vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0,
+                                0, nullptr,
+                                0, nullptr,
+                                1, &imageBarrier);
     }
 
     if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        LogError("VulkanBackend::executeRenderGraph(): error ending command buffer command!\n");
-    }
-}
-
-void VulkanBackend::setupWindowRenderTargets()
-{
-    SCOPED_PROFILE_ZONE_BACKEND();
-
-    // TODO: Could this be rewritten to use the common functions?
-    //  I.e. createRenderTarget, passing in the manually created color textures etc.
-    //  The only "problem" is probably the specific layouts (VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
-
-    VkAttachmentDescription colorAttachment = {};
-    colorAttachment.format = m_swapchainImageFormat;
-    colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-    VkAttachmentDescription depthAttachment = {};
-    depthAttachment.format = m_swapchainDepthTexture->vkFormat;
-    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    std::array<VkAttachmentDescription, 2> allAttachments = {
-        colorAttachment,
-        depthAttachment
-    };
-
-    VkAttachmentReference colorAttachmentRef = {};
-    colorAttachmentRef.attachment = 0;
-    colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    VkAttachmentReference depthAttachmentRef = {};
-    depthAttachmentRef.attachment = 1;
-    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &colorAttachmentRef;
-    subpass.pDepthStencilAttachment = &depthAttachmentRef;
-
-    // Setup subpass dependency to make sure we have the right stuff before drawing to a swapchain image.
-    // see https://vulkan-tutorial.com/en/Drawing_a_triangle/Drawing/Rendering_and_presentation for info.
-    VkSubpassDependency subpassDependency = {};
-    subpassDependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    subpassDependency.dstSubpass = 0; // i.e. the first and only subpass we have here
-    subpassDependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    subpassDependency.srcAccessMask = 0;
-    subpassDependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    subpassDependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-    VkRenderPassCreateInfo renderPassCreateInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO };
-    renderPassCreateInfo.attachmentCount = (uint32_t)allAttachments.size();
-    renderPassCreateInfo.pAttachments = allAttachments.data();
-    renderPassCreateInfo.subpassCount = 1;
-    renderPassCreateInfo.pSubpasses = &subpass;
-    renderPassCreateInfo.dependencyCount = 1;
-    renderPassCreateInfo.pDependencies = &subpassDependency;
-
-    VkRenderPass renderPass {};
-    if (vkCreateRenderPass(device(), &renderPassCreateInfo, nullptr, &renderPass) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create window render pass\n");
-    }
-    m_swapchainRenderPass = renderPass;
-
-    m_swapchainFramebuffers.resize(m_numSwapchainImages);
-    for (size_t it = 0; it < m_numSwapchainImages; ++it) {
-
-        std::array<VkImageView, 2> attachmentImageViews = {
-            m_swapchainImageViews[it],
-            m_swapchainDepthTexture->imageView
-        };
-
-        VkFramebufferCreateInfo framebufferCreateInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
-        framebufferCreateInfo.renderPass = renderPass;
-        framebufferCreateInfo.attachmentCount = (uint32_t)attachmentImageViews.size();
-        framebufferCreateInfo.pAttachments = attachmentImageViews.data();
-        framebufferCreateInfo.width = m_swapchainExtent.width();
-        framebufferCreateInfo.height = m_swapchainExtent.height();
-        framebufferCreateInfo.layers = 1;
-
-        VkFramebuffer framebuffer;
-        if (vkCreateFramebuffer(device(), &framebufferCreateInfo, nullptr, &framebuffer) != VK_SUCCESS) {
-            LogErrorAndExit("Error trying to create window framebuffer\n");
-        }
-
-        m_swapchainFramebuffers[it] = framebuffer;
+        LogError("VulkanBackend: error ending command buffer command!\n");
     }
 }
 
@@ -1454,13 +1264,13 @@ void VulkanBackend::reconstructRenderGraphResources(RenderGraph& renderGraph)
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
-    uint32_t numFrameManagers = m_numSwapchainImages;
+    uint32_t numFrameManagers = (uint32_t)m_frameContexts.size();
 
     // Create new resource managers
     auto nodeRegistry = std::make_unique<Registry>(*this);
     std::vector<std::unique_ptr<Registry>> frameRegistries {};
     for (uint32_t i = 0; i < numFrameManagers; ++i) {
-        const RenderTarget& windowRenderTargetForFrame = *m_swapchainMockRenderTargets[i];
+        const RenderTarget& windowRenderTargetForFrame = *m_frameContexts[i]->clearingRenderTarget;
         frameRegistries.push_back(std::make_unique<Registry>(*this, &windowRenderTargetForFrame));
     }
 
@@ -1478,10 +1288,9 @@ void VulkanBackend::reconstructRenderGraphResources(RenderGraph& renderGraph)
     m_nodeRegistry = std::move(nodeRegistry);
 
     // Then create & replace frame resources
-    m_frameRegistries.resize(numFrameManagers);
     for (uint32_t i = 0; i < numFrameManagers; ++i) {
-        //replaceResourcesForRegistry(m_frameRegistries[i].get(), frameRegistries[i].get());
-        m_frameRegistries[i] = std::move(frameRegistries[i]);
+        //replaceResourcesForRegistry(m_frameContexts[i]->registry, frameRegistries[i].get());
+        m_frameContexts[i]->registry = std::move(frameRegistries[i]);
     }
 }
 
@@ -1494,7 +1303,7 @@ bool VulkanBackend::issueSingleTimeCommand(const std::function<void(VkCommandBuf
 
     VkCommandBuffer oneTimeCommandBuffer;
     vkAllocateCommandBuffers(device(), &commandBufferAllocInfo, &oneTimeCommandBuffer);
-    AT_SCOPE_EXIT([&] {
+    AtScopeExit cleanUpOneTimeUseBuffer([&] {
         vkFreeCommandBuffers(device(), m_transientCommandPool, 1, &oneTimeCommandBuffer);
     });
 
@@ -1502,14 +1311,14 @@ bool VulkanBackend::issueSingleTimeCommand(const std::function<void(VkCommandBuf
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     if (vkBeginCommandBuffer(oneTimeCommandBuffer, &beginInfo) != VK_SUCCESS) {
-        LogError("VulkanBackend::issueSingleTimeCommand(): could not begin the command buffer.\n");
+        LogError("VulkanBackend: could not begin the command buffer.\n");
         return false;
     }
 
     callback(oneTimeCommandBuffer);
 
     if (vkEndCommandBuffer(oneTimeCommandBuffer) != VK_SUCCESS) {
-        LogError("VulkanBackend::issueSingleTimeCommand(): could not end the command buffer.\n");
+        LogError("VulkanBackend: could not end the command buffer.\n");
         return false;
     }
 
@@ -1518,11 +1327,11 @@ bool VulkanBackend::issueSingleTimeCommand(const std::function<void(VkCommandBuf
     submitInfo.pCommandBuffers = &oneTimeCommandBuffer;
 
     if (vkQueueSubmit(m_graphicsQueue.queue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
-        LogError("VulkanBackend::issueSingleTimeCommand(): could not submit the single-time command buffer.\n");
+        LogError("VulkanBackend: could not submit the single-time command buffer.\n");
         return false;
     }
     if (vkQueueWaitIdle(m_graphicsQueue.queue) != VK_SUCCESS) {
-        LogError("VulkanBackend::issueSingleTimeCommand(): error while waiting for the graphics queue to idle.\n");
+        LogError("VulkanBackend: error while waiting for the graphics queue to idle.\n");
         return false;
     }
 
@@ -1543,7 +1352,7 @@ bool VulkanBackend::copyBuffer(VkBuffer source, VkBuffer destination, size_t siz
             vkCmdCopyBuffer(commandBuffer, source, destination, 1, &bufferCopyRegion);
         });
         if (!success) {
-            LogError("VulkanBackend::copyBuffer(): error copying buffer, refer to issueSingleTimeCommand errors for more information.\n");
+            LogError("VulkanBackend: error copying buffer, refer to issueSingleTimeCommand errors for more information.\n");
             return false;
         }
     }
@@ -1561,7 +1370,7 @@ bool VulkanBackend::setBufferMemoryUsingMapping(VmaAllocation allocation, const 
 
     void* mappedMemory;
     if (vmaMapMemory(globalAllocator(), allocation, &mappedMemory) != VK_SUCCESS) {
-        LogError("VulkanBackend::setBufferMemoryUsingMapping(): could not map staging buffer.\n");
+        LogError("VulkanBackend: could not map staging buffer.\n");
         return false;
     }
 
@@ -1592,139 +1401,21 @@ bool VulkanBackend::setBufferDataUsingStagingBuffer(VkBuffer buffer, const uint8
     VkBuffer stagingBuffer;
     VmaAllocation stagingAllocation;
     if (vmaCreateBuffer(globalAllocator(), &bufferCreateInfo, &allocCreateInfo, &stagingBuffer, &stagingAllocation, nullptr) != VK_SUCCESS) {
-        LogError("VulkanBackend::setBufferDataUsingStagingBuffer(): could not create staging buffer.\n");
+        LogError("VulkanBackend: could not create staging buffer.\n");
     }
 
-    AT_SCOPE_EXIT([&] {
+    AtScopeExit cleanUpStagingBuffer([&] {
         vmaDestroyBuffer(globalAllocator(), stagingBuffer, stagingAllocation);
     });
 
     if (!setBufferMemoryUsingMapping(stagingAllocation, data, size, 0)) {
-        LogError("VulkanBackend::setBufferDataUsingStagingBuffer(): could set staging buffer memory.\n");
+        LogError("VulkanBackend: could set staging buffer memory.\n");
         return false;
     }
 
     if (!copyBuffer(stagingBuffer, buffer, size, offset, commandBuffer)) {
-        LogError("VulkanBackend::setBufferDataUsingStagingBuffer(): could not copy from staging buffer to buffer.\n");
+        LogError("VulkanBackend: could not copy from staging buffer to buffer.\n");
         return false;
-    }
-
-    return true;
-}
-
-bool VulkanBackend::transitionImageLayout(VkImage image, bool isDepthFormat, VkImageLayout oldLayout, VkImageLayout newLayout, VkCommandBuffer* currentCommandBuffer) const
-{
-    SCOPED_PROFILE_ZONE_BACKEND();
-
-    if (oldLayout == newLayout) {
-        LogWarning("VulkanBackend::transitionImageLayout(): old & new layout identical, ignoring.\n");
-        return true;
-    }
-
-    VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-    imageBarrier.oldLayout = oldLayout;
-    imageBarrier.newLayout = newLayout;
-    imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-    imageBarrier.image = image;
-    imageBarrier.subresourceRange.aspectMask = isDepthFormat ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-    imageBarrier.subresourceRange.baseMipLevel = 0;
-    imageBarrier.subresourceRange.levelCount = 1;
-    imageBarrier.subresourceRange.baseArrayLayer = 0;
-    imageBarrier.subresourceRange.layerCount = 1;
-
-    VkPipelineStageFlags sourceStage;
-    VkPipelineStageFlags destinationStage;
-
-    // TODO: This whole function needs to be scrapped, really..
-
-    if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-
-        sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        imageBarrier.srcAccessMask = 0;
-
-        destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-    } else if (oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-
-        sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        imageBarrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-        destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    } else if (oldLayout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-
-        // Wait for all color attachment writes ...
-        sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        imageBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        // ... before allowing any shaders to read the memory
-        destinationStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    } else if (oldLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-
-        // Wait for all color attachment writes ...
-        sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        imageBarrier.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-
-        // ... before allowing any shaders to read the memory
-        destinationStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    } else if (oldLayout == VK_IMAGE_LAYOUT_GENERAL && newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-
-        // Wait for all memory writes ...
-        sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-
-        // ... before allowing any shaders to read the memory
-        destinationStage = VK_PIPELINE_STAGE_VERTEX_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-    } else if (oldLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VK_IMAGE_LAYOUT_GENERAL) {
-
-        // Wait for all shader memory reads...
-        sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        imageBarrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
-
-        // ... before allowing any memory writes
-        destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-
-    } else if (oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-
-        // Wait for all color attachment writes ...
-        sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        imageBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        // ... before allowing any reading or writing
-        destinationStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-
-    } else {
-        LogErrorAndExit("VulkanBackend::transitionImageLayout(): old & new layout combination unsupported by application, exiting.\n");
-    }
-
-    if (currentCommandBuffer) {
-        vkCmdPipelineBarrier(*currentCommandBuffer, sourceStage, destinationStage, 0,
-                             0, nullptr,
-                             0, nullptr,
-                             1, &imageBarrier);
-    } else {
-        bool success = issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
-            vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0,
-                                 0, nullptr,
-                                 0, nullptr,
-                                 1, &imageBarrier);
-        });
-        if (!success) {
-            LogError("VulkanBackend::transitionImageLayout(): error transitioning layout, refer to issueSingleTimeCommand errors for more information.\n");
-            return false;
-        }
     }
 
     return true;
@@ -1755,7 +1446,7 @@ bool VulkanBackend::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t w
     });
 
     if (!success) {
-        LogError("VulkanBackend::copyBufferToImage(): error copying buffer to image, refer to issueSingleTimeCommand errors for more information.\n");
+        LogError("VulkanBackend: error copying buffer to image, refer to issueSingleTimeCommand errors for more information.\n");
         return false;
     }
 
@@ -2018,32 +1709,5 @@ uint32_t VulkanBackend::findAppropriateMemory(uint32_t typeBits, VkMemoryPropert
         }
     }
 
-    LogErrorAndExit("VulkanBackend::findAppropriateMemory(): could not find any appropriate memory, exiting.\n");
-}
-
-void VulkanBackend::submitQueue(uint32_t imageIndex, VkSemaphore* waitFor, VkSemaphore* signal, VkFence* inFlight)
-{
-    SCOPED_PROFILE_ZONE_BACKEND();
-
-    VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = waitFor;
-    VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-    submitInfo.pWaitDstStageMask = waitStages;
-
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &m_frameCommandBuffers[imageIndex];
-
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = signal;
-
-    if (vkResetFences(device(), 1, inFlight) != VK_SUCCESS) {
-        LogError("VulkanBackend::submitQueue(): error resetting in-flight frame fence (index %u).\n", imageIndex);
-    }
-
-    VkResult submitStatus = vkQueueSubmit(m_graphicsQueue.queue, 1, &submitInfo, *inFlight);
-    if (submitStatus != VK_SUCCESS) {
-        LogError("VulkanBackend::submitQueue(): could not submit the graphics queue (index %u).\n", imageIndex);
-    }
+    LogErrorAndExit("VulkanBackend: could not find any appropriate memory, exiting.\n");
 }

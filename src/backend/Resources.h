@@ -309,9 +309,6 @@ void forEachCubemapSide(std::function<void(CubemapSide, uint32_t)> callback);
 
 struct RenderTarget : public Resource {
 
-    // (required for now, so we can create the mockup RenderTarget objects)
-    friend class VulkanBackend;
-
     enum class AttachmentType : unsigned {
         Color0 = 0,
         Color1 = 1,

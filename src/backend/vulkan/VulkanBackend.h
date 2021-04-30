@@ -113,8 +113,6 @@ public:
     bool copyBuffer(VkBuffer source, VkBuffer destination, size_t size, size_t dstOffset = 0, VkCommandBuffer* = nullptr) const;
     bool setBufferMemoryUsingMapping(VmaAllocation, const uint8_t* data, size_t size, size_t offset = 0);
     bool setBufferDataUsingStagingBuffer(VkBuffer, const uint8_t* data, size_t size, size_t offset = 0, VkCommandBuffer* = nullptr);
-
-    bool transitionImageLayout(VkImage, bool isDepthFormat, VkImageLayout oldLayout, VkImageLayout newLayout, VkCommandBuffer* = nullptr) const;
     bool copyBufferToImage(VkBuffer, VkImage, uint32_t width, uint32_t height, bool isDepthImage) const;
 
     std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>> createDescriptorSetLayoutForShader(const Shader&) const;
@@ -151,35 +149,26 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     /// Drawing
 
-    void drawFrame(const Scene& scene, const RenderGraph&, const AppState&, double elapsedTime, double deltaTime, uint32_t swapchainImageIndex);
+    struct FrameContext;
+    void drawFrame(const Scene& scene, const RenderGraph&, const AppState&, FrameContext&, double elapsedTime, double deltaTime);
 
     ///////////////////////////////////////////////////////////////////////////
     /// Swapchain management
 
-    void submitQueue(uint32_t imageIndex, VkSemaphore* waitFor, VkSemaphore* signal, VkFence* inFlight);
-
-    void createSemaphoresAndFences(VkDevice);
-
-    void createAndSetupSwapchain(VkPhysicalDevice, VkDevice, VkSurfaceKHR);
+    void createSwapchain(VkPhysicalDevice, VkDevice, VkSurfaceKHR);
     void destroySwapchain();
     Extent2D recreateSwapchain();
-
-    void setupWindowRenderTargets();
-    void createWindowRenderTargetFrontend();
 
     ///////////////////////////////////////////////////////////////////////////
     /// ImGui related
 
     void setupDearImgui();
     void destroyDearImgui();
-
-    void updateDearImguiFramebuffers();
-    void renderDearImguiFrame(VkCommandBuffer, uint32_t swapchainImageIndex);
+    
+    void renderDearImguiFrame(VkCommandBuffer, FrameContext&);
 
     bool m_guiIsSetup { false };
     VkDescriptorPool m_guiDescriptorPool {};
-    VkRenderPass m_guiRenderPass {};
-    std::vector<VkFramebuffer> m_guiFramebuffers {};
 
     ///////////////////////////////////////////////////////////////////////////
     /// Vulkan core stuff (e.g. instance, device)
@@ -220,28 +209,40 @@ private:
     VkSurfaceKHR m_surface {};
 
     VkSwapchainKHR m_swapchain {};
-
     Extent2D m_swapchainExtent {};
-    uint32_t m_numSwapchainImages {};
-
     VkFormat m_swapchainImageFormat {};
-    std::vector<VkImage> m_swapchainImages {};
-    std::vector<VkImageView> m_swapchainImageViews {};
 
-    std::unique_ptr<VulkanTexture> m_swapchainDepthTexture {};
-
-    std::vector<VkFramebuffer> m_swapchainFramebuffers {};
-    VkRenderPass m_swapchainRenderPass {};
-
-    //
-
-    static constexpr size_t maxFramesInFlight { 2 };
     uint32_t m_currentFrameIndex { 0 };
-    uint32_t m_lastSwapchainRecreationFrameIndex { 0 };
+    uint32_t m_relativeFrameIndex { 0 };
 
-    std::array<VkSemaphore, maxFramesInFlight> m_imageAvailableSemaphores {};
-    std::array<VkSemaphore, maxFramesInFlight> m_renderFinishedSemaphores {};
-    std::array<VkFence, maxFramesInFlight> m_inFlightFrameFences {};
+    struct SyncContext {
+        VkFence frameFence {};
+        VkSemaphore imageAvailableSemaphore {};
+        VkSemaphore renderingFinishedSemaphore {};
+    };
+
+    std::vector<SyncContext> m_syncContexts {};
+
+    struct FrameContext {
+
+        // TODO: Maybe try to put e.g. command buffer & registry etc. in the sync context, so we can have e.g. exactly 2 of those but more images.
+        // We can't right now, as we require each Registry to know exactly what image it should render to, but in the future, if we mess with the bindings!
+
+        VkImage image {}; // NOTE: Owned by the swapchain!
+        VkImageView imageView {};
+        std::unique_ptr<VulkanTexture> mockColorTexture {};
+
+        std::unique_ptr<VulkanTexture> depthTexture {};
+
+        std::unique_ptr<VulkanRenderTarget> clearingRenderTarget {};
+        std::unique_ptr<VulkanRenderTarget> guiRenderTargetForPresenting {};
+
+        VkCommandBuffer commandBuffer {};
+        std::unique_ptr<Registry> registry {};
+
+    };
+
+    std::vector<std::unique_ptr<FrameContext>> m_frameContexts {};
 
     ///////////////////////////////////////////////////////////////////////////
     /// Sub-systems / extensions
@@ -256,15 +257,11 @@ private:
 
     std::unique_ptr<Registry> m_persistentRegistry {};
     std::unique_ptr<Registry> m_nodeRegistry {};
-    std::vector<std::unique_ptr<Registry>> m_frameRegistries {};
 
+    // TODO: Clean up / remove
     std::vector<VkEvent> m_events {};
 
-    VkCommandPool m_renderGraphFrameCommandPool {};
+    VkCommandPool m_defaultCommandPool {};
     VkCommandPool m_transientCommandPool {};
 
-    std::vector<VkCommandBuffer> m_frameCommandBuffers {};
-
-    std::vector<std::unique_ptr<VulkanTexture>> m_swapchainMockColorTextures {};
-    std::vector<std::unique_ptr<VulkanRenderTarget>> m_swapchainMockRenderTargets {};
 };

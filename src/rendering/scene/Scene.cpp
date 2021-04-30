@@ -7,6 +7,7 @@
 #include "utility/Logging.h"
 #include <fstream>
 #include <imgui.h>
+#include <ImGuizmo.h>
 #include <moos/aabb.h>
 #include <moos/transform.h>
 #include <nlohmann/json.hpp>
@@ -216,6 +217,39 @@ void Scene::update(float elapsedTime, float deltaTime)
         }
     }
     ImGui::End();
+
+    {
+        static ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
+
+        auto& input = Input::instance();
+        if (input.wasKeyPressed(Key::T))
+            operation = ImGuizmo::TRANSLATE;
+        else if (input.wasKeyPressed(Key::R))
+            operation = ImGuizmo::ROTATE;
+        else if (input.wasKeyPressed(Key::Y))
+            operation = ImGuizmo::SCALE;
+
+        if (selectedModel()) {
+
+            ImGuizmo::BeginFrame();
+            ImGuizmo::SetRect(0, 0, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
+
+            // FIXME: Support world transforms! Well, we don't really have hierarchies right now, so it doesn't really matter.
+            //  What we do have is meshes with their own transform under a model, and we are modifying the model's transform here.
+            //  Maybe in the future we want to be able to modify meshes too?
+            ImGuizmo::MODE mode = ImGuizmo::LOCAL;
+
+            mat4 viewMatrix = camera().viewMatrix();
+            mat4 projMatrix = camera().projectionMatrix();
+
+            // Silly stuff, since ImGuizmo doesn't seem to like my projection matrix..
+            projMatrix.y = -projMatrix.y;
+
+            mat4 matrix = selectedModel()->transform().localMatrix();
+            ImGuizmo::Manipulate(value_ptr(viewMatrix), value_ptr(projMatrix), operation, mode, value_ptr(matrix));
+            selectedModel()->transform().setLocalMatrix(matrix);
+        }
+    }
 }
 
 bool Scene::isNextFrameExposureResultBufferReady(Badge<SceneNode>) const

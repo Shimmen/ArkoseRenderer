@@ -555,18 +555,43 @@ void VulkanTexture::setPixelData(vec4 pixel)
         return;
     }
 
-    AT_SCOPE_EXIT([&]() {
+    AtScopeExit cleanUpStagingBuffer([&]() {
         vmaDestroyBuffer(vulkanBackend.globalAllocator(), stagingBuffer, stagingAllocation);
     });
 
-    // NOTE: Since we are updating the texture we don't care what was in the image before. For these cases undefined
-    //  works fine, since it will simply discard/ignore whatever data is in it before.
-    VkImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    if (currentLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+    {
+        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-    if (!vulkanBackend.transitionImageLayout(image, hasDepthFormat(), oldLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)) {
-        LogError("Could not transition the image to transfer layout.\n");
-        return;
+        imageBarrier.image = image;
+        imageBarrier.subresourceRange.aspectMask = aspectMask();
+        imageBarrier.subresourceRange.baseMipLevel = 0;
+        imageBarrier.subresourceRange.levelCount = 1;
+        imageBarrier.subresourceRange.baseArrayLayer = 0;
+        imageBarrier.subresourceRange.layerCount = 1;
+
+        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        imageBarrier.srcAccessMask = 0;
+
+        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        bool success = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+            vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0,
+                                    0, nullptr,
+                                    0, nullptr,
+                                    1, &imageBarrier);
+        });
+        if (!success) {
+            LogError("Could not transition the image to transfer optimal layout.\n");
+            return;
+        }
     }
+
     if (!vulkanBackend.copyBufferToImage(stagingBuffer, image, 1, 1, hasDepthFormat())) {
         LogError("Could not copy the staging buffer to the image.\n");
         return;
@@ -630,18 +655,42 @@ void VulkanTexture::setData(const void* data, size_t size)
         return;
     }
 
-    AT_SCOPE_EXIT([&]() {
+    AtScopeExit cleanUpStagingBuffer([&]() {
         vmaDestroyBuffer(vulkanBackend.globalAllocator(), stagingBuffer, stagingAllocation);
     });
 
-    // NOTE: Since we are updating the texture we don't care what was in the image before. For these cases undefined
-    //  works fine, since it will simply discard/ignore whatever data is in it before.
-    VkImageLayout oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    if (currentLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-    if (!vulkanBackend.transitionImageLayout(image, hasDepthFormat(), oldLayout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)) {
-        LogError("Could not transition the image to transfer layout.\n");
-        return;
+        imageBarrier.image = image;
+        imageBarrier.subresourceRange.aspectMask = aspectMask();
+        imageBarrier.subresourceRange.baseMipLevel = 0;
+        imageBarrier.subresourceRange.levelCount = 1;
+        imageBarrier.subresourceRange.baseArrayLayer = 0;
+        imageBarrier.subresourceRange.layerCount = 1;
+
+        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        imageBarrier.srcAccessMask = 0;
+
+        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+
+        bool success = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+            vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 1, &imageBarrier);
+        });
+        if (!success) {
+            LogError("Could not transition the image to transfer optimal layout.\n");
+            return;
+        }
     }
+
     if (!vulkanBackend.copyBufferToImage(stagingBuffer, image, extent().width(), extent().height(), hasDepthFormat())) {
         LogError("Could not copy the staging buffer to the image.\n");
         return;
@@ -841,8 +890,9 @@ VkImageAspectFlags VulkanTexture::aspectMask() const
     return mask;
 }
 
-VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment> attachments)
+VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment> attachments, QuirkMode quirkMode)
     : RenderTarget(backend, std::move(attachments))
+    , m_quirkMode(quirkMode)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
@@ -886,6 +936,8 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
         }
 
         attachment.finalLayout = finalLayout;
+        if (m_quirkMode == QuirkMode::ForPresenting)
+            attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         uint32_t attachmentIndex = (uint32_t)allAttachments.size();
         allAttachments.push_back(attachment);
@@ -899,7 +951,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
             ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL
             : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         uint32_t attachmentIndex = createAttachmentDescription(attachInfo.texture, finalLayout, attachInfo.loadOp, attachInfo.storeOp);
-
+        
         VkAttachmentReference attachmentRef = {};
         attachmentRef.attachment = attachmentIndex;
         attachmentRef.layout = finalLayout;
