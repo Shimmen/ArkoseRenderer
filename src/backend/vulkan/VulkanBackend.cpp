@@ -1146,7 +1146,87 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
     swapchainImageContext.mockColorTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     swapchainImageContext.depthTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    drawFrame(scene, renderGraph, appState, frameContext, swapchainImageContext, elapsedTime, deltaTime);
+    // Draw frame
+    {
+        VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        commandBufferBeginInfo.flags = 0u;
+        commandBufferBeginInfo.pInheritanceInfo = nullptr;
+
+        VkCommandBuffer commandBuffer = frameContext.commandBuffer;
+        if (vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo) != VK_SUCCESS) {
+            LogError("VulkanBackend: error beginning command buffer command!\n");
+        }
+
+        Registry& associatedRegistry = *frameContext.registry;
+        VulkanCommandList cmdList { *this, commandBuffer };
+
+        ImGui::Begin("Nodes (in order)");
+        renderGraph.forEachNodeInResolvedOrder(associatedRegistry, [&](const std::string& nodeName, NodeTimer& nodeTimer, const RenderGraphNode::ExecuteCallback& nodeExecuteCallback) {
+            double cpuTime = nodeTimer.averageCpuTime() * 1000.0;
+            std::string title = isnan(cpuTime)
+                ? fmt::format("{} | CPU: - ms", nodeName)
+                : fmt::format("{} | CPU: {:.2f} ms", nodeName, cpuTime);
+            ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_Leaf);
+
+            SCOPED_PROFILE_ZONE_DYNAMIC(nodeName, 0x00ffff);
+            double cpuStartTime = glfwGetTime();
+
+            cmdList.beginDebugLabel(nodeName);
+            nodeExecuteCallback(appState, cmdList);
+            cmdList.endNode({});
+            cmdList.endDebugLabel();
+
+            double cpuElapsed = glfwGetTime() - cpuStartTime;
+            nodeTimer.reportCpuTime(cpuElapsed);
+        });
+        ImGui::End();
+
+        cmdList.beginDebugLabel("GUI");
+        {
+            SCOPED_PROFILE_ZONE_BACKEND_NAMED("GUI Rendering");
+
+            ImGui::Render();
+            renderDearImguiFrame(commandBuffer, frameContext, swapchainImageContext);
+            ImGui::UpdatePlatformWindows();
+        }
+        cmdList.endDebugLabel();
+
+        VulkanTexture& swapchainTexture = *swapchainImageContext.mockColorTexture;
+        if (swapchainTexture.currentLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+
+            // Performing explicit swapchain layout transition. This should only happen if we don't render any GUI.
+
+            VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+            imageBarrier.oldLayout = swapchainTexture.currentLayout;
+            imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+            imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+            imageBarrier.image = swapchainTexture.image;
+            imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            imageBarrier.subresourceRange.baseMipLevel = 0;
+            imageBarrier.subresourceRange.levelCount = 1;
+            imageBarrier.subresourceRange.baseArrayLayer = 0;
+            imageBarrier.subresourceRange.layerCount = 1;
+
+            // Wait for all color attachment writes ...
+            VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+            imageBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+            // ... before allowing it can be read (by the OS I guess)
+            VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+            imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
+
+            vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 1, &imageBarrier);
+        }
+
+        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+            LogError("VulkanBackend: error ending command buffer command!\n");
+        }
+    }
 
     // Submit queue
     {
@@ -1197,90 +1277,6 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
     m_currentFrameIndex += 1;
     m_relativeFrameIndex += 1;
     return true;
-}
-
-void VulkanBackend::drawFrame(const Scene& scene, const RenderGraph& renderGraph, const AppState& appState, FrameContext& frameContext, SwapchainImageContext& swapchainImageContext, double elapsedTime, double deltaTime)
-{
-    SCOPED_PROFILE_ZONE_BACKEND();
-
-    VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-    commandBufferBeginInfo.flags = 0u;
-    commandBufferBeginInfo.pInheritanceInfo = nullptr;
-
-    VkCommandBuffer commandBuffer = frameContext.commandBuffer;
-    if (vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo) != VK_SUCCESS) {
-        LogError("VulkanBackend: error beginning command buffer command!\n");
-    }
-
-    Registry& associatedRegistry = *frameContext.registry;
-    VulkanCommandList cmdList { *this, commandBuffer };
-
-    ImGui::Begin("Nodes (in order)");
-    renderGraph.forEachNodeInResolvedOrder(associatedRegistry, [&](const std::string& nodeName, NodeTimer& nodeTimer, const RenderGraphNode::ExecuteCallback& nodeExecuteCallback) {
-        double cpuTime = nodeTimer.averageCpuTime() * 1000.0;
-        std::string title = isnan(cpuTime)
-            ? fmt::format("{} | CPU: - ms", nodeName)
-            : fmt::format("{} | CPU: {:.2f} ms", nodeName, cpuTime);
-        ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_Leaf);
-
-        SCOPED_PROFILE_ZONE_DYNAMIC(nodeName, 0x00ffff);
-        double cpuStartTime = glfwGetTime();
-
-        cmdList.beginDebugLabel(nodeName);
-        nodeExecuteCallback(appState, cmdList);
-        cmdList.endNode({});
-        cmdList.endDebugLabel();
-
-        double cpuElapsed = glfwGetTime() - cpuStartTime;
-        nodeTimer.reportCpuTime(cpuElapsed);
-    });
-    ImGui::End();
-
-    cmdList.beginDebugLabel("GUI");
-    {
-        SCOPED_PROFILE_ZONE_BACKEND_NAMED("GUI Rendering");
-
-        ImGui::Render();
-        renderDearImguiFrame(commandBuffer, frameContext, swapchainImageContext);
-        ImGui::UpdatePlatformWindows();
-    }
-    cmdList.endDebugLabel();
-
-    VulkanTexture& swapchainTexture = *swapchainImageContext.mockColorTexture;
-    if (swapchainTexture.currentLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-
-        // Performing explicit swapchain layout transition. This should only happen if we don't render any GUI.
-
-        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-        imageBarrier.oldLayout = swapchainTexture.currentLayout;
-        imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-        imageBarrier.image = swapchainTexture.image;
-        imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        imageBarrier.subresourceRange.baseMipLevel = 0;
-        imageBarrier.subresourceRange.levelCount = 1;
-        imageBarrier.subresourceRange.baseArrayLayer = 0;
-        imageBarrier.subresourceRange.layerCount = 1;
-
-        // Wait for all color attachment writes ...
-        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        imageBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        // ... before allowing it can be read (by the OS I guess)
-        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-
-        vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0,
-                                0, nullptr,
-                                0, nullptr,
-                                1, &imageBarrier);
-    }
-
-    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-        LogError("VulkanBackend: error ending command buffer command!\n");
-    }
 }
 
 Registry& VulkanBackend::getPersistentRegistry()

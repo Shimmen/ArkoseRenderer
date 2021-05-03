@@ -147,15 +147,10 @@ private:
     void reconstructRenderGraphResources(RenderGraph& renderGraph);
 
     ///////////////////////////////////////////////////////////////////////////
-    /// Drawing
+    /// Swapchain management
 
     struct FrameContext;
     struct SwapchainImageContext;
-
-    void drawFrame(const Scene& scene, const RenderGraph&, const AppState&, FrameContext&, SwapchainImageContext&, double elapsedTime, double deltaTime);
-
-    ///////////////////////////////////////////////////////////////////////////
-    /// Swapchain management
 
     void createSwapchain(VkPhysicalDevice, VkDevice, VkSurfaceKHR);
     void destroySwapchain();
