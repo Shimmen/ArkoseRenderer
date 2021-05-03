@@ -262,6 +262,11 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         allRequiredSupported = false;
     }
 
+    if (!vk12features.imagelessFramebuffer) {
+        LogError("VulkanBackend: no support for imageless framebuffers which is required\n");
+        allRequiredSupported = false;
+    }
+
     for (auto& cap : appSpecification.requiredCapabilities) {
         if (isSupported(cap)) {
             m_activeCapabilities[cap] = true;
@@ -289,7 +294,8 @@ std::unique_ptr<Buffer> VulkanBackend::createBuffer(size_t size, Buffer::Usage u
 
 std::unique_ptr<RenderTarget> VulkanBackend::createRenderTarget(std::vector<RenderTarget::Attachment> attachments)
 {
-    return std::make_unique<VulkanRenderTarget>(*this, attachments);
+    bool imageless = false; // for now, keep using normal framebuffers for these generic render targets
+    return std::make_unique<VulkanRenderTarget>(*this, attachments, imageless, VulkanRenderTarget::QuirkMode::None);
 }
 
 std::unique_ptr<Texture> VulkanBackend::createTexture(Texture::TextureDescription desc)
@@ -531,6 +537,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 
     // Common drawing related features
     vk12features.drawIndirectCount = VK_TRUE;
+
+    // Imageless framebuffers
+    vk12features.imagelessFramebuffer = VK_TRUE;
 
     for (auto& [capability, active] : m_activeCapabilities) {
         if (!active)
@@ -802,6 +811,7 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
             mockTexture->m_mipmap = Texture::Mipmap::None;
             mockTexture->m_multisampling = Texture::Multisampling::None;
 
+            mockTexture->vkUsage = createInfo.imageUsage;
             mockTexture->vkFormat = m_swapchainImageFormat;
             mockTexture->image = frameContext->image;
             mockTexture->imageView = frameContext->imageView;
@@ -845,13 +855,16 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
         }
 
         {
+            // We use imageless framebuffers for these swapchain render targets!
+            constexpr bool imageless = true;
+
             auto attachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, frameContext->mockColorTexture.get(), LoadOp::Clear, StoreOp::Store },
                                                                        { RenderTarget::AttachmentType::Depth, frameContext->depthTexture.get(), LoadOp::Clear, StoreOp::Store } });
-            frameContext->clearingRenderTarget = std::make_unique<VulkanRenderTarget>(*this, attachments);
+            frameContext->clearingRenderTarget = std::make_unique<VulkanRenderTarget>(*this, attachments, imageless);
 
             // NOTE: Does not handle depth & requires something to have already been written to the render target, as it has load op load on color0
             auto finalAttachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, frameContext->mockColorTexture.get(), LoadOp::Load, StoreOp::Store } });
-            frameContext->guiRenderTargetForPresenting = std::make_unique<VulkanRenderTarget>(*this, finalAttachments, VulkanRenderTarget::QuirkMode::ForPresenting);
+            frameContext->guiRenderTargetForPresenting = std::make_unique<VulkanRenderTarget>(*this, finalAttachments, imageless, VulkanRenderTarget::QuirkMode::ForPresenting);
         }
 
         m_frameContexts.push_back(std::move(frameContext));
@@ -1034,6 +1047,12 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameCon
     passBeginInfo.clearValueCount = 0;
     passBeginInfo.pClearValues = nullptr;
 
+    // NOTE: We use imageless framebuffer for swapchain images!
+    VkRenderPassAttachmentBeginInfo attachmentBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO };
+    attachmentBeginInfo.pAttachments = &frameContext.imageView;
+    attachmentBeginInfo.attachmentCount = 1;
+    passBeginInfo.pNext = &attachmentBeginInfo;
+
     vkCmdBeginRenderPass(commandBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
     vkCmdEndRenderPass(commandBuffer);
@@ -1098,6 +1117,9 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
     }
 
     FrameContext& frameContext = *m_frameContexts[swapchainImageIndex].get();
+
+    // We've just found out what image views we should use for this frame, so send them to the render target so it knows to bind them
+    frameContext.clearingRenderTarget->imagelessFramebufferAttachments = { frameContext.mockColorTexture->imageView, frameContext.depthTexture->imageView };
 
     // We shouldn't use the data from the swapchain image, so we set current layout accordingly (not sure about depth, but sure..)
     frameContext.mockColorTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;

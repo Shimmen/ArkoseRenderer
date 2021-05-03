@@ -430,6 +430,7 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
             clearValues.push_back(value);
     });
 
+    // TODO: What about imageless framebuffer? Then I guess we would want to transition those images instead? Or just assume they are already of the correct layout?
     for (auto& [genAttachedTexture, requiredLayout] : renderTarget.attachedTextures) {
         auto& attachedTexture = static_cast<VulkanTexture&>(*genAttachedTexture);
 
@@ -517,6 +518,16 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
 
     renderPassBeginInfo.clearValueCount = (uint32_t)clearValues.size();
     renderPassBeginInfo.pClearValues = clearValues.data();
+
+    VkRenderPassAttachmentBeginInfo attachmentBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO };
+    if (renderTarget.framebufferIsImageless) {
+
+        ASSERT(renderTarget.totalAttachmentCount() == renderTarget.imagelessFramebufferAttachments.size());
+        attachmentBeginInfo.attachmentCount = (uint32_t)renderTarget.imagelessFramebufferAttachments.size();
+        attachmentBeginInfo.pAttachments = renderTarget.imagelessFramebufferAttachments.data();
+
+        renderPassBeginInfo.pNext = &attachmentBeginInfo;
+    }
 
     // TODO: Handle subpasses properly!
     vkCmdBeginRenderPass(m_commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);

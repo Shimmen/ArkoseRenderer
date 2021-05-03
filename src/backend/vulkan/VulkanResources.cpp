@@ -284,6 +284,8 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
     imageCreateInfo.samples = static_cast<VkSampleCountFlagBits>(multisampling());
     imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
+    vkUsage = usageFlags;
+
     switch (type()) {
     case Type::Texture2D:
         imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
@@ -890,9 +892,10 @@ VkImageAspectFlags VulkanTexture::aspectMask() const
     return mask;
 }
 
-VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment> attachments, QuirkMode quirkMode)
+VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment> attachments, bool imageless, QuirkMode quirkMode)
     : RenderTarget(backend, std::move(attachments))
-    , m_quirkMode(quirkMode)
+    , framebufferIsImageless(imageless)
+    , quirkMode(quirkMode)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
@@ -936,7 +939,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
         }
 
         attachment.finalLayout = finalLayout;
-        if (m_quirkMode == QuirkMode::ForPresenting)
+        if (quirkMode == QuirkMode::ForPresenting)
             attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         uint32_t attachmentIndex = (uint32_t)allAttachments.size();
@@ -1015,6 +1018,34 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
     framebufferCreateInfo.width = extent().width();
     framebufferCreateInfo.height = extent().height();
     framebufferCreateInfo.layers = 1;
+
+    VkFramebufferAttachmentsCreateInfo attachmentCreateInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_ATTACHMENTS_CREATE_INFO };
+    std::vector<VkFramebufferAttachmentImageInfo> attachmentImageInfos {}; 
+    if (framebufferIsImageless) {
+
+        forEachAttachmentInOrder([&attachmentImageInfos](const RenderTarget::Attachment& attachment) {
+
+            VkFramebufferAttachmentImageInfo attachmentImageInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_ATTACHMENT_IMAGE_INFO };
+
+            auto* texture = static_cast<VulkanTexture*>(attachment.texture);
+
+            attachmentImageInfo.flags = 0;
+            attachmentImageInfo.usage = texture->vkUsage;
+            attachmentImageInfo.width = texture->extent().width();
+            attachmentImageInfo.height = texture->extent().height();
+            attachmentImageInfo.layerCount = 1;
+            attachmentImageInfo.viewFormatCount = 1;
+            attachmentImageInfo.pViewFormats = &texture->vkFormat;
+
+            attachmentImageInfos.push_back(attachmentImageInfo);
+        });
+
+        attachmentCreateInfo.attachmentImageInfoCount = (uint32_t)attachmentImageInfos.size();
+        attachmentCreateInfo.pAttachmentImageInfos = attachmentImageInfos.data();
+
+        framebufferCreateInfo.flags |= VK_FRAMEBUFFER_CREATE_IMAGELESS_BIT;
+        framebufferCreateInfo.pNext = &attachmentCreateInfo;
+    }
 
     if (vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &framebuffer) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to create framebuffer\n");

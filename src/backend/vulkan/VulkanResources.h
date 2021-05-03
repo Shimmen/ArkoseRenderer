@@ -42,6 +42,7 @@ public:
     VkImage image { VK_NULL_HANDLE };
     VmaAllocation allocation { VK_NULL_HANDLE };
 
+    VkImageUsageFlags vkUsage { 0 };
     VkFormat vkFormat { VK_FORMAT_R8G8B8A8_UINT };
     VkImageView imageView { VK_NULL_HANDLE };
     VkSampler sampler { VK_NULL_HANDLE };
@@ -57,7 +58,7 @@ public:
     };
 
     VulkanRenderTarget() = default;
-    explicit VulkanRenderTarget(Backend&, std::vector<Attachment> attachments, QuirkMode = QuirkMode::None);
+    explicit VulkanRenderTarget(Backend&, std::vector<Attachment> attachments, bool imageless, QuirkMode = QuirkMode::None);
     virtual ~VulkanRenderTarget() override;
 
     virtual void setName(const std::string& name) override;
@@ -67,7 +68,10 @@ public:
 
     std::vector<std::pair<Texture*, VkImageLayout>> attachedTextures;
 
-    QuirkMode m_quirkMode;
+    bool framebufferIsImageless { false };
+    std::vector<VkImageView> imagelessFramebufferAttachments {};
+
+    QuirkMode quirkMode;
 };
 
 struct VulkanBindingSet : public BindingSet {
