@@ -24,31 +24,6 @@ VulkanRTX::VulkanRTX(VulkanBackend& backend, VkPhysicalDevice physicalDevice, Vk
     vkCmdTraceRaysNV = reinterpret_cast<PFN_vkCmdTraceRaysNV>(vkGetDeviceProcAddr(m_device, "vkCmdTraceRaysNV"));
 }
 
-bool VulkanRTX::isSupportedOnPhysicalDevice(VkPhysicalDevice physicalDevice)
-{
-    uint32_t extensionCount;
-    vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, nullptr);
-    std::vector<VkExtensionProperties> availableExtensions { extensionCount };
-    vkEnumerateDeviceExtensionProperties(physicalDevice, nullptr, &extensionCount, availableExtensions.data());
-
-    bool rayTracing = false;
-    bool memRequirements2 = false;
-
-    for (auto& extension : availableExtensions) {
-        if (std::strcmp(extension.extensionName, VK_NV_RAY_TRACING_EXTENSION_NAME) == 0) {
-            rayTracing = true;
-        } else if (std::strcmp(extension.extensionName, VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME) == 0) {
-            memRequirements2 = true;
-        }
-
-        if (rayTracing && memRequirements2) {
-            return true;
-        }
-    }
-
-    return false;
-}
-
 const VkPhysicalDeviceRayTracingPropertiesNV& VulkanRTX::properties() const
 {
     return m_rayTracingProperties;

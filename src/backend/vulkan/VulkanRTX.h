@@ -11,8 +11,6 @@ class VulkanRTX {
 public:
     VulkanRTX(VulkanBackend&, VkPhysicalDevice, VkDevice);
 
-    static bool isSupportedOnPhysicalDevice(VkPhysicalDevice);
-
     PFN_vkCreateAccelerationStructureNV vkCreateAccelerationStructureNV { nullptr };
     PFN_vkDestroyAccelerationStructureNV vkDestroyAccelerationStructureNV { nullptr };
     PFN_vkBindAccelerationStructureMemoryNV vkBindAccelerationStructureMemoryNV { nullptr };

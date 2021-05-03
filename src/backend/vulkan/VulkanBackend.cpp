@@ -94,8 +94,7 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, const AppSpecification& appSpec
     vkGetDeviceQueue(m_device, m_graphicsQueue.familyIndex, 0, &m_graphicsQueue.queue);
     vkGetDeviceQueue(m_device, m_computeQueue.familyIndex, 0, &m_computeQueue.queue);
 
-    // TODO: Only create if actually requested (in optional or required capabilities of appSpecification)
-    if (VulkanRTX::isSupportedOnPhysicalDevice(physicalDevice())) {
+    if (hasActiveCapability(Backend::Capability::RtxRayTracing)) {
         m_rtx = std::make_unique<VulkanRTX>(*this, physicalDevice(), device());
     }
 
