@@ -12,7 +12,7 @@
 
 class Registry final {
 public:
-    explicit Registry(Backend&, const RenderTarget* windowRenderTarget = nullptr);
+    explicit Registry(Backend&, Registry* previousRegistry, const RenderTarget* windowRenderTarget = nullptr);
 
     void setCurrentNode(const std::string&);
 
@@ -26,6 +26,9 @@ public:
     [[nodiscard]] Texture& createTextureFromImage(const Image&, bool srgb, bool generateMipmaps, Texture::WrapModes = Texture::WrapModes::repeatAll());
     [[nodiscard]] Texture& createMultisampledTexture2D(Extent2D, Texture::Format, Texture::Multisampling, Texture::Mipmap = Texture::Mipmap::None);
     [[nodiscard]] Texture& createCubemapTexture(Extent2D, Texture::Format);
+
+    // TODO: Create more of these reuse variants!
+    Texture& createOrReuseTextureArray(const std::string& name, uint32_t itemCount, Extent2D, Texture::Format, Texture::Filters = Texture::Filters::linear(), Texture::Mipmap = Texture::Mipmap::None, Texture::WrapModes = Texture::WrapModes::repeatAll());
 
     [[nodiscard]] Buffer& createBuffer(size_t size, Buffer::Usage, Buffer::MemoryHint);
     [[nodiscard]] Buffer& createBuffer(const std::byte* data, size_t size, Buffer::Usage, Buffer::MemoryHint);
@@ -67,6 +70,8 @@ public:
 private:
     Backend& m_backend;
     Backend& backend() { return m_backend; }
+
+    Registry* m_previousRegistry { nullptr };
 
     std::optional<std::string> m_currentNodeName;
     std::unordered_set<NodeDependency> m_nodeDependencies;

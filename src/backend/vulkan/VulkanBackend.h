@@ -202,7 +202,7 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     /// Frame management related members
 
-    const int m_numInFlightFrames = 2;
+    static constexpr int NumInFlightFrames = 2;
     uint32_t m_currentFrameIndex { 0 };
     uint32_t m_relativeFrameIndex { 0 };
 
@@ -218,7 +218,7 @@ private:
         std::unique_ptr<Registry> registry {};
     };
 
-    std::vector<std::unique_ptr<FrameContext>> m_frameContexts {};
+    std::array<std::unique_ptr<FrameContext>, NumInFlightFrames> m_frameContexts {};
 
     ///////////////////////////////////////////////////////////////////////////
     /// Sub-systems / extensions

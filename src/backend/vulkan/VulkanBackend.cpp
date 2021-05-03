@@ -140,7 +140,7 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, const AppSpecification& appSpec
 
     setupDearImgui();
 
-    m_persistentRegistry = std::make_unique<Registry>(*this);
+    m_persistentRegistry = std::make_unique<Registry>(*this, nullptr);
 }
 
 VulkanBackend::~VulkanBackend()
@@ -898,16 +898,18 @@ void VulkanBackend::createFrameContexts()
     ASSERT(m_swapchainImageContexts.size() > 0);
     SwapchainImageContext& referenceImageContext = *m_swapchainImageContexts[0];
 
-    for (int i = 0; i < m_numInFlightFrames; ++i) {
+    for (int i = 0; i < NumInFlightFrames; ++i) {
 
-        auto frameContext = std::make_unique<FrameContext>();
+        if (m_frameContexts[i] == nullptr)
+            m_frameContexts[i] = std::make_unique<FrameContext>();
+        FrameContext& frameContext = *m_frameContexts[i];
 
         // Create fence
         {
             VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
             fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-            if (vkCreateFence(device(), &fenceCreateInfo, nullptr, &frameContext->frameFence) != VK_SUCCESS) {
+            if (vkCreateFence(device(), &fenceCreateInfo, nullptr, &frameContext.frameFence) != VK_SUCCESS) {
                 LogErrorAndExit("VulkanBackend: could not create frame context fence, exiting.\n");
             }
         }
@@ -916,11 +918,11 @@ void VulkanBackend::createFrameContexts()
         {
             VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
-            if (vkCreateSemaphore(device(), &semaphoreCreateInfo, nullptr, &frameContext->imageAvailableSemaphore) != VK_SUCCESS) {
+            if (vkCreateSemaphore(device(), &semaphoreCreateInfo, nullptr, &frameContext.imageAvailableSemaphore) != VK_SUCCESS) {
                 LogErrorAndExit("VulkanBackend: could not create imageAvailableSemaphore, exiting.\n");
             }
 
-            if (vkCreateSemaphore(device(), &semaphoreCreateInfo, nullptr, &frameContext->renderingFinishedSemaphore) != VK_SUCCESS) {
+            if (vkCreateSemaphore(device(), &semaphoreCreateInfo, nullptr, &frameContext.renderingFinishedSemaphore) != VK_SUCCESS) {
                 LogErrorAndExit("VulkanBackend: could not create renderingFinishedSemaphore, exiting.\n");
             }
         }
@@ -939,25 +941,22 @@ void VulkanBackend::createFrameContexts()
                 LogErrorAndExit("VulkanBackend: could not create command buffer, exiting.\n");
             }
 
-            frameContext->commandBuffer = commandBuffer;
+            frameContext.commandBuffer = commandBuffer;
         }
 
-        createFrameRenderTargets(*frameContext, referenceImageContext);
-
-        m_frameContexts.push_back(std::move(frameContext));
+        createFrameRenderTargets(frameContext, referenceImageContext);
     }
 }
 
 void VulkanBackend::destroyFrameContexts()
 {
-    for (auto& frameContext : m_frameContexts) {
+    for (std::unique_ptr<FrameContext>& frameContext : m_frameContexts) {
         vkFreeCommandBuffers(device(), m_defaultCommandPool, 1, &frameContext->commandBuffer);
         vkDestroySemaphore(device(), frameContext->imageAvailableSemaphore, nullptr);
         vkDestroySemaphore(device(), frameContext->renderingFinishedSemaphore, nullptr);
         vkDestroyFence(device(), frameContext->frameFence, nullptr);
+        frameContext.reset();
     }
-
-    m_frameContexts.clear();
 }
 
 void VulkanBackend::createFrameRenderTargets(FrameContext& frameContext, const SwapchainImageContext& referenceImageContext)
@@ -1303,33 +1302,27 @@ void VulkanBackend::reconstructRenderGraphResources(RenderGraph& renderGraph)
     SCOPED_PROFILE_ZONE_BACKEND();
 
     size_t numFrameManagers = m_frameContexts.size();
+    ASSERT(numFrameManagers == NumInFlightFrames);
 
-    // Create new resource managers
-    auto nodeRegistry = std::make_unique<Registry>(*this);
-    std::vector<std::unique_ptr<Registry>> frameRegistries {};
+    std::vector<Registry*> frameRegistries {};
     for (size_t i = 0; i < numFrameManagers; ++i) {
-        const RenderTarget& windowRenderTargetForFrame = *m_frameContexts[i]->clearingRenderTarget;
-        frameRegistries.push_back(std::make_unique<Registry>(*this, &windowRenderTargetForFrame));
+
+        FrameContext& frameContext = *m_frameContexts[i].get();
+
+        Registry* previousFrameRegistry = frameContext.registry.get();
+        const RenderTarget& windowRenderTargetForFrame = *frameContext.clearingRenderTarget;
+
+        frameRegistries.push_back(new Registry(*this, previousFrameRegistry, &windowRenderTargetForFrame));
     }
 
-    // TODO: Fix me, this is stupid..
-    std::vector<Registry*> regPointers {};
-    regPointers.reserve(frameRegistries.size());
-    for (auto& mng : frameRegistries) {
-        regPointers.emplace_back(mng.get());
-    }
+    Registry* previousNodeRegistry = m_nodeRegistry.get();
+    Registry* nodeRegistry = new Registry(*this, previousNodeRegistry);
 
-    renderGraph.constructAll(*nodeRegistry, regPointers);
+    renderGraph.constructAll(*nodeRegistry, frameRegistries);
 
-    // First create & replace node resources
-    //replaceResourcesForRegistry(m_nodeRegistry.get(), nodeRegistry.get());
-    m_nodeRegistry = std::move(nodeRegistry);
-
-    // Then create & replace frame resources
-    for (size_t i = 0; i < numFrameManagers; ++i) {
-        //replaceResourcesForRegistry(m_frameContexts[i]->registry, frameRegistries[i].get());
-        m_frameContexts[i]->registry = std::move(frameRegistries[i]);
-    }
+    m_nodeRegistry.reset(nodeRegistry);
+    for (size_t i = 0; i < numFrameManagers; ++i)
+        m_frameContexts[i]->registry.reset(frameRegistries[i]);
 }
 
 bool VulkanBackend::issueSingleTimeCommand(const std::function<void(VkCommandBuffer)>& callback) const

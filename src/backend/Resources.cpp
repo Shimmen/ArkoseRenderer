@@ -31,9 +31,13 @@ void Resource::setName(const std::string& name)
     m_name = name;
 }
 
+void Resource::setReusable(Badge<Registry>, bool reusable)
+{
+    m_reusable = reusable;
+}
+
 void Resource::setOwningRegistry(Badge<Registry>, Registry* registry)
 {
-    ASSERT(m_owningRegistry == nullptr);
     m_owningRegistry = registry;
 }
 
@@ -339,6 +343,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std:
     , count(count)
     , shaderStage(shaderStage)
     , type(ShaderBindingType::TextureSamplerArray)
+    , tlas(nullptr)
     , buffers()
     , textures(textures)
 {

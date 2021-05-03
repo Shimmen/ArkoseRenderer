@@ -32,6 +32,9 @@ public:
     const std::string& name() const;
     virtual void setName(const std::string&);
 
+    void setReusable(Badge<Registry>, bool reusable);
+    bool reusable(Badge<Registry>) const { return m_reusable; }
+
     void setOwningRegistry(Badge<Registry>, Registry* registry);
     Registry* owningRegistry(Badge<Registry>) { return m_owningRegistry; }
 
@@ -42,6 +45,7 @@ protected:
 private:
     Backend* m_backend { nullptr };
     Registry* m_owningRegistry { nullptr };
+    bool m_reusable { false };
     std::string m_name {};
 };
 

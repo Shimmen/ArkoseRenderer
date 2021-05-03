@@ -35,12 +35,10 @@ void DiffuseGINode::constructNode(Registry& reg)
 {
     SCOPED_PROFILE_ZONE();
 
-    m_irradianceProbes = &reg.createTextureArray(m_scene.probeGrid().probeCount(), probeDataColorSHTexSize, colorFormat, Texture::Filters::nearest(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
-    m_irradianceProbes->setName("GIProbeSH");
+    m_irradianceProbes = &reg.createOrReuseTextureArray("GIProbeSH", m_scene.probeGrid().probeCount(), probeDataColorSHTexSize, colorFormat, Texture::Filters::nearest(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
     reg.publish("irradianceProbes", *m_irradianceProbes);
 
-    m_filteredDistanceProbes = &reg.createTextureArray(m_scene.probeGrid().probeCount(), probeDataDistanceTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
-    m_filteredDistanceProbes->setName("GIProbeDistance");
+    m_filteredDistanceProbes = &reg.createOrReuseTextureArray("GIProbeDistance", m_scene.probeGrid().probeCount(), probeDataDistanceTexSize, distanceFormat, Texture::Filters::linear(), Texture::Mipmap::None, sphereWrapping);
     reg.publish("filteredDistanceProbes", *m_filteredDistanceProbes);
 }
 

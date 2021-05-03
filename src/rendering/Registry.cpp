@@ -6,8 +6,9 @@
 #include "utility/util.h"
 #include <stb_image.h>
 
-Registry::Registry(Backend& backend, const RenderTarget* windowRenderTarget)
+Registry::Registry(Backend& backend, Registry* previousRegistry, const RenderTarget* windowRenderTarget)
     : m_backend(backend)
+    , m_previousRegistry(previousRegistry)
     , m_windowRenderTarget(windowRenderTarget)
 {
 }
@@ -207,6 +208,39 @@ Texture& Registry::createCubemapTexture(Extent2D extent, Texture::Format format)
 
     m_textures.push_back(std::move(texture));
     return *m_textures.back();
+}
+
+Texture& Registry::createOrReuseTextureArray(const std::string& name, uint32_t itemCount, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
+{
+    if (m_previousRegistry) {
+        for (std::unique_ptr<Texture>& oldTexture : m_previousRegistry->m_textures) {
+            if (oldTexture && oldTexture->reusable({}) && oldTexture->name() == name) {
+
+                // Verify that all parameters are the same (for reuse we obviouly need that it's the same between occations)
+                ASSERT(itemCount == oldTexture->arrayCount());
+                ASSERT(extent == oldTexture->extent());
+                ASSERT(format == oldTexture->format());
+                ASSERT(filters.min == oldTexture->minFilter());
+                ASSERT(filters.mag == oldTexture->magFilter());
+                ASSERT(mipmap == oldTexture->mipmap());
+                ASSERT(wrapMode.u == oldTexture->wrapMode().u);
+                ASSERT(wrapMode.v == oldTexture->wrapMode().v);
+                ASSERT(wrapMode.w == oldTexture->wrapMode().w);
+
+                // Adopt the reused resource (m_previousRegistry will be destroyed so it's fine to move things from it)
+                oldTexture->setOwningRegistry({}, this);
+                m_textures.push_back(std::move(oldTexture));
+
+                return *m_textures.back();
+            }
+        }
+    }
+
+    Texture& texture = createTextureArray(itemCount, extent, format, filters, mipmap, wrapMode);
+    texture.setReusable({}, true);
+    texture.setName(name);
+
+    return texture;
 }
 
 Buffer& Registry::createBuffer(size_t size, Buffer::Usage usage, Buffer::MemoryHint memoryHint)
