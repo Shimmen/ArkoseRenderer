@@ -61,42 +61,19 @@ public:
     ///////////////////////////////////////////////////////////////////////////
     /// Utilities
 
-    VmaAllocator& globalAllocator()
-    {
-        return m_memoryAllocator;
-    }
+    VmaAllocator& globalAllocator() { return m_memoryAllocator; }
+    VkDevice device() const { return m_device; }
+    VkPhysicalDevice physicalDevice() const { return m_physicalDevice; }
+    VkPipelineCache pipelineCache() const { return m_pipelineCache; }
 
-    VkDevice device() const
-    {
-        return m_device;
-    }
-
-    VkPhysicalDevice physicalDevice() const
-    {
-        return m_physicalDevice;
-    }
-
-    VkPipelineCache pipelineCache() const
-    {
-        return m_pipelineCache;
-    }
-
-    bool hasRtxSupport() const
-    {
-        return m_rtx != nullptr;
-    }
-
+    bool hasRtxSupport() const { return m_rtx != nullptr; }
     VulkanRTX& rtx()
     {
         ASSERT(hasRtxSupport());
         return *m_rtx;
     }
 
-    bool hasDebugUtilsSupport() const
-    {
-        return m_debugUtils != nullptr;
-    }
-
+    bool hasDebugUtilsSupport() const { return m_debugUtils != nullptr; }
     VulkanDebugUtils& debugUtils()
     {
         ASSERT(hasDebugUtilsSupport());
