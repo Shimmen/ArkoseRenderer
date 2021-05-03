@@ -137,6 +137,7 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, const AppSpecification& appSpec
     m_pipelineCache = createAndLoadPipelineCacheFromDisk();
 
     createSwapchain(physicalDevice(), device(), m_surface);
+    createFrameContexts();
 
     setupDearImgui();
 
@@ -153,6 +154,7 @@ VulkanBackend::~VulkanBackend()
 
     destroyDearImgui();
 
+    destroyFrameContexts();
     destroySwapchain();
 
     savePipelineCacheToDisk(m_pipelineCache);
@@ -762,14 +764,14 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
 
     for (uint32_t imageIdx = 0; imageIdx < numSwapchainImages; ++imageIdx) {
 
-        auto frameContext = std::make_unique<FrameContext>();
-        frameContext->image = swapchainImages[imageIdx];
+        auto swapchainImageContext = std::make_unique<SwapchainImageContext>();
+        swapchainImageContext->image = swapchainImages[imageIdx];
 
         // Create image view
         {
             VkImageViewCreateInfo imageViewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
 
-            imageViewCreateInfo.image = frameContext->image;
+            imageViewCreateInfo.image = swapchainImageContext->image;
             imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
             imageViewCreateInfo.format = surfaceFormat.format;
 
@@ -793,7 +795,7 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
                 LogErrorAndExit("VulkanBackend: could not create image view %u (out of %u), exiting.\n", imageIdx, numSwapchainImages);
             }
 
-            frameContext->imageView = swapchainImageView;
+            swapchainImageContext->imageView = swapchainImageView;
         }
 
         // Create mock VulkanTexture for the swapchain image & its image view
@@ -813,11 +815,11 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
 
             mockTexture->vkUsage = createInfo.imageUsage;
             mockTexture->vkFormat = m_swapchainImageFormat;
-            mockTexture->image = frameContext->image;
-            mockTexture->imageView = frameContext->imageView;
+            mockTexture->image = swapchainImageContext->image;
+            mockTexture->imageView = swapchainImageContext->imageView;
             mockTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-            frameContext->mockColorTexture = std::move(mockTexture);
+            swapchainImageContext->mockColorTexture = std::move(mockTexture);
         }
 
         // Create depth texture
@@ -834,71 +836,10 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
                                                         Texture::WrapMode::Repeat },
                                                     .mipmap = Texture::Mipmap::None,
                                                     .multisampling = Texture::Multisampling::None };
-            frameContext->depthTexture = std::make_unique<VulkanTexture>(*this, depthDesc);
+            swapchainImageContext->depthTexture = std::make_unique<VulkanTexture>(*this, depthDesc);
         }
 
-        // Create command buffer for recoding this frame
-        {
-            VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
-            commandBufferAllocateInfo.commandPool = m_defaultCommandPool;
-            commandBufferAllocateInfo.commandBufferCount = 1;
-
-            // Can be submitted to a queue for execution, but cannot be called from other command buffers
-            commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-
-            VkCommandBuffer commandBuffer;
-            if (vkAllocateCommandBuffers(device, &commandBufferAllocateInfo, &commandBuffer) != VK_SUCCESS) {
-                LogErrorAndExit("VulkanBackend: could not create command buffer, exiting.\n");
-            }
-
-            frameContext->commandBuffer = commandBuffer;
-        }
-
-        {
-            // We use imageless framebuffers for these swapchain render targets!
-            constexpr bool imageless = true;
-
-            auto attachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, frameContext->mockColorTexture.get(), LoadOp::Clear, StoreOp::Store },
-                                                                       { RenderTarget::AttachmentType::Depth, frameContext->depthTexture.get(), LoadOp::Clear, StoreOp::Store } });
-            frameContext->clearingRenderTarget = std::make_unique<VulkanRenderTarget>(*this, attachments, imageless);
-
-            // NOTE: Does not handle depth & requires something to have already been written to the render target, as it has load op load on color0
-            auto finalAttachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, frameContext->mockColorTexture.get(), LoadOp::Load, StoreOp::Store } });
-            frameContext->guiRenderTargetForPresenting = std::make_unique<VulkanRenderTarget>(*this, finalAttachments, imageless, VulkanRenderTarget::QuirkMode::ForPresenting);
-        }
-
-        m_frameContexts.push_back(std::move(frameContext));
-    }
-
-    for (auto& frameContext : m_frameContexts) {
-
-        SyncContext syncContext;
-
-        // Create fence
-        {
-            VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
-            fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-            if (vkCreateFence(device, &fenceCreateInfo, nullptr, &syncContext.frameFence) != VK_SUCCESS) {
-                LogErrorAndExit("VulkanBackend: could not create frame context fence, exiting.\n");
-            }
-        }
-
-        // Create semaphores
-        {
-            VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
-
-            if (vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &syncContext.imageAvailableSemaphore) != VK_SUCCESS) {
-                LogErrorAndExit("VulkanBackend: could not create imageAvailableSemaphore, exiting.\n");
-            }
-
-            if (vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &syncContext.renderingFinishedSemaphore) != VK_SUCCESS) {
-                LogErrorAndExit("VulkanBackend: could not create renderingFinishedSemaphore, exiting.\n");
-            }
-        }
-
-        m_syncContexts.push_back(syncContext);
-
+        m_swapchainImageContexts.push_back(std::move(swapchainImageContext));
     }
 
     if (m_guiIsSetup) {
@@ -910,21 +851,11 @@ void VulkanBackend::destroySwapchain()
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
-    for (auto& frameContext : m_frameContexts) {
-
-        vkFreeCommandBuffers(device(), m_defaultCommandPool, 1, &frameContext->commandBuffer);
-        vkDestroyImageView(device(), frameContext->imageView, nullptr);
+    for (auto& swapchainImageContext : m_swapchainImageContexts) {
+        vkDestroyImageView(device(), swapchainImageContext->imageView, nullptr);
     }
 
-    m_frameContexts.clear();
-
-    for (auto& syncContext : m_syncContexts) {
-        vkDestroySemaphore(device(), syncContext.imageAvailableSemaphore, nullptr);
-        vkDestroySemaphore(device(), syncContext.renderingFinishedSemaphore, nullptr);
-        vkDestroyFence(device(), syncContext.frameFence, nullptr);
-    }
-
-    m_syncContexts.clear();
+    m_swapchainImageContexts.clear();
 
     vkDestroySwapchainKHR(device(), m_swapchain, nullptr);
 }
@@ -951,10 +882,100 @@ Extent2D VulkanBackend::recreateSwapchain()
     destroySwapchain();
     createSwapchain(physicalDevice(), device(), m_surface);
 
+    SwapchainImageContext& referenceImageContext = *m_swapchainImageContexts[0];
+    for (auto& frameContext : m_frameContexts) {
+        createFrameRenderTargets(*frameContext, referenceImageContext);
+    }
+
     m_relativeFrameIndex = 0;
     s_unhandledWindowResize = false;
 
     return m_swapchainExtent;
+}
+
+void VulkanBackend::createFrameContexts()
+{
+    // We need the swapchain to be created for reference!
+    ASSERT(m_swapchainImageContexts.size() > 0);
+    SwapchainImageContext& referenceImageContext = *m_swapchainImageContexts[0];
+
+    for (int i = 0; i < m_numInFlightFrames; ++i) {
+
+        auto frameContext = std::make_unique<FrameContext>();
+
+        // Create fence
+        {
+            VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+            fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+            if (vkCreateFence(device(), &fenceCreateInfo, nullptr, &frameContext->frameFence) != VK_SUCCESS) {
+                LogErrorAndExit("VulkanBackend: could not create frame context fence, exiting.\n");
+            }
+        }
+
+        // Create semaphores
+        {
+            VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+
+            if (vkCreateSemaphore(device(), &semaphoreCreateInfo, nullptr, &frameContext->imageAvailableSemaphore) != VK_SUCCESS) {
+                LogErrorAndExit("VulkanBackend: could not create imageAvailableSemaphore, exiting.\n");
+            }
+
+            if (vkCreateSemaphore(device(), &semaphoreCreateInfo, nullptr, &frameContext->renderingFinishedSemaphore) != VK_SUCCESS) {
+                LogErrorAndExit("VulkanBackend: could not create renderingFinishedSemaphore, exiting.\n");
+            }
+        }
+
+        // Create command buffer for recoding this frame
+        {
+            VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+            commandBufferAllocateInfo.commandPool = m_defaultCommandPool;
+            commandBufferAllocateInfo.commandBufferCount = 1;
+
+            // Can be submitted to a queue for execution, but cannot be called from other command buffers
+            commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+            VkCommandBuffer commandBuffer;
+            if (vkAllocateCommandBuffers(device(), &commandBufferAllocateInfo, &commandBuffer) != VK_SUCCESS) {
+                LogErrorAndExit("VulkanBackend: could not create command buffer, exiting.\n");
+            }
+
+            frameContext->commandBuffer = commandBuffer;
+        }
+
+        createFrameRenderTargets(*frameContext, referenceImageContext);
+
+        m_frameContexts.push_back(std::move(frameContext));
+    }
+}
+
+void VulkanBackend::destroyFrameContexts()
+{
+    for (auto& frameContext : m_frameContexts) {
+        vkFreeCommandBuffers(device(), m_defaultCommandPool, 1, &frameContext->commandBuffer);
+        vkDestroySemaphore(device(), frameContext->imageAvailableSemaphore, nullptr);
+        vkDestroySemaphore(device(), frameContext->renderingFinishedSemaphore, nullptr);
+        vkDestroyFence(device(), frameContext->frameFence, nullptr);
+    }
+
+    m_frameContexts.clear();
+}
+
+void VulkanBackend::createFrameRenderTargets(FrameContext& frameContext, const SwapchainImageContext& referenceImageContext)
+{
+    frameContext.clearingRenderTarget.reset();
+    frameContext.guiRenderTargetForPresenting.reset();
+
+    // We use imageless framebuffers for these swapchain render targets!
+    constexpr bool imageless = true;
+
+    auto attachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, referenceImageContext.mockColorTexture.get(), LoadOp::Clear, StoreOp::Store },
+                                                                { RenderTarget::AttachmentType::Depth, referenceImageContext.depthTexture.get(), LoadOp::Clear, StoreOp::Store } });
+    frameContext.clearingRenderTarget = std::make_unique<VulkanRenderTarget>(*this, attachments, imageless);
+
+    // NOTE: Does not handle depth & requires something to have already been written to the render target, as it has load op load on color0
+    auto finalAttachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, referenceImageContext.mockColorTexture.get(), LoadOp::Load, StoreOp::Store } });
+    frameContext.guiRenderTargetForPresenting = std::make_unique<VulkanRenderTarget>(*this, finalAttachments, imageless, VulkanRenderTarget::QuirkMode::ForPresenting);
 }
 
 void VulkanBackend::setupDearImgui()
@@ -1007,13 +1028,13 @@ void VulkanBackend::setupDearImgui()
     initInfo.QueueFamily = m_graphicsQueue.familyIndex;
     initInfo.Queue = m_graphicsQueue.queue;
 
-    initInfo.MinImageCount = (uint32_t)m_frameContexts.size(); // (todo: should this be something different than the actual count??)
-    initInfo.ImageCount = (uint32_t)m_frameContexts.size();
+    initInfo.MinImageCount = (uint32_t)m_swapchainImageContexts.size(); // (todo: should this be something different than the actual count??)
+    initInfo.ImageCount = (uint32_t)m_swapchainImageContexts.size();
 
     initInfo.DescriptorPool = m_guiDescriptorPool;
     initInfo.PipelineCache = VK_NULL_HANDLE;
 
-    ASSERT(m_frameContexts.size() > 0); // make sure this is created after the swapchain is created!
+    ASSERT(m_swapchainImageContexts.size() > 0); // make sure this is created after the swapchain is created!
     VkRenderPass compatibleRenderPassForImGui = m_frameContexts[0]->guiRenderTargetForPresenting->compatibleRenderPass;
     ImGui_ImplVulkan_Init(&initInfo, compatibleRenderPassForImGui);
 
@@ -1036,7 +1057,7 @@ void VulkanBackend::destroyDearImgui()
     m_guiIsSetup = false;
 }
 
-void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameContext& frameContext)
+void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameContext& frameContext, SwapchainImageContext& swapchainImageContext)
 {
     VkRenderPassBeginInfo passBeginInfo = {};
     passBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -1049,7 +1070,7 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameCon
 
     // NOTE: We use imageless framebuffer for swapchain images!
     VkRenderPassAttachmentBeginInfo attachmentBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO };
-    attachmentBeginInfo.pAttachments = &frameContext.imageView;
+    attachmentBeginInfo.pAttachments = &swapchainImageContext.imageView;
     attachmentBeginInfo.attachmentCount = 1;
     passBeginInfo.pNext = &attachmentBeginInfo;
 
@@ -1057,7 +1078,7 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameCon
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
     vkCmdEndRenderPass(commandBuffer);
 
-    VulkanTexture& swapchainTexture = *frameContext.mockColorTexture;
+    VulkanTexture& swapchainTexture = *swapchainImageContext.mockColorTexture;
     swapchainTexture.currentLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 }
 
@@ -1081,12 +1102,12 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
     bool isRelativeFirstFrame = m_relativeFrameIndex == 0;
     AppState appState { m_swapchainExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
 
-    uint32_t frameContextIndex = m_relativeFrameIndex % m_frameContexts.size();
-    SyncContext& syncContext = m_syncContexts[frameContextIndex];
+    uint32_t frameContextIndex = m_currentFrameIndex % m_frameContexts.size();
+    FrameContext& frameContext = *m_frameContexts[frameContextIndex];
 
     {
         SCOPED_PROFILE_ZONE_BACKEND_NAMED("Waiting for fence");
-        if (vkWaitForFences(device(), 1, &syncContext.frameFence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
+        if (vkWaitForFences(device(), 1, &frameContext.frameFence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
             LogError("VulkanBackend: error while waiting for in-flight frame fence (frame %u).\n", m_currentFrameIndex);
         }
     }
@@ -1096,7 +1117,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
     {
         {
             SCOPED_PROFILE_ZONE_BACKEND_NAMED("Acquiring next swapchain image");
-            acquireResult = vkAcquireNextImageKHR(device(), m_swapchain, UINT64_MAX, syncContext.imageAvailableSemaphore, VK_NULL_HANDLE, &swapchainImageIndex);
+            acquireResult = vkAcquireNextImageKHR(device(), m_swapchain, UINT64_MAX, frameContext.imageAvailableSemaphore, VK_NULL_HANDLE, &swapchainImageIndex);
         }
 
         if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) {
@@ -1116,16 +1137,16 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
         }
     }
 
-    FrameContext& frameContext = *m_frameContexts[swapchainImageIndex].get();
+    SwapchainImageContext& swapchainImageContext = *m_swapchainImageContexts[swapchainImageIndex].get();
 
     // We've just found out what image views we should use for this frame, so send them to the render target so it knows to bind them
-    frameContext.clearingRenderTarget->imagelessFramebufferAttachments = { frameContext.mockColorTexture->imageView, frameContext.depthTexture->imageView };
+    frameContext.clearingRenderTarget->imagelessFramebufferAttachments = { swapchainImageContext.mockColorTexture->imageView, swapchainImageContext.depthTexture->imageView };
 
     // We shouldn't use the data from the swapchain image, so we set current layout accordingly (not sure about depth, but sure..)
-    frameContext.mockColorTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    frameContext.depthTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    swapchainImageContext.mockColorTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    swapchainImageContext.depthTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
-    drawFrame(scene, renderGraph, appState, frameContext, elapsedTime, deltaTime);
+    drawFrame(scene, renderGraph, appState, frameContext, swapchainImageContext, elapsedTime, deltaTime);
 
     // Submit queue
     {
@@ -1135,18 +1156,18 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
         submitInfo.pCommandBuffers = &frameContext.commandBuffer;
 
         submitInfo.waitSemaphoreCount = 1;
-        submitInfo.pWaitSemaphores = &syncContext.imageAvailableSemaphore;
+        submitInfo.pWaitSemaphores = &frameContext.imageAvailableSemaphore;
         VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
         submitInfo.pWaitDstStageMask = waitStages;
 
         submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &syncContext.renderingFinishedSemaphore;
+        submitInfo.pSignalSemaphores = &frameContext.renderingFinishedSemaphore;
 
-        if (vkResetFences(device(), 1, &syncContext.frameFence) != VK_SUCCESS) {
+        if (vkResetFences(device(), 1, &frameContext.frameFence) != VK_SUCCESS) {
             LogError("VulkanBackend: error resetting in-flight frame fence.\n");
         }
 
-        VkResult submitStatus = vkQueueSubmit(m_graphicsQueue.queue, 1, &submitInfo, syncContext.frameFence);
+        VkResult submitStatus = vkQueueSubmit(m_graphicsQueue.queue, 1, &submitInfo, frameContext.frameFence);
         if (submitStatus != VK_SUCCESS) {
             LogError("VulkanBackend: could not submit the graphics queue.\n");
         }
@@ -1157,7 +1178,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
         VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &syncContext.renderingFinishedSemaphore;
+        presentInfo.pWaitSemaphores = &frameContext.renderingFinishedSemaphore;
 
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &m_swapchain;
@@ -1178,7 +1199,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
     return true;
 }
 
-void VulkanBackend::drawFrame(const Scene& scene, const RenderGraph& renderGraph, const AppState& appState, FrameContext& frameContext, double elapsedTime, double deltaTime)
+void VulkanBackend::drawFrame(const Scene& scene, const RenderGraph& renderGraph, const AppState& appState, FrameContext& frameContext, SwapchainImageContext& swapchainImageContext, double elapsedTime, double deltaTime)
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
@@ -1220,12 +1241,12 @@ void VulkanBackend::drawFrame(const Scene& scene, const RenderGraph& renderGraph
         SCOPED_PROFILE_ZONE_BACKEND_NAMED("GUI Rendering");
 
         ImGui::Render();
-        renderDearImguiFrame(commandBuffer, frameContext);
+        renderDearImguiFrame(commandBuffer, frameContext, swapchainImageContext);
         ImGui::UpdatePlatformWindows();
     }
     cmdList.endDebugLabel();
 
-    VulkanTexture& swapchainTexture = *frameContext.mockColorTexture;
+    VulkanTexture& swapchainTexture = *swapchainImageContext.mockColorTexture;
     if (swapchainTexture.currentLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
 
         // Performing explicit swapchain layout transition. This should only happen if we don't render any GUI.
@@ -1286,12 +1307,12 @@ void VulkanBackend::reconstructRenderGraphResources(RenderGraph& renderGraph)
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
-    uint32_t numFrameManagers = (uint32_t)m_frameContexts.size();
+    size_t numFrameManagers = m_frameContexts.size();
 
     // Create new resource managers
     auto nodeRegistry = std::make_unique<Registry>(*this);
     std::vector<std::unique_ptr<Registry>> frameRegistries {};
-    for (uint32_t i = 0; i < numFrameManagers; ++i) {
+    for (size_t i = 0; i < numFrameManagers; ++i) {
         const RenderTarget& windowRenderTargetForFrame = *m_frameContexts[i]->clearingRenderTarget;
         frameRegistries.push_back(std::make_unique<Registry>(*this, &windowRenderTargetForFrame));
     }
@@ -1310,7 +1331,7 @@ void VulkanBackend::reconstructRenderGraphResources(RenderGraph& renderGraph)
     m_nodeRegistry = std::move(nodeRegistry);
 
     // Then create & replace frame resources
-    for (uint32_t i = 0; i < numFrameManagers; ++i) {
+    for (size_t i = 0; i < numFrameManagers; ++i) {
         //replaceResourcesForRegistry(m_frameContexts[i]->registry, frameRegistries[i].get());
         m_frameContexts[i]->registry = std::move(frameRegistries[i]);
     }

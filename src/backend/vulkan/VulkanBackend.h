@@ -150,7 +150,9 @@ private:
     /// Drawing
 
     struct FrameContext;
-    void drawFrame(const Scene& scene, const RenderGraph&, const AppState&, FrameContext&, double elapsedTime, double deltaTime);
+    struct SwapchainImageContext;
+
+    void drawFrame(const Scene& scene, const RenderGraph&, const AppState&, FrameContext&, SwapchainImageContext&, double elapsedTime, double deltaTime);
 
     ///////////////////////////////////////////////////////////////////////////
     /// Swapchain management
@@ -159,13 +161,17 @@ private:
     void destroySwapchain();
     Extent2D recreateSwapchain();
 
+    void createFrameContexts();
+    void destroyFrameContexts();
+    void createFrameRenderTargets(FrameContext&, const SwapchainImageContext& referenceImageContext);
+
     ///////////////////////////////////////////////////////////////////////////
     /// ImGui related
 
     void setupDearImgui();
     void destroyDearImgui();
     
-    void renderDearImguiFrame(VkCommandBuffer, FrameContext&);
+    void renderDearImguiFrame(VkCommandBuffer, FrameContext&, SwapchainImageContext&);
 
     bool m_guiIsSetup { false };
     VkDescriptorPool m_guiDescriptorPool {};
@@ -212,34 +218,32 @@ private:
     Extent2D m_swapchainExtent {};
     VkFormat m_swapchainImageFormat {};
 
-    uint32_t m_currentFrameIndex { 0 };
-    uint32_t m_relativeFrameIndex { 0 };
-
-    struct SyncContext {
-        VkFence frameFence {};
-        VkSemaphore imageAvailableSemaphore {};
-        VkSemaphore renderingFinishedSemaphore {};
-    };
-
-    std::vector<SyncContext> m_syncContexts {};
-
-    struct FrameContext {
-
-        // TODO: Maybe try to put e.g. command buffer & registry etc. in the sync context, so we can have e.g. exactly 2 of those but more images.
-        // We can't right now, as we require each Registry to know exactly what image it should render to, but in the future, if we mess with the bindings!
-
+    struct SwapchainImageContext {
         VkImage image {}; // NOTE: Owned by the swapchain!
         VkImageView imageView {};
         std::unique_ptr<VulkanTexture> mockColorTexture {};
-
         std::unique_ptr<VulkanTexture> depthTexture {};
+    };
+
+    std::vector<std::unique_ptr<SwapchainImageContext>> m_swapchainImageContexts {};
+
+    ///////////////////////////////////////////////////////////////////////////
+    /// Frame management related members
+
+    const int m_numInFlightFrames = 2;
+    uint32_t m_currentFrameIndex { 0 };
+    uint32_t m_relativeFrameIndex { 0 };
+
+    struct FrameContext {
+        VkFence frameFence {};
+        VkSemaphore imageAvailableSemaphore {};
+        VkSemaphore renderingFinishedSemaphore {};
 
         std::unique_ptr<VulkanRenderTarget> clearingRenderTarget {};
         std::unique_ptr<VulkanRenderTarget> guiRenderTargetForPresenting {};
 
         VkCommandBuffer commandBuffer {};
         std::unique_ptr<Registry> registry {};
-
     };
 
     std::vector<std::unique_ptr<FrameContext>> m_frameContexts {};
