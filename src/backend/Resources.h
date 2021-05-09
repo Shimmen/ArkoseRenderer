@@ -462,6 +462,21 @@ struct DepthState {
     DepthCompareOp compareOp { DepthCompareOp::Less };
 };
 
+// Instead of exposing the whole stencil interface we will just have some presets/modes (at least for now!)
+enum class StencilMode {
+    Disabled,
+
+    // Writing modes
+    AlwaysWrite,
+
+    // Non-writing modes
+    PassIfNotZero,
+};
+
+struct StencilState {
+    StencilMode mode { StencilMode::Disabled };
+};
+
 enum class TriangleWindingOrder {
     Clockwise,
     CounterClockwise
@@ -548,7 +563,7 @@ public:
     RenderState(Backend& backend,
                 const RenderTarget& renderTarget, VertexLayout vertexLayout,
                 Shader shader, const std::vector<BindingSet*>& shaderBindingSets,
-                Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState)
+                Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState, StencilState stencilState)
         : Resource(backend)
         , m_renderTarget(&renderTarget)
         , m_vertexLayout(vertexLayout)
@@ -558,6 +573,7 @@ public:
         , m_blendState(blendState)
         , m_rasterState(rasterState)
         , m_depthState(depthState)
+        , m_stencilState(stencilState)
     {
         ASSERT(shader.type() == ShaderType::Raster);
     }
@@ -572,6 +588,7 @@ public:
     const BlendState& blendState() const { return m_blendState; }
     const RasterState& rasterState() const { return m_rasterState; }
     const DepthState& depthState() const { return m_depthState; }
+    const StencilState& stencilState() const { return m_stencilState; }
 
 private:
     const RenderTarget* m_renderTarget;
@@ -584,6 +601,7 @@ private:
     BlendState m_blendState;
     RasterState m_rasterState;
     DepthState m_depthState;
+    StencilState m_stencilState;
 };
 
 class RenderStateBuilder {
@@ -597,12 +615,14 @@ public:
     bool writeDepth { true };
     bool testDepth { true };
     DepthCompareOp depthCompare { DepthCompareOp::Less };
+    StencilMode stencilMode { StencilMode::Disabled };
     PolygonMode polygonMode { PolygonMode::Filled };
 
     [[nodiscard]] Viewport viewport() const;
     [[nodiscard]] BlendState blendState() const;
     [[nodiscard]] RasterState rasterState() const;
     [[nodiscard]] DepthState depthState() const;
+    [[nodiscard]] StencilState stencilState() const;
 
     RenderStateBuilder& addBindingSet(BindingSet&);
     [[nodiscard]] const std::vector<BindingSet*>& bindingSets() const;

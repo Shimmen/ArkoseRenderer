@@ -458,6 +458,14 @@ DepthState RenderStateBuilder::depthState() const
     return state;
 }
 
+StencilState RenderStateBuilder::stencilState() const
+{
+    StencilState state {
+        .mode = stencilMode
+    };
+    return state;
+}
+
 RenderStateBuilder& RenderStateBuilder::addBindingSet(BindingSet& bindingSet)
 {
     m_bindingSets.emplace_back(&bindingSet);

@@ -89,7 +89,7 @@ public:
 struct VulkanRenderState final : public RenderState {
 public:
     VulkanRenderState(Backend&, const RenderTarget&, VertexLayout, Shader, const std::vector<BindingSet*>&,
-                      Viewport, BlendState, RasterState, DepthState);
+                      Viewport, BlendState, RasterState, DepthState, StencilState);
     virtual ~VulkanRenderState() override;
 
     virtual void setName(const std::string& name) override;

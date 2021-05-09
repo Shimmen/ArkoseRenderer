@@ -361,6 +361,9 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
     case Texture::MinFilter::Nearest:
         vkMinFilter = VK_FILTER_NEAREST;
         break;
+    default:
+        vkMinFilter = VK_FILTER_MAX_ENUM;
+        ASSERT_NOT_REACHED();
     }
 
     VkFilter vkMagFilter;
@@ -371,6 +374,9 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
     case Texture::MagFilter::Nearest:
         vkMagFilter = VK_FILTER_NEAREST;
         break;
+    default:
+        vkMagFilter = VK_FILTER_MAX_ENUM;
+        ASSERT_NOT_REACHED();
     }
 
     auto wrapModeToAddressMode = [](WrapMode mode) -> VkSamplerAddressMode {
@@ -914,17 +920,15 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
         attachment.format = texture.vkFormat;
         attachment.samples = static_cast<VkSampleCountFlagBits>(texture.multisampling());
 
-        // TODO: Handle stencil stuff!
-        attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-
         switch (loadOp) {
         case LoadOp::Load:
             attachment.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
             attachment.initialLayout = finalLayout;
             break;
         case LoadOp::Clear:
             attachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
             attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             break;
         }
@@ -932,9 +936,11 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
         switch (storeOp) {
         case StoreOp::Store:
             attachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+            attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
             break;
         case StoreOp::Discard:
             attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+            attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
             break;
         }
 
@@ -1514,8 +1520,8 @@ void VulkanBindingSet::setName(const std::string& name)
 
 VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& renderTarget, VertexLayout vertexLayout,
                                      Shader shader, const std::vector<BindingSet*>& bindingSets,
-                                     Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState)
-    : RenderState(backend, renderTarget, vertexLayout, shader, bindingSets, viewport, blendState, rasterState, depthState)
+                                     Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState, StencilState stencilState)
+    : RenderState(backend, renderTarget, vertexLayout, shader, bindingSets, viewport, blendState, rasterState, depthState, stencilState)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
@@ -1748,9 +1754,43 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     depthStencilState.depthBoundsTestEnable = VK_FALSE;
     depthStencilState.minDepthBounds = 0.0f;
     depthStencilState.maxDepthBounds = 1.0f;
-    depthStencilState.stencilTestEnable = VK_FALSE;
-    depthStencilState.front = {};
-    depthStencilState.back = {};
+
+    if (stencilState.mode != StencilMode::Disabled) {
+        depthStencilState.stencilTestEnable = VK_TRUE;
+        switch (stencilState.mode) {
+        case StencilMode::AlwaysWrite:
+            // Test
+            depthStencilState.front.compareOp = VK_COMPARE_OP_ALWAYS;
+            depthStencilState.front.compareMask = 0x00;
+            // Writing (just set to 0xff)
+            depthStencilState.front.passOp = VK_STENCIL_OP_REPLACE;
+            depthStencilState.front.reference = 0xff;
+            depthStencilState.front.writeMask = 0xff;
+            break;
+
+        case StencilMode::PassIfNotZero:
+            // Test
+            depthStencilState.front.compareOp = VK_COMPARE_OP_GREATER;
+            depthStencilState.front.compareMask = 0xff;
+            depthStencilState.front.reference = 0x00;
+            // Writing (in this case, no writing)
+            depthStencilState.front.passOp = VK_STENCIL_OP_KEEP;
+            depthStencilState.front.failOp = VK_STENCIL_OP_KEEP;
+            depthStencilState.front.depthFailOp = VK_STENCIL_OP_KEEP;
+            depthStencilState.front.writeMask = 0x00;
+            break;
+
+        default:
+            ASSERT_NOT_REACHED();
+        }
+
+        // For now, no separate front/back treatment supported
+        depthStencilState.back = depthStencilState.front;
+    } else {
+        depthStencilState.stencilTestEnable = VK_FALSE;
+        depthStencilState.front = {};
+        depthStencilState.back = {};
+    }
 
     VkGraphicsPipelineCreateInfo pipelineCreateInfo = { VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO };
 
@@ -1966,7 +2006,7 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
         ASSERT(geometries()[i].hasTriangles() == isTriangleBLAS);
     }
 
-    VkBuffer transformBuffer;
+    VkBuffer transformBuffer = VK_NULL_HANDLE;
     VmaAllocation transformBufferAllocation;
     size_t singleTransformSize = 3 * 4 * sizeof(float);
     if (isTriangleBLAS) {
