@@ -1768,9 +1768,21 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
             depthStencilState.front.writeMask = 0xff;
             break;
 
+        case StencilMode::PassIfZero:
+            // Test
+            depthStencilState.front.compareOp = VK_COMPARE_OP_EQUAL;
+            depthStencilState.front.compareMask = 0xff;
+            depthStencilState.front.reference = 0x00;
+            // Writing (in this case, no writing)
+            depthStencilState.front.passOp = VK_STENCIL_OP_KEEP;
+            depthStencilState.front.failOp = VK_STENCIL_OP_KEEP;
+            depthStencilState.front.depthFailOp = VK_STENCIL_OP_KEEP;
+            depthStencilState.front.writeMask = 0x00;
+            break;
+
         case StencilMode::PassIfNotZero:
             // Test
-            depthStencilState.front.compareOp = VK_COMPARE_OP_GREATER;
+            depthStencilState.front.compareOp = VK_COMPARE_OP_NOT_EQUAL;
             depthStencilState.front.compareMask = 0xff;
             depthStencilState.front.reference = 0x00;
             // Writing (in this case, no writing)

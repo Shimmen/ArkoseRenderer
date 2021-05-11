@@ -1,6 +1,7 @@
 #version 460
 
 #include <shared/CameraState.h>
+#include <common/namedUniforms.glsl>
 #include <common/spherical.glsl>
 
 layout(set = 0, binding = 0) uniform CameraStateBlock {
@@ -11,9 +12,9 @@ layout(set = 0, binding = 1, rgba16f) restrict uniform writeonly image2D targetI
 layout(set = 0, binding = 2) uniform sampler2D depthTex;
 layout(set = 0, binding = 3) uniform sampler2D environmentTex;
 
-layout(push_constant) uniform PushConstants {
+NAMED_UNIFORMS(pushConstants,
     float environmentMultiplier;
-};
+)
 
 layout(local_size_x = 16, local_size_y = 16) in;
 void main()
@@ -28,6 +29,7 @@ void main()
     if (depth >= 1.0 - epsilon) {
 
         // FIXME: Maybe use vert+frag shaders & use interpolation to do this instead?
+        //  => Yes, and optimize with stencil test!
         vec2 uv = (vec2(pixelCoord) + vec2(0.5)) / vec2(imageSize(targetImg));
         vec4 projPosition = vec4(uv * 2.0 - 1.0, 1.0, 1.0); // TODO: should depth (i.e., z) be 1 here? Yeah? Does it matter? Maybe not..
         vec4 viewSpacePos = camera.viewFromProjection * projPosition;
@@ -35,7 +37,7 @@ void main()
 
         vec2 sampleUv = sphericalUvFromDirection(normalize(viewRay));
         vec3 environment = texture(environmentTex, sampleUv).rgb;
-        environment *= environmentMultiplier;
+        environment *= pushConstants.environmentMultiplier;
 
         // Account for the smaller solid angle of pixels near the poles
         // Note that we don't actually get a solid angle out, since we plug 1.0 in as reference.

@@ -470,6 +470,7 @@ enum class StencilMode {
     AlwaysWrite,
 
     // Non-writing modes
+    PassIfZero,
     PassIfNotZero,
 };
 
