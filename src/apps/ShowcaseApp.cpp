@@ -12,6 +12,8 @@
 #include "rendering/nodes/SceneNode.h"
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SkyViewNode.h"
+#include "rendering/nodes/SSAONode.h"
+#include "rendering/nodes/GIComposeNode.h"
 #include "rendering/scene/models/GltfModel.h"
 #include "utility/Input.h"
 #include "utility/Logging.h"
@@ -43,6 +45,10 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
     graph.addNode<CullingNode>(scene);
     graph.addNode<PrepassNode>(scene);
     graph.addNode<ForwardRenderNode>(scene);
+
+    graph.addNode<SSAONode>(scene);
+    graph.addNode<GIComposeNode>(scene);
+    
     graph.addNode<SkyViewNode>(scene);
     graph.addNode<BloomNode>(scene);
 
@@ -82,13 +88,13 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
 #endif
 
         return [&](const AppState& appState, CommandList& cmdList) {
-            cmdList.beginRendering(tonemapRenderState, ClearColor(0.5f, 0.1f, 0.5f), 1.0f);
+            cmdList.beginRendering(tonemapRenderState, ClearColor::srgbColor(0.5f, 0.1f, 0.5f), 1.0f);
             cmdList.bindSet(tonemapBindingSet, 0);
             cmdList.draw(vertexBuffer, 3);
             cmdList.endRendering();
 
 #if USE_FXAA
-            cmdList.beginRendering(fxaaRenderState, ClearColor(0.5f, 0.1f, 0.5f), 1.0f);
+            cmdList.beginRendering(fxaaRenderState, ClearColor::srgbColor(0.5f, 0.1f, 0.5f), 1.0f);
             cmdList.bindSet(fxaaBindingSet, 0);
             {
                 vec2 pixelSize = vec2(1.0f / ldrTexture.extent().width(), 1.0f / ldrTexture.extent().height());

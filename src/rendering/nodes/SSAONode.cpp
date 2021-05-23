@@ -47,7 +47,7 @@ RenderGraphNode::ExecuteCallback SSAONode::constructFrame(Registry& reg) const
         static float kernelRadius = 0.58f;
         ImGui::SliderFloat("Kernel radius (m)", &kernelRadius, 0.01f, 1.5f);
 
-        static float kernelExponent = 1.5f;
+        static float kernelExponent = 4.4f;
         ImGui::SliderFloat("Kernel exponent", &kernelExponent, 0.5f, 5.0f);
 
         //static bool applyBlur = true;
