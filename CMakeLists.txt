@@ -37,6 +37,7 @@ add_executable(ArkoseRenderer
     src/rendering/nodes/SceneNode.cpp
     src/rendering/nodes/ShadowMapNode.cpp
     src/rendering/nodes/SkyViewNode.cpp
+    src/rendering/nodes/SSAONode.cpp
     src/rendering/Registry.cpp
     src/rendering/RenderGraph.cpp
     src/rendering/RenderGraphNode.cpp
