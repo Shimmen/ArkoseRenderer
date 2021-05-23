@@ -27,6 +27,18 @@ public:
     PathOrImage metallicRoughness {};
     PathOrImage emissive {};
 
+    enum class AlphaMode {
+        Opaque,
+        Mask,
+        Blend
+    };
+
+    AlphaMode alphaMode { AlphaMode::Opaque };
+    float maskCutoff { 1.0f };
+
+    bool isOpaque() const { return alphaMode == AlphaMode::Opaque; }
+    bool isTranlucent() const { return !isOpaque(); }
+
     void setMesh(Mesh* mesh) { m_owner = mesh; }
     const Mesh* mesh() const { return m_owner; }
     Mesh* mesh() { return m_owner; }

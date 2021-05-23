@@ -241,6 +241,17 @@ std::unique_ptr<Material> GltfMesh::createMaterial()
     auto material = std::make_unique<Material>();
     material->setMesh(this);
 
+    if (gltfMaterial.alphaMode == "OPAQUE") {
+        material->alphaMode = Material::AlphaMode::Opaque;
+    } else if (gltfMaterial.alphaMode == "BLEND") {
+        material->alphaMode = Material::AlphaMode::Blend;
+    } else if (gltfMaterial.alphaMode == "MASK") {
+        material->alphaMode = Material::AlphaMode::Mask;
+        material->maskCutoff = gltfMaterial.alphaCutoff;
+    } else {
+        ASSERT_NOT_REACHED();
+    }
+
     material->baseColor = getTexture(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index);
     std::vector<double> c = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
     material->baseColorFactor = vec4((float)c[0], (float)c[1], (float)c[2], (float)c[3]);
