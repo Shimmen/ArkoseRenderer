@@ -64,7 +64,7 @@ void main()
         weight += sampleWeight;
     }
 
-    occlusion /= weight;
+    occlusion /= (weight + 1e-3);
     occlusion = 1.0 - pow(1.0 - occlusion, pushConstants.kernelExponent);
 
     float aoValue = 1.0 - occlusion;
