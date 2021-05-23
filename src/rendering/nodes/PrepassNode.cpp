@@ -27,6 +27,7 @@ RenderGraphNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) cons
     Shader prepassShader = Shader::createVertexOnly("forward/prepass.vert");
     RenderTarget& prepassRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &gBufferDepthTexture, LoadOp::Clear, StoreOp::Store } });
     RenderStateBuilder prepassRenderStateBuilder { prepassRenderTarget, prepassShader, m_prepassVertexLayout };
+    prepassRenderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
     prepassRenderStateBuilder.addBindingSet(drawableBindingSet);
     RenderState& prepassRenderState = reg.createRenderState(prepassRenderStateBuilder);
     prepassRenderState.setName("ForwardZPrepass");

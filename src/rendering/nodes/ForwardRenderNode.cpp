@@ -66,7 +66,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag");
     RenderStateBuilder renderStateBuilder { renderTarget, shader, m_vertexLayout };
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
-    renderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
+    renderStateBuilder.stencilMode = reg.hasPreviousNode("prepass") ? StencilMode::PassIfNotZero : StencilMode::AlwaysWrite;
     renderStateBuilder.addBindingSet(materialBindingSet);
     renderStateBuilder.addBindingSet(cameraBindingSet);
     renderStateBuilder.addBindingSet(drawableBindingSet);
