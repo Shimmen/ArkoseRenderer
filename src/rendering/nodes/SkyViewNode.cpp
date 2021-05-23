@@ -29,7 +29,7 @@ RenderGraphNode::ExecuteCallback SkyViewNode::constructFrame(Registry& reg) cons
     BindingSet& skyViewRasterizeBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, reg.getBuffer("scene", "camera") },
                                                                     { 1, ShaderStageFragment, &skyViewTexture, ShaderBindingType::TextureSampler } });
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &targetImage, LoadOp::Load, StoreOp::Store },
-                                                          { RenderTarget::AttachmentType::Depth, &depthStencilImage, LoadOp::Load, StoreOp::Discard } });
+                                                          { RenderTarget::AttachmentType::Depth, &depthStencilImage, LoadOp::Load, StoreOp::Store } });
     Shader rasterizeShader = Shader::createBasicRasterize("sky-view/sky-view.vert", "sky-view/sky-view.frag");
     RenderStateBuilder renderStateBuilder { renderTarget, rasterizeShader, { VertexComponent::Position2F } };
     renderStateBuilder.stencilMode = StencilMode::PassIfZero; // i.e. if no geometry is written to this pixel
