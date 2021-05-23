@@ -54,7 +54,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     reg.publish("color", colorTexture);
 
     Texture& diffueGiTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
-    colorTexture.setName("DiffuseGI");
+    diffueGiTexture.setName("DiffuseGI");
     reg.publish("diffuse-gi", diffueGiTexture);
 
     Texture& gBufferDepthTexture = *reg.getTexture("g-buffer", "depth").value();
