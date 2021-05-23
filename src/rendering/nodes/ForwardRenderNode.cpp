@@ -53,6 +53,10 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     colorTexture.setName("ForwardColor");
     reg.publish("color", colorTexture);
 
+    Texture& diffueGiTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
+    colorTexture.setName("DiffuseGI");
+    reg.publish("diffuse-gi", diffueGiTexture);
+
     Texture& gBufferDepthTexture = *reg.getTexture("g-buffer", "depth").value();
     auto depthAttachment = reg.hasPreviousNode("prepass")
         ? RenderTarget::Attachment { RenderTarget::AttachmentType::Depth, &gBufferDepthTexture, LoadOp::Load, StoreOp::Store }
@@ -61,6 +65,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture },
                                                           { RenderTarget::AttachmentType::Color1, reg.getTexture("g-buffer", "normal").value() },
                                                           { RenderTarget::AttachmentType::Color2, reg.getTexture("g-buffer", "baseColor").value() },
+                                                          { RenderTarget::AttachmentType::Color3, &diffueGiTexture },
                                                           depthAttachment });
 
     Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag");

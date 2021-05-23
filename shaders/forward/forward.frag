@@ -44,6 +44,7 @@ NAMED_UNIFORMS(pushConstants,
 layout(location = 0) out vec4 oColor;
 layout(location = 1) out vec4 oNormal;
 layout(location = 2) out vec4 oBaseColor;
+layout(location = 3) out vec4 oDiffuseGI;
 
 vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
@@ -139,7 +140,8 @@ void main()
     }
 
 #if FORWARD_INCLUDE_INDIRECT_LIGHT
-    color += evaluateIndirectLight(vPosition, V, N, baseColor, metallic, roughness);
+    vec3 diffuseGI = evaluateIndirectLight(vPosition, V, N, baseColor, metallic, roughness);
+    oDiffuseGI = vec4(diffuseGI, 0.0);
 #endif
 
     oColor = vec4(color, 1.0);

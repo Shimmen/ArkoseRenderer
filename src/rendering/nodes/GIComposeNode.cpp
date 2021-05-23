@@ -23,12 +23,14 @@ RenderGraphNode::ExecuteCallback GIComposeNode::constructFrame(Registry& reg) co
 
     Texture& sceneColorBeforeGI = *reg.getTexture("forward", "color").value();
     Texture& ambientOcclusionTex = *reg.getTexture("ssao", "ambient-occlusion").value();
+    Texture& diffuseGiTex = *reg.getTexture("forward", "diffuse-gi").value();
 
     Texture& sceneColorWithGI = reg.createTexture2D(reg.windowRenderTarget().extent(), sceneColorBeforeGI.format(), Texture::Filters::nearest());
 
     BindingSet& composeBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &sceneColorWithGI, ShaderBindingType::StorageImage },
                                                            { 1, ShaderStageCompute, &sceneColorBeforeGI, ShaderBindingType::TextureSampler },
-                                                           { 2, ShaderStageCompute, &ambientOcclusionTex, ShaderBindingType::TextureSampler } });
+                                                           { 2, ShaderStageCompute, &ambientOcclusionTex, ShaderBindingType::TextureSampler },
+                                                           { 3, ShaderStageCompute, &diffuseGiTex, ShaderBindingType::TextureSampler } });
     ComputeState& giComposeState = reg.createComputeState(Shader::createCompute("compose/compose-gi.comp"), { &composeBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList) {
@@ -38,8 +40,12 @@ RenderGraphNode::ExecuteCallback GIComposeNode::constructFrame(Registry& reg) co
 
         cmdList.setNamedUniform("targetSize", sceneColorWithGI.extent());
 
+        static bool includeDiffuseGI = true;
         static bool withAmbientOcclusion = true;
-        ImGui::Checkbox("With ambient occlusion", &withAmbientOcclusion);
+        ImGui::Checkbox("Include diffuse GI", &includeDiffuseGI);
+        if (includeDiffuseGI)
+            ImGui::Checkbox("... with ambient occlusion", &withAmbientOcclusion);
+        cmdList.setNamedUniform("includeDiffuseGI", includeDiffuseGI);
         cmdList.setNamedUniform("withAmbientOcclusion", withAmbientOcclusion);
 
         cmdList.dispatch({ sceneColorWithGI.extent(), 1 }, { 32, 32, 1 });
