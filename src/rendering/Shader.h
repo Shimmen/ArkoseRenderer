@@ -14,6 +14,10 @@ enum ShaderStage : uint8_t {
     ShaderStageRTClosestHit = 0x20,
     ShaderStageRTAnyHit = 0x40,
     ShaderStageRTIntersection = 0x80,
+
+    ShaderStageAnyRasterize = ShaderStageVertex | ShaderStageFragment,
+    ShaderStageAnyRayTrace = ShaderStageRTRayGen | ShaderStageRTMiss | ShaderStageRTClosestHit | ShaderStageRTAnyHit | ShaderStageRTIntersection,
+    ShaderStageAny = ShaderStageAnyRasterize | ShaderStageAnyRayTrace | ShaderStageCompute
 };
 
 enum class ShaderFileType {
