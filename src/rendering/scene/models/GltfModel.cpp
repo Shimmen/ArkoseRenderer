@@ -247,7 +247,7 @@ std::unique_ptr<Material> GltfMesh::createMaterial()
         material->alphaMode = Material::AlphaMode::Blend;
     } else if (gltfMaterial.alphaMode == "MASK") {
         material->alphaMode = Material::AlphaMode::Mask;
-        material->maskCutoff = gltfMaterial.alphaCutoff;
+        material->maskCutoff = static_cast<float>(gltfMaterial.alphaCutoff);
     } else {
         ASSERT_NOT_REACHED();
     }
