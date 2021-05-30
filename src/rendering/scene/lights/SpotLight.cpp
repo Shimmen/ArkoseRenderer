@@ -9,13 +9,8 @@ SpotLight::SpotLight(vec3 color, float luminousIntensity, const std::string& ies
     , m_position(position)
     , m_direction(direction)
 {
-}
-
-mat4 SpotLight::viewProjection() const
-{
-    mat4 lightOrientation = moos::lookAt(m_position, m_position + normalize(m_direction));
-    mat4 lightProjection = moos::perspectiveProjectionToVulkanClipSpace(outerConeAngle, 1.0f, 0.1f, 1000.0f);
-    return lightProjection * lightOrientation;
+    constantBias = 0.0001f;
+    slopeBias = 0.0f;
 }
 
 Texture& SpotLight::iesProfileLookupTexture()

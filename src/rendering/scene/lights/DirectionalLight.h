@@ -13,6 +13,8 @@ public:
         , shadowMapWorldOrigin(0, 0, 0)
         , shadowMapWorldExtent(50.0f)
     {
+        constantBias = 0.0003f;
+        slopeBias = 0.0f;
     }
 
     virtual ~DirectionalLight() { }
@@ -27,11 +29,14 @@ public:
         return direction;
     }
 
-    mat4 viewProjection() const final
+    mat4 lightViewMatrix() const final
     {
-        mat4 lightOrientation = moos::lookAt(shadowMapWorldOrigin, shadowMapWorldOrigin + normalize(direction));
-        mat4 lightProjection = moos::orthographicProjectionToVulkanClipSpace(shadowMapWorldExtent, -shadowMapWorldExtent, shadowMapWorldExtent);
-        return lightProjection * lightOrientation;
+        return moos::lookAt(shadowMapWorldOrigin, shadowMapWorldOrigin + normalize(direction));
+    }
+
+    mat4 projectionMatrix() const final
+    {
+        return moos::orthographicProjectionToVulkanClipSpace(shadowMapWorldExtent, -shadowMapWorldExtent, shadowMapWorldExtent);
     }
 
     // Light illuminance (lux, lx = lm / m^2)

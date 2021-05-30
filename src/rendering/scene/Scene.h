@@ -64,6 +64,9 @@ public:
     int forEachLight(std::function<void(size_t, const Light&)>) const;
     int forEachLight(std::function<void(size_t, Light&)>);
 
+    int forEachShadowCastingLight(std::function<void(size_t, const Light&)>) const;
+    int forEachShadowCastingLight(std::function<void(size_t, Light&)>);
+
     const DirectionalLight& sun() const { return *m_directionalLights[0]; }
     DirectionalLight& sun() { return *m_directionalLights[0]; }
 

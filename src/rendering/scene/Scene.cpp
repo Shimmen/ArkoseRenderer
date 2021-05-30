@@ -179,6 +179,8 @@ void Scene::update(float elapsedTime, float deltaTime)
             ImGui::ColorEdit3("Sun color", value_ptr(sun().color));
             ImGui::SliderFloat("Sun illuminance (lx)", &sun().illuminance, 1.0f, 150000.0f);
             ImGui::SliderFloat("Ambient (lx)", &ambient(), 0.0f, 1000.0f);
+            ImGui::SliderFloat("Constant bias", &sun().constantBias, 0.0f, 0.001f, "%.6f");
+            ImGui::SliderFloat("Slope bias", &sun().slopeBias, 0.0f, 0.001f, "%.6f");
             ImGui::TreePop();
         }
 
@@ -361,6 +363,34 @@ int Scene::forEachLight(std::function<void(size_t, Light&)> callback)
     }
     for (auto& light : m_spotLights) {
         callback(nextIndex++, *light);
+    }
+    return static_cast<int>(nextIndex);
+}
+
+int Scene::forEachShadowCastingLight(std::function<void(size_t, const Light&)> callback) const
+{
+    size_t nextIndex = 0;
+    for (auto& light : m_directionalLights) {
+        if (light->castsShadows())
+            callback(nextIndex++, *light);
+    }
+    for (auto& light : m_spotLights) {
+        if (light->castsShadows())
+            callback(nextIndex++, *light);
+    }
+    return static_cast<int>(nextIndex);
+}
+
+int Scene::forEachShadowCastingLight(std::function<void(size_t, Light&)> callback)
+{
+    size_t nextIndex = 0;
+    for (auto& light : m_directionalLights) {
+        if (light->castsShadows())
+            callback(nextIndex++, *light);
+    }
+    for (auto& light : m_spotLights) {
+        if (light->castsShadows())
+            callback(nextIndex++, *light);
     }
     return static_cast<int>(nextIndex);
 }

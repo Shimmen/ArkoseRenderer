@@ -26,7 +26,15 @@ public:
         return m_direction;
     }
 
-    virtual mat4 viewProjection() const final;
+    mat4 lightViewMatrix() const final
+    {
+        return moos::lookAt(m_position, m_position + normalize(m_direction));
+    }
+
+    mat4 projectionMatrix() const final
+    {
+        return moos::perspectiveProjectionToVulkanClipSpace(outerConeAngle, 1.0f, 0.1f, 1000.0f);
+    }
 
     static constexpr int SpotLightIESLookupTextureSize = 256;
     Texture& iesProfileLookupTexture();

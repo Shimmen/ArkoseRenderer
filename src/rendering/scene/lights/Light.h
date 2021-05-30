@@ -32,10 +32,16 @@ public:
     virtual vec3 position() const { return vec3(); };
     virtual float intensityValue() const = 0;
     virtual vec3 forwardDirection() const = 0;
-    virtual mat4 viewProjection() const = 0;
+
+    virtual mat4 lightViewMatrix() const = 0;
+    virtual mat4 projectionMatrix() const = 0;
+    mat4 viewProjection() const { return projectionMatrix() * lightViewMatrix(); };
 
     Extent2D shadowMapSize() const { return m_shadowMapSize; }
     void setShadowMapSize(Extent2D size);
+
+    float constantBias = 0.0f;
+    float slopeBias = 0.0f;
 
     bool castsShadows() const { return m_castsShadows; }
 
