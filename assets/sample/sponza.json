@@ -26,7 +26,7 @@
         "illuminance": 90000.0,
         "direction": [ 0.2, -1.0, -0.4 ],
         "worldExtent": 30.0,
-        "shadowMapSize": [ 8192, 8192 ]
+        "shadowMapSize": [ 4096, 4096 ]
       },
       {
         "type": "ambient",

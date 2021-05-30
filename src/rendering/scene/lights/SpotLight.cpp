@@ -9,8 +9,9 @@ SpotLight::SpotLight(vec3 color, float luminousIntensity, const std::string& ies
     , m_position(position)
     , m_direction(direction)
 {
-    constantBias = 0.0001f;
-    slopeBias = 0.0f;
+    // NOTE: Feel free to adjust these on a per-light/case basis, but probably in the scene.json
+    customConstantBias = 1.0f;
+    customSlopeBias = 0.66f;
 }
 
 Texture& SpotLight::iesProfileLookupTexture()
@@ -20,4 +21,15 @@ Texture& SpotLight::iesProfileLookupTexture()
 
     // TODO: Cache these!! Both loading of IES profiles & the LUTs
     return m_iesProfile.createLookupTexture(*scene(), SpotLightIESLookupTextureSize);
+}
+
+float SpotLight::constantBias()
+{
+    int maxShadowMapDim = std::max(shadowMapSize().width(), shadowMapSize().height());
+    return 0.1f * customConstantBias / float(maxShadowMapDim);
+}
+
+float SpotLight::slopeBias()
+{
+    return customSlopeBias * constantBias();
 }

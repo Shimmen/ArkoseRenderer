@@ -17,5 +17,7 @@ public:
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:
+    VertexLayout m_vertexLayout { VertexComponent::Position3F,
+                                  VertexComponent::Normal3F };
     Scene& m_scene;
 };

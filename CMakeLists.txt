@@ -43,6 +43,7 @@ add_executable(ArkoseRenderer
     src/rendering/RenderGraph.cpp
     src/rendering/RenderGraphNode.cpp
     src/rendering/scene/lights/Light.cpp
+    src/rendering/scene/lights/DirectionalLight.cpp
     src/rendering/scene/lights/SpotLight.cpp
     src/rendering/scene/Material.cpp
     src/rendering/scene/Mesh.cpp

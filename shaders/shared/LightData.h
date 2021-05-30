@@ -47,4 +47,18 @@ struct SpotLightData {
     int iesProfileIndex;
 };
 
+struct PerLightShadowData {
+
+    // TODO: It would be nice if we could combine this into the LightData stuff so we don't have to have so many buffers around!
+
+    mat4 lightViewFromWorld;
+    mat4 lightProjectionFromWorld;
+
+    float constantBias;
+    float slopeBias;
+    float _pad0;
+    float _pad1;
+    
+};
+
 #endif // LIGHT_DATA_H

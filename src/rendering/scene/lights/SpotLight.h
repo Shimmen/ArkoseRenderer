@@ -33,8 +33,11 @@ public:
 
     mat4 projectionMatrix() const final
     {
-        return moos::perspectiveProjectionToVulkanClipSpace(outerConeAngle, 1.0f, 0.1f, 1000.0f);
+        return moos::perspectiveProjectionToVulkanClipSpace(outerConeAngle, 1.0f, m_zNear, m_zFar);
     }
+
+    virtual float constantBias() override;
+    virtual float slopeBias() override;
 
     static constexpr int SpotLightIESLookupTextureSize = 256;
     Texture& iesProfileLookupTexture();
@@ -52,5 +55,8 @@ private:
 
     vec3 m_position { 0, 0, 0 };
     vec3 m_direction { 1, 1, 1 };
+
+    float m_zNear { 0.1f };
+    float m_zFar { 1000.0f };
 
 };

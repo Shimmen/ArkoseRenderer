@@ -40,8 +40,11 @@ public:
     Extent2D shadowMapSize() const { return m_shadowMapSize; }
     void setShadowMapSize(Extent2D size);
 
-    float constantBias = 0.0f;
-    float slopeBias = 0.0f;
+    float customConstantBias = 0.0f;
+    float customSlopeBias = 0.0f;
+
+    virtual float constantBias() = 0;
+    virtual float slopeBias() = 0;
 
     bool castsShadows() const { return m_castsShadows; }
 

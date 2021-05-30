@@ -6,17 +6,7 @@
 class DirectionalLight final : public Light {
 public:
     DirectionalLight() = default;
-    DirectionalLight(vec3 color, float illuminance, vec3 direction)
-        : Light(Type::DirectionalLight, color)
-        , illuminance(illuminance)
-        , direction(normalize(direction))
-        , shadowMapWorldOrigin(0, 0, 0)
-        , shadowMapWorldExtent(50.0f)
-    {
-        constantBias = 0.0003f;
-        slopeBias = 0.0f;
-    }
-
+    DirectionalLight(vec3 color, float illuminance, vec3 direction);
     virtual ~DirectionalLight() { }
 
     float intensityValue() const final
@@ -36,8 +26,11 @@ public:
 
     mat4 projectionMatrix() const final
     {
-        return moos::orthographicProjectionToVulkanClipSpace(shadowMapWorldExtent, -shadowMapWorldExtent, shadowMapWorldExtent);
+        return moos::orthographicProjectionToVulkanClipSpace(shadowMapWorldExtent, -0.5f * shadowMapWorldExtent, 0.5f * shadowMapWorldExtent);
     }
+
+    virtual float constantBias() override;
+    virtual float slopeBias() override;
 
     // Light illuminance (lux, lx = lm / m^2)
     // TODO: Actually use physically based units!

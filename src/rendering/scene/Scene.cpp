@@ -179,8 +179,17 @@ void Scene::update(float elapsedTime, float deltaTime)
             ImGui::ColorEdit3("Sun color", value_ptr(sun().color));
             ImGui::SliderFloat("Sun illuminance (lx)", &sun().illuminance, 1.0f, 150000.0f);
             ImGui::SliderFloat("Ambient (lx)", &ambient(), 0.0f, 1000.0f);
-            ImGui::SliderFloat("Constant bias", &sun().constantBias, 0.0f, 0.001f, "%.6f");
-            ImGui::SliderFloat("Slope bias", &sun().slopeBias, 0.0f, 0.001f, "%.6f");
+            ImGui::SliderFloat("Constant bias", &sun().customConstantBias, 0.0f, 20.0f);
+            ImGui::SliderFloat("Slope bias", &sun().customSlopeBias, 0.0f, 10.0f);
+            ImGui::TreePop();
+        }
+
+        if (m_spotLights.size() > 0 && ImGui::TreeNode("Spot")) {
+            SpotLight& spot = *m_spotLights[0];
+            ImGui::ColorEdit3("Color", value_ptr(spot.color));
+            ImGui::SliderFloat("Luminous intensity (cd)", &spot.luminousIntensity, 1.0f, 1000.0f);
+            ImGui::SliderFloat("Constant bias", &spot.customConstantBias, 0.0f, 20.0f);
+            ImGui::SliderFloat("Slope bias", &spot.customSlopeBias, 0.0f, 10.0f);
             ImGui::TreePop();
         }
 

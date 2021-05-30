@@ -53,6 +53,11 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     BindingSet& objectBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &objectDataBuffer } });
     reg.publish("objectSet", objectBindingSet);
 
+    // Light shadow data stuff
+    Buffer& lightShadowDataBuffer = reg.createBuffer(SCENE_MAX_SHADOW_MAPS * sizeof(PerLightShadowData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
+    lightShadowDataBuffer.setName("SceneShadowData");
+    reg.publish("shadowData", lightShadowDataBuffer);
+
     // Light data stuff
     Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     lightMetaDataBuffer.setName("SceneLightMetaData");
@@ -193,6 +198,15 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
             LightMetaData metaData { .numDirectionalLights = (int)dirLightData.size(),
                                      .numSpotLights = (int)spotLightData.size() };
             lightMetaDataBuffer.updateData(&metaData, sizeof(LightMetaData));
+
+            std::vector<PerLightShadowData> shadowData;
+            m_scene.forEachShadowCastingLight([&](size_t, Light& light) {
+                shadowData.push_back({ .lightViewFromWorld = light.lightViewMatrix(),
+                                       .lightProjectionFromWorld = light.viewProjection(),
+                                       .constantBias = light.constantBias(),
+                                       .slopeBias = light.slopeBias() });
+            });
+            lightShadowDataBuffer.updateData(shadowData.data(), shadowData.size() * sizeof(PerLightShadowData), 0);
         }
 
         // Environment mapping uniforms
