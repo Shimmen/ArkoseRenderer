@@ -23,12 +23,12 @@ public:
 
     vec3 forwardDirection() const final
     {
-        return m_direction;
+        return normalize(m_direction);
     }
 
     mat4 lightViewMatrix() const final
     {
-        return moos::lookAt(m_position, m_position + normalize(m_direction));
+        return moos::lookAt(m_position, m_position + forwardDirection());
     }
 
     mat4 projectionMatrix() const final

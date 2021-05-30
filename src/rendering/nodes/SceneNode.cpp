@@ -63,7 +63,7 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     lightMetaDataBuffer.setName("SceneLightMetaData");
     Buffer& dirLightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
     dirLightDataBuffer.setName("SceneDirectionalLightData");
-    Buffer& spotLightDataBuffer = reg.createBuffer(sizeof(SpotLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
+    Buffer& spotLightDataBuffer = reg.createBuffer(10 * sizeof(SpotLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
     spotLightDataBuffer.setName("SceneSpotLightData");
     std::vector<Texture*> iesProfileLUTs;
     std::vector<Texture*> shadowMaps;

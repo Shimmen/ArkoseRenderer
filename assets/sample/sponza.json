@@ -29,6 +29,33 @@
         "shadowMapSize": [ 4096, 4096 ]
       },
       {
+        "name": "blue-spot",
+        "type": "spot",
+        "color": [ 0.25, 1.0, 0.25 ],
+        "luminousIntensity": 150.0,
+        "ies": "assets/sample/ies/three-lobe-umbrella.ies",
+        "position": [ 3.0, 1.0, 0.0 ],
+        "direction": [ 0.75, -1.0, 1.0 ]
+      },
+      {
+        "name": "red-spot",
+        "type": "spot",
+        "color": [ 1.0, 0.25, 0.25 ],
+        "luminousIntensity": 150.0,
+        "ies": "assets/sample/ies/three-lobe-umbrella.ies",
+        "position": [ 0.0, 1.0, 0.0 ],
+        "direction": [ 0.0, -1.0, 1.0 ]
+      },
+      {
+        "name": "green-spot",
+        "type": "spot",
+        "color": [ 0.25, 0.25, 1.0 ],
+        "luminousIntensity": 150.0,
+        "ies": "assets/sample/ies/three-lobe-umbrella.ies",
+        "position": [ -3.0, 1.0, 0.0 ],
+        "direction": [ -0.75, -1.0, 1.0 ]
+      },
+      {
         "type": "ambient",
         "illuminance": 0.0
       }

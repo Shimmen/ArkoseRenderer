@@ -7,11 +7,14 @@ SpotLight::SpotLight(vec3 color, float luminousIntensity, const std::string& ies
     , luminousIntensity(luminousIntensity)
     , m_iesProfile(iesProfilePath)
     , m_position(position)
-    , m_direction(direction)
+    , m_direction(normalize(direction))
 {
     // NOTE: Feel free to adjust these on a per-light/case basis, but probably in the scene.json
     customConstantBias = 1.0f;
     customSlopeBias = 0.66f;
+
+    // Good default for spot lights
+    setShadowMapSize({ 512, 512 });
 }
 
 Texture& SpotLight::iesProfileLookupTexture()

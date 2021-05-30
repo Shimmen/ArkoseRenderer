@@ -28,10 +28,6 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
 
     scene.loadFromFile("assets/sample/sponza.json");
 
-    // TODO: Move to the scene json
-    SpotLight& testSpot = scene.addLight(std::make_unique<SpotLight>(vec3(1.0f, 0.25f, 0.25f), 250.0f, "assets/sample/ies/three-lobe-umbrella.ies", vec3(0, 1, 0), vec3(1, -1, 1)));
-    testSpot.setShadowMapSize({ 1024, 1024});
-
     if (!scene.hasProbeGrid()) {
         scene.generateProbeGridFromBoundingBox();
     }

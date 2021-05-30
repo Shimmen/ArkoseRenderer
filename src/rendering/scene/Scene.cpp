@@ -44,6 +44,14 @@ void Scene::loadFromFile(const std::string& path)
         return Extent3D(values[0], values[1], values[2]);
     };
 
+    auto optionallyParseShadowMapSize = [](const json& jsonLight, Light& light) {
+        if (jsonLight.find("shadowMapSize") != jsonLight.end()) {
+            int mapSize[2];
+            jsonLight.at("shadowMapSize").get_to(mapSize);
+            light.setShadowMapSize({ mapSize[0], mapSize[1] });
+        }
+    };
+
     auto jsonEnv = jsonScene.at("environment");
     m_environmentMap = jsonEnv.at("texture");
     m_environmentMultiplier = jsonEnv.at("illuminance");
@@ -89,12 +97,24 @@ void Scene::loadFromFile(const std::string& path)
 
             auto light = std::make_unique<DirectionalLight>(color, illuminance, direction);
 
+            optionallyParseShadowMapSize(jsonLight, *light);
+
             light->shadowMapWorldOrigin = { 0, 0, 0 };
             light->shadowMapWorldExtent = jsonLight.at("worldExtent");
 
-            int mapSize[2];
-            jsonLight.at("shadowMapSize").get_to(mapSize);
-            light->setShadowMapSize({ mapSize[0], mapSize[1] });
+            addLight(std::move(light));
+
+        } else if (type == "spot") {
+
+            vec3 color = readVec3(jsonLight.at("color"));
+            float luminousIntensity = jsonLight.at("luminousIntensity");
+            vec3 position = readVec3(jsonLight.at("position"));
+            vec3 direction = readVec3(jsonLight.at("direction"));
+            std::string iesPath = jsonLight.at("ies");
+
+            auto light = std::make_unique<SpotLight>(color, luminousIntensity, iesPath, position, direction);
+
+            optionallyParseShadowMapSize(jsonLight, *light);
 
             addLight(std::move(light));
 
