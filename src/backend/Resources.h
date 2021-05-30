@@ -619,6 +619,9 @@ public:
     StencilMode stencilMode { StencilMode::Disabled };
     PolygonMode polygonMode { PolygonMode::Filled };
 
+    bool cullBackfaces { true };
+    TriangleWindingOrder frontFace { TriangleWindingOrder::CounterClockwise };
+
     [[nodiscard]] Viewport viewport() const;
     [[nodiscard]] BlendState blendState() const;
     [[nodiscard]] RasterState rasterState() const;

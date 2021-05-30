@@ -71,6 +71,7 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
 
     Shader renderShader = Shader::createBasicRasterize("diffuse-gi/forward.vert", "diffuse-gi/forward.frag");
     RenderStateBuilder renderStateBuilder { renderTarget, renderShader, m_vertexLayout };
+    renderStateBuilder.cullBackfaces = false;
     renderStateBuilder.addBindingSet(materialBindingSet);
     renderStateBuilder.addBindingSet(cameraBindingSet);
     renderStateBuilder.addBindingSet(objectBindingSet);
