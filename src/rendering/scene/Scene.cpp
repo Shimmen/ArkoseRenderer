@@ -52,6 +52,11 @@ void Scene::loadFromFile(const std::string& path)
         }
     };
 
+    auto optionallyParseLightName = [](const json& jsonLight, Light& light) {
+        if (jsonLight.find("name") != jsonLight.end())
+            light.setName(jsonLight.at("name"));
+    };
+
     auto jsonEnv = jsonScene.at("environment");
     m_environmentMap = jsonEnv.at("texture");
     m_environmentMultiplier = jsonEnv.at("illuminance");
@@ -98,6 +103,7 @@ void Scene::loadFromFile(const std::string& path)
             auto light = std::make_unique<DirectionalLight>(color, illuminance, direction);
 
             optionallyParseShadowMapSize(jsonLight, *light);
+            optionallyParseLightName(jsonLight, *light);
 
             light->shadowMapWorldOrigin = { 0, 0, 0 };
             light->shadowMapWorldExtent = jsonLight.at("worldExtent");
@@ -115,6 +121,7 @@ void Scene::loadFromFile(const std::string& path)
             auto light = std::make_unique<SpotLight>(color, luminousIntensity, iesPath, position, direction);
 
             optionallyParseShadowMapSize(jsonLight, *light);
+            optionallyParseLightName(jsonLight, *light);
 
             addLight(std::move(light));
 
@@ -195,30 +202,51 @@ void Scene::update(float elapsedTime, float deltaTime)
             ImGui::Columns(1);
         }
 
-        if (ImGui::TreeNode("Lighting")) {
-            ImGui::ColorEdit3("Sun color", value_ptr(sun().color));
-            ImGui::SliderFloat("Sun illuminance (lx)", &sun().illuminance, 1.0f, 150000.0f);
-            ImGui::SliderFloat("Ambient (lx)", &ambient(), 0.0f, 1000.0f);
-            ImGui::SliderFloat("Constant bias", &sun().customConstantBias, 0.0f, 20.0f);
-            ImGui::SliderFloat("Slope bias", &sun().customSlopeBias, 0.0f, 10.0f);
-            ImGui::TreePop();
+        ImGui::Separator();
+
+        {
+            static Light* selectedLight = nullptr;
+            if (ImGui::BeginCombo("Inspected light", selectedLight ? selectedLight->name().c_str() : "Select a light")) {
+                forEachLight([&](size_t lightIndex, Light& light) {
+                    bool selected = &light == selectedLight;
+                    if (ImGui::Selectable(light.name().c_str(), &selected))
+                        selectedLight = &light;
+                    if (selected)
+                        ImGui::SetItemDefaultFocus();
+                });
+                ImGui::EndCombo();
+            }
+
+            if (selectedLight != nullptr) {
+
+                ImGui::ColorEdit3("Color", value_ptr(selectedLight->color));
+
+                switch (selectedLight->type()) {
+                case Light::Type::DirectionalLight:
+                    ImGui::SliderFloat("Illuminance (lx)", &static_cast<DirectionalLight*>(selectedLight)->illuminance, 1.0f, 150000.0f);
+                    break;
+                case Light::Type::SpotLight:
+                    ImGui::SliderFloat("Luminous intensity (cd)", &static_cast<SpotLight*>(selectedLight)->luminousIntensity, 1.0f, 1000.0f);
+                    break;
+                case Light::Type::PointLight:
+                    break;
+                default:
+                    ASSERT_NOT_REACHED();
+                }
+
+                ImGui::SliderFloat("Constant bias", &selectedLight->customConstantBias, 0.0f, 20.0f);
+                ImGui::SliderFloat("Slope bias", &selectedLight->customSlopeBias, 0.0f, 10.0f);
+            }
         }
 
-        if (m_spotLights.size() > 0 && ImGui::TreeNode("Spot")) {
-            SpotLight& spot = *m_spotLights[0];
-            ImGui::ColorEdit3("Color", value_ptr(spot.color));
-            ImGui::SliderFloat("Luminous intensity (cd)", &spot.luminousIntensity, 1.0f, 1000.0f);
-            ImGui::SliderFloat("Constant bias", &spot.customConstantBias, 0.0f, 20.0f);
-            ImGui::SliderFloat("Slope bias", &spot.customSlopeBias, 0.0f, 10.0f);
-            ImGui::TreePop();
-        }
+        ImGui::Separator();
 
-        if (ImGui::TreeNode("Exposure")) {
+        if (ImGui::TreeNode("Exposure control")) {
             exposureGUI(camera());
             ImGui::TreePop();
         }
 
-        if (ImGui::Button("Current camera to clipboard")) {
+        if (ImGui::Button("Copy current camera to clipboard")) {
             const auto& camera = m_currentMainCamera;
             std::vector<float> cameraPosition = { camera.position().x,
                                                   camera.position().y,

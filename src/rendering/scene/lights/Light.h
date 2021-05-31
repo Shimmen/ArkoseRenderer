@@ -3,6 +3,7 @@
 #include "backend/Resources.h"
 #include "utility/Badge.h"
 #include <moos/matrix.h>
+#include <fmt/format.h>
 
 class Scene;
 
@@ -20,6 +21,8 @@ public:
         : color(color)
         , m_type(type)
     {
+        static int nextLightId = 0;
+        m_name = fmt::format("light-{}", nextLightId++);
     }
 
     virtual ~Light() { }
@@ -57,6 +60,9 @@ public:
     const Scene* scene() const { return m_scene; }
     Scene* scene() { return m_scene; }
 
+    void setName(std::string name) { m_name = std::move(name); }
+    const std::string& name() const { return m_name; }
+
 private:
     Scene* m_scene { nullptr };
 
@@ -67,4 +73,6 @@ private:
     Texture* m_shadowMap { nullptr };
     RenderTarget* m_shadowMapRenderTarget { nullptr };
     std::unordered_map<std::string, RenderState*> m_cachedRenderStates {};
+
+    std::string m_name {};
 };

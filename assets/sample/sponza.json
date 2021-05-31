@@ -29,7 +29,7 @@
         "shadowMapSize": [ 4096, 4096 ]
       },
       {
-        "name": "blue-spot",
+        "name": "green-spot",
         "type": "spot",
         "color": [ 0.25, 1.0, 0.25 ],
         "luminousIntensity": 150.0,
@@ -47,7 +47,7 @@
         "direction": [ 0.0, -1.0, 1.0 ]
       },
       {
-        "name": "green-spot",
+        "name": "blue-spot",
         "type": "spot",
         "color": [ 0.25, 0.25, 1.0 ],
         "luminousIntensity": 150.0,
