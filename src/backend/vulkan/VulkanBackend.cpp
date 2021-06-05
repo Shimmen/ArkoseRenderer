@@ -62,8 +62,17 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, const AppSpecification& appSpec
         m_instance = createInstance(requestedLayers, &dbgMessengerCreateInfo);
 
         m_debugUtils = std::make_unique<VulkanDebugUtils>(*this, m_instance);
-        if (debugUtils().vkCreateDebugUtilsMessengerEXT(m_instance, &dbgMessengerCreateInfo, nullptr, &m_messenger) != VK_SUCCESS) {
+        if (debugUtils().vkCreateDebugUtilsMessengerEXT(m_instance, &dbgMessengerCreateInfo, nullptr, &m_debugMessenger) != VK_SUCCESS) {
             LogErrorAndExit("VulkanBackend: could not create the debug messenger, exiting.\n");
+        }
+
+        VkDebugReportCallbackCreateInfoEXT dbgReportCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT };
+        dbgReportCreateInfo.pfnCallback = VulkanDebugUtils::debugReportCallback;
+        dbgReportCreateInfo.flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
+        dbgReportCreateInfo.pUserData = nullptr;
+
+        if (debugUtils().vkCreateDebugReportCallbackEXT(m_instance, &dbgReportCreateInfo, nullptr, &m_debugReportCallback) != VK_SUCCESS) {
+            LogErrorAndExit("VulkanBackend: could not create the debug reporter, exiting.\n");
         }
 
     } else {
@@ -172,7 +181,8 @@ VulkanBackend::~VulkanBackend()
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 
     if (vulkanDebugMode) {
-        debugUtils().vkDestroyDebugUtilsMessengerEXT(m_instance, m_messenger, nullptr);
+        debugUtils().vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
+        debugUtils().vkDestroyDebugReportCallbackEXT(m_instance, m_debugReportCallback, nullptr);
     }
 
     vkDestroyInstance(m_instance, nullptr);
@@ -439,6 +449,10 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
             ASSERT(hasSupportForInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME));
             instanceExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
+            if (hasSupportForInstanceExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME)) {
+                instanceExtensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+            }
+
             if (hasSupportForInstanceExtension(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
                 instanceExtensions.emplace_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
                 includeValidationFeatures = true;
@@ -512,6 +526,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 
     ASSERT(hasSupportForExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
     deviceExtensions.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+    if (vulkanDebugMode && hasSupportForExtension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME))
+        deviceExtensions.emplace_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
 
     VkPhysicalDeviceFeatures2 features2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
     VkPhysicalDeviceFeatures& features = features2.features;

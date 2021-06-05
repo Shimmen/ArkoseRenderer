@@ -162,7 +162,9 @@ private:
 
     VkInstance createInstance(const std::vector<const char*>& requestedLayers, VkDebugUtilsMessengerCreateInfoEXT*) const;
     VkDevice createDevice(const std::vector<const char*>& requestedLayers, VkPhysicalDevice);
-    VkDebugUtilsMessengerEXT m_messenger {};
+
+    VkDebugUtilsMessengerEXT m_debugMessenger {};
+    VkDebugReportCallbackEXT m_debugReportCallback {};
 
     VkInstance m_instance {};
     VkPhysicalDevice m_physicalDevice {};
