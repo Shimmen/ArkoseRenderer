@@ -142,6 +142,10 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
         usageFlags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
         usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         break;
+    case Buffer::Usage::Transfer:
+        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        usageFlags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        break;
     default:
         ASSERT_NOT_REACHED();
     }

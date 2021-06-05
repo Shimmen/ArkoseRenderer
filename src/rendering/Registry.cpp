@@ -11,6 +11,13 @@ Registry::Registry(Backend& backend, Registry* previousRegistry, const RenderTar
     , m_previousRegistry(previousRegistry)
     , m_windowRenderTarget(windowRenderTarget)
 {
+    if (m_previousRegistry) {
+        m_uploadBuffer = std::move(previousRegistry->m_uploadBuffer);
+        m_uploadBuffer->reset();
+    } else {
+        static constexpr size_t registryUploadBufferSize = 4 * 1024 * 1024;
+        m_uploadBuffer = std::make_unique<UploadBuffer>(backend, registryUploadBufferSize);
+    }
 }
 
 void Registry::setCurrentNode(const std::string& node)
@@ -24,6 +31,13 @@ const RenderTarget& Registry::windowRenderTarget()
     if (!m_windowRenderTarget)
         LogErrorAndExit("Can't get the window render target from a non-frame registry!\n");
     return *m_windowRenderTarget;
+}
+
+UploadBuffer& Registry::getUploadBuffer()
+{
+    ASSERT(m_uploadBuffer);
+    m_uploadBuffer->reset();
+    return *m_uploadBuffer;
 }
 
 RenderTarget& Registry::createRenderTarget(std::vector<RenderTarget::Attachment> attachments)
@@ -469,11 +483,6 @@ TopLevelAS* Registry::getTopLevelAccelerationStructure(const std::string& node, 
 const std::unordered_set<NodeDependency>& Registry::nodeDependencies() const
 {
     return m_nodeDependencies;
-}
-
-Badge<Registry> Registry::exchangeBadges(Badge<Backend>) const
-{
-    return {};
 }
 
 std::string Registry::makeQualifiedName(const std::string& node, const std::string& name)

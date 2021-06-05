@@ -19,6 +19,8 @@ public:
     [[nodiscard]] const RenderTarget& windowRenderTarget();
     [[nodiscard]] RenderTarget& createRenderTarget(std::vector<RenderTarget::Attachment>);
 
+    UploadBuffer& getUploadBuffer();
+
     [[nodiscard]] Texture& createPixelTexture(vec4 pixelValue, bool srgb);
     [[nodiscard]] Texture& loadTexture2D(const std::string& imagePath, bool srgb, bool generateMipmaps);
     [[nodiscard]] Texture& createTexture2D(Extent2D, Texture::Format, Texture::Filters = Texture::Filters::linear(), Texture::Mipmap = Texture::Mipmap::None, Texture::WrapModes = Texture::WrapModes::repeatAll());
@@ -64,9 +66,6 @@ public:
 
     [[nodiscard]] const std::unordered_set<NodeDependency>& nodeDependencies() const;
 
-    // REMOVE: not needed now/soon, I think..
-    [[nodiscard]] Badge<Registry> exchangeBadges(Badge<Backend>) const;
-
 private:
     Backend& m_backend;
     Backend& backend() { return m_backend; }
@@ -78,6 +77,8 @@ private:
     std::vector<std::string> m_allNodes;
 
     const RenderTarget* m_windowRenderTarget;
+
+    std::unique_ptr<UploadBuffer> m_uploadBuffer;
 
     std::unordered_map<std::string, Buffer*> m_nameBufferMap;
     std::unordered_map<std::string, Texture*> m_nameTextureMap;

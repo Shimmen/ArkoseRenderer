@@ -10,6 +10,8 @@ public:
     void copyTexture(Texture& src, Texture& dst, uint32_t srcLayer = 0, uint32_t dstLayer = 0) override;
     void generateMipmaps(Texture&) override;
 
+    void executeBufferCopyOperations(std::vector<BufferCopyOperation>) override;
+
     void beginRendering(const RenderState&) override;
     void beginRendering(const RenderState&, ClearColor, float clearDepth, uint32_t clearStencil) override;
     void endRendering() override;
