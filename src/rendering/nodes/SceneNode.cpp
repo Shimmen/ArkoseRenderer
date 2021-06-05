@@ -26,7 +26,7 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 
-    Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+    Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
     cameraBuffer.setName("SceneCameraData");
     BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStageAnyRasterize, &cameraBuffer } });
     reg.publish("camera", cameraBuffer);
@@ -42,7 +42,7 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     // Object data stuff
     // TODO: Resize the buffer if needed when more meshes are added
     size_t objectDataBufferSize = m_scene.meshCount() * sizeof(ShaderDrawable);
-    Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
+    Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     objectDataBuffer.setName("SceneObjectData");
     reg.publish("objectData", objectDataBuffer);
 
@@ -50,16 +50,16 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     reg.publish("objectSet", objectBindingSet);
 
     // Light shadow data stuff
-    Buffer& lightShadowDataBuffer = reg.createBuffer(SCENE_MAX_SHADOW_MAPS * sizeof(PerLightShadowData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
+    Buffer& lightShadowDataBuffer = reg.createBuffer(SCENE_MAX_SHADOW_MAPS * sizeof(PerLightShadowData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     lightShadowDataBuffer.setName("SceneShadowData");
     reg.publish("shadowData", lightShadowDataBuffer);
 
     // Light data stuff
-    Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+    Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
     lightMetaDataBuffer.setName("SceneLightMetaData");
-    Buffer& dirLightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
+    Buffer& dirLightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     dirLightDataBuffer.setName("SceneDirectionalLightData");
-    Buffer& spotLightDataBuffer = reg.createBuffer(10 * sizeof(SpotLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
+    Buffer& spotLightDataBuffer = reg.createBuffer(10 * sizeof(SpotLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     spotLightDataBuffer.setName("SceneSpotLightData");
     std::vector<Texture*> iesProfileLUTs;
     std::vector<Texture*> shadowMaps;
@@ -78,6 +78,8 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     reg.publish("lightSet", lightBindingSet);
 
     return [&](const AppState& appState, CommandList& cmdList) {
+
+        UploadBuffer& uploadBuffer = reg.getUploadBuffer();
 
         // Update camera data
         {
@@ -102,7 +104,7 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
                 .shutterSpeed = camera.shutterSpeed,
                 .exposureCompensation = camera.exposureCompensation,
             };
-            cameraBuffer.updateData(&cameraState, sizeof(CameraState));
+            uploadBuffer.upload(cameraState, cameraBuffer);
         }
 
         // Update object data
@@ -113,7 +115,7 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
                                                       .worldFromTangent = mat4(mesh.transform().worldNormalMatrix()),
                                                       .materialIndex = mesh.materialIndex().value_or(0) });
             });
-            objectDataBuffer.updateData(objectData.data(), objectData.size() * sizeof(ShaderDrawable));
+            uploadBuffer.upload(objectData, objectDataBuffer);
         }
 
         // Update exposure data
@@ -187,12 +189,12 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
                 }
             });
 
-            dirLightDataBuffer.updateData(dirLightData.data(), dirLightData.size() * sizeof(DirectionalLightData));
-            spotLightDataBuffer.updateData(spotLightData.data(), spotLightData.size() * sizeof(SpotLightData));
+            uploadBuffer.upload(dirLightData, dirLightDataBuffer);
+            uploadBuffer.upload(spotLightData, spotLightDataBuffer);
 
             LightMetaData metaData { .numDirectionalLights = (int)dirLightData.size(),
                                      .numSpotLights = (int)spotLightData.size() };
-            lightMetaDataBuffer.updateData(&metaData, sizeof(LightMetaData));
+            uploadBuffer.upload(metaData, lightMetaDataBuffer);
 
             std::vector<PerLightShadowData> shadowData;
             m_scene.forEachShadowCastingLight([&](size_t, Light& light) {
@@ -201,7 +203,9 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
                                        .constantBias = light.constantBias(),
                                        .slopeBias = light.slopeBias() });
             });
-            lightShadowDataBuffer.updateData(shadowData.data(), shadowData.size() * sizeof(PerLightShadowData), 0);
+            uploadBuffer.upload(shadowData, lightShadowDataBuffer);
         }
+
+        cmdList.executeBufferCopyOperations(uploadBuffer);
     };
 }
