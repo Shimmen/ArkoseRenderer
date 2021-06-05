@@ -35,6 +35,9 @@ VkBool32 VulkanDebugUtils::debugMessageCallback(VkDebugUtilsMessageSeverityFlagB
 VkBool32 VulkanDebugUtils::debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location,
                                                int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
 {
+    if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
+        return VK_FALSE;
+
     LogError("Vulkan debug report; [%s] %s\n", pLayerPrefix, pMessage);
     return VK_FALSE;
 }
