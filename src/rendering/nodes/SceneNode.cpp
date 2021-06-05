@@ -28,15 +28,11 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
 
     Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     cameraBuffer.setName("SceneCameraData");
-    BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageVertex | ShaderStageFragment), &cameraBuffer } });
+    BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStageAnyRasterize, &cameraBuffer } });
     reg.publish("camera", cameraBuffer);
     reg.publish("cameraSet", cameraBindingSet);
 
     // Environment mapping stuff
-    // TODO: Remove this! Barely used anyway, and not the most convenient format anyway..
-    Buffer& envDataBuffer = reg.createBuffer(sizeof(float), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
-    envDataBuffer.setName("SceneEnvironmentData");
-    reg.publish("environmentData", envDataBuffer);
     Texture& envTexture = m_scene.environmentMap().empty()
         ? reg.createPixelTexture(vec4(1.0f), true)
         : reg.loadTexture2D(m_scene.environmentMap(), true, false);
@@ -179,10 +175,9 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
                                                                .lightProjectionFromView = light.viewProjection() * worldFromView,
                                                                .worldSpacePosition = vec4(light.position(), 0.0f),
                                                                .viewSpacePosition = viewFromWorld * vec4(light.position(), 1.0f),
-                                                               .worldSpaceRight = vec3(/* todo: pass matrices */),
                                                                .outerConeHalfAngle = spotLight.outerConeAngle / 2.0f,
-                                                               .worldSpaceUp = vec3(/* todo: pass matrices */),
-                                                               .iesProfileIndex = 0 /* todo: set correctly */ });
+                                                               .iesProfileIndex = 0 /* todo: set correctly */,
+                                                               ._pad0 = vec2() });
                     break;
                 }
                 case Light::Type::PointLight:
@@ -208,9 +203,5 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
             });
             lightShadowDataBuffer.updateData(shadowData.data(), shadowData.size() * sizeof(PerLightShadowData), 0);
         }
-
-        // Environment mapping uniforms
-        float envMultiplier = m_scene.environmentMultiplier();
-        envDataBuffer.updateData(&envMultiplier, sizeof(envMultiplier));
     };
 }
