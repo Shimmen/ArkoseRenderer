@@ -56,6 +56,11 @@ public:
     int forEachMesh(std::function<void(size_t, const Mesh&)> callback) const;
     int forEachMesh(std::function<void(size_t, Mesh&)> callback);
 
+    // Ray tracing
+
+    bool doesMaintainRayTracingScene() const { return m_maintainRayTracingScene; }
+    void setShouldMaintainRayTracingScene(bool);
+
     // Lighting - direct & indirect
 
     DirectionalLight& addLight(std::unique_ptr<DirectionalLight>);
@@ -103,6 +108,8 @@ public:
 
     BindingSet& globalMaterialBindingSet() const;
 
+    TopLevelAS& globalTopLevelAccelerationStructure() const;
+
 private:
     std::string m_filePath {};
 
@@ -118,6 +125,8 @@ private:
     std::vector<std::unique_ptr<SpotLight>> m_spotLights;
 
     std::optional<ProbeGrid> m_probeGrid;
+
+    bool m_maintainRayTracingScene { false };
 
     std::string m_environmentMap {};
     float m_environmentMultiplier { 1.0f };
@@ -144,6 +153,9 @@ private:
 
     std::vector<Texture*> m_usedTextures {};
     std::vector<ShaderMaterial> m_usedMaterials {};
+
+    std::vector<RTGeometryInstance> m_rayTracingGeometryInstances {};
+    TopLevelAS* m_sceneTopLevelAccelerationStructure {};
 
     void rebuildGpuSceneData();
     bool m_sceneDataNeedsRebuild { true };

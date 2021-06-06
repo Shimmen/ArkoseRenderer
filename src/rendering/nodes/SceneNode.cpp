@@ -207,5 +207,10 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
         }
 
         cmdList.executeBufferCopyOperations(uploadBuffer);
+
+        if (m_scene.doesMaintainRayTracingScene()) {
+            TopLevelAS& sceneTlas = m_scene.globalTopLevelAccelerationStructure();
+            cmdList.rebuildTopLevelAcceratationStructure(sceneTlas);
+        }
     };
 }

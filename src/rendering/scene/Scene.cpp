@@ -337,6 +337,14 @@ Model& Scene::addModel(std::unique_ptr<Model> model)
     return *m_models.back().get();
 }
 
+void Scene::setShouldMaintainRayTracingScene(bool value)
+{
+    // For now, only let this be changed before anything has been loaded. Also, assume 
+    ASSERT(m_filePath.empty());
+
+    m_maintainRayTracingScene = value;
+}
+
 DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)
 {
     ASSERT(light);
@@ -602,6 +610,7 @@ void Scene::rebuildGpuSceneData()
 {
     m_usedTextures.clear();
     m_usedMaterials.clear();
+    m_rayTracingGeometryInstances.clear();
 
     std::unordered_map<Texture*, int> textureIndices;
     auto pushTexture = [&](Texture* texture) -> int {
@@ -642,6 +651,25 @@ void Scene::rebuildGpuSceneData()
         ASSERT(materialIndex >= 0);
         mesh.setMaterialIndex({}, materialIndex);
 
+        if (doesMaintainRayTracingScene()) {
+
+            RTTriangleGeometry geometry { .vertexBuffer = m_registry.createBuffer(mesh.vertexData({ VertexComponent::Position3F }), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal),
+                                          .vertexFormat = RTVertexFormat::XYZ32F,
+                                          .vertexStride = sizeof(vec3),
+                                          .indexBuffer = m_registry.createBuffer(mesh.indexData(), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal),
+                                          .indexType = mesh.indexType(),
+                                          .transform = mesh.transform().localMatrix() };
+
+            // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
+            RTGeometryInstance instance = { .blas = m_registry.createBottomLevelAccelerationStructure({ geometry }),
+                                            .transform = mesh.model()->transform(),
+                                            .shaderBindingTableOffset = 0, //HitGroupIndex::Triangle,
+                                            .customInstanceId = static_cast<uint32_t>(meshIdx),
+                                            .hitMask = 0x01 }; //HitMask::TriangleMeshWithoutProxy };
+
+            m_rayTracingGeometryInstances.push_back(instance);
+        }
+
     });
 
     if (m_usedTextures.size() > SCENE_MAX_TEXTURES) {
@@ -657,12 +685,24 @@ void Scene::rebuildGpuSceneData()
 
     m_materialBindingSet = &m_registry.createBindingSet({ { 0, ShaderStageFragment, m_materialDataBuffer },
                                                           { 1, ShaderStageFragment, m_usedTextures, SCENE_MAX_TEXTURES } });
+
+    if (doesMaintainRayTracingScene() && m_rayTracingGeometryInstances.size() > 0) {
+        // TODO: If we call rebuildGpuSceneData twice or more we will leak the TLAS!
+        m_sceneTopLevelAccelerationStructure = &m_registry.createTopLevelAccelerationStructure(m_rayTracingGeometryInstances);
+    }
 }
 
 BindingSet& Scene::globalMaterialBindingSet() const
 {
     ASSERT(m_materialBindingSet);
     return *m_materialBindingSet;
+}
+
+TopLevelAS& Scene::globalTopLevelAccelerationStructure() const
+{
+    ASSERT(shouldMaintainRayTracingScene());
+    ASSERT(m_sceneTopLevelAccelerationStructure);
+    return *m_sceneTopLevelAccelerationStructure;
 }
 
 void Scene::exposureGUI(FpsCamera& camera) const
