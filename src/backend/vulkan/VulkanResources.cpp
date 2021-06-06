@@ -1331,7 +1331,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
 
                     ASSERT(buffer);
                     ASSERT(buffer->usage() == Buffer::Usage::StorageBuffer);
-                    auto& vulkanBuffer = static_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
+                    auto& vulkanBuffer = static_cast<const VulkanBuffer&>(*buffer);
 
                     VkDescriptorBufferInfo descBufferInfo {};
                     descBufferInfo.offset = 0;
