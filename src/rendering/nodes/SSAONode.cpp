@@ -6,6 +6,9 @@
 #include <imgui.h>
 #include <moos/random.h>
 
+// Shader data
+#include "SSAOData.h"
+
 std::string SSAONode::name()
 {
     return "ssao";

@@ -420,7 +420,7 @@ void VulkanCommandList::executeBufferCopyOperations(std::vector<BufferCopyOperat
         vkCmdPipelineBarrier(m_commandBuffer,
                              VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
                              0, nullptr,
-                             bufferMemoryBarriers.size(), bufferMemoryBarriers.data(),
+                             (uint32_t)bufferMemoryBarriers.size(), bufferMemoryBarriers.data(),
                              0, nullptr);
     }
 
