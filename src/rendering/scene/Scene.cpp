@@ -653,19 +653,36 @@ void Scene::rebuildGpuSceneData()
 
         if (doesMaintainRayTracingScene()) {
 
-            RTTriangleGeometry geometry { .vertexBuffer = m_registry.createBuffer(mesh.vertexData({ VertexComponent::Position3F }), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal),
-                                          .vertexFormat = RTVertexFormat::XYZ32F,
-                                          .vertexStride = sizeof(vec3),
-                                          .indexBuffer = m_registry.createBuffer(mesh.indexData(), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal),
-                                          .indexType = mesh.indexType(),
+            VertexLayout vertexLayout = { VertexComponent::Position3F };
+            size_t vertexStride = vertexLayout.packedVertexSize();
+            RTVertexFormat vertexFormat = RTVertexFormat::XYZ32F;
+
+            const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(vertexLayout, *this);
+            ASSERT(drawCallDesc.type == DrawCallDescription::Type ::Indexed);
+
+            IndexType indexType = globalIndexBufferType();
+            size_t indexStride = sizeofIndexType(indexType);
+
+            uint32_t indexOfFirstVertex = drawCallDesc.vertexOffset; // Yeah this is confusing naming for sure.. Offset should probably always be byte offset
+            size_t vertexOffset = indexOfFirstVertex * vertexStride;
+
+            RTTriangleGeometry geometry { .vertexBuffer = *drawCallDesc.vertexBuffer,
+                                          .vertexCount = drawCallDesc.vertexCount,
+                                          .vertexOffset = vertexOffset,
+                                          .vertexStride = vertexStride,
+                                          .vertexFormat = vertexFormat,
+                                          .indexBuffer = *drawCallDesc.indexBuffer,
+                                          .indexCount = drawCallDesc.indexCount,
+                                          .indexOffset = indexStride * drawCallDesc.firstIndex,
+                                          .indexType = indexType,
                                           .transform = mesh.transform().localMatrix() };
 
             // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
             RTGeometryInstance instance = { .blas = m_registry.createBottomLevelAccelerationStructure({ geometry }),
                                             .transform = mesh.model()->transform(),
-                                            .shaderBindingTableOffset = 0, //HitGroupIndex::Triangle,
+                                            .shaderBindingTableOffset = 0, // todo: generalize!
                                             .customInstanceId = static_cast<uint32_t>(meshIdx),
-                                            .hitMask = 0x01 }; //HitMask::TriangleMeshWithoutProxy };
+                                            .hitMask = 0x01 }; // todo: generalize!
 
             m_rayTracingGeometryInstances.push_back(instance);
         }

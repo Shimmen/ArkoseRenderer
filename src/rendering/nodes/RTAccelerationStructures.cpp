@@ -42,9 +42,13 @@ RenderGraphNode::ExecuteCallback RTAccelerationStructures::constructFrame(Regist
 RTGeometry RTAccelerationStructures::createGeometryForTriangleMesh(Mesh& mesh, Registry& reg) const
 {
     RTTriangleGeometry geometry { .vertexBuffer = reg.createBuffer(mesh.vertexData({ VertexComponent::Position3F }), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal),
-                                  .vertexFormat = RTVertexFormat::XYZ32F,
+                                  .vertexCount = (uint32_t)mesh.vertexCountForLayout({ VertexComponent::Position3F }),
+                                  .vertexOffset = 0,
                                   .vertexStride = sizeof(vec3),
+                                  .vertexFormat = RTVertexFormat::XYZ32F,
                                   .indexBuffer = reg.createBuffer(mesh.indexData(), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal),
+                                  .indexCount = (uint32_t)mesh.indexCount(),
+                                  .indexOffset = 0,
                                   .indexType = mesh.indexType(),
                                   .transform = mesh.transform().localMatrix() };
     return geometry;

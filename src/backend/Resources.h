@@ -418,6 +418,18 @@ enum class IndexType {
     UInt32,
 };
 
+inline size_t sizeofIndexType(IndexType indexType)
+{
+    switch (indexType) {
+    case IndexType::UInt16:
+        return sizeof(uint16_t);
+    case IndexType::UInt32:
+        return sizeof(uint32_t);
+    default:
+        ASSERT_NOT_REACHED();
+    }
+}
+
 struct BufferCopyOperation {
     size_t size;
     
@@ -685,10 +697,14 @@ enum class RTVertexFormat {
 
 struct RTTriangleGeometry {
     const Buffer& vertexBuffer;
-    RTVertexFormat vertexFormat;
+    uint32_t vertexCount;
+    size_t vertexOffset;
     size_t vertexStride;
+    RTVertexFormat vertexFormat;
 
     const Buffer& indexBuffer;
+    uint32_t indexCount;
+    size_t indexOffset;
     IndexType indexType;
 
     mat4 transform;

@@ -150,6 +150,11 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
         ASSERT_NOT_REACHED();
     }
 
+    // Always make vertex & index buffers also have storage buffer support, so the buffers can be reused for ray tracing shaders
+    if (usage() == Buffer::Usage::Vertex || usage() == Buffer::Usage::Index) {
+        usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    }
+
     if (vulkanDebugMode) {
         // for nsight debugging & similar stuff)
         usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
@@ -2061,9 +2066,9 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
             VkGeometryTrianglesNV triangles { VK_STRUCTURE_TYPE_GEOMETRY_TRIANGLES_NV };
 
             triangles.vertexData = static_cast<const VulkanBuffer&>(triGeo.vertexBuffer).buffer;
-            triangles.vertexOffset = 0;
+            triangles.vertexOffset = (VkDeviceSize)triGeo.vertexOffset;
             triangles.vertexStride = (VkDeviceSize)triGeo.vertexStride;
-            triangles.vertexCount = (uint32_t)(triGeo.vertexBuffer.size() / triangles.vertexStride);
+            triangles.vertexCount = triGeo.vertexCount;
             switch (triGeo.vertexFormat) {
             case RTVertexFormat::XYZ32F:
                 triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
@@ -2071,15 +2076,14 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
             }
 
             triangles.indexData = static_cast<const VulkanBuffer&>(triGeo.indexBuffer).buffer;
-            triangles.indexOffset = 0;
+            triangles.indexOffset = (VkDeviceSize)triGeo.indexOffset;
+            triangles.indexCount = triGeo.indexCount;
             switch (triGeo.indexType) {
             case IndexType::UInt16:
                 triangles.indexType = VK_INDEX_TYPE_UINT16;
-                triangles.indexCount = (uint32_t)(triGeo.indexBuffer.size() / sizeof(uint16_t));
                 break;
             case IndexType::UInt32:
                 triangles.indexType = VK_INDEX_TYPE_UINT32;
-                triangles.indexCount = (uint32_t)(triGeo.indexBuffer.size() / sizeof(uint32_t));
                 break;
             }
 
