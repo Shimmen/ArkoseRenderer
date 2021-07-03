@@ -268,6 +268,11 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         allRequiredSupported = false;
     }
 
+    if (!vk12features.scalarBlockLayout) {
+        LogError("VulkanBackend: no support for scalar layout in shader storage blocks\n");
+        allRequiredSupported = false;
+    }
+
     if (!vk12features.drawIndirectCount) {
         LogError("VulkanBackend: no support for required common drawing related device features\n");
         allRequiredSupported = false;
@@ -555,6 +560,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 
     // Common drawing related features
     vk12features.drawIndirectCount = VK_TRUE;
+
+    // Scalar block layout in shaders
+    vk12features.scalarBlockLayout = VK_TRUE;
 
     // Imageless framebuffers
     vk12features.imagelessFramebuffer = VK_TRUE;
