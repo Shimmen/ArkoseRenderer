@@ -9,6 +9,7 @@
 #include "rendering/nodes/GBufferNode.h"
 #include "rendering/nodes/PrepassNode.h"
 #include "rendering/nodes/PickingNode.h"
+#include "rendering/nodes/RTFirstHitNode.h"
 #include "rendering/nodes/SceneNode.h"
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SkyViewNode.h"
@@ -22,10 +23,16 @@
 
 #include "utility/IESProfile.h"
 
+std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
+{
+    return { Backend::Capability::RtxRayTracing };
+}
+
 void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
 {
     SCOPED_PROFILE_ZONE();
 
+    scene.setShouldMaintainRayTracingScene(true);
     scene.loadFromFile("assets/sample/sponza.json");
 
     if (!scene.hasProbeGrid()) {
@@ -51,6 +58,8 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
     graph.addNode<AutoExposureNode>(scene);
     graph.addNode<DiffuseGIProbeDebug>(scene);
 
+    graph.addNode<RTFirstHitNode>(scene);
+
     graph.addNode("final", [](Registry& reg) {
         // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.
         std::vector<vec2> fullScreenTriangle { { -1, -3 }, { -1, 1 }, { 3, 1 } };
@@ -65,7 +74,8 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
         const RenderTarget& ldrTarget = reg.windowRenderTarget();
 #endif
 
-        BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("forward", "color").value(), ShaderBindingType::TextureSampler } });
+        BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("rt-firsthit", "image").value(), ShaderBindingType::TextureSampler } });
+        //BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("forward", "color").value(), ShaderBindingType::TextureSampler } });
         Shader tonemapShader = Shader::createBasicRasterize("final/showcase/tonemap.vert", "final/showcase/tonemap.frag");
         RenderStateBuilder tonemapStateBuilder { ldrTarget, tonemapShader, vertexLayout };
         tonemapStateBuilder.addBindingSet(tonemapBindingSet);

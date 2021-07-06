@@ -108,6 +108,10 @@ public:
 
     BindingSet& globalMaterialBindingSet() const;
 
+    // FIXME: We would like to use globalMaterialBindingSet for ray tracing too, but right now we can't!
+    const std::vector<Texture*>& globalMaterialTextureArray() const { return m_usedTextures; }
+    Buffer* globalMaterialDataBuffer() const { return m_materialDataBuffer; }
+
     TopLevelAS& globalTopLevelAccelerationStructure() const;
 
 private:

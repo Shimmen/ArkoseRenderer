@@ -4,12 +4,9 @@
 #include <shared/CameraState.h>
 #include <shared/RTData.h>
 
-layout(binding = 0, set = 0) uniform accelerationStructureNV topLevelAS;
-layout(binding = 1, set = 0, rgba16f) uniform image2D u_image;
-layout(binding = 2, set = 0) uniform CameraStateBlock
-{
-	CameraState camera;
-};
+layout(set = 0, binding = 0) uniform accelerationStructureNV topLevelAS;
+layout(set = 0, binding = 1) uniform CameraStateBlock { CameraState camera; };
+layout(set = 0, binding = 2, rgba16f) uniform image2D u_image;
 
 layout(location = 0) rayPayloadNV vec3 hitValue;
 

@@ -10,6 +10,12 @@ struct RTMesh {
     //int pad0, pad1;
 };
 
+struct RTTriangleMesh {
+    int firstVertex;
+    int firstIndex;
+    int materialIndex;
+};
+
 struct RTAABB {
 	vec3 min;
 	vec3 max;

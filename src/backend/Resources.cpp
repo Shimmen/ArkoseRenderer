@@ -331,6 +331,8 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Buffer* bu
     case Buffer::Usage::UniformBuffer:
         type = ShaderBindingType::UniformBuffer;
         break;
+    case Buffer::Usage::Vertex: // includes storage buffer support
+    case Buffer::Usage::Index: // includes storage buffer support
     case Buffer::Usage::StorageBuffer:
     case Buffer::Usage::IndirectBuffer:
         type = ShaderBindingType::StorageBuffer;

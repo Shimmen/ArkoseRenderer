@@ -5,7 +5,7 @@
 
 layout(location = 0) rayPayloadInNV vec3 hitValue;
 
-layout(binding = 0, set = 2) uniform sampler2D environmentMap;
+layout(set = 3, binding = 0) uniform sampler2D environmentMap;
 
 void main()
 {
