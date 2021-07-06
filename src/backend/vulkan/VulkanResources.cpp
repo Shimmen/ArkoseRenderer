@@ -2234,22 +2234,8 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
     ASSERT(vulkanBackend.hasRtxSupport());
 
-    std::vector<VkDescriptorSetLayout> descriptorSetLayouts {};
-    for (auto& set : bindingSets) {
-        auto& vulkanBindingSet = static_cast<const VulkanBindingSet&>(*set);
-        descriptorSetLayouts.push_back(vulkanBindingSet.descriptorSetLayout);
-    }
-
-    // TODO: Really, it makes sense to use the descriptor set layouts we get from the helper function as well.
-    //  However, the problem is that we have dynamic-length storage buffers in our ray tracing shaders, and if
-    //  I'm not mistaken we need to specify the length of them in the layout. The passed in stuff should include
-    //  the actual array so we know the length in that case. Without the input data though we don't know that.
-    //  We will have to think about what the best way to handle that would be..
     Shader shader { shaderBindingTable().allReferencedShaderFiles(), ShaderType::RayTrace };
-    const auto& [tempDescriptorSetLayouts, pushConstantRange] = vulkanBackend.createDescriptorSetLayoutForShader(shader);
-    for (auto& dsl : tempDescriptorSetLayouts) { // FIXME: This is obviously very stupid..
-        vkDestroyDescriptorSetLayout(vulkanBackend.device(), dsl, nullptr);
-    }
+    const auto& [descriptorSetLayouts, pushConstantRange] = vulkanBackend.createDescriptorSetLayoutForShader(shader);
 
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
@@ -2266,6 +2252,10 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
 
     if (vkCreatePipelineLayout(vulkanBackend.device(), &pipelineLayoutCreateInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to create pipeline layout for ray tracing\n");
+    }
+
+    for (const VkDescriptorSetLayout& layout : descriptorSetLayouts) {
+        vkDestroyDescriptorSetLayout(vulkanBackend.device(), layout, nullptr);
     }
 
     std::vector<VkShaderModule> shaderModulesToRemove {};
