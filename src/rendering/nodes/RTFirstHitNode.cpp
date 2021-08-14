@@ -47,6 +47,7 @@ RenderGraphNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg) c
     reg.publish("image", storageImage);
 
     BindingSet& environmentBindingSet = reg.createBindingSet({ { 0, ShaderStageRTMiss, reg.getTexture("scene", "environmentMap").value(), ShaderBindingType::TextureSampler } });
+    // TODO: It would be really nice if we could reuse m_scene.globalMaterialBindingSet() here. 
     BindingSet& materialBindingSet = reg.createBindingSet({ { 0, ShaderStageRTClosestHit, m_scene.globalMaterialDataBuffer() },
                                                             { 1, ShaderStageRTClosestHit, m_scene.globalMaterialTextureArray(), SCENE_MAX_TEXTURES } });
 
