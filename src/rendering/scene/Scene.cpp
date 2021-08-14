@@ -208,7 +208,7 @@ void Scene::update(float elapsedTime, float deltaTime)
         ImGui::Separator();
 
         {
-            ImGui::SliderFloat("Ambient (lx)", &m_ambientIlluminance, 0.0f, 10000.0f, ".0f");
+            ImGui::SliderFloat("Ambient (lx)", &m_ambientIlluminance, 0.0f, 10'000.0f, "%.0f");
         }
 
         {
