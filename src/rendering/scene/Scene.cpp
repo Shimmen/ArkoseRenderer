@@ -15,6 +15,9 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
+// Shared shader headers
+#include "RTData.h"
+
 Scene::Scene(Registry& registry)
     : m_registry(registry)
 {
@@ -203,6 +206,10 @@ void Scene::update(float elapsedTime, float deltaTime)
         }
 
         ImGui::Separator();
+
+        {
+            ImGui::SliderFloat("Ambient (lx)", &m_ambientIlluminance, 0.0f, 10000.0f, ".0f");
+        }
 
         {
             static Light* selectedLight = nullptr;
@@ -680,13 +687,13 @@ void Scene::rebuildGpuSceneData()
             uint8_t hitMask = 0x00;
             switch (material.alphaMode) {
             case Material::AlphaMode::Opaque:
-                hitMask = 0x01;
+                hitMask = RT_HIT_MASK_OPAQUE;
                 break;
             case Material::AlphaMode::Mask:
-                hitMask = 0x02;
+                hitMask = RT_HIT_MASK_MASKED;
                 break;
             case Material::AlphaMode::Blend:
-                hitMask = 0x04;
+                hitMask = RT_HIT_MASK_BLEND;
                 break;
             default:
                 ASSERT_NOT_REACHED();
