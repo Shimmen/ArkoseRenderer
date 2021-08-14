@@ -55,7 +55,6 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
     graph.addNode<SkyViewNode>(scene);
     graph.addNode<BloomNode>(scene);
 
-    graph.addNode<AutoExposureNode>(scene);
     graph.addNode<DiffuseGIProbeDebug>(scene);
 
     graph.addNode<RTFirstHitNode>(scene);
