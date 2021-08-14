@@ -702,6 +702,7 @@ void Scene::rebuildGpuSceneData()
 
     m_materialBindingSet = &m_registry.createBindingSet({ { 0, ShaderStageFragment, m_materialDataBuffer },
                                                           { 1, ShaderStageFragment, m_usedTextures, SCENE_MAX_TEXTURES } });
+    m_materialBindingSet->setName("SceneMaterialSet");
 
     if (doesMaintainRayTracingScene() && m_rayTracingGeometryInstances.size() > 0) {
         // TODO: If we call rebuildGpuSceneData twice or more we will leak the TLAS!
