@@ -677,12 +677,28 @@ void Scene::rebuildGpuSceneData()
                                           .indexType = indexType,
                                           .transform = mesh.transform().localMatrix() };
 
+            uint8_t hitMask = 0x00;
+            switch (material.alphaMode) {
+            case Material::AlphaMode::Opaque:
+                hitMask = 0x01;
+                break;
+            case Material::AlphaMode::Mask:
+                hitMask = 0x02;
+                break;
+            case Material::AlphaMode::Blend:
+                hitMask = 0x04;
+                break;
+            default:
+                ASSERT_NOT_REACHED();
+            }
+            ASSERT(hitMask != 0);
+
             // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
             RTGeometryInstance instance = { .blas = m_registry.createBottomLevelAccelerationStructure({ geometry }),
                                             .transform = mesh.model()->transform(),
                                             .shaderBindingTableOffset = 0, // todo: generalize!
                                             .customInstanceId = static_cast<uint32_t>(meshIdx),
-                                            .hitMask = 0x01 }; // todo: generalize!
+                                            .hitMask = hitMask };
 
             m_rayTracingGeometryInstances.push_back(instance);
         }
@@ -718,7 +734,7 @@ BindingSet& Scene::globalMaterialBindingSet() const
 
 TopLevelAS& Scene::globalTopLevelAccelerationStructure() const
 {
-    ASSERT(shouldMaintainRayTracingScene());
+    ASSERT(doesMaintainRayTracingScene());
     ASSERT(m_sceneTopLevelAccelerationStructure);
     return *m_sceneTopLevelAccelerationStructure;
 }

@@ -2330,7 +2330,26 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
             shaderModulesToRemove.push_back(shaderModule);
         }
 
-        ASSERT(!hitGroup.hasAnyHitShader()); // for now!
+        if (hitGroup.hasAnyHitShader()) {
+            VkShaderModuleCreateInfo moduleCreateInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
+            const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(hitGroup.anyHit().path());
+            moduleCreateInfo.codeSize = sizeof(uint32_t) * spirv.size();
+            moduleCreateInfo.pCode = spirv.data();
+
+            VkShaderModule shaderModule {};
+            if (vkCreateShaderModule(vulkanBackend.device(), &moduleCreateInfo, nullptr, &shaderModule) != VK_SUCCESS) {
+                LogErrorAndExit("Error trying to create shader module for anyhit shader for ray tracing state\n");
+            }
+
+            VkPipelineShaderStageCreateInfo stageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
+            stageCreateInfo.stage = VK_SHADER_STAGE_ANY_HIT_BIT_NV;
+            stageCreateInfo.module = shaderModule;
+            stageCreateInfo.pName = "main";
+
+            shaderGroup.anyHitShader = (uint32_t)shaderStages.size();
+            shaderStages.push_back(stageCreateInfo);
+            shaderModulesToRemove.push_back(shaderModule);
+        }
 
         if (hitGroup.hasIntersectionShader()) {
             VkShaderModuleCreateInfo moduleCreateInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };

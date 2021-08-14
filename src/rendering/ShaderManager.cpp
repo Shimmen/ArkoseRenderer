@@ -41,6 +41,8 @@ shaderc_shader_kind glslShaderKindForPath(const std::string& path)
         return shaderc_miss_shader;
     } else if (ext6 == ".rchit") {
         return shaderc_closesthit_shader;
+    } else if (ext6 == ".rahit") {
+        return shaderc_anyhit_shader;
     }
 
     LogWarning("ShaderManager: unrecognized shader file type '%s'\n", path.c_str());
