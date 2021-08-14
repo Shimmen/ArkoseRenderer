@@ -17,6 +17,9 @@ struct ShaderMaterial {
     int normalMap;
     int metallicRoughness;
     int emissive;
+
+    float maskCutoff;
+    float _pad0, _pad1, _pad2;
 };
 
 struct IndirectShaderDrawable {

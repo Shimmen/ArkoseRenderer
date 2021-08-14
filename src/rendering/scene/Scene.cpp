@@ -653,6 +653,7 @@ void Scene::rebuildGpuSceneData()
             .normalMap = pushTexture(material.normalMapTexture()),
             .metallicRoughness = pushTexture(material.metallicRoughnessTexture()),
             .emissive = pushTexture(material.emissiveTexture()),
+            .maskCutoff = material.maskCutoff,
         });
 
         ASSERT(materialIndex >= 0);
