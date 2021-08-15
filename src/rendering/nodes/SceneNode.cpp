@@ -70,11 +70,11 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
         if (light.castsShadows())
             shadowMaps.push_back(&light.shadowMap());
     });
-    BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &lightMetaDataBuffer },
-                                                         { 1, ShaderStageFragment, &dirLightDataBuffer },
-                                                         { 2, ShaderStageFragment, &spotLightDataBuffer },
-                                                         { 3, ShaderStageFragment, shadowMaps, SCENE_MAX_SHADOW_MAPS },
-                                                         { 4, ShaderStageFragment, iesProfileLUTs, SCENE_MAX_IES_LUT } });
+    BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStageAny, &lightMetaDataBuffer },
+                                                         { 1, ShaderStageAny, &dirLightDataBuffer },
+                                                         { 2, ShaderStageAny, &spotLightDataBuffer },
+                                                         { 3, ShaderStageAny, shadowMaps, SCENE_MAX_SHADOW_MAPS },
+                                                         { 4, ShaderStageAny, iesProfileLUTs, SCENE_MAX_IES_LUT } });
     reg.publish("lightSet", lightBindingSet);
 
     return [&](const AppState& appState, CommandList& cmdList) {

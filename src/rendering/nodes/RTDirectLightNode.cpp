@@ -45,10 +45,11 @@ RenderGraphNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& reg
     reg.publish("target", storageImage);
 
     BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
+    BindingSet& lightBindingSet = *reg.getBindingSet("scene", "lightSet");
 
     TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },
-                                                         { 1, ShaderStageRTRayGen, reg.getBuffer("scene", "camera") },
+                                                         { 1, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), reg.getBuffer("scene", "camera") },
                                                          { 2, ShaderStageRTRayGen, reg.getTexture("scene", "environmentMap").value(), ShaderBindingType::TextureSampler },
                                                          { 3, ShaderStageRTRayGen, &storageImage, ShaderBindingType::StorageImage } });
 
@@ -62,6 +63,7 @@ RenderGraphNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& reg
     stateDataBindings.at(0, frameBindingSet);
     stateDataBindings.at(1, *m_objectDataBindingSet);
     stateDataBindings.at(2, materialBindingSet);
+    stateDataBindings.at(3, lightBindingSet);
 
     constexpr uint32_t maxRecursionDepth = 1;
     RayTracingState& rtState = reg.createRayTracingState(sbt, stateDataBindings, maxRecursionDepth);
@@ -73,7 +75,7 @@ RenderGraphNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& reg
         static bool useSceneAmbient = false;
         ImGui::Checkbox("Use scene ambient light", &useSceneAmbient);
         if (!useSceneAmbient) {
-            static float injectedAmbientLx = 1000.0f;
+            static float injectedAmbientLx = 200.0f;
             ImGui::SliderFloat("Injected ambient (lx)", &injectedAmbientLx, 0.0f, 10'000.0f, "%.0f");
             ambientLx = injectedAmbientLx;
         }
