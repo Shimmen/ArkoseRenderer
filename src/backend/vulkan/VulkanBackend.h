@@ -55,7 +55,7 @@ public:
                                                    const Viewport&, const BlendState&, const RasterState&, const DepthState&, const StencilState&) override;
     std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(std::vector<RTGeometry>) override;
     std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(std::vector<RTGeometryInstance>) override;
-    std::unique_ptr<RayTracingState> createRayTracingState(ShaderBindingTable& sbt, std::vector<BindingSet*>, uint32_t maxRecursionDepth) override;
+    std::unique_ptr<RayTracingState> createRayTracingState(ShaderBindingTable& sbt, const StateBindings&, uint32_t maxRecursionDepth) override;
     std::unique_ptr<ComputeState> createComputeState(const Shader&, std::vector<BindingSet*>) override;
 
     ///////////////////////////////////////////////////////////////////////////

@@ -132,7 +132,7 @@ public:
 
 struct VulkanRayTracingState final : public RayTracingState {
 public:
-    VulkanRayTracingState(Backend&, ShaderBindingTable, std::vector<BindingSet*>, uint32_t maxRecursionDepth);
+    VulkanRayTracingState(Backend&, ShaderBindingTable, const StateBindings&, uint32_t maxRecursionDepth);
     virtual ~VulkanRayTracingState() override;
 
     virtual void setName(const std::string& name) override;
@@ -142,9 +142,6 @@ public:
 
     VkBuffer sbtBuffer;
     VmaAllocation sbtBufferAllocation;
-
-    std::vector<Texture*> sampledTextures;
-    std::vector<Texture*> storageImages;
 };
 
 struct VulkanComputeState final : public ComputeState {

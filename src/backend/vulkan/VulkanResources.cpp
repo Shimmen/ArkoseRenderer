@@ -2239,8 +2239,8 @@ void VulkanBottomLevelAS::setName(const std::string& name)
     }
 }
 
-VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTable sbt, std::vector<BindingSet*> bindingSets, uint32_t maxRecursionDepth)
-    : RayTracingState(backend, sbt, bindingSets, maxRecursionDepth)
+VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTable sbt, const StateBindings& stateBindings, uint32_t maxRecursionDepth)
+    : RayTracingState(backend, sbt, stateBindings, maxRecursionDepth)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
@@ -2253,8 +2253,8 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts {};
-    for (BindingSet* bindingSet : bindingSets) {
-        auto* vulkanBindingSet = static_cast<VulkanBindingSet*>(bindingSet);
+    for (const BindingSet* bindingSet : stateBindings.orderedBindingSets()) {
+        auto* vulkanBindingSet = static_cast<const VulkanBindingSet*>(bindingSet);
         descriptorSetLayouts.push_back(vulkanBindingSet->createDescriptorSetLayout());
     }
 
@@ -2487,24 +2487,6 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
 
         if (!vulkanBackend.setBufferMemoryUsingMapping(sbtBufferAllocation, (uint8_t*)sbtData.data(), sbtSize)) {
             LogErrorAndExit("Error trying to copy data to the shader binding table.\n");
-        }
-    }
-
-    for (auto& set : bindingSets) {
-        for (auto& bindingInfo : set->shaderBindings()) {
-            for (auto texture : bindingInfo.textures) {
-                switch (bindingInfo.type) {
-                case ShaderBindingType::TextureSampler:
-                case ShaderBindingType::TextureSamplerArray:
-                    sampledTextures.push_back(texture);
-                    break;
-                case ShaderBindingType::StorageImage:
-                    storageImages.push_back(texture);
-                    break;
-                default:
-                    ASSERT_NOT_REACHED();
-                }
-            }
         }
     }
 }

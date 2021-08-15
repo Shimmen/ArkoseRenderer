@@ -341,9 +341,9 @@ std::unique_ptr<TopLevelAS> VulkanBackend::createTopLevelAccelerationStructure(s
     return std::make_unique<VulkanTopLevelAS>(*this, instances);
 }
 
-std::unique_ptr<RayTracingState> VulkanBackend::createRayTracingState(ShaderBindingTable& sbt, std::vector<BindingSet*> bidningSets, uint32_t maxRecursionDepth)
+std::unique_ptr<RayTracingState> VulkanBackend::createRayTracingState(ShaderBindingTable& sbt, const StateBindings& stateBindings, uint32_t maxRecursionDepth)
 {
-    return std::make_unique<VulkanRayTracingState>(*this, sbt, bidningSets, maxRecursionDepth);
+    return std::make_unique<VulkanRayTracingState>(*this, sbt, stateBindings, maxRecursionDepth);
 }
 
 std::unique_ptr<ComputeState> VulkanBackend::createComputeState(const Shader& shader, std::vector<BindingSet*> bidningSets)

@@ -44,9 +44,7 @@ RenderGraphNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& reg
     Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("target", storageImage);
 
-    // TODO: It would be really nice if we could reuse m_scene.globalMaterialBindingSet() here.
-    BindingSet& materialBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), m_scene.globalMaterialDataBuffer() },
-                                                            { 1, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), m_scene.globalMaterialTextureArray(), SCENE_MAX_TEXTURES } });
+    BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
 
     TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },
@@ -60,15 +58,16 @@ RenderGraphNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& reg
     HitGroup mainHitGroup { ShaderFile("rt-direct-light/default.rchit"), ShaderFile("rt-direct-light/masked.rahit") };
     ShaderBindingTable sbt { raygen, { mainHitGroup }, { defaultMissShader, shadowMissShader } };
 
+    StateBindings stateDataBindings;
+    stateDataBindings.at(0, frameBindingSet);
+    stateDataBindings.at(1, *m_objectDataBindingSet);
+    stateDataBindings.at(2, materialBindingSet);
+
     constexpr uint32_t maxRecursionDepth = 1;
-    RayTracingState& rtState = reg.createRayTracingState(sbt, { &frameBindingSet, m_objectDataBindingSet, &materialBindingSet }, maxRecursionDepth);
+    RayTracingState& rtState = reg.createRayTracingState(sbt, stateDataBindings, maxRecursionDepth);
 
     return [&](const AppState& appState, CommandList& cmdList) {
         cmdList.setRayTracingState(rtState);
-
-        cmdList.bindSet(frameBindingSet, 0);
-        cmdList.bindSet(*m_objectDataBindingSet, 1);
-        cmdList.bindSet(materialBindingSet, 2);
 
         float ambientLx = m_scene.ambient();
         static bool useSceneAmbient = false;

@@ -432,6 +432,16 @@ BindingSet::BindingSet(Backend& backend, std::vector<ShaderBinding> shaderBindin
     }
 }
 
+void StateBindings::at(uint32_t index, BindingSet& bindingSet)
+{
+    if (index >= (int64_t)m_orderedBindingSets.size()) {
+        m_orderedBindingSets.resize(size_t(index) + 1);
+    }
+
+    ASSERT(m_orderedBindingSets[index] == nullptr);
+    m_orderedBindingSets[index] = &bindingSet;
+}
+
 const std::vector<ShaderBinding>& BindingSet::shaderBindings() const
 {
     return m_shaderBindings;
@@ -570,10 +580,10 @@ uint32_t TopLevelAS::instanceCount() const
     return static_cast<uint32_t>(m_instances.size());
 }
 
-RayTracingState::RayTracingState(Backend& backend, ShaderBindingTable sbt, std::vector<BindingSet*> bindingSets, uint32_t maxRecursionDepth)
+RayTracingState::RayTracingState(Backend& backend, ShaderBindingTable sbt, const StateBindings& stateBindings, uint32_t maxRecursionDepth)
     : Resource(backend)
     , m_shaderBindingTable(sbt)
-    , m_bindingSets(bindingSets)
+    , m_stateBindings(stateBindings)
     , m_maxRecursionDepth(maxRecursionDepth)
 {
 }
@@ -586,11 +596,6 @@ uint32_t RayTracingState::maxRecursionDepth() const
 const ShaderBindingTable& RayTracingState::shaderBindingTable() const
 {
     return m_shaderBindingTable;
-}
-
-const std::vector<BindingSet*>& RayTracingState::bindingSets() const
-{
-    return m_bindingSets;
 }
 
 ComputeState::ComputeState(Backend& backend, Shader shader, std::vector<BindingSet*> bindingSets)

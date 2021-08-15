@@ -408,9 +408,9 @@ TopLevelAS& Registry::createTopLevelAccelerationStructure(std::vector<RTGeometry
     return *m_topLevelAS.back();
 }
 
-RayTracingState& Registry::createRayTracingState(ShaderBindingTable& sbt, std::vector<BindingSet*> bindingSets, uint32_t maxRecursionDepth)
+RayTracingState& Registry::createRayTracingState(ShaderBindingTable& sbt, const StateBindings& stateBindings, uint32_t maxRecursionDepth)
 {
-    auto rtState = backend().createRayTracingState(sbt, bindingSets, maxRecursionDepth);
+    auto rtState = backend().createRayTracingState(sbt, stateBindings, maxRecursionDepth);
     rtState->setOwningRegistry({}, this);
 
     m_rayTracingStates.push_back(std::move(rtState));

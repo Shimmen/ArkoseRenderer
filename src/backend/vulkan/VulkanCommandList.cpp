@@ -609,77 +609,90 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)
     activeComputeState = nullptr;
 
     // Explicitly transition the layouts of the referenced textures to an optimal layout (if it isn't already)
-    {
-        for (Texture* texture : rtState.sampledTextures) {
+    std::vector<VkImageMemoryBarrier> imageMemoryBarriers {};
+    rtState.stateBindings().forEachBinding([&](const ShaderBinding& bindingInfo) {
+        for (Texture* texture : bindingInfo.textures) {
+
             auto& vulkanTexture = static_cast<VulkanTexture&>(*texture);
 
-            constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            if (vulkanTexture.currentLayout != targetLayout) {
+            switch (bindingInfo.type) {
+            case ShaderBindingType::TextureSampler:
+            case ShaderBindingType::TextureSamplerArray: {
 
-                VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-                imageBarrier.oldLayout = vulkanTexture.currentLayout;
-                imageBarrier.newLayout = targetLayout;
-                imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                if (vulkanTexture.currentLayout != targetLayout) {
 
-                imageBarrier.image = vulkanTexture.image;
-                imageBarrier.subresourceRange.aspectMask = vulkanTexture.aspectMask();
-                imageBarrier.subresourceRange.baseMipLevel = 0;
-                imageBarrier.subresourceRange.levelCount = vulkanTexture.mipLevels();
-                imageBarrier.subresourceRange.baseArrayLayer = 0;
-                imageBarrier.subresourceRange.layerCount = vulkanTexture.layerCount();
+                    VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+                    imageBarrier.oldLayout = vulkanTexture.currentLayout;
+                    imageBarrier.newLayout = targetLayout;
+                    imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-                VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-                imageBarrier.srcAccessMask = 0;
+                    imageBarrier.image = vulkanTexture.image;
+                    imageBarrier.subresourceRange.aspectMask = vulkanTexture.aspectMask();
+                    imageBarrier.subresourceRange.baseMipLevel = 0;
+                    imageBarrier.subresourceRange.levelCount = vulkanTexture.mipLevels();
+                    imageBarrier.subresourceRange.baseArrayLayer = 0;
+                    imageBarrier.subresourceRange.layerCount = vulkanTexture.layerCount();
 
-                VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV;
-                imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT; // FIXME: Maybe memory read & write?
+                    imageBarrier.srcAccessMask = 0;
+                    imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-                vkCmdPipelineBarrier(m_commandBuffer,
-                                     sourceStage, destinationStage, 0,
-                                     0, nullptr,
-                                     0, nullptr,
-                                     1, &imageBarrier);
-                vulkanTexture.currentLayout = targetLayout;
+                    imageMemoryBarriers.push_back(imageBarrier);
+
+                    vulkanTexture.currentLayout = targetLayout;
+                }
+
+            } break;
+
+            case ShaderBindingType::StorageImage: {
+
+                constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_GENERAL;
+                if (vulkanTexture.currentLayout != targetLayout) {
+
+                    VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+                    imageBarrier.oldLayout = vulkanTexture.currentLayout;
+                    imageBarrier.newLayout = targetLayout;
+                    imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+                    imageBarrier.image = vulkanTexture.image;
+                    imageBarrier.subresourceRange.aspectMask = vulkanTexture.aspectMask();
+                    imageBarrier.subresourceRange.baseMipLevel = 0;
+                    imageBarrier.subresourceRange.levelCount = vulkanTexture.mipLevels();
+                    imageBarrier.subresourceRange.baseArrayLayer = 0;
+                    imageBarrier.subresourceRange.layerCount = vulkanTexture.layerCount();
+
+                    imageBarrier.srcAccessMask = 0;
+                    imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT;
+
+                    imageMemoryBarriers.push_back(imageBarrier);
+
+                    vulkanTexture.currentLayout = targetLayout;
+                }
+
+            } break;
+
+            default:
+                ASSERT_NOT_REACHED();
             }
         }
+    });
 
-        for (Texture* texture : rtState.storageImages) {
-            auto& vulkanTexture = static_cast<VulkanTexture&>(*texture);
-
-            constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_GENERAL;
-            if (vulkanTexture.currentLayout != targetLayout) {
-
-                VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-                imageBarrier.oldLayout = vulkanTexture.currentLayout;
-                imageBarrier.newLayout = targetLayout;
-                imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-                imageBarrier.image = vulkanTexture.image;
-                imageBarrier.subresourceRange.aspectMask = vulkanTexture.aspectMask();
-                imageBarrier.subresourceRange.baseMipLevel = 0;
-                imageBarrier.subresourceRange.levelCount = vulkanTexture.mipLevels();
-                imageBarrier.subresourceRange.baseArrayLayer = 0;
-                imageBarrier.subresourceRange.layerCount = vulkanTexture.layerCount();
-
-                VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-                imageBarrier.srcAccessMask = 0;
-
-                VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV;
-                imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT; // FIXME: Maybe memory read & write?
-
-                vkCmdPipelineBarrier(m_commandBuffer,
-                                     sourceStage, destinationStage, 0,
-                                     0, nullptr,
-                                     0, nullptr,
-                                     1, &imageBarrier);
-                vulkanTexture.currentLayout = targetLayout;
-            }
-        }
-    }
+    VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV;
+    vkCmdPipelineBarrier(m_commandBuffer,
+                         sourceStage, destinationStage, 0,
+                         0, nullptr,
+                         0, nullptr,
+                         imageMemoryBarriers.size(), imageMemoryBarriers.data());
 
     vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV, rtState.pipeline);
+
+    // TODO: Maybe this step should be optional? In some case you might want to control this manually..?
+    rtState.stateBindings().forEachBindingSet([this](uint32_t setIndex, BindingSet& bindingSet) {
+        bindSet(bindingSet, setIndex);
+    });
 }
 
 void VulkanCommandList::setComputeState(const ComputeState& genComputeState)

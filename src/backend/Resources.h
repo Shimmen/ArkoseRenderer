@@ -612,6 +612,38 @@ private:
     std::vector<ShaderBinding> m_shaderBindings {};
 };
 
+struct StateBindings {
+    StateBindings() = default;
+    void at(uint32_t index, BindingSet&);
+
+    const std::vector<BindingSet*>& orderedBindingSets() const { return m_orderedBindingSets; }
+
+    template<typename Callback>
+    void forEachBindingSet(Callback callback) const
+    {
+        for (uint32_t index = 0; index < m_orderedBindingSets.size(); ++index) {
+            BindingSet* bindingSet = m_orderedBindingSets[index];
+            if (bindingSet != nullptr) {
+                callback(index, *bindingSet);
+            }
+        }
+    }
+
+    template<typename Callback>
+    void forEachBinding(Callback callback) const
+    {
+        for (const BindingSet* set : m_orderedBindingSets) {
+            if (!set)
+                continue;
+            for (const ShaderBinding& bindingInfo : set->shaderBindings())
+                callback(bindingInfo);
+        }
+    }
+
+private:
+    std::vector<BindingSet*> m_orderedBindingSets;
+};
+
 struct RenderState : public Resource {
 public:
     RenderState() = default;
@@ -804,15 +836,15 @@ private:
 class RayTracingState : public Resource {
 public:
     RayTracingState() = default;
-    RayTracingState(Backend&, ShaderBindingTable, std::vector<BindingSet*>, uint32_t maxRecursionDepth);
+    RayTracingState(Backend&, ShaderBindingTable, const StateBindings&, uint32_t maxRecursionDepth);
 
     [[nodiscard]] uint32_t maxRecursionDepth() const;
     [[nodiscard]] const ShaderBindingTable& shaderBindingTable() const;
-    [[nodiscard]] const std::vector<BindingSet*>& bindingSets() const;
+    const StateBindings& stateBindings() const { return m_stateBindings; }
 
 private:
     ShaderBindingTable m_shaderBindingTable;
-    std::vector<BindingSet*> m_bindingSets;
+    StateBindings m_stateBindings;
     uint32_t m_maxRecursionDepth;
 };
 
