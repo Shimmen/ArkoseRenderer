@@ -47,9 +47,7 @@ RenderGraphNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg) c
     reg.publish("image", storageImage);
 
     BindingSet& environmentBindingSet = reg.createBindingSet({ { 0, ShaderStageRTMiss, reg.getTexture("scene", "environmentMap").value(), ShaderBindingType::TextureSampler } });
-    // TODO: It would be really nice if we could reuse m_scene.globalMaterialBindingSet() here. 
-    BindingSet& materialBindingSet = reg.createBindingSet({ { 0, ShaderStageRTClosestHit, m_scene.globalMaterialDataBuffer() },
-                                                            { 1, ShaderStageRTClosestHit, m_scene.globalMaterialTextureArray(), SCENE_MAX_TEXTURES } });
+    BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
 
     TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStageRTRayGen, &sceneTLAS },
@@ -61,8 +59,14 @@ RenderGraphNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg) c
     ShaderFile missShader { ShaderFile("rt-firsthit/miss.rmiss") };
     ShaderBindingTable sbt { raygen, { mainHitGroup }, { missShader } };
 
+    StateBindings stateBindings;
+    stateBindings.at(0, frameBindingSet);
+    stateBindings.at(1, *m_objectDataBindingSet);
+    stateBindings.at(2, materialBindingSet);
+    stateBindings.at(3, environmentBindingSet);
+
     uint32_t maxRecursionDepth = 1;
-    RayTracingState& rtState = reg.createRayTracingState(sbt, { &frameBindingSet, m_objectDataBindingSet, &materialBindingSet, &environmentBindingSet }, maxRecursionDepth);
+    RayTracingState& rtState = reg.createRayTracingState(sbt, stateBindings, maxRecursionDepth);
 
     return [&](const AppState& appState, CommandList& cmdList) {
         cmdList.setRayTracingState(rtState);
