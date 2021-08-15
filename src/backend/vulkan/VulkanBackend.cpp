@@ -1509,6 +1509,72 @@ bool VulkanBackend::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t w
     return true;
 }
 
+std::optional<VkPushConstantRange> VulkanBackend::getPushConstantRangeForShader(const Shader& shader) const
+{
+    SCOPED_PROFILE_ZONE_BACKEND();
+
+    std::optional<VkPushConstantRange> pushConstantRange;
+
+    for (auto& file : shader.files()) {
+
+        VkShaderStageFlags stageFlag;
+        switch (file.type()) {
+        case ShaderFileType::Vertex:
+            stageFlag = VK_SHADER_STAGE_VERTEX_BIT;
+            break;
+        case ShaderFileType::Fragment:
+            stageFlag = VK_SHADER_STAGE_FRAGMENT_BIT;
+            break;
+        case ShaderFileType::Compute:
+            stageFlag = VK_SHADER_STAGE_COMPUTE_BIT;
+            break;
+        case ShaderFileType::RTRaygen:
+            stageFlag = VK_SHADER_STAGE_RAYGEN_BIT_NV;
+            break;
+        case ShaderFileType::RTClosestHit:
+            stageFlag = VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
+            break;
+        case ShaderFileType::RTAnyHit:
+            stageFlag = VK_SHADER_STAGE_ANY_HIT_BIT_NV;
+            break;
+        case ShaderFileType::RTMiss:
+            stageFlag = VK_SHADER_STAGE_MISS_BIT_NV;
+            break;
+        case ShaderFileType::RTIntersection:
+            stageFlag = VK_SHADER_STAGE_INTERSECTION_BIT_NV;
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+
+        const auto& spv = ShaderManager::instance().spirv(file.path());
+        spirv_cross::Compiler compiler { spv };
+        spirv_cross::ShaderResources resources = compiler.get_shader_resources();
+
+        if (!resources.push_constant_buffers.empty()) {
+            ASSERT(resources.push_constant_buffers.size() == 1);
+            const spirv_cross::Resource& res = resources.push_constant_buffers[0];
+            const spirv_cross::SPIRType& type = compiler.get_type(res.type_id);
+            size_t pushConstantSize = compiler.get_declared_struct_size(type);
+
+            if (!pushConstantRange.has_value()) {
+                VkPushConstantRange range {};
+                range.stageFlags = stageFlag;
+                range.size = (uint32_t)pushConstantSize;
+                range.offset = 0;
+                pushConstantRange = range;
+            } else {
+                if (pushConstantRange.value().size != pushConstantSize) {
+                    LogErrorAndExit("Different push constant sizes in the different shader files!\n");
+                }
+                pushConstantRange.value().stageFlags |= stageFlag;
+            }
+        }
+    }
+
+    return pushConstantRange;
+}
+
 std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>> VulkanBackend::createDescriptorSetLayoutForShader(const Shader& shader) const
 {
     SCOPED_PROFILE_ZONE_BACKEND();

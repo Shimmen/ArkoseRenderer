@@ -41,6 +41,7 @@ public:
 protected:
     bool hasBackend() const { return m_backend != nullptr; }
     Backend& backend() { return *m_backend; }
+    const Backend& backend() const { return *m_backend; }
 
 private:
     Backend* m_backend { nullptr };

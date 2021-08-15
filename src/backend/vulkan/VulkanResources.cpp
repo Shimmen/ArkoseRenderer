@@ -1131,70 +1131,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
 
     const auto& device = static_cast<VulkanBackend&>(backend).device();
 
-    {
-        std::vector<VkDescriptorSetLayoutBinding> layoutBindings {};
-        layoutBindings.reserve(shaderBindings().size());
-
-        for (auto& bindingInfo : shaderBindings()) {
-
-            VkDescriptorSetLayoutBinding binding = {};
-            binding.binding = bindingInfo.bindingIndex;
-            binding.descriptorCount = bindingInfo.count;
-
-            switch (bindingInfo.type) {
-            case ShaderBindingType::UniformBuffer:
-                binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-                break;
-            case ShaderBindingType::StorageBuffer:
-            case ShaderBindingType::StorageBufferArray:
-                binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-                break;
-            case ShaderBindingType::StorageImage:
-                binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-                break;
-            case ShaderBindingType::TextureSampler:
-            case ShaderBindingType::TextureSamplerArray:
-                binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                break;
-            case ShaderBindingType::RTAccelerationStructure:
-                binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
-                break;
-            default:
-                ASSERT_NOT_REACHED();
-            }
-
-            if (bindingInfo.shaderStage & ShaderStageVertex)
-                binding.stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
-            if (bindingInfo.shaderStage & ShaderStageFragment)
-                binding.stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
-            if (bindingInfo.shaderStage & ShaderStageCompute)
-                binding.stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
-            if (bindingInfo.shaderStage & ShaderStageRTRayGen)
-                binding.stageFlags |= VK_SHADER_STAGE_RAYGEN_BIT_NV;
-            if (bindingInfo.shaderStage & ShaderStageRTMiss)
-                binding.stageFlags |= VK_SHADER_STAGE_MISS_BIT_NV;
-            if (bindingInfo.shaderStage & ShaderStageRTClosestHit)
-                binding.stageFlags |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
-            if (bindingInfo.shaderStage & ShaderStageRTAnyHit)
-                binding.stageFlags |= VK_SHADER_STAGE_ANY_HIT_BIT_NV;
-            if (bindingInfo.shaderStage & ShaderStageRTIntersection)
-                binding.stageFlags |= VK_SHADER_STAGE_INTERSECTION_BIT_NV;
-
-            ASSERT(binding.stageFlags != 0);
-
-            binding.pImmutableSamplers = nullptr;
-
-            layoutBindings.push_back(binding);
-        }
-
-        VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-        descriptorSetLayoutCreateInfo.bindingCount = (uint32_t)layoutBindings.size();
-        descriptorSetLayoutCreateInfo.pBindings = layoutBindings.data();
-
-        if (vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
-            LogErrorAndExit("Error trying to create descriptor set layout\n");
-        }
-    }
+    descriptorSetLayout = createDescriptorSetLayout();
 
     {
         // TODO: Maybe in the future we don't want one pool per shader binding state? We could group a lot of stuff together probably..?
@@ -1527,6 +1464,77 @@ void VulkanBindingSet::setName(const std::string& name)
     }
 }
 
+VkDescriptorSetLayout VulkanBindingSet::createDescriptorSetLayout() const
+{
+    auto& vulkanBackend = static_cast<const VulkanBackend&>(backend());
+
+    std::vector<VkDescriptorSetLayoutBinding> layoutBindings {};
+    layoutBindings.reserve(shaderBindings().size());
+
+    for (auto& bindingInfo : shaderBindings()) {
+
+        VkDescriptorSetLayoutBinding binding = {};
+        binding.binding = bindingInfo.bindingIndex;
+        binding.descriptorCount = bindingInfo.count;
+
+        switch (bindingInfo.type) {
+        case ShaderBindingType::UniformBuffer:
+            binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            break;
+        case ShaderBindingType::StorageBuffer:
+        case ShaderBindingType::StorageBufferArray:
+            binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            break;
+        case ShaderBindingType::StorageImage:
+            binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+            break;
+        case ShaderBindingType::TextureSampler:
+        case ShaderBindingType::TextureSamplerArray:
+            binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            break;
+        case ShaderBindingType::RTAccelerationStructure:
+            binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+
+        if (bindingInfo.shaderStage & ShaderStageVertex)
+            binding.stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
+        if (bindingInfo.shaderStage & ShaderStageFragment)
+            binding.stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+        if (bindingInfo.shaderStage & ShaderStageCompute)
+            binding.stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
+        if (bindingInfo.shaderStage & ShaderStageRTRayGen)
+            binding.stageFlags |= VK_SHADER_STAGE_RAYGEN_BIT_NV;
+        if (bindingInfo.shaderStage & ShaderStageRTMiss)
+            binding.stageFlags |= VK_SHADER_STAGE_MISS_BIT_NV;
+        if (bindingInfo.shaderStage & ShaderStageRTClosestHit)
+            binding.stageFlags |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
+        if (bindingInfo.shaderStage & ShaderStageRTAnyHit)
+            binding.stageFlags |= VK_SHADER_STAGE_ANY_HIT_BIT_NV;
+        if (bindingInfo.shaderStage & ShaderStageRTIntersection)
+            binding.stageFlags |= VK_SHADER_STAGE_INTERSECTION_BIT_NV;
+
+        ASSERT(binding.stageFlags != 0);
+
+        binding.pImmutableSamplers = nullptr;
+
+        layoutBindings.push_back(binding);
+    }
+
+    VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+    descriptorSetLayoutCreateInfo.bindingCount = (uint32_t)layoutBindings.size();
+    descriptorSetLayoutCreateInfo.pBindings = layoutBindings.data();
+
+    VkDescriptorSetLayout newDescriptorSetLayout;
+    if (vkCreateDescriptorSetLayout(vulkanBackend.device(), &descriptorSetLayoutCreateInfo, nullptr, &newDescriptorSetLayout) != VK_SUCCESS) {
+        LogErrorAndExit("Error trying to create descriptor set layout\n");
+    }
+
+    return newDescriptorSetLayout;
+}
+
 VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& renderTarget, VertexLayout vertexLayout,
                                      Shader shader, const std::vector<BindingSet*>& bindingSets,
                                      Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState, StencilState stencilState)
@@ -1626,11 +1634,16 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     //
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
-    const auto& [descriptorSetLayouts, pushConstantRange] = vulkanBackend.createDescriptorSetLayoutForShader(shader);
+    std::vector<VkDescriptorSetLayout> descriptorSetLayouts {};
+    for (BindingSet* bindingSet : bindingSets) {
+        auto* vulkanBindingSet = static_cast<VulkanBindingSet*>(bindingSet);
+        descriptorSetLayouts.push_back(vulkanBindingSet->createDescriptorSetLayout());
+    }
 
     pipelineLayoutCreateInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
     pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts.data();
 
+    const auto& pushConstantRange = vulkanBackend.getPushConstantRangeForShader(shader);
     if (pushConstantRange.has_value()) {
         pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
         pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange.value();
@@ -2234,14 +2247,21 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
     ASSERT(vulkanBackend.hasRtxSupport());
 
+    // Define a pseudo shader which is simply a collection of all used shader files. This will let us get info on used push constants.
     Shader shader { shaderBindingTable().allReferencedShaderFiles(), ShaderType::RayTrace };
-    const auto& [descriptorSetLayouts, pushConstantRange] = vulkanBackend.createDescriptorSetLayoutForShader(shader);
 
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
+
+    std::vector<VkDescriptorSetLayout> descriptorSetLayouts {};
+    for (BindingSet* bindingSet : bindingSets) {
+        auto* vulkanBindingSet = static_cast<VulkanBindingSet*>(bindingSet);
+        descriptorSetLayouts.push_back(vulkanBindingSet->createDescriptorSetLayout());
+    }
 
     pipelineLayoutCreateInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
     pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts.data();
 
+    const auto& pushConstantRange = vulkanBackend.getPushConstantRangeForShader(shader);
     if (pushConstantRange.has_value()) {
         pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
         pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange.value();
@@ -2572,11 +2592,16 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
 
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
-    const auto& [descriptorSetLayouts, pushConstantRange] = vulkanBackend.createDescriptorSetLayoutForShader(shader);
+    std::vector<VkDescriptorSetLayout> descriptorSetLayouts {};
+    for (BindingSet* bindingSet : bindingSets) {
+        auto* vulkanBindingSet = static_cast<VulkanBindingSet*>(bindingSet);
+        descriptorSetLayouts.push_back(vulkanBindingSet->createDescriptorSetLayout());
+    }
 
     pipelineLayoutCreateInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
     pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts.data();
 
+    const auto& pushConstantRange = vulkanBackend.getPushConstantRangeForShader(shader);
     if (pushConstantRange.has_value()) {
         pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
         pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange.value();
