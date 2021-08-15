@@ -325,10 +325,10 @@ std::unique_ptr<BindingSet> VulkanBackend::createBindingSet(std::vector<ShaderBi
 }
 
 std::unique_ptr<RenderState> VulkanBackend::createRenderState(const RenderTarget& renderTarget, const VertexLayout& vertexLayout,
-                                                              const Shader& shader, std::vector<BindingSet*> bindingSets,
+                                                              const Shader& shader, const StateBindings& stateBindings,
                                                               const Viewport& viewport, const BlendState& blendState, const RasterState& rasterState, const DepthState& depthState, const StencilState& stencilState)
 {
-    return std::make_unique<VulkanRenderState>(*this, renderTarget, vertexLayout, shader, bindingSets, viewport, blendState, rasterState, depthState, stencilState);
+    return std::make_unique<VulkanRenderState>(*this, renderTarget, vertexLayout, shader, stateBindings, viewport, blendState, rasterState, depthState, stencilState);
 }
 
 std::unique_ptr<BottomLevelAS> VulkanBackend::createBottomLevelAccelerationStructure(std::vector<RTGeometry> geometries)

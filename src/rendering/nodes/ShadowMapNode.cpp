@@ -43,8 +43,9 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
             // objects though, which I have barely done at all, so this is a very simple and quick hack to get around that.
             RenderState& renderState = light.getOrCreateCachedShadowMapRenderState("ShadowMapNode::defaultShadowMapping", [&](Registry& sceneRegistry) -> RenderState& {
                 RenderStateBuilder renderStateBuilder { light.shadowMapRenderTarget(), shadowMapShader, m_vertexLayout };
-                renderStateBuilder.addBindingSet(transformBindingSet);
-                renderStateBuilder.addBindingSet(shadowDataBindingSet);
+                renderStateBuilder.stateBindings().disableAutoBinding();
+                renderStateBuilder.stateBindings().at(0, transformBindingSet);
+                renderStateBuilder.stateBindings().at(1, shadowDataBindingSet);
                 return sceneRegistry.createRenderState(renderStateBuilder);
             });
 
@@ -54,6 +55,8 @@ RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) co
                 mat4 lightProjectionFromWorld = light.viewProjection();
                 auto lightFrustum = geometry::Frustum::createFromProjectionMatrix(lightProjectionFromWorld);
 
+                // NOTE: We are not autobinding for this due to the cached shadow map render state keeping track of old sets
+                //  Maybe we could also try resetting the cache when we recreate it so we don't get more confusing issues?
                 cmdList.bindSet(transformBindingSet, 0);
                 cmdList.bindSet(shadowDataBindingSet, 1);
 

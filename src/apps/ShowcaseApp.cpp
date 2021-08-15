@@ -9,7 +9,7 @@
 #include "rendering/nodes/GBufferNode.h"
 #include "rendering/nodes/PrepassNode.h"
 #include "rendering/nodes/PickingNode.h"
-#include "rendering/nodes/RTFirstHitNode.h"
+#include "rendering/nodes/RTDirectLightNode.h"
 #include "rendering/nodes/SceneNode.h"
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SkyViewNode.h"
@@ -57,7 +57,7 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
 
     graph.addNode<DiffuseGIProbeDebug>(scene);
 
-    graph.addNode<RTFirstHitNode>(scene);
+    //graph.addNode<RTDirectLightNode>(scene);
 
     graph.addNode("final", [](Registry& reg) {
         // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.
@@ -73,11 +73,11 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
         const RenderTarget& ldrTarget = reg.windowRenderTarget();
 #endif
 
-        BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("rt-firsthit", "image").value(), ShaderBindingType::TextureSampler } });
-        //BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("forward", "color").value(), ShaderBindingType::TextureSampler } });
+        //BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("rt-direct-light", "target").value(), ShaderBindingType::TextureSampler } });
+        BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("forward", "color").value(), ShaderBindingType::TextureSampler } });
         Shader tonemapShader = Shader::createBasicRasterize("final/showcase/tonemap.vert", "final/showcase/tonemap.frag");
         RenderStateBuilder tonemapStateBuilder { ldrTarget, tonemapShader, vertexLayout };
-        tonemapStateBuilder.addBindingSet(tonemapBindingSet);
+        tonemapStateBuilder.stateBindings().at(0, tonemapBindingSet);
         tonemapStateBuilder.writeDepth = false;
         tonemapStateBuilder.testDepth = false;
         RenderState& tonemapRenderState = reg.createRenderState(tonemapStateBuilder);
@@ -86,7 +86,7 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
         BindingSet& fxaaBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &ldrTexture, ShaderBindingType::TextureSampler } });
         Shader fxaaShader = Shader::createBasicRasterize("final/showcase/anti-alias.vert", "final/showcase/anti-alias.frag");
         RenderStateBuilder fxaaStateBuilder { reg.windowRenderTarget(), fxaaShader, vertexLayout };
-        fxaaStateBuilder.addBindingSet(fxaaBindingSet);
+        fxaaStateBuilder.stateBindings().at(0, fxaaBindingSet);
         fxaaStateBuilder.writeDepth = false;
         fxaaStateBuilder.testDepth = false;
         RenderState& fxaaRenderState = reg.createRenderState(fxaaStateBuilder);

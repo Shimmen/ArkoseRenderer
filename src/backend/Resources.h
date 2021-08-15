@@ -614,7 +614,11 @@ private:
 
 struct StateBindings {
     StateBindings() = default;
+
     void at(uint32_t index, BindingSet&);
+
+    void disableAutoBinding() { m_autoBinding = false; }
+    bool shouldAutoBind() const { return m_autoBinding; }
 
     const std::vector<BindingSet*>& orderedBindingSets() const { return m_orderedBindingSets; }
 
@@ -641,7 +645,8 @@ struct StateBindings {
     }
 
 private:
-    std::vector<BindingSet*> m_orderedBindingSets;
+    bool m_autoBinding { true };
+    std::vector<BindingSet*> m_orderedBindingSets {};
 };
 
 struct RenderState : public Resource {
@@ -649,13 +654,13 @@ public:
     RenderState() = default;
     RenderState(Backend& backend,
                 const RenderTarget& renderTarget, VertexLayout vertexLayout,
-                Shader shader, const std::vector<BindingSet*>& shaderBindingSets,
+                Shader shader, const StateBindings& stateBindings,
                 Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState, StencilState stencilState)
         : Resource(backend)
         , m_renderTarget(&renderTarget)
         , m_vertexLayout(vertexLayout)
         , m_shader(shader)
-        , m_shaderBindingSets(shaderBindingSets)
+        , m_stateBindings(stateBindings)
         , m_viewport(viewport)
         , m_blendState(blendState)
         , m_rasterState(rasterState)
@@ -669,7 +674,7 @@ public:
     const VertexLayout& vertexLayout() const { return m_vertexLayout; }
 
     const Shader& shader() const { return m_shader; }
-    const std::vector<BindingSet*>& bindingSets() const { return m_shaderBindingSets; }
+    const StateBindings& stateBindings() const { return m_stateBindings; }
 
     const Viewport& fixedViewport() const { return m_viewport; }
     const BlendState& blendState() const { return m_blendState; }
@@ -682,7 +687,7 @@ private:
     VertexLayout m_vertexLayout;
 
     Shader m_shader;
-    std::vector<BindingSet*> m_shaderBindingSets;
+    StateBindings m_stateBindings;
 
     Viewport m_viewport;
     BlendState m_blendState;
@@ -714,14 +719,14 @@ public:
     [[nodiscard]] DepthState depthState() const;
     [[nodiscard]] StencilState stencilState() const;
 
-    RenderStateBuilder& addBindingSet(BindingSet&);
-    [[nodiscard]] const std::vector<BindingSet*>& bindingSets() const;
+    const StateBindings& stateBindings() const { return m_stateBindings; }
+    StateBindings& stateBindings() { return m_stateBindings; }
 
 private:
     std::optional<Viewport> m_viewport {};
     std::optional<BlendState> m_blendState {};
     std::optional<RasterState> m_rasterState {};
-    std::vector<BindingSet*> m_bindingSets {};
+    StateBindings m_stateBindings {};
 };
 
 enum class RTVertexFormat {

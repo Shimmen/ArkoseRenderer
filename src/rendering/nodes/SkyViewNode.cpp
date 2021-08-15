@@ -33,7 +33,7 @@ RenderGraphNode::ExecuteCallback SkyViewNode::constructFrame(Registry& reg) cons
     Shader rasterizeShader = Shader::createBasicRasterize("sky-view/sky-view.vert", "sky-view/sky-view.frag");
     RenderStateBuilder renderStateBuilder { renderTarget, rasterizeShader, { VertexComponent::Position2F } };
     renderStateBuilder.stencilMode = StencilMode::PassIfZero; // i.e. if no geometry is written to this pixel
-    renderStateBuilder.addBindingSet(skyViewRasterizeBindingSet);
+    renderStateBuilder.stateBindings().at(0, skyViewRasterizeBindingSet);
     RenderState& skyViewRenderState = reg.createRenderState(renderStateBuilder);
     Buffer& fullscreenTriangleVertexBuffer = reg.createBuffer(std::vector<vec2> { { -1, -3 }, { -1, 1 }, { 3, 1 } },
                                                               Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
@@ -56,7 +56,6 @@ RenderGraphNode::ExecuteCallback SkyViewNode::constructFrame(Registry& reg) cons
         if (useRasterizedPath) {
             // Uses the stencil buffer to old process pixels with no geometry (faster, but must be done in-line)
             cmdList.beginRendering(skyViewRenderState);
-            cmdList.bindSet(skyViewRasterizeBindingSet, 0);
             cmdList.setNamedUniform("environmentMultiplier", envMultiplier);
             cmdList.draw(fullscreenTriangleVertexBuffer, 3);
             cmdList.endRendering();

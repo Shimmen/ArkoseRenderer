@@ -44,7 +44,8 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
     Shader debugShader = Shader::createBasicRasterize("diffuse-gi/probe-debug.vert", "diffuse-gi/probe-debug.frag");
     RenderStateBuilder stateBuilder { renderTarget, debugShader, VertexLayout { VertexComponent::Position3F }};
     BindingSet& cameraBindingSet = *reg.getBindingSet("scene", "cameraSet");
-    stateBuilder.addBindingSet(cameraBindingSet).addBindingSet(probeDataBindingSet);
+    stateBuilder.stateBindings().at(0, cameraBindingSet);
+    stateBuilder.stateBindings().at(1, probeDataBindingSet);
     stateBuilder.writeDepth = true;
     stateBuilder.testDepth = true;
     RenderState& renderState = reg.createRenderState(stateBuilder);
@@ -61,8 +62,6 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
             return;
 
         cmdList.beginRendering(renderState);
-        cmdList.bindSet(cameraBindingSet, 0);
-        cmdList.bindSet(probeDataBindingSet, 1);
         cmdList.setNamedUniform("probeScale", probeScale);
         cmdList.setNamedUniform("indirectExposure", m_scene.lightPreExposureValue());
 

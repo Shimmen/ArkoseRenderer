@@ -512,17 +512,6 @@ StencilState RenderStateBuilder::stencilState() const
     return state;
 }
 
-RenderStateBuilder& RenderStateBuilder::addBindingSet(BindingSet& bindingSet)
-{
-    m_bindingSets.emplace_back(&bindingSet);
-    return *this;
-}
-
-const std::vector<BindingSet*>& RenderStateBuilder::bindingSets() const
-{
-    return m_bindingSets;
-}
-
 RTGeometry::RTGeometry(RTTriangleGeometry triangles)
     : m_internal(triangles)
 {

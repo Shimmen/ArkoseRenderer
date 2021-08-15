@@ -1536,9 +1536,9 @@ VkDescriptorSetLayout VulkanBindingSet::createDescriptorSetLayout() const
 }
 
 VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& renderTarget, VertexLayout vertexLayout,
-                                     Shader shader, const std::vector<BindingSet*>& bindingSets,
+                                     Shader shader, const StateBindings& stateBindings,
                                      Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState, StencilState stencilState)
-    : RenderState(backend, renderTarget, vertexLayout, shader, bindingSets, viewport, blendState, rasterState, depthState, stencilState)
+    : RenderState(backend, renderTarget, vertexLayout, shader, stateBindings, viewport, blendState, rasterState, depthState, stencilState)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
@@ -1635,8 +1635,8 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts {};
-    for (BindingSet* bindingSet : bindingSets) {
-        auto* vulkanBindingSet = static_cast<VulkanBindingSet*>(bindingSet);
+    for (const BindingSet* bindingSet : stateBindings.orderedBindingSets()) {
+        auto* vulkanBindingSet = static_cast<const VulkanBindingSet*>(bindingSet);
         descriptorSetLayouts.push_back(vulkanBindingSet->createDescriptorSetLayout());
     }
 
@@ -1861,14 +1861,6 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     // Remove shader modules, they are no longer needed after creating the pipeline
     for (auto& stage : shaderStages) {
         vkDestroyShaderModule(device, stage.module, nullptr);
-    }
-
-    for (auto& set : bindingSets) {
-        for (auto& bindingInfo : set->shaderBindings()) {
-            for (auto texture : bindingInfo.textures) {
-                sampledTextures.push_back(texture);
-            }
-        }
     }
 }
 

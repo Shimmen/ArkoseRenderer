@@ -72,10 +72,10 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
     Shader renderShader = Shader::createBasicRasterize("diffuse-gi/forward.vert", "diffuse-gi/forward.frag");
     RenderStateBuilder renderStateBuilder { renderTarget, renderShader, m_vertexLayout };
     renderStateBuilder.cullBackfaces = false;
-    renderStateBuilder.addBindingSet(materialBindingSet);
-    renderStateBuilder.addBindingSet(cameraBindingSet);
-    renderStateBuilder.addBindingSet(objectBindingSet);
-    renderStateBuilder.addBindingSet(lightBindingSet);
+    renderStateBuilder.stateBindings().at(0, cameraBindingSet);
+    renderStateBuilder.stateBindings().at(1, materialBindingSet);
+    renderStateBuilder.stateBindings().at(2, lightBindingSet);
+    renderStateBuilder.stateBindings().at(3, objectBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
     BindingSet& irradianceFilterBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &tempIrradianceProbe, ShaderBindingType::StorageImage },
@@ -162,11 +162,6 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
             {
                 float clearAlpha = 0.0f; // (important for drawing sky view in filtering stage)
                 cmdList.beginRendering(renderState, ClearColor::srgbColor(0, 0, 0, clearAlpha), 1.0f);
-
-                cmdList.bindSet(cameraBindingSet, 0);
-                cmdList.bindSet(materialBindingSet, 1);
-                cmdList.bindSet(lightBindingSet, 2);
-                cmdList.bindSet(objectBindingSet, 3);
 
                 cmdList.pushConstant(ShaderStage(ShaderStageVertex | ShaderStageFragment), sideIndex, 0);
                 cmdList.pushConstant(ShaderStage(ShaderStageVertex | ShaderStageFragment), ambientLx, 4);

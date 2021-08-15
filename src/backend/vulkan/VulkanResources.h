@@ -90,7 +90,7 @@ public:
 
 struct VulkanRenderState final : public RenderState {
 public:
-    VulkanRenderState(Backend&, const RenderTarget&, VertexLayout, Shader, const std::vector<BindingSet*>&,
+    VulkanRenderState(Backend&, const RenderTarget&, VertexLayout, Shader, const StateBindings& stateBindings,
                       Viewport, BlendState, RasterState, DepthState, StencilState);
     virtual ~VulkanRenderState() override;
 
@@ -98,8 +98,6 @@ public:
 
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
-
-    std::vector<Texture*> sampledTextures;
 };
 
 struct VulkanTopLevelAS final : public TopLevelAS {

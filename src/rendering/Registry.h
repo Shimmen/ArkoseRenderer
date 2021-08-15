@@ -42,7 +42,7 @@ public:
     [[nodiscard]] BindingSet& createBindingSet(std::vector<ShaderBinding>);
 
     [[nodiscard]] RenderState& createRenderState(const RenderStateBuilder&);
-    [[nodiscard]] RenderState& createRenderState(const RenderTarget&, const VertexLayout&, const Shader&, std::vector<BindingSet*>, const Viewport&, const BlendState&, const RasterState&, const DepthState&, const StencilState&);
+    [[nodiscard]] RenderState& createRenderState(const RenderTarget&, const VertexLayout&, const Shader&, const StateBindings&, const Viewport&, const BlendState&, const RasterState&, const DepthState&, const StencilState&);
 
     [[nodiscard]] BottomLevelAS& createBottomLevelAccelerationStructure(std::vector<RTGeometry>);
     [[nodiscard]] TopLevelAS& createTopLevelAccelerationStructure(std::vector<RTGeometryInstance>);

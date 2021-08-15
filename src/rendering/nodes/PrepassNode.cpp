@@ -28,7 +28,7 @@ RenderGraphNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) cons
     RenderTarget& prepassRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &gBufferDepthTexture, LoadOp::Clear, StoreOp::Store } });
     RenderStateBuilder prepassRenderStateBuilder { prepassRenderTarget, prepassShader, m_prepassVertexLayout };
     prepassRenderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
-    prepassRenderStateBuilder.addBindingSet(drawableBindingSet);
+    prepassRenderStateBuilder.stateBindings().at(0, drawableBindingSet);
     RenderState& prepassRenderState = reg.createRenderState(prepassRenderStateBuilder);
     prepassRenderState.setName("ForwardZPrepass");
 
@@ -38,8 +38,6 @@ RenderGraphNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) cons
         });
 
         cmdList.beginRendering(prepassRenderState, ClearColor::srgbColor(0, 0, 0, 0), 1.0f);
-
-        cmdList.bindSet(drawableBindingSet, 0);
 
         cmdList.setNamedUniform("depthOffset", 0.00005f);
         cmdList.setNamedUniform("projectionFromWorld", m_scene.camera().viewProjectionMatrix());

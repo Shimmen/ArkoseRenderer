@@ -72,12 +72,12 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     RenderStateBuilder renderStateBuilder { renderTarget, shader, m_vertexLayout };
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
     renderStateBuilder.stencilMode = reg.hasPreviousNode("prepass") ? StencilMode::PassIfNotZero : StencilMode::AlwaysWrite;
-    renderStateBuilder.addBindingSet(materialBindingSet);
-    renderStateBuilder.addBindingSet(cameraBindingSet);
-    renderStateBuilder.addBindingSet(drawableBindingSet);
-    renderStateBuilder.addBindingSet(lightBindingSet);
+    renderStateBuilder.stateBindings().at(0, cameraBindingSet);
+    renderStateBuilder.stateBindings().at(1, materialBindingSet);
+    renderStateBuilder.stateBindings().at(2, lightBindingSet);
     if (m_indirectLightBindingSet)
-        renderStateBuilder.addBindingSet(*m_indirectLightBindingSet);
+        renderStateBuilder.stateBindings().at(3, *m_indirectLightBindingSet);
+    renderStateBuilder.stateBindings().at(4, drawableBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
     renderState.setName("ForwardOpaque");
 
@@ -92,13 +92,6 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
             cmdList.beginRendering(renderState, ClearColor::srgbColor(0, 0, 0, 0), 1.0f);
             cmdList.setNamedUniform("ambientAmount", m_scene.exposedAmbient());
             cmdList.setNamedUniform("indirectExposure", m_scene.lightPreExposureValue());
-
-            cmdList.bindSet(cameraBindingSet, 0);
-            cmdList.bindSet(materialBindingSet, 1);
-            cmdList.bindSet(lightBindingSet, 2);
-            cmdList.bindSet(drawableBindingSet, 4);
-            if (m_indirectLightBindingSet)
-                cmdList.bindSet(*m_indirectLightBindingSet, 3);
 
             cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout(m_vertexLayout));
             cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());

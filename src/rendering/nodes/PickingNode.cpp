@@ -32,7 +32,7 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
 
     Shader drawIndexShader = Shader::createBasicRasterize("picking/drawIndices.vert", "picking/drawIndices.frag");
     RenderStateBuilder renderStateBuilder(indexMapRenderTarget, drawIndexShader, VertexLayout { VertexComponent::Position3F });
-    renderStateBuilder.addBindingSet(drawIndexBindingSet);
+    renderStateBuilder.stateBindings().at(0, drawIndexBindingSet);
     RenderState& drawIndicesState = reg.createRenderState(renderStateBuilder);
 
     Buffer& pickedIndexBuffer = reg.createBuffer(sizeof(moos::u32), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::Readback);
@@ -76,7 +76,6 @@ RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) cons
             transformDataBuffer.updateDataAndGrowIfRequired(objectTransforms.data(), objectTransforms.size() * sizeof(mat4));
 
             cmdList.beginRendering(drawIndicesState, ClearColor::srgbColor(1, 0, 1), 1.0f);
-            cmdList.bindSet(drawIndexBindingSet, 0);
             cmdList.setNamedUniform("projectionFromWorld", m_scene.camera().viewProjectionMatrix());
 
             cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout({ VertexComponent::Position3F }));
