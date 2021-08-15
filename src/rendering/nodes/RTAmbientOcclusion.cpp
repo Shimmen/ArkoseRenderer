@@ -41,8 +41,11 @@ RenderGraphNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry& re
     HitGroup triangleHitGroup(ShaderFile("rt-ao/closestHit.rchit"));
     ShaderBindingTable sbt { raygen, { triangleHitGroup }, { miss } };
 
+    StateBindings stateDataBindings;
+    stateDataBindings.at(0, frameBindingSet);
+
     uint32_t maxRecursionDepth = 1;
-    RayTracingState& rtState = reg.createRayTracingState(sbt, { &frameBindingSet }, maxRecursionDepth);
+    RayTracingState& rtState = reg.createRayTracingState(sbt, stateDataBindings, maxRecursionDepth);
 
     BindingSet& avgAccumBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, m_accumulatedAO, ShaderBindingType::StorageImage },
                                                             { 1, ShaderStageCompute, &ambientOcclusion, ShaderBindingType::StorageImage } });
@@ -73,7 +76,6 @@ RenderGraphNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry& re
 
             if (m_numAccumulatedFrames < 256) {
                 cmdList.setRayTracingState(rtState);
-                cmdList.bindSet(frameBindingSet, 0);
                 cmdList.pushConstant(ShaderStageRTRayGen, radius, 0);
                 cmdList.pushConstant(ShaderStageRTRayGen, static_cast<uint32_t>(signedNumSamples), 4);
                 cmdList.pushConstant(ShaderStageRTRayGen, appState.frameIndex(), 8);

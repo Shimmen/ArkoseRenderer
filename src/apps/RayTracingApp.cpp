@@ -91,7 +91,7 @@ void RayTracingApp::setup(Scene& scene, RenderGraph& graph)
         BindingSet& bindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("forward", "color").value(), ShaderBindingType::TextureSampler } });
         Shader shader = Shader::createBasicRasterize("final/showcase/tonemap.vert", "final/showcase/tonemap.frag");
         RenderStateBuilder renderStateBuilder { reg.windowRenderTarget(), shader, vertexLayout };
-        renderStateBuilder.addBindingSet(bindingSet);
+        renderStateBuilder.stateBindings().at(0, bindingSet);
         renderStateBuilder.writeDepth = false;
         renderStateBuilder.testDepth = false;
 
@@ -99,7 +99,6 @@ void RayTracingApp::setup(Scene& scene, RenderGraph& graph)
 
         return [&](const AppState& appState, CommandList& cmdList) {
             cmdList.beginRendering(renderState, ClearColor::srgbColor(0.5f, 0.1f, 0.5f), 1.0f);
-            cmdList.bindSet(bindingSet, 0);
             cmdList.draw(vertexBuffer, 3);
 
             if (ImGui::Button("Take screenshot")) {

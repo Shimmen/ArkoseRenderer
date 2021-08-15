@@ -93,8 +93,12 @@ RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) 
                                           ShaderFile("rt-diffuseGI/shadow.rmiss") };
     ShaderBindingTable sbt { raygen, { mainHitGroup }, missShaders };
 
+    StateBindings stateDataBindings;
+    stateDataBindings.at(0, frameBindingSet);
+    stateDataBindings.at(1, *m_objectDataBindingSet);
+
     uint32_t maxRecursionDepth = 2;
-    RayTracingState& rtState = reg.createRayTracingState(sbt, { &frameBindingSet, m_objectDataBindingSet }, maxRecursionDepth);
+    RayTracingState& rtState = reg.createRayTracingState(sbt, stateDataBindings, maxRecursionDepth);
 
     Texture& diffuseGI = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("diffuseGI", diffuseGI);
@@ -133,9 +137,7 @@ RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) 
         dirLightBuffer.updateData(&dirLightData, sizeof(DirectionalLightData));
 
         cmdList.setRayTracingState(rtState);
-        cmdList.bindSet(frameBindingSet, 0);
 
-        cmdList.bindSet(*m_objectDataBindingSet, 1);
         cmdList.pushConstant(ShaderStageRTRayGen, ignoreColor);
         cmdList.pushConstant(ShaderStageRTRayGen, appState.frameIndex(), 4);
 
