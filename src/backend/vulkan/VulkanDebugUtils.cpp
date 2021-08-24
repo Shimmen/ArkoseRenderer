@@ -28,7 +28,11 @@ VulkanDebugUtils::VulkanDebugUtils(VulkanBackend& backend, VkInstance instance)
 VkBool32 VulkanDebugUtils::debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
                                                 const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 {
-    LogError("Vulkan debug message; %s\n", pCallbackData->pMessage);
+    if (messageSeverity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
+        LogError("Vulkan debug message; %s\n", pCallbackData->pMessage);
+        return VK_FALSE;
+    }
+
     return VK_FALSE;
 }
 
