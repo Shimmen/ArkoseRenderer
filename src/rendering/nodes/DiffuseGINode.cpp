@@ -211,6 +211,11 @@ RenderGraphNode::ExecuteCallback DiffuseGINode::constructFrame(Registry& reg) co
         // TODO: Later, if we put this in another queue, we have to be very careful here,
         //  because this needs to be done in sync with the main queue while the rest lives on the async compute queue.
         {
+            if (appState.frameIndex() == 0) {
+                cmdList.clearTexture(*m_irradianceProbes, ClearColor::srgbColor(0, 0, 0));
+                cmdList.clearTexture(*m_filteredDistanceProbes, ClearColor::dataValues(0, 0, 0, 0));
+            }
+
             cmdList.copyTexture(tempIrradianceProbe, *m_irradianceProbes, 0, probeToRender);
             cmdList.copyTexture(tempFilteredDistanceProbe, *m_filteredDistanceProbes, 0, probeToRender);
         }
