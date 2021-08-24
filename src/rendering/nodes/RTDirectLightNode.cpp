@@ -65,7 +65,7 @@ RenderGraphNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& reg
     stateDataBindings.at(2, materialBindingSet);
     stateDataBindings.at(3, lightBindingSet);
 
-    constexpr uint32_t maxRecursionDepth = 1;
+    constexpr uint32_t maxRecursionDepth = 2; // raygen -> closest hit -> shadow ray
     RayTracingState& rtState = reg.createRayTracingState(sbt, stateDataBindings, maxRecursionDepth);
 
     return [&](const AppState& appState, CommandList& cmdList) {
