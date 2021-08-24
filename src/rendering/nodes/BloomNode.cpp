@@ -114,7 +114,7 @@ RenderGraphNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
 
         if (enabled) {
             static float bloomBlend = 0.04f;
-            ImGui::SliderFloat("Bloom blend", &bloomBlend, 0.0f, 1.0f, "%.6f", 4.0f);
+            ImGui::SliderFloat("Bloom blend", &bloomBlend, 0.0f, 1.0f, "%.6f", ImGuiSliderFlags_Logarithmic);
 
             cmdList.setComputeState(bloomBlendComputeState);
             cmdList.bindSet(blendBindingSet, 0);

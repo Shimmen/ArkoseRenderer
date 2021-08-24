@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.0)
 
 project(dear_imgui LANGUAGES CXX)
-add_library(dear_imgui imgui.cpp imgui_draw.cpp imgui_widgets.cpp imgui_demo.cpp imgui_impl_glfw.cpp imgui_impl_vulkan.cpp ImGuizmo.cpp)
+add_library(dear_imgui imgui.cpp imgui_draw.cpp imgui_widgets.cpp imgui_tables.cpp imgui_demo.cpp backends/imgui_impl_glfw.cpp backends/imgui_impl_vulkan.cpp ImGuizmo.cpp)
 target_compile_features(dear_imgui PRIVATE cxx_std_11)
 target_include_directories(dear_imgui PUBLIC .)
 

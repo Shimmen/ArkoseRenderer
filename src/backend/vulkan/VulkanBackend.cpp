@@ -16,8 +16,8 @@
 #include <cstring>
 #include <fmt/format.h>
 #include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_vulkan.h>
+#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_vulkan.h>
 #include <spirv_cross/spirv_cross.hpp>
 #include <unordered_map>
 #include <unordered_set>
@@ -1009,9 +1009,6 @@ void VulkanBackend::setupDearImgui()
     ImGui::CreateContext();
     ImGui::StyleColorsDark();
 
-    ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    //ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
-
     ImGui_ImplGlfw_InitForVulkan(m_window, true);
 
     VkDescriptorPoolSize poolSizes[] = {
@@ -1210,7 +1207,6 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
 
             ImGui::Render();
             renderDearImguiFrame(commandBuffer, frameContext, swapchainImageContext);
-            ImGui::UpdatePlatformWindows();
         }
         cmdList.endDebugLabel();
 
