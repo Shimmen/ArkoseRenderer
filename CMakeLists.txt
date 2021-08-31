@@ -18,6 +18,7 @@ add_executable(ArkoseRenderer
     src/backend/vulkan/VulkanDebugUtils.cpp
     src/backend/vulkan/VulkanResources.cpp
     src/backend/vulkan/VulkanRTX.cpp
+    src/geometry/Fibonacci.cpp
     src/geometry/Frustum.cpp
     src/rendering/camera/FpsCamera.cpp
     src/rendering/nodes/AutoExposureNode.cpp
