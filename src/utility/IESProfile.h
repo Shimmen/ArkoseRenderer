@@ -61,15 +61,15 @@ private:
     UnitsType m_unitsType { UnitsType::Feet };
     PhotometricType m_photometricType { PhotometricType::TypeA };
 
-    int m_lampCount;
-    float m_lumensPerLamp;
+    int m_lampCount {};
+    float m_lumensPerLamp {};
 
-    float m_width;
-    float m_length;
-    float m_height;
+    float m_width {};
+    float m_length {};
+    float m_height {};
 
-    float m_ballastFactor;
-    float m_inputWatts;
+    float m_ballastFactor {};
+    float m_inputWatts {};
 
     std::vector<float> m_anglesV {};
     std::vector<float> m_anglesH {};
