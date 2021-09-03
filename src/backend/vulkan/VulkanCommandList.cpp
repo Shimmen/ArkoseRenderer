@@ -1392,6 +1392,11 @@ void VulkanCommandList::textureWriteBarrier(const Texture& genTexture)
 {
     auto& texture = static_cast<const VulkanTexture&>(genTexture);
 
+    if (texture.currentLayout == VK_IMAGE_LAYOUT_PREINITIALIZED || texture.currentLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
+        // Texture has no valid data written to it, so this barrier can be a no-op
+        return;
+    }
+
     VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
     barrier.image = texture.image;
 
