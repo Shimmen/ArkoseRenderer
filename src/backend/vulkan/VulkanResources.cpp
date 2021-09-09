@@ -2239,9 +2239,6 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
     ASSERT(vulkanBackend.hasRtxSupport());
 
-    // Define a pseudo shader which is simply a collection of all used shader files. This will let us get info on used push constants.
-    Shader shader { shaderBindingTable().allReferencedShaderFiles(), ShaderType::RayTrace };
-
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts {};
@@ -2253,7 +2250,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     pipelineLayoutCreateInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
     pipelineLayoutCreateInfo.pSetLayouts = descriptorSetLayouts.data();
 
-    const auto& pushConstantRange = vulkanBackend.getPushConstantRangeForShader(shader);
+    const auto& pushConstantRange = vulkanBackend.getPushConstantRangeForShader(shaderBindingTable().pseudoShader());
     if (pushConstantRange.has_value()) {
         pipelineLayoutCreateInfo.pushConstantRangeCount = 1;
         pipelineLayoutCreateInfo.pPushConstantRanges = &pushConstantRange.value();

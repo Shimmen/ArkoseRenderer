@@ -614,6 +614,8 @@ ShaderBindingTable::ShaderBindingTable(ShaderFile rayGen, std::vector<HitGroup> 
     for (const auto& miss : m_missShaders) {
         ASSERT(miss.type() == ShaderFileType::RTMiss);
     }
+
+    m_pseudoShader = Shader(allReferencedShaderFiles(), ShaderType::RayTrace);
 }
 
 std::vector<ShaderFile> ShaderBindingTable::allReferencedShaderFiles() const

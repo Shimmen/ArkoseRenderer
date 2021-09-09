@@ -12,4 +12,9 @@
         PushConstantStruct scopeName;              \
     };
 
+#define NAMED_UNIFORMS_STRUCT(PushConstantStructName, scopeName)  \
+    layout(push_constant) uniform PushConstantsBlockName {        \
+        PushConstantStructName scopeName;                         \
+    };
+
 #endif // NAMED_UNIFORMS_GLSL

@@ -887,9 +887,6 @@ void VulkanCommandList::setNamedUniform(const std::string& name, void* data, siz
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     requireExactlyOneStateToBeSet("setNamedUniform");
-    if (activeRayTracingState != nullptr) {
-        LogErrorAndExit("setNamedUniform: don't call setNamedUniform for a ray tracing state (for now)!\n");
-    }
 
     const Shader& shader = getCurrentlyBoundShader();
 
@@ -1556,8 +1553,7 @@ const Shader& VulkanCommandList::getCurrentlyBoundShader()
         return activeComputeState->shader();
     }
     if (activeRayTracingState) {
-        LogErrorAndExit("getCurrentlyBoundShader: undefined for ray tracing!\n");
-        ASSERT_NOT_REACHED();
+        return activeRayTracingState->shaderBindingTable().pseudoShader();
     }
 
     ASSERT_NOT_REACHED();

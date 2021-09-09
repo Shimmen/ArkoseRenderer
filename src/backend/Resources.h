@@ -830,12 +830,16 @@ public:
     const std::vector<ShaderFile>& missShaders() const { return m_missShaders; }
 
     std::vector<ShaderFile> allReferencedShaderFiles() const;
+    const Shader& pseudoShader() const { return m_pseudoShader; }
 
 private:
     // TODO: In theory we can have more than one ray gen shader!
     ShaderFile m_rayGen;
     std::vector<HitGroup> m_hitGroups;
     std::vector<ShaderFile> m_missShaders;
+
+    // A shader which is simply a collection of all used shader files
+    Shader m_pseudoShader;
 };
 
 class RayTracingState : public Resource {
