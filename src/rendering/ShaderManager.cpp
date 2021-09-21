@@ -284,6 +284,7 @@ bool ShaderManager::CompiledShader::recompile()
     options.SetTargetSpirv(shaderc_spirv_version_1_5);
     options.SetSourceLanguage(shaderc_source_language_glsl);
     options.SetForcedVersionProfile(460, shaderc_profile_none);
+    options.SetGenerateDebugInfo(); // always generate debug info
 
     shaderc_shader_kind shaderKind = glslShaderKindForPath(filePath);
     std::string glslSource = FileIO::readEntireFile(filePath).value();
