@@ -224,6 +224,38 @@ Texture& Registry::createCubemapTexture(Extent2D extent, Texture::Format format)
     return *m_textures.back();
 }
 
+Texture& Registry::createOrReuseTexture2D(const std::string& name, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
+{
+    if (m_previousRegistry) {
+        for (std::unique_ptr<Texture>& oldTexture : m_previousRegistry->m_textures) {
+            if (oldTexture && oldTexture->reusable({}) && oldTexture->name() == name) {
+
+                // Verify that all parameters are the same (for reuse we obviouly need that it's the same between occations)
+                ASSERT(extent == oldTexture->extent());
+                ASSERT(format == oldTexture->format());
+                ASSERT(filters.min == oldTexture->minFilter());
+                ASSERT(filters.mag == oldTexture->magFilter());
+                ASSERT(mipmap == oldTexture->mipmap());
+                ASSERT(wrapMode.u == oldTexture->wrapMode().u);
+                ASSERT(wrapMode.v == oldTexture->wrapMode().v);
+                ASSERT(wrapMode.w == oldTexture->wrapMode().w);
+
+                // Adopt the reused resource (m_previousRegistry will be destroyed so it's fine to move things from it)
+                oldTexture->setOwningRegistry({}, this);
+                m_textures.push_back(std::move(oldTexture));
+
+                return *m_textures.back();
+            }
+        }
+    }
+
+    Texture& texture = createTexture2D(extent, format, filters, mipmap, wrapMode);
+    texture.setReusable({}, true);
+    texture.setName(name);
+
+    return texture;
+}
+
 Texture& Registry::createOrReuseTextureArray(const std::string& name, uint32_t itemCount, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
 {
     if (m_previousRegistry) {
