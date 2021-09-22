@@ -2,6 +2,7 @@
 
 #include "utility/util.h"
 #include <cstdint>
+#include <moos/vector.h>
 
 struct Extent2D {
     constexpr Extent2D()
@@ -36,6 +37,9 @@ struct Extent2D {
     {
         return m_width == other.m_width && m_height == other.m_height;
     }
+
+    moos::uvec2 asUIntVector() const { return moos::uvec2(m_width, m_height); }
+    moos::ivec2 asIntVector() const { return moos::ivec2(m_width, m_height); }
 
 private:
     uint32_t m_width {};
@@ -74,6 +78,9 @@ struct Extent3D {
     {
         return m_width == other.m_width && m_height == other.m_height && m_depth == other.m_depth;
     }
+
+    moos::uvec3 asUIntVector() const { return moos::uvec3(m_width, m_height, m_depth); }
+    moos::ivec3 asIntVector() const { return moos::ivec3(m_width, m_height, m_depth); }
 
 private:
     uint32_t m_width {};
