@@ -224,7 +224,7 @@ Texture& Registry::createCubemapTexture(Extent2D extent, Texture::Format format)
     return *m_textures.back();
 }
 
-Texture& Registry::createOrReuseTexture2D(const std::string& name, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
+std::pair<Texture&, Registry::ReuseMode> Registry::createOrReuseTexture2D(const std::string& name, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
 {
     if (m_previousRegistry) {
         for (std::unique_ptr<Texture>& oldTexture : m_previousRegistry->m_textures) {
@@ -244,7 +244,7 @@ Texture& Registry::createOrReuseTexture2D(const std::string& name, Extent2D exte
                 oldTexture->setOwningRegistry({}, this);
                 m_textures.push_back(std::move(oldTexture));
 
-                return *m_textures.back();
+                return { *m_textures.back(), ReuseMode::Reused };
             }
         }
     }
@@ -253,7 +253,7 @@ Texture& Registry::createOrReuseTexture2D(const std::string& name, Extent2D exte
     texture.setReusable({}, true);
     texture.setName(name);
 
-    return texture;
+    return { texture, ReuseMode::Created };
 }
 
 Texture& Registry::createOrReuseTextureArray(const std::string& name, uint32_t itemCount, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
