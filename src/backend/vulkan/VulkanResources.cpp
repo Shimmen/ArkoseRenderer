@@ -495,6 +495,112 @@ void VulkanTexture::setName(const std::string& name)
     }
 }
 
+void VulkanTexture::clear(ClearColor color)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+
+    // TODO: Support depth texture clears!
+    ASSERT(!hasDepthFormat());
+
+    std::optional<VkImageLayout> originalLayout;
+    if (currentLayout != VK_IMAGE_LAYOUT_GENERAL && currentLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        originalLayout = currentLayout;
+
+        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        imageBarrier.oldLayout = originalLayout.value();
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        imageBarrier.image = image;
+        imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageBarrier.subresourceRange.baseMipLevel = 0;
+        imageBarrier.subresourceRange.levelCount = mipLevels();
+        imageBarrier.subresourceRange.baseArrayLayer = 0;
+        imageBarrier.subresourceRange.layerCount = layerCount();
+
+        // FIXME: Probably overly aggressive barriers!
+
+        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+        bool success = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+            vkCmdPipelineBarrier(commandBuffer,
+                                 sourceStage, destinationStage, 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 1, &imageBarrier);
+        });
+        if (!success) {
+            LogError("Could not transition image to general layout.\n");
+            return;
+        }
+    }
+
+    VkClearColorValue clearValue {};
+    clearValue.float32[0] = color.r;
+    clearValue.float32[1] = color.g;
+    clearValue.float32[2] = color.b;
+    clearValue.float32[3] = color.a;
+
+    VkImageSubresourceRange range {};
+    range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+    range.baseMipLevel = 0;
+    range.levelCount = mipLevels();
+
+    range.baseArrayLayer = 0;
+    range.layerCount = layerCount();
+
+    bool success = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+        vkCmdClearColorImage(commandBuffer, image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &range);
+    });
+    if (!success) {
+        LogError("Could not clear the color image.\n");
+        return;
+    }
+
+    if (originalLayout.has_value() && originalLayout.value() != VK_IMAGE_LAYOUT_UNDEFINED && originalLayout.value() != VK_IMAGE_LAYOUT_PREINITIALIZED) {
+        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+        imageBarrier.newLayout = originalLayout.value();
+        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        imageBarrier.image = image;
+        imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageBarrier.subresourceRange.baseMipLevel = 0;
+        imageBarrier.subresourceRange.levelCount = mipLevels();
+        imageBarrier.subresourceRange.baseArrayLayer = 0;
+        imageBarrier.subresourceRange.layerCount = layerCount();
+
+        // FIXME: Probably overly aggressive barriers!
+
+        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+        bool success = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+            vkCmdPipelineBarrier(commandBuffer,
+                                 sourceStage, destinationStage, 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 1, &imageBarrier);
+        });
+        if (!success) {
+            LogError("Could not transition image back to original layout.\n");
+            return;
+        }
+    }
+}
+
 void VulkanTexture::setPixelData(vec4 pixel)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();

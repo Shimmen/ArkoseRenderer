@@ -234,6 +234,8 @@ struct Texture : public Resource {
 
     bool hasFloatingPointDataFormat() const;
 
+    virtual void clear(ClearColor) = 0;
+
     virtual void setPixelData(vec4 pixel) = 0;
     virtual void setData(const void* data, size_t size) = 0;
 

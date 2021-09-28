@@ -30,6 +30,8 @@ public:
 
     virtual void setName(const std::string& name) override;
 
+    void clear(ClearColor) override;
+
     void setPixelData(vec4 pixel) override;
     void setData(const void* data, size_t size) override;
 
