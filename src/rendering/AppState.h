@@ -16,6 +16,7 @@ public:
     }
 
     uint32_t frameIndex() const { return m_frameIndex; }
+    bool isFirstFrame() const { return m_frameIndex == 0; }
     bool isRelativeFirstFrame() const { return m_isRelativeFirstFrame; }
     const Extent2D& windowExtent() const { return m_windowExtent; }
     double deltaTime() const { return m_deltaTime; }
