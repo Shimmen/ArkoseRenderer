@@ -201,7 +201,7 @@ std::optional<std::string> ShaderManager::loadAndCompileImmediately(const std::s
     std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
 
     auto entry = m_compiledShaders.find(path);
-    if (entry == m_compiledShaders.end()) {
+    if (entry == m_compiledShaders.end() || entry->second->lastCompileError.length() > 0) {
 
         if (!FileIO::isFileReadable(path))
             return "file '" + name + "' not found";

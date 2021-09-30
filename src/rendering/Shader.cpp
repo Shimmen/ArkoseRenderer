@@ -3,6 +3,10 @@
 #include "rendering/ShaderManager.h"
 #include <utility/Logging.h>
 
+#ifdef _WIN32
+#include <cstdio>
+#endif
+
 ShaderFile::ShaderFile(const std::string& path)
     : ShaderFile(path, typeFromPath(path))
 {
@@ -12,11 +16,19 @@ ShaderFile::ShaderFile(std::string path, ShaderFileType type)
     : m_path(std::move(path))
     , m_type(type)
 {
-    auto maybeError = ShaderManager::instance().loadAndCompileImmediately(m_path);
-    if (maybeError.has_value()) {
-        LogError("Shader file error: %s\n", maybeError.value().c_str());
-        LogErrorAndExit("Exiting due to bad shader at startup.\n");
-    }
+    std::optional<std::string> maybeError = {};
+    do {
+        maybeError = ShaderManager::instance().loadAndCompileImmediately(m_path);
+        if (maybeError.has_value()) {
+            LogError("Shader file error: %s\n", maybeError.value().c_str());
+            #ifdef _WIN32
+                LogError("Edit & and save the shader, then ...\n");
+                system("pause");
+            #else
+                LogErrorAndExit("Exiting due to bad shader at startup.\n");
+            #endif
+        }
+    } while (maybeError.has_value());
 }
 
 const std::string& ShaderFile::path() const
