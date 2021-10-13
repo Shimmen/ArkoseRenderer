@@ -10,43 +10,32 @@
 #include <thread>
 #include <sys/stat.h>
 
-shaderc_shader_kind glslShaderKindForPath(const std::string& path)
+static shaderc_shader_kind glslShaderKindForShaderFile(const ShaderFile& shaderFile)
 {
-    // Actually, since we have the ShaderFile with ShaderFileType we already know what the author intends the shader to be!
-    // Also, this code is real shit.. but it works!
-
-    if (path.length() < 5) {
-        return shaderc_glsl_infer_from_source;
-    }
-    std::string ext5 = path.substr(path.length() - 5);
-
-    if (ext5 == ".vert") {
+    switch (shaderFile.type()) {
+    case ShaderFileType::Vertex:
         return shaderc_vertex_shader;
-    } else if (ext5 == ".frag") {
+    case ShaderFileType::Fragment:
         return shaderc_fragment_shader;
-    } else if (ext5 == ".rgen") {
-        return shaderc_raygen_shader;
-    } else if (ext5 == ".comp") {
+    case ShaderFileType::Compute:
         return shaderc_compute_shader;
-    } else if (ext5 == ".rint") {
+    case ShaderFileType::RTRaygen:
+        return shaderc_raygen_shader;
+    case ShaderFileType::RTClosestHit:
+        return shaderc_closesthit_shader;
+    case ShaderFileType::RTAnyHit:
+        return shaderc_anyhit_shader;
+    case ShaderFileType::RTIntersection:
         return shaderc_intersection_shader;
-    }
-
-    if (path.length() < 6) {
+    case ShaderFileType::RTMiss:
+        return shaderc_miss_shader;
+    case ShaderFileType::Unknown:
+        LogWarning("Can't find glsl shader kind for shader file of unknown type ('%s')\n", shaderFile.path().c_str());
+        return shaderc_glsl_infer_from_source;
+    default:
+        ASSERT_NOT_REACHED();
         return shaderc_glsl_infer_from_source;
     }
-    std::string ext6 = path.substr(path.length() - 6);
-
-    if (ext6 == ".rmiss") {
-        return shaderc_miss_shader;
-    } else if (ext6 == ".rchit") {
-        return shaderc_closesthit_shader;
-    } else if (ext6 == ".rahit") {
-        return shaderc_anyhit_shader;
-    }
-
-    LogWarning("ShaderManager: unrecognized shader file type '%s'\n", path.c_str());
-    return shaderc_glsl_infer_from_source;
 }
 
 class GlslIncluder : public shaderc::CompileOptions::IncluderInterface {
@@ -98,6 +87,7 @@ public:
             data->content_length = dataOwner->content.size();
 
         } else {
+            // TODO: Handle include errors slightly more gracefully
             LogError("ShaderManager: could not find file '%s' included by '%s', exiting", requested_source, requesting_source);
         }
 
@@ -147,11 +137,11 @@ void ShaderManager::startFileWatching(unsigned msBetweenPolls, FilesChangedCallb
                     if (latestTimestamp <= compiledShader->compiledTimestamp)
                         continue;
 
-                    LogInfo("Recompiling shader '%s'", compiledShader->filePath.c_str());
+                    LogInfo("Recompiling shader '%s'", compiledShader->resolvedFilePath.c_str());
 
                     if (compiledShader->recompile()) {
                         LogInfo(" (success)\n");
-                        recompiledFiles.push_back(compiledShader->shaderName);
+                        recompiledFiles.push_back(compiledShader->shaderFile.path());
                     } else {
                         // TODO: Pop an error window in the draw window instead.. that would be easier to keep track of
                         LogError(" (error):\n  %s", compiledShader->lastCompileError.c_str());
@@ -194,8 +184,9 @@ std::string ShaderManager::resolveSpirvAssemblyPath(const std::string& name) con
     return resolvedPath;
 }
 
-std::optional<std::string> ShaderManager::loadAndCompileImmediately(const std::string& name)
+std::optional<std::string> ShaderManager::loadAndCompileImmediately(const ShaderFile& shaderFile)
 {
+    std::string name = shaderFile.path();
     std::string path = resolveGlslPath(name);
 
     std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
@@ -206,7 +197,7 @@ std::optional<std::string> ShaderManager::loadAndCompileImmediately(const std::s
         if (!FileIO::isFileReadable(path))
             return "file '" + name + "' not found";
 
-        auto compiledShader = std::make_unique<CompiledShader>(*this, name, path);
+        auto compiledShader = std::make_unique<CompiledShader>(*this, shaderFile, path);
         if (compiledShader->tryLoadingFromBinaryCache() == false) {
             compiledShader->recompile();
         }
@@ -222,7 +213,7 @@ std::optional<std::string> ShaderManager::loadAndCompileImmediately(const std::s
     return {};
 }
 
-const std::vector<uint32_t>& ShaderManager::spirv(const std::string& name) const
+const ShaderManager::SpirvData& ShaderManager::spirv(const std::string& name) const
 {
     auto path = resolveGlslPath(name);
 
@@ -239,10 +230,10 @@ const std::vector<uint32_t>& ShaderManager::spirv(const std::string& name) const
 }
 
 
-ShaderManager::CompiledShader::CompiledShader(ShaderManager& manager, std::string name, std::string path)
+ShaderManager::CompiledShader::CompiledShader(ShaderManager& manager, ShaderFile shaderFile, std::string resolvedPath)
     : shaderManager(manager)
-    , shaderName(std::move(name))
-    , filePath(std::move(path))
+    , shaderFile(std::move(shaderFile))
+    , resolvedFilePath(std::move(resolvedPath))
 {
 }
 
@@ -250,7 +241,7 @@ bool ShaderManager::CompiledShader::tryLoadingFromBinaryCache()
 {
     SCOPED_PROFILE_ZONE();
 
-    std::string spirvPath = shaderManager.resolveSpirvPath(shaderName);
+    std::string spirvPath = shaderManager.resolveSpirvPath(shaderFile.path());
 
     struct stat statResult {};
     bool binaryCacheExists = stat(spirvPath.c_str(), &statResult) == 0;
@@ -286,14 +277,14 @@ bool ShaderManager::CompiledShader::recompile()
     options.SetForcedVersionProfile(460, shaderc_profile_none);
     options.SetGenerateDebugInfo(); // always generate debug info
 
-    shaderc_shader_kind shaderKind = glslShaderKindForPath(filePath);
-    std::string glslSource = FileIO::readEntireFile(filePath).value();
+    shaderc_shader_kind shaderKind = glslShaderKindForShaderFile(shaderFile);
+    std::string glslSource = FileIO::readEntireFile(resolvedFilePath).value();
 
     shaderc::Compiler compiler {};
     shaderc::SpvCompilationResult result;
     {
         SCOPED_PROFILE_ZONE_NAMED("ShaderC work")
-        result = compiler.CompileGlslToSpv(glslSource, shaderKind, filePath.c_str(), options);
+        result = compiler.CompileGlslToSpv(glslSource, shaderKind, resolvedFilePath.c_str(), options);
     }
 
     bool compilationSuccess = result.GetCompilationStatus() == shaderc_compilation_status_success;
@@ -301,15 +292,15 @@ bool ShaderManager::CompiledShader::recompile()
     if (compilationSuccess) {
 
         currentSpirvBinary = std::vector<uint32_t>(result.cbegin(), result.cend());
-        FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvPath(shaderName), currentSpirvBinary);
+        FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvPath(shaderFile.path()), currentSpirvBinary);
 
         includedFilePaths = std::move(newIncludedFiles);
         lastCompileError.clear();
 
         {
-            // NOTE: This causes a weird crash in ShaderC for some reason *for some shader*
+            // NOTE: This causes a weird crash in ShaderC for some reason *for some shaders*
             //SCOPED_PROFILE_ZONE_NAMED("ShaderC ASM work");
-            //shaderc::AssemblyCompilationResult asmResult = compiler.CompileGlslToSpvAssembly(glslSource, shaderKind, filePath.c_str(), options);
+            //shaderc::AssemblyCompilationResult asmResult = compiler.CompileGlslToSpvAssembly(glslSource, shaderKind, resolvedFilePath.c_str(), options);
             //FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvAssemblyPath(shaderName), std::vector<char>(asmResult.cbegin(), asmResult.cend()));
         }
 
@@ -345,7 +336,7 @@ uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree(boo
         includedFilePaths = findAllIncludedFiles();
     }
 
-    checkFile(filePath);
+    checkFile(resolvedFilePath);
     for (auto& file : includedFilePaths) {
         checkFile(file);
     }
@@ -361,9 +352,12 @@ std::vector<std::string> ShaderManager::CompiledShader::findAllIncludedFiles() c
 {
     SCOPED_PROFILE_ZONE();
 
+    // NOTE: If the resulting list does not line up with what the shader compiler
+    // believes is the true set of includes we should expect some weird issues.
+
     std::vector<std::string> files {};
 
-    std::vector<std::string> filesToTest { filePath };
+    std::vector<std::string> filesToTest { resolvedFilePath };
     while (filesToTest.size() > 0) {
 
         std::string fileToTest = filesToTest.back();
@@ -374,6 +368,8 @@ std::vector<std::string> ShaderManager::CompiledShader::findAllIncludedFiles() c
             size_t includeIdx = line.find("#include");
             if (includeIdx == std::string::npos)
                 return FileIO::NextAction::Continue;
+
+            // TODO: Add support for relative includes as well!
 
             size_t fileStartIdx = line.find('<', includeIdx);
             size_t fileEndIdx = line.find('>', fileStartIdx);
@@ -392,8 +388,6 @@ std::vector<std::string> ShaderManager::CompiledShader::findAllIncludedFiles() c
             return FileIO::NextAction::Continue;
         });
     }
-
-
 
     return files;
 }

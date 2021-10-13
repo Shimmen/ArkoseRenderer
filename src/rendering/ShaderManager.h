@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rendering/Shader.h"
 #include "utility/Badge.h"
 #include <functional>
 #include <mutex>
@@ -24,7 +25,7 @@ public:
     std::string resolveSpirvPath(const std::string& name) const;
     std::string resolveSpirvAssemblyPath(const std::string& name) const;
 
-    std::optional<std::string> loadAndCompileImmediately(const std::string& name);
+    std::optional<std::string> loadAndCompileImmediately(const ShaderFile&);
 
     const SpirvData& spirv(const std::string& name) const;
 
@@ -42,7 +43,7 @@ private:
 
     struct CompiledShader {
         CompiledShader() = default;
-        explicit CompiledShader(ShaderManager&, std::string name, std::string path);
+        explicit CompiledShader(ShaderManager&, ShaderFile, std::string resolvedPath);
 
         bool tryLoadingFromBinaryCache();
         bool recompile();
@@ -52,8 +53,8 @@ private:
 
         const ShaderManager& shaderManager;
 
-        std::string shaderName {};
-        std::string filePath {};
+        ShaderFile shaderFile {};
+        std::string resolvedFilePath {};
         std::vector<std::string> includedFilePaths {};
 
         uint64_t lastEditTimestamp { 0 };

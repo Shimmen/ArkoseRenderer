@@ -18,7 +18,7 @@ ShaderFile::ShaderFile(std::string path, ShaderFileType type)
 {
     std::optional<std::string> maybeError = {};
     do {
-        maybeError = ShaderManager::instance().loadAndCompileImmediately(m_path);
+        maybeError = ShaderManager::instance().loadAndCompileImmediately(*this);
         if (maybeError.has_value()) {
             LogError("Shader file error: %s\n", maybeError.value().c_str());
             #ifdef _WIN32
