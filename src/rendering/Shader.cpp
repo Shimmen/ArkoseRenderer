@@ -7,15 +7,38 @@
 #include <cstdio>
 #endif
 
-ShaderFile::ShaderFile(const std::string& path)
-    : ShaderFile(path, typeFromPath(path))
+ShaderFile::ShaderFile(const std::string& path, std::initializer_list<ShaderDefine> defines)
+    : ShaderFile(path, typeFromPath(path), std::move(defines))
 {
 }
 
-ShaderFile::ShaderFile(std::string path, ShaderFileType type)
+ShaderFile::ShaderFile(std::string path, ShaderFileType type, std::initializer_list<ShaderDefine> defines)
     : m_path(std::move(path))
+    , m_defines(std::move(defines))
     , m_type(type)
 {
+    //m_defines_identifier = createIdentifierForDefines();
+    // Sort the list so we can assume that equivalent set of defines generates the same identifier
+    std::sort(m_defines.begin(), m_defines.end(), [](const ShaderDefine& lhs, const ShaderDefine& rhs) {
+        if (lhs.symbol == rhs.symbol) {
+            return lhs.value < rhs.value;
+        } else {
+            return lhs.symbol < rhs.symbol;
+        }
+    });
+
+    m_defines_identifier = "";
+    for (int i = 0; i < m_defines.size(); ++i) {
+        const ShaderDefine& define = m_defines[i];
+        m_defines_identifier.append(define.symbol);
+        if (define.value.has_value()) {
+            m_defines_identifier.append("=");
+            m_defines_identifier.append(define.value.value());
+        }
+        if (i < m_defines.size() - 1)
+            m_defines_identifier.append(";");
+    }
+
     std::optional<std::string> maybeError = {};
     do {
         maybeError = ShaderManager::instance().loadAndCompileImmediately(*this);
@@ -34,6 +57,16 @@ ShaderFile::ShaderFile(std::string path, ShaderFileType type)
 const std::string& ShaderFile::path() const
 {
     return m_path;
+}
+
+const std::vector<ShaderDefine>& ShaderFile::defines() const
+{
+    return m_defines;
+}
+
+const std::string& ShaderFile::definesIdentifier() const
+{
+    return m_defines_identifier;
 }
 
 ShaderFileType ShaderFile::type() const
@@ -72,22 +105,22 @@ ShaderFileType ShaderFile::typeFromPath(const std::string& path)
     return ShaderFileType::Unknown;
 }
 
-Shader Shader::createVertexOnly(std::string vertexName)
+Shader Shader::createVertexOnly(std::string vertexName, std::initializer_list<ShaderDefine> defines)
 {
-    ShaderFile vertexFile { std::move(vertexName), ShaderFileType::Vertex };
+    ShaderFile vertexFile { std::move(vertexName), ShaderFileType::Vertex, defines };
     return Shader({ vertexFile }, ShaderType::Raster);
 }
 
-Shader Shader::createBasicRasterize(std::string vertexName, std::string fragmentName)
+Shader Shader::createBasicRasterize(std::string vertexName, std::string fragmentName, std::initializer_list<ShaderDefine> defines)
 {
-    ShaderFile vertexFile { std::move(vertexName), ShaderFileType::Vertex };
-    ShaderFile fragmentFile { std::move(fragmentName), ShaderFileType::Fragment };
+    ShaderFile vertexFile { std::move(vertexName), ShaderFileType::Vertex, defines };
+    ShaderFile fragmentFile { std::move(fragmentName), ShaderFileType::Fragment, defines };
     return Shader({ vertexFile, fragmentFile }, ShaderType::Raster);
 }
 
-Shader Shader::createCompute(std::string computeName)
+Shader Shader::createCompute(std::string computeName, std::initializer_list<ShaderDefine> defines)
 {
-    ShaderFile computeFile { std::move(computeName), ShaderFileType::Compute };
+    ShaderFile computeFile { std::move(computeName), ShaderFileType::Compute, defines };
     return Shader({ computeFile }, ShaderType::Compute);
 }
 

@@ -1702,7 +1702,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
 
             // TODO: Maybe don't create new modules every time? Currently they are deleted later in this function
             VkShaderModuleCreateInfo moduleCreateInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-            const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(file.path());
+            const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(file);
             moduleCreateInfo.codeSize = sizeof(uint32_t) * spirv.size();
             moduleCreateInfo.pCode = spirv.data();
 
@@ -2380,7 +2380,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     // RayGen
     {
         VkShaderModuleCreateInfo moduleCreateInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-        const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(sbt.rayGen().path());
+        const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(sbt.rayGen());
         moduleCreateInfo.codeSize = sizeof(uint32_t) * spirv.size();
         moduleCreateInfo.pCode = spirv.data();
 
@@ -2426,7 +2426,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
         // ClosestHit
         {
             VkShaderModuleCreateInfo moduleCreateInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-            const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(hitGroup.closestHit().path());
+            const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(hitGroup.closestHit());
             moduleCreateInfo.codeSize = sizeof(uint32_t) * spirv.size();
             moduleCreateInfo.pCode = spirv.data();
 
@@ -2447,7 +2447,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
 
         if (hitGroup.hasAnyHitShader()) {
             VkShaderModuleCreateInfo moduleCreateInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-            const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(hitGroup.anyHit().path());
+            const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(hitGroup.anyHit());
             moduleCreateInfo.codeSize = sizeof(uint32_t) * spirv.size();
             moduleCreateInfo.pCode = spirv.data();
 
@@ -2468,7 +2468,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
 
         if (hitGroup.hasIntersectionShader()) {
             VkShaderModuleCreateInfo moduleCreateInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-            const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(hitGroup.intersection().path());
+            const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(hitGroup.intersection());
             moduleCreateInfo.codeSize = sizeof(uint32_t) * spirv.size();
             moduleCreateInfo.pCode = spirv.data();
 
@@ -2494,7 +2494,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     for (const ShaderFile& missShader : sbt.missShaders()) {
 
         VkShaderModuleCreateInfo moduleCreateInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-        const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(missShader.path());
+        const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(missShader);
         moduleCreateInfo.codeSize = sizeof(uint32_t) * spirv.size();
         moduleCreateInfo.pCode = spirv.data();
 
@@ -2651,7 +2651,7 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
 
         // TODO: Maybe don't create new modules every time? Currently they are deleted later in this function
         VkShaderModuleCreateInfo moduleCreateInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
-        const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(file.path());
+        const std::vector<uint32_t>& spirv = ShaderManager::instance().spirv(file);
         moduleCreateInfo.codeSize = sizeof(uint32_t) * spirv.size();
         moduleCreateInfo.pCode = spirv.data();
 

@@ -170,42 +170,55 @@ std::string ShaderManager::resolveGlslPath(const std::string& name) const
     return resolvedPath;
 }
 
-std::string ShaderManager::resolveSpirvPath(const std::string& name) const
+std::string ShaderManager::createShaderIdentifier(const ShaderFile& shaderFile) const
 {
-    std::string spirvName = name + ".spv";
+    if (shaderFile.defines().size() > 0) {
+        // TODO: Should we maybe hash the define identifier here to cut down on its length?
+        std::string defineIdentifier = shaderFile.definesIdentifier();
+        return shaderFile.path() + "_" + defineIdentifier;
+    } else {
+        return shaderFile.path();
+    }
+}
+
+std::string ShaderManager::resolveSpirvPath(const ShaderFile& shaderFile) const
+{
+    std::string spirvName = createShaderIdentifier(shaderFile) + ".spv";
     std::string resolvedPath = m_shaderBasePath + "/.cache/" + spirvName;
     return resolvedPath;
 }
 
-std::string ShaderManager::resolveSpirvAssemblyPath(const std::string& name) const
+std::string ShaderManager::resolveSpirvAssemblyPath(const ShaderFile& shaderFile) const
 {
-    std::string asmName = name + ".spv-asm";
+    std::string asmName = createShaderIdentifier(shaderFile) + ".spv-asm";
     std::string resolvedPath = m_shaderBasePath + "/.cache/" + asmName;
     return resolvedPath;
 }
 
 std::optional<std::string> ShaderManager::loadAndCompileImmediately(const ShaderFile& shaderFile)
 {
-    std::string name = shaderFile.path();
-    std::string path = resolveGlslPath(name);
-
     std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
 
-    auto entry = m_compiledShaders.find(path);
+    std::string identifer = createShaderIdentifier(shaderFile);
+
+    auto entry = m_compiledShaders.find(identifer);
     if (entry == m_compiledShaders.end() || entry->second->lastCompileError.length() > 0) {
 
-        if (!FileIO::isFileReadable(path))
-            return "file '" + name + "' not found";
+        const std::string& shaderName = shaderFile.path();
+        std::string resolvedPath = resolveGlslPath(shaderName);
 
-        auto compiledShader = std::make_unique<CompiledShader>(*this, shaderFile, path);
+        if (!FileIO::isFileReadable(resolvedPath))
+            return "file '" + shaderName + "' not found";
+
+        auto compiledShader = std::make_unique<CompiledShader>(*this, shaderFile, resolvedPath);
         if (compiledShader->tryLoadingFromBinaryCache() == false) {
             compiledShader->recompile();
         }
 
-        m_compiledShaders[path] = std::move(compiledShader);
+        m_compiledShaders[identifer] = std::move(compiledShader);
     }
 
-    CompiledShader& compiledShader = *m_compiledShaders[path];
+    CompiledShader& compiledShader = *m_compiledShaders[identifer];
     if (compiledShader.currentSpirvBinary.empty()) {
         return compiledShader.lastCompileError;
     }
@@ -213,12 +226,10 @@ std::optional<std::string> ShaderManager::loadAndCompileImmediately(const Shader
     return {};
 }
 
-const ShaderManager::SpirvData& ShaderManager::spirv(const std::string& name) const
+const ShaderManager::SpirvData& ShaderManager::spirv(const ShaderFile& shaderFile) const
 {
-    auto path = resolveGlslPath(name);
-
     std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
-    auto result = m_compiledShaders.find(path);
+    auto result = m_compiledShaders.find(createShaderIdentifier(shaderFile));
 
     // NOTE: This function should only be called from some backend, so if the
     //  file doesn't exist in the set of loaded shaders something is wrong,
@@ -230,9 +241,9 @@ const ShaderManager::SpirvData& ShaderManager::spirv(const std::string& name) co
 }
 
 
-ShaderManager::CompiledShader::CompiledShader(ShaderManager& manager, ShaderFile shaderFile, std::string resolvedPath)
+ShaderManager::CompiledShader::CompiledShader(ShaderManager& manager, const ShaderFile& shaderFile, std::string resolvedPath)
     : shaderManager(manager)
-    , shaderFile(std::move(shaderFile))
+    , shaderFile(shaderFile)
     , resolvedFilePath(std::move(resolvedPath))
 {
 }
@@ -241,7 +252,7 @@ bool ShaderManager::CompiledShader::tryLoadingFromBinaryCache()
 {
     SCOPED_PROFILE_ZONE();
 
-    std::string spirvPath = shaderManager.resolveSpirvPath(shaderFile.path());
+    std::string spirvPath = shaderManager.resolveSpirvPath(shaderFile);
 
     struct stat statResult {};
     bool binaryCacheExists = stat(spirvPath.c_str(), &statResult) == 0;
@@ -270,7 +281,15 @@ bool ShaderManager::CompiledShader::recompile()
     });
 
     shaderc::CompileOptions options;
+
     options.SetIncluder(std::move(includer));
+    for (const ShaderDefine& define : shaderFile.defines()) {
+        if (define.value.has_value())
+            options.AddMacroDefinition(define.symbol, define.value.value());
+        else
+            options.AddMacroDefinition(define.symbol);
+    }
+
     options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
     options.SetTargetSpirv(shaderc_spirv_version_1_5);
     options.SetSourceLanguage(shaderc_source_language_glsl);
@@ -292,7 +311,7 @@ bool ShaderManager::CompiledShader::recompile()
     if (compilationSuccess) {
 
         currentSpirvBinary = std::vector<uint32_t>(result.cbegin(), result.cend());
-        FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvPath(shaderFile.path()), currentSpirvBinary);
+        FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvPath(shaderFile), currentSpirvBinary);
 
         includedFilePaths = std::move(newIncludedFiles);
         lastCompileError.clear();
@@ -301,7 +320,7 @@ bool ShaderManager::CompiledShader::recompile()
             // NOTE: This causes a weird crash in ShaderC for some reason *for some shaders*
             //SCOPED_PROFILE_ZONE_NAMED("ShaderC ASM work");
             //shaderc::AssemblyCompilationResult asmResult = compiler.CompileGlslToSpvAssembly(glslSource, shaderKind, resolvedFilePath.c_str(), options);
-            //FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvAssemblyPath(shaderName), std::vector<char>(asmResult.cbegin(), asmResult.cend()));
+            //FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvAssemblyPath(shaderFile), std::vector<char>(asmResult.cbegin(), asmResult.cend()));
         }
 
     } else {

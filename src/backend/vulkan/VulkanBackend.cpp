@@ -1543,7 +1543,7 @@ std::optional<VkPushConstantRange> VulkanBackend::getPushConstantRangeForShader(
             ASSERT_NOT_REACHED();
         }
 
-        const auto& spv = ShaderManager::instance().spirv(file.path());
+        const auto& spv = ShaderManager::instance().spirv(file);
         spirv_cross::Compiler compiler { spv };
         spirv_cross::ShaderResources resources = compiler.get_shader_resources();
 
@@ -1612,7 +1612,7 @@ std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>
             ASSERT_NOT_REACHED();
         }
 
-        const auto& spv = ShaderManager::instance().spirv(file.path());
+        const auto& spv = ShaderManager::instance().spirv(file);
         spirv_cross::Compiler compiler { spv };
         spirv_cross::ShaderResources resources = compiler.get_shader_resources();
 
@@ -1751,7 +1751,7 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
             ASSERT_NOT_REACHED();
         }
 
-        const auto& spv = ShaderManager::instance().spirv(file.path());
+        const auto& spv = ShaderManager::instance().spirv(file);
         spirv_cross::Compiler compiler { spv };
         spirv_cross::ShaderResources resources = compiler.get_shader_resources();
 

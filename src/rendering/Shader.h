@@ -20,6 +20,35 @@ enum ShaderStage : uint8_t {
     ShaderStageAny = ShaderStageAnyRasterize | ShaderStageAnyRayTrace | ShaderStageCompute
 };
 
+struct ShaderDefine {
+    std::string symbol;
+    std::optional<std::string> value;
+
+    static ShaderDefine makeSymbol(std::string symbol)
+    {
+        ShaderDefine define;
+        define.symbol = symbol;
+        define.value = {};
+        return define;
+    }
+
+    static ShaderDefine makeInt(std::string symbol, int intValue)
+    {
+        ShaderDefine define;
+        define.symbol = symbol;
+        define.value = std::to_string(intValue);
+        return define;    
+    }
+
+    static ShaderDefine makeBool(std::string symbol, bool boolValue)
+    {
+        ShaderDefine define;
+        define.symbol = symbol;
+        define.value = boolValue ? "1" : "0";
+        return define;
+    }
+};
+
 enum class ShaderFileType {
     Vertex,
     Fragment,
@@ -34,16 +63,20 @@ enum class ShaderFileType {
 
 struct ShaderFile {
     ShaderFile() = default;
-    /* implicit */ ShaderFile(const std::string& path); // NOLINT(google-explicit-constructor)
-    ShaderFile(std::string path, ShaderFileType);
+    explicit ShaderFile(const std::string& path, std::initializer_list<ShaderDefine> = {});
+    ShaderFile(std::string path, ShaderFileType, std::initializer_list<ShaderDefine> = {});
 
     [[nodiscard]] const std::string& path() const;
+    [[nodiscard]] const std::vector<ShaderDefine>& defines() const;
+    [[nodiscard]] const std::string& definesIdentifier() const;
     [[nodiscard]] ShaderFileType type() const;
 
+private:
     static ShaderFileType typeFromPath(const std::string&);
 
-private:
     std::string m_path;
+    std::vector<ShaderDefine> m_defines;
+    std::string m_defines_identifier;
     ShaderFileType m_type { ShaderFileType::Unknown };
 };
 
@@ -63,9 +96,9 @@ struct Shader {
         uint32_t size;
     };
 
-    static Shader createVertexOnly(std::string vertexName);
-    static Shader createBasicRasterize(std::string vertexName, std::string fragmentName);
-    static Shader createCompute(std::string computeName);
+    static Shader createVertexOnly(std::string vertexName, std::initializer_list<ShaderDefine> = {});
+    static Shader createBasicRasterize(std::string vertexName, std::string fragmentName, std::initializer_list<ShaderDefine> = {});
+    static Shader createCompute(std::string computeName, std::initializer_list<ShaderDefine> = {});
 
     Shader() = default;
     Shader(std::vector<ShaderFile>, ShaderType type);

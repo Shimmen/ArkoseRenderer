@@ -22,12 +22,15 @@ public:
     using SpirvData = std::vector<uint32_t>;
 
     std::string resolveGlslPath(const std::string& name) const;
-    std::string resolveSpirvPath(const std::string& name) const;
-    std::string resolveSpirvAssemblyPath(const std::string& name) const;
+
+    std::string createShaderIdentifier(const ShaderFile&) const;
+
+    std::string resolveSpirvPath(const ShaderFile&) const;
+    std::string resolveSpirvAssemblyPath(const ShaderFile&) const;
 
     std::optional<std::string> loadAndCompileImmediately(const ShaderFile&);
 
-    const SpirvData& spirv(const std::string& name) const;
+    const SpirvData& spirv(const ShaderFile&) const;
 
     using FilesChangedCallback = std::function<void(const std::vector<std::string>&)>;
     void startFileWatching(unsigned msBetweenPolls, FilesChangedCallback filesChangedCallback = {});
@@ -43,7 +46,7 @@ private:
 
     struct CompiledShader {
         CompiledShader() = default;
-        explicit CompiledShader(ShaderManager&, ShaderFile, std::string resolvedPath);
+        explicit CompiledShader(ShaderManager&, const ShaderFile&, std::string resolvedPath);
 
         bool tryLoadingFromBinaryCache();
         bool recompile();
@@ -53,7 +56,7 @@ private:
 
         const ShaderManager& shaderManager;
 
-        ShaderFile shaderFile {};
+        const ShaderFile& shaderFile;
         std::string resolvedFilePath {};
         std::vector<std::string> includedFilePaths {};
 
