@@ -29,6 +29,9 @@ public:
 
     using ExecuteCallback = std::function<void(const AppState&, CommandList&)>;
 
+    // An execute callback that does nothing. Useful for early exit when nothing to execute.
+    static const ExecuteCallback NullExecuteCallback;
+
     [[nodiscard]] const std::string& name() const;
     [[nodiscard]] NodeTimer& timer();
 

@@ -2,6 +2,8 @@
 
 #include <utility>
 
+const RenderGraphNode::ExecuteCallback RenderGraphNode::NullExecuteCallback = [&](const AppState&, CommandList&) {};
+
 void NodeTimer::reportCpuTime(double time)
 {
     m_cpuAccumulator.report(time);

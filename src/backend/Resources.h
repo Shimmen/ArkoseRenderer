@@ -5,6 +5,7 @@
 #include "rendering/scene/Vertex.h"
 #include "utility/Badge.h"
 #include "utility/Extent.h"
+#include "utility/Logging.h"
 #include "utility/util.h"
 #include <cstdint>
 #include <functional>
@@ -629,9 +630,10 @@ struct StateBindings {
     {
         for (uint32_t index = 0; index < m_orderedBindingSets.size(); ++index) {
             BindingSet* bindingSet = m_orderedBindingSets[index];
-            if (bindingSet != nullptr) {
+            if (bindingSet == nullptr && shouldAutoBind())
+                LogErrorAndExit("Non-contiguous bindings are not supported right now! (This can probably be changed later if we want to)");
+            else
                 callback(index, *bindingSet);
-            }
         }
     }
 
@@ -639,8 +641,8 @@ struct StateBindings {
     void forEachBinding(Callback callback) const
     {
         for (const BindingSet* set : m_orderedBindingSets) {
-            if (!set)
-                continue;
+            if (set == nullptr && shouldAutoBind())
+                LogErrorAndExit("Non-contiguous bindings are not supported right now! (This can probably be changed later if we want to)");
             for (const ShaderBinding& bindingInfo : set->shaderBindings())
                 callback(bindingInfo);
         }

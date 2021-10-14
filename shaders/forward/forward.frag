@@ -8,9 +8,6 @@
 #include <shared/SceneData.h>
 #include <shared/LightData.h>
 
-// TODO: Define this when compiling the shader instead of here!
-#define FORWARD_INCLUDE_INDIRECT_LIGHT 1
-
 layout(location = 0) in vec2 vTexCoord;
 layout(location = 1) in vec3 vPosition;
 layout(location = 2) in vec3 vNormal;
@@ -31,9 +28,9 @@ layout(set = 2, binding = 4) uniform sampler2D iesLUTs[SCENE_MAX_IES_LUT];
 #if FORWARD_INCLUDE_INDIRECT_LIGHT
 #include <shared/ProbeGridData.h>
 #include <diffuse-gi/probeSampling.glsl>
-layout(set = 3, binding = 0) uniform ProbeGridDataBlock { ProbeGridData probeGridData; };
-layout(set = 3, binding = 1) uniform sampler2DArray probeIrradianceTex;
-layout(set = 3, binding = 2) uniform sampler2DArray probeDistanceTex;
+layout(set = 4, binding = 0) uniform ProbeGridDataBlock { ProbeGridData probeGridData; };
+layout(set = 4, binding = 1) uniform sampler2DArray probeIrradianceTex;
+layout(set = 4, binding = 2) uniform sampler2DArray probeDistanceTex;
 #endif
 
 NAMED_UNIFORMS(pushConstants,

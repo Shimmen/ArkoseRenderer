@@ -21,6 +21,9 @@ void DiffuseGIProbeDebug::constructNode(Registry& reg)
 {
     SCOPED_PROFILE_ZONE();
 
+    if (!reg.hasPreviousNode("diffuse-gi"))
+        return;
+
 #if PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_COLOR
     m_probeData = reg.getTexture("diffuse-gi", "irradianceProbes").value();
 #elif (PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_DISTANCE) || (PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_DISTANCE2)
@@ -33,6 +36,9 @@ void DiffuseGIProbeDebug::constructNode(Registry& reg)
 RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
+
+    if (!reg.hasPreviousNode("diffuse-gi"))
+        return RenderGraphNode::NullExecuteCallback;
 
     Texture& depthTexture = *reg.getTexture("g-buffer", "depth").value();
     Texture& colorTexture = *reg.getTexture("forward", "color").value();

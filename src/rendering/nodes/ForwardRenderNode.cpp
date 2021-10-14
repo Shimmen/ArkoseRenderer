@@ -68,16 +68,19 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
                                                           { RenderTarget::AttachmentType::Color3, &diffueGiTexture },
                                                           depthAttachment });
 
-    Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag");
+    bool useIndirectLight = m_indirectLightBindingSet != nullptr;
+    auto includeIndirectDefine = ShaderDefine::makeBool("FORWARD_INCLUDE_INDIRECT_LIGHT", useIndirectLight);
+
+    Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", { includeIndirectDefine });
     RenderStateBuilder renderStateBuilder { renderTarget, shader, m_vertexLayout };
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
     renderStateBuilder.stencilMode = reg.hasPreviousNode("prepass") ? StencilMode::PassIfNotZero : StencilMode::AlwaysWrite;
     renderStateBuilder.stateBindings().at(0, cameraBindingSet);
     renderStateBuilder.stateBindings().at(1, materialBindingSet);
     renderStateBuilder.stateBindings().at(2, lightBindingSet);
-    if (m_indirectLightBindingSet)
-        renderStateBuilder.stateBindings().at(3, *m_indirectLightBindingSet);
-    renderStateBuilder.stateBindings().at(4, drawableBindingSet);
+    renderStateBuilder.stateBindings().at(3, drawableBindingSet);
+    if (useIndirectLight)
+        renderStateBuilder.stateBindings().at(4, *m_indirectLightBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
     renderState.setName("ForwardOpaque");
 
