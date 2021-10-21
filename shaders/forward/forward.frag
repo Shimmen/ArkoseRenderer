@@ -91,7 +91,7 @@ vec3 evaluateIndirectLight(vec3 P, vec3 V, vec3 N, vec3 baseColor, float metalli
     float fakeF = pow(a, 5.0);
 
     vec3 irradiance = computePrefilteredIrradiance(worldSpacePos, worldSpaceNormal, probeGridData, probeIrradianceTex, probeDistanceTex);
-    vec3 indirectDiffuse = vec3(1.0 - metallic) * vec3(1.0 - fakeF) * baseColor * irradiance;
+    vec3 indirectDiffuse = vec3(1.0 - metallic) * vec3(1.0 - fakeF) * irradiance;
 
     // TODO: Later we should probably pre-expose light when drawing indirect too, but since it's so slow now
     // we do it here so we can get instant feedback to camera settings adjustment.
