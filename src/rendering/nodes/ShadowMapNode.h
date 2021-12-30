@@ -10,9 +10,7 @@ public:
     explicit ShadowMapNode(Scene&);
     ~ShadowMapNode() override = default;
 
-    static std::string name();
-
-    std::optional<std::string> displayName() const override { return "Shadow Mapping"; }
+    std::string name() const override { return "Shadow Mapping"; }
 
     ExecuteCallback constructFrame(Registry&) const override;
 

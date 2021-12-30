@@ -3,13 +3,7 @@
 #include "utility/Profiling.h"
 
 GBufferNode::GBufferNode(const Scene&)
-    : RenderPipelineNode(GBufferNode::name())
 {
-}
-
-std::string GBufferNode::name()
-{
-    return "g-buffer";
 }
 
 RenderPipelineNode::ExecuteCallback GBufferNode::constructFrame(Registry& reg) const
@@ -27,5 +21,5 @@ RenderPipelineNode::ExecuteCallback GBufferNode::constructFrame(Registry& reg) c
     Texture& baseColorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA8);
     reg.publish("SceneBaseColor", baseColorTexture);
 
-    return [&](const AppState& appState, CommandList& cmdList) {};
+    return RenderPipelineNode::NullExecuteCallback;
 }

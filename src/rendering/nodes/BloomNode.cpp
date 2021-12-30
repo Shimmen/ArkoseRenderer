@@ -5,8 +5,7 @@
 #include <imgui.h>
 
 BloomNode::BloomNode(Scene& scene)
-    : RenderPipelineNode(BloomNode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
 }
 

@@ -7,14 +7,8 @@
 #include "RTData.h"
 
 RTDirectLightNode::RTDirectLightNode(Scene& scene)
-    : RenderPipelineNode(RTDirectLightNode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
-}
-
-std::string RTDirectLightNode::name()
-{
-    return "rt-direct-light";
 }
 
 void RTDirectLightNode::constructNode(Registry& nodeReg)

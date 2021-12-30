@@ -7,8 +7,7 @@ class BloomNode final : public RenderPipelineNode {
 public:
     explicit BloomNode(Scene&);
 
-    static std::string name() { return "bloom"; }
-    std::optional<std::string> displayName() const override { return "Bloom"; }
+    std::string name() const override { return "Bloom"; }
 
     ExecuteCallback constructFrame(Registry&) const override;
 

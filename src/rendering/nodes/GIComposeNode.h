@@ -7,8 +7,7 @@ class GIComposeNode final : public RenderPipelineNode {
 public:
     explicit GIComposeNode(Scene&);
 
-    std::optional<std::string> displayName() const override { return "GI Compose"; }
-    static std::string name();
+    std::string name() const override { return "GI Compose"; }
 
     ExecuteCallback constructFrame(Registry&) const override;
 

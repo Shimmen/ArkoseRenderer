@@ -7,14 +7,8 @@
 #include <imgui.h>
 #include <moos/vector.h>
 
-std::string PickingNode::name()
-{
-    return "picking";
-}
-
 PickingNode::PickingNode(Scene& scene)
-    : RenderPipelineNode(PickingNode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
 }
 

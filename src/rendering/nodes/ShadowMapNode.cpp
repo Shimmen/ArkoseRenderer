@@ -4,14 +4,8 @@
 #include "utility/Profiling.h"
 #include "ShadowData.h"
 
-std::string ShadowMapNode::name()
-{
-    return "shadow";
-}
-
 ShadowMapNode::ShadowMapNode(Scene& scene)
-    : RenderPipelineNode(ShadowMapNode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
 }
 

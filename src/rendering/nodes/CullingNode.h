@@ -7,8 +7,7 @@ class CullingNode final : public RenderPipelineNode {
 public:
     explicit CullingNode(Scene&);
 
-    std::optional<std::string> displayName() const override { return "Culling"; }
-    static std::string name();
+    std::string name() const override { return "Culling"; }
 
     ExecuteCallback constructFrame(Registry&) const override;
 

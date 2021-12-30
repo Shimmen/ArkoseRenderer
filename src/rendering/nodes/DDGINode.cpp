@@ -15,14 +15,8 @@ static_assert((DDGI_VISIBILITY_RES & (DDGI_VISIBILITY_RES - 1)) == 0);
 static_assert((DDGI_VISIBILITY_RES % DDGI_IRRADIANCE_RES) == 0 || (DDGI_IRRADIANCE_RES % DDGI_VISIBILITY_RES) == 0);
 
 DDGINode::DDGINode(Scene& scene)
-    : RenderPipelineNode(DDGINode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
-}
-
-std::string DDGINode::name()
-{
-    return "ddgi";
 }
 
 void DDGINode::constructNode(Registry& reg)

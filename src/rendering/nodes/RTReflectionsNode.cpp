@@ -5,14 +5,8 @@
 #include "RTAccelerationStructures.h"
 
 RTReflectionsNode::RTReflectionsNode(Scene& scene)
-    : RenderPipelineNode(RTReflectionsNode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
-}
-
-std::string RTReflectionsNode::name()
-{
-    return "rt-reflections";
 }
 
 void RTReflectionsNode::constructNode(Registry& nodeReg)

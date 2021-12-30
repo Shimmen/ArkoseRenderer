@@ -8,9 +8,8 @@ class PickingNode final : public RenderPipelineNode {
 public:
     explicit PickingNode(Scene&);
 
-    std::optional<std::string> displayName() const override { return "Picking"; }
+    std::string name() const override { return "Picking"; }
 
-    static std::string name();
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:

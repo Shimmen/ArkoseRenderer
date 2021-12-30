@@ -10,9 +10,7 @@ public:
     explicit RTDiffuseGINode(Scene&);
     ~RTDiffuseGINode() override = default;
 
-    std::optional<std::string> displayName() const override { return "Diffuse GI"; }
-
-    static std::string name();
+    std::string name() const override { return "Diffuse GI"; }
 
     void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;

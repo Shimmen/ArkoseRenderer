@@ -8,14 +8,8 @@
 #include "RTData.h"
 
 RTFirstHitNode::RTFirstHitNode(Scene& scene)
-    : RenderPipelineNode(RTFirstHitNode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
-}
-
-std::string RTFirstHitNode::name()
-{
-    return "rt-firsthit";
 }
 
 void RTFirstHitNode::constructNode(Registry& nodeReg)

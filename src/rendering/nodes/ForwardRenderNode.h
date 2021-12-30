@@ -9,8 +9,7 @@ class ForwardRenderNode final : public RenderPipelineNode {
 public:
     explicit ForwardRenderNode(Scene&);
 
-    std::optional<std::string> displayName() const override { return "Forward"; }
-    static std::string name();
+    std::string name() const override { return "Forward"; }
 
     void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;

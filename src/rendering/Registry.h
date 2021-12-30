@@ -77,7 +77,7 @@ private:
 
     std::optional<std::string> m_currentNodeName;
     std::unordered_set<NodeDependency> m_nodeDependencies;
-    std::vector<std::string> m_allNodes;
+    std::vector<std::string> m_allNodeNames;
 
     const RenderTarget* m_windowRenderTarget;
 

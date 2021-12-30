@@ -6,14 +6,8 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-std::string PrepassNode::name()
-{
-    return "prepass";
-}
-
 PrepassNode::PrepassNode(Scene& scene)
-    : RenderPipelineNode(PrepassNode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
 }
 

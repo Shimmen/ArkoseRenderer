@@ -7,14 +7,8 @@
 #include <imgui.h>
 
 RTDiffuseGINode::RTDiffuseGINode(Scene& scene)
-    : RenderPipelineNode(RTDiffuseGINode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
-}
-
-std::string RTDiffuseGINode::name()
-{
-    return "rt-diffuse-gi";
 }
 
 void RTDiffuseGINode::constructNode(Registry& nodeReg)

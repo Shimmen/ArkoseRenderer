@@ -8,8 +8,7 @@ class SceneNode final : public RenderPipelineNode {
 public:
     explicit SceneNode(Scene&);
 
-    std::optional<std::string> displayName() const override { return "Scene"; }
-    static std::string name();
+    std::string name() const override { return "Scene"; }
 
     ExecuteCallback constructFrame(Registry&) const override;
 

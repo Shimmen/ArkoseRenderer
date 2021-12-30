@@ -24,23 +24,14 @@ double NodeTimer::averageGpuTime() const
     return m_gpuAccumulator.runningAverage();
 }
 
-RenderPipelineNode::RenderPipelineNode(std::string name)
-    : m_name(std::move(name))
-{
-}
-
-const std::string& RenderPipelineNode::name() const
-{
-    return m_name;
-}
-
 NodeTimer& RenderPipelineNode::timer()
 {
     return m_timer;
 }
 
 RenderPipelineBasicNode::RenderPipelineBasicNode(std::string name, ConstructorFunction constructorFunction)
-    : RenderPipelineNode(std::move(name))
+    : RenderPipelineNode()
+    , m_name(std::move(name))
     , m_constructorFunction(std::move(constructorFunction))
 {
 }

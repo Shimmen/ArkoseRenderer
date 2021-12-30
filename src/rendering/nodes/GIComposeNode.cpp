@@ -6,14 +6,8 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-std::string GIComposeNode::name()
-{
-    return "gi-compose";
-}
-
 GIComposeNode::GIComposeNode(Scene& scene)
-    : RenderPipelineNode(GIComposeNode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
 }
 

@@ -15,8 +15,7 @@ public:
     explicit DDGINode(Scene&);
     ~DDGINode() override = default;
 
-    std::optional<std::string> displayName() const override { return "Dynamic Diffuse GI"; }
-    static std::string name();
+    std::string name() const override { return "DDGI"; }
 
     void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;

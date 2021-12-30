@@ -7,8 +7,7 @@ class PrepassNode final : public RenderPipelineNode {
 public:
     explicit PrepassNode(Scene&);
 
-    std::optional<std::string> displayName() const override { return "Prepass"; }
-    static std::string name();
+    std::string name() const override { return "Prepass"; }
 
     ExecuteCallback constructFrame(Registry&) const override;
 

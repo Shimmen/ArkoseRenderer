@@ -9,14 +9,8 @@
 // Shader data
 #include "SSAOData.h"
 
-std::string SSAONode::name()
-{
-    return "ssao";
-}
-
 SSAONode::SSAONode(Scene& scene)
-    : RenderPipelineNode(SSAONode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
 }
 

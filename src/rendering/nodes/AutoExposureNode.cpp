@@ -6,8 +6,7 @@
 #include <moos/vector.h>
 
 AutoExposureNode::AutoExposureNode(Scene& scene)
-    : RenderPipelineNode(AutoExposureNode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
 }
 

@@ -3,14 +3,8 @@
 #include "RTData.h"
 
 RTAccelerationStructures::RTAccelerationStructures(Scene& scene)
-    : RenderPipelineNode(RTAccelerationStructures::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
-}
-
-std::string RTAccelerationStructures::name()
-{
-    return "rt-acceleration-structures";
 }
 
 void RTAccelerationStructures::constructNode(Registry& nodeReg)

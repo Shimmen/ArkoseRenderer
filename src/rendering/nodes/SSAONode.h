@@ -9,8 +9,7 @@ class SSAONode final : public RenderPipelineNode {
 public:
     explicit SSAONode(Scene&);
 
-    std::optional<std::string> displayName() const override { return "SSAO"; }
-    static std::string name();
+    std::string name() const override { return "SSAO"; }
 
     void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;

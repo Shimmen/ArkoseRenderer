@@ -6,8 +6,7 @@ class DDGIProbeDebug final : public RenderPipelineNode {
 public:
     DDGIProbeDebug(Scene&);
 
-    static std::string name();
-    std::optional<std::string> displayName() const override { return "DDGI probe debug"; }
+    std::string name() const override { return "DDGI probe debug"; }
 
     void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;

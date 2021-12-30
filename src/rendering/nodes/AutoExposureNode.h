@@ -9,8 +9,7 @@ class AutoExposureNode final : public RenderPipelineNode {
 public:
     explicit AutoExposureNode(Scene&);
 
-    static std::string name() { return "auto-exposure"; }
-    std::optional<std::string> displayName() const override { return "Auto Exposure"; }
+    std::string name() const override { return "Auto Exposure"; }
 
     ExecuteCallback constructFrame(Registry&) const override;
 

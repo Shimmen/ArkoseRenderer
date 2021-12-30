@@ -4,8 +4,7 @@
 #include <imgui.h>
 
 SkyViewNode::SkyViewNode(Scene& scene)
-    : RenderPipelineNode(SkyViewNode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
 }
 

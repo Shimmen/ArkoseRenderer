@@ -10,9 +10,7 @@ public:
     explicit RTFirstHitNode(Scene&);
     ~RTFirstHitNode() override = default;
 
-    std::optional<std::string> displayName() const override { return "RT first-hit"; }
-
-    static std::string name();
+    std::string name() const override { return "RT first-hit"; }
 
     void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;

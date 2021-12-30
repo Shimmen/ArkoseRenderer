@@ -6,14 +6,8 @@
 #include <imgui.h>
 
 RTAmbientOcclusion::RTAmbientOcclusion(const Scene& scene)
-    : RenderPipelineNode(RTAmbientOcclusion::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
-}
-
-std::string RTAmbientOcclusion::name()
-{
-    return "rt-ambient-occlusion";
 }
 
 void RTAmbientOcclusion::constructNode(Registry& reg)

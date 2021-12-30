@@ -8,14 +8,9 @@
 // Shared shader headers
 #include "DDGIData.h"
 
-std::string DDGIProbeDebug::name()
-{
-    return "ddgi-probe-debug";
-}
 
 DDGIProbeDebug::DDGIProbeDebug(Scene& scene)
-    : RenderPipelineNode(DDGIProbeDebug::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
 }
 
@@ -23,7 +18,7 @@ void DDGIProbeDebug::constructNode(Registry& reg)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (!reg.hasPreviousNode("ddgi"))
+    if (!reg.hasPreviousNode("DDGI"))
         return;
 
     m_ddgiSamplingSet = reg.getBindingSet("DDGISamplingSet");
@@ -35,7 +30,7 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::constructFrame(Registry& reg
 {
     SCOPED_PROFILE_ZONE();
 
-    if (!reg.hasPreviousNode("ddgi"))
+    if (!reg.hasPreviousNode("DDGI"))
         return RenderPipelineNode::NullExecuteCallback;
 
     Texture& depthTexture = *reg.getTexture("SceneDepth");

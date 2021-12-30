@@ -24,7 +24,7 @@ private:
 
 class RenderPipelineNode {
 public:
-    explicit RenderPipelineNode(std::string name);
+    RenderPipelineNode() = default;
     virtual ~RenderPipelineNode() = default;
 
     using ExecuteCallback = std::function<void(const AppState&, CommandList&)>;
@@ -32,11 +32,9 @@ public:
     // An execute callback that does nothing. Useful for early exit when nothing to execute.
     static const ExecuteCallback NullExecuteCallback;
 
-    [[nodiscard]] const std::string& name() const;
     [[nodiscard]] NodeTimer& timer();
 
-    //! Optionally return a display name for use in GUI situations
-    virtual std::optional<std::string> displayName() const { return {}; }
+    [[nodiscard]] virtual std::string name() const = 0;
 
     //! This is not const since we need to write to members here that are shared for the whole node.
     virtual void constructNode(Registry&) {};
@@ -46,7 +44,6 @@ public:
     virtual ExecuteCallback constructFrame(Registry&) const { return RenderPipelineNode::ExecuteCallback(); };
 
 private:
-    std::string m_name;
     NodeTimer m_timer;
 };
 
@@ -55,9 +52,12 @@ public:
     using ConstructorFunction = std::function<ExecuteCallback(Registry&)>;
     RenderPipelineBasicNode(std::string name, ConstructorFunction);
 
+    std::string name() const override { return m_name; }
+
     void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;
 
 private:
+    std::string m_name;
     ConstructorFunction m_constructorFunction;
 };

@@ -18,7 +18,7 @@ void RenderPipeline::addNode(std::unique_ptr<RenderPipelineNode>&& node)
     m_allNodes.emplace_back(std::move(node));
 }
 
-void RenderPipeline::constructAll(Registry& nodeManager, std::vector<Registry*> frameManagers)
+void RenderPipeline::constructAll(Registry& nodeRegistry, std::vector<Registry*> frameRegistries)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -33,8 +33,8 @@ void RenderPipeline::constructAll(Registry& nodeManager, std::vector<Registry*> 
         SCOPED_PROFILE_ZONE_NAMED("Node resources");
         for (auto& node : m_allNodes) {
             LogInfo("  node=%i (%s)\n", nextNodeIdx++, node->name().c_str());
-            nodeManager.setCurrentNode(node->name());
-            node->constructNode(nodeManager);
+            nodeRegistry.setCurrentNode(node->name());
+            node->constructNode(nodeRegistry);
         }
     }
 
@@ -43,7 +43,7 @@ void RenderPipeline::constructAll(Registry& nodeManager, std::vector<Registry*> 
 
     {
         SCOPED_PROFILE_ZONE_NAMED("Frame resources");
-        for (auto& frameManager : frameManagers) {
+        for (auto& frameRegistry : frameRegistries) {
             SCOPED_PROFILE_ZONE_DYNAMIC(fmt::format("Frame {}", nextFrameIdx), 0x252515)
             FrameContext frameCtx {};
 
@@ -52,19 +52,19 @@ void RenderPipeline::constructAll(Registry& nodeManager, std::vector<Registry*> 
 
             for (auto& node : m_allNodes) {
                 LogInfo("    node=%i (%s)\n", nextNodeIdx++, node->name().c_str());
-                frameManager->setCurrentNode(node->name());
-                auto executeCallback = node->constructFrame(*frameManager);
+                frameRegistry->setCurrentNode(node->name());
+                auto executeCallback = node->constructFrame(*frameRegistry);
                 frameCtx.nodeContexts.push_back({ .node = node.get(),
                                                   .executeCallback = executeCallback });
             }
 
-            m_frameContexts[frameManager] = frameCtx;
+            m_frameContexts[frameRegistry] = frameCtx;
         }
     }
 
-    nodeManager.setCurrentNode("-");
-    for (auto& frameManager : frameManagers) {
-        frameManager->setCurrentNode("-");
+    nodeRegistry.setCurrentNode("-");
+    for (auto& frameRegistry : frameRegistries) {
+        frameRegistry->setCurrentNode("-");
     }
 }
 
@@ -78,7 +78,6 @@ void RenderPipeline::forEachNodeInResolvedOrder(const Registry& frameManager, st
 
     const FrameContext& frameContext = entry->second;
     for (auto& [node, execCallback] : frameContext.nodeContexts) {
-        std::string nodeDisplayName = node->displayName().value_or(node->name());
-        callback(nodeDisplayName, node->timer(), execCallback);
+        callback(node->name(), node->timer(), execCallback);
     }
 }

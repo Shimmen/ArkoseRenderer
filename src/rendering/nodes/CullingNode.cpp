@@ -11,14 +11,8 @@ using uint = uint32_t;
 #include "IndirectData.h"
 #include "LightData.h"
 
-std::string CullingNode::name()
-{
-    return "culling";
-}
-
 CullingNode::CullingNode(Scene& scene)
-    : RenderPipelineNode(CullingNode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
 }
 

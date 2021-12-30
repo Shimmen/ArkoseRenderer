@@ -11,14 +11,8 @@ using uint = uint32_t;
 #include "IndirectData.h"
 #include "LightData.h"
 
-std::string ForwardRenderNode::name()
-{
-    return "forward";
-}
-
 ForwardRenderNode::ForwardRenderNode(Scene& scene)
-    : RenderPipelineNode(ForwardRenderNode::name())
-    , m_scene(scene)
+    : m_scene(scene)
 {
 }
 
@@ -26,7 +20,7 @@ void ForwardRenderNode::constructNode(Registry& reg)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (reg.hasPreviousNode("ddgi")) {
+    if (reg.hasPreviousNode("DDGI")) {
         m_ddgiSamplingBindingSet = reg.getBindingSet("DDGISamplingSet");
     }
 }
@@ -47,7 +41,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
     reg.publish("DiffuseGI", diffueGiTexture);
 
     Texture& gBufferDepthTexture = *reg.getTexture("SceneDepth");
-    auto depthAttachment = reg.hasPreviousNode("prepass")
+    auto depthAttachment = reg.hasPreviousNode("Prepass")
         ? RenderTarget::Attachment { RenderTarget::AttachmentType::Depth, &gBufferDepthTexture, LoadOp::Load, StoreOp::Store }
         : RenderTarget::Attachment { RenderTarget::AttachmentType::Depth, &gBufferDepthTexture, LoadOp::Clear, StoreOp::Store };
 
@@ -63,7 +57,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
     Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", { includeDDGIDefine });
     RenderStateBuilder renderStateBuilder { renderTarget, shader, m_vertexLayout };
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
-    renderStateBuilder.stencilMode = reg.hasPreviousNode("prepass") ? StencilMode::PassIfNotZero : StencilMode::AlwaysWrite;
+    renderStateBuilder.stencilMode = reg.hasPreviousNode("Prepass") ? StencilMode::PassIfNotZero : StencilMode::AlwaysWrite;
     renderStateBuilder.stateBindings().at(0, cameraBindingSet);
     renderStateBuilder.stateBindings().at(1, materialBindingSet);
     renderStateBuilder.stateBindings().at(2, lightBindingSet);

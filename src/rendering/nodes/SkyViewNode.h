@@ -7,8 +7,7 @@ class SkyViewNode final : public RenderPipelineNode {
 public:
     explicit SkyViewNode(Scene&);
 
-    static std::string name() { return "skyview"; }
-    std::optional<std::string> displayName() const override { return "Sky view"; }
+    std::string name() const override { return "Sky view"; }
 
     ExecuteCallback constructFrame(Registry&) const override;
 
