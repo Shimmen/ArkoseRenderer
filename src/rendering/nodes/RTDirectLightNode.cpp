@@ -7,7 +7,7 @@
 #include "RTData.h"
 
 RTDirectLightNode::RTDirectLightNode(Scene& scene)
-    : RenderGraphNode(RTDirectLightNode::name())
+    : RenderPipelineNode(RTDirectLightNode::name())
     , m_scene(scene)
 {
 }
@@ -39,7 +39,7 @@ void RTDirectLightNode::constructNode(Registry& nodeReg)
                                                          { 2, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &vertexBuffer } });
 }
 
-RenderGraphNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& reg) const
 {
     Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("target", storageImage);

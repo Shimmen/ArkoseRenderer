@@ -5,7 +5,7 @@
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 
-class SSAONode final : public RenderGraphNode {
+class SSAONode final : public RenderPipelineNode {
 public:
     explicit SSAONode(Scene&);
 

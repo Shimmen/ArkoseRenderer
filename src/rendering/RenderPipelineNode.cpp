@@ -2,7 +2,7 @@
 
 #include <utility>
 
-const RenderGraphNode::ExecuteCallback RenderGraphNode::NullExecuteCallback = [&](const AppState&, CommandList&) {};
+const RenderPipelineNode::ExecuteCallback RenderPipelineNode::NullExecuteCallback = [&](const AppState&, CommandList&) {};
 
 void NodeTimer::reportCpuTime(double time)
 {
@@ -24,33 +24,33 @@ double NodeTimer::averageGpuTime() const
     return m_gpuAccumulator.runningAverage();
 }
 
-RenderGraphNode::RenderGraphNode(std::string name)
+RenderPipelineNode::RenderPipelineNode(std::string name)
     : m_name(std::move(name))
 {
 }
 
-const std::string& RenderGraphNode::name() const
+const std::string& RenderPipelineNode::name() const
 {
     return m_name;
 }
 
-NodeTimer& RenderGraphNode::timer()
+NodeTimer& RenderPipelineNode::timer()
 {
     return m_timer;
 }
 
-RenderGraphBasicNode::RenderGraphBasicNode(std::string name, ConstructorFunction constructorFunction)
-    : RenderGraphNode(std::move(name))
+RenderPipelineBasicNode::RenderPipelineBasicNode(std::string name, ConstructorFunction constructorFunction)
+    : RenderPipelineNode(std::move(name))
     , m_constructorFunction(std::move(constructorFunction))
 {
 }
 
-void RenderGraphBasicNode::constructNode(Registry&)
+void RenderPipelineBasicNode::constructNode(Registry&)
 {
-    // Intentionally empty. If you want to have node resource, create a custom RenderGraphNode subclass.
+    // Intentionally empty. If you want to have node resource, create a custom RenderPipelineNode subclass.
 }
 
-RenderGraphBasicNode::ExecuteCallback RenderGraphBasicNode::constructFrame(Registry& frameManager) const
+RenderPipelineBasicNode::ExecuteCallback RenderPipelineBasicNode::constructFrame(Registry& frameManager) const
 {
     return m_constructorFunction(frameManager);
 }

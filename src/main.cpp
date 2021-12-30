@@ -89,9 +89,9 @@ int main(int argc, char** argv)
     auto backend = createBackend(backendType, window, appSpec);
 
     auto scene = std::make_unique<Scene>(backend->getPersistentRegistry());
-    auto renderGraph = std::make_unique<RenderGraph>();
-    app->setup(*scene, *renderGraph);
-    backend->renderGraphDidChange(*renderGraph);
+    auto renderPipeline = std::make_unique<RenderPipeline>();
+    app->setup(*scene, *renderPipeline);
+    backend->renderPipelineDidChange(*renderPipeline);
 
     LogInfo("ArkoseRenderer: main loop begin.\n");
 
@@ -109,7 +109,7 @@ int main(int argc, char** argv)
 
         if (shaderFileWatchMutex.try_lock()) {
             if (changedShaderFiles.size() > 0) {
-                backend->shadersDidRecompile(changedShaderFiles, *renderGraph);
+                backend->shadersDidRecompile(changedShaderFiles, *renderPipeline);
                 changedShaderFiles.clear();
             }
             shaderFileWatchMutex.unlock();
@@ -129,7 +129,7 @@ int main(int argc, char** argv)
 
         bool frameExecuted = false;
         while (!frameExecuted) {
-            frameExecuted = backend->executeFrame(*scene, *renderGraph, elapsedTime, deltaTime);
+            frameExecuted = backend->executeFrame(*scene, *renderPipeline, elapsedTime, deltaTime);
         }
 
         END_OF_FRAME_PROFILE_MARKER();

@@ -5,7 +5,7 @@
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 
-class RTReflectionsNode final : public RenderGraphNode {
+class RTReflectionsNode final : public RenderPipelineNode {
 public:
     explicit RTReflectionsNode(Scene&);
     ~RTReflectionsNode() override = default;

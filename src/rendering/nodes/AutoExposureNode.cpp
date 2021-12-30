@@ -6,12 +6,12 @@
 #include <moos/vector.h>
 
 AutoExposureNode::AutoExposureNode(Scene& scene)
-    : RenderGraphNode(AutoExposureNode::name())
+    : RenderPipelineNode(AutoExposureNode::name())
     , m_scene(scene)
 {
 }
 
-RenderGraphNode::ExecuteCallback AutoExposureNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback AutoExposureNode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 

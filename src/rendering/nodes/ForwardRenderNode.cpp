@@ -17,7 +17,7 @@ std::string ForwardRenderNode::name()
 }
 
 ForwardRenderNode::ForwardRenderNode(Scene& scene)
-    : RenderGraphNode(ForwardRenderNode::name())
+    : RenderPipelineNode(ForwardRenderNode::name())
     , m_scene(scene)
 {
 }
@@ -31,7 +31,7 @@ void ForwardRenderNode::constructNode(Registry& reg)
     }
 }
 
-RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 

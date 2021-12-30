@@ -3,7 +3,7 @@
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/scene/Scene.h"
 
-class GIComposeNode final : public RenderGraphNode {
+class GIComposeNode final : public RenderPipelineNode {
 public:
     explicit GIComposeNode(Scene&);
 

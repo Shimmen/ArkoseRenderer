@@ -17,12 +17,12 @@ std::string SceneNode::name()
 }
 
 SceneNode::SceneNode(Scene& scene)
-    : RenderGraphNode(SceneNode::name())
+    : RenderPipelineNode(SceneNode::name())
     , m_scene(scene)
 {
 }
 
-RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 

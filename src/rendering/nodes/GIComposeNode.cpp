@@ -12,12 +12,12 @@ std::string GIComposeNode::name()
 }
 
 GIComposeNode::GIComposeNode(Scene& scene)
-    : RenderGraphNode(GIComposeNode::name())
+    : RenderPipelineNode(GIComposeNode::name())
     , m_scene(scene)
 {
 }
 
-RenderGraphNode::ExecuteCallback GIComposeNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback GIComposeNode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 

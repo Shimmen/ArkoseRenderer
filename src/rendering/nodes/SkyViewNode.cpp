@@ -4,12 +4,12 @@
 #include <imgui.h>
 
 SkyViewNode::SkyViewNode(Scene& scene)
-    : RenderGraphNode(SkyViewNode::name())
+    : RenderPipelineNode(SkyViewNode::name())
     , m_scene(scene)
 {
 }
 
-RenderGraphNode::ExecuteCallback SkyViewNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback SkyViewNode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 

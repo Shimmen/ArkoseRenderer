@@ -6,7 +6,7 @@
 #include <memory>
 #include <vector>
 
-class RenderGraph;
+class RenderPipeline;
 class Scene;
 
 class Backend {
@@ -33,11 +33,11 @@ public:
 
     virtual Registry& getPersistentRegistry() = 0;
 
-    virtual void renderGraphDidChange(RenderGraph&) = 0;
-    virtual void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderGraph&) = 0;
+    virtual void renderPipelineDidChange(RenderPipeline&) = 0;
+    virtual void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline&) = 0;
 
     virtual void newFrame(Scene&) = 0;
-    virtual bool executeFrame(const Scene&, RenderGraph&, double elapsedTime, double deltaTime) = 0;
+    virtual bool executeFrame(const Scene&, RenderPipeline&, double elapsedTime, double deltaTime) = 0;
 
     virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) = 0;
     virtual std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) = 0;

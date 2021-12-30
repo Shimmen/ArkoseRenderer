@@ -5,7 +5,7 @@
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 
-class ForwardRenderNode final : public RenderGraphNode {
+class ForwardRenderNode final : public RenderPipelineNode {
 public:
     explicit ForwardRenderNode(Scene&);
 

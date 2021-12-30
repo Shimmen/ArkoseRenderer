@@ -15,7 +15,7 @@ static_assert((DDGI_VISIBILITY_RES & (DDGI_VISIBILITY_RES - 1)) == 0);
 static_assert((DDGI_VISIBILITY_RES % DDGI_IRRADIANCE_RES) == 0 || (DDGI_IRRADIANCE_RES % DDGI_VISIBILITY_RES) == 0);
 
 DDGINode::DDGINode(Scene& scene)
-    : RenderGraphNode(DDGINode::name())
+    : RenderPipelineNode(DDGINode::name())
     , m_scene(scene)
 {
 }
@@ -52,7 +52,7 @@ void DDGINode::constructNode(Registry& reg)
     reg.publish("DDGISamplingSet", ddgiSamplingBindingSet);
 }
 
-RenderGraphNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) const
 {
     if (!m_scene.hasProbeGrid())
         return {};

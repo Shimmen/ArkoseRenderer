@@ -6,7 +6,7 @@
 #include "rendering/scene/Scene.h"
 #include "utility/Extent.h"
 
-class DDGINode final : public RenderGraphNode {
+class DDGINode final : public RenderPipelineNode {
 public:
 
     static constexpr int MaxNumProbeUpdatesPerFrame = 4096;

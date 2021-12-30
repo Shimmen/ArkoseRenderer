@@ -3,7 +3,7 @@
 #include "RTData.h"
 
 RTAccelerationStructures::RTAccelerationStructures(Scene& scene)
-    : RenderGraphNode(RTAccelerationStructures::name())
+    : RenderPipelineNode(RTAccelerationStructures::name())
     , m_scene(scene)
 {
 }
@@ -29,7 +29,7 @@ void RTAccelerationStructures::constructNode(Registry& nodeReg)
     });
 }
 
-RenderGraphNode::ExecuteCallback RTAccelerationStructures::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback RTAccelerationStructures::constructFrame(Registry& reg) const
 {
     TopLevelAS& main = reg.createTopLevelAccelerationStructure(m_mainInstances);
     reg.publish("rtAccStructureNodeScene", main);

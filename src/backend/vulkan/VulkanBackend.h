@@ -38,11 +38,11 @@ public:
 
     Registry& getPersistentRegistry() override;
 
-    void renderGraphDidChange(RenderGraph&) override;
-    void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderGraph&) override;
+    void renderPipelineDidChange(RenderPipeline&) override;
+    void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline&) override;
 
     void newFrame(Scene&);
-    bool executeFrame(const Scene&, RenderGraph&, double elapsedTime, double deltaTime) override;
+    bool executeFrame(const Scene&, RenderPipeline&, double elapsedTime, double deltaTime) override;
 
     ///////////////////////////////////////////////////////////////////////////
     /// Backend-specific resource types
@@ -122,7 +122,7 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     /// Command translation & resource management
 
-    void reconstructRenderGraphResources(RenderGraph& renderGraph);
+    void reconstructRenderPipelineResources(RenderPipeline& renderPipeline);
 
     ///////////////////////////////////////////////////////////////////////////
     /// Swapchain management

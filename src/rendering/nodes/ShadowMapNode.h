@@ -5,7 +5,7 @@
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 
-class ShadowMapNode final : public RenderGraphNode {
+class ShadowMapNode final : public RenderPipelineNode {
 public:
     explicit ShadowMapNode(Scene&);
     ~ShadowMapNode() override = default;

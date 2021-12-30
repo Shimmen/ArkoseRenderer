@@ -6,7 +6,7 @@
 #include <imgui.h>
 
 RTAmbientOcclusion::RTAmbientOcclusion(const Scene& scene)
-    : RenderGraphNode(RTAmbientOcclusion::name())
+    : RenderPipelineNode(RTAmbientOcclusion::name())
     , m_scene(scene)
 {
 }
@@ -21,7 +21,7 @@ void RTAmbientOcclusion::constructNode(Registry& reg)
     m_accumulatedAO = &reg.createTexture2D(m_scene.mainViewportSize(), Texture::Format::R16F);
 }
 
-RenderGraphNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry& reg) const
 {
     Texture* gBufferNormal = reg.getTexture("SceneNormal");
     Texture* gBufferDepth = reg.getTexture("SceneDepth");

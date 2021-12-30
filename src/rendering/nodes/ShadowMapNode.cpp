@@ -10,12 +10,12 @@ std::string ShadowMapNode::name()
 }
 
 ShadowMapNode::ShadowMapNode(Scene& scene)
-    : RenderGraphNode(ShadowMapNode::name())
+    : RenderPipelineNode(ShadowMapNode::name())
     , m_scene(scene)
 {
 }
 
-RenderGraphNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 

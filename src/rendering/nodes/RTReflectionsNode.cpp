@@ -5,7 +5,7 @@
 #include "RTAccelerationStructures.h"
 
 RTReflectionsNode::RTReflectionsNode(Scene& scene)
-    : RenderGraphNode(RTReflectionsNode::name())
+    : RenderPipelineNode(RTReflectionsNode::name())
     , m_scene(scene)
 {
 }
@@ -60,7 +60,7 @@ void RTReflectionsNode::constructNode(Registry& nodeReg)
                                                          { 3, ShaderStageRTClosestHit, allTextures, RT_MAX_TEXTURES } });
 }
 
-RenderGraphNode::ExecuteCallback RTReflectionsNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback RTReflectionsNode::constructFrame(Registry& reg) const
 {
     Texture* gBufferColor = reg.getTexture("SceneBaseColor");
     Texture* gBufferNormal = reg.getTexture("SceneNormal");

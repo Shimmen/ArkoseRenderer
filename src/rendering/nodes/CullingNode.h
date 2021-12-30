@@ -3,7 +3,7 @@
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/scene/Scene.h"
 
-class CullingNode final : public RenderGraphNode {
+class CullingNode final : public RenderPipelineNode {
 public:
     explicit CullingNode(Scene&);
 

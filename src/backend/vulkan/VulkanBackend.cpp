@@ -1115,7 +1115,7 @@ void VulkanBackend::newFrame(Scene& scene)
     scene.setMainViewportSize(badge(), { width, height });
 }
 
-bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, double elapsedTime, double deltaTime)
+bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipeline, double elapsedTime, double deltaTime)
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
@@ -1144,7 +1144,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
             // Since we couldn't acquire an image to draw to, recreate the swapchain and report that it didn't work
             Extent2D newWindowExtent = recreateSwapchain();
             appState = appState.updateWindowExtent(newWindowExtent);
-            reconstructRenderGraphResources(renderGraph);
+            reconstructRenderPipelineResources(renderPipeline);
             return false;
         }
         if (acquireResult == VK_SUBOPTIMAL_KHR) {
@@ -1181,7 +1181,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
         VulkanCommandList cmdList { *this, commandBuffer };
 
         ImGui::Begin("Nodes (in order)");
-        renderGraph.forEachNodeInResolvedOrder(associatedRegistry, [&](const std::string& nodeName, NodeTimer& nodeTimer, const RenderGraphNode::ExecuteCallback& nodeExecuteCallback) {
+        renderPipeline.forEachNodeInResolvedOrder(associatedRegistry, [&](const std::string& nodeName, NodeTimer& nodeTimer, const RenderPipelineNode::ExecuteCallback& nodeExecuteCallback) {
             double cpuTime = nodeTimer.averageCpuTime() * 1000.0;
             std::string title = isnan(cpuTime)
                 ? fmt::format("{} | CPU: - ms", nodeName)
@@ -1287,7 +1287,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderGraph& renderGraph, d
 
         if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || s_unhandledWindowResize) {
             recreateSwapchain();
-            reconstructRenderGraphResources(renderGraph);
+            reconstructRenderPipelineResources(renderPipeline);
         } else if (presentResult != VK_SUCCESS) {
             LogError("VulkanBackend: could not present swapchain (frame %u).\n", m_currentFrameIndex);
         }
@@ -1304,21 +1304,21 @@ Registry& VulkanBackend::getPersistentRegistry()
     return *m_persistentRegistry;
 }
 
-void VulkanBackend::renderGraphDidChange(RenderGraph& renderGraph)
+void VulkanBackend::renderPipelineDidChange(RenderPipeline& renderPipeline)
 {
-    reconstructRenderGraphResources(renderGraph);
+    reconstructRenderPipelineResources(renderPipeline);
 }
 
-void VulkanBackend::shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderGraph& renderGraph)
+void VulkanBackend::shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline& renderPipeline)
 {
     // Maybe figure out what nodes needs updating and only reconstruct that node & nodes depending on it?
     // On the other hand, creatating these resources should be very fast anyway so maybe shouldn't bother.
     if (shaderNames.size() > 0) {
-        reconstructRenderGraphResources(renderGraph);
+        reconstructRenderPipelineResources(renderPipeline);
     }
 }
 
-void VulkanBackend::reconstructRenderGraphResources(RenderGraph& renderGraph)
+void VulkanBackend::reconstructRenderPipelineResources(RenderPipeline& renderPipeline)
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
@@ -1339,7 +1339,7 @@ void VulkanBackend::reconstructRenderGraphResources(RenderGraph& renderGraph)
     Registry* previousNodeRegistry = m_nodeRegistry.get();
     Registry* nodeRegistry = new Registry(*this, previousNodeRegistry);
 
-    renderGraph.constructAll(*nodeRegistry, frameRegistries);
+    renderPipeline.constructAll(*nodeRegistry, frameRegistries);
 
     m_nodeRegistry.reset(nodeRegistry);
     for (size_t i = 0; i < numFrameManagers; ++i)

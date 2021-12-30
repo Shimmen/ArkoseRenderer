@@ -6,7 +6,7 @@
 class SphereSetModel;
 class VoxelContourModel;
 
-class RTAccelerationStructures final : public RenderGraphNode {
+class RTAccelerationStructures final : public RenderPipelineNode {
 public:
     explicit RTAccelerationStructures(Scene&);
     ~RTAccelerationStructures() override = default;

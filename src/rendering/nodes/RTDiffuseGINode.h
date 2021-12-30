@@ -5,7 +5,7 @@
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 
-class RTDiffuseGINode final : public RenderGraphNode {
+class RTDiffuseGINode final : public RenderPipelineNode {
 public:
     explicit RTDiffuseGINode(Scene&);
     ~RTDiffuseGINode() override = default;

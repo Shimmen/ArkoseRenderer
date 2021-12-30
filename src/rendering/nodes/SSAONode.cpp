@@ -15,7 +15,7 @@ std::string SSAONode::name()
 }
 
 SSAONode::SSAONode(Scene& scene)
-    : RenderGraphNode(SSAONode::name())
+    : RenderPipelineNode(SSAONode::name())
     , m_scene(scene)
 {
 }
@@ -27,7 +27,7 @@ void SSAONode::constructNode(Registry& reg)
     m_kernelSampleBuffer = &reg.createBuffer(generateKernel(m_kernelSampleCount), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOptimal);
 }
 
-RenderGraphNode::ExecuteCallback SSAONode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback SSAONode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 

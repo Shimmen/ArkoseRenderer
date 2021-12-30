@@ -5,12 +5,12 @@
 #include <imgui.h>
 
 BloomNode::BloomNode(Scene& scene)
-    : RenderGraphNode(BloomNode::name())
+    : RenderPipelineNode(BloomNode::name())
     , m_scene(scene)
 {
 }
 
-RenderGraphNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 

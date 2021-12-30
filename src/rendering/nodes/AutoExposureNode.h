@@ -5,7 +5,7 @@
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 
-class AutoExposureNode final : public RenderGraphNode {
+class AutoExposureNode final : public RenderPipelineNode {
 public:
     explicit AutoExposureNode(Scene&);
 

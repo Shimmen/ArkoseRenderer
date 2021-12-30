@@ -4,7 +4,7 @@
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 
-class SceneNode final : public RenderGraphNode {
+class SceneNode final : public RenderPipelineNode {
 public:
     explicit SceneNode(Scene&);
 

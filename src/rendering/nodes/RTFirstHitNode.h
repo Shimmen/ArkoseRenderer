@@ -5,7 +5,7 @@
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 
-class RTFirstHitNode final : public RenderGraphNode {
+class RTFirstHitNode final : public RenderPipelineNode {
 public:
     explicit RTFirstHitNode(Scene&);
     ~RTFirstHitNode() override = default;

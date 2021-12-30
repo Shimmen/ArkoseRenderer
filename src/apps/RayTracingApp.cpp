@@ -27,7 +27,7 @@ std::vector<Backend::Capability> RayTracingApp::optionalCapabilities()
     return {};
 }
 
-void RayTracingApp::setup(Scene& scene, RenderGraph& graph)
+void RayTracingApp::setup(Scene& scene, RenderPipeline& pipeline)
 {
     //scene().loadFromFile("assets/sample/sponza.json");
     scene.loadFromFile("assets/sample/cornell-box.json");
@@ -35,24 +35,24 @@ void RayTracingApp::setup(Scene& scene, RenderGraph& graph)
     bool rtxOn = true;
     //bool firstHit = true;
 
-    graph.addNode<SceneNode>(scene);
-    graph.addNode<PickingNode>(scene);
-    graph.addNode<GBufferNode>(scene);
-    graph.addNode<ShadowMapNode>(scene);
-    graph.addNode<ForwardRenderNode>(scene);
+    pipeline.addNode<SceneNode>(scene);
+    pipeline.addNode<PickingNode>(scene);
+    pipeline.addNode<GBufferNode>(scene);
+    pipeline.addNode<ShadowMapNode>(scene);
+    pipeline.addNode<ForwardRenderNode>(scene);
     if (rtxOn) {
-        graph.addNode<RTAccelerationStructures>(scene);
-        graph.addNode<RTAmbientOcclusion>(scene);
-        graph.addNode<RTReflectionsNode>(scene);
-        graph.addNode<RTDiffuseGINode>(scene);
+        pipeline.addNode<RTAccelerationStructures>(scene);
+        pipeline.addNode<RTAmbientOcclusion>(scene);
+        pipeline.addNode<RTReflectionsNode>(scene);
+        pipeline.addNode<RTDiffuseGINode>(scene);
         //if (firstHit) {
-        //    graph.addNode<RTFirstHitNode>(scene());
+        //    pipeline.addNode<RTFirstHitNode>(scene());
         //}
     }
 
-    graph.addNode<SkyViewNode>(scene);
+    pipeline.addNode<SkyViewNode>(scene);
 
-    graph.addNode("rt-combine", [](Registry& reg) {
+    pipeline.addNode("rt-combine", [](Registry& reg) {
         Texture* targetTexture = reg.getTexture("SceneColor");
         if (!targetTexture)
             targetTexture = &reg.loadTexture2D("assets/test-pattern.png", true, true);
@@ -86,9 +86,9 @@ void RayTracingApp::setup(Scene& scene, RenderGraph& graph)
         };
     });
 
-    graph.addNode<AutoExposureNode>(scene);
+    pipeline.addNode<AutoExposureNode>(scene);
 
-    graph.addNode("final", [](Registry& reg) {
+    pipeline.addNode("final", [](Registry& reg) {
         // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.
         std::vector<vec2> fullScreenTriangle { { -1, -3 }, { -1, 1 }, { 3, 1 } };
         Buffer& vertexBuffer = reg.createBuffer(std::move(fullScreenTriangle), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);

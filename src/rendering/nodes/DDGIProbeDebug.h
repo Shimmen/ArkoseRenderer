@@ -2,7 +2,7 @@
 
 #include "rendering/RenderPipelineNode.h"
 
-class DDGIProbeDebug final : public RenderGraphNode {
+class DDGIProbeDebug final : public RenderPipelineNode {
 public:
     DDGIProbeDebug(Scene&);
 

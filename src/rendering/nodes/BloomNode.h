@@ -3,7 +3,7 @@
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/scene/Scene.h"
 
-class BloomNode final : public RenderGraphNode {
+class BloomNode final : public RenderPipelineNode {
 public:
     explicit BloomNode(Scene&);
 

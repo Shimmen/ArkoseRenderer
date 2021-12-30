@@ -14,7 +14,7 @@ std::string DDGIProbeDebug::name()
 }
 
 DDGIProbeDebug::DDGIProbeDebug(Scene& scene)
-    : RenderGraphNode(DDGIProbeDebug::name())
+    : RenderPipelineNode(DDGIProbeDebug::name())
     , m_scene(scene)
 {
 }
@@ -31,12 +31,12 @@ void DDGIProbeDebug::constructNode(Registry& reg)
     setUpSphereRenderData(reg);
 }
 
-RenderGraphNode::ExecuteCallback DDGIProbeDebug::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback DDGIProbeDebug::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 
     if (!reg.hasPreviousNode("ddgi"))
-        return RenderGraphNode::NullExecuteCallback;
+        return RenderPipelineNode::NullExecuteCallback;
 
     Texture& depthTexture = *reg.getTexture("SceneDepth");
     Texture& colorTexture = *reg.getTexture("SceneColor");

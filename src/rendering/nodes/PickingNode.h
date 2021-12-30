@@ -4,7 +4,7 @@
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 
-class PickingNode final : public RenderGraphNode {
+class PickingNode final : public RenderPipelineNode {
 public:
     explicit PickingNode(Scene&);
 

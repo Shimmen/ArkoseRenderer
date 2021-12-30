@@ -4,21 +4,21 @@
 #include "utility/Profiling.h"
 #include <fmt/format.h>
 
-void RenderGraph::addNode(const std::string& name, RenderGraphBasicNode::ConstructorFunction constructorFunction)
+void RenderPipeline::addNode(const std::string& name, RenderPipelineBasicNode::ConstructorFunction constructorFunction)
 {
     // All nodes should be added before construction!
     ASSERT(m_frameContexts.empty());
 
-    auto node = std::make_unique<RenderGraphBasicNode>(name, constructorFunction);
+    auto node = std::make_unique<RenderPipelineBasicNode>(name, constructorFunction);
     m_allNodes.emplace_back(std::move(node));
 }
 
-void RenderGraph::addNode(std::unique_ptr<RenderGraphNode>&& node)
+void RenderPipeline::addNode(std::unique_ptr<RenderPipelineNode>&& node)
 {
     m_allNodes.emplace_back(std::move(node));
 }
 
-void RenderGraph::constructAll(Registry& nodeManager, std::vector<Registry*> frameManagers)
+void RenderPipeline::constructAll(Registry& nodeManager, std::vector<Registry*> frameManagers)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -68,7 +68,7 @@ void RenderGraph::constructAll(Registry& nodeManager, std::vector<Registry*> fra
     }
 }
 
-void RenderGraph::forEachNodeInResolvedOrder(const Registry& frameManager, std::function<void(std::string nodeName, NodeTimer& timer, const RenderGraphNode::ExecuteCallback&)> callback) const
+void RenderPipeline::forEachNodeInResolvedOrder(const Registry& frameManager, std::function<void(std::string nodeName, NodeTimer& timer, const RenderPipelineNode::ExecuteCallback&)> callback) const
 {
     auto entry = m_frameContexts.find(&frameManager);
     ASSERT(entry != m_frameContexts.end());

@@ -3,7 +3,7 @@
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/scene/Scene.h"
 
-class PrepassNode final : public RenderGraphNode {
+class PrepassNode final : public RenderPipelineNode {
 public:
     explicit PrepassNode(Scene&);
 

@@ -3,7 +3,7 @@
 #include "utility/Profiling.h"
 
 GBufferNode::GBufferNode(const Scene&)
-    : RenderGraphNode(GBufferNode::name())
+    : RenderPipelineNode(GBufferNode::name())
 {
 }
 
@@ -12,7 +12,7 @@ std::string GBufferNode::name()
     return "g-buffer";
 }
 
-RenderGraphNode::ExecuteCallback GBufferNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback GBufferNode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 

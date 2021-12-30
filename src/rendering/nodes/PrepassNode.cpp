@@ -12,12 +12,12 @@ std::string PrepassNode::name()
 }
 
 PrepassNode::PrepassNode(Scene& scene)
-    : RenderGraphNode(PrepassNode::name())
+    : RenderPipelineNode(PrepassNode::name())
     , m_scene(scene)
 {
 }
 
-RenderGraphNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 

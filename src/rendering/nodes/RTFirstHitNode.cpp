@@ -8,7 +8,7 @@
 #include "RTData.h"
 
 RTFirstHitNode::RTFirstHitNode(Scene& scene)
-    : RenderGraphNode(RTFirstHitNode::name())
+    : RenderPipelineNode(RTFirstHitNode::name())
     , m_scene(scene)
 {
 }
@@ -41,7 +41,7 @@ void RTFirstHitNode::constructNode(Registry& nodeReg)
                                                          { 2, ShaderStageRTClosestHit, &vertexBuffer } });
 }
 
-RenderGraphNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg) const
 {
     Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("image", storageImage);

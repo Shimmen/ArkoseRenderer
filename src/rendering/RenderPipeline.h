@@ -8,16 +8,16 @@
 #include <string>
 #include <unordered_map>
 
-class RenderGraph {
+class RenderPipeline {
 public:
-    RenderGraph() = default;
-    ~RenderGraph() = default;
+    RenderPipeline() = default;
+    ~RenderPipeline() = default;
 
-    RenderGraph(RenderGraph&) = delete;
-    RenderGraph& operator=(RenderGraph&) = delete;
+    RenderPipeline(RenderPipeline&) = delete;
+    RenderPipeline& operator=(RenderPipeline&) = delete;
 
-    void addNode(const std::string& name, RenderGraphBasicNode::ConstructorFunction);
-    void addNode(std::unique_ptr<RenderGraphNode>&&);
+    void addNode(const std::string& name, RenderPipelineBasicNode::ConstructorFunction);
+    void addNode(std::unique_ptr<RenderPipelineNode>&&);
 
     template<typename NodeType, typename... Args>
     void addNode(Args&&... args)
@@ -30,19 +30,19 @@ public:
     void constructAll(Registry& nodeManager, std::vector<Registry*> frameManagers);
 
     //! The callback is called for each node (in correct order)
-    void forEachNodeInResolvedOrder(const Registry&, std::function<void(std::string, NodeTimer&, const RenderGraphNode::ExecuteCallback&)>) const;
+    void forEachNodeInResolvedOrder(const Registry&, std::function<void(std::string, NodeTimer&, const RenderPipelineNode::ExecuteCallback&)>) const;
 
 private:
     struct NodeContext {
-        RenderGraphNode* node;
-        RenderGraphNode::ExecuteCallback executeCallback;
+        RenderPipelineNode* node;
+        RenderPipelineNode::ExecuteCallback executeCallback;
     };
     struct FrameContext {
         std::vector<NodeContext> nodeContexts {};
     };
 
-    //! All nodes that are part of this graph
-    std::vector<std::unique_ptr<RenderGraphNode>> m_allNodes {};
+    //! All nodes that are part of this pipeline
+    std::vector<std::unique_ptr<RenderPipelineNode>> m_allNodes {};
 
     //! The frame contexts, one per frame (i.e. image in the swapchain)
     std::unordered_map<const Registry*, FrameContext> m_frameContexts {};

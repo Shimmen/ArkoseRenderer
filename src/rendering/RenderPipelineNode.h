@@ -22,10 +22,10 @@ private:
     AvgAccumulator<double, 60> m_gpuAccumulator;
 };
 
-class RenderGraphNode {
+class RenderPipelineNode {
 public:
-    explicit RenderGraphNode(std::string name);
-    virtual ~RenderGraphNode() = default;
+    explicit RenderPipelineNode(std::string name);
+    virtual ~RenderPipelineNode() = default;
 
     using ExecuteCallback = std::function<void(const AppState&, CommandList&)>;
 
@@ -43,17 +43,17 @@ public:
 
     //! This is const, since changing or writing to any members would probably break stuff
     //! since this is called n times, one for each frame at reconstruction.
-    virtual ExecuteCallback constructFrame(Registry&) const { return RenderGraphNode::ExecuteCallback(); };
+    virtual ExecuteCallback constructFrame(Registry&) const { return RenderPipelineNode::ExecuteCallback(); };
 
 private:
     std::string m_name;
     NodeTimer m_timer;
 };
 
-class RenderGraphBasicNode final : public RenderGraphNode {
+class RenderPipelineBasicNode final : public RenderPipelineNode {
 public:
     using ConstructorFunction = std::function<ExecuteCallback(Registry&)>;
-    RenderGraphBasicNode(std::string name, ConstructorFunction);
+    RenderPipelineBasicNode(std::string name, ConstructorFunction);
 
     void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;

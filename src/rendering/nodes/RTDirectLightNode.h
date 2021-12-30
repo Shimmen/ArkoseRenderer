@@ -5,7 +5,7 @@
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 
-class RTDirectLightNode final : public RenderGraphNode {
+class RTDirectLightNode final : public RenderPipelineNode {
 public:
     explicit RTDirectLightNode(Scene&);
     ~RTDirectLightNode() override = default;

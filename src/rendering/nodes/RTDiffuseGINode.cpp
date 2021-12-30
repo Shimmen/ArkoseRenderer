@@ -7,7 +7,7 @@
 #include <imgui.h>
 
 RTDiffuseGINode::RTDiffuseGINode(Scene& scene)
-    : RenderGraphNode(RTDiffuseGINode::name())
+    : RenderPipelineNode(RTDiffuseGINode::name())
     , m_scene(scene)
 {
 }
@@ -68,7 +68,7 @@ void RTDiffuseGINode::constructNode(Registry& nodeReg)
     m_accumulationTexture = &nodeReg.createTexture2D(m_scene.mainViewportSize(), Texture::Format::RGBA32F);
 }
 
-RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) const
 {
     Texture* gBufferColor = reg.getTexture("SceneBaseColor");
     Texture* gBufferNormal = reg.getTexture("SceneNormal");

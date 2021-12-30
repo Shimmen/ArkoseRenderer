@@ -25,7 +25,7 @@ std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
     return { Backend::Capability::RtxRayTracing };
 }
 
-void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
+void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -36,26 +36,26 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
         scene.generateProbeGridFromBoundingBox();
     }
 
-    graph.addNode<SceneNode>(scene);
-    graph.addNode<GBufferNode>(scene);
-    graph.addNode<PickingNode>(scene);
+    pipeline.addNode<SceneNode>(scene);
+    pipeline.addNode<GBufferNode>(scene);
+    pipeline.addNode<PickingNode>(scene);
 
-    graph.addNode<DDGINode>(scene);
+    pipeline.addNode<DDGINode>(scene);
 
-    graph.addNode<ShadowMapNode>(scene);
-    graph.addNode<CullingNode>(scene);
-    graph.addNode<PrepassNode>(scene);
-    graph.addNode<ForwardRenderNode>(scene);
+    pipeline.addNode<ShadowMapNode>(scene);
+    pipeline.addNode<CullingNode>(scene);
+    pipeline.addNode<PrepassNode>(scene);
+    pipeline.addNode<ForwardRenderNode>(scene);
 
-    graph.addNode<SSAONode>(scene);
-    graph.addNode<GIComposeNode>(scene);
+    pipeline.addNode<SSAONode>(scene);
+    pipeline.addNode<GIComposeNode>(scene);
     
-    graph.addNode<SkyViewNode>(scene);
-    graph.addNode<BloomNode>(scene);
+    pipeline.addNode<SkyViewNode>(scene);
+    pipeline.addNode<BloomNode>(scene);
 
-    graph.addNode<DDGIProbeDebug>(scene);
+    pipeline.addNode<DDGIProbeDebug>(scene);
 
-    graph.addNode("final", [](Registry& reg) {
+    pipeline.addNode("final", [](Registry& reg) {
         // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.
         std::vector<vec2> fullScreenTriangle { { -1, -3 }, { -1, 1 }, { 3, 1 } };
         Buffer& vertexBuffer = reg.createBuffer(std::move(fullScreenTriangle), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);

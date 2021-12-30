@@ -5,7 +5,7 @@
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"
 
-class RTAmbientOcclusion final : public RenderGraphNode {
+class RTAmbientOcclusion final : public RenderPipelineNode {
 public:
     explicit RTAmbientOcclusion(const Scene&);
     ~RTAmbientOcclusion() override = default;

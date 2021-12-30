@@ -3,7 +3,7 @@
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/scene/Scene.h"
 
-class SkyViewNode final : public RenderGraphNode {
+class SkyViewNode final : public RenderPipelineNode {
 public:
     explicit SkyViewNode(Scene&);
 

@@ -13,12 +13,12 @@ std::string PickingNode::name()
 }
 
 PickingNode::PickingNode(Scene& scene)
-    : RenderGraphNode(PickingNode::name())
+    : RenderPipelineNode(PickingNode::name())
     , m_scene(scene)
 {
 }
 
-RenderGraphNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 
