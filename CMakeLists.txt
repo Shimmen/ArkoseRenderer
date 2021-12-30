@@ -25,9 +25,9 @@ add_executable(ArkoseRenderer
     src/backend/util/UploadBuffer.cpp
     src/backend/vulkan/VulkanBackend.cpp
     src/backend/vulkan/VulkanCommandList.cpp
-    src/backend/vulkan/VulkanDebugUtils.cpp
     src/backend/vulkan/VulkanResources.cpp
-    src/backend/vulkan/VulkanRTX.cpp
+    src/backend/vulkan/extensions/VulkanDebugUtils.cpp
+    src/backend/vulkan/extensions/VulkanRTX.cpp
     src/geometry/Fibonacci.cpp
     src/geometry/Frustum.cpp
     src/rendering/camera/FpsCamera.cpp

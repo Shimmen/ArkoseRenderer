@@ -1,6 +1,6 @@
 #include "VulkanDebugUtils.h"
 
-#include "VulkanBackend.h"
+#include "backend/vulkan/VulkanBackend.h"
 #include "utility/Logging.h"
 
 VulkanDebugUtils::VulkanDebugUtils(VulkanBackend& backend, VkInstance instance)
