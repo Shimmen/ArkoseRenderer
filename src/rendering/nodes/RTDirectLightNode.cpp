@@ -49,7 +49,7 @@ RenderGraphNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& reg
 
     TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },
-                                                         { 1, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), reg.getBuffer("scene", "camera") },
+                                                         { 1, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), reg.getBuffer("camera") },
                                                          { 2, ShaderStageRTRayGen, reg.getTexture("scene", "environmentMap"), ShaderBindingType::TextureSampler },
                                                          { 3, ShaderStageRTRayGen, &storageImage, ShaderBindingType::StorageImage } });
 

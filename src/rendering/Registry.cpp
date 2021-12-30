@@ -489,7 +489,7 @@ Texture* Registry::getTexture(const std::string& node, const std::string& name)
     return getResource(name, m_publishedTextures);
 }
 
-Buffer* Registry::getBuffer(const std::string& node, const std::string& name)
+Buffer* Registry::getBuffer(const std::string& name)
 {
     return getResource(name, m_publishedBuffers);
 }

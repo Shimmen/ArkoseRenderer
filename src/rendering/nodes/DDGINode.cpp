@@ -71,7 +71,7 @@ RenderGraphNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) const
 
     TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },
-                                                         { 1, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), reg.getBuffer("scene", "camera") },
+                                                         { 1, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), reg.getBuffer("camera") },
                                                          { 2, ShaderStageRTRayGen, m_probeGridDataBuffer },
                                                          { 3, ShaderStageRTRayGen, reg.getTexture("scene", "environmentMap"), ShaderBindingType::TextureSampler },
 #if USE_DEBUG_TARGET

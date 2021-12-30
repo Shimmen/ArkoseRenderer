@@ -20,13 +20,13 @@ RenderGraphNode::ExecuteCallback SkyViewNode::constructFrame(Registry& reg) cons
         ? reg.createPixelTexture(vec4(1.0f), true)
         : reg.loadTexture2D(m_scene.environmentMap(), true, false);
 
-    BindingSet& skyViewComputeBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, reg.getBuffer("scene", "camera") },
+    BindingSet& skyViewComputeBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, reg.getBuffer("camera") },
                                                                   { 1, ShaderStageCompute, &targetImage, ShaderBindingType::StorageImage },
                                                                   { 2, ShaderStageCompute, &depthStencilImage, ShaderBindingType::TextureSampler },
                                                                   { 3, ShaderStageCompute, &skyViewTexture, ShaderBindingType::TextureSampler } });
     ComputeState& skyViewComputeState = reg.createComputeState(Shader::createCompute("sky-view/sky-view.comp"), { &skyViewComputeBindingSet });
 
-    BindingSet& skyViewRasterizeBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, reg.getBuffer("scene", "camera") },
+    BindingSet& skyViewRasterizeBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, reg.getBuffer("camera") },
                                                                     { 1, ShaderStageFragment, &skyViewTexture, ShaderBindingType::TextureSampler } });
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &targetImage, LoadOp::Load, StoreOp::Store },
                                                           { RenderTarget::AttachmentType::Depth, &depthStencilImage, LoadOp::Load, StoreOp::Store } });

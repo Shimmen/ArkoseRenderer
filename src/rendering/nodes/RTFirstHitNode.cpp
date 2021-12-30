@@ -51,7 +51,7 @@ RenderGraphNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg) c
 
     TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStageRTRayGen, &sceneTLAS },
-                                                         { 1, ShaderStageRTRayGen, reg.getBuffer("scene", "camera") },
+                                                         { 1, ShaderStageRTRayGen, reg.getBuffer("camera") },
                                                          { 2, ShaderStageRTRayGen, &storageImage, ShaderBindingType::StorageImage } });
 
     ShaderFile raygen = ShaderFile("rt-firsthit/raygen.rgen");

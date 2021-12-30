@@ -62,7 +62,7 @@ public:
     void publish(const std::string& name, BindingSet&);
     void publish(const std::string& name, TopLevelAS&);
 
-    [[nodiscard]] Buffer*     getBuffer(const std::string& node, const std::string& name);
+    [[nodiscard]] Buffer*     getBuffer(const std::string& name);
     [[nodiscard]] Texture*    getTexture(const std::string& node, const std::string& name);
     [[nodiscard]] BindingSet* getBindingSet(const std::string& name);
     [[nodiscard]] TopLevelAS* getTopLevelAccelerationStructure(const std::string& name);

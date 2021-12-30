@@ -90,7 +90,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
             cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout(m_vertexLayout));
             cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
 
-            cmdList.drawIndirect(*reg.getBuffer("culling", "indirect-cmd-buffer"), *reg.getBuffer("culling", "indirect-count-buffer"));
+            cmdList.drawIndirect(*reg.getBuffer("culling-indirect-cmd-buffer"), *reg.getBuffer("culling-indirect-count-buffer"));
 
             cmdList.endRendering();
         }

@@ -31,7 +31,7 @@ RenderGraphNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry& re
 
     TopLevelAS& tlas = *reg.getTopLevelAccelerationStructure("rtAccStructureNodeScene");
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStageRTRayGen, &tlas },
-                                                         { 1, ShaderStageRTRayGen, reg.getBuffer("scene", "camera") },
+                                                         { 1, ShaderStageRTRayGen, reg.getBuffer("camera") },
                                                          { 2, ShaderStageRTRayGen, m_accumulatedAO, ShaderBindingType::StorageImage },
                                                          { 3, ShaderStageRTRayGen, gBufferNormal, ShaderBindingType::TextureSampler },
                                                          { 4, ShaderStageRTRayGen, gBufferDepth, ShaderBindingType::TextureSampler } });

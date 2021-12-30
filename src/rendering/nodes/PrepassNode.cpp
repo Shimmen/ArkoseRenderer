@@ -44,7 +44,7 @@ RenderGraphNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) cons
 
         cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout(m_prepassVertexLayout));
         cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
-        cmdList.drawIndirect(*reg.getBuffer("culling", "indirect-cmd-buffer"), *reg.getBuffer("culling", "indirect-count-buffer"));
+        cmdList.drawIndirect(*reg.getBuffer("culling-indirect-cmd-buffer"), *reg.getBuffer("culling-indirect-count-buffer"));
 
         cmdList.endRendering();
 
