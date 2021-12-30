@@ -17,7 +17,7 @@ RenderGraphNode::ExecuteCallback AutoExposureNode::constructFrame(Registry& reg)
 
     Texture& logLuminanceTexture = reg.createTexture2D({ 512, 512 }, Texture::Format::R32F, Texture::Filters::linear(), Texture::Mipmap::Nearest);
 
-    Texture& targetImage = *reg.getTexture("forward", "color");
+    Texture& targetImage = *reg.getTexture("SceneColor");
     BindingSet& logLumBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &targetImage, ShaderBindingType::TextureSampler },
                                                           { 1, ShaderStageCompute, &logLuminanceTexture, ShaderBindingType::StorageImage } });
     ComputeState& logLumComputeState = reg.createComputeState(Shader::createCompute("post/logLuminance.comp"), { &logLumBindingSet });

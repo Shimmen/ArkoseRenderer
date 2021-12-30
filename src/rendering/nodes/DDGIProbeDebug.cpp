@@ -38,8 +38,8 @@ RenderGraphNode::ExecuteCallback DDGIProbeDebug::constructFrame(Registry& reg) c
     if (!reg.hasPreviousNode("ddgi"))
         return RenderGraphNode::NullExecuteCallback;
 
-    Texture& depthTexture = *reg.getTexture("g-buffer", "depth");
-    Texture& colorTexture = *reg.getTexture("forward", "color");
+    Texture& depthTexture = *reg.getTexture("SceneDepth");
+    Texture& colorTexture = *reg.getTexture("SceneColor");
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture, LoadOp::Load, StoreOp::Store },
                                                           { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Load, StoreOp::Discard } });
 

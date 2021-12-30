@@ -484,7 +484,7 @@ void Registry::publish(const std::string& name, TopLevelAS& tlas)
     publishResource(name, tlas, m_publishedTopLevelAS);
 }
 
-Texture* Registry::getTexture(const std::string& node, const std::string& name)
+Texture* Registry::getTexture(const std::string& name)
 {
     return getResource(name, m_publishedTextures);
 }

@@ -13,8 +13,8 @@ RenderGraphNode::ExecuteCallback SkyViewNode::constructFrame(Registry& reg) cons
 {
     SCOPED_PROFILE_ZONE();
 
-    Texture& targetImage = *reg.getTexture("forward", "color");
-    Texture& depthStencilImage = *reg.getTexture("g-buffer", "depth");
+    Texture& targetImage = *reg.getTexture("SceneColor");
+    Texture& depthStencilImage = *reg.getTexture("SceneDepth");
 
     Texture& skyViewTexture = m_scene.environmentMap().empty()
         ? reg.createPixelTexture(vec4(1.0f), true)

@@ -20,8 +20,6 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-#include "utility/IESProfile.h"
-
 std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
 {
     return { Backend::Capability::RtxRayTracing };
@@ -71,8 +69,8 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
         const RenderTarget& ldrTarget = reg.windowRenderTarget();
 #endif
 
-        //BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("ddgi", "target"), ShaderBindingType::TextureSampler } });
-        BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("forward", "color"), ShaderBindingType::TextureSampler } });
+        //BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("DDGITestTarget"), ShaderBindingType::TextureSampler } });
+        BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("SceneColor"), ShaderBindingType::TextureSampler } });
         Shader tonemapShader = Shader::createBasicRasterize("final/showcase/tonemap.vert", "final/showcase/tonemap.frag");
         RenderStateBuilder tonemapStateBuilder { ldrTarget, tonemapShader, vertexLayout };
         tonemapStateBuilder.stateBindings().at(0, tonemapBindingSet);

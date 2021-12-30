@@ -23,11 +23,11 @@ void RTAmbientOcclusion::constructNode(Registry& reg)
 
 RenderGraphNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry& reg) const
 {
-    Texture* gBufferNormal = reg.getTexture("g-buffer", "normal");
-    Texture* gBufferDepth = reg.getTexture("g-buffer", "depth");
+    Texture* gBufferNormal = reg.getTexture("SceneNormal");
+    Texture* gBufferDepth = reg.getTexture("SceneDepth");
 
     Texture& ambientOcclusion = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R16F);
-    reg.publish("AO", ambientOcclusion);
+    reg.publish("rtAO", ambientOcclusion);
 
     TopLevelAS& tlas = *reg.getTopLevelAccelerationStructure("rtAccStructureNodeScene");
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStageRTRayGen, &tlas },

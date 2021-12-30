@@ -46,7 +46,7 @@ RenderGraphNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg) c
     Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("image", storageImage);
 
-    BindingSet& environmentBindingSet = reg.createBindingSet({ { 0, ShaderStageRTMiss, reg.getTexture("scene", "environmentMap"), ShaderBindingType::TextureSampler } });
+    BindingSet& environmentBindingSet = reg.createBindingSet({ { 0, ShaderStageRTMiss, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler } });
     BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
 
     TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();

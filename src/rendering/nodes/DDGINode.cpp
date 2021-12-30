@@ -66,14 +66,14 @@ RenderGraphNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) const
 
 #if USE_DEBUG_TARGET
     Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
-    reg.publish("target", storageImage);
+    reg.publish("DDGITestTarget", storageImage);
 #endif
 
     TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },
                                                          { 1, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), reg.getBuffer("camera") },
                                                          { 2, ShaderStageRTRayGen, m_probeGridDataBuffer },
-                                                         { 3, ShaderStageRTRayGen, reg.getTexture("scene", "environmentMap"), ShaderBindingType::TextureSampler },
+                                                         { 3, ShaderStageRTRayGen, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler },
 #if USE_DEBUG_TARGET
                                                          { 4, ShaderStageRTRayGen, &storageImage, ShaderBindingType::StorageImage } });
 #else

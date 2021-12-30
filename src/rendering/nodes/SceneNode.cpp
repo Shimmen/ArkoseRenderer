@@ -36,8 +36,8 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     Texture& envTexture = m_scene.environmentMap().empty()
         ? reg.createPixelTexture(vec4(1.0f), true)
         : reg.loadTexture2D(m_scene.environmentMap(), true, false);
-    envTexture.setName("SceneEnvironmentTexture");
-    reg.publish("environmentMap", envTexture);
+    envTexture.setName("SceneEnvironmentMap");
+    reg.publish("SceneEnvironmentMap", envTexture);
 
     // Object data stuff
     // TODO: Resize the buffer if needed when more meshes are added

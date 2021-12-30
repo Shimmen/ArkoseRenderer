@@ -62,9 +62,9 @@ void RTReflectionsNode::constructNode(Registry& nodeReg)
 
 RenderGraphNode::ExecuteCallback RTReflectionsNode::constructFrame(Registry& reg) const
 {
-    Texture* gBufferColor = reg.getTexture("g-buffer", "baseColor");
-    Texture* gBufferNormal = reg.getTexture("g-buffer", "normal");
-    Texture* gBufferDepth = reg.getTexture("g-buffer", "depth");
+    Texture* gBufferColor = reg.getTexture("SceneBaseColor");
+    Texture* gBufferNormal = reg.getTexture("SceneNormal");
+    Texture* gBufferDepth = reg.getTexture("SceneDepth");
 
     Texture& reflections = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("reflections", reflections);
@@ -79,7 +79,7 @@ RenderGraphNode::ExecuteCallback RTReflectionsNode::constructFrame(Registry& reg
                                                          { 4, ShaderStageRTRayGen, gBufferDepth, ShaderBindingType::TextureSampler },
                                                          { 5, ShaderStageRTRayGen, reg.getBuffer("camera") },
                                                          { 6, ShaderStageRTMiss, reg.getBuffer("environmentData") },
-                                                         { 7, ShaderStageRTMiss, reg.getTexture("scene", "environmentMap"), ShaderBindingType::TextureSampler },
+                                                         { 7, ShaderStageRTMiss, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler },
                                                          { 8, ShaderStageRTClosestHit, &dirLightBuffer } });
 
     ShaderFile raygen = ShaderFile("rt-reflections/raygen.rgen");
