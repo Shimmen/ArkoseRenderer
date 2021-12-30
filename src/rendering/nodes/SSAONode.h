@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../RenderGraphNode.h"
+#include "rendering/RenderPipelineNode.h"
 #include "rendering/camera/FpsCamera.h"
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Scene.h"

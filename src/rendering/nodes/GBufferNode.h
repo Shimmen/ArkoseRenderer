@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../RenderGraphNode.h"
+#include "rendering/RenderPipelineNode.h"
 #include <rendering/scene/Scene.h>
 
 class GBufferNode final : public RenderGraphNode {

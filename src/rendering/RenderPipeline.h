@@ -2,7 +2,7 @@
 
 #include "AppState.h"
 #include "Registry.h"
-#include "RenderGraphNode.h"
+#include "RenderPipelineNode.h"
 #include <functional>
 #include <memory>
 #include <string>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../RenderGraphNode.h"
+#include "rendering/RenderPipelineNode.h"
 
 class DDGIProbeDebug final : public RenderGraphNode {
 public:

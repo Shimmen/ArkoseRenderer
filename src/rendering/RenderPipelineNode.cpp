@@ -1,4 +1,4 @@
-#include "RenderGraphNode.h"
+#include "RenderPipelineNode.h"
 
 #include <utility>
 
