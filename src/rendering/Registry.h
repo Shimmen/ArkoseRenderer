@@ -62,8 +62,8 @@ public:
     void publish(const std::string& name, BindingSet&);
     void publish(const std::string& name, TopLevelAS&);
 
-    [[nodiscard]] std::optional<Texture*> getTexture(const std::string& node, const std::string& name);
-    [[nodiscard]] Buffer* getBuffer(const std::string& node, const std::string& name);
+    [[nodiscard]] Buffer*     getBuffer(const std::string& node, const std::string& name);
+    [[nodiscard]] Texture*    getTexture(const std::string& node, const std::string& name);
     [[nodiscard]] BindingSet* getBindingSet(const std::string& node, const std::string& name);
     [[nodiscard]] TopLevelAS* getTopLevelAccelerationStructure(const std::string& node, const std::string& name);
 
@@ -92,10 +92,10 @@ private:
     template<typename ResourceType>
     using PublishedResourceMap = std::unordered_map<std::string, PublishedResource<ResourceType>>;
 
-    PublishedResourceMap<Buffer> m_nameBufferMap;
-    PublishedResourceMap<Texture> m_nameTextureMap;
-    PublishedResourceMap<BindingSet> m_nameBindingSetMap;
-    PublishedResourceMap<TopLevelAS> m_nameTopLevelASMap;
+    PublishedResourceMap<Buffer> m_publishedBuffers;
+    PublishedResourceMap<Texture> m_publishedTextures;
+    PublishedResourceMap<BindingSet> m_publishedBindingSets;
+    PublishedResourceMap<TopLevelAS> m_publishedTopLevelAS;
 
     template<typename T>
     void publishResource(const std::string& name, T& resource, PublishedResourceMap<T>& map);

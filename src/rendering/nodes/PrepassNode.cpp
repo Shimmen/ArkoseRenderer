@@ -21,7 +21,7 @@ RenderGraphNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) cons
 {
     SCOPED_PROFILE_ZONE();
 
-    Texture& gBufferDepthTexture = *reg.getTexture("g-buffer", "depth").value();
+    Texture& gBufferDepthTexture = *reg.getTexture("g-buffer", "depth");
     BindingSet& drawableBindingSet = *reg.getBindingSet("culling", "culled-drawables");
 
     Shader prepassShader = Shader::createVertexOnly("forward/prepass.vert");

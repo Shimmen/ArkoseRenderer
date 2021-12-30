@@ -23,8 +23,8 @@ void RTAmbientOcclusion::constructNode(Registry& reg)
 
 RenderGraphNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry& reg) const
 {
-    Texture* gBufferNormal = reg.getTexture("g-buffer", "normal").value();
-    Texture* gBufferDepth = reg.getTexture("g-buffer", "depth").value();
+    Texture* gBufferNormal = reg.getTexture("g-buffer", "normal");
+    Texture* gBufferDepth = reg.getTexture("g-buffer", "depth");
 
     Texture& ambientOcclusion = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R16F);
     reg.publish("AO", ambientOcclusion);

@@ -32,8 +32,8 @@ RenderGraphNode::ExecuteCallback SSAONode::constructFrame(Registry& reg) const
     SCOPED_PROFILE_ZONE();
 
     // TODO: Handle resource modifications! For proper async handling
-    Texture* sceneOpaqueDepth = reg.getTexture("g-buffer", "depth").value_or(nullptr);
-    Texture* sceneOpaqueNormals = reg.getTexture("g-buffer", "normal").value_or(nullptr);
+    Texture* sceneOpaqueDepth = reg.getTexture("g-buffer", "depth");
+    Texture* sceneOpaqueNormals = reg.getTexture("g-buffer", "normal");
 
     Texture& ambientOcclusionTex = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F); //Texture::Format::R16F);
     reg.publish("ambient-occlusion", ambientOcclusionTex);

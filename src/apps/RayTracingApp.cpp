@@ -53,14 +53,20 @@ void RayTracingApp::setup(Scene& scene, RenderGraph& graph)
     graph.addNode<SkyViewNode>(scene);
 
     graph.addNode("rt-combine", [](Registry& reg) {
-        // TODO: Consider placing something like this in the Registry itself so we can just do value_or(reg.placeholderTexture())
-        Texture& placeholder = reg.loadTexture2D("assets/test-pattern.png", true, true);
+        Texture* targetTexture = reg.getTexture(ForwardRenderNode::name(), "color");
+        if (!targetTexture)
+            targetTexture = &reg.loadTexture2D("assets/test-pattern.png", true, true);
 
-        Texture* targetTexture = reg.getTexture(ForwardRenderNode::name(), "color").value_or(&placeholder);
         BindingSet& targetBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, targetTexture, ShaderBindingType::StorageImage } });
 
-        Texture* diffuseGI = reg.getTexture(RTDiffuseGINode::name(), "diffuseGI").value_or(&reg.createPixelTexture(vec4(0, 0, 0, 1), true));
-        Texture* ambientOcclusion = reg.getTexture(RTAmbientOcclusion::name(), "AO").value_or(&reg.createPixelTexture(vec4(1, 1, 1, 1), true));
+        Texture* diffuseGI = reg.getTexture(RTDiffuseGINode::name(), "diffuseGI");
+        if (!diffuseGI)
+            diffuseGI = &reg.createPixelTexture(vec4(0, 0, 0, 1), true);
+
+        Texture* ambientOcclusion = reg.getTexture(RTAmbientOcclusion::name(), "AO");
+        if (!ambientOcclusion)
+            ambientOcclusion = &reg.createPixelTexture(vec4(1, 1, 1, 1), true);
+
         BindingSet& giBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, diffuseGI, ShaderBindingType::TextureSampler },
                                                           { 1, ShaderStageCompute, ambientOcclusion, ShaderBindingType::TextureSampler } });
 
@@ -88,7 +94,7 @@ void RayTracingApp::setup(Scene& scene, RenderGraph& graph)
         Buffer& vertexBuffer = reg.createBuffer(std::move(fullScreenTriangle), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
         VertexLayout vertexLayout = VertexLayout { VertexComponent::Position2F };
 
-        BindingSet& bindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("forward", "color").value(), ShaderBindingType::TextureSampler } });
+        BindingSet& bindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("forward", "color"), ShaderBindingType::TextureSampler } });
         Shader shader = Shader::createBasicRasterize("final/showcase/tonemap.vert", "final/showcase/tonemap.frag");
         RenderStateBuilder renderStateBuilder { reg.windowRenderTarget(), shader, vertexLayout };
         renderStateBuilder.stateBindings().at(0, bindingSet);

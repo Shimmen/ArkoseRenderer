@@ -14,7 +14,7 @@ RenderGraphNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 
-    Texture& mainTexture = *reg.getTexture("forward", "color").value();
+    Texture& mainTexture = *reg.getTexture("forward", "color");
     Extent2D baseExtent = mainTexture.extent();
 
     const size_t numDownsamples = 6;

@@ -21,10 +21,10 @@ RenderGraphNode::ExecuteCallback GIComposeNode::constructFrame(Registry& reg) co
 {
     SCOPED_PROFILE_ZONE();
 
-    Texture& sceneColorBeforeGI = *reg.getTexture("forward", "color").value();
-    Texture& baseColorTex = *reg.getTexture("g-buffer", "baseColor").value();
-    Texture& ambientOcclusionTex = *reg.getTexture("ssao", "ambient-occlusion").value();
-    Texture& diffuseGiTex = *reg.getTexture("forward", "diffuse-gi").value();
+    Texture& sceneColorBeforeGI = *reg.getTexture("forward", "color");
+    Texture& baseColorTex = *reg.getTexture("g-buffer", "baseColor");
+    Texture& ambientOcclusionTex = *reg.getTexture("ssao", "ambient-occlusion");
+    Texture& diffuseGiTex = *reg.getTexture("forward", "diffuse-gi");
 
     Texture& sceneColorWithGI = reg.createTexture2D(reg.windowRenderTarget().extent(), sceneColorBeforeGI.format(), Texture::Filters::nearest());
 

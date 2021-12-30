@@ -466,45 +466,42 @@ bool Registry::hasPreviousNode(const std::string& name) const
 
 void Registry::publish(const std::string& name, Buffer& buffer)
 {
-    publishResource(name, buffer, m_nameBufferMap);
+    publishResource(name, buffer, m_publishedBuffers);
 }
 
 void Registry::publish(const std::string& name, Texture& texture)
 {
-    publishResource(name, texture, m_nameTextureMap);
+    publishResource(name, texture, m_publishedTextures);
 }
 
 void Registry::publish(const std::string& name, BindingSet& bindingSet)
 {
-    publishResource(name, bindingSet, m_nameBindingSetMap);
+    publishResource(name, bindingSet, m_publishedBindingSets);
 }
 
 void Registry::publish(const std::string& name, TopLevelAS& tlas)
 {
-    publishResource(name, tlas, m_nameTopLevelASMap);
+    publishResource(name, tlas, m_publishedTopLevelAS);
 }
 
-std::optional<Texture*> Registry::getTexture(const std::string& node, const std::string& name)
+Texture* Registry::getTexture(const std::string& node, const std::string& name)
 {
-    Texture* texture = getResource(name, m_nameTextureMap);
-    if (!texture)
-        return {};
-    return texture;
+    return getResource(name, m_publishedTextures);
 }
 
 Buffer* Registry::getBuffer(const std::string& node, const std::string& name)
 {
-    return getResource(name, m_nameBufferMap);
+    return getResource(name, m_publishedBuffers);
 }
 
 BindingSet* Registry::getBindingSet(const std::string& node, const std::string& name)
 {
-    return getResource(name, m_nameBindingSetMap);
+    return getResource(name, m_publishedBindingSets);
 }
 
 TopLevelAS* Registry::getTopLevelAccelerationStructure(const std::string& node, const std::string& name)
 {
-    return getResource(name, m_nameTopLevelASMap);
+    return getResource(name, m_publishedTopLevelAS);
 }
 
 const std::unordered_set<NodeDependency>& Registry::nodeDependencies() const

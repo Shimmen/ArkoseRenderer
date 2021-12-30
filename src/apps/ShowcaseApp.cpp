@@ -71,8 +71,8 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
         const RenderTarget& ldrTarget = reg.windowRenderTarget();
 #endif
 
-        //BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("ddgi", "target").value(), ShaderBindingType::TextureSampler } });
-        BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("forward", "color").value(), ShaderBindingType::TextureSampler } });
+        //BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("ddgi", "target"), ShaderBindingType::TextureSampler } });
+        BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("forward", "color"), ShaderBindingType::TextureSampler } });
         Shader tonemapShader = Shader::createBasicRasterize("final/showcase/tonemap.vert", "final/showcase/tonemap.frag");
         RenderStateBuilder tonemapStateBuilder { ldrTarget, tonemapShader, vertexLayout };
         tonemapStateBuilder.stateBindings().at(0, tonemapBindingSet);
