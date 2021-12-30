@@ -67,8 +67,6 @@ public:
     [[nodiscard]] BindingSet* getBindingSet(const std::string& node, const std::string& name);
     [[nodiscard]] TopLevelAS* getTopLevelAccelerationStructure(const std::string& node, const std::string& name);
 
-    [[nodiscard]] Texture* getTextureWithoutDependency(const std::string& node, const std::string& name);
-
     [[nodiscard]] const std::unordered_set<NodeDependency>& nodeDependencies() const;
 
 private:
@@ -85,20 +83,25 @@ private:
 
     std::unique_ptr<UploadBuffer> m_uploadBuffer;
 
-    std::unordered_map<std::string, Buffer*> m_nameBufferMap;
-    std::unordered_map<std::string, Texture*> m_nameTextureMap;
-    std::unordered_map<std::string, BindingSet*> m_nameBindingSetMap;
-    std::unordered_map<std::string, TopLevelAS*> m_nameTopLevelASMap;
+    template<typename ResourceType>
+    struct PublishedResource {
+        ResourceType* resource;
+        std::string publisher;
+    };
 
-    std::string makeQualifiedName(const std::string& node, const std::string& name);
+    template<typename ResourceType>
+    using PublishedResourceMap = std::unordered_map<std::string, PublishedResource<ResourceType>>;
+
+    PublishedResourceMap<Buffer> m_nameBufferMap;
+    PublishedResourceMap<Texture> m_nameTextureMap;
+    PublishedResourceMap<BindingSet> m_nameBindingSetMap;
+    PublishedResourceMap<TopLevelAS> m_nameTopLevelASMap;
 
     template<typename T>
-    void publishResource(const std::string& name, T& resource, std::unordered_map<std::string, T*>& map);
+    void publishResource(const std::string& name, T& resource, PublishedResourceMap<T>& map);
 
     template<typename T>
-    T* getResource(const std::string& node, const std::string& name, const std::unordered_map<std::string, T*>& map);
-    template<typename T>
-    T* getResourceWithoutDependency(const std::string& node, const std::string& name, const std::unordered_map<std::string, T*>& map);
+    T* getResource(const std::string& name, const PublishedResourceMap<T>& map);
 
     std::vector<std::unique_ptr<Buffer>> m_buffers;
     std::vector<std::unique_ptr<Texture>> m_textures;
@@ -128,7 +131,7 @@ template<typename T>
 }
 
 template<typename T>
-void Registry::publishResource(const std::string& name, T& resource, std::unordered_map<std::string, T*>& map)
+void Registry::publishResource(const std::string& name, T& resource, std::unordered_map<std::string, PublishedResource<T>>& map)
 {
     ASSERT(m_currentNodeName.has_value());
     auto nodeName = m_currentNodeName.value();
@@ -139,33 +142,26 @@ void Registry::publishResource(const std::string& name, T& resource, std::unorde
                         name.c_str(), nodeName.c_str());
     }
 
-    auto fullName = makeQualifiedName(nodeName, name);
-    auto entry = map.find(fullName);
-    ASSERT(entry == map.end());
-    map[fullName] = &resource;
+    // Must be a new entry, i.e. no accidental overwrite
+    ASSERT(map.find(name) == map.end());
+
+    map[name] = PublishedResource { .resource = &resource,
+                                    .publisher = nodeName };
 }
 
 template<typename T>
-T* Registry::getResource(const std::string& node, const std::string& name, const std::unordered_map<std::string, T*>& map)
+T* Registry::getResource(const std::string& name, const PublishedResourceMap<T>& map)
 {
-    T* resource = getResourceWithoutDependency(node, name, map);
-
-    if (resource) {
-        ASSERT(m_currentNodeName.has_value());
-        NodeDependency dependency { m_currentNodeName.value(), node };
-        m_nodeDependencies.insert(dependency);
-    }
-
-    return resource;
-}
-
-template<typename T>
-T* Registry::getResourceWithoutDependency(const std::string& node, const std::string& name, const std::unordered_map<std::string, T*>& map)
-{
-    std::string fullName = makeQualifiedName(node, name);
-    auto entry = map.find(fullName);
+    auto entry = map.find(name);
     if (entry == map.end())
         return nullptr;
-    T* resource = entry->second;
-    return resource;
+
+    const PublishedResource<T>& publishedResource = entry->second;
+
+    // Insert node dependency link
+    // TODO: Later when we allow consuming and passing on resources this might be a good place to handle that!
+    NodeDependency dependency { m_currentNodeName.value(), publishedResource.publisher };
+    m_nodeDependencies.insert(dependency);
+
+    return publishedResource.resource;
 }

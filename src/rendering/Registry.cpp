@@ -486,38 +486,28 @@ void Registry::publish(const std::string& name, TopLevelAS& tlas)
 
 std::optional<Texture*> Registry::getTexture(const std::string& node, const std::string& name)
 {
-    Texture* texture = getResource(node, name, m_nameTextureMap);
+    Texture* texture = getResource(name, m_nameTextureMap);
     if (!texture)
         return {};
     return texture;
 }
 
-Texture* Registry::getTextureWithoutDependency(const std::string& node, const std::string& name)
-{
-    return getResourceWithoutDependency(node, name, m_nameTextureMap);
-}
-
 Buffer* Registry::getBuffer(const std::string& node, const std::string& name)
 {
-    return getResource(node, name, m_nameBufferMap);
+    return getResource(name, m_nameBufferMap);
 }
 
 BindingSet* Registry::getBindingSet(const std::string& node, const std::string& name)
 {
-    return getResource(node, name, m_nameBindingSetMap);
+    return getResource(name, m_nameBindingSetMap);
 }
 
 TopLevelAS* Registry::getTopLevelAccelerationStructure(const std::string& node, const std::string& name)
 {
-    return getResource(node, name, m_nameTopLevelASMap);
+    return getResource(name, m_nameTopLevelASMap);
 }
 
 const std::unordered_set<NodeDependency>& Registry::nodeDependencies() const
 {
     return m_nodeDependencies;
-}
-
-std::string Registry::makeQualifiedName(const std::string& node, const std::string& name)
-{
-    return node + ':' + name;
 }
