@@ -1,6 +1,6 @@
 #include "RayTracingState.h"
 
-#include "rendering/Shader.h"
+#include "backend/shader/Shader.h"
 #include "utility/util.h"
 
 HitGroup::HitGroup(ShaderFile closestHit, std::optional<ShaderFile> anyHit, std::optional<ShaderFile> intersection)

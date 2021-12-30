@@ -12,6 +12,8 @@ add_executable(ArkoseRenderer
     src/apps/RayTracingApp.cpp
     src/apps/ShowcaseApp.cpp
     src/backend/Resource.cpp
+    src/backend/shader/Shader.cpp
+    src/backend/shader/ShaderManager.cpp
     src/backend/base/AccelerationStructure.cpp
     src/backend/base/Backend.cpp
     src/backend/base/BindingSet.cpp
@@ -71,8 +73,6 @@ add_executable(ArkoseRenderer
     src/rendering/scene/ProbeGrid.cpp
     src/rendering/scene/Scene.cpp
     src/rendering/scene/Vertex.cpp
-    src/rendering/Shader.cpp
-    src/rendering/ShaderManager.cpp
     src/utility/FileIO.cpp
     src/utility/IESProfile.cpp
     src/utility/Image.cpp

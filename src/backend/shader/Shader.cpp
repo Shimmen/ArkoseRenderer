@@ -1,7 +1,7 @@
 #include "Shader.h"
 
-#include "rendering/ShaderManager.h"
-#include <utility/Logging.h>
+#include "backend/shader/ShaderManager.h"
+#include "utility/Logging.h"
 
 #ifdef _WIN32
 #include <cstdio>

@@ -1,10 +1,8 @@
 #include "VulkanRayTracingState.h"
 
 #include "backend/vulkan/VulkanBackend.h"
+#include "backend/shader/ShaderManager.h"
 #include "utility/Profiling.h"
-
-// TODO: Avoid importing frontend stuff from backend
-#include "rendering/ShaderManager.h"
 
 VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTable sbt, const StateBindings& stateBindings, uint32_t maxRecursionDepth)
     : RayTracingState(backend, sbt, stateBindings, maxRecursionDepth)

@@ -1,10 +1,8 @@
 #pragma once
 
 #include "backend/Resource.h"
+#include "backend/shader/Shader.h"
 #include <vector>
-
-// TODO: Avoid importing frontend stuff from backend
-#include "rendering/Shader.h" // for ShaderStage enum
 
 class Buffer;
 class Texture;

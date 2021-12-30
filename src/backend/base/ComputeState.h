@@ -2,9 +2,7 @@
 
 #include "backend/Resource.h"
 #include "backend/base/BindingSet.h"
-
-// TODO: Avoid importing frontend stuff from backend
-#include "rendering/Shader.h"
+#include "backend/shader/Shader.h"
 
 class ComputeState : public Resource {
 public:

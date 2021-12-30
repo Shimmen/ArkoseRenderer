@@ -1,10 +1,8 @@
 #include "VulkanComputeState.h"
 
 #include "backend/vulkan/VulkanBackend.h"
+#include "backend/shader/ShaderManager.h"
 #include "utility/Profiling.h"
-
-// TODO: Avoid importing frontend stuff from backend
-#include "rendering/ShaderManager.h"
 
 VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vector<BindingSet*> bindingSets)
     : ComputeState(backend, shader, bindingSets)

@@ -1,10 +1,8 @@
 #include "VulkanRenderState.h"
 
 #include "backend/vulkan/VulkanBackend.h"
+#include "backend/shader/ShaderManager.h"
 #include "utility/Profiling.h"
-
-// TODO: Avoid importing frontend stuff from backend
-#include "rendering/ShaderManager.h"
 
 VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& renderTarget, VertexLayout vertexLayout,
                                      Shader shader, const StateBindings& stateBindings,

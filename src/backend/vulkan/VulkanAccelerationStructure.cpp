@@ -1,9 +1,7 @@
 #include "VulkanAccelerationStructure.h"
 
 #include "backend/vulkan/VulkanBackend.h"
-
-// TODO: Avoid importing frontend stuff from backend
-#include "rendering/ShaderManager.h"
+#include "backend/shader/ShaderManager.h"
 
 VulkanTopLevelAS::VulkanTopLevelAS(Backend& backend, std::vector<RTGeometryInstance> inst)
     : TopLevelAS(backend, std::move(inst))

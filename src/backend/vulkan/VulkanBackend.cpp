@@ -5,9 +5,9 @@
 
 #include "VulkanCommandList.h"
 #include "backend/vulkan/VulkanResources.h"
+#include "backend/shader/Shader.h"
+#include "backend/shader/ShaderManager.h"
 #include "rendering/Registry.h"
-#include "rendering/Shader.h"
-#include "rendering/ShaderManager.h"
 #include "utility/FileIO.h"
 #include "utility/Logging.h"
 #include "utility/Profiling.h"

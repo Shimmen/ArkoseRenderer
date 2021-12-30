@@ -2,10 +2,10 @@
 
 #include "backend/Resource.h"
 #include "backend/base/RenderTarget.h"
+#include "backend/shader/Shader.h"
 #include "backend/util/StateBindings.h"
 
 // TODO: Clean up: shouln't refer to frontend from backend!
-#include "rendering/Shader.h"
 #include "rendering/scene/Vertex.h"
 
 struct BlendState {
