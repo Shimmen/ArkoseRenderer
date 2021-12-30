@@ -494,7 +494,7 @@ Buffer* Registry::getBuffer(const std::string& node, const std::string& name)
     return getResource(name, m_publishedBuffers);
 }
 
-BindingSet* Registry::getBindingSet(const std::string& node, const std::string& name)
+BindingSet* Registry::getBindingSet(const std::string& name)
 {
     return getResource(name, m_publishedBindingSets);
 }

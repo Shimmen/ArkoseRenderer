@@ -35,7 +35,7 @@ RenderGraphNode::ExecuteCallback CullingNode::constructFrame(Registry& reg) cons
     Buffer& drawableBuffer = reg.createBuffer(initialBufferCount * sizeof(ShaderDrawable), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     drawableBuffer.setName("CulledDrawables");
     BindingSet& drawableBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &drawableBuffer } });
-    reg.publish("culled-drawables", drawableBindingSet);
+    reg.publish("culling-culled-drawables", drawableBindingSet);
 
     Buffer& indirectCmdBuffer = reg.createBuffer(initialBufferCount * sizeof(IndexedDrawCmd), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
     reg.publish("indirect-cmd-buffer", indirectCmdBuffer);

@@ -27,7 +27,7 @@ void ForwardRenderNode::constructNode(Registry& reg)
     SCOPED_PROFILE_ZONE();
 
     if (reg.hasPreviousNode("ddgi")) {
-        m_ddgiSamplingBindingSet = reg.getBindingSet("ddgi", "sampling-set");
+        m_ddgiSamplingBindingSet = reg.getBindingSet("ddgi-sampling-set");
     }
 }
 
@@ -35,10 +35,10 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
 {
     SCOPED_PROFILE_ZONE();
 
-    BindingSet& drawableBindingSet = *reg.getBindingSet("culling", "culled-drawables");
+    BindingSet& drawableBindingSet = *reg.getBindingSet("culling-culled-drawables");
     BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
-    BindingSet& cameraBindingSet = *reg.getBindingSet("scene", "cameraSet");
-    BindingSet& lightBindingSet = *reg.getBindingSet("scene", "lightSet");
+    BindingSet& cameraBindingSet = *reg.getBindingSet("cameraSet");
+    BindingSet& lightBindingSet = *reg.getBindingSet("lightSet");
 
     Texture& colorTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     colorTexture.setName("ForwardColor");

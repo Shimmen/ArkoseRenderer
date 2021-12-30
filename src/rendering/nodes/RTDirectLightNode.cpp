@@ -45,7 +45,7 @@ RenderGraphNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& reg
     reg.publish("target", storageImage);
 
     BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
-    BindingSet& lightBindingSet = *reg.getBindingSet("scene", "lightSet");
+    BindingSet& lightBindingSet = *reg.getBindingSet("lightSet");
 
     TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },

@@ -50,7 +50,7 @@ void DDGINode::constructNode(Registry& reg)
                                                                 { 1, ShaderStageFragment, m_probeAtlasIrradiance, ShaderBindingType::TextureSampler },
                                                                 { 2, ShaderStageFragment, m_probeAtlasVisibility, ShaderBindingType::TextureSampler } });
     ddgiSamplingBindingSet.setName("DDGISampling");
-    reg.publish("sampling-set", ddgiSamplingBindingSet);
+    reg.publish("ddgi-sampling-set", ddgiSamplingBindingSet);
 }
 
 RenderGraphNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) const
@@ -90,7 +90,7 @@ RenderGraphNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) const
     rtStateDataBindings.at(0, frameBindingSet);
     rtStateDataBindings.at(1, *m_objectDataBindingSet);
     rtStateDataBindings.at(2, m_scene.globalMaterialBindingSet());
-    rtStateDataBindings.at(3, *reg.getBindingSet("scene", "lightSet"));
+    rtStateDataBindings.at(3, *reg.getBindingSet("lightSet"));
 
     constexpr uint32_t maxRecursionDepth = 2; // raygen -> closest/any hit -> shadow ray
     RayTracingState& surfelRayTracingState = reg.createRayTracingState(sbt, rtStateDataBindings, maxRecursionDepth);

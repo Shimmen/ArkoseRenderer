@@ -26,7 +26,7 @@ void DDGIProbeDebug::constructNode(Registry& reg)
     if (!reg.hasPreviousNode("ddgi"))
         return;
 
-    m_ddgiSamplingSet = reg.getBindingSet("ddgi", "sampling-set");
+    m_ddgiSamplingSet = reg.getBindingSet("ddgi-sampling-set");
 
     setUpSphereRenderData(reg);
 }
@@ -45,7 +45,7 @@ RenderGraphNode::ExecuteCallback DDGIProbeDebug::constructFrame(Registry& reg) c
 
     Shader debugShader = Shader::createBasicRasterize("ddgi/probeDebug.vert", "ddgi/probeDebug.frag");
     RenderStateBuilder stateBuilder { renderTarget, debugShader, VertexLayout { VertexComponent::Position3F }};
-    stateBuilder.stateBindings().at(0, *reg.getBindingSet("scene", "cameraSet"));
+    stateBuilder.stateBindings().at(0, *reg.getBindingSet("cameraSet"));
     stateBuilder.stateBindings().at(1, *m_ddgiSamplingSet);
     stateBuilder.writeDepth = true;
     stateBuilder.testDepth = true;
