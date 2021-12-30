@@ -45,9 +45,9 @@ RenderPipelineNode::ExecuteCallback AutoExposureNode::constructFrame(Registry& r
 
         // FIXME: Don't use hardcoded event index! Maybe we should have some event resource type?
         static bool firstTimeAround  = true;
-        cmdList.waitEvent(1, firstTimeAround ? PipelineStage::Host : PipelineStage::Compute);
+        cmdList.waitEvent(1, firstTimeAround ? CommandList::PipelineStage::Host : CommandList::PipelineStage::Compute);
         firstTimeAround = false;
-        cmdList.resetEvent(1, PipelineStage::Compute);
+        cmdList.resetEvent(1, CommandList::PipelineStage::Compute);
         {
             cmdList.setComputeState(exposeComputeState);
             cmdList.bindSet(sourceDataBindingSet, 0);
@@ -62,7 +62,7 @@ RenderPipelineNode::ExecuteCallback AutoExposureNode::constructFrame(Registry& r
 
             cmdList.dispatch(1, 1, 1);
         }
-        cmdList.signalEvent(1, PipelineStage::Compute);
+        cmdList.signalEvent(1, CommandList::PipelineStage::Compute);
 
         m_lastFrameBindingSet = &targetDataBindingSet;
         m_scene.setNextFrameExposureResultBuffer(passDataBuffer);

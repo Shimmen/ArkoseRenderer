@@ -60,8 +60,8 @@ RenderPipelineNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry&
             return;
         }
 
-        cmdList.waitEvent(1, appState.frameIndex() == 0 ? PipelineStage::Host : PipelineStage::RayTracing);
-        cmdList.resetEvent(1, PipelineStage::RayTracing);
+        cmdList.waitEvent(1, appState.frameIndex() == 0 ? CommandList::PipelineStage::Host : CommandList::PipelineStage::RayTracing);
+        cmdList.resetEvent(1, CommandList::PipelineStage::RayTracing);
         {
             if (m_scene.camera().didModify() || Input::instance().isKeyDown(Key::R)) {
                 cmdList.clearTexture(*m_accumulatedAO, ClearColor::srgbColor(0, 0, 0));
@@ -88,6 +88,6 @@ RenderPipelineNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry&
             Extent2D globalSize = appState.windowExtent();
             cmdList.dispatch(globalSize, Extent3D(16));
         }
-        cmdList.signalEvent(1, PipelineStage::RayTracing);
+        cmdList.signalEvent(1, CommandList::PipelineStage::RayTracing);
     };
 }

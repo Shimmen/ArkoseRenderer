@@ -135,8 +135,8 @@ RenderPipelineNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& re
         cmdList.pushConstant(ShaderStageRTRayGen, ignoreColor);
         cmdList.pushConstant(ShaderStageRTRayGen, appState.frameIndex(), 4);
 
-        cmdList.waitEvent(0, appState.frameIndex() == 0 ? PipelineStage::Host : PipelineStage::RayTracing);
-        cmdList.resetEvent(0, PipelineStage::RayTracing);
+        cmdList.waitEvent(0, appState.frameIndex() == 0 ? CommandList::PipelineStage::Host : CommandList::PipelineStage::RayTracing);
+        cmdList.resetEvent(0, CommandList::PipelineStage::RayTracing);
         {
             if (m_scene.camera().didModify() || Input::instance().isKeyDown(Key::R)) {
                 cmdList.clearTexture(*m_accumulationTexture, ClearColor::srgbColor(0, 0, 0));
@@ -157,6 +157,6 @@ RenderPipelineNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& re
             Extent2D globalSize = appState.windowExtent();
             cmdList.dispatch(globalSize, Extent3D(16));
         }
-        cmdList.signalEvent(0, PipelineStage::RayTracing);
+        cmdList.signalEvent(0, CommandList::PipelineStage::RayTracing);
     };
 }

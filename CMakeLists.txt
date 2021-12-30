@@ -11,8 +11,18 @@ add_executable(ArkoseRenderer
     src/main.cpp
     src/apps/RayTracingApp.cpp
     src/apps/ShowcaseApp.cpp
-    src/backend/Backend.cpp
-    src/backend/Resources.cpp
+    src/backend/Resource.cpp
+    src/backend/base/AccelerationStructure.cpp
+    src/backend/base/Backend.cpp
+    src/backend/base/BindingSet.cpp
+    src/backend/base/Buffer.cpp
+    src/backend/base/ComputeState.cpp
+    src/backend/base/RayTracingState.cpp
+    src/backend/base/RenderState.cpp
+    src/backend/base/RenderTarget.cpp
+    src/backend/base/Texture.cpp
+    src/backend/util/StateBindings.cpp
+    src/backend/util/UploadBuffer.cpp
     src/backend/vulkan/VulkanBackend.cpp
     src/backend/vulkan/VulkanCommandList.cpp
     src/backend/vulkan/VulkanDebugUtils.cpp

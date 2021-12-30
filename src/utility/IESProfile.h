@@ -4,7 +4,7 @@
 #include <vector>
 #include <moos/vector.h>
 
-struct Texture;
+class Texture;
 class Scene;
 
 class IESProfile {
