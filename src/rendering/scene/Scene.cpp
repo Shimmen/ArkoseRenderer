@@ -207,9 +207,10 @@ void Scene::update(float elapsedTime, float deltaTime)
 
         ImGui::Separator();
 
-        {
-            ImGui::SliderFloat("Ambient (lx)", &m_ambientIlluminance, 0.0f, 10'000.0f, "%.0f");
-        }
+        ImGui::SliderFloat("Ambient (lx)", &m_ambientIlluminance, 0.0f, 1'000.0f, "%.0f");
+
+        // NOTE: Obviously the unit of this is dependent on the values in the texture.. we should probably unify this a bit.
+        ImGui::SliderFloat("Environment multiplier", &m_environmentMultiplier, 0.0f, 10'000.0f, "%.0f");
 
         {
             static Light* selectedLight = nullptr;

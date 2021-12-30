@@ -48,11 +48,9 @@ RenderGraphNode::ExecuteCallback SkyViewNode::constructFrame(Registry& reg) cons
         static bool useRasterizedPath = true;
         ImGui::Checkbox("Use rasterized path", &useRasterizedPath);
 
-        // NOTE: Obviously the unit of this is dependent on the values in the texture.
-        ImGui::SliderFloat("Environment multiplier", &m_scene.environmentMultiplier(), 1000.0f, 15000.0f);
         float envMultiplier = m_scene.exposedEnvironmentMultiplier();
 
-        if (!enabled)
+        if (!enabled || envMultiplier < 1e-6f)
             return;
 
         if (useRasterizedPath) {
