@@ -38,6 +38,10 @@ void ForwardRenderNode::constructNode(Registry& reg)
                                                             { 1, ShaderStageFragment, irradianceProbeTex, ShaderBindingType::TextureSampler },
                                                             { 2, ShaderStageFragment, distanceProbeTex, ShaderBindingType::TextureSampler } });
     }
+
+    if (reg.hasPreviousNode("ddgi")) {
+        m_ddgiSamplingBindingSet = reg.getBindingSet("ddgi", "sampling-set");
+    }
 }
 
 RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg) const
@@ -70,8 +74,10 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
 
     bool useIndirectLight = m_indirectLightBindingSet != nullptr;
     auto includeIndirectDefine = ShaderDefine::makeBool("FORWARD_INCLUDE_INDIRECT_LIGHT", useIndirectLight);
+    bool useDDGI = m_ddgiSamplingBindingSet != nullptr;
+    auto includeDDGIDefine = ShaderDefine::makeBool("FORWARD_INCLUDE_DDGI", useDDGI);
 
-    Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", { includeIndirectDefine });
+    Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", { includeIndirectDefine, includeDDGIDefine });
     RenderStateBuilder renderStateBuilder { renderTarget, shader, m_vertexLayout };
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
     renderStateBuilder.stencilMode = reg.hasPreviousNode("prepass") ? StencilMode::PassIfNotZero : StencilMode::AlwaysWrite;
@@ -81,6 +87,8 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
     renderStateBuilder.stateBindings().at(3, drawableBindingSet);
     if (useIndirectLight)
         renderStateBuilder.stateBindings().at(4, *m_indirectLightBindingSet);
+    if (useDDGI)
+        renderStateBuilder.stateBindings().at(5, *m_ddgiSamplingBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
     renderState.setName("ForwardOpaque");
 

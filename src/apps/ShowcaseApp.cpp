@@ -3,13 +3,13 @@
 #include "rendering/nodes/AutoExposureNode.h"
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/CullingNode.h"
+#include "rendering/nodes/DDGINode.h"
 #include "rendering/nodes/DiffuseGINode.h"
 #include "rendering/nodes/DiffuseGIProbeDebug.h"
 #include "rendering/nodes/ForwardRenderNode.h"
 #include "rendering/nodes/GBufferNode.h"
 #include "rendering/nodes/PrepassNode.h"
 #include "rendering/nodes/PickingNode.h"
-#include "rendering/nodes/RTDirectLightNode.h"
 #include "rendering/nodes/SceneNode.h"
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SkyViewNode.h"
@@ -43,6 +43,8 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
     graph.addNode<GBufferNode>(scene);
     graph.addNode<PickingNode>(scene);
 
+    graph.addNode<DDGINode>(scene);
+
     graph.addNode<ShadowMapNode>(scene);
     graph.addNode<DiffuseGINode>(scene);
     graph.addNode<CullingNode>(scene);
@@ -56,8 +58,6 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
     graph.addNode<BloomNode>(scene);
 
     graph.addNode<DiffuseGIProbeDebug>(scene);
-
-    //graph.addNode<RTDirectLightNode>(scene);
 
     graph.addNode("final", [](Registry& reg) {
         // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.
@@ -73,7 +73,7 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
         const RenderTarget& ldrTarget = reg.windowRenderTarget();
 #endif
 
-        //BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("rt-direct-light", "target").value(), ShaderBindingType::TextureSampler } });
+        //BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("ddgi", "target").value(), ShaderBindingType::TextureSampler } });
         BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("forward", "color").value(), ShaderBindingType::TextureSampler } });
         Shader tonemapShader = Shader::createBasicRasterize("final/showcase/tonemap.vert", "final/showcase/tonemap.frag");
         RenderStateBuilder tonemapStateBuilder { ldrTarget, tonemapShader, vertexLayout };
@@ -135,4 +135,13 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
 #endif
         };
     });
+}
+
+void ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
+{
+    float sunRotation = 0.0f;
+    sunRotation -= Input::instance().isKeyDown(Key::Left) ? 1.0f : 0.0f;
+    sunRotation += Input::instance().isKeyDown(Key::Right) ? 1.0f : 0.0f;
+    quat rotation = axisAngle(moos::globalRight, sunRotation * deltaTime * 0.2f);
+    scene.sun().direction = moos::rotateVector(rotation, scene.sun().direction);
 }

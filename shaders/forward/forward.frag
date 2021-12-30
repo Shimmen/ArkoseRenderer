@@ -33,6 +33,14 @@ layout(set = 4, binding = 1) uniform sampler2DArray probeIrradianceTex;
 layout(set = 4, binding = 2) uniform sampler2DArray probeDistanceTex;
 #endif
 
+#if FORWARD_INCLUDE_DDGI
+#include <shared/DDGIData.h>
+#include <ddgi/probeSampling.glsl>
+layout(set = 5, binding = 0) uniform DDGIGridDataBlock { DDGIProbeGridData ddgiProbeGridData; };
+layout(set = 5, binding = 1) uniform sampler2D ddgiIrradianceAtlas;
+layout(set = 5, binding = 2) uniform sampler2D ddgiVisibilityAtlas;
+#endif
+
 NAMED_UNIFORMS(pushConstants,
     float ambientAmount;
     float indirectExposure;
@@ -99,6 +107,27 @@ vec3 evaluateIndirectLight(vec3 P, vec3 V, vec3 N, vec3 baseColor, float metalli
 }
 #endif
 
+#if FORWARD_INCLUDE_DDGI
+vec3 evaluateDDGIIndirectLight(vec3 P, vec3 V, vec3 N, vec3 baseColor, float metallic, float roughness)
+{
+    vec3 worldSpacePos = vec3(camera.worldFromView * vec4(P, 1.0));
+    vec3 worldSpaceNormal = normalize(mat3(camera.worldFromView) * N);
+
+    // Assume glossy indirect light comes from the reflected direction L
+    //vec3 L = reflect(-V, N); TODO!
+    vec3 indirectGlossy = vec3(0.0);
+
+    // TODO: Use physically plausible amounts! For now we just use a silly estimate for F since we don't actually include glossy stuff at the moment.
+    float a = square(roughness);
+    float fakeF = pow(a, 5.0);
+
+    vec3 irradiance = sampleDynamicDiffuseGlobalIllumination(worldSpacePos, worldSpaceNormal, ddgiProbeGridData, ddgiIrradianceAtlas, ddgiVisibilityAtlas);
+    vec3 indirectDiffuse = vec3(1.0 - metallic) * vec3(1.0 - fakeF) * irradiance;
+
+    return indirectDiffuse + indirectGlossy;
+}
+#endif
+
 void main()
 {
     ShaderMaterial material = materials[vMaterialIndex];
@@ -139,6 +168,11 @@ void main()
 #if FORWARD_INCLUDE_INDIRECT_LIGHT
     vec3 diffuseGI = evaluateIndirectLight(vPosition, V, N, baseColor, metallic, roughness);
     oDiffuseGI = vec4(diffuseGI, 0.0);
+#endif
+
+#if FORWARD_INCLUDE_DDGI
+    vec3 ddgi = evaluateDDGIIndirectLight(vPosition, V, N, baseColor, metallic, roughness);
+    oDiffuseGI = vec4(ddgi, 0.0);
 #endif
 
     oColor = vec4(color, 1.0);

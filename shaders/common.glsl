@@ -4,6 +4,8 @@
 #define PI     (3.14159265358979323846)
 #define TWO_PI (2.0 * PI)
 
+#define GOLDEN_RATIO ((1.0 + sqrt(5.0)) / 2.0)
+
 #include <shared/SphericalHarmonics.h>
 
 void swap(inout float a, inout float b)
@@ -43,9 +45,19 @@ float square(float x)
     return x * x;
 }
 
+vec3 square(vec3 x)
+{
+    return x * x;
+}
+
 float saturate(float x)
 {
     return clamp(x, 0.0, 1.0);
+}
+
+float maxComponent(vec3 v)
+{
+    return max(max(v.x, v.y), v.z);
 }
 
 void reortogonalize(in vec3 v0, inout vec3 v1)
@@ -79,6 +91,29 @@ vec2 hammersley(uint i, uint n)
 
     float xi0 = float(i) / float(n);
     return vec2(xi0, xi1);
+}
+
+vec3 sphericalFibonacciSample(uint i, uint n)
+{
+	// Refer to sphericalFibonacci(..) in c++ source for more info
+	
+	float theta = TWO_PI * float(i) / GOLDEN_RATIO;
+	float phi = acos(2.0 * (float(i) / float(n)) - 1.0);
+
+	float sinPhi = sin(phi);
+	return vec3(cos(theta) * sinPhi, sin(theta) * sinPhi, cos(phi));
+}
+
+// https://en.wikipedia.org/wiki/Rodrigues%27_rotation_formula
+vec3 axisAngleRotate(vec3 target, vec3 axis, float angle)
+{
+    const vec3 k = axis;
+    const vec3 v = target;
+
+    const float sinTheta = sin(angle);
+    const float cosTheta = cos(angle);
+
+    return v * cosTheta + cross(k, v) * sinTheta + k * dot(k, v) * (1.0 - cosTheta);
 }
 
 vec3 sampleSphericalHarmonic(SphericalHarmonics sh, vec3 dir)

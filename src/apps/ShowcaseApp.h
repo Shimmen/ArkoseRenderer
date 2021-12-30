@@ -7,4 +7,5 @@ class ShowcaseApp : public App {
 public:
     std::vector<Backend::Capability> requiredCapabilities();
     void setup(Scene&, RenderGraph&) override;
+    void update(Scene&, float elapsedTime, float deltaTime) override;
 };

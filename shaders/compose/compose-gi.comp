@@ -10,6 +10,7 @@ layout(set = 0, binding = 4) uniform sampler2D diffuseGiTex;
 
 NAMED_UNIFORMS(pushConstants,
     uvec2 targetSize;
+    bool includeSceneColor;
     bool includeDiffuseGI;
     bool withMaterialColor;
     bool withAmbientOcclusion;
@@ -22,7 +23,10 @@ void main()
     if (any(greaterThanEqual(pixelCoord, pushConstants.targetSize)))
         return;
 
-    vec4 sceneColor = texelFetch(sceneColorBeforeGI, pixelCoord, 0);
+    vec4 sceneColor = vec4(0.0);
+    if (pushConstants.includeSceneColor) {
+        sceneColor = texelFetch(sceneColorBeforeGI, pixelCoord, 0);
+    }
 
     float ambientOcclusion = 1.0;
     if (pushConstants.withAmbientOcclusion) {
@@ -36,7 +40,7 @@ void main()
 
     if (pushConstants.includeDiffuseGI) {
         vec3 diffuseGI = texelFetch(diffuseGiTex, pixelCoord, 0).rgb;
-        sceneColor.rgb = diffuseGI * materialBaseColor * ambientOcclusion;
+        sceneColor.rgb += diffuseGI * materialBaseColor * ambientOcclusion;
     }
 
     imageStore(sceneColorWithGI, pixelCoord, sceneColor);

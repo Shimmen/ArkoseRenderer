@@ -1,0 +1,57 @@
+#version 460
+
+#include <common.glsl>
+#include <common/namedUniforms.glsl>
+#include <common/octahedral.glsl>
+#include <ddgi/common.glsl>
+
+layout(set = 0, binding = 0, rgba16f) uniform readonly image2D surfelImage;
+layout(set = 0, binding = 1, rgba16f) uniform          image2D probeVisibilityAtlas;
+
+NAMED_UNIFORMS(pushConstants,
+    float visibilitySharpness;
+    ivec3 gridDimensions;
+    uint raysPerProbe;
+    float hysterisis;
+    uint frameIdx;
+)
+
+layout(local_size_x = DDGI_VISIBILITY_RES,
+       local_size_y = DDGI_VISIBILITY_RES,
+       local_size_z = 1) in;
+void main()
+{
+    uint probeIdx = gl_GlobalInvocationID.z;
+    ivec2 tileTexelCoord = ivec2(gl_GlobalInvocationID.xy);
+
+    // Compute the direction that this ocrahedral texel (coordinate) represents
+    vec2 tileUV = (vec2(tileTexelCoord) + vec2(0.5)) / vec2(DDGI_VISIBILITY_RES);
+    vec3 texelDirection = octahedralDecode(2.0 * tileUV - 1.0);
+
+    // Compute the texel coordinate that we should draw into
+    const int tileResolution = DDGI_VISIBILITY_RES;
+    const int tilePadding = DDGI_ATLAS_PADDING;
+    ivec2 atlasTexelCoord = calculateAtlasTexelCoord(probeIdx, pushConstants.gridDimensions, tileTexelCoord, tileResolution, tilePadding);
+
+    vec2 newVisibility = vec2(0.0);
+    float totalWeight = 0.0;
+
+    for (uint sampleIdx = 0; sampleIdx < pushConstants.raysPerProbe; ++sampleIdx) {
+
+        vec3 rayDirection = calculateRotatedSphericalFibonacciSample(probeIdx, sampleIdx, pushConstants.raysPerProbe, pushConstants.frameIdx);
+        float weight = pow(max(0.0, dot(texelDirection, rayDirection)), pushConstants.visibilitySharpness);
+
+        float surfelRayDistance = imageLoad(surfelImage, ivec2(probeIdx, sampleIdx)).a;
+
+        newVisibility += weight * vec2(surfelRayDistance, square(surfelRayDistance));
+        totalWeight += weight;
+    }
+
+    const float epsilon = 1e-9 * float(pushConstants.raysPerProbe);
+    newVisibility /= max(totalWeight, epsilon);
+
+    // "Hysteresis represent the history dependence of physical systems", hence the mix from new to old with hysteresis
+    vec2 oldVisibility = imageLoad(probeVisibilityAtlas, atlasTexelCoord).rg;
+    newVisibility = mix(newVisibility, oldVisibility, pushConstants.hysterisis);
+    imageStore(probeVisibilityAtlas, atlasTexelCoord, vec4(newVisibility, 0.0, 0.0));
+}

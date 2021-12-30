@@ -22,6 +22,7 @@ private:
                                   VertexComponent::Tangent4F };
 
     BindingSet* m_indirectLightBindingSet { nullptr };
+    BindingSet* m_ddgiSamplingBindingSet { nullptr };
 
     Scene& m_scene;
 };

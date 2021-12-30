@@ -1,0 +1,52 @@
+#version 460
+
+#include <common.glsl>
+#include <ddgi/common.glsl>
+
+layout(set = 0, binding = 0, rgba16f) uniform image2D probeIrradianceAtlas;
+layout(set = 0, binding = 1, rg16f)   uniform image2D probeVisibilityAtlas;
+
+ivec2 texCoordForCorner(ivec2 cornerIdx, int sideLengthWithPadding)
+{
+    // Convert corner idx [0, 1]^2 to local corner coord [0, sideLengthWithPadding)^2
+    ivec2 localCornerCoord = cornerIdx * ivec2(sideLengthWithPadding - 1);
+
+    // Convert local corner coord to global corner coord (i.e. global texel coord)
+    ivec2 globalCornerCoord = ivec2(gl_WorkGroupID.xy) * ivec2(sideLengthWithPadding)  + localCornerCoord;
+
+    return globalCornerCoord;
+}
+
+layout(local_size_x = 2, local_size_y = 2, local_size_z = 1) in;
+void main()
+{
+    // Correct call for this shader: dispatch(num-probes-along-x-axis, num-probes-along-y-axis, 2)
+    // I.e., instead of having super smart but hard to understand code we hope that the scheduler handles it for us..! :)
+
+    bool irradianceMode = gl_WorkGroupID.z == 0;
+
+    int sideLength = irradianceMode ? DDGI_IRRADIANCE_RES : DDGI_VISIBILITY_RES;
+    int sideLengthWithPadding = sideLength + 2 * DDGI_ATLAS_PADDING;
+
+    // Corner idx [0, 1]^2
+    ivec2 dstCornerIdx = ivec2(gl_LocalInvocationID.xy);
+    ivec2 srcCornerIdx = ivec2(mod(dstCornerIdx.x + 1, 2), mod(dstCornerIdx.y + 1, 2));
+
+    // Actual global corner texel coordinates
+    ivec2 dstTexelCoord = texCoordForCorner(dstCornerIdx, sideLengthWithPadding);
+    ivec2 srcTexelCoord = texCoordForCorner(srcCornerIdx, sideLengthWithPadding);
+    
+    // We're not copying from the border, but the corner pixel right inside it
+    // TODO: I'm sure we can do this in a much nicer way.. and less divergent.
+    if (srcCornerIdx.x == 0) srcTexelCoord.x += 1;
+    if (srcCornerIdx.y == 0) srcTexelCoord.y += 1;
+    if (srcCornerIdx.x == 1) srcTexelCoord.x -= 1;
+    if (srcCornerIdx.y == 1) srcTexelCoord.y -= 1;
+
+    // Perform the copy from tile to border
+    if (irradianceMode) {
+        imageStore(probeIrradianceAtlas, dstTexelCoord, imageLoad(probeIrradianceAtlas, srcTexelCoord));
+    } else {
+        imageStore(probeVisibilityAtlas, dstTexelCoord, imageLoad(probeVisibilityAtlas, srcTexelCoord));
+    }
+}

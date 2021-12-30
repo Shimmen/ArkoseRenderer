@@ -1,7 +1,7 @@
 {
     "environment": {
       "texture": "assets/sample/hdri/tiergarten_2k.hdr",
-      "illuminance": 8000.0
+      "illuminance": 2000.0
     },
     "models": [
       {

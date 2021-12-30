@@ -1,0 +1,58 @@
+#version 460
+
+#include <common.glsl>
+#include <ddgi/common.glsl>
+
+layout(set = 0, binding = 0, rgba16f) uniform image2D probeIrradianceAtlas;
+layout(set = 0, binding = 1, rg16f)   uniform image2D probeVisibilityAtlas;
+
+ivec2 texCoordForCorner(ivec2 cornerIdx, int sideLengthWithPadding)
+{
+    // Convert corner idx [0, 1]^2 to local corner coord [0, sideLengthWithPadding)^2
+    ivec2 localCornerCoord = cornerIdx * ivec2(sideLengthWithPadding - 1);
+
+    // Convert local corner coord to global corner coord (i.e. global texel coord)
+    ivec2 globalCornerCoord = ivec2(gl_WorkGroupID.xy) * ivec2(sideLengthWithPadding)  + localCornerCoord;
+
+    return globalCornerCoord;
+}
+
+layout(local_size_x = TILE_SIZE,
+       local_size_y = 4,
+       local_size_z = 1) in;
+void main()
+{
+    // sideIdx corresponds to the four different sides
+    //  sideIdx 0: (0, 0) -> (1, 0), and stepDir = (+1, 0)
+    //  sideIdx 1: (1, 0) -> (1, 1), and stepDir = (0, +1)
+    //  sideIdx 2: (1, 1) -> (0, 1), and stepDir = (-1, 0)
+    //  sideIdx 3: (0, 1) -> (0, 0), and stepDir = (0, -1)
+    uint sideIdx = gl_LocalInvocationID.y;
+
+    const ivec2 cornerIndices[4]  = ivec2[4]( ivec2( 0, 0), ivec2(+1, 0), ivec2(+1, +1), ivec2(0, +1) );
+    const ivec2 stepDirections[4] = ivec2[4]( ivec2(+1, 0), ivec2(0, +1), ivec2(-1,  0), ivec2(0, -1) );
+
+    ivec2 cornerIdx = cornerIndices[sideIdx];
+    ivec2 stepDirection = stepDirections[sideIdx]; 
+    ivec2 inDirection = stepDirections[(sideIdx + 1) % 4];
+
+    int sideLengthWithPadding = TILE_SIZE + 2 * DDGI_ATLAS_PADDING;
+    ivec2 cornerTexelCoord = texCoordForCorner(cornerIdx, sideLengthWithPadding);
+
+    // Step along the edge for each local invocation id
+    int stepIdx = int(gl_LocalInvocationID.x);
+
+    // Copy to the first pixel next to the corner and continue along the edge
+    ivec2 dstTexelCoord = cornerTexelCoord + (stepIdx + 1) * stepDirection;
+
+    // Step on step in (so we are no longer in the border) and copy from the along the edge but in mirrored direction
+    ivec2 srcTexelCoord = (cornerTexelCoord + inDirection) + (TILE_SIZE - stepIdx) * stepDirection;
+
+#if TILE_SIZE == DDGI_IRRADIANCE_RES
+    imageStore(probeIrradianceAtlas, dstTexelCoord, imageLoad(probeIrradianceAtlas, srcTexelCoord));
+#elif TILE_SIZE == DDGI_VISIBILITY_RES
+    imageStore(probeVisibilityAtlas, dstTexelCoord, imageLoad(probeVisibilityAtlas, srcTexelCoord));
+#else
+    #error "Incorrect TILE_SIZE specified"
+#endif
+}

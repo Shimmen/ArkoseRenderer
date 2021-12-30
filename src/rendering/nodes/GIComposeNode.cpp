@@ -42,14 +42,54 @@ RenderGraphNode::ExecuteCallback GIComposeNode::constructFrame(Registry& reg) co
 
         cmdList.setNamedUniform("targetSize", sceneColorWithGI.extent());
 
+        static bool includeSceneColor = true;
         static bool includeDiffuseGI = true;
         static bool withMaterialColor = true;
         static bool withAmbientOcclusion = true;
+#if 0
+        ImGui::Checkbox("Include scene color", &includeSceneColor);
         ImGui::Checkbox("Include diffuse GI", &includeDiffuseGI);
         if (includeDiffuseGI) {
             ImGui::Checkbox("... with material color", &withMaterialColor);
             ImGui::Checkbox("... with ambient occlusion", &withAmbientOcclusion);
         }
+#else
+        enum class ComposeMode {
+            FullCompose,
+            DirectOnly,
+            IndirectOnly,
+            IndirectOnlyNoBaseColor,
+        };
+        static ComposeMode composeMode = ComposeMode::FullCompose;
+
+        if (ImGui::RadioButton("Full compose", composeMode == ComposeMode::FullCompose)) {
+            composeMode = ComposeMode::FullCompose;
+            includeSceneColor = true;
+            includeDiffuseGI = true;
+            withMaterialColor = true;
+        }
+        if (ImGui::RadioButton("Direct light only", composeMode == ComposeMode::DirectOnly)) {
+            composeMode = ComposeMode::DirectOnly;
+            includeSceneColor = true;
+            includeDiffuseGI = false;
+        }
+        if (ImGui::RadioButton("Diffuse indirect only", composeMode == ComposeMode::IndirectOnly)) {
+            composeMode = ComposeMode::IndirectOnly;
+            includeSceneColor = false;
+            includeDiffuseGI = true;
+            withMaterialColor = true;
+        }
+        if (ImGui::RadioButton("Diffuse indirect only (ignore material color)", composeMode == ComposeMode::IndirectOnlyNoBaseColor)) {
+            composeMode = ComposeMode::IndirectOnlyNoBaseColor;
+            includeSceneColor = false;
+            includeDiffuseGI = true;
+            withMaterialColor = false;
+        }
+        
+        ImGui::Separator();
+        ImGui::Checkbox("Include ambient occlusion (for diffuse indirect)", &withAmbientOcclusion);
+#endif
+        cmdList.setNamedUniform("includeSceneColor", includeSceneColor);
         cmdList.setNamedUniform("includeDiffuseGI", includeDiffuseGI);
         cmdList.setNamedUniform("withMaterialColor", withMaterialColor);
         cmdList.setNamedUniform("withAmbientOcclusion", withAmbientOcclusion);
