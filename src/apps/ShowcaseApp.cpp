@@ -55,7 +55,7 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
     graph.addNode<SkyViewNode>(scene);
     graph.addNode<BloomNode>(scene);
 
-    graph.addNode<DiffuseGIProbeDebug>(scene);
+    graph.addNode<DDGIProbeDebug>(scene);
 
     graph.addNode("final", [](Registry& reg) {
         // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.

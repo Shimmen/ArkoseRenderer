@@ -1,44 +1,41 @@
 #include "DDGIProbeDebug.h"
 
-#include "CameraState.h"
-#include "ProbeDebug.h"
 #include "rendering/scene/Scene.h"
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-std::string DiffuseGIProbeDebug::name()
+// Shared shader headers
+#include "DDGIData.h"
+
+std::string DDGIProbeDebug::name()
 {
-    return "diffuse-gi-probe-debug";
+    return "ddgi-probe-debug";
 }
 
-DiffuseGIProbeDebug::DiffuseGIProbeDebug(Scene& scene)
-    : RenderGraphNode(DiffuseGIProbeDebug::name())
+DDGIProbeDebug::DDGIProbeDebug(Scene& scene)
+    : RenderGraphNode(DDGIProbeDebug::name())
     , m_scene(scene)
 {
 }
 
-void DiffuseGIProbeDebug::constructNode(Registry& reg)
+void DDGIProbeDebug::constructNode(Registry& reg)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (!reg.hasPreviousNode("diffuse-gi"))
+    if (!reg.hasPreviousNode("ddgi"))
         return;
 
-#if PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_COLOR
-    m_probeData = reg.getTexture("diffuse-gi", "irradianceProbes").value();
-#elif (PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_DISTANCE) || (PROBE_DEBUG_VIZ == PROBE_DEBUG_VISUALIZE_DISTANCE2)
-    m_probeData = reg.getTexture("diffuse-gi", "filteredDistanceProbes").value();
-#endif
+    m_ddgiSamplingSet = reg.getBindingSet("ddgi", "sampling-set");
 
     setUpSphereRenderData(reg);
 }
 
-RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& reg) const
+RenderGraphNode::ExecuteCallback DDGIProbeDebug::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 
-    if (!reg.hasPreviousNode("diffuse-gi"))
+    if (!reg.hasPreviousNode("ddgi"))
         return RenderGraphNode::NullExecuteCallback;
 
     Texture& depthTexture = *reg.getTexture("g-buffer", "depth").value();
@@ -46,13 +43,10 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture, LoadOp::Load, StoreOp::Store },
                                                           { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Load, StoreOp::Discard } });
 
-    BindingSet& probeDataBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, m_probeData, ShaderBindingType::TextureSampler } });
-
-    Shader debugShader = Shader::createBasicRasterize("diffuse-gi/probe-debug.vert", "diffuse-gi/probe-debug.frag");
+    Shader debugShader = Shader::createBasicRasterize("ddgi/probeDebug.vert", "ddgi/probeDebug.frag");
     RenderStateBuilder stateBuilder { renderTarget, debugShader, VertexLayout { VertexComponent::Position3F }};
-    BindingSet& cameraBindingSet = *reg.getBindingSet("scene", "cameraSet");
-    stateBuilder.stateBindings().at(0, cameraBindingSet);
-    stateBuilder.stateBindings().at(1, probeDataBindingSet);
+    stateBuilder.stateBindings().at(0, *reg.getBindingSet("scene", "cameraSet"));
+    stateBuilder.stateBindings().at(1, *m_ddgiSamplingSet);
     stateBuilder.writeDepth = true;
     stateBuilder.testDepth = true;
     RenderState& renderState = reg.createRenderState(stateBuilder);
@@ -60,23 +54,38 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
     return [&](const AppState& appState, CommandList& cmdList) {
         SCOPED_PROFILE_ZONE();
 
-        static bool enabled = false;
-        ImGui::Checkbox("Enabled##diffuse-gi", &enabled);
+        ImGui::Text("Debug visualisation:");
+        static int debugVisualisation = DDGI_PROBE_DEBUG_VISUALIZE_DISABLED;
+        if (ImGui::RadioButton("Disabled", debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_DISABLED))
+            debugVisualisation = DDGI_PROBE_DEBUG_VISUALIZE_DISABLED;
+        if (ImGui::RadioButton("Irradiance", debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_IRRADIANCE))
+            debugVisualisation = DDGI_PROBE_DEBUG_VISUALIZE_IRRADIANCE;
+        if (ImGui::RadioButton("Visibility distance", debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_DISTANCE))
+            debugVisualisation = DDGI_PROBE_DEBUG_VISUALIZE_DISTANCE;
+        if (ImGui::RadioButton("Visibility distance^2", debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_DISTANCE2))
+            debugVisualisation = DDGI_PROBE_DEBUG_VISUALIZE_DISTANCE2;
+
+        if (debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_DISABLED)
+            return;
+
         static float probeScale = 0.05f;
         ImGui::SliderFloat("Probe size (m)", &probeScale, 0.01f, 1.0f);
 
-        if (!enabled)
-            return;
+        static float distanceScale = 0.002f;
+        ImGui::SliderFloat("Distance scale", &distanceScale, 0.001f, 0.1f);
 
         cmdList.beginRendering(renderState);
         cmdList.setNamedUniform("probeScale", probeScale);
-        cmdList.setNamedUniform("indirectExposure", m_scene.lightPreExposureValue());
+        cmdList.setNamedUniform("distanceScale", distanceScale);
+        cmdList.setNamedUniform("debugVisualisation", debugVisualisation);
 
+        // TODO: Use instanced rendering instead.. it's sufficient for debug visualisation but it's not great.
         for (int probeIdx = 0; probeIdx < m_scene.probeGrid().probeCount(); ++probeIdx) {
-            auto probeIdx3D = m_scene.probeGrid().probeIndexFromLinear(probeIdx);
+            
+            ivec3 probeIdx3D = m_scene.probeGrid().probeIndexFromLinear(probeIdx);
             vec3 probeLocation = m_scene.probeGrid().probePositionForIndex(probeIdx3D);
 
-            cmdList.setNamedUniform("probeIdx", probeIdx);
+            cmdList.setNamedUniform("probeGridCoord", probeIdx3D);
             cmdList.setNamedUniform("probeLocation", probeLocation);
 
             cmdList.drawIndexed(*m_sphereVertexBuffer, *m_sphereIndexBuffer, m_indexCount, IndexType::UInt16);
@@ -86,7 +95,7 @@ RenderGraphNode::ExecuteCallback DiffuseGIProbeDebug::constructFrame(Registry& r
     };
 }
 
-void DiffuseGIProbeDebug::setUpSphereRenderData(Registry& reg)
+void DDGIProbeDebug::setUpSphereRenderData(Registry& reg)
 {
     constexpr int rings = 48;
     constexpr int sectors = 48;

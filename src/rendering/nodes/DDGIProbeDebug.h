@@ -2,12 +2,12 @@
 
 #include "../RenderGraphNode.h"
 
-class DiffuseGIProbeDebug final : public RenderGraphNode {
+class DDGIProbeDebug final : public RenderGraphNode {
 public:
-    DiffuseGIProbeDebug(Scene&);
+    DDGIProbeDebug(Scene&);
 
     static std::string name();
-    std::optional<std::string> displayName() const override { return "Diffuse GI probe debug"; }
+    std::optional<std::string> displayName() const override { return "DDGI probe debug"; }
 
     void constructNode(Registry&) override;
     ExecuteCallback constructFrame(Registry&) const override;
@@ -15,7 +15,7 @@ public:
 private:
     Scene& m_scene;
 
-    Texture* m_probeData;
+    BindingSet* m_ddgiSamplingSet { nullptr };
 
     void setUpSphereRenderData(Registry&);
     Buffer* m_sphereVertexBuffer { nullptr };

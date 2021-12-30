@@ -32,6 +32,8 @@ RenderGraphNode::ExecuteCallback SkyViewNode::constructFrame(Registry& reg) cons
                                                           { RenderTarget::AttachmentType::Depth, &depthStencilImage, LoadOp::Load, StoreOp::Store } });
     Shader rasterizeShader = Shader::createBasicRasterize("sky-view/sky-view.vert", "sky-view/sky-view.frag");
     RenderStateBuilder renderStateBuilder { renderTarget, rasterizeShader, { VertexComponent::Position2F } };
+    renderStateBuilder.testDepth = true;
+    renderStateBuilder.writeDepth = false;
     renderStateBuilder.stencilMode = StencilMode::PassIfZero; // i.e. if no geometry is written to this pixel
     renderStateBuilder.stateBindings().at(0, skyViewRasterizeBindingSet);
     RenderState& skyViewRenderState = reg.createRenderState(renderStateBuilder);
