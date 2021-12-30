@@ -499,7 +499,7 @@ BindingSet* Registry::getBindingSet(const std::string& node, const std::string& 
     return getResource(name, m_publishedBindingSets);
 }
 
-TopLevelAS* Registry::getTopLevelAccelerationStructure(const std::string& node, const std::string& name)
+TopLevelAS* Registry::getTopLevelAccelerationStructure(const std::string& name)
 {
     return getResource(name, m_publishedTopLevelAS);
 }

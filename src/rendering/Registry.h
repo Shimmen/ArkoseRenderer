@@ -65,7 +65,7 @@ public:
     [[nodiscard]] Buffer*     getBuffer(const std::string& node, const std::string& name);
     [[nodiscard]] Texture*    getTexture(const std::string& node, const std::string& name);
     [[nodiscard]] BindingSet* getBindingSet(const std::string& node, const std::string& name);
-    [[nodiscard]] TopLevelAS* getTopLevelAccelerationStructure(const std::string& node, const std::string& name);
+    [[nodiscard]] TopLevelAS* getTopLevelAccelerationStructure(const std::string& name);
 
     [[nodiscard]] const std::unordered_set<NodeDependency>& nodeDependencies() const;
 

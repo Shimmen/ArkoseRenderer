@@ -32,7 +32,7 @@ void RTAccelerationStructures::constructNode(Registry& nodeReg)
 RenderGraphNode::ExecuteCallback RTAccelerationStructures::constructFrame(Registry& reg) const
 {
     TopLevelAS& main = reg.createTopLevelAccelerationStructure(m_mainInstances);
-    reg.publish("scene", main);
+    reg.publish("rtAccStructureNodeScene", main);
 
     return [&](const AppState& appState, CommandList& cmdList) {
         cmdList.rebuildTopLevelAcceratationStructure(main);
