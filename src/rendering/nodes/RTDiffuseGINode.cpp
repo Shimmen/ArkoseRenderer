@@ -82,7 +82,7 @@ RenderGraphNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& reg) 
                                                          { 2, ShaderStageRTRayGen, gBufferColor, ShaderBindingType::TextureSampler },
                                                          { 3, ShaderStageRTRayGen, gBufferNormal, ShaderBindingType::TextureSampler },
                                                          { 4, ShaderStageRTRayGen, gBufferDepth, ShaderBindingType::TextureSampler },
-                                                         { 5, ShaderStageRTRayGen, reg.getBuffer("camera") },
+                                                         { 5, ShaderStageRTRayGen, reg.getBuffer("SceneCameraData") },
                                                          { 6, ShaderStageRTMiss, reg.getBuffer("environmentData") },
                                                          { 7, ShaderStageRTMiss, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler },
                                                          { 8, ShaderStageRTClosestHit, &dirLightBuffer } });

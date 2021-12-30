@@ -27,7 +27,7 @@ void ForwardRenderNode::constructNode(Registry& reg)
     SCOPED_PROFILE_ZONE();
 
     if (reg.hasPreviousNode("ddgi")) {
-        m_ddgiSamplingBindingSet = reg.getBindingSet("ddgi-sampling-set");
+        m_ddgiSamplingBindingSet = reg.getBindingSet("DDGISamplingSet");
     }
 }
 
@@ -35,17 +35,15 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
 {
     SCOPED_PROFILE_ZONE();
 
-    BindingSet& drawableBindingSet = *reg.getBindingSet("culling-culled-drawables");
+    BindingSet& drawableBindingSet = *reg.getBindingSet("MainViewCulledDrawablesSet");
     BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
-    BindingSet& cameraBindingSet = *reg.getBindingSet("cameraSet");
-    BindingSet& lightBindingSet = *reg.getBindingSet("lightSet");
+    BindingSet& cameraBindingSet = *reg.getBindingSet("SceneCameraSet");
+    BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");
 
     Texture& colorTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
-    colorTexture.setName("SceneColor");
     reg.publish("SceneColor", colorTexture);
 
     Texture& diffueGiTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
-    diffueGiTexture.setName("DiffuseGI");
     reg.publish("DiffuseGI", diffueGiTexture);
 
     Texture& gBufferDepthTexture = *reg.getTexture("SceneDepth");
@@ -90,7 +88,7 @@ RenderGraphNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg
             cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout(m_vertexLayout));
             cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
 
-            cmdList.drawIndirect(*reg.getBuffer("culling-indirect-cmd-buffer"), *reg.getBuffer("culling-indirect-count-buffer"));
+            cmdList.drawIndirect(*reg.getBuffer("MainViewIndirectDrawCmds"), *reg.getBuffer("MainViewIndirectDrawCount"));
 
             cmdList.endRendering();
         }

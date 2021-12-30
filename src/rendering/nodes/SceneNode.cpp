@@ -27,16 +27,14 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     SCOPED_PROFILE_ZONE();
 
     Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
-    cameraBuffer.setName("SceneCameraData");
     BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStageAnyRasterize, &cameraBuffer } });
-    reg.publish("camera", cameraBuffer);
-    reg.publish("cameraSet", cameraBindingSet);
+    reg.publish("SceneCameraData", cameraBuffer);
+    reg.publish("SceneCameraSet", cameraBindingSet);
 
     // Environment mapping stuff
     Texture& envTexture = m_scene.environmentMap().empty()
         ? reg.createPixelTexture(vec4(1.0f), true)
         : reg.loadTexture2D(m_scene.environmentMap(), true, false);
-    envTexture.setName("SceneEnvironmentMap");
     reg.publish("SceneEnvironmentMap", envTexture);
 
     // Object data stuff
@@ -44,15 +42,13 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
     size_t objectDataBufferSize = m_scene.meshCount() * sizeof(ShaderDrawable);
     Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     objectDataBuffer.setName("SceneObjectData");
-    reg.publish("objectData", objectDataBuffer);
 
     BindingSet& objectBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &objectDataBuffer } });
     reg.publish("objectSet", objectBindingSet);
 
     // Light shadow data stuff
     Buffer& lightShadowDataBuffer = reg.createBuffer(SCENE_MAX_SHADOW_MAPS * sizeof(PerLightShadowData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
-    lightShadowDataBuffer.setName("SceneShadowData");
-    reg.publish("shadowData", lightShadowDataBuffer);
+    reg.publish("SceneShadowData", lightShadowDataBuffer);
 
     // Light data stuff
     Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
@@ -75,7 +71,7 @@ RenderGraphNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
                                                          { 2, ShaderStageAny, &spotLightDataBuffer },
                                                          { 3, ShaderStageAny, shadowMaps, SCENE_MAX_SHADOW_MAPS },
                                                          { 4, ShaderStageAny, iesProfileLUTs, SCENE_MAX_IES_LUT } });
-    reg.publish("lightSet", lightBindingSet);
+    reg.publish("SceneLightSet", lightBindingSet);
 
     return [&](const AppState& appState, CommandList& cmdList) {
 

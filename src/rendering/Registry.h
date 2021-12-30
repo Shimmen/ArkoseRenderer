@@ -147,6 +147,12 @@ void Registry::publishResource(const std::string& name, T& resource, std::unorde
 
     map[name] = PublishedResource { .resource = &resource,
                                     .publisher = nodeName };
+
+    //if (!resource.name().empty())
+    //    LogInfo("Renaming during publishing: '%s' -> '%s'\n", resource.name().c_str(), name.c_str());
+
+    // Also set debug name for resource to the same name when publishing
+    resource.setName(name);
 }
 
 template<typename T>

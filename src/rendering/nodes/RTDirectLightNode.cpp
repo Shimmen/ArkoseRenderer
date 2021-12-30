@@ -45,11 +45,11 @@ RenderGraphNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& reg
     reg.publish("target", storageImage);
 
     BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
-    BindingSet& lightBindingSet = *reg.getBindingSet("lightSet");
+    BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");
 
     TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },
-                                                         { 1, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), reg.getBuffer("camera") },
+                                                         { 1, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), reg.getBuffer("SceneCameraData") },
                                                          { 2, ShaderStageRTRayGen, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler },
                                                          { 3, ShaderStageRTRayGen, &storageImage, ShaderBindingType::StorageImage } });
 

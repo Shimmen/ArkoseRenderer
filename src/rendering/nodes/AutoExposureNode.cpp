@@ -25,7 +25,7 @@ RenderGraphNode::ExecuteCallback AutoExposureNode::constructFrame(Registry& reg)
     Buffer& passDataBuffer = reg.createBuffer(2 * sizeof(float), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
     passDataBuffer.setName("ExposurePassData");
 
-    BindingSet& sourceDataBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, reg.getBuffer("camera") },
+    BindingSet& sourceDataBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, reg.getBuffer("SceneCameraData") },
                                                               { 1, ShaderStageCompute, &logLuminanceTexture, ShaderBindingType::TextureSampler } });
     BindingSet& targetDataBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &passDataBuffer } });
     ComputeState& exposeComputeState = reg.createComputeState(Shader::createCompute("post/expose.comp"), { &sourceDataBindingSet, &targetDataBindingSet });

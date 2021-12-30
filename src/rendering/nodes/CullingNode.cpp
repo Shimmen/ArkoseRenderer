@@ -33,15 +33,15 @@ RenderGraphNode::ExecuteCallback CullingNode::constructFrame(Registry& reg) cons
     Buffer& indirectDrawableBuffer = reg.createBuffer(initialBufferCount * sizeof(IndirectShaderDrawable), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
 
     Buffer& drawableBuffer = reg.createBuffer(initialBufferCount * sizeof(ShaderDrawable), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
-    drawableBuffer.setName("CulledDrawables");
+    drawableBuffer.setName("MainViewCulledDrawables");
     BindingSet& drawableBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &drawableBuffer } });
-    reg.publish("culling-culled-drawables", drawableBindingSet);
+    reg.publish("MainViewCulledDrawablesSet", drawableBindingSet);
 
     Buffer& indirectCmdBuffer = reg.createBuffer(initialBufferCount * sizeof(IndexedDrawCmd), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
-    reg.publish("culling-indirect-cmd-buffer", indirectCmdBuffer);
+    reg.publish("MainViewIndirectDrawCmds", indirectCmdBuffer);
 
     Buffer& indirectCountBuffer = reg.createBuffer(sizeof(uint), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::TransferOptimal);
-    reg.publish("culling-indirect-count-buffer", indirectCountBuffer);
+    reg.publish("MainViewIndirectDrawCount", indirectCountBuffer);
 
     BindingSet& cullingBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &frustumPlaneBuffer },
                                                            { 1, ShaderStageCompute, &indirectDrawableBuffer },
@@ -50,7 +50,7 @@ RenderGraphNode::ExecuteCallback CullingNode::constructFrame(Registry& reg) cons
                                                            { 4, ShaderStageCompute, &indirectCountBuffer } });
 
     ComputeState& cullingState = reg.createComputeState(Shader::createCompute("culling/culling.comp"), { &cullingBindingSet });
-    cullingState.setName("ForwardCulling");
+    cullingState.setName("MainViewCulling");
 
     return [&](const AppState& appState, CommandList& cmdList) {
 

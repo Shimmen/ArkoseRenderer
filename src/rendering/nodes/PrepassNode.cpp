@@ -22,7 +22,7 @@ RenderGraphNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) cons
     SCOPED_PROFILE_ZONE();
 
     Texture& gBufferDepthTexture = *reg.getTexture("SceneDepth");
-    BindingSet& drawableBindingSet = *reg.getBindingSet("culling-culled-drawables");
+    BindingSet& drawableBindingSet = *reg.getBindingSet("MainViewCulledDrawablesSet");
 
     Shader prepassShader = Shader::createVertexOnly("forward/prepass.vert");
     RenderTarget& prepassRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &gBufferDepthTexture, LoadOp::Clear, StoreOp::Store } });
@@ -44,7 +44,7 @@ RenderGraphNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) cons
 
         cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout(m_prepassVertexLayout));
         cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
-        cmdList.drawIndirect(*reg.getBuffer("culling-indirect-cmd-buffer"), *reg.getBuffer("culling-indirect-count-buffer"));
+        cmdList.drawIndirect(*reg.getBuffer("MainViewIndirectDrawCmds"), *reg.getBuffer("MainViewIndirectDrawCount"));
 
         cmdList.endRendering();
 

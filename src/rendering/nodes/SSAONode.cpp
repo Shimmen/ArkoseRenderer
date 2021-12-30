@@ -41,7 +41,7 @@ RenderGraphNode::ExecuteCallback SSAONode::constructFrame(Registry& reg) const
     BindingSet& ssaoBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &ambientOcclusionTex, ShaderBindingType::StorageImage },
                                                         { 1, ShaderStageCompute, sceneOpaqueDepth, ShaderBindingType::TextureSampler },
                                                         { 2, ShaderStageCompute, sceneOpaqueNormals, ShaderBindingType::TextureSampler },
-                                                        { 3, ShaderStageCompute, reg.getBuffer("camera") },
+                                                        { 3, ShaderStageCompute, reg.getBuffer("SceneCameraData") },
                                                         { 4, ShaderStageCompute, m_kernelSampleBuffer } });
     ComputeState& ssaoComputeState = reg.createComputeState(Shader::createCompute("ssao/ssao.comp"), { &ssaoBindingSet });
 

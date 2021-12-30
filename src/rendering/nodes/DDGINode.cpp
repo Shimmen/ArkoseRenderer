@@ -49,8 +49,7 @@ void DDGINode::constructNode(Registry& reg)
     BindingSet& ddgiSamplingBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, m_probeGridDataBuffer },
                                                                 { 1, ShaderStageFragment, m_probeAtlasIrradiance, ShaderBindingType::TextureSampler },
                                                                 { 2, ShaderStageFragment, m_probeAtlasVisibility, ShaderBindingType::TextureSampler } });
-    ddgiSamplingBindingSet.setName("DDGISampling");
-    reg.publish("ddgi-sampling-set", ddgiSamplingBindingSet);
+    reg.publish("DDGISamplingSet", ddgiSamplingBindingSet);
 }
 
 RenderGraphNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) const
@@ -71,7 +70,7 @@ RenderGraphNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) const
 
     TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },
-                                                         { 1, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), reg.getBuffer("camera") },
+                                                         { 1, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), reg.getBuffer("SceneCameraData") },
                                                          { 2, ShaderStageRTRayGen, m_probeGridDataBuffer },
                                                          { 3, ShaderStageRTRayGen, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler },
 #if USE_DEBUG_TARGET
@@ -90,7 +89,7 @@ RenderGraphNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) const
     rtStateDataBindings.at(0, frameBindingSet);
     rtStateDataBindings.at(1, *m_objectDataBindingSet);
     rtStateDataBindings.at(2, m_scene.globalMaterialBindingSet());
-    rtStateDataBindings.at(3, *reg.getBindingSet("lightSet"));
+    rtStateDataBindings.at(3, *reg.getBindingSet("SceneLightSet"));
 
     constexpr uint32_t maxRecursionDepth = 2; // raygen -> closest/any hit -> shadow ray
     RayTracingState& surfelRayTracingState = reg.createRayTracingState(sbt, rtStateDataBindings, maxRecursionDepth);
