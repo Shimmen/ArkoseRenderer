@@ -4,7 +4,6 @@
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/DDGINode.h"
-#include "rendering/nodes/DiffuseGINode.h"
 #include "rendering/nodes/DiffuseGIProbeDebug.h"
 #include "rendering/nodes/ForwardRenderNode.h"
 #include "rendering/nodes/GBufferNode.h"
@@ -46,7 +45,6 @@ void ShowcaseApp::setup(Scene& scene, RenderGraph& graph)
     graph.addNode<DDGINode>(scene);
 
     graph.addNode<ShadowMapNode>(scene);
-    graph.addNode<DiffuseGINode>(scene);
     graph.addNode<CullingNode>(scene);
     graph.addNode<PrepassNode>(scene);
     graph.addNode<ForwardRenderNode>(scene);

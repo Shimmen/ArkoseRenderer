@@ -1,7 +1,6 @@
 #pragma once
 
 #include "../RenderGraphNode.h"
-#include "rendering/nodes/DiffuseGINode.h"
 
 class DiffuseGIProbeDebug final : public RenderGraphNode {
 public:

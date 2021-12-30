@@ -25,7 +25,6 @@ add_executable(ArkoseRenderer
     src/rendering/nodes/BloomNode.cpp
     src/rendering/nodes/CullingNode.cpp
     src/rendering/nodes/DDGINode.cpp
-    src/rendering/nodes/DiffuseGINode.cpp
     src/rendering/nodes/DiffuseGIProbeDebug.cpp
     src/rendering/nodes/ForwardRenderNode.cpp
     src/rendering/nodes/GBufferNode.cpp

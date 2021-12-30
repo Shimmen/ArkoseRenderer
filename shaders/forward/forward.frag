@@ -25,14 +25,6 @@ layout(set = 2, binding = 2) buffer readonly SpotLightDataBlock { SpotLightData 
 layout(set = 2, binding = 3) uniform sampler2D shadowMaps[SCENE_MAX_SHADOW_MAPS];
 layout(set = 2, binding = 4) uniform sampler2D iesLUTs[SCENE_MAX_IES_LUT];
 
-#if FORWARD_INCLUDE_INDIRECT_LIGHT
-#include <shared/ProbeGridData.h>
-#include <diffuse-gi/probeSampling.glsl>
-layout(set = 4, binding = 0) uniform ProbeGridDataBlock { ProbeGridData probeGridData; };
-layout(set = 4, binding = 1) uniform sampler2DArray probeIrradianceTex;
-layout(set = 4, binding = 2) uniform sampler2DArray probeDistanceTex;
-#endif
-
 #if FORWARD_INCLUDE_DDGI
 #include <shared/DDGIData.h>
 #include <ddgi/probeSampling.glsl>
@@ -83,29 +75,6 @@ vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, floa
     float LdotN = max(dot(L, N), 0.0);
     return brdf * LdotN * directLight;
 }
-
-#if FORWARD_INCLUDE_INDIRECT_LIGHT
-vec3 evaluateIndirectLight(vec3 P, vec3 V, vec3 N, vec3 baseColor, float metallic, float roughness)
-{
-    vec3 worldSpacePos = vec3(camera.worldFromView * vec4(P, 1.0));
-    vec3 worldSpaceNormal = normalize(mat3(camera.worldFromView) * N);
-
-    // Assume glossy indirect light comes from the reflected direction L
-    //vec3 L = reflect(-V, N); TODO!
-    vec3 indirectGlossy = vec3(0.0);
-
-    // TODO: Use physically plausible amounts! For now we just use a silly estimate for F since we don't actually include glossy stuff at the moment.
-    float a = square(roughness);
-    float fakeF = pow(a, 5.0);
-
-    vec3 irradiance = computePrefilteredIrradiance(worldSpacePos, worldSpaceNormal, probeGridData, probeIrradianceTex, probeDistanceTex);
-    vec3 indirectDiffuse = vec3(1.0 - metallic) * vec3(1.0 - fakeF) * irradiance;
-
-    // TODO: Later we should probably pre-expose light when drawing indirect too, but since it's so slow now
-    // we do it here so we can get instant feedback to camera settings adjustment.
-    return pushConstants.indirectExposure * (indirectDiffuse + indirectGlossy);
-}
-#endif
 
 #if FORWARD_INCLUDE_DDGI
 vec3 evaluateDDGIIndirectLight(vec3 P, vec3 V, vec3 N, vec3 baseColor, float metallic, float roughness)
@@ -164,11 +133,6 @@ void main()
             color += evaluateSpotLight(spotLights[i], V, N, baseColor, roughness, metallic);
         }
     }
-
-#if FORWARD_INCLUDE_INDIRECT_LIGHT
-    vec3 diffuseGI = evaluateIndirectLight(vPosition, V, N, baseColor, metallic, roughness);
-    oDiffuseGI = vec4(diffuseGI, 0.0);
-#endif
 
 #if FORWARD_INCLUDE_DDGI
     vec3 ddgi = evaluateDDGIIndirectLight(vPosition, V, N, baseColor, metallic, roughness);

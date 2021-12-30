@@ -2,6 +2,7 @@
 
 #include "CameraState.h"
 #include "ProbeDebug.h"
+#include "rendering/scene/Scene.h"
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <imgui.h>

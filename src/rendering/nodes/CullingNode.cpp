@@ -10,7 +10,6 @@
 using uint = uint32_t;
 #include "IndirectData.h"
 #include "LightData.h"
-#include "ProbeGridData.h"
 
 std::string CullingNode::name()
 {
