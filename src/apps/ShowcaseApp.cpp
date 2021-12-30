@@ -4,7 +4,7 @@
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/DDGINode.h"
-#include "rendering/nodes/DiffuseGIProbeDebug.h"
+#include "rendering/nodes/DDGIProbeDebug.h"
 #include "rendering/nodes/ForwardRenderNode.h"
 #include "rendering/nodes/GBufferNode.h"
 #include "rendering/nodes/PrepassNode.h"

@@ -1,4 +1,4 @@
-#include "DiffuseGIProbeDebug.h"
+#include "DDGIProbeDebug.h"
 
 #include "CameraState.h"
 #include "ProbeDebug.h"
