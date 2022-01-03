@@ -68,7 +68,7 @@ void RenderPipeline::constructAll(Registry& nodeRegistry, std::vector<Registry*>
     }
 }
 
-void RenderPipeline::forEachNodeInResolvedOrder(const Registry& frameManager, std::function<void(std::string nodeName, NodeTimer& timer, const RenderPipelineNode::ExecuteCallback&)> callback) const
+void RenderPipeline::forEachNodeInResolvedOrder(const Registry& frameManager, std::function<void(std::string nodeName, AvgElapsedTimer& timer, const RenderPipelineNode::ExecuteCallback&)> callback) const
 {
     auto entry = m_frameContexts.find(&frameManager);
     ASSERT(entry != m_frameContexts.end());

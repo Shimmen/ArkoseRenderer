@@ -4,23 +4,10 @@
 #include "Registry.h"
 #include "backend/base/CommandList.h"
 #include "backend/Resources.h"
-#include "utility/AvgAccumulator.h"
+#include "utility/AvgElapsedTimer.h"
 #include <functional>
 #include <memory>
 #include <string>
-
-class NodeTimer {
-public:
-    void reportCpuTime(double);
-    double averageCpuTime() const;
-
-    void reportGpuTime(double);
-    double averageGpuTime() const;
-
-private:
-    AvgAccumulator<double, 60> m_cpuAccumulator;
-    AvgAccumulator<double, 60> m_gpuAccumulator;
-};
 
 class RenderPipelineNode {
 public:
@@ -32,7 +19,7 @@ public:
     // An execute callback that does nothing. Useful for early exit when nothing to execute.
     static const ExecuteCallback NullExecuteCallback;
 
-    [[nodiscard]] NodeTimer& timer();
+    [[nodiscard]] AvgElapsedTimer& timer() { return m_timer; }
 
     [[nodiscard]] virtual std::string name() const = 0;
 
@@ -44,7 +31,7 @@ public:
     virtual ExecuteCallback constructFrame(Registry&) const { return RenderPipelineNode::ExecuteCallback(); };
 
 private:
-    NodeTimer m_timer;
+    AvgElapsedTimer m_timer;
 };
 
 class RenderPipelineBasicNode final : public RenderPipelineNode {

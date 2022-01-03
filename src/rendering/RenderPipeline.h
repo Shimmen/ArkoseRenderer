@@ -30,7 +30,7 @@ public:
     void constructAll(Registry& nodeManager, std::vector<Registry*> frameManagers);
 
     //! The callback is called for each node (in correct order)
-    void forEachNodeInResolvedOrder(const Registry&, std::function<void(std::string, NodeTimer&, const RenderPipelineNode::ExecuteCallback&)>) const;
+    void forEachNodeInResolvedOrder(const Registry&, std::function<void(std::string, AvgElapsedTimer&, const RenderPipelineNode::ExecuteCallback&)>) const;
 
 private:
     struct NodeContext {

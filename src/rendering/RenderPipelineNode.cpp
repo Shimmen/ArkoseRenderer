@@ -4,31 +4,6 @@
 
 const RenderPipelineNode::ExecuteCallback RenderPipelineNode::NullExecuteCallback = [&](const AppState&, CommandList&) {};
 
-void NodeTimer::reportCpuTime(double time)
-{
-    m_cpuAccumulator.report(time);
-}
-
-double NodeTimer::averageCpuTime() const
-{
-    return m_cpuAccumulator.runningAverage();
-}
-
-void NodeTimer::reportGpuTime(double time)
-{
-    m_gpuAccumulator.report(time);
-}
-
-double NodeTimer::averageGpuTime() const
-{
-    return m_gpuAccumulator.runningAverage();
-}
-
-NodeTimer& RenderPipelineNode::timer()
-{
-    return m_timer;
-}
-
 RenderPipelineBasicNode::RenderPipelineBasicNode(std::string name, ConstructorFunction constructorFunction)
     : RenderPipelineNode()
     , m_name(std::move(name))
