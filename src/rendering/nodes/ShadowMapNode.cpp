@@ -20,6 +20,11 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg)
     Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
     BindingSet& shadowDataBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, reg.getBuffer("SceneShadowData") } });
 
+    // HACK: Well, this really is a hack, together with the whole render state cache..
+    m_scene.forEachShadowCastingLight([&](size_t shadowLightIndex, Light& light) {
+        light.invalidateRenderStateCache();
+    });
+
     return [&, shadowMapShader](const AppState& appState, CommandList& cmdList) {
 
         // TODO: This should be managed from some central location, e.g. the scene node or similar.
@@ -37,7 +42,6 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg)
             // objects though, which I have barely done at all, so this is a very simple and quick hack to get around that.
             RenderState& renderState = light.getOrCreateCachedShadowMapRenderState("ShadowMapNode::defaultShadowMapping", [&](Registry& sceneRegistry) -> RenderState& {
                 RenderStateBuilder renderStateBuilder { light.shadowMapRenderTarget(), shadowMapShader, m_vertexLayout };
-                renderStateBuilder.stateBindings().disableAutoBinding();
                 renderStateBuilder.stateBindings().at(0, transformBindingSet);
                 renderStateBuilder.stateBindings().at(1, shadowDataBindingSet);
                 return sceneRegistry.createRenderState(renderStateBuilder);
@@ -48,11 +52,6 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg)
             {
                 mat4 lightProjectionFromWorld = light.viewProjection();
                 auto lightFrustum = geometry::Frustum::createFromProjectionMatrix(lightProjectionFromWorld);
-
-                // NOTE: We are not autobinding for this due to the cached shadow map render state keeping track of old sets
-                //  Maybe we could also try resetting the cache when we recreate it so we don't get more confusing issues?
-                cmdList.bindSet(transformBindingSet, 0);
-                cmdList.bindSet(shadowDataBindingSet, 1);
 
                 uint32_t index = (uint32_t)shadowLightIndex;
                 cmdList.setNamedUniform("lightIndex", index);

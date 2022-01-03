@@ -30,7 +30,7 @@ struct StateBindings {
     {
         for (const BindingSet* set : m_orderedBindingSets) {
             if (set == nullptr && shouldAutoBind())
-                continue; //LogErrorAndExit("Non-contiguous bindings are not supported right now! (This can probably be changed later if we want to)");
+                continue;
             for (const ShaderBinding& bindingInfo : set->shaderBindings())
                 callback(bindingInfo);
         }

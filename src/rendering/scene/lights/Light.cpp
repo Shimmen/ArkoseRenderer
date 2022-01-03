@@ -76,3 +76,8 @@ RenderState& Light::getOrCreateCachedShadowMapRenderState(const std::string& cac
 
     return newRenderState;
 }
+
+void Light::invalidateRenderStateCache()
+{
+    m_cachedRenderStates.clear();
+}

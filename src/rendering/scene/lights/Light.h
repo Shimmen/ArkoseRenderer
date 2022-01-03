@@ -53,8 +53,9 @@ public:
 
     Texture& shadowMap();
     RenderTarget& shadowMapRenderTarget();
+
     RenderState& getOrCreateCachedShadowMapRenderState(const std::string& cacheIdentifier, std::function<RenderState&(Registry& sceneRegistry)> creationCallback);
-    
+    void invalidateRenderStateCache();
 
     void setScene(Badge<Scene>, Scene* scene) { m_scene = scene; }
     const Scene* scene() const { return m_scene; }
