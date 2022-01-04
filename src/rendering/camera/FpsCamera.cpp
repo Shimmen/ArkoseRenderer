@@ -7,6 +7,12 @@ void FpsCamera::setMaxSpeed(float newMaxSpeed)
     maxSpeed = newMaxSpeed;
 }
 
+void FpsCamera::newFrame(Badge<Scene>)
+{
+    m_previousFrameViewFromWorld = viewMatrix();
+    m_previousFrameProjectionFromView = projectionMatrix();
+}
+
 void FpsCamera::update(const Input& input, const Extent2D& viewportSize, float dt)
 {
     m_didModify = false;

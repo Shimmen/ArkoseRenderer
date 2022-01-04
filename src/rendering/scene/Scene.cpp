@@ -179,8 +179,17 @@ void Scene::loadFromFile(const std::string& path)
     m_sceneDataNeedsRebuild = false;
 }
 
-void Scene::update(float elapsedTime, float deltaTime)
+void Scene::update(float elapsedTime, float deltaTime, bool firstFrame)
 {
+    if (firstFrame == false) {
+        // NOTE: We only want to do this on leaf-nodes right now, i.e. meshes not models.
+        forEachMesh([](size_t meshIdx, Mesh& mesh) {
+            mesh.transform().newFrame({});
+        });
+
+        camera().newFrame({});
+    }
+
     camera().update(Input::instance(), mainViewportSize(), deltaTime);
 
     if (m_sceneDataNeedsRebuild) {

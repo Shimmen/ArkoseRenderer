@@ -105,6 +105,7 @@ int main(int argc, char** argv)
 
     glfwSetTime(0.0);
     double lastTime = 0.0;
+    bool firstFrame = true;
     while (!glfwWindowShouldClose(window)) {
 
         if (shaderFileWatchMutex.try_lock()) {
@@ -124,13 +125,15 @@ int main(int argc, char** argv)
         double deltaTime = elapsedTime - lastTime;
         lastTime = elapsedTime;
 
-        scene->update((float)elapsedTime, (float)deltaTime);
+        scene->update((float)elapsedTime, (float)deltaTime, firstFrame);
         app->update(*scene, (float)elapsedTime, (float)deltaTime);
 
         bool frameExecuted = false;
         while (!frameExecuted) {
             frameExecuted = backend->executeFrame(*scene, *renderPipeline, elapsedTime, deltaTime);
         }
+
+        firstFrame = false;
 
         END_OF_FRAME_PROFILE_MARKER();
     }

@@ -8,6 +8,7 @@
 struct ShaderDrawable {
     mat4 worldFromLocal;
     mat4 worldFromTangent;
+    mat4 previousFrameWorldFromLocal;
     int materialIndex;
     int pad1, pad2, pad3;
 };

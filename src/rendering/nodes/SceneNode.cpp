@@ -83,6 +83,9 @@ RenderPipelineNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) con
                 .viewFromWorld = viewFromWorld,
                 .worldFromView = inverse(viewFromWorld),
 
+                .previousFrameProjectionFromView = camera.previousFrameProjectionMatrix(),
+                .previousFrameViewFromWorld = camera.previousFrameViewMatrix(),
+
                 .pixelFromView = pixelFromView,
                 .viewFromPixel = inverse(pixelFromView),
 
@@ -103,6 +106,7 @@ RenderPipelineNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) con
             m_scene.forEachMesh([&](size_t, Mesh& mesh) {
                 objectData.push_back(ShaderDrawable { .worldFromLocal = mesh.transform().worldMatrix(),
                                                       .worldFromTangent = mat4(mesh.transform().worldNormalMatrix()),
+                                                      .previousFrameWorldFromLocal = mesh.transform().previousFrameWorldMatrix(),
                                                       .materialIndex = mesh.materialIndex().value_or(0) });
             });
             uploadBuffer.upload(objectData, objectDataBuffer);

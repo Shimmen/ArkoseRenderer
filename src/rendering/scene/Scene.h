@@ -26,7 +26,7 @@ public:
 
     void loadFromFile(const std::string&);
 
-    void update(float elapsedTime, float deltaTime);
+    void update(float elapsedTime, float deltaTime, bool firstFrame);
 
     // Camera & view
 

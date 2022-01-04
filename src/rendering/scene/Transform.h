@@ -1,8 +1,11 @@
 #pragma once
 
+#include "utility/Badge.h"
 #include "utility/Profiling.h"
 #include <moos/matrix.h>
 #include <moos/vector.h>
+
+class Scene;
 
 class Transform {
 public:
@@ -50,6 +53,16 @@ public:
         return normalMatrix;
     }
 
+    void newFrame(Badge<Scene>)
+    {
+        m_previousFrameWorldMatrix = worldMatrix();
+    }
+
+    mat4 previousFrameWorldMatrix()
+    {
+        return m_previousFrameWorldMatrix.value_or(worldMatrix());
+    }
+
     // ..
     //Transform& setScale(float);
     //Transform& rotateBy(float);
@@ -58,5 +71,7 @@ private:
     //quat m_orientation {};
     //vec3 m_scale { 1.0 };
     const Transform* m_parent {};
-    mutable mat4 m_localMatrix { 1.0f };
+    mat4 m_localMatrix { 1.0f };
+
+    std::optional<mat4> m_previousFrameWorldMatrix{ std::nullopt };
 };

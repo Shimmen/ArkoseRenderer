@@ -60,6 +60,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::constructFrame(Registry& reg) c
             DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, m_scene);
             indirectDrawableData.push_back({ .drawable = { .worldFromLocal = mesh.transform().worldMatrix(),
                                                            .worldFromTangent = mat4(mesh.transform().worldNormalMatrix()),
+                                                           .previousFrameWorldFromLocal = mesh.transform().previousFrameWorldMatrix(),
                                                            .materialIndex = mesh.materialIndex().value_or(0) },
                                              .localBoundingSphere = vec4(mesh.boundingSphere().center(), mesh.boundingSphere().radius()),
                                              .indexCount = drawCall.indexCount,

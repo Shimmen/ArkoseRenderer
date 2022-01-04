@@ -1,10 +1,14 @@
 #pragma once
 
+#include "utility/Badge.h"
 #include "utility/Extent.h"
 #include "utility/Input.h"
 #include <moos/matrix.h>
 #include <moos/quaternion.h>
 #include <moos/vector.h>
+#include <optional>
+
+class Scene;
 
 class FpsCamera {
 public:
@@ -13,6 +17,7 @@ public:
 
     void setMaxSpeed(float);
 
+    void newFrame(Badge<Scene>);
     void update(const Input&, const Extent2D& screenExtent, float deltaTime);
 
     void setDidModify(bool);
@@ -32,7 +37,11 @@ public:
 
     [[nodiscard]] mat4 viewMatrix() const { return m_viewFromWorld; }
     [[nodiscard]] mat4 projectionMatrix() const { return m_projectionFromView; }
-    [[nodiscard]] mat4 viewProjectionMatrix() const { return m_projectionFromView * m_viewFromWorld; }
+    [[nodiscard]] mat4 viewProjectionMatrix() const { return projectionMatrix() * viewMatrix(); }
+
+    [[nodiscard]] mat4 previousFrameViewMatrix() const { return m_previousFrameViewFromWorld.value_or(viewMatrix()); }
+    [[nodiscard]] mat4 previousFrameProjectionMatrix() const { return m_previousFrameProjectionFromView.value_or(projectionMatrix()); }
+    [[nodiscard]] mat4 previousFrameViewProjectionMatrix() const { return previousFrameProjectionMatrix() * previousFrameViewMatrix(); }
 
     mat4 pixelProjectionMatrix() const;
 
@@ -62,6 +71,9 @@ private:
     mat4 m_viewFromWorld {};
     mat4 m_projectionFromView {};
     Extent2D m_currentViewportSize {};
+
+    std::optional<mat4> m_previousFrameViewFromWorld { std::nullopt };
+    std::optional<mat4> m_previousFrameProjectionFromView { std::nullopt };
 
     bool m_didModify { true };
 

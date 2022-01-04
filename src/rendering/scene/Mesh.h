@@ -26,6 +26,7 @@ public:
     virtual const Model* model() const { return m_owner; }
 
     Material& material();
+    virtual Transform& transform() { return m_transform; }
     virtual const Transform& transform() const { return m_transform; }
 
     std::optional<int> materialIndex() const { return m_materialIndex; }
