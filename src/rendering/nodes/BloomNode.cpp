@@ -66,7 +66,14 @@ RenderPipelineNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) con
     ComputeState& bloomBlendComputeState = reg.createComputeState(bloomBlendShader, { &blendBindingSet });
 
     return [&mainTexture, &downsampleState, &upsampleState, &bloomBlendComputeState, &blendBindingSet, captures](const AppState& appState, CommandList& cmdList) {
-        const Extent3D localSizeForComp { 16, 16, 1 };
+
+        static bool enabled = true;
+        ImGui::Checkbox("Enabled##bloom", &enabled);
+
+        if (!enabled)
+            return;
+        
+        constexpr Extent3D localSizeForComp { 16, 16, 1 };
 
         // Copy image to the top level of the downsample stack
         cmdList.copyTexture(mainTexture, *captures.downsampleTextures[0]);
@@ -107,11 +114,7 @@ RenderPipelineNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) con
         }
 
         // Blend the bloom contribution back into the target texture
-
-        static bool enabled = true;
-        ImGui::Checkbox("Enabled", &enabled);
-
-        if (enabled) {
+        {
             static float bloomBlend = 0.04f;
             ImGui::SliderFloat("Bloom blend", &bloomBlend, 0.0f, 1.0f, "%.6f", ImGuiSliderFlags_Logarithmic);
 
