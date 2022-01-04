@@ -138,13 +138,16 @@ void Registry::publishResource(const std::string& name, T& resource, std::unorde
     auto nodeName = m_currentNodeName.value();
 
     if (resource.owningRegistry({}) != this) {
-        LogErrorAndExit("Registry: Attempt to publish the resource '%s' in node %s, but the resource is not owned by this registry. "
+        LogErrorAndExit("Registry: Attempt to publish the resource '%s' in node '%s', but the resource is not owned by this registry. "
                         "This could be caused by a per-node resource being published as a per-frame node, or similar.\n",
                         name.c_str(), nodeName.c_str());
     }
 
-    // Must be a new entry, i.e. no accidental overwrite
-    ASSERT(map.find(name) == map.end());
+    if (map.find(name) != map.end()) {
+        LogErrorAndExit("Registry: Attempt to publish the resource '%s' in node '%s', but a resource of that name (and type) "
+                        "has already been published. This is not valid, all resource must have unique names.\n",
+                        name.c_str(), nodeName.c_str());
+    }
 
     map[name] = PublishedResource { .resource = &resource,
                                     .publisher = nodeName };
