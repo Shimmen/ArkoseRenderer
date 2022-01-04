@@ -26,19 +26,19 @@ void RenderPipeline::constructAll(Registry& nodeRegistry, std::vector<Registry*>
 
     // TODO: For debugability it would be nice if the frame resources were constructed right after the node resources, for each node
 
-    LogInfo("Constructing per-node stuff:\n");
+    LogInfo("Constructing per-node resources:\n");
     int nextNodeIdx = 1;
 
     {
         SCOPED_PROFILE_ZONE_NAMED("Node resources");
         for (auto& node : m_allNodes) {
-            LogInfo("  node=%i (%s)\n", nextNodeIdx++, node->name().c_str());
+            LogInfo("  %s\n", node->name().c_str());
             nodeRegistry.setCurrentNode(node->name());
             node->constructNode(nodeRegistry);
         }
     }
 
-    LogInfo("Constructing per-frame stuff:\n");
+    LogInfo("Constructing per-frame resources:\n");
     int nextFrameIdx = 1;
 
     {
@@ -51,7 +51,7 @@ void RenderPipeline::constructAll(Registry& nodeRegistry, std::vector<Registry*>
             int nextNodeIdx = 1;
 
             for (auto& node : m_allNodes) {
-                LogInfo("    node=%i (%s)\n", nextNodeIdx++, node->name().c_str());
+                LogInfo("    %s\n", node->name().c_str());
                 frameRegistry->setCurrentNode(node->name());
                 auto executeCallback = node->constructFrame(*frameRegistry);
                 frameCtx.nodeContexts.push_back({ .node = node.get(),
