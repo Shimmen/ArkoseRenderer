@@ -8,11 +8,12 @@
 #include <shared/SceneData.h>
 #include <shared/LightData.h>
 
-layout(location = 0) in vec2 vTexCoord;
-layout(location = 1) in vec3 vPosition;
-layout(location = 2) in vec3 vNormal;
-layout(location = 3) in mat3 vTbnMatrix;
-layout(location = 6) flat in int vMaterialIndex;
+layout(location = 0) flat in int vMaterialIndex;
+layout(location = 1) in vec2 vTexCoord;
+layout(location = 2) in vec3 vPosition;
+layout(location = 3) in vec4 vCurrFrameProjectedPos;
+layout(location = 4) in vec4 vPrevFrameProjectedPos;
+layout(location = 5 /*, 6, 7*/) in mat3 vTbnMatrix;
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 
@@ -40,8 +41,9 @@ NAMED_UNIFORMS(pushConstants,
 
 layout(location = 0) out vec4 oColor;
 layout(location = 1) out vec4 oNormal;
-layout(location = 2) out vec4 oBaseColor;
-layout(location = 3) out vec4 oDiffuseGI;
+layout(location = 2) out vec4 oVelocity;
+layout(location = 3) out vec4 oBaseColor;
+layout(location = 4) out vec4 oDiffuseGI;
 
 vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
@@ -102,6 +104,8 @@ void main()
     ShaderMaterial material = materials[vMaterialIndex];
 
     vec4 inputBaseColor = texture(textures[material.baseColor], vTexCoord).rgba;
+
+    // TODO: This should not be done in the opaque pass! We should not render any masked or blended objects in opaque rendering
     if (inputBaseColor.a < 1e-2) {
         discard;
         return;
@@ -139,7 +143,19 @@ void main()
     oDiffuseGI = vec4(ddgi, 0.0);
 #endif
 
+    vec2 velocity;
+    {
+        vec2 currentPos = vCurrFrameProjectedPos.xy / vCurrFrameProjectedPos.w;
+        vec2 previousPos = vPrevFrameProjectedPos.xy / vPrevFrameProjectedPos.w;
+
+        velocity = (currentPos - previousPos) * vec2(0.5); // in uv-space
+
+        // TODO: Adjust for jitter here when we have that in place!
+    }
+
+    // TODO: Maybe use octahedral for normals and pack normal & velocity together?
     oColor = vec4(color, 1.0);
     oNormal = vec4(N, 0.0);
+    oVelocity = vec4(velocity, 0.0, 0.0);
     oBaseColor = vec4(baseColor, 0.0);
 }

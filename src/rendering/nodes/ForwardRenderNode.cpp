@@ -35,6 +35,9 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
     Texture& normalTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("SceneNormal", normalTexture);
 
+    Texture& velocityTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
+    reg.publish("SceneVelocity", velocityTexture);
+
     Texture& baseColorTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA8);
     reg.publish("SceneBaseColor", baseColorTexture);
 
@@ -52,8 +55,9 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
 
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture },
                                                           { RenderTarget::AttachmentType::Color1, &normalTexture },
-                                                          { RenderTarget::AttachmentType::Color2, &baseColorTexture },
-                                                          { RenderTarget::AttachmentType::Color3, &diffueGiTexture },
+                                                          { RenderTarget::AttachmentType::Color2, &velocityTexture },
+                                                          { RenderTarget::AttachmentType::Color3, &baseColorTexture },
+                                                          { RenderTarget::AttachmentType::Color4, &diffueGiTexture },
                                                           depthAttachment });
 
     BindingSet& cameraBindingSet = *reg.getBindingSet("SceneCameraSet");
