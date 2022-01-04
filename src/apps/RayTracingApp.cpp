@@ -2,7 +2,6 @@
 
 #include "rendering/nodes/AutoExposureNode.h"
 #include "rendering/nodes/ForwardRenderNode.h"
-#include "rendering/nodes/GBufferNode.h"
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/RTAccelerationStructures.h"
 #include "rendering/nodes/RTAmbientOcclusion.h"
@@ -37,7 +36,6 @@ void RayTracingApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     pipeline.addNode<SceneNode>(scene);
     pipeline.addNode<PickingNode>(scene);
-    pipeline.addNode<GBufferNode>(scene);
     pipeline.addNode<ShadowMapNode>(scene);
     pipeline.addNode<ForwardRenderNode>(scene);
     if (rtxOn) {

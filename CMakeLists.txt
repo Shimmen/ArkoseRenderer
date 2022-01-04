@@ -46,7 +46,6 @@ add_executable(ArkoseRenderer
     src/rendering/nodes/DDGINode.cpp
     src/rendering/nodes/DDGIProbeDebug.cpp
     src/rendering/nodes/ForwardRenderNode.cpp
-    src/rendering/nodes/GBufferNode.cpp
     src/rendering/nodes/GIComposeNode.cpp
     src/rendering/nodes/PickingNode.cpp
     src/rendering/nodes/PrepassNode.cpp

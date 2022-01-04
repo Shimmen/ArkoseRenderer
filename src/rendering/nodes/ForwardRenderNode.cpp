@@ -29,13 +29,14 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
 {
     SCOPED_PROFILE_ZONE();
 
-    BindingSet& drawableBindingSet = *reg.getBindingSet("MainViewCulledDrawablesSet");
-    BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
-    BindingSet& cameraBindingSet = *reg.getBindingSet("SceneCameraSet");
-    BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");
-
     Texture& colorTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("SceneColor", colorTexture);
+
+    Texture& normalTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
+    reg.publish("SceneNormal", normalTexture);
+
+    Texture& baseColorTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA8);
+    reg.publish("SceneBaseColor", baseColorTexture);
 
     Texture& diffueGiTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("DiffuseGI", diffueGiTexture);
@@ -50,10 +51,15 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
     }
 
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture },
-                                                          { RenderTarget::AttachmentType::Color1, reg.getTexture("SceneNormal") },
-                                                          { RenderTarget::AttachmentType::Color2, reg.getTexture("SceneBaseColor") },
+                                                          { RenderTarget::AttachmentType::Color1, &normalTexture },
+                                                          { RenderTarget::AttachmentType::Color2, &baseColorTexture },
                                                           { RenderTarget::AttachmentType::Color3, &diffueGiTexture },
                                                           depthAttachment });
+
+    BindingSet& cameraBindingSet = *reg.getBindingSet("SceneCameraSet");
+    BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
+    BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");
+    BindingSet& drawableBindingSet = *reg.getBindingSet("MainViewCulledDrawablesSet");
 
     bool useDDGI = m_ddgiSamplingBindingSet != nullptr;
     auto includeDDGIDefine = ShaderDefine::makeBool("FORWARD_INCLUDE_DDGI", useDDGI);

@@ -6,7 +6,6 @@
 #include "rendering/nodes/DDGINode.h"
 #include "rendering/nodes/DDGIProbeDebug.h"
 #include "rendering/nodes/ForwardRenderNode.h"
-#include "rendering/nodes/GBufferNode.h"
 #include "rendering/nodes/PrepassNode.h"
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/SceneNode.h"
@@ -37,7 +36,6 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     }
 
     pipeline.addNode<SceneNode>(scene);
-    pipeline.addNode<GBufferNode>(scene);
     pipeline.addNode<PickingNode>(scene);
 
     pipeline.addNode<DDGINode>(scene);
