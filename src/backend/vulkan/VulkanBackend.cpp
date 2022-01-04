@@ -83,6 +83,9 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, const AppSpecification& appSpec
         LogErrorAndExit("VulkanBackend: can't create window surface, exiting.\n");
 
     m_physicalDevice = pickBestPhysicalDevice();
+    vkGetPhysicalDeviceProperties(physicalDevice(), &m_physicalDeviceProperties);
+    LogInfo("VulkanBackend: using physical device '%s'\n", m_physicalDeviceProperties.deviceName);
+
     findQueueFamilyIndices(m_physicalDevice, m_surface);
 
     {
@@ -680,10 +683,6 @@ VkPhysicalDevice VulkanBackend::pickBestPhysicalDevice() const
     // FIXME: Don't just pick the first one if there are more than one!
     VkPhysicalDevice physicalDevice = devices[0];
 
-    VkPhysicalDeviceProperties props;
-    vkGetPhysicalDeviceProperties(physicalDevice, &props);
-    LogInfo("VulkanBackend: using physical device '%s'\n", props.deviceName);
-
     return physicalDevice;
 }
 
@@ -969,6 +968,20 @@ void VulkanBackend::createFrameContexts()
             frameContext.commandBuffer = commandBuffer;
         }
 
+        // Create timestamp query pool for this frame
+        {
+            VkQueryPoolCreateInfo timestampQueryPoolCreateInfo = { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
+            timestampQueryPoolCreateInfo.queryType = VK_QUERY_TYPE_TIMESTAMP;
+            timestampQueryPoolCreateInfo.queryCount = FrameContext::TimestampQueryPoolCount;
+
+            VkQueryPool timestampQueryPool;
+            if (vkCreateQueryPool(device(), &timestampQueryPoolCreateInfo, nullptr, &timestampQueryPool) != VK_SUCCESS) {
+                LogErrorAndExit("VulkanBackend: could not create timestamp query pool, exiting.\n");
+            }
+
+            frameContext.timestampQueryPool = timestampQueryPool;
+        }
+
         createFrameRenderTargets(frameContext, referenceImageContext);
     }
 }
@@ -976,6 +989,7 @@ void VulkanBackend::createFrameContexts()
 void VulkanBackend::destroyFrameContexts()
 {
     for (std::unique_ptr<FrameContext>& frameContext : m_frameContexts) {
+        vkDestroyQueryPool(device(), frameContext->timestampQueryPool, nullptr);
         vkFreeCommandBuffers(device(), m_defaultCommandPool, 1, &frameContext->commandBuffer);
         vkDestroySemaphore(device(), frameContext->imageAvailableSemaphore, nullptr);
         vkDestroySemaphore(device(), frameContext->renderingFinishedSemaphore, nullptr);
@@ -1119,6 +1133,8 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
+    double cpuFrameStartTime = glfwGetTime();
+
     bool isRelativeFirstFrame = m_relativeFrameIndex == 0;
     AppState appState { m_swapchainExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
 
@@ -1166,8 +1182,37 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
     swapchainImageContext.mockColorTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     swapchainImageContext.depthTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
+    // If we wrote any timestamps last time we processed this FrameContext, read and validate those results now
+    if (frameContext.numTimestampsWrittenLastTime > 0) {
+        VkResult timestampGetQueryResults = vkGetQueryPoolResults(device(), frameContext.timestampQueryPool, 0, frameContext.numTimestampsWrittenLastTime, sizeof(frameContext.timestampResults), frameContext.timestampResults, sizeof(TimestampResult64), VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
+        if (timestampGetQueryResults == VK_SUCCESS || timestampGetQueryResults == VK_NOT_READY) {
+            // Validate that all timestamps that we have written to have valid results ready to read
+            for (uint32_t startIdx = 0; startIdx < frameContext.numTimestampsWrittenLastTime; startIdx += 2) {
+                uint32_t endIdx = startIdx + 1;
+                if (frameContext.timestampResults[startIdx].available == 0 || frameContext.timestampResults[endIdx].available == 0) {
+                    LogError("VulkanBackend: timestamps not available (this probably shouldn't happen?)\n");
+                }
+            }
+        }
+    }
+
+    auto elapsedSecondsBetweenTimestamps = [&](uint32_t startIdx, uint32_t endIdx) -> double {
+        if (startIdx >= frameContext.numTimestampsWrittenLastTime || endIdx >= frameContext.numTimestampsWrittenLastTime)
+            return NAN;
+        uint64_t timestampDiff = frameContext.timestampResults[endIdx].timestamp - frameContext.timestampResults[startIdx].timestamp;
+        float nanosecondDiff = float(timestampDiff) * m_physicalDeviceProperties.limits.timestampPeriod;
+        return double(nanosecondDiff) / (1000.0 * 1000.0 * 1000.0);
+    };
+
     // Draw frame
     {
+        uint32_t nextTimestampQueryIdx = 0;
+
+        uint32_t frameStartTimestampIdx = nextTimestampQueryIdx++;
+        uint32_t frameEndTimestampIdx = nextTimestampQueryIdx++;
+        double gpuFrameElapsedTime = elapsedSecondsBetweenTimestamps(frameStartTimestampIdx, frameEndTimestampIdx);
+        m_frameTimer.reportGpuTime(gpuFrameElapsedTime);
+
         VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         commandBufferBeginInfo.flags = 0u;
         commandBufferBeginInfo.pInheritanceInfo = nullptr;
@@ -1180,25 +1225,40 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
         Registry& associatedRegistry = *frameContext.registry;
         VulkanCommandList cmdList { *this, commandBuffer };
 
+        vkCmdResetQueryPool(commandBuffer, frameContext.timestampQueryPool, 0, FrameContext::TimestampQueryPoolCount);
+        vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameContext.timestampQueryPool, frameStartTimestampIdx);
+
         ImGui::Begin("Nodes (in order)");
-        renderPipeline.forEachNodeInResolvedOrder(associatedRegistry, [&](const std::string& nodeName, NodeTimer& nodeTimer, const RenderPipelineNode::ExecuteCallback& nodeExecuteCallback) {
-            double cpuTime = nodeTimer.averageCpuTime() * 1000.0;
-            std::string title = isnan(cpuTime)
-                ? fmt::format("{} | CPU: - ms", nodeName)
-                : fmt::format("{} | CPU: {:.2f} ms", nodeName, cpuTime);
-            ImGui::CollapsingHeader(title.c_str(), ImGuiTreeNodeFlags_Leaf);
+        {
+            std::string frameTimePerfString = m_frameTimer.createFormattedString();
+            ImGui::Text("Frame time: %s", frameTimePerfString.c_str());
 
-            SCOPED_PROFILE_ZONE_DYNAMIC(nodeName, 0x00ffff);
-            double cpuStartTime = glfwGetTime();
+            renderPipeline.forEachNodeInResolvedOrder(associatedRegistry, [&](const std::string& nodeName, AvgElapsedTimer& nodeTimer, const RenderPipelineNode::ExecuteCallback& nodeExecuteCallback) {
+                std::string nodeTimePerfString = nodeTimer.createFormattedString();
+                std::string nodeTitle = fmt::format("{} | {}", nodeName, nodeTimePerfString);
+                ImGui::CollapsingHeader(nodeTitle.c_str(), ImGuiTreeNodeFlags_Leaf);
 
-            cmdList.beginDebugLabel(nodeName);
-            nodeExecuteCallback(appState, cmdList);
-            cmdList.endNode({});
-            cmdList.endDebugLabel();
+                SCOPED_PROFILE_ZONE_DYNAMIC(nodeName, 0x00ffff);
+                double cpuStartTime = glfwGetTime();
 
-            double cpuElapsed = glfwGetTime() - cpuStartTime;
-            nodeTimer.reportCpuTime(cpuElapsed);
-        });
+                // NOTE: This works assuming we never modify the list of nodes (add/remove/reorder)
+                uint32_t nodeStartTimestampIdx = nextTimestampQueryIdx++;
+                uint32_t nodeEndTimestampIdx = nextTimestampQueryIdx++;
+                nodeTimer.reportGpuTime(elapsedSecondsBetweenTimestamps(nodeStartTimestampIdx, nodeEndTimestampIdx));
+
+                vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameContext.timestampQueryPool, nodeStartTimestampIdx);
+
+                cmdList.beginDebugLabel(nodeName);
+                nodeExecuteCallback(appState, cmdList);
+                cmdList.endNode({});
+                cmdList.endDebugLabel();
+
+                vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameContext.timestampQueryPool, nodeEndTimestampIdx);
+
+                double cpuElapsed = glfwGetTime() - cpuStartTime;
+                nodeTimer.reportCpuTime(cpuElapsed);
+            });
+        }
         ImGui::End();
 
         cmdList.beginDebugLabel("GUI");
@@ -1241,6 +1301,10 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
                                  0, nullptr,
                                  1, &imageBarrier);
         }
+
+        vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameContext.timestampQueryPool, frameEndTimestampIdx);
+        frameContext.numTimestampsWrittenLastTime = nextTimestampQueryIdx;
+        ASSERT(frameContext.numTimestampsWrittenLastTime < FrameContext::TimestampQueryPoolCount);
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             LogError("VulkanBackend: error ending command buffer command!\n");
@@ -1295,6 +1359,10 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
     m_currentFrameIndex += 1;
     m_relativeFrameIndex += 1;
+
+    double cpuFrameElapsedTime = glfwGetTime() - cpuFrameStartTime;
+    m_frameTimer.reportCpuTime(cpuFrameElapsedTime);
+
     return true;
 }
 

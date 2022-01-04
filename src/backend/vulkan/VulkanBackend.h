@@ -6,6 +6,7 @@
 #include "extensions/VulkanDebugUtils.h"
 #include "extensions/VulkanRTX.h"
 #include "rendering/App.h"
+#include "utility/AvgElapsedTimer.h"
 #include <array>
 #include <optional>
 #include <unordered_map>
@@ -168,8 +169,12 @@ private:
     VkDebugReportCallbackEXT m_debugReportCallback {};
 
     VkInstance m_instance {};
+
     VkPhysicalDevice m_physicalDevice {};
+    VkPhysicalDeviceProperties m_physicalDeviceProperties {};
+
     VkDevice m_device {};
+
     VkPipelineCache m_pipelineCache {};
 
     struct VulkanQueue {
@@ -209,6 +214,11 @@ private:
     uint32_t m_currentFrameIndex { 0 };
     uint32_t m_relativeFrameIndex { 0 };
 
+    struct TimestampResult64 {
+        uint64_t timestamp;
+        uint64_t available;
+    };
+
     struct FrameContext {
         VkFence frameFence {};
         VkSemaphore imageAvailableSemaphore {};
@@ -219,6 +229,11 @@ private:
 
         VkCommandBuffer commandBuffer {};
         std::unique_ptr<Registry> registry {};
+
+        static constexpr uint32_t TimestampQueryPoolCount = 100;
+        TimestampResult64 timestampResults[TimestampQueryPoolCount] = { 0 };
+        uint32_t numTimestampsWrittenLastTime { 0 };
+        VkQueryPool timestampQueryPool {};
     };
 
     std::array<std::unique_ptr<FrameContext>, NumInFlightFrames> m_frameContexts {};
@@ -242,5 +257,7 @@ private:
 
     VkCommandPool m_defaultCommandPool {};
     VkCommandPool m_transientCommandPool {};
+
+    AvgElapsedTimer m_frameTimer {};
 
 };
