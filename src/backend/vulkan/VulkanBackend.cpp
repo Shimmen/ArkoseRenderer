@@ -286,6 +286,12 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         allRequiredSupported = false;
     }
 
+    if (vulkanDebugMode && !(vk12features.bufferDeviceAddress && vk12features.bufferDeviceAddressCaptureReplay)) {
+        LogError("VulkanBackend: no support for buffer device address & buffer device address capture replay, which is required by e.g. Nsight for debugging. "
+                 "If this is a problem, try compiling and running with vulkanDebugMode set to false.\n");
+        allRequiredSupported = false;
+    }
+
     for (auto& cap : appSpecification.requiredCapabilities) {
         if (isSupported(cap)) {
             m_activeCapabilities[cap] = true;
@@ -569,6 +575,12 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 
     // Imageless framebuffers
     vk12features.imagelessFramebuffer = VK_TRUE;
+
+    // GPU debugging & insight for e.g. Nsight
+    if (vulkanDebugMode) {
+        vk12features.bufferDeviceAddress = VK_TRUE;
+        vk12features.bufferDeviceAddressCaptureReplay = VK_TRUE;
+    }
 
     for (auto& [capability, active] : m_activeCapabilities) {
         if (!active)
