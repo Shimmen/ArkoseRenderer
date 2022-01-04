@@ -15,6 +15,9 @@ RenderPipelineNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) c
 {
     SCOPED_PROFILE_ZONE();
 
+    Texture& depthTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth24Stencil8, Texture::Filters::nearest());
+    reg.publish("SceneDepth", depthTexture);
+
     Texture& gBufferDepthTexture = *reg.getTexture("SceneDepth");
     BindingSet& drawableBindingSet = *reg.getBindingSet("MainViewCulledDrawablesSet");
 

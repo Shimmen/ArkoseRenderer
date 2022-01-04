@@ -40,10 +40,14 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
     Texture& diffueGiTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("DiffuseGI", diffueGiTexture);
 
-    Texture& gBufferDepthTexture = *reg.getTexture("SceneDepth");
-    auto depthAttachment = reg.hasPreviousNode("Prepass")
-        ? RenderTarget::Attachment { RenderTarget::AttachmentType::Depth, &gBufferDepthTexture, LoadOp::Load, StoreOp::Store }
-        : RenderTarget::Attachment { RenderTarget::AttachmentType::Depth, &gBufferDepthTexture, LoadOp::Clear, StoreOp::Store };
+    RenderTarget::Attachment depthAttachment;
+    if (reg.hasPreviousNode("Prepass")) {
+        depthAttachment = RenderTarget::Attachment { RenderTarget::AttachmentType::Depth, reg.getTexture("SceneDepth"), LoadOp::Load, StoreOp::Store };
+    } else {
+        Texture& depthTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth24Stencil8, Texture::Filters::nearest());
+        reg.publish("SceneDepth", depthTexture);
+        depthAttachment = RenderTarget::Attachment { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Clear, StoreOp::Store };
+    }
 
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture },
                                                           { RenderTarget::AttachmentType::Color1, reg.getTexture("SceneNormal") },

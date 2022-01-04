@@ -14,10 +14,6 @@ RenderPipelineNode::ExecuteCallback GBufferNode::constructFrame(Registry& reg) c
 
     Texture& normalTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA16F);
     reg.publish("SceneNormal", normalTexture);
-
-    Texture& depthTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::Depth24Stencil8, Texture::Filters::nearest());
-    reg.publish("SceneDepth", depthTexture);
-
     Texture& baseColorTexture = reg.createTexture2D(windowTarget.extent(), Texture::Format::RGBA8);
     reg.publish("SceneBaseColor", baseColorTexture);
 
