@@ -42,6 +42,7 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg)
             // objects though, which I have barely done at all, so this is a very simple and quick hack to get around that.
             RenderState& renderState = light.getOrCreateCachedShadowMapRenderState("ShadowMapNode::defaultShadowMapping", [&](Registry& sceneRegistry) -> RenderState& {
                 RenderStateBuilder renderStateBuilder { light.shadowMapRenderTarget(), shadowMapShader, m_vertexLayout };
+                renderStateBuilder.stateBindings().disableAutoBinding();
                 renderStateBuilder.stateBindings().at(0, transformBindingSet);
                 renderStateBuilder.stateBindings().at(1, shadowDataBindingSet);
                 return sceneRegistry.createRenderState(renderStateBuilder);
@@ -52,6 +53,12 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg)
             {
                 mat4 lightProjectionFromWorld = light.viewProjection();
                 auto lightFrustum = geometry::Frustum::createFromProjectionMatrix(lightProjectionFromWorld);
+
+                // HACK: Since we only cache one render state per light we can't use the auto-binding, because then we only have the right sets 1/n times.
+                // Yeah.. this is a horrible hack. I need to figure out how we want to do this for real. Maybe just manage all the render states here in
+                // this node and possibly add some local caching here. This will at least let us manage the different frame contexts etc.
+                cmdList.bindSet(transformBindingSet, 0);
+                cmdList.bindSet(shadowDataBindingSet, 1);
 
                 uint32_t index = (uint32_t)shadowLightIndex;
                 cmdList.setNamedUniform("lightIndex", index);
