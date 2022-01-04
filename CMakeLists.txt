@@ -73,6 +73,7 @@ add_executable(ArkoseRenderer
     src/rendering/scene/ProbeGrid.cpp
     src/rendering/scene/Scene.cpp
     src/rendering/scene/Vertex.cpp
+    src/utility/AvgElapsedTimer.cpp
     src/utility/FileIO.cpp
     src/utility/IESProfile.cpp
     src/utility/Image.cpp
