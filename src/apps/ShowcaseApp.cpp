@@ -8,6 +8,8 @@
 #include "rendering/nodes/ForwardRenderNode.h"
 #include "rendering/nodes/PrepassNode.h"
 #include "rendering/nodes/PickingNode.h"
+#include "rendering/nodes/RTDirectLightNode.h"
+#include "rendering/nodes/RTFirstHitNode.h"
 #include "rendering/nodes/SceneNode.h"
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SkyViewNode.h"
@@ -53,7 +55,15 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     pipeline.addNode<DDGIProbeDebug>(scene);
 
-    pipeline.addNode("Final", [](Registry& reg) {
+    // These nodes are expected to work, but it's only for testing for now
+    //pipeline.addNode<RTFirstHitNode>(scene);
+    //pipeline.addNode<RTDirectLightNode>(scene);
+
+    const std::string finalTexture = "SceneColor";
+    //const std::string finalTexture = "RTDirectLight";
+    //const std::string finalTexture = "RTFirstHit";
+
+    pipeline.addNode("Final", [finalTexture](Registry& reg) {
         // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.
         std::vector<vec2> fullScreenTriangle { { -1, -3 }, { -1, 1 }, { 3, 1 } };
         Buffer& vertexBuffer = reg.createBuffer(std::move(fullScreenTriangle), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
@@ -67,8 +77,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         const RenderTarget& ldrTarget = reg.windowRenderTarget();
 #endif
 
-        //BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("DDGITestTarget"), ShaderBindingType::TextureSampler } });
-        BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture("SceneColor"), ShaderBindingType::TextureSampler } });
+        BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, reg.getTexture(finalTexture), ShaderBindingType::TextureSampler } });
         Shader tonemapShader = Shader::createBasicRasterize("final/showcase/tonemap.vert", "final/showcase/tonemap.frag");
         RenderStateBuilder tonemapStateBuilder { ldrTarget, tonemapShader, vertexLayout };
         tonemapStateBuilder.stateBindings().at(0, tonemapBindingSet);

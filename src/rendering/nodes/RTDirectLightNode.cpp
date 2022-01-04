@@ -36,7 +36,7 @@ void RTDirectLightNode::constructNode(Registry& nodeReg)
 RenderPipelineNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& reg) const
 {
     Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
-    reg.publish("target", storageImage);
+    reg.publish("RTDirectLight", storageImage);
 
     BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
     BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");

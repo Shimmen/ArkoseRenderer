@@ -38,7 +38,7 @@ void RTFirstHitNode::constructNode(Registry& nodeReg)
 RenderPipelineNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg) const
 {
     Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
-    reg.publish("image", storageImage);
+    reg.publish("RTFirstHit", storageImage);
 
     BindingSet& environmentBindingSet = reg.createBindingSet({ { 0, ShaderStageRTMiss, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler } });
     BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
