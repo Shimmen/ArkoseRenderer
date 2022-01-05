@@ -80,6 +80,8 @@ public:
     void generateProbeGridFromBoundingBox();
     ProbeGrid& probeGrid() { return m_probeGrid.value(); }
 
+    float filmGrainGain() const;
+
     float& ambient() { return m_ambientIlluminance; }
     float exposedAmbient() const { return m_ambientIlluminance * lightPreExposureValue(); }
 
@@ -127,6 +129,8 @@ private:
     std::optional<ProbeGrid> m_probeGrid;
 
     bool m_maintainRayTracingScene { false };
+
+    float m_fixedFilmGrainGain { 0.035f };
 
     std::string m_environmentMap {};
     float m_environmentMultiplier { 1.0f };

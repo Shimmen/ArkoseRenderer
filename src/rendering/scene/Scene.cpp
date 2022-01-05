@@ -217,10 +217,20 @@ void Scene::update(float elapsedTime, float deltaTime, bool firstFrame)
 
         ImGui::Separator();
 
-        ImGui::SliderFloat("Ambient (lx)", &m_ambientIlluminance, 0.0f, 1'000.0f, "%.0f");
+        if (ImGui::TreeNode("Film grain")) {
+            // TODO: I would love to estimate gain grain from ISO and scene light amount, but that's for later..
+            ImGui::SliderFloat("Fixed grain gain", &m_fixedFilmGrainGain, 0.0f, 0.25f);
+            ImGui::TreePop();
+        }
 
-        // NOTE: Obviously the unit of this is dependent on the values in the texture.. we should probably unify this a bit.
-        ImGui::SliderFloat("Environment multiplier", &m_environmentMultiplier, 0.0f, 10'000.0f, "%.0f");
+        if (ImGui::TreeNode("Environment")) {
+            ImGui::SliderFloat("Ambient (lx)", &m_ambientIlluminance, 0.0f, 1'000.0f, "%.0f");
+            // NOTE: Obviously the unit of this is dependent on the values in the texture.. we should probably unify this a bit.
+            ImGui::SliderFloat("Environment multiplier", &m_environmentMultiplier, 0.0f, 10'000.0f, "%.0f");
+            ImGui::TreePop();
+        }
+
+        ImGui::Separator();
 
         {
             static Light* selectedLight = nullptr;
@@ -756,4 +766,9 @@ TopLevelAS& Scene::globalTopLevelAccelerationStructure() const
     ASSERT(doesMaintainRayTracingScene());
     ASSERT(m_sceneTopLevelAccelerationStructure);
     return *m_sceneTopLevelAccelerationStructure;
+}
+
+float Scene::filmGrainGain() const
+{
+    return m_fixedFilmGrainGain;
 }

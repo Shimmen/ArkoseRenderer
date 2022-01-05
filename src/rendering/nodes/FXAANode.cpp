@@ -40,12 +40,6 @@ RenderPipelineNode::ExecuteCallback FXAANode::constructFrame(Registry& reg) cons
             ImGui::TreePop();
         }
 
-        static float filmGrainGain = 0.035f;
-        if (ImGui::TreeNode("Film grain")) {
-            ImGui::SliderFloat("Grain gain", &filmGrainGain, 0.0f, 1.0f);
-            ImGui::TreePop();
-        }
-
         cmdList.beginRendering(fxaaRenderState, ClearColor::black(), 1.0f);
         {
             vec2 pixelSize = vec2(1.0f / ldrTexture.extent().width(), 1.0f / ldrTexture.extent().height());
@@ -55,7 +49,7 @@ RenderPipelineNode::ExecuteCallback FXAANode::constructFrame(Registry& reg) cons
             cmdList.setNamedUniform("fxaaQualityEdgeThreshold", edgeThreshold);
             cmdList.setNamedUniform("fxaaQualityEdgeThresholdMin", edgeThresholdMin);
 
-            cmdList.setNamedUniform("filmGrainGain", filmGrainGain);
+            cmdList.setNamedUniform("filmGrainGain", m_scene.filmGrainGain());
             cmdList.setNamedUniform("frameIndex", appState.frameIndex());
 
             cmdList.draw(vertexBuffer, 3);

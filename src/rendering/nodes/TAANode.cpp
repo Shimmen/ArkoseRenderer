@@ -41,7 +41,7 @@ RenderPipelineNode::ExecuteCallback TAANode::constructFrame(Registry& reg) const
         cmdList.beginRendering(taaRenderState, ClearColor::black(), 1.0f);
         {
             cmdList.setNamedUniform("enabled", m_taaEnabled);
-            cmdList.setNamedUniform("filmGrainGain", 0.035f);
+            cmdList.setNamedUniform("filmGrainGain", m_scene.filmGrainGain());
             cmdList.setNamedUniform("frameIndex", appState.frameIndex());
         }
         cmdList.draw(vertexBuffer, 3);
