@@ -148,9 +148,11 @@ void main()
         vec2 currentPos = vCurrFrameProjectedPos.xy / vCurrFrameProjectedPos.w;
         vec2 previousPos = vPrevFrameProjectedPos.xy / vPrevFrameProjectedPos.w;
 
-        velocity = (currentPos - previousPos) * vec2(0.5); // in uv-space
+        velocity = (currentPos - previousPos) * vec2(0.5, 0.5); // in uv-space
 
         // TODO: Adjust for jitter here when we have that in place!
+
+        //velocity = abs(velocity) * 100.0; // debug code
     }
 
     // TODO: Maybe use octahedral for normals and pack normal & velocity together?
