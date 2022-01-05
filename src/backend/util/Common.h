@@ -20,12 +20,18 @@ struct ClearColor {
         return ClearColor(r, g, b, a);
     }
 
+    static ClearColor black()
+    {
+        return ClearColor();
+    }
+
     float r { 0.0f };
     float g { 0.0f };
     float b { 0.0f };
     float a { 0.0f };
 
 private:
+    ClearColor() = default;
     ClearColor(float r, float g, float b, float a)
         : r(r)
         , g(g)
