@@ -19,8 +19,9 @@
 // Shared shader headers
 #include "RTData.h"
 
-Scene::Scene(Registry& registry)
+Scene::Scene(Registry& registry, Extent2D initialMainViewportSize)
     : m_registry(registry)
+    , m_mainViewportSize(initialMainViewportSize)
 {
 }
 

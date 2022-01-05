@@ -19,7 +19,7 @@ class SceneNode;
 
 class Scene final {
 public:
-    explicit Scene(Registry&);
+    Scene(Registry&, Extent2D initialMainViewportSize);
 
     Registry& registry() { return m_registry; }
     const Registry& registry() const { return m_registry; }
@@ -118,7 +118,7 @@ private:
     Registry& m_registry;
 
     Extent2D m_mainViewportSize {};
-    Camera* m_currentMainCamera;
+    Camera* m_currentMainCamera {};
     std::unordered_map<std::string, std::unique_ptr<Camera>> m_allCameras {};
 
     std::vector<std::unique_ptr<Model>> m_models;
