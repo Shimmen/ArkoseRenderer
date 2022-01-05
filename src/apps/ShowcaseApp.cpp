@@ -59,15 +59,25 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<DDGIProbeDebug>(scene);
 
     std::string finalTexture = "SceneColor";
+    AntiAliasing antiAliasingMode = AntiAliasing::None;
 
-    // These nodes are expected to work, but it's only for testing for now
-    //pipeline.addNode<RTFirstHitNode>(scene); finalTexture = "RTDirectLight";
-    //pipeline.addNode<RTDirectLightNode>(scene); finalTexture = "RTFirstHit";
+    // Uncomment for ray tracing visualisations
+    //pipeline.addNode<RTFirstHitNode>(scene); finalTexture = "RTFirstHit";
+    //pipeline.addNode<RTDirectLightNode>(scene); finalTexture = "RTDirectLight";
 
-    pipeline.addNode<TonemapNode>(scene, finalTexture, TonemapNode::Mode::RenderToSceneColorLDR);
+    auto tonemapMode = (antiAliasingMode == AntiAliasing::None)
+        ? TonemapNode::Mode::RenderToWindow
+        : TonemapNode::Mode::RenderToSceneColorLDR;
+    pipeline.addNode<TonemapNode>(scene, finalTexture, tonemapMode);
 
-    pipeline.addNode<FXAANode>(scene);
-    //pipeline.addNode<TAANode>(scene);
+    switch (antiAliasingMode) {
+    case AntiAliasing::FXAA:
+        pipeline.addNode<FXAANode>(scene);
+        break;
+    case AntiAliasing::TAA:
+        pipeline.addNode<TAANode>(scene);
+        break;
+    }
 }
 
 void ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
