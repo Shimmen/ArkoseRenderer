@@ -127,6 +127,7 @@ enum class Key : int {
     RightSuper = 347,
     Menu = 348,
     __Max = Menu,
+    __Count = __Max + 1,
 };
 
 // Values map directly to GLFW's button defines
@@ -143,6 +144,7 @@ enum class Button : int {
     Right = B2,
     Middle = B3,
     __Max = B8,
+    __Count = __Max + 1,
 };
 
 // (forward declare for GLFW.h)
@@ -187,8 +189,8 @@ private:
 
     static Input s_instance;
 
-    static constexpr int KeyboardKeyCount { static_cast<int>(Key::__Max) };
-    static constexpr int MouseButtonCount { static_cast<int>(Button::__Max) };
+    static constexpr int KeyboardKeyCount { static_cast<int>(Key::__Count) };
+    static constexpr int MouseButtonCount { static_cast<int>(Button::__Count) };
 
     static constexpr float GamepadDeadzone { 0.25f };
 
