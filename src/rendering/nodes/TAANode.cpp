@@ -40,16 +40,9 @@ RenderPipelineNode::ExecuteCallback TAANode::constructFrame(Registry& reg) const
 
         cmdList.beginRendering(taaRenderState, ClearColor::black(), 1.0f);
         {
-            /*
-            static float filmGrainGain = 0.035f;
-            cmdList.pushConstant(ShaderStageFragment, filmGrainGain, sizeof(vec2) + 3 * sizeof(float));
-            cmdList.pushConstant(ShaderStageFragment, appState.frameIndex(), sizeof(vec2) + 4 * sizeof(float));
-
-            if (ImGui::TreeNode("Film grain")) {
-                ImGui::SliderFloat("Grain gain", &filmGrainGain, 0.0f, 1.0f);
-                ImGui::TreePop();
-            }
-            */
+            cmdList.setNamedUniform("enabled", m_taaEnabled);
+            cmdList.setNamedUniform("filmGrainGain", 0.035f);
+            cmdList.setNamedUniform("frameIndex", appState.frameIndex());
         }
         cmdList.draw(vertexBuffer, 3);
         cmdList.endRendering();

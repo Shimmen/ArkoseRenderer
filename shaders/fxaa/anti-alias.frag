@@ -1,6 +1,6 @@
 #version 460
 
-#include <common/noise.glsl>
+#include <common/filmGrain.glsl>
 #include <common/namedUniforms.glsl>
 
 #define FXAA_PC 1
@@ -86,11 +86,10 @@ void main()
         fxaaConsoleEdgeThresholdMin,
         fxaaConsole360ConstDir);
 
-    // TODO: Use blue noise (or something even better)
-    // TODO: Make filmGrainGain a function of the camera ISO: higher ISO -> more digital sensor noise!
-    float noise = hash_2u_to_1f(uvec2(gl_FragCoord.xy) + pushConstants.frameIndex * uvec2(textureSize(uTexture, 0)));
-    vec3 filmGrain = vec3(pushConstants.filmGrainGain * (2.0 * noise - 1.0));
-    vec3 color = aaColor.rgb + filmGrain;
+    uvec2 pixelCoord = uvec2(gl_FragCoord.xy);
+    uvec2 targetSize = uvec2(textureSize(uTexture, 0));
+    vec3 filmGrain = generateFilmGrain(pushConstants.filmGrainGain, pushConstants.frameIndex, pixelCoord, targetSize);
 
-    oColor = vec4(color, 1.0);
+    vec3 finalColor = applyFilmGrain(aaColor.rgb, filmGrain);
+    oColor = vec4(finalColor, 1.0);
 }

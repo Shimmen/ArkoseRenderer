@@ -59,7 +59,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<DDGIProbeDebug>(scene);
 
     std::string finalTexture = "SceneColor";
-    AntiAliasing antiAliasingMode = AntiAliasing::None;
+    AntiAliasing antiAliasingMode = AntiAliasing::TAA;
 
     // Uncomment for ray tracing visualisations
     //pipeline.addNode<RTFirstHitNode>(scene); finalTexture = "RTFirstHit";
