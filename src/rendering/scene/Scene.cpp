@@ -2,6 +2,7 @@
 
 #include "backend/Resources.h"
 #include "rendering/Registry.h"
+#include "rendering/camera/FpsCamera.h"
 #include "rendering/scene/models/GltfModel.h"
 #include "utility/FileIO.h"
 #include "utility/Logging.h"
@@ -147,32 +148,34 @@ void Scene::loadFromFile(const std::string& path)
 
     for (auto& jsonCamera : jsonScene.at("cameras")) {
 
-        FpsCamera camera;
+        // TODO: For now always just make FpsCamera objects. Later we probably want to be able to change etc.
+        auto camera = std::make_unique<FpsCamera>();
+
         vec3 position = readVec3(jsonCamera.at("position"));
         vec3 direction = normalize(readVec3(jsonCamera.at("direction")));
-        camera.lookAt(position, position + direction, moos::globalUp);
+        camera->lookAt(position, position + direction, moos::globalUp);
 
         if (jsonCamera.find("exposure") != jsonCamera.end()) {
             if (jsonCamera.at("exposure") == "manual") {
-                camera.useAutomaticExposure = false;
-                camera.iso = jsonCamera.at("ISO");
-                camera.aperture = jsonCamera.at("aperture");
-                camera.shutterSpeed = 1.0f / jsonCamera.at("shutter");
+                camera->useAutomaticExposure = false;
+                camera->iso = jsonCamera.at("ISO");
+                camera->aperture = jsonCamera.at("aperture");
+                camera->shutterSpeed = 1.0f / jsonCamera.at("shutter");
             } else if (jsonCamera.at("exposure") == "auto") {
-                camera.useAutomaticExposure = true;
-                camera.exposureCompensation = jsonCamera.at("EC");
-                camera.adaptionRate = jsonCamera.at("adaptionRate");
+                camera->useAutomaticExposure = true;
+                camera->exposureCompensation = jsonCamera.at("EC");
+                camera->adaptionRate = jsonCamera.at("adaptionRate");
             }
         }
 
         std::string name = jsonCamera.at("name");
-        m_allCameras[name] = camera;
+        m_allCameras[name] = std::move(camera);
     }
 
     std::string mainCamera = jsonScene.at("camera");
     auto entry = m_allCameras.find(mainCamera);
     if (entry != m_allCameras.end()) {
-        m_currentMainCamera = m_allCameras[mainCamera];
+        m_currentMainCamera = m_allCameras[mainCamera].get();
     }
 
     rebuildGpuSceneData();
@@ -187,10 +190,10 @@ void Scene::update(float elapsedTime, float deltaTime, bool firstFrame)
             mesh.transform().newFrame({});
         });
 
-        camera().newFrame({});
+        camera().newFrame({}, mainViewportSize());
     }
 
-    camera().update(Input::instance(), mainViewportSize(), deltaTime);
+    camera().update(Input::instance(), deltaTime);
 
     if (m_sceneDataNeedsRebuild) {
         // We shouldn't need to rebuild the whole thing, just append and potentially remove some stuff.. But the
@@ -259,12 +262,12 @@ void Scene::update(float elapsedTime, float deltaTime, bool firstFrame)
         ImGui::Separator();
 
         if (ImGui::TreeNode("Exposure control")) {
-            exposureGUI(camera());
+            camera().renderExposureGUI();
             ImGui::TreePop();
         }
 
         if (ImGui::Button("Copy current camera to clipboard")) {
-            const auto& camera = m_currentMainCamera;
+            const auto& camera = *m_currentMainCamera;
             std::vector<float> cameraPosition = { camera.position().x,
                                                   camera.position().y,
                                                   camera.position().z };
@@ -755,88 +758,4 @@ TopLevelAS& Scene::globalTopLevelAccelerationStructure() const
     ASSERT(doesMaintainRayTracingScene());
     ASSERT(m_sceneTopLevelAccelerationStructure);
     return *m_sceneTopLevelAccelerationStructure;
-}
-
-void Scene::exposureGUI(FpsCamera& camera) const
-{
-    auto& useAutoExposure = camera.useAutomaticExposure;
-    if (ImGui::RadioButton("Automatic exposure", useAutoExposure))
-        useAutoExposure = true;
-    if (ImGui::RadioButton("Manual exposure", !useAutoExposure))
-        useAutoExposure = false;
-
-    ImGui::Spacing();
-    ImGui::Spacing();
-
-    if (useAutoExposure)
-        automaticExposureGUI(camera);
-    else
-        manualExposureGUI(camera);
-}
-
-void Scene::manualExposureGUI(FpsCamera& camera) const
-{
-    // Aperture
-    {
-        constexpr float steps[] = { 1.4f, 2.0f, 2.8f, 4.0f, 5.6f, 8.0f, 11.0f, 16.0f };
-        constexpr int stepCount = sizeof(steps) / sizeof(steps[0]);
-        constexpr float apertureMin = steps[0];
-        constexpr float apertureMax = steps[stepCount - 1];
-
-        ImGui::Text("Aperture f/%.1f", camera.aperture);
-
-        // A kind of snapping SliderFloat implementation
-        {
-            ImGui::SliderFloat("aperture", &camera.aperture, apertureMin, apertureMax, "");
-
-            int index = 1;
-            for (; index < stepCount && camera.aperture >= steps[index]; ++index) { }
-            float distUp = std::abs(steps[index] - camera.aperture);
-            float distDown = std::abs(steps[index - 1] - camera.aperture);
-            if (distDown < distUp)
-                index -= 1;
-
-            camera.aperture = steps[index];
-        }
-    }
-
-    // Shutter speed
-    {
-        const int denominators[] = { 1000, 500, 400, 250, 125, 60, 30, 15, 8, 4, 2, 1 };
-        const int denominatorCount = sizeof(denominators) / sizeof(denominators[0]);
-
-        // Find the current value, snapped to the denominators
-        int index = 1;
-        {
-            for (; index < denominatorCount && camera.shutterSpeed >= (1.0f / denominators[index]); ++index) { }
-            float distUp = std::abs(1.0f / denominators[index] - camera.shutterSpeed);
-            float distDown = std::abs(1.0f / denominators[index - 1] - camera.shutterSpeed);
-            if (distDown < distUp)
-                index -= 1;
-        }
-
-        ImGui::Text("Shutter speed  1/%i s", denominators[index]);
-        ImGui::SliderInt("shutter", &index, 0, denominatorCount - 1, "");
-
-        camera.shutterSpeed = 1.0f / denominators[index];
-    }
-
-    // ISO
-    {
-        int isoHundreds = int(camera.iso + 0.5f) / 100;
-
-        ImGui::Text("ISO %i", 100 * isoHundreds);
-        ImGui::SliderInt("ISO", &isoHundreds, 1, 64, "");
-
-        camera.iso = float(isoHundreds * 100.0f);
-    }
-}
-
-void Scene::automaticExposureGUI(FpsCamera& camera) const
-{
-    ImGui::Text("Adaption rate", &camera.adaptionRate);
-    ImGui::SliderFloat("", &camera.adaptionRate, 0.0001f, 2.0f, "%.4f", 5.0f);
-
-    ImGui::Text("Exposure Compensation", &camera.exposureCompensation);
-    ImGui::SliderFloat("ECs", &camera.exposureCompensation, -5.0f, +5.0f, "%.1f");
 }

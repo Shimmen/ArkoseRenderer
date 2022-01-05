@@ -7,16 +7,8 @@ void FpsCamera::setMaxSpeed(float newMaxSpeed)
     maxSpeed = newMaxSpeed;
 }
 
-void FpsCamera::newFrame(Badge<Scene>)
+void FpsCamera::update(const Input& input, float dt)
 {
-    m_previousFrameViewFromWorld = viewMatrix();
-    m_previousFrameProjectionFromView = projectionMatrix();
-}
-
-void FpsCamera::update(const Input& input, const Extent2D& viewportSize, float dt)
-{
-    m_didModify = false;
-
     // Apply acceleration from input
 
     vec3 acceleration { 0.0f };
@@ -42,11 +34,11 @@ void FpsCamera::update(const Input& input, const Extent2D& viewportSize, float d
         acceleration -= moos::globalUp;
 
     if (usingController) {
-        m_velocity += moos::rotateVector(m_orientation, acceleration);
+        m_velocity += moos::rotateVector(orientation(), acceleration);
     } else {
         if (moos::length2(acceleration) > 0.01f && !input.isGuiUsingKeyboard()) {
             acceleration = normalize(acceleration) * (maxSpeed / timeToMaxSpeed) * dt;
-            m_velocity += moos::rotateVector(m_orientation, acceleration);
+            m_velocity += moos::rotateVector(orientation(), acceleration);
         } else {
             // If no input and movement to acceleration decelerate instead
             if (length2(m_velocity) < stopThreshold) {
@@ -64,17 +56,13 @@ void FpsCamera::update(const Input& input, const Extent2D& viewportSize, float d
     if (speed > 0.0f) {
         speed = moos::clamp(speed, 0.0f, maxSpeed);
         m_velocity = normalize(m_velocity) * speed;
-
-        m_position += m_velocity * dt;
-        m_didModify = true;
+        moveBy(m_velocity * dt);
     }
 
     // Calculate rotation velocity from input
 
-    vec3 prevPitchYawRoll = m_pitchYawRoll;
-
     // Make rotations less sensitive when zoomed in
-    float fovMultiplier = 0.2f + ((m_fieldOfView - minFieldOfView) / (maxFieldOfView - minFieldOfView)) * 0.8f;
+    float fovMultiplier = 0.2f + ((fieldOfView() - minFieldOfView) / (maxFieldOfView - minFieldOfView)) * 0.8f;
 
     vec2 controllerRotation = 0.3f * input.rightStick();
     m_pitchYawRoll.x -= controllerRotation.x * fovMultiplier * dt;
@@ -82,7 +70,7 @@ void FpsCamera::update(const Input& input, const Extent2D& viewportSize, float d
 
     if (input.isButtonDown(Button::Right) && !input.isGuiUsingMouse()) {
         // Screen size independent but also aspect ratio dependent!
-        vec2 mouseDelta = input.mouseDelta() / float(viewportSize.width());
+        vec2 mouseDelta = input.mouseDelta() / float(viewportSize().width());
 
         m_pitchYawRoll.x += -mouseDelta.x * rotationMultiplier * fovMultiplier * dt;
         m_pitchYawRoll.y += -mouseDelta.y * rotationMultiplier * fovMultiplier * dt;
@@ -90,8 +78,8 @@ void FpsCamera::update(const Input& input, const Extent2D& viewportSize, float d
 
     // Calculate banking due to movement
 
-    vec3 right = rotateVector(m_orientation, moos::globalRight);
-    vec3 forward = rotateVector(m_orientation, moos::globalForward);
+    vec3 right = rotateVector(orientation(), moos::globalRight);
+    vec3 forward = rotateVector(orientation(), moos::globalForward);
 
     if (speed > 0.0f) {
         auto direction = m_velocity / speed;
@@ -111,14 +99,12 @@ void FpsCamera::update(const Input& input, const Extent2D& viewportSize, float d
 
     m_pitchYawRoll *= pow(rotationDampening, dt);
 
-    if (length(m_pitchYawRoll - prevPitchYawRoll) > 1e-6f) {
-        m_didModify = true;
-    }
-
     // Apply rotation
 
-    m_orientation = axisAngle(right, m_pitchYawRoll.y) * m_orientation;
-    m_orientation = axisAngle(vec3(0, 1, 0), m_pitchYawRoll.x) * m_orientation;
+    quat newOrientation = axisAngle(right, m_pitchYawRoll.y) * orientation();
+    newOrientation = axisAngle(vec3(0, 1, 0), m_pitchYawRoll.x) * newOrientation;
+    setOrientation(newOrientation);
+
     m_bankingOrientation = moos::axisAngle(forward, m_pitchYawRoll.z);
 
     // Apply zoom
@@ -127,61 +113,18 @@ void FpsCamera::update(const Input& input, const Extent2D& viewportSize, float d
         m_targetFieldOfView += -input.scrollDelta() * zoomSensitivity;
         m_targetFieldOfView = moos::clamp(m_targetFieldOfView, minFieldOfView, maxFieldOfView);
     }
-    float fov = moos::lerp(m_fieldOfView, m_targetFieldOfView, 1.0f - pow(0.01f, dt));
-    if (abs(fov - m_fieldOfView) > 1e-6f) {
-        m_didModify = true;
-    }
-    m_fieldOfView = fov;
+    float fov = moos::lerp(fieldOfView(), m_targetFieldOfView, 1.0f - pow(0.01f, dt));
+    setFieldOfView(fov);
 
     // Create the view matrix
 
-    auto preAdjustedUp = rotateVector(m_orientation, vec3(0, 1, 0));
+    auto preAdjustedUp = rotateVector(orientation(), vec3(0, 1, 0));
     auto up = rotateVector(m_bankingOrientation, preAdjustedUp);
 
-    vec3 target = m_position + forward;
-    m_viewFromWorld = moos::lookAt(m_position, target, up);
+    vec3 target = position() + forward;
+    setViewFromWorld(moos::lookAt(position(), target, up));
 
     // Create the projection matrix
 
-    float width = static_cast<float>(viewportSize.width());
-    float height = static_cast<float>(viewportSize.height());
-    float aspectRatio = (height > 1e-6f) ? (width / height) : 1.0f;
-    m_projectionFromView = moos::perspectiveProjectionToVulkanClipSpace(m_fieldOfView, aspectRatio, zNear, zFar);
-    m_currentViewportSize = viewportSize;
-}
-
-mat4 FpsCamera::pixelProjectionMatrix() const
-{
-    // Ensures e.g. NDC (1,1) projects to (width-1,height-1)
-    float roundingPixelsX = (float)m_currentViewportSize.width() - 0.001f;
-    float roundingPixelsY = (float)m_currentViewportSize.height() - 0.001f;
-
-    mat4 pixelFromNDC = moos::scale(vec3(roundingPixelsX, roundingPixelsY, 1.0f)) * moos::translate(vec3(0.5f, 0.5f, 0.0f)) * moos::scale(vec3(0.5f, 0.5f, 1.0f));
-    return pixelFromNDC * projectionMatrix();
-}
-
-void FpsCamera::setDidModify(bool value)
-{
-    m_didModify = value;
-}
-
-bool FpsCamera::didModify() const
-{
-    return m_didModify;
-}
-
-void FpsCamera::lookAt(const vec3& position, const vec3& target, const vec3& up)
-{
-    m_position = position;
-
-    vec3 forward = normalize(target - position);
-    // TODO: Apparently I never bothered to implement lookRotation ...
-    //m_orientation = moos::lookRotation(direction, up);
-    vec3 right = cross(forward, up);
-    vec3 properUp = cross(right, forward);
-    mat3 orientationMat = mat3(right, properUp, -forward);
-    m_orientation = moos::quatFromMatrix(mat4(orientationMat));
-
-    m_viewFromWorld = moos::lookAt(m_position, target, up);
-    setDidModify(true);
+    setProjectionFromView(moos::perspectiveProjectionToVulkanClipSpace(fieldOfView(), aspectRatio(), zNear, zFar));
 }

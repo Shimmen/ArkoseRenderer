@@ -138,7 +138,7 @@ RenderPipelineNode::ExecuteCallback RTDiffuseGINode::constructFrame(Registry& re
         cmdList.waitEvent(0, appState.frameIndex() == 0 ? CommandList::PipelineStage::Host : CommandList::PipelineStage::RayTracing);
         cmdList.resetEvent(0, CommandList::PipelineStage::RayTracing);
         {
-            if (m_scene.camera().didModify() || Input::instance().isKeyDown(Key::R)) {
+            if (m_scene.camera().hasChangedSinceLastFrame() || Input::instance().isKeyDown(Key::R)) {
                 cmdList.clearTexture(*m_accumulationTexture, ClearColor::srgbColor(0, 0, 0));
                 m_numAccumulatedFrames = 0;
             }

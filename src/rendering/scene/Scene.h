@@ -3,7 +3,7 @@
 #include "Model.h"
 #include "rendering/scene/lights/DirectionalLight.h"
 #include "rendering/scene/lights/SpotLight.h"
-#include "rendering/camera/FpsCamera.h"
+#include "rendering/camera/Camera.h"
 #include "rendering/scene/ProbeGrid.h"
 #include <memory>
 #include <nlohmann/json_fwd.hpp>
@@ -30,8 +30,8 @@ public:
 
     // Camera & view
 
-    const FpsCamera& camera() const { return m_currentMainCamera; }
-    FpsCamera& camera() { return m_currentMainCamera; }
+    const Camera& camera() const { return *m_currentMainCamera; }
+    Camera& camera() { return *m_currentMainCamera; }
 
     Extent2D mainViewportSize() const { return m_mainViewportSize; }
     void setMainViewportSize(Badge<Backend>, Extent2D size) { m_mainViewportSize = size; }
@@ -116,8 +116,8 @@ private:
     Registry& m_registry;
 
     Extent2D m_mainViewportSize {};
-    FpsCamera m_currentMainCamera;
-    std::unordered_map<std::string, FpsCamera> m_allCameras {};
+    Camera* m_currentMainCamera;
+    std::unordered_map<std::string, std::unique_ptr<Camera>> m_allCameras {};
 
     std::vector<std::unique_ptr<Model>> m_models;
 
@@ -138,10 +138,6 @@ private:
 
     Model* m_selectedModel { nullptr };
     Mesh* m_selectedMesh { nullptr };
-
-    void exposureGUI(FpsCamera&) const;
-    void manualExposureGUI(FpsCamera&) const;
-    void automaticExposureGUI(FpsCamera&) const;
 
     // GPU data
 

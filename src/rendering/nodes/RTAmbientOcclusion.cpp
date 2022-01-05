@@ -63,7 +63,7 @@ RenderPipelineNode::ExecuteCallback RTAmbientOcclusion::constructFrame(Registry&
         cmdList.waitEvent(1, appState.frameIndex() == 0 ? CommandList::PipelineStage::Host : CommandList::PipelineStage::RayTracing);
         cmdList.resetEvent(1, CommandList::PipelineStage::RayTracing);
         {
-            if (m_scene.camera().didModify() || Input::instance().isKeyDown(Key::R)) {
+            if (m_scene.camera().hasChangedSinceLastFrame() || Input::instance().isKeyDown(Key::R)) {
                 cmdList.clearTexture(*m_accumulatedAO, ClearColor::srgbColor(0, 0, 0));
                 m_numAccumulatedFrames = 0;
             }

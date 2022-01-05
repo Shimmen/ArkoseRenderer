@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rendering/camera/Camera.h"
 #include "utility/Badge.h"
 #include "utility/Extent.h"
 #include "utility/Input.h"
@@ -10,72 +11,20 @@
 
 class Scene;
 
-class FpsCamera {
+class FpsCamera final : public Camera {
 public:
     FpsCamera() = default;
     ~FpsCamera() = default;
 
     void setMaxSpeed(float);
 
-    void newFrame(Badge<Scene>);
-    void update(const Input&, const Extent2D& screenExtent, float deltaTime);
+    void update(const Input&, float deltaTime) override;
 
-    void setDidModify(bool);
-    bool didModify() const;
-
-    void lookAt(const vec3& position, const vec3& target, const vec3& up = moos::globalY);
-
-    vec3 position() const { return m_position; }
-    void setPosition(vec3 p) { m_position = p; }
-
-    quat orientation() const { return m_orientation; }
-    void setOrientation(quat q) { m_orientation = q; }
-
-    vec3 forward() const { return moos::rotateVector(orientation(), moos::globalForward); }
-    vec3 right() const { return moos::rotateVector(orientation(), moos::globalRight); }
-    vec3 up() const { return moos::rotateVector(orientation(), moos::globalUp); }
-
-    [[nodiscard]] mat4 viewMatrix() const { return m_viewFromWorld; }
-    [[nodiscard]] mat4 projectionMatrix() const { return m_projectionFromView; }
-    [[nodiscard]] mat4 viewProjectionMatrix() const { return projectionMatrix() * viewMatrix(); }
-
-    [[nodiscard]] mat4 previousFrameViewMatrix() const { return m_previousFrameViewFromWorld.value_or(viewMatrix()); }
-    [[nodiscard]] mat4 previousFrameProjectionMatrix() const { return m_previousFrameProjectionFromView.value_or(projectionMatrix()); }
-    [[nodiscard]] mat4 previousFrameViewProjectionMatrix() const { return previousFrameProjectionMatrix() * previousFrameViewMatrix(); }
-
-    mat4 pixelProjectionMatrix() const;
-
-    static constexpr float zNear { 0.25f };
-    static constexpr float zFar { 10000.0f };
-
-    // Default manual values according to the "sunny 16 rule" (https://en.wikipedia.org/wiki/Sunny_16_rule)
-    float aperture { 16.0f }; // i.e. f/16
-    float iso { 400.0f };
-    float shutterSpeed { 1.0f / iso };
-
-    bool useAutomaticExposure { true };
-    float exposureCompensation { 0.0f };
-    float adaptionRate { 0.0018f };
-
-private:
-    vec3 m_position {};
+protected:
     vec3 m_velocity {};
-
-    quat m_orientation {};
     vec3 m_pitchYawRoll {};
     quat m_bankingOrientation { { 0, 0, 0 }, 1 };
-
-    float m_fieldOfView { moos::toRadians(60.0f) };
-    float m_targetFieldOfView { m_fieldOfView };
-
-    mat4 m_viewFromWorld {};
-    mat4 m_projectionFromView {};
-    Extent2D m_currentViewportSize {};
-
-    std::optional<mat4> m_previousFrameViewFromWorld { std::nullopt };
-    std::optional<mat4> m_previousFrameProjectionFromView { std::nullopt };
-
-    bool m_didModify { true };
+    float m_targetFieldOfView { fieldOfView() };
 
     float maxSpeed { 10.0f };
     static constexpr float timeToMaxSpeed { 0.25f };

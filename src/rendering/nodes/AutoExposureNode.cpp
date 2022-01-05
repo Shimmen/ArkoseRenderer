@@ -30,7 +30,7 @@ RenderPipelineNode::ExecuteCallback AutoExposureNode::constructFrame(Registry& r
     ComputeState& exposeComputeState = reg.createComputeState(Shader::createCompute("post/expose.comp"), { &sourceDataBindingSet, &targetDataBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList) {
-        FpsCamera& camera = m_scene.camera();
+        Camera& camera = m_scene.camera();
         if (!camera.useAutomaticExposure)
             return;
 

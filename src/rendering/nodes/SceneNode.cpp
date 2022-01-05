@@ -73,7 +73,7 @@ RenderPipelineNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) con
 
         // Update camera data
         {
-            const FpsCamera& camera = m_scene.camera();
+            const Camera& camera = m_scene.camera();
             mat4 pixelFromView = camera.pixelProjectionMatrix();
             mat4 projectionFromView = camera.projectionMatrix();
             mat4 viewFromWorld = camera.viewMatrix();
