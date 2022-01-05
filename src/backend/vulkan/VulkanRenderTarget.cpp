@@ -36,6 +36,11 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
             attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
             attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
             break;
+        case LoadOp::Discard:
+            attachment.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+            attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            break;
         }
 
         switch (storeOp) {

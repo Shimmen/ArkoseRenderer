@@ -8,6 +8,7 @@
 enum class LoadOp {
     Clear,
     Load,
+    Discard,
 };
 
 enum class StoreOp {

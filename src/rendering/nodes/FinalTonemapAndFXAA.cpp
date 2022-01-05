@@ -25,7 +25,7 @@ RenderPipelineNode::ExecuteCallback FinalTonemapAndFXAA::constructFrame(Registry
 
 #if USE_FXAA
     Texture& ldrTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA8);
-    RenderTarget& ldrTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &ldrTexture } });
+    RenderTarget& ldrTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &ldrTexture, LoadOp::Discard } });
 #else
     const RenderTarget& ldrTarget = reg.windowRenderTarget();
 #endif
