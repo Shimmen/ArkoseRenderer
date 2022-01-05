@@ -7,6 +7,7 @@
 #include "rendering/nodes/DDGIProbeDebug.h"
 #include "rendering/nodes/FinalTonemapAndFXAA.h"
 #include "rendering/nodes/ForwardRenderNode.h"
+#include "rendering/nodes/GIComposeNode.h"
 #include "rendering/nodes/PrepassNode.h"
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/RTDirectLightNode.h"
@@ -15,7 +16,8 @@
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SkyViewNode.h"
 #include "rendering/nodes/SSAONode.h"
-#include "rendering/nodes/GIComposeNode.h"
+#include "rendering/nodes/TAANode.h"
+#include "rendering/nodes/TonemapNode.h"
 #include "rendering/scene/models/GltfModel.h"
 #include "utility/Input.h"
 #include "utility/Logging.h"
@@ -62,9 +64,10 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     //pipeline.addNode<RTFirstHitNode>(scene); finalTexture = "RTDirectLight";
     //pipeline.addNode<RTDirectLightNode>(scene); finalTexture = "RTFirstHit";
 
-    scene.camera().setFrustumJitteringEnabled(true);
+    pipeline.addNode<TonemapNode>(scene, finalTexture, TonemapNode::Mode::RenderToSceneColorLDR);
 
-    pipeline.addNode<FinalTonemapAndFXAA>(scene, finalTexture);
+    //pipeline.addNode<FinalTonemapAndFXAA>(scene, finalTexture);
+    pipeline.addNode<TAANode>(scene);
 }
 
 void ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
