@@ -62,6 +62,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     //pipeline.addNode<RTFirstHitNode>(scene); finalTexture = "RTDirectLight";
     //pipeline.addNode<RTDirectLightNode>(scene); finalTexture = "RTFirstHit";
 
+    scene.camera().setFrustumJitteringEnabled(true);
+
     pipeline.addNode<FinalTonemapAndFXAA>(scene, finalTexture);
 }
 

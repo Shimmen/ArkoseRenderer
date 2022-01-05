@@ -1,15 +1,30 @@
 #include "Camera.h"
 
+#include "geometry/Halton.h"
 #include <moos/transform.h>
 #include <imgui/imgui.h>
 
-void Camera::newFrame(Badge<Scene>, Extent2D viewportSize)
+void Camera::newFrame(Badge<Scene>, Extent2D viewportSize, bool firstFrame)
 {
-    m_previousFrameViewFromWorld = viewMatrix();
-    m_previousFrameProjectionFromView = projectionMatrix();
+    if (!firstFrame) {
+        m_previousFrameViewFromWorld = viewMatrix();
+        m_previousFrameProjectionFromView = projectionMatrix();
+    }
+    
+    if (isFrustumJitteringEnabled()) {
+
+        if (!firstFrame)
+            m_previousFrameFrustumJitterPixelOffset = frustumJitterPixelOffset();
+
+        int haltonSampleIdx = (m_frameIndex++) % 64;
+        vec2 haltonSample01 = halton::generateHaltonSample(haltonSampleIdx, 3, 2);
+        vec2 haltonSampleCentered = haltonSample01 - vec2(0.5f);
+        m_frustumJitterPixelOffset = 0.75f * haltonSampleCentered;
+    }
 
     // Reset at frame boundary
-    m_modified = false;
+    if (!firstFrame)
+        m_modified = false;
 
     m_viewportSize = viewportSize;
 }
@@ -109,6 +124,16 @@ void Camera::setProjectionFromView(mat4 projectionFromView)
     if (projectionFromView != m_projectionFromView) {
         m_projectionFromView = projectionFromView;
         markAsModified();
+    }
+
+    // NOTE: We intentionally ignore the jittering when considering camera modified state
+    if (m_frustumJitteringEnabled) {
+        float uvOffsetX = float(frustumJitterPixelOffset().x) / viewportSize().width();
+        float uvOffsetY = float(frustumJitterPixelOffset().y) / viewportSize().height();
+        float ndcOffsetX = uvOffsetX * 2.0f;
+        float ndcOffsetY = uvOffsetY * 2.0f;
+        mat4 jitteringOffset = moos::translate(vec3(ndcOffsetX, ndcOffsetY, 0.0f));
+        m_projectionFromView = jitteringOffset * m_projectionFromView;
     }
 }
 

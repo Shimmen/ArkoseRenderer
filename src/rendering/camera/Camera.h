@@ -17,7 +17,7 @@ public:
     Camera() = default;
     ~Camera() = default;
 
-    virtual void newFrame(Badge<Scene>, Extent2D viewportSize);
+    virtual void newFrame(Badge<Scene>, Extent2D viewportSize, bool firstFrame);
     virtual void update(const Input&, float deltaTime) {}
 
     void renderExposureGUI();
@@ -55,6 +55,11 @@ public:
 
     mat4 pixelProjectionMatrix() const;
 
+    bool isFrustumJitteringEnabled() const { return m_frustumJitteringEnabled; }
+    void setFrustumJitteringEnabled(bool enabled) { m_frustumJitteringEnabled = enabled; }
+    [[nodiscard]] vec2 frustumJitterPixelOffset() const { return m_frustumJitterPixelOffset; }
+    [[nodiscard]] vec2 previousFrameFrustumJitterPixelOffset() const { return m_previousFrameFrustumJitterPixelOffset.value_or(frustumJitterPixelOffset()); }
+
     static constexpr float zNear { 0.25f };
     static constexpr float zFar { 10000.0f };
 
@@ -82,8 +87,13 @@ private:
     mat4 m_projectionFromView {};
     Extent2D m_viewportSize {};
 
+    bool m_frustumJitteringEnabled { false };
+    vec2 m_frustumJitterPixelOffset {};
+    size_t m_frameIndex { 0 };
+
     std::optional<mat4> m_previousFrameViewFromWorld { std::nullopt };
     std::optional<mat4> m_previousFrameProjectionFromView { std::nullopt };
+    std::optional<vec2> m_previousFrameFrustumJitterPixelOffset { std::nullopt };
 
     bool m_modified { true };
 };
