@@ -5,8 +5,8 @@
 #include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/DDGINode.h"
 #include "rendering/nodes/DDGIProbeDebug.h"
-#include "rendering/nodes/FinalTonemapAndFXAA.h"
 #include "rendering/nodes/ForwardRenderNode.h"
+#include "rendering/nodes/FXAANode.h"
 #include "rendering/nodes/GIComposeNode.h"
 #include "rendering/nodes/PrepassNode.h"
 #include "rendering/nodes/PickingNode.h"
@@ -66,8 +66,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     pipeline.addNode<TonemapNode>(scene, finalTexture, TonemapNode::Mode::RenderToSceneColorLDR);
 
-    //pipeline.addNode<FinalTonemapAndFXAA>(scene, finalTexture);
-    pipeline.addNode<TAANode>(scene);
+    pipeline.addNode<FXAANode>(scene);
+    //pipeline.addNode<TAANode>(scene);
 }
 
 void ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)

@@ -1,6 +1,7 @@
 #version 460
 
 #include <common/noise.glsl>
+#include <common/namedUniforms.glsl>
 
 #define FXAA_PC 1
 #define FXAA_GLSL_130 1
@@ -13,7 +14,8 @@
 layout(location = 0) noperspective in vec2 vTexCoord;
 
 layout(set = 0, binding = 0) uniform sampler2D uTexture;
-layout(push_constant) uniform PushConstants {
+
+NAMED_UNIFORMS(pushConstants,
     //
     // This must be from a constant/uniform.
     // {x_} = 1.0/screenWidthInPixels
@@ -45,7 +47,7 @@ layout(push_constant) uniform PushConstants {
 
     float filmGrainGain;
     uint frameIndex;
-};
+)
 
 layout(location = 0) out vec4 oColor;
 
@@ -72,13 +74,13 @@ void main()
         pos, fxaaConsolePosPos, uTexture,
         uTexture,// unused, but must pass something .. fxaaConsole360TexExpBiasNegOne,
         uTexture,// unused, but must pass something .. fxaaConsole360TexExpBiasNegTwo,
-        fxaaQualityRcpFrame,
+        pushConstants.fxaaQualityRcpFrame,
         fxaaConsoleRcpFrameOpt,
         fxaaConsoleRcpFrameOpt2,
         fxaaConsole360RcpFrameOpt2,
-        fxaaQualitySubpix,
-        fxaaQualityEdgeThreshold,
-        fxaaQualityEdgeThresholdMin,
+        pushConstants.fxaaQualitySubpix,
+        pushConstants.fxaaQualityEdgeThreshold,
+        pushConstants.fxaaQualityEdgeThresholdMin,
         fxaaConsoleEdgeSharpness,
         fxaaConsoleEdgeThreshold,
         fxaaConsoleEdgeThresholdMin,
@@ -86,8 +88,8 @@ void main()
 
     // TODO: Use blue noise (or something even better)
     // TODO: Make filmGrainGain a function of the camera ISO: higher ISO -> more digital sensor noise!
-    float noise = hash_2u_to_1f(uvec2(gl_FragCoord.xy) + frameIndex * uvec2(textureSize(uTexture, 0)));
-    vec3 filmGrain = vec3(filmGrainGain * (2.0 * noise - 1.0));
+    float noise = hash_2u_to_1f(uvec2(gl_FragCoord.xy) + pushConstants.frameIndex * uvec2(textureSize(uTexture, 0)));
+    vec3 filmGrain = vec3(pushConstants.filmGrainGain * (2.0 * noise - 1.0));
     vec3 color = aaColor.rgb + filmGrain;
 
     oColor = vec4(color, 1.0);
