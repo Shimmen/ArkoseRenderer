@@ -49,6 +49,15 @@ RenderTarget& Registry::createRenderTarget(std::vector<RenderTarget::Attachment>
     return *m_renderTargets.back();
 }
 
+static void validateTextureDescription(Texture::TextureDescription desc)
+{
+    // TODO: Add more validation
+    if (desc.extent.width() == 0 || desc.extent.height() == 0 || desc.extent.depth() == 0)
+        LogErrorAndExit("Registry: One or more texture dimensions are zero (extent={%u, %u, %u})\n", desc.extent.width(), desc.extent.height(), desc.extent.depth());
+    if (desc.arrayCount == 0)
+        LogErrorAndExit("Registry: Texture array count must be >= 1 but is %u\n", desc.arrayCount);
+}
+
 Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
 {
     Texture::TextureDescription desc {
@@ -63,6 +72,7 @@ Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Text
         .multisampling = Texture::Multisampling::None
     };
 
+    validateTextureDescription(desc);
     auto texture = backend().createTexture(desc);
     texture->setOwningRegistry({}, this);
 
@@ -84,6 +94,7 @@ Texture& Registry::createTextureArray(uint32_t itemCount, Extent2D extent, Textu
         .multisampling = Texture::Multisampling::None
     };
 
+    validateTextureDescription(desc);
     auto texture = backend().createTexture(desc);
     texture->setOwningRegistry({}, this);
 
@@ -142,6 +153,7 @@ Texture& Registry::createTextureFromImage(const Image& image, bool srgb, bool ge
         .multisampling = Texture::Multisampling::None
     };
 
+    validateTextureDescription(desc);
     auto texture = backend().createTexture(desc);
     texture->setOwningRegistry({}, this);
 
@@ -193,6 +205,7 @@ Texture& Registry::createMultisampledTexture2D(Extent2D extent, Texture::Format 
         .multisampling = multisampling
     };
 
+    validateTextureDescription(desc);
     auto texture = backend().createTexture(desc);
     texture->setOwningRegistry({}, this);
 
