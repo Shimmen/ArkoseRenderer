@@ -61,7 +61,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     const std::string sceneTexture = "SceneColor";
     const std::string finalTextureToScreen = "SceneColorLDR";
-    const AntiAliasing antiAliasingMode = AntiAliasing::FXAA;
+    const AntiAliasing antiAliasingMode = AntiAliasing::TAA;
 
     // Uncomment for ray tracing visualisations
     //pipeline.addNode<RTFirstHitNode>(scene); finalTexture = "RTFirstHit";

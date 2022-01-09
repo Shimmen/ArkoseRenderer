@@ -1,0 +1,28 @@
+#version 460
+
+#include <common/namedUniforms.glsl>
+
+layout(set = 0, binding = 0, rgba8) uniform restrict writeonly image2D resultImage;
+layout(set = 0, binding = 1)        uniform                  sampler2D currentTexture;
+layout(set = 0, binding = 2)        uniform                  sampler2D historyTexture;
+
+NAMED_UNIFORMS(pushConstants,
+    bool placeholder;
+    //bool enabled;
+    //bool firstFrame;
+)
+
+layout(local_size_x = 16, local_size_y = 16) in;
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imgSize = ivec2(textureSize(currentTexture, 0).xy);
+
+    if (any(greaterThanEqual(pixelCoord, imgSize)))
+        return;
+
+    vec3 current = texelFetch(currentTexture, pixelCoord, 0).rgb;
+    vec3 antiAliased = current;
+
+    imageStore(resultImage, pixelCoord, vec4(antiAliased, 1.0));
+}

@@ -13,38 +13,60 @@ TAANode::TAANode(Scene& scene)
     }
 }
 
+void TAANode::constructNode(Registry& reg)
+{
+    m_accumulationTexture = &reg.createTexture2D(m_scene.mainViewportSize(), Texture::Format::RGBA8);
+}
+
 RenderPipelineNode::ExecuteCallback TAANode::constructFrame(Registry& reg) const
 {
     SCOPED_PROFILE_ZONE();
 
-    // TODO: We should probably use compute for this now.. we don't require interpolation or any type of depth writing etc.
-    std::vector<vec2> fullScreenTriangle { { -1, -3 }, { -1, 1 }, { 3, 1 } };
-    Buffer& vertexBuffer = reg.createBuffer(std::move(fullScreenTriangle), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-    VertexLayout vertexLayout = VertexLayout { VertexComponent::Position2F };
+    Texture& currentFrameTexture = *reg.getTexture("SceneColorLDR");
 
-    Texture& ldrTexture = *reg.getTexture("SceneColorLDR");
+    Texture& historyTexture = reg.createTexture2D(m_accumulationTexture->extent(), m_accumulationTexture->format(),
+                                                  Texture::Filters::linear(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
 
-    BindingSet& taaBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &ldrTexture, ShaderBindingType::TextureSampler } });
-    Shader taaShader = Shader::createBasicRasterize("taa/taa.vert", "taa/taa.frag");
-    RenderStateBuilder taaStateBuilder { reg.windowRenderTarget(), taaShader, vertexLayout };
-    taaStateBuilder.stateBindings().at(0, taaBindingSet);
-    taaStateBuilder.writeDepth = false;
-    taaStateBuilder.testDepth = false;
-    RenderState& taaRenderState = reg.createRenderState(taaStateBuilder);
+    BindingSet& taaBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, m_accumulationTexture, ShaderBindingType::StorageImage },
+                                                       { 1, ShaderStageCompute, &currentFrameTexture, ShaderBindingType::TextureSampler },
+                                                       { 2, ShaderStageCompute, &historyTexture, ShaderBindingType::TextureSampler } });
+
+    Shader taaComputeShader = Shader::createCompute("taa/taa.comp");
+    ComputeState& taaComputeState = reg.createComputeState(taaComputeShader, { &taaBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList) {
 
-        // TODO: Respect enabled state!
         ImGui::Checkbox("Enabled##taa", &m_taaEnabled);
         m_scene.camera().setFrustumJitteringEnabled(m_taaEnabled);
 
-        cmdList.beginRendering(taaRenderState, ClearColor::black(), 1.0f);
-        {
-            cmdList.setNamedUniform("enabled", m_taaEnabled);
-            cmdList.setNamedUniform("filmGrainGain", m_scene.filmGrainGain());
-            cmdList.setNamedUniform("frameIndex", appState.frameIndex());
+        const bool wasEnabledThisFrame = m_taaEnabled && !m_taaEnabledPreviousFrame;
+        m_taaEnabledPreviousFrame = m_taaEnabled;
+
+        if (!m_taaEnabled)
+            return;
+
+        // NOTE: Relative first frame includes first frame after e.g. screen resize and other pipline invalidating actions
+        const bool firstFrame = appState.isRelativeFirstFrame() || wasEnabledThisFrame;
+
+        if (firstFrame) {
+            cmdList.copyTexture(currentFrameTexture, *m_accumulationTexture);
+            return;
         }
-        cmdList.draw(vertexBuffer, 3);
-        cmdList.endRendering();
+
+        // Grab a copy of the current state of the accumulation texture; this is our history for this frame and we overwrite/accumulate in the accumulation texture
+        ASSERT(m_accumulationTexture->extent() == historyTexture.extent());
+        cmdList.copyTexture(*m_accumulationTexture, historyTexture);
+
+        cmdList.setComputeState(taaComputeState);
+        cmdList.bindSet(taaBindingSet, 0);
+
+        // TODO: Set named uniforms!
+
+        cmdList.dispatch(currentFrameTexture.extent3D(), { 16, 16, 1 });
+
+
+        // TODO: Noooo.. we don't want to have to do this :(
+        // There might be some clever way to avoid all these copies.
+        cmdList.copyTexture(*m_accumulationTexture, currentFrameTexture);
     };
 }
