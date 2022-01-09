@@ -10,9 +10,8 @@
 
 #include <fxaa/Fxaa3_11.h>
 
-layout(location = 0) noperspective in vec2 vTexCoord;
-
-layout(set = 0, binding = 0) uniform sampler2D uTexture;
+layout(set = 0, binding = 0, rgba8) uniform restrict writeonly image2D dstImage;
+layout(set = 0, binding = 1)        uniform                  sampler2D srcTexture;
 
 NAMED_UNIFORMS(pushConstants,
     //
@@ -43,16 +42,25 @@ NAMED_UNIFORMS(pushConstants,
     //   0.0625 - high quality (faster)
     //   0.0312 - visible limit (slower)
     FxaaFloat fxaaQualityEdgeThresholdMin;
+
+    float filmGrainGain;
+    uint frameIndex;
 )
 
-layout(location = 0) out vec4 oColor;
-
+layout(local_size_x = 16, local_size_y = 16) in;
 void main()
 {
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imgSize = imageSize(dstImage);
+
+    if (any(greaterThanEqual(pixelCoord, imgSize)))
+        return;
+
     // NOTE:
     //  {rgb_} = color in linear or perceptual color space
     //  {___a} = luma in perceptual color space (not linear)
-    FxaaFloat2 pos = vTexCoord;
+    vec2 texCoord = (vec2(pixelCoord) + vec2(0.5)) / vec2(imgSize);
+    FxaaFloat2 pos = texCoord;
 
     // note: unused
     FxaaFloat4 fxaaConsolePosPos;
@@ -67,9 +75,9 @@ void main()
     FxaaFloat4 fxaaConsole360ConstDir;
 
     vec4 aaColor = FxaaPixelShader(
-        pos, fxaaConsolePosPos, uTexture,
-        uTexture,// unused, but must pass something .. fxaaConsole360TexExpBiasNegOne,
-        uTexture,// unused, but must pass something .. fxaaConsole360TexExpBiasNegTwo,
+        pos, fxaaConsolePosPos, srcTexture,
+        srcTexture,// unused, but must pass something .. fxaaConsole360TexExpBiasNegOne,
+        srcTexture,// unused, but must pass something .. fxaaConsole360TexExpBiasNegTwo,
         pushConstants.fxaaQualityRcpFrame,
         fxaaConsoleRcpFrameOpt,
         fxaaConsoleRcpFrameOpt2,
@@ -82,5 +90,5 @@ void main()
         fxaaConsoleEdgeThresholdMin,
         fxaaConsole360ConstDir);
 
-    oColor = vec4(aaColor.rgb, 1.0);
+    imageStore(dstImage, pixelCoord, vec4(aaColor.rgb, 1.0));
 }

@@ -14,21 +14,19 @@ RenderPipelineNode::ExecuteCallback FXAANode::constructFrame(Registry& reg) cons
 {
     SCOPED_PROFILE_ZONE();
 
-    std::vector<vec2> fullScreenTriangle { { -1, -3 }, { -1, 1 }, { 3, 1 } };
-    Buffer& vertexBuffer = reg.createBuffer(std::move(fullScreenTriangle), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-    VertexLayout vertexLayout = VertexLayout { VertexComponent::Position2F };
-
     Texture& ldrTexture = *reg.getTexture("SceneColorLDR");
+    Texture& replaceTex = reg.createTexture2D(ldrTexture.extent(), ldrTexture.format(), ldrTexture.filters(), ldrTexture.mipmap(), ldrTexture.wrapMode());
 
-    BindingSet& fxaaBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &ldrTexture, ShaderBindingType::TextureSampler } });
-    Shader fxaaShader = Shader::createBasicRasterize("fxaa/anti-alias.vert", "fxaa/anti-alias.frag");
-    RenderStateBuilder fxaaStateBuilder { reg.windowRenderTarget(), fxaaShader, vertexLayout };
-    fxaaStateBuilder.stateBindings().at(0, fxaaBindingSet);
-    fxaaStateBuilder.writeDepth = false;
-    fxaaStateBuilder.testDepth = false;
-    RenderState& fxaaRenderState = reg.createRenderState(fxaaStateBuilder);
+    BindingSet& fxaaBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &replaceTex, ShaderBindingType::StorageImage },
+                                                        { 1, ShaderStageCompute, &ldrTexture, ShaderBindingType::TextureSampler } });
+
+    Shader computeShader = Shader::createCompute("fxaa/anti-alias.comp");
+    ComputeState& fxaaComputeState = reg.createComputeState(computeShader, { &fxaaBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList) {
+
+        static bool enabled = true;
+        ImGui::Checkbox("Enabled##fxaa", &enabled);
 
         static float subpix = 0.75f;
         static float edgeThreshold = 0.166f;
@@ -40,20 +38,22 @@ RenderPipelineNode::ExecuteCallback FXAANode::constructFrame(Registry& reg) cons
             ImGui::TreePop();
         }
 
-        cmdList.beginRendering(fxaaRenderState, ClearColor::black(), 1.0f);
-        {
+        if (enabled) {
+            cmdList.setComputeState(fxaaComputeState);
+            cmdList.bindSet(fxaaBindingSet, 0);
+
             vec2 pixelSize = vec2(1.0f / ldrTexture.extent().width(), 1.0f / ldrTexture.extent().height());
             cmdList.setNamedUniform("fxaaQualityRcpFrame", pixelSize);
-
             cmdList.setNamedUniform("fxaaQualitySubpix", subpix);
             cmdList.setNamedUniform("fxaaQualityEdgeThreshold", edgeThreshold);
             cmdList.setNamedUniform("fxaaQualityEdgeThresholdMin", edgeThresholdMin);
 
-            cmdList.setNamedUniform("filmGrainGain", m_scene.filmGrainGain());
-            cmdList.setNamedUniform("frameIndex", appState.frameIndex());
+            cmdList.dispatch(ldrTexture.extent3D(), { 16, 16, 1 });
 
-            cmdList.draw(vertexBuffer, 3);
+            // TODO: This is stupid.. we should have a way to "replace" textures of a name so we can maintain these chains of textures..
+            // Well maybe not. Usually we have a compute pass which can have a RW-image for input+output, but the FXAA source doesn't
+            // support that, it needs a texture sampler to read from. So this might be quite a special case..
+            cmdList.copyTexture(replaceTex, ldrTexture);
         }
-        cmdList.endRendering();
     };
 }

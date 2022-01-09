@@ -176,6 +176,7 @@ public:
 
     [[nodiscard]] MinFilter minFilter() const { return m_minFilter; }
     [[nodiscard]] MagFilter magFilter() const { return m_magFilter; }
+    [[nodiscard]] Filters filters() const { return { minFilter(), magFilter() }; }
     [[nodiscard]] WrapModes wrapMode() const { return m_wrapMode; }
 
     [[nodiscard]] Mipmap mipmap() const { return m_mipmap; }
