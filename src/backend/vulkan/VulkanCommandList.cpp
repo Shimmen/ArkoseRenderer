@@ -217,6 +217,8 @@ void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t s
                              0, nullptr,
                              0, nullptr,
                              (uint32_t)barriers.size(), barriers.data());
+
+        dst.currentLayout = finalDstLayout;
     }
 }
 
