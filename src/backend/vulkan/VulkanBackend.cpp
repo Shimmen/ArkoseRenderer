@@ -1147,7 +1147,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
     double cpuFrameStartTime = glfwGetTime();
 
-    bool isRelativeFirstFrame = m_relativeFrameIndex == 0;
+    bool isRelativeFirstFrame = m_relativeFrameIndex < m_frameContexts.size();
     AppState appState { m_swapchainExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
 
     uint32_t frameContextIndex = m_currentFrameIndex % m_frameContexts.size();
