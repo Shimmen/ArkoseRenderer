@@ -6,6 +6,7 @@
 #include "rendering/nodes/DDGINode.h"
 #include "rendering/nodes/DDGIProbeDebug.h"
 #include "rendering/nodes/ForwardRenderNode.h"
+#include "rendering/nodes/FinalNode.h"
 #include "rendering/nodes/FXAANode.h"
 #include "rendering/nodes/GIComposeNode.h"
 #include "rendering/nodes/PrepassNode.h"
@@ -58,17 +59,15 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     pipeline.addNode<DDGIProbeDebug>(scene);
 
-    std::string finalTexture = "SceneColor";
-    AntiAliasing antiAliasingMode = AntiAliasing::TAA;
+    const std::string sceneTexture = "SceneColor";
+    const std::string finalTextureToScreen = "SceneColorLDR";
+    const AntiAliasing antiAliasingMode = AntiAliasing::None;
 
     // Uncomment for ray tracing visualisations
     //pipeline.addNode<RTFirstHitNode>(scene); finalTexture = "RTFirstHit";
     //pipeline.addNode<RTDirectLightNode>(scene); finalTexture = "RTDirectLight";
 
-    auto tonemapMode = (antiAliasingMode == AntiAliasing::None)
-        ? TonemapNode::Mode::RenderToWindow
-        : TonemapNode::Mode::RenderToSceneColorLDR;
-    pipeline.addNode<TonemapNode>(scene, finalTexture, tonemapMode);
+    pipeline.addNode<TonemapNode>(scene, sceneTexture);
 
     switch (antiAliasingMode) {
     case AntiAliasing::FXAA:
@@ -78,6 +77,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         pipeline.addNode<TAANode>(scene);
         break;
     }
+
+    pipeline.addNode<FinalNode>(scene, finalTextureToScreen);
 }
 
 void ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)

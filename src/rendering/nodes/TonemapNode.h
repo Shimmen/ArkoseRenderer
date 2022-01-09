@@ -11,7 +11,7 @@ public:
         RenderToSceneColorLDR,
     };
 
-    TonemapNode(Scene&, std::string sourceTextureName, Mode);
+    TonemapNode(Scene&, std::string sourceTextureName, Mode = Mode::RenderToSceneColorLDR);
 
     std::string name() const override { return "Tonemap"; }
 
