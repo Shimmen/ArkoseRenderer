@@ -19,7 +19,7 @@ void Camera::newFrame(Badge<Scene>, Extent2D viewportSize, bool firstFrame)
         int haltonSampleIdx = (m_frameIndex++) % 64;
         vec2 haltonSample01 = halton::generateHaltonSample(haltonSampleIdx, 3, 2);
         vec2 haltonSampleCentered = haltonSample01 - vec2(0.5f);
-        m_frustumJitterPixelOffset = 0.75f * haltonSampleCentered;
+        m_frustumJitterPixelOffset = frustumJitterScale * haltonSampleCentered;
     }
 
     // Reset at frame boundary
@@ -135,6 +135,14 @@ void Camera::setProjectionFromView(mat4 projectionFromView)
         mat4 jitteringOffset = moos::translate(vec3(ndcOffsetX, ndcOffsetY, 0.0f));
         m_projectionFromView = jitteringOffset * m_projectionFromView;
     }
+}
+
+vec2 Camera::totalFrustumJitterInUVCoords() const
+{
+    vec2 totalJitterPixelOffset = frustumJitterPixelOffset() + previousFrameFrustumJitterPixelOffset();
+    float x = totalJitterPixelOffset.x / float(viewportSize().width());
+    float y = totalJitterPixelOffset.y / float(viewportSize().height());
+    return vec2(x, y);
 }
 
 void Camera::renderExposureGUI()

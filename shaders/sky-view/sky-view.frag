@@ -47,8 +47,6 @@ void main()
 
         vec2 velocity = (vPosition.xy - previousFrameProjectedPos.xy) * vec2(0.5, 0.5); // in uv-space
 
-        // TODO: Adjust for jitter here when we have that in place!
-        
         //velocity = abs(velocity) * 100.0; // debug code
         oVelocity = vec4(velocity, 0.0, 0.0);
     }

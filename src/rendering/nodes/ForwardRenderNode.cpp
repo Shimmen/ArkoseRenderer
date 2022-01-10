@@ -92,6 +92,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
             cmdList.beginRendering(renderState, ClearColor::srgbColor(0, 0, 0, 0), 1.0f);
             cmdList.setNamedUniform("ambientAmount", m_scene.exposedAmbient());
             cmdList.setNamedUniform("indirectExposure", m_scene.lightPreExposureValue());
+            cmdList.setNamedUniform("totalFrustumJitter", m_scene.camera().totalFrustumJitterInUVCoords());
 
             cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout(m_vertexLayout));
             cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());

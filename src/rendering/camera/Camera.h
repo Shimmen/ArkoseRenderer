@@ -59,6 +59,9 @@ public:
     void setFrustumJitteringEnabled(bool enabled) { m_frustumJitteringEnabled = enabled; }
     [[nodiscard]] vec2 frustumJitterPixelOffset() const { return m_frustumJitterPixelOffset; }
     [[nodiscard]] vec2 previousFrameFrustumJitterPixelOffset() const { return m_previousFrameFrustumJitterPixelOffset.value_or(frustumJitterPixelOffset()); }
+    [[nodiscard]] vec2 totalFrustumJitterInUVCoords() const;
+
+    float frustumJitterScale { 0.25f };
 
     static constexpr float zNear { 0.25f };
     static constexpr float zFar { 10000.0f };

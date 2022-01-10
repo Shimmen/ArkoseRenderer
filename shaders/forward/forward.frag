@@ -37,6 +37,7 @@ layout(set = 5, binding = 2) uniform sampler2D ddgiVisibilityAtlas;
 NAMED_UNIFORMS(pushConstants,
     float ambientAmount;
     float indirectExposure;
+    vec2 totalFrustumJitter;
 )
 
 layout(location = 0) out vec4 oColor;
@@ -149,8 +150,7 @@ void main()
         vec2 previousPos = vPrevFrameProjectedPos.xy / vPrevFrameProjectedPos.w;
 
         velocity = (currentPos - previousPos) * vec2(0.5, 0.5); // in uv-space
-
-        // TODO: Adjust for jitter here when we have that in place!
+        velocity -= pushConstants.totalFrustumJitter;
 
         //velocity = abs(velocity) * 100.0; // debug code
     }
