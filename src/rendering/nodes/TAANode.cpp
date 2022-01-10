@@ -23,13 +23,15 @@ RenderPipelineNode::ExecuteCallback TAANode::constructFrame(Registry& reg) const
     SCOPED_PROFILE_ZONE();
 
     Texture& currentFrameTexture = *reg.getTexture("SceneColorLDR");
+    Texture& currentFrameVelocity = *reg.getTexture("SceneVelocity");
 
     Texture& historyTexture = reg.createTexture2D(m_accumulationTexture->extent(), m_accumulationTexture->format(),
                                                   Texture::Filters::linear(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
 
     BindingSet& taaBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, m_accumulationTexture, ShaderBindingType::StorageImage },
                                                        { 1, ShaderStageCompute, &currentFrameTexture, ShaderBindingType::TextureSampler },
-                                                       { 2, ShaderStageCompute, &historyTexture, ShaderBindingType::TextureSampler } });
+                                                       { 2, ShaderStageCompute, &currentFrameVelocity, ShaderBindingType::TextureSampler },
+                                                       { 3, ShaderStageCompute, &historyTexture, ShaderBindingType::TextureSampler } });
 
     Shader taaComputeShader = Shader::createCompute("taa/taa.comp");
     ComputeState& taaComputeState = reg.createComputeState(taaComputeShader, { &taaBindingSet });
@@ -38,6 +40,13 @@ RenderPipelineNode::ExecuteCallback TAANode::constructFrame(Registry& reg) const
 
         ImGui::Checkbox("Enabled##taa", &m_taaEnabled);
         m_scene.camera().setFrustumJitteringEnabled(m_taaEnabled);
+
+        static float hysteresis = 0.9f;
+        if (ImGui::TreeNode("Advanced")) {
+            ImGui::SliderFloat("Hysteresis", &hysteresis, 0.0f, 1.0f);
+            ImGui::SliderFloat("Jitter scale", &m_scene.camera().frustumJitterScale, 0.0f, 1.0f);
+            ImGui::TreePop();
+        }
 
         const bool wasEnabledThisFrame = m_taaEnabled && !m_taaEnabledPreviousFrame;
         m_taaEnabledPreviousFrame = m_taaEnabled;
@@ -60,7 +69,7 @@ RenderPipelineNode::ExecuteCallback TAANode::constructFrame(Registry& reg) const
         cmdList.setComputeState(taaComputeState);
         cmdList.bindSet(taaBindingSet, 0);
 
-        // TODO: Set named uniforms!
+        cmdList.setNamedUniform("hysteresis", hysteresis);
 
         cmdList.dispatch(currentFrameTexture.extent3D(), { 16, 16, 1 });
 
