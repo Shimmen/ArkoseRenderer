@@ -13,9 +13,9 @@ layout(push_constant) uniform PushConstants {
 vec4 sampleNextLevelUpsampledBilinear(vec2 uv)
 {
     vec2 clampedUv = clamp(uv, vec2(0.0), vec2(1.0));
-    vec2 coord = clampedUv * (imageSize(nextLevelUpsampledImg) - ivec2(1));
+    vec2 coord = clampedUv * vec2(imageSize(nextLevelUpsampledImg));
 
-    ivec2 iCoord = ivec2(floor(coord));
+    ivec2 iCoord = ivec2(floor(coord - vec2(0.5)));
     vec2 fCoord = fract(coord);
 
     vec4 bl = imageLoad(nextLevelUpsampledImg, iCoord + ivec2(0, 0));
