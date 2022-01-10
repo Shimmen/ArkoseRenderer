@@ -42,9 +42,11 @@ RenderPipelineNode::ExecuteCallback TAANode::constructFrame(Registry& reg) const
         m_scene.camera().setFrustumJitteringEnabled(m_taaEnabled);
 
         static float hysteresis = 0.9f;
-        if (ImGui::TreeNode("Advanced")) {
+        static bool useCatmullRom = true;
+        if (ImGui::TreeNode("Advanced##taa")) {
             ImGui::SliderFloat("Hysteresis", &hysteresis, 0.0f, 1.0f);
             ImGui::SliderFloat("Jitter scale", &m_scene.camera().frustumJitterScale, 0.0f, 1.0f);
+            ImGui::Checkbox("Use Catmull-Rom history sampling", &useCatmullRom);
             ImGui::TreePop();
         }
 
@@ -70,6 +72,7 @@ RenderPipelineNode::ExecuteCallback TAANode::constructFrame(Registry& reg) const
         cmdList.bindSet(taaBindingSet, 0);
 
         cmdList.setNamedUniform("hysteresis", hysteresis);
+        cmdList.setNamedUniform("useCatmullRom", useCatmullRom);
 
         cmdList.dispatch(currentFrameTexture.extent3D(), { 16, 16, 1 });
 
