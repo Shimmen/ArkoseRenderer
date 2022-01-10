@@ -60,6 +60,10 @@ RenderPipelineNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) con
         if (light.castsShadows())
             shadowMaps.push_back(&light.shadowMap());
     });
+    // We can't upload empty texture arrays (for now.. would be better to fix deeper int the stack)
+    if (iesProfileLUTs.empty())
+        iesProfileLUTs.push_back(&reg.createPixelTexture(vec4(1.0f), true));
+
     BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStageAny, &lightMetaDataBuffer },
                                                          { 1, ShaderStageAny, &dirLightDataBuffer },
                                                          { 2, ShaderStageAny, &spotLightDataBuffer },
