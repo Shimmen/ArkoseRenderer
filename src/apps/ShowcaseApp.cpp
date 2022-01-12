@@ -25,16 +25,23 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
+constexpr bool keepRenderDocCompatible = false;
+constexpr bool rtxOn = true && !keepRenderDocCompatible;
+
 std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
 {
-    return { Backend::Capability::RtxRayTracing };
+    if (rtxOn) {
+        return { Backend::Capability::RtxRayTracing };
+    } else {
+        return {};
+    }
 }
 
 void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 {
     SCOPED_PROFILE_ZONE();
 
-    scene.setShouldMaintainRayTracingScene(true);
+    scene.setShouldMaintainRayTracingScene(rtxOn);
     scene.loadFromFile("assets/sample/sponza.json");
 
     if (!scene.hasProbeGrid()) {
@@ -44,7 +51,11 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<SceneNode>(scene);
     pipeline.addNode<PickingNode>(scene);
 
-    pipeline.addNode<DDGINode>(scene);
+    if (rtxOn) {
+        pipeline.addNode<DDGINode>(scene);
+    } else {
+        scene.setAmbient(250.0f);
+    }
 
     pipeline.addNode<ShadowMapNode>(scene);
     pipeline.addNode<CullingNode>(scene);
@@ -57,15 +68,19 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<SkyViewNode>(scene);
     pipeline.addNode<BloomNode>(scene);
 
-    pipeline.addNode<DDGIProbeDebug>(scene);
+    if (rtxOn) {
+        pipeline.addNode<DDGIProbeDebug>(scene);
+    }
 
     const std::string sceneTexture = "SceneColor";
     const std::string finalTextureToScreen = "SceneColorLDR";
     const AntiAliasing antiAliasingMode = AntiAliasing::TAA;
 
-    // Uncomment for ray tracing visualisations
-    //pipeline.addNode<RTFirstHitNode>(scene); finalTexture = "RTFirstHit";
-    //pipeline.addNode<RTDirectLightNode>(scene); finalTexture = "RTDirectLight";
+    if (rtxOn) {
+        // Uncomment for ray tracing visualisations
+        //pipeline.addNode<RTFirstHitNode>(scene); finalTexture = "RTFirstHit";
+        //pipeline.addNode<RTDirectLightNode>(scene); finalTexture = "RTDirectLight";
+    }
 
     pipeline.addNode<TonemapNode>(scene, sceneTexture);
 

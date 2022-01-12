@@ -82,8 +82,9 @@ public:
 
     float filmGrainGain() const;
 
-    float& ambient() { return m_ambientIlluminance; }
+    float ambient() const { return m_ambientIlluminance; }
     float exposedAmbient() const { return m_ambientIlluminance * lightPreExposureValue(); }
+    void setAmbient(float illuminance) { m_ambientIlluminance = illuminance; }
 
     void setEnvironmentMap(std::string path) { m_environmentMap = std::move(path); }
     const std::string& environmentMap() const { return m_environmentMap; }
