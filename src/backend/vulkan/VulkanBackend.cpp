@@ -1234,6 +1234,8 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
             LogError("VulkanBackend: error beginning command buffer command!\n");
         }
 
+        m_currentlyExecutingMainCommandBuffer = true;
+
         Registry& associatedRegistry = *frameContext.registry;
         VulkanCommandList cmdList { *this, commandBuffer };
 
@@ -1242,6 +1244,8 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
         ImGui::Begin("Nodes (in order)");
         {
+            associatedRegistry.newFrame(badge());
+
             std::string frameTimePerfString = m_frameTimer.createFormattedString();
             ImGui::Text("Frame time: %s", frameTimePerfString.c_str());
 
@@ -1321,6 +1325,8 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             LogError("VulkanBackend: error ending command buffer command!\n");
         }
+
+        m_currentlyExecutingMainCommandBuffer = false;
     }
 
     // Submit queue
@@ -1428,6 +1434,10 @@ void VulkanBackend::reconstructRenderPipelineResources(RenderPipeline& renderPip
 
 bool VulkanBackend::issueSingleTimeCommand(const std::function<void(VkCommandBuffer)>& callback) const
 {
+    if (m_currentlyExecutingMainCommandBuffer && vulkanVerboseDebugMessages)
+        LogWarning("Issuing single-time command while also \"inside\" the main command buffer. This will cause a stall which "
+                   "can be avoided by e.g. using UploadBuffer to stage multiple uploads and copy them over on one go.\n");
+
     VkCommandBufferAllocateInfo commandBufferAllocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
     commandBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     commandBufferAllocInfo.commandPool = m_transientCommandPool;

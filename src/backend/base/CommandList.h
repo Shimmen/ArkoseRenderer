@@ -73,8 +73,7 @@ public:
 
 inline void CommandList::executeBufferCopyOperations(UploadBuffer& uploadBuffer)
 {
-    executeBufferCopyOperations(uploadBuffer.pendingOperations());
-    uploadBuffer.reset();
+    executeBufferCopyOperations(uploadBuffer.popPendingOperations());
 }
 
 template<typename T>

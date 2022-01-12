@@ -84,6 +84,9 @@ public:
     ///////////////////////////////////////////////////////////////////////////
     /// Backend services
 
+    // For being able to detect some cases where we get a full pipeline stall
+    bool m_currentlyExecutingMainCommandBuffer = false;
+
     bool issueSingleTimeCommand(const std::function<void(VkCommandBuffer)>& callback) const;
 
     uint32_t findAppropriateMemory(uint32_t typeBits, VkMemoryPropertyFlags properties) const;

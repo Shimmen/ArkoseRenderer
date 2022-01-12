@@ -20,6 +20,11 @@ Registry::Registry(Backend& backend, Registry* previousRegistry, const RenderTar
     }
 }
 
+void Registry::newFrame(Badge<Backend>)
+{
+    m_uploadBuffer->reset();
+}
+
 void Registry::setCurrentNode(const std::string& node)
 {
     m_currentNodeName = node;
@@ -36,7 +41,6 @@ const RenderTarget& Registry::windowRenderTarget()
 UploadBuffer& Registry::getUploadBuffer()
 {
     ASSERT(m_uploadBuffer);
-    m_uploadBuffer->reset();
     return *m_uploadBuffer;
 }
 

@@ -15,6 +15,7 @@ class Registry final {
 public:
     explicit Registry(Backend&, Registry* previousRegistry, const RenderTarget* windowRenderTarget = nullptr);
 
+    void newFrame(Badge<Backend>);
     void setCurrentNode(const std::string&);
 
     [[nodiscard]] const RenderTarget& windowRenderTarget();

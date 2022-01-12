@@ -8,10 +8,18 @@ UploadBuffer::UploadBuffer(Backend& backend, size_t size)
     m_buffer = backend.createBuffer(size, Buffer::Usage::Transfer, Buffer::MemoryHint::TransferOptimal);
 }
 
+std::vector<BufferCopyOperation> UploadBuffer::popPendingOperations()
+{
+    auto pending = std::move(m_pendingOperations);
+    m_pendingOperations.clear();
+    return pending;
+}
+
 void UploadBuffer::reset()
 {
     m_cursor = 0;
-    m_pendingOperations.clear();
+    if (m_pendingOperations.size() > 0)
+        LogErrorAndExit("UploadBuffer: resetting although not all pending operations have been executed, exiting.\n");
 }
 
 BufferCopyOperation UploadBuffer::upload(const void* data, size_t size, Buffer& dstBuffer)

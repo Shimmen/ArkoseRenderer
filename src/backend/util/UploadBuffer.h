@@ -18,7 +18,9 @@ struct UploadBuffer final {
     UploadBuffer(UploadBuffer&) = delete;
     UploadBuffer& operator=(UploadBuffer&) = delete;
 
-    const std::vector<BufferCopyOperation>& pendingOperations() const { return m_pendingOperations; }
+    std::vector<BufferCopyOperation> popPendingOperations();
+    const std::vector<BufferCopyOperation>& peekPendingOperations() const { return m_pendingOperations; }
+
     void reset();
 
     BufferCopyOperation upload(const void* data, size_t size, Buffer& dstBuffer);
