@@ -10,7 +10,8 @@ struct ShaderDrawable {
     mat4 worldFromTangent;
     mat4 previousFrameWorldFromLocal;
     int materialIndex;
-    int pad1, pad2, pad3;
+    int materialBlendMode; // shortcut, useful when culling
+    int _pad0, _pad1;
 };
 
 struct ShaderMaterial {
@@ -19,8 +20,9 @@ struct ShaderMaterial {
     int metallicRoughness;
     int emissive;
 
+    int blendMode;
     float maskCutoff;
-    float _pad0, _pad1, _pad2;
+    float _pad0, _pad1;
 };
 
 struct IndirectShaderDrawable {

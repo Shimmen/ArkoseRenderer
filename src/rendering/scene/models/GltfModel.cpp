@@ -242,11 +242,11 @@ std::unique_ptr<Material> GltfMesh::createMaterial()
     material->setMesh(this);
 
     if (gltfMaterial.alphaMode == "OPAQUE") {
-        material->alphaMode = Material::AlphaMode::Opaque;
+        material->blendMode = Material::BlendMode::Opaque;
     } else if (gltfMaterial.alphaMode == "BLEND") {
-        material->alphaMode = Material::AlphaMode::Blend;
+        material->blendMode = Material::BlendMode::Translucent;
     } else if (gltfMaterial.alphaMode == "MASK") {
-        material->alphaMode = Material::AlphaMode::Mask;
+        material->blendMode = Material::BlendMode::Masked;
         material->maskCutoff = static_cast<float>(gltfMaterial.alphaCutoff);
     } else {
         ASSERT_NOT_REACHED();

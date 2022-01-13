@@ -675,6 +675,7 @@ void Scene::rebuildGpuSceneData()
             .normalMap = pushTexture(material.normalMapTexture()),
             .metallicRoughness = pushTexture(material.metallicRoughnessTexture()),
             .emissive = pushTexture(material.emissiveTexture()),
+            .blendMode = material.blendModeValue(),
             .maskCutoff = material.maskCutoff,
         });
 
@@ -708,14 +709,14 @@ void Scene::rebuildGpuSceneData()
                                           .transform = mesh.transform().localMatrix() };
 
             uint8_t hitMask = 0x00;
-            switch (material.alphaMode) {
-            case Material::AlphaMode::Opaque:
+            switch (material.blendMode) {
+            case Material::BlendMode::Opaque:
                 hitMask = RT_HIT_MASK_OPAQUE;
                 break;
-            case Material::AlphaMode::Mask:
+            case Material::BlendMode::Masked:
                 hitMask = RT_HIT_MASK_MASKED;
                 break;
-            case Material::AlphaMode::Blend:
+            case Material::BlendMode::Translucent:
                 hitMask = RT_HIT_MASK_BLEND;
                 break;
             default:

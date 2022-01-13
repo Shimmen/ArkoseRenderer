@@ -7,6 +7,9 @@
 #include <string>
 #include <unordered_map>
 
+// Shared shader data
+#include "BlendMode.h"
+
 class Mesh;
 class Registry;
 
@@ -27,17 +30,17 @@ public:
     PathOrImage metallicRoughness {};
     PathOrImage emissive {};
 
-    enum class AlphaMode {
-        Opaque,
-        Mask,
-        Blend
+    enum class BlendMode {
+        Opaque = BLEND_MODE_OPAQUE,
+        Masked = BLEND_MODE_MASKED,
+        Translucent = BLEND_MODE_TRANSLUCENT,
     };
 
-    AlphaMode alphaMode { AlphaMode::Opaque };
+    BlendMode blendMode { BlendMode::Opaque };
+    int32_t blendModeValue() const { return static_cast<int32_t>(blendMode); }
     float maskCutoff { 1.0f };
 
-    bool isOpaque() const { return alphaMode == AlphaMode::Opaque; }
-    bool isTranlucent() const { return !isOpaque(); }
+    bool isOpaque() const { return blendMode == BlendMode::Opaque; }
 
     void setMesh(Mesh* mesh) { m_owner = mesh; }
     const Mesh* mesh() const { return m_owner; }
