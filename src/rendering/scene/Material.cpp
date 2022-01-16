@@ -43,7 +43,7 @@ Texture* Material::normalMapTexture()
         } else {
             m_normalMapTexture = normalMap.hasPath()
                 ? MaterialTextureCache::global({}).getLoadedTexture(sceneRegistry(), normalMap.path, false)
-                : MaterialTextureCache::global({}).getLoadedTexture(sceneRegistry(), "assets/default-normal.png", false);
+                : MaterialTextureCache::global({}).getPixelColorTexture(sceneRegistry(), vec4(0.5f, 0.5f, 1.0f, 1.0f), false);
         }
     }
     return m_normalMapTexture;
