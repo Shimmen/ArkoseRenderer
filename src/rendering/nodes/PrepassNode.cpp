@@ -18,14 +18,13 @@ RenderPipelineNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) c
     Texture& depthTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth24Stencil8, Texture::Filters::nearest());
     reg.publish("SceneDepth", depthTexture);
 
-    Texture& gBufferDepthTexture = *reg.getTexture("SceneDepth");
-    BindingSet& drawableBindingSet = *reg.getBindingSet("MainViewCulledDrawablesSet");
+    BindingSet& opaqueDrawableBindingSet = *reg.getBindingSet("MainViewCulledDrawablesOpaqueSet");
 
     Shader prepassShader = Shader::createVertexOnly("forward/prepass.vert");
-    RenderTarget& prepassRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &gBufferDepthTexture, LoadOp::Clear, StoreOp::Store } });
+    RenderTarget& prepassRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Clear, StoreOp::Store } });
     RenderStateBuilder prepassRenderStateBuilder { prepassRenderTarget, prepassShader, m_prepassVertexLayout };
     prepassRenderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
-    prepassRenderStateBuilder.stateBindings().at(0, drawableBindingSet);
+    prepassRenderStateBuilder.stateBindings().at(0, opaqueDrawableBindingSet);
     RenderState& prepassRenderState = reg.createRenderState(prepassRenderStateBuilder);
     prepassRenderState.setName("ForwardZPrepass");
 
@@ -41,10 +40,11 @@ RenderPipelineNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) c
 
         cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout(m_prepassVertexLayout));
         cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
-        cmdList.drawIndirect(*reg.getBuffer("MainViewIndirectDrawCmds"), *reg.getBuffer("MainViewIndirectDrawCount"));
+
+        Buffer& indirectDrawCmdsBuffer = *reg.getBuffer("MainViewOpaqueDrawCmds");
+        Buffer& indirectDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
+        cmdList.drawIndirect(indirectDrawCmdsBuffer, indirectDrawCountBuffer);
 
         cmdList.endRendering();
-
-        cmdList.textureWriteBarrier(gBufferDepthTexture);
     };
 }

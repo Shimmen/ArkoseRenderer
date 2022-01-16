@@ -10,8 +10,7 @@ struct ShaderDrawable {
     mat4 worldFromTangent;
     mat4 previousFrameWorldFromLocal;
     int materialIndex;
-    int materialBlendMode; // shortcut, useful when culling
-    int _pad0, _pad1;
+    int _pad0, _pad1, _pad2;
 };
 
 struct ShaderMaterial {
@@ -32,7 +31,7 @@ struct IndirectShaderDrawable {
     uint indexCount;
     uint firstIndex;
     int vertexOffset;
-    int _pad0;
+    int materialBlendMode; // shortcut, useful for culling
 };
 
 #endif // SCENE_DATA_H

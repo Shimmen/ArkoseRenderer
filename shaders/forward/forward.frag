@@ -4,6 +4,7 @@
 #include <common/namedUniforms.glsl>
 #include <common/iesProfile.glsl>
 #include <common/shadow.glsl>
+#include <shared/BlendMode.h>
 #include <shared/CameraState.h>
 #include <shared/SceneData.h>
 #include <shared/LightData.h>
@@ -106,11 +107,12 @@ void main()
 
     vec4 inputBaseColor = texture(textures[material.baseColor], vTexCoord).rgba;
 
-    // TODO: This should not be done in the opaque pass! We should not render any masked or blended objects in opaque rendering
-    if (inputBaseColor.a < 1e-2) {
+#if FORWARD_BLEND_MODE == BLEND_MODE_MASKED
+    float mask = inputBaseColor.a;
+    if (mask < material.maskCutoff) {
         discard;
-        return;
     }
+#endif
 
     vec3 baseColor = inputBaseColor.rgb;
     vec3 emissive = texture(textures[material.emissive], vTexCoord).rgb;

@@ -26,34 +26,57 @@ RenderPipelineNode::ExecuteCallback CullingNode::constructFrame(Registry& reg) c
     Buffer& frustumPlaneBuffer = reg.createBuffer(6 * sizeof(vec4), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
     Buffer& indirectDrawableBuffer = reg.createBuffer(initialBufferCount * sizeof(IndirectShaderDrawable), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
 
-    Buffer& drawableBuffer = reg.createBuffer(initialBufferCount * sizeof(ShaderDrawable), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
-    drawableBuffer.setName("MainViewCulledDrawables");
-    BindingSet& drawableBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &drawableBuffer } });
-    reg.publish("MainViewCulledDrawablesSet", drawableBindingSet);
+    //////////////
+    // Opaque
 
-    Buffer& indirectCmdBuffer = reg.createBuffer(initialBufferCount * sizeof(IndexedDrawCmd), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
-    reg.publish("MainViewIndirectDrawCmds", indirectCmdBuffer);
+    Buffer& opaqueDrawableBuffer = reg.createBuffer(initialBufferCount * sizeof(ShaderDrawable), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
+    opaqueDrawableBuffer.setName("MainViewCulledDrawablesOpaque");
+    BindingSet& opaqueDrawableBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &opaqueDrawableBuffer } });
+    reg.publish("MainViewCulledDrawablesOpaqueSet", opaqueDrawableBindingSet);
 
-    Buffer& indirectCountBuffer = reg.createBuffer(sizeof(uint), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::TransferOptimal);
-    reg.publish("MainViewIndirectDrawCount", indirectCountBuffer);
+    Buffer& opaqueDrawsCmdBuffer = reg.createBuffer(initialBufferCount * sizeof(IndexedDrawCmd), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
+    reg.publish("MainViewOpaqueDrawCmds", opaqueDrawsCmdBuffer);
+    Buffer& opaqueDrawCountBuffer = reg.createBuffer(sizeof(uint), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::TransferOptimal);
+    reg.publish("MainViewOpaqueDrawCount", opaqueDrawCountBuffer);
+
+    //////////////
+    // Masked
+
+    Buffer& maskedDrawableBuffer = reg.createBuffer(initialBufferCount * sizeof(ShaderDrawable), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
+    maskedDrawableBuffer.setName("MainViewCulledDrawablesMasked");
+    BindingSet& maskedDrawableBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &maskedDrawableBuffer } });
+    reg.publish("MainViewCulledDrawablesMaskedSet", maskedDrawableBindingSet);
+
+    Buffer& maskedDrawsCmdBuffer = reg.createBuffer(initialBufferCount * sizeof(IndexedDrawCmd), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
+    reg.publish("MainViewMaskedDrawCmds", maskedDrawsCmdBuffer);
+    Buffer& maskedDrawCountBuffer = reg.createBuffer(sizeof(uint), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::TransferOptimal);
+    reg.publish("MainViewMaskedDrawCount", maskedDrawCountBuffer);
+
+    //////////////
+    // 
 
     BindingSet& cullingBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &frustumPlaneBuffer },
                                                            { 1, ShaderStageCompute, &indirectDrawableBuffer },
-                                                           { 2, ShaderStageCompute, &drawableBuffer },
-                                                           { 3, ShaderStageCompute, &indirectCmdBuffer },
-                                                           { 4, ShaderStageCompute, &indirectCountBuffer } });
+                                                           { 2, ShaderStageCompute, &opaqueDrawableBuffer },
+                                                           { 3, ShaderStageCompute, &opaqueDrawsCmdBuffer },
+                                                           { 4, ShaderStageCompute, &opaqueDrawCountBuffer },
+                                                           { 5, ShaderStageCompute, &maskedDrawableBuffer },
+                                                           { 6, ShaderStageCompute, &maskedDrawsCmdBuffer },
+                                                           { 7, ShaderStageCompute, &maskedDrawCountBuffer } });
 
     ComputeState& cullingState = reg.createComputeState(Shader::createCompute("culling/culling.comp"), { &cullingBindingSet });
     cullingState.setName("MainViewCulling");
 
     return [&](const AppState& appState, CommandList& cmdList) {
 
-        mat4 cameraViewProjection = m_scene.camera().projectionMatrix() * m_scene.camera().viewMatrix();
+        UploadBuffer& uploadBuffer = reg.getUploadBuffer();
+
+        mat4 cameraViewProjection = m_scene.camera().viewProjectionMatrix();
         auto cameraFrustum = geometry::Frustum::createFromProjectionMatrix(cameraViewProjection);
         size_t planesByteSize;
         const geometry::Plane* planesData = cameraFrustum.rawPlaneData(&planesByteSize);
         ASSERT(planesByteSize == frustumPlaneBuffer.size());
-        frustumPlaneBuffer.updateData(planesData, planesByteSize);
+        uploadBuffer.upload(planesData, planesByteSize, frustumPlaneBuffer);
 
         std::vector<IndirectShaderDrawable> indirectDrawableData {};
         int numInputDrawables = m_scene.forEachMesh([&](size_t, Mesh& mesh) {
@@ -65,23 +88,25 @@ RenderPipelineNode::ExecuteCallback CullingNode::constructFrame(Registry& reg) c
                                              .localBoundingSphere = vec4(mesh.boundingSphere().center(), mesh.boundingSphere().radius()),
                                              .indexCount = drawCall.indexCount,
                                              .firstIndex = drawCall.firstIndex,
-                                             .vertexOffset = drawCall.vertexOffset });
+                                             .vertexOffset = drawCall.vertexOffset,
+                                             .materialBlendMode = mesh.material().blendModeValue() });
         });
         size_t newSize = numInputDrawables * sizeof(IndirectShaderDrawable);
         ASSERT(newSize <= indirectDrawableBuffer.size()); // fixme: grow instead of failing!
-        indirectDrawableBuffer.updateData(indirectDrawableData.data(), newSize);
+        uploadBuffer.upload(indirectDrawableData, indirectDrawableBuffer);
 
         uint32_t zero = 0u;
-        indirectCountBuffer.updateData(&zero, sizeof(zero));
+        uploadBuffer.upload(zero, opaqueDrawCountBuffer);
+        uploadBuffer.upload(zero, maskedDrawCountBuffer);
+
+        cmdList.executeBufferCopyOperations(uploadBuffer);
 
         cmdList.setComputeState(cullingState);
         cmdList.bindSet(cullingBindingSet, 0);
         cmdList.setNamedUniform("numInputDrawables", numInputDrawables);
         cmdList.dispatch(Extent3D(numInputDrawables, 1, 1), Extent3D(64, 1, 1));
 
-        cmdList.bufferWriteBarrier({ &drawableBuffer, &indirectCmdBuffer, &indirectCountBuffer });
-
-        // It would be nice if we could do GPU readback from last frame's count buffer
+        // It would be nice if we could do GPU readback from last frame's count buffer (on the other hand, we do have renderdoc for this)
         //ImGui::Text("Issued draw calls: %i", numDrawCallsIssued);
     };
 }
