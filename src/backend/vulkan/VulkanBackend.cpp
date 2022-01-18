@@ -1563,38 +1563,6 @@ bool VulkanBackend::setBufferDataUsingStagingBuffer(VkBuffer buffer, const uint8
     return true;
 }
 
-bool VulkanBackend::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, bool isDepthImage) const
-{
-    SCOPED_PROFILE_ZONE_BACKEND();
-
-    VkBufferImageCopy region = {};
-    region.bufferOffset = 0;
-
-    // (zeros here indicate tightly packed data)
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-
-    region.imageOffset = VkOffset3D { 0, 0, 0 };
-    region.imageExtent = VkExtent3D { width, height, 1 };
-
-    region.imageSubresource.aspectMask = isDepthImage ? VK_IMAGE_ASPECT_DEPTH_BIT : VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-
-    bool success = issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
-        // TODO/NOTE: This assumes that the image we are copying to has the VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL layout!
-        vkCmdCopyBufferToImage(commandBuffer, buffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-    });
-
-    if (!success) {
-        LogError("VulkanBackend: error copying buffer to image, refer to issueSingleTimeCommand errors for more information.\n");
-        return false;
-    }
-
-    return true;
-}
-
 std::optional<VkPushConstantRange> VulkanBackend::getPushConstantRangeForShader(const Shader& shader) const
 {
     SCOPED_PROFILE_ZONE_BACKEND();

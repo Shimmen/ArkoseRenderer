@@ -11,7 +11,7 @@
 static std::unordered_map<std::string, Image::Info> s_infoCache {};
 static std::unordered_map<std::string, std::unique_ptr<Image>> s_imageCache {};
 
-Image::Info* Image::getInfo(const std::string& imagePath)
+Image::Info* Image::getInfo(const std::string& imagePath, bool quiet)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -21,7 +21,9 @@ Image::Info* Image::getInfo(const std::string& imagePath)
 
     // TODO: Consider putting like a nullptr Image::Info in the cache in this case?
     if (!FileIO::isFileReadable(imagePath)) {
-        LogError("Image: could not read file at path '%s', which is required for info.\n", imagePath.c_str());
+        if (!quiet) {
+            LogError("Image: could not read file at path '%s', which is required for info.\n", imagePath.c_str());
+        }
         return nullptr;
     }
 

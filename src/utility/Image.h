@@ -24,6 +24,14 @@ public:
         ComponentType componentType;
 
         bool isHdr() const { return componentType == ComponentType::Float; }
+        
+        bool operator==(const Info& other) const
+        {
+            return width == other.width
+                && height == other.height
+                && pixelType == other.pixelType
+                && componentType == other.componentType;
+        }
     };
 
     enum class DataOwner {
@@ -31,7 +39,7 @@ public:
         StbImage,
     };
 
-    static Info* getInfo(const std::string& imagePath);
+    static Info* getInfo(const std::string& imagePath, bool quiet = false);
     static Image* load(const std::string& imagePath, PixelType);
 
     const Info& info() const { return m_info; }

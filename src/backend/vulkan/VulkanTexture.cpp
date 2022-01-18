@@ -144,14 +144,14 @@ VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
     switch (type()) {
     case Type::Texture2D:
         viewCreateInfo.subresourceRange.baseArrayLayer = 0;
-        viewCreateInfo.subresourceRange.layerCount = arrayCount();
+        viewCreateInfo.subresourceRange.layerCount = layerCount();
         viewCreateInfo.viewType = isArray()
             ? VK_IMAGE_VIEW_TYPE_2D_ARRAY
             : VK_IMAGE_VIEW_TYPE_2D;
         break;
     case Type::Cubemap:
         viewCreateInfo.subresourceRange.baseArrayLayer = 0;
-        viewCreateInfo.subresourceRange.layerCount = 6 * arrayCount();
+        viewCreateInfo.subresourceRange.layerCount = layerCount();
         viewCreateInfo.viewType = isArray()
             ? VK_IMAGE_VIEW_TYPE_CUBE_ARRAY
             : VK_IMAGE_VIEW_TYPE_CUBE;
@@ -408,7 +408,7 @@ void VulkanTexture::setPixelData(vec4 pixel)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
-    int numChannels;
+    int numChannels = 0;
     bool isHdr = false;
 
     switch (format()) {
@@ -447,112 +447,16 @@ void VulkanTexture::setPixelData(vec4 pixel)
 
     ASSERT(numChannels == 4);
 
-    moos::u8 pixels[4];
-    VkDeviceSize pixelsSize;
-
     if (isHdr) {
-        pixelsSize = sizeof(vec4);
+        setData(&pixel, sizeof(pixel));
     } else {
-        pixels[0] = (stbi_uc)(moos::clamp(pixel.x, 0.0f, 1.0f) * 255.99f);
-        pixels[1] = (stbi_uc)(moos::clamp(pixel.y, 0.0f, 1.0f) * 255.99f);
-        pixels[2] = (stbi_uc)(moos::clamp(pixel.z, 0.0f, 1.0f) * 255.99f);
-        pixels[3] = (stbi_uc)(moos::clamp(pixel.w, 0.0f, 1.0f) * 255.99f);
-        pixelsSize = 4 * sizeof(stbi_uc);
+        moos::u8 pixelUint8Data[4];
+        pixelUint8Data[0] = (moos::u8)(moos::clamp(pixel.x, 0.0f, 1.0f) * 255.99f);
+        pixelUint8Data[1] = (moos::u8)(moos::clamp(pixel.y, 0.0f, 1.0f) * 255.99f);
+        pixelUint8Data[2] = (moos::u8)(moos::clamp(pixel.z, 0.0f, 1.0f) * 255.99f);
+        pixelUint8Data[3] = (moos::u8)(moos::clamp(pixel.w, 0.0f, 1.0f) * 255.99f);
+        setData(pixelUint8Data, sizeof(pixelUint8Data));
     }
-
-    VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    bufferCreateInfo.size = pixelsSize;
-
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-
-    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
-
-    VkBuffer stagingBuffer;
-    VmaAllocation stagingAllocation;
-    if (vmaCreateBuffer(vulkanBackend.globalAllocator(), &bufferCreateInfo, &allocCreateInfo, &stagingBuffer, &stagingAllocation, nullptr) != VK_SUCCESS) {
-        LogError("Could not create staging buffer for updating image with pixel-data.\n");
-    }
-
-    if (!vulkanBackend.setBufferMemoryUsingMapping(stagingAllocation, isHdr ? (uint8_t*)value_ptr(pixel) : (uint8_t*)pixels, pixelsSize)) {
-        LogError("Could not set the buffer memory for the staging buffer for updating image with pixel-data.\n");
-        return;
-    }
-
-    AtScopeExit cleanUpStagingBuffer([&]() {
-        vmaDestroyBuffer(vulkanBackend.globalAllocator(), stagingBuffer, stagingAllocation);
-    });
-
-    if (currentLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-        imageBarrier.image = image;
-        imageBarrier.subresourceRange.aspectMask = aspectMask();
-        imageBarrier.subresourceRange.baseMipLevel = 0;
-        imageBarrier.subresourceRange.levelCount = 1;
-        imageBarrier.subresourceRange.baseArrayLayer = 0;
-        imageBarrier.subresourceRange.layerCount = 1;
-
-        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        imageBarrier.srcAccessMask = 0;
-
-        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-
-        bool success = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
-            vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0,
-                                 0, nullptr,
-                                 0, nullptr,
-                                 1, &imageBarrier);
-        });
-        if (!success) {
-            LogError("Could not transition the image to transfer optimal layout.\n");
-            return;
-        }
-    }
-
-    if (!vulkanBackend.copyBufferToImage(stagingBuffer, image, 1, 1, hasDepthFormat())) {
-        LogError("Could not copy the staging buffer to the image.\n");
-        return;
-    }
-
-    VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-    {
-        imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-        imageBarrier.image = image;
-        imageBarrier.subresourceRange.aspectMask = aspectMask();
-        imageBarrier.subresourceRange.baseMipLevel = 0;
-        imageBarrier.subresourceRange.levelCount = 1;
-        imageBarrier.subresourceRange.baseArrayLayer = 0;
-        imageBarrier.subresourceRange.layerCount = 1;
-
-        imageBarrier.srcAccessMask = 0;
-        imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    }
-
-    bool success = static_cast<VulkanBackend&>(backend()).issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
-        vkCmdPipelineBarrier(commandBuffer,
-                             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
-                             0, nullptr,
-                             0, nullptr,
-                             1, &imageBarrier);
-    });
-
-    if (!success) {
-        LogError("Error transitioning layout after setting pixel data\n");
-    }
-
-    currentLayout = VK_IMAGE_LAYOUT_GENERAL;
 }
 
 void VulkanTexture::setData(const void* data, size_t size)
@@ -594,9 +498,9 @@ void VulkanTexture::setData(const void* data, size_t size)
         imageBarrier.image = image;
         imageBarrier.subresourceRange.aspectMask = aspectMask();
         imageBarrier.subresourceRange.baseMipLevel = 0;
-        imageBarrier.subresourceRange.levelCount = 1;
+        imageBarrier.subresourceRange.levelCount = 1; // only set data for mip0, rest will be generated
         imageBarrier.subresourceRange.baseArrayLayer = 0;
-        imageBarrier.subresourceRange.layerCount = 1;
+        imageBarrier.subresourceRange.layerCount = layerCount();
 
         VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
         imageBarrier.srcAccessMask = 0;
@@ -616,7 +520,38 @@ void VulkanTexture::setData(const void* data, size_t size)
         }
     }
 
-    if (!vulkanBackend.copyBufferToImage(stagingBuffer, image, extent().width(), extent().height(), hasDepthFormat())) {
+    std::vector<VkBufferImageCopy> copyRegions {};
+    copyRegions.reserve(layerCount());
+
+    // TODO: We currently assume we're uploading the entire texture array
+    const VkDeviceSize sizePerLayer = size / layerCount();
+
+    for (size_t layerIdx = 0; layerIdx < layerCount(); ++layerIdx) {
+
+        VkBufferImageCopy region = {};
+
+        region.bufferOffset = layerIdx * sizePerLayer;
+
+        // (zeros here indicate tightly packed data)
+        region.bufferRowLength = 0;
+        region.bufferImageHeight = 0;
+
+        region.imageOffset = VkOffset3D { 0, 0, 0 };
+        region.imageExtent = VkExtent3D { extent().width(), extent().height(), 1 };
+
+        region.imageSubresource.aspectMask = aspectMask();
+        region.imageSubresource.mipLevel = 0; // only set data for mip0, rest will be generated
+        region.imageSubresource.baseArrayLayer = layerIdx;
+        region.imageSubresource.layerCount = 1;
+
+        copyRegions.push_back(region);
+    }
+
+    bool copySuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+        vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, copyRegions.size(), copyRegions.data());
+    });
+
+    if (!copySuccess) {
         LogError("Could not copy the staging buffer to the image.\n");
         return;
     }
@@ -637,7 +572,7 @@ void VulkanTexture::setData(const void* data, size_t size)
             imageBarrier.subresourceRange.baseMipLevel = 0;
             imageBarrier.subresourceRange.levelCount = 1;
             imageBarrier.subresourceRange.baseArrayLayer = 0;
-            imageBarrier.subresourceRange.layerCount = 1;
+            imageBarrier.subresourceRange.layerCount = layerCount();
 
             imageBarrier.srcAccessMask = 0;
             imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
@@ -678,7 +613,7 @@ void VulkanTexture::generateMipmaps()
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.layerCount = layerCount();
     barrier.subresourceRange.levelCount = 1;
 
     uint32_t levels = mipLevels();
@@ -703,7 +638,7 @@ void VulkanTexture::generateMipmaps()
             initialBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             initialBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             initialBarrier.subresourceRange.baseArrayLayer = 0;
-            initialBarrier.subresourceRange.layerCount = 1;
+            initialBarrier.subresourceRange.layerCount = layerCount();
             initialBarrier.subresourceRange.baseMipLevel = 1;
             initialBarrier.subresourceRange.levelCount = levels - 1;
 
@@ -741,13 +676,13 @@ void VulkanTexture::generateMipmaps()
             blit.srcSubresource.aspectMask = aspectMask();
             blit.srcSubresource.mipLevel = i - 1;
             blit.srcSubresource.baseArrayLayer = 0;
-            blit.srcSubresource.layerCount = 1;
+            blit.srcSubresource.layerCount = layerCount();
             blit.dstOffsets[0] = { 0, 0, 0 };
             blit.dstOffsets[1] = { nextWidth, nextHeight, 1 };
             blit.dstSubresource.aspectMask = aspectMask();
             blit.dstSubresource.mipLevel = i;
             blit.dstSubresource.baseArrayLayer = 0;
-            blit.dstSubresource.layerCount = 1;
+            blit.dstSubresource.layerCount = layerCount();
 
             vkCmdBlitImage(commandBuffer,
                            image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
