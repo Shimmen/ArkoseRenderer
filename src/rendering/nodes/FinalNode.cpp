@@ -19,7 +19,10 @@ RenderPipelineNode::ExecuteCallback FinalNode::constructFrame(Registry& reg) con
     if (!sourceTexture)
         LogErrorAndExit("Final: specified source texture '%s' not found, exiting.\n", m_sourceTextureName.c_str());
 
-    BindingSet& bindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, sourceTexture, ShaderBindingType::TextureSampler } });
+    Texture& filmGrainTexture = reg.loadTextureArrayFromFileSequence("assets/blue-noise/64_64/HDR_RGBA_{}.png", false, false);
+
+    BindingSet& bindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, sourceTexture, ShaderBindingType::TextureSampler },
+                                                    { 1, ShaderStageFragment, &filmGrainTexture, ShaderBindingType::TextureSampler } });
 
     std::vector<vec2> fullScreenTriangle { { -1, -3 }, { -1, 1 }, { 3, 1 } };
     Buffer& vertexBuffer = reg.createBuffer(std::move(fullScreenTriangle), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
@@ -37,10 +40,14 @@ RenderPipelineNode::ExecuteCallback FinalNode::constructFrame(Registry& reg) con
         ImGui::Checkbox("Add film grain", &addFilmGrain);
         float filmGrainGain = addFilmGrain ? m_scene.filmGrainGain() : 0.0f;
 
+        static float filmGrainScale = 2.5f;
+        ImGui::SliderFloat("Film grain scale", &filmGrainScale, 1.0f, 10.0f);
+
         cmdList.beginRendering(renderState, ClearColor::black(), 1.0f);
         {
             cmdList.setNamedUniform("filmGrainGain", filmGrainGain);
-            cmdList.setNamedUniform("frameIndex", appState.frameIndex());
+            cmdList.setNamedUniform("filmGrainScale", filmGrainScale);
+            cmdList.setNamedUniform("filmGrainArrayIdx", appState.frameIndex() % filmGrainTexture.arrayCount());
         }
         cmdList.draw(vertexBuffer, 3);
         cmdList.endRendering();

@@ -1,15 +1,16 @@
 #version 460
 
-#include <common/filmGrain.glsl>
 #include <common/namedUniforms.glsl>
 
 layout(location = 0) noperspective in vec2 vTexCoord;
 
 layout(set = 0, binding = 0) uniform sampler2D finalTexture;
+layout(set = 0, binding = 1) uniform sampler2DArray filmGrainTexture;
 
 NAMED_UNIFORMS(pushConstants,
     float filmGrainGain;
-    uint frameIndex;
+    float filmGrainScale;
+    uint filmGrainArrayIdx;
 )
 
 layout(location = 0) out vec4 oColor;
@@ -18,10 +19,13 @@ void main()
 {
     vec3 finalPixel = texture(finalTexture, vTexCoord).rgb;
 
-    uvec2 pixelCoord = uvec2(gl_FragCoord.xy);
-    uvec2 targetSize = uvec2(textureSize(finalTexture, 0));
-    vec3 filmGrain = generateFilmGrain(pushConstants.filmGrainGain, pushConstants.frameIndex, pixelCoord, targetSize);
+    // TODO: Maybe not strictly accurate, but I think it makes sense to add more film grain at higher ISO values
+    // and lower scene energy values. I.e. the lower signal-to-noise ratio at the sensor the more noise/"film grain".
+    vec2 filmGrainUv = gl_FragCoord.xy / (vec2(textureSize(filmGrainTexture, 0).xy) * pushConstants.filmGrainScale);
+    vec3 lookupCoord = vec3(filmGrainUv, float(pushConstants.filmGrainArrayIdx));
+    vec3 filmGrain01 = textureLod(filmGrainTexture, lookupCoord, 0.0).rgb;
+    vec3 filmGrain = vec3(pushConstants.filmGrainGain * (2.0 * filmGrain01 - 1.0));
 
-    vec3 finalColor = applyFilmGrain(finalPixel, filmGrain);
+    vec3 finalColor = clamp(finalPixel + filmGrain, vec3(0.0), vec3(1.0));
     oColor = vec4(finalColor, 1.0);
 }

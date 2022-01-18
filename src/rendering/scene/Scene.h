@@ -131,7 +131,7 @@ private:
 
     bool m_maintainRayTracingScene { false };
 
-    float m_fixedFilmGrainGain { 0.035f };
+    float m_fixedFilmGrainGain { 0.040f };
 
     std::string m_environmentMap {};
     float m_environmentMultiplier { 1.0f };
