@@ -526,7 +526,7 @@ void VulkanTexture::setData(const void* data, size_t size)
     // TODO: We currently assume we're uploading the entire texture array
     const VkDeviceSize sizePerLayer = size / layerCount();
 
-    for (size_t layerIdx = 0; layerIdx < layerCount(); ++layerIdx) {
+    for (uint32_t layerIdx = 0; layerIdx < layerCount(); ++layerIdx) {
 
         VkBufferImageCopy region = {};
 
@@ -548,7 +548,7 @@ void VulkanTexture::setData(const void* data, size_t size)
     }
 
     bool copySuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
-        vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, copyRegions.size(), copyRegions.data());
+        vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
     });
 
     if (!copySuccess) {
