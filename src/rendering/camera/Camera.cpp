@@ -16,7 +16,7 @@ void Camera::newFrame(Badge<Scene>, Extent2D viewportSize, bool firstFrame)
         if (!firstFrame)
             m_previousFrameFrustumJitterPixelOffset = frustumJitterPixelOffset();
 
-        int haltonSampleIdx = (m_frameIndex++) % 64;
+        int haltonSampleIdx = ((m_frameIndex++) % 8) + 1; // (+1 to avoid zero jitter)
         vec2 haltonSample01 = halton::generateHaltonSample(haltonSampleIdx, 3, 2);
         vec2 haltonSampleCentered = haltonSample01 - vec2(0.5f);
         m_frustumJitterPixelOffset = frustumJitterScale * haltonSampleCentered;
