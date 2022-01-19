@@ -28,10 +28,6 @@ public:
     VulkanBackend(VulkanBackend&) = delete;
     VulkanBackend& operator=(VulkanBackend&) = delete;
 
-    // FIXME: There might be more elegant ways of giving access. We really don't need everything from here.
-    //  Currently only VkEvent are accessed privately from the command list.
-    friend class VulkanCommandList;
-
     ///////////////////////////////////////////////////////////////////////////
     /// Public backend API
 
@@ -253,9 +249,6 @@ private:
 
     std::unique_ptr<Registry> m_persistentRegistry {};
     std::unique_ptr<Registry> m_nodeRegistry {};
-
-    // TODO: Clean up / remove
-    std::vector<VkEvent> m_events {};
 
     VkCommandPool m_defaultCommandPool {};
     VkCommandPool m_transientCommandPool {};

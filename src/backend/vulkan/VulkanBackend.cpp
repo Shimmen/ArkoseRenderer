@@ -133,18 +133,6 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, const AppSpecification& appSpec
         LogErrorAndExit("VulkanBackend: could not create transient command pool, exiting.\n");
     }
 
-    size_t numEvents = 4;
-    m_events.resize(numEvents);
-    VkEventCreateInfo eventCreateInfo = { VK_STRUCTURE_TYPE_EVENT_CREATE_INFO };
-    for (size_t i = 0; i < numEvents; ++i) {
-        if (vkCreateEvent(device(), &eventCreateInfo, nullptr, &m_events[i]) != VK_SUCCESS) {
-            LogErrorAndExit("VulkanBackend: could not create event, exiting.\n");
-        }
-        if (vkSetEvent(device(), m_events[i]) != VK_SUCCESS) {
-            LogErrorAndExit("VulkanBackend: could not signal event after creating it, exiting.\n");
-        }
-    }
-
     m_pipelineCache = createAndLoadPipelineCacheFromDisk();
 
     createSwapchain(physicalDevice(), device(), m_surface);
@@ -170,10 +158,6 @@ VulkanBackend::~VulkanBackend()
 
     savePipelineCacheToDisk(m_pipelineCache);
     vkDestroyPipelineCache(device(), m_pipelineCache, nullptr);
-
-    for (VkEvent event : m_events) {
-        vkDestroyEvent(device(), event, nullptr);
-    }
 
     vkDestroyCommandPool(device(), m_defaultCommandPool, nullptr);
     vkDestroyCommandPool(device(), m_transientCommandPool, nullptr);

@@ -37,10 +37,6 @@ public:
     void dispatch(Extent3D globalSize, Extent3D localSize) override;
     void dispatch(uint32_t x, uint32_t y, uint32_t z = 1) override;
 
-    void waitEvent(uint8_t eventId, PipelineStage) override;
-    void resetEvent(uint8_t eventId, PipelineStage) override;
-    void signalEvent(uint8_t eventId, PipelineStage) override;
-
     void debugBarrier() override;
     void beginDebugLabel(const std::string&) override;
     void endDebugLabel() override;
@@ -61,9 +57,6 @@ private:
 
     VkDevice device() { return backend().device(); }
     VkPhysicalDevice physicalDevice() { return backend().physicalDevice(); }
-
-    VkEvent getEvent(uint8_t eventId);
-    VkPipelineStageFlags stageFlags(PipelineStage) const;
 
     // TODO: Remove this.. Make something more fine grained
     void transitionImageLayoutDEBUG(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags, VkCommandBuffer) const;

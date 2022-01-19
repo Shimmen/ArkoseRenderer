@@ -1153,36 +1153,6 @@ void VulkanCommandList::dispatch(uint32_t x, uint32_t y, uint32_t z)
     vkCmdDispatch(m_commandBuffer, x, y, z);
 }
 
-void VulkanCommandList::waitEvent(uint8_t eventId, PipelineStage stage)
-{
-    SCOPED_PROFILE_ZONE_GPUCOMMAND();
-
-    VkEvent event = getEvent(eventId);
-    VkPipelineStageFlags flags = stageFlags(stage);
-
-    vkCmdWaitEvents(m_commandBuffer, 1, &event,
-                    flags, flags, // TODO: Might be required that we have different stages here later!
-                    0, nullptr,
-                    0, nullptr,
-                    0, nullptr);
-}
-
-void VulkanCommandList::resetEvent(uint8_t eventId, PipelineStage stage)
-{
-    SCOPED_PROFILE_ZONE_GPUCOMMAND();
-
-    VkEvent event = getEvent(eventId);
-    vkCmdResetEvent(m_commandBuffer, event, stageFlags(stage));
-}
-
-void VulkanCommandList::signalEvent(uint8_t eventId, PipelineStage stage)
-{
-    SCOPED_PROFILE_ZONE_GPUCOMMAND();
-
-    VkEvent event = getEvent(eventId);
-    vkCmdSetEvent(m_commandBuffer, event, stageFlags(stage));
-}
-
 void VulkanCommandList::slowBlockingReadFromBuffer(const Buffer& buffer, size_t offset, size_t size, void* dst)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
@@ -1467,30 +1437,6 @@ void VulkanCommandList::endCurrentRenderPassIfAny()
     if (activeRenderState) {
         vkCmdEndRenderPass(m_commandBuffer);
         activeRenderState = nullptr;
-    }
-}
-
-VkEvent VulkanCommandList::getEvent(uint8_t eventId)
-{
-    const auto& events = m_backend.m_events;
-
-    if (eventId >= events.size()) {
-        LogErrorAndExit("Event of id %u requested, which is >= than the number of created events (%u)\n", eventId, events.size());
-    }
-    return events[eventId];
-}
-
-VkPipelineStageFlags VulkanCommandList::stageFlags(PipelineStage stage) const
-{
-    switch (stage) {
-    case PipelineStage::Host:
-        return VK_PIPELINE_STAGE_HOST_BIT;
-    case PipelineStage::Compute:
-        return VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-    case PipelineStage::RayTracing:
-        return VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV;
-    default:
-        ASSERT_NOT_REACHED();
     }
 }
 

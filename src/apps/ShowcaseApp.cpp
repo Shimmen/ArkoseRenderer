@@ -1,6 +1,5 @@
 #include "ShowcaseApp.h"
 
-#include "rendering/nodes/AutoExposureNode.h"
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/DDGINode.h"

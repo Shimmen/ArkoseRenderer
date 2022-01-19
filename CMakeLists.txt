@@ -9,7 +9,6 @@ add_subdirectory(deps/tracy)
 add_executable(ArkoseRenderer
     ${TRACY_CLIENT_SOURCE}
     src/main.cpp
-    src/apps/RayTracingApp.cpp
     src/apps/ShowcaseApp.cpp
     src/backend/Resource.cpp
     src/backend/shader/Shader.cpp
@@ -42,7 +41,6 @@ add_executable(ArkoseRenderer
     src/geometry/Halton.cpp
     src/rendering/camera/Camera.cpp
     src/rendering/camera/FpsCamera.cpp
-    src/rendering/nodes/AutoExposureNode.cpp
     src/rendering/nodes/BloomNode.cpp
     src/rendering/nodes/CullingNode.cpp
     src/rendering/nodes/DDGINode.cpp
@@ -53,12 +51,8 @@ add_executable(ArkoseRenderer
     src/rendering/nodes/GIComposeNode.cpp
     src/rendering/nodes/PickingNode.cpp
     src/rendering/nodes/PrepassNode.cpp
-    src/rendering/nodes/RTAccelerationStructures.cpp
-    src/rendering/nodes/RTAmbientOcclusion.cpp
-    src/rendering/nodes/RTDiffuseGINode.cpp
     src/rendering/nodes/RTDirectLightNode.cpp
     src/rendering/nodes/RTFirstHitNode.cpp
-    src/rendering/nodes/RTReflectionsNode.cpp
     src/rendering/nodes/SceneNode.cpp
     src/rendering/nodes/ShadowMapNode.cpp
     src/rendering/nodes/SkyViewNode.cpp

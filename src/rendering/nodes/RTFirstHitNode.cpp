@@ -1,6 +1,5 @@
 #include "RTFirstHitNode.h"
 
-#include "RTAccelerationStructures.h"
 #include <half.hpp>
 #include <imgui.h>
 

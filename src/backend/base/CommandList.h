@@ -45,17 +45,6 @@ public:
     virtual void dispatch(Extent3D globalSize, Extent3D localSize) = 0;
     virtual void dispatch(uint32_t x, uint32_t y, uint32_t z = 1) = 0;
 
-    enum class PipelineStage {
-        Host,
-        Compute,
-        RayTracing,
-        // TODO: Add more as required...
-    };
-
-    virtual void waitEvent(uint8_t eventId, PipelineStage) = 0;
-    virtual void resetEvent(uint8_t eventId, PipelineStage) = 0;
-    virtual void signalEvent(uint8_t eventId, PipelineStage) = 0;
-
     //! A barrier for all commands and memory, which probably only should be used for debug stuff.
     virtual void debugBarrier() = 0;
 

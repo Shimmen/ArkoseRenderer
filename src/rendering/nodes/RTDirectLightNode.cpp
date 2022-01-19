@@ -1,6 +1,5 @@
 #include "RTDirectLightNode.h"
 
-#include "RTAccelerationStructures.h"
 #include <imgui.h>
 
 // Shader headers
