@@ -1414,6 +1414,8 @@ void VulkanBackend::reconstructRenderPipelineResources(RenderPipeline& renderPip
     m_nodeRegistry.reset(nodeRegistry);
     for (size_t i = 0; i < numFrameManagers; ++i)
         m_frameContexts[i]->registry.reset(frameRegistries[i]);
+
+    m_relativeFrameIndex = 0;
 }
 
 bool VulkanBackend::issueSingleTimeCommand(const std::function<void(VkCommandBuffer)>& callback) const

@@ -56,7 +56,7 @@ private:
 
         const ShaderManager& shaderManager;
 
-        const ShaderFile& shaderFile;
+        ShaderFile shaderFile;
         std::string resolvedFilePath {};
         std::vector<std::string> includedFilePaths {};
 
