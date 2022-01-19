@@ -72,14 +72,14 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         pipeline.addNode<DDGIProbeDebug>(scene);
     }
 
-    const std::string sceneTexture = "SceneColor";
+    std::string sceneTexture = "SceneColor";
     const std::string finalTextureToScreen = "SceneColorLDR";
     const AntiAliasing antiAliasingMode = AntiAliasing::TAA;
 
     if (rtxOn) {
         // Uncomment for ray tracing visualisations
-        //pipeline.addNode<RTFirstHitNode>(scene); finalTexture = "RTFirstHit";
-        //pipeline.addNode<RTDirectLightNode>(scene); finalTexture = "RTDirectLight";
+        //pipeline.addNode<RTFirstHitNode>(scene); sceneTexture = "RTFirstHit";
+        //pipeline.addNode<RTDirectLightNode>(scene); sceneTexture = "RTDirectLight";
     }
 
     pipeline.addNode<TonemapNode>(scene, sceneTexture);
