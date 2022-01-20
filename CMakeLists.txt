@@ -12,6 +12,7 @@ add_executable(ArkoseRenderer
     src/apps/ShowcaseApp.cpp
     src/backend/Resource.cpp
     src/backend/shader/Shader.cpp
+    src/backend/shader/ShaderFile.cpp
     src/backend/shader/ShaderManager.cpp
     src/backend/base/AccelerationStructure.cpp
     src/backend/base/Backend.cpp
