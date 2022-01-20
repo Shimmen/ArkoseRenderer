@@ -1,6 +1,6 @@
 #include "Camera.h"
 
-#include "geometry/Halton.h"
+#include "math/Halton.h"
 #include <moos/transform.h>
 #include <imgui/imgui.h>
 

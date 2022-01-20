@@ -36,9 +36,9 @@ add_executable(ArkoseRenderer
     src/backend/vulkan/VulkanTexture.cpp
     src/backend/vulkan/extensions/VulkanDebugUtils.cpp
     src/backend/vulkan/extensions/VulkanRTX.cpp
-    src/geometry/Fibonacci.cpp
-    src/geometry/Frustum.cpp
-    src/geometry/Halton.cpp
+    src/math/Fibonacci.cpp
+    src/math/Frustum.cpp
+    src/math/Halton.cpp
     src/rendering/camera/Camera.cpp
     src/rendering/camera/FpsCamera.cpp
     src/rendering/nodes/BloomNode.cpp

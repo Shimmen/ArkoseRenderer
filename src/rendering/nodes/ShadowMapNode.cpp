@@ -1,6 +1,6 @@
 #include "ShadowMapNode.h"
 
-#include "geometry/Frustum.h"
+#include "math/Frustum.h"
 #include "utility/Profiling.h"
 #include "ShadowData.h"
 
