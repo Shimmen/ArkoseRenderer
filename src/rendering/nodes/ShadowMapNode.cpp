@@ -9,7 +9,7 @@ ShadowMapNode::ShadowMapNode(Scene& scene)
 {
 }
 
-RenderPipelineNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(Registry& reg)
 {
     // TODO: This should be managed from some central location, e.g. the scene node or similar.
     Buffer& transformDataBuffer = reg.createBuffer(m_scene.meshCount() * sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);

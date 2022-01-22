@@ -10,7 +10,7 @@ GIComposeNode::GIComposeNode(Scene& scene)
 {
 }
 
-RenderPipelineNode::ExecuteCallback GIComposeNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback GIComposeNode::construct(Registry& reg)
 {
     Texture& sceneColorBeforeGI = *reg.getTexture("SceneColor");
     Texture& baseColorTex = *reg.getTexture("SceneBaseColor");

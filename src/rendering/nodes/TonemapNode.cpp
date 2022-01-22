@@ -12,7 +12,7 @@ TonemapNode::TonemapNode(Scene& scene, std::string sourceTextureName, Mode mode)
 {
 }
 
-RenderPipelineNode::ExecuteCallback TonemapNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback TonemapNode::construct(Registry& reg)
 {
     Texture* sourceTexture = reg.getTexture(m_sourceTextureName);
     if (!sourceTexture)

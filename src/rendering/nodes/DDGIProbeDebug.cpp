@@ -14,22 +14,16 @@ DDGIProbeDebug::DDGIProbeDebug(Scene& scene)
 {
 }
 
-void DDGIProbeDebug::constructNode(Registry& reg)
-{
-    SCOPED_PROFILE_ZONE();
-
-    if (!reg.hasPreviousNode("DDGI"))
-        return;
-
-    m_ddgiSamplingSet = reg.getBindingSet("DDGISamplingSet");
-
-    setUpSphereRenderData(reg);
-}
-
-RenderPipelineNode::ExecuteCallback DDGIProbeDebug::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(Registry& reg)
 {
     if (!reg.hasPreviousNode("DDGI"))
         return RenderPipelineNode::NullExecuteCallback;
+
+    ///////////////////////
+    // constructNode
+    BindingSet& m_ddgiSamplingSet = *reg.getBindingSet("DDGISamplingSet");
+    const_cast<DDGIProbeDebug*>(this)->setUpSphereRenderData(reg);
+    ///////////////////////
 
     Texture& depthTexture = *reg.getTexture("SceneDepth");
     Texture& colorTexture = *reg.getTexture("SceneColor");
@@ -39,7 +33,7 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::constructFrame(Registry& reg
     Shader debugShader = Shader::createBasicRasterize("ddgi/probeDebug.vert", "ddgi/probeDebug.frag");
     RenderStateBuilder stateBuilder { renderTarget, debugShader, VertexLayout { VertexComponent::Position3F }};
     stateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneCameraSet"));
-    stateBuilder.stateBindings().at(1, *m_ddgiSamplingSet);
+    stateBuilder.stateBindings().at(1, m_ddgiSamplingSet);
     stateBuilder.writeDepth = true;
     stateBuilder.testDepth = true;
     RenderState& renderState = reg.createRenderState(stateBuilder);

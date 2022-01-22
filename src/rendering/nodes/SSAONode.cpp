@@ -14,15 +14,15 @@ SSAONode::SSAONode(Scene& scene)
 {
 }
 
-void SSAONode::constructNode(Registry& reg)
+RenderPipelineNode::ExecuteCallback SSAONode::construct(Registry& reg)
 {
-    m_kernelSampleCount = 32;
-    ASSERT(m_kernelSampleCount <= SSAO_KERNEL_SAMPLE_MAX_COUNT);
-    m_kernelSampleBuffer = &reg.createBuffer(generateKernel(m_kernelSampleCount), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOptimal);
-}
+    ///////////////////////
+    // constructNode
+    static constexpr int KernelSampleCount = 32;
+    ASSERT(KernelSampleCount <= SSAO_KERNEL_SAMPLE_MAX_COUNT);
+    Buffer& kernelSampleBuffer = reg.createBuffer(generateKernel(KernelSampleCount), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOptimal);
+    ///////////////////////
 
-RenderPipelineNode::ExecuteCallback SSAONode::constructFrame(Registry& reg) const
-{
     // TODO: Handle resource modifications! For proper async handling
     Texture* sceneOpaqueDepth = reg.getTexture("SceneDepth");
     Texture* sceneOpaqueNormals = reg.getTexture("SceneNormal");
@@ -34,7 +34,7 @@ RenderPipelineNode::ExecuteCallback SSAONode::constructFrame(Registry& reg) cons
                                                         { 1, ShaderStageCompute, sceneOpaqueDepth, ShaderBindingType::TextureSampler },
                                                         { 2, ShaderStageCompute, sceneOpaqueNormals, ShaderBindingType::TextureSampler },
                                                         { 3, ShaderStageCompute, reg.getBuffer("SceneCameraData") },
-                                                        { 4, ShaderStageCompute, m_kernelSampleBuffer } });
+                                                        { 4, ShaderStageCompute, &kernelSampleBuffer } });
     ComputeState& ssaoComputeState = reg.createComputeState(Shader::createCompute("ssao/ssao.comp"), { &ssaoBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
@@ -54,7 +54,7 @@ RenderPipelineNode::ExecuteCallback SSAONode::constructFrame(Registry& reg) cons
         cmdList.setNamedUniform("targetSize", appState.windowExtent());
         cmdList.setNamedUniform("kernelRadius", kernelRadius);
         cmdList.setNamedUniform("kernelExponent", kernelExponent);
-        cmdList.setNamedUniform("kernelSampleCount", m_kernelSampleCount);
+        cmdList.setNamedUniform("kernelSampleCount", KernelSampleCount);
 
         cmdList.dispatch({ ambientOcclusionTex.extent(), 1 }, { 32, 32, 1 });
         cmdList.textureWriteBarrier(ambientOcclusionTex);

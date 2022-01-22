@@ -8,7 +8,7 @@ SkyViewNode::SkyViewNode(Scene& scene)
 {
 }
 
-RenderPipelineNode::ExecuteCallback SkyViewNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback SkyViewNode::construct(Registry& reg)
 {
     Texture& sceneColor = *reg.getTexture("SceneColor");
     Texture& sceneVelocity = *reg.getTexture("SceneVelocity"); // todo: velocity shouldn't be strictly required as it is now!

@@ -11,7 +11,7 @@ FinalNode::FinalNode(Scene& scene, std::string sourceTextureName)
 {
 }
 
-RenderPipelineNode::ExecuteCallback FinalNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback FinalNode::construct(Registry& reg)
 {
     Texture* sourceTexture = reg.getTexture(m_sourceTextureName);
     if (!sourceTexture)

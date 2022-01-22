@@ -13,20 +13,20 @@ TAANode::TAANode(Scene& scene)
     }
 }
 
-void TAANode::constructNode(Registry& reg)
+RenderPipelineNode::ExecuteCallback TAANode::construct(Registry& reg)
 {
-    m_accumulationTexture = &reg.createTexture2D(m_scene.mainViewportSize(), Texture::Format::RGBA8);
-}
+    ///////////////////////
+    // constructNode
+    Texture& accumulationTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA8);
+    ///////////////////////
 
-RenderPipelineNode::ExecuteCallback TAANode::constructFrame(Registry& reg) const
-{
     Texture& currentFrameTexture = *reg.getTexture("SceneColorLDR");
     Texture& currentFrameVelocity = *reg.getTexture("SceneVelocity");
 
-    Texture& historyTexture = reg.createTexture2D(m_accumulationTexture->extent(), m_accumulationTexture->format(),
+    Texture& historyTexture = reg.createTexture2D(accumulationTexture.extent(), accumulationTexture.format(),
                                                   Texture::Filters::linear(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
 
-    BindingSet& taaBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, m_accumulationTexture, ShaderBindingType::StorageImage },
+    BindingSet& taaBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &accumulationTexture, ShaderBindingType::StorageImage },
                                                        { 1, ShaderStageCompute, &currentFrameTexture, ShaderBindingType::TextureSampler },
                                                        { 2, ShaderStageCompute, &currentFrameVelocity, ShaderBindingType::TextureSampler },
                                                        { 3, ShaderStageCompute, &historyTexture, ShaderBindingType::TextureSampler } });
@@ -58,13 +58,13 @@ RenderPipelineNode::ExecuteCallback TAANode::constructFrame(Registry& reg) const
         const bool firstFrame = appState.isRelativeFirstFrame() || wasEnabledThisFrame;
 
         if (firstFrame) {
-            cmdList.copyTexture(currentFrameTexture, *m_accumulationTexture);
+            cmdList.copyTexture(currentFrameTexture, accumulationTexture);
             return;
         }
 
         // Grab a copy of the current state of the accumulation texture; this is our history for this frame and we overwrite/accumulate in the accumulation texture
-        ASSERT(m_accumulationTexture->extent() == historyTexture.extent());
-        cmdList.copyTexture(*m_accumulationTexture, historyTexture);
+        ASSERT(accumulationTexture.extent() == historyTexture.extent());
+        cmdList.copyTexture(accumulationTexture, historyTexture);
 
         cmdList.setComputeState(taaComputeState);
         cmdList.bindSet(taaBindingSet, 0);
@@ -77,6 +77,6 @@ RenderPipelineNode::ExecuteCallback TAANode::constructFrame(Registry& reg) const
 
         // TODO: Noooo.. we don't want to have to do this :(
         // There might be some clever way to avoid all these copies.
-        cmdList.copyTexture(*m_accumulationTexture, currentFrameTexture);
+        cmdList.copyTexture(accumulationTexture, currentFrameTexture);
     };
 }

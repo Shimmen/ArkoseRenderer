@@ -12,10 +12,8 @@ public:
 
     std::string name() const override { return "RT first-hit"; }
 
-    void constructNode(Registry&) override;
-    ExecuteCallback constructFrame(Registry&) const override;
+    ExecuteCallback construct(Registry&) override;
 
 private:
     Scene& m_scene;
-    BindingSet* m_objectDataBindingSet {};
 };

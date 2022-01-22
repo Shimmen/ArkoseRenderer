@@ -10,8 +10,13 @@ RTDirectLightNode::RTDirectLightNode(Scene& scene)
 {
 }
 
-void RTDirectLightNode::constructNode(Registry& nodeReg)
+RenderPipelineNode::ExecuteCallback RTDirectLightNode::construct(Registry& reg)
 {
+    ///////////////////////
+    // constructNode
+
+    // TODO: All of this is reusable for all rt stuff, should go in Scene!
+
     const VertexLayout vertexLayout = { VertexComponent::Normal3F,
                                         VertexComponent::TexCoord2F };
 
@@ -26,14 +31,12 @@ void RTDirectLightNode::constructNode(Registry& nodeReg)
     Buffer& indexBuffer = m_scene.globalIndexBuffer();
     Buffer& vertexBuffer = m_scene.globalVertexBufferForLayout(vertexLayout);
 
-    Buffer& meshBuffer = nodeReg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
-    m_objectDataBindingSet = &nodeReg.createBindingSet({ { 0, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &meshBuffer },
-                                                         { 1, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &indexBuffer },
-                                                         { 2, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &vertexBuffer } });
-}
+    Buffer& meshBuffer = reg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+    BindingSet& objectDataBindingSet = reg.createBindingSet({ { 0, ShaderStageRTClosestHit, &meshBuffer },
+                                                              { 1, ShaderStageRTClosestHit, &indexBuffer },
+                                                              { 2, ShaderStageRTClosestHit, &vertexBuffer } });
+    ///////////////////////
 
-RenderPipelineNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& reg) const
-{
     Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("RTDirectLight", storageImage);
 
@@ -54,7 +57,7 @@ RenderPipelineNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& 
 
     StateBindings stateDataBindings;
     stateDataBindings.at(0, frameBindingSet);
-    stateDataBindings.at(1, *m_objectDataBindingSet);
+    stateDataBindings.at(1, objectDataBindingSet);
     stateDataBindings.at(2, materialBindingSet);
     stateDataBindings.at(3, lightBindingSet);
 

@@ -15,17 +15,16 @@ ForwardRenderNode::ForwardRenderNode(Scene& scene)
 {
 }
 
-void ForwardRenderNode::constructNode(Registry& reg)
+RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(Registry& reg)
 {
-    SCOPED_PROFILE_ZONE();
-
+    ///////////////////////
+    // constructNode
+    BindingSet* ddgiSamplingBindingSet = nullptr;
     if (reg.hasPreviousNode("DDGI")) {
-        m_ddgiSamplingBindingSet = reg.getBindingSet("DDGISamplingSet");
+        ddgiSamplingBindingSet = reg.getBindingSet("DDGISamplingSet");
     }
-}
+    ///////////////////////
 
-RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg) const
-{
     Texture& colorTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("SceneColor", colorTexture);
 
@@ -63,7 +62,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
     BindingSet& opaqueDrawablesBindingSet = *reg.getBindingSet("MainViewCulledDrawablesOpaqueSet");
     BindingSet& maskedDrawablesBindingSet = *reg.getBindingSet("MainViewCulledDrawablesMaskedSet");
 
-    bool useDDGI = m_ddgiSamplingBindingSet != nullptr;
+    bool useDDGI = ddgiSamplingBindingSet != nullptr;
     auto includeDDGIDefine = ShaderDefine::makeBool("FORWARD_INCLUDE_DDGI", useDDGI);
 
     RenderState* renderStateOpaque;
@@ -79,7 +78,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
         renderStateBuilder.stateBindings().at(2, lightBindingSet);
         renderStateBuilder.stateBindings().at(3, opaqueDrawablesBindingSet);
         if (useDDGI)
-            renderStateBuilder.stateBindings().at(5, *m_ddgiSamplingBindingSet);
+            renderStateBuilder.stateBindings().at(5, *ddgiSamplingBindingSet);
 
         renderStateOpaque = &reg.createRenderState(renderStateBuilder);
         renderStateOpaque->setName("ForwardOpaque");
@@ -98,7 +97,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
         renderStateBuilder.stateBindings().at(2, lightBindingSet);
         renderStateBuilder.stateBindings().at(3, maskedDrawablesBindingSet);
         if (useDDGI)
-            renderStateBuilder.stateBindings().at(5, *m_ddgiSamplingBindingSet);
+            renderStateBuilder.stateBindings().at(5, *ddgiSamplingBindingSet);
 
         renderStateMasked = &reg.createRenderState(renderStateBuilder);
         renderStateMasked->setName("ForwardMasked");

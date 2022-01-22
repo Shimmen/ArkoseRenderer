@@ -10,7 +10,7 @@ PrepassNode::PrepassNode(Scene& scene)
 {
 }
 
-RenderPipelineNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback PrepassNode::construct(Registry& reg)
 {
     Texture& depthTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth24Stencil8, Texture::Filters::nearest());
     reg.publish("SceneDepth", depthTexture);

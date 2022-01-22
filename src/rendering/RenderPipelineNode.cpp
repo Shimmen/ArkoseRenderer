@@ -11,12 +11,7 @@ RenderPipelineBasicNode::RenderPipelineBasicNode(std::string name, ConstructorFu
 {
 }
 
-void RenderPipelineBasicNode::constructNode(Registry&)
+RenderPipelineBasicNode::ExecuteCallback RenderPipelineBasicNode::construct(Registry& reg)
 {
-    // Intentionally empty. If you want to have node resource, create a custom RenderPipelineNode subclass.
-}
-
-RenderPipelineBasicNode::ExecuteCallback RenderPipelineBasicNode::constructFrame(Registry& frameManager) const
-{
-    return m_constructorFunction(frameManager);
+    return m_constructorFunction(reg);
 }

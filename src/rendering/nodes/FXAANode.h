@@ -9,7 +9,7 @@ public:
 
     std::string name() const override { return "FXAA"; }
 
-    ExecuteCallback constructFrame(Registry&) const override;
+    ExecuteCallback construct(Registry&) override;
 
 private:
     Scene& m_scene;

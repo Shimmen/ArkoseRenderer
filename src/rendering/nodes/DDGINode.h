@@ -17,17 +17,11 @@ public:
 
     std::string name() const override { return "DDGI"; }
 
-    void constructNode(Registry&) override;
-    ExecuteCallback constructFrame(Registry&) const override;
+    ExecuteCallback construct(Registry&) override;
 
 private:
     Scene& m_scene;
 
-    Buffer* m_probeGridDataBuffer {};
-    BindingSet* m_objectDataBindingSet {};
-    Texture* m_probeAtlasIrradiance {};
-    Texture* m_probeAtlasVisibility {};
-
-    BindingSet* createMeshDataBindingSet(Registry&) const;
-    Texture* createProbeAtlas(Registry&, const std::string& name, const ProbeGrid&, const ClearColor&, Texture::Format, int probeTileSize, int tileSidePadding) const;
+    BindingSet& createMeshDataBindingSet(Registry&) const;
+    Texture& createProbeAtlas(Registry&, const std::string& name, const ProbeGrid&, const ClearColor&, Texture::Format, int probeTileSize, int tileSidePadding) const;
 };

@@ -16,7 +16,7 @@ SceneNode::SceneNode(Scene& scene)
 {
 }
 
-RenderPipelineNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback SceneNode::construct(Registry& reg)
 {
     Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
     BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStageAnyRasterize, &cameraBuffer } });

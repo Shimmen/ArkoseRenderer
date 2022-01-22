@@ -11,13 +11,10 @@ public:
 
     std::string name() const override { return "SSAO"; }
 
-    void constructNode(Registry&) override;
-    ExecuteCallback constructFrame(Registry&) const override;
+    ExecuteCallback construct(Registry&) override;
 
 private:
     Scene& m_scene;
 
-    int m_kernelSampleCount { 0 };
-    Buffer* m_kernelSampleBuffer {};
     std::vector<vec4> generateKernel(int numSamples) const;
 };

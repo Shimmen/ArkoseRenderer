@@ -16,7 +16,7 @@ CullingNode::CullingNode(Scene& scene)
 {
 }
 
-RenderPipelineNode::ExecuteCallback CullingNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback CullingNode::construct(Registry& reg)
 {
     // todo: maybe default to smaller, and definitely actually grow when needed!
     static constexpr size_t initialBufferCount = 1024;

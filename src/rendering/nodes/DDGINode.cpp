@@ -19,37 +19,34 @@ DDGINode::DDGINode(Scene& scene)
 {
 }
 
-void DDGINode::constructNode(Registry& reg)
+RenderPipelineNode::ExecuteCallback DDGINode::construct(Registry& reg)
 {
     if (!m_scene.hasProbeGrid()) {
         LogError("DDGINode is used but no probe grid is available, will no-op");
-        return;
+        return RenderPipelineNode::NullExecuteCallback;
     }
 
+    ///////////////////////
+    // constructNode
     DDGIProbeGridData probeGridData { .gridDimensions = ivec4(m_scene.probeGrid().gridDimensions.asIntVector(), 0),
                                       .probeSpacing = vec4(m_scene.probeGrid().probeSpacing, 0.0f),
                                       .offsetToFirst = vec4(m_scene.probeGrid().offsetToFirst, 0.0f) };
-    m_probeGridDataBuffer = &reg.createBufferForData(probeGridData, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOptimal);
+    Buffer& probeGridDataBuffer = reg.createBufferForData(probeGridData, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOptimal);
 
-    m_objectDataBindingSet = createMeshDataBindingSet(reg);
+    BindingSet& objectDataBindingSet = createMeshDataBindingSet(reg);
 
     auto irradianceClearColor = ClearColor::dataValues(0, 0, 0, 0);
-    m_probeAtlasIrradiance = createProbeAtlas(reg, "ddgi-irradiance", m_scene.probeGrid(), irradianceClearColor, Texture::Format::RGBA16F, DDGI_IRRADIANCE_RES, DDGI_ATLAS_PADDING);
+    Texture& probeAtlasIrradiance = createProbeAtlas(reg, "ddgi-irradiance", m_scene.probeGrid(), irradianceClearColor, Texture::Format::RGBA16F, DDGI_IRRADIANCE_RES, DDGI_ATLAS_PADDING);
 
     float cameraZFar = m_scene.camera().zFar;
     auto visibilityClearColor = ClearColor::dataValues(cameraZFar, cameraZFar * cameraZFar, 0, 0);
-    m_probeAtlasVisibility = createProbeAtlas(reg, "ddgi-visibility", m_scene.probeGrid(), visibilityClearColor, Texture::Format::RG16F, DDGI_VISIBILITY_RES, DDGI_ATLAS_PADDING);
+    Texture& probeAtlasVisibility = createProbeAtlas(reg, "ddgi-visibility", m_scene.probeGrid(), visibilityClearColor, Texture::Format::RG16F, DDGI_VISIBILITY_RES, DDGI_ATLAS_PADDING);
 
-    BindingSet& ddgiSamplingBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, m_probeGridDataBuffer },
-                                                                { 1, ShaderStageFragment, m_probeAtlasIrradiance, ShaderBindingType::TextureSampler },
-                                                                { 2, ShaderStageFragment, m_probeAtlasVisibility, ShaderBindingType::TextureSampler } });
+    BindingSet& ddgiSamplingBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &probeGridDataBuffer },
+                                                                { 1, ShaderStageFragment, &probeAtlasIrradiance, ShaderBindingType::TextureSampler },
+                                                                { 2, ShaderStageFragment, &probeAtlasVisibility, ShaderBindingType::TextureSampler } });
     reg.publish("DDGISamplingSet", ddgiSamplingBindingSet);
-}
-
-RenderPipelineNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) const
-{
-    if (!m_scene.hasProbeGrid())
-        return {};
+    ///////////////////////
 
     const int probeCount = m_scene.probeGrid().probeCount(); // TODO: maybe don't expect to be able to update all in one surfel image?
     static constexpr int maxNumProbeSamples = 128; // we dynamically choose to do fewer samples but not more since it's the fixed image size now
@@ -65,7 +62,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) cons
     TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },
                                                          { 1, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), reg.getBuffer("SceneCameraData") },
-                                                         { 2, ShaderStageRTRayGen, m_probeGridDataBuffer },
+                                                         { 2, ShaderStageRTRayGen, &probeGridDataBuffer },
                                                          { 3, ShaderStageRTRayGen, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler },
 #if USE_DEBUG_TARGET
                                                          { 4, ShaderStageRTRayGen, &storageImage, ShaderBindingType::StorageImage } });
@@ -81,7 +78,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) cons
 
     StateBindings rtStateDataBindings;
     rtStateDataBindings.at(0, frameBindingSet);
-    rtStateDataBindings.at(1, *m_objectDataBindingSet);
+    rtStateDataBindings.at(1, objectDataBindingSet);
     rtStateDataBindings.at(2, m_scene.globalMaterialBindingSet());
     rtStateDataBindings.at(3, *reg.getBindingSet("SceneLightSet"));
 
@@ -89,16 +86,16 @@ RenderPipelineNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) cons
     RayTracingState& surfelRayTracingState = reg.createRayTracingState(sbt, rtStateDataBindings, maxRecursionDepth);
 
     BindingSet& irradianceUpdateBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &surfelImage, ShaderBindingType::StorageImage },
-                                                                    { 1, ShaderStageCompute, m_probeAtlasIrradiance, ShaderBindingType::StorageImage } });
+                                                                    { 1, ShaderStageCompute, &probeAtlasIrradiance, ShaderBindingType::StorageImage } });
     ComputeState& irradianceProbeUpdateState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateIrradiance.comp"), { &irradianceUpdateBindingSet });
 
 
     BindingSet& visibilityUpdateBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &surfelImage, ShaderBindingType::StorageImage },
-                                                                    { 1, ShaderStageCompute, m_probeAtlasVisibility, ShaderBindingType::StorageImage } });
+                                                                    { 1, ShaderStageCompute, &probeAtlasVisibility, ShaderBindingType::StorageImage } });
     ComputeState& visibilityProbeUpdateState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateVisibility.comp"), { &visibilityUpdateBindingSet });
 
-    BindingSet& probeBorderCopyBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, m_probeAtlasIrradiance, ShaderBindingType::StorageImage },
-                                                                   { 1, ShaderStageCompute, m_probeAtlasVisibility, ShaderBindingType::StorageImage } });
+    BindingSet& probeBorderCopyBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &probeAtlasIrradiance, ShaderBindingType::StorageImage },
+                                                                   { 1, ShaderStageCompute, &probeAtlasVisibility, ShaderBindingType::StorageImage } });
     ComputeState& probeBorderCopyCornersState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyCorners.comp"), { &probeBorderCopyBindingSet });
     ComputeState& probeBorderCopyIrradianceEdgesState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyEdges.comp", { ShaderDefine::makeInt("TILE_SIZE", DDGI_IRRADIANCE_RES) }), { &probeBorderCopyBindingSet });
     ComputeState& probeBorderCopyVisibilityEdgesState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyEdges.comp", { ShaderDefine::makeInt("TILE_SIZE", DDGI_VISIBILITY_RES) }), { &probeBorderCopyBindingSet });
@@ -225,14 +222,14 @@ RenderPipelineNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) cons
         // 6. Ensure all probes have been updated
         {
             // TODO: The render graph should take care of this!
-            cmdList.textureWriteBarrier(*m_probeAtlasIrradiance);
-            cmdList.textureWriteBarrier(*m_probeAtlasVisibility);
+            cmdList.textureWriteBarrier(probeAtlasIrradiance);
+            cmdList.textureWriteBarrier(probeAtlasVisibility);
         }
         
     };
 }
 
-BindingSet* DDGINode::createMeshDataBindingSet(Registry& reg) const
+BindingSet& DDGINode::createMeshDataBindingSet(Registry& reg) const
 {
     const VertexLayout vertexLayout = { VertexComponent::Normal3F,
                                         VertexComponent::TexCoord2F };
@@ -254,10 +251,10 @@ BindingSet* DDGINode::createMeshDataBindingSet(Registry& reg) const
                                                             { 2, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &vertexBuffer } });
     meshDataBindingSet.setName("DDGIMeshData");
 
-    return &meshDataBindingSet;
+    return meshDataBindingSet;
 }
 
-Texture* DDGINode::createProbeAtlas(Registry& reg, const std::string& name, const ProbeGrid& probeGrid, const ClearColor& clearColor, Texture::Format format, int probeTileSize, int tileSidePadding) const
+Texture& DDGINode::createProbeAtlas(Registry& reg, const std::string& name, const ProbeGrid& probeGrid, const ClearColor& clearColor, Texture::Format format, int probeTileSize, int tileSidePadding) const
 {
     ASSERT(probeTileSize > 0);
     ASSERT(tileSidePadding >= 0);
@@ -275,5 +272,5 @@ Texture* DDGINode::createProbeAtlas(Registry& reg, const std::string& name, cons
         atlasTexture.clear(clearColor);
     }
 
-    return &atlasTexture;
+    return atlasTexture;
 }

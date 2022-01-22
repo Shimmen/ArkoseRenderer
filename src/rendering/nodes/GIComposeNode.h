@@ -9,7 +9,7 @@ public:
 
     std::string name() const override { return "GI Compose"; }
 
-    ExecuteCallback constructFrame(Registry&) const override;
+    ExecuteCallback construct(Registry&) override;
 
 private:
     Scene& m_scene;

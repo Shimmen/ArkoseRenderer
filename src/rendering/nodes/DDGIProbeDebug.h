@@ -8,13 +8,10 @@ public:
 
     std::string name() const override { return "DDGI probe debug"; }
 
-    void constructNode(Registry&) override;
-    ExecuteCallback constructFrame(Registry&) const override;
+    ExecuteCallback construct(Registry&) override;
 
 private:
     Scene& m_scene;
-
-    BindingSet* m_ddgiSamplingSet { nullptr };
 
     void setUpSphereRenderData(Registry&);
     Buffer* m_sphereVertexBuffer { nullptr };

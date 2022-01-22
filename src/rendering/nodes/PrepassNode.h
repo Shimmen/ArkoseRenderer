@@ -9,7 +9,7 @@ public:
 
     std::string name() const override { return "Prepass"; }
 
-    ExecuteCallback constructFrame(Registry&) const override;
+    ExecuteCallback construct(Registry&) override;
 
 private:
     VertexLayout m_prepassVertexLayout { VertexComponent::Position3F };

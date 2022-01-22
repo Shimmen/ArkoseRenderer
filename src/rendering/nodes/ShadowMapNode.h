@@ -12,7 +12,7 @@ public:
 
     std::string name() const override { return "Shadow Mapping"; }
 
-    ExecuteCallback constructFrame(Registry&) const override;
+    ExecuteCallback construct(Registry&) override;
 
 private:
     VertexLayout m_vertexLayout { VertexComponent::Position3F,

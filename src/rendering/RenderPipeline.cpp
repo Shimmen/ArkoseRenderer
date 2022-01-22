@@ -32,13 +32,10 @@ void RenderPipeline::constructAll(Registry& registry)
         LogInfo("  %s\n", node->name().c_str());
 
         registry.setCurrentNode({}, node->name());
-
-        // TODO: Remove the constructNode variant..
-        node->constructNode(registry);
-        auto executeCallback = node->constructFrame(registry);
+        auto executeCallback = node->construct(registry);
 
         m_nodeContexts.push_back({ .node = node.get(),
-                                    .executeCallback = executeCallback });
+                                   .executeCallback = std::move(executeCallback) });
     }
 
     registry.setCurrentNode({}, std::nullopt);

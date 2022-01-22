@@ -12,7 +12,7 @@ PickingNode::PickingNode(Scene& scene)
 {
 }
 
-RenderPipelineNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) const
+RenderPipelineNode::ExecuteCallback PickingNode::construct(Registry& reg)
 {
     Texture& indexMap = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R32);
     Texture& indexDepthMap = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth32F);

@@ -25,12 +25,7 @@ public:
 
     [[nodiscard]] virtual std::string name() const = 0;
 
-    //! This is not const since we need to write to members here that are shared for the whole node.
-    virtual void constructNode(Registry&) {};
-
-    //! This is const, since changing or writing to any members would probably break stuff
-    //! since this is called n times, one for each frame at reconstruction.
-    virtual ExecuteCallback constructFrame(Registry&) const { return RenderPipelineNode::ExecuteCallback(); };
+    virtual ExecuteCallback construct(Registry&) { return RenderPipelineNode::ExecuteCallback(); };
 
 private:
     AvgElapsedTimer m_timer;
@@ -43,8 +38,7 @@ public:
 
     std::string name() const override { return m_name; }
 
-    void constructNode(Registry&) override;
-    ExecuteCallback constructFrame(Registry&) const override;
+    ExecuteCallback construct(Registry&) override;
 
 private:
     std::string m_name;

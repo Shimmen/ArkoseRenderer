@@ -11,8 +11,13 @@ RTFirstHitNode::RTFirstHitNode(Scene& scene)
 {
 }
 
-void RTFirstHitNode::constructNode(Registry& nodeReg)
+RenderPipelineNode::ExecuteCallback RTFirstHitNode::construct(Registry& reg)
 {
+    ///////////////////////
+    // constructNode
+
+    // TODO: All of this is reusable for all rt stuff, should go in Scene!
+
     const VertexLayout vertexLayout = { VertexComponent::Normal3F,
                                         VertexComponent::TexCoord2F };
 
@@ -24,18 +29,15 @@ void RTFirstHitNode::constructNode(Registry& nodeReg)
                              .materialIndex = mesh.materialIndex().value_or(0) });
     });
 
-
     Buffer& indexBuffer = m_scene.globalIndexBuffer();
     Buffer& vertexBuffer = m_scene.globalVertexBufferForLayout(vertexLayout);
 
-    Buffer& meshBuffer = nodeReg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
-    m_objectDataBindingSet = &nodeReg.createBindingSet({ { 0, ShaderStageRTClosestHit, &meshBuffer },
-                                                         { 1, ShaderStageRTClosestHit, &indexBuffer },
-                                                         { 2, ShaderStageRTClosestHit, &vertexBuffer } });
-}
+    Buffer& meshBuffer = reg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+    BindingSet& objectDataBindingSet = reg.createBindingSet({ { 0, ShaderStageRTClosestHit, &meshBuffer },
+                                                                { 1, ShaderStageRTClosestHit, &indexBuffer },
+                                                                { 2, ShaderStageRTClosestHit, &vertexBuffer } });
+    ///////////////////////
 
-RenderPipelineNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg) const
-{
     Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("RTFirstHit", storageImage);
 
@@ -54,7 +56,7 @@ RenderPipelineNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg
 
     StateBindings stateBindings;
     stateBindings.at(0, frameBindingSet);
-    stateBindings.at(1, *m_objectDataBindingSet);
+    stateBindings.at(1, objectDataBindingSet);
     stateBindings.at(2, materialBindingSet);
     stateBindings.at(3, environmentBindingSet);
 
@@ -65,7 +67,7 @@ RenderPipelineNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg
         cmdList.setRayTracingState(rtState);
 
         cmdList.bindSet(frameBindingSet, 0);
-        cmdList.bindSet(*m_objectDataBindingSet, 1);
+        cmdList.bindSet(objectDataBindingSet, 1);
         cmdList.bindSet(materialBindingSet, 2);
         cmdList.bindSet(environmentBindingSet, 3);
 
