@@ -11,8 +11,6 @@ ShadowMapNode::ShadowMapNode(Scene& scene)
 
 RenderPipelineNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg) const
 {
-    SCOPED_PROFILE_ZONE();
-
     // TODO: This should be managed from some central location, e.g. the scene node or similar.
     Buffer& transformDataBuffer = reg.createBuffer(m_scene.meshCount() * sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     BindingSet& transformBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &transformDataBuffer } });

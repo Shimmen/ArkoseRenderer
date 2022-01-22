@@ -26,8 +26,6 @@ void ForwardRenderNode::constructNode(Registry& reg)
 
 RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& reg) const
 {
-    SCOPED_PROFILE_ZONE();
-
     Texture& colorTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("SceneColor", colorTexture);
 
@@ -106,6 +104,12 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
         renderStateMasked->setName("ForwardMasked");
     }
 
+    Buffer& opaqueDrawCmdsBuffer = *reg.getBuffer("MainViewOpaqueDrawCmds");
+    Buffer& opaqueDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
+
+    Buffer& maskedDrawCmdsBuffer = *reg.getBuffer("MainViewMaskedDrawCmds");
+    Buffer& maskedDrawCountBuffer = *reg.getBuffer("MainViewMaskedDrawCount");
+
     return [&, renderStateOpaque, renderStateMasked](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         m_scene.forEachMesh([&](size_t, Mesh& mesh) {
@@ -125,9 +129,8 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
         cmdList.beginRendering(*renderStateOpaque, ClearColor::srgbColor(0, 0, 0, 0), 1.0f);
         {
             setCommonNamedUniforms();
-            Buffer& indirectDrawCmdsBuffer = *reg.getBuffer("MainViewOpaqueDrawCmds");
-            Buffer& indirectDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
-            cmdList.drawIndirect(indirectDrawCmdsBuffer, indirectDrawCountBuffer);
+            
+            cmdList.drawIndirect(opaqueDrawCmdsBuffer, opaqueDrawCountBuffer);
         }
         cmdList.endRendering();
         cmdList.endDebugLabel();
@@ -136,9 +139,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
         cmdList.beginRendering(*renderStateMasked);
         {
             setCommonNamedUniforms();
-            Buffer& indirectDrawCmdsBuffer = *reg.getBuffer("MainViewMaskedDrawCmds");
-            Buffer& indirectDrawCountBuffer = *reg.getBuffer("MainViewMaskedDrawCount");
-            cmdList.drawIndirect(indirectDrawCmdsBuffer, indirectDrawCountBuffer);
+            cmdList.drawIndirect(maskedDrawCmdsBuffer, maskedDrawCountBuffer);
         }
         cmdList.endRendering();
         cmdList.endDebugLabel();

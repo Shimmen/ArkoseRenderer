@@ -14,10 +14,11 @@ Registry::Registry(Backend& backend, Registry* previousRegistry, const RenderTar
 {
 }
 
-void Registry::setCurrentNode(const std::string& node)
+void Registry::setCurrentNode(Badge<RenderPipeline>, std::optional<std::string> node)
 {
     m_currentNodeName = node;
-    m_allNodeNames.push_back(node);
+    if (node.has_value())
+        m_allNodeNames.push_back(node.value());
 }
 
 const RenderTarget& Registry::windowRenderTarget()

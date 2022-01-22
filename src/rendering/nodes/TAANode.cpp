@@ -20,8 +20,6 @@ void TAANode::constructNode(Registry& reg)
 
 RenderPipelineNode::ExecuteCallback TAANode::constructFrame(Registry& reg) const
 {
-    SCOPED_PROFILE_ZONE();
-
     Texture& currentFrameTexture = *reg.getTexture("SceneColorLDR");
     Texture& currentFrameVelocity = *reg.getTexture("SceneVelocity");
 

@@ -11,8 +11,6 @@ BloomNode::BloomNode(Scene& scene)
 
 RenderPipelineNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) const
 {
-    SCOPED_PROFILE_ZONE();
-
     Texture& mainTexture = *reg.getTexture("SceneColor");
     Extent2D baseExtent = mainTexture.extent();
 

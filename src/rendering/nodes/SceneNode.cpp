@@ -18,8 +18,6 @@ SceneNode::SceneNode(Scene& scene)
 
 RenderPipelineNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) const
 {
-    SCOPED_PROFILE_ZONE();
-
     Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
     BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStageAnyRasterize, &cameraBuffer } });
     reg.publish("SceneCameraData", cameraBuffer);

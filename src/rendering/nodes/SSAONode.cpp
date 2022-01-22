@@ -23,8 +23,6 @@ void SSAONode::constructNode(Registry& reg)
 
 RenderPipelineNode::ExecuteCallback SSAONode::constructFrame(Registry& reg) const
 {
-    SCOPED_PROFILE_ZONE();
-
     // TODO: Handle resource modifications! For proper async handling
     Texture* sceneOpaqueDepth = reg.getTexture("SceneDepth");
     Texture* sceneOpaqueNormals = reg.getTexture("SceneNormal");

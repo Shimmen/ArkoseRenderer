@@ -31,7 +31,7 @@ void RenderPipeline::constructAll(Registry& registry)
         SCOPED_PROFILE_ZONE_DYNAMIC(node->name(), 0x252515)
         LogInfo("  %s\n", node->name().c_str());
 
-        registry.setCurrentNode(node->name());
+        registry.setCurrentNode({}, node->name());
 
         // TODO: Remove the constructNode variant..
         node->constructNode(registry);
@@ -41,8 +41,7 @@ void RenderPipeline::constructAll(Registry& registry)
                                     .executeCallback = executeCallback });
     }
 
-    // Is this useful? Also, maybe use optional instead?
-    registry.setCurrentNode("-");
+    registry.setCurrentNode({}, std::nullopt);
 }
 
 void RenderPipeline::forEachNodeInResolvedOrder(const Registry& frameManager, std::function<void(std::string nodeName, AvgElapsedTimer& timer, const RenderPipelineNode::ExecuteCallback&)> callback) const

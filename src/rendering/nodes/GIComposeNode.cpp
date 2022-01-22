@@ -12,8 +12,6 @@ GIComposeNode::GIComposeNode(Scene& scene)
 
 RenderPipelineNode::ExecuteCallback GIComposeNode::constructFrame(Registry& reg) const
 {
-    SCOPED_PROFILE_ZONE();
-
     Texture& sceneColorBeforeGI = *reg.getTexture("SceneColor");
     Texture& baseColorTex = *reg.getTexture("SceneBaseColor");
     Texture& ambientOcclusionTex = *reg.getTexture("AmbientOcclusion");

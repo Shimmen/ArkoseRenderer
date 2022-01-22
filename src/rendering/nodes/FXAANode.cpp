@@ -12,8 +12,6 @@ FXAANode::FXAANode(Scene& scene)
 
 RenderPipelineNode::ExecuteCallback FXAANode::constructFrame(Registry& reg) const
 {
-    SCOPED_PROFILE_ZONE();
-
     Texture& ldrTexture = *reg.getTexture("SceneColorLDR");
     Texture& replaceTex = reg.createTexture2D(ldrTexture.extent(), ldrTexture.format(), ldrTexture.filters(), ldrTexture.mipmap(), ldrTexture.wrapMode());
 

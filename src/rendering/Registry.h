@@ -11,11 +11,13 @@
 #include <unordered_map>
 #include <unordered_set>
 
+class RenderPipeline;
+
 class Registry final {
 public:
     explicit Registry(Backend&, Registry* previousRegistry, const RenderTarget* windowRenderTarget = nullptr);
 
-    void setCurrentNode(const std::string&);
+    void setCurrentNode(Badge<RenderPipeline>, std::optional<std::string>);
 
     [[nodiscard]] const RenderTarget& windowRenderTarget();
     [[nodiscard]] RenderTarget& createRenderTarget(std::vector<RenderTarget::Attachment>);
@@ -159,6 +161,11 @@ void Registry::publishResource(const std::string& name, T& resource, std::unorde
 template<typename T>
 T* Registry::getResource(const std::string& name, const PublishedResourceMap<T>& map)
 {
+    if (!m_currentNodeName.has_value()) {
+        LogErrorAndExit("Registry: Attempt to get resource while not in the render pipline construct phase, which is illegal. "
+                        "Any resources that you want to use in the execution phase you must first get in the construction phase.\n");
+    }
+
     auto entry = map.find(name);
     if (entry == map.end())
         return nullptr;

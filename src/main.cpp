@@ -71,8 +71,6 @@ std::unique_ptr<Backend> createBackend(Backend::Type backendType, GLFWwindow* wi
 
 int main(int argc, char** argv)
 {
-    SCOPED_PROFILE_ZONE();
-
     if (!glfwInit()) {
         LogErrorAndExit("ArkoseRenderer::main(): could not initialize GLFW, exiting.\n");
     }

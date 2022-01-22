@@ -10,8 +10,6 @@ SkyViewNode::SkyViewNode(Scene& scene)
 
 RenderPipelineNode::ExecuteCallback SkyViewNode::constructFrame(Registry& reg) const
 {
-    SCOPED_PROFILE_ZONE();
-
     Texture& sceneColor = *reg.getTexture("SceneColor");
     Texture& sceneVelocity = *reg.getTexture("SceneVelocity"); // todo: velocity shouldn't be strictly required as it is now!
     Texture& depthStencilImage = *reg.getTexture("SceneDepth");

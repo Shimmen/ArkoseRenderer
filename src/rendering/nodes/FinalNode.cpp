@@ -13,8 +13,6 @@ FinalNode::FinalNode(Scene& scene, std::string sourceTextureName)
 
 RenderPipelineNode::ExecuteCallback FinalNode::constructFrame(Registry& reg) const
 {
-    SCOPED_PROFILE_ZONE();
-
     Texture* sourceTexture = reg.getTexture(m_sourceTextureName);
     if (!sourceTexture)
         LogErrorAndExit("Final: specified source texture '%s' not found, exiting.\n", m_sourceTextureName.c_str());

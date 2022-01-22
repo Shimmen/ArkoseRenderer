@@ -14,8 +14,6 @@ TonemapNode::TonemapNode(Scene& scene, std::string sourceTextureName, Mode mode)
 
 RenderPipelineNode::ExecuteCallback TonemapNode::constructFrame(Registry& reg) const
 {
-    SCOPED_PROFILE_ZONE();
-
     Texture* sourceTexture = reg.getTexture(m_sourceTextureName);
     if (!sourceTexture)
         LogErrorAndExit("Tonemap: specified source texture '%s' not found, exiting.\n", m_sourceTextureName.c_str());

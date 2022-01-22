@@ -12,8 +12,6 @@ PrepassNode::PrepassNode(Scene& scene)
 
 RenderPipelineNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) const
 {
-    SCOPED_PROFILE_ZONE();
-
     Texture& depthTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth24Stencil8, Texture::Filters::nearest());
     reg.publish("SceneDepth", depthTexture);
 
@@ -26,6 +24,9 @@ RenderPipelineNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) c
     prepassRenderStateBuilder.stateBindings().at(0, opaqueDrawableBindingSet);
     RenderState& prepassRenderState = reg.createRenderState(prepassRenderStateBuilder);
     prepassRenderState.setName("ForwardZPrepass");
+
+    Buffer& indirectDrawCmdsBuffer = *reg.getBuffer("MainViewOpaqueDrawCmds");
+    Buffer& indirectDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         int numInputDrawables = m_scene.forEachMesh([&](size_t, Mesh& mesh) {
@@ -40,8 +41,6 @@ RenderPipelineNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) c
         cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout(m_prepassVertexLayout));
         cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
 
-        Buffer& indirectDrawCmdsBuffer = *reg.getBuffer("MainViewOpaqueDrawCmds");
-        Buffer& indirectDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
         cmdList.drawIndirect(indirectDrawCmdsBuffer, indirectDrawCountBuffer);
 
         cmdList.endRendering();

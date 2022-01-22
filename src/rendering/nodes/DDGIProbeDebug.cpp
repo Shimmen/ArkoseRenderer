@@ -28,8 +28,6 @@ void DDGIProbeDebug::constructNode(Registry& reg)
 
 RenderPipelineNode::ExecuteCallback DDGIProbeDebug::constructFrame(Registry& reg) const
 {
-    SCOPED_PROFILE_ZONE();
-
     if (!reg.hasPreviousNode("DDGI"))
         return RenderPipelineNode::NullExecuteCallback;
 
