@@ -224,11 +224,7 @@ private:
         VkSemaphore imageAvailableSemaphore {};
         VkSemaphore renderingFinishedSemaphore {};
 
-        //std::unique_ptr<VulkanRenderTarget> clearingRenderTarget {};
-        //std::unique_ptr<VulkanRenderTarget> guiRenderTargetForPresenting {};
-
         VkCommandBuffer commandBuffer {};
-        //std::unique_ptr<Registry> registry {};
         std::unique_ptr<UploadBuffer> uploadBuffer {};
 
         static constexpr uint32_t TimestampQueryPoolCount = 100;
