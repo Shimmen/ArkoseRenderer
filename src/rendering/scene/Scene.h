@@ -18,15 +18,17 @@ using uint = uint32_t;
 
 class SceneNode;
 
-class Scene final {
+class Scene final : public RenderPipelineNode {
 public:
     Scene(Registry&, Extent2D initialMainViewportSize);
 
     Registry& registry() { return m_registry; }
     const Registry& registry() const { return m_registry; }
 
-    static RenderPipelineNode::ExecuteCallback constructFrameResources(Scene&, Registry&);
-    void update(float elapsedTime, float deltaTime, bool firstFrame);
+    // RenderPipelineNode interface
+
+    std::string name() const override { return "Scene"; }
+    RenderPipelineNode::ExecuteCallback construct(Scene&, Registry&) override;
 
     // Serialization
 
@@ -112,6 +114,11 @@ public:
     BindingSet& globalMaterialBindingSet() const;
 
     TopLevelAS& globalTopLevelAccelerationStructure() const;
+
+private:
+
+    void drawSceneGui();
+    void drawSceneGizmos();
 
 private:
     std::string m_filePath {};

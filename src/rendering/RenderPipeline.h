@@ -32,13 +32,15 @@ public:
     void forEachNodeInResolvedOrder(const Registry&, std::function<void(std::string, AvgElapsedTimer&, const RenderPipelineNode::ExecuteCallback&)>) const;
 
 private:
+
+    // All nodes that are part of this pipeline (some may be not not owned)
+    std::vector<std::unique_ptr<RenderPipelineNode>> m_ownedNodes {};
+    std::vector<RenderPipelineNode*> m_allNodes {};
+
     struct NodeContext {
         RenderPipelineNode* node;
         RenderPipelineNode::ExecuteCallback executeCallback;
     };
-
-    // All nodes that are part of this pipeline
-    std::vector<std::unique_ptr<RenderPipelineNode>> m_allNodes {};
 
     std::vector<NodeContext> m_nodeContexts {};
 

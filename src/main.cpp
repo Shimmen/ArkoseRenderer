@@ -126,8 +126,7 @@ int main(int argc, char** argv)
         double deltaTime = elapsedTime - lastTime;
         lastTime = elapsedTime;
 
-        scene->update((float)elapsedTime, (float)deltaTime, firstFrame);
-        app->update(*scene, (float)elapsedTime, (float)deltaTime);
+        app->update(*scene, static_cast<float>(elapsedTime), static_cast<float>(deltaTime));
 
         bool frameExecuted = false;
         while (!frameExecuted) {

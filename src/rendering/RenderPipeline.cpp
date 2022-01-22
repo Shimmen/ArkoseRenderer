@@ -9,16 +9,12 @@ RenderPipeline::RenderPipeline(Scene* scene)
     : m_scene(scene)
 {
     // Add "Scene" node which should always be included (unless it's some weird case that I can't think of now)
-    addNode("Scene", Scene::constructFrameResources);
+    m_allNodes.push_back(scene);
 }
 
 void RenderPipeline::addNode(const std::string& name, RenderPipelineLambdaNode::ConstructorFunction constructorFunction)
 {
-    // All nodes should be added before construction!
-    ASSERT(m_nodeContexts.empty());
-
-    auto node = std::make_unique<RenderPipelineLambdaNode>(name, constructorFunction);
-    m_allNodes.emplace_back(std::move(node));
+    addNode(std::make_unique<RenderPipelineLambdaNode>(name, constructorFunction));
 }
 
 void RenderPipeline::addNode(std::unique_ptr<RenderPipelineNode>&& node)
@@ -26,7 +22,8 @@ void RenderPipeline::addNode(std::unique_ptr<RenderPipelineNode>&& node)
     // All nodes should be added before construction!
     ASSERT(m_nodeContexts.empty());
 
-    m_allNodes.emplace_back(std::move(node));
+    m_ownedNodes.emplace_back(std::move(node));
+    m_allNodes.push_back(m_ownedNodes.back().get());
 }
 
 void RenderPipeline::constructAll(Registry& registry)
@@ -45,7 +42,7 @@ void RenderPipeline::constructAll(Registry& registry)
         registry.setCurrentNode({}, node->name());
         auto executeCallback = node->construct(*m_scene, registry);
 
-        m_nodeContexts.push_back({ .node = node.get(),
+        m_nodeContexts.push_back({ .node = node,
                                    .executeCallback = std::move(executeCallback) });
     }
 

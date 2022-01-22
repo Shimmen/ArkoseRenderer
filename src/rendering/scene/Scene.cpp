@@ -20,7 +20,7 @@ Scene::Scene(Registry& registry, Extent2D initialMainViewportSize)
 {
 }
 
-RenderPipelineNode::ExecuteCallback Scene::constructFrameResources(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback Scene::construct(Scene& scene, Registry& reg)
 {
     // TODO: Maybe call into a member function instead?
 
@@ -76,6 +76,30 @@ RenderPipelineNode::ExecuteCallback Scene::constructFrameResources(Scene& scene,
     reg.publish("SceneLightSet", lightBindingSet);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
+
+        {
+            // NOTE: We only want to do this on leaf-nodes right now, i.e. meshes not models.
+            forEachMesh([&](size_t meshIdx, Mesh& mesh) {
+                mesh.transform().newFrame({}, appState.isFirstFrame());
+            });
+
+            camera().newFrame({}, mainViewportSize(), appState.isFirstFrame());
+
+            camera().update(Input::instance(), static_cast<float>(appState.deltaTime()));
+
+            if (m_sceneDataNeedsRebuild) {
+                // We shouldn't need to rebuild the whole thing, just append and potentially remove some stuff.. But the
+                // distinction here is that it wouldn't be enough to just update some matrices, e.g. if an object was moved
+                // If we save the vector of textures & materials we can probably resuse a lot of calculations. There is no
+                // rush with that though, as currently we can't even make changes that would require a rebuild..
+                rebuildGpuSceneData();
+                m_sceneDataNeedsRebuild = false;
+            }
+
+            drawSceneGui();
+            drawSceneGizmos();
+        }
+
         // Update camera data
         {
             const Camera& camera = scene.camera();
@@ -201,142 +225,10 @@ RenderPipelineNode::ExecuteCallback Scene::constructFrameResources(Scene& scene,
         cmdList.executeBufferCopyOperations(uploadBuffer);
 
         if (scene.doesMaintainRayTracingScene()) {
-            TopLevelAS& sceneTlas = scene.globalTopLevelAccelerationStructure();
+            TopLevelAS& sceneTlas = globalTopLevelAccelerationStructure();
             cmdList.rebuildTopLevelAcceratationStructure(sceneTlas);
         }
     };
-}
-
-void Scene::update(float elapsedTime, float deltaTime, bool firstFrame)
-{
-    // NOTE: We only want to do this on leaf-nodes right now, i.e. meshes not models.
-    forEachMesh([&](size_t meshIdx, Mesh& mesh) {
-        mesh.transform().newFrame({}, firstFrame);
-    });
-
-    camera().newFrame({}, mainViewportSize(), firstFrame);
-
-    camera().update(Input::instance(), deltaTime);
-
-    if (m_sceneDataNeedsRebuild) {
-        // We shouldn't need to rebuild the whole thing, just append and potentially remove some stuff.. But the
-        // distinction here is that it wouldn't be enough to just update some matrices, e.g. if an object was moved
-        // If we save the vector of textures & materials we can probably resuse a lot of calculations. There is no
-        // rush with that though, as currently we can't even make changes that would require a rebuild..
-        rebuildGpuSceneData();
-        m_sceneDataNeedsRebuild = false;
-    }
-
-    ImGui::Begin("Scene");
-    {
-        {
-            ImGui::Text("Number of managed resources:");
-            ImGui::Columns(3);
-            ImGui::Text("meshes: %u", meshCount());
-            ImGui::NextColumn();
-            ImGui::Text("materials: %u", m_usedMaterials.size());
-            ImGui::NextColumn();
-            ImGui::Text("textures: %u", m_usedTextures.size());
-            ImGui::Columns(1);
-        }
-
-        ImGui::Separator();
-
-        if (ImGui::TreeNode("Film grain")) {
-            // TODO: I would love to estimate gain grain from ISO and scene light amount, but that's for later..
-            ImGui::SliderFloat("Fixed grain gain", &m_fixedFilmGrainGain, 0.0f, 0.25f);
-            ImGui::TreePop();
-        }
-
-        if (ImGui::TreeNode("Environment")) {
-            ImGui::SliderFloat("Ambient (lx)", &m_ambientIlluminance, 0.0f, 1'000.0f, "%.0f");
-            // NOTE: Obviously the unit of this is dependent on the values in the texture.. we should probably unify this a bit.
-            ImGui::SliderFloat("Environment multiplier", &m_environmentMultiplier, 0.0f, 10'000.0f, "%.0f");
-            ImGui::TreePop();
-        }
-
-        ImGui::Separator();
-
-        {
-            static Light* selectedLight = nullptr;
-            if (ImGui::BeginCombo("Inspected light", selectedLight ? selectedLight->name().c_str() : "Select a light")) {
-                forEachLight([&](size_t lightIndex, Light& light) {
-                    bool selected = &light == selectedLight;
-                    if (ImGui::Selectable(light.name().c_str(), &selected))
-                        selectedLight = &light;
-                    if (selected)
-                        ImGui::SetItemDefaultFocus();
-                });
-                ImGui::EndCombo();
-            }
-
-            if (selectedLight != nullptr) {
-
-                ImGui::ColorEdit3("Color", value_ptr(selectedLight->color));
-
-                switch (selectedLight->type()) {
-                case Light::Type::DirectionalLight:
-                    ImGui::SliderFloat("Illuminance (lx)", &static_cast<DirectionalLight*>(selectedLight)->illuminance, 1.0f, 150000.0f);
-                    break;
-                case Light::Type::SpotLight:
-                    ImGui::SliderFloat("Luminous intensity (cd)", &static_cast<SpotLight*>(selectedLight)->luminousIntensity, 1.0f, 1000.0f);
-                    break;
-                case Light::Type::PointLight:
-                    break;
-                default:
-                    ASSERT_NOT_REACHED();
-                }
-
-                ImGui::SliderFloat("Constant bias", &selectedLight->customConstantBias, 0.0f, 20.0f);
-                ImGui::SliderFloat("Slope bias", &selectedLight->customSlopeBias, 0.0f, 10.0f);
-            }
-        }
-
-        ImGui::Separator();
-
-        if (ImGui::TreeNode("Exposure control")) {
-            camera().renderExposureGUI();
-            ImGui::TreePop();
-        }
-
-        if (ImGui::Button("Copy current camera to clipboard")) {
-            saveCameraToClipboard(*m_currentMainCamera);
-        }
-    }
-    ImGui::End();
-
-    {
-        static ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
-
-        auto& input = Input::instance();
-        if (input.wasKeyPressed(Key::T))
-            operation = ImGuizmo::TRANSLATE;
-        else if (input.wasKeyPressed(Key::R))
-            operation = ImGuizmo::ROTATE;
-        else if (input.wasKeyPressed(Key::Y))
-            operation = ImGuizmo::SCALE;
-
-        if (selectedModel()) {
-
-            ImGuizmo::BeginFrame();
-            ImGuizmo::SetRect(0, 0, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
-
-            // FIXME: Support world transforms! Well, we don't really have hierarchies right now, so it doesn't really matter.
-            //  What we do have is meshes with their own transform under a model, and we are modifying the model's transform here.
-            //  Maybe in the future we want to be able to modify meshes too?
-            ImGuizmo::MODE mode = ImGuizmo::LOCAL;
-
-            mat4 viewMatrix = camera().viewMatrix();
-            mat4 projMatrix = camera().projectionMatrix();
-
-            // Silly stuff, since ImGuizmo doesn't seem to like my projection matrix..
-            projMatrix.y = -projMatrix.y;
-
-            mat4 matrix = selectedModel()->transform().localMatrix();
-            ImGuizmo::Manipulate(value_ptr(viewMatrix), value_ptr(projMatrix), operation, mode, value_ptr(matrix));
-            selectedModel()->transform().setLocalMatrix(matrix);
-        }
-    }
 }
 
 Model& Scene::addModel(std::unique_ptr<Model> model)
@@ -754,4 +646,119 @@ TopLevelAS& Scene::globalTopLevelAccelerationStructure() const
 float Scene::filmGrainGain() const
 {
     return m_fixedFilmGrainGain;
+}
+
+void Scene::drawSceneGui()
+{
+    ImGui::Begin("Scene");
+
+    {
+        ImGui::Text("Number of managed resources:");
+        ImGui::Columns(3);
+        ImGui::Text("meshes: %u", meshCount());
+        ImGui::NextColumn();
+        ImGui::Text("materials: %u", m_usedMaterials.size());
+        ImGui::NextColumn();
+        ImGui::Text("textures: %u", m_usedTextures.size());
+        ImGui::Columns(1);
+    }
+
+    ImGui::Separator();
+
+    if (ImGui::TreeNode("Film grain")) {
+        // TODO: I would love to estimate gain grain from ISO and scene light amount, but that's for later..
+        ImGui::SliderFloat("Fixed grain gain", &m_fixedFilmGrainGain, 0.0f, 0.25f);
+        ImGui::TreePop();
+    }
+
+    if (ImGui::TreeNode("Environment")) {
+        ImGui::SliderFloat("Ambient (lx)", &m_ambientIlluminance, 0.0f, 1'000.0f, "%.0f");
+        // NOTE: Obviously the unit of this is dependent on the values in the texture.. we should probably unify this a bit.
+        ImGui::SliderFloat("Environment multiplier", &m_environmentMultiplier, 0.0f, 10'000.0f, "%.0f");
+        ImGui::TreePop();
+    }
+
+    ImGui::Separator();
+
+    {
+        static Light* selectedLight = nullptr;
+        if (ImGui::BeginCombo("Inspected light", selectedLight ? selectedLight->name().c_str() : "Select a light")) {
+            forEachLight([&](size_t lightIndex, Light& light) {
+                bool selected = &light == selectedLight;
+                if (ImGui::Selectable(light.name().c_str(), &selected))
+                    selectedLight = &light;
+                if (selected)
+                    ImGui::SetItemDefaultFocus();
+            });
+            ImGui::EndCombo();
+        }
+
+        if (selectedLight != nullptr) {
+
+            ImGui::ColorEdit3("Color", value_ptr(selectedLight->color));
+
+            switch (selectedLight->type()) {
+            case Light::Type::DirectionalLight:
+                ImGui::SliderFloat("Illuminance (lx)", &static_cast<DirectionalLight*>(selectedLight)->illuminance, 1.0f, 150000.0f);
+                break;
+            case Light::Type::SpotLight:
+                ImGui::SliderFloat("Luminous intensity (cd)", &static_cast<SpotLight*>(selectedLight)->luminousIntensity, 1.0f, 1000.0f);
+                break;
+            case Light::Type::PointLight:
+                break;
+            default:
+                ASSERT_NOT_REACHED();
+            }
+
+            ImGui::SliderFloat("Constant bias", &selectedLight->customConstantBias, 0.0f, 20.0f);
+            ImGui::SliderFloat("Slope bias", &selectedLight->customSlopeBias, 0.0f, 10.0f);
+        }
+    }
+
+    ImGui::Separator();
+
+    if (ImGui::TreeNode("Exposure control")) {
+        camera().renderExposureGUI();
+        ImGui::TreePop();
+    }
+
+    if (ImGui::Button("Copy current camera to clipboard")) {
+        saveCameraToClipboard(*m_currentMainCamera);
+    }
+
+    ImGui::End();
+}
+
+void Scene::drawSceneGizmos()
+{
+    static ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
+
+    auto& input = Input::instance();
+    if (input.wasKeyPressed(Key::T))
+        operation = ImGuizmo::TRANSLATE;
+    else if (input.wasKeyPressed(Key::R))
+        operation = ImGuizmo::ROTATE;
+    else if (input.wasKeyPressed(Key::Y))
+        operation = ImGuizmo::SCALE;
+
+    if (selectedModel()) {
+
+        ImGuizmo::BeginFrame();
+        ImGuizmo::SetRect(0, 0, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
+
+        // FIXME: Support world transforms! Well, we don't really have hierarchies right now, so it doesn't really matter.
+        //  What we do have is meshes with their own transform under a model, and we are modifying the model's transform here.
+        //  Maybe in the future we want to be able to modify meshes too?
+        ImGuizmo::MODE mode = ImGuizmo::LOCAL;
+
+        mat4 viewMatrix = camera().viewMatrix();
+        mat4 projMatrix = camera().projectionMatrix();
+
+        // Silly stuff, since ImGuizmo doesn't seem to like my projection matrix..
+        projMatrix.y = -projMatrix.y;
+
+        mat4 matrix = selectedModel()->transform().localMatrix();
+        ImGuizmo::Manipulate(value_ptr(viewMatrix), value_ptr(projMatrix), operation, mode, value_ptr(matrix));
+        selectedModel()->transform().setLocalMatrix(matrix);
+    }
 }
