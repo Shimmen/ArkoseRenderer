@@ -135,7 +135,9 @@ private:
 
     void createFrameContexts();
     void destroyFrameContexts();
-    void createFrameRenderTargets(FrameContext&, const SwapchainImageContext& referenceImageContext);
+
+    void createFrameRenderTargets(const SwapchainImageContext& referenceImageContext);
+    void destroyFrameRenderTargets();
 
     ///////////////////////////////////////////////////////////////////////////
     /// ImGui related
@@ -222,17 +224,21 @@ private:
         VkSemaphore imageAvailableSemaphore {};
         VkSemaphore renderingFinishedSemaphore {};
 
-        std::unique_ptr<VulkanRenderTarget> clearingRenderTarget {};
-        std::unique_ptr<VulkanRenderTarget> guiRenderTargetForPresenting {};
+        //std::unique_ptr<VulkanRenderTarget> clearingRenderTarget {};
+        //std::unique_ptr<VulkanRenderTarget> guiRenderTargetForPresenting {};
 
         VkCommandBuffer commandBuffer {};
-        std::unique_ptr<Registry> registry {};
+        //std::unique_ptr<Registry> registry {};
+        std::unique_ptr<UploadBuffer> uploadBuffer {};
 
         static constexpr uint32_t TimestampQueryPoolCount = 100;
         TimestampResult64 timestampResults[TimestampQueryPoolCount] = { 0 };
         uint32_t numTimestampsWrittenLastTime { 0 };
         VkQueryPool timestampQueryPool {};
     };
+
+    std::unique_ptr<VulkanRenderTarget> m_clearingRenderTarget {};
+    std::unique_ptr<VulkanRenderTarget> m_guiRenderTargetForPresenting {};
 
     std::array<std::unique_ptr<FrameContext>, NumInFlightFrames> m_frameContexts {};
 
@@ -249,6 +255,7 @@ private:
 
     std::unique_ptr<Registry> m_persistentRegistry {};
     std::unique_ptr<Registry> m_nodeRegistry {};
+    std::unique_ptr<Registry> m_frameRegistry {};
 
     VkCommandPool m_defaultCommandPool {};
     VkCommandPool m_transientCommandPool {};

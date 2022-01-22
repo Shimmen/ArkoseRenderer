@@ -148,11 +148,13 @@ VulkanBackend::~VulkanBackend()
     // Before destroying stuff, make sure we're done with all scheduled work
     vkDeviceWaitIdle(device());
 
+    m_frameRegistry.reset();
     m_nodeRegistry.reset();
     m_persistentRegistry.reset();
 
     destroyDearImgui();
 
+    destroyFrameRenderTargets();
     destroyFrameContexts();
     destroySwapchain();
 
@@ -902,9 +904,7 @@ Extent2D VulkanBackend::recreateSwapchain()
     createSwapchain(physicalDevice(), device(), m_surface);
 
     SwapchainImageContext& referenceImageContext = *m_swapchainImageContexts[0];
-    for (auto& frameContext : m_frameContexts) {
-        createFrameRenderTargets(*frameContext, referenceImageContext);
-    }
+    createFrameRenderTargets(referenceImageContext);
 
     m_relativeFrameIndex = 0;
     s_unhandledWindowResize = false;
@@ -923,6 +923,12 @@ void VulkanBackend::createFrameContexts()
         if (m_frameContexts[i] == nullptr)
             m_frameContexts[i] = std::make_unique<FrameContext>();
         FrameContext& frameContext = *m_frameContexts[i];
+
+        // Create upload buffer
+        {
+            static constexpr size_t registryUploadBufferSize = 4 * 1024 * 1024;
+            frameContext.uploadBuffer = std::make_unique<UploadBuffer>(*this, registryUploadBufferSize);
+        }
 
         // Create fence
         {
@@ -978,7 +984,7 @@ void VulkanBackend::createFrameContexts()
             frameContext.timestampQueryPool = timestampQueryPool;
         }
 
-        createFrameRenderTargets(frameContext, referenceImageContext);
+        createFrameRenderTargets(referenceImageContext);
     }
 }
 
@@ -994,21 +1000,24 @@ void VulkanBackend::destroyFrameContexts()
     }
 }
 
-void VulkanBackend::createFrameRenderTargets(FrameContext& frameContext, const SwapchainImageContext& referenceImageContext)
+void VulkanBackend::createFrameRenderTargets(const SwapchainImageContext& referenceImageContext)
 {
-    frameContext.clearingRenderTarget.reset();
-    frameContext.guiRenderTargetForPresenting.reset();
-
     // We use imageless framebuffers for these swapchain render targets!
     constexpr bool imageless = true;
 
     auto attachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, referenceImageContext.mockColorTexture.get(), LoadOp::Clear, StoreOp::Store },
                                                                 { RenderTarget::AttachmentType::Depth, referenceImageContext.depthTexture.get(), LoadOp::Clear, StoreOp::Store } });
-    frameContext.clearingRenderTarget = std::make_unique<VulkanRenderTarget>(*this, attachments, imageless);
+    m_clearingRenderTarget = std::make_unique<VulkanRenderTarget>(*this, attachments, imageless);
 
     // NOTE: Does not handle depth & requires something to have already been written to the render target, as it has load op load on color0
     auto finalAttachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, referenceImageContext.mockColorTexture.get(), LoadOp::Load, StoreOp::Store } });
-    frameContext.guiRenderTargetForPresenting = std::make_unique<VulkanRenderTarget>(*this, finalAttachments, imageless, VulkanRenderTarget::QuirkMode::ForPresenting);
+    m_guiRenderTargetForPresenting = std::make_unique<VulkanRenderTarget>(*this, finalAttachments, imageless, VulkanRenderTarget::QuirkMode::ForPresenting);
+}
+
+void VulkanBackend::destroyFrameRenderTargets()
+{
+    m_clearingRenderTarget.reset();
+    m_guiRenderTargetForPresenting.reset();
 }
 
 void VulkanBackend::setupDearImgui()
@@ -1065,7 +1074,7 @@ void VulkanBackend::setupDearImgui()
     initInfo.PipelineCache = VK_NULL_HANDLE;
 
     ASSERT(m_swapchainImageContexts.size() > 0); // make sure this is created after the swapchain is created!
-    VkRenderPass compatibleRenderPassForImGui = m_frameContexts[0]->guiRenderTargetForPresenting->compatibleRenderPass;
+    VkRenderPass compatibleRenderPassForImGui = m_guiRenderTargetForPresenting->compatibleRenderPass; //m_frameContexts[0]->guiRenderTargetForPresenting->compatibleRenderPass;
     ImGui_ImplVulkan_Init(&initInfo, compatibleRenderPassForImGui);
 
     issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
@@ -1091,8 +1100,8 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameCon
 {
     VkRenderPassBeginInfo passBeginInfo = {};
     passBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    passBeginInfo.renderPass = frameContext.guiRenderTargetForPresenting->compatibleRenderPass;
-    passBeginInfo.framebuffer = frameContext.guiRenderTargetForPresenting->framebuffer;
+    passBeginInfo.renderPass = m_guiRenderTargetForPresenting->compatibleRenderPass; //frameContext.guiRenderTargetForPresenting->compatibleRenderPass;
+    passBeginInfo.framebuffer = m_guiRenderTargetForPresenting->framebuffer; //frameContext.guiRenderTargetForPresenting->framebuffer;
     passBeginInfo.renderArea.extent.width = m_swapchainExtent.width();
     passBeginInfo.renderArea.extent.height = m_swapchainExtent.height();
     passBeginInfo.clearValueCount = 0;
@@ -1172,11 +1181,12 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
     SwapchainImageContext& swapchainImageContext = *m_swapchainImageContexts[swapchainImageIndex].get();
 
     // We've just found out what image views we should use for this frame, so send them to the render target so it knows to bind them
-    frameContext.clearingRenderTarget->imagelessFramebufferAttachments = { swapchainImageContext.mockColorTexture->imageView, swapchainImageContext.depthTexture->imageView };
+    m_clearingRenderTarget->imagelessFramebufferAttachments = { swapchainImageContext.mockColorTexture->imageView, swapchainImageContext.depthTexture->imageView };
+    m_guiRenderTargetForPresenting->imagelessFramebufferAttachments = { swapchainImageContext.mockColorTexture->imageView };
 
     // We shouldn't use the data from the swapchain image, so we set current layout accordingly (not sure about depth, but sure..)
-    swapchainImageContext.mockColorTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    swapchainImageContext.depthTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    //swapchainImageContext.mockColorTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    //swapchainImageContext.depthTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     // If we wrote any timestamps last time we processed this FrameContext, read and validate those results now
     if (frameContext.numTimestampsWrittenLastTime > 0) {
@@ -1220,7 +1230,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
         m_currentlyExecutingMainCommandBuffer = true;
 
-        Registry& associatedRegistry = *frameContext.registry;
+        Registry& associatedRegistry = *m_frameRegistry; //frameContext.registry;
         VulkanCommandList cmdList { *this, commandBuffer };
 
         vkCmdResetQueryPool(commandBuffer, frameContext.timestampQueryPool, 0, FrameContext::TimestampQueryPoolCount);
@@ -1228,7 +1238,10 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
         ImGui::Begin("Nodes (in order)");
         {
+            // TODO: Remove all of this from here!
             associatedRegistry.newFrame(badge());
+            frameContext.uploadBuffer->reset();
+            associatedRegistry.setUploadBuffer(badge(), frameContext.uploadBuffer.get());
 
             std::string frameTimePerfString = m_frameTimer.createFormattedString();
             ImGui::Text("Frame time: %s", frameTimePerfString.c_str());
@@ -1395,6 +1408,7 @@ void VulkanBackend::reconstructRenderPipelineResources(RenderPipeline& renderPip
     size_t numFrameManagers = m_frameContexts.size();
     ASSERT(numFrameManagers == NumInFlightFrames);
 
+    /*
     std::vector<Registry*> frameRegistries {};
     for (size_t i = 0; i < numFrameManagers; ++i) {
 
@@ -1405,15 +1419,29 @@ void VulkanBackend::reconstructRenderPipelineResources(RenderPipeline& renderPip
 
         frameRegistries.push_back(new Registry(*this, previousFrameRegistry, &windowRenderTargetForFrame));
     }
+    */
+    
 
     Registry* previousNodeRegistry = m_nodeRegistry.get();
     Registry* nodeRegistry = new Registry(*this, previousNodeRegistry);
 
+    FrameContext& templateFrameContext = *m_frameContexts[0].get();
+    const RenderTarget& windowRenderTargetForFrame = *m_clearingRenderTarget; //*templateFrameContext.clearingRenderTarget;
+
+    Registry* previousFrameRegistry = m_frameRegistry.get();
+    Registry* frameRegistry = new Registry(*this, previousFrameRegistry, &windowRenderTargetForFrame);
+
+    std::vector<Registry*> frameRegistries {};
+    frameRegistries.push_back(frameRegistry);
+
     renderPipeline.constructAll(*nodeRegistry, frameRegistries);
 
     m_nodeRegistry.reset(nodeRegistry);
+    m_frameRegistry.reset(frameRegistry);
+    /*
     for (size_t i = 0; i < numFrameManagers; ++i)
         m_frameContexts[i]->registry.reset(frameRegistries[i]);
+    */
 
     m_relativeFrameIndex = 0;
 }

@@ -21,6 +21,7 @@ public:
     [[nodiscard]] const RenderTarget& windowRenderTarget();
     [[nodiscard]] RenderTarget& createRenderTarget(std::vector<RenderTarget::Attachment>);
 
+    void setUploadBuffer(Badge<Backend>, UploadBuffer*); // todo: move all this to the execution callback isntead!
     UploadBuffer& getUploadBuffer();
 
     [[nodiscard]] Texture& createPixelTexture(vec4 pixelValue, bool srgb);
@@ -84,7 +85,8 @@ private:
 
     const RenderTarget* m_windowRenderTarget;
 
-    std::unique_ptr<UploadBuffer> m_uploadBuffer;
+    //std::unique_ptr<UploadBuffer> m_uploadBuffer;
+    UploadBuffer* m_uploadBuffer;
 
     template<typename ResourceType>
     struct PublishedResource {
