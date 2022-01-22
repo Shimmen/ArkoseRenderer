@@ -5,7 +5,6 @@
 #include <functional>
 #include <mutex>
 #include <optional>
-#include <shaderc/shaderc.hpp>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -72,5 +71,5 @@ private:
 
     std::unique_ptr<std::thread> m_fileWatcherThread {};
     mutable std::mutex m_shaderDataMutex {};
-    volatile bool m_fileWatchingActive { false };
+    std::atomic_bool m_fileWatchingActive { false };
 };

@@ -9,6 +9,7 @@
 #include <cstddef>
 #include <thread>
 #include <sys/stat.h>
+#include <shaderc/shaderc.hpp>
 
 static shaderc_shader_kind glslShaderKindForShaderFile(const ShaderFile& shaderFile)
 {
