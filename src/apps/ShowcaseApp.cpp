@@ -46,9 +46,6 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         scene.generateProbeGridFromBoundingBox();
     }
 
-    // TODO: I don't love that the string "Scene" just sits here in the app.. should be defined by the Scene itself
-    pipeline.addNode("Scene", Scene::constructFrameResources);
-
     pipeline.addNode<PickingNode>();
 
     if (rtxOn) {

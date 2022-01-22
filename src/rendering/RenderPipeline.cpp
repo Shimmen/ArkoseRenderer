@@ -8,6 +8,8 @@
 RenderPipeline::RenderPipeline(Scene* scene)
     : m_scene(scene)
 {
+    // Add "Scene" node which should always be included (unless it's some weird case that I can't think of now)
+    addNode("Scene", Scene::constructFrameResources);
 }
 
 void RenderPipeline::addNode(const std::string& name, RenderPipelineLambdaNode::ConstructorFunction constructorFunction)

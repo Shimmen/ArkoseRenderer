@@ -25,10 +25,13 @@ public:
     Registry& registry() { return m_registry; }
     const Registry& registry() const { return m_registry; }
 
-    void loadFromFile(const std::string&);
-
     static RenderPipelineNode::ExecuteCallback constructFrameResources(Scene&, Registry&);
     void update(float elapsedTime, float deltaTime, bool firstFrame);
+
+    // Serialization
+
+    void loadFromFile(const std::string&);
+    void saveCameraToClipboard(const Camera&);
 
     // Camera & view
 
