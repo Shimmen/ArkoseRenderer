@@ -12,7 +12,6 @@
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/RTDirectLightNode.h"
 #include "rendering/nodes/RTFirstHitNode.h"
-#include "rendering/nodes/SceneNode.h"
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SkyViewNode.h"
 #include "rendering/nodes/SSAONode.h"
@@ -47,7 +46,9 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         scene.generateProbeGridFromBoundingBox();
     }
 
-    pipeline.addNode<SceneNode>();
+    // TODO: I don't love that the string "Scene" just sits here in the app.. should be defined by the Scene itself
+    pipeline.addNode("Scene", Scene::constructFrameResources);
+
     pipeline.addNode<PickingNode>();
 
     if (rtxOn) {

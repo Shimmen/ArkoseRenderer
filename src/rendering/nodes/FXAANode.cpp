@@ -1,6 +1,5 @@
 #include "FXAANode.h"
 
-#include "SceneNode.h"
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <imgui.h>

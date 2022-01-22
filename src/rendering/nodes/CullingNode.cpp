@@ -1,6 +1,5 @@
 #include "CullingNode.h"
 
-#include "SceneNode.h"
 #include "math/Frustum.h"
 #include "utility/Logging.h"
 #include "utility/Profiling.h"

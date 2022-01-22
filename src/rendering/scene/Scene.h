@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Model.h"
+#include "rendering/RenderPipelineNode.h"
 #include "rendering/scene/lights/DirectionalLight.h"
 #include "rendering/scene/lights/SpotLight.h"
 #include "rendering/camera/Camera.h"
@@ -26,6 +27,7 @@ public:
 
     void loadFromFile(const std::string&);
 
+    static RenderPipelineNode::ExecuteCallback constructFrameResources(Scene&, Registry&);
     void update(float elapsedTime, float deltaTime, bool firstFrame);
 
     // Camera & view
@@ -37,11 +39,6 @@ public:
     void setMainViewportSize(Badge<Backend>, Extent2D size) { m_mainViewportSize = size; }
 
     float lightPreExposureValue() const { return m_lightPreExposure; }
-    void setLightPreExposureValue(Badge<SceneNode>, float value) { m_lightPreExposure = value; }
-
-    void setNextFrameExposureResultBuffer(const Buffer& buffer) { m_nextFrameExposureResultBuffer = &buffer; }
-    bool isNextFrameExposureResultBufferReady(Badge<SceneNode>) const;
-    const Buffer* popNextFrameExposureResultBuffer(Badge<SceneNode>);
 
     // Models & meshes
 
@@ -139,7 +136,6 @@ private:
     float m_ambientIlluminance { 0.0f };
 
     float m_lightPreExposure { 1.0f };
-    const Buffer* m_nextFrameExposureResultBuffer { nullptr };
 
     Model* m_selectedModel { nullptr };
     Mesh* m_selectedMesh { nullptr };
