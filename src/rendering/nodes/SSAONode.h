@@ -7,14 +7,10 @@
 
 class SSAONode final : public RenderPipelineNode {
 public:
-    explicit SSAONode(Scene&);
 
     std::string name() const override { return "SSAO"; }
-
-    ExecuteCallback construct(Registry&) override;
+    ExecuteCallback construct(Scene&, Registry&) override;
 
 private:
-    Scene& m_scene;
-
     std::vector<vec4> generateKernel(int numSamples) const;
 };

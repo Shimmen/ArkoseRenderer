@@ -4,12 +4,7 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-BloomNode::BloomNode(Scene& scene)
-    : m_scene(scene)
-{
-}
-
-RenderPipelineNode::ExecuteCallback BloomNode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback BloomNode::construct(Scene& scene, Registry& reg)
 {
     Texture& mainTexture = *reg.getTexture("SceneColor");
     Extent2D baseExtent = mainTexture.extent();

@@ -6,12 +6,7 @@
 // Shader headers
 #include "RTData.h"
 
-RTFirstHitNode::RTFirstHitNode(Scene& scene)
-    : m_scene(scene)
-{
-}
-
-RenderPipelineNode::ExecuteCallback RTFirstHitNode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback RTFirstHitNode::construct(Scene& scene, Registry& reg)
 {
     ///////////////////////
     // constructNode
@@ -22,15 +17,15 @@ RenderPipelineNode::ExecuteCallback RTFirstHitNode::construct(Registry& reg)
                                         VertexComponent::TexCoord2F };
 
     std::vector<RTTriangleMesh> rtMeshes {};
-    m_scene.forEachMesh([&](size_t meshIdx, Mesh& mesh) {
-        const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(vertexLayout, m_scene);
+    scene.forEachMesh([&](size_t meshIdx, Mesh& mesh) {
+        const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(vertexLayout, scene);
         rtMeshes.push_back({ .firstVertex = drawCallDesc.vertexOffset,
                              .firstIndex = (int32_t)drawCallDesc.firstIndex,
                              .materialIndex = mesh.materialIndex().value_or(0) });
     });
 
-    Buffer& indexBuffer = m_scene.globalIndexBuffer();
-    Buffer& vertexBuffer = m_scene.globalVertexBufferForLayout(vertexLayout);
+    Buffer& indexBuffer = scene.globalIndexBuffer();
+    Buffer& vertexBuffer = scene.globalVertexBufferForLayout(vertexLayout);
 
     Buffer& meshBuffer = reg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
     BindingSet& objectDataBindingSet = reg.createBindingSet({ { 0, ShaderStageRTClosestHit, &meshBuffer },
@@ -42,9 +37,9 @@ RenderPipelineNode::ExecuteCallback RTFirstHitNode::construct(Registry& reg)
     reg.publish("RTFirstHit", storageImage);
 
     BindingSet& environmentBindingSet = reg.createBindingSet({ { 0, ShaderStageRTMiss, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler } });
-    BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
+    BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
 
-    TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();
+    TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStageRTRayGen, &sceneTLAS },
                                                          { 1, ShaderStageRTRayGen, reg.getBuffer("SceneCameraData") },
                                                          { 2, ShaderStageRTRayGen, &storageImage, ShaderBindingType::StorageImage } });

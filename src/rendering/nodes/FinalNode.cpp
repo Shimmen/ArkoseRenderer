@@ -5,13 +5,12 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-FinalNode::FinalNode(Scene& scene, std::string sourceTextureName)
-    : m_scene(scene)
-    , m_sourceTextureName(std::move(sourceTextureName))
+FinalNode::FinalNode(std::string sourceTextureName)
+    : m_sourceTextureName(std::move(sourceTextureName))
 {
 }
 
-RenderPipelineNode::ExecuteCallback FinalNode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback FinalNode::construct(Scene& scene, Registry& reg)
 {
     Texture* sourceTexture = reg.getTexture(m_sourceTextureName);
     if (!sourceTexture)
@@ -36,7 +35,7 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(Registry& reg)
 
         static bool addFilmGrain = true;
         ImGui::Checkbox("Add film grain", &addFilmGrain);
-        float filmGrainGain = addFilmGrain ? m_scene.filmGrainGain() : 0.0f;
+        float filmGrainGain = addFilmGrain ? scene.filmGrainGain() : 0.0f;
 
         static float filmGrainScale = 2.5f;
         ImGui::SliderFloat("Film grain scale", &filmGrainScale, 1.0f, 10.0f);

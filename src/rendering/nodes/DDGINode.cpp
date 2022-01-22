@@ -14,33 +14,28 @@ static_assert((DDGI_VISIBILITY_RES & (DDGI_VISIBILITY_RES - 1)) == 0);
 // The two different resolutions should be a integer multiplier different
 static_assert((DDGI_VISIBILITY_RES % DDGI_IRRADIANCE_RES) == 0 || (DDGI_IRRADIANCE_RES % DDGI_VISIBILITY_RES) == 0);
 
-DDGINode::DDGINode(Scene& scene)
-    : m_scene(scene)
+RenderPipelineNode::ExecuteCallback DDGINode::construct(Scene& scene, Registry& reg)
 {
-}
-
-RenderPipelineNode::ExecuteCallback DDGINode::construct(Registry& reg)
-{
-    if (!m_scene.hasProbeGrid()) {
+    if (!scene.hasProbeGrid()) {
         LogError("DDGINode is used but no probe grid is available, will no-op");
         return RenderPipelineNode::NullExecuteCallback;
     }
 
     ///////////////////////
     // constructNode
-    DDGIProbeGridData probeGridData { .gridDimensions = ivec4(m_scene.probeGrid().gridDimensions.asIntVector(), 0),
-                                      .probeSpacing = vec4(m_scene.probeGrid().probeSpacing, 0.0f),
-                                      .offsetToFirst = vec4(m_scene.probeGrid().offsetToFirst, 0.0f) };
+    DDGIProbeGridData probeGridData { .gridDimensions = ivec4(scene.probeGrid().gridDimensions.asIntVector(), 0),
+                                      .probeSpacing = vec4(scene.probeGrid().probeSpacing, 0.0f),
+                                      .offsetToFirst = vec4(scene.probeGrid().offsetToFirst, 0.0f) };
     Buffer& probeGridDataBuffer = reg.createBufferForData(probeGridData, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOptimal);
 
-    BindingSet& objectDataBindingSet = createMeshDataBindingSet(reg);
+    BindingSet& objectDataBindingSet = createMeshDataBindingSet(scene, reg);
 
     auto irradianceClearColor = ClearColor::dataValues(0, 0, 0, 0);
-    Texture& probeAtlasIrradiance = createProbeAtlas(reg, "ddgi-irradiance", m_scene.probeGrid(), irradianceClearColor, Texture::Format::RGBA16F, DDGI_IRRADIANCE_RES, DDGI_ATLAS_PADDING);
+    Texture& probeAtlasIrradiance = createProbeAtlas(reg, "ddgi-irradiance", scene.probeGrid(), irradianceClearColor, Texture::Format::RGBA16F, DDGI_IRRADIANCE_RES, DDGI_ATLAS_PADDING);
 
-    float cameraZFar = m_scene.camera().zFar;
+    float cameraZFar = scene.camera().zFar;
     auto visibilityClearColor = ClearColor::dataValues(cameraZFar, cameraZFar * cameraZFar, 0, 0);
-    Texture& probeAtlasVisibility = createProbeAtlas(reg, "ddgi-visibility", m_scene.probeGrid(), visibilityClearColor, Texture::Format::RG16F, DDGI_VISIBILITY_RES, DDGI_ATLAS_PADDING);
+    Texture& probeAtlasVisibility = createProbeAtlas(reg, "ddgi-visibility", scene.probeGrid(), visibilityClearColor, Texture::Format::RG16F, DDGI_VISIBILITY_RES, DDGI_ATLAS_PADDING);
 
     BindingSet& ddgiSamplingBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &probeGridDataBuffer },
                                                                 { 1, ShaderStageFragment, &probeAtlasIrradiance, ShaderBindingType::TextureSampler },
@@ -48,7 +43,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Registry& reg)
     reg.publish("DDGISamplingSet", ddgiSamplingBindingSet);
     ///////////////////////
 
-    const int probeCount = m_scene.probeGrid().probeCount(); // TODO: maybe don't expect to be able to update all in one surfel image?
+    const int probeCount = scene.probeGrid().probeCount(); // TODO: maybe don't expect to be able to update all in one surfel image?
     static constexpr int maxNumProbeSamples = 128; // we dynamically choose to do fewer samples but not more since it's the fixed image size now
     Texture& surfelImage = reg.createTexture2D({ probeCount, maxNumProbeSamples }, Texture::Format::RGBA16F);
 
@@ -59,7 +54,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Registry& reg)
     reg.publish("DDGITestTarget", storageImage);
 #endif
 
-    TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();
+    TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },
                                                          { 1, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), reg.getBuffer("SceneCameraData") },
                                                          { 2, ShaderStageRTRayGen, &probeGridDataBuffer },
@@ -79,7 +74,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Registry& reg)
     StateBindings rtStateDataBindings;
     rtStateDataBindings.at(0, frameBindingSet);
     rtStateDataBindings.at(1, objectDataBindingSet);
-    rtStateDataBindings.at(2, m_scene.globalMaterialBindingSet());
+    rtStateDataBindings.at(2, scene.globalMaterialBindingSet());
     rtStateDataBindings.at(3, *reg.getBindingSet("SceneLightSet"));
 
     constexpr uint32_t maxRecursionDepth = 2; // raygen -> closest/any hit -> shadow ray
@@ -114,7 +109,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Registry& reg)
         static float visibilitySharpness = 5.0f;
         ImGui::SliderFloat("Visibility sharpness", &visibilitySharpness, 1.0f, 10.0f);
 
-        float ambientLx = m_scene.ambient();
+        float ambientLx = scene.ambient();
         static bool useSceneAmbient = true;
         ImGui::Checkbox("Use scene ambient light", &useSceneAmbient);
         if (!useSceneAmbient) {
@@ -126,9 +121,9 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Registry& reg)
         uint32_t frameIdx = appState.frameIndex();
 
         ivec3 gridDimensions = ivec3(
-            m_scene.probeGrid().gridDimensions.width(),
-            m_scene.probeGrid().gridDimensions.height(),
-            m_scene.probeGrid().gridDimensions.depth());
+            scene.probeGrid().gridDimensions.width(),
+            scene.probeGrid().gridDimensions.height(),
+            scene.probeGrid().gridDimensions.depth());
 
         // 1. Ray trace to collect surfel data (including indirect light from last frame's probe data)
         {
@@ -136,8 +131,8 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Registry& reg)
 
             cmdList.setRayTracingState(surfelRayTracingState);
 
-            cmdList.setNamedUniform("ambientAmount", ambientLx * m_scene.lightPreExposureValue());
-            cmdList.setNamedUniform("environmentMultiplier", m_scene.exposedEnvironmentMultiplier());
+            cmdList.setNamedUniform("ambientAmount", ambientLx * scene.lightPreExposureValue());
+            cmdList.setNamedUniform("environmentMultiplier", scene.exposedEnvironmentMultiplier());
             cmdList.setNamedUniform("frameIdx", frameIdx);
 
 #if USE_DEBUG_TARGET
@@ -229,21 +224,21 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Registry& reg)
     };
 }
 
-BindingSet& DDGINode::createMeshDataBindingSet(Registry& reg) const
+BindingSet& DDGINode::createMeshDataBindingSet(Scene& scene, Registry& reg) const
 {
     const VertexLayout vertexLayout = { VertexComponent::Normal3F,
                                         VertexComponent::TexCoord2F };
 
     std::vector<RTTriangleMesh> rtMeshes {};
-    m_scene.forEachMesh([&](size_t meshIdx, Mesh& mesh) {
-        const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(vertexLayout, m_scene);
+    scene.forEachMesh([&](size_t meshIdx, Mesh& mesh) {
+        const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(vertexLayout, scene);
         rtMeshes.push_back({ .firstVertex = drawCallDesc.vertexOffset,
                              .firstIndex = (int32_t)drawCallDesc.firstIndex,
                              .materialIndex = mesh.materialIndex().value_or(0) });
     });
 
-    Buffer& indexBuffer = m_scene.globalIndexBuffer();
-    Buffer& vertexBuffer = m_scene.globalVertexBufferForLayout(vertexLayout);
+    Buffer& indexBuffer = scene.globalIndexBuffer();
+    Buffer& vertexBuffer = scene.globalVertexBufferForLayout(vertexLayout);
 
     Buffer& meshBuffer = reg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
     BindingSet& meshDataBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &meshBuffer },

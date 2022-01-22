@@ -11,12 +11,7 @@ using uint = uint32_t;
 #include "IndirectData.h"
 #include "LightData.h"
 
-CullingNode::CullingNode(Scene& scene)
-    : m_scene(scene)
-{
-}
-
-RenderPipelineNode::ExecuteCallback CullingNode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback CullingNode::construct(Scene& scene, Registry& reg)
 {
     // todo: maybe default to smaller, and definitely actually grow when needed!
     static constexpr size_t initialBufferCount = 1024;
@@ -67,7 +62,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(Registry& reg)
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        mat4 cameraViewProjection = m_scene.camera().viewProjectionMatrix();
+        mat4 cameraViewProjection = scene.camera().viewProjectionMatrix();
         auto cameraFrustum = geometry::Frustum::createFromProjectionMatrix(cameraViewProjection);
         size_t planesByteSize;
         const geometry::Plane* planesData = cameraFrustum.rawPlaneData(&planesByteSize);
@@ -75,8 +70,8 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(Registry& reg)
         uploadBuffer.upload(planesData, planesByteSize, frustumPlaneBuffer);
 
         std::vector<IndirectShaderDrawable> indirectDrawableData {};
-        int numInputDrawables = m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-            DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, m_scene);
+        int numInputDrawables = scene.forEachMesh([&](size_t, Mesh& mesh) {
+            DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, scene);
             indirectDrawableData.push_back({ .drawable = { .worldFromLocal = mesh.transform().worldMatrix(),
                                                            .worldFromTangent = mat4(mesh.transform().worldNormalMatrix()),
                                                            .previousFrameWorldFromLocal = mesh.transform().previousFrameWorldMatrix(),

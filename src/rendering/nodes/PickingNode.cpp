@@ -7,12 +7,7 @@
 #include <imgui.h>
 #include <moos/vector.h>
 
-PickingNode::PickingNode(Scene& scene)
-    : m_scene(scene)
-{
-}
-
-RenderPipelineNode::ExecuteCallback PickingNode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback PickingNode::construct(Scene& scene, Registry& reg)
 {
     Texture& indexMap = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R32);
     Texture& indexDepthMap = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth32F);
@@ -43,16 +38,16 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(Registry& reg)
 
             moos::u32 selectedIndex;
             cmdList.slowBlockingReadFromBuffer(*m_lastResultBuffer.value(), 0, sizeof(moos::u32), &selectedIndex);
-            if (selectedIndex < m_scene.meshCount()) {
-                m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
+            if (selectedIndex < scene.meshCount()) {
+                scene.forEachMesh([&](size_t index, Mesh& mesh) {
                     if (index == selectedIndex) {
-                        m_scene.setSelectedMesh(&mesh);
-                        m_scene.setSelectedModel(mesh.model());
+                        scene.setSelectedMesh(&mesh);
+                        scene.setSelectedModel(mesh.model());
                     }
                 });
             } else {
-                m_scene.setSelectedMesh(nullptr);
-                m_scene.setSelectedModel(nullptr);
+                scene.setSelectedMesh(nullptr);
+                scene.setSelectedModel(nullptr);
             }
 
             m_lastResultBuffer.reset();
@@ -61,20 +56,20 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(Registry& reg)
         if (didClick(Button::Middle)) {
 
             std::vector<mat4> objectTransforms {}; 
-            m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
+            scene.forEachMesh([&](size_t index, Mesh& mesh) {
                 objectTransforms.push_back(mesh.transform().worldMatrix());
-                mesh.ensureDrawCallIsAvailable({ VertexComponent::Position3F }, m_scene);
+                mesh.ensureDrawCallIsAvailable({ VertexComponent::Position3F }, scene);
             });
             transformDataBuffer.updateDataAndGrowIfRequired(objectTransforms.data(), objectTransforms.size() * sizeof(mat4));
 
             cmdList.beginRendering(drawIndicesState, ClearColor::srgbColor(1, 0, 1), 1.0f);
-            cmdList.setNamedUniform("projectionFromWorld", m_scene.camera().viewProjectionMatrix());
+            cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
 
-            cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout({ VertexComponent::Position3F }));
-            cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
+            cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout({ VertexComponent::Position3F }));
+            cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
 
-            m_scene.forEachMesh([&](size_t index, Mesh& mesh) {
-                DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, m_scene);
+            scene.forEachMesh([&](size_t index, Mesh& mesh) {
+                DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, scene);
                 drawCall.firstInstance = static_cast<uint32_t>(index);
                 cmdList.issueDrawCall(drawCall);
             });

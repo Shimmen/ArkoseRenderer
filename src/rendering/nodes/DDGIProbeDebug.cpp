@@ -8,13 +8,7 @@
 // Shared shader headers
 #include "DDGIData.h"
 
-
-DDGIProbeDebug::DDGIProbeDebug(Scene& scene)
-    : m_scene(scene)
-{
-}
-
-RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(Scene& scene, Registry& reg)
 {
     if (!reg.hasPreviousNode("DDGI"))
         return RenderPipelineNode::NullExecuteCallback;
@@ -22,7 +16,7 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(Registry& reg)
     ///////////////////////
     // constructNode
     BindingSet& m_ddgiSamplingSet = *reg.getBindingSet("DDGISamplingSet");
-    const_cast<DDGIProbeDebug*>(this)->setUpSphereRenderData(reg);
+    const_cast<DDGIProbeDebug*>(this)->setUpSphereRenderData(scene, reg);
     ///////////////////////
 
     Texture& depthTexture = *reg.getTexture("SceneDepth");
@@ -67,10 +61,10 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(Registry& reg)
         cmdList.setNamedUniform("debugVisualisation", debugVisualisation);
 
         // TODO: Use instanced rendering instead.. it's sufficient for debug visualisation but it's not great.
-        for (int probeIdx = 0; probeIdx < m_scene.probeGrid().probeCount(); ++probeIdx) {
+        for (int probeIdx = 0; probeIdx < scene.probeGrid().probeCount(); ++probeIdx) {
             
-            ivec3 probeIdx3D = m_scene.probeGrid().probeIndexFromLinear(probeIdx);
-            vec3 probeLocation = m_scene.probeGrid().probePositionForIndex(probeIdx3D);
+            ivec3 probeIdx3D = scene.probeGrid().probeIndexFromLinear(probeIdx);
+            vec3 probeLocation = scene.probeGrid().probePositionForIndex(probeIdx3D);
 
             cmdList.setNamedUniform("probeGridCoord", probeIdx3D);
             cmdList.setNamedUniform("probeLocation", probeLocation);
@@ -82,7 +76,7 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(Registry& reg)
     };
 }
 
-void DDGIProbeDebug::setUpSphereRenderData(Registry& reg)
+void DDGIProbeDebug::setUpSphereRenderData(Scene& scene, Registry& reg)
 {
     constexpr int rings = 48;
     constexpr int sectors = 48;

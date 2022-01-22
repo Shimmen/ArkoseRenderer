@@ -11,14 +11,12 @@ public:
         RenderToSceneColorLDR,
     };
 
-    TonemapNode(Scene&, std::string sourceTextureName, Mode = Mode::RenderToSceneColorLDR);
+    TonemapNode(std::string sourceTextureName, Mode = Mode::RenderToSceneColorLDR);
 
     std::string name() const override { return "Tonemap"; }
-
-    ExecuteCallback construct(Registry&) override;
+    ExecuteCallback construct(Scene&, Registry&) override;
 
 private:
-    Scene& m_scene;
     std::string m_sourceTextureName;
     Mode m_mode;
 };

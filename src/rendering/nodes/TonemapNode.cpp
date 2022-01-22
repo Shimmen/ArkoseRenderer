@@ -5,14 +5,13 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-TonemapNode::TonemapNode(Scene& scene, std::string sourceTextureName, Mode mode)
-    : m_scene(scene)
-    , m_sourceTextureName(sourceTextureName)
+TonemapNode::TonemapNode(std::string sourceTextureName, Mode mode)
+    : m_sourceTextureName(sourceTextureName)
     , m_mode(mode)
 {
 }
 
-RenderPipelineNode::ExecuteCallback TonemapNode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback TonemapNode::construct(Scene& scene, Registry& reg)
 {
     Texture* sourceTexture = reg.getTexture(m_sourceTextureName);
     if (!sourceTexture)

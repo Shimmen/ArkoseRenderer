@@ -11,12 +11,7 @@ using uint = uint32_t;
 #include "LightData.h"
 #include "CameraState.h"
 
-SceneNode::SceneNode(Scene& scene)
-    : m_scene(scene)
-{
-}
-
-RenderPipelineNode::ExecuteCallback SceneNode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback SceneNode::construct(Scene& scene, Registry& reg)
 {
     Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
     BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStageAnyRasterize, &cameraBuffer } });
@@ -24,14 +19,14 @@ RenderPipelineNode::ExecuteCallback SceneNode::construct(Registry& reg)
     reg.publish("SceneCameraSet", cameraBindingSet);
 
     // Environment mapping stuff
-    Texture& envTexture = m_scene.environmentMap().empty()
+    Texture& envTexture = scene.environmentMap().empty()
         ? reg.createPixelTexture(vec4(1.0f), true)
-        : reg.loadTexture2D(m_scene.environmentMap(), true, false);
+        : reg.loadTexture2D(scene.environmentMap(), true, false);
     reg.publish("SceneEnvironmentMap", envTexture);
 
     // Object data stuff
     // TODO: Resize the buffer if needed when more meshes are added
-    size_t objectDataBufferSize = m_scene.meshCount() * sizeof(ShaderDrawable);
+    size_t objectDataBufferSize = scene.meshCount() * sizeof(ShaderDrawable);
     Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     objectDataBuffer.setName("SceneObjectData");
 
@@ -52,7 +47,7 @@ RenderPipelineNode::ExecuteCallback SceneNode::construct(Registry& reg)
     std::vector<Texture*> iesProfileLUTs;
     std::vector<Texture*> shadowMaps;
     // TODO: We need to be able to update the shadow map binding. Right now we can only do it once, at creation.
-    m_scene.forEachLight([&](size_t, Light& light) {
+    scene.forEachLight([&](size_t, Light& light) {
         if (light.type() == Light::Type::SpotLight)
             iesProfileLUTs.push_back(&((SpotLight&)light).iesProfileLookupTexture()); // all this light stuff needs cleanup...
         if (light.castsShadows())
@@ -73,7 +68,7 @@ RenderPipelineNode::ExecuteCallback SceneNode::construct(Registry& reg)
 
         // Update camera data
         {
-            const Camera& camera = m_scene.camera();
+            const Camera& camera = scene.camera();
             mat4 pixelFromView = camera.pixelProjectionMatrix();
             mat4 projectionFromView = camera.projectionMatrix();
             mat4 viewFromWorld = camera.viewMatrix();
@@ -103,7 +98,7 @@ RenderPipelineNode::ExecuteCallback SceneNode::construct(Registry& reg)
         // Update object data
         {
             std::vector<ShaderDrawable> objectData {};
-            m_scene.forEachMesh([&](size_t, Mesh& mesh) {
+            scene.forEachMesh([&](size_t, Mesh& mesh) {
                 objectData.push_back(ShaderDrawable { .worldFromLocal = mesh.transform().worldMatrix(),
                                                       .worldFromTangent = mat4(mesh.transform().worldNormalMatrix()),
                                                       .previousFrameWorldFromLocal = mesh.transform().previousFrameWorldMatrix(),
@@ -116,44 +111,44 @@ RenderPipelineNode::ExecuteCallback SceneNode::construct(Registry& reg)
         {
             // TODO: hmm, I kinda wanna do this in Scene, not scene node.. this whole Scene/SceneNode split is stupid.
 
-            if (m_scene.camera().useAutomaticExposure) {
-                if (m_scene.isNextFrameExposureResultBufferReady({})) {
+            if (scene.camera().useAutomaticExposure) {
+                if (scene.isNextFrameExposureResultBufferReady({})) {
                     float lastFrameExposure;
-                    cmdList.slowBlockingReadFromBuffer(*m_scene.popNextFrameExposureResultBuffer({}), 0, sizeof(lastFrameExposure), &lastFrameExposure);
-                    m_scene.setLightPreExposureValue({}, lastFrameExposure);
+                    cmdList.slowBlockingReadFromBuffer(*scene.popNextFrameExposureResultBuffer({}), 0, sizeof(lastFrameExposure), &lastFrameExposure);
+                    scene.setLightPreExposureValue({}, lastFrameExposure);
                 } else {
                     // Let's just not touch the variable, it's probably going to be ready next frame anyway
                 }
             } else {
                 // See camera.glsl for reference
-                auto& camera = m_scene.camera();
+                auto& camera = scene.camera();
                 float ev100 = std::log2f((camera.aperture * camera.aperture) / camera.shutterSpeed * 100.0f / camera.iso);
                 float maxLuminance = 1.2f * std::pow(2.0f, ev100);
-                m_scene.setLightPreExposureValue({}, 1.0f / maxLuminance);
+                scene.setLightPreExposureValue({}, 1.0f / maxLuminance);
             }
         }
 
         // Update light data
         {
-            mat4 viewFromWorld = m_scene.camera().viewMatrix();
+            mat4 viewFromWorld = scene.camera().viewMatrix();
             mat4 worldFromView = inverse(viewFromWorld);
 
             int nextShadowMapIndex = 0;
             std::vector<DirectionalLightData> dirLightData;
             std::vector<SpotLightData> spotLightData;
 
-            m_scene.forEachLight([&](size_t, Light& light) {
+            scene.forEachLight([&](size_t, Light& light) {
 
                 int shadowMapIndex = light.castsShadows() ? nextShadowMapIndex++ : -1;
                 ShadowMapData shadowMapData { .textureIndex = shadowMapIndex };
 
-                vec3 lightColor = light.color * light.intensityValue() * m_scene.lightPreExposureValue();
+                vec3 lightColor = light.color * light.intensityValue() * scene.lightPreExposureValue();
 
                 switch (light.type()) {
                 case Light::Type::DirectionalLight: {
                     dirLightData.emplace_back(DirectionalLightData { .shadowMap = shadowMapData,
                                                                      .color = lightColor,
-                                                                     .exposure = m_scene.lightPreExposureValue(),
+                                                                     .exposure = scene.lightPreExposureValue(),
                                                                      .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0),
                                                                      .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0),
                                                                      .lightProjectionFromWorld = light.viewProjection(),
@@ -164,7 +159,7 @@ RenderPipelineNode::ExecuteCallback SceneNode::construct(Registry& reg)
                     SpotLight& spotLight = static_cast<SpotLight&>(light);
                     spotLightData.emplace_back(SpotLightData { .shadowMap = shadowMapData,
                                                                .color = lightColor,
-                                                               .exposure = m_scene.lightPreExposureValue(),
+                                                               .exposure = scene.lightPreExposureValue(),
                                                                .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0f),
                                                                .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0f),
                                                                .lightProjectionFromWorld = light.viewProjection(),
@@ -191,7 +186,7 @@ RenderPipelineNode::ExecuteCallback SceneNode::construct(Registry& reg)
             uploadBuffer.upload(metaData, lightMetaDataBuffer);
 
             std::vector<PerLightShadowData> shadowData;
-            m_scene.forEachShadowCastingLight([&](size_t, Light& light) {
+            scene.forEachShadowCastingLight([&](size_t, Light& light) {
                 shadowData.push_back({ .lightViewFromWorld = light.lightViewMatrix(),
                                        .lightProjectionFromWorld = light.viewProjection(),
                                        .constantBias = light.constantBias(),
@@ -202,8 +197,8 @@ RenderPipelineNode::ExecuteCallback SceneNode::construct(Registry& reg)
 
         cmdList.executeBufferCopyOperations(uploadBuffer);
 
-        if (m_scene.doesMaintainRayTracingScene()) {
-            TopLevelAS& sceneTlas = m_scene.globalTopLevelAccelerationStructure();
+        if (scene.doesMaintainRayTracingScene()) {
+            TopLevelAS& sceneTlas = scene.globalTopLevelAccelerationStructure();
             cmdList.rebuildTopLevelAcceratationStructure(sceneTlas);
         }
     };

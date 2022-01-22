@@ -10,12 +10,7 @@ using uint = uint32_t;
 #include "IndirectData.h"
 #include "LightData.h"
 
-ForwardRenderNode::ForwardRenderNode(Scene& scene)
-    : m_scene(scene)
-{
-}
-
-RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(Scene& scene, Registry& reg)
 {
     ///////////////////////
     // constructNode
@@ -56,7 +51,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(Registry& reg)
     };
 
     BindingSet& cameraBindingSet = *reg.getBindingSet("SceneCameraSet");
-    BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
+    BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
     BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");
 
     BindingSet& opaqueDrawablesBindingSet = *reg.getBindingSet("MainViewCulledDrawablesOpaqueSet");
@@ -111,18 +106,18 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(Registry& reg)
 
     return [&, renderStateOpaque, renderStateMasked](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-            mesh.ensureDrawCallIsAvailable(m_vertexLayout, m_scene);
+        scene.forEachMesh([&](size_t, Mesh& mesh) {
+            mesh.ensureDrawCallIsAvailable(m_vertexLayout, scene);
         });
 
         auto setCommonNamedUniforms = [&]() {
-            cmdList.setNamedUniform("ambientAmount", m_scene.exposedAmbient());
-            cmdList.setNamedUniform("indirectExposure", m_scene.lightPreExposureValue());
-            cmdList.setNamedUniform("totalFrustumJitter", m_scene.camera().totalFrustumJitterInUVCoords());
+            cmdList.setNamedUniform("ambientAmount", scene.exposedAmbient());
+            cmdList.setNamedUniform("indirectExposure", scene.lightPreExposureValue());
+            cmdList.setNamedUniform("totalFrustumJitter", scene.camera().totalFrustumJitterInUVCoords());
         };
 
-        cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout(m_vertexLayout));
-        cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
+        cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
+        cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
 
         cmdList.beginDebugLabel("Opaque");
         cmdList.beginRendering(*renderStateOpaque, ClearColor::srgbColor(0, 0, 0, 0), 1.0f);

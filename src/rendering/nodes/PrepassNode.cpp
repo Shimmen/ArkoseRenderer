@@ -5,12 +5,7 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-PrepassNode::PrepassNode(Scene& scene)
-    : m_scene(scene)
-{
-}
-
-RenderPipelineNode::ExecuteCallback PrepassNode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback PrepassNode::construct(Scene& scene, Registry& reg)
 {
     Texture& depthTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth24Stencil8, Texture::Filters::nearest());
     reg.publish("SceneDepth", depthTexture);
@@ -29,17 +24,17 @@ RenderPipelineNode::ExecuteCallback PrepassNode::construct(Registry& reg)
     Buffer& indirectDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
-        int numInputDrawables = m_scene.forEachMesh([&](size_t, Mesh& mesh) {
-            mesh.ensureDrawCallIsAvailable(m_prepassVertexLayout, m_scene);
+        int numInputDrawables = scene.forEachMesh([&](size_t, Mesh& mesh) {
+            mesh.ensureDrawCallIsAvailable(m_prepassVertexLayout, scene);
         });
 
         cmdList.beginRendering(prepassRenderState, ClearColor::srgbColor(0, 0, 0, 0), 1.0f);
 
         cmdList.setNamedUniform("depthOffset", 0.00005f);
-        cmdList.setNamedUniform("projectionFromWorld", m_scene.camera().viewProjectionMatrix());
+        cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
 
-        cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout(m_prepassVertexLayout));
-        cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
+        cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_prepassVertexLayout));
+        cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
 
         cmdList.drawIndirect(indirectDrawCmdsBuffer, indirectDrawCountBuffer);
 

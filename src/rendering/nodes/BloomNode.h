@@ -5,12 +5,6 @@
 
 class BloomNode final : public RenderPipelineNode {
 public:
-    explicit BloomNode(Scene&);
-
     std::string name() const override { return "Bloom"; }
-
-    ExecuteCallback construct(Registry&) override;
-
-private:
-    Scene& m_scene;
+    ExecuteCallback construct(Scene&, Registry&) override;
 };

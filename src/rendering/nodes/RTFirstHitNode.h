@@ -7,13 +7,6 @@
 
 class RTFirstHitNode final : public RenderPipelineNode {
 public:
-    explicit RTFirstHitNode(Scene&);
-    ~RTFirstHitNode() override = default;
-
     std::string name() const override { return "RT first-hit"; }
-
-    ExecuteCallback construct(Registry&) override;
-
-private:
-    Scene& m_scene;
+    ExecuteCallback construct(Scene&, Registry&) override;
 };

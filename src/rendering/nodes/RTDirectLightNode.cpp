@@ -5,12 +5,7 @@
 // Shader headers
 #include "RTData.h"
 
-RTDirectLightNode::RTDirectLightNode(Scene& scene)
-    : m_scene(scene)
-{
-}
-
-RenderPipelineNode::ExecuteCallback RTDirectLightNode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback RTDirectLightNode::construct(Scene& scene, Registry& reg)
 {
     ///////////////////////
     // constructNode
@@ -21,15 +16,15 @@ RenderPipelineNode::ExecuteCallback RTDirectLightNode::construct(Registry& reg)
                                         VertexComponent::TexCoord2F };
 
     std::vector<RTTriangleMesh> rtMeshes {};
-    m_scene.forEachMesh([&](size_t meshIdx, Mesh& mesh) {
-        const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(vertexLayout, m_scene);
+    scene.forEachMesh([&](size_t meshIdx, Mesh& mesh) {
+        const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(vertexLayout, scene);
         rtMeshes.push_back({ .firstVertex = drawCallDesc.vertexOffset,
                              .firstIndex = (int32_t)drawCallDesc.firstIndex,
                              .materialIndex = mesh.materialIndex().value_or(0) });
     });
 
-    Buffer& indexBuffer = m_scene.globalIndexBuffer();
-    Buffer& vertexBuffer = m_scene.globalVertexBufferForLayout(vertexLayout);
+    Buffer& indexBuffer = scene.globalIndexBuffer();
+    Buffer& vertexBuffer = scene.globalVertexBufferForLayout(vertexLayout);
 
     Buffer& meshBuffer = reg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
     BindingSet& objectDataBindingSet = reg.createBindingSet({ { 0, ShaderStageRTClosestHit, &meshBuffer },
@@ -40,10 +35,10 @@ RenderPipelineNode::ExecuteCallback RTDirectLightNode::construct(Registry& reg)
     Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("RTDirectLight", storageImage);
 
-    BindingSet& materialBindingSet = m_scene.globalMaterialBindingSet();
+    BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
     BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");
 
-    TopLevelAS& sceneTLAS = m_scene.globalTopLevelAccelerationStructure();
+    TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },
                                                          { 1, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), reg.getBuffer("SceneCameraData") },
                                                          { 2, ShaderStageRTRayGen, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler },
@@ -67,7 +62,7 @@ RenderPipelineNode::ExecuteCallback RTDirectLightNode::construct(Registry& reg)
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         cmdList.setRayTracingState(rtState);
 
-        float ambientLx = m_scene.ambient();
+        float ambientLx = scene.ambient();
         static bool useSceneAmbient = false;
         ImGui::Checkbox("Use scene ambient light", &useSceneAmbient);
         if (!useSceneAmbient) {
@@ -78,8 +73,8 @@ RenderPipelineNode::ExecuteCallback RTDirectLightNode::construct(Registry& reg)
 
         // TODO: Do we still want the exposed variants when we use this for indirect light stuff?
         // TODO: It would be nice to actually support the names uniforms API for ray tracing..
-        cmdList.pushConstant(ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), ambientLx * m_scene.lightPreExposureValue(), 0);
-        cmdList.pushConstant(ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), m_scene.exposedEnvironmentMultiplier(), sizeof(float));
+        cmdList.pushConstant(ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), ambientLx * scene.lightPreExposureValue(), 0);
+        cmdList.pushConstant(ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), scene.exposedEnvironmentMultiplier(), sizeof(float));
 
         cmdList.traceRays(appState.windowExtent());
     };

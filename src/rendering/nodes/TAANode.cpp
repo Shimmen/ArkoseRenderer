@@ -1,19 +1,18 @@
 #include "TAANode.h"
 
-#include "SceneNode.h"
+#include "rendering/camera/Camera.h"
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-TAANode::TAANode(Scene& scene)
-    : m_scene(scene)
+TAANode::TAANode(Camera& camera)
 {
     if (m_taaEnabled) {
-        m_scene.camera().setFrustumJitteringEnabled(true);
+        camera.setFrustumJitteringEnabled(true);
     }
 }
 
-RenderPipelineNode::ExecuteCallback TAANode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback TAANode::construct(Scene& scene, Registry& reg)
 {
     ///////////////////////
     // constructNode
@@ -37,13 +36,13 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(Registry& reg)
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         ImGui::Checkbox("Enabled##taa", &m_taaEnabled);
-        m_scene.camera().setFrustumJitteringEnabled(m_taaEnabled);
+        scene.camera().setFrustumJitteringEnabled(m_taaEnabled);
 
         static float hysteresis = 0.9f;
         static bool useCatmullRom = true;
         if (ImGui::TreeNode("Advanced##taa")) {
             ImGui::SliderFloat("Hysteresis", &hysteresis, 0.0f, 1.0f);
-            ImGui::SliderFloat("Jitter scale", &m_scene.camera().frustumJitterScale, 0.0f, 1.0f);
+            ImGui::SliderFloat("Jitter scale", &scene.camera().frustumJitterScale, 0.0f, 1.0f);
             ImGui::Checkbox("Use Catmull-Rom history sampling", &useCatmullRom);
             ImGui::TreePop();
         }

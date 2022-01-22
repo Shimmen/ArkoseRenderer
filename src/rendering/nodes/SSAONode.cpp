@@ -9,12 +9,7 @@
 // Shader data
 #include "SSAOData.h"
 
-SSAONode::SSAONode(Scene& scene)
-    : m_scene(scene)
-{
-}
-
-RenderPipelineNode::ExecuteCallback SSAONode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback SSAONode::construct(Scene& scene, Registry& reg)
 {
     ///////////////////////
     // constructNode

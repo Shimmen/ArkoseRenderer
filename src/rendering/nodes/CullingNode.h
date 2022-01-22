@@ -5,12 +5,6 @@
 
 class CullingNode final : public RenderPipelineNode {
 public:
-    explicit CullingNode(Scene&);
-
     std::string name() const override { return "Culling"; }
-
-    ExecuteCallback construct(Registry&) override;
-
-private:
-    Scene& m_scene;
+    ExecuteCallback construct(Scene&, Registry&) override;
 };

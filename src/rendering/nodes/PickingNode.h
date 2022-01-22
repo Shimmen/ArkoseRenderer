@@ -6,14 +6,11 @@
 
 class PickingNode final : public RenderPipelineNode {
 public:
-    explicit PickingNode(Scene&);
 
     std::string name() const override { return "Picking"; }
-
-    ExecuteCallback construct(Registry&) override;
+    ExecuteCallback construct(Scene&, Registry&) override;
 
 private:
-    Scene& m_scene;
     mutable std::optional<Buffer*> m_lastResultBuffer {};
 
     bool didClick(Button) const;

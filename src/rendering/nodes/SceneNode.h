@@ -6,12 +6,6 @@
 
 class SceneNode final : public RenderPipelineNode {
 public:
-    explicit SceneNode(Scene&);
-
     std::string name() const override { return "Scene"; }
-
-    ExecuteCallback construct(Registry&) override;
-
-private:
-    Scene& m_scene;
+    ExecuteCallback construct(Scene&, Registry&) override;
 };

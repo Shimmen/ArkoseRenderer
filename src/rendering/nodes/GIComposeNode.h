@@ -5,12 +5,6 @@
 
 class GIComposeNode final : public RenderPipelineNode {
 public:
-    explicit GIComposeNode(Scene&);
-
     std::string name() const override { return "GI Compose"; }
-
-    ExecuteCallback construct(Registry&) override;
-
-private:
-    Scene& m_scene;
+    ExecuteCallback construct(Scene&, Registry&) override;
 };

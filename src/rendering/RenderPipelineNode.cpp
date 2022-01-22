@@ -4,14 +4,13 @@
 
 const RenderPipelineNode::ExecuteCallback RenderPipelineNode::NullExecuteCallback = [&](const AppState&, CommandList&, UploadBuffer&) {};
 
-RenderPipelineBasicNode::RenderPipelineBasicNode(std::string name, ConstructorFunction constructorFunction)
-    : RenderPipelineNode()
-    , m_name(std::move(name))
+RenderPipelineLambdaNode::RenderPipelineLambdaNode(std::string name, ConstructorFunction constructorFunction)
+    : m_name(std::move(name))
     , m_constructorFunction(std::move(constructorFunction))
 {
 }
 
-RenderPipelineBasicNode::ExecuteCallback RenderPipelineBasicNode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback RenderPipelineLambdaNode::construct(Scene& scene, Registry& reg)
 {
-    return m_constructorFunction(reg);
+    return m_constructorFunction(scene, reg);
 }

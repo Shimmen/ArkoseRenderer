@@ -2,19 +2,28 @@
 
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
+#include "rendering/scene/Scene.h"
 #include <fmt/format.h>
 
-void RenderPipeline::addNode(const std::string& name, RenderPipelineBasicNode::ConstructorFunction constructorFunction)
+RenderPipeline::RenderPipeline(Scene* scene)
+    : m_scene(scene)
+{
+}
+
+void RenderPipeline::addNode(const std::string& name, RenderPipelineLambdaNode::ConstructorFunction constructorFunction)
 {
     // All nodes should be added before construction!
     ASSERT(m_nodeContexts.empty());
 
-    auto node = std::make_unique<RenderPipelineBasicNode>(name, constructorFunction);
+    auto node = std::make_unique<RenderPipelineLambdaNode>(name, constructorFunction);
     m_allNodes.emplace_back(std::move(node));
 }
 
 void RenderPipeline::addNode(std::unique_ptr<RenderPipelineNode>&& node)
 {
+    // All nodes should be added before construction!
+    ASSERT(m_nodeContexts.empty());
+
     m_allNodes.emplace_back(std::move(node));
 }
 
@@ -32,7 +41,7 @@ void RenderPipeline::constructAll(Registry& registry)
         LogInfo("  %s\n", node->name().c_str());
 
         registry.setCurrentNode({}, node->name());
-        auto executeCallback = node->construct(registry);
+        auto executeCallback = node->construct(*m_scene, registry);
 
         m_nodeContexts.push_back({ .node = node.get(),
                                    .executeCallback = std::move(executeCallback) });

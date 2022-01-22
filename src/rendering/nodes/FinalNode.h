@@ -5,13 +5,11 @@
 
 class FinalNode final : public RenderPipelineNode {
 public:
-    FinalNode(Scene&, std::string sourceTextureName);
+    explicit FinalNode(std::string sourceTextureName);
 
     std::string name() const override { return "Final"; }
-
-    ExecuteCallback construct(Registry&) override;
+    ExecuteCallback construct(Scene&, Registry&) override;
 
 private:
-    Scene& m_scene;
     std::string m_sourceTextureName;
 };

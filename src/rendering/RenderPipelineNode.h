@@ -10,6 +10,7 @@
 #include <string>
 
 class UploadBuffer;
+class Scene;
 
 class RenderPipelineNode {
 public:
@@ -25,20 +26,20 @@ public:
 
     [[nodiscard]] virtual std::string name() const = 0;
 
-    virtual ExecuteCallback construct(Registry&) { return RenderPipelineNode::ExecuteCallback(); };
+    virtual ExecuteCallback construct(Scene&, Registry&) = 0;
 
 private:
     AvgElapsedTimer m_timer;
 };
 
-class RenderPipelineBasicNode final : public RenderPipelineNode {
+class RenderPipelineLambdaNode final : public RenderPipelineNode {
 public:
-    using ConstructorFunction = std::function<ExecuteCallback(Registry&)>;
-    RenderPipelineBasicNode(std::string name, ConstructorFunction);
+    using ConstructorFunction = std::function<ExecuteCallback(Scene&, Registry&)>;
+    RenderPipelineLambdaNode(std::string name, ConstructorFunction);
 
     std::string name() const override { return m_name; }
 
-    ExecuteCallback construct(Registry&) override;
+    ExecuteCallback construct(Scene&, Registry&) override;
 
 private:
     std::string m_name;

@@ -10,13 +10,13 @@
 
 class RenderPipeline {
 public:
-    RenderPipeline() = default;
+    explicit RenderPipeline(Scene* scene);
     ~RenderPipeline() = default;
 
     RenderPipeline(RenderPipeline&) = delete;
     RenderPipeline& operator=(RenderPipeline&) = delete;
 
-    void addNode(const std::string& name, RenderPipelineBasicNode::ConstructorFunction);
+    void addNode(const std::string& name, RenderPipelineLambdaNode::ConstructorFunction);
     void addNode(std::unique_ptr<RenderPipelineNode>&&);
 
     template<typename NodeType, typename... Args>
@@ -36,12 +36,11 @@ private:
         RenderPipelineNode* node;
         RenderPipelineNode::ExecuteCallback executeCallback;
     };
-    struct FrameContext {
-        
-    };
 
     // All nodes that are part of this pipeline
     std::vector<std::unique_ptr<RenderPipelineNode>> m_allNodes {};
 
     std::vector<NodeContext> m_nodeContexts {};
+
+    Scene* m_scene {};
 };

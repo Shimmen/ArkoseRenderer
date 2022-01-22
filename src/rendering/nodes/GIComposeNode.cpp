@@ -5,12 +5,7 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-GIComposeNode::GIComposeNode(Scene& scene)
-    : m_scene(scene)
-{
-}
-
-RenderPipelineNode::ExecuteCallback GIComposeNode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback GIComposeNode::construct(Scene& scene, Registry& reg)
 {
     Texture& sceneColorBeforeGI = *reg.getTexture("SceneColor");
     Texture& baseColorTex = *reg.getTexture("SceneBaseColor");

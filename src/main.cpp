@@ -89,7 +89,7 @@ int main(int argc, char** argv)
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     auto scene = std::make_unique<Scene>(backend->getPersistentRegistry(), Extent2D(width, height));
-    auto renderPipeline = std::make_unique<RenderPipeline>();
+    auto renderPipeline = std::make_unique<RenderPipeline>(scene.get());
     app->setup(*scene, *renderPipeline);
     backend->renderPipelineDidChange(*renderPipeline);
 

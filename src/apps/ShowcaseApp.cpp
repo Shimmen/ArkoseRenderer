@@ -47,28 +47,28 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         scene.generateProbeGridFromBoundingBox();
     }
 
-    pipeline.addNode<SceneNode>(scene);
-    pipeline.addNode<PickingNode>(scene);
+    pipeline.addNode<SceneNode>();
+    pipeline.addNode<PickingNode>();
 
     if (rtxOn) {
-        pipeline.addNode<DDGINode>(scene);
+        pipeline.addNode<DDGINode>();
     } else {
         scene.setAmbient(250.0f);
     }
 
-    pipeline.addNode<ShadowMapNode>(scene);
-    pipeline.addNode<CullingNode>(scene);
-    pipeline.addNode<PrepassNode>(scene);
-    pipeline.addNode<ForwardRenderNode>(scene);
+    pipeline.addNode<ShadowMapNode>();
+    pipeline.addNode<CullingNode>();
+    pipeline.addNode<PrepassNode>();
+    pipeline.addNode<ForwardRenderNode>();
 
-    pipeline.addNode<SSAONode>(scene);
-    pipeline.addNode<GIComposeNode>(scene);
+    pipeline.addNode<SSAONode>();
+    pipeline.addNode<GIComposeNode>();
     
-    pipeline.addNode<SkyViewNode>(scene);
-    pipeline.addNode<BloomNode>(scene);
+    pipeline.addNode<SkyViewNode>();
+    pipeline.addNode<BloomNode>();
 
     if (rtxOn) {
-        pipeline.addNode<DDGIProbeDebug>(scene);
+        pipeline.addNode<DDGIProbeDebug>();
     }
 
     std::string sceneTexture = "SceneColor";
@@ -77,22 +77,22 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     if (rtxOn) {
         // Uncomment for ray tracing visualisations
-        //pipeline.addNode<RTFirstHitNode>(scene); sceneTexture = "RTFirstHit";
-        //pipeline.addNode<RTDirectLightNode>(scene); sceneTexture = "RTDirectLight";
+        //pipeline.addNode<RTFirstHitNode>(); sceneTexture = "RTFirstHit";
+        //pipeline.addNode<RTDirectLightNode>(); sceneTexture = "RTDirectLight";
     }
 
-    pipeline.addNode<TonemapNode>(scene, sceneTexture);
+    pipeline.addNode<TonemapNode>(sceneTexture);
 
     switch (antiAliasingMode) {
     case AntiAliasing::FXAA:
-        pipeline.addNode<FXAANode>(scene);
+        pipeline.addNode<FXAANode>();
         break;
     case AntiAliasing::TAA:
-        pipeline.addNode<TAANode>(scene);
+        pipeline.addNode<TAANode>(scene.camera());
         break;
     }
 
-    pipeline.addNode<FinalNode>(scene, finalTextureToScreen);
+    pipeline.addNode<FinalNode>(finalTextureToScreen);
 }
 
 void ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)

@@ -4,22 +4,17 @@
 #include "utility/Profiling.h"
 #include "ShadowData.h"
 
-ShadowMapNode::ShadowMapNode(Scene& scene)
-    : m_scene(scene)
-{
-}
-
-RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(Scene& scene, Registry& reg)
 {
     // TODO: This should be managed from some central location, e.g. the scene node or similar.
-    Buffer& transformDataBuffer = reg.createBuffer(m_scene.meshCount() * sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+    Buffer& transformDataBuffer = reg.createBuffer(scene.meshCount() * sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     BindingSet& transformBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &transformDataBuffer } });
 
     Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
     BindingSet& shadowDataBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, reg.getBuffer("SceneShadowData") } });
 
     // HACK: Well, this really is a hack, together with the whole render state cache..
-    m_scene.forEachShadowCastingLight([&](size_t shadowLightIndex, Light& light) {
+    scene.forEachShadowCastingLight([&](size_t shadowLightIndex, Light& light) {
         light.invalidateRenderStateCache();
     });
 
@@ -27,13 +22,13 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(Registry& reg)
 
         // TODO: This should be managed from some central location, e.g. the scene node or similar.
         mat4 objectTransforms[SHADOW_MAX_OCCLUDERS];
-        int meshCount = m_scene.forEachMesh([&](size_t idx, Mesh& mesh) {
+        int meshCount = scene.forEachMesh([&](size_t idx, Mesh& mesh) {
             objectTransforms[idx] = mesh.transform().worldMatrix();
-            mesh.ensureDrawCallIsAvailable(m_vertexLayout, m_scene);
+            mesh.ensureDrawCallIsAvailable(m_vertexLayout, scene);
         });
         transformDataBuffer.updateData(objectTransforms, meshCount * sizeof(mat4));
 
-        m_scene.forEachShadowCastingLight([&](size_t shadowLightIndex, Light& light) {
+        scene.forEachShadowCastingLight([&](size_t shadowLightIndex, Light& light) {
             SCOPED_PROFILE_ZONE_NAMED("Processing light");
 
             // TODO: Use a proper cache instead of just using a name as a "cache identifier". This will require implementing operator== on a lot of
@@ -61,10 +56,10 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(Registry& reg)
                 uint32_t index = (uint32_t)shadowLightIndex;
                 cmdList.setNamedUniform("lightIndex", index);
 
-                cmdList.bindVertexBuffer(m_scene.globalVertexBufferForLayout(m_vertexLayout));
-                cmdList.bindIndexBuffer(m_scene.globalIndexBuffer(), m_scene.globalIndexBufferType());
+                cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
+                cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
 
-                m_scene.forEachMesh([&](size_t idx, Mesh& mesh) {
+                scene.forEachMesh([&](size_t idx, Mesh& mesh) {
                     // Don't render translucent objects. We still do masked though and pretend they are opaque. This may fail
                     // in some cases but in general if the masked features are small enough it's not really noticable.
                     if (mesh.material().blendMode == Material::BlendMode::Translucent)
@@ -74,7 +69,7 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(Registry& reg)
                     if (!lightFrustum.includesSphere(sphere))
                         return;
 
-                    DrawCallDescription drawCall = mesh.drawCallDescription(m_vertexLayout, m_scene);
+                    DrawCallDescription drawCall = mesh.drawCallDescription(m_vertexLayout, scene);
                     drawCall.firstInstance = static_cast<uint32_t>(idx); // TODO: Put this in some buffer instead!
 
                     cmdList.issueDrawCall(drawCall);

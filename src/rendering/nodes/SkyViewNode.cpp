@@ -3,20 +3,15 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-SkyViewNode::SkyViewNode(Scene& scene)
-    : m_scene(scene)
-{
-}
-
-RenderPipelineNode::ExecuteCallback SkyViewNode::construct(Registry& reg)
+RenderPipelineNode::ExecuteCallback SkyViewNode::construct(Scene& scene, Registry& reg)
 {
     Texture& sceneColor = *reg.getTexture("SceneColor");
     Texture& sceneVelocity = *reg.getTexture("SceneVelocity"); // todo: velocity shouldn't be strictly required as it is now!
     Texture& depthStencilImage = *reg.getTexture("SceneDepth");
 
-    Texture& skyViewTexture = m_scene.environmentMap().empty()
+    Texture& skyViewTexture = scene.environmentMap().empty()
         ? reg.createPixelTexture(vec4(1.0f), true)
-        : reg.loadTexture2D(m_scene.environmentMap(), true, false);
+        : reg.loadTexture2D(scene.environmentMap(), true, false);
 
     BindingSet& skyViewRasterizeBindingSet = reg.createBindingSet({ { 0, ShaderStageAnyRasterize, reg.getBuffer("SceneCameraData") },
                                                                     { 1, ShaderStageFragment, &skyViewTexture, ShaderBindingType::TextureSampler } });
@@ -44,7 +39,7 @@ RenderPipelineNode::ExecuteCallback SkyViewNode::construct(Registry& reg)
         if (ImGui::RadioButton("Velocity only", !skyViewEnabled))
             skyViewEnabled = false;
 
-        float envMultiplier = skyViewEnabled ? m_scene.exposedEnvironmentMultiplier() : 0.0f;
+        float envMultiplier = skyViewEnabled ? scene.exposedEnvironmentMultiplier() : 0.0f;
 
         cmdList.beginRendering(skyViewRenderState);
         cmdList.setNamedUniform("environmentMultiplier", envMultiplier);

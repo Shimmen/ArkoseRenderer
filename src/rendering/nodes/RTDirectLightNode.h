@@ -7,13 +7,6 @@
 
 class RTDirectLightNode final : public RenderPipelineNode {
 public:
-    explicit RTDirectLightNode(Scene&);
-    ~RTDirectLightNode() override = default;
-
     std::string name() const override { return "RT direct light"; }
-
-    ExecuteCallback construct(Registry&) override;
-
-private:
-    Scene& m_scene;
+    ExecuteCallback construct(Scene&, Registry&) override;
 };
