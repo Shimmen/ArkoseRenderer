@@ -148,8 +148,7 @@ VulkanBackend::~VulkanBackend()
     // Before destroying stuff, make sure we're done with all scheduled work
     vkDeviceWaitIdle(device());
 
-    m_frameRegistry.reset();
-    m_nodeRegistry.reset();
+    m_pipelineRegistry.reset();
     m_persistentRegistry.reset();
 
     destroyDearImgui();
@@ -1233,7 +1232,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
         UploadBuffer& uploadBuffer = *frameContext.uploadBuffer;
         uploadBuffer.reset();
 
-        Registry& registry = *m_frameRegistry;
+        Registry& registry = *m_pipelineRegistry;
         VulkanCommandList cmdList { *this, commandBuffer };
 
         vkCmdResetQueryPool(commandBuffer, frameContext.timestampQueryPool, 0, FrameContext::TimestampQueryPoolCount);
@@ -1406,22 +1405,15 @@ void VulkanBackend::reconstructRenderPipelineResources(RenderPipeline& renderPip
     size_t numFrameManagers = m_frameContexts.size();
     ASSERT(numFrameManagers == NumInFlightFrames);
 
-    Registry* previousNodeRegistry = m_nodeRegistry.get();
-    Registry* nodeRegistry = new Registry(*this, previousNodeRegistry);
+    // We use imageless framebuffers for this one so it doesn't matter that we don't construct the render pipeline knowing the exact images.
+    const RenderTarget& templateWindowRenderTarget = *m_clearingRenderTarget;
 
-    FrameContext& templateFrameContext = *m_frameContexts[0].get();
-    const RenderTarget& windowRenderTargetForFrame = *m_clearingRenderTarget;
+    Registry* previousRegistry = m_pipelineRegistry.get();
+    Registry* registry = new Registry(*this, previousRegistry, &templateWindowRenderTarget);
 
-    Registry* previousFrameRegistry = m_frameRegistry.get();
-    Registry* frameRegistry = new Registry(*this, previousFrameRegistry, &windowRenderTargetForFrame);
+    renderPipeline.constructAll(*registry);
 
-    std::vector<Registry*> frameRegistries {};
-    frameRegistries.push_back(frameRegistry);
-
-    renderPipeline.constructAll(*nodeRegistry, frameRegistries);
-
-    m_nodeRegistry.reset(nodeRegistry);
-    m_frameRegistry.reset(frameRegistry);
+    m_pipelineRegistry.reset(registry);
 
     m_relativeFrameIndex = 0;
 }

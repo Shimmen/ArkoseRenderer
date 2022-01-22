@@ -26,10 +26,9 @@ public:
         addNode(std::move(nodePtr));
     }
 
-    //! Construct all nodes & set up a per-frame context for each resource manager frameManagers
-    void constructAll(Registry& nodeManager, std::vector<Registry*> frameManagers);
+    void constructAll(Registry& registry);
 
-    //! The callback is called for each node (in correct order)
+    // The callback is called for each node (in correct order)
     void forEachNodeInResolvedOrder(const Registry&, std::function<void(std::string, AvgElapsedTimer&, const RenderPipelineNode::ExecuteCallback&)>) const;
 
 private:
@@ -38,12 +37,11 @@ private:
         RenderPipelineNode::ExecuteCallback executeCallback;
     };
     struct FrameContext {
-        std::vector<NodeContext> nodeContexts {};
+        
     };
 
-    //! All nodes that are part of this pipeline
+    // All nodes that are part of this pipeline
     std::vector<std::unique_ptr<RenderPipelineNode>> m_allNodes {};
 
-    //! The frame contexts, one per frame (i.e. image in the swapchain)
-    std::unordered_map<const Registry*, FrameContext> m_frameContexts {};
+    std::vector<NodeContext> m_nodeContexts {};
 };

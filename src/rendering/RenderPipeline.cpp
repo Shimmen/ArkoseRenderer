@@ -7,7 +7,7 @@
 void RenderPipeline::addNode(const std::string& name, RenderPipelineBasicNode::ConstructorFunction constructorFunction)
 {
     // All nodes should be added before construction!
-    ASSERT(m_frameContexts.empty());
+    ASSERT(m_nodeContexts.empty());
 
     auto node = std::make_unique<RenderPipelineBasicNode>(name, constructorFunction);
     m_allNodes.emplace_back(std::move(node));
@@ -18,66 +18,41 @@ void RenderPipeline::addNode(std::unique_ptr<RenderPipelineNode>&& node)
     m_allNodes.emplace_back(std::move(node));
 }
 
-void RenderPipeline::constructAll(Registry& nodeRegistry, std::vector<Registry*> frameRegistries)
+void RenderPipeline::constructAll(Registry& registry)
 {
     SCOPED_PROFILE_ZONE();
 
-    m_frameContexts.clear();
+    // TODO: This is slightly confusing.. why not make this "destruction" more explicit?
+    m_nodeContexts.clear();
 
-    // TODO: For debugability it would be nice if the frame resources were constructed right after the node resources, for each node
+    LogInfo("Constructing node resources:\n");
+    for (auto& node : m_allNodes) {
 
-    LogInfo("Constructing per-node resources:\n");
-    int nextNodeIdx = 1;
+        SCOPED_PROFILE_ZONE_DYNAMIC(node->name(), 0x252515)
+        LogInfo("  %s\n", node->name().c_str());
 
-    {
-        SCOPED_PROFILE_ZONE_NAMED("Node resources");
-        for (auto& node : m_allNodes) {
-            LogInfo("  %s\n", node->name().c_str());
-            nodeRegistry.setCurrentNode(node->name());
-            node->constructNode(nodeRegistry);
-        }
+        registry.setCurrentNode(node->name());
+
+        // TODO: Remove the constructNode variant..
+        node->constructNode(registry);
+        auto executeCallback = node->constructFrame(registry);
+
+        m_nodeContexts.push_back({ .node = node.get(),
+                                    .executeCallback = executeCallback });
     }
 
-    LogInfo("Constructing per-frame resources:\n");
-    int nextFrameIdx = 1;
-
-    {
-        SCOPED_PROFILE_ZONE_NAMED("Frame resources");
-        for (auto& frameRegistry : frameRegistries) {
-            SCOPED_PROFILE_ZONE_DYNAMIC(fmt::format("Frame {}", nextFrameIdx), 0x252515)
-            FrameContext frameCtx {};
-
-            LogInfo("  frame=%i\n", nextFrameIdx++);
-            int nextNodeIdx = 1;
-
-            for (auto& node : m_allNodes) {
-                LogInfo("    %s\n", node->name().c_str());
-                frameRegistry->setCurrentNode(node->name());
-                auto executeCallback = node->constructFrame(*frameRegistry);
-                frameCtx.nodeContexts.push_back({ .node = node.get(),
-                                                  .executeCallback = executeCallback });
-            }
-
-            m_frameContexts[frameRegistry] = frameCtx;
-        }
-    }
-
-    nodeRegistry.setCurrentNode("-");
-    for (auto& frameRegistry : frameRegistries) {
-        frameRegistry->setCurrentNode("-");
-    }
+    // Is this useful? Also, maybe use optional instead?
+    registry.setCurrentNode("-");
 }
 
 void RenderPipeline::forEachNodeInResolvedOrder(const Registry& frameManager, std::function<void(std::string nodeName, AvgElapsedTimer& timer, const RenderPipelineNode::ExecuteCallback&)> callback) const
 {
-    auto entry = m_frameContexts.find(&frameManager);
-    ASSERT(entry != m_frameContexts.end());
-
-    // TODO: We also have to make sure that nodes rendering to the screen are last (and in some respective order that makes sense)
     // TODO: Actually run the callback in the correctly resolved order!
+    // TODO: We also have to make sure that nodes rendering to the screen are last (and in some respective order that makes sense)
 
-    const FrameContext& frameContext = entry->second;
-    for (auto& [node, execCallback] : frameContext.nodeContexts) {
+    ASSERT(m_nodeContexts.size() > 0);
+
+    for (auto& [node, execCallback] : m_nodeContexts) {
         callback(node->name(), node->timer(), execCallback);
     }
 }

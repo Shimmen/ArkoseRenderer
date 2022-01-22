@@ -249,9 +249,8 @@ private:
 
     VmaAllocator m_memoryAllocator;
 
+    std::unique_ptr<Registry> m_pipelineRegistry {};
     std::unique_ptr<Registry> m_persistentRegistry {};
-    std::unique_ptr<Registry> m_nodeRegistry {};
-    std::unique_ptr<Registry> m_frameRegistry {};
 
     VkCommandPool m_defaultCommandPool {};
     VkCommandPool m_transientCommandPool {};
