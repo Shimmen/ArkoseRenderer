@@ -26,7 +26,7 @@ BufferCopyOperation UploadBuffer::upload(const void* data, size_t size, Buffer& 
 {
     size_t requiredSize = m_cursor + size;
     if (requiredSize > m_buffer->size())
-        LogWarning("UploadBuffer: needs to grow to fit all requested uploads! It might be good to increase the default size so we don't have to pay this runtime cost");
+        LogWarning("UploadBuffer: needs to grow to fit all requested uploads! It might be good to increase the default size so we don't have to pay this runtime cost\n");
 
     BufferCopyOperation copyOperation;
     copyOperation.size = size;

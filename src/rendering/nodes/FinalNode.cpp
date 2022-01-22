@@ -34,7 +34,7 @@ RenderPipelineNode::ExecuteCallback FinalNode::constructFrame(Registry& reg) con
     stateBuilder.testDepth = false;
     RenderState& renderState = reg.createRenderState(stateBuilder);
 
-    return [&](const AppState& appState, CommandList& cmdList) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         static bool addFilmGrain = true;
         ImGui::Checkbox("Add film grain", &addFilmGrain);

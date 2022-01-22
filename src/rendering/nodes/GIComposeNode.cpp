@@ -28,7 +28,7 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::constructFrame(Registry& reg)
                                                            { 4, ShaderStageCompute, &diffuseGiTex, ShaderBindingType::TextureSampler } });
     ComputeState& giComposeState = reg.createComputeState(Shader::createCompute("compose/compose-gi.comp"), { &composeBindingSet });
 
-    return [&](const AppState& appState, CommandList& cmdList) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         cmdList.setComputeState(giComposeState);
         cmdList.bindSet(composeBindingSet, 0);

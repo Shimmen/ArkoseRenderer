@@ -2,7 +2,7 @@
 
 #include <utility>
 
-const RenderPipelineNode::ExecuteCallback RenderPipelineNode::NullExecuteCallback = [&](const AppState&, CommandList&) {};
+const RenderPipelineNode::ExecuteCallback RenderPipelineNode::NullExecuteCallback = [&](const AppState&, CommandList&, UploadBuffer&) {};
 
 RenderPipelineBasicNode::RenderPipelineBasicNode(std::string name, ConstructorFunction constructorFunction)
     : RenderPipelineNode()

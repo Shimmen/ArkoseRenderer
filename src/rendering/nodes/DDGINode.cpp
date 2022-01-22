@@ -103,7 +103,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::constructFrame(Registry& reg) cons
     ComputeState& probeBorderCopyIrradianceEdgesState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyEdges.comp", { ShaderDefine::makeInt("TILE_SIZE", DDGI_IRRADIANCE_RES) }), { &probeBorderCopyBindingSet });
     ComputeState& probeBorderCopyVisibilityEdgesState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyEdges.comp", { ShaderDefine::makeInt("TILE_SIZE", DDGI_VISIBILITY_RES) }), { &probeBorderCopyBindingSet });
 
-    return [&, probeCount](const AppState& appState, CommandList& cmdList) {
+    return [&, probeCount](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         static int raysPerProbeInt = maxNumProbeSamples;
         ImGui::SliderInt("Rays per probe", &raysPerProbeInt, 1, maxNumProbeSamples);
         uint32_t raysPerProbe = static_cast<uint32_t>(raysPerProbeInt);

@@ -65,7 +65,7 @@ RenderPipelineNode::ExecuteCallback BloomNode::constructFrame(Registry& reg) con
     Shader bloomBlendShader = Shader::createCompute("bloom/blend.comp");
     ComputeState& bloomBlendComputeState = reg.createComputeState(bloomBlendShader, { &blendBindingSet });
 
-    return [&mainTexture, &downsampleState, &upsampleState, &bloomBlendComputeState, &blendBindingSet, captures](const AppState& appState, CommandList& cmdList) {
+    return [&mainTexture, &downsampleState, &upsampleState, &bloomBlendComputeState, &blendBindingSet, captures](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         static bool enabled = true;
         ImGui::Checkbox("Enabled##bloom", &enabled);

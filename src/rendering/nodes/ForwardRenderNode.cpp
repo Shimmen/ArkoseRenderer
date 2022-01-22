@@ -106,7 +106,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::constructFrame(Registry& 
         renderStateMasked->setName("ForwardMasked");
     }
 
-    return [&, renderStateOpaque, renderStateMasked](const AppState& appState, CommandList& cmdList) {
+    return [&, renderStateOpaque, renderStateMasked](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         m_scene.forEachMesh([&](size_t, Mesh& mesh) {
             mesh.ensureDrawCallIsAvailable(m_vertexLayout, m_scene);

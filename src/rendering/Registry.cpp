@@ -12,20 +12,6 @@ Registry::Registry(Backend& backend, Registry* previousRegistry, const RenderTar
     , m_previousRegistry(previousRegistry)
     , m_windowRenderTarget(windowRenderTarget)
 {
-    /*
-    if (m_previousRegistry) {
-        m_uploadBuffer = std::move(previousRegistry->m_uploadBuffer);
-        m_uploadBuffer->reset();
-    } else {
-        static constexpr size_t registryUploadBufferSize = 4 * 1024 * 1024;
-        m_uploadBuffer = std::make_unique<UploadBuffer>(backend, registryUploadBufferSize);
-    }
-    */
-}
-
-void Registry::newFrame(Badge<Backend>)
-{
-    //m_uploadBuffer->reset();
 }
 
 void Registry::setCurrentNode(const std::string& node)
@@ -39,17 +25,6 @@ const RenderTarget& Registry::windowRenderTarget()
     if (!m_windowRenderTarget)
         LogErrorAndExit("Can't get the window render target from a non-frame registry!\n");
     return *m_windowRenderTarget;
-}
-
-void Registry::setUploadBuffer(Badge<Backend>, UploadBuffer* uploadBuffer)
-{
-    m_uploadBuffer = uploadBuffer;
-}
-
-UploadBuffer& Registry::getUploadBuffer()
-{
-    ASSERT(m_uploadBuffer);
-    return *m_uploadBuffer;
 }
 
 RenderTarget& Registry::createRenderTarget(std::vector<RenderTarget::Attachment> attachments)

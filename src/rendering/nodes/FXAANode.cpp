@@ -23,7 +23,7 @@ RenderPipelineNode::ExecuteCallback FXAANode::constructFrame(Registry& reg) cons
     Shader computeShader = Shader::createCompute("fxaa/anti-alias.comp");
     ComputeState& fxaaComputeState = reg.createComputeState(computeShader, { &fxaaBindingSet });
 
-    return [&](const AppState& appState, CommandList& cmdList) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         static bool enabled = true;
         ImGui::Checkbox("Enabled##fxaa", &enabled);

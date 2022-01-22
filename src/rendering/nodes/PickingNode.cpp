@@ -35,7 +35,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::constructFrame(Registry& reg) c
                                                                 { 1, ShaderStageCompute, &pickedIndexBuffer } });
     ComputeState& collectState = reg.createComputeState(collectorShader, { &collectIndexBindingSet });
 
-    return [&](const AppState& appState, CommandList& cmdList) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         // TODO: Implement some proper CPU readback context so we know for sure that the previous result
         // is ready at this point. Just because it's from the previous frame doesn't mean it must be done.

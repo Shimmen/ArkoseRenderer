@@ -39,7 +39,7 @@ RenderPipelineNode::ExecuteCallback SSAONode::constructFrame(Registry& reg) cons
                                                         { 4, ShaderStageCompute, m_kernelSampleBuffer } });
     ComputeState& ssaoComputeState = reg.createComputeState(Shader::createCompute("ssao/ssao.comp"), { &ssaoBindingSet });
 
-    return [&](const AppState& appState, CommandList& cmdList) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         static float kernelRadius = 0.58f;
         ImGui::SliderFloat("Kernel radius (m)", &kernelRadius, 0.01f, 1.5f);

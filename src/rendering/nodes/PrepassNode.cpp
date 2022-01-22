@@ -27,7 +27,7 @@ RenderPipelineNode::ExecuteCallback PrepassNode::constructFrame(Registry& reg) c
     RenderState& prepassRenderState = reg.createRenderState(prepassRenderStateBuilder);
     prepassRenderState.setName("ForwardZPrepass");
 
-    return [&](const AppState& appState, CommandList& cmdList) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         int numInputDrawables = m_scene.forEachMesh([&](size_t, Mesh& mesh) {
             mesh.ensureDrawCallIsAvailable(m_prepassVertexLayout, m_scene);
         });

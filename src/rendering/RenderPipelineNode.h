@@ -9,12 +9,14 @@
 #include <memory>
 #include <string>
 
+class UploadBuffer;
+
 class RenderPipelineNode {
 public:
     RenderPipelineNode() = default;
     virtual ~RenderPipelineNode() = default;
 
-    using ExecuteCallback = std::function<void(const AppState&, CommandList&)>;
+    using ExecuteCallback = std::function<void(const AppState&, CommandList&, UploadBuffer&)>;
 
     // An execute callback that does nothing. Useful for early exit when nothing to execute.
     static const ExecuteCallback NullExecuteCallback;

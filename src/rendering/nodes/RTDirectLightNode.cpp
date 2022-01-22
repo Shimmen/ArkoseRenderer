@@ -61,7 +61,7 @@ RenderPipelineNode::ExecuteCallback RTDirectLightNode::constructFrame(Registry& 
     constexpr uint32_t maxRecursionDepth = 2; // raygen -> closest hit -> shadow ray
     RayTracingState& rtState = reg.createRayTracingState(sbt, stateDataBindings, maxRecursionDepth);
 
-    return [&](const AppState& appState, CommandList& cmdList) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         cmdList.setRayTracingState(rtState);
 
         float ambientLx = m_scene.ambient();

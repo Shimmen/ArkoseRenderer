@@ -46,7 +46,7 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::constructFrame(Registry& reg
     stateBuilder.testDepth = true;
     RenderState& renderState = reg.createRenderState(stateBuilder);
 
-    return [&](const AppState& appState, CommandList& cmdList) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         SCOPED_PROFILE_ZONE();
 
         ImGui::Text("Debug visualisation:");

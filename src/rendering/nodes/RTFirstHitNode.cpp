@@ -61,7 +61,7 @@ RenderPipelineNode::ExecuteCallback RTFirstHitNode::constructFrame(Registry& reg
     uint32_t maxRecursionDepth = 1;
     RayTracingState& rtState = reg.createRayTracingState(sbt, stateBindings, maxRecursionDepth);
 
-    return [&](const AppState& appState, CommandList& cmdList) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         cmdList.setRayTracingState(rtState);
 
         cmdList.bindSet(frameBindingSet, 0);

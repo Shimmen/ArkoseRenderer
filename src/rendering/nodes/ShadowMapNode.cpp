@@ -25,7 +25,7 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::constructFrame(Registry& reg)
         light.invalidateRenderStateCache();
     });
 
-    return [&, shadowMapShader](const AppState& appState, CommandList& cmdList) {
+    return [&, shadowMapShader](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         // TODO: This should be managed from some central location, e.g. the scene node or similar.
         mat4 objectTransforms[SHADOW_MAX_OCCLUDERS];

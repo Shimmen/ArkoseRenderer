@@ -1230,6 +1230,9 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
         m_currentlyExecutingMainCommandBuffer = true;
 
+        UploadBuffer& uploadBuffer = *frameContext.uploadBuffer;
+        uploadBuffer.reset();
+
         Registry& associatedRegistry = *m_frameRegistry; //frameContext.registry;
         VulkanCommandList cmdList { *this, commandBuffer };
 
@@ -1238,11 +1241,6 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
         ImGui::Begin("Nodes (in order)");
         {
-            // TODO: Remove all of this from here!
-            associatedRegistry.newFrame(badge());
-            frameContext.uploadBuffer->reset();
-            associatedRegistry.setUploadBuffer(badge(), frameContext.uploadBuffer.get());
-
             std::string frameTimePerfString = m_frameTimer.createFormattedString();
             ImGui::Text("Frame time: %s", frameTimePerfString.c_str());
 
@@ -1262,7 +1260,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
                 vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameContext.timestampQueryPool, nodeStartTimestampIdx);
 
                 cmdList.beginDebugLabel(nodeName);
-                nodeExecuteCallback(appState, cmdList);
+                nodeExecuteCallback(appState, cmdList, uploadBuffer);
                 cmdList.endNode({});
                 cmdList.endDebugLabel();
 

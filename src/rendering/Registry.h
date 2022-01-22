@@ -15,14 +15,10 @@ class Registry final {
 public:
     explicit Registry(Backend&, Registry* previousRegistry, const RenderTarget* windowRenderTarget = nullptr);
 
-    void newFrame(Badge<Backend>);
     void setCurrentNode(const std::string&);
 
     [[nodiscard]] const RenderTarget& windowRenderTarget();
     [[nodiscard]] RenderTarget& createRenderTarget(std::vector<RenderTarget::Attachment>);
-
-    void setUploadBuffer(Badge<Backend>, UploadBuffer*); // todo: move all this to the execution callback isntead!
-    UploadBuffer& getUploadBuffer();
 
     [[nodiscard]] Texture& createPixelTexture(vec4 pixelValue, bool srgb);
     [[nodiscard]] Texture& loadTexture2D(const std::string& imagePath, bool srgb, bool generateMipmaps);
@@ -84,9 +80,6 @@ private:
     std::vector<std::string> m_allNodeNames;
 
     const RenderTarget* m_windowRenderTarget;
-
-    //std::unique_ptr<UploadBuffer> m_uploadBuffer;
-    UploadBuffer* m_uploadBuffer;
 
     template<typename ResourceType>
     struct PublishedResource {

@@ -38,7 +38,7 @@ RenderPipelineNode::ExecuteCallback SkyViewNode::constructFrame(Registry& reg) c
     Buffer& fullscreenTriangleVertexBuffer = reg.createBuffer(std::vector<vec2> { { -1, -3 }, { -1, 1 }, { 3, 1 } },
                                                               Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
 
-    return [&](const AppState& appState, CommandList& cmdList) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         static bool skyViewEnabled = true;
         if (ImGui::RadioButton("Sky view enabled", skyViewEnabled))

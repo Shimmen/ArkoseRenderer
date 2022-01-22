@@ -42,7 +42,7 @@ RenderPipelineNode::ExecuteCallback TonemapNode::constructFrame(Registry& reg) c
     tonemapStateBuilder.testDepth = false;
     RenderState& tonemapRenderState = reg.createRenderState(tonemapStateBuilder);
 
-    return [&](const AppState& appState, CommandList& cmdList) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         if (m_mode == Mode::RenderToWindow)
             cmdList.beginRendering(tonemapRenderState, ClearColor::black(), 1.0f);

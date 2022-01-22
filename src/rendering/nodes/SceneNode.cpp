@@ -71,9 +71,7 @@ RenderPipelineNode::ExecuteCallback SceneNode::constructFrame(Registry& reg) con
                                                          { 4, ShaderStageAny, iesProfileLUTs, SCENE_MAX_IES_LUT } });
     reg.publish("SceneLightSet", lightBindingSet);
 
-    return [&](const AppState& appState, CommandList& cmdList) {
-
-        UploadBuffer& uploadBuffer = reg.getUploadBuffer();
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         // Update camera data
         {

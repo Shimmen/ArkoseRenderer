@@ -36,7 +36,7 @@ RenderPipelineNode::ExecuteCallback TAANode::constructFrame(Registry& reg) const
     Shader taaComputeShader = Shader::createCompute("taa/taa.comp");
     ComputeState& taaComputeState = reg.createComputeState(taaComputeShader, { &taaBindingSet });
 
-    return [&](const AppState& appState, CommandList& cmdList) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         ImGui::Checkbox("Enabled##taa", &m_taaEnabled);
         m_scene.camera().setFrustumJitteringEnabled(m_taaEnabled);

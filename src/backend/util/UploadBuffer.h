@@ -12,7 +12,8 @@ struct BufferCopyOperation {
     size_t dstOffset;
 };
 
-struct UploadBuffer final {
+class UploadBuffer final {
+public:
     UploadBuffer(Backend&, size_t size);
 
     UploadBuffer(UploadBuffer&) = delete;

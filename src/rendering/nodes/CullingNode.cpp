@@ -67,9 +67,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::constructFrame(Registry& reg) c
     ComputeState& cullingState = reg.createComputeState(Shader::createCompute("culling/culling.comp"), { &cullingBindingSet });
     cullingState.setName("MainViewCulling");
 
-    return [&](const AppState& appState, CommandList& cmdList) {
-
-        UploadBuffer& uploadBuffer = reg.getUploadBuffer();
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         mat4 cameraViewProjection = m_scene.camera().viewProjectionMatrix();
         auto cameraFrustum = geometry::Frustum::createFromProjectionMatrix(cameraViewProjection);
