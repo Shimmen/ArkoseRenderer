@@ -1084,7 +1084,7 @@ void VulkanCommandList::rebuildTopLevelAcceratationStructure(TopLevelAS& tlas)
 
     VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
     barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NV;
-    barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT; //VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV; // getting validation error with this?!
+    barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV;
     vkCmdPipelineBarrier(m_commandBuffer,
                          VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV,
                          VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV,
