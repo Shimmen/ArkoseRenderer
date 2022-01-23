@@ -25,6 +25,8 @@ public:
     Registry& registry() { return m_registry; }
     const Registry& registry() const { return m_registry; }
 
+    void newFrame(Extent2D mainViewportSize, bool firstFrame);
+
     // RenderPipelineNode interface
 
     std::string name() const override { return "Scene"; }
@@ -41,7 +43,6 @@ public:
     Camera& camera() { return *m_currentMainCamera; }
 
     Extent2D mainViewportSize() const { return m_mainViewportSize; }
-    void setMainViewportSize(Badge<Backend>, Extent2D size) { m_mainViewportSize = size; }
 
     float lightPreExposureValue() const { return m_lightPreExposure; }
 

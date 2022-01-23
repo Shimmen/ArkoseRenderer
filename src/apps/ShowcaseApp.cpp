@@ -95,6 +95,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
 void ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
 {
+    scene.camera().update(Input::instance(), deltaTime);
+
     float sunRotation = 0.0f;
     sunRotation -= Input::instance().isKeyDown(Key::Left) ? 1.0f : 0.0f;
     sunRotation += Input::instance().isKeyDown(Key::Right) ? 1.0f : 0.0f;

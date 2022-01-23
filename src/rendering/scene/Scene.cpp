@@ -20,24 +20,34 @@ Scene::Scene(Registry& registry, Extent2D initialMainViewportSize)
 {
 }
 
-RenderPipelineNode::ExecuteCallback Scene::construct(Scene& scene, Registry& reg)
+void Scene::newFrame(Extent2D mainViewportSize, bool firstFrame)
 {
-    // TODO: Maybe call into a member function instead?
+    m_mainViewportSize = mainViewportSize;
 
+    camera().newFrame({}, mainViewportSize, firstFrame);
+
+    // NOTE: We only want to do this on leaf-nodes right now, i.e. meshes not models.
+    forEachMesh([&](size_t meshIdx, Mesh& mesh) {
+        mesh.transform().newFrame({}, firstFrame);
+    });
+}
+
+RenderPipelineNode::ExecuteCallback Scene::construct(Scene&, Registry& reg)
+{
     Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
     BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStageAnyRasterize, &cameraBuffer } });
     reg.publish("SceneCameraData", cameraBuffer);
     reg.publish("SceneCameraSet", cameraBindingSet);
 
     // Environment mapping stuff
-    Texture& envTexture = scene.environmentMap().empty()
+    Texture& envTexture = environmentMap().empty()
         ? reg.createPixelTexture(vec4(1.0f), true)
-        : reg.loadTexture2D(scene.environmentMap(), true, false);
+        : reg.loadTexture2D(environmentMap(), true, false);
     reg.publish("SceneEnvironmentMap", envTexture);
 
     // Object data stuff
     // TODO: Resize the buffer if needed when more meshes are added
-    size_t objectDataBufferSize = scene.meshCount() * sizeof(ShaderDrawable);
+    size_t objectDataBufferSize = meshCount() * sizeof(ShaderDrawable);
     Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     objectDataBuffer.setName("SceneObjectData");
 
@@ -58,7 +68,7 @@ RenderPipelineNode::ExecuteCallback Scene::construct(Scene& scene, Registry& reg
     std::vector<Texture*> iesProfileLUTs;
     std::vector<Texture*> shadowMaps;
     // TODO: We need to be able to update the shadow map binding. Right now we can only do it once, at creation.
-    scene.forEachLight([&](size_t, Light& light) {
+    forEachLight([&](size_t, Light& light) {
         if (light.type() == Light::Type::SpotLight)
             iesProfileLUTs.push_back(&((SpotLight&)light).iesProfileLookupTexture()); // all this light stuff needs cleanup...
         if (light.castsShadows())
@@ -77,35 +87,27 @@ RenderPipelineNode::ExecuteCallback Scene::construct(Scene& scene, Registry& reg
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        {
-            // NOTE: We only want to do this on leaf-nodes right now, i.e. meshes not models.
-            forEachMesh([&](size_t meshIdx, Mesh& mesh) {
-                mesh.transform().newFrame({}, appState.isFirstFrame());
-            });
-
-            camera().newFrame({}, mainViewportSize(), appState.isFirstFrame());
-
-            camera().update(Input::instance(), static_cast<float>(appState.deltaTime()));
-
-            if (m_sceneDataNeedsRebuild) {
-                // We shouldn't need to rebuild the whole thing, just append and potentially remove some stuff.. But the
-                // distinction here is that it wouldn't be enough to just update some matrices, e.g. if an object was moved
-                // If we save the vector of textures & materials we can probably resuse a lot of calculations. There is no
-                // rush with that though, as currently we can't even make changes that would require a rebuild..
-                rebuildGpuSceneData();
-                m_sceneDataNeedsRebuild = false;
-            }
-
-            drawSceneGui();
-            drawSceneGizmos();
+        if (m_sceneDataNeedsRebuild) {
+            // We shouldn't need to rebuild the whole thing, just append and potentially remove some stuff.. But the
+            // distinction here is that it wouldn't be enough to just update some matrices, e.g. if an object was moved.
+            // If we save the vector of textures & materials we can probably resuse a lot of calculations. There is no
+            // rush with that though, as currently we can't even make changes that would require a rebuild..
+            // TODO: There is no reason this is a separate path from the normal Scene render pipeline execute function!
+            rebuildGpuSceneData();
+            m_sceneDataNeedsRebuild = false;
         }
+
+        drawSceneGui();
+        drawSceneGizmos();
 
         // Update camera data
         {
-            const Camera& camera = scene.camera();
+            const Camera& camera = this->camera();
+
             mat4 pixelFromView = camera.pixelProjectionMatrix();
             mat4 projectionFromView = camera.projectionMatrix();
             mat4 viewFromWorld = camera.viewMatrix();
+
             CameraState cameraState {
                 .projectionFromView = projectionFromView,
                 .viewFromProjection = inverse(projectionFromView),
@@ -126,56 +128,56 @@ RenderPipelineNode::ExecuteCallback Scene::construct(Scene& scene, Registry& reg
                 .shutterSpeed = camera.shutterSpeed,
                 .exposureCompensation = camera.exposureCompensation,
             };
+
             uploadBuffer.upload(cameraState, cameraBuffer);
         }
 
         // Update object data
         {
             std::vector<ShaderDrawable> objectData {};
-            scene.forEachMesh([&](size_t, Mesh& mesh) {
+            forEachMesh([&](size_t, Mesh& mesh) {
                 objectData.push_back(ShaderDrawable { .worldFromLocal = mesh.transform().worldMatrix(),
                                                       .worldFromTangent = mat4(mesh.transform().worldNormalMatrix()),
                                                       .previousFrameWorldFromLocal = mesh.transform().previousFrameWorldMatrix(),
                                                       .materialIndex = mesh.materialIndex().value_or(0) });
             });
+
             uploadBuffer.upload(objectData, objectDataBuffer);
         }
 
         // Update exposure data
         {
-            // TODO: hmm, I kinda wanna do this in Scene, not scene node.. this whole Scene/SceneNode split is stupid.
-
-            if (scene.camera().useAutomaticExposure) {
+            if (camera().useAutomaticExposure) {
                 ASSERT_NOT_REACHED();
             } else {
                 // See camera.glsl for reference
-                auto& camera = scene.camera();
+                auto& camera = this->camera();
                 float ev100 = std::log2f((camera.aperture * camera.aperture) / camera.shutterSpeed * 100.0f / camera.iso);
                 float maxLuminance = 1.2f * std::pow(2.0f, ev100);
-                scene.m_lightPreExposure = 1.0f / maxLuminance;
+                m_lightPreExposure = 1.0f / maxLuminance;
             }
         }
 
         // Update light data
         {
-            mat4 viewFromWorld = scene.camera().viewMatrix();
+            mat4 viewFromWorld = camera().viewMatrix();
             mat4 worldFromView = inverse(viewFromWorld);
 
             int nextShadowMapIndex = 0;
             std::vector<DirectionalLightData> dirLightData;
             std::vector<SpotLightData> spotLightData;
 
-            scene.forEachLight([&](size_t, Light& light) {
+            forEachLight([&](size_t, Light& light) {
                 int shadowMapIndex = light.castsShadows() ? nextShadowMapIndex++ : -1;
                 ShadowMapData shadowMapData { .textureIndex = shadowMapIndex };
 
-                vec3 lightColor = light.color * light.intensityValue() * scene.lightPreExposureValue();
+                vec3 lightColor = light.color * light.intensityValue() * lightPreExposureValue();
 
                 switch (light.type()) {
                 case Light::Type::DirectionalLight: {
                     dirLightData.emplace_back(DirectionalLightData { .shadowMap = shadowMapData,
                                                                      .color = lightColor,
-                                                                     .exposure = scene.lightPreExposureValue(),
+                                                                     .exposure = lightPreExposureValue(),
                                                                      .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0),
                                                                      .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0),
                                                                      .lightProjectionFromWorld = light.viewProjection(),
@@ -186,7 +188,7 @@ RenderPipelineNode::ExecuteCallback Scene::construct(Scene& scene, Registry& reg
                     SpotLight& spotLight = static_cast<SpotLight&>(light);
                     spotLightData.emplace_back(SpotLightData { .shadowMap = shadowMapData,
                                                                .color = lightColor,
-                                                               .exposure = scene.lightPreExposureValue(),
+                                                               .exposure = lightPreExposureValue(),
                                                                .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0f),
                                                                .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0f),
                                                                .lightProjectionFromWorld = light.viewProjection(),
@@ -213,7 +215,7 @@ RenderPipelineNode::ExecuteCallback Scene::construct(Scene& scene, Registry& reg
             uploadBuffer.upload(metaData, lightMetaDataBuffer);
 
             std::vector<PerLightShadowData> shadowData;
-            scene.forEachShadowCastingLight([&](size_t, Light& light) {
+            forEachShadowCastingLight([&](size_t, Light& light) {
                 shadowData.push_back({ .lightViewFromWorld = light.lightViewMatrix(),
                                        .lightProjectionFromWorld = light.viewProjection(),
                                        .constantBias = light.constantBias(),
@@ -224,7 +226,7 @@ RenderPipelineNode::ExecuteCallback Scene::construct(Scene& scene, Registry& reg
 
         cmdList.executeBufferCopyOperations(uploadBuffer);
 
-        if (scene.doesMaintainRayTracingScene()) {
+        if (doesMaintainRayTracingScene()) {
             TopLevelAS& sceneTlas = globalTopLevelAccelerationStructure();
             cmdList.rebuildTopLevelAcceratationStructure(sceneTlas);
         }

@@ -120,7 +120,11 @@ int main(int argc, char** argv)
         Input::preEventPoll();
         glfwPollEvents();
 
-        backend->newFrame(*scene);
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+
+        backend->newFrame();
+        scene->newFrame({ width, height }, firstFrame);
 
         double elapsedTime = glfwGetTime();
         double deltaTime = elapsedTime - lastTime;
