@@ -50,9 +50,28 @@ RenderPipelineNode::ExecuteCallback Scene::construct(Scene&, Registry& reg)
     size_t objectDataBufferSize = meshCount() * sizeof(ShaderDrawable);
     Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     objectDataBuffer.setName("SceneObjectData");
-
     BindingSet& objectBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &objectDataBuffer } });
     reg.publish("objectSet", objectBindingSet);
+
+    if (doesMaintainRayTracingScene()) {
+
+        // TODO: Resize the buffer if needed when more meshes are added
+
+        std::vector<RTTriangleMesh> rtMeshes {};
+        forEachMesh([&](size_t meshIdx, Mesh& mesh) {
+            const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(m_rayTracingVertexLayout, *this);
+            rtMeshes.push_back({ .firstVertex = drawCallDesc.vertexOffset,
+                                 .firstIndex = (int32_t)drawCallDesc.firstIndex,
+                                 .materialIndex = mesh.materialIndex().value_or(0) });
+        });
+
+        Buffer& meshBuffer = reg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+        BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &meshBuffer },
+                                                                  { 1, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &globalIndexBuffer() },
+                                                                  { 2, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &globalVertexBufferForLayout(m_rayTracingVertexLayout) } });
+
+        reg.publish("SceneRTMeshDataSet", rtMeshDataBindingSet);
+    }
 
     // Light shadow data stuff
     Buffer& lightShadowDataBuffer = reg.createBuffer(SCENE_MAX_SHADOW_MAPS * sizeof(PerLightShadowData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);

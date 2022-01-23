@@ -138,6 +138,11 @@ private:
     std::optional<ProbeGrid> m_probeGrid;
 
     bool m_maintainRayTracingScene { false };
+    // NOTE: It's possible some RT pass would want more vertex info than this, but in all cases I can think of
+    // we want either these and nothing more, or nothing at all (e.g. ray traced AO). Remember that vertex positions
+    // are always available more directly, as we know our hit point.
+    const VertexLayout m_rayTracingVertexLayout = { VertexComponent::Normal3F,
+                                                    VertexComponent::TexCoord2F };
 
     float m_fixedFilmGrainGain { 0.040f };
 
