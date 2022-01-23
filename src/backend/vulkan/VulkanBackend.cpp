@@ -1753,6 +1753,30 @@ std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>
     return { setLayouts, pushConstantRange };
 }
 
+VkShaderStageFlags VulkanBackend::shaderStageToVulkanShaderStageFlags(ShaderStage shaderStage) const
+{
+    VkShaderStageFlags stageFlags = 0;
+    if (isSet(shaderStage & ShaderStage::Vertex))
+        stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
+    if (isSet(shaderStage & ShaderStage::Fragment))
+        stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
+    if (isSet(shaderStage & ShaderStage::Compute))
+        stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
+    if (isSet(shaderStage & ShaderStage::RTRayGen))
+        stageFlags |= VK_SHADER_STAGE_RAYGEN_BIT_NV;
+    if (isSet(shaderStage & ShaderStage::RTMiss))
+        stageFlags |= VK_SHADER_STAGE_MISS_BIT_NV;
+    if (isSet(shaderStage & ShaderStage::RTClosestHit))
+        stageFlags |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
+    if (isSet(shaderStage & ShaderStage::RTAnyHit))
+        stageFlags |= VK_SHADER_STAGE_ANY_HIT_BIT_NV;
+    if (isSet(shaderStage & ShaderStage::RTIntersection))
+        stageFlags |= VK_SHADER_STAGE_INTERSECTION_BIT_NV;
+
+    ASSERT(stageFlags != 0);
+    return stageFlags;
+}
+
 std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConstants(const Shader& shader) const
 {
     SCOPED_PROFILE_ZONE_BACKEND();
@@ -1761,31 +1785,32 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
 
     for (auto& file : shader.files()) {
 
+        // Hmm, why aren't ShaderFileType and ShaderStage the same thing?
         ShaderStage stageFlag;
         switch (file.type()) {
         case ShaderFileType::Vertex:
-            stageFlag = ShaderStageVertex;
+            stageFlag = ShaderStage::Vertex;
             break;
         case ShaderFileType::Fragment:
-            stageFlag = ShaderStageFragment;
+            stageFlag = ShaderStage::Fragment;
             break;
         case ShaderFileType::Compute:
-            stageFlag = ShaderStageCompute;
+            stageFlag = ShaderStage::Compute;
             break;
         case ShaderFileType::RTRaygen:
-            stageFlag = ShaderStageRTRayGen;
+            stageFlag = ShaderStage::RTRayGen;
             break;
         case ShaderFileType::RTClosestHit:
-            stageFlag = ShaderStageRTClosestHit;
+            stageFlag = ShaderStage::RTClosestHit;
             break;
         case ShaderFileType::RTAnyHit:
-            stageFlag = ShaderStageRTAnyHit;
+            stageFlag = ShaderStage::RTAnyHit;
             break;
         case ShaderFileType::RTMiss:
-            stageFlag = ShaderStageRTMiss;
+            stageFlag = ShaderStage::RTMiss;
             break;
         case ShaderFileType::RTIntersection:
-            stageFlag = ShaderStageRTIntersection;
+            stageFlag = ShaderStage::RTIntersection;
             break;
         default:
             ASSERT_NOT_REACHED();

@@ -25,10 +25,10 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(Scene& scene, Registry& r
     Texture& historyTexture = reg.createTexture2D(accumulationTexture.extent(), accumulationTexture.format(),
                                                   Texture::Filters::linear(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
 
-    BindingSet& taaBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &accumulationTexture, ShaderBindingType::StorageImage },
-                                                       { 1, ShaderStageCompute, &currentFrameTexture, ShaderBindingType::TextureSampler },
-                                                       { 2, ShaderStageCompute, &currentFrameVelocity, ShaderBindingType::TextureSampler },
-                                                       { 3, ShaderStageCompute, &historyTexture, ShaderBindingType::TextureSampler } });
+    BindingSet& taaBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &accumulationTexture, ShaderBindingType::StorageImage },
+                                                       { 1, ShaderStage::Compute, &currentFrameTexture, ShaderBindingType::TextureSampler },
+                                                       { 2, ShaderStage::Compute, &currentFrameVelocity, ShaderBindingType::TextureSampler },
+                                                       { 3, ShaderStage::Compute, &historyTexture, ShaderBindingType::TextureSampler } });
 
     Shader taaComputeShader = Shader::createCompute("taa/taa.comp");
     ComputeState& taaComputeState = reg.createComputeState(taaComputeShader, { &taaBindingSet });

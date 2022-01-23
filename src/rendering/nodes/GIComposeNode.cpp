@@ -13,11 +13,11 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(Scene& scene, Regis
 
     Texture& sceneColorWithGI = reg.createTexture2D(reg.windowRenderTarget().extent(), sceneColorBeforeGI.format(), Texture::Filters::nearest());
 
-    BindingSet& composeBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &sceneColorWithGI, ShaderBindingType::StorageImage },
-                                                           { 1, ShaderStageCompute, &sceneColorBeforeGI, ShaderBindingType::TextureSampler },
-                                                           { 2, ShaderStageCompute, &baseColorTex, ShaderBindingType::TextureSampler },
-                                                           { 3, ShaderStageCompute, &ambientOcclusionTex, ShaderBindingType::TextureSampler },
-                                                           { 4, ShaderStageCompute, &diffuseGiTex, ShaderBindingType::TextureSampler } });
+    BindingSet& composeBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &sceneColorWithGI, ShaderBindingType::StorageImage },
+                                                           { 1, ShaderStage::Compute, &sceneColorBeforeGI, ShaderBindingType::TextureSampler },
+                                                           { 2, ShaderStage::Compute, &baseColorTex, ShaderBindingType::TextureSampler },
+                                                           { 3, ShaderStage::Compute, &ambientOcclusionTex, ShaderBindingType::TextureSampler },
+                                                           { 4, ShaderStage::Compute, &diffuseGiTex, ShaderBindingType::TextureSampler } });
     ComputeState& giComposeState = reg.createComputeState(Shader::createCompute("compose/compose-gi.comp"), { &composeBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {

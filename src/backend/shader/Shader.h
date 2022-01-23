@@ -1,26 +1,27 @@
 #pragma once
 
 #include "backend/shader/ShaderFile.h"
+#include "utility/EnumHelpers.h"
 #include <string>
 #include <vector>
 #include <optional>
 #include <unordered_map>
 
-// TODO: Make this an enum class with operator overloading for bit-patterns
-enum ShaderStage : uint8_t {
-    ShaderStageVertex = 0x01,
-    ShaderStageFragment = 0x02,
-    ShaderStageCompute = 0x04,
-    ShaderStageRTRayGen = 0x08,
-    ShaderStageRTMiss = 0x10,
-    ShaderStageRTClosestHit = 0x20,
-    ShaderStageRTAnyHit = 0x40,
-    ShaderStageRTIntersection = 0x80,
+enum class ShaderStage {
+    Vertex = 0x01,
+    Fragment = 0x02,
+    Compute = 0x04,
+    RTRayGen = 0x08,
+    RTMiss = 0x10,
+    RTClosestHit = 0x20,
+    RTAnyHit = 0x40,
+    RTIntersection = 0x80,
 
-    ShaderStageAnyRasterize = ShaderStageVertex | ShaderStageFragment,
-    ShaderStageAnyRayTrace = ShaderStageRTRayGen | ShaderStageRTMiss | ShaderStageRTClosestHit | ShaderStageRTAnyHit | ShaderStageRTIntersection,
-    ShaderStageAny = ShaderStageAnyRasterize | ShaderStageAnyRayTrace | ShaderStageCompute
+    AnyRasterize = Vertex | Fragment,
+    AnyRayTrace = RTRayGen | RTMiss | RTClosestHit | RTAnyHit | RTIntersection,
+    Any = AnyRasterize | AnyRayTrace | Compute
 };
+ARKOSE_ENUM_CLASS_BIT_FLAGS(ShaderStage)
 
 enum class ShaderType {
     Raster,

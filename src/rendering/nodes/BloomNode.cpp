@@ -34,15 +34,15 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(Scene& scene, Registry&
     for (size_t i = 1; i <= numDownsamples; ++i) {
 
         // (first iteration: to downsample[1] from downsample[0])
-        BindingSet& downsampleSet = reg.createBindingSet({ { 0, ShaderStageCompute, captures.downsampleTextures[i], ShaderBindingType::StorageImage },
-                                                           { 1, ShaderStageCompute, captures.downsampleTextures[i - 1], ShaderBindingType::StorageImage } });
+        BindingSet& downsampleSet = reg.createBindingSet({ { 0, ShaderStage::Compute, captures.downsampleTextures[i], ShaderBindingType::StorageImage },
+                                                           { 1, ShaderStage::Compute, captures.downsampleTextures[i - 1], ShaderBindingType::StorageImage } });
         captures.downsampleSets.push_back(&downsampleSet);
 
         // (first iteration: to upsample[0] from upsample[1] & downsample[0])
         if (i != numDownsamples) {
-            BindingSet& upsampleSet = reg.createBindingSet({ { 0, ShaderStageCompute, captures.upsampleTextures[i - 1], ShaderBindingType::StorageImage },
-                                                             { 1, ShaderStageCompute, captures.upsampleTextures[i], ShaderBindingType::StorageImage },
-                                                             { 2, ShaderStageCompute, captures.downsampleTextures[i - 1], ShaderBindingType::StorageImage } });
+            BindingSet& upsampleSet = reg.createBindingSet({ { 0, ShaderStage::Compute, captures.upsampleTextures[i - 1], ShaderBindingType::StorageImage },
+                                                             { 1, ShaderStage::Compute, captures.upsampleTextures[i], ShaderBindingType::StorageImage },
+                                                             { 2, ShaderStage::Compute, captures.downsampleTextures[i - 1], ShaderBindingType::StorageImage } });
             captures.upsampleSets.push_back(&upsampleSet);
         }
     }
@@ -53,8 +53,8 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(Scene& scene, Registry&
     Shader upsampleShader = Shader::createCompute("bloom/upsample.comp");
     ComputeState& upsampleState = reg.createComputeState(upsampleShader, captures.upsampleSets);
 
-    BindingSet& blendBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &mainTexture, ShaderBindingType::StorageImage },
-                                                         { 1, ShaderStageCompute, captures.upsampleTextures[0], ShaderBindingType::TextureSampler } });
+    BindingSet& blendBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &mainTexture, ShaderBindingType::StorageImage },
+                                                         { 1, ShaderStage::Compute, captures.upsampleTextures[0], ShaderBindingType::TextureSampler } });
     Shader bloomBlendShader = Shader::createCompute("bloom/blend.comp");
     ComputeState& bloomBlendComputeState = reg.createComputeState(bloomBlendShader, { &blendBindingSet });
 
@@ -95,7 +95,7 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(Scene& scene, Registry&
         ImGui::SliderFloat("Upsample blur radius", &upsampleBlurRadius, 0.0f, 0.01f, "%.4f");
 
         cmdList.setComputeState(upsampleState);
-        cmdList.pushConstant(ShaderStageCompute, upsampleBlurRadius, 0);
+        cmdList.pushConstant(ShaderStage::Compute, upsampleBlurRadius, 0);
         for (int i = numDownsamples - 2; i >= 0; --i) {
 
             BindingSet& upsampleBindingSet = *captures.upsampleSets[i];
@@ -113,7 +113,7 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(Scene& scene, Registry&
 
             cmdList.setComputeState(bloomBlendComputeState);
             cmdList.bindSet(blendBindingSet, 0);
-            cmdList.pushConstant(ShaderStageCompute, bloomBlend, 0);
+            cmdList.pushConstant(ShaderStage::Compute, bloomBlend, 0);
             cmdList.dispatch(mainTexture.extent(), localSizeForComp);
         }
     };

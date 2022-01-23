@@ -379,24 +379,7 @@ VkDescriptorSetLayout VulkanBindingSet::createDescriptorSetLayout() const
             ASSERT_NOT_REACHED();
         }
 
-        if (bindingInfo.shaderStage & ShaderStageVertex)
-            binding.stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
-        if (bindingInfo.shaderStage & ShaderStageFragment)
-            binding.stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
-        if (bindingInfo.shaderStage & ShaderStageCompute)
-            binding.stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
-        if (bindingInfo.shaderStage & ShaderStageRTRayGen)
-            binding.stageFlags |= VK_SHADER_STAGE_RAYGEN_BIT_NV;
-        if (bindingInfo.shaderStage & ShaderStageRTMiss)
-            binding.stageFlags |= VK_SHADER_STAGE_MISS_BIT_NV;
-        if (bindingInfo.shaderStage & ShaderStageRTClosestHit)
-            binding.stageFlags |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
-        if (bindingInfo.shaderStage & ShaderStageRTAnyHit)
-            binding.stageFlags |= VK_SHADER_STAGE_ANY_HIT_BIT_NV;
-        if (bindingInfo.shaderStage & ShaderStageRTIntersection)
-            binding.stageFlags |= VK_SHADER_STAGE_INTERSECTION_BIT_NV;
-
-        ASSERT(binding.stageFlags != 0);
+        binding.stageFlags = vulkanBackend.shaderStageToVulkanShaderStageFlags(bindingInfo.shaderStage);
 
         binding.pImmutableSamplers = nullptr;
 

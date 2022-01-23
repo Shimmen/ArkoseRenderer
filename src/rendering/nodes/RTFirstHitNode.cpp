@@ -5,14 +5,14 @@ RenderPipelineNode::ExecuteCallback RTFirstHitNode::construct(Scene& scene, Regi
     Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("RTFirstHit", storageImage);
 
-    BindingSet& environmentBindingSet = reg.createBindingSet({ { 0, ShaderStageRTMiss, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler } });
+    BindingSet& environmentBindingSet = reg.createBindingSet({ { 0, ShaderStage::RTMiss, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler } });
     BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
     BindingSet& rtMeshDataBindingSet = *reg.getBindingSet("SceneRTMeshDataSet");
 
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
-    BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStageRTRayGen, &sceneTLAS },
-                                                         { 1, ShaderStageRTRayGen, reg.getBuffer("SceneCameraData") },
-                                                         { 2, ShaderStageRTRayGen, &storageImage, ShaderBindingType::StorageImage } });
+    BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage::RTRayGen, &sceneTLAS },
+                                                         { 1, ShaderStage::RTRayGen, reg.getBuffer("SceneCameraData") },
+                                                         { 2, ShaderStage::RTRayGen, &storageImage, ShaderBindingType::StorageImage } });
 
     ShaderFile raygen = ShaderFile("rt-firsthit/raygen.rgen");
     HitGroup mainHitGroup { ShaderFile("rt-firsthit/closestHit.rchit") };

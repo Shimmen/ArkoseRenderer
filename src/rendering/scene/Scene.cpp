@@ -35,7 +35,7 @@ void Scene::newFrame(Extent2D mainViewportSize, bool firstFrame)
 RenderPipelineNode::ExecuteCallback Scene::construct(Scene&, Registry& reg)
 {
     Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
-    BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStageAnyRasterize, &cameraBuffer } });
+    BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStage::AnyRasterize, &cameraBuffer } });
     reg.publish("SceneCameraData", cameraBuffer);
     reg.publish("SceneCameraSet", cameraBindingSet);
 
@@ -50,7 +50,7 @@ RenderPipelineNode::ExecuteCallback Scene::construct(Scene&, Registry& reg)
     size_t objectDataBufferSize = meshCount() * sizeof(ShaderDrawable);
     Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     objectDataBuffer.setName("SceneObjectData");
-    BindingSet& objectBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &objectDataBuffer } });
+    BindingSet& objectBindingSet = reg.createBindingSet({ { 0, ShaderStage::Vertex, &objectDataBuffer } });
     reg.publish("objectSet", objectBindingSet);
 
     if (doesMaintainRayTracingScene()) {
@@ -66,9 +66,9 @@ RenderPipelineNode::ExecuteCallback Scene::construct(Scene&, Registry& reg)
         });
 
         Buffer& meshBuffer = reg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
-        BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &meshBuffer },
-                                                                  { 1, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &globalIndexBuffer() },
-                                                                  { 2, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &globalVertexBufferForLayout(m_rayTracingVertexLayout) } });
+        BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ { 0, ShaderStage::AnyRayTrace, &meshBuffer },
+                                                                  { 1, ShaderStage::AnyRayTrace, &globalIndexBuffer() },
+                                                                  { 2, ShaderStage::AnyRayTrace, &globalVertexBufferForLayout(m_rayTracingVertexLayout) } });
 
         reg.publish("SceneRTMeshDataSet", rtMeshDataBindingSet);
     }
@@ -97,11 +97,11 @@ RenderPipelineNode::ExecuteCallback Scene::construct(Scene&, Registry& reg)
     if (iesProfileLUTs.empty())
         iesProfileLUTs.push_back(&reg.createPixelTexture(vec4(1.0f), true));
 
-    BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStageAny, &lightMetaDataBuffer },
-                                                         { 1, ShaderStageAny, &dirLightDataBuffer },
-                                                         { 2, ShaderStageAny, &spotLightDataBuffer },
-                                                         { 3, ShaderStageAny, shadowMaps, SCENE_MAX_SHADOW_MAPS },
-                                                         { 4, ShaderStageAny, iesProfileLUTs, SCENE_MAX_IES_LUT } });
+    BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStage::Any, &lightMetaDataBuffer },
+                                                         { 1, ShaderStage::Any, &dirLightDataBuffer },
+                                                         { 2, ShaderStage::Any, &spotLightDataBuffer },
+                                                         { 3, ShaderStage::Any, shadowMaps, SCENE_MAX_SHADOW_MAPS },
+                                                         { 4, ShaderStage::Any, iesProfileLUTs, SCENE_MAX_IES_LUT } });
     reg.publish("SceneLightSet", lightBindingSet);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
@@ -641,8 +641,8 @@ void Scene::rebuildGpuSceneData()
     m_materialDataBuffer->updateData(m_usedMaterials.data(), materialBufferSize);
     m_materialDataBuffer->setName("SceneMaterialData");
 
-    m_materialBindingSet = &m_registry.createBindingSet({ { 0, ShaderStageAny, m_materialDataBuffer },
-                                                          { 1, ShaderStageAny, m_usedTextures, SCENE_MAX_TEXTURES } });
+    m_materialBindingSet = &m_registry.createBindingSet({ { 0, ShaderStage::Any, m_materialDataBuffer },
+                                                          { 1, ShaderStage::Any, m_usedTextures, SCENE_MAX_TEXTURES } });
     m_materialBindingSet->setName("SceneMaterialSet");
 
     if (doesMaintainRayTracingScene() && m_rayTracingGeometryInstances.size() > 0) {

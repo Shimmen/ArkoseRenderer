@@ -34,9 +34,9 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Scene& scene, Registry& 
     auto visibilityClearColor = ClearColor::dataValues(cameraZFar, cameraZFar * cameraZFar, 0, 0);
     Texture& probeAtlasVisibility = createProbeAtlas(reg, "ddgi-visibility", scene.probeGrid(), visibilityClearColor, Texture::Format::RG16F, DDGI_VISIBILITY_RES, DDGI_ATLAS_PADDING);
 
-    BindingSet& ddgiSamplingBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, &probeGridDataBuffer },
-                                                                { 1, ShaderStageFragment, &probeAtlasIrradiance, ShaderBindingType::TextureSampler },
-                                                                { 2, ShaderStageFragment, &probeAtlasVisibility, ShaderBindingType::TextureSampler } });
+    BindingSet& ddgiSamplingBindingSet = reg.createBindingSet({ { 0, ShaderStage::Fragment, &probeGridDataBuffer },
+                                                                { 1, ShaderStage::Fragment, &probeAtlasIrradiance, ShaderBindingType::TextureSampler },
+                                                                { 2, ShaderStage::Fragment, &probeAtlasVisibility, ShaderBindingType::TextureSampler } });
     reg.publish("DDGISamplingSet", ddgiSamplingBindingSet);
     ///////////////////////
 
@@ -52,14 +52,14 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Scene& scene, Registry& 
 #endif
 
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
-    BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), &sceneTLAS },
-                                                         { 1, ShaderStage(ShaderStageRTRayGen | ShaderStageRTClosestHit), reg.getBuffer("SceneCameraData") },
-                                                         { 2, ShaderStageRTRayGen, &probeGridDataBuffer },
-                                                         { 3, ShaderStageRTRayGen, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler },
+    BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, &sceneTLAS },
+                                                         { 1, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, reg.getBuffer("SceneCameraData") },
+                                                         { 2, ShaderStage::RTRayGen, &probeGridDataBuffer },
+                                                         { 3, ShaderStage::RTRayGen, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler },
 #if USE_DEBUG_TARGET
-                                                         { 4, ShaderStageRTRayGen, &storageImage, ShaderBindingType::StorageImage } });
+                                                         { 4, ShaderStage::RTRayGen, &storageImage, ShaderBindingType::StorageImage } });
 #else
-                                                         { 4, ShaderStageRTRayGen, &surfelImage, ShaderBindingType::StorageImage } });
+                                                         { 4, ShaderStage::RTRayGen, &surfelImage, ShaderBindingType::StorageImage } });
 #endif
 
     ShaderFile raygen { "ddgi/raygen.rgen" };
@@ -77,17 +77,17 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Scene& scene, Registry& 
     constexpr uint32_t maxRecursionDepth = 2; // raygen -> closest/any hit -> shadow ray
     RayTracingState& surfelRayTracingState = reg.createRayTracingState(sbt, rtStateDataBindings, maxRecursionDepth);
 
-    BindingSet& irradianceUpdateBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &surfelImage, ShaderBindingType::StorageImage },
-                                                                    { 1, ShaderStageCompute, &probeAtlasIrradiance, ShaderBindingType::StorageImage } });
+    BindingSet& irradianceUpdateBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &surfelImage, ShaderBindingType::StorageImage },
+                                                                    { 1, ShaderStage::Compute, &probeAtlasIrradiance, ShaderBindingType::StorageImage } });
     ComputeState& irradianceProbeUpdateState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateIrradiance.comp"), { &irradianceUpdateBindingSet });
 
 
-    BindingSet& visibilityUpdateBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &surfelImage, ShaderBindingType::StorageImage },
-                                                                    { 1, ShaderStageCompute, &probeAtlasVisibility, ShaderBindingType::StorageImage } });
+    BindingSet& visibilityUpdateBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &surfelImage, ShaderBindingType::StorageImage },
+                                                                    { 1, ShaderStage::Compute, &probeAtlasVisibility, ShaderBindingType::StorageImage } });
     ComputeState& visibilityProbeUpdateState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateVisibility.comp"), { &visibilityUpdateBindingSet });
 
-    BindingSet& probeBorderCopyBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &probeAtlasIrradiance, ShaderBindingType::StorageImage },
-                                                                   { 1, ShaderStageCompute, &probeAtlasVisibility, ShaderBindingType::StorageImage } });
+    BindingSet& probeBorderCopyBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &probeAtlasIrradiance, ShaderBindingType::StorageImage },
+                                                                   { 1, ShaderStage::Compute, &probeAtlasVisibility, ShaderBindingType::StorageImage } });
     ComputeState& probeBorderCopyCornersState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyCorners.comp"), { &probeBorderCopyBindingSet });
     ComputeState& probeBorderCopyIrradianceEdgesState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyEdges.comp", { ShaderDefine::makeInt("TILE_SIZE", DDGI_IRRADIANCE_RES) }), { &probeBorderCopyBindingSet });
     ComputeState& probeBorderCopyVisibilityEdgesState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyEdges.comp", { ShaderDefine::makeInt("TILE_SIZE", DDGI_VISIBILITY_RES) }), { &probeBorderCopyBindingSet });

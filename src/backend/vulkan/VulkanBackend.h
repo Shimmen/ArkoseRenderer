@@ -94,6 +94,8 @@ public:
     std::optional<VkPushConstantRange> getPushConstantRangeForShader(const Shader&) const;
     std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>> createDescriptorSetLayoutForShader(const Shader&) const;
 
+    VkShaderStageFlags shaderStageToVulkanShaderStageFlags(ShaderStage) const;
+
     struct PushConstantInfo {
         std::string name {};
         int32_t offset { 0 };

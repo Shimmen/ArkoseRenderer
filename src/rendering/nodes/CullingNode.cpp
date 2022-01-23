@@ -23,7 +23,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(Scene& scene, Registr
 
     Buffer& opaqueDrawableBuffer = reg.createBuffer(initialBufferCount * sizeof(ShaderDrawable), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     opaqueDrawableBuffer.setName("MainViewCulledDrawablesOpaque");
-    BindingSet& opaqueDrawableBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &opaqueDrawableBuffer } });
+    BindingSet& opaqueDrawableBindingSet = reg.createBindingSet({ { 0, ShaderStage::Vertex, &opaqueDrawableBuffer } });
     reg.publish("MainViewCulledDrawablesOpaqueSet", opaqueDrawableBindingSet);
 
     Buffer& opaqueDrawsCmdBuffer = reg.createBuffer(initialBufferCount * sizeof(IndexedDrawCmd), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
@@ -36,7 +36,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(Scene& scene, Registr
 
     Buffer& maskedDrawableBuffer = reg.createBuffer(initialBufferCount * sizeof(ShaderDrawable), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     maskedDrawableBuffer.setName("MainViewCulledDrawablesMasked");
-    BindingSet& maskedDrawableBindingSet = reg.createBindingSet({ { 0, ShaderStageVertex, &maskedDrawableBuffer } });
+    BindingSet& maskedDrawableBindingSet = reg.createBindingSet({ { 0, ShaderStage::Vertex, &maskedDrawableBuffer } });
     reg.publish("MainViewCulledDrawablesMaskedSet", maskedDrawableBindingSet);
 
     Buffer& maskedDrawsCmdBuffer = reg.createBuffer(initialBufferCount * sizeof(IndexedDrawCmd), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
@@ -47,14 +47,14 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(Scene& scene, Registr
     //////////////
     // 
 
-    BindingSet& cullingBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &frustumPlaneBuffer },
-                                                           { 1, ShaderStageCompute, &indirectDrawableBuffer },
-                                                           { 2, ShaderStageCompute, &opaqueDrawableBuffer },
-                                                           { 3, ShaderStageCompute, &opaqueDrawsCmdBuffer },
-                                                           { 4, ShaderStageCompute, &opaqueDrawCountBuffer },
-                                                           { 5, ShaderStageCompute, &maskedDrawableBuffer },
-                                                           { 6, ShaderStageCompute, &maskedDrawsCmdBuffer },
-                                                           { 7, ShaderStageCompute, &maskedDrawCountBuffer } });
+    BindingSet& cullingBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &frustumPlaneBuffer },
+                                                           { 1, ShaderStage::Compute, &indirectDrawableBuffer },
+                                                           { 2, ShaderStage::Compute, &opaqueDrawableBuffer },
+                                                           { 3, ShaderStage::Compute, &opaqueDrawsCmdBuffer },
+                                                           { 4, ShaderStage::Compute, &opaqueDrawCountBuffer },
+                                                           { 5, ShaderStage::Compute, &maskedDrawableBuffer },
+                                                           { 6, ShaderStage::Compute, &maskedDrawsCmdBuffer },
+                                                           { 7, ShaderStage::Compute, &maskedDrawCountBuffer } });
 
     ComputeState& cullingState = reg.createComputeState(Shader::createCompute("culling/culling.comp"), { &cullingBindingSet });
     cullingState.setName("MainViewCulling");

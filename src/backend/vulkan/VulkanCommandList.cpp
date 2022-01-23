@@ -866,20 +866,7 @@ void VulkanCommandList::pushConstants(ShaderStage shaderStage, void* data, size_
     requireExactlyOneStateToBeSet("pushConstants");
     VkPipelineLayout pipelineLayout = getCurrentlyBoundPipelineLayout();
 
-    // TODO: This isn't the only occurrence of this shady table. We probably want a function for doing this translation!
-    VkShaderStageFlags stageFlags = 0u;
-    if (shaderStage & ShaderStageVertex)
-        stageFlags |= VK_SHADER_STAGE_VERTEX_BIT;
-    if (shaderStage & ShaderStageFragment)
-        stageFlags |= VK_SHADER_STAGE_FRAGMENT_BIT;
-    if (shaderStage & ShaderStageCompute)
-        stageFlags |= VK_SHADER_STAGE_COMPUTE_BIT;
-    if (shaderStage & ShaderStageRTRayGen)
-        stageFlags |= VK_SHADER_STAGE_RAYGEN_BIT_NV;
-    if (shaderStage & ShaderStageRTMiss)
-        stageFlags |= VK_SHADER_STAGE_MISS_BIT_NV;
-    if (shaderStage & ShaderStageRTClosestHit)
-        stageFlags |= VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
+    VkShaderStageFlags stageFlags = static_cast<VulkanBackend&>(backend()).shaderStageToVulkanShaderStageFlags(shaderStage);
 
     vkCmdPushConstants(m_commandBuffer, pipelineLayout, stageFlags, (uint32_t)byteOffset, (uint32_t)size, data);
 }

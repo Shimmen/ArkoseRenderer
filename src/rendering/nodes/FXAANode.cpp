@@ -9,8 +9,8 @@ RenderPipelineNode::ExecuteCallback FXAANode::construct(Scene& scene, Registry& 
     Texture& ldrTexture = *reg.getTexture("SceneColorLDR");
     Texture& replaceTex = reg.createTexture2D(ldrTexture.extent(), ldrTexture.format(), ldrTexture.filters(), ldrTexture.mipmap(), ldrTexture.wrapMode());
 
-    BindingSet& fxaaBindingSet = reg.createBindingSet({ { 0, ShaderStageCompute, &replaceTex, ShaderBindingType::StorageImage },
-                                                        { 1, ShaderStageCompute, &ldrTexture, ShaderBindingType::TextureSampler } });
+    BindingSet& fxaaBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &replaceTex, ShaderBindingType::StorageImage },
+                                                        { 1, ShaderStage::Compute, &ldrTexture, ShaderBindingType::TextureSampler } });
 
     Shader computeShader = Shader::createCompute("fxaa/anti-alias.comp");
     ComputeState& fxaaComputeState = reg.createComputeState(computeShader, { &fxaaBindingSet });

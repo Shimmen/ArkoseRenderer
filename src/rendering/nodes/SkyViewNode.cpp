@@ -13,8 +13,8 @@ RenderPipelineNode::ExecuteCallback SkyViewNode::construct(Scene& scene, Registr
         ? reg.createPixelTexture(vec4(1.0f), true)
         : reg.loadTexture2D(scene.environmentMap(), true, false);
 
-    BindingSet& skyViewRasterizeBindingSet = reg.createBindingSet({ { 0, ShaderStageAnyRasterize, reg.getBuffer("SceneCameraData") },
-                                                                    { 1, ShaderStageFragment, &skyViewTexture, ShaderBindingType::TextureSampler } });
+    BindingSet& skyViewRasterizeBindingSet = reg.createBindingSet({ { 0, ShaderStage::AnyRasterize, reg.getBuffer("SceneCameraData") },
+                                                                    { 1, ShaderStage::Fragment, &skyViewTexture, ShaderBindingType::TextureSampler } });
 
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &sceneColor, LoadOp::Load, StoreOp::Store },
                                                           { RenderTarget::AttachmentType::Color1, &sceneVelocity, LoadOp::Load, StoreOp::Store },

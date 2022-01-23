@@ -30,7 +30,7 @@ RenderPipelineNode::ExecuteCallback TonemapNode::construct(Scene& scene, Registr
     Buffer& vertexBuffer = reg.createBuffer(std::move(fullScreenTriangle), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
     VertexLayout vertexLayout = VertexLayout { VertexComponent::Position2F };
 
-    BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStageFragment, sourceTexture, ShaderBindingType::TextureSampler } });
+    BindingSet& tonemapBindingSet = reg.createBindingSet({ { 0, ShaderStage::Fragment, sourceTexture, ShaderBindingType::TextureSampler } });
     Shader tonemapShader = Shader::createBasicRasterize("tonemap/tonemap.vert", "tonemap/tonemap.frag");
     RenderStateBuilder tonemapStateBuilder { *ldrTarget, tonemapShader, vertexLayout };
     tonemapStateBuilder.stateBindings().at(0, tonemapBindingSet);
