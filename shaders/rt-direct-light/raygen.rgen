@@ -1,6 +1,7 @@
 #version 460
 #extension GL_NV_ray_tracing : require
 
+#include <common/namedUniforms.glsl>
 #include <rt-direct-light/common.glsl>
 #include <common/spherical.glsl>
 #include <shared/CameraState.h>
@@ -10,11 +11,7 @@ layout(set = 0, binding = 1) uniform CameraStateBlock { CameraState camera; };
 layout(set = 0, binding = 2) uniform sampler2D environmentMap;
 layout(set = 0, binding = 3, rgba16f) uniform image2D u_image;
 
-// TODO: It would be nice to actually support the names uniforms API for ray tracing..
-layout(push_constant) uniform PushConstantBlock
-{
-	PushConstants pushConstants;
-};
+NAMED_UNIFORMS_STRUCT(PushConstants, pushConstants)
 
 layout(location = 0) rayPayloadNV RayPayload payload;
 

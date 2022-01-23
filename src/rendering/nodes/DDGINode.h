@@ -16,6 +16,5 @@ public:
     ExecuteCallback construct(Scene&, Registry&) override;
 
 private:
-    BindingSet& createMeshDataBindingSet(Scene&, Registry&) const;
     Texture& createProbeAtlas(Registry&, const std::string& name, const ProbeGrid&, const ClearColor&, Texture::Format, int probeTileSize, int tileSidePadding) const;
 };

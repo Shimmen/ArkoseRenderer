@@ -4,7 +4,6 @@
 #include <imgui.h>
 
 // Shader headers
-#include "RTData.h"
 #include "DDGIData.h"
 
 // Resolutions must be powers of two
@@ -27,8 +26,6 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Scene& scene, Registry& 
                                       .probeSpacing = vec4(scene.probeGrid().probeSpacing, 0.0f),
                                       .offsetToFirst = vec4(scene.probeGrid().offsetToFirst, 0.0f) };
     Buffer& probeGridDataBuffer = reg.createBufferForData(probeGridData, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOptimal);
-
-    BindingSet& objectDataBindingSet = createMeshDataBindingSet(scene, reg);
 
     auto irradianceClearColor = ClearColor::dataValues(0, 0, 0, 0);
     Texture& probeAtlasIrradiance = createProbeAtlas(reg, "ddgi-irradiance", scene.probeGrid(), irradianceClearColor, Texture::Format::RGBA16F, DDGI_IRRADIANCE_RES, DDGI_ATLAS_PADDING);
@@ -73,7 +70,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Scene& scene, Registry& 
 
     StateBindings rtStateDataBindings;
     rtStateDataBindings.at(0, frameBindingSet);
-    rtStateDataBindings.at(1, objectDataBindingSet);
+    rtStateDataBindings.at(1, *reg.getBindingSet("SceneRTMeshDataSet"));
     rtStateDataBindings.at(2, scene.globalMaterialBindingSet());
     rtStateDataBindings.at(3, *reg.getBindingSet("SceneLightSet"));
 
@@ -222,31 +219,6 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Scene& scene, Registry& 
         }
         
     };
-}
-
-BindingSet& DDGINode::createMeshDataBindingSet(Scene& scene, Registry& reg) const
-{
-    const VertexLayout vertexLayout = { VertexComponent::Normal3F,
-                                        VertexComponent::TexCoord2F };
-
-    std::vector<RTTriangleMesh> rtMeshes {};
-    scene.forEachMesh([&](size_t meshIdx, Mesh& mesh) {
-        const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(vertexLayout, scene);
-        rtMeshes.push_back({ .firstVertex = drawCallDesc.vertexOffset,
-                             .firstIndex = (int32_t)drawCallDesc.firstIndex,
-                             .materialIndex = mesh.materialIndex().value_or(0) });
-    });
-
-    Buffer& indexBuffer = scene.globalIndexBuffer();
-    Buffer& vertexBuffer = scene.globalVertexBufferForLayout(vertexLayout);
-
-    Buffer& meshBuffer = reg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
-    BindingSet& meshDataBindingSet = reg.createBindingSet({ { 0, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &meshBuffer },
-                                                            { 1, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &indexBuffer },
-                                                            { 2, ShaderStage(ShaderStageRTClosestHit | ShaderStageRTAnyHit), &vertexBuffer } });
-    meshDataBindingSet.setName("DDGIMeshData");
-
-    return meshDataBindingSet;
 }
 
 Texture& DDGINode::createProbeAtlas(Registry& reg, const std::string& name, const ProbeGrid& probeGrid, const ClearColor& clearColor, Texture::Format format, int probeTileSize, int tileSidePadding) const

@@ -5,6 +5,7 @@
 
 #include <common/brdf.glsl>
 #include <common/iesProfile.glsl>
+#include <common/namedUniforms.glsl>
 #include <rt-direct-light/common.glsl>
 #include <shared/CameraState.h>
 #include <shared/SceneData.h>
@@ -31,11 +32,7 @@ layout(set = 3, binding = 2) buffer readonly SpotLightDataBlock { SpotLightData 
 layout(set = 3, binding = 3) uniform sampler2D shadowMaps[SCENE_MAX_SHADOW_MAPS];
 layout(set = 3, binding = 4) uniform sampler2D iesLUTs[SCENE_MAX_IES_LUT];
 
-// TODO: It would be nice to actually support the names uniforms API for ray tracing..
-layout(push_constant) uniform PushConstantBlock
-{
-	PushConstants pushConstants;
-};
+NAMED_UNIFORMS_STRUCT(PushConstants, pushConstants)
 
 float traceShadowRay(vec3 X, vec3 L, float maxDistance)
 {
