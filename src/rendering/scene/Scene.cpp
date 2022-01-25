@@ -73,8 +73,9 @@ RenderPipelineNode::ExecuteCallback Scene::construct(Scene&, Registry& reg)
         reg.publish("SceneRTMeshDataSet", rtMeshDataBindingSet);
     }
 
-    // Light shadow data stuff
-    Buffer& lightShadowDataBuffer = reg.createBuffer(SCENE_MAX_SHADOW_MAPS * sizeof(PerLightShadowData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
+    // Light shadow data stuff (todo: make not fixed!)
+    uint32_t numShadowCastingLights = forEachShadowCastingLight([](size_t, Light&) {});
+    Buffer& lightShadowDataBuffer = reg.createBuffer(numShadowCastingLights * sizeof(PerLightShadowData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     reg.publish("SceneShadowData", lightShadowDataBuffer);
 
     // Light data stuff
@@ -100,8 +101,8 @@ RenderPipelineNode::ExecuteCallback Scene::construct(Scene&, Registry& reg)
     BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStage::Any, &lightMetaDataBuffer },
                                                          { 1, ShaderStage::Any, &dirLightDataBuffer },
                                                          { 2, ShaderStage::Any, &spotLightDataBuffer },
-                                                         { 3, ShaderStage::Any, shadowMaps, SCENE_MAX_SHADOW_MAPS },
-                                                         { 4, ShaderStage::Any, iesProfileLUTs, SCENE_MAX_IES_LUT } });
+                                                         { 3, ShaderStage::Any, shadowMaps },
+                                                         { 4, ShaderStage::Any, iesProfileLUTs } });
     reg.publish("SceneLightSet", lightBindingSet);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
@@ -630,10 +631,10 @@ void Scene::rebuildGpuSceneData()
 
     });
 
-    if (m_usedTextures.size() > SCENE_MAX_TEXTURES) {
-        LogErrorAndExit("Scene: we need to up the number of max textures that can be handled by the scene! We have %u, the capacity is %u.\n",
-                        m_usedTextures.size(), SCENE_MAX_TEXTURES);
-    }
+    //if (m_usedTextures.size() > SCENE_MAX_TEXTURES) {
+    //    LogErrorAndExit("Scene: we need to up the number of max textures that can be handled by the scene! We have %u, the capacity is %u.\n",
+    //                    m_usedTextures.size(), SCENE_MAX_TEXTURES);
+    //}
 
     // Create material buffer
     size_t materialBufferSize = m_usedMaterials.size() * sizeof(ShaderMaterial);
@@ -642,7 +643,7 @@ void Scene::rebuildGpuSceneData()
     m_materialDataBuffer->setName("SceneMaterialData");
 
     m_materialBindingSet = &m_registry.createBindingSet({ { 0, ShaderStage::Any, m_materialDataBuffer },
-                                                          { 1, ShaderStage::Any, m_usedTextures, SCENE_MAX_TEXTURES } });
+                                                          { 1, ShaderStage::Any, m_usedTextures } });
     m_materialBindingSet->setName("SceneMaterialSet");
 
     if (doesMaintainRayTracingScene() && m_rayTracingGeometryInstances.size() > 0) {

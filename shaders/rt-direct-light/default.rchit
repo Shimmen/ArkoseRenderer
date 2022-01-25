@@ -29,8 +29,8 @@ layout(set = 2, binding = 1) uniform sampler2D textures[SCENE_MAX_TEXTURES];
 layout(set = 3, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
 layout(set = 3, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
 layout(set = 3, binding = 2) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
-layout(set = 3, binding = 3) uniform sampler2D shadowMaps[SCENE_MAX_SHADOW_MAPS];
-layout(set = 3, binding = 4) uniform sampler2D iesLUTs[SCENE_MAX_IES_LUT];
+layout(set = 3, binding = 3) uniform sampler2D shadowMaps[];
+layout(set = 3, binding = 4) uniform sampler2D iesLUTs[];
 
 NAMED_UNIFORMS_STRUCT(PushConstants, pushConstants)
 

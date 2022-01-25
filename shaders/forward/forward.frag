@@ -1,5 +1,7 @@
 #version 460
 
+#extension GL_EXT_nonuniform_qualifier : require
+
 #include <common/brdf.glsl>
 #include <common/namedUniforms.glsl>
 #include <common/iesProfile.glsl>
@@ -19,13 +21,13 @@ layout(location = 5 /*, 6, 7*/) in mat3 vTbnMatrix;
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 
 layout(set = 1, binding = 0) buffer readonly MaterialBlock { ShaderMaterial materials[]; };
-layout(set = 1, binding = 1) uniform sampler2D textures[SCENE_MAX_TEXTURES];
+layout(set = 1, binding = 1) uniform sampler2D textures[];
 
 layout(set = 2, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
 layout(set = 2, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
 layout(set = 2, binding = 2) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
-layout(set = 2, binding = 3) uniform sampler2D shadowMaps[SCENE_MAX_SHADOW_MAPS];
-layout(set = 2, binding = 4) uniform sampler2D iesLUTs[SCENE_MAX_IES_LUT];
+layout(set = 2, binding = 3) uniform sampler2D shadowMaps[];
+layout(set = 2, binding = 4) uniform sampler2D iesLUTs[];
 
 #if FORWARD_INCLUDE_DDGI
 #include <shared/DDGIData.h>
