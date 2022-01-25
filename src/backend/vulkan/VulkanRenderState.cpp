@@ -106,19 +106,9 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts {};
     for (const BindingSet* bindingSet : stateBindings.orderedBindingSets()) {
         if (auto* vulkanBindingSet = static_cast<const VulkanBindingSet*>(bindingSet)) {
-            descriptorSetLayouts.push_back(vulkanBindingSet->createDescriptorSetLayout());
+            descriptorSetLayouts.push_back(vulkanBindingSet->descriptorSetLayout);
         } else {
-            // Create empty stub descriptor set layout (we can't have any gaps)
-            VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-            descriptorSetLayoutCreateInfo.bindingCount = 0;
-            descriptorSetLayoutCreateInfo.pBindings = nullptr;
-
-            VkDescriptorSetLayout emptyDescriptorSetLayout;
-            if (vkCreateDescriptorSetLayout(vulkanBackend.device(), &descriptorSetLayoutCreateInfo, nullptr, &emptyDescriptorSetLayout) != VK_SUCCESS) {
-                LogErrorAndExit("Error trying to create empty stub descriptor set layout\n");
-            }
-
-            descriptorSetLayouts.push_back(emptyDescriptorSetLayout);
+            descriptorSetLayouts.push_back(vulkanBackend.emptyDescriptorSetLayout());
         }
     }
 
@@ -136,11 +126,6 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
 
     if (vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to create pipeline layout\n");
-    }
-
-    // (it's *probably* safe to delete these after creating the pipeline layout! no layers are complaining)
-    for (const VkDescriptorSetLayout& layout : descriptorSetLayouts) {
-        vkDestroyDescriptorSetLayout(device, layout, nullptr);
     }
 
     //

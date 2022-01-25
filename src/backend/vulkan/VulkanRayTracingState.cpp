@@ -17,7 +17,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts {};
     for (const BindingSet* bindingSet : stateBindings.orderedBindingSets()) {
         auto* vulkanBindingSet = static_cast<const VulkanBindingSet*>(bindingSet);
-        descriptorSetLayouts.push_back(vulkanBindingSet->createDescriptorSetLayout());
+        descriptorSetLayouts.push_back(vulkanBindingSet->descriptorSetLayout);
     }
 
     pipelineLayoutCreateInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
@@ -34,10 +34,6 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
 
     if (vkCreatePipelineLayout(vulkanBackend.device(), &pipelineLayoutCreateInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to create pipeline layout for ray tracing\n");
-    }
-
-    for (const VkDescriptorSetLayout& layout : descriptorSetLayouts) {
-        vkDestroyDescriptorSetLayout(vulkanBackend.device(), layout, nullptr);
     }
 
     std::vector<VkShaderModule> shaderModulesToRemove {};

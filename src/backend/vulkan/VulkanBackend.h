@@ -93,6 +93,7 @@ public:
 
     std::optional<VkPushConstantRange> getPushConstantRangeForShader(const Shader&) const;
     std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>> createDescriptorSetLayoutForShader(const Shader&) const;
+    VkDescriptorSetLayout emptyDescriptorSetLayout() const { return m_emptyDescriptorSetLayout; };
 
     VkShaderStageFlags shaderStageToVulkanShaderStageFlags(ShaderStage) const;
 
@@ -256,6 +257,8 @@ private:
 
     VkCommandPool m_defaultCommandPool {};
     VkCommandPool m_transientCommandPool {};
+
+    VkDescriptorSetLayout m_emptyDescriptorSetLayout {};
 
     AvgElapsedTimer m_frameTimer {};
 

@@ -44,7 +44,7 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts {};
     for (BindingSet* bindingSet : bindingSets) {
         auto* vulkanBindingSet = static_cast<VulkanBindingSet*>(bindingSet);
-        descriptorSetLayouts.push_back(vulkanBindingSet->createDescriptorSetLayout());
+        descriptorSetLayouts.push_back(vulkanBindingSet->descriptorSetLayout);
     }
 
     pipelineLayoutCreateInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
@@ -61,11 +61,6 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
 
     if (vkCreatePipelineLayout(vulkanBackend.device(), &pipelineLayoutCreateInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to create pipeline layout\n");
-    }
-
-    // (it's *probably* safe to delete these after creating the pipeline layout! no layers are complaining)
-    for (const VkDescriptorSetLayout& layout : descriptorSetLayouts) {
-        vkDestroyDescriptorSetLayout(vulkanBackend.device(), layout, nullptr);
     }
 
     //

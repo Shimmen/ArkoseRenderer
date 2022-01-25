@@ -133,6 +133,14 @@ VulkanBackend::VulkanBackend(GLFWwindow* window, const AppSpecification& appSpec
         LogErrorAndExit("VulkanBackend: could not create transient command pool, exiting.\n");
     }
 
+    // Create empty stub descriptor set layout (useful for filling gaps as Vulkan doesn't allow having gaps)
+    VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+    descriptorSetLayoutCreateInfo.bindingCount = 0;
+    descriptorSetLayoutCreateInfo.pBindings = nullptr;
+    if (vkCreateDescriptorSetLayout(device(), &descriptorSetLayoutCreateInfo, nullptr, &m_emptyDescriptorSetLayout) != VK_SUCCESS) {
+        LogErrorAndExit("Error trying to create empty stub descriptor set layout\n");
+    }
+
     m_pipelineCache = createAndLoadPipelineCacheFromDisk();
 
     createSwapchain(physicalDevice(), device(), m_surface);
@@ -159,6 +167,8 @@ VulkanBackend::~VulkanBackend()
 
     savePipelineCacheToDisk(m_pipelineCache);
     vkDestroyPipelineCache(device(), m_pipelineCache, nullptr);
+
+    vkDestroyDescriptorSetLayout(device(), m_emptyDescriptorSetLayout, nullptr);
 
     vkDestroyCommandPool(device(), m_defaultCommandPool, nullptr);
     vkDestroyCommandPool(device(), m_transientCommandPool, nullptr);

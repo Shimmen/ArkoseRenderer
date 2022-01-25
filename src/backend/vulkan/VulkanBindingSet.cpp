@@ -9,10 +9,9 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
-    const auto& device = static_cast<VulkanBackend&>(backend).device();
+    const auto& device = static_cast<const VulkanBackend&>(backend).device();
 
-    descriptorSetLayout = createDescriptorSetLayout();
-
+    // Create descriptor pool
     {
         // TODO: Maybe in the future we don't want one pool per shader binding state? We could group a lot of stuff together probably..?
 
@@ -72,6 +71,63 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
         }
     }
 
+    // Create descriptor set layout
+    {
+        std::vector<VkDescriptorSetLayoutBinding> layoutBindings {};
+        layoutBindings.reserve(shaderBindings().size());
+
+        for (auto& bindingInfo : shaderBindings()) {
+
+            VkDescriptorSetLayoutBinding binding = {};
+            binding.binding = bindingInfo.bindingIndex;
+            binding.descriptorCount = bindingInfo.count;
+
+            switch (bindingInfo.type) {
+            case ShaderBindingType::UniformBuffer:
+                binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+                break;
+            case ShaderBindingType::StorageBuffer:
+            case ShaderBindingType::StorageBufferArray:
+                binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+                break;
+            case ShaderBindingType::StorageImage:
+                binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+                break;
+            case ShaderBindingType::TextureSampler:
+            case ShaderBindingType::TextureSamplerArray:
+                binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                break;
+            case ShaderBindingType::RTAccelerationStructure:
+                binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
+                break;
+            default:
+                ASSERT_NOT_REACHED();
+            }
+
+            const auto& vulkanBackend = static_cast<const VulkanBackend&>(backend);
+            binding.stageFlags = vulkanBackend.shaderStageToVulkanShaderStageFlags(bindingInfo.shaderStage);
+
+            binding.pImmutableSamplers = nullptr;
+
+            layoutBindings.push_back(binding);
+        }
+
+        VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
+        descriptorSetLayoutCreateInfo.bindingCount = (uint32_t)layoutBindings.size();
+        descriptorSetLayoutCreateInfo.pBindings = layoutBindings.data();
+
+        //VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
+        //bindingFlagsCreateInfo. ...
+
+        //descriptorSetLayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+        //descriptorSetLayoutCreateInfo.pNext = &bindingFlagsCreateInfo;
+
+        if (vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
+            LogErrorAndExit("Error trying to create descriptor set layout\n");
+        }
+    }
+
+    // Create descriptor set
     {
         VkDescriptorSetAllocateInfo descriptorSetAllocateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO };
         descriptorSetAllocateInfo.descriptorPool = descriptorPool;
@@ -344,56 +400,3 @@ void VulkanBindingSet::setName(const std::string& name)
     }
 }
 
-VkDescriptorSetLayout VulkanBindingSet::createDescriptorSetLayout() const
-{
-    auto& vulkanBackend = static_cast<const VulkanBackend&>(backend());
-
-    std::vector<VkDescriptorSetLayoutBinding> layoutBindings {};
-    layoutBindings.reserve(shaderBindings().size());
-
-    for (auto& bindingInfo : shaderBindings()) {
-
-        VkDescriptorSetLayoutBinding binding = {};
-        binding.binding = bindingInfo.bindingIndex;
-        binding.descriptorCount = bindingInfo.count;
-
-        switch (bindingInfo.type) {
-        case ShaderBindingType::UniformBuffer:
-            binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-            break;
-        case ShaderBindingType::StorageBuffer:
-        case ShaderBindingType::StorageBufferArray:
-            binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            break;
-        case ShaderBindingType::StorageImage:
-            binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-            break;
-        case ShaderBindingType::TextureSampler:
-        case ShaderBindingType::TextureSamplerArray:
-            binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            break;
-        case ShaderBindingType::RTAccelerationStructure:
-            binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
-            break;
-        default:
-            ASSERT_NOT_REACHED();
-        }
-
-        binding.stageFlags = vulkanBackend.shaderStageToVulkanShaderStageFlags(bindingInfo.shaderStage);
-
-        binding.pImmutableSamplers = nullptr;
-
-        layoutBindings.push_back(binding);
-    }
-
-    VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-    descriptorSetLayoutCreateInfo.bindingCount = (uint32_t)layoutBindings.size();
-    descriptorSetLayoutCreateInfo.pBindings = layoutBindings.data();
-
-    VkDescriptorSetLayout newDescriptorSetLayout;
-    if (vkCreateDescriptorSetLayout(vulkanBackend.device(), &descriptorSetLayoutCreateInfo, nullptr, &newDescriptorSetLayout) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create descriptor set layout\n");
-    }
-
-    return newDescriptorSetLayout;
-}
