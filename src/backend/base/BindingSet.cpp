@@ -85,6 +85,26 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std:
     }
 }
 
+ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std::vector<Texture*>& textures)
+    : bindingIndex(index)
+    , count((uint32_t)textures.size())
+    , shaderStage(shaderStage)
+    , type(ShaderBindingType::TextureSamplerArray)
+    , tlas(nullptr)
+    , buffers()
+    , textures(textures)
+{
+    if (count < 1) {
+        //LogErrorAndExit("ShaderBinding error: too few textures in list\n");
+    }
+
+    for (auto texture : textures) {
+        if (!texture) {
+            LogErrorAndExit("ShaderBinding error: null texture in list\n");
+        }
+    }
+}
+
 ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std::vector<Buffer*>& buffers)
     : bindingIndex(index)
     , count((uint32_t)buffers.size())

@@ -32,6 +32,9 @@ struct ShaderBinding {
     // Multiple sampled textures in an array of fixed size (count)
     ShaderBinding(uint32_t index, ShaderStage, const std::vector<Texture*>&, uint32_t count);
 
+    // Multiple sampled textures in an array of undefined size
+    ShaderBinding(uint32_t index, ShaderStage, const std::vector<Texture*>&);
+
     // Multiple storage buffers in a dynamic array
     ShaderBinding(uint32_t index, ShaderStage, const std::vector<Buffer*>&);
 
