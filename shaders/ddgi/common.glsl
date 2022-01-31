@@ -8,7 +8,7 @@
 
 #define HIT_T_MISS (-1.0)
 
-#define DDGI_IRRADIANCE_GAMMA     (2.2)
+#define DDGI_IRRADIANCE_GAMMA     (5.0)
 #define DDGI_IRRADIANCE_INV_GAMMA (1.0 / DDGI_IRRADIANCE_GAMMA)
 
 struct Vertex {
