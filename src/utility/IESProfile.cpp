@@ -55,7 +55,7 @@ float IESProfile::requiredSpotLightConeAngle(float minThreshold) const
 }
 */
 
-Texture& IESProfile::createLookupTexture(Scene& scene, int size)
+std::unique_ptr<Texture> IESProfile::createLookupTexture(Backend& backend, int size)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -79,7 +79,7 @@ Texture& IESProfile::createLookupTexture(Scene& scene, int size)
     info.componentType = Image::ComponentType::Float;
 
     Image image { Image::DataOwner::External, info, pixels.data(), pixels.size() * sizeof(float) };
-    return scene.registry().createTextureFromImage(image, false, false, Texture::WrapModes::clampAllToEdge());
+    return Texture::createFromImage(backend, image, false, false, Texture::WrapModes::clampAllToEdge());
 }
 
 void IESProfile::parse(const std::string& path)

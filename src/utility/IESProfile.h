@@ -1,11 +1,12 @@
 #pragma once
 
+#include <memory>
 #include <string>
 #include <vector>
 #include <moos/vector.h>
 
+class Backend;
 class Texture;
-class Scene;
 
 class IESProfile {
 public:
@@ -42,7 +43,7 @@ public:
 
     //float requiredSpotLightConeAngle(float minThreshold) const;
 
-    Texture& createLookupTexture(Scene&, int size = 256);
+    std::unique_ptr<Texture> createLookupTexture(Backend&, int size = 256);
 
     float lookupValue(float angleH, float angleV) const;
 

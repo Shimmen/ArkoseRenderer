@@ -52,6 +52,7 @@ public:
 private:
 
     IESProfile m_iesProfile {};
+    std::unique_ptr<Texture> m_iesLookupTexture {};
 
     vec3 m_position { 0, 0, 0 };
     vec3 m_direction { 1, 1, 1 };

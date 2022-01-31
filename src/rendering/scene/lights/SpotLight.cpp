@@ -1,5 +1,6 @@
 #include "SpotLight.h"
 
+#include "backend/base/Backend.h"
 #include "utility/Logging.h"
 
 SpotLight::SpotLight(vec3 color, float luminousIntensity, const std::string& iesProfilePath, vec3 position, vec3 direction)
@@ -19,11 +20,11 @@ SpotLight::SpotLight(vec3 color, float luminousIntensity, const std::string& ies
 
 Texture& SpotLight::iesProfileLookupTexture()
 {
-    if (!scene())
-        LogErrorAndExit("SpotLight: can't request IES profile LUT for light that is not part of a scene, exiting\n");
+    if (m_iesLookupTexture == nullptr) {
+        m_iesLookupTexture = m_iesProfile.createLookupTexture(Backend::get(), SpotLightIESLookupTextureSize);
+    }
 
-    // TODO: Cache these!! Both loading of IES profiles & the LUTs
-    return m_iesProfile.createLookupTexture(*scene(), SpotLightIESLookupTextureSize);
+    return *m_iesLookupTexture;
 }
 
 float SpotLight::constantBias()
