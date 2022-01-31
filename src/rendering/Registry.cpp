@@ -94,83 +94,8 @@ Texture& Registry::createTextureFromImage(const Image& image, bool srgb, bool ge
 {
     SCOPED_PROFILE_ZONE()
 
-    auto mipmapMode = (generateMipmaps && image.info().width > 1 && image.info().height > 1)
-        ? Texture::Mipmap::Linear
-        : Texture::Mipmap::None;
-
-    Texture::Format format;
-    int numDesiredComponents;
-    int pixelSizeBytes;
-
-    switch (image.info().pixelType) {
-    case Image::PixelType::Grayscale:
-        numDesiredComponents = 1;
-        if (!srgb && image.info().isHdr()) {
-            format = Texture::Format::R32F;
-            pixelSizeBytes = sizeof(float);
-        } else {
-            LogErrorAndExit("Registry: no support for grayscale non-HDR or sRGB texture loading (from image)!\n");
-        }
-        break;
-    case Image::PixelType::RGB:
-    case Image::PixelType::RGBA:
-        numDesiredComponents = 4;
-        if (image.info().isHdr()) {
-            format = Texture::Format::RGBA32F;
-            pixelSizeBytes = 4 * sizeof(float);
-        } else {
-            format = (srgb)
-                ? Texture::Format::sRGBA8
-                : Texture::Format::RGBA8;
-            pixelSizeBytes = 4 * sizeof(uint8_t);
-        }
-        break;
-    default:
-        LogErrorAndExit("Registry: currently no support for other than R32F, (s)RGB(F), and (s)RGBA(F) texture loading (from image)!\n");
-    }
-
-    Texture::TextureDescription desc {
-        .type = Texture::Type::Texture2D,
-        .arrayCount = 1u,
-        .extent = { (uint32_t)image.info().width, (uint32_t)image.info().height, 1 },
-        .format = format,
-        .minFilter = Texture::MinFilter::Linear,
-        .magFilter = Texture::MagFilter::Linear,
-        .wrapMode = wrapMode,
-        .mipmap = mipmapMode,
-        .multisampling = Texture::Multisampling::None
-    };
-
-    validateTextureDescription(desc);
-    auto texture = backend().createTexture(desc);
+    auto texture = Texture::createFromImage(m_backend, image, srgb, generateMipmaps, wrapMode);
     texture->setOwningRegistry({}, this);
-
-    int width, height;
-    const void* rawPixelData;
-    switch (image.dataOwner()) {
-    case Image::DataOwner::StbImage:
-        if (image.info().isHdr())
-            rawPixelData = (void*)stbi_loadf_from_memory((const stbi_uc*)image.data(), (int)image.size(), &width, &height, nullptr, numDesiredComponents);
-        else
-            rawPixelData = (void*)stbi_load_from_memory((const stbi_uc*)image.data(), (int)image.size(), &width, &height, nullptr, numDesiredComponents);
-        ASSERT(width == image.info().width);
-        ASSERT(height == image.info().height);
-        break;
-    case Image::DataOwner::External:
-        rawPixelData = image.data();
-        width = image.info().width;
-        height = image.info().height;
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-
-    uint32_t rawDataSize = width * height * pixelSizeBytes;
-    texture->setData(rawPixelData, rawDataSize);
-
-    if (image.dataOwner() == Image::DataOwner::StbImage)
-        stbi_image_free(const_cast<void*>(rawPixelData));
 
     m_textures.push_back(std::move(texture));
     return *m_textures.back();

@@ -3,6 +3,9 @@
 #include "backend/util/Common.h"
 #include "backend/Resource.h"
 #include "utility/Extent.h"
+#include <memory>
+
+class Image;
 
 class Texture : public Resource {
 public:
@@ -154,6 +157,8 @@ public:
 
     Texture() = default;
     Texture(Backend&, TextureDescription);
+
+    static std::unique_ptr<Texture> createFromImage(Backend&, const Image&, bool sRGB, bool generateMipmaps, Texture::WrapModes = Texture::WrapModes::repeatAll());
 
     bool hasFloatingPointDataFormat() const;
 
