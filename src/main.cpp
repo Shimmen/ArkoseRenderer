@@ -1,6 +1,5 @@
 #include "backend/base/Backend.h"
 #include "backend/shader/ShaderManager.h"
-#include "backend/vulkan/VulkanBackend.h"
 #include "rendering/App.h"
 #include "utility/Input.h"
 #include "utility/Logging.h"
@@ -54,21 +53,6 @@ GLFWwindow* createWindow(Backend::Type backendType, WindowType windowType, const
     return window;
 }
 
-std::unique_ptr<Backend> createBackend(Backend::Type backendType, GLFWwindow* window, const Backend::AppSpecification& appSpecification)
-{
-    SCOPED_PROFILE_ZONE();
-
-    std::unique_ptr<Backend> backend;
-
-    switch (backendType) {
-    case Backend::Type::Vulkan:
-        backend = std::make_unique<VulkanBackend>(window, appSpecification);
-        break;
-    }
-
-    return backend;
-}
-
 int main(int argc, char** argv)
 {
     if (!glfwInit()) {
@@ -84,15 +68,15 @@ int main(int argc, char** argv)
     Backend::AppSpecification appSpec;
     appSpec.requiredCapabilities = app->requiredCapabilities();
     appSpec.optionalCapabilities = app->optionalCapabilities();
-    auto backend = createBackend(backendType, window, appSpec);
+    Backend& backend = Backend::create(backendType, window, appSpec);
 
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
-    auto scene = std::make_unique<Scene>(backend->getPersistentRegistry(), Extent2D(width, height));
+    auto scene = std::make_unique<Scene>(backend, backend.getPersistentRegistry(), Extent2D(width, height));
     auto renderPipeline = std::make_unique<RenderPipeline>(scene.get());
 
     app->setup(*scene, *renderPipeline);
-    backend->renderPipelineDidChange(*renderPipeline);
+    backend.renderPipelineDidChange(*renderPipeline);
 
     LogInfo("ArkoseRenderer: main loop begin.\n");
 
@@ -111,7 +95,7 @@ int main(int argc, char** argv)
 
         if (shaderFileWatchMutex.try_lock()) {
             if (changedShaderFiles.size() > 0) {
-                backend->shadersDidRecompile(changedShaderFiles, *renderPipeline);
+                backend.shadersDidRecompile(changedShaderFiles, *renderPipeline);
                 changedShaderFiles.clear();
             }
             shaderFileWatchMutex.unlock();
@@ -123,7 +107,7 @@ int main(int argc, char** argv)
         int width, height;
         glfwGetFramebufferSize(window, &width, &height);
 
-        backend->newFrame();
+        backend.newFrame();
         scene->newFrame({ width, height }, firstFrame);
 
         double elapsedTime = glfwGetTime();
@@ -134,7 +118,7 @@ int main(int argc, char** argv)
 
         bool frameExecuted = false;
         while (!frameExecuted) {
-            frameExecuted = backend->executeFrame(*scene, *renderPipeline, elapsedTime, deltaTime);
+            frameExecuted = backend.executeFrame(*scene, *renderPipeline, elapsedTime, deltaTime);
         }
 
         firstFrame = false;
@@ -145,8 +129,7 @@ int main(int argc, char** argv)
     ShaderManager::instance().stopFileWatching();
     LogInfo("ArkoseRenderer: main loop end.\n");
 
-    // Best to make sure the backend is destroyed before the window as it relies on it
-    backend.reset();
+    Backend::destroy();
 
     glfwDestroyWindow(window);
     glfwTerminate();

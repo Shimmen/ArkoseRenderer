@@ -21,7 +21,7 @@ static constexpr bool vulkanVerboseDebugMessages = false;
 
 class VulkanBackend final : public Backend {
 public:
-    VulkanBackend(GLFWwindow*, const AppSpecification& appSpecification);
+    VulkanBackend(Badge<Backend>, GLFWwindow*, const AppSpecification& appSpecification);
     ~VulkanBackend() final;
 
     VulkanBackend(VulkanBackend&&) = delete;

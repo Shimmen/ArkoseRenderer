@@ -9,10 +9,24 @@
 class RenderPipeline;
 class Scene;
 
+struct GLFWwindow;
+
 class Backend {
-public:
+private:
+
+    // Only one backend can exist at any point in time
+    static Backend* s_globalBackend;
+
+protected:
+
     Backend() = default;
     virtual ~Backend() = default;
+
+    Backend(Backend&&) = delete;
+    Backend(Backend&) = delete;
+    Backend& operator=(Backend&) = delete;
+
+public:
 
     enum class Type {
         Vulkan
@@ -27,6 +41,13 @@ public:
         std::vector<Backend::Capability> requiredCapabilities;
         std::vector<Backend::Capability> optionalCapabilities;
     };
+
+    // Creating and destroying the global backend object
+    static Backend& create(Backend::Type, GLFWwindow*, const Backend::AppSpecification&);
+    static void destroy();
+
+    // Get a reference to the global backend
+    static Backend& get();
 
     static std::string capabilityName(Capability capability);
     virtual bool hasActiveCapability(Capability) const = 0;

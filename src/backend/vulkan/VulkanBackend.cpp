@@ -24,7 +24,7 @@
 
 static bool s_unhandledWindowResize = false;
 
-VulkanBackend::VulkanBackend(GLFWwindow* window, const AppSpecification& appSpecification)
+VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecification& appSpecification)
     : m_window(window)
 {
     glfwSetFramebufferSizeCallback(window, static_cast<GLFWframebuffersizefun>([](GLFWwindow* window, int width, int height) {
