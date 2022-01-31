@@ -54,6 +54,8 @@ public:
 
     virtual Registry& getPersistentRegistry() = 0;
 
+    virtual void shutdown() = 0;
+
     virtual void renderPipelineDidChange(RenderPipeline&) = 0;
     virtual void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline&) = 0;
 

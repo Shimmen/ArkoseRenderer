@@ -154,7 +154,7 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
 VulkanBackend::~VulkanBackend()
 {
     // Before destroying stuff, make sure we're done with all scheduled work
-    vkDeviceWaitIdle(device());
+    shutdown();
 
     m_pipelineRegistry.reset();
     m_persistentRegistry.reset();
@@ -184,6 +184,11 @@ VulkanBackend::~VulkanBackend()
     }
 
     vkDestroyInstance(m_instance, nullptr);
+}
+
+void VulkanBackend::shutdown()
+{
+    vkDeviceWaitIdle(device());
 }
 
 bool VulkanBackend::hasActiveCapability(Capability capability) const

@@ -38,6 +38,8 @@ public:
     void renderPipelineDidChange(RenderPipeline&) override;
     void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline&) override;
 
+    void shutdown();
+
     void newFrame();
     bool executeFrame(const Scene&, RenderPipeline&, double elapsedTime, double deltaTime) override;
 

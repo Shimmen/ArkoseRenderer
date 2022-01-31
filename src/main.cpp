@@ -129,6 +129,9 @@ int main(int argc, char** argv)
     ShaderManager::instance().stopFileWatching();
     LogInfo("ArkoseRenderer: main loop end.\n");
 
+    backend.shutdown();
+    scene.reset();
+
     Backend::destroy();
 
     glfwDestroyWindow(window);
