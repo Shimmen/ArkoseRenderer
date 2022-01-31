@@ -3,9 +3,8 @@
 #include "backend/util/Common.h"
 #include "backend/Resource.h"
 #include "utility/Extent.h"
+#include "utility/Image.h"
 #include <memory>
-
-class Image;
 
 class Texture : public Resource {
 public:
@@ -158,7 +157,13 @@ public:
     Texture() = default;
     Texture(Backend&, TextureDescription);
 
-    static std::unique_ptr<Texture> createFromImage(Backend&, const Image&, bool sRGB, bool generateMipmaps, Texture::WrapModes = Texture::WrapModes::repeatAll());
+    static void pixelFormatAndTypeForImageInfo(const Image::Info& info, bool sRGB, Texture::Format& format, Image::PixelType& pixelTypeToUse);
+
+    static std::unique_ptr<Texture> createFromImage(Backend&, const Image&, bool sRGB, bool generateMipmaps, Texture::WrapModes);
+    static std::unique_ptr<Texture> createFromPixel(Backend&, vec4 pixelColor, bool sRGB);
+
+    static std::unique_ptr<Texture> createFromImagePath(Backend&, const std::string& imagePath, bool sRGB, bool generateMipmaps, Texture::WrapModes);
+    static std::unique_ptr<Texture> createFromImagePathSequence(Backend&, const std::string& imagePathSequencePattern, bool sRGB, bool generateMipmaps, Texture::WrapModes);
 
     bool hasFloatingPointDataFormat() const;
 
