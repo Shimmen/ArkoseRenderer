@@ -158,21 +158,22 @@ private:
 
     // GPU data
 
-    Buffer* m_global32BitIndexBuffer { nullptr };
+    std::unique_ptr<Buffer> m_global32BitIndexBuffer { nullptr };
     uint32_t m_nextFreeIndex { 0 };
 
-    std::unordered_map<VertexLayout, Buffer*> m_globalVertexBuffers {};
+    std::unordered_map<VertexLayout, std::unique_ptr<Buffer>> m_globalVertexBuffers {};
     uint32_t m_nextFreeVertexIndex { 0 };
 
     std::vector<Texture*> m_usedTextures {};
     std::vector<ShaderMaterial> m_usedMaterials {};
 
     std::vector<RTGeometryInstance> m_rayTracingGeometryInstances {};
-    TopLevelAS* m_sceneTopLevelAccelerationStructure {};
+    std::vector<std::unique_ptr<BottomLevelAS>> m_sceneBottomLevelAccelerationStructures {};
+    std::unique_ptr<TopLevelAS> m_sceneTopLevelAccelerationStructure {};
 
     void rebuildGpuSceneData();
     bool m_sceneDataNeedsRebuild { true };
-    Buffer* m_materialDataBuffer { nullptr };
+    std::unique_ptr<Buffer> m_materialDataBuffer { nullptr };
 
-    BindingSet* m_materialBindingSet { nullptr };
+    std::unique_ptr<BindingSet> m_materialBindingSet { nullptr };
 };

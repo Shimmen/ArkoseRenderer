@@ -440,10 +440,8 @@ DrawCallDescription Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&
         size_t offset = doAlign ? (alignWith->vertexOffset * layout.packedVertexSize()) : 0;
         size_t minRequiredBufferSize = offset + vertexData.size();
 
-        Buffer& buffer = m_registry.createBuffer(std::max(initialVertexBufferSize, minRequiredBufferSize), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-        buffer.setName("SceneVertexBuffer");
-
-        m_globalVertexBuffers[layout] = &buffer;
+        m_globalVertexBuffers[layout] = Backend::get().createBuffer(std::max(initialVertexBufferSize, minRequiredBufferSize), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+        m_globalVertexBuffers[layout]->setName("SceneVertexBuffer");
     }
 
     Buffer& vertexBuffer = *m_globalVertexBuffers[layout];
@@ -456,7 +454,7 @@ DrawCallDescription Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&
     if (doAlign) {
         // TODO: Maybe ensure we haven't already fitted this mesh+layout combo and is just overwriting at this point. Well, before doing it I guess..
         DrawCallDescription reusedDrawCall = alignWith.value();
-        reusedDrawCall.vertexBuffer = m_globalVertexBuffers[layout];
+        reusedDrawCall.vertexBuffer = m_globalVertexBuffers[layout].get();
         return reusedDrawCall;
     }
 
@@ -478,7 +476,7 @@ DrawCallDescription Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&
         size_t requiredAdditionalSize = indexData.size() * sizeof(uint32_t);
 
         if (m_global32BitIndexBuffer == nullptr) {
-            m_global32BitIndexBuffer = &m_registry.createBuffer(std::max(initialIndexBufferSize, requiredAdditionalSize), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+            m_global32BitIndexBuffer = Backend::get().createBuffer(std::max(initialIndexBufferSize, requiredAdditionalSize), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
             m_global32BitIndexBuffer->setName("SceneIndexBuffer");
         }
 
@@ -487,7 +485,7 @@ DrawCallDescription Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&
 
         m_global32BitIndexBuffer->updateDataAndGrowIfRequired(indexData.data(), requiredAdditionalSize, firstIndex * sizeof(uint32_t));
 
-        drawCall.indexBuffer = m_global32BitIndexBuffer;
+        drawCall.indexBuffer = m_global32BitIndexBuffer.get();
         drawCall.indexCount = (uint32_t)indexData.size();
         drawCall.indexType = IndexType::UInt32;
         drawCall.firstIndex = firstIndex;
@@ -619,8 +617,11 @@ void Scene::rebuildGpuSceneData()
             }
             ASSERT(hitMask != 0);
 
+            m_sceneBottomLevelAccelerationStructures.emplace_back(Backend::get().createBottomLevelAccelerationStructure({ geometry }));
+            BottomLevelAS& blas = *m_sceneBottomLevelAccelerationStructures.back();
+
             // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
-            RTGeometryInstance instance = { .blas = m_registry.createBottomLevelAccelerationStructure({ geometry }),
+            RTGeometryInstance instance = { .blas = blas,
                                             .transform = mesh.model()->transform(),
                                             .shaderBindingTableOffset = 0, // todo: generalize!
                                             .customInstanceId = static_cast<uint32_t>(meshIdx),
@@ -638,17 +639,17 @@ void Scene::rebuildGpuSceneData()
 
     // Create material buffer
     size_t materialBufferSize = m_usedMaterials.size() * sizeof(ShaderMaterial);
-    m_materialDataBuffer = &m_registry.createBuffer(materialBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+    m_materialDataBuffer = Backend::get().createBuffer(materialBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
     m_materialDataBuffer->updateData(m_usedMaterials.data(), materialBufferSize);
     m_materialDataBuffer->setName("SceneMaterialData");
 
-    m_materialBindingSet = &m_registry.createBindingSet({ { 0, ShaderStage::Any, m_materialDataBuffer },
-                                                          { 1, ShaderStage::Any, m_usedTextures } });
+    m_materialBindingSet = Backend::get().createBindingSet({ { 0, ShaderStage::Any, m_materialDataBuffer.get() },
+                                                             { 1, ShaderStage::Any, m_usedTextures } });
     m_materialBindingSet->setName("SceneMaterialSet");
 
     if (doesMaintainRayTracingScene() && m_rayTracingGeometryInstances.size() > 0) {
         // TODO: If we call rebuildGpuSceneData twice or more we will leak the TLAS!
-        m_sceneTopLevelAccelerationStructure = &m_registry.createTopLevelAccelerationStructure(m_rayTracingGeometryInstances);
+        m_sceneTopLevelAccelerationStructure = Backend::get().createTopLevelAccelerationStructure(m_rayTracingGeometryInstances);
     }
 }
 
