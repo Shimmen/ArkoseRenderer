@@ -24,8 +24,20 @@ Texture& Light::shadowMap()
         LogErrorAndExit("Light: can't request shadow map for light that is not part of a scene, exiting\n");
 
     ASSERT(m_shadowMapSize.width() > 0 && m_shadowMapSize.height() > 0);
-    Texture& shadowMap = scene()->registry().createTexture2D(m_shadowMapSize, Texture::Format::Depth32F, Texture::Filters::linear(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
-    m_shadowMap = &shadowMap;
+    Texture::TextureDescription textureDesc { .type = Texture::Type::Texture2D,
+                                              .arrayCount = 1,
+
+                                              .extent = Extent3D(m_shadowMapSize),
+                                              .format = Texture::Format::Depth32F,
+
+                                              .minFilter = Texture::MinFilter::Linear,
+                                              .magFilter = Texture::MagFilter::Linear,
+
+                                              .wrapMode = Texture::WrapModes::clampAllToEdge(),
+
+                                              .mipmap = Texture::Mipmap::None,
+                                              .multisampling = Texture::Multisampling::None };
+    m_shadowMap = Backend::get().createTexture(textureDesc);
 
     std::string baseName;
     switch (type()) {
@@ -39,9 +51,9 @@ Texture& Light::shadowMap()
         ASSERT_NOT_REACHED();
         break;
     }
-    shadowMap.setName(baseName + "ShadowMap");
+    m_shadowMap->setName(baseName + "ShadowMap");
 
-    return shadowMap;
+    return *m_shadowMap;
 }
 
 RenderTarget& Light::shadowMapRenderTarget()
@@ -54,13 +66,12 @@ RenderTarget& Light::shadowMapRenderTarget()
     if (!scene())
         LogErrorAndExit("Light: can't request shadow map render target for light that is not part of a scene, exiting\n");
 
-    RenderTarget& renderTarget = scene()->registry().createRenderTarget({ { RenderTarget::AttachmentType::Depth, &shadowMap() } });
-    m_shadowMapRenderTarget = &renderTarget;
+    m_shadowMapRenderTarget = Backend::get().createRenderTarget({ { RenderTarget::AttachmentType::Depth, &shadowMap() } });
 
-    return renderTarget;
+    return *m_shadowMapRenderTarget;
 }
 
-RenderState& Light::getOrCreateCachedShadowMapRenderState(const std::string& cacheIdentifier, std::function<RenderState&(Registry& sceneRegistry)> creationCallback)
+RenderState& Light::getOrCreateCachedShadowMapRenderState(const std::string& cacheIdentifier, std::function<RenderState&()> creationCallback)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -71,7 +82,7 @@ RenderState& Light::getOrCreateCachedShadowMapRenderState(const std::string& cac
     if (entry != m_cachedRenderStates.end())
         return *entry->second;
 
-    RenderState& newRenderState = creationCallback(scene()->registry());
+    RenderState& newRenderState = creationCallback();
     m_cachedRenderStates[cacheIdentifier] = &newRenderState;
 
     return newRenderState;

@@ -54,7 +54,8 @@ public:
     Texture& shadowMap();
     RenderTarget& shadowMapRenderTarget();
 
-    RenderState& getOrCreateCachedShadowMapRenderState(const std::string& cacheIdentifier, std::function<RenderState&(Registry& sceneRegistry)> creationCallback);
+    // TODO: Remove this API and replace it with something less stupid.
+    RenderState& getOrCreateCachedShadowMapRenderState(const std::string& cacheIdentifier, std::function<RenderState&()> creationCallback);
     void invalidateRenderStateCache();
 
     void setScene(Badge<Scene>, Scene* scene) { m_scene = scene; }
@@ -71,8 +72,10 @@ private:
 
     bool m_castsShadows { true };
     Extent2D m_shadowMapSize { 1024u, 1024u };
-    Texture* m_shadowMap { nullptr };
-    RenderTarget* m_shadowMapRenderTarget { nullptr };
+    std::unique_ptr<Texture> m_shadowMap { nullptr };
+    std::unique_ptr<RenderTarget> m_shadowMapRenderTarget { nullptr };
+
+    // NOTE: Uses raw ptr since the registry owns the resource
     std::unordered_map<std::string, RenderState*> m_cachedRenderStates {};
 
     std::string m_name {};

@@ -33,12 +33,12 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(Scene& scene, Regis
 
             // TODO: Use a proper cache instead of just using a name as a "cache identifier". This will require implementing operator== on a lot of
             // objects though, which I have barely done at all, so this is a very simple and quick hack to get around that.
-            RenderState& renderState = light.getOrCreateCachedShadowMapRenderState("ShadowMapNode::defaultShadowMapping", [&](Registry& sceneRegistry) -> RenderState& {
+            RenderState& renderState = light.getOrCreateCachedShadowMapRenderState("ShadowMapNode::defaultShadowMapping", [&]() -> RenderState& {
                 RenderStateBuilder renderStateBuilder { light.shadowMapRenderTarget(), shadowMapShader, m_vertexLayout };
                 renderStateBuilder.stateBindings().disableAutoBinding();
                 renderStateBuilder.stateBindings().at(0, transformBindingSet);
                 renderStateBuilder.stateBindings().at(1, shadowDataBindingSet);
-                return sceneRegistry.createRenderState(renderStateBuilder);
+                return reg.createRenderState(renderStateBuilder);
             });
 
             constexpr float clearDepth = 1.0f;
