@@ -87,31 +87,16 @@ Image* Image::load(const std::string& imagePath, PixelType pixelType)
         size = info.width * info.height * desiredNumberOfComponents * sizeof(stbi_uc);
     }
 
-    auto image = std::make_unique<Image>(DataOwner::StbImage, info, data, size);
+    auto image = std::make_unique<Image>(MemoryType::EncodedImage, info, data, size);
     s_imageCache[imagePath] = std::move(image);
 
     return s_imageCache[imagePath].get();
 }
 
-Image::Image(DataOwner owner, Info info, void* data, size_t size)
+Image::Image(MemoryType type, Info info, void* data, size_t size)
     : m_data(data)
     , m_size(size)
     , m_info(info)
-    , m_owner(owner)
+    , m_type(type)
 {
-}
-
-Image::~Image()
-{
-    switch (m_owner) {
-    case Image::DataOwner::External:
-        return;
-    case Image::DataOwner::StbImage:
-        if (m_data != nullptr && m_size > 0)
-            stbi_image_free(m_data);
-        return;
-    default:
-        ASSERT_NOT_REACHED();
-        return;
-    }
 }

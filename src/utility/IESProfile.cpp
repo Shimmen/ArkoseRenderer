@@ -78,7 +78,7 @@ std::unique_ptr<Texture> IESProfile::createLookupTexture(Backend& backend, int s
     info.pixelType = Image::PixelType::Grayscale;
     info.componentType = Image::ComponentType::Float;
 
-    Image image { Image::DataOwner::External, info, pixels.data(), pixels.size() * sizeof(float) };
+    Image image { Image::MemoryType::RawBitMap, info, pixels.data(), pixels.size() * sizeof(float) };
     return Texture::createFromImage(backend, image, false, false, Texture::WrapModes::clampAllToEdge());
 }
 

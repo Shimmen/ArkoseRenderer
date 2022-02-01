@@ -34,9 +34,9 @@ public:
         }
     };
 
-    enum class DataOwner {
-        External,
-        StbImage,
+    enum class MemoryType {
+        RawBitMap,
+        EncodedImage,
     };
 
     static Info* getInfo(const std::string& imagePath, bool quiet = false);
@@ -44,19 +44,19 @@ public:
 
     const Info& info() const { return m_info; }
 
-    DataOwner dataOwner() const { return m_owner; }
+    MemoryType memoryType() const { return m_type; }
     const void* data() const { return m_data; }
     size_t size() const { return m_size; }
 
     Image(Image&) = delete;
     Image& operator=(Image&) = delete;
 
-    Image(DataOwner, Info, void* data, size_t size);
-    ~Image();
+    Image(MemoryType, Info, void* data, size_t size);
+    ~Image() = default;
 
 private:
     Info m_info;
-    void* m_data;
+    void* m_data; // NOTE: this memory is assumed to be owned by someone else
     size_t m_size;
-    DataOwner m_owner;
+    MemoryType m_type;
 };

@@ -234,7 +234,7 @@ std::unique_ptr<Material> GltfMesh::createMaterial()
             size_t dataSize = bufferView.byteLength;
             const uint8_t* data = buffer.data.data() + bufferView.byteOffset;
 
-            return { "", std::make_unique<Image>(Image::DataOwner::External, info, (void*)data, dataSize) };
+            return { "", std::make_unique<Image>(Image::MemoryType::EncodedImage, info, (void*)data, dataSize) };
         }
     };
 

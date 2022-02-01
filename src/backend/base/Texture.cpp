@@ -138,8 +138,8 @@ std::unique_ptr<Texture> Texture::createFromImage(Backend& backend, const Image&
 
     int width, height;
     const void* rawPixelData;
-    switch (image.dataOwner()) {
-    case Image::DataOwner::StbImage:
+    switch (image.memoryType()) {
+    case Image::MemoryType::EncodedImage:
         if (image.info().isHdr())
             rawPixelData = (void*)stbi_loadf_from_memory((const stbi_uc*)image.data(), (int)image.size(), &width, &height, nullptr, numDesiredComponents);
         else
@@ -147,7 +147,7 @@ std::unique_ptr<Texture> Texture::createFromImage(Backend& backend, const Image&
         ASSERT(width == image.info().width);
         ASSERT(height == image.info().height);
         break;
-    case Image::DataOwner::External:
+    case Image::MemoryType::RawBitMap:
         rawPixelData = image.data();
         width = image.info().width;
         height = image.info().height;
@@ -160,7 +160,7 @@ std::unique_ptr<Texture> Texture::createFromImage(Backend& backend, const Image&
     uint32_t rawDataSize = width * height * pixelSizeBytes;
     texture->setData(rawPixelData, rawDataSize);
 
-    if (image.dataOwner() == Image::DataOwner::StbImage)
+    if (image.memoryType() == Image::MemoryType::EncodedImage)
         stbi_image_free(const_cast<void*>(rawPixelData));
 
     return texture;
