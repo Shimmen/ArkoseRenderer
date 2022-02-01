@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utility/util.h"
+#include "utility/Hash.h"
 #include <cstdint>
 #include <moos/vector.h>
 
@@ -87,3 +88,28 @@ private:
     uint32_t m_height {};
     uint32_t m_depth {};
 };
+
+namespace std {
+
+    template<>
+    struct hash<Extent2D> {
+        std::size_t operator()(const Extent2D& extent) const
+        {
+            auto widthHash = std::hash<uint32_t>()(extent.width());
+            auto heightHash = std::hash<uint32_t>()(extent.height());
+            return hashCombine(widthHash, heightHash);
+        }
+    };
+
+    template<>
+    struct hash<Extent3D> {
+        std::size_t operator()(const Extent3D& extent) const
+        {
+            auto widthHash = std::hash<uint32_t>()(extent.width());
+            auto heightHash = std::hash<uint32_t>()(extent.height());
+            auto depthHash = std::hash<uint32_t>()(extent.depth());
+            return hashCombine(widthHash, hashCombine(heightHash, depthHash));
+        }
+    };
+
+} // namespace std

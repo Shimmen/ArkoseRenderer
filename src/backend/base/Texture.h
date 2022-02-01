@@ -3,6 +3,7 @@
 #include "backend/util/Common.h"
 #include "backend/Resource.h"
 #include "utility/Extent.h"
+#include "utility/Hash.h"
 #include "utility/Image.h"
 #include <memory>
 
@@ -238,11 +239,44 @@ private:
     Description m_description;
 };
 
-struct TextureDescriptionHasher {
-    std::size_t operator()(const Texture::Description& cachedTexture) const
-    {
-        // TODO!
-        ASSERT_NOT_REACHED();
-        return 0u;
-    }
-};
+// Define hash functions
+namespace std {
+
+    template<>
+    struct hash<Texture::Filters> {
+        std::size_t operator()(const Texture::Filters& filters) const
+        {
+            auto minHash = std::hash<Texture::MinFilter>()(filters.min);
+            auto magHash = std::hash<Texture::MagFilter>()(filters.mag);
+            return hashCombine(minHash, magHash);
+        }
+    };
+
+    template<>
+    struct hash<Texture::WrapModes> {
+        std::size_t operator()(const Texture::WrapModes& wrapModes) const
+        {
+            auto uHash = std::hash<Texture::WrapMode>()(wrapModes.u);
+            auto vHash = std::hash<Texture::WrapMode>()(wrapModes.v);
+            auto wHash = std::hash<Texture::WrapMode>()(wrapModes.w);
+            return hashCombine(uHash, hashCombine(vHash, wHash));
+        }
+    };
+
+    template<>
+    struct hash<Texture::Description> {
+        std::size_t operator()(const Texture::Description& desc) const
+        {
+            // TODO: It would be nice if we had some variadic template function for combining N hashes..
+            return hashCombine(std::hash<Texture::Type>()(desc.type),
+                               hashCombine(std::hash<uint32_t>()(desc.arrayCount),
+                                           hashCombine(std::hash<Extent3D>()(desc.extent),
+                                                       hashCombine(std::hash<Texture::Format>()(desc.format),
+                                                                   hashCombine(std::hash<Texture::Filters>()(desc.filter),
+                                                                               hashCombine(std::hash<Texture::WrapModes>()(desc.wrapMode),
+                                                                                           hashCombine(std::hash<Texture::Mipmap>()(desc.mipmap),
+                                                                                                       std::hash<Texture::Multisampling>()(desc.multisampling))))))));
+        }
+    };
+
+} // namespace std
