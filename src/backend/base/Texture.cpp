@@ -8,23 +8,15 @@
 #include <fmt/format.h>
 #include <stb_image.h>
 
-Texture::Texture(Backend& backend, TextureDescription desc)
+Texture::Texture(Backend& backend, Description desc)
     : Resource(backend)
-    , m_type(desc.type)
-    , m_arrayCount(desc.arrayCount)
-    , m_extent(desc.extent)
-    , m_format(desc.format)
-    , m_minFilter(desc.minFilter)
-    , m_magFilter(desc.magFilter)
-    , m_wrapMode(desc.wrapMode)
-    , m_mipmap(desc.mipmap)
-    , m_multisampling(desc.multisampling)
+    , m_description(desc)
 {
     // (according to most specifications we can't have both multisampling and mipmapping)
-    ASSERT(m_multisampling == Multisampling::None || m_mipmap == Mipmap::None);
+    ASSERT(multisampling() == Multisampling::None || mipmap() == Mipmap::None);
 
     // At least one item in an implicit array
-    ASSERT(m_arrayCount > 0);
+    ASSERT(arrayCount() > 0);
 }
 
 bool Texture::hasFloatingPointDataFormat() const
@@ -48,7 +40,7 @@ bool Texture::hasFloatingPointDataFormat() const
 
 bool Texture::hasMipmaps() const
 {
-    return m_mipmap != Mipmap::None;
+    return mipmap() != Mipmap::None;
 }
 
 uint32_t Texture::mipLevels() const
@@ -64,12 +56,12 @@ uint32_t Texture::mipLevels() const
 
 bool Texture::isMultisampled() const
 {
-    return m_multisampling != Multisampling::None;
+    return multisampling() != Multisampling::None;
 }
 
 Texture::Multisampling Texture::multisampling() const
 {
-    return m_multisampling;
+    return m_description.multisampling;
 }
 
 void Texture::pixelFormatAndTypeForImageInfo(const Image::Info& info, bool sRGB, Texture::Format& format, Image::PixelType& pixelTypeToUse)
@@ -130,13 +122,12 @@ std::unique_ptr<Texture> Texture::createFromImage(Backend& backend, const Image&
         LogErrorAndExit("Registry: currently no support for other than R32F, (s)RGB(F), and (s)RGBA(F) texture loading (from image)!\n");
     }
 
-    Texture::TextureDescription desc {
+    Texture::Description desc {
         .type = Texture::Type::Texture2D,
         .arrayCount = 1u,
         .extent = { (uint32_t)image.info().width, (uint32_t)image.info().height, 1 },
         .format = format,
-        .minFilter = Texture::MinFilter::Linear,
-        .magFilter = Texture::MagFilter::Linear,
+        .filter = Texture::Filters::linear(),
         .wrapMode = wrapMode,
         .mipmap = mipmapMode,
         .multisampling = Texture::Multisampling::None
@@ -179,19 +170,15 @@ std::unique_ptr<Texture> Texture::createFromPixel(Backend& backend, vec4 pixelCo
 {
     SCOPED_PROFILE_ZONE()
 
-    Texture::TextureDescription desc {
+    Texture::Description desc {
         .type = Texture::Type::Texture2D,
         .arrayCount = 1u,
         .extent = Extent3D(1, 1, 1),
         .format = sRGB
             ? Texture::Format::sRGBA8
             : Texture::Format::RGBA8,
-        .minFilter = Texture::MinFilter::Nearest,
-        .magFilter = Texture::MagFilter::Nearest,
-        .wrapMode = {
-            Texture::WrapMode::Repeat,
-            Texture::WrapMode::Repeat,
-            Texture::WrapMode::Repeat },
+        .filter = Texture::Filters::nearest(),
+        .wrapMode = Texture::WrapModes::repeatAll(),
         .mipmap = Texture::Mipmap::None,
         .multisampling = Texture::Multisampling::None
     };
@@ -221,17 +208,13 @@ std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const st
         ? Texture::Mipmap::Linear
         : Texture::Mipmap::None;
 
-    Texture::TextureDescription desc {
+    Texture::Description desc {
         .type = Texture::Type::Texture2D,
         .arrayCount = 1u,
         .extent = { (uint32_t)info->width, (uint32_t)info->height, 1 },
         .format = format,
-        .minFilter = Texture::MinFilter::Linear,
-        .magFilter = Texture::MagFilter::Linear,
-        .wrapMode = {
-            Texture::WrapMode::Repeat,
-            Texture::WrapMode::Repeat,
-            Texture::WrapMode::Repeat },
+        .filter = Texture::Filters::linear(),
+        .wrapMode = Texture::WrapModes::repeatAll(),
         .mipmap = mipmapMode,
         .multisampling = Texture::Multisampling::None
     };
@@ -285,17 +268,13 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
         ? Texture::Mipmap::Linear
         : Texture::Mipmap::None;
 
-    Texture::TextureDescription desc {
+    Texture::Description desc {
         .type = Texture::Type::Texture2D,
         .arrayCount = arrayCount,
         .extent = { (uint32_t)info.width, (uint32_t)info.height, 1 },
         .format = format,
-        .minFilter = Texture::MinFilter::Linear,
-        .magFilter = Texture::MagFilter::Linear,
-        .wrapMode = {
-            Texture::WrapMode::Repeat,
-            Texture::WrapMode::Repeat,
-            Texture::WrapMode::Repeat },
+        .filter = Texture::Filters::linear(),
+        .wrapMode = Texture::WrapModes::repeatAll(),
         .mipmap = mipmapMode,
         .multisampling = Texture::Multisampling::None
     };

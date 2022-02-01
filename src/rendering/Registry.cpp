@@ -37,7 +37,7 @@ RenderTarget& Registry::createRenderTarget(std::vector<RenderTarget::Attachment>
     return *m_renderTargets.back();
 }
 
-static void validateTextureDescription(Texture::TextureDescription desc)
+static void validateTextureDescription(Texture::Description desc)
 {
     // TODO: Add more validation
     if (desc.extent.width() == 0 || desc.extent.height() == 0 || desc.extent.depth() == 0)
@@ -48,13 +48,12 @@ static void validateTextureDescription(Texture::TextureDescription desc)
 
 Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
 {
-    Texture::TextureDescription desc {
+    Texture::Description desc {
         .type = Texture::Type::Texture2D,
         .arrayCount = 1u,
         .extent = Extent3D(extent, 1),
         .format = format,
-        .minFilter = filters.min,
-        .magFilter = filters.mag,
+        .filter = filters,
         .wrapMode = wrapMode,
         .mipmap = mipmap,
         .multisampling = Texture::Multisampling::None
@@ -70,13 +69,12 @@ Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Text
 
 Texture& Registry::createTextureArray(uint32_t itemCount, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
 {
-    Texture::TextureDescription desc {
+    Texture::Description desc {
         .type = Texture::Type::Texture2D,
         .arrayCount = itemCount,
         .extent = Extent3D(extent, 1),
         .format = format,
-        .minFilter = filters.min,
-        .magFilter = filters.mag,
+        .filter = filters,
         .wrapMode = wrapMode,
         .mipmap = mipmap,
         .multisampling = Texture::Multisampling::None
@@ -103,17 +101,13 @@ Texture& Registry::createTextureFromImage(const Image& image, bool srgb, bool ge
 
 Texture& Registry::createMultisampledTexture2D(Extent2D extent, Texture::Format format, Texture::Multisampling multisampling, Texture::Mipmap mipmap)
 {
-    Texture::TextureDescription desc {
+    Texture::Description desc {
         .type = Texture::Type::Texture2D,
         .arrayCount = 1u,
         .extent = Extent3D(extent, 1),
         .format = format,
-        .minFilter = Texture::MinFilter::Linear,
-        .magFilter = Texture::MagFilter::Linear,
-        .wrapMode = {
-            Texture::WrapMode::Repeat,
-            Texture::WrapMode::Repeat,
-            Texture::WrapMode::Repeat },
+        .filter = Texture::Filters::linear(),
+        .wrapMode = Texture::WrapModes::repeatAll(),
         .mipmap = mipmap,
         .multisampling = multisampling
     };
@@ -128,17 +122,13 @@ Texture& Registry::createMultisampledTexture2D(Extent2D extent, Texture::Format 
 
 Texture& Registry::createCubemapTexture(Extent2D extent, Texture::Format format)
 {
-    Texture::TextureDescription desc {
+    Texture::Description desc {
         .type = Texture::Type::Cubemap,
         .arrayCount = 1u,
         .extent = Extent3D(extent, 1),
         .format = format,
-        .minFilter = Texture::MinFilter::Linear,
-        .magFilter = Texture::MagFilter::Linear,
-        .wrapMode = {
-            Texture::WrapMode::ClampToEdge,
-            Texture::WrapMode::ClampToEdge,
-            Texture::WrapMode::ClampToEdge },
+        .filter = Texture::Filters::linear(),
+        .wrapMode = Texture::WrapModes::clampAllToEdge(),
         .mipmap = Texture::Mipmap::None,
         .multisampling = Texture::Multisampling::None
     };

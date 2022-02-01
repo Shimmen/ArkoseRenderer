@@ -5,7 +5,7 @@
 #include "utility/Logging.h"
 #include <stb_image.h>
 
-VulkanTexture::VulkanTexture(Backend& backend, TextureDescription desc)
+VulkanTexture::VulkanTexture(Backend& backend, Description desc)
     : Texture(backend, desc)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();

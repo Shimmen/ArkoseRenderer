@@ -323,7 +323,7 @@ std::unique_ptr<RenderTarget> VulkanBackend::createRenderTarget(std::vector<Rend
     return std::make_unique<VulkanRenderTarget>(*this, attachments, imageless, VulkanRenderTarget::QuirkMode::None);
 }
 
-std::unique_ptr<Texture> VulkanBackend::createTexture(Texture::TextureDescription desc)
+std::unique_ptr<Texture> VulkanBackend::createTexture(Texture::Description desc)
 {
     return std::make_unique<VulkanTexture>(*this, desc);
 }
@@ -837,16 +837,13 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
         {
             auto mockTexture = std::make_unique<VulkanTexture>();
 
-            mockTexture->m_type = Texture::Type::Texture2D;
-            mockTexture->m_extent = m_swapchainExtent;
-            mockTexture->m_format = Texture::Format::Unknown;
-            mockTexture->m_minFilter = Texture::MinFilter::Nearest;
-            mockTexture->m_magFilter = Texture::MagFilter::Nearest;
-            mockTexture->m_wrapMode = { Texture::WrapMode::Repeat,
-                                        Texture::WrapMode::Repeat,
-                                        Texture::WrapMode::Repeat };
-            mockTexture->m_mipmap = Texture::Mipmap::None;
-            mockTexture->m_multisampling = Texture::Multisampling::None;
+            mockTexture->m_description.type = Texture::Type::Texture2D;
+            mockTexture->m_description.extent = m_swapchainExtent;
+            mockTexture->m_description.format = Texture::Format::Unknown;
+            mockTexture->m_description.filter = Texture::Filters::nearest();
+            mockTexture->m_description.wrapMode = Texture::WrapModes::repeatAll();
+            mockTexture->m_description.mipmap = Texture::Mipmap::None;
+            mockTexture->m_description.multisampling = Texture::Multisampling::None;
 
             mockTexture->vkUsage = createInfo.imageUsage;
             mockTexture->vkFormat = m_swapchainImageFormat;
@@ -859,18 +856,14 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
 
         // Create depth texture
         {
-            Texture::TextureDescription depthDesc { .type = Texture::Type::Texture2D,
-                                                    .arrayCount = 1u,
-                                                    .extent = m_swapchainExtent,
-                                                    .format = Texture::Format::Depth32F,
-                                                    .minFilter = Texture::MinFilter::Nearest,
-                                                    .magFilter = Texture::MagFilter::Nearest,
-                                                    .wrapMode = {
-                                                        Texture::WrapMode::Repeat,
-                                                        Texture::WrapMode::Repeat,
-                                                        Texture::WrapMode::Repeat },
-                                                    .mipmap = Texture::Mipmap::None,
-                                                    .multisampling = Texture::Multisampling::None };
+            Texture::Description depthDesc { .type = Texture::Type::Texture2D,
+                                             .arrayCount = 1u,
+                                             .extent = m_swapchainExtent,
+                                             .format = Texture::Format::Depth32F,
+                                             .filter = Texture::Filters::nearest(),
+                                             .wrapMode = Texture::WrapModes::repeatAll(),
+                                             .mipmap = Texture::Mipmap::None,
+                                             .multisampling = Texture::Multisampling::None };
             swapchainImageContext->depthTexture = std::make_unique<VulkanTexture>(*this, depthDesc);
         }
 

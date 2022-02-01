@@ -8,7 +8,7 @@
 struct VulkanTexture final : public Texture {
 public:
     VulkanTexture() = default;
-    VulkanTexture(Backend&, TextureDescription);
+    VulkanTexture(Backend&, Description);
     virtual ~VulkanTexture() override;
 
     virtual void setName(const std::string& name) override;

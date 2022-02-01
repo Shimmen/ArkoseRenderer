@@ -68,6 +68,12 @@ public:
                 MagFilter::Nearest
             };
         }
+
+        bool operator==(Filters rhs)
+        {
+            return min == rhs.min
+                && mag == rhs.mag;
+        }
     };
 
     enum class WrapMode {
@@ -121,6 +127,13 @@ public:
                 WrapMode::ClampToEdge
             };
         }
+
+        bool operator==(WrapModes rhs)
+        {
+            return u == rhs.u
+                && v == rhs.v
+                && w == rhs.w;
+        }
     };
 
     enum class Mipmap {
@@ -138,24 +151,34 @@ public:
         X32 = 32,
     };
 
-    struct TextureDescription {
-        Type type;
-        uint32_t arrayCount;
+    struct Description {
+        Type type { Type::Texture2D };
+        uint32_t arrayCount { 1 };
 
-        Extent3D extent;
-        Format format;
+        Extent3D extent { 1, 1, 1 };
+        Format format { Format::RGBA8 };
 
-        MinFilter minFilter;
-        MagFilter magFilter;
+        Filters filter { Filters::nearest() };
+        WrapModes wrapMode { WrapModes::clampAllToEdge() };
 
-        WrapModes wrapMode;
+        Mipmap mipmap { Mipmap::None };
+        Multisampling multisampling { Multisampling::None };
 
-        Mipmap mipmap;
-        Multisampling multisampling;
+        bool operator==(Texture::Description rhs)
+        {
+            return type == rhs.type
+                && arrayCount == rhs.arrayCount
+                && extent == rhs.extent
+                && format == rhs.format
+                && filter == rhs.filter
+                && wrapMode == rhs.wrapMode
+                && mipmap == rhs.mipmap
+                && multisampling == rhs.multisampling;
+        }
     };
 
     Texture() = default;
-    Texture(Backend&, TextureDescription);
+    Texture(Backend&, Description);
 
     static void pixelFormatAndTypeForImageInfo(const Image::Info& info, bool sRGB, Texture::Format& format, Image::PixelType& pixelTypeToUse);
 
@@ -174,22 +197,22 @@ public:
 
     virtual void generateMipmaps() = 0;
 
-    [[nodiscard]] Type type() const { return m_type; }
+    [[nodiscard]] Type type() const { return m_description.type; }
 
-    [[nodiscard]] bool isArray() const { return m_arrayCount > 1; };
-    [[nodiscard]] uint32_t arrayCount() const { return m_arrayCount; };
+    [[nodiscard]] bool isArray() const { return m_description.arrayCount > 1; };
+    [[nodiscard]] uint32_t arrayCount() const { return m_description.arrayCount; };
 
-    [[nodiscard]] const Extent2D extent() const { return { m_extent.width(), m_extent.height() }; }
-    [[nodiscard]] const Extent3D extent3D() const { return m_extent; }
+    [[nodiscard]] const Extent2D extent() const { return { m_description.extent.width(), m_description.extent.height() }; }
+    [[nodiscard]] const Extent3D extent3D() const { return m_description.extent; }
 
-    [[nodiscard]] Format format() const { return m_format; }
+    [[nodiscard]] Format format() const { return m_description.format; }
 
-    [[nodiscard]] MinFilter minFilter() const { return m_minFilter; }
-    [[nodiscard]] MagFilter magFilter() const { return m_magFilter; }
-    [[nodiscard]] Filters filters() const { return { minFilter(), magFilter() }; }
-    [[nodiscard]] WrapModes wrapMode() const { return m_wrapMode; }
+    [[nodiscard]] MinFilter minFilter() const { return m_description.filter.min; }
+    [[nodiscard]] MagFilter magFilter() const { return m_description.filter.mag; }
+    [[nodiscard]] Filters filters() const { return m_description.filter; }
+    [[nodiscard]] WrapModes wrapMode() const { return m_description.wrapMode; }
 
-    [[nodiscard]] Mipmap mipmap() const { return m_mipmap; }
+    [[nodiscard]] Mipmap mipmap() const { return m_description.mipmap; }
     [[nodiscard]] bool hasMipmaps() const;
     [[nodiscard]] uint32_t mipLevels() const;
 
@@ -198,31 +221,28 @@ public:
 
     [[nodiscard]] bool hasDepthFormat() const
     {
-        return m_format == Format::Depth32F || m_format == Format::Depth24Stencil8;
+        return m_description.format == Format::Depth32F || m_description.format == Format::Depth24Stencil8;
     }
 
     [[nodiscard]] bool hasStencilFormat() const
     {
-        return m_format == Format::Depth24Stencil8;
+        return m_description.format == Format::Depth24Stencil8;
     }
 
     [[nodiscard]] bool hasSrgbFormat() const
     {
-        return m_format == Format::sRGBA8;
+        return m_description.format == Format::sRGBA8;
     }
 
 private:
-    Type m_type { Type::Texture2D };
-    uint32_t m_arrayCount { 1u };
+    Description m_description;
+};
 
-    Extent3D m_extent { 0, 0, 0 };
-    Format m_format { Format::RGBA8 };
-
-    MinFilter m_minFilter { MinFilter::Nearest };
-    MagFilter m_magFilter { MagFilter::Nearest };
-
-    WrapModes m_wrapMode { WrapModes::repeatAll() };
-
-    Mipmap m_mipmap { Mipmap::None };
-    Multisampling m_multisampling { Multisampling::None };
+struct TextureDescriptionHasher {
+    std::size_t operator()(const Texture::Description& cachedTexture) const
+    {
+        // TODO!
+        ASSERT_NOT_REACHED();
+        return 0u;
+    }
 };

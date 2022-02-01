@@ -24,19 +24,17 @@ Texture& Light::shadowMap()
         LogErrorAndExit("Light: can't request shadow map for light that is not part of a scene, exiting\n");
 
     ASSERT(m_shadowMapSize.width() > 0 && m_shadowMapSize.height() > 0);
-    Texture::TextureDescription textureDesc { .type = Texture::Type::Texture2D,
-                                              .arrayCount = 1,
+    Texture::Description textureDesc { .type = Texture::Type::Texture2D,
+                                       .arrayCount = 1,
 
-                                              .extent = Extent3D(m_shadowMapSize),
-                                              .format = Texture::Format::Depth32F,
+                                       .extent = Extent3D(m_shadowMapSize),
+                                       .format = Texture::Format::Depth32F,
 
-                                              .minFilter = Texture::MinFilter::Linear,
-                                              .magFilter = Texture::MagFilter::Linear,
+                                       .filter = Texture::Filters::linear(),
+                                       .wrapMode = Texture::WrapModes::clampAllToEdge(),
 
-                                              .wrapMode = Texture::WrapModes::clampAllToEdge(),
-
-                                              .mipmap = Texture::Mipmap::None,
-                                              .multisampling = Texture::Multisampling::None };
+                                       .mipmap = Texture::Mipmap::None,
+                                       .multisampling = Texture::Multisampling::None };
     m_shadowMap = Backend::get().createTexture(textureDesc);
 
     std::string baseName;
