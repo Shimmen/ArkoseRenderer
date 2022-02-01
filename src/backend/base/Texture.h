@@ -70,7 +70,7 @@ public:
             };
         }
 
-        bool operator==(Filters rhs)
+        bool operator==(const Filters& rhs) const
         {
             return min == rhs.min
                 && mag == rhs.mag;
@@ -129,7 +129,7 @@ public:
             };
         }
 
-        bool operator==(WrapModes rhs)
+        bool operator==(const WrapModes& rhs) const
         {
             return u == rhs.u
                 && v == rhs.v
@@ -165,7 +165,7 @@ public:
         Mipmap mipmap { Mipmap::None };
         Multisampling multisampling { Multisampling::None };
 
-        bool operator==(Texture::Description rhs)
+        bool operator==(const Texture::Description& rhs) const
         {
             return type == rhs.type
                 && arrayCount == rhs.arrayCount
