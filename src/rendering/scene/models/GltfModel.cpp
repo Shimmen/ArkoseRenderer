@@ -239,7 +239,6 @@ std::unique_ptr<Material> GltfMesh::createMaterial()
     };
 
     auto material = std::make_unique<Material>();
-    material->setMesh(this);
 
     if (gltfMaterial.alphaMode == "OPAQUE") {
         material->blendMode = Material::BlendMode::Opaque;

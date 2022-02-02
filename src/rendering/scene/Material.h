@@ -42,19 +42,12 @@ public:
 
     bool isOpaque() const { return blendMode == BlendMode::Opaque; }
 
-    void setMesh(Mesh* mesh) { m_owner = mesh; }
-    const Mesh* mesh() const { return m_owner; }
-    Mesh* mesh() { return m_owner; }
-
     Texture* baseColorTexture();
     Texture* normalMapTexture();
     Texture* metallicRoughnessTexture();
     Texture* emissiveTexture();
 
 private:
-    Mesh* m_owner;
-    Registry& sceneRegistry();
-
     // Texture cache (currently loaded for this material)
     Texture* m_baseColorTexture { nullptr };
     Texture* m_normalMapTexture { nullptr };
@@ -65,12 +58,18 @@ private:
 class MaterialTextureCache {
 public:
     MaterialTextureCache() = default;
-    static MaterialTextureCache& global(Badge<Material>);
 
-    Texture* getLoadedTexture(Registry&, const std::string& name, bool sRGB);
-    Texture* getPixelColorTexture(Registry&, vec4 color, bool sRGB);
+    static MaterialTextureCache& global(Badge<Material>);
+    static void shutdown(); // HACK!
+
+    Texture* getLoadedTexture(Backend&, const std::string& name, bool sRGB);
+    Texture* getTextureForImage(Backend&, const Image&, bool sRGB);
+    Texture* getPixelColorTexture(Backend&, vec4 color, bool sRGB);
 
 private:
-    std::unordered_map<std::string, Texture*> m_loadedTextures;
-    std::unordered_map<uint32_t, Texture*> m_pixelColorTextures;
+    static std::unique_ptr<MaterialTextureCache> s_globalCache;
+
+    std::unordered_map<std::string, std::unique_ptr<Texture>> m_loadedTextures;
+    std::unordered_map<uint32_t, std::unique_ptr<Texture>> m_pixelColorTextures;
+    std::vector<std::unique_ptr<Texture>> m_imageTextures;
 };

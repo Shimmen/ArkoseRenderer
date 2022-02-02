@@ -131,6 +131,7 @@ int main(int argc, char** argv)
 
     backend.shutdown();
     scene.reset();
+    MaterialTextureCache::shutdown(); // TODO: Get rid of this...
 
     Backend::destroy();
 
