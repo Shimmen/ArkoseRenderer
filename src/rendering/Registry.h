@@ -15,7 +15,7 @@ class RenderPipeline;
 
 class Registry final {
 public:
-    explicit Registry(Backend&, Registry* previousRegistry, const RenderTarget* windowRenderTarget = nullptr);
+    explicit Registry(Backend&, const RenderTarget& windowRenderTarget, Registry* previousRegistry);
 
     void setCurrentNode(Badge<RenderPipeline>, std::optional<std::string>);
 
@@ -81,7 +81,7 @@ private:
     std::unordered_set<NodeDependency> m_nodeDependencies;
     std::vector<std::string> m_allNodeNames;
 
-    const RenderTarget* m_windowRenderTarget;
+    const RenderTarget& m_windowRenderTarget;
 
     template<typename ResourceType>
     struct PublishedResource {

@@ -7,7 +7,7 @@
 #include <fmt/format.h>
 #include <stb_image.h>
 
-Registry::Registry(Backend& backend, Registry* previousRegistry, const RenderTarget* windowRenderTarget)
+Registry::Registry(Backend& backend, const RenderTarget& windowRenderTarget, Registry* previousRegistry)
     : m_backend(backend)
     , m_previousRegistry(previousRegistry)
     , m_windowRenderTarget(windowRenderTarget)
@@ -23,9 +23,7 @@ void Registry::setCurrentNode(Badge<RenderPipeline>, std::optional<std::string> 
 
 const RenderTarget& Registry::windowRenderTarget()
 {
-    if (!m_windowRenderTarget)
-        LogErrorAndExit("Can't get the window render target from a non-frame registry!\n");
-    return *m_windowRenderTarget;
+    return m_windowRenderTarget;
 }
 
 RenderTarget& Registry::createRenderTarget(std::vector<RenderTarget::Attachment> attachments)

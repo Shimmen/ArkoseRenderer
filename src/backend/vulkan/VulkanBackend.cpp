@@ -147,8 +147,6 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
     createFrameContexts();
 
     setupDearImgui();
-
-    m_persistentRegistry = std::make_unique<Registry>(*this, nullptr);
 }
 
 VulkanBackend::~VulkanBackend()
@@ -157,7 +155,6 @@ VulkanBackend::~VulkanBackend()
     shutdown();
 
     m_pipelineRegistry.reset();
-    m_persistentRegistry.reset();
 
     destroyDearImgui();
 
@@ -1382,12 +1379,6 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
     return true;
 }
 
-Registry& VulkanBackend::getPersistentRegistry()
-{
-    ASSERT(m_persistentRegistry);
-    return *m_persistentRegistry;
-}
-
 void VulkanBackend::renderPipelineDidChange(RenderPipeline& renderPipeline)
 {
     reconstructRenderPipelineResources(renderPipeline);
@@ -1413,7 +1404,7 @@ void VulkanBackend::reconstructRenderPipelineResources(RenderPipeline& renderPip
     const RenderTarget& templateWindowRenderTarget = *m_clearingRenderTarget;
 
     Registry* previousRegistry = m_pipelineRegistry.get();
-    Registry* registry = new Registry(*this, previousRegistry, &templateWindowRenderTarget);
+    Registry* registry = new Registry(*this, templateWindowRenderTarget, previousRegistry);
 
     renderPipeline.constructAll(*registry);
 

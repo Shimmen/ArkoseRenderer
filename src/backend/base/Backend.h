@@ -52,8 +52,6 @@ public:
     static std::string capabilityName(Capability capability);
     virtual bool hasActiveCapability(Capability) const = 0;
 
-    virtual Registry& getPersistentRegistry() = 0;
-
     virtual void shutdown() = 0;
 
     virtual void renderPipelineDidChange(RenderPipeline&) = 0;

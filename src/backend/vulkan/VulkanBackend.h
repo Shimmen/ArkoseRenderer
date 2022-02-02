@@ -33,8 +33,6 @@ public:
 
     bool hasActiveCapability(Capability) const override;
 
-    Registry& getPersistentRegistry() override;
-
     void renderPipelineDidChange(RenderPipeline&) override;
     void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline&) override;
 
@@ -255,7 +253,6 @@ private:
     VmaAllocator m_memoryAllocator;
 
     std::unique_ptr<Registry> m_pipelineRegistry {};
-    std::unique_ptr<Registry> m_persistentRegistry {};
 
     VkCommandPool m_defaultCommandPool {};
     VkCommandPool m_transientCommandPool {};

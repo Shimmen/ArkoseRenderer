@@ -14,9 +14,8 @@ using uint = uint32_t;
 #include "LightData.h"
 #include "CameraState.h"
 
-Scene::Scene(Registry& registry, Extent2D initialMainViewportSize)
-    : m_registry(registry)
-    , m_mainViewportSize(initialMainViewportSize)
+Scene::Scene(Extent2D initialMainViewportSize)
+    : m_mainViewportSize(initialMainViewportSize)
 {
 }
 

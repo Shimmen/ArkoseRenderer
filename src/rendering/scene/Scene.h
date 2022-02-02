@@ -20,10 +20,7 @@ class SceneNode;
 
 class Scene final : public RenderPipelineNode {
 public:
-    Scene(Registry&, Extent2D initialMainViewportSize);
-
-    Registry& registry() { return m_registry; }
-    const Registry& registry() const { return m_registry; }
+    Scene(Extent2D initialMainViewportSize);
 
     void newFrame(Extent2D mainViewportSize, bool firstFrame);
 
@@ -123,8 +120,6 @@ private:
 
 private:
     std::string m_filePath {};
-
-    Registry& m_registry;
 
     Extent2D m_mainViewportSize {};
     Camera* m_currentMainCamera {};
