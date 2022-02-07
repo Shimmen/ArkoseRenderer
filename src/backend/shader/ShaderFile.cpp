@@ -20,7 +20,11 @@ ShaderFile::ShaderFile(std::string path, ShaderFileType type, std::initializer_l
     , m_defines(std::move(defines))
     , m_type(type)
 {
-    //m_defines_identifier = createIdentifierForDefines();
+    if (isRayTracingShaderFile()) {
+        // TODO: Maybe we should ask the backend what define we need here? But in a nicer way..
+        m_defines.push_back(ShaderDefine::makeSymbol("RAY_TRACING_BACKEND_RTX"));
+    }
+
     // Sort the list so we can assume that equivalent set of defines generates the same identifier
     std::sort(m_defines.begin(), m_defines.end(), [](const ShaderDefine& lhs, const ShaderDefine& rhs) {
         if (lhs.symbol == rhs.symbol) {
@@ -75,6 +79,20 @@ const std::string& ShaderFile::definesIdentifier() const
 ShaderFileType ShaderFile::type() const
 {
     return m_type;
+}
+
+bool ShaderFile::isRayTracingShaderFile() const
+{
+    switch (type()) {
+    case ShaderFileType::RTAnyHit:
+    case ShaderFileType::RTClosestHit:
+    case ShaderFileType::RTIntersection:
+    case ShaderFileType::RTMiss:
+    case ShaderFileType::RTRaygen:
+        return true;
+    default:
+        return false;
+    }
 }
 
 ShaderFileType ShaderFile::typeFromPath(const std::string& path)

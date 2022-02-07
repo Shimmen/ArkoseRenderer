@@ -1,9 +1,9 @@
 #version 460
-#extension GL_NV_ray_tracing : require
 
+#include <common/rayTracing.glsl>
 #include <ddgi/common.glsl>
 
-layout(location = 0) rayPayloadInNV RayPayload payload;
+layout(location = 0) rayPayloadIn RayPayload payload;
 
 void main()
 {

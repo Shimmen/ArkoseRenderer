@@ -1,12 +1,12 @@
 #version 460
-#extension GL_NV_ray_tracing : require
 
 #include <common/namedUniforms.glsl>
 #include <common/spherical.glsl>
+#include <common/rayTracing.glsl>
 #include <ddgi/common.glsl>
 #include <shared/CameraState.h>
 
-layout(set = 0, binding = 0) uniform accelerationStructureNV topLevelAS;
+layout(set = 0, binding = 0) uniform AccelerationStructure topLevelAS;
 layout(set = 0, binding = 1) uniform CameraStateBlock { CameraState camera; };
 layout(set = 0, binding = 2) uniform GridDataBlock { DDGIProbeGridData probeGridData; };
 layout(set = 0, binding = 3) uniform sampler2D environmentMap;
@@ -14,7 +14,7 @@ layout(set = 0, binding = 4, rgba16f) uniform image2D surfelImage;
 
 NAMED_UNIFORMS_STRUCT(RayTracingPushConstants, pushConstants)
 
-layout(location = 0) rayPayloadNV RayPayload payload;
+layout(location = 0) rayPayload RayPayload payload;
 
 struct HitResult {
     vec3 color;
@@ -31,10 +31,10 @@ HitResult tracePrimaryRay(vec3 origin, vec3 direction)
 
     // Opaque
     {
-        uint rayFlags = gl_RayFlagsOpaqueNV | gl_RayFlagsCullBackFacingTrianglesNV;
+        uint rayFlags = RayFlags_Opaque | RayFlags_CullBackFacingTriangles;
         uint cullMask = RT_HIT_MASK_OPAQUE;
 
-        traceNV(topLevelAS, rayFlags, cullMask, 0, 0, 0, origin, tmin, direction, tmax, 0);
+        traceRay(topLevelAS, rayFlags, cullMask, 0, 0, 0, origin, tmin, direction, tmax, 0);
         if (payload.hitT != HIT_T_MISS) {
             tmax = payload.hitT;
             color = payload.color;
@@ -44,10 +44,10 @@ HitResult tracePrimaryRay(vec3 origin, vec3 direction)
 
     // Masked (todo: also include alpha-translucents here, but treat them like masked)
     {
-        uint rayFlags = gl_RayFlagsNoOpaqueNV;
+        uint rayFlags = RayFlags_NoOpaque;
         uint cullMask = RT_HIT_MASK_MASKED;
 
-        traceNV(topLevelAS, rayFlags, cullMask, 0, 0, 0, origin, tmin, direction, tmax, 0);
+        traceRay(topLevelAS, rayFlags, cullMask, 0, 0, 0, origin, tmin, direction, tmax, 0);
         if (payload.hitT != HIT_T_MISS) {
             tmax = payload.hitT;
             color = payload.color;
@@ -100,13 +100,13 @@ vec3 evaluateIndirectLight(vec3 P, vec3 N, vec3 baseColor, float metallic, float
 
 void main()
 {
-    ivec2 targetPixel = ivec2(gl_LaunchIDNV.xy);
+    ivec2 targetPixel = ivec2(rt_LaunchID.xy);
 
     // TODO: We're "supposed" to report *negative* ray distance when we hit a backface, so that we can optimize probe offsets! We're not doing that yet though.
     //    see gl_HitKindFrontFacingTriangleNV & gl_HitKindBackFacingTriangleNV
 
-    uint probeIdx = gl_LaunchIDNV.x;
-    uint sampleIdx = gl_LaunchIDNV.y;
+    uint probeIdx = rt_LaunchID.x;
+    uint sampleIdx = rt_LaunchID.y;
     uint sampleCount = imageSize(surfelImage).y;
     HitResult probeSample = traceRayForProbe(probeIdx, sampleIdx, sampleCount);
 
@@ -119,8 +119,8 @@ void main()
 
 #if 0 // for debugging the ray tracing code and displaying it on a texture instead of rendering into the probes
 
-    const vec2 pixelCenter = vec2(gl_LaunchIDNV.xy) + vec2(0.5);
-    const vec2 inUV = pixelCenter / vec2(gl_LaunchSizeNV.xy);
+    const vec2 pixelCenter = vec2(rt_LaunchID.xy) + vec2(0.5);
+    const vec2 inUV = pixelCenter / vec2(rt_LaunchSize.xy);
     vec2 d = inUV * 2.0 - 1.0;
 
     vec4 origin = camera.worldFromView * vec4(0, 0, 0, 1);

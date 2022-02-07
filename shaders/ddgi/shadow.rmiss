@@ -1,7 +1,8 @@
 #version 460
-#extension GL_NV_ray_tracing : require
 
-layout(location = 1) rayPayloadInNV bool inShadow;
+#include <common/rayTracing.glsl>
+
+layout(location = 1) rayPayloadIn bool inShadow;
 
 void main()
 {

@@ -1,13 +1,13 @@
 #version 460
-#extension GL_NV_ray_tracing : require
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_EXT_scalar_block_layout : require
 
+#include <common/rayTracing.glsl>
 #include <ddgi/common.glsl>
 #include <shared/SceneData.h>
 
-layout(location = 0) rayPayloadNV RayPayload payload;
-hitAttributeNV vec3 attribs;
+layout(location = 0) rayPayload RayPayload payload;
+hitAttribute vec3 attribs;
 
 layout(set = 1, binding = 0, scalar) buffer readonly TriangleMeshes { RTTriangleMesh meshes[]; };
 layout(set = 1, binding = 1, scalar) buffer readonly Indices        { uint indices[]; };
@@ -18,7 +18,7 @@ layout(set = 2, binding = 1) uniform sampler2D textures[];
 
 void main()
 {
-	RTTriangleMesh mesh = meshes[gl_InstanceCustomIndexNV];
+	RTTriangleMesh mesh = meshes[rt_InstanceCustomIndex];
 	ShaderMaterial material = materials[mesh.materialIndex];
 
 	ivec3 idx = ivec3(indices[mesh.firstIndex + 3 * gl_PrimitiveID + 0],
@@ -35,6 +35,6 @@ void main()
 	float mask = texture(textures[material.baseColor], uv).a;
 
 	if (mask < material.maskCutoff) {
-		ignoreIntersectionNV();
+		ignoreIntersection();
 	}
 }

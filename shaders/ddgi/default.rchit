@@ -1,22 +1,22 @@
 #version 460
-#extension GL_NV_ray_tracing : require
 #extension GL_EXT_nonuniform_qualifier : require
 #extension GL_EXT_scalar_block_layout : require
 
 #include <common/brdf.glsl>
 #include <common/namedUniforms.glsl>
 #include <common/iesProfile.glsl>
+#include <common/rayTracing.glsl>
 #include <ddgi/common.glsl>
 #include <shared/CameraState.h>
 #include <shared/SceneData.h>
 #include <shared/LightData.h>
 
-layout(location = 0) rayPayloadInNV RayPayload payload;
-hitAttributeNV vec3 attribs;
+layout(location = 0) rayPayloadIn RayPayload payload;
+hitAttribute vec3 attribs;
 
-layout(location = 1) rayPayloadNV bool inShadow;
+layout(location = 1) rayPayload bool inShadow;
 
-layout(set = 0, binding = 0) uniform accelerationStructureNV topLevelAS;
+layout(set = 0, binding = 0) uniform AccelerationStructure topLevelAS;
 layout(set = 0, binding = 1) uniform CameraStateBlock { CameraState camera; };
 
 layout(set = 1, binding = 0, scalar) buffer readonly TriangleMeshes { RTTriangleMesh meshes[]; };
@@ -37,7 +37,7 @@ NAMED_UNIFORMS_STRUCT(RayTracingPushConstants, pushConstants)
 float traceShadowRay(vec3 X, vec3 L, float maxDistance)
 {
 	// NOTE: Yes, this means we treat all non-opaque geometry as opaque too. This is probably good enough for this use case.
-	uint flags = gl_RayFlagsTerminateOnFirstHitNV | gl_RayFlagsSkipClosestHitShaderNV | gl_RayFlagsOpaqueNV;
+	uint flags = RayFlags_TerminateOnFirstHit | RayFlags_SkipClosestHitShader | RayFlags_Opaque;
 	uint cullMask = 0xff;
 
 	const int shadowPayloadIdx = 1;
@@ -45,12 +45,12 @@ float traceShadowRay(vec3 X, vec3 L, float maxDistance)
 	// Assume we are in shadow, and if the shadow miss shader activates we are *not* in shadow
 	inShadow = true;
 
-	traceNV(topLevelAS, flags, cullMask,
-			0, // sbtRecordOffset
-			0, // sbtRecordStride
-			1, // missIndex
-			X, 0.025, L, maxDistance,
-			shadowPayloadIdx);
+	traceRay(topLevelAS, flags, cullMask,
+			 0, // sbtRecordOffset
+			 0, // sbtRecordStride
+			 1, // missIndex
+			 X, 0.025, L, maxDistance,
+			 shadowPayloadIdx);
 
 	return inShadow ? 0.0 : 1.0;
 }
@@ -62,7 +62,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
 
 	if (LdotN > 0.0) {
 
-		vec3 hitPoint = gl_WorldRayOriginNV + gl_HitTNV * gl_WorldRayDirectionNV;
+		vec3 hitPoint = rt_WorldRayOrigin + rt_RayHitT * rt_WorldRayDirection;
 		float shadowFactor = traceShadowRay(hitPoint, L, 2.0 * camera.far);
 
 		vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
@@ -81,7 +81,7 @@ vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, floa
 
 	if (LdotN > 0.0) {
 
-		vec3 hitPoint = gl_WorldRayOriginNV + gl_HitTNV * gl_WorldRayDirectionNV;
+		vec3 hitPoint = rt_WorldRayOrigin + rt_RayHitT * rt_WorldRayDirection;
 		vec3 toLight = light.worldSpacePosition.xyz - hitPoint;
 		float distanceToLight = length(toLight);
 
@@ -104,7 +104,7 @@ vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, floa
 
 void main()
 {
-	RTTriangleMesh mesh = meshes[gl_InstanceCustomIndexNV];
+	RTTriangleMesh mesh = meshes[rt_InstanceCustomIndex];
 	ShaderMaterial material = materials[mesh.materialIndex];
 
 	ivec3 idx = ivec3(indices[mesh.firstIndex + 3 * gl_PrimitiveID + 0],
@@ -118,7 +118,7 @@ void main()
 	const vec3 b = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
 	vec3 N = normalize(v0.normal.xyz * b.x + v1.normal.xyz * b.y + v2.normal.xyz * b.z);
-	mat3 normalMatrix = transpose(mat3(gl_WorldToObjectNV));
+	mat3 normalMatrix = transpose(mat3(rt_WorldToObject));
 	N = normalize(normalMatrix * N);
 
 	vec2 uv = v0.texCoord.xy * b.x + v1.texCoord.xy * b.y + v2.texCoord.xy * b.z;
@@ -130,7 +130,7 @@ void main()
 	float metallic = metallicRoughness.b;
 	float roughness = metallicRoughness.g;
 
-	vec3 V = -gl_WorldRayDirectionNV;
+	vec3 V = -rt_WorldRayDirection;
 
 	vec3 ambient = pushConstants.ambientAmount * baseColor;
 	vec3 color = emissive + ambient;
@@ -146,5 +146,5 @@ void main()
 	//payload.color = N * 0.5 + 0.5;
 	//payload.color = vec3(uv, 0.0);
 	payload.color = color;
-	payload.hitT = gl_HitTNV;
+	payload.hitT = rt_RayHitT;
 }

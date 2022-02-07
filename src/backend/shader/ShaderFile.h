@@ -55,6 +55,8 @@ struct ShaderFile {
     [[nodiscard]] const std::string& definesIdentifier() const;
     [[nodiscard]] ShaderFileType type() const;
 
+    bool isRayTracingShaderFile() const;
+
 private:
     static ShaderFileType typeFromPath(const std::string&);
 
