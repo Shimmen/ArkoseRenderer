@@ -1,6 +1,8 @@
 #ifndef RTX_RAY_TRACING_GLSL
 #define RTX_RAY_TRACING_GLSL
 
+// https://github.com/KhronosGroup/GLSL/blob/master/extensions/nv/GLSL_NV_ray_tracing.txt
+
 #extension GL_NV_ray_tracing : require
 
 // Common types
@@ -15,11 +17,15 @@
 
 // Ray flags
 
+#define RayFlags_None gl_RayFlagsNoneNV
 #define RayFlags_Opaque gl_RayFlagsOpaqueNV
 #define RayFlags_NoOpaque gl_RayFlagsNoOpaqueNV
-#define RayFlags_CullBackFacingTriangles gl_RayFlagsCullBackFacingTrianglesNV
 #define RayFlags_TerminateOnFirstHit gl_RayFlagsTerminateOnFirstHitNV
 #define RayFlags_SkipClosestHitShader gl_RayFlagsSkipClosestHitShaderNV
+#define RayFlags_CullBackFacingTriangles gl_RayFlagsCullBackFacingTrianglesNV
+#define RayFlags_CullFrontFacingTriangles gl_RayFlagsCullFrontFacingTrianglesNV
+#define RayFlags_CullOpaque gl_RayFlagsCullOpaqueNV
+#define RayFlags_CullNoOpaque gl_RayFlagsCullNoOpaqueNV
 
 // Common globals (prefixed with rt_)
 
