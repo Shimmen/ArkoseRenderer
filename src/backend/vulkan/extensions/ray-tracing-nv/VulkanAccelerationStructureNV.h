@@ -5,10 +5,10 @@
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
-struct VulkanTopLevelAS final : public TopLevelAS {
+struct VulkanTopLevelASNV final : public TopLevelAS {
 public:
-    VulkanTopLevelAS(Backend&, uint32_t maxInstanceCount, std::vector<RTGeometryInstance>);
-    virtual ~VulkanTopLevelAS() override;
+    VulkanTopLevelASNV(Backend&, uint32_t maxInstanceCount, std::vector<RTGeometryInstance>);
+    virtual ~VulkanTopLevelASNV() override;
 
     virtual void setName(const std::string& name) override;
 
@@ -30,10 +30,10 @@ public:
     std::unique_ptr<Buffer> instanceBuffer {};
 };
 
-struct VulkanBottomLevelAS final : public BottomLevelAS {
+struct VulkanBottomLevelASNV final : public BottomLevelAS {
 public:
-    VulkanBottomLevelAS(Backend&, std::vector<RTGeometry>);
-    virtual ~VulkanBottomLevelAS() override;
+    VulkanBottomLevelASNV(Backend&, std::vector<RTGeometry>);
+    virtual ~VulkanBottomLevelASNV() override;
 
     virtual void setName(const std::string& name) override;
 

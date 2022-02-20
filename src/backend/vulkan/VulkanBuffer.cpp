@@ -134,7 +134,7 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
         break;
     case Buffer::Usage::RTInstanceBuffer:
         switch (vulkanBackend.rayTracingBackend()) {
-        case VulkanBackend::RayTracingBackend::RtxExtension:
+        case VulkanBackend::RayTracingBackend::NvExtension:
             usageFlags |= VK_BUFFER_USAGE_RAY_TRACING_BIT_NV;
             break;
         case VulkanBackend::RayTracingBackend::KhrExtension:
@@ -164,7 +164,7 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
     // Make vertex & index buffers also be usable in ray tracing acceleration structures
     if (usage() == Buffer::Usage::Vertex || usage() == Buffer::Usage::Index) {
         switch (vulkanBackend.rayTracingBackend()) {
-        case VulkanBackend::RayTracingBackend::RtxExtension:
+        case VulkanBackend::RayTracingBackend::NvExtension:
             usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
             break;
         case VulkanBackend::RayTracingBackend::KhrExtension:

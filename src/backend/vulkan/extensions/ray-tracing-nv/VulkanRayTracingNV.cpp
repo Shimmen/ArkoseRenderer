@@ -1,10 +1,10 @@
-#include "VulkanRTX.h"
+#include "VulkanRayTracingNV.h"
 
 #include "backend/vulkan/VulkanBackend.h"
 #include "utility/Logging.h"
 #include <vector>
 
-VulkanRTX::VulkanRTX(VulkanBackend& backend, VkPhysicalDevice physicalDevice, VkDevice device)
+VulkanRayTracingNV::VulkanRayTracingNV(VulkanBackend& backend, VkPhysicalDevice physicalDevice, VkDevice device)
     : m_backend(backend)
     , m_physicalDevice(physicalDevice)
     , m_device(device)
@@ -26,22 +26,22 @@ VulkanRTX::VulkanRTX(VulkanBackend& backend, VkPhysicalDevice physicalDevice, Vk
     vkCmdTraceRaysNV = reinterpret_cast<PFN_vkCmdTraceRaysNV>(vkGetDeviceProcAddr(m_device, "vkCmdTraceRaysNV"));
 }
 
-const VkPhysicalDeviceRayTracingPropertiesNV& VulkanRTX::properties() const
+const VkPhysicalDeviceRayTracingPropertiesNV& VulkanRayTracingNV::properties() const
 {
     return m_rayTracingProperties;
 }
 
-std::vector<VulkanRTX::GeometryInstance> VulkanRTX::createInstanceData(const std::vector<RTGeometryInstance>& instances) const
+std::vector<VulkanRayTracingNV::GeometryInstance> VulkanRayTracingNV::createInstanceData(const std::vector<RTGeometryInstance>& instances) const
 {
-    std::vector<VulkanRTX::GeometryInstance> instanceData {};
+    std::vector<VulkanRayTracingNV::GeometryInstance> instanceData {};
 
     for (size_t instanceIdx = 0; instanceIdx < instances.size(); ++instanceIdx) {
         auto& instance = instances[instanceIdx];
-        VulkanRTX::GeometryInstance data {};
+        VulkanRayTracingNV::GeometryInstance data {};
 
         data.transform = transpose(instance.transform.worldMatrix());
 
-        auto& vulkanBlas = static_cast<const VulkanBottomLevelAS&>(instance.blas);
+        auto& vulkanBlas = static_cast<const VulkanBottomLevelASNV&>(instance.blas);
         data.accelerationStructureHandle = vulkanBlas.handle;
 
         // TODO: We already have gl_InstanceID for this running index, and this sets gl_InstanceCustomIndexNV.
@@ -59,7 +59,7 @@ std::vector<VulkanRTX::GeometryInstance> VulkanRTX::createInstanceData(const std
     return instanceData;
 }
 
-VkBuffer VulkanRTX::createScratchBufferForAccelerationStructure(VkAccelerationStructureNV accelerationStructure, bool updateInPlace, VmaAllocation& allocation) const
+VkBuffer VulkanRayTracingNV::createScratchBufferForAccelerationStructure(VkAccelerationStructureNV accelerationStructure, bool updateInPlace, VmaAllocation& allocation) const
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 

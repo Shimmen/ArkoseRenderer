@@ -135,9 +135,9 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
 
     if (hasActiveCapability(Backend::Capability::RayTracing)) {
         switch (rayTracingBackend()) {
-        case RayTracingBackend::RtxExtension:
-            m_rayTracingRtx = std::make_unique<VulkanRTX>(*this, physicalDevice(), device());
-            LogInfo("VulkanBackend: using RTX ray tracing backend\n");
+        case RayTracingBackend::NvExtension:
+            m_rayTracingNv = std::make_unique<VulkanRayTracingNV>(*this, physicalDevice(), device());
+            LogInfo("VulkanBackend: using NV ray tracing backend\n");
             break;
         case RayTracingBackend::KhrExtension:
             m_rayTracingKhr = std::make_unique<VulkanRayTracingKHR>(*this, physicalDevice(), device());
@@ -169,7 +169,7 @@ VulkanBackend::~VulkanBackend()
     // Before destroying stuff, make sure we're done with all scheduled work
     shutdown();
 
-    m_rayTracingRtx.reset();
+    m_rayTracingNv.reset();
     m_rayTracingKhr.reset();
 
     m_pipelineRegistry.reset();
@@ -267,7 +267,7 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
     auto isSupported = [&](Capability capability) -> bool {
         switch (capability) {
         case Capability::RayTracing: {
-            bool nvidiaRtxSupport = hasSupportForExtension(VK_NV_RAY_TRACING_EXTENSION_NAME);
+            bool nvidiaRayTracingSupport = hasSupportForExtension(VK_NV_RAY_TRACING_EXTENSION_NAME);
             bool khrRayTracingSupport =
                 hasSupportForExtension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
                     && khrRayTracingPipelineFeatures.rayTracingPipeline
@@ -287,19 +287,19 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
             // Prefer KHR
             if (khrRayTracingSupport) {
                 m_rayTracingBackend = RayTracingBackend::KhrExtension;
-            } else if (nvidiaRtxSupport) {
-                m_rayTracingBackend = RayTracingBackend::RtxExtension;
+            } else if (nvidiaRayTracingSupport) {
+                m_rayTracingBackend = RayTracingBackend::NvExtension;
             }
 #else
-            // Prefer RTX (for now!)
-            if (nvidiaRtxSupport) {
-                m_rayTracingBackend = RayTracingBackend::RtxExtension;
+            // Prefer NV (for now!)
+            if (nvidiaRayTracingSupport) {
+                m_rayTracingBackend = RayTracingBackend::NvExtension;
             } else if (khrRayTracingSupport) {
                 m_rayTracingBackend = RayTracingBackend::KhrExtension;
             }
 #endif
 
-            return nvidiaRtxSupport || khrRayTracingSupport; 
+            return nvidiaRayTracingSupport || khrRayTracingSupport; 
         }
         case Capability::Shader16BitFloat:
             return vk11features.storageBuffer16BitAccess
@@ -373,8 +373,8 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
 ShaderDefine VulkanBackend::rayTracingShaderDefine() const
 {
     switch (rayTracingBackend()) {
-    case RayTracingBackend::RtxExtension:
-        return ShaderDefine::makeSymbol("RAY_TRACING_BACKEND_RTX");
+    case RayTracingBackend::NvExtension:
+        return ShaderDefine::makeSymbol("RAY_TRACING_BACKEND_NV");
     case RayTracingBackend::KhrExtension:
         return ShaderDefine::makeSymbol("RAY_TRACING_BACKEND_KHR");
     }
@@ -415,8 +415,8 @@ std::unique_ptr<BottomLevelAS> VulkanBackend::createBottomLevelAccelerationStruc
     switch (rayTracingBackend()) {
     case RayTracingBackend::KhrExtension:
         return std::make_unique<VulkanBottomLevelASKHR>(*this, geometries);
-    case RayTracingBackend::RtxExtension:
-        return std::make_unique<VulkanBottomLevelAS>(*this, geometries);
+    case RayTracingBackend::NvExtension:
+        return std::make_unique<VulkanBottomLevelASNV>(*this, geometries);
     default:
         ASSERT_NOT_REACHED();
     }
@@ -427,8 +427,8 @@ std::unique_ptr<TopLevelAS> VulkanBackend::createTopLevelAccelerationStructure(u
     switch (rayTracingBackend()) {
     case RayTracingBackend::KhrExtension:
         return std::make_unique<VulkanTopLevelASKHR>(*this, maxInstanceCount, initialInstances);
-    case RayTracingBackend::RtxExtension:
-        return std::make_unique<VulkanTopLevelAS>(*this, maxInstanceCount, initialInstances);
+    case RayTracingBackend::NvExtension:
+        return std::make_unique<VulkanTopLevelASNV>(*this, maxInstanceCount, initialInstances);
     default:
         ASSERT_NOT_REACHED();
     }
@@ -439,8 +439,8 @@ std::unique_ptr<RayTracingState> VulkanBackend::createRayTracingState(ShaderBind
     switch (rayTracingBackend()) {
     case RayTracingBackend::KhrExtension:
         return std::make_unique<VulkanRayTracingStateKHR>(*this, sbt, stateBindings, maxRecursionDepth);
-    case RayTracingBackend::RtxExtension:
-        return std::make_unique<VulkanRayTracingState>(*this, sbt, stateBindings, maxRecursionDepth);
+    case RayTracingBackend::NvExtension:
+        return std::make_unique<VulkanRayTracingStateNV>(*this, sbt, stateBindings, maxRecursionDepth);
     default:
         ASSERT_NOT_REACHED();
     }
@@ -683,7 +683,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
         switch (capability) {
         case Capability::RayTracing:
             switch (rayTracingBackend()) {
-            case RayTracingBackend::RtxExtension:
+            case RayTracingBackend::NvExtension:
                 deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
                 break;
             case RayTracingBackend::KhrExtension:

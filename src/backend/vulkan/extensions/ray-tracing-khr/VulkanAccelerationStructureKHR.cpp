@@ -54,12 +54,12 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
 
     uint32_t maxInstanceCnt = this->maxInstanceCount();
     VkAccelerationStructureBuildSizesInfoKHR buildSizesInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
-    vulkanBackend.rayTracing().vkGetAccelerationStructureBuildSizesKHR(vulkanBackend.device(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &initialBuildInfo, &maxInstanceCnt, &buildSizesInfo);
+    vulkanBackend.rayTracingKHR().vkGetAccelerationStructureBuildSizesKHR(vulkanBackend.device(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &initialBuildInfo, &maxInstanceCnt, &buildSizesInfo);
     ASSERT(buildSizesInfo.buildScratchSize <= VulkanRayTracingKHR::SharedScratchBufferSize);
     ASSERT(buildSizesInfo.updateScratchSize <= VulkanRayTracingKHR::SharedScratchBufferSize);
 
     VkDeviceSize accelerationStructureBufferSize = buildSizesInfo.accelerationStructureSize; // (use min required size)
-    accelerationStructureBufferAndAllocation = vulkanBackend.rayTracing().createAccelerationStructureBuffer(accelerationStructureBufferSize, true, false);
+    accelerationStructureBufferAndAllocation = vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(accelerationStructureBufferSize, true, false);
     VkBuffer accelerationStructureBuffer = accelerationStructureBufferAndAllocation.first;
     
     VkAccelerationStructureCreateInfoKHR accelerationStructureCreateInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
@@ -68,13 +68,13 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
     accelerationStructureCreateInfo.size = accelerationStructureBufferSize;
     accelerationStructureCreateInfo.offset = 0;
 
-    if (vulkanBackend.rayTracing().vkCreateAccelerationStructureKHR(vulkanBackend.device(), &accelerationStructureCreateInfo, nullptr, &accelerationStructure) != VK_SUCCESS) {
+    if (vulkanBackend.rayTracingKHR().vkCreateAccelerationStructureKHR(vulkanBackend.device(), &accelerationStructureCreateInfo, nullptr, &accelerationStructure) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to create top level acceleration structure\n");
     }
 
     VkAccelerationStructureDeviceAddressInfoKHR accelerationStructureDeviceAddressInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
     accelerationStructureDeviceAddressInfo.accelerationStructure = accelerationStructure;
-    accelerationStructureDeviceAddress = vulkanBackend.rayTracing().vkGetAccelerationStructureDeviceAddressKHR(vulkanBackend.device(), &accelerationStructureDeviceAddressInfo);
+    accelerationStructureDeviceAddress = vulkanBackend.rayTracingKHR().vkGetAccelerationStructureDeviceAddressKHR(vulkanBackend.device(), &accelerationStructureDeviceAddressInfo);
 
     bool buildSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer cmdBuffer) {
         build(cmdBuffer, BuildType::BuildInitial);
@@ -90,7 +90,7 @@ VulkanTopLevelASKHR::~VulkanTopLevelASKHR()
         return;
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
-    vulkanBackend.rayTracing().vkDestroyAccelerationStructureKHR(vulkanBackend.device(), accelerationStructure, nullptr);
+    vulkanBackend.rayTracingKHR().vkDestroyAccelerationStructureKHR(vulkanBackend.device(), accelerationStructure, nullptr);
 
     vmaDestroyBuffer(vulkanBackend.globalAllocator(), accelerationStructureBufferAndAllocation.first, accelerationStructureBufferAndAllocation.second);
 }
@@ -153,13 +153,13 @@ void VulkanTopLevelASKHR::build(VkCommandBuffer commandBuffer, BuildType buildTy
     // TODO: Ensure we can safely use this scrash buffer! Maybe we need to use something like the UploadBuffer for this? As long as we only have a single TLAS this is fine though..
     // TODO: Ensure we can safely use this scrash buffer! Maybe we need to use something like the UploadBuffer for this? As long as we only have a single TLAS this is fine though..
     // TODO: Ensure we can safely use this scrash buffer! Maybe we need to use something like the UploadBuffer for this? As long as we only have a single TLAS this is fine though..
-    buildInfo.scratchData.deviceAddress = vulkanBackend.rayTracing().sharedScratchBufferDeviceAddress();
+    buildInfo.scratchData.deviceAddress = vulkanBackend.rayTracingKHR().sharedScratchBufferDeviceAddress();
 
     VkAccelerationStructureBuildRangeInfoKHR rangeInfo { 0, 0, 0, 0 };
     rangeInfo.primitiveCount = instanceCount();
 
     VkAccelerationStructureBuildRangeInfoKHR* rangeInfosData = &rangeInfo;
-    vulkanBackend.rayTracing().vkCmdBuildAccelerationStructuresKHR(commandBuffer, 1, &buildInfo, &rangeInfosData);
+    vulkanBackend.rayTracingKHR().vkCmdBuildAccelerationStructuresKHR(commandBuffer, 1, &buildInfo, &rangeInfosData);
 
     VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
     barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
@@ -192,7 +192,7 @@ std::vector<VkAccelerationStructureInstanceKHR> VulkanTopLevelASKHR::createInsta
         ASSERT(blas != nullptr); // ensure we do in face have a KHR version here
 
         VkAccelerationStructureInstanceKHR vkInstance {};
-        vkInstance.transform = vulkanBackend.rayTracing().toVkTransformMatrixKHR(instance.transform.worldMatrix());
+        vkInstance.transform = vulkanBackend.rayTracingKHR().toVkTransformMatrixKHR(instance.transform.worldMatrix());
         vkInstance.instanceCustomIndex = instanceIdx; // NOTE: This is gl_InstanceCustomIndexEXT, we should be smarter about this..
         vkInstance.accelerationStructureReference = blas->accelerationStructureDeviceAddress;
         vkInstance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
@@ -230,7 +230,7 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
         }
 
         size_t totalSize = transforms.size() * singleTransformSize;
-        transformBufferAndAllocation = vulkanBackend.rayTracing().createAccelerationStructureBuffer(totalSize, false, true); // TODO: Can this really be read-only?
+        transformBufferAndAllocation = vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(totalSize, false, true); // TODO: Can this really be read-only?
 
         if (!vulkanBackend.setBufferMemoryUsingMapping(transformBufferAndAllocation.second, (uint8_t*)transforms.data(), totalSize)) {
             LogErrorAndExit("Error trying to copy data to the bottom level acceeration structure transform buffer.\n");
@@ -352,10 +352,10 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
     previewBuildInfo.pGeometries = vkGeometries.data();
 
     VkAccelerationStructureBuildSizesInfoKHR buildSizesInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
-    vulkanBackend.rayTracing().vkGetAccelerationStructureBuildSizesKHR(vulkanBackend.device(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &previewBuildInfo, maxPrimitiveCounts.data(), &buildSizesInfo);
+    vulkanBackend.rayTracingKHR().vkGetAccelerationStructureBuildSizesKHR(vulkanBackend.device(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &previewBuildInfo, maxPrimitiveCounts.data(), &buildSizesInfo);
 
     VkDeviceSize accelerationStructureBufferSize = buildSizesInfo.accelerationStructureSize; // (use min required size)
-    auto accelerationStructureBufferAndAllocation = vulkanBackend.rayTracing().createAccelerationStructureBuffer(accelerationStructureBufferSize, true, false);
+    auto accelerationStructureBufferAndAllocation = vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(accelerationStructureBufferSize, true, false);
     VkBuffer accelerationStructureBuffer = accelerationStructureBufferAndAllocation.first;
 
     VkAccelerationStructureCreateInfoKHR accelerationStructureCreateInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
@@ -364,24 +364,24 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
     accelerationStructureCreateInfo.size = accelerationStructureBufferSize;
     accelerationStructureCreateInfo.offset = 0;
 
-    if (vulkanBackend.rayTracing().vkCreateAccelerationStructureKHR(vulkanBackend.device(), &accelerationStructureCreateInfo, nullptr, &accelerationStructure) != VK_SUCCESS) {
+    if (vulkanBackend.rayTracingKHR().vkCreateAccelerationStructureKHR(vulkanBackend.device(), &accelerationStructureCreateInfo, nullptr, &accelerationStructure) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to create bottom level acceleration structure\n");
     }
 
     VkAccelerationStructureDeviceAddressInfoKHR accelerationStructureDeviceAddressInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
     accelerationStructureDeviceAddressInfo.accelerationStructure = accelerationStructure;
-    accelerationStructureDeviceAddress = vulkanBackend.rayTracing().vkGetAccelerationStructureDeviceAddressKHR(vulkanBackend.device(), &accelerationStructureDeviceAddressInfo);
+    accelerationStructureDeviceAddress = vulkanBackend.rayTracingKHR().vkGetAccelerationStructureDeviceAddressKHR(vulkanBackend.device(), &accelerationStructureDeviceAddressInfo);
 
     VkAccelerationStructureBuildGeometryInfoKHR buildInfo = previewBuildInfo;
     buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
     buildInfo.dstAccelerationStructure = accelerationStructure;
 
     ASSERT(buildSizesInfo.buildScratchSize <= VulkanRayTracingKHR::SharedScratchBufferSize);
-    buildInfo.scratchData.deviceAddress = vulkanBackend.rayTracing().sharedScratchBufferDeviceAddress();
+    buildInfo.scratchData.deviceAddress = vulkanBackend.rayTracingKHR().sharedScratchBufferDeviceAddress();
 
     VkAccelerationStructureBuildRangeInfoKHR* rangeInfosData = rangeInfos.data();
     bool buildSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer cmdBuffer) {
-        vulkanBackend.rayTracing().vkCmdBuildAccelerationStructuresKHR(cmdBuffer, 1, &buildInfo, &rangeInfosData);
+        vulkanBackend.rayTracingKHR().vkCmdBuildAccelerationStructuresKHR(cmdBuffer, 1, &buildInfo, &rangeInfosData);
     });
     if (!buildSuccess) {
         LogErrorAndExit("Error trying to build bottom level acceleration structure\n");
@@ -399,7 +399,7 @@ VulkanBottomLevelASKHR::~VulkanBottomLevelASKHR()
         return;
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
-    vulkanBackend.rayTracing().vkDestroyAccelerationStructureKHR(vulkanBackend.device(), accelerationStructure, nullptr);
+    vulkanBackend.rayTracingKHR().vkDestroyAccelerationStructureKHR(vulkanBackend.device(), accelerationStructure, nullptr);
 
     for (auto& [buffer, allocation] : associatedBuffers) {
         vmaDestroyBuffer(vulkanBackend.globalAllocator(), buffer, allocation);

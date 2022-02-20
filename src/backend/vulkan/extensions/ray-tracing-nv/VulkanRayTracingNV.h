@@ -7,9 +7,9 @@
 
 class VulkanBackend;
 
-class VulkanRTX {
+class VulkanRayTracingNV {
 public:
-    VulkanRTX(VulkanBackend&, VkPhysicalDevice, VkDevice);
+    VulkanRayTracingNV(VulkanBackend&, VkPhysicalDevice, VkDevice);
 
     PFN_vkCreateAccelerationStructureNV vkCreateAccelerationStructureNV { nullptr };
     PFN_vkDestroyAccelerationStructureNV vkDestroyAccelerationStructureNV { nullptr };

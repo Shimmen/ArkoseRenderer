@@ -5,7 +5,7 @@
 #include "backend/vulkan/VulkanResources.h"
 #include "backend/vulkan/extensions/VulkanDebugUtils.h"
 #include "backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.h"
-#include "backend/vulkan/extensions/VulkanRTX.h"
+#include "backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingNV.h"
 #include "rendering/App.h"
 #include "utility/AvgElapsedTimer.h"
 #include <array>
@@ -68,32 +68,32 @@ public:
 
     enum class RayTracingBackend {
         None,
-        RtxExtension,
+        NvExtension,
         KhrExtension,
     };
 
     RayTracingBackend rayTracingBackend() const { return m_rayTracingBackend; }
     bool hasRayTracingSupport() const { return rayTracingBackend() != RayTracingBackend::None; }
 
-    VulkanRTX& rtx()
+    VulkanRayTracingNV& rayTracingNV()
     {
-        ASSERT(m_rayTracingBackend == RayTracingBackend::RtxExtension && m_rayTracingRtx);
-        return *m_rayTracingRtx;
+        ASSERT(m_rayTracingBackend == RayTracingBackend::NvExtension && m_rayTracingNv);
+        return *m_rayTracingNv;
     }
 
-    const VulkanRTX& rtx() const
+    const VulkanRayTracingNV& rayTracingNV() const
     {
-        ASSERT(m_rayTracingBackend == RayTracingBackend::RtxExtension && m_rayTracingRtx);
-        return *m_rayTracingRtx;
+        ASSERT(m_rayTracingBackend == RayTracingBackend::NvExtension && m_rayTracingNv);
+        return *m_rayTracingNv;
     }
 
-    VulkanRayTracingKHR& rayTracing()
+    VulkanRayTracingKHR& rayTracingKHR()
     {
         ASSERT(m_rayTracingBackend == RayTracingBackend::KhrExtension && m_rayTracingKhr);
         return *m_rayTracingKhr;
     }
 
-    const VulkanRayTracingKHR& rayTracing() const
+    const VulkanRayTracingKHR& rayTracingKHR() const
     {
         ASSERT(m_rayTracingBackend == RayTracingBackend::KhrExtension && m_rayTracingKhr);
         return *m_rayTracingKhr;
@@ -274,7 +274,7 @@ private:
     /// Sub-systems / extensions
 
     RayTracingBackend m_rayTracingBackend { RayTracingBackend::None };
-    std::unique_ptr<VulkanRTX> m_rayTracingRtx {};
+    std::unique_ptr<VulkanRayTracingNV> m_rayTracingNv {};
     std::unique_ptr<VulkanRayTracingKHR> m_rayTracingKhr {};
 
     std::unique_ptr<VulkanDebugUtils> m_debugUtils {};

@@ -1,9 +1,9 @@
-#include "VulkanAccelerationStructure.h"
+#include "VulkanAccelerationStructureNV.h"
 
 #include "backend/vulkan/VulkanBackend.h"
 #include "backend/shader/ShaderManager.h"
 
-VulkanTopLevelAS::VulkanTopLevelAS(Backend& backend, uint32_t maxInstanceCount, std::vector<RTGeometryInstance> initialInstances)
+VulkanTopLevelASNV::VulkanTopLevelASNV(Backend& backend, uint32_t maxInstanceCount, std::vector<RTGeometryInstance> initialInstances)
     : TopLevelAS(backend, maxInstanceCount)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
@@ -24,7 +24,7 @@ VulkanTopLevelAS::VulkanTopLevelAS(Backend& backend, uint32_t maxInstanceCount, 
 
     VkAccelerationStructureCreateInfoNV accelerationStructureCreateInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_NV };
     accelerationStructureCreateInfo.info = accelerationStructureInfo;
-    if (vulkanBackend.rtx().vkCreateAccelerationStructureNV(vulkanBackend.device(), &accelerationStructureCreateInfo, nullptr, &accelerationStructure) != VK_SUCCESS) {
+    if (vulkanBackend.rayTracingNV().vkCreateAccelerationStructureNV(vulkanBackend.device(), &accelerationStructureCreateInfo, nullptr, &accelerationStructure) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to create top level acceleration structure\n");
     }
 
@@ -32,7 +32,7 @@ VulkanTopLevelAS::VulkanTopLevelAS(Backend& backend, uint32_t maxInstanceCount, 
     memoryRequirementsInfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_NV;
     memoryRequirementsInfo.accelerationStructure = accelerationStructure;
     VkMemoryRequirements2 memoryRequirements2 {};
-    vulkanBackend.rtx().vkGetAccelerationStructureMemoryRequirementsNV(vulkanBackend.device(), &memoryRequirementsInfo, &memoryRequirements2);
+    vulkanBackend.rayTracingNV().vkGetAccelerationStructureMemoryRequirementsNV(vulkanBackend.device(), &memoryRequirementsInfo, &memoryRequirements2);
 
     VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
     memoryAllocateInfo.allocationSize = memoryRequirements2.memoryRequirements.size;
@@ -44,20 +44,20 @@ VulkanTopLevelAS::VulkanTopLevelAS(Backend& backend, uint32_t maxInstanceCount, 
     VkBindAccelerationStructureMemoryInfoNV accelerationStructureMemoryInfo { VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV };
     accelerationStructureMemoryInfo.accelerationStructure = accelerationStructure;
     accelerationStructureMemoryInfo.memory = memory;
-    if (vulkanBackend.rtx().vkBindAccelerationStructureMemoryNV(vulkanBackend.device(), 1, &accelerationStructureMemoryInfo) != VK_SUCCESS) {
+    if (vulkanBackend.rayTracingNV().vkBindAccelerationStructureMemoryNV(vulkanBackend.device(), 1, &accelerationStructureMemoryInfo) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to bind memory to acceleration structure\n");
     }
 
-    if (vulkanBackend.rtx().vkGetAccelerationStructureHandleNV(vulkanBackend.device(), accelerationStructure, sizeof(uint64_t), &handle) != VK_SUCCESS) {
+    if (vulkanBackend.rayTracingNV().vkGetAccelerationStructureHandleNV(vulkanBackend.device(), accelerationStructure, sizeof(uint64_t), &handle) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to get acceleration structure handle\n");
     }
 
-    size_t instanceBufferSize = this->maxInstanceCount() * sizeof(VulkanRTX::GeometryInstance);
+    size_t instanceBufferSize = this->maxInstanceCount() * sizeof(VulkanRayTracingNV::GeometryInstance);
     instanceBuffer = vulkanBackend.createBuffer(instanceBufferSize, Buffer::Usage::RTInstanceBuffer, Buffer::MemoryHint::GpuOptimal);
 
     updateCurrentInstanceCount(static_cast<uint32_t>(initialInstances.size()));
-    auto initialInstanceData = vulkanBackend.rtx().createInstanceData(initialInstances);
-    instanceBuffer->updateData(initialInstanceData.data(), initialInstanceData.size() * sizeof(VulkanRTX::GeometryInstance));
+    auto initialInstanceData = vulkanBackend.rayTracingNV().createInstanceData(initialInstances);
+    instanceBuffer->updateData(initialInstanceData.data(), initialInstanceData.size() * sizeof(VulkanRayTracingNV::GeometryInstance));
 
     bool buildSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
         build(commandBuffer, BuildType::BuildInitial);
@@ -67,17 +67,17 @@ VulkanTopLevelAS::VulkanTopLevelAS(Backend& backend, uint32_t maxInstanceCount, 
     }
 }
 
-VulkanTopLevelAS::~VulkanTopLevelAS()
+VulkanTopLevelASNV::~VulkanTopLevelASNV()
 {
     if (!hasBackend())
         return;
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
-    vulkanBackend.rtx().vkDestroyAccelerationStructureNV(vulkanBackend.device(), accelerationStructure, nullptr);
+    vulkanBackend.rayTracingNV().vkDestroyAccelerationStructureNV(vulkanBackend.device(), accelerationStructure, nullptr);
     vkFreeMemory(vulkanBackend.device(), memory, nullptr);
 }
 
-void VulkanTopLevelAS::setName(const std::string& name)
+void VulkanTopLevelASNV::setName(const std::string& name)
 {
     Resource::setName(name);
 
@@ -95,7 +95,7 @@ void VulkanTopLevelAS::setName(const std::string& name)
     }
 }
 
-void VulkanTopLevelAS::build(VkCommandBuffer commandBuffer, BuildType buildType)
+void VulkanTopLevelASNV::build(VkCommandBuffer commandBuffer, BuildType buildType)
 {
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
@@ -113,8 +113,8 @@ void VulkanTopLevelAS::build(VkCommandBuffer commandBuffer, BuildType buildType)
 
     switch (buildType) {
     case BuildType::BuildInitial:
-        scratchBuffer= vulkanBackend.rtx().createScratchBufferForAccelerationStructure(accelerationStructure, false, scratchAllocation);
-        vulkanBackend.rtx().vkCmdBuildAccelerationStructureNV(
+        scratchBuffer= vulkanBackend.rayTracingNV().createScratchBufferForAccelerationStructure(accelerationStructure, false, scratchAllocation);
+        vulkanBackend.rayTracingNV().vkCmdBuildAccelerationStructureNV(
             commandBuffer,
             &buildInfo,
             vkInstanceBuffer, 0,
@@ -124,8 +124,8 @@ void VulkanTopLevelAS::build(VkCommandBuffer commandBuffer, BuildType buildType)
             scratchBuffer, 0);
         break;
     case BuildType::UpdateInPlace:
-        scratchBuffer = vulkanBackend.rtx().createScratchBufferForAccelerationStructure(accelerationStructure, true, scratchAllocation);
-        vulkanBackend.rtx().vkCmdBuildAccelerationStructureNV(
+        scratchBuffer = vulkanBackend.rayTracingNV().createScratchBufferForAccelerationStructure(accelerationStructure, true, scratchAllocation);
+        vulkanBackend.rayTracingNV().vkCmdBuildAccelerationStructureNV(
             commandBuffer,
             &buildInfo,
             vkInstanceBuffer, 0,
@@ -151,15 +151,15 @@ void VulkanTopLevelAS::build(VkCommandBuffer commandBuffer, BuildType buildType)
     vmaDestroyBuffer(vulkanBackend.globalAllocator(), scratchBuffer, scratchAllocation);
 }
 
-void VulkanTopLevelAS::updateInstanceDataWithUploadBuffer(const std::vector<RTGeometryInstance>& newInstances, UploadBuffer& uploadBuffer)
+void VulkanTopLevelASNV::updateInstanceDataWithUploadBuffer(const std::vector<RTGeometryInstance>& newInstances, UploadBuffer& uploadBuffer)
 {
     updateCurrentInstanceCount(static_cast<uint32_t>(newInstances.size()));
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
-    auto updatedInstanceData = vulkanBackend.rtx().createInstanceData(newInstances);
+    auto updatedInstanceData = vulkanBackend.rayTracingNV().createInstanceData(newInstances);
     uploadBuffer.upload(updatedInstanceData, *instanceBuffer);
 }
 
-VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometry> geos)
+VulkanBottomLevelASNV::VulkanBottomLevelASNV(Backend& backend, std::vector<RTGeometry> geos)
     : BottomLevelAS(backend, std::move(geos))
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
@@ -282,7 +282,7 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
 
     VkAccelerationStructureCreateInfoNV accelerationStructureCreateInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_NV };
     accelerationStructureCreateInfo.info = accelerationStructureInfo;
-    if (vulkanBackend.rtx().vkCreateAccelerationStructureNV(vulkanBackend.device(), &accelerationStructureCreateInfo, nullptr, &accelerationStructure) != VK_SUCCESS) {
+    if (vulkanBackend.rayTracingNV().vkCreateAccelerationStructureNV(vulkanBackend.device(), &accelerationStructureCreateInfo, nullptr, &accelerationStructure) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to create bottom level acceleration structure\n");
     }
 
@@ -290,7 +290,7 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
     memoryRequirementsInfo.type = VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_OBJECT_NV;
     memoryRequirementsInfo.accelerationStructure = accelerationStructure;
     VkMemoryRequirements2 memoryRequirements2 {};
-    vulkanBackend.rtx().vkGetAccelerationStructureMemoryRequirementsNV(vulkanBackend.device(), &memoryRequirementsInfo, &memoryRequirements2);
+    vulkanBackend.rayTracingNV().vkGetAccelerationStructureMemoryRequirementsNV(vulkanBackend.device(), &memoryRequirementsInfo, &memoryRequirements2);
 
     VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
     memoryAllocateInfo.allocationSize = memoryRequirements2.memoryRequirements.size;
@@ -302,16 +302,16 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
     VkBindAccelerationStructureMemoryInfoNV accelerationStructureMemoryInfo { VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV };
     accelerationStructureMemoryInfo.accelerationStructure = accelerationStructure;
     accelerationStructureMemoryInfo.memory = memory;
-    if (vulkanBackend.rtx().vkBindAccelerationStructureMemoryNV(vulkanBackend.device(), 1, &accelerationStructureMemoryInfo) != VK_SUCCESS) {
+    if (vulkanBackend.rayTracingNV().vkBindAccelerationStructureMemoryNV(vulkanBackend.device(), 1, &accelerationStructureMemoryInfo) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to bind memory to acceleration structure\n");
     }
 
-    if (vulkanBackend.rtx().vkGetAccelerationStructureHandleNV(vulkanBackend.device(), accelerationStructure, sizeof(uint64_t), &handle) != VK_SUCCESS) {
+    if (vulkanBackend.rayTracingNV().vkGetAccelerationStructureHandleNV(vulkanBackend.device(), accelerationStructure, sizeof(uint64_t), &handle) != VK_SUCCESS) {
         LogErrorAndExit("Error trying to get acceleration structure handle\n");
     }
 
     VmaAllocation scratchAllocation;
-    VkBuffer scratchBuffer = vulkanBackend.rtx().createScratchBufferForAccelerationStructure(accelerationStructure, false, scratchAllocation);
+    VkBuffer scratchBuffer = vulkanBackend.rayTracingNV().createScratchBufferForAccelerationStructure(accelerationStructure, false, scratchAllocation);
 
     VkAccelerationStructureInfoNV buildInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV };
     buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_NV;
@@ -320,7 +320,7 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
     buildInfo.pGeometries = vkGeometries.data();
 
     vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
-        vulkanBackend.rtx().vkCmdBuildAccelerationStructureNV(
+        vulkanBackend.rayTracingNV().vkCmdBuildAccelerationStructureNV(
             commandBuffer,
             &buildInfo,
             VK_NULL_HANDLE, 0,
@@ -338,13 +338,13 @@ VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometr
     }
 }
 
-VulkanBottomLevelAS::~VulkanBottomLevelAS()
+VulkanBottomLevelASNV::~VulkanBottomLevelASNV()
 {
     if (!hasBackend())
         return;
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
-    vulkanBackend.rtx().vkDestroyAccelerationStructureNV(vulkanBackend.device(), accelerationStructure, nullptr);
+    vulkanBackend.rayTracingNV().vkDestroyAccelerationStructureNV(vulkanBackend.device(), accelerationStructure, nullptr);
     vkFreeMemory(vulkanBackend.device(), memory, nullptr);
 
     for (auto& [buffer, allocation] : associatedBuffers) {
@@ -352,7 +352,7 @@ VulkanBottomLevelAS::~VulkanBottomLevelAS()
     }
 }
 
-void VulkanBottomLevelAS::setName(const std::string& name)
+void VulkanBottomLevelASNV::setName(const std::string& name)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 

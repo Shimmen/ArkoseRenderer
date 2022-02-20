@@ -208,7 +208,7 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
     rtPipelineCreateInfo.basePipelineIndex = -1;
 
     VkDeferredOperationKHR deferredOperation = VK_NULL_HANDLE;
-    if (vulkanBackend.rayTracing().vkCreateRayTracingPipelinesKHR(vulkanBackend.device(), deferredOperation, vulkanBackend.pipelineCache(), 1, &rtPipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
+    if (vulkanBackend.rayTracingKHR().vkCreateRayTracingPipelinesKHR(vulkanBackend.device(), deferredOperation, vulkanBackend.pipelineCache(), 1, &rtPipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
         LogErrorAndExit("Error creating ray tracing pipeline\n");
     }
 
@@ -219,15 +219,15 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
 
     // Create buffer for the shader binding table
     {
-        uint32_t sizeOfSingleHandle = vulkanBackend.rayTracing().pipelineStateProperties().shaderGroupHandleSize;
+        uint32_t sizeOfSingleHandle = vulkanBackend.rayTracingKHR().pipelineStateProperties().shaderGroupHandleSize;
         uint32_t sizeOfAllHandles = sizeOfSingleHandle * (uint32_t)shaderGroups.size();
         std::vector<std::byte> shaderGroupHandles { sizeOfAllHandles };
-        if (vulkanBackend.rayTracing().vkGetRayTracingShaderGroupHandlesKHR(vulkanBackend.device(), pipeline, 0, (uint32_t)shaderGroups.size(), sizeOfAllHandles, shaderGroupHandles.data()) != VK_SUCCESS) {
+        if (vulkanBackend.rayTracingKHR().vkGetRayTracingShaderGroupHandlesKHR(vulkanBackend.device(), pipeline, 0, (uint32_t)shaderGroups.size(), sizeOfAllHandles, shaderGroupHandles.data()) != VK_SUCCESS) {
             LogErrorAndExit("Error trying to get shader group handles for the shader binding table.\n");
         }
 
         // TODO: For now we don't have any data, only shader handles, but we still have to consider the alignments & strides
-        uint32_t baseAlignment = vulkanBackend.rayTracing().pipelineStateProperties().shaderGroupBaseAlignment;
+        uint32_t baseAlignment = vulkanBackend.rayTracingKHR().pipelineStateProperties().shaderGroupBaseAlignment;
         uint32_t sbtSize = baseAlignment * (uint32_t)shaderGroups.size();
         std::vector<std::byte> sbtData { sbtSize };
 
@@ -316,7 +316,7 @@ void VulkanRayTracingStateKHR::traceRaysWithShaderOnlySBT(VkCommandBuffer comman
     auto& vulkanBackend = static_cast<const VulkanBackend&>(backend());
 
     // NOTE: Right now all shader groups work out to exactly one of these alignments in size
-    uint32_t shaderGroupBaseAlignment = vulkanBackend.rayTracing().pipelineStateProperties().shaderGroupBaseAlignment;
+    uint32_t shaderGroupBaseAlignment = vulkanBackend.rayTracingKHR().pipelineStateProperties().shaderGroupBaseAlignment;
 
     VkBufferDeviceAddressInfo sbtBufferDeviceAddressInfo { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
     sbtBufferDeviceAddressInfo.buffer = sbtBuffer;
@@ -343,7 +343,7 @@ void VulkanRayTracingStateKHR::traceRaysWithShaderOnlySBT(VkCommandBuffer comman
     // NOTE: No support for callable shaders yet
     VkStridedDeviceAddressRegionKHR callableSbtRegion { 0, 0, 0 };
 
-    vulkanBackend.rayTracing().vkCmdTraceRaysKHR(commandBuffer,
-                                                 &raygenSbtRegion, &missSbtRegion, &hitSbtRegion, &callableSbtRegion,
-                                                 extent.width(), extent.height(), 1);
+    vulkanBackend.rayTracingKHR().vkCmdTraceRaysKHR(commandBuffer,
+                                                    &raygenSbtRegion, &missSbtRegion, &hitSbtRegion, &callableSbtRegion,
+                                                    extent.width(), extent.height(), 1);
 }

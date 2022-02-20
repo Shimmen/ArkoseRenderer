@@ -1,10 +1,10 @@
-#include "VulkanRayTracingState.h"
+#include "VulkanRayTracingStateNV.h"
 
 #include "backend/vulkan/VulkanBackend.h"
 #include "backend/shader/ShaderManager.h"
 #include "utility/Profiling.h"
 
-VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTable sbt, const StateBindings& stateBindings, uint32_t maxRecursionDepth)
+VulkanRayTracingStateNV::VulkanRayTracingStateNV(Backend& backend, ShaderBindingTable sbt, const StateBindings& stateBindings, uint32_t maxRecursionDepth)
     : RayTracingState(backend, sbt, stateBindings, maxRecursionDepth)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
@@ -194,7 +194,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     rtPipelineCreateInfo.pGroups = shaderGroups.data();
     rtPipelineCreateInfo.layout = pipelineLayout;
 
-    if (vulkanBackend.rtx().vkCreateRayTracingPipelinesNV(vulkanBackend.device(), vulkanBackend.pipelineCache(), 1, &rtPipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
+    if (vulkanBackend.rayTracingNV().vkCreateRayTracingPipelinesNV(vulkanBackend.device(), vulkanBackend.pipelineCache(), 1, &rtPipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
         LogErrorAndExit("Error creating ray tracing pipeline\n");
     }
 
@@ -205,15 +205,15 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
 
     // Create buffer for the shader binding table
     {
-        uint32_t sizeOfSingleHandle = vulkanBackend.rtx().properties().shaderGroupHandleSize;
+        uint32_t sizeOfSingleHandle = vulkanBackend.rayTracingNV().properties().shaderGroupHandleSize;
         uint32_t sizeOfAllHandles = sizeOfSingleHandle * (uint32_t)shaderGroups.size();
         std::vector<std::byte> shaderGroupHandles { sizeOfAllHandles };
-        if (vulkanBackend.rtx().vkGetRayTracingShaderGroupHandlesNV(vulkanBackend.device(), pipeline, 0, (uint32_t)shaderGroups.size(), sizeOfAllHandles, shaderGroupHandles.data()) != VK_SUCCESS) {
+        if (vulkanBackend.rayTracingNV().vkGetRayTracingShaderGroupHandlesNV(vulkanBackend.device(), pipeline, 0, (uint32_t)shaderGroups.size(), sizeOfAllHandles, shaderGroupHandles.data()) != VK_SUCCESS) {
             LogErrorAndExit("Error trying to get shader group handles for the shader binding table.\n");
         }
 
         // TODO: For now we don't have any data, only shader handles, but we still have to consider the alignments & strides
-        uint32_t baseAlignment = vulkanBackend.rtx().properties().shaderGroupBaseAlignment;
+        uint32_t baseAlignment = vulkanBackend.rayTracingNV().properties().shaderGroupBaseAlignment;
         uint32_t sbtSize = baseAlignment * (uint32_t)shaderGroups.size();
         std::vector<std::byte> sbtData { sbtSize };
 
@@ -249,7 +249,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     }
 }
 
-VulkanRayTracingState::~VulkanRayTracingState()
+VulkanRayTracingStateNV::~VulkanRayTracingStateNV()
 {
     if (!hasBackend())
         return;
@@ -259,7 +259,7 @@ VulkanRayTracingState::~VulkanRayTracingState()
     vkDestroyPipelineLayout(vulkanBackend.device(), pipelineLayout, nullptr);
 }
 
-void VulkanRayTracingState::setName(const std::string& name)
+void VulkanRayTracingStateNV::setName(const std::string& name)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
@@ -295,10 +295,10 @@ void VulkanRayTracingState::setName(const std::string& name)
     }
 }
 
-void VulkanRayTracingState::traceRays(VkCommandBuffer commandBuffer, Extent2D extent) const
+void VulkanRayTracingStateNV::traceRays(VkCommandBuffer commandBuffer, Extent2D extent) const
 {
-    auto& rtx = static_cast<const VulkanBackend&>(backend()).rtx();
-    uint32_t baseAlignment = rtx.properties().shaderGroupBaseAlignment;
+    auto& rtNV = static_cast<const VulkanBackend&>(backend()).rayTracingNV();
+    uint32_t baseAlignment = rtNV.properties().shaderGroupBaseAlignment;
 
     uint32_t raygenOffset = 0; // we always start with raygen
     uint32_t raygenStride = baseAlignment; // since we have no data => TODO!
@@ -311,10 +311,10 @@ void VulkanRayTracingState::traceRays(VkCommandBuffer commandBuffer, Extent2D ex
     uint32_t missOffset = hitGroupOffset + (numHitGroups * hitGroupStride);
     uint32_t missStride = baseAlignment; // since we have no data
 
-    rtx.vkCmdTraceRaysNV(commandBuffer,
-                         sbtBuffer, raygenOffset,
-                         sbtBuffer, missOffset, missStride,
-                         sbtBuffer, hitGroupOffset, hitGroupStride,
-                         VK_NULL_HANDLE, 0, 0,
-                         extent.width(), extent.height(), 1);
+    rtNV.vkCmdTraceRaysNV(commandBuffer,
+                          sbtBuffer, raygenOffset,
+                          sbtBuffer, missOffset, missStride,
+                          sbtBuffer, hitGroupOffset, hitGroupStride,
+                          VK_NULL_HANDLE, 0, 0,
+                          extent.width(), extent.height(), 1);
 }

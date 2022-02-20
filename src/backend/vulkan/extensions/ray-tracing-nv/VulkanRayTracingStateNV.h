@@ -6,10 +6,10 @@
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
-struct VulkanRayTracingState final : public RayTracingState {
+struct VulkanRayTracingStateNV final : public RayTracingState {
 public:
-    VulkanRayTracingState(Backend&, ShaderBindingTable, const StateBindings&, uint32_t maxRecursionDepth);
-    virtual ~VulkanRayTracingState() override;
+    VulkanRayTracingStateNV(Backend&, ShaderBindingTable, const StateBindings&, uint32_t maxRecursionDepth);
+    virtual ~VulkanRayTracingStateNV() override;
 
     virtual void setName(const std::string& name) override;
 

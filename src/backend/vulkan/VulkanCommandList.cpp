@@ -734,8 +734,8 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
     };
 
     switch (backend().rayTracingBackend()) {
-    case VulkanBackend::RayTracingBackend::RtxExtension: {
-        auto& rtxRtState = static_cast<const VulkanRayTracingState&>(rtState);
+    case VulkanBackend::RayTracingBackend::NvExtension: {
+        auto& rtxRtState = static_cast<const VulkanRayTracingStateNV&>(rtState);
         issuePipelineBarrierForRayTracingStateResources(VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV);
         vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV, rtxRtState.pipeline);
     } break;
@@ -1047,9 +1047,9 @@ void VulkanCommandList::rebuildTopLevelAcceratationStructure(TopLevelAS& tlas)
         auto& khrTlas = static_cast<VulkanTopLevelASKHR&>(tlas);
         khrTlas.build(m_commandBuffer, VulkanTopLevelASKHR::BuildType::UpdateInPlace);
     } break;
-    case VulkanBackend::RayTracingBackend::RtxExtension: {
-        auto& rtxTlas = static_cast<VulkanTopLevelAS&>(tlas);
-        rtxTlas.build(m_commandBuffer, VulkanTopLevelAS::BuildType::UpdateInPlace);
+    case VulkanBackend::RayTracingBackend::NvExtension: {
+        auto& rtxTlas = static_cast<VulkanTopLevelASNV&>(tlas);
+        rtxTlas.build(m_commandBuffer, VulkanTopLevelASNV::BuildType::UpdateInPlace);
     } break;
     }
 
@@ -1070,8 +1070,8 @@ void VulkanCommandList::traceRays(Extent2D extent)
         auto& khrRtState = static_cast<const VulkanRayTracingStateKHR&>(*activeRayTracingState);
         khrRtState.traceRaysWithShaderOnlySBT(m_commandBuffer, extent);
     } break;
-    case VulkanBackend::RayTracingBackend::RtxExtension: {
-        auto& rtxRtState = static_cast<const VulkanRayTracingState&>(*activeRayTracingState);
+    case VulkanBackend::RayTracingBackend::NvExtension: {
+        auto& rtxRtState = static_cast<const VulkanRayTracingStateNV&>(*activeRayTracingState);
         rtxRtState.traceRays(m_commandBuffer, extent);
     } break;
     }
@@ -1431,8 +1431,8 @@ std::pair<VkPipelineLayout, VkPipelineBindPoint> VulkanCommandList::getCurrently
     }
     if (activeRayTracingState) {
         switch (backend().rayTracingBackend()) {
-        case VulkanBackend::RayTracingBackend::RtxExtension:
-            return { static_cast<const VulkanRayTracingState*>(activeRayTracingState)->pipelineLayout, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV };
+        case VulkanBackend::RayTracingBackend::NvExtension:
+            return { static_cast<const VulkanRayTracingStateNV*>(activeRayTracingState)->pipelineLayout, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV };
         case VulkanBackend::RayTracingBackend::KhrExtension:
             return { static_cast<const VulkanRayTracingStateKHR*>(activeRayTracingState)->pipelineLayout, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR };
         }

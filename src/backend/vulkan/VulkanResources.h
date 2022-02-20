@@ -8,9 +8,9 @@
 #include "backend/vulkan/VulkanRenderState.h"
 #include "backend/vulkan/VulkanComputeState.h"
 
-// Nvidia's RTX ray tracing extension
-#include "backend/vulkan/VulkanAccelerationStructure.h"
-#include "backend/vulkan/VulkanRayTracingState.h"
+// Nvidia's NV ray tracing extension
+#include "backend/vulkan/extensions/ray-tracing-nv/VulkanAccelerationStructureNV.h"
+#include "backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingStateNV.h"
 
 // Khronos KHR ray tracing extension
 #include "backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.h"

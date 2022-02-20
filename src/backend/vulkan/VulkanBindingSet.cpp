@@ -46,7 +46,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                     break;
                 case ShaderBindingType::RTAccelerationStructure:
                     switch (vulkanBackend.rayTracingBackend()) {
-                    case VulkanBackend::RayTracingBackend::RtxExtension:
+                    case VulkanBackend::RayTracingBackend::NvExtension:
                         poolSize.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
                         break;
                     case VulkanBackend::RayTracingBackend::KhrExtension:
@@ -107,7 +107,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 break;
             case ShaderBindingType::RTAccelerationStructure:
                 switch (vulkanBackend.rayTracingBackend()) {
-                case VulkanBackend::RayTracingBackend::RtxExtension:
+                case VulkanBackend::RayTracingBackend::NvExtension:
                     binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
                     break;
                 case VulkanBackend::RayTracingBackend::KhrExtension:
@@ -329,10 +329,10 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 ASSERT(bindingInfo.tlas != nullptr);
 
                 switch (vulkanBackend.rayTracingBackend()) {
-                case VulkanBackend::RayTracingBackend::RtxExtension: {
+                case VulkanBackend::RayTracingBackend::NvExtension: {
 
                     VkWriteDescriptorSetAccelerationStructureNV descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV };
-                    descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelAS&>(*bindingInfo.tlas).accelerationStructure;
+                    descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASNV&>(*bindingInfo.tlas).accelerationStructure;
                     descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
 
                     rtxAccelStructWrites.push_back(descriptorAccelerationStructureInfo);
