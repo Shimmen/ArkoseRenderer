@@ -3,7 +3,7 @@
 #include "backend/base/Backend.h"
 #include "backend/Resources.h"
 #include "backend/vulkan/VulkanResources.h"
-#include "backend/vulkan/extensions/VulkanDebugUtils.h"
+#include "backend/vulkan/extensions/debug-utils/VulkanDebugUtils.h"
 #include "backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.h"
 #include "backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingNV.h"
 #include "rendering/App.h"

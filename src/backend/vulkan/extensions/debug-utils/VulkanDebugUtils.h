@@ -5,6 +5,9 @@
 
 class VulkanBackend;
 
+// Defines extension interface for
+//  1. VK_EXT_debug_utils
+//  2. VK_EXT_debug_report
 class VulkanDebugUtils {
 public:
     VulkanDebugUtils(VulkanBackend&, VkInstance);
@@ -16,6 +19,7 @@ public:
     static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location,
                                                               int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData);
 
+    // VK_EXT_debug_utils
     PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT { nullptr };
     PFN_vkSetDebugUtilsObjectTagEXT vkSetDebugUtilsObjectTagEXT { nullptr };
     PFN_vkQueueBeginDebugUtilsLabelEXT vkQueueBeginDebugUtilsLabelEXT { nullptr };
@@ -28,7 +32,7 @@ public:
     PFN_vkDestroyDebugUtilsMessengerEXT vkDestroyDebugUtilsMessengerEXT { nullptr };
     PFN_vkSubmitDebugUtilsMessageEXT vkSubmitDebugUtilsMessageEXT { nullptr };
 
-    // Technically part of the VK_EXT_debug_report extention (this file is for VK_EXT_debug_utils) but I'll include them here for convenience
+    // VK_EXT_debug_report
     PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT { nullptr };
     PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT { nullptr };
     PFN_vkDebugReportMessageEXT vkDebugReportMessageEXT { nullptr }; 

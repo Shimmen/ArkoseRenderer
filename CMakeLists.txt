@@ -33,7 +33,7 @@ add_executable(ArkoseRenderer
     src/backend/vulkan/VulkanRenderState.cpp
     src/backend/vulkan/VulkanRenderTarget.cpp
     src/backend/vulkan/VulkanTexture.cpp
-    src/backend/vulkan/extensions/VulkanDebugUtils.cpp
+    src/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.cpp
     src/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.cpp
     src/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.cpp
     src/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.cpp
