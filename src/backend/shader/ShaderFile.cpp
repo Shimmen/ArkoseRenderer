@@ -1,7 +1,8 @@
 #include "ShaderFile.h"
 
-#include "utility/Logging.h"
+#include "backend/base/Backend.h"
 #include "backend/shader/ShaderManager.h"
+#include "utility/Logging.h"
 #include <algorithm>
 #include <string>
 #include <initializer_list>
@@ -21,8 +22,10 @@ ShaderFile::ShaderFile(std::string path, ShaderFileType type, std::initializer_l
     , m_type(type)
 {
     if (isRayTracingShaderFile()) {
-        // TODO: Maybe we should ask the backend what define we need here? But in a nicer way..
-        m_defines.push_back(ShaderDefine::makeSymbol("RAY_TRACING_BACKEND_RTX"));
+        ShaderDefine rayTracingDefine = Backend::get().rayTracingShaderDefine();
+        if (rayTracingDefine.valid()) {
+            m_defines.push_back(rayTracingDefine);
+        }
     }
 
     // Sort the list so we can assume that equivalent set of defines generates the same identifier

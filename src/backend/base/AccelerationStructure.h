@@ -9,6 +9,8 @@
 // TODO: Avoid importing frontend stuff from backend
 #include "rendering/scene/Transform.h" // for Transform object
 
+class UploadBuffer;
+
 enum class RTVertexFormat {
     XYZ32F
 };
@@ -70,11 +72,17 @@ struct RTGeometryInstance {
 class TopLevelAS : public Resource {
 public:
     TopLevelAS() = default;
-    TopLevelAS(Backend&, std::vector<RTGeometryInstance>);
+    TopLevelAS(Backend&, uint32_t maxInstanceCount);
 
-    [[nodiscard]] const std::vector<RTGeometryInstance>& instances() const;
-    [[nodiscard]] uint32_t instanceCount() const;
+    virtual void updateInstanceDataWithUploadBuffer(const std::vector<RTGeometryInstance>&, UploadBuffer&) = 0;
+
+    [[nodiscard]] uint32_t instanceCount() const { return m_instanceCount; }
+    [[nodiscard]] uint32_t maxInstanceCount() const { return m_maxInstanceCount; }
+
+protected:
+    void updateCurrentInstanceCount(uint32_t newInstanceCount);
 
 private:
-    std::vector<RTGeometryInstance> m_instances {};
+    uint32_t m_instanceCount { 0 };
+    uint32_t m_maxInstanceCount { 0 };
 };

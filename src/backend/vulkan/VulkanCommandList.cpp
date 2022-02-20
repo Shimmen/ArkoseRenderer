@@ -637,11 +637,11 @@ void VulkanCommandList::endRendering()
     }
 }
 
-void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)
+void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    if (!backend().hasRtxSupport()) {
+    if (!backend().hasRayTracingSupport()) {
         LogErrorAndExit("Trying to set ray tracing state but there is no ray tracing support!\n");
     }
 
@@ -650,7 +650,6 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)
         endCurrentRenderPassIfAny();
     }
 
-    auto& rtState = static_cast<const VulkanRayTracingState&>(genRtState);
     activeRayTracingState = &rtState;
     activeComputeState = nullptr;
 
@@ -725,15 +724,27 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& genRtState)
         }
     });
 
-    VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV;
-    vkCmdPipelineBarrier(m_commandBuffer,
-                         sourceStage, destinationStage, 0,
-                         0, nullptr,
-                         0, nullptr,
-                         (uint32_t)imageMemoryBarriers.size(), imageMemoryBarriers.data());
+    auto issuePipelineBarrierForRayTracingStateResources = [&](VkPipelineStageFlags destinationStage) {
+        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        vkCmdPipelineBarrier(m_commandBuffer,
+                             sourceStage, destinationStage, 0,
+                             0, nullptr,
+                             0, nullptr,
+                             (uint32_t)imageMemoryBarriers.size(), imageMemoryBarriers.data());
+    };
 
-    vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV, rtState.pipeline);
+    switch (backend().rayTracingBackend()) {
+    case VulkanBackend::RayTracingBackend::RtxExtension: {
+        auto& rtxRtState = static_cast<const VulkanRayTracingState&>(rtState);
+        issuePipelineBarrierForRayTracingStateResources(VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV);
+        vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV, rtxRtState.pipeline);
+    } break;
+    case VulkanBackend::RayTracingBackend::KhrExtension: {
+        auto& khrRtState = static_cast<const VulkanRayTracingStateKHR&>(rtState);
+        issuePipelineBarrierForRayTracingStateResources(VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
+        vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, khrRtState.pipeline);
+    } break;
+    }
 
     if (rtState.stateBindings().shouldAutoBind()) {
         rtState.stateBindings().forEachBindingSet([this](uint32_t setIndex, BindingSet& bindingSet) {
@@ -839,21 +850,9 @@ void VulkanCommandList::bindSet(BindingSet& bindingSet, uint32_t index)
 
     ASSERT(!(activeRenderState && activeRayTracingState && activeComputeState));
 
-    VkPipelineLayout pipelineLayout;
-    VkPipelineBindPoint bindPoint;
-
-    if (activeRenderState) {
-        pipelineLayout = activeRenderState->pipelineLayout;
-        bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    }
-    if (activeComputeState) {
-        pipelineLayout = activeComputeState->pipelineLayout;
-        bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
-    }
-    if (activeRayTracingState) {
-        pipelineLayout = activeRayTracingState->pipelineLayout;
-        bindPoint = VK_PIPELINE_BIND_POINT_RAY_TRACING_NV;
-    }
+    auto pipelinePair = getCurrentlyBoundPipelineLayout();
+    VkPipelineLayout pipelineLayout = pipelinePair.first;
+    VkPipelineBindPoint bindPoint = pipelinePair.second;
 
     auto& vulkanBindingSet = static_cast<VulkanBindingSet&>(bindingSet);
     vkCmdBindDescriptorSets(m_commandBuffer, bindPoint, pipelineLayout, index, 1, &vulkanBindingSet.descriptorSet, 0, nullptr);
@@ -864,7 +863,7 @@ void VulkanCommandList::pushConstants(ShaderStage shaderStage, void* data, size_
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     requireExactlyOneStateToBeSet("pushConstants");
-    VkPipelineLayout pipelineLayout = getCurrentlyBoundPipelineLayout();
+    VkPipelineLayout pipelineLayout = getCurrentlyBoundPipelineLayout().first;
 
     VkShaderStageFlags stageFlags = static_cast<VulkanBackend&>(backend()).shaderStageToVulkanShaderStageFlags(shaderStage);
 
@@ -1038,52 +1037,21 @@ void VulkanCommandList::rebuildTopLevelAcceratationStructure(TopLevelAS& tlas)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    if (!backend().hasRtxSupport())
+    if (!backend().hasRayTracingSupport())
         LogErrorAndExit("Trying to rebuild a top level acceleration structure but there is no ray tracing support!\n");
 
     beginDebugLabel("Rebuild TLAS");
 
-    auto& vulkanTlas = static_cast<VulkanTopLevelAS&>(tlas);
-
-    // TODO: Maybe don't throw the allocation away (when building the first time), so we can reuse it here?
-    //  However, it's a different size, though! So maybe not. Or if we use the max(build, rebuild) size?
-    VmaAllocation scratchAllocation;
-    VkBuffer scratchBuffer = backend().rtx().createScratchBufferForAccelerationStructure(vulkanTlas.accelerationStructure, true, scratchAllocation);
-
-    VmaAllocation instanceAllocation;
-    VkBuffer instanceBuffer = backend().rtx().createInstanceBuffer(tlas.instances(), instanceAllocation);
-
-    VkAccelerationStructureInfoNV buildInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV };
-    buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_NV;
-    buildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_NV | VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_NV;
-    buildInfo.instanceCount = tlas.instanceCount();
-    buildInfo.geometryCount = 0;
-    buildInfo.pGeometries = nullptr;
-
-    m_backend.rtx().vkCmdBuildAccelerationStructureNV(
-        m_commandBuffer,
-        &buildInfo,
-        instanceBuffer, 0,
-        VK_TRUE,
-        vulkanTlas.accelerationStructure,
-        vulkanTlas.accelerationStructure,
-        scratchBuffer, 0);
-
-    VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
-    barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NV;
-    barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV;
-    vkCmdPipelineBarrier(m_commandBuffer,
-                         VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV,
-                         VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV,
-                         0, 1, &barrier, 0, nullptr, 0, nullptr);
-
-    vmaDestroyBuffer(m_backend.globalAllocator(), scratchBuffer, scratchAllocation);
-
-    // Delete the old instance buffer & replace with the new one
-    ASSERT(vulkanTlas.associatedBuffers.size() == 1);
-    auto& [prevInstanceBuf, prevInstanceAlloc] = vulkanTlas.associatedBuffers[0];
-    vmaDestroyBuffer(m_backend.globalAllocator(), prevInstanceBuf, prevInstanceAlloc);
-    vulkanTlas.associatedBuffers[0] = { instanceBuffer, instanceAllocation };
+    switch (backend().rayTracingBackend()) {
+    case VulkanBackend::RayTracingBackend::KhrExtension: {
+        auto& khrTlas = static_cast<VulkanTopLevelASKHR&>(tlas);
+        khrTlas.build(m_commandBuffer, VulkanTopLevelASKHR::BuildType::UpdateInPlace);
+    } break;
+    case VulkanBackend::RayTracingBackend::RtxExtension: {
+        auto& rtxTlas = static_cast<VulkanTopLevelAS&>(tlas);
+        rtxTlas.build(m_commandBuffer, VulkanTopLevelAS::BuildType::UpdateInPlace);
+    } break;
+    }
 
     endDebugLabel();
 }
@@ -1094,30 +1062,19 @@ void VulkanCommandList::traceRays(Extent2D extent)
 
     if (!activeRayTracingState)
         LogErrorAndExit("traceRays: no active ray tracing state!\n");
-    if (!backend().hasRtxSupport())
+    if (!backend().hasRayTracingSupport())
         LogErrorAndExit("Trying to trace rays but there is no ray tracing support!\n");
 
-    VkBuffer sbtBuffer = static_cast<const VulkanRayTracingState&>(*activeRayTracingState).sbtBuffer;
-
-    uint32_t baseAlignment = backend().rtx().properties().shaderGroupBaseAlignment;
-
-    uint32_t raygenOffset = 0; // we always start with raygen
-    uint32_t raygenStride = baseAlignment; // since we have no data => TODO!
-    uint32_t numRaygenShaders = 1; // for now, always just one
-
-    uint32_t hitGroupOffset = raygenOffset + (numRaygenShaders * raygenStride);
-    uint32_t hitGroupStride = baseAlignment; // since we have no data and a single shader for now => TODO! ALSO CONSIDER IF THIS SHOULD SIMPLY BE PASSED IN TO HERE?!
-    uint32_t numHitGroups = (uint32_t)activeRayTracingState->shaderBindingTable().hitGroups().size();
-
-    uint32_t missOffset = hitGroupOffset + (numHitGroups * hitGroupStride);
-    uint32_t missStride = baseAlignment; // since we have no data => TODO!
-
-    backend().rtx().vkCmdTraceRaysNV(m_commandBuffer,
-                                     sbtBuffer, raygenOffset,
-                                     sbtBuffer, missOffset, missStride,
-                                     sbtBuffer, hitGroupOffset, hitGroupStride,
-                                     VK_NULL_HANDLE, 0, 0,
-                                     extent.width(), extent.height(), 1);
+    switch (backend().rayTracingBackend()) {
+    case VulkanBackend::RayTracingBackend::KhrExtension: {
+        auto& khrRtState = static_cast<const VulkanRayTracingStateKHR&>(*activeRayTracingState);
+        khrRtState.traceRaysWithShaderOnlySBT(m_commandBuffer, extent);
+    } break;
+    case VulkanBackend::RayTracingBackend::RtxExtension: {
+        auto& rtxRtState = static_cast<const VulkanRayTracingState&>(*activeRayTracingState);
+        rtxRtState.traceRays(m_commandBuffer, extent);
+    } break;
+    }
 }
 
 void VulkanCommandList::dispatch(Extent3D globalSize, Extent3D localSize)
@@ -1464,16 +1421,21 @@ void VulkanCommandList::requireExactlyOneStateToBeSet(const std::string& context
     ASSERT(!(activeRenderState && activeRayTracingState && activeComputeState));
 }
 
-VkPipelineLayout VulkanCommandList::getCurrentlyBoundPipelineLayout()
+std::pair<VkPipelineLayout, VkPipelineBindPoint> VulkanCommandList::getCurrentlyBoundPipelineLayout()
 {
     if (activeRenderState) {
-        return activeRenderState->pipelineLayout;
+        return { activeRenderState->pipelineLayout, VK_PIPELINE_BIND_POINT_GRAPHICS };
     }
     if (activeComputeState) {
-        return activeComputeState->pipelineLayout;
+        return { activeComputeState->pipelineLayout, VK_PIPELINE_BIND_POINT_COMPUTE };
     }
     if (activeRayTracingState) {
-        return activeRayTracingState->pipelineLayout;
+        switch (backend().rayTracingBackend()) {
+        case VulkanBackend::RayTracingBackend::RtxExtension:
+            return { static_cast<const VulkanRayTracingState*>(activeRayTracingState)->pipelineLayout, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV };
+        case VulkanBackend::RayTracingBackend::KhrExtension:
+            return { static_cast<const VulkanRayTracingStateKHR*>(activeRayTracingState)->pipelineLayout, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR };
+        }
     }
 
     ASSERT_NOT_REACHED();

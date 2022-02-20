@@ -120,13 +120,28 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
         bufferSize = 1;
     }
 
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+
     VkBufferUsageFlags usageFlags = 0u;
     switch (usage()) {
     case Buffer::Usage::Vertex:
         usageFlags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         break;
     case Buffer::Usage::Index:
         usageFlags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        break;
+    case Buffer::Usage::RTInstanceBuffer:
+        switch (vulkanBackend.rayTracingBackend()) {
+        case VulkanBackend::RayTracingBackend::RtxExtension:
+            usageFlags |= VK_BUFFER_USAGE_RAY_TRACING_BIT_NV;
+            break;
+        case VulkanBackend::RayTracingBackend::KhrExtension:
+            usageFlags |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+            usageFlags |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+            break;
+        }
         break;
     case Buffer::Usage::UniformBuffer:
         usageFlags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
@@ -146,9 +161,16 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
         ASSERT_NOT_REACHED();
     }
 
-    // Always make vertex & index buffers also have storage buffer support, so the buffers can be reused for ray tracing shaders
+    // Make vertex & index buffers also be usable in ray tracing acceleration structures
     if (usage() == Buffer::Usage::Vertex || usage() == Buffer::Usage::Index) {
-        usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        switch (vulkanBackend.rayTracingBackend()) {
+        case VulkanBackend::RayTracingBackend::RtxExtension:
+            usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+            break;
+        case VulkanBackend::RayTracingBackend::KhrExtension:
+            usageFlags |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+            usageFlags |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+        }
     }
 
     if (vulkanDebugMode) {

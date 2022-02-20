@@ -52,7 +52,7 @@ public:
     [[nodiscard]] RenderState& createRenderState(const RenderTarget&, const VertexLayout&, const Shader&, const StateBindings&, const Viewport&, const BlendState&, const RasterState&, const DepthState&, const StencilState&);
 
     [[nodiscard]] BottomLevelAS& createBottomLevelAccelerationStructure(std::vector<RTGeometry>);
-    [[nodiscard]] TopLevelAS& createTopLevelAccelerationStructure(std::vector<RTGeometryInstance>);
+    [[nodiscard]] TopLevelAS& createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance> initialInstances);
     [[nodiscard]] RayTracingState& createRayTracingState(ShaderBindingTable&, const StateBindings&, uint32_t maxRecursionDepth);
 
     [[nodiscard]] ComputeState& createComputeState(const Shader&, std::vector<BindingSet*>);

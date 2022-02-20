@@ -3,8 +3,9 @@
 #include "backend/base/Backend.h"
 #include "backend/Resources.h"
 #include "backend/vulkan/VulkanResources.h"
-#include "extensions/VulkanDebugUtils.h"
-#include "extensions/VulkanRTX.h"
+#include "backend/vulkan/extensions/VulkanDebugUtils.h"
+#include "backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.h"
+#include "backend/vulkan/extensions/VulkanRTX.h"
 #include "rendering/App.h"
 #include "utility/AvgElapsedTimer.h"
 #include <array>
@@ -33,6 +34,8 @@ public:
 
     bool hasActiveCapability(Capability) const override;
 
+    ShaderDefine rayTracingShaderDefine() const override;
+
     void renderPipelineDidChange(RenderPipeline&) override;
     void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline&) override;
 
@@ -51,7 +54,7 @@ public:
     std::unique_ptr<RenderState> createRenderState(const RenderTarget&, const VertexLayout&, const Shader&, const StateBindings&,
                                                    const Viewport&, const BlendState&, const RasterState&, const DepthState&, const StencilState&) override;
     std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(std::vector<RTGeometry>) override;
-    std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(std::vector<RTGeometryInstance>) override;
+    std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance>) override;
     std::unique_ptr<RayTracingState> createRayTracingState(ShaderBindingTable& sbt, const StateBindings&, uint32_t maxRecursionDepth) override;
     std::unique_ptr<ComputeState> createComputeState(const Shader&, std::vector<BindingSet*>) override;
 
@@ -63,11 +66,37 @@ public:
     VkPhysicalDevice physicalDevice() const { return m_physicalDevice; }
     VkPipelineCache pipelineCache() const { return m_pipelineCache; }
 
-    bool hasRtxSupport() const { return m_rtx != nullptr; }
+    enum class RayTracingBackend {
+        None,
+        RtxExtension,
+        KhrExtension,
+    };
+
+    RayTracingBackend rayTracingBackend() const { return m_rayTracingBackend; }
+    bool hasRayTracingSupport() const { return rayTracingBackend() != RayTracingBackend::None; }
+
     VulkanRTX& rtx()
     {
-        ASSERT(hasRtxSupport());
-        return *m_rtx;
+        ASSERT(m_rayTracingBackend == RayTracingBackend::RtxExtension && m_rayTracingRtx);
+        return *m_rayTracingRtx;
+    }
+
+    const VulkanRTX& rtx() const
+    {
+        ASSERT(m_rayTracingBackend == RayTracingBackend::RtxExtension && m_rayTracingRtx);
+        return *m_rayTracingRtx;
+    }
+
+    VulkanRayTracingKHR& rayTracing()
+    {
+        ASSERT(m_rayTracingBackend == RayTracingBackend::KhrExtension && m_rayTracingKhr);
+        return *m_rayTracingKhr;
+    }
+
+    const VulkanRayTracingKHR& rayTracing() const
+    {
+        ASSERT(m_rayTracingBackend == RayTracingBackend::KhrExtension && m_rayTracingKhr);
+        return *m_rayTracingKhr;
     }
 
     bool hasDebugUtilsSupport() const { return m_debugUtils != nullptr; }
@@ -244,7 +273,10 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     /// Sub-systems / extensions
 
-    std::unique_ptr<VulkanRTX> m_rtx {};
+    RayTracingBackend m_rayTracingBackend { RayTracingBackend::None };
+    std::unique_ptr<VulkanRTX> m_rayTracingRtx {};
+    std::unique_ptr<VulkanRayTracingKHR> m_rayTracingKhr {};
+
     std::unique_ptr<VulkanDebugUtils> m_debugUtils {};
 
     ///////////////////////////////////////////////////////////////////////////

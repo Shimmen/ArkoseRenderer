@@ -6,6 +6,12 @@
 #include "backend/vulkan/VulkanRenderTarget.h"
 #include "backend/vulkan/VulkanBindingSet.h"
 #include "backend/vulkan/VulkanRenderState.h"
+#include "backend/vulkan/VulkanComputeState.h"
+
+// Nvidia's RTX ray tracing extension
 #include "backend/vulkan/VulkanAccelerationStructure.h"
 #include "backend/vulkan/VulkanRayTracingState.h"
-#include "backend/vulkan/VulkanComputeState.h"
+
+// Khronos KHR ray tracing extension
+#include "backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.h"
+#include "backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.h"

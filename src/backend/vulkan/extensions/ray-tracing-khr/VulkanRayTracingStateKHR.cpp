@@ -1,16 +1,18 @@
-#include "VulkanRayTracingState.h"
+#include "VulkanRayTracingStateKHR.h"
 
-#include "backend/vulkan/VulkanBackend.h"
 #include "backend/shader/ShaderManager.h"
+#include "backend/vulkan/VulkanBackend.h"
 #include "utility/Profiling.h"
 
-VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTable sbt, const StateBindings& stateBindings, uint32_t maxRecursionDepth)
+VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindingTable sbt, const StateBindings& stateBindings, uint32_t maxRecursionDepth)
     : RayTracingState(backend, sbt, stateBindings, maxRecursionDepth)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
+
     ASSERT(vulkanBackend.hasRayTracingSupport());
+    ASSERT(vulkanBackend.rayTracingBackend() == VulkanBackend::RayTracingBackend::KhrExtension);
 
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
@@ -38,7 +40,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
 
     std::vector<VkShaderModule> shaderModulesToRemove {};
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages {};
-    std::vector<VkRayTracingShaderGroupCreateInfoNV> shaderGroups {};
+    std::vector<VkRayTracingShaderGroupCreateInfoKHR> shaderGroups {};
 
     // RayGen
     {
@@ -53,7 +55,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
         }
 
         VkPipelineShaderStageCreateInfo stageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
-        stageCreateInfo.stage = VK_SHADER_STAGE_RAYGEN_BIT_NV;
+        stageCreateInfo.stage = VK_SHADER_STAGE_RAYGEN_BIT_KHR;
         stageCreateInfo.module = shaderModule;
         stageCreateInfo.pName = "main";
 
@@ -61,13 +63,13 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
         shaderStages.push_back(stageCreateInfo);
         shaderModulesToRemove.push_back(shaderModule);
 
-        VkRayTracingShaderGroupCreateInfoNV shaderGroup = { VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV };
-        shaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV;
+        VkRayTracingShaderGroupCreateInfoKHR shaderGroup = { VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR };
+        shaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
         shaderGroup.generalShader = shaderIndex;
 
-        shaderGroup.closestHitShader = VK_SHADER_UNUSED_NV;
-        shaderGroup.anyHitShader = VK_SHADER_UNUSED_NV;
-        shaderGroup.intersectionShader = VK_SHADER_UNUSED_NV;
+        shaderGroup.closestHitShader = VK_SHADER_UNUSED_KHR;
+        shaderGroup.anyHitShader = VK_SHADER_UNUSED_KHR;
+        shaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
 
         shaderGroups.push_back(shaderGroup);
     }
@@ -75,16 +77,16 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     // HitGroups
     for (const HitGroup& hitGroup : sbt.hitGroups()) {
 
-        VkRayTracingShaderGroupCreateInfoNV shaderGroup = { VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV };
+        VkRayTracingShaderGroupCreateInfoKHR shaderGroup = { VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR };
 
         shaderGroup.type = hitGroup.hasIntersectionShader()
-            ? VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_NV
-            : VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_NV;
+            ? VK_RAY_TRACING_SHADER_GROUP_TYPE_PROCEDURAL_HIT_GROUP_KHR
+            : VK_RAY_TRACING_SHADER_GROUP_TYPE_TRIANGLES_HIT_GROUP_KHR;
 
-        shaderGroup.generalShader = VK_SHADER_UNUSED_NV;
-        shaderGroup.closestHitShader = VK_SHADER_UNUSED_NV;
-        shaderGroup.anyHitShader = VK_SHADER_UNUSED_NV;
-        shaderGroup.intersectionShader = VK_SHADER_UNUSED_NV;
+        shaderGroup.generalShader = VK_SHADER_UNUSED_KHR;
+        shaderGroup.closestHitShader = VK_SHADER_UNUSED_KHR;
+        shaderGroup.anyHitShader = VK_SHADER_UNUSED_KHR;
+        shaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
 
         // ClosestHit
         {
@@ -99,7 +101,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
             }
 
             VkPipelineShaderStageCreateInfo stageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
-            stageCreateInfo.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
+            stageCreateInfo.stage = VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR;
             stageCreateInfo.module = shaderModule;
             stageCreateInfo.pName = "main";
 
@@ -120,7 +122,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
             }
 
             VkPipelineShaderStageCreateInfo stageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
-            stageCreateInfo.stage = VK_SHADER_STAGE_ANY_HIT_BIT_NV;
+            stageCreateInfo.stage = VK_SHADER_STAGE_ANY_HIT_BIT_KHR;
             stageCreateInfo.module = shaderModule;
             stageCreateInfo.pName = "main";
 
@@ -141,7 +143,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
             }
 
             VkPipelineShaderStageCreateInfo stageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
-            stageCreateInfo.stage = VK_SHADER_STAGE_INTERSECTION_BIT_NV;
+            stageCreateInfo.stage = VK_SHADER_STAGE_INTERSECTION_BIT_KHR;
             stageCreateInfo.module = shaderModule;
             stageCreateInfo.pName = "main";
 
@@ -167,7 +169,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
         }
 
         VkPipelineShaderStageCreateInfo stageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
-        stageCreateInfo.stage = VK_SHADER_STAGE_MISS_BIT_NV;
+        stageCreateInfo.stage = VK_SHADER_STAGE_MISS_BIT_KHR;
         stageCreateInfo.module = shaderModule;
         stageCreateInfo.pName = "main";
 
@@ -175,26 +177,38 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
         shaderStages.push_back(stageCreateInfo);
         shaderModulesToRemove.push_back(shaderModule);
 
-        VkRayTracingShaderGroupCreateInfoNV shaderGroup = { VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_NV };
-        shaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_NV;
+        VkRayTracingShaderGroupCreateInfoKHR shaderGroup = { VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR };
+        shaderGroup.type = VK_RAY_TRACING_SHADER_GROUP_TYPE_GENERAL_KHR;
         shaderGroup.generalShader = shaderIndex;
 
-        shaderGroup.closestHitShader = VK_SHADER_UNUSED_NV;
-        shaderGroup.anyHitShader = VK_SHADER_UNUSED_NV;
-        shaderGroup.intersectionShader = VK_SHADER_UNUSED_NV;
+        shaderGroup.closestHitShader = VK_SHADER_UNUSED_KHR;
+        shaderGroup.anyHitShader = VK_SHADER_UNUSED_KHR;
+        shaderGroup.intersectionShader = VK_SHADER_UNUSED_KHR;
 
         shaderGroups.push_back(shaderGroup);
     }
 
-    VkRayTracingPipelineCreateInfoNV rtPipelineCreateInfo { VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_NV };
-    rtPipelineCreateInfo.maxRecursionDepth = maxRecursionDepth;
+    VkRayTracingPipelineCreateInfoKHR rtPipelineCreateInfo { VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR };
+
+    rtPipelineCreateInfo.flags = 0u;
+    rtPipelineCreateInfo.maxPipelineRayRecursionDepth = maxRecursionDepth;
     rtPipelineCreateInfo.stageCount = (uint32_t)shaderStages.size();
     rtPipelineCreateInfo.pStages = shaderStages.data();
     rtPipelineCreateInfo.groupCount = (uint32_t)shaderGroups.size();
     rtPipelineCreateInfo.pGroups = shaderGroups.data();
     rtPipelineCreateInfo.layout = pipelineLayout;
 
-    if (vulkanBackend.rtx().vkCreateRayTracingPipelinesNV(vulkanBackend.device(), vulkanBackend.pipelineCache(), 1, &rtPipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
+    // This is not a library pipeline state
+    rtPipelineCreateInfo.pLibraryInfo = nullptr;
+    rtPipelineCreateInfo.pLibraryInterface = nullptr;
+    rtPipelineCreateInfo.pDynamicState = nullptr;
+
+    // Not deriving from another pipeline
+    rtPipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+    rtPipelineCreateInfo.basePipelineIndex = -1;
+
+    VkDeferredOperationKHR deferredOperation = VK_NULL_HANDLE;
+    if (vulkanBackend.rayTracing().vkCreateRayTracingPipelinesKHR(vulkanBackend.device(), deferredOperation, vulkanBackend.pipelineCache(), 1, &rtPipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
         LogErrorAndExit("Error creating ray tracing pipeline\n");
     }
 
@@ -205,15 +219,15 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
 
     // Create buffer for the shader binding table
     {
-        uint32_t sizeOfSingleHandle = vulkanBackend.rtx().properties().shaderGroupHandleSize;
+        uint32_t sizeOfSingleHandle = vulkanBackend.rayTracing().pipelineStateProperties().shaderGroupHandleSize;
         uint32_t sizeOfAllHandles = sizeOfSingleHandle * (uint32_t)shaderGroups.size();
         std::vector<std::byte> shaderGroupHandles { sizeOfAllHandles };
-        if (vulkanBackend.rtx().vkGetRayTracingShaderGroupHandlesNV(vulkanBackend.device(), pipeline, 0, (uint32_t)shaderGroups.size(), sizeOfAllHandles, shaderGroupHandles.data()) != VK_SUCCESS) {
+        if (vulkanBackend.rayTracing().vkGetRayTracingShaderGroupHandlesKHR(vulkanBackend.device(), pipeline, 0, (uint32_t)shaderGroups.size(), sizeOfAllHandles, shaderGroupHandles.data()) != VK_SUCCESS) {
             LogErrorAndExit("Error trying to get shader group handles for the shader binding table.\n");
         }
 
         // TODO: For now we don't have any data, only shader handles, but we still have to consider the alignments & strides
-        uint32_t baseAlignment = vulkanBackend.rtx().properties().shaderGroupBaseAlignment;
+        uint32_t baseAlignment = vulkanBackend.rayTracing().pipelineStateProperties().shaderGroupBaseAlignment;
         uint32_t sbtSize = baseAlignment * (uint32_t)shaderGroups.size();
         std::vector<std::byte> sbtData { sbtSize };
 
@@ -228,7 +242,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
         }
 
         VkBufferCreateInfo sbtBufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-        sbtBufferCreateInfo.usage = VK_BUFFER_USAGE_RAY_TRACING_BIT_NV;
+        sbtBufferCreateInfo.usage = VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_EXT;
         sbtBufferCreateInfo.size = sbtSize;
 
         if (vulkanDebugMode) {
@@ -249,7 +263,7 @@ VulkanRayTracingState::VulkanRayTracingState(Backend& backend, ShaderBindingTabl
     }
 }
 
-VulkanRayTracingState::~VulkanRayTracingState()
+VulkanRayTracingStateKHR::~VulkanRayTracingStateKHR()
 {
     if (!hasBackend())
         return;
@@ -259,7 +273,7 @@ VulkanRayTracingState::~VulkanRayTracingState()
     vkDestroyPipelineLayout(vulkanBackend.device(), pipelineLayout, nullptr);
 }
 
-void VulkanRayTracingState::setName(const std::string& name)
+void VulkanRayTracingStateKHR::setName(const std::string& name)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
@@ -295,26 +309,41 @@ void VulkanRayTracingState::setName(const std::string& name)
     }
 }
 
-void VulkanRayTracingState::traceRays(VkCommandBuffer commandBuffer, Extent2D extent) const
+void VulkanRayTracingStateKHR::traceRaysWithShaderOnlySBT(VkCommandBuffer commandBuffer, Extent2D extent) const
 {
-    auto& rtx = static_cast<const VulkanBackend&>(backend()).rtx();
-    uint32_t baseAlignment = rtx.properties().shaderGroupBaseAlignment;
+    SCOPED_PROFILE_ZONE_BACKEND();
 
-    uint32_t raygenOffset = 0; // we always start with raygen
-    uint32_t raygenStride = baseAlignment; // since we have no data => TODO!
-    uint32_t numRaygenShaders = 1; // for now, always just one
+    auto& vulkanBackend = static_cast<const VulkanBackend&>(backend());
 
-    uint32_t hitGroupOffset = raygenOffset + (numRaygenShaders * raygenStride);
-    uint32_t hitGroupStride = baseAlignment; // since we have no data
+    // NOTE: Right now all shader groups work out to exactly one of these alignments in size
+    uint32_t shaderGroupBaseAlignment = vulkanBackend.rayTracing().pipelineStateProperties().shaderGroupBaseAlignment;
+
+    VkBufferDeviceAddressInfo sbtBufferDeviceAddressInfo { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+    sbtBufferDeviceAddressInfo.buffer = sbtBuffer;
+    VkDeviceAddress sbtBufferBaseAddress = vkGetBufferDeviceAddress(vulkanBackend.device(), &sbtBufferDeviceAddressInfo);
+
     uint32_t numHitGroups = (uint32_t)shaderBindingTable().hitGroups().size();
+    uint32_t numMissShaders = (uint32_t)shaderBindingTable().missShaders().size();
 
-    uint32_t missOffset = hitGroupOffset + (numHitGroups * hitGroupStride);
-    uint32_t missStride = baseAlignment; // since we have no data
+    VkStridedDeviceAddressRegionKHR raygenSbtRegion;
+    raygenSbtRegion.deviceAddress = sbtBufferBaseAddress;
+    raygenSbtRegion.stride = shaderGroupBaseAlignment;
+    raygenSbtRegion.size = raygenSbtRegion.stride;
 
-    rtx.vkCmdTraceRaysNV(commandBuffer,
-                         sbtBuffer, raygenOffset,
-                         sbtBuffer, missOffset, missStride,
-                         sbtBuffer, hitGroupOffset, hitGroupStride,
-                         VK_NULL_HANDLE, 0, 0,
-                         extent.width(), extent.height(), 1);
+    VkStridedDeviceAddressRegionKHR missSbtRegion;
+    missSbtRegion.deviceAddress = raygenSbtRegion.deviceAddress + raygenSbtRegion.size;
+    missSbtRegion.stride = shaderGroupBaseAlignment;
+    missSbtRegion.size = numMissShaders * missSbtRegion.stride;
+
+    VkStridedDeviceAddressRegionKHR hitSbtRegion;
+    hitSbtRegion.deviceAddress = missSbtRegion.deviceAddress + missSbtRegion.size;
+    hitSbtRegion.stride = shaderGroupBaseAlignment;
+    hitSbtRegion.size = numHitGroups * hitSbtRegion.stride;
+
+    // NOTE: No support for callable shaders yet
+    VkStridedDeviceAddressRegionKHR callableSbtRegion { 0, 0, 0 };
+
+    vulkanBackend.rayTracing().vkCmdTraceRaysKHR(commandBuffer,
+                                                 &raygenSbtRegion, &missSbtRegion, &hitSbtRegion, &callableSbtRegion,
+                                                 extent.width(), extent.height(), 1);
 }

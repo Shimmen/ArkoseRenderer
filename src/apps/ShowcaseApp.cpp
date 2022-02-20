@@ -29,7 +29,7 @@ constexpr bool rtxOn = true && !keepRenderDocCompatible;
 std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
 {
     if (rtxOn) {
-        return { Backend::Capability::RtxRayTracing };
+        return { Backend::Capability::RayTracing };
     } else {
         return {};
     }

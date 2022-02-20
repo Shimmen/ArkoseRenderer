@@ -8,6 +8,11 @@ struct ShaderDefine {
     std::string symbol;
     std::optional<std::string> value;
 
+    bool valid() const
+    {
+        return symbol.length() > 0;
+    }
+
     static ShaderDefine makeSymbol(std::string symbol)
     {
         ShaderDefine define;

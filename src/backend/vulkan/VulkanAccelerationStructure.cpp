@@ -3,21 +3,23 @@
 #include "backend/vulkan/VulkanBackend.h"
 #include "backend/shader/ShaderManager.h"
 
-VulkanTopLevelAS::VulkanTopLevelAS(Backend& backend, std::vector<RTGeometryInstance> inst)
-    : TopLevelAS(backend, std::move(inst))
+VulkanTopLevelAS::VulkanTopLevelAS(Backend& backend, uint32_t maxInstanceCount, std::vector<RTGeometryInstance> initialInstances)
+    : TopLevelAS(backend, maxInstanceCount)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
-    ASSERT(vulkanBackend.hasRtxSupport());
+    ASSERT(vulkanBackend.hasRayTracingSupport());
 
     // Something more here maybe? Like fast to build/traverse, can be compacted, etc.
-    auto flags = VkBuildAccelerationStructureFlagBitsNV(VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_NV | VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_NV);
+    accelerationStructureFlags = 0u;
+    accelerationStructureFlags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_NV;
+    accelerationStructureFlags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_NV;
 
     VkAccelerationStructureInfoNV accelerationStructureInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV };
     accelerationStructureInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_NV;
-    accelerationStructureInfo.flags = flags;
-    accelerationStructureInfo.instanceCount = instanceCount();
+    accelerationStructureInfo.flags = accelerationStructureFlags;
+    accelerationStructureInfo.instanceCount = this->maxInstanceCount();
     accelerationStructureInfo.geometryCount = 0;
 
     VkAccelerationStructureCreateInfoNV accelerationStructureCreateInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_NV };
@@ -50,34 +52,19 @@ VulkanTopLevelAS::VulkanTopLevelAS(Backend& backend, std::vector<RTGeometryInsta
         LogErrorAndExit("Error trying to get acceleration structure handle\n");
     }
 
-    VmaAllocation scratchAllocation;
-    VkBuffer scratchBuffer = vulkanBackend.rtx().createScratchBufferForAccelerationStructure(accelerationStructure, false, scratchAllocation);
+    size_t instanceBufferSize = this->maxInstanceCount() * sizeof(VulkanRTX::GeometryInstance);
+    instanceBuffer = vulkanBackend.createBuffer(instanceBufferSize, Buffer::Usage::RTInstanceBuffer, Buffer::MemoryHint::GpuOptimal);
 
-    VmaAllocation instanceAllocation;
-    VkBuffer instanceBuffer = vulkanBackend.rtx().createInstanceBuffer(instances(), instanceAllocation);
+    updateCurrentInstanceCount(static_cast<uint32_t>(initialInstances.size()));
+    auto initialInstanceData = vulkanBackend.rtx().createInstanceData(initialInstances);
+    instanceBuffer->updateData(initialInstanceData.data(), initialInstanceData.size() * sizeof(VulkanRTX::GeometryInstance));
 
-    VkAccelerationStructureInfoNV buildInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV };
-    buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_NV;
-    buildInfo.flags = flags;
-    buildInfo.instanceCount = instanceCount();
-    buildInfo.geometryCount = 0;
-    buildInfo.pGeometries = nullptr;
-
-    vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
-        vulkanBackend.rtx().vkCmdBuildAccelerationStructureNV(
-            commandBuffer,
-            &buildInfo,
-            instanceBuffer, 0,
-            VK_FALSE,
-            accelerationStructure,
-            VK_NULL_HANDLE,
-            scratchBuffer, 0);
+    bool buildSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+        build(commandBuffer, BuildType::BuildInitial);
     });
-
-    vmaDestroyBuffer(vulkanBackend.globalAllocator(), scratchBuffer, scratchAllocation);
-
-    // (should persist for the lifetime of this TLAS)
-    associatedBuffers.push_back({ instanceBuffer, instanceAllocation });
+    if (!buildSuccess) {
+        LogErrorAndExit("Error trying to build top level acceleration structure\n");
+    }
 }
 
 VulkanTopLevelAS::~VulkanTopLevelAS()
@@ -88,10 +75,6 @@ VulkanTopLevelAS::~VulkanTopLevelAS()
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vulkanBackend.rtx().vkDestroyAccelerationStructureNV(vulkanBackend.device(), accelerationStructure, nullptr);
     vkFreeMemory(vulkanBackend.device(), memory, nullptr);
-
-    for (auto& [buffer, allocation] : associatedBuffers) {
-        vmaDestroyBuffer(vulkanBackend.globalAllocator(), buffer, allocation);
-    }
 }
 
 void VulkanTopLevelAS::setName(const std::string& name)
@@ -112,13 +95,77 @@ void VulkanTopLevelAS::setName(const std::string& name)
     }
 }
 
+void VulkanTopLevelAS::build(VkCommandBuffer commandBuffer, BuildType buildType)
+{
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+
+    VkBuffer vkInstanceBuffer = static_cast<VulkanBuffer&>(*instanceBuffer).buffer;
+
+    VkAccelerationStructureInfoNV buildInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_INFO_NV };
+    buildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_NV;
+    buildInfo.flags = accelerationStructureFlags;
+    buildInfo.instanceCount = instanceCount();
+    buildInfo.geometryCount = 0;
+    buildInfo.pGeometries = nullptr;
+
+    VkBuffer scratchBuffer;
+    VmaAllocation scratchAllocation;
+
+    switch (buildType) {
+    case BuildType::BuildInitial:
+        scratchBuffer= vulkanBackend.rtx().createScratchBufferForAccelerationStructure(accelerationStructure, false, scratchAllocation);
+        vulkanBackend.rtx().vkCmdBuildAccelerationStructureNV(
+            commandBuffer,
+            &buildInfo,
+            vkInstanceBuffer, 0,
+            VK_FALSE,
+            accelerationStructure,
+            VK_NULL_HANDLE,
+            scratchBuffer, 0);
+        break;
+    case BuildType::UpdateInPlace:
+        scratchBuffer = vulkanBackend.rtx().createScratchBufferForAccelerationStructure(accelerationStructure, true, scratchAllocation);
+        vulkanBackend.rtx().vkCmdBuildAccelerationStructureNV(
+            commandBuffer,
+            &buildInfo,
+            vkInstanceBuffer, 0,
+            VK_TRUE,
+            accelerationStructure,
+            accelerationStructure,
+            scratchBuffer, 0);
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+
+    VkMemoryBarrier barrier = { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
+    barrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_NV;
+    barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_NV;
+    vkCmdPipelineBarrier(commandBuffer,
+                         VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_NV,
+                         VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV,
+                         0, 1, &barrier, 0, nullptr, 0, nullptr);
+
+    // TODO: Maybe don't throw the allocation away (when building the first time), so we can reuse it here?
+    //  However, it may be a different size, though! So maybe not. Or if we use the max(build, rebuild) size?
+    vmaDestroyBuffer(vulkanBackend.globalAllocator(), scratchBuffer, scratchAllocation);
+}
+
+void VulkanTopLevelAS::updateInstanceDataWithUploadBuffer(const std::vector<RTGeometryInstance>& newInstances, UploadBuffer& uploadBuffer)
+{
+    updateCurrentInstanceCount(static_cast<uint32_t>(newInstances.size()));
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+    auto updatedInstanceData = vulkanBackend.rtx().createInstanceData(newInstances);
+    uploadBuffer.upload(updatedInstanceData, *instanceBuffer);
+}
+
 VulkanBottomLevelAS::VulkanBottomLevelAS(Backend& backend, std::vector<RTGeometry> geos)
     : BottomLevelAS(backend, std::move(geos))
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
-    ASSERT(vulkanBackend.hasRtxSupport());
+    ASSERT(vulkanBackend.hasRayTracingSupport());
 
     // All geometries in a BLAS must have the same type (i.e. AABB/triangles)
     bool isTriangleBLAS = geometries().front().hasTriangles();

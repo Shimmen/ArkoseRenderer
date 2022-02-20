@@ -1,5 +1,7 @@
 #include "AccelerationStructure.h"
 
+#include "backend/util/UploadBuffer.h"
+
 RTGeometry::RTGeometry(RTTriangleGeometry triangles)
     : m_internal(triangles)
 {
@@ -41,18 +43,16 @@ const std::vector<RTGeometry>& BottomLevelAS::geometries() const
     return m_geometries;
 }
 
-TopLevelAS::TopLevelAS(Backend& backend, std::vector<RTGeometryInstance> instances)
+TopLevelAS::TopLevelAS(Backend& backend, uint32_t maxInstanceCountIn)
     : Resource(backend)
-    , m_instances(instances)
+    , m_maxInstanceCount(maxInstanceCountIn)
 {
 }
 
-const std::vector<RTGeometryInstance>& TopLevelAS::instances() const
+void TopLevelAS::updateCurrentInstanceCount(uint32_t newInstanceCount)
 {
-    return m_instances;
-}
+    ASSERT(newInstanceCount > 0);
+    ASSERT(newInstanceCount <= maxInstanceCount());
 
-uint32_t TopLevelAS::instanceCount() const
-{
-    return static_cast<uint32_t>(m_instances.size());
+    m_instanceCount = newInstanceCount;
 }

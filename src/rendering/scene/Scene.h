@@ -162,6 +162,7 @@ private:
     std::vector<Texture*> m_usedTextures {};
     std::vector<ShaderMaterial> m_usedMaterials {};
 
+    static constexpr uint32_t InitialMaxRayTracingGeometryInstanceCount { 1024 };
     std::vector<RTGeometryInstance> m_rayTracingGeometryInstances {};
     std::vector<std::unique_ptr<BottomLevelAS>> m_sceneBottomLevelAccelerationStructures {};
     std::unique_ptr<TopLevelAS> m_sceneTopLevelAccelerationStructure {};

@@ -23,10 +23,6 @@ public:
 
     const VkPhysicalDeviceRayTracingPropertiesNV& properties() const;
 
-    VkBuffer createInstanceBuffer(const std::vector<RTGeometryInstance>&, VmaAllocation&) const;
-    VkBuffer createScratchBufferForAccelerationStructure(VkAccelerationStructureNV, bool updateInPlace, VmaAllocation&) const;
-
-public:
     struct GeometryInstance {
         moos::mat3x4 transform;
         uint32_t instanceId : 24;
@@ -35,6 +31,10 @@ public:
         uint32_t flags : 8;
         uint64_t accelerationStructureHandle;
     };
+
+    std::vector<GeometryInstance> createInstanceData(const std::vector<RTGeometryInstance>&) const;
+
+    VkBuffer createScratchBufferForAccelerationStructure(VkAccelerationStructureNV, bool updateInPlace, VmaAllocation&) const;
 
 private:
     VulkanBackend& m_backend;

@@ -9,6 +9,8 @@ VulkanRTX::VulkanRTX(VulkanBackend& backend, VkPhysicalDevice physicalDevice, Vk
     , m_physicalDevice(physicalDevice)
     , m_device(device)
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     VkPhysicalDeviceProperties2 deviceProps2 { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
     deviceProps2.pNext = &m_rayTracingProperties;
     vkGetPhysicalDeviceProperties2(m_physicalDevice, &deviceProps2);
@@ -29,7 +31,7 @@ const VkPhysicalDeviceRayTracingPropertiesNV& VulkanRTX::properties() const
     return m_rayTracingProperties;
 }
 
-VkBuffer VulkanRTX::createInstanceBuffer(const std::vector<RTGeometryInstance>& instances, VmaAllocation& allocation) const
+std::vector<VulkanRTX::GeometryInstance> VulkanRTX::createInstanceData(const std::vector<RTGeometryInstance>& instances) const
 {
     std::vector<VulkanRTX::GeometryInstance> instanceData {};
 
@@ -54,35 +56,13 @@ VkBuffer VulkanRTX::createInstanceBuffer(const std::vector<RTGeometryInstance>& 
         instanceData.push_back(data);
     }
 
-    VkDeviceSize totalSize = instanceData.size() * sizeof(VulkanRTX::GeometryInstance);
-
-    VkBufferCreateInfo instanceBufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    instanceBufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    instanceBufferCreateInfo.usage = VK_BUFFER_USAGE_RAY_TRACING_BIT_NV;
-    instanceBufferCreateInfo.size = totalSize;
-
-    if (vulkanDebugMode) {
-        // for nsight debugging & similar stuff)
-        instanceBufferCreateInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    }
-
-    VmaAllocationCreateInfo instanceAllocCreateInfo = {};
-    instanceAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
-
-    VkBuffer instanceBuffer;
-    if (vmaCreateBuffer(m_backend.globalAllocator(), &instanceBufferCreateInfo, &instanceAllocCreateInfo, &instanceBuffer, &allocation, nullptr) != VK_SUCCESS) {
-        LogError("Could not create RTX instance buffer.\n");
-    }
-
-    if (!m_backend.setBufferMemoryUsingMapping(allocation, (uint8_t*)instanceData.data(), totalSize)) {
-        LogError("Could not set RTX instance instance buffer data.\n");
-    }
-
-    return instanceBuffer;
+    return instanceData;
 }
 
 VkBuffer VulkanRTX::createScratchBufferForAccelerationStructure(VkAccelerationStructureNV accelerationStructure, bool updateInPlace, VmaAllocation& allocation) const
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     VkAccelerationStructureMemoryRequirementsInfoNV memoryRequirementsInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_NV };
     memoryRequirementsInfo.type = updateInPlace
         ? VK_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_TYPE_UPDATE_SCRATCH_NV

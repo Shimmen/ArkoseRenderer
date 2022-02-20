@@ -9,7 +9,8 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
-    const auto& device = static_cast<const VulkanBackend&>(backend).device();
+    auto& vulkanBackend = static_cast<const VulkanBackend&>(backend);
+    const auto& device = vulkanBackend.device();
 
     // Create descriptor pool
     {
@@ -44,7 +45,14 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                     poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                     break;
                 case ShaderBindingType::RTAccelerationStructure:
-                    poolSize.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
+                    switch (vulkanBackend.rayTracingBackend()) {
+                    case VulkanBackend::RayTracingBackend::RtxExtension:
+                        poolSize.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
+                        break;
+                    case VulkanBackend::RayTracingBackend::KhrExtension:
+                        poolSize.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+                        break;
+                    }
                     break;
                 default:
                     ASSERT_NOT_REACHED();
@@ -98,7 +106,14 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 break;
             case ShaderBindingType::RTAccelerationStructure:
-                binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
+                switch (vulkanBackend.rayTracingBackend()) {
+                case VulkanBackend::RayTracingBackend::RtxExtension:
+                    binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
+                    break;
+                case VulkanBackend::RayTracingBackend::KhrExtension:
+                    binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+                    break;
+                }
                 break;
             default:
                 ASSERT_NOT_REACHED();
@@ -144,7 +159,8 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
         std::vector<VkWriteDescriptorSet> descriptorSetWrites {};
         CapList<VkDescriptorBufferInfo> descBufferInfos { 1024 };
         CapList<VkDescriptorImageInfo> descImageInfos { 1024 };
-        std::optional<VkWriteDescriptorSetAccelerationStructureNV> accelStructWrite {};
+        CapList<VkWriteDescriptorSetAccelerationStructureNV> rtxAccelStructWrites { 10 };
+        CapList<VkWriteDescriptorSetAccelerationStructureKHR> khrAccelStructWrites { 10 };
 
         for (auto& bindingInfo : shaderBindings()) {
 
@@ -312,19 +328,31 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 ASSERT(bindingInfo.buffers.empty());
                 ASSERT(bindingInfo.tlas != nullptr);
 
-                ASSERT(bindingInfo.tlas);
-                auto& vulkanTlas = static_cast<const VulkanTopLevelAS&>(*bindingInfo.tlas);
+                switch (vulkanBackend.rayTracingBackend()) {
+                case VulkanBackend::RayTracingBackend::RtxExtension: {
 
-                VkWriteDescriptorSetAccelerationStructureNV descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV };
-                descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
-                descriptorAccelerationStructureInfo.pAccelerationStructures = &vulkanTlas.accelerationStructure;
+                    VkWriteDescriptorSetAccelerationStructureNV descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV };
+                    descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelAS&>(*bindingInfo.tlas).accelerationStructure;
+                    descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
 
-                // (there can only be one in a set!) (well maybe not, but it makes sense..)
-                ASSERT(!accelStructWrite.has_value());
-                accelStructWrite = descriptorAccelerationStructureInfo;
+                    rtxAccelStructWrites.push_back(descriptorAccelerationStructureInfo);
+                    write.pNext = &rtxAccelStructWrites.back();
+                    write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
 
-                write.pNext = &accelStructWrite.value();
-                write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
+                } break;
+                
+                case VulkanBackend::RayTracingBackend::KhrExtension: {
+
+                    VkWriteDescriptorSetAccelerationStructureKHR descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR };
+                    descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASKHR&>(*bindingInfo.tlas).accelerationStructure;
+                    descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
+
+                    khrAccelStructWrites.push_back(descriptorAccelerationStructureInfo);
+                    write.pNext = &khrAccelStructWrites.back();
+                    write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+
+                } break;
+                }
 
                 write.descriptorCount = 1;
                 write.dstArrayElement = 0;

@@ -33,8 +33,8 @@ Backend& Backend::get()
 std::string Backend::capabilityName(Capability capability)
 {
     switch (capability) {
-    case Capability::RtxRayTracing:
-        return "RtxRayTracing";
+    case Capability::RayTracing:
+        return "RayTracing";
     case Capability::Shader16BitFloat:
         return "Shader16BitFloat";
     default:

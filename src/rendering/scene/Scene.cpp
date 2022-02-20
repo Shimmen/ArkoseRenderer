@@ -246,8 +246,14 @@ RenderPipelineNode::ExecuteCallback Scene::construct(Scene&, Registry& reg)
         cmdList.executeBufferCopyOperations(uploadBuffer);
 
         if (doesMaintainRayTracingScene()) {
+
             TopLevelAS& sceneTlas = globalTopLevelAccelerationStructure();
+
+            sceneTlas.updateInstanceDataWithUploadBuffer(m_rayTracingGeometryInstances, uploadBuffer);
+            cmdList.executeBufferCopyOperations(uploadBuffer);
+
             cmdList.rebuildTopLevelAcceratationStructure(sceneTlas);
+
         }
     };
 }
@@ -647,8 +653,8 @@ void Scene::rebuildGpuSceneData()
     m_materialBindingSet->setName("SceneMaterialSet");
 
     if (doesMaintainRayTracingScene() && m_rayTracingGeometryInstances.size() > 0) {
-        // TODO: If we call rebuildGpuSceneData twice or more we will leak the TLAS!
-        m_sceneTopLevelAccelerationStructure = Backend::get().createTopLevelAccelerationStructure(m_rayTracingGeometryInstances);
+        // TODO: We need to handle the case where we end up with more instances then required. Should that just force a full recreation maybe?
+        m_sceneTopLevelAccelerationStructure = Backend::get().createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, m_rayTracingGeometryInstances);
     }
 }
 

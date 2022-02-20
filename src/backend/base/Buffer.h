@@ -1,6 +1,7 @@
 #pragma once
 
 #include "backend/Resource.h"
+#include <vector>
 
 class Buffer : public Resource {
 public:
@@ -8,6 +9,7 @@ public:
     enum class Usage {
         Vertex,
         Index,
+        RTInstanceBuffer,
         UniformBuffer,
         StorageBuffer,
         IndirectBuffer,
@@ -36,6 +38,14 @@ public:
     {
         auto* byteData = reinterpret_cast<const std::byte*>(data);
         updateData(byteData, size, offset);
+    }
+
+    template<typename T>
+    void updateData(const std::vector<T>& vector, size_t offset = 0)
+    {
+        auto* byteData = reinterpret_cast<const std::byte*>(vector.data());
+        size_t byteSize = vector.size() * sizeof(T);
+        updateData(byteData, byteSize, offset);
     }
 
     template<typename T>

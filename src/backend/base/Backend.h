@@ -33,7 +33,7 @@ public:
     };
 
     enum class Capability {
-        RtxRayTracing,
+        RayTracing,
         Shader16BitFloat,
     };
 
@@ -52,6 +52,8 @@ public:
     static std::string capabilityName(Capability capability);
     virtual bool hasActiveCapability(Capability) const = 0;
 
+    virtual ShaderDefine rayTracingShaderDefine() const = 0;
+
     virtual void shutdown() = 0;
 
     virtual void renderPipelineDidChange(RenderPipeline&) = 0;
@@ -68,7 +70,7 @@ public:
                                                            const Viewport&, const BlendState&, const RasterState&, const DepthState&, const StencilState&)
         = 0;
     virtual std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(std::vector<RTGeometry>) = 0;
-    virtual std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(std::vector<RTGeometryInstance>) = 0;
+    virtual std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance>) = 0;
     virtual std::unique_ptr<RayTracingState> createRayTracingState(ShaderBindingTable& sbt, const StateBindings&, uint32_t maxRecursionDepth) = 0;
     virtual std::unique_ptr<ComputeState> createComputeState(const Shader&, std::vector<BindingSet*>) = 0;
 

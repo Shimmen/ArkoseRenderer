@@ -106,15 +106,15 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
     vkGetDeviceQueue(m_device, m_graphicsQueue.familyIndex, 0, &m_graphicsQueue.queue);
     vkGetDeviceQueue(m_device, m_computeQueue.familyIndex, 0, &m_computeQueue.queue);
 
-    if (hasActiveCapability(Backend::Capability::RtxRayTracing)) {
-        m_rtx = std::make_unique<VulkanRTX>(*this, physicalDevice(), device());
-    }
-
     VmaAllocatorCreateInfo allocatorInfo = {};
     allocatorInfo.instance = m_instance;
     allocatorInfo.physicalDevice = physicalDevice();
     allocatorInfo.device = device();
     allocatorInfo.flags = 0u;
+    if (hasActiveCapability(Backend::Capability::RayTracing)) {
+        // Device address required if we use ray tracing
+        allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    }
     if (vmaCreateAllocator(&allocatorInfo, &m_memoryAllocator) != VK_SUCCESS) {
         LogErrorAndExit("VulkanBackend: could not create memory allocator, exiting.\n");
     }
@@ -131,6 +131,21 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
     transientPoolCreateInfo.queueFamilyIndex = m_graphicsQueue.familyIndex;
     if (vkCreateCommandPool(device(), &transientPoolCreateInfo, nullptr, &m_transientCommandPool) != VK_SUCCESS) {
         LogErrorAndExit("VulkanBackend: could not create transient command pool, exiting.\n");
+    }
+
+    if (hasActiveCapability(Backend::Capability::RayTracing)) {
+        switch (rayTracingBackend()) {
+        case RayTracingBackend::RtxExtension:
+            m_rayTracingRtx = std::make_unique<VulkanRTX>(*this, physicalDevice(), device());
+            LogInfo("VulkanBackend: using RTX ray tracing backend\n");
+            break;
+        case RayTracingBackend::KhrExtension:
+            m_rayTracingKhr = std::make_unique<VulkanRayTracingKHR>(*this, physicalDevice(), device());
+            LogInfo("VulkanBackend: using KHR ray tracing backend\n");
+            break;
+        }
+    } else {
+        LogInfo("VulkanBackend: no ray tracing backend\n");
     }
 
     // Create empty stub descriptor set layout (useful for filling gaps as Vulkan doesn't allow having gaps)
@@ -153,6 +168,9 @@ VulkanBackend::~VulkanBackend()
 {
     // Before destroying stuff, make sure we're done with all scheduled work
     shutdown();
+
+    m_rayTracingRtx.reset();
+    m_rayTracingKhr.reset();
 
     m_pipelineRegistry.reset();
 
@@ -178,6 +196,7 @@ VulkanBackend::~VulkanBackend()
     if (vulkanDebugMode) {
         debugUtils().vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
         debugUtils().vkDestroyDebugReportCallbackEXT(m_instance, m_debugReportCallback, nullptr);
+        m_debugUtils.reset();
     }
 
     vkDestroyInstance(m_instance, nullptr);
@@ -234,12 +253,54 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
     VkPhysicalDeviceVulkan12Features vk12features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
     vk11features.pNext = &vk12features;
 
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR khrRayTracingPipelineFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
+    vk12features.pNext = &khrRayTracingPipelineFeatures;
+
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR khrAccelerationStructureFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
+    khrRayTracingPipelineFeatures.pNext = &khrAccelerationStructureFeatures;
+
+    VkPhysicalDeviceRayQueryFeaturesKHR khrRayQueryFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
+    khrAccelerationStructureFeatures.pNext = &khrRayQueryFeatures;
+
     vkGetPhysicalDeviceFeatures2(physicalDevice(), &features2);
 
     auto isSupported = [&](Capability capability) -> bool {
         switch (capability) {
-        case Capability::RtxRayTracing:
-            return hasSupportForExtension(VK_NV_RAY_TRACING_EXTENSION_NAME);
+        case Capability::RayTracing: {
+            bool nvidiaRtxSupport = hasSupportForExtension(VK_NV_RAY_TRACING_EXTENSION_NAME);
+            bool khrRayTracingSupport =
+                hasSupportForExtension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
+                    && khrRayTracingPipelineFeatures.rayTracingPipeline
+                    && khrRayTracingPipelineFeatures.rayTracingPipelineTraceRaysIndirect
+                    && khrRayTracingPipelineFeatures.rayTraversalPrimitiveCulling
+                && hasSupportForExtension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)
+                    && khrAccelerationStructureFeatures.accelerationStructure
+                    //&& khrAccelerationStructureFeatures.accelerationStructureIndirectBuild
+                    && khrAccelerationStructureFeatures.descriptorBindingAccelerationStructureUpdateAfterBind
+                    //&& khrAccelerationStructureFeatures.accelerationStructureHostCommands
+                && hasSupportForExtension(VK_KHR_RAY_QUERY_EXTENSION_NAME)
+                    && khrRayQueryFeatures.rayQuery
+                && hasSupportForExtension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)
+                && vk12features.bufferDeviceAddress;
+
+#if 0
+            // Prefer KHR
+            if (khrRayTracingSupport) {
+                m_rayTracingBackend = RayTracingBackend::KhrExtension;
+            } else if (nvidiaRtxSupport) {
+                m_rayTracingBackend = RayTracingBackend::RtxExtension;
+            }
+#else
+            // Prefer RTX (for now!)
+            if (nvidiaRtxSupport) {
+                m_rayTracingBackend = RayTracingBackend::RtxExtension;
+            } else if (khrRayTracingSupport) {
+                m_rayTracingBackend = RayTracingBackend::KhrExtension;
+            }
+#endif
+
+            return nvidiaRtxSupport || khrRayTracingSupport; 
+        }
         case Capability::Shader16BitFloat:
             return vk11features.storageBuffer16BitAccess
                 && vk11features.uniformAndStorageBuffer16BitAccess
@@ -309,6 +370,18 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
     return allRequiredSupported;
 }
 
+ShaderDefine VulkanBackend::rayTracingShaderDefine() const
+{
+    switch (rayTracingBackend()) {
+    case RayTracingBackend::RtxExtension:
+        return ShaderDefine::makeSymbol("RAY_TRACING_BACKEND_RTX");
+    case RayTracingBackend::KhrExtension:
+        return ShaderDefine::makeSymbol("RAY_TRACING_BACKEND_KHR");
+    }
+
+    return ShaderDefine();
+}
+
 std::unique_ptr<Buffer> VulkanBackend::createBuffer(size_t size, Buffer::Usage usage, Buffer::MemoryHint memoryHint)
 {
     return std::make_unique<VulkanBuffer>(*this, size, usage, memoryHint);
@@ -339,17 +412,38 @@ std::unique_ptr<RenderState> VulkanBackend::createRenderState(const RenderTarget
 
 std::unique_ptr<BottomLevelAS> VulkanBackend::createBottomLevelAccelerationStructure(std::vector<RTGeometry> geometries)
 {
-    return std::make_unique<VulkanBottomLevelAS>(*this, geometries);
+    switch (rayTracingBackend()) {
+    case RayTracingBackend::KhrExtension:
+        return std::make_unique<VulkanBottomLevelASKHR>(*this, geometries);
+    case RayTracingBackend::RtxExtension:
+        return std::make_unique<VulkanBottomLevelAS>(*this, geometries);
+    default:
+        ASSERT_NOT_REACHED();
+    }
 }
 
-std::unique_ptr<TopLevelAS> VulkanBackend::createTopLevelAccelerationStructure(std::vector<RTGeometryInstance> instances)
+std::unique_ptr<TopLevelAS> VulkanBackend::createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance> initialInstances)
 {
-    return std::make_unique<VulkanTopLevelAS>(*this, instances);
+    switch (rayTracingBackend()) {
+    case RayTracingBackend::KhrExtension:
+        return std::make_unique<VulkanTopLevelASKHR>(*this, maxInstanceCount, initialInstances);
+    case RayTracingBackend::RtxExtension:
+        return std::make_unique<VulkanTopLevelAS>(*this, maxInstanceCount, initialInstances);
+    default:
+        ASSERT_NOT_REACHED();
+    }
 }
 
 std::unique_ptr<RayTracingState> VulkanBackend::createRayTracingState(ShaderBindingTable& sbt, const StateBindings& stateBindings, uint32_t maxRecursionDepth)
 {
-    return std::make_unique<VulkanRayTracingState>(*this, sbt, stateBindings, maxRecursionDepth);
+    switch (rayTracingBackend()) {
+    case RayTracingBackend::KhrExtension:
+        return std::make_unique<VulkanRayTracingStateKHR>(*this, sbt, stateBindings, maxRecursionDepth);
+    case RayTracingBackend::RtxExtension:
+        return std::make_unique<VulkanRayTracingState>(*this, sbt, stateBindings, maxRecursionDepth);
+    default:
+        ASSERT_NOT_REACHED();
+    }
 }
 
 std::unique_ptr<ComputeState> VulkanBackend::createComputeState(const Shader& shader, std::vector<BindingSet*> bidningSets)
@@ -546,6 +640,10 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     VkPhysicalDeviceVulkan11Features vk11features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
     VkPhysicalDeviceVulkan12Features vk12features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
 
+    VkPhysicalDeviceRayTracingPipelineFeaturesKHR khrRayTracingPipelineFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
+    VkPhysicalDeviceAccelerationStructureFeaturesKHR khrAccelerationStructureFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
+    VkPhysicalDeviceRayQueryFeaturesKHR khrRayQueryFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
+
     // Enable some very basic common features expected by everyone to exist
     features.samplerAnisotropy = VK_TRUE;
     features.fillModeNonSolid = VK_TRUE;
@@ -583,8 +681,27 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
         if (!active)
             continue;
         switch (capability) {
-        case Capability::RtxRayTracing:
-            deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+        case Capability::RayTracing:
+            switch (rayTracingBackend()) {
+            case RayTracingBackend::RtxExtension:
+                deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
+                break;
+            case RayTracingBackend::KhrExtension:
+                deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+                khrRayTracingPipelineFeatures.rayTracingPipeline = VK_TRUE;
+                khrRayTracingPipelineFeatures.rayTracingPipelineTraceRaysIndirect = VK_TRUE;
+                khrRayTracingPipelineFeatures.rayTraversalPrimitiveCulling = VK_TRUE;
+                deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+                khrAccelerationStructureFeatures.accelerationStructure = VK_TRUE;
+                //khrAccelerationStructureFeatures.accelerationStructureIndirectBuild = VK_TRUE;
+                khrAccelerationStructureFeatures.descriptorBindingAccelerationStructureUpdateAfterBind = VK_TRUE;
+                //khrAccelerationStructureFeatures.accelerationStructureHostCommands = VK_TRUE;
+                deviceExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+                khrRayQueryFeatures.rayQuery = VK_TRUE;
+                deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+                vk12features.bufferDeviceAddress = VK_TRUE;
+                break;
+            }
             break;
         case Capability::Shader16BitFloat:
             vk11features.storageBuffer16BitAccess = VK_TRUE;
@@ -617,6 +734,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     deviceCreateInfo.pNext = &features2;
     features2.pNext = &vk11features;
     vk11features.pNext = &vk12features;
+    vk12features.pNext = &khrRayTracingPipelineFeatures;
+    khrRayTracingPipelineFeatures.pNext = &khrAccelerationStructureFeatures;
+    khrAccelerationStructureFeatures.pNext = &khrRayQueryFeatures;
 
     VkDevice device;
     if (vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device) != VK_SUCCESS)
@@ -1148,8 +1268,14 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
     {
         SCOPED_PROFILE_ZONE_BACKEND_NAMED("Waiting for fence");
-        if (vkWaitForFences(device(), 1, &frameContext.frameFence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
-            LogError("VulkanBackend: error while waiting for in-flight frame fence (frame %u).\n", m_currentFrameIndex);
+
+        // Wait indefinitely, or as long as the drivers will allow
+        uint64_t timeout = UINT64_MAX;
+
+        VkResult result = vkWaitForFences(device(), 1, &frameContext.frameFence, VK_TRUE, timeout);
+
+        if (result == VK_ERROR_DEVICE_LOST) {
+            LogErrorAndExit("VulkanBackend: device was lost while waiting for frame fence (frame %u).\n", m_currentFrameIndex);
         }
     }
 

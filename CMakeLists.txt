@@ -25,18 +25,21 @@ add_executable(ArkoseRenderer
     src/backend/base/Texture.cpp
     src/backend/util/StateBindings.cpp
     src/backend/util/UploadBuffer.cpp
-    src/backend/vulkan/VulkanAccelerationStructure.cpp
+    src/backend/vulkan/VulkanAccelerationStructure.cpp # rename to VulkanAccelerationStructureRTX
     src/backend/vulkan/VulkanBackend.cpp
     src/backend/vulkan/VulkanBindingSet.cpp
     src/backend/vulkan/VulkanBuffer.cpp
     src/backend/vulkan/VulkanCommandList.cpp
     src/backend/vulkan/VulkanComputeState.cpp
-    src/backend/vulkan/VulkanRayTracingState.cpp
+    src/backend/vulkan/VulkanRayTracingState.cpp # rename to VulkanRayTracingStateRTX
     src/backend/vulkan/VulkanRenderState.cpp
     src/backend/vulkan/VulkanRenderTarget.cpp
     src/backend/vulkan/VulkanTexture.cpp
     src/backend/vulkan/extensions/VulkanDebugUtils.cpp
-    src/backend/vulkan/extensions/VulkanRTX.cpp
+    src/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.cpp
+    src/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.cpp
+    src/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.cpp
+    src/backend/vulkan/extensions/VulkanRTX.cpp # rename to VulkanRayTracingRTX
     src/math/Fibonacci.cpp
     src/math/Frustum.cpp
     src/math/Halton.cpp

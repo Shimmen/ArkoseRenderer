@@ -62,7 +62,7 @@ private:
     void transitionImageLayoutDEBUG(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags, VkCommandBuffer) const;
 
     void requireExactlyOneStateToBeSet(const std::string& context) const;
-    VkPipelineLayout getCurrentlyBoundPipelineLayout();
+    std::pair<VkPipelineLayout, VkPipelineBindPoint> getCurrentlyBoundPipelineLayout();
     const Shader& getCurrentlyBoundShader();
 
 private:
@@ -75,5 +75,5 @@ private:
 
     const VulkanRenderState* activeRenderState = nullptr;
     const VulkanComputeState* activeComputeState = nullptr;
-    const VulkanRayTracingState* activeRayTracingState = nullptr;
+    const RayTracingState* activeRayTracingState = nullptr;
 };

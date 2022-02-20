@@ -3,7 +3,7 @@
 
 // https://github.com/KhronosGroup/GLSL/blob/master/extensions/ext/GLSL_EXT_ray_tracing.txt
 
-#extension GLSL_EXT_ray_tracing : require
+#extension GL_EXT_ray_tracing : require
 
 // Common types
 
@@ -43,7 +43,7 @@
 
 // Functions
 
-#define ignoreIntersection() ignoreIntersectionEXT()
+#define ignoreIntersection() ignoreIntersectionEXT
 #define traceRay(topLevelAS, rayFlags, cullMask, sbtRecordOffset, sbtRecordStride, missIndex, origin, tmin, direction, tmax, payloadIdx) \
     traceRayEXT(topLevelAS, rayFlags, cullMask, sbtRecordOffset, sbtRecordStride, missIndex, origin, tmin, direction, tmax, payloadIdx)
 

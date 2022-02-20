@@ -6,14 +6,14 @@
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
-struct VulkanRayTracingState final : public RayTracingState {
+struct VulkanRayTracingStateKHR final : public RayTracingState {
 public:
-    VulkanRayTracingState(Backend&, ShaderBindingTable, const StateBindings&, uint32_t maxRecursionDepth);
-    virtual ~VulkanRayTracingState() override;
+    VulkanRayTracingStateKHR(Backend&, ShaderBindingTable, const StateBindings&, uint32_t maxRecursionDepth);
+    virtual ~VulkanRayTracingStateKHR() override;
 
     virtual void setName(const std::string& name) override;
 
-    void traceRays(VkCommandBuffer, Extent2D) const;
+    void traceRaysWithShaderOnlySBT(VkCommandBuffer, Extent2D) const;
 
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
