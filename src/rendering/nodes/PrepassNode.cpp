@@ -6,13 +6,11 @@
 
 RenderPipelineNode::ExecuteCallback PrepassNode::construct(Scene& scene, Registry& reg)
 {
-    Texture& depthTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth24Stencil8, Texture::Filters::nearest());
-    reg.publish("SceneDepth", depthTexture);
-
+    Texture* sceneDepth = reg.getTexture("SceneDepth");
     BindingSet& opaqueDrawableBindingSet = *reg.getBindingSet("MainViewCulledDrawablesOpaqueSet");
 
     Shader prepassShader = Shader::createVertexOnly("forward/prepass.vert");
-    RenderTarget& prepassRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Clear, StoreOp::Store } });
+    RenderTarget& prepassRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, sceneDepth, LoadOp::Clear, StoreOp::Store } });
     RenderStateBuilder prepassRenderStateBuilder { prepassRenderTarget, prepassShader, m_prepassVertexLayout };
     prepassRenderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
     prepassRenderStateBuilder.stateBindings().at(0, opaqueDrawableBindingSet);

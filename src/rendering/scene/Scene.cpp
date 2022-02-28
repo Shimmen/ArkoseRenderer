@@ -33,6 +33,30 @@ void Scene::newFrame(Extent2D mainViewportSize, bool firstFrame)
 
 RenderPipelineNode::ExecuteCallback Scene::construct(Scene&, Registry& reg)
 {
+    // G-Buffer textures
+    {
+        Extent2D windowExtent = reg.windowRenderTarget().extent();
+
+        Texture& depthTexture = reg.createTexture2D(windowExtent, Texture::Format::Depth24Stencil8, Texture::Filters::nearest());
+        reg.publish("SceneDepth", depthTexture);
+
+        // rgb: scene color, a: unused
+        Texture& colorTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
+        reg.publish("SceneColor", colorTexture);
+
+        // rg: encoded normal, ba: velocity in image plane (2D)
+        Texture& normalVelocityTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
+        reg.publish("SceneNormalVelocity", normalVelocityTexture);
+
+        // rgb: base color, a: unused
+        Texture& baseColorTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA8);
+        reg.publish("SceneBaseColor", baseColorTexture);
+
+        // rgb: diffuse color, a: unused
+        Texture& diffueGiTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
+        reg.publish("DiffuseGI", diffueGiTexture);
+    }
+
     Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
     BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStage::AnyRasterize, &cameraBuffer } });
     reg.publish("SceneCameraData", cameraBuffer);

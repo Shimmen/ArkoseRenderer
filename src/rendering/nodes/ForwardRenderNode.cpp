@@ -11,42 +11,20 @@ using uint = uint32_t;
 
 RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(Scene& scene, Registry& reg)
 {
-    ///////////////////////
-    // constructNode
-    BindingSet* ddgiSamplingBindingSet = nullptr;
-    if (reg.hasPreviousNode("DDGI")) {
-        ddgiSamplingBindingSet = reg.getBindingSet("DDGISamplingSet");
-    }
-    ///////////////////////
-
-    Texture& colorTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
-    reg.publish("SceneColor", colorTexture);
-
-    Texture& normalVelocityTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
-    reg.publish("SceneNormalVelocity", normalVelocityTexture);
-
-    Texture& velocityTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
-    reg.publish("SceneVelocity", velocityTexture);
-
-    Texture& baseColorTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA8);
-    reg.publish("SceneBaseColor", baseColorTexture);
-
-    Texture& diffueGiTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
-    reg.publish("DiffuseGI", diffueGiTexture);
-
-    if (!reg.hasPreviousNode("Prepass"))
-        reg.publish("SceneDepth", reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth24Stencil8, Texture::Filters::nearest()));
-    Texture& depthTexture = *reg.getTexture("SceneDepth");
+    Texture* colorTexture = reg.getTexture("SceneColor");
+    Texture* normalVelocityTexture = reg.getTexture("SceneNormalVelocity");
+    Texture* baseColorTexture = reg.getTexture("SceneBaseColor");
+    Texture* diffueGiTexture = reg.getTexture("DiffuseGI");
+    Texture* depthTexture = reg.getTexture("SceneDepth");
 
     auto makeRenderTarget = [&](LoadOp loadOp) -> RenderTarget& {
         // For depth, if we have prepass we should never do any other load op than to load
         LoadOp depthLoadOp = reg.hasPreviousNode("Prepass") ? LoadOp::Load : loadOp;
-        return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture, loadOp, StoreOp::Store },
-                                        { RenderTarget::AttachmentType::Color1, &normalVelocityTexture, loadOp, StoreOp::Store },
-                                        { RenderTarget::AttachmentType::Color2, &velocityTexture, loadOp, StoreOp::Store },
-                                        { RenderTarget::AttachmentType::Color3, &baseColorTexture, loadOp, StoreOp::Store },
-                                        { RenderTarget::AttachmentType::Color4, &diffueGiTexture, loadOp, StoreOp::Store },
-                                        { RenderTarget::AttachmentType::Depth, &depthTexture, depthLoadOp, StoreOp::Store } });
+        return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, colorTexture, loadOp, StoreOp::Store },
+                                        { RenderTarget::AttachmentType::Color1, normalVelocityTexture, loadOp, StoreOp::Store },
+                                        { RenderTarget::AttachmentType::Color2, baseColorTexture, loadOp, StoreOp::Store },
+                                        { RenderTarget::AttachmentType::Color3, diffueGiTexture, loadOp, StoreOp::Store },
+                                        { RenderTarget::AttachmentType::Depth, depthTexture, depthLoadOp, StoreOp::Store } });
     };
 
     BindingSet& cameraBindingSet = *reg.getBindingSet("SceneCameraSet");
@@ -56,6 +34,10 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(Scene& scene, R
     BindingSet& opaqueDrawablesBindingSet = *reg.getBindingSet("MainViewCulledDrawablesOpaqueSet");
     BindingSet& maskedDrawablesBindingSet = *reg.getBindingSet("MainViewCulledDrawablesMaskedSet");
 
+    BindingSet* ddgiSamplingBindingSet = nullptr;
+    if (reg.hasPreviousNode("DDGI")) {
+        ddgiSamplingBindingSet = reg.getBindingSet("DDGISamplingSet");
+    }
     bool useDDGI = ddgiSamplingBindingSet != nullptr;
     auto includeDDGIDefine = ShaderDefine::makeBool("FORWARD_INCLUDE_DDGI", useDDGI);
 
