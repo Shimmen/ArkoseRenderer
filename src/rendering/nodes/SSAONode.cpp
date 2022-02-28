@@ -19,7 +19,7 @@ RenderPipelineNode::ExecuteCallback SSAONode::construct(Scene& scene, Registry& 
 
     // TODO: Handle resource modifications! For proper async handling
     Texture* sceneOpaqueDepth = reg.getTexture("SceneDepth");
-    Texture* sceneOpaqueNormals = reg.getTexture("SceneNormal");
+    Texture* sceneOpaqueNormals = reg.getTexture("SceneNormalVelocity");
 
     Texture& ambientOcclusionTex = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F); //Texture::Format::R16F);
     reg.publish("AmbientOcclusion", ambientOcclusionTex);

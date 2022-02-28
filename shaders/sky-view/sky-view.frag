@@ -1,6 +1,7 @@
 #version 460
 
 #include <shared/CameraState.h>
+#include <common/gBuffer.glsl>
 #include <common/namedUniforms.glsl>
 #include <common/spherical.glsl>
 
@@ -15,7 +16,7 @@ NAMED_UNIFORMS(pushConstants,
 )
 
 layout(location = 0) out vec4 oColor;
-layout(location = 1) out vec4 oVelocity;
+layout(location = 1) out vec4 oNormalVelocity;
 
 void main()
 {
@@ -48,6 +49,6 @@ void main()
         vec2 velocity = (vPosition.xy - previousFrameProjectedPos.xy) * vec2(0.5, 0.5); // in uv-space
 
         //velocity = abs(velocity) * 100.0; // debug code
-        oVelocity = vec4(velocity, 0.0, 0.0);
+        oNormalVelocity = vec4(encodeNullNormal(), velocity);
     }
 }

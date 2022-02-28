@@ -24,7 +24,7 @@ void main()
         return;
 
     vec3 current = texelFetch(currentColorTex, pixelCoord, 0).rgb;
-    vec2 currentVelocity = texelFetch(currentVelocityTex, pixelCoord, 0).xy;
+    vec2 currentVelocity = texelFetch(currentVelocityTex, pixelCoord, 0).zw; // (xy is encoded normal)
 
     vec2 pixelSize = vec2(1.0) / vec2(imgSize);
     vec2 currentUV = (vec2(pixelCoord) + vec2(0.5)) * pixelSize;

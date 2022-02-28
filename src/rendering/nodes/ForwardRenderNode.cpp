@@ -22,8 +22,8 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(Scene& scene, R
     Texture& colorTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("SceneColor", colorTexture);
 
-    Texture& normalTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
-    reg.publish("SceneNormal", normalTexture);
+    Texture& normalVelocityTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
+    reg.publish("SceneNormalVelocity", normalVelocityTexture);
 
     Texture& velocityTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("SceneVelocity", velocityTexture);
@@ -42,7 +42,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(Scene& scene, R
         // For depth, if we have prepass we should never do any other load op than to load
         LoadOp depthLoadOp = reg.hasPreviousNode("Prepass") ? LoadOp::Load : loadOp;
         return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture, loadOp, StoreOp::Store },
-                                        { RenderTarget::AttachmentType::Color1, &normalTexture, loadOp, StoreOp::Store },
+                                        { RenderTarget::AttachmentType::Color1, &normalVelocityTexture, loadOp, StoreOp::Store },
                                         { RenderTarget::AttachmentType::Color2, &velocityTexture, loadOp, StoreOp::Store },
                                         { RenderTarget::AttachmentType::Color3, &baseColorTexture, loadOp, StoreOp::Store },
                                         { RenderTarget::AttachmentType::Color4, &diffueGiTexture, loadOp, StoreOp::Store },

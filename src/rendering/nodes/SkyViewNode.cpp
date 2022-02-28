@@ -6,7 +6,7 @@
 RenderPipelineNode::ExecuteCallback SkyViewNode::construct(Scene& scene, Registry& reg)
 {
     Texture& sceneColor = *reg.getTexture("SceneColor");
-    Texture& sceneVelocity = *reg.getTexture("SceneVelocity"); // todo: velocity shouldn't be strictly required as it is now!
+    Texture& sceneNormalVelocity = *reg.getTexture("SceneNormalVelocity"); // todo: velocity shouldn't be strictly required as it is now!
     Texture& depthStencilImage = *reg.getTexture("SceneDepth");
 
     Texture& skyViewTexture = scene.environmentMap().empty()
@@ -17,7 +17,7 @@ RenderPipelineNode::ExecuteCallback SkyViewNode::construct(Scene& scene, Registr
                                                                     { 1, ShaderStage::Fragment, &skyViewTexture, ShaderBindingType::TextureSampler } });
 
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &sceneColor, LoadOp::Load, StoreOp::Store },
-                                                          { RenderTarget::AttachmentType::Color1, &sceneVelocity, LoadOp::Load, StoreOp::Store },
+                                                          { RenderTarget::AttachmentType::Color1, &sceneNormalVelocity, LoadOp::Load, StoreOp::Store },
                                                           { RenderTarget::AttachmentType::Depth, &depthStencilImage, LoadOp::Load, StoreOp::Store } });
 
     Shader rasterizeShader = Shader::createBasicRasterize("sky-view/sky-view.vert", "sky-view/sky-view.frag");
@@ -27,7 +27,7 @@ RenderPipelineNode::ExecuteCallback SkyViewNode::construct(Scene& scene, Registr
     renderStateBuilder.stencilMode = StencilMode::PassIfZero; // i.e. if no geometry is written to this pixel
     renderStateBuilder.stateBindings().at(0, skyViewRasterizeBindingSet);
     RenderState& skyViewRenderState = reg.createRenderState(renderStateBuilder);
-    
+
     Buffer& fullscreenTriangleVertexBuffer = reg.createBuffer(std::vector<vec2> { { -1, -3 }, { -1, 1 }, { 3, 1 } },
                                                               Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
 

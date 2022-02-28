@@ -20,7 +20,7 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(Scene& scene, Registry& r
     ///////////////////////
 
     Texture& currentFrameTexture = *reg.getTexture("SceneColorLDR");
-    Texture& currentFrameVelocity = *reg.getTexture("SceneVelocity");
+    Texture& currentFrameVelocity = *reg.getTexture("SceneNormalVelocity");
 
     Texture& historyTexture = reg.createTexture2D(accumulationTexture.extent(), accumulationTexture.format(),
                                                   Texture::Filters::linear(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());

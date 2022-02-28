@@ -3,8 +3,9 @@
 #extension GL_EXT_nonuniform_qualifier : require
 
 #include <common/brdf.glsl>
-#include <common/namedUniforms.glsl>
+#include <common/gBuffer.glsl>
 #include <common/iesProfile.glsl>
+#include <common/namedUniforms.glsl>
 #include <common/shadow.glsl>
 #include <shared/BlendMode.h>
 #include <shared/CameraState.h>
@@ -44,10 +45,9 @@ NAMED_UNIFORMS(pushConstants,
 )
 
 layout(location = 0) out vec4 oColor;
-layout(location = 1) out vec4 oNormal;
-layout(location = 2) out vec4 oVelocity;
-layout(location = 3) out vec4 oBaseColor;
-layout(location = 4) out vec4 oDiffuseGI;
+layout(location = 1) out vec4 oNormalVelocity;
+layout(location = 2) out vec4 oBaseColor;
+layout(location = 3) out vec4 oDiffuseGI;
 
 vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
@@ -88,18 +88,19 @@ vec3 evaluateDDGIIndirectLight(vec3 P, vec3 V, vec3 N, vec3 baseColor, float met
     vec3 worldSpacePos = vec3(camera.worldFromView * vec4(P, 1.0));
     vec3 worldSpaceNormal = normalize(mat3(camera.worldFromView) * N);
 
-    // Assume glossy indirect light comes from the reflected direction L
-    //vec3 L = reflect(-V, N); TODO!
-    vec3 indirectGlossy = vec3(0.0);
+    // For diffuse, simply pretend half vector is normal
+    vec3 H = N;
 
-    // TODO: Use physically plausible amounts! For now we just use a silly estimate for F since we don't actually include glossy stuff at the moment.
-    float a = square(roughness);
-    float fakeF = pow(a, 5.0);
+    vec3 F0 = mix(vec3(DIELECTRIC_REFLECTANCE), baseColor, metallic);
+    vec3 F = F_Schlick(max(0.0, dot(V, H)), F0);
+
+    //float a = square(roughness);
+    //float fakeF = pow(a, 5.0);
 
     vec3 irradiance = sampleDynamicDiffuseGlobalIllumination(worldSpacePos, worldSpaceNormal, ddgiProbeGridData, ddgiIrradianceAtlas, ddgiVisibilityAtlas);
-    vec3 indirectDiffuse = vec3(1.0 - metallic) * vec3(1.0 - fakeF) * irradiance;
+    vec3 indirectDiffuse = vec3(1.0 - metallic) * vec3(1.0 - F) * irradiance;
 
-    return indirectDiffuse + indirectGlossy;
+    return indirectDiffuse;
 }
 #endif
 
@@ -123,9 +124,13 @@ void main()
     float metallic = metallicRoughness.b;
     float roughness = metallicRoughness.g;
 
+#if 1
     vec3 packedNormal = texture(textures[material.normalMap], vTexCoord).rgb;
     vec3 mappedNormal = normalize(packedNormal * 2.0 - 1.0);
     vec3 N = normalize(vTbnMatrix * mappedNormal);
+#else
+    vec3 N = vTbnMatrix[2];
+#endif
 
     vec3 V = -normalize(vPosition);
 
@@ -159,9 +164,7 @@ void main()
         //velocity = abs(velocity) * 100.0; // debug code
     }
 
-    // TODO: Maybe use octahedral for normals and pack normal & velocity together?
     oColor = vec4(color, 1.0);
-    oNormal = vec4(N, 0.0);
-    oVelocity = vec4(velocity, 0.0, 0.0);
+    oNormalVelocity = vec4(encodeNormal(N), velocity);
     oBaseColor = vec4(baseColor, 0.0);
 }
