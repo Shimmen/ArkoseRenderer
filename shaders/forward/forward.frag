@@ -46,8 +46,9 @@ NAMED_UNIFORMS(pushConstants,
 
 layout(location = 0) out vec4 oColor;
 layout(location = 1) out vec4 oNormalVelocity;
-layout(location = 2) out vec4 oBaseColor;
-layout(location = 3) out vec4 oDiffuseGI;
+layout(location = 2) out vec4 oMaterialProps;
+layout(location = 3) out vec4 oBaseColor;
+layout(location = 4) out vec4 oDiffuseGI;
 
 vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
@@ -166,5 +167,6 @@ void main()
 
     oColor = vec4(color, 1.0);
     oNormalVelocity = vec4(encodeNormal(N), velocity);
+    oMaterialProps = vec4(roughness, metallic, 0.0, 0.0);
     oBaseColor = vec4(baseColor, 0.0);
 }

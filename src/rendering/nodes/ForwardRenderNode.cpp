@@ -13,6 +13,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(Scene& scene, R
 {
     Texture* colorTexture = reg.getTexture("SceneColor");
     Texture* normalVelocityTexture = reg.getTexture("SceneNormalVelocity");
+    Texture* materialTexture = reg.getTexture("SceneMaterial");
     Texture* baseColorTexture = reg.getTexture("SceneBaseColor");
     Texture* diffueGiTexture = reg.getTexture("DiffuseGI");
     Texture* depthTexture = reg.getTexture("SceneDepth");
@@ -22,8 +23,9 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(Scene& scene, R
         LoadOp depthLoadOp = reg.hasPreviousNode("Prepass") ? LoadOp::Load : loadOp;
         return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, colorTexture, loadOp, StoreOp::Store },
                                         { RenderTarget::AttachmentType::Color1, normalVelocityTexture, loadOp, StoreOp::Store },
-                                        { RenderTarget::AttachmentType::Color2, baseColorTexture, loadOp, StoreOp::Store },
-                                        { RenderTarget::AttachmentType::Color3, diffueGiTexture, loadOp, StoreOp::Store },
+                                        { RenderTarget::AttachmentType::Color2, materialTexture, loadOp, StoreOp::Store },
+                                        { RenderTarget::AttachmentType::Color3, baseColorTexture, loadOp, StoreOp::Store },
+                                        { RenderTarget::AttachmentType::Color4, diffueGiTexture, loadOp, StoreOp::Store },
                                         { RenderTarget::AttachmentType::Depth, depthTexture, depthLoadOp, StoreOp::Store } });
     };
 

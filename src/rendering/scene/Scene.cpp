@@ -48,6 +48,10 @@ RenderPipelineNode::ExecuteCallback Scene::construct(Scene&, Registry& reg)
         Texture& normalVelocityTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
         reg.publish("SceneNormalVelocity", normalVelocityTexture);
 
+        // r: roughness, g: metallic, b: unused, a: unused
+        Texture& materialTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
+        reg.publish("SceneMaterial", materialTexture);
+
         // rgb: base color, a: unused
         Texture& baseColorTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA8);
         reg.publish("SceneBaseColor", baseColorTexture);
