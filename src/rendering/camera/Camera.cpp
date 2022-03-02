@@ -132,8 +132,8 @@ void Camera::setProjectionFromView(mat4 projectionFromView)
         float uvOffsetY = float(frustumJitterPixelOffset().y) / viewportSize().height();
         float ndcOffsetX = uvOffsetX * 2.0f;
         float ndcOffsetY = uvOffsetY * 2.0f;
-        mat4 jitteringOffset = moos::translate(vec3(ndcOffsetX, ndcOffsetY, 0.0f));
-        m_projectionFromView = jitteringOffset * m_projectionFromView;
+        m_projectionFromView[2][0] += ndcOffsetX;
+        m_projectionFromView[2][1] += ndcOffsetY;
     }
 }
 
