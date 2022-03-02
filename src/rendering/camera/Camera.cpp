@@ -137,9 +137,10 @@ void Camera::setProjectionFromView(mat4 projectionFromView)
     }
 }
 
-vec2 Camera::totalFrustumJitterInUVCoords() const
+vec2 Camera::frustumJitterUVCorrection() const
 {
-    vec2 totalJitterPixelOffset = frustumJitterPixelOffset() + previousFrameFrustumJitterPixelOffset();
+    // Remove this frame's offset, we're now "neutral", then add previous frame's offset
+    vec2 totalJitterPixelOffset = -frustumJitterPixelOffset() + previousFrameFrustumJitterPixelOffset();
     float x = totalJitterPixelOffset.x / float(viewportSize().width());
     float y = totalJitterPixelOffset.y / float(viewportSize().height());
     return vec2(x, y);

@@ -96,7 +96,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(Scene& scene, R
         auto setCommonNamedUniforms = [&]() {
             cmdList.setNamedUniform("ambientAmount", scene.exposedAmbient());
             cmdList.setNamedUniform("indirectExposure", scene.lightPreExposureValue());
-            cmdList.setNamedUniform("totalFrustumJitter", scene.camera().totalFrustumJitterInUVCoords());
+            cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
         };
 
         cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
