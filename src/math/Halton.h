@@ -4,6 +4,6 @@
 
 namespace halton {
 
-vec2 generateHaltonSample(int index, int baseX, int baseY);
+float generateHaltonSample(int index, int base);
 
 } // namespace halton
