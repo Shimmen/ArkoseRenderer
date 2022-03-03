@@ -191,6 +191,7 @@ std::unique_ptr<Material> GltfMesh::createMaterial()
             return { "", nullptr };
 
         auto& texture = m_model->textures[texIndex];
+        auto& sampler = m_model->samplers[texture.sampler];
         auto& image = m_model->images[texture.source];
 
         if (!image.uri.empty()) {

@@ -86,13 +86,13 @@ Texture* MaterialTextureCache::getLoadedTexture(Backend& backend, const std::str
     if (entry != m_loadedTextures.end())
         return entry->second.get();
 
-    m_loadedTextures[imagePath] = Texture::createFromImagePath(backend, imagePath, sRGB, true, Texture::WrapModes::clampAllToEdge());
+    m_loadedTextures[imagePath] = Texture::createFromImagePath(backend, imagePath, sRGB, true, Texture::WrapModes::repeatAll());
     return m_loadedTextures[imagePath].get();
 }
 
 Texture* MaterialTextureCache::getTextureForImage(Backend& backend, const Image& image, bool sRGB)
 {
-    auto texture = Texture::createFromImage(Backend::get(), image, sRGB, true, Texture::WrapModes::clampAllToEdge());
+    auto texture = Texture::createFromImage(Backend::get(), image, sRGB, true, Texture::WrapModes::repeatAll());
     m_imageTextures.push_back(std::move(texture));
     return m_imageTextures.back().get();
 }
