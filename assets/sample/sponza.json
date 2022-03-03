@@ -16,6 +16,19 @@
           },
           "scale": [ 1, 1, 1 ]
         }
+      },
+      {
+        "name": "helmet",
+        "gltf": "assets/sample/models/DamagedHelmet.glb",
+        "transform": {
+          "translation": [ 0, 8.5, 0 ],
+          "rotation": {
+            "type": "axis-angle",
+            "axis": [ 0, 1, 0 ],
+            "angle": 1.0
+          },
+          "scale": [ 1.2, 1.2, 1.2 ]
+        }
       }
     ],
     "lights": [
