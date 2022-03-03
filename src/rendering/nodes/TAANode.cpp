@@ -38,7 +38,7 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(Scene& scene, Registry& r
         ImGui::Checkbox("Enabled##taa", &m_taaEnabled);
         scene.camera().setFrustumJitteringEnabled(m_taaEnabled);
 
-        static float hysteresis = 0.9f;
+        static float hysteresis = 0.95f;
         static bool useCatmullRom = true;
         if (ImGui::TreeNode("Advanced##taa")) {
             ImGui::SliderFloat("Hysteresis", &hysteresis, 0.0f, 1.0f);
