@@ -13,6 +13,7 @@ layout(set = 0, binding = 1) uniform sampler2D environmentTex;
 
 NAMED_UNIFORMS(pushConstants,
     float environmentMultiplier;
+    vec2 frustumJitterCorrection;
 )
 
 layout(location = 0) out vec4 oColor;
@@ -47,6 +48,7 @@ void main()
         previousFrameProjectedPos /= previousFrameProjectedPos.w;
 
         vec2 velocity = (vPosition.xy - previousFrameProjectedPos.xy) * vec2(0.5, 0.5); // in uv-space
+        velocity -= pushConstants.frustumJitterCorrection;
 
         //velocity = abs(velocity) * 100.0; // debug code
         oNormalVelocity = vec4(encodeNullNormal(), velocity);

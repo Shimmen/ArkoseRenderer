@@ -43,6 +43,7 @@ RenderPipelineNode::ExecuteCallback SkyViewNode::construct(Scene& scene, Registr
 
         cmdList.beginRendering(skyViewRenderState);
         cmdList.setNamedUniform("environmentMultiplier", envMultiplier);
+        cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
         cmdList.draw(fullscreenTriangleVertexBuffer, 3);
         cmdList.endRendering();
     };
