@@ -42,7 +42,6 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(Scene& scene, Registry& r
         static bool useCatmullRom = true;
         if (ImGui::TreeNode("Advanced##taa")) {
             ImGui::SliderFloat("Hysteresis", &hysteresis, 0.0f, 1.0f);
-            ImGui::SliderFloat("Jitter scale", &scene.camera().frustumJitterScale, 0.0f, 1.0f);
             ImGui::Checkbox("Use Catmull-Rom history sampling", &useCatmullRom);
             ImGui::TreePop();
         }
