@@ -12,8 +12,8 @@ public:
     };
 
     enum class ComponentType {
-        UInt8,
-        Float,
+        UInt8 = 1,
+        Float = 4,
     };
 
     struct Info {
@@ -32,6 +32,13 @@ public:
                 && pixelType == other.pixelType
                 && componentType == other.componentType;
         }
+
+        size_t requiredStorageSize() const
+        {
+            int componentCount = static_cast<int>(pixelType);
+            int componentSize = static_cast<int>(componentType);
+            return width * height * componentCount * componentSize;
+        }
     };
 
     enum class MemoryType {
@@ -40,7 +47,7 @@ public:
     };
 
     static Info* getInfo(const std::string& imagePath, bool quiet = false);
-    static Image* load(const std::string& imagePath, PixelType);
+    static Image* load(const std::string& imagePath, PixelType, bool skipReadableCheck = false);
 
     const Info& info() const { return m_info; }
 

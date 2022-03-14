@@ -5,11 +5,13 @@
 #include "utility/Profiling.h"
 #include <memory>
 #include <moos/core.h>
+#include <mutex>
 #include <stb_image.h>
 #include <unordered_map>
 
 static std::unordered_map<std::string, Image::Info> s_infoCache {};
 static std::unordered_map<std::string, std::unique_ptr<Image>> s_imageCache {};
+static std::mutex s_imageCacheMutex {};
 
 Image::Info* Image::getInfo(const std::string& imagePath, bool quiet)
 {
@@ -19,16 +21,12 @@ Image::Info* Image::getInfo(const std::string& imagePath, bool quiet)
     if (entry != s_infoCache.end())
         return &entry->second;
 
-    // TODO: Consider putting like a nullptr Image::Info in the cache in this case?
-    if (!FileIO::isFileReadable(imagePath)) {
-        if (!quiet) {
+    FILE* file = fopen(imagePath.c_str(), "rb");
+    if (file == nullptr) {
+        if (!quiet)
             LogError("Image: could not read file at path '%s', which is required for info.\n", imagePath.c_str());
-        }
         return nullptr;
     }
-
-    FILE* file = fopen(imagePath.c_str(), "rb");
-    ASSERT(file);
 
     Image::Info& info = s_infoCache[imagePath];
 
@@ -46,22 +44,28 @@ Image::Info* Image::getInfo(const std::string& imagePath, bool quiet)
     return &info;
 }
 
-Image* Image::load(const std::string& imagePath, PixelType pixelType)
+Image* Image::load(const std::string& imagePath, PixelType pixelType, bool skipReadableCheck)
 {
     SCOPED_PROFILE_ZONE();
 
-    auto entry = s_imageCache.find(imagePath);
-    if (entry != s_imageCache.end()) {
-        Image* image = entry->second.get();
-        // For now we only load RGBA images, but later we might wanna do some more advanced caching,
-        //  where e.g. (path, RGBA) is loaded differently to a (path, RGB) (i.e., same path, different types)
-        ASSERT(image->info().pixelType == pixelType);
-        return image;
+    {
+        //SCOPED_PROFILE_ZONE_NAMED("Image cache mutex");
+        std::scoped_lock<std::mutex> lock(s_imageCacheMutex);
+        auto entry = s_imageCache.find(imagePath);
+        if (entry != s_imageCache.end()) {
+            Image* image = entry->second.get();
+            // For now we only load RGBA images, but later we might wanna do some more advanced caching,
+            //  where e.g. (path, RGBA) is loaded differently to a (path, RGB) (i.e., same path, different types)
+            ASSERT(image->info().pixelType == pixelType);
+            return image;
+        }
     }
 
-    // TODO: Consider putting like a nullptr Image::Info in the cache in this case?
-    if (!FileIO::isFileReadable(imagePath))
-        LogErrorAndExit("Image: could not read file at path '%s'.\n", imagePath.c_str());
+    if (!skipReadableCheck) {
+        if (!FileIO::isFileReadable(imagePath)) {
+            LogErrorAndExit("Image: could not read file at path '%s'.\n", imagePath.c_str());
+        }
+    }
 
     //LogInfo("Image: actually loading texture '%s'\n", imagePath.c_str());
 
@@ -88,9 +92,13 @@ Image* Image::load(const std::string& imagePath, PixelType pixelType)
     }
 
     auto image = std::make_unique<Image>(MemoryType::EncodedImage, info, data, size);
-    s_imageCache[imagePath] = std::move(image);
 
-    return s_imageCache[imagePath].get();
+    {
+        //SCOPED_PROFILE_ZONE_NAMED("Image cache mutex");
+        std::scoped_lock<std::mutex> lock(s_imageCacheMutex);
+        s_imageCache[imagePath] = std::move(image);
+        return s_imageCache[imagePath].get();
+    }
 }
 
 Image::Image(MemoryType type, Info info, void* data, size_t size)
