@@ -1,6 +1,7 @@
 #include "Texture.h"
 
 #include "backend/base/Backend.h"
+#include "core/parallel/ParallelFor.h"
 #include "utility/Image.h"
 #include "utility/Logging.h"
 #include "utility/util.h"
@@ -73,8 +74,8 @@ void Texture::pixelFormatAndTypeForImageInfo(const Image::Info& info, bool sRGB,
         format = (info.isHdr())
             ? Texture::Format::RGBA32F
             : (sRGB)
-            ? Texture::Format::sRGBA8
-            : Texture::Format::RGBA8;
+                ? Texture::Format::sRGBA8
+                : Texture::Format::RGBA8;
         // RGB formats aren't always supported, so always use RGBA for 3-component data
         pixelTypeToUse = Image::PixelType::RGBA;
         break;
@@ -219,7 +220,7 @@ std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const st
         .multisampling = Texture::Multisampling::None
     };
 
-    Image* image = Image::load(imagePath, pixelTypeToUse);
+    Image* image = Image::load(imagePath, pixelTypeToUse, true);
 
     auto texture = backend.createTexture(desc);
     texture->setData(image->data(), image->size());
@@ -233,9 +234,11 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     SCOPED_PROFILE_ZONE()
 
     // TODO: Make this be not incredibly slow.. e.g. don't load all of them individually like this
+    //       We now support multithreaded loading, but the "right" solution is to store them all in
+    //       a single file, e.g. a compressed binary blob or some proper format with layer support,
+    //       such as OpenEXR.
 
-    // FIXME (maybe): Add async loading?
-
+    size_t totalRequiredSize = 0;
     std::vector<std::string> imagePaths;
     std::vector<Image::Info*> imageInfos;
     for (size_t idx = 0;; ++idx) {
@@ -243,8 +246,9 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
         Image::Info* imageInfo = Image::getInfo(imagePath, true);
         if (!imageInfo)
             break;
-        imageInfos.push_back(imageInfo);
-        imagePaths.push_back(imagePath);
+        totalRequiredSize += imageInfo->requiredStorageSize();
+        imageInfos.push_back(std::move(imageInfo));
+        imagePaths.push_back(std::move(imagePath));
     }
 
     if (imageInfos.size() == 0)
@@ -282,30 +286,22 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     auto texture = Backend::get().createTexture(desc);
     texture->setName("Texture:" + imagePathSequencePattern);
 
-    // Set texture data
-    {
-        size_t totalSize = 0;
-        std::vector<Image*> images {};
-        images.reserve(imageInfos.size());
-        for (const std::string& imagePath : imagePaths) {
-            Image* image = Image::load(imagePath, pixelTypeToUse);
-            images.push_back(image);
-            totalSize += image->size();
-        }
+    // Allocate temporary storage for pixel data ahead of upload to texture
+    // TODO: Maybe we can just map the individual image into memory directly?
+    uint8_t* textureArrayMemory = static_cast<uint8_t*>(malloc(totalRequiredSize));
+    AtScopeExit freeMemory { [&]() { free(textureArrayMemory); } };
 
-        // TODO: Maybe we can just map the individual image into memory directly?
-        uint8_t* textureArrayMemory = static_cast<uint8_t*>(malloc(totalSize));
-        AtScopeExit freeMemory { [&]() { free(textureArrayMemory); } };
+    // Load images and set texture data
+    ParallelFor(imagePaths.size(), [&](size_t idx) {
 
-        size_t cursor = 0;
-        for (const Image* image : images) {
-            std::memcpy(textureArrayMemory + cursor, image->data(), image->size());
-            cursor += image->size();
-        }
-        ASSERT(cursor == totalSize);
+        const std::string& imagePath = imagePaths[idx];
+        Image* image = Image::load(imagePath, pixelTypeToUse, true);
 
-        texture->setData(textureArrayMemory, totalSize);
-    }
+        size_t offset = idx * image->size();
+        std::memcpy(textureArrayMemory + offset, image->data(), image->size());
+
+    });
+    texture->setData(textureArrayMemory, totalRequiredSize);
 
     return texture;
 }
