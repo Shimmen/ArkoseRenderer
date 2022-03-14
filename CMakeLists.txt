@@ -23,6 +23,7 @@ add_executable(ArkoseRenderer
     src/backend/base/RenderState.cpp
     src/backend/base/RenderTarget.cpp
     src/backend/base/Texture.cpp
+    src/core/parallel/TaskGraph.cpp
     src/backend/util/StateBindings.cpp
     src/backend/util/UploadBuffer.cpp
     src/backend/vulkan/VulkanBackend.cpp

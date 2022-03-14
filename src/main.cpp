@@ -1,5 +1,6 @@
 #include "backend/base/Backend.h"
 #include "backend/shader/ShaderManager.h"
+#include "core/parallel/TaskGraph.h"
 #include "rendering/App.h"
 #include "utility/Input.h"
 #include "utility/Logging.h"
@@ -55,6 +56,8 @@ GLFWwindow* createWindow(Backend::Type backendType, WindowType windowType, const
 
 int main(int argc, char** argv)
 {
+    TaskGraph::initialize();
+
     if (!glfwInit()) {
         LogErrorAndExit("ArkoseRenderer::main(): could not initialize GLFW, exiting.\n");
     }
@@ -137,6 +140,8 @@ int main(int argc, char** argv)
 
     glfwDestroyWindow(window);
     glfwTerminate();
+
+    TaskGraph::shutdown();
 
     return 0;
 }
