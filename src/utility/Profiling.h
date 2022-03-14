@@ -15,6 +15,7 @@ inline void setNameForActiveThread(const char* name);
 
 #define SCOPED_PROFILE_ZONE_COLOR(color) ZoneScopedC(color)
 #define SCOPED_PROFILE_ZONE_NAMED(name) ZoneScopedN(name)
+#define SCOPED_PROFILE_ZONE_NAME_AND_COLOR(name, color) ZoneScopedNC(name, color)
 
 #define SCOPED_PROFILE_ZONE_DYNAMIC(nameStr, color) \
 	ZoneScopedC(color)                              \
@@ -39,6 +40,7 @@ void Profiling::setNameForActiveThread(const char* name)
 
 #define SCOPED_PROFILE_ZONE_COLOR(color)
 #define SCOPED_PROFILE_ZONE_NAMED(name)
+#define SCOPED_PROFILE_ZONE_NAME_AND_COLOR(name, color)
 
 #define SCOPED_PROFILE_ZONE_DYNAMIC(nameStr, color)
 
