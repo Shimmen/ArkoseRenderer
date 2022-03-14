@@ -12,6 +12,8 @@
 
 void Scene::loadFromFile(const std::string& path)
 {
+    SCOPED_PROFILE_ZONE();
+
     using json = nlohmann::json;
 
     if (!FileIO::isFileReadable(path))

@@ -563,6 +563,8 @@ constexpr bool operator==(const ShaderMaterial& lhs, const ShaderMaterial& rhs)
 
 void Scene::rebuildGpuSceneData()
 {
+    SCOPED_PROFILE_ZONE();
+
     m_usedTextures.clear();
     m_usedMaterials.clear();
     m_rayTracingGeometryInstances.clear();
