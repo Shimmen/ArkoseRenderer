@@ -10,6 +10,7 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(Scene& scene, Regis
     Texture& baseColorTex = *reg.getTexture("SceneBaseColor");
     Texture& ambientOcclusionTex = *reg.getTexture("AmbientOcclusion");
     Texture& diffuseGiTex = *reg.getTexture("DiffuseGI");
+    Texture& reflectionsTex = *reg.getTexture("Reflections");
 
     Texture& sceneColorWithGI = reg.createTexture2D(reg.windowRenderTarget().extent(), sceneColorBeforeGI.format(), Texture::Filters::nearest());
 
@@ -17,7 +18,8 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(Scene& scene, Regis
                                                            { 1, ShaderStage::Compute, &sceneColorBeforeGI, ShaderBindingType::TextureSampler },
                                                            { 2, ShaderStage::Compute, &baseColorTex, ShaderBindingType::TextureSampler },
                                                            { 3, ShaderStage::Compute, &ambientOcclusionTex, ShaderBindingType::TextureSampler },
-                                                           { 4, ShaderStage::Compute, &diffuseGiTex, ShaderBindingType::TextureSampler } });
+                                                           { 4, ShaderStage::Compute, &diffuseGiTex, ShaderBindingType::TextureSampler },
+                                                           { 5, ShaderStage::Compute, &reflectionsTex, ShaderBindingType::TextureSampler } });
     ComputeState& giComposeState = reg.createComputeState(Shader::createCompute("compose/compose-gi.comp"), { &composeBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
@@ -29,6 +31,7 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(Scene& scene, Regis
 
         static bool includeSceneColor = true;
         static bool includeDiffuseGI = true;
+        static bool includeGlossyGI = true;
         static bool withMaterialColor = true;
         static bool withAmbientOcclusion = true;
 #if 0
@@ -42,8 +45,9 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(Scene& scene, Regis
         enum class ComposeMode {
             FullCompose,
             DirectOnly,
-            IndirectOnly,
-            IndirectOnlyNoBaseColor,
+            DiffuseIndirectOnly,
+            DiffuseIndirectOnlyNoBaseColor,
+            GlossyIndirectOnly,
         };
         static ComposeMode composeMode = ComposeMode::FullCompose;
 
@@ -51,24 +55,35 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(Scene& scene, Regis
             composeMode = ComposeMode::FullCompose;
             includeSceneColor = true;
             includeDiffuseGI = true;
+            includeGlossyGI = true;
             withMaterialColor = true;
         }
         if (ImGui::RadioButton("Direct light only", composeMode == ComposeMode::DirectOnly)) {
             composeMode = ComposeMode::DirectOnly;
             includeSceneColor = true;
             includeDiffuseGI = false;
+            includeGlossyGI = false;
         }
-        if (ImGui::RadioButton("Diffuse indirect only", composeMode == ComposeMode::IndirectOnly)) {
-            composeMode = ComposeMode::IndirectOnly;
+        if (ImGui::RadioButton("Diffuse indirect only", composeMode == ComposeMode::DiffuseIndirectOnly)) {
+            composeMode = ComposeMode::DiffuseIndirectOnly;
             includeSceneColor = false;
             includeDiffuseGI = true;
+            includeGlossyGI = false;
             withMaterialColor = true;
         }
-        if (ImGui::RadioButton("Diffuse indirect only (ignore material color)", composeMode == ComposeMode::IndirectOnlyNoBaseColor)) {
-            composeMode = ComposeMode::IndirectOnlyNoBaseColor;
+        if (ImGui::RadioButton("Diffuse indirect only (ignore material color)", composeMode == ComposeMode::DiffuseIndirectOnlyNoBaseColor)) {
+            composeMode = ComposeMode::DiffuseIndirectOnlyNoBaseColor;
             includeSceneColor = false;
             includeDiffuseGI = true;
+            includeGlossyGI = false;
             withMaterialColor = false;
+        }
+        if (ImGui::RadioButton("Glossy indirect only", composeMode == ComposeMode::GlossyIndirectOnly)) {
+            composeMode = ComposeMode::GlossyIndirectOnly;
+            includeSceneColor = false;
+            includeDiffuseGI = false;
+            includeGlossyGI = true;
+            withMaterialColor = true;
         }
         
         ImGui::Separator();
@@ -76,6 +91,7 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(Scene& scene, Regis
 #endif
         cmdList.setNamedUniform("includeSceneColor", includeSceneColor);
         cmdList.setNamedUniform("includeDiffuseGI", includeDiffuseGI);
+        cmdList.setNamedUniform("includeGlossyGI", includeGlossyGI);
         cmdList.setNamedUniform("withMaterialColor", withMaterialColor);
         cmdList.setNamedUniform("withAmbientOcclusion", withAmbientOcclusion);
 

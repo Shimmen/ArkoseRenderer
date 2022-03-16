@@ -7,11 +7,13 @@ layout(set = 0, binding = 1) uniform sampler2D sceneColorBeforeGI;
 layout(set = 0, binding = 2) uniform sampler2D baseColorTex;
 layout(set = 0, binding = 3) uniform sampler2D ambientOcclusionTex;
 layout(set = 0, binding = 4) uniform sampler2D diffuseGiTex;
+layout(set = 0, binding = 5) uniform sampler2D reflectionsTex;
 
 NAMED_UNIFORMS(pushConstants,
     uvec2 targetSize;
     bool includeSceneColor;
     bool includeDiffuseGI;
+    bool includeGlossyGI;
     bool withMaterialColor;
     bool withAmbientOcclusion;
 )
@@ -41,6 +43,12 @@ void main()
     if (pushConstants.includeDiffuseGI) {
         vec3 diffuseGI = texelFetch(diffuseGiTex, pixelCoord, 0).rgb;
         sceneColor.rgb += diffuseGI * materialBaseColor * ambientOcclusion;
+    }
+
+    if (pushConstants.includeGlossyGI) {
+        // TODO: Do reflections properly!
+        vec3 reflections = texelFetch(reflectionsTex, pixelCoord, 0).rgb;
+        sceneColor.rgb += reflections;
     }
 
     imageStore(sceneColorWithGI, pixelCoord, sceneColor);

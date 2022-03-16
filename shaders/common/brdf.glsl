@@ -51,6 +51,15 @@ vec3 specularBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float
     return F * D * V_;
 }
 
+// From "A Simpler and Exact Sampling Routine for the GGX Distribution of Visible Normals"
+// https://hal.archives-ouvertes.fr/hal-01509746/document
+vec3 sampleSpecularBRDF(vec3 wo, float roughness, vec2 rand)
+{
+    // TODO!
+
+    return vec3(1.0, 0.0, 0.0);
+}
+
 vec3 diffuseBRDF()
 {
     return vec3(1.0) / vec3(PI);

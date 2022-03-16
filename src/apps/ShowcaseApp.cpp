@@ -12,6 +12,7 @@
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/RTDirectLightNode.h"
 #include "rendering/nodes/RTFirstHitNode.h"
+#include "rendering/nodes/RTReflectionsNode.h"
 #include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SkyViewNode.h"
 #include "rendering/nodes/SSAONode.h"
@@ -58,6 +59,10 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<CullingNode>();
     pipeline.addNode<PrepassNode>();
     pipeline.addNode<ForwardRenderNode>();
+
+    if (rtxOn) {
+        pipeline.addNode<RTReflectionsNode>();
+    }
 
     pipeline.addNode<SSAONode>();
     pipeline.addNode<GIComposeNode>();

@@ -58,6 +58,7 @@ add_executable(ArkoseRenderer
     src/rendering/nodes/PrepassNode.cpp
     src/rendering/nodes/RTDirectLightNode.cpp
     src/rendering/nodes/RTFirstHitNode.cpp
+    src/rendering/nodes/RTReflectionsNode.cpp
     src/rendering/nodes/ShadowMapNode.cpp
     src/rendering/nodes/SkyViewNode.cpp
     src/rendering/nodes/SSAONode.cpp
