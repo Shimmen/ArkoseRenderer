@@ -2,46 +2,43 @@
 
 #include "Model.h"
 #include "rendering/RenderPipelineNode.h"
-#include "rendering/scene/lights/DirectionalLight.h"
-#include "rendering/scene/lights/SpotLight.h"
 #include "rendering/camera/Camera.h"
 #include "rendering/scene/ProbeGrid.h"
+#include "rendering/scene/lights/DirectionalLight.h"
+#include "rendering/scene/lights/SpotLight.h"
 #include <memory>
 #include <nlohmann/json_fwd.hpp>
 #include <optional>
 #include <string>
 #include <unordered_map>
 
-// Shared shader data
-using uint = uint32_t;
-#include "SceneData.h"
-
 class SceneNode;
+class GpuScene;
 
-class Scene final : public RenderPipelineNode {
+class Scene final {
 public:
     Scene(Extent2D initialMainViewportSize);
+    ~Scene();
 
     void newFrame(Extent2D mainViewportSize, bool firstFrame);
+    void update(float elapsedTime, float deltaTime);
 
-    // RenderPipelineNode interface
+    struct Description {
+        std::string path {};
+        bool maintainRayTracingScene { true };
+    };
 
-    std::string name() const override { return "Scene"; }
-    RenderPipelineNode::ExecuteCallback construct(Scene&, Registry&) override;
+    void setupFromDescription(const Description&);
 
-    // Serialization
+    // Scene version accessors
 
-    void loadFromFile(const std::string&);
-    void saveCameraToClipboard(const Camera&);
+    GpuScene& gpuScene() { return *m_gpuScene; }
+    //PhysicScene& physicsScene() { return m_physicsScene; }
 
     // Camera & view
 
     const Camera& camera() const { return *m_currentMainCamera; }
     Camera& camera() { return *m_currentMainCamera; }
-
-    Extent2D mainViewportSize() const { return m_mainViewportSize; }
-
-    float lightPreExposureValue() const { return m_lightPreExposure; }
 
     // Models & meshes
 
@@ -56,15 +53,15 @@ public:
     int forEachMesh(std::function<void(size_t, const Mesh&)> callback) const;
     int forEachMesh(std::function<void(size_t, Mesh&)> callback);
 
-    // Ray tracing
-
-    bool doesMaintainRayTracingScene() const { return m_maintainRayTracingScene; }
-    void setShouldMaintainRayTracingScene(bool);
-
     // Lighting - direct & indirect
 
     DirectionalLight& addLight(std::unique_ptr<DirectionalLight>);
     SpotLight& addLight(std::unique_ptr<SpotLight>);
+
+    size_t spotLightCount() const { return m_spotLights.size(); }
+    size_t directionalLightCount() const { return m_directionalLights.size(); }
+
+    DirectionalLight* firstDirectionalLight();
 
     int forEachLight(std::function<void(size_t, const Light&)>) const;
     int forEachLight(std::function<void(size_t, Light&)>);
@@ -72,26 +69,23 @@ public:
     int forEachShadowCastingLight(std::function<void(size_t, const Light&)>) const;
     int forEachShadowCastingLight(std::function<void(size_t, Light&)>);
 
-    const DirectionalLight& sun() const { return *m_directionalLights[0]; }
-    DirectionalLight& sun() { return *m_directionalLights[0]; }
-
+    void setAmbientIlluminance(float illuminance) { m_ambientIlluminance = illuminance; }
+    float ambientIlluminance() const { return m_ambientIlluminance; }
+    
     bool hasProbeGrid() { return m_probeGrid.has_value(); }
     void setProbeGrid(ProbeGrid probeGrid) { m_probeGrid = probeGrid; }
     void generateProbeGridFromBoundingBox();
     ProbeGrid& probeGrid() { return m_probeGrid.value(); }
 
-    float filmGrainGain() const;
+    float filmGrainGain() const { return m_fixedFilmGrainGain; }
 
-    float ambient() const { return m_ambientIlluminance; }
-    float exposedAmbient() const { return m_ambientIlluminance * lightPreExposureValue(); }
-    void setAmbient(float illuminance) { m_ambientIlluminance = illuminance; }
+    struct EnvironmentMap {
+        std::string assetPath {};
+        float brightnessFactor { 1.0f };
+    };
 
-    void setEnvironmentMap(std::string path) { m_environmentMap = std::move(path); }
-    const std::string& environmentMap() const { return m_environmentMap; }
-
-    float environmentMultiplier() const { return m_environmentMultiplier; }
-    float& environmentMultiplier() { return m_environmentMultiplier; }
-    float exposedEnvironmentMultiplier() const { return environmentMultiplier() * lightPreExposureValue(); }
+    void setEnvironmentMap(EnvironmentMap&);
+    const EnvironmentMap& environmentMap() const { return m_environmentMap; }
 
     // Meta
 
@@ -101,75 +95,40 @@ public:
     void setSelectedMesh(Mesh* mesh) { m_selectedMesh = mesh; }
     Mesh* selectedMesh() { return m_selectedMesh; }
 
-    // Managed GPU assets
+    private:
 
-    DrawCallDescription fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&, const VertexLayout&, std::optional<DrawCallDescription> alignWith = {});
+    // Serialization
 
-    Buffer& globalVertexBufferForLayout(const VertexLayout&) const;
-    Buffer& globalIndexBuffer() const;
-    IndexType globalIndexBufferType() const;
+    void loadFromFile(const std::string&);
 
-    BindingSet& globalMaterialBindingSet() const;
-
-    TopLevelAS& globalTopLevelAccelerationStructure() const;
-
-private:
+    // GUI
 
     void drawSceneGui();
     void drawSceneGizmos();
 
 private:
-    std::string m_filePath {};
+    Description m_description {};
 
-    Extent2D m_mainViewportSize {};
+    // Manages all GPU & render specific data of this scene
+    std::unique_ptr<GpuScene> m_gpuScene {};
+
     Camera* m_currentMainCamera {};
     std::unordered_map<std::string, std::unique_ptr<Camera>> m_allCameras {};
 
-    std::vector<std::unique_ptr<Model>> m_models;
+    std::vector<std::unique_ptr<Model>> m_models {};
+    
+    std::vector<std::unique_ptr<DirectionalLight>> m_directionalLights {};
+    std::vector<std::unique_ptr<SpotLight>> m_spotLights {};
 
-    std::vector<std::unique_ptr<DirectionalLight>> m_directionalLights;
-    std::vector<std::unique_ptr<SpotLight>> m_spotLights;
-
-    std::optional<ProbeGrid> m_probeGrid;
-
-    bool m_maintainRayTracingScene { false };
-    // NOTE: It's possible some RT pass would want more vertex info than this, but in all cases I can think of
-    // we want either these and nothing more, or nothing at all (e.g. ray traced AO). Remember that vertex positions
-    // are always available more directly, as we know our hit point.
-    const VertexLayout m_rayTracingVertexLayout = { VertexComponent::Normal3F,
-                                                    VertexComponent::TexCoord2F };
-
-    float m_fixedFilmGrainGain { 0.040f };
-
-    std::string m_environmentMap {};
-    float m_environmentMultiplier { 1.0f };
-
+    EnvironmentMap m_environmentMap {};
     float m_ambientIlluminance { 0.0f };
 
-    float m_lightPreExposure { 1.0f };
+    std::optional<ProbeGrid> m_probeGrid {};
+
+    // TODO: Maybe move to the camera?
+    float m_fixedFilmGrainGain { 0.040f };
 
     Model* m_selectedModel { nullptr };
     Mesh* m_selectedMesh { nullptr };
 
-    // GPU data
-
-    std::unique_ptr<Buffer> m_global32BitIndexBuffer { nullptr };
-    uint32_t m_nextFreeIndex { 0 };
-
-    std::unordered_map<VertexLayout, std::unique_ptr<Buffer>> m_globalVertexBuffers {};
-    uint32_t m_nextFreeVertexIndex { 0 };
-
-    std::vector<Texture*> m_usedTextures {};
-    std::vector<ShaderMaterial> m_usedMaterials {};
-
-    static constexpr uint32_t InitialMaxRayTracingGeometryInstanceCount { 1024 };
-    std::vector<RTGeometryInstance> m_rayTracingGeometryInstances {};
-    std::vector<std::unique_ptr<BottomLevelAS>> m_sceneBottomLevelAccelerationStructures {};
-    std::unique_ptr<TopLevelAS> m_sceneTopLevelAccelerationStructure {};
-
-    void rebuildGpuSceneData();
-    bool m_sceneDataNeedsRebuild { true };
-    std::unique_ptr<Buffer> m_materialDataBuffer { nullptr };
-
-    std::unique_ptr<BindingSet> m_materialBindingSet { nullptr };
 };

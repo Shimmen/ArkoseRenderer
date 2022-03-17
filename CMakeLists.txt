@@ -76,7 +76,7 @@ add_executable(ArkoseRenderer
     src/rendering/scene/models/GltfModel.cpp
     src/rendering/scene/ProbeGrid.cpp
     src/rendering/scene/Scene.cpp
-    src/rendering/scene/SceneSerialization.cpp
+    src/rendering/scene/GpuScene.cpp
     src/rendering/scene/Vertex.cpp
     src/utility/AvgElapsedTimer.cpp
     src/utility/FileIO.cpp

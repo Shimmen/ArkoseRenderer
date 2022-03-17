@@ -4,6 +4,8 @@
 #include <moos/transform.h>
 #include <imgui/imgui.h>
 
+class Scene;
+
 void Camera::newFrame(Badge<Scene>, Extent2D viewportSize, bool firstFrame)
 {
     if (!firstFrame) {

@@ -3,18 +3,14 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-RenderPipelineNode::ExecuteCallback SkyViewNode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback SkyViewNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& sceneColor = *reg.getTexture("SceneColor");
     Texture& sceneNormalVelocity = *reg.getTexture("SceneNormalVelocity"); // todo: velocity shouldn't be strictly required as it is now!
     Texture& depthStencilImage = *reg.getTexture("SceneDepth");
 
-    Texture& skyViewTexture = scene.environmentMap().empty()
-        ? reg.createPixelTexture(vec4(1.0f), true)
-        : reg.loadTexture2D(scene.environmentMap(), true, false);
-
     BindingSet& skyViewRasterizeBindingSet = reg.createBindingSet({ { 0, ShaderStage::AnyRasterize, reg.getBuffer("SceneCameraData") },
-                                                                    { 1, ShaderStage::Fragment, &skyViewTexture, ShaderBindingType::TextureSampler } });
+                                                                    { 1, ShaderStage::Fragment, &scene.environmentMapTexture(), ShaderBindingType::TextureSampler } });
 
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &sceneColor, LoadOp::Load, StoreOp::Store },
                                                           { RenderTarget::AttachmentType::Color1, &sceneNormalVelocity, LoadOp::Load, StoreOp::Store },
@@ -39,7 +35,7 @@ RenderPipelineNode::ExecuteCallback SkyViewNode::construct(Scene& scene, Registr
         if (ImGui::RadioButton("Velocity only", !skyViewEnabled))
             skyViewEnabled = false;
 
-        float envMultiplier = skyViewEnabled ? scene.exposedEnvironmentMultiplier() : 0.0f;
+        float envMultiplier = skyViewEnabled ? scene.preExposedEnvironmentBrightnessFactor() : 0.0f;
 
         cmdList.beginRendering(skyViewRenderState);
         cmdList.setNamedUniform("environmentMultiplier", envMultiplier);

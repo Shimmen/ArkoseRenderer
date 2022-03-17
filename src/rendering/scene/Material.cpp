@@ -3,7 +3,6 @@
 #include "rendering/Registry.h"
 #include "rendering/scene/Mesh.h"
 #include "rendering/scene/Model.h"
-#include "rendering/scene/Scene.h"
 #include "utility/Logging.h"
 
 Texture* Material::baseColorTexture()

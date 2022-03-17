@@ -2,7 +2,7 @@
 
 #include "rendering/Registry.h"
 #include "rendering/scene/Model.h"
-#include "rendering/scene/Scene.h"
+#include "rendering/scene/GpuScene.h"
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <array>
@@ -98,14 +98,14 @@ size_t Mesh::vertexCountForLayout(const VertexLayout& layout) const
     return vertexCount;
 }
 
-void Mesh::ensureDrawCallIsAvailable(const VertexLayout& layout, Scene& scene)
+void Mesh::ensureDrawCallIsAvailable(const VertexLayout& layout, GpuScene& scene)
 {
     SCOPED_PROFILE_ZONE();
     // Will create the relevant buffers & set their data (if it doesn't already exist)
     drawCallDescription(layout, scene);
 }
 
-const DrawCallDescription& Mesh::drawCallDescription(const VertexLayout& layout, Scene& scene)
+const DrawCallDescription& Mesh::drawCallDescription(const VertexLayout& layout, GpuScene& scene)
 {
     SCOPED_PROFILE_ZONE();
 

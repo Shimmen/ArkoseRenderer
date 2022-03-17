@@ -1,6 +1,6 @@
 #include "DDGIProbeDebug.h"
 
-#include "rendering/scene/Scene.h"
+#include "rendering/scene/GpuScene.h"
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
@@ -8,7 +8,7 @@
 // Shared shader headers
 #include "DDGIData.h"
 
-RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(GpuScene& scene, Registry& reg)
 {
     if (!reg.hasPreviousNode("DDGI"))
         return RenderPipelineNode::NullExecuteCallback;
@@ -61,10 +61,10 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(Scene& scene, Regi
         cmdList.setNamedUniform("debugVisualisation", debugVisualisation);
 
         // TODO: Use instanced rendering instead.. it's sufficient for debug visualisation but it's not great.
-        for (int probeIdx = 0; probeIdx < scene.probeGrid().probeCount(); ++probeIdx) {
+        for (int probeIdx = 0; probeIdx < scene.scene().probeGrid().probeCount(); ++probeIdx) {
             
-            ivec3 probeIdx3D = scene.probeGrid().probeIndexFromLinear(probeIdx);
-            vec3 probeLocation = scene.probeGrid().probePositionForIndex(probeIdx3D);
+            ivec3 probeIdx3D = scene.scene().probeGrid().probeIndexFromLinear(probeIdx);
+            vec3 probeLocation = scene.scene().probeGrid().probePositionForIndex(probeIdx3D);
 
             cmdList.setNamedUniform("probeGridCoord", probeIdx3D);
             cmdList.setNamedUniform("probeLocation", probeLocation);
@@ -76,7 +76,7 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(Scene& scene, Regi
     };
 }
 
-void DDGIProbeDebug::setUpSphereRenderData(Scene& scene, Registry& reg)
+void DDGIProbeDebug::setUpSphereRenderData(GpuScene& scene, Registry& reg)
 {
     constexpr int rings = 48;
     constexpr int sectors = 48;

@@ -10,7 +10,7 @@ TonemapNode::TonemapNode(std::string sourceTextureName, Mode mode)
 {
 }
 
-RenderPipelineNode::ExecuteCallback TonemapNode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback TonemapNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture* sourceTexture = reg.getTexture(m_sourceTextureName);
     if (!sourceTexture)

@@ -10,7 +10,7 @@
 
 class RenderPipeline {
 public:
-    explicit RenderPipeline(Scene* scene);
+    explicit RenderPipeline(GpuScene* scene);
     ~RenderPipeline() = default;
 
     RenderPipeline(RenderPipeline&) = delete;
@@ -44,5 +44,5 @@ private:
 
     std::vector<NodeContext> m_nodeContexts {};
 
-    Scene* m_scene {};
+    GpuScene* m_scene {};
 };

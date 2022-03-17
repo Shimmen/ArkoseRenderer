@@ -1,9 +1,9 @@
 #include "RTReflectionsNode.h"
 
-#include "rendering/scene/Scene.h"
+#include "rendering/scene/GpuScene.h"
 #include <imgui.h>
 
-RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& reflectionsImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("Reflections", reflectionsImage);
@@ -19,7 +19,7 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(Scene& scene, R
                                                          { 3, ShaderStage::RTRayGen, reg.getTexture("SceneNormalVelocity"), ShaderBindingType::TextureSampler },
                                                          { 4, ShaderStage::RTRayGen, reg.getTexture("SceneDepth"), ShaderBindingType::TextureSampler },
                                                          { 5, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, reg.getBuffer("SceneCameraData") },
-                                                         { 6, ShaderStage::RTRayGen, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler } });
+                                                         { 6, ShaderStage::RTRayGen, &scene.environmentMapTexture(), ShaderBindingType::TextureSampler } });
 
     ShaderFile raygen { "rt-reflections/raygen.rgen" };
     ShaderFile defaultMissShader { "rt-reflections/miss.rmiss" };
@@ -42,7 +42,7 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(Scene& scene, R
 
         static float injectedAmbient = 500.0f;
         ImGui::SliderFloat("Injected ambient", &injectedAmbient, 0.0f, 1'000.0f);
-        cmdList.setNamedUniform("ambientAmount", injectedAmbient * scene.lightPreExposureValue());
+        cmdList.setNamedUniform("ambientAmount", injectedAmbient * scene.lightPreExposure());
 
         static float mirrorRoughnessThreshold = 0.2f;
         static float fullyDiffuseRoughnessThreshold = 0.96f;
@@ -51,7 +51,7 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(Scene& scene, R
         cmdList.setNamedUniform("mirrorRoughnessThreshold", mirrorRoughnessThreshold);
         cmdList.setNamedUniform("fullyDiffuseRoughnessThreshold", fullyDiffuseRoughnessThreshold);
 
-        cmdList.setNamedUniform("environmentMultiplier", scene.exposedEnvironmentMultiplier());
+        cmdList.setNamedUniform("environmentMultiplier", scene.preExposedEnvironmentBrightnessFactor());
 
         cmdList.traceRays(appState.windowExtent());
     };

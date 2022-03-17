@@ -13,26 +13,28 @@ static_assert((DDGI_VISIBILITY_RES & (DDGI_VISIBILITY_RES - 1)) == 0);
 // The two different resolutions should be a integer multiplier different
 static_assert((DDGI_VISIBILITY_RES % DDGI_IRRADIANCE_RES) == 0 || (DDGI_IRRADIANCE_RES % DDGI_VISIBILITY_RES) == 0);
 
-RenderPipelineNode::ExecuteCallback DDGINode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registry& reg)
 {
-    if (!scene.hasProbeGrid()) {
+    if (!scene.scene().hasProbeGrid()) {
         LogError("DDGINode is used but no probe grid is available, will no-op");
         return RenderPipelineNode::NullExecuteCallback;
     }
 
+    const ProbeGrid& probeGrid = scene.scene().probeGrid();
+
     ///////////////////////
     // constructNode
-    DDGIProbeGridData probeGridData { .gridDimensions = ivec4(scene.probeGrid().gridDimensions.asIntVector(), 0),
-                                      .probeSpacing = vec4(scene.probeGrid().probeSpacing, 0.0f),
-                                      .offsetToFirst = vec4(scene.probeGrid().offsetToFirst, 0.0f) };
+    DDGIProbeGridData probeGridData { .gridDimensions = ivec4(probeGrid.gridDimensions.asIntVector(), 0),
+                                      .probeSpacing = vec4(probeGrid.probeSpacing, 0.0f),
+                                      .offsetToFirst = vec4(probeGrid.offsetToFirst, 0.0f) };
     Buffer& probeGridDataBuffer = reg.createBufferForData(probeGridData, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOptimal);
 
     auto irradianceClearColor = ClearColor::dataValues(0, 0, 0, 0);
-    Texture& probeAtlasIrradiance = createProbeAtlas(reg, "ddgi-irradiance", scene.probeGrid(), irradianceClearColor, Texture::Format::RGBA16F, DDGI_IRRADIANCE_RES, DDGI_ATLAS_PADDING);
+    Texture& probeAtlasIrradiance = createProbeAtlas(reg, "ddgi-irradiance", probeGrid, irradianceClearColor, Texture::Format::RGBA16F, DDGI_IRRADIANCE_RES, DDGI_ATLAS_PADDING);
 
     float cameraZFar = scene.camera().zFar;
     auto visibilityClearColor = ClearColor::dataValues(cameraZFar, cameraZFar * cameraZFar, 0, 0);
-    Texture& probeAtlasVisibility = createProbeAtlas(reg, "ddgi-visibility", scene.probeGrid(), visibilityClearColor, Texture::Format::RG16F, DDGI_VISIBILITY_RES, DDGI_ATLAS_PADDING);
+    Texture& probeAtlasVisibility = createProbeAtlas(reg, "ddgi-visibility", probeGrid, visibilityClearColor, Texture::Format::RG16F, DDGI_VISIBILITY_RES, DDGI_ATLAS_PADDING);
 
     BindingSet& ddgiSamplingBindingSet = reg.createBindingSet({ { 0, ShaderStage::Fragment, &probeGridDataBuffer },
                                                                 { 1, ShaderStage::Fragment, &probeAtlasIrradiance, ShaderBindingType::TextureSampler },
@@ -40,7 +42,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Scene& scene, Registry& 
     reg.publish("DDGISamplingSet", ddgiSamplingBindingSet);
     ///////////////////////
 
-    const int probeCount = scene.probeGrid().probeCount(); // TODO: maybe don't expect to be able to update all in one surfel image?
+    const int probeCount = probeGrid.probeCount(); // TODO: maybe don't expect to be able to update all in one surfel image?
     static constexpr int maxNumProbeSamples = 128; // we dynamically choose to do fewer samples but not more since it's the fixed image size now
     Texture& surfelImage = reg.createTexture2D({ probeCount, maxNumProbeSamples }, Texture::Format::RGBA16F);
 
@@ -55,7 +57,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Scene& scene, Registry& 
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, &sceneTLAS },
                                                          { 1, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, reg.getBuffer("SceneCameraData") },
                                                          { 2, ShaderStage::RTRayGen, &probeGridDataBuffer },
-                                                         { 3, ShaderStage::RTRayGen, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler },
+                                                         { 3, ShaderStage::RTRayGen, &scene.environmentMapTexture(), ShaderBindingType::TextureSampler },
 #if USE_DEBUG_TARGET
                                                          { 4, ShaderStage::RTRayGen, &storageImage, ShaderBindingType::StorageImage } });
 #else
@@ -106,7 +108,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Scene& scene, Registry& 
         static float visibilitySharpness = 5.0f;
         ImGui::SliderFloat("Visibility sharpness", &visibilitySharpness, 1.0f, 10.0f);
 
-        float ambientLx = scene.ambient();
+        float ambientLx = scene.scene().ambientIlluminance();
         static bool useSceneAmbient = true;
         ImGui::Checkbox("Use scene ambient light", &useSceneAmbient);
         if (!useSceneAmbient) {
@@ -118,9 +120,9 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Scene& scene, Registry& 
         uint32_t frameIdx = appState.frameIndex();
 
         ivec3 gridDimensions = ivec3(
-            scene.probeGrid().gridDimensions.width(),
-            scene.probeGrid().gridDimensions.height(),
-            scene.probeGrid().gridDimensions.depth());
+            scene.scene().probeGrid().gridDimensions.width(),
+            scene.scene().probeGrid().gridDimensions.height(),
+            scene.scene().probeGrid().gridDimensions.depth());
 
         // 1. Ray trace to collect surfel data (including indirect light from last frame's probe data)
         {
@@ -128,8 +130,8 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(Scene& scene, Registry& 
 
             cmdList.setRayTracingState(surfelRayTracingState);
 
-            cmdList.setNamedUniform("ambientAmount", ambientLx * scene.lightPreExposureValue());
-            cmdList.setNamedUniform("environmentMultiplier", scene.exposedEnvironmentMultiplier());
+            cmdList.setNamedUniform("ambientAmount", ambientLx * scene.lightPreExposure());
+            cmdList.setNamedUniform("environmentMultiplier", scene.preExposedEnvironmentBrightnessFactor());
             cmdList.setNamedUniform("frameIdx", frameIdx);
 
 #if USE_DEBUG_TARGET

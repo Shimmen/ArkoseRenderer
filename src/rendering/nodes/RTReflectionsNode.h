@@ -5,5 +5,5 @@
 class RTReflectionsNode final : public RenderPipelineNode {
 public:
     std::string name() const override { return "RT reflections"; }
-    ExecuteCallback construct(Scene&, Registry&) override;
+    ExecuteCallback construct(GpuScene&, Registry&) override;
 };

@@ -10,7 +10,7 @@ RenderPipelineLambdaNode::RenderPipelineLambdaNode(std::string name, Constructor
 {
 }
 
-RenderPipelineNode::ExecuteCallback RenderPipelineLambdaNode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback RenderPipelineLambdaNode::construct(GpuScene& scene, Registry& reg)
 {
     return m_constructorFunction(scene, reg);
 }

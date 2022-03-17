@@ -11,7 +11,7 @@
 #include <unordered_map>
 
 class Model;
-class Scene;
+class GpuScene;
 
 class Mesh {
 public:
@@ -30,13 +30,13 @@ public:
     virtual const Transform& transform() const { return m_transform; }
 
     std::optional<int> materialIndex() const { return m_materialIndex; }
-    void setMaterialIndex(Badge<Scene>, int index) { m_materialIndex = index; }
+    void setMaterialIndex(Badge<GpuScene>, int index) { m_materialIndex = index; }
 
     virtual moos::aabb3 boundingBox() const = 0;
     virtual geometry::Sphere boundingSphere() const = 0;
 
-    void ensureDrawCallIsAvailable(const VertexLayout&, Scene&);
-    const DrawCallDescription& drawCallDescription(const VertexLayout&, Scene&);
+    void ensureDrawCallIsAvailable(const VertexLayout&, GpuScene&);
+    const DrawCallDescription& drawCallDescription(const VertexLayout&, GpuScene&);
 
     std::vector<uint8_t> vertexData(const VertexLayout&) const;
     size_t vertexCountForLayout(const VertexLayout&) const;

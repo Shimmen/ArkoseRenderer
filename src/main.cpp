@@ -76,7 +76,7 @@ int main(int argc, char** argv)
     int width, height;
     glfwGetFramebufferSize(window, &width, &height);
     auto scene = std::make_unique<Scene>(Extent2D(width, height));
-    auto renderPipeline = std::make_unique<RenderPipeline>(scene.get());
+    auto renderPipeline = std::make_unique<RenderPipeline>(&scene->gpuScene());
 
     app->setup(*scene, *renderPipeline);
     backend.renderPipelineDidChange(*renderPipeline);
@@ -117,6 +117,7 @@ int main(int argc, char** argv)
         double deltaTime = elapsedTime - lastTime;
         lastTime = elapsedTime;
 
+        scene->update(static_cast<float>(elapsedTime), static_cast<float>(deltaTime));
         app->update(*scene, static_cast<float>(elapsedTime), static_cast<float>(deltaTime));
 
         bool frameExecuted = false;

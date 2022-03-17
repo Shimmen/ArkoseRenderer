@@ -9,8 +9,6 @@
 #include <moos/vector.h>
 #include <optional>
 
-class Scene;
-
 class FpsCamera final : public Camera {
 public:
     FpsCamera() = default;

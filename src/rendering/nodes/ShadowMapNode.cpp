@@ -4,17 +4,17 @@
 #include "utility/Profiling.h"
 #include "ShadowData.h"
 
-RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(GpuScene& scene, Registry& reg)
 {
     // TODO: This should be managed from some central location, e.g. the scene node or similar.
-    Buffer& transformDataBuffer = reg.createBuffer(scene.meshCount() * sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+    Buffer& transformDataBuffer = reg.createBuffer(scene.scene().meshCount() * sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
     BindingSet& transformBindingSet = reg.createBindingSet({ { 0, ShaderStage::Vertex, &transformDataBuffer } });
 
     Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
     BindingSet& shadowDataBindingSet = reg.createBindingSet({ { 0, ShaderStage::Vertex, reg.getBuffer("SceneShadowData") } });
 
     // HACK: Well, this really is a hack, together with the whole render state cache..
-    scene.forEachShadowCastingLight([&](size_t shadowLightIndex, Light& light) {
+    scene.scene().forEachShadowCastingLight([&](size_t shadowLightIndex, Light& light) {
         light.invalidateRenderStateCache();
     });
 
@@ -22,13 +22,13 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(Scene& scene, Regis
 
         // TODO: This should be managed from some central location, e.g. the scene node or similar.
         mat4 objectTransforms[SHADOW_MAX_OCCLUDERS];
-        int meshCount = scene.forEachMesh([&](size_t idx, Mesh& mesh) {
+        int meshCount = scene.scene().forEachMesh([&](size_t idx, Mesh& mesh) {
             objectTransforms[idx] = mesh.transform().worldMatrix();
             mesh.ensureDrawCallIsAvailable(m_vertexLayout, scene);
         });
         transformDataBuffer.updateData(objectTransforms, meshCount * sizeof(mat4));
 
-        scene.forEachShadowCastingLight([&](size_t shadowLightIndex, Light& light) {
+        scene.scene().forEachShadowCastingLight([&](size_t shadowLightIndex, Light& light) {
             SCOPED_PROFILE_ZONE_NAMED("Processing light");
 
             // TODO: Use a proper cache instead of just using a name as a "cache identifier". This will require implementing operator== on a lot of
@@ -59,7 +59,7 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(Scene& scene, Regis
                 cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
                 cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
 
-                scene.forEachMesh([&](size_t idx, Mesh& mesh) {
+                scene.scene().forEachMesh([&](size_t idx, Mesh& mesh) {
                     // Don't render translucent objects. We still do masked though and pretend they are opaque. This may fail
                     // in some cases but in general if the masked features are small enough it's not really noticable.
                     if (mesh.material().blendMode == Material::BlendMode::Translucent)

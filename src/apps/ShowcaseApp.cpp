@@ -40,8 +40,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 {
     SCOPED_PROFILE_ZONE();
 
-    scene.setShouldMaintainRayTracingScene(rtxOn);
-    scene.loadFromFile("assets/sample/sponza.json");
+    scene.setupFromDescription({ .path = "assets/sample/sponza.json",
+                                 .maintainRayTracingScene = rtxOn });
 
     if (!scene.hasProbeGrid()) {
         scene.generateProbeGridFromBoundingBox();
@@ -52,7 +52,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     if (rtxOn) {
         pipeline.addNode<DDGINode>();
     } else {
-        scene.setAmbient(250.0f);
+        scene.setAmbientIlluminance(250.0f);
     }
 
     pipeline.addNode<ShadowMapNode>();
@@ -100,11 +100,15 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
 void ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
 {
+    // TODO: The scene should contain a Camera which doesn't have controls while the app has a CameraController which does.
+    //       Here we would then just update the controller which somehow changes the Camera it's assigned to control.
     scene.camera().update(Input::instance(), deltaTime);
 
     float sunRotation = 0.0f;
     sunRotation -= Input::instance().isKeyDown(Key::Left) ? 1.0f : 0.0f;
     sunRotation += Input::instance().isKeyDown(Key::Right) ? 1.0f : 0.0f;
     quat rotation = axisAngle(moos::globalRight, sunRotation * deltaTime * 0.2f);
-    scene.sun().direction = moos::rotateVector(rotation, scene.sun().direction);
+
+    DirectionalLight& sun = *scene.firstDirectionalLight();
+    sun.direction = moos::rotateVector(rotation, sun.direction);
 }

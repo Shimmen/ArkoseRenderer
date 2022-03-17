@@ -6,8 +6,6 @@
 #include <functional>
 #include <moos/vector.h>
 
-class Scene;
-
 class Model {
 public:
     Model() = default;
@@ -27,13 +25,7 @@ public:
     const Model& proxy() const;
     void setProxy(std::unique_ptr<Model>);
 
-    virtual void setScene(Badge<Scene>, Scene* scene) { m_scene = scene; }
-    virtual const Scene* scene() const { return m_scene; }
-    virtual Scene* scene() { return m_scene; }
-
 private:
-    Scene* m_scene { nullptr };
-
     std::string m_name;
     Transform m_transform {};
     std::unique_ptr<Model> m_proxy {};

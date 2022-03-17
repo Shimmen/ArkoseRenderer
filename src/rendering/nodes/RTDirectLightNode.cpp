@@ -1,6 +1,6 @@
 #include "RTDirectLightNode.h"
 
-RenderPipelineNode::ExecuteCallback RTDirectLightNode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback RTDirectLightNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("RTDirectLight", storageImage);
@@ -12,7 +12,7 @@ RenderPipelineNode::ExecuteCallback RTDirectLightNode::construct(Scene& scene, R
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, &sceneTLAS },
                                                          { 1, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, reg.getBuffer("SceneCameraData") },
-                                                         { 2, ShaderStage::RTRayGen, reg.getTexture("SceneEnvironmentMap"), ShaderBindingType::TextureSampler },
+                                                         { 2, ShaderStage::RTRayGen, &scene.environmentMapTexture(), ShaderBindingType::TextureSampler },
                                                          { 3, ShaderStage::RTRayGen, &storageImage, ShaderBindingType::StorageImage } });
 
     ShaderFile raygen { "rt-direct-light/raygen.rgen" };
@@ -32,8 +32,8 @@ RenderPipelineNode::ExecuteCallback RTDirectLightNode::construct(Scene& scene, R
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         cmdList.setRayTracingState(rtState);
-        cmdList.setNamedUniform("ambientAmount", scene.exposedAmbient());
-        cmdList.setNamedUniform("environmentMultiplier", scene.exposedEnvironmentMultiplier());
+        cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
+        cmdList.setNamedUniform("environmentMultiplier", scene.preExposedEnvironmentBrightnessFactor());
         cmdList.traceRays(appState.windowExtent());
     };
 }

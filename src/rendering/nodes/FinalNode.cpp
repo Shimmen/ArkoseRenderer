@@ -9,7 +9,7 @@ FinalNode::FinalNode(std::string sourceTextureName)
 {
 }
 
-RenderPipelineNode::ExecuteCallback FinalNode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture* sourceTexture = reg.getTexture(m_sourceTextureName);
     if (!sourceTexture)
@@ -34,7 +34,7 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(Scene& scene, Registry&
 
         static bool addFilmGrain = true;
         ImGui::Checkbox("Add film grain", &addFilmGrain);
-        float filmGrainGain = addFilmGrain ? scene.filmGrainGain() : 0.0f;
+        float filmGrainGain = addFilmGrain ? scene.scene().filmGrainGain() : 0.0f;
 
         static float filmGrainScale = 2.5f;
         ImGui::SliderFloat("Film grain scale", &filmGrainScale, 1.0f, 10.0f);

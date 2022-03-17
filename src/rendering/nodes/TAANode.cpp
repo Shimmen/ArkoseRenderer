@@ -12,7 +12,7 @@ TAANode::TAANode(Camera& camera)
     }
 }
 
-RenderPipelineNode::ExecuteCallback TAANode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback TAANode::construct(GpuScene& scene, Registry& reg)
 {
     ///////////////////////
     // constructNode

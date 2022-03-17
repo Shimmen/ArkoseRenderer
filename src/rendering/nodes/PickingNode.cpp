@@ -7,7 +7,7 @@
 #include <imgui.h>
 #include <moos/vector.h>
 
-RenderPipelineNode::ExecuteCallback PickingNode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& indexMap = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R32);
     Texture& indexDepthMap = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth32F);
@@ -38,16 +38,16 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(Scene& scene, Registr
 
             moos::u32 selectedIndex;
             cmdList.slowBlockingReadFromBuffer(*m_lastResultBuffer.value(), 0, sizeof(moos::u32), &selectedIndex);
-            if (selectedIndex < scene.meshCount()) {
-                scene.forEachMesh([&](size_t index, Mesh& mesh) {
+            if (selectedIndex < scene.scene().meshCount()) {
+                scene.scene().forEachMesh([&](size_t index, Mesh& mesh) {
                     if (index == selectedIndex) {
-                        scene.setSelectedMesh(&mesh);
-                        scene.setSelectedModel(mesh.model());
+                        scene.scene().setSelectedMesh(&mesh);
+                        scene.scene().setSelectedModel(mesh.model());
                     }
                 });
             } else {
-                scene.setSelectedMesh(nullptr);
-                scene.setSelectedModel(nullptr);
+                scene.scene().setSelectedMesh(nullptr);
+                scene.scene().setSelectedModel(nullptr);
             }
 
             m_lastResultBuffer.reset();
@@ -56,7 +56,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(Scene& scene, Registr
         if (didClick(Button::Middle)) {
 
             std::vector<mat4> objectTransforms {}; 
-            scene.forEachMesh([&](size_t index, Mesh& mesh) {
+            scene.scene().forEachMesh([&](size_t index, Mesh& mesh) {
                 objectTransforms.push_back(mesh.transform().worldMatrix());
                 mesh.ensureDrawCallIsAvailable({ VertexComponent::Position3F }, scene);
             });
@@ -68,7 +68,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(Scene& scene, Registr
             cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout({ VertexComponent::Position3F }));
             cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
 
-            scene.forEachMesh([&](size_t index, Mesh& mesh) {
+            scene.scene().forEachMesh([&](size_t index, Mesh& mesh) {
                 DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, scene);
                 drawCall.firstInstance = static_cast<uint32_t>(index);
                 cmdList.issueDrawCall(drawCall);

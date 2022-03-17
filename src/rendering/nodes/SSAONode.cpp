@@ -8,7 +8,7 @@
 // Shader data
 #include "SSAOData.h"
 
-RenderPipelineNode::ExecuteCallback SSAONode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback SSAONode::construct(GpuScene& scene, Registry& reg)
 {
     ///////////////////////
     // constructNode

@@ -4,7 +4,7 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-RenderPipelineNode::ExecuteCallback PrepassNode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture* sceneDepth = reg.getTexture("SceneDepth");
     BindingSet& opaqueDrawableBindingSet = *reg.getBindingSet("MainViewCulledDrawablesOpaqueSet");
@@ -21,7 +21,7 @@ RenderPipelineNode::ExecuteCallback PrepassNode::construct(Scene& scene, Registr
     Buffer& indirectDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
-        int numInputDrawables = scene.forEachMesh([&](size_t, Mesh& mesh) {
+        int numInputDrawables = scene.scene().forEachMesh([&](size_t, Mesh& mesh) {
             mesh.ensureDrawCallIsAvailable(m_prepassVertexLayout, scene);
         });
 

@@ -5,9 +5,6 @@
 #include <moos/matrix.h>
 #include <fmt/format.h>
 
-class Scene;
-
-
 class Light {
 public:
 
@@ -58,16 +55,10 @@ public:
     RenderState& getOrCreateCachedShadowMapRenderState(const std::string& cacheIdentifier, std::function<RenderState&()> creationCallback);
     void invalidateRenderStateCache();
 
-    void setScene(Badge<Scene>, Scene* scene) { m_scene = scene; }
-    const Scene* scene() const { return m_scene; }
-    Scene* scene() { return m_scene; }
-
     void setName(std::string name) { m_name = std::move(name); }
     const std::string& name() const { return m_name; }
 
 private:
-    Scene* m_scene { nullptr };
-
     Type m_type;
 
     bool m_castsShadows { true };

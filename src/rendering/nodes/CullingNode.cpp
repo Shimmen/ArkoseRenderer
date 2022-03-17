@@ -10,7 +10,7 @@ using uint = uint32_t;
 #include "IndirectData.h"
 #include "LightData.h"
 
-RenderPipelineNode::ExecuteCallback CullingNode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Registry& reg)
 {
     // todo: maybe default to smaller, and definitely actually grow when needed!
     static constexpr size_t initialBufferCount = 1024;
@@ -69,7 +69,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(Scene& scene, Registr
         uploadBuffer.upload(planesData, planesByteSize, frustumPlaneBuffer);
 
         std::vector<IndirectShaderDrawable> indirectDrawableData {};
-        int numInputDrawables = scene.forEachMesh([&](size_t, Mesh& mesh) {
+        int numInputDrawables = scene.scene().forEachMesh([&](size_t, Mesh& mesh) {
             DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, scene);
             indirectDrawableData.push_back({ .drawable = { .worldFromLocal = mesh.transform().worldMatrix(),
                                                            .worldFromTangent = mat4(mesh.transform().worldNormalMatrix()),

@@ -2,7 +2,6 @@
 
 #include "backend/Resources.h"
 #include "rendering/Registry.h"
-#include "rendering/scene/Scene.h"
 #include "utility/FileIO.h"
 #include "utility/Image.h"
 #include "utility/Logging.h"

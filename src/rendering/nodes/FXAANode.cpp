@@ -4,7 +4,7 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-RenderPipelineNode::ExecuteCallback FXAANode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback FXAANode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& ldrTexture = *reg.getTexture("SceneColorLDR");
     Texture& replaceTex = reg.createTexture2D(ldrTexture.extent(), ldrTexture.format(), ldrTexture.filters(), ldrTexture.mipmap(), ldrTexture.wrapMode());

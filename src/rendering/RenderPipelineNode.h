@@ -9,8 +9,8 @@
 #include <memory>
 #include <string>
 
+class GpuScene;
 class UploadBuffer;
-class Scene;
 
 class RenderPipelineNode {
 public:
@@ -26,7 +26,7 @@ public:
 
     [[nodiscard]] virtual std::string name() const = 0;
 
-    virtual ExecuteCallback construct(Scene&, Registry&) = 0;
+    virtual ExecuteCallback construct(GpuScene&, Registry&) = 0;
 
 private:
     AvgElapsedTimer m_timer;
@@ -34,12 +34,12 @@ private:
 
 class RenderPipelineLambdaNode final : public RenderPipelineNode {
 public:
-    using ConstructorFunction = std::function<ExecuteCallback(Scene&, Registry&)>;
+    using ConstructorFunction = std::function<ExecuteCallback(GpuScene&, Registry&)>;
     RenderPipelineLambdaNode(std::string name, ConstructorFunction);
 
     std::string name() const override { return m_name; }
 
-    ExecuteCallback construct(Scene&, Registry&) override;
+    ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:
     std::string m_name;

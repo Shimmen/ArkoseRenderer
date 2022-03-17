@@ -1,7 +1,6 @@
 #include "Light.h"
 
 #include "rendering/Registry.h"
-#include "rendering/scene/Scene.h"
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
 
@@ -19,9 +18,6 @@ Texture& Light::shadowMap()
 
     if (m_shadowMap)
         return *m_shadowMap;
-
-    if (!scene())
-        LogErrorAndExit("Light: can't request shadow map for light that is not part of a scene, exiting\n");
 
     ASSERT(m_shadowMapSize.width() > 0 && m_shadowMapSize.height() > 0);
     Texture::Description textureDesc { .type = Texture::Type::Texture2D,
@@ -61,9 +57,6 @@ RenderTarget& Light::shadowMapRenderTarget()
     if (m_shadowMapRenderTarget)
         return *m_shadowMapRenderTarget;
 
-    if (!scene())
-        LogErrorAndExit("Light: can't request shadow map render target for light that is not part of a scene, exiting\n");
-
     m_shadowMapRenderTarget = Backend::get().createRenderTarget({ { RenderTarget::AttachmentType::Depth, &shadowMap() } });
 
     return *m_shadowMapRenderTarget;
@@ -72,9 +65,6 @@ RenderTarget& Light::shadowMapRenderTarget()
 RenderState& Light::getOrCreateCachedShadowMapRenderState(const std::string& cacheIdentifier, std::function<RenderState&()> creationCallback)
 {
     SCOPED_PROFILE_ZONE();
-
-    if (!scene())
-        LogErrorAndExit("Light: can't get or create shadow map render state for light that is not part of a scene, exiting\n");
 
     auto entry = m_cachedRenderStates.find(cacheIdentifier);
     if (entry != m_cachedRenderStates.end())

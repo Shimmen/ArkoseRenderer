@@ -9,7 +9,7 @@ using uint = uint32_t;
 #include "IndirectData.h"
 #include "LightData.h"
 
-RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(Scene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture* colorTexture = reg.getTexture("SceneColor");
     Texture* normalVelocityTexture = reg.getTexture("SceneNormalVelocity");
@@ -89,13 +89,13 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(Scene& scene, R
 
     return [&, renderStateOpaque, renderStateMasked](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        scene.forEachMesh([&](size_t, Mesh& mesh) {
+        scene.scene().forEachMesh([&](size_t, Mesh& mesh) {
             mesh.ensureDrawCallIsAvailable(m_vertexLayout, scene);
         });
 
         auto setCommonNamedUniforms = [&]() {
-            cmdList.setNamedUniform("ambientAmount", scene.exposedAmbient());
-            cmdList.setNamedUniform("indirectExposure", scene.lightPreExposureValue());
+            cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
+            cmdList.setNamedUniform("indirectExposure", scene.lightPreExposure());
             cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
         };
 

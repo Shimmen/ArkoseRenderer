@@ -2,13 +2,13 @@
 
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/scene/Model.h"
-#include "rendering/scene/Scene.h"
+#include "rendering/scene/GpuScene.h"
 
 class PickingNode final : public RenderPipelineNode {
 public:
 
     std::string name() const override { return "Picking"; }
-    ExecuteCallback construct(Scene&, Registry&) override;
+    ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:
     mutable std::optional<Buffer*> m_lastResultBuffer {};

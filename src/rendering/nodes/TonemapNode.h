@@ -1,7 +1,7 @@
 #pragma once
 
 #include "rendering/RenderPipelineNode.h"
-#include "rendering/scene/Scene.h"
+#include "rendering/scene/GpuScene.h"
 
 class TonemapNode final : public RenderPipelineNode {
 public:
@@ -14,7 +14,7 @@ public:
     TonemapNode(std::string sourceTextureName, Mode = Mode::RenderToSceneColorLDR);
 
     std::string name() const override { return "Tonemap"; }
-    ExecuteCallback construct(Scene&, Registry&) override;
+    ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:
     std::string m_sourceTextureName;

@@ -1,28 +1,26 @@
 #include "Scene.h"
 
-#include "backend/Resources.h"
-#include "rendering/Registry.h"
-#include "utility/Logging.h"
+#include "rendering/camera/Camera.h"
+#include "rendering/camera/FpsCamera.h"
+#include "rendering/scene/GpuScene.h"
+#include "rendering/scene/models/GltfModel.h"
+#include "utility/FileIO.h"
 #include <imgui.h>
 #include <ImGuizmo.h>
-#include <moos/aabb.h>
-#include <moos/transform.h>
-
-// Shared shader headers
-using uint = uint32_t;
-#include "RTData.h"
-#include "LightData.h"
-#include "CameraState.h"
+#include <nlohmann/json.hpp>
+#include <fstream>
 
 Scene::Scene(Extent2D initialMainViewportSize)
-    : m_mainViewportSize(initialMainViewportSize)
+{
+    m_gpuScene = std::make_unique<GpuScene>(*this, initialMainViewportSize);
+}
+
+Scene::~Scene()
 {
 }
 
 void Scene::newFrame(Extent2D mainViewportSize, bool firstFrame)
 {
-    m_mainViewportSize = mainViewportSize;
-
     camera().newFrame({}, mainViewportSize, firstFrame);
 
     // NOTE: We only want to do this on leaf-nodes right now, i.e. meshes not models.
@@ -31,291 +29,35 @@ void Scene::newFrame(Extent2D mainViewportSize, bool firstFrame)
     });
 }
 
-RenderPipelineNode::ExecuteCallback Scene::construct(Scene&, Registry& reg)
+void Scene::update(float elapsedTime, float deltaTime)
 {
-    // G-Buffer textures
-    {
-        Extent2D windowExtent = reg.windowRenderTarget().extent();
+    drawSceneGui();
+    drawSceneGizmos();
+    gpuScene().drawGui();
+}
 
-        Texture& depthTexture = reg.createTexture2D(windowExtent, Texture::Format::Depth24Stencil8, Texture::Filters::nearest());
-        reg.publish("SceneDepth", depthTexture);
+void Scene::setupFromDescription(const Description& description)
+{
+    gpuScene().setShouldMaintainRayTracingScene({}, description.maintainRayTracingScene);
 
-        // rgb: scene color, a: unused
-        Texture& colorTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
-        reg.publish("SceneColor", colorTexture);
+    if (!FileIO::isFileReadable(description.path))
+        LogErrorAndExit("Could not read scene file '%s', exiting\n", description.path.c_str());
+    loadFromFile(description.path);
 
-        // rg: encoded normal, ba: velocity in image plane (2D)
-        Texture& normalVelocityTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
-        reg.publish("SceneNormalVelocity", normalVelocityTexture);
-
-        // r: roughness, g: metallic, b: unused, a: unused
-        Texture& materialTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
-        reg.publish("SceneMaterial", materialTexture);
-
-        // rgb: base color, a: unused
-        Texture& baseColorTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA8);
-        reg.publish("SceneBaseColor", baseColorTexture);
-
-        // rgb: diffuse color, a: unused
-        Texture& diffueGiTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
-        reg.publish("DiffuseGI", diffueGiTexture);
-    }
-
-    Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
-    BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStage::AnyRasterize, &cameraBuffer } });
-    reg.publish("SceneCameraData", cameraBuffer);
-    reg.publish("SceneCameraSet", cameraBindingSet);
-
-    // Environment mapping stuff
-    Texture& envTexture = environmentMap().empty()
-        ? reg.createPixelTexture(vec4(1.0f), true)
-        : reg.loadTexture2D(environmentMap(), true, false);
-    reg.publish("SceneEnvironmentMap", envTexture);
-
-    // Object data stuff
-    // TODO: Resize the buffer if needed when more meshes are added
-    size_t objectDataBufferSize = meshCount() * sizeof(ShaderDrawable);
-    Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
-    objectDataBuffer.setName("SceneObjectData");
-    BindingSet& objectBindingSet = reg.createBindingSet({ { 0, ShaderStage::Vertex, &objectDataBuffer } });
-    reg.publish("objectSet", objectBindingSet);
-
-    if (doesMaintainRayTracingScene()) {
-
-        // TODO: Resize the buffer if needed when more meshes are added
-
-        std::vector<RTTriangleMesh> rtMeshes {};
-        forEachMesh([&](size_t meshIdx, Mesh& mesh) {
-            const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(m_rayTracingVertexLayout, *this);
-            rtMeshes.push_back({ .firstVertex = drawCallDesc.vertexOffset,
-                                 .firstIndex = (int32_t)drawCallDesc.firstIndex,
-                                 .materialIndex = mesh.materialIndex().value_or(0) });
-        });
-
-        Buffer& meshBuffer = reg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
-        BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ { 0, ShaderStage::AnyRayTrace, &meshBuffer },
-                                                                  { 1, ShaderStage::AnyRayTrace, &globalIndexBuffer() },
-                                                                  { 2, ShaderStage::AnyRayTrace, &globalVertexBufferForLayout(m_rayTracingVertexLayout) } });
-
-        reg.publish("SceneRTMeshDataSet", rtMeshDataBindingSet);
-    }
-
-    // Light shadow data stuff (todo: make not fixed!)
-    uint32_t numShadowCastingLights = forEachShadowCastingLight([](size_t, Light&) {});
-    Buffer& lightShadowDataBuffer = reg.createBuffer(numShadowCastingLights * sizeof(PerLightShadowData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
-    reg.publish("SceneShadowData", lightShadowDataBuffer);
-
-    // Light data stuff
-    Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
-    lightMetaDataBuffer.setName("SceneLightMetaData");
-    Buffer& dirLightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
-    dirLightDataBuffer.setName("SceneDirectionalLightData");
-    Buffer& spotLightDataBuffer = reg.createBuffer(10 * sizeof(SpotLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
-    spotLightDataBuffer.setName("SceneSpotLightData");
-    std::vector<Texture*> iesProfileLUTs;
-    std::vector<Texture*> shadowMaps;
-    // TODO: We need to be able to update the shadow map binding. Right now we can only do it once, at creation.
-    forEachLight([&](size_t, Light& light) {
-        if (light.type() == Light::Type::SpotLight)
-            iesProfileLUTs.push_back(&((SpotLight&)light).iesProfileLookupTexture()); // all this light stuff needs cleanup...
-        if (light.castsShadows())
-            shadowMaps.push_back(&light.shadowMap());
-    });
-    // We can't upload empty texture arrays (for now.. would be better to fix deeper int the stack)
-    if (iesProfileLUTs.empty())
-        iesProfileLUTs.push_back(&reg.createPixelTexture(vec4(1.0f), true));
-
-    BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStage::Any, &lightMetaDataBuffer },
-                                                         { 1, ShaderStage::Any, &dirLightDataBuffer },
-                                                         { 2, ShaderStage::Any, &spotLightDataBuffer },
-                                                         { 3, ShaderStage::Any, shadowMaps },
-                                                         { 4, ShaderStage::Any, iesProfileLUTs } });
-    reg.publish("SceneLightSet", lightBindingSet);
-
-    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
-
-        if (m_sceneDataNeedsRebuild) {
-            // We shouldn't need to rebuild the whole thing, just append and potentially remove some stuff.. But the
-            // distinction here is that it wouldn't be enough to just update some matrices, e.g. if an object was moved.
-            // If we save the vector of textures & materials we can probably resuse a lot of calculations. There is no
-            // rush with that though, as currently we can't even make changes that would require a rebuild..
-            // TODO: There is no reason this is a separate path from the normal Scene render pipeline execute function!
-            rebuildGpuSceneData();
-            m_sceneDataNeedsRebuild = false;
-        }
-
-        drawSceneGui();
-        drawSceneGizmos();
-
-        // Update camera data
-        {
-            const Camera& camera = this->camera();
-
-            mat4 pixelFromView = camera.pixelProjectionMatrix();
-            mat4 projectionFromView = camera.projectionMatrix();
-            mat4 viewFromWorld = camera.viewMatrix();
-
-            CameraState cameraState {
-                .projectionFromView = projectionFromView,
-                .viewFromProjection = inverse(projectionFromView),
-                .viewFromWorld = viewFromWorld,
-                .worldFromView = inverse(viewFromWorld),
-
-                .previousFrameProjectionFromView = camera.previousFrameProjectionMatrix(),
-                .previousFrameViewFromWorld = camera.previousFrameViewMatrix(),
-
-                .pixelFromView = pixelFromView,
-                .viewFromPixel = inverse(pixelFromView),
-
-                .near = camera.zNear,
-                .far = camera.zFar,
-
-                .iso = camera.iso,
-                .aperture = camera.aperture,
-                .shutterSpeed = camera.shutterSpeed,
-                .exposureCompensation = camera.exposureCompensation,
-            };
-
-            uploadBuffer.upload(cameraState, cameraBuffer);
-        }
-
-        // Update object data
-        {
-            std::vector<ShaderDrawable> objectData {};
-            forEachMesh([&](size_t, Mesh& mesh) {
-                objectData.push_back(ShaderDrawable { .worldFromLocal = mesh.transform().worldMatrix(),
-                                                      .worldFromTangent = mat4(mesh.transform().worldNormalMatrix()),
-                                                      .previousFrameWorldFromLocal = mesh.transform().previousFrameWorldMatrix(),
-                                                      .materialIndex = mesh.materialIndex().value_or(0) });
-            });
-
-            uploadBuffer.upload(objectData, objectDataBuffer);
-        }
-
-        // Update exposure data
-        {
-            if (camera().useAutomaticExposure) {
-                ASSERT_NOT_REACHED();
-            } else {
-                // See camera.glsl for reference
-                auto& camera = this->camera();
-                float ev100 = std::log2f((camera.aperture * camera.aperture) / camera.shutterSpeed * 100.0f / camera.iso);
-                float maxLuminance = 1.2f * std::pow(2.0f, ev100);
-                m_lightPreExposure = 1.0f / maxLuminance;
-            }
-        }
-
-        // Update light data
-        {
-            mat4 viewFromWorld = camera().viewMatrix();
-            mat4 worldFromView = inverse(viewFromWorld);
-
-            int nextShadowMapIndex = 0;
-            std::vector<DirectionalLightData> dirLightData;
-            std::vector<SpotLightData> spotLightData;
-
-            forEachLight([&](size_t, Light& light) {
-                int shadowMapIndex = light.castsShadows() ? nextShadowMapIndex++ : -1;
-                ShadowMapData shadowMapData { .textureIndex = shadowMapIndex };
-
-                vec3 lightColor = light.color * light.intensityValue() * lightPreExposureValue();
-
-                switch (light.type()) {
-                case Light::Type::DirectionalLight: {
-                    dirLightData.emplace_back(DirectionalLightData { .shadowMap = shadowMapData,
-                                                                     .color = lightColor,
-                                                                     .exposure = lightPreExposureValue(),
-                                                                     .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0),
-                                                                     .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0),
-                                                                     .lightProjectionFromWorld = light.viewProjection(),
-                                                                     .lightProjectionFromView = light.viewProjection() * worldFromView });
-                    break;
-                }
-                case Light::Type::SpotLight: {
-                    SpotLight& spotLight = static_cast<SpotLight&>(light);
-                    spotLightData.emplace_back(SpotLightData { .shadowMap = shadowMapData,
-                                                               .color = lightColor,
-                                                               .exposure = lightPreExposureValue(),
-                                                               .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0f),
-                                                               .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0f),
-                                                               .lightProjectionFromWorld = light.viewProjection(),
-                                                               .lightProjectionFromView = light.viewProjection() * worldFromView,
-                                                               .worldSpacePosition = vec4(light.position(), 0.0f),
-                                                               .viewSpacePosition = viewFromWorld * vec4(light.position(), 1.0f),
-                                                               .outerConeHalfAngle = spotLight.outerConeAngle / 2.0f,
-                                                               .iesProfileIndex = 0 /* todo: set correctly */,
-                                                               ._pad0 = vec2() });
-                    break;
-                }
-                case Light::Type::PointLight:
-                default:
-                    ASSERT_NOT_REACHED();
-                    break;
-                }
-            });
-
-            uploadBuffer.upload(dirLightData, dirLightDataBuffer);
-            uploadBuffer.upload(spotLightData, spotLightDataBuffer);
-
-            LightMetaData metaData { .numDirectionalLights = (int)dirLightData.size(),
-                                     .numSpotLights = (int)spotLightData.size() };
-            uploadBuffer.upload(metaData, lightMetaDataBuffer);
-
-            std::vector<PerLightShadowData> shadowData;
-            forEachShadowCastingLight([&](size_t, Light& light) {
-                shadowData.push_back({ .lightViewFromWorld = light.lightViewMatrix(),
-                                       .lightProjectionFromWorld = light.viewProjection(),
-                                       .constantBias = light.constantBias(),
-                                       .slopeBias = light.slopeBias() });
-            });
-            uploadBuffer.upload(shadowData, lightShadowDataBuffer);
-        }
-
-        cmdList.executeBufferCopyOperations(uploadBuffer);
-
-        if (doesMaintainRayTracingScene()) {
-
-            TopLevelAS& sceneTlas = globalTopLevelAccelerationStructure();
-
-            sceneTlas.updateInstanceDataWithUploadBuffer(m_rayTracingGeometryInstances, uploadBuffer);
-            cmdList.executeBufferCopyOperations(uploadBuffer);
-
-            cmdList.rebuildTopLevelAcceratationStructure(sceneTlas);
-
-        }
-    };
+    // TODO: Don't do this here!!! In fact, we should never really manually request a rebuild like this
+    // TODO: Don't do this here!!! In fact, we should never really manually request a rebuild like this
+    // TODO: Don't do this here!!! In fact, we should never really manually request a rebuild like this
+    // TODO: Don't do this here!!! In fact, we should never really manually request a rebuild like this
+    gpuScene().rebuildGpuSceneData();
 }
 
 Model& Scene::addModel(std::unique_ptr<Model> model)
 {
     ASSERT(model);
-    model->setScene({}, this);
     m_models.push_back(std::move(model));
-    return *m_models.back().get();
-}
-
-void Scene::setShouldMaintainRayTracingScene(bool value)
-{
-    // For now, only let this be changed before anything has been loaded. Also, assume 
-    ASSERT(m_filePath.empty());
-
-    m_maintainRayTracingScene = value;
-}
-
-DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)
-{
-    ASSERT(light);
-    light->setScene({}, this);
-    m_directionalLights.push_back(std::move(light));
-    return *m_directionalLights.back().get();
-}
-
-SpotLight& Scene::addLight(std::unique_ptr<SpotLight> light)
-{
-    ASSERT(light);
-    light->setScene({}, this);
-    m_spotLights.push_back(std::move(light));
-    return *m_spotLights.back().get();
+    Model& addedModel = *m_models.back();
+    gpuScene().registerModel(addedModel);
+    return addedModel;
 }
 
 size_t Scene::meshCount() const
@@ -326,6 +68,7 @@ size_t Scene::meshCount() const
     }
     return count;
 }
+
 
 void Scene::forEachModel(std::function<void(size_t, const Model&)> callback) const
 {
@@ -363,6 +106,31 @@ int Scene::forEachMesh(std::function<void(size_t, Mesh&)> callback)
         });
     }
     return static_cast<int>(nextIndex);
+}
+
+DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)
+{
+    ASSERT(light);
+    m_directionalLights.push_back(std::move(light));
+    DirectionalLight& addedLight = *m_directionalLights.back();
+    gpuScene().registerLight(addedLight);
+    return addedLight;
+}
+
+SpotLight& Scene::addLight(std::unique_ptr<SpotLight> light)
+{
+    ASSERT(light);
+    m_spotLights.push_back(std::move(light));
+    SpotLight& addedLight = *m_spotLights.back();
+    gpuScene().registerLight(addedLight);
+    return addedLight;
+}
+
+DirectionalLight* Scene::firstDirectionalLight()
+{
+    if (m_directionalLights.size() > 0)
+        return m_directionalLights.front().get();
+    return nullptr;
 }
 
 int Scene::forEachLight(std::function<void(size_t, const Light&)> callback) const
@@ -417,15 +185,26 @@ int Scene::forEachShadowCastingLight(std::function<void(size_t, Light&)> callbac
     return static_cast<int>(nextIndex);
 }
 
+void Scene::setEnvironmentMap(EnvironmentMap& environmentMap)
+{
+    if (m_environmentMap.assetPath != environmentMap.assetPath) {
+        gpuScene().updateEnvironmentMap(environmentMap);
+    }
+
+    m_environmentMap = environmentMap;
+}
+
 void Scene::generateProbeGridFromBoundingBox()
 {
     NOT_YET_IMPLEMENTED();
+
+    /*
 
     constexpr int maxGridSideSize = 16;
     constexpr float boxPadding = 0.0f;
 
     moos::aabb3 sceneBox {};
-    forEachMesh([&](size_t, Mesh& mesh) {
+    scene().forEachMesh([&](size_t, Mesh& mesh) {
         // TODO: Transform the bounding box first, obviously..
         // But we aren't using this path right now so not going
         // to spend time on it right now.
@@ -455,273 +234,169 @@ void Scene::generateProbeGridFromBoundingBox()
     grid.gridDimensions = Extent3D(counts[0], counts[1], counts[2]);
     grid.probeSpacing = spacing;
     setProbeGrid(grid);
+
+    */
 }
 
-DrawCallDescription Scene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh& mesh, const VertexLayout& layout, std::optional<DrawCallDescription> alignWith)
-{
-    const size_t initialIndexBufferSize = 100'000 * sizeof(uint32_t);
-    const size_t initialVertexBufferSize = 50'000 * layout.packedVertexSize();
-
-    bool doAlign = alignWith.has_value();
-    ASSERT(!alignWith || alignWith->sourceMesh == &mesh);
-
-    std::vector<uint8_t> vertexData = mesh.vertexData(layout);
-
-    auto entry = m_globalVertexBuffers.find(layout);
-    if (entry == m_globalVertexBuffers.end()) {
-
-        size_t offset = doAlign ? (alignWith->vertexOffset * layout.packedVertexSize()) : 0;
-        size_t minRequiredBufferSize = offset + vertexData.size();
-
-        m_globalVertexBuffers[layout] = Backend::get().createBuffer(std::max(initialVertexBufferSize, minRequiredBufferSize), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-        m_globalVertexBuffers[layout]->setName("SceneVertexBuffer");
-    }
-
-    Buffer& vertexBuffer = *m_globalVertexBuffers[layout];
-    size_t newDataStartOffset = doAlign
-        ? alignWith->vertexOffset * layout.packedVertexSize()
-        : m_nextFreeVertexIndex * layout.packedVertexSize();
-
-    vertexBuffer.updateDataAndGrowIfRequired(vertexData.data(), vertexData.size(), newDataStartOffset);
-
-    if (doAlign) {
-        // TODO: Maybe ensure we haven't already fitted this mesh+layout combo and is just overwriting at this point. Well, before doing it I guess..
-        DrawCallDescription reusedDrawCall = alignWith.value();
-        reusedDrawCall.vertexBuffer = m_globalVertexBuffers[layout].get();
-        return reusedDrawCall;
-    }
-
-    uint32_t vertexCount = (uint32_t)mesh.vertexCountForLayout(layout);
-    uint32_t vertexOffset = m_nextFreeVertexIndex;
-    m_nextFreeVertexIndex += vertexCount;
-
-
-    DrawCallDescription drawCall {};
-    drawCall.sourceMesh = &mesh;
-
-    drawCall.vertexBuffer = &vertexBuffer;
-    drawCall.vertexCount = vertexCount;
-    drawCall.vertexOffset = vertexOffset;
-
-    // Fit index data
-    {
-        std::vector<uint32_t> indexData = mesh.indexData();
-        size_t requiredAdditionalSize = indexData.size() * sizeof(uint32_t);
-
-        if (m_global32BitIndexBuffer == nullptr) {
-            m_global32BitIndexBuffer = Backend::get().createBuffer(std::max(initialIndexBufferSize, requiredAdditionalSize), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
-            m_global32BitIndexBuffer->setName("SceneIndexBuffer");
-        }
-
-        uint32_t firstIndex = m_nextFreeIndex;
-        m_nextFreeIndex += (uint32_t)indexData.size();
-
-        m_global32BitIndexBuffer->updateDataAndGrowIfRequired(indexData.data(), requiredAdditionalSize, firstIndex * sizeof(uint32_t));
-
-        drawCall.indexBuffer = m_global32BitIndexBuffer.get();
-        drawCall.indexCount = (uint32_t)indexData.size();
-        drawCall.indexType = IndexType::UInt32;
-        drawCall.firstIndex = firstIndex;
-    }
-
-    return drawCall;
-}
-
-Buffer& Scene::globalVertexBufferForLayout(const VertexLayout& layout) const
-{
-    auto entry = m_globalVertexBuffers.find(layout);
-    if (entry == m_globalVertexBuffers.end())
-        LogErrorAndExit("Can't get vertex buffer for layout since it has not been created! Please ensureDrawCallIsAvailable for at least one mesh before calling this.\n");
-    return *entry->second;
-}
-
-Buffer& Scene::globalIndexBuffer() const
-{
-    if (m_global32BitIndexBuffer == nullptr)
-        LogErrorAndExit("Can't get global index buffer since it has not been created! Please ensureDrawCallIsAvailable for at least one indexed mesh before calling this.\n");
-    return *m_global32BitIndexBuffer;
-}
-
-IndexType Scene::globalIndexBufferType() const
-{
-    // For simplicity we keep a single 32-bit index buffer, since every mesh should fit in there.
-    return IndexType::UInt32;
-}
-
-constexpr bool operator==(const ShaderMaterial& lhs, const ShaderMaterial& rhs)
-{
-    if (lhs.baseColor != rhs.baseColor)
-        return false;
-    if (lhs.normalMap != rhs.normalMap)
-        return false;
-    if (lhs.metallicRoughness != rhs.metallicRoughness)
-        return false;
-    if (lhs.emissive != rhs.emissive)
-        return false;
-    return true;
-}
-
-void Scene::rebuildGpuSceneData()
+void Scene::loadFromFile(const std::string& path)
 {
     SCOPED_PROFILE_ZONE();
 
-    m_usedTextures.clear();
-    m_usedMaterials.clear();
-    m_rayTracingGeometryInstances.clear();
+    using json = nlohmann::json;
 
-    std::unordered_map<Texture*, int> textureIndices;
-    auto pushTexture = [&](Texture* texture) -> int {
-        auto entry = textureIndices.find(texture);
-        if (entry != textureIndices.end())
-            return entry->second;
+    json jsonScene;
+    std::ifstream fileStream(path);
+    fileStream >> jsonScene;
 
-        int textureIndex = static_cast<int>(m_usedTextures.size());
-        textureIndices[texture] = textureIndex;
-        m_usedTextures.push_back(texture);
-
-        return textureIndex;
+    auto readVec3 = [&](const json& val) -> vec3 {
+        std::vector<float> values = val;
+        ASSERT(values.size() == 3);
+        return { values[0], values[1], values[2] };
     };
 
-    auto pushMaterial = [&](ShaderMaterial shaderMaterial) -> int {
-        // Would be nice if we could hash them..
-        for (int idx = 0; idx < m_usedMaterials.size(); ++idx) {
-            if (m_usedMaterials[idx] == shaderMaterial)
-                return idx;
-        }
-
-        int materialIndex = static_cast<int>(m_usedMaterials.size());
-        m_usedMaterials.push_back(shaderMaterial);
-
-        return materialIndex;
+    auto readExtent3D = [&](const json& val) -> Extent3D {
+        std::vector<uint32_t> values = val;
+        ASSERT(values.size() == 3);
+        return Extent3D(values[0], values[1], values[2]);
     };
 
-    int numMeshes = forEachMesh([&](size_t meshIdx, Mesh& mesh) {
+    auto optionallyParseShadowMapSize = [](const json& jsonLight, Light& light) {
+        if (jsonLight.find("shadowMapSize") != jsonLight.end()) {
+            int mapSize[2];
+            jsonLight.at("shadowMapSize").get_to(mapSize);
+            light.setShadowMapSize({ mapSize[0], mapSize[1] });
+        }
+    };
 
-        Material& material = mesh.material();
-        int materialIndex = pushMaterial(ShaderMaterial {
-            .baseColor = pushTexture(material.baseColorTexture()),
-            .normalMap = pushTexture(material.normalMapTexture()),
-            .metallicRoughness = pushTexture(material.metallicRoughnessTexture()),
-            .emissive = pushTexture(material.emissiveTexture()),
-            .blendMode = material.blendModeValue(),
-            .maskCutoff = material.maskCutoff,
-        });
+    auto optionallyParseLightName = [](const json& jsonLight, Light& light) {
+        if (jsonLight.find("name") != jsonLight.end())
+            light.setName(jsonLight.at("name"));
+    };
 
-        ASSERT(materialIndex >= 0);
-        mesh.setMaterialIndex({}, materialIndex);
+    auto jsonEnv = jsonScene.at("environment");
+    EnvironmentMap envMap;
+    envMap.assetPath = jsonEnv.at("texture");
+    envMap.brightnessFactor = jsonEnv.at("illuminance");
+    setEnvironmentMap(envMap);
 
-        if (doesMaintainRayTracingScene()) {
+    for (auto& jsonModel : jsonScene.at("models")) {
+        std::string modelGltf = jsonModel.at("gltf");
 
-            VertexLayout vertexLayout = { VertexComponent::Position3F };
-            size_t vertexStride = vertexLayout.packedVertexSize();
-            RTVertexFormat vertexFormat = RTVertexFormat::XYZ32F;
+        auto model = GltfModel::load(modelGltf);
+        if (!model)
+            continue;
 
-            const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(vertexLayout, *this);
-            ASSERT(drawCallDesc.type == DrawCallDescription::Type ::Indexed);
+        std::string name = jsonModel.at("name");
+        model->setName(name);
 
-            IndexType indexType = globalIndexBufferType();
-            size_t indexStride = sizeofIndexType(indexType);
+        auto transform = jsonModel.at("transform");
+        auto jsonRotation = transform.at("rotation");
 
-            uint32_t indexOfFirstVertex = drawCallDesc.vertexOffset; // Yeah this is confusing naming for sure.. Offset should probably always be byte offset
-            size_t vertexOffset = indexOfFirstVertex * vertexStride;
-
-            RTTriangleGeometry geometry { .vertexBuffer = *drawCallDesc.vertexBuffer,
-                                          .vertexCount = drawCallDesc.vertexCount,
-                                          .vertexOffset = vertexOffset,
-                                          .vertexStride = vertexStride,
-                                          .vertexFormat = vertexFormat,
-                                          .indexBuffer = *drawCallDesc.indexBuffer,
-                                          .indexCount = drawCallDesc.indexCount,
-                                          .indexOffset = indexStride * drawCallDesc.firstIndex,
-                                          .indexType = indexType,
-                                          .transform = mesh.transform().localMatrix() };
-
-            uint8_t hitMask = 0x00;
-            switch (material.blendMode) {
-            case Material::BlendMode::Opaque:
-                hitMask = RT_HIT_MASK_OPAQUE;
-                break;
-            case Material::BlendMode::Masked:
-                hitMask = RT_HIT_MASK_MASKED;
-                break;
-            case Material::BlendMode::Translucent:
-                hitMask = RT_HIT_MASK_BLEND;
-                break;
-            default:
-                ASSERT_NOT_REACHED();
-            }
-            ASSERT(hitMask != 0);
-
-            m_sceneBottomLevelAccelerationStructures.emplace_back(Backend::get().createBottomLevelAccelerationStructure({ geometry }));
-            BottomLevelAS& blas = *m_sceneBottomLevelAccelerationStructures.back();
-
-            // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
-            RTGeometryInstance instance = { .blas = blas,
-                                            .transform = mesh.model()->transform(),
-                                            .shaderBindingTableOffset = 0, // todo: generalize!
-                                            .customInstanceId = static_cast<uint32_t>(meshIdx),
-                                            .hitMask = hitMask };
-
-            m_rayTracingGeometryInstances.push_back(instance);
+        mat4 rotationMatrix;
+        std::string rotType = jsonRotation.at("type");
+        if (rotType == "axis-angle") {
+            vec3 axis = readVec3(jsonRotation.at("axis"));
+            float angle = jsonRotation.at("angle");
+            rotationMatrix = moos::quatToMatrix(moos::axisAngle(axis, angle));
+        } else {
+            ASSERT_NOT_REACHED();
         }
 
-    });
+        mat4 localMatrix = moos::translate(readVec3(transform.at("translation")))
+            * rotationMatrix * moos::scale(readVec3(transform.at("scale")));
+        model->transform().setLocalMatrix(localMatrix);
 
-    //if (m_usedTextures.size() > SCENE_MAX_TEXTURES) {
-    //    LogErrorAndExit("Scene: we need to up the number of max textures that can be handled by the scene! We have %u, the capacity is %u.\n",
-    //                    m_usedTextures.size(), SCENE_MAX_TEXTURES);
-    //}
-
-    // Create material buffer
-    size_t materialBufferSize = m_usedMaterials.size() * sizeof(ShaderMaterial);
-    m_materialDataBuffer = Backend::get().createBuffer(materialBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
-    m_materialDataBuffer->updateData(m_usedMaterials.data(), materialBufferSize);
-    m_materialDataBuffer->setName("SceneMaterialData");
-
-    m_materialBindingSet = Backend::get().createBindingSet({ { 0, ShaderStage::Any, m_materialDataBuffer.get() },
-                                                             { 1, ShaderStage::Any, m_usedTextures } });
-    m_materialBindingSet->setName("SceneMaterialSet");
-
-    if (doesMaintainRayTracingScene() && m_rayTracingGeometryInstances.size() > 0) {
-        // TODO: We need to handle the case where we end up with more instances then required. Should that just force a full recreation maybe?
-        m_sceneTopLevelAccelerationStructure = Backend::get().createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, m_rayTracingGeometryInstances);
+        addModel(std::move(model));
     }
-}
 
-BindingSet& Scene::globalMaterialBindingSet() const
-{
-    ASSERT(m_materialBindingSet);
-    return *m_materialBindingSet;
-}
+    for (auto& jsonLight : jsonScene.at("lights")) {
 
-TopLevelAS& Scene::globalTopLevelAccelerationStructure() const
-{
-    ASSERT(doesMaintainRayTracingScene());
-    ASSERT(m_sceneTopLevelAccelerationStructure);
-    return *m_sceneTopLevelAccelerationStructure;
-}
+        auto type = jsonLight.at("type");
+        if (type == "directional") {
 
-float Scene::filmGrainGain() const
-{
-    return m_fixedFilmGrainGain;
+            vec3 color = readVec3(jsonLight.at("color"));
+            float illuminance = jsonLight.at("illuminance");
+            vec3 direction = readVec3(jsonLight.at("direction"));
+
+            auto light = std::make_unique<DirectionalLight>(color, illuminance, direction);
+
+            optionallyParseShadowMapSize(jsonLight, *light);
+            optionallyParseLightName(jsonLight, *light);
+
+            light->shadowMapWorldOrigin = { 0, 0, 0 };
+            light->shadowMapWorldExtent = jsonLight.at("worldExtent");
+
+            addLight(std::move(light));
+
+        } else if (type == "spot") {
+
+            vec3 color = readVec3(jsonLight.at("color"));
+            float luminousIntensity = jsonLight.at("luminousIntensity");
+            vec3 position = readVec3(jsonLight.at("position"));
+            vec3 direction = readVec3(jsonLight.at("direction"));
+            std::string iesPath = jsonLight.at("ies");
+
+            auto light = std::make_unique<SpotLight>(color, luminousIntensity, iesPath, position, direction);
+
+            optionallyParseShadowMapSize(jsonLight, *light);
+            optionallyParseLightName(jsonLight, *light);
+
+            addLight(std::move(light));
+
+        } else if (type == "ambient") {
+
+            float illuminance = jsonLight.at("illuminance");
+            setAmbientIlluminance(illuminance);
+
+        } else {
+            ASSERT_NOT_REACHED();
+        }
+    }
+
+    if (jsonScene.find("probe-grid") != jsonScene.end()) {
+        auto jsonProbeGrid = jsonScene.at("probe-grid");
+        setProbeGrid({ .gridDimensions = readExtent3D(jsonProbeGrid.at("dimensions")),
+                       .probeSpacing = readVec3(jsonProbeGrid.at("spacing")),
+                       .offsetToFirst = readVec3(jsonProbeGrid.at("offsetToFirst")) });
+    }
+
+    for (auto& jsonCamera : jsonScene.at("cameras")) {
+
+        // TODO: For now always just make FpsCamera objects. Later we probably want to be able to change etc.
+        // E.g. make a camera controller class which wraps or refers to a Camera object.
+        auto camera = std::make_unique<FpsCamera>();
+
+        vec3 position = readVec3(jsonCamera.at("position"));
+        vec3 direction = normalize(readVec3(jsonCamera.at("direction")));
+        camera->lookAt(position, position + direction, moos::globalUp);
+
+        if (jsonCamera.find("exposure") != jsonCamera.end()) {
+            if (jsonCamera.at("exposure") == "manual") {
+                camera->useAutomaticExposure = false;
+                camera->iso = jsonCamera.at("ISO");
+                camera->aperture = jsonCamera.at("aperture");
+                camera->shutterSpeed = 1.0f / jsonCamera.at("shutter");
+            } else if (jsonCamera.at("exposure") == "auto") {
+                camera->useAutomaticExposure = true;
+                camera->exposureCompensation = jsonCamera.at("EC");
+                camera->adaptionRate = jsonCamera.at("adaptionRate");
+            }
+        }
+
+        std::string name = jsonCamera.at("name");
+        m_allCameras[name] = std::move(camera);
+    }
+
+    std::string mainCamera = jsonScene.at("camera");
+    auto entry = m_allCameras.find(mainCamera);
+    if (entry != m_allCameras.end()) {
+        m_currentMainCamera = m_allCameras[mainCamera].get();
+    }
 }
 
 void Scene::drawSceneGui()
 {
     ImGui::Begin("Scene");
-
-    {
-        ImGui::Text("Number of managed resources:");
-        ImGui::Columns(3);
-        ImGui::Text("meshes: %u", meshCount());
-        ImGui::NextColumn();
-        ImGui::Text("materials: %u", m_usedMaterials.size());
-        ImGui::NextColumn();
-        ImGui::Text("textures: %u", m_usedTextures.size());
-        ImGui::Columns(1);
-    }
-
-    ImGui::Separator();
 
     if (ImGui::TreeNode("Film grain")) {
         // TODO: I would love to estimate gain grain from ISO and scene light amount, but that's for later..
@@ -732,7 +407,7 @@ void Scene::drawSceneGui()
     if (ImGui::TreeNode("Environment")) {
         ImGui::SliderFloat("Ambient (lx)", &m_ambientIlluminance, 0.0f, 1'000.0f, "%.0f");
         // NOTE: Obviously the unit of this is dependent on the values in the texture.. we should probably unify this a bit.
-        ImGui::SliderFloat("Environment multiplier", &m_environmentMultiplier, 0.0f, 10'000.0f, "%.0f");
+        ImGui::SliderFloat("Environment multiplier", &m_environmentMap.brightnessFactor, 0.0f, 10'000.0f, "%.0f");
         ImGui::TreePop();
     }
 
@@ -776,12 +451,8 @@ void Scene::drawSceneGui()
     ImGui::Separator();
 
     if (ImGui::TreeNode("Exposure control")) {
-        camera().renderExposureGUI();
+        gpuScene().camera().renderExposureGUI();
         ImGui::TreePop();
-    }
-
-    if (ImGui::Button("Copy current camera to clipboard")) {
-        saveCameraToClipboard(*m_currentMainCamera);
     }
 
     ImGui::End();

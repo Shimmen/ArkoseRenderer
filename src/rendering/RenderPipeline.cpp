@@ -2,10 +2,10 @@
 
 #include "utility/Logging.h"
 #include "utility/Profiling.h"
-#include "rendering/scene/Scene.h"
+#include "rendering/scene/GpuScene.h"
 #include <fmt/format.h>
 
-RenderPipeline::RenderPipeline(Scene* scene)
+RenderPipeline::RenderPipeline(GpuScene* scene)
     : m_scene(scene)
 {
     // Add "Scene" node which should always be included (unless it's some weird case that I can't think of now)
