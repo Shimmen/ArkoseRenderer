@@ -59,7 +59,7 @@ public:
             m_previousFrameWorldMatrix = worldMatrix();
     }
 
-    mat4 previousFrameWorldMatrix()
+    mat4 previousFrameWorldMatrix() const
     {
         return m_previousFrameWorldMatrix.value_or(worldMatrix());
     }
