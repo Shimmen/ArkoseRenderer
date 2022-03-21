@@ -5,7 +5,7 @@
 class AppState {
 public:
     AppState() = default;
-    AppState(const Extent2D& windowExtent, double deltaTime, double timeSinceStartup, uint32_t frameIndex, bool isRelativeFirstFrame)
+    AppState(const Extent2D& windowExtent, float deltaTime, float timeSinceStartup, uint32_t frameIndex, bool isRelativeFirstFrame)
         : m_frameIndex(frameIndex)
         , m_isRelativeFirstFrame(isRelativeFirstFrame)
         , m_windowExtent(windowExtent)
@@ -34,6 +34,6 @@ private:
     bool m_isRelativeFirstFrame {};
     Extent2D m_windowExtent {};
 
-    double m_deltaTime {};
-    double m_timeSinceStartup {};
+    float m_deltaTime {};
+    float m_timeSinceStartup {};
 };

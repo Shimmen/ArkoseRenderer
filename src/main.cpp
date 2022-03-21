@@ -54,6 +54,13 @@ GLFWwindow* createWindow(Backend::Type backendType, WindowType windowType, const
     return window;
 }
 
+Extent2D windowFramebufferSize(GLFWwindow* window)
+{
+    int width, height;
+    glfwGetFramebufferSize(window, &width, &height);
+    return Extent2D(width, height);
+}
+
 int main(int argc, char** argv)
 {
     TaskGraph::initialize();
@@ -73,9 +80,7 @@ int main(int argc, char** argv)
     appSpec.optionalCapabilities = app->optionalCapabilities();
     Backend& backend = Backend::create(backendType, window, appSpec);
 
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-    auto scene = std::make_unique<Scene>(Extent2D(width, height));
+    auto scene = std::make_unique<Scene>(backend, windowFramebufferSize(window));
     auto renderPipeline = std::make_unique<RenderPipeline>(&scene->gpuScene());
 
     app->setup(*scene, *renderPipeline);
@@ -92,7 +97,7 @@ int main(int argc, char** argv)
     });
 
     glfwSetTime(0.0);
-    double lastTime = 0.0;
+    float lastTime = 0.0f;
     bool firstFrame = true;
     while (!glfwWindowShouldClose(window)) {
 
@@ -107,18 +112,15 @@ int main(int argc, char** argv)
         Input::preEventPoll();
         glfwPollEvents();
 
-        int width, height;
-        glfwGetFramebufferSize(window, &width, &height);
-
         backend.newFrame();
-        scene->newFrame({ width, height }, firstFrame);
+        scene->newFrame(windowFramebufferSize(window), firstFrame);
 
-        double elapsedTime = glfwGetTime();
-        double deltaTime = elapsedTime - lastTime;
+        float elapsedTime = static_cast<float>(glfwGetTime());
+        float deltaTime = elapsedTime - lastTime;
         lastTime = elapsedTime;
 
-        scene->update(static_cast<float>(elapsedTime), static_cast<float>(deltaTime));
-        app->update(*scene, static_cast<float>(elapsedTime), static_cast<float>(deltaTime));
+        scene->update(elapsedTime, deltaTime);
+        app->update(*scene, elapsedTime, deltaTime);
 
         bool frameExecuted = false;
         while (!frameExecuted) {

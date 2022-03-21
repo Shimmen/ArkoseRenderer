@@ -60,7 +60,7 @@ public:
     virtual void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline&) = 0;
 
     virtual void newFrame() = 0;
-    virtual bool executeFrame(const Scene&, RenderPipeline&, double elapsedTime, double deltaTime) = 0;
+    virtual bool executeFrame(const Scene&, RenderPipeline&, float elapsedTime, float deltaTime) = 0;
 
     virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) = 0;
     virtual std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) = 0;
