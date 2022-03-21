@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utility/Hash.h"
 #include <string>
 
 class Image {
@@ -55,11 +56,16 @@ public:
     const void* data() const { return m_data; }
     size_t size() const { return m_size; }
 
-    Image(Image&) = delete;
-    Image& operator=(Image&) = delete;
-
     Image(MemoryType, Info, void* data, size_t size);
     ~Image() = default;
+
+    bool operator==(const Image& other) const
+    {
+        return m_info == other.m_info
+            && m_data == other.m_data
+            && m_size == other.m_size
+            && m_type == other.m_type;
+    }
 
 private:
     Info m_info;
@@ -67,3 +73,29 @@ private:
     size_t m_size;
     MemoryType m_type;
 };
+
+namespace std {
+
+template<>
+struct hash<Image::Info> {
+    std::size_t operator()(const Image::Info& info) const
+    {
+        auto sizeHash = hashCombine(std::hash<int>()(info.width), std::hash<int>()(info.height));
+        auto typeHash = hashCombine(std::hash<Image::PixelType>()(info.pixelType), std::hash<Image::ComponentType>()(info.componentType));
+        return hashCombine(sizeHash, typeHash);
+    }
+};
+
+template<>
+struct hash<Image> {
+    std::size_t operator()(const Image& image) const
+    {
+        auto infoHash = std::hash<Image::Info>()(image.info());
+        auto dataHash = std::hash<const void*>()((image.data()));
+        auto sizeHash = std::hash<size_t>()((image.size()));
+        auto typeHash = std::hash<Image::MemoryType>()((image.memoryType()));
+        return hashCombine(hashCombine(infoHash, dataHash), hashCombine(sizeHash, typeHash));
+    }
+};
+
+}
