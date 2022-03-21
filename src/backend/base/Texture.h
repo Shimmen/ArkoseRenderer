@@ -89,20 +89,20 @@ public:
         WrapMode w;
 
         WrapModes() = delete;
-        WrapModes(WrapMode u, WrapMode v)
+        constexpr WrapModes(WrapMode u, WrapMode v)
             : u(u)
             , v(v)
             , w(WrapMode::ClampToEdge)
         {
         }
-        WrapModes(WrapMode u, WrapMode v, WrapMode w)
+        constexpr WrapModes(WrapMode u, WrapMode v, WrapMode w)
             : u(u)
             , v(v)
             , w(w)
         {
         }
 
-        static WrapModes repeatAll()
+        static constexpr WrapModes repeatAll()
         {
             return {
                 WrapMode::Repeat,
@@ -111,7 +111,7 @@ public:
             };
         }
 
-        static WrapModes mirroredRepeatAll()
+        static constexpr WrapModes mirroredRepeatAll()
         {
             return {
                 WrapMode::MirroredRepeat,
@@ -120,7 +120,7 @@ public:
             };
         }
 
-        static WrapModes clampAllToEdge()
+        static constexpr WrapModes clampAllToEdge()
         {
             return {
                 WrapMode::ClampToEdge,
