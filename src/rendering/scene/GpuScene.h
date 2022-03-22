@@ -140,6 +140,8 @@ private:
     };
     std::vector<ManagedMaterial> m_managedMaterials {};
     static constexpr int MaxSupportedSceneMaterials = 1'000;
+    std::unique_ptr<Buffer> m_materialDataBuffer { nullptr };
+    bool m_materialDataBufferNeedsUpdate { false };
 
     static constexpr uint32_t InitialMaxRayTracingGeometryInstanceCount { 1024 };
     std::vector<RTGeometryInstance> m_rayTracingGeometryInstances {};
@@ -155,7 +157,6 @@ private:
     void rebuildGpuSceneData();
 
     bool m_sceneDataNeedsRebuild { true };
-    std::unique_ptr<Buffer> m_materialDataBuffer { nullptr };
-
+    
     std::unique_ptr<BindingSet> m_materialBindingSet { nullptr };
 };

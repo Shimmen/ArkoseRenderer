@@ -216,7 +216,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         // Update material data
-        // TODO: support partial updates?
+        // TODO: support partial updates? E.g. ranges of materials needing update
+        if (m_materialDataBufferNeedsUpdate)
         {
             ASSERT(m_managedMaterials.size() <= MaxSupportedSceneMaterials);
             std::vector<ShaderMaterial> shaderMaterialData {};
@@ -224,6 +225,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 shaderMaterialData.push_back(managedMaterial.material);
             }
             m_materialDataBuffer->updateData(shaderMaterialData);
+            m_materialDataBufferNeedsUpdate = false;
         }
 
         // Update camera data
@@ -509,6 +511,8 @@ MaterialHandle GpuScene::registerMaterial(Material& material)
     m_managedMaterials.push_back(ManagedMaterial { .material = shaderMaterial,
                                                    .referenceCount = 1 });
 
+    m_materialDataBufferNeedsUpdate = true;
+
     return handle;
 }
 
@@ -527,6 +531,8 @@ void GpuScene::unregisterMaterial(MaterialHandle handle)
         // TODO: Put this handle in some handle free list for index reuse so we don't leave gaps
         managedMaterial = ManagedMaterial();
     }
+
+    m_materialDataBufferNeedsUpdate = true;
 }
 
 TextureHandle GpuScene::registerTexture(Material::TextureDescription& desc)
