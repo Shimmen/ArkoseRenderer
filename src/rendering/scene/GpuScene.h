@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/Handle.h"
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/camera/Camera.h"
 #include "rendering/scene/Scene.h"
@@ -11,20 +12,43 @@
 // Shared shader data
 using uint = uint32_t;
 #include "SceneData.h"
+#include "RTData.h"
 
 class DirectionalLight;
-class Model;
+class Mesh;
 class SpotLight;
+
+DEFINE_HANDLE_TYPE(TextureHandle);
+DEFINE_HANDLE_TYPE(MaterialHandle);
 
 class GpuScene final : public RenderPipelineNode {
 public:
-    GpuScene(Scene&, Extent2D initialMainViewportSize);
+    GpuScene(Scene&, Backend&, Extent2D initialMainViewportSize);
+
+    void initialize(Badge<Scene>, bool rayTracingCapable);
+
+    // Render asset accessors
+
+    Backend& backend() { return m_backend; }
+    const Backend& backend() const { return m_backend; }
 
     Scene& scene() { return m_scene; }
     const Scene& scene() const { return m_scene; }
 
     Camera& camera() { return scene().camera(); }
     const Camera& camera() const { return scene().camera(); }
+
+    size_t meshCount() const { return m_managedMeshes.size(); }
+    size_t forEachMesh(std::function<void(size_t, Mesh&)> callback);
+    size_t forEachMesh(std::function<void(size_t, const Mesh&)> callback) const;
+
+    size_t lightCount() const;
+    size_t forEachLight(std::function<void(size_t, Light&)>);
+    size_t forEachLight(std::function<void(size_t, const Light&)>) const;
+
+    size_t shadowCastingLightCount() const;
+    size_t forEachShadowCastingLight(std::function<void(size_t, Light&)>);
+    size_t forEachShadowCastingLight(std::function<void(size_t, const Light&)>) const;
 
     // RenderPipelineNode interface
 
@@ -33,14 +57,17 @@ public:
 
     // GPU data registration
 
-    void registerModel(Model&);
     void registerLight(SpotLight&);
     void registerLight(DirectionalLight&);
 
-    // Ray tracing
+    // TODO: Replace with something like "registerInstance" which takes a Model and a transform.. or something like that
+    void registerMesh(Mesh&);
 
-    bool doesMaintainRayTracingScene() const { return m_maintainRayTracingScene; }
-    void setShouldMaintainRayTracingScene(Badge<Scene>, bool);
+    MaterialHandle registerMaterial(Material&);
+    void unregisterMaterial(MaterialHandle);
+
+    TextureHandle registerTexture(Material::TextureDescription&);
+    void unregisterTexture(TextureHandle);
 
     // Lighting & environment
 
@@ -69,8 +96,7 @@ public:
 
 private:
     Scene& m_scene;
-
-    std::vector<Model*> m_models {};
+    Backend& m_backend;
 
     std::vector<DirectionalLight*> m_directionalLights {};
     std::vector<SpotLight*> m_spotLights {};
@@ -82,6 +108,8 @@ private:
     const VertexLayout m_rayTracingVertexLayout = { VertexComponent::Normal3F,
                                                     VertexComponent::TexCoord2F };
 
+    RTGeometryInstance createRTGeometryInstance(Mesh&, uint32_t meshIdx);
+
     float m_lightPreExposure { 1.0f };
 
     // GPU data
@@ -92,8 +120,26 @@ private:
     std::unordered_map<VertexLayout, std::unique_ptr<Buffer>> m_globalVertexBuffers {};
     uint32_t m_nextFreeVertexIndex { 0 };
 
-    std::vector<Texture*> m_usedTextures {};
-    std::vector<ShaderMaterial> m_usedMaterials {};
+    std::vector<Mesh*> m_managedMeshes {};
+    std::vector<ShaderDrawable> m_rasterizerMeshData {}; // TODO: Rename to something like m_drawInstances and the type ShaderDrawInstance? Something like that :^)
+    std::vector<RTTriangleMesh> m_rayTracingMeshData {};
+    static constexpr int MaxSupportedSceneMeshes = 10'000;
+
+    struct ManagedTexture {
+        std::unique_ptr<Texture> texture {};
+        Material::TextureDescription description {};
+        uint64_t referenceCount { 0 };
+    };
+    std::vector<ManagedTexture> m_managedTextures {};
+    std::unordered_map<Material::TextureDescription, TextureHandle> m_textureCache {};
+    static constexpr int MaxSupportedSceneTextures = 1'024;
+
+    struct ManagedMaterial {
+        ShaderMaterial material {};
+        uint64_t referenceCount { 0 };
+    };
+    std::vector<ManagedMaterial> m_managedMaterials {};
+    static constexpr int MaxSupportedSceneMaterials = 1'000;
 
     static constexpr uint32_t InitialMaxRayTracingGeometryInstanceCount { 1024 };
     std::vector<RTGeometryInstance> m_rayTracingGeometryInstances {};
@@ -102,10 +148,11 @@ private:
 
     std::unique_ptr<Texture> m_environmentMapTexture {};
 
-public:
-    // TODO: while refactoring keep this visible (for the Scene)
+    // TODO: Remove me!
+    // TODO: Remove me!
+    // TODO: Remove me!
+    // TODO: Remove me!
     void rebuildGpuSceneData();
-private:
 
     bool m_sceneDataNeedsRebuild { true };
     std::unique_ptr<Buffer> m_materialDataBuffer { nullptr };

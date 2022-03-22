@@ -21,7 +21,7 @@ RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Regi
     Buffer& indirectDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
-        int numInputDrawables = scene.scene().forEachMesh([&](size_t, Mesh& mesh) {
+        scene.forEachMesh([&](size_t, Mesh& mesh) {
             mesh.ensureDrawCallIsAvailable(m_prepassVertexLayout, scene);
         });
 

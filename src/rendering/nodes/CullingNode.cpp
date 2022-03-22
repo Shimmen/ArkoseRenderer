@@ -69,7 +69,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
         uploadBuffer.upload(planesData, planesByteSize, frustumPlaneBuffer);
 
         std::vector<IndirectShaderDrawable> indirectDrawableData {};
-        int numInputDrawables = scene.scene().forEachMesh([&](size_t, Mesh& mesh) {
+        size_t numInputDrawables = scene.forEachMesh([&](size_t, Mesh& mesh) {
             DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, scene);
             indirectDrawableData.push_back({ .drawable = { .worldFromLocal = mesh.transform().worldMatrix(),
                                                            .worldFromTangent = mat4(mesh.transform().worldNormalMatrix()),
@@ -93,8 +93,8 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
 
         cmdList.setComputeState(cullingState);
         cmdList.bindSet(cullingBindingSet, 0);
-        cmdList.setNamedUniform("numInputDrawables", numInputDrawables);
-        cmdList.dispatch(Extent3D(numInputDrawables, 1, 1), Extent3D(64, 1, 1));
+        cmdList.setNamedUniform<uint32_t>("numInputDrawables", static_cast<uint32_t>(numInputDrawables));
+        cmdList.dispatch(Extent3D(static_cast<uint32_t>(numInputDrawables), 1, 1), Extent3D(64, 1, 1));
 
         // It would be nice if we could do GPU readback from last frame's count buffer (on the other hand, we do have renderdoc for this)
         //ImGui::Text("Issued draw calls: %i", numDrawCallsIssued);

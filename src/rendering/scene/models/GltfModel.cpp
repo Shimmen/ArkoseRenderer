@@ -186,16 +186,22 @@ std::unique_ptr<Material> GltfMesh::createMaterial()
 
     auto& gltfMaterial = m_model->materials[m_primitive->material];
 
-    auto getTexture = [&](int texIndex) -> Material::PathOrImage {
-        if (texIndex == -1)
-            return { "", nullptr };
+    auto toTextureDesc = [&](int texIndex, bool sRGB, vec4 fallbackColor) -> Material::TextureDescription {
+
+        if (texIndex == -1) {
+            Material::TextureDescription desc {};
+            desc.fallbackColor = fallbackColor;
+            desc.sRGB = sRGB;
+            return desc;
+        }
 
         auto& texture = m_model->textures[texIndex];
         auto& sampler = m_model->samplers[texture.sampler];
         auto& image = m_model->images[texture.source];
 
+        Material::TextureDescription desc;
         if (!image.uri.empty()) {
-            return { m_parentModel->directory() + image.uri, nullptr };
+            desc = Material::TextureDescription(m_parentModel->directory() + image.uri);
         } else {
 
             Image::Info info;
@@ -235,8 +241,75 @@ std::unique_ptr<Material> GltfMesh::createMaterial()
             size_t dataSize = bufferView.byteLength;
             const uint8_t* data = buffer.data.data() + bufferView.byteOffset;
 
-            return { "", std::make_unique<Image>(Image::MemoryType::EncodedImage, info, (void*)data, dataSize) };
+            desc = Material::TextureDescription(Image(Image::MemoryType::EncodedImage, info, (void*)data, dataSize));
         }
+
+        auto wrapModeFromTinyGltf = [](int filterMode) -> Texture::WrapMode {
+            switch (filterMode) {
+            case TINYGLTF_TEXTURE_WRAP_REPEAT:
+                return Texture::WrapMode::Repeat;
+            case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
+                return Texture::WrapMode::ClampToEdge;
+            case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
+                return Texture::WrapMode::MirroredRepeat;
+            default:
+                ASSERT_NOT_REACHED();
+            }
+        };
+
+        desc.fallbackColor = fallbackColor;
+        desc.sRGB = sRGB;
+
+        desc.wrapMode.u = wrapModeFromTinyGltf(sampler.wrapS);
+        desc.wrapMode.v = wrapModeFromTinyGltf(sampler.wrapT);
+        desc.wrapMode.w = wrapModeFromTinyGltf(sampler.wrapR);
+
+        switch (sampler.minFilter) {
+        case TINYGLTF_TEXTURE_FILTER_NEAREST:
+            desc.filters.min = Texture::MinFilter::Nearest;
+            desc.mipmapped = false;
+            break;
+        case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
+        case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
+            // TODO: We need to change how we handle mipmapping for this to be correct..
+            desc.filters.min = Texture::MinFilter::Nearest;
+            desc.mipmapped = true;
+            break;
+        case TINYGLTF_TEXTURE_FILTER_LINEAR:
+            desc.filters.min = Texture::MinFilter::Linear;
+            desc.mipmapped = false;
+            break;
+        case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST:
+        case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR:
+            // TODO: We need to change how we handle mipmapping for this to be correct..
+            desc.filters.min = Texture::MinFilter::Linear;
+            desc.mipmapped = true;
+            break;
+        case -1:
+            // "glTF 2.0 spec does not define default value for `minFilter` and `magFilter`. Set -1 in TinyGLTF(issue #186)"
+            desc.filters.min = Texture::MinFilter::Linear;
+            desc.mipmapped = true;
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+
+        switch (sampler.magFilter) {
+        case TINYGLTF_TEXTURE_FILTER_NEAREST:
+            desc.filters.mag = Texture::MagFilter::Nearest;
+            break;
+        case TINYGLTF_TEXTURE_FILTER_LINEAR:
+            desc.filters.mag = Texture::MagFilter::Linear;
+            break;
+        case -1:
+            // "glTF 2.0 spec does not define default value for `minFilter` and `magFilter`. Set -1 in TinyGLTF(issue #186)"
+            desc.filters.mag = Texture::MagFilter::Linear;
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+
+        return desc;
     };
 
     auto material = std::make_unique<Material>();
@@ -252,13 +325,20 @@ std::unique_ptr<Material> GltfMesh::createMaterial()
         ASSERT_NOT_REACHED();
     }
 
-    material->baseColor = getTexture(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index);
     std::vector<double> c = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
     material->baseColorFactor = vec4((float)c[0], (float)c[1], (float)c[2], (float)c[3]);
 
-    material->normalMap = getTexture(gltfMaterial.normalTexture.index);
-    material->metallicRoughness = getTexture(gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index);
-    material->emissive = getTexture(gltfMaterial.emissiveTexture.index);
+    int baseColorIdx = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
+    material->baseColor = toTextureDesc(baseColorIdx, true, material->baseColorFactor);
+
+    int normalMapIdx = gltfMaterial.normalTexture.index;
+    material->normalMap = toTextureDesc(normalMapIdx, false, vec4(0.5f, 0.5f, 1.0f, 1.0f));
+
+    int metallicRoughnessIdx = gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
+    material->metallicRoughness = toTextureDesc(metallicRoughnessIdx, false, vec4(0.0f, 0.0f, 0.0f, 0.0f));
+
+    int emissiveIdx = gltfMaterial.emissiveTexture.index;
+    material->emissive = toTextureDesc(emissiveIdx, true, vec4(0.0f, 0.0f, 0.0f, 0.0f));
 
     return material;
 }

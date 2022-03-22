@@ -12,12 +12,13 @@
 #include <string>
 #include <unordered_map>
 
+class Backend;
 class SceneNode;
 class GpuScene;
 
 class Scene final {
 public:
-    Scene(Extent2D initialMainViewportSize);
+    Scene(Backend&, Extent2D initialMainViewportSize);
     ~Scene();
 
     void newFrame(Extent2D mainViewportSize, bool firstFrame);
@@ -30,28 +31,25 @@ public:
 
     void setupFromDescription(const Description&);
 
-    // Scene version accessors
+    // Scene variant accessors
 
     GpuScene& gpuScene() { return *m_gpuScene; }
+    const GpuScene& gpuScene() const { return *m_gpuScene; }
     //PhysicScene& physicsScene() { return m_physicsScene; }
 
-    // Camera & view
+    // Camera
 
     const Camera& camera() const { return *m_currentMainCamera; }
     Camera& camera() { return *m_currentMainCamera; }
 
-    // Models & meshes
+    // Models
 
     Model& addModel(std::unique_ptr<Model>);
 
     size_t modelCount() const { return m_models.size(); }
-    size_t meshCount() const;
 
     void forEachModel(std::function<void(size_t, const Model&)> callback) const;
     void forEachModel(std::function<void(size_t, Model&)> callback);
-
-    int forEachMesh(std::function<void(size_t, const Mesh&)> callback) const;
-    int forEachMesh(std::function<void(size_t, Mesh&)> callback);
 
     // Lighting - direct & indirect
 
@@ -63,19 +61,16 @@ public:
 
     DirectionalLight* firstDirectionalLight();
 
-    int forEachLight(std::function<void(size_t, const Light&)>) const;
-    int forEachLight(std::function<void(size_t, Light&)>);
-
-    int forEachShadowCastingLight(std::function<void(size_t, const Light&)>) const;
-    int forEachShadowCastingLight(std::function<void(size_t, Light&)>);
+    size_t forEachLight(std::function<void(size_t, const Light&)>) const;
+    size_t forEachLight(std::function<void(size_t, Light&)>);
 
     void setAmbientIlluminance(float illuminance) { m_ambientIlluminance = illuminance; }
     float ambientIlluminance() const { return m_ambientIlluminance; }
     
-    bool hasProbeGrid() { return m_probeGrid.has_value(); }
+    bool hasProbeGrid() const { return m_probeGrid.has_value(); }
     void setProbeGrid(ProbeGrid probeGrid) { m_probeGrid = probeGrid; }
     void generateProbeGridFromBoundingBox();
-    ProbeGrid& probeGrid() { return m_probeGrid.value(); }
+    const ProbeGrid& probeGrid() const { return m_probeGrid.value(); }
 
     float filmGrainGain() const { return m_fixedFilmGrainGain; }
 

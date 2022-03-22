@@ -5,6 +5,7 @@
 #include <memory>
 #include <moos/vector.h>
 #include <string>
+#include <optional>
 #include <unordered_map>
 
 // Shared shader data
@@ -15,20 +16,43 @@ class Registry;
 
 class Material {
 public:
-    struct PathOrImage {
-        std::string path;
-        std::unique_ptr<Image> image;
+    struct TextureDescription {
+
+        TextureDescription() = default;
+        TextureDescription(const TextureDescription&) = default;
+        TextureDescription& operator=(const TextureDescription&) = default;
+        
+        TextureDescription(std::string inPath)
+            : path(std::move(inPath))
+        {
+        }
+
+        TextureDescription(Image inImage)
+        {
+            image.emplace(std::move(inImage));
+        }
+
+        std::string path {};
+        std::optional<Image> image {};
+        vec4 fallbackColor {};
+
+        bool sRGB { false }; // TODO: Replace with Texture::ColorMode or similar!
+        bool mipmapped { true }; // TODO: Use more detailed description (how do we want to filter between mips?)
+        Texture::WrapModes wrapMode { Texture::WrapModes::repeatAll() };
+        Texture::Filters filters { Texture::Filters::linear() };
 
         bool hasPath() const { return !path.empty(); }
-        bool hasImage() const { return image != nullptr; }
+        bool hasImage() const { return image.has_value(); }
+
+        bool operator==(const TextureDescription&) const;
     };
 
-    PathOrImage baseColor {};
+    TextureDescription baseColor {};
     vec4 baseColorFactor { 1.0f };
 
-    PathOrImage normalMap {};
-    PathOrImage metallicRoughness {};
-    PathOrImage emissive {};
+    TextureDescription normalMap {};
+    TextureDescription metallicRoughness {};
+    TextureDescription emissive {};
 
     enum class BlendMode {
         Opaque = BLEND_MODE_OPAQUE,
@@ -41,35 +65,19 @@ public:
     float maskCutoff { 1.0f };
 
     bool isOpaque() const { return blendMode == BlendMode::Opaque; }
-
-    Texture* baseColorTexture();
-    Texture* normalMapTexture();
-    Texture* metallicRoughnessTexture();
-    Texture* emissiveTexture();
-
-private:
-    // Texture cache (currently loaded for this material)
-    Texture* m_baseColorTexture { nullptr };
-    Texture* m_normalMapTexture { nullptr };
-    Texture* m_metallicRoughnessTexture { nullptr };
-    Texture* m_emissiveTexture { nullptr };
 };
 
-class MaterialTextureCache {
-public:
-    MaterialTextureCache() = default;
-
-    static MaterialTextureCache& global(Badge<Material>);
-    static void shutdown(); // HACK!
-
-    Texture* getLoadedTexture(Backend&, const std::string& name, bool sRGB);
-    Texture* getTextureForImage(Backend&, const Image&, bool sRGB);
-    Texture* getPixelColorTexture(Backend&, vec4 color, bool sRGB);
-
-private:
-    static std::unique_ptr<MaterialTextureCache> s_globalCache;
-
-    std::unordered_map<std::string, std::unique_ptr<Texture>> m_loadedTextures;
-    std::unordered_map<uint32_t, std::unique_ptr<Texture>> m_pixelColorTextures;
-    std::vector<std::unique_ptr<Texture>> m_imageTextures;
+namespace std {
+template<>
+struct hash<Material::TextureDescription> {
+    std::size_t operator()(const Material::TextureDescription& desc) const
+    {
+        auto pathHash = std::hash<std::string>()(desc.path);
+        auto imageHash = std::hash<std::optional<Image>>()(desc.image);
+        auto fallbackHash = 0u;//std::hash<vec4>()(desc.fallbackColor); TODO!
+        auto settingsHash = hashCombine(hashCombine(std::hash<bool>()(desc.sRGB), std::hash<bool>()(desc.mipmapped)),
+                                        hashCombine(std::hash<Texture::WrapModes>()(desc.wrapMode), std::hash<Texture::Filters>()(desc.filters)));
+        return hashCombine(hashCombine(pathHash, imageHash), hashCombine(fallbackHash, settingsHash));
+    }
 };
+}

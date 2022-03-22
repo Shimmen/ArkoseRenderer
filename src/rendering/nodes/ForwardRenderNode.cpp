@@ -89,7 +89,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
 
     return [&, renderStateOpaque, renderStateMasked](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        scene.scene().forEachMesh([&](size_t, Mesh& mesh) {
+        scene.forEachMesh([&](size_t, Mesh& mesh) {
             mesh.ensureDrawCallIsAvailable(m_vertexLayout, scene);
         });
 

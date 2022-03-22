@@ -14,9 +14,111 @@ using uint = uint32_t;
 #include "LightData.h"
 #include "CameraState.h"
 
-GpuScene::GpuScene(Scene& scene, Extent2D initialMainViewportSize)
+GpuScene::GpuScene(Scene& scene, Backend& backend, Extent2D initialMainViewportSize)
     : m_scene(scene)
+    , m_backend(backend)
 {
+}
+
+void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
+{
+    m_maintainRayTracingScene = rayTracingCapable;
+
+    size_t materialBufferSize = MaxSupportedSceneMaterials * sizeof(ShaderMaterial);
+    m_materialDataBuffer = backend().createBuffer(materialBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+    m_materialDataBuffer->setName("SceneMaterialData");
+
+    //std::vector<Texture*> placeholderTextures {};
+    //m_materialBindingSet = backend().createBindingSet({ { 0, ShaderStage::Any, m_materialDataBuffer.get() },
+    //                                                    { 1, ShaderStage::Any, placeholderTextures, MaxSupportedSceneTextures } });
+    //m_materialBindingSet->setName("SceneMaterialSet");
+
+    //if (m_maintainRayTracingScene && m_rayTracingGeometryInstances.size() > 0) {
+    // TODO: We need to handle the case where we end up with more instances then required. Should that just force a full recreation maybe?
+    //m_rayTracingGeometryInstances.clear();
+    //m_sceneTopLevelAccelerationStructure = m_backend.createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, m_rayTracingGeometryInstances);
+    //}
+}
+
+size_t GpuScene::forEachMesh(std::function<void(size_t, Mesh&)> callback)
+{
+    size_t nextIndex = 0;
+    for (Mesh* mesh : m_managedMeshes) {
+        callback(nextIndex++, *mesh);
+    }
+    return nextIndex;
+}
+
+size_t GpuScene::forEachMesh(std::function<void(size_t, const Mesh&)> callback) const
+{
+    size_t nextIndex = 0;
+    for (const Mesh* mesh : m_managedMeshes) {
+        callback(nextIndex++, *mesh);
+    }
+    return nextIndex;
+}
+
+size_t GpuScene::lightCount() const
+{
+    return m_directionalLights.size() + m_spotLights.size();
+}
+
+size_t GpuScene::forEachLight(std::function<void(size_t, Light&)> callback)
+{
+    size_t nextIndex = 0;
+    for (auto& light : m_directionalLights) {
+        callback(nextIndex++, *light);
+    }
+    for (auto& light : m_spotLights) {
+        callback(nextIndex++, *light);
+    }
+    return nextIndex;
+}
+
+size_t GpuScene::forEachLight(std::function<void(size_t, const Light&)> callback) const
+{
+    size_t nextIndex = 0;
+    for (const auto& light : m_directionalLights) {
+        callback(nextIndex++, *light);
+    }
+    for (const auto& light : m_spotLights) {
+        callback(nextIndex++, *light);
+    }
+    return nextIndex;
+}
+
+size_t GpuScene::shadowCastingLightCount() const
+{
+    // eh, i'm lazy
+    return forEachShadowCastingLight([](size_t, const Light&) {});
+}
+
+size_t GpuScene::forEachShadowCastingLight(std::function<void(size_t, Light&)> callback)
+{
+    size_t nextIndex = 0;
+    for (auto& light : m_directionalLights) {
+        if (light->castsShadows())
+            callback(nextIndex++, *light);
+    }
+    for (auto& light : m_spotLights) {
+        if (light->castsShadows())
+            callback(nextIndex++, *light);
+    }
+    return nextIndex;
+}
+
+size_t GpuScene::forEachShadowCastingLight(std::function<void(size_t, const Light&)> callback) const
+{
+    size_t nextIndex = 0;
+    for (auto* light : m_directionalLights) {
+        if (light->castsShadows())
+            callback(nextIndex++, *light);
+    }
+    for (auto* light : m_spotLights) {
+        if (light->castsShadows())
+            callback(nextIndex++, *light);
+    }
+    return nextIndex;
 }
 
 RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg)
@@ -56,25 +158,16 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
     // Object data stuff
     // TODO: Resize the buffer if needed when more meshes are added
-    size_t objectDataBufferSize = scene().meshCount() * sizeof(ShaderDrawable);
+    size_t objectDataBufferSize = meshCount() * sizeof(ShaderDrawable);
     Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     objectDataBuffer.setName("SceneObjectData");
     BindingSet& objectBindingSet = reg.createBindingSet({ { 0, ShaderStage::Vertex, &objectDataBuffer } });
     reg.publish("objectSet", objectBindingSet);
 
-    if (doesMaintainRayTracingScene()) {
+    if (m_maintainRayTracingScene) {
 
-        // TODO: Resize the buffer if needed when more meshes are added
-
-        std::vector<RTTriangleMesh> rtMeshes {};
-        scene().forEachMesh([&](size_t meshIdx, Mesh& mesh) {
-            const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(m_rayTracingVertexLayout, *this);
-            rtMeshes.push_back({ .firstVertex = drawCallDesc.vertexOffset,
-                                 .firstIndex = (int32_t)drawCallDesc.firstIndex,
-                                 .materialIndex = mesh.materialIndex().value_or(0) });
-        });
-
-        Buffer& meshBuffer = reg.createBuffer(rtMeshes, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+        // TODO: Make buffer big enough to contain all meshes we may want
+        Buffer& meshBuffer = reg.createBuffer(m_rayTracingMeshData, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
         BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ { 0, ShaderStage::AnyRayTrace, &meshBuffer },
                                                                   { 1, ShaderStage::AnyRayTrace, &globalIndexBuffer() },
                                                                   { 2, ShaderStage::AnyRayTrace, &globalVertexBufferForLayout(m_rayTracingVertexLayout) } });
@@ -83,7 +176,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     }
 
     // Light shadow data stuff (todo: make not fixed!)
-    uint32_t numShadowCastingLights = scene().forEachShadowCastingLight([](size_t, Light&) {});
+    size_t numShadowCastingLights = shadowCastingLightCount();
     Buffer& lightShadowDataBuffer = reg.createBuffer(numShadowCastingLights * sizeof(PerLightShadowData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     reg.publish("SceneShadowData", lightShadowDataBuffer);
 
@@ -114,16 +207,23 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                          { 4, ShaderStage::Any, iesProfileLUTs } });
     reg.publish("SceneLightSet", lightBindingSet);
 
+    // TODO: Remove me!
+    // TODO: Remove me!
+    // TODO: Remove me!
+    // TODO: Remove me!
+    rebuildGpuSceneData();
+
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        if (m_sceneDataNeedsRebuild) {
-            // We shouldn't need to rebuild the whole thing, just append and potentially remove some stuff.. But the
-            // distinction here is that it wouldn't be enough to just update some matrices, e.g. if an object was moved.
-            // If we save the vector of textures & materials we can probably resuse a lot of calculations. There is no
-            // rush with that though, as currently we can't even make changes that would require a rebuild..
-            // TODO: There is no reason this is a separate path from the normal GpuScene render pipeline execute function!
-            rebuildGpuSceneData();
-            m_sceneDataNeedsRebuild = false;
+        // Update material data
+        // TODO: support partial updates?
+        {
+            ASSERT(m_managedMaterials.size() <= MaxSupportedSceneMaterials);
+            std::vector<ShaderMaterial> shaderMaterialData {};
+            for (const ManagedMaterial& managedMaterial : m_managedMaterials) {
+                shaderMaterialData.push_back(managedMaterial.material);
+            }
+            m_materialDataBuffer->updateData(shaderMaterialData);
         }
 
         // Update camera data
@@ -160,15 +260,17 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
         // Update object data
         {
-            std::vector<ShaderDrawable> objectData {};
-            scene().forEachMesh([&](size_t, Mesh& mesh) {
-                objectData.push_back(ShaderDrawable { .worldFromLocal = mesh.transform().worldMatrix(),
-                                                      .worldFromTangent = mat4(mesh.transform().worldNormalMatrix()),
-                                                      .previousFrameWorldFromLocal = mesh.transform().previousFrameWorldMatrix(),
-                                                      .materialIndex = mesh.materialIndex().value_or(0) });
-            });
+            for (int i = 0; i < meshCount(); ++i) {
 
-            uploadBuffer.upload(objectData, objectDataBuffer);
+                const Mesh& mesh = *m_managedMeshes[i];
+                ShaderDrawable& drawable = m_rasterizerMeshData[i];
+
+                drawable.worldFromLocal = mesh.transform().worldMatrix();
+                drawable.worldFromTangent = mat4(mesh.transform().worldNormalMatrix());
+                drawable.previousFrameWorldFromLocal = mesh.transform().previousFrameWorldMatrix();
+            }
+
+            uploadBuffer.upload(m_rasterizerMeshData, objectDataBuffer);
         }
 
         // Update exposure data
@@ -241,7 +343,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             uploadBuffer.upload(metaData, lightMetaDataBuffer);
 
             std::vector<PerLightShadowData> shadowData;
-            scene().forEachShadowCastingLight([&](size_t, Light& light) {
+            forEachShadowCastingLight([&](size_t, Light& light) {
                 shadowData.push_back({ .lightViewFromWorld = light.lightViewMatrix(),
                                        .lightProjectionFromWorld = light.viewProjection(),
                                        .constantBias = light.constantBias(),
@@ -252,9 +354,9 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
         cmdList.executeBufferCopyOperations(uploadBuffer);
 
-        if (doesMaintainRayTracingScene()) {
+        if (m_maintainRayTracingScene) {
 
-            TopLevelAS& sceneTlas = globalTopLevelAccelerationStructure();
+            TopLevelAS& sceneTlas = *m_sceneTopLevelAccelerationStructure;
 
             sceneTlas.updateInstanceDataWithUploadBuffer(m_rayTracingGeometryInstances, uploadBuffer);
             cmdList.executeBufferCopyOperations(uploadBuffer);
@@ -267,22 +369,15 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
 void GpuScene::updateEnvironmentMap(Scene::EnvironmentMap& environmentMap)
 {
-    Backend& backend = Backend::get();
     m_environmentMapTexture = environmentMap.assetPath.empty()
-        ? Texture::createFromPixel(backend, vec4(1.0f), true)
-        : Texture::createFromImagePath(backend, environmentMap.assetPath, true, false, Texture::WrapModes::repeatAll());
+        ? Texture::createFromPixel(backend(), vec4(1.0f), true)
+        : Texture::createFromImagePath(backend(), environmentMap.assetPath, true, false, Texture::WrapModes::repeatAll());
 }
 
 Texture& GpuScene::environmentMapTexture()
 {
     ASSERT(m_environmentMapTexture);
     return *m_environmentMapTexture;
-}
-
-void GpuScene::registerModel(Model& model)
-{
-    m_models.push_back(&model);
-    m_sceneDataNeedsRebuild = true;
 }
 
 void GpuScene::registerLight(SpotLight& light)
@@ -297,15 +392,207 @@ void GpuScene::registerLight(DirectionalLight& light)
     m_sceneDataNeedsRebuild = true;
 }
 
-void GpuScene::setShouldMaintainRayTracingScene(Badge<Scene>, bool value)
+void GpuScene::registerMesh(Mesh& mesh)
 {
-    m_maintainRayTracingScene = value;
+    SCOPED_PROFILE_ZONE();
+
+    m_managedMeshes.push_back(&mesh);
+
+    Material& material = mesh.material();
+    MaterialHandle materialHandle = registerMaterial(material);
+    ASSERT(materialHandle.valid());
+
+    // TODO: This is the legacy path, get rid of it! CullingNode still uses it directly, but I am not so sure it should..
+    mesh.setMaterialIndex({}, materialHandle.indexOfType<int>());
+
+    // NOTE: Matrices are set at "render-time" before each frame starts
+    ShaderDrawable shaderDrawable;
+    shaderDrawable.materialIndex = materialHandle.indexOfType<int>();
+    m_rasterizerMeshData.push_back(shaderDrawable);
+
+    if (m_maintainRayTracingScene) {
+
+        uint32_t rtMeshIndex = static_cast<uint32_t>(m_rayTracingMeshData.size());
+
+        const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(m_rayTracingVertexLayout, *this);
+        m_rayTracingMeshData.push_back(RTTriangleMesh { .firstVertex = drawCallDesc.vertexOffset,
+                                                        .firstIndex = (int32_t)drawCallDesc.firstIndex,
+                                                        .materialIndex = materialHandle.indexOfType<int>() });
+
+        RTGeometryInstance rtGeometryInstance = createRTGeometryInstance(mesh, rtMeshIndex);
+        m_rayTracingGeometryInstances.push_back(rtGeometryInstance);
+    }
+
     m_sceneDataNeedsRebuild = true;
+}
+
+RTGeometryInstance GpuScene::createRTGeometryInstance(Mesh& mesh, uint32_t meshIdx)
+{
+    VertexLayout vertexLayout = { VertexComponent::Position3F };
+    size_t vertexStride = vertexLayout.packedVertexSize();
+    RTVertexFormat vertexFormat = RTVertexFormat::XYZ32F;
+
+    const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(vertexLayout, *this);
+    ASSERT(drawCallDesc.type == DrawCallDescription::Type ::Indexed);
+
+    IndexType indexType = globalIndexBufferType();
+    size_t indexStride = sizeofIndexType(indexType);
+
+    uint32_t indexOfFirstVertex = drawCallDesc.vertexOffset; // Yeah this is confusing naming for sure.. Offset should probably always be byte offset
+    size_t vertexOffset = indexOfFirstVertex * vertexStride;
+
+    RTTriangleGeometry geometry { .vertexBuffer = *drawCallDesc.vertexBuffer,
+                                  .vertexCount = drawCallDesc.vertexCount,
+                                  .vertexOffset = vertexOffset,
+                                  .vertexStride = vertexStride,
+                                  .vertexFormat = vertexFormat,
+                                  .indexBuffer = *drawCallDesc.indexBuffer,
+                                  .indexCount = drawCallDesc.indexCount,
+                                  .indexOffset = indexStride * drawCallDesc.firstIndex,
+                                  .indexType = indexType,
+                                  .transform = mesh.transform().localMatrix() };
+
+    uint8_t hitMask = 0x00;
+    switch (mesh.material().blendMode) {
+    case Material::BlendMode::Opaque:
+        hitMask = RT_HIT_MASK_OPAQUE;
+        break;
+    case Material::BlendMode::Masked:
+        hitMask = RT_HIT_MASK_MASKED;
+        break;
+    case Material::BlendMode::Translucent:
+        hitMask = RT_HIT_MASK_BLEND;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+    ASSERT(hitMask != 0);
+
+    m_sceneBottomLevelAccelerationStructures.emplace_back(backend().createBottomLevelAccelerationStructure({ geometry }));
+    BottomLevelAS& blas = *m_sceneBottomLevelAccelerationStructures.back();
+
+    // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
+    RTGeometryInstance instance = { .blas = blas,
+                                    .transform = mesh.model()->transform(),
+                                    .shaderBindingTableOffset = 0, // todo: generalize!
+                                    .customInstanceId = meshIdx,
+                                    .hitMask = hitMask };
+
+    return instance;
+}
+
+MaterialHandle GpuScene::registerMaterial(Material& material)
+{
+    SCOPED_PROFILE_ZONE();
+
+    // NOTE: A material here is very lightweight (for now) so we don't cache them
+
+    // Register textures
+    TextureHandle baseColor = registerTexture(material.baseColor);
+    TextureHandle emissive = registerTexture(material.emissive);
+    TextureHandle normalMap = registerTexture(material.normalMap);
+    TextureHandle metallicRoughness = registerTexture(material.metallicRoughness);
+
+    ShaderMaterial shaderMaterial {};
+
+    shaderMaterial.baseColor = baseColor.indexOfType<int>();
+    shaderMaterial.normalMap = normalMap.indexOfType<int>();
+    shaderMaterial.metallicRoughness = metallicRoughness.indexOfType<int>();
+    shaderMaterial.emissive = emissive.indexOfType<int>();
+
+    shaderMaterial.blendMode = material.blendModeValue();
+    shaderMaterial.maskCutoff = material.maskCutoff;
+
+    uint64_t materialIdx = m_managedMaterials.size();
+    auto handle = MaterialHandle(materialIdx);
+
+    m_managedMaterials.push_back(ManagedMaterial { .material = shaderMaterial,
+                                                   .referenceCount = 1 });
+
+    return handle;
+}
+
+void GpuScene::unregisterMaterial(MaterialHandle handle)
+{
+    SCOPED_PROFILE_ZONE();
+
+    ASSERT(handle.valid());
+    ASSERT(handle.index() < m_managedMaterials.size());
+
+    ManagedMaterial& managedMaterial = m_managedMaterials[handle.index()];
+    ASSERT(managedMaterial.referenceCount == 1); // (for now, only a single ref.)
+    managedMaterial.referenceCount -= 1;
+
+    if (managedMaterial.referenceCount == 0) {
+        // TODO: Put this handle in some handle free list for index reuse so we don't leave gaps
+        managedMaterial = ManagedMaterial();
+    }
+}
+
+TextureHandle GpuScene::registerTexture(Material::TextureDescription& desc)
+{
+    SCOPED_PROFILE_ZONE();
+
+    auto entry = m_textureCache.find(desc);
+    if (entry == m_textureCache.end()) {
+
+        std::unique_ptr<Texture> texture {};
+        if (desc.hasImage()) {
+            texture = Texture::createFromImage(backend(), desc.image.value(), desc.sRGB, desc.mipmapped, desc.wrapMode);
+        } else if (desc.hasPath()) {
+            texture = Texture::createFromImagePath(backend(), desc.path, desc.sRGB, desc.mipmapped, desc.wrapMode);
+        } else {
+            // TODO: Maybe keep a cache of pixel textures so we don't create so many:
+            // NOTE: If we support HDR/float colors for pixel textures, this key won't be enough..
+            //  But right now we still only have RGBA8 or sRGBA8 pixel textures, so this is fine.
+            //uint32_t key = uint32_t(255.99f * moos::clamp(color.x, 0.0f, 1.0f))
+            //    | (uint32_t(255.99f * moos::clamp(color.y, 0.0f, 1.0f)) << 8)
+            //    | (uint32_t(255.99f * moos::clamp(color.z, 0.0f, 1.0f)) << 16)
+            //    | (uint32_t(255.99f * moos::clamp(color.w, 0.0f, 1.0f)) << 24);
+            texture = Texture::createFromPixel(backend(), desc.fallbackColor, desc.sRGB);
+        }
+
+        uint64_t textureIdx = m_managedTextures.size();
+        auto handle = TextureHandle(textureIdx);
+        m_textureCache[desc] = handle;
+
+        m_managedTextures.push_back(ManagedTexture { .texture = std::move(texture),
+                                                     .description = desc,
+                                                     .referenceCount = 1 });
+
+        return handle;
+    }
+
+    TextureHandle handle = entry->second;
+    ASSERT(handle.valid());
+
+    ASSERT(handle.index() < m_managedTextures.size());
+    ManagedTexture& managedTexture = m_managedTextures[handle.index()];
+    managedTexture.referenceCount += 1;
+
+    return handle;
+}
+
+void GpuScene::unregisterTexture(TextureHandle handle)
+{
+    SCOPED_PROFILE_ZONE();
+
+    ASSERT(handle.valid());
+    ASSERT(handle.index() < m_managedTextures.size());
+
+    ManagedTexture& managedTexture = m_managedTextures[handle.index()];
+    ASSERT(managedTexture.referenceCount > 0);
+    managedTexture.referenceCount -= 1;
+
+    if (managedTexture.referenceCount == 0) {
+        // TODO: Put this handle in some handle free list for index reuse so we don't leave gaps
+        managedTexture = ManagedTexture();
+    }
 }
 
 DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh& mesh, const VertexLayout& layout, std::optional<DrawCallDescription> alignWith)
 {
-    const size_t initialIndexBufferSize = 100'000 * sizeof(uint32_t);
+    const size_t initialIndexBufferSize = 100'000 * sizeofIndexType(globalIndexBufferType());
     const size_t initialVertexBufferSize = 50'000 * layout.packedVertexSize();
 
     bool doAlign = alignWith.has_value();
@@ -319,7 +606,7 @@ DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Me
         size_t offset = doAlign ? (alignWith->vertexOffset * layout.packedVertexSize()) : 0;
         size_t minRequiredBufferSize = offset + vertexData.size();
 
-        m_globalVertexBuffers[layout] = Backend::get().createBuffer(std::max(initialVertexBufferSize, minRequiredBufferSize), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+        m_globalVertexBuffers[layout] = backend().createBuffer(std::max(initialVertexBufferSize, minRequiredBufferSize), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
         m_globalVertexBuffers[layout]->setName("SceneVertexBuffer");
     }
 
@@ -355,7 +642,7 @@ DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Me
         size_t requiredAdditionalSize = indexData.size() * sizeof(uint32_t);
 
         if (m_global32BitIndexBuffer == nullptr) {
-            m_global32BitIndexBuffer = Backend::get().createBuffer(std::max(initialIndexBufferSize, requiredAdditionalSize), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+            m_global32BitIndexBuffer = backend().createBuffer(std::max(initialIndexBufferSize, requiredAdditionalSize), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
             m_global32BitIndexBuffer->setName("SceneIndexBuffer");
         }
 
@@ -394,143 +681,28 @@ IndexType GpuScene::globalIndexBufferType() const
     return IndexType::UInt32;
 }
 
-constexpr bool operator==(const ShaderMaterial& lhs, const ShaderMaterial& rhs)
-{
-    if (lhs.baseColor != rhs.baseColor)
-        return false;
-    if (lhs.normalMap != rhs.normalMap)
-        return false;
-    if (lhs.metallicRoughness != rhs.metallicRoughness)
-        return false;
-    if (lhs.emissive != rhs.emissive)
-        return false;
-    return true;
-}
-
 void GpuScene::rebuildGpuSceneData()
 {
     SCOPED_PROFILE_ZONE();
 
-    m_usedTextures.clear();
-    m_usedMaterials.clear();
-    m_rayTracingGeometryInstances.clear();
+    // TODO: We will need to create a BindingSet (Vulkan: descriptor set) but not write anything (useful) to it,
+    //       then update it with real textures once we know those textures, i.e. before rendering if anything has changed.
 
-    std::unordered_map<Texture*, int> textureIndices;
-    auto pushTexture = [&](Texture* texture) -> int {
-        auto entry = textureIndices.find(texture);
-        if (entry != textureIndices.end())
-            return entry->second;
+    std::vector<Texture*> sceneTextures {};
+    for (const ManagedTexture& managedTexture : m_managedTextures) {
+        sceneTextures.push_back(managedTexture.texture.get());
+    }
 
-        int textureIndex = static_cast<int>(m_usedTextures.size());
-        textureIndices[texture] = textureIndex;
-        m_usedTextures.push_back(texture);
-
-        return textureIndex;
-    };
-
-    auto pushMaterial = [&](ShaderMaterial shaderMaterial) -> int {
-        // Would be nice if we could hash them..
-        for (int idx = 0; idx < m_usedMaterials.size(); ++idx) {
-            if (m_usedMaterials[idx] == shaderMaterial)
-                return idx;
-        }
-
-        int materialIndex = static_cast<int>(m_usedMaterials.size());
-        m_usedMaterials.push_back(shaderMaterial);
-
-        return materialIndex;
-    };
-
-    int numMeshes = scene().forEachMesh([&](size_t meshIdx, Mesh& mesh) {
-
-        Material& material = mesh.material();
-        int materialIndex = pushMaterial(ShaderMaterial {
-            .baseColor = pushTexture(material.baseColorTexture()),
-            .normalMap = pushTexture(material.normalMapTexture()),
-            .metallicRoughness = pushTexture(material.metallicRoughnessTexture()),
-            .emissive = pushTexture(material.emissiveTexture()),
-            .blendMode = material.blendModeValue(),
-            .maskCutoff = material.maskCutoff,
-        });
-
-        ASSERT(materialIndex >= 0);
-        mesh.setMaterialIndex({}, materialIndex);
-
-        if (doesMaintainRayTracingScene()) {
-
-            VertexLayout vertexLayout = { VertexComponent::Position3F };
-            size_t vertexStride = vertexLayout.packedVertexSize();
-            RTVertexFormat vertexFormat = RTVertexFormat::XYZ32F;
-
-            const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(vertexLayout, *this);
-            ASSERT(drawCallDesc.type == DrawCallDescription::Type ::Indexed);
-
-            IndexType indexType = globalIndexBufferType();
-            size_t indexStride = sizeofIndexType(indexType);
-
-            uint32_t indexOfFirstVertex = drawCallDesc.vertexOffset; // Yeah this is confusing naming for sure.. Offset should probably always be byte offset
-            size_t vertexOffset = indexOfFirstVertex * vertexStride;
-
-            RTTriangleGeometry geometry { .vertexBuffer = *drawCallDesc.vertexBuffer,
-                                          .vertexCount = drawCallDesc.vertexCount,
-                                          .vertexOffset = vertexOffset,
-                                          .vertexStride = vertexStride,
-                                          .vertexFormat = vertexFormat,
-                                          .indexBuffer = *drawCallDesc.indexBuffer,
-                                          .indexCount = drawCallDesc.indexCount,
-                                          .indexOffset = indexStride * drawCallDesc.firstIndex,
-                                          .indexType = indexType,
-                                          .transform = mesh.transform().localMatrix() };
-
-            uint8_t hitMask = 0x00;
-            switch (material.blendMode) {
-            case Material::BlendMode::Opaque:
-                hitMask = RT_HIT_MASK_OPAQUE;
-                break;
-            case Material::BlendMode::Masked:
-                hitMask = RT_HIT_MASK_MASKED;
-                break;
-            case Material::BlendMode::Translucent:
-                hitMask = RT_HIT_MASK_BLEND;
-                break;
-            default:
-                ASSERT_NOT_REACHED();
-            }
-            ASSERT(hitMask != 0);
-
-            m_sceneBottomLevelAccelerationStructures.emplace_back(Backend::get().createBottomLevelAccelerationStructure({ geometry }));
-            BottomLevelAS& blas = *m_sceneBottomLevelAccelerationStructures.back();
-
-            // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
-            RTGeometryInstance instance = { .blas = blas,
-                                            .transform = mesh.model()->transform(),
-                                            .shaderBindingTableOffset = 0, // todo: generalize!
-                                            .customInstanceId = static_cast<uint32_t>(meshIdx),
-                                            .hitMask = hitMask };
-
-            m_rayTracingGeometryInstances.push_back(instance);
-        }
-
-    });
-
-    //if (m_usedTextures.size() > SCENE_MAX_TEXTURES) {
-    //    LogErrorAndExit("GpuScene: we need to up the number of max textures that can be handled by the scene! We have %u, the capacity is %u.\n",
-    //                    m_usedTextures.size(), SCENE_MAX_TEXTURES);
-    //}
-
-    // Create material buffer
-    size_t materialBufferSize = m_usedMaterials.size() * sizeof(ShaderMaterial);
-    m_materialDataBuffer = Backend::get().createBuffer(materialBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
-    m_materialDataBuffer->updateData(m_usedMaterials.data(), materialBufferSize);
-    m_materialDataBuffer->setName("SceneMaterialData");
-
-    m_materialBindingSet = Backend::get().createBindingSet({ { 0, ShaderStage::Any, m_materialDataBuffer.get() },
-                                                             { 1, ShaderStage::Any, m_usedTextures } });
+    m_materialBindingSet = backend().createBindingSet({ { 0, ShaderStage::Any, m_materialDataBuffer.get() },
+                                                        { 1, ShaderStage::Any, sceneTextures, MaxSupportedSceneTextures } });
     m_materialBindingSet->setName("SceneMaterialSet");
 
-    if (doesMaintainRayTracingScene() && m_rayTracingGeometryInstances.size() > 0) {
+
+    // TODO: We should have a way of creating a TLAS without providing an initial set of instances.. It's kind of stupid in situations like these.
+
+    if (m_maintainRayTracingScene && m_rayTracingGeometryInstances.size() > 0) {
         // TODO: We need to handle the case where we end up with more instances then required. Should that just force a full recreation maybe?
-        m_sceneTopLevelAccelerationStructure = Backend::get().createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, m_rayTracingGeometryInstances);
+        m_sceneTopLevelAccelerationStructure = backend().createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, m_rayTracingGeometryInstances);
     }
 
     // Just rebuilt.
@@ -545,7 +717,7 @@ BindingSet& GpuScene::globalMaterialBindingSet() const
 
 TopLevelAS& GpuScene::globalTopLevelAccelerationStructure() const
 {
-    ASSERT(doesMaintainRayTracingScene());
+    ASSERT(m_maintainRayTracingScene);
     ASSERT(m_sceneTopLevelAccelerationStructure);
     return *m_sceneTopLevelAccelerationStructure;
 }
@@ -556,11 +728,11 @@ void GpuScene::drawGui()
 
     ImGui::Text("Number of managed resources:");
     ImGui::Columns(3);
-    ImGui::Text("meshes: %u", scene().meshCount()); // TODO: replace with something like "drawables"
+    ImGui::Text("meshes: %u", m_managedMeshes.size());
     ImGui::NextColumn();
-    ImGui::Text("materials: %u", m_usedMaterials.size());
+    ImGui::Text("materials: %u", m_managedMaterials.size());
     ImGui::NextColumn();
-    ImGui::Text("textures: %u", m_usedTextures.size());
+    ImGui::Text("textures: %u", m_managedTextures.size());
     ImGui::Columns(1);
 
     ImGui::End();

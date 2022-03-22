@@ -10,9 +10,9 @@
 #include <nlohmann/json.hpp>
 #include <fstream>
 
-Scene::Scene(Extent2D initialMainViewportSize)
+Scene::Scene(Backend& backend, Extent2D initialMainViewportSize)
 {
-    m_gpuScene = std::make_unique<GpuScene>(*this, initialMainViewportSize);
+    m_gpuScene = std::make_unique<GpuScene>(*this, backend, initialMainViewportSize);
 }
 
 Scene::~Scene()
@@ -24,8 +24,10 @@ void Scene::newFrame(Extent2D mainViewportSize, bool firstFrame)
     camera().newFrame({}, mainViewportSize, firstFrame);
 
     // NOTE: We only want to do this on leaf-nodes right now, i.e. meshes not models.
-    forEachMesh([&](size_t meshIdx, Mesh& mesh) {
-        mesh.transform().newFrame({}, firstFrame);
+    forEachModel([&](size_t modelIdx, Model& model) {
+        model.forEachMesh([&](Mesh& mesh) {
+            mesh.transform().newFrame({}, firstFrame);
+        });
     });
 }
 
@@ -38,17 +40,12 @@ void Scene::update(float elapsedTime, float deltaTime)
 
 void Scene::setupFromDescription(const Description& description)
 {
-    gpuScene().setShouldMaintainRayTracingScene({}, description.maintainRayTracingScene);
+    // NOTE: Must initialize GPU scene before we start registering meshes etc.
+    gpuScene().initialize({}, description.maintainRayTracingScene);
 
     if (!FileIO::isFileReadable(description.path))
         LogErrorAndExit("Could not read scene file '%s', exiting\n", description.path.c_str());
     loadFromFile(description.path);
-
-    // TODO: Don't do this here!!! In fact, we should never really manually request a rebuild like this
-    // TODO: Don't do this here!!! In fact, we should never really manually request a rebuild like this
-    // TODO: Don't do this here!!! In fact, we should never really manually request a rebuild like this
-    // TODO: Don't do this here!!! In fact, we should never really manually request a rebuild like this
-    gpuScene().rebuildGpuSceneData();
 }
 
 Model& Scene::addModel(std::unique_ptr<Model> model)
@@ -56,19 +53,13 @@ Model& Scene::addModel(std::unique_ptr<Model> model)
     ASSERT(model);
     m_models.push_back(std::move(model));
     Model& addedModel = *m_models.back();
-    gpuScene().registerModel(addedModel);
+
+    addedModel.forEachMesh([&](Mesh& mesh) {
+        gpuScene().registerMesh(mesh);
+    });
+
     return addedModel;
 }
-
-size_t Scene::meshCount() const
-{
-    size_t count = 0u;
-    for (auto& model : m_models) {
-        count += model->meshCount();
-    }
-    return count;
-}
-
 
 void Scene::forEachModel(std::function<void(size_t, const Model&)> callback) const
 {
@@ -84,28 +75,6 @@ void Scene::forEachModel(std::function<void(size_t, Model&)> callback)
         Model& model = *m_models[i];
         callback(i, model);
     }
-}
-
-int Scene::forEachMesh(std::function<void(size_t, const Mesh&)> callback) const
-{
-    size_t nextIndex = 0;
-    for (auto& model : m_models) {
-        model->forEachMesh([&](const Mesh& mesh) {
-            callback(nextIndex++, mesh);
-        });
-    }
-    return static_cast<int>(nextIndex);
-}
-
-int Scene::forEachMesh(std::function<void(size_t, Mesh&)> callback)
-{
-    size_t nextIndex = 0;
-    for (auto& model : m_models) {
-        model->forEachMesh([&](Mesh& mesh) {
-            callback(nextIndex++, mesh);
-        });
-    }
-    return static_cast<int>(nextIndex);
 }
 
 DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)
@@ -133,56 +102,14 @@ DirectionalLight* Scene::firstDirectionalLight()
     return nullptr;
 }
 
-int Scene::forEachLight(std::function<void(size_t, const Light&)> callback) const
+size_t Scene::forEachLight(std::function<void(size_t, const Light&)> callback) const
 {
-    size_t nextIndex = 0;
-    for (auto& light : m_directionalLights) {
-        callback(nextIndex++, *light);
-    }
-    for (auto& light : m_spotLights) {
-        callback(nextIndex++, *light);
-    }
-    return static_cast<int>(nextIndex);
+    return gpuScene().forEachLight(callback);
 }
 
-int Scene::forEachLight(std::function<void(size_t, Light&)> callback)
+size_t Scene::forEachLight(std::function<void(size_t, Light&)> callback)
 {
-    size_t nextIndex = 0;
-    for (auto& light : m_directionalLights) {
-        callback(nextIndex++, *light);
-    }
-    for (auto& light : m_spotLights) {
-        callback(nextIndex++, *light);
-    }
-    return static_cast<int>(nextIndex);
-}
-
-int Scene::forEachShadowCastingLight(std::function<void(size_t, const Light&)> callback) const
-{
-    size_t nextIndex = 0;
-    for (auto& light : m_directionalLights) {
-        if (light->castsShadows())
-            callback(nextIndex++, *light);
-    }
-    for (auto& light : m_spotLights) {
-        if (light->castsShadows())
-            callback(nextIndex++, *light);
-    }
-    return static_cast<int>(nextIndex);
-}
-
-int Scene::forEachShadowCastingLight(std::function<void(size_t, Light&)> callback)
-{
-    size_t nextIndex = 0;
-    for (auto& light : m_directionalLights) {
-        if (light->castsShadows())
-            callback(nextIndex++, *light);
-    }
-    for (auto& light : m_spotLights) {
-        if (light->castsShadows())
-            callback(nextIndex++, *light);
-    }
-    return static_cast<int>(nextIndex);
+    return gpuScene().forEachLight(callback);
 }
 
 void Scene::setEnvironmentMap(EnvironmentMap& environmentMap)
@@ -451,7 +378,7 @@ void Scene::drawSceneGui()
     ImGui::Separator();
 
     if (ImGui::TreeNode("Exposure control")) {
-        gpuScene().camera().renderExposureGUI();
+        camera().renderExposureGUI();
         ImGui::TreePop();
     }
 
