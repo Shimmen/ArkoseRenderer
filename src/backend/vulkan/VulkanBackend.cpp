@@ -329,6 +329,14 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         allRequiredSupported = false;
     }
 
+    if (!vk12features.runtimeDescriptorArray ||
+        !vk12features.descriptorBindingVariableDescriptorCount ||
+        !vk12features.descriptorBindingUpdateUnusedWhilePending ||
+        !vk12features.descriptorBindingSampledImageUpdateAfterBind) {
+        LogError("VulkanBackend: no support for required common descriptor-binding device features\n");
+        allRequiredSupported = false;
+    }
+
     if (!vk12features.scalarBlockLayout) {
         LogError("VulkanBackend: no support for scalar layout in shader storage blocks\n");
         allRequiredSupported = false;
@@ -659,8 +667,12 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     vk12features.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
     features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
     vk12features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+
+    // Common descriptor binding features that should be supported on a modern GPU
     vk12features.runtimeDescriptorArray = VK_TRUE;
     vk12features.descriptorBindingVariableDescriptorCount = VK_TRUE;
+    vk12features.descriptorBindingUpdateUnusedWhilePending = VK_TRUE;
+    vk12features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
 
     // Common drawing related features
     vk12features.drawIndirectCount = VK_TRUE;
