@@ -214,7 +214,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         // Update material data
-        // TODO: support partial updates? E.g. ranges of materials needing update
+        // TODO: support partial updates? E.g. ranges of materials or a list of indices needing update
         if (m_materialDataBufferNeedsUpdate)
         {
             ASSERT(m_managedMaterials.size() <= MaxSupportedSceneMaterials);
@@ -222,7 +222,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             for (const ManagedMaterial& managedMaterial : m_managedMaterials) {
                 shaderMaterialData.push_back(managedMaterial.material);
             }
-            m_materialDataBuffer->updateData(shaderMaterialData);
+            uploadBuffer.upload(shaderMaterialData, *m_materialDataBuffer);
             m_materialDataBufferNeedsUpdate = false;
         }
 
