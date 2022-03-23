@@ -70,6 +70,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
         }
 
         VkDescriptorPoolCreateInfo descriptorPoolCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO };
+        descriptorPoolCreateInfo.flags = VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT;
         descriptorPoolCreateInfo.poolSizeCount = (uint32_t)descriptorPoolSizes.size();
         descriptorPoolCreateInfo.pPoolSizes = descriptorPoolSizes.data();
         descriptorPoolCreateInfo.maxSets = 1;
@@ -84,11 +85,16 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
         std::vector<VkDescriptorSetLayoutBinding> layoutBindings {};
         layoutBindings.reserve(shaderBindings().size());
 
+        std::vector<VkDescriptorBindingFlags> bindingFlags {};
+        bindingFlags.reserve(shaderBindings().size());
+
         for (auto& bindingInfo : shaderBindings()) {
 
             VkDescriptorSetLayoutBinding binding = {};
             binding.binding = bindingInfo.bindingIndex;
             binding.descriptorCount = bindingInfo.count;
+
+            VkDescriptorBindingFlags flagsForBinding = 0u;
 
             switch (bindingInfo.type) {
             case ShaderBindingType::UniformBuffer:
@@ -104,6 +110,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
             case ShaderBindingType::TextureSampler:
             case ShaderBindingType::TextureSamplerArray:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+                flagsForBinding |= VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT; // TODO: Maybe allow this for more/all types?
                 break;
             case ShaderBindingType::RTAccelerationStructure:
                 switch (vulkanBackend.rayTracingBackend()) {
@@ -125,17 +132,21 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
             binding.pImmutableSamplers = nullptr;
 
             layoutBindings.push_back(binding);
+            bindingFlags.push_back(flagsForBinding);
         }
 
+        ASSERT(bindingFlags.size() == layoutBindings.size());
+
         VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
-        descriptorSetLayoutCreateInfo.bindingCount = (uint32_t)layoutBindings.size();
+        descriptorSetLayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
+        descriptorSetLayoutCreateInfo.bindingCount = static_cast<uint32_t>(layoutBindings.size());
         descriptorSetLayoutCreateInfo.pBindings = layoutBindings.data();
 
-        //VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
-        //bindingFlagsCreateInfo. ...
+        VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlagsCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO };
+        bindingFlagsCreateInfo.bindingCount = static_cast<uint32_t>(bindingFlags.size());
+        bindingFlagsCreateInfo.pBindingFlags = bindingFlags.data();
 
-        //descriptorSetLayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
-        //descriptorSetLayoutCreateInfo.pNext = &bindingFlagsCreateInfo;
+        descriptorSetLayoutCreateInfo.pNext = &bindingFlagsCreateInfo;
 
         if (vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
             LogErrorAndExit("Error trying to create descriptor set layout\n");
