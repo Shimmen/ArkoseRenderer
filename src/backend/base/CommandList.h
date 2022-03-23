@@ -39,7 +39,7 @@ public:
     virtual void bindIndexBuffer(const Buffer&, IndexType) = 0;
     virtual void issueDrawCall(const DrawCallDescription&) = 0;
 
-    virtual void rebuildTopLevelAcceratationStructure(TopLevelAS&) = 0;
+    virtual void buildTopLevelAcceratationStructure(TopLevelAS&, AccelerationStructureBuildType) = 0;
     virtual void traceRays(Extent2D) = 0;
 
     virtual void dispatch(Extent3D globalSize, Extent3D localSize) = 0;

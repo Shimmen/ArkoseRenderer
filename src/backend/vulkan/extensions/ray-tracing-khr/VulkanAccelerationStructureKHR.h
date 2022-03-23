@@ -12,12 +12,7 @@ public:
 
     virtual void setName(const std::string& name) override;
 
-    enum class BuildType {
-        BuildInitial,
-        UpdateInPlace,
-    };
-
-    void build(VkCommandBuffer, BuildType);
+    void build(VkCommandBuffer, AccelerationStructureBuildType);
 
     void updateInstanceDataWithUploadBuffer(const std::vector<RTGeometryInstance>&, UploadBuffer&) override;
 

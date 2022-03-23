@@ -33,11 +33,9 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
     //                                                    { 1, ShaderStage::Any, placeholderTextures, MaxSupportedSceneTextures } });
     //m_materialBindingSet->setName("SceneMaterialSet");
 
-    //if (m_maintainRayTracingScene && m_rayTracingGeometryInstances.size() > 0) {
-    // TODO: We need to handle the case where we end up with more instances then required. Should that just force a full recreation maybe?
-    //m_rayTracingGeometryInstances.clear();
-    //m_sceneTopLevelAccelerationStructure = m_backend.createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, m_rayTracingGeometryInstances);
-    //}
+    if (m_maintainRayTracingScene) {
+        m_sceneTopLevelAccelerationStructure = m_backend.createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, {});
+    }
 }
 
 size_t GpuScene::forEachMesh(std::function<void(size_t, Mesh&)> callback)
@@ -363,8 +361,15 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             sceneTlas.updateInstanceDataWithUploadBuffer(m_rayTracingGeometryInstances, uploadBuffer);
             cmdList.executeBufferCopyOperations(uploadBuffer);
 
-            cmdList.rebuildTopLevelAcceratationStructure(sceneTlas);
-
+            // Only do an update most frame, but every x frames require a full rebuild
+            auto buildType = AccelerationStructureBuildType::Update;
+            if (m_framesUntilNextFullTlasBuild == 0) {
+                buildType = AccelerationStructureBuildType::FullBuild;
+                m_framesUntilNextFullTlasBuild = 60;
+            }
+            
+            cmdList.buildTopLevelAcceratationStructure(sceneTlas, buildType);
+            m_framesUntilNextFullTlasBuild -= 1;
         }
     };
 }
@@ -702,14 +707,6 @@ void GpuScene::rebuildGpuSceneData()
     m_materialBindingSet = backend().createBindingSet({ { 0, ShaderStage::Any, m_materialDataBuffer.get() },
                                                         { 1, ShaderStage::Any, sceneTextures, MaxSupportedSceneTextures } });
     m_materialBindingSet->setName("SceneMaterialSet");
-
-
-    // TODO: We should have a way of creating a TLAS without providing an initial set of instances.. It's kind of stupid in situations like these.
-
-    if (m_maintainRayTracingScene && m_rayTracingGeometryInstances.size() > 0) {
-        // TODO: We need to handle the case where we end up with more instances then required. Should that just force a full recreation maybe?
-        m_sceneTopLevelAccelerationStructure = backend().createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, m_rayTracingGeometryInstances);
-    }
 
     // Just rebuilt.
     m_sceneDataNeedsRebuild = false;

@@ -147,6 +147,7 @@ private:
     std::vector<RTGeometryInstance> m_rayTracingGeometryInstances {};
     std::vector<std::unique_ptr<BottomLevelAS>> m_sceneBottomLevelAccelerationStructures {};
     std::unique_ptr<TopLevelAS> m_sceneTopLevelAccelerationStructure {};
+    uint32_t m_framesUntilNextFullTlasBuild { 0u };
 
     std::unique_ptr<Texture> m_environmentMapTexture {};
 

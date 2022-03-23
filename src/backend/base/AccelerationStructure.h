@@ -50,6 +50,11 @@ private:
     std::variant<RTTriangleGeometry, RTAABBGeometry> m_internal;
 };
 
+enum class AccelerationStructureBuildType {
+    FullBuild,
+    Update,
+};
+
 class BottomLevelAS : public Resource {
 public:
     BottomLevelAS() = default;

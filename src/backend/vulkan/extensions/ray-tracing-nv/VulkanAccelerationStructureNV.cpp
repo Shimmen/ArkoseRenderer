@@ -55,15 +55,18 @@ VulkanTopLevelASNV::VulkanTopLevelASNV(Backend& backend, uint32_t maxInstanceCou
     size_t instanceBufferSize = this->maxInstanceCount() * sizeof(VulkanRayTracingNV::GeometryInstance);
     instanceBuffer = vulkanBackend.createBuffer(instanceBufferSize, Buffer::Usage::RTInstanceBuffer, Buffer::MemoryHint::GpuOptimal);
 
-    updateCurrentInstanceCount(static_cast<uint32_t>(initialInstances.size()));
-    auto initialInstanceData = vulkanBackend.rayTracingNV().createInstanceData(initialInstances);
-    instanceBuffer->updateData(initialInstanceData.data(), initialInstanceData.size() * sizeof(VulkanRayTracingNV::GeometryInstance));
+    if (initialInstances.size() > 0) {
+        updateCurrentInstanceCount(static_cast<uint32_t>(initialInstances.size()));
 
-    bool buildSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
-        build(commandBuffer, BuildType::BuildInitial);
-    });
-    if (!buildSuccess) {
-        LogErrorAndExit("Error trying to build top level acceleration structure\n");
+        auto initialInstanceData = vulkanBackend.rayTracingNV().createInstanceData(initialInstances);
+        instanceBuffer->updateData(initialInstanceData.data(), initialInstanceData.size() * sizeof(VulkanRayTracingNV::GeometryInstance));
+
+        bool buildSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+            build(commandBuffer, AccelerationStructureBuildType::FullBuild);
+        });
+        if (!buildSuccess) {
+            LogErrorAndExit("Error trying to build top level acceleration structure (initial build)\n");
+        }
     }
 }
 
@@ -95,7 +98,7 @@ void VulkanTopLevelASNV::setName(const std::string& name)
     }
 }
 
-void VulkanTopLevelASNV::build(VkCommandBuffer commandBuffer, BuildType buildType)
+void VulkanTopLevelASNV::build(VkCommandBuffer commandBuffer, AccelerationStructureBuildType buildType)
 {
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
@@ -112,7 +115,7 @@ void VulkanTopLevelASNV::build(VkCommandBuffer commandBuffer, BuildType buildTyp
     VmaAllocation scratchAllocation;
 
     switch (buildType) {
-    case BuildType::BuildInitial:
+    case AccelerationStructureBuildType::FullBuild:
         scratchBuffer= vulkanBackend.rayTracingNV().createScratchBufferForAccelerationStructure(accelerationStructure, false, scratchAllocation);
         vulkanBackend.rayTracingNV().vkCmdBuildAccelerationStructureNV(
             commandBuffer,
@@ -123,7 +126,7 @@ void VulkanTopLevelASNV::build(VkCommandBuffer commandBuffer, BuildType buildTyp
             VK_NULL_HANDLE,
             scratchBuffer, 0);
         break;
-    case BuildType::UpdateInPlace:
+    case AccelerationStructureBuildType::Update:
         scratchBuffer = vulkanBackend.rayTracingNV().createScratchBufferForAccelerationStructure(accelerationStructure, true, scratchAllocation);
         vulkanBackend.rayTracingNV().vkCmdBuildAccelerationStructureNV(
             commandBuffer,

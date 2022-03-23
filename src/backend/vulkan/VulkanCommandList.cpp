@@ -1033,7 +1033,7 @@ void VulkanCommandList::issueDrawCall(const DrawCallDescription& drawCall)
     }
 }
 
-void VulkanCommandList::rebuildTopLevelAcceratationStructure(TopLevelAS& tlas)
+void VulkanCommandList::buildTopLevelAcceratationStructure(TopLevelAS& tlas, AccelerationStructureBuildType buildType)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
@@ -1045,11 +1045,11 @@ void VulkanCommandList::rebuildTopLevelAcceratationStructure(TopLevelAS& tlas)
     switch (backend().rayTracingBackend()) {
     case VulkanBackend::RayTracingBackend::KhrExtension: {
         auto& khrTlas = static_cast<VulkanTopLevelASKHR&>(tlas);
-        khrTlas.build(m_commandBuffer, VulkanTopLevelASKHR::BuildType::UpdateInPlace);
+        khrTlas.build(m_commandBuffer, buildType);
     } break;
     case VulkanBackend::RayTracingBackend::NvExtension: {
         auto& rtxTlas = static_cast<VulkanTopLevelASNV&>(tlas);
-        rtxTlas.build(m_commandBuffer, VulkanTopLevelASNV::BuildType::UpdateInPlace);
+        rtxTlas.build(m_commandBuffer, buildType);
     } break;
     }
 

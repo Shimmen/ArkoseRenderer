@@ -31,7 +31,7 @@ public:
     void bindIndexBuffer(const Buffer&, IndexType) override;
     void issueDrawCall(const DrawCallDescription&) override;
 
-    void rebuildTopLevelAcceratationStructure(TopLevelAS&) override;
+    void buildTopLevelAcceratationStructure(TopLevelAS&, AccelerationStructureBuildType) override;
     void traceRays(Extent2D) override;
 
     void dispatch(Extent3D globalSize, Extent3D localSize) override;

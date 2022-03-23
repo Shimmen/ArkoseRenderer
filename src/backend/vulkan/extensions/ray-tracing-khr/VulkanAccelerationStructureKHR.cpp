@@ -19,9 +19,10 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
     size_t instanceBufferSize = this->maxInstanceCount() * sizeof(VkAccelerationStructureInstanceKHR);
     instanceBuffer = vulkanBackend.createBuffer(instanceBufferSize, Buffer::Usage::RTInstanceBuffer, Buffer::MemoryHint::GpuOptimal);
 
-    updateCurrentInstanceCount(static_cast<uint32_t>(initialInstances.size()));
-    auto initialInstanceData = createInstanceData(initialInstances);
-    instanceBuffer->updateData(initialInstanceData);
+    // Needed now or can we do this later??
+    //updateCurrentInstanceCount(static_cast<uint32_t>(initialInstances.size()));
+    //auto initialInstanceData = createInstanceData(initialInstances);
+    //instanceBuffer->updateData(initialInstanceData);
 
     VkBufferDeviceAddressInfo instanceBufferDeviceAddressInfo { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
     instanceBufferDeviceAddressInfo.buffer = static_cast<VulkanBuffer&>(*instanceBuffer).buffer;
@@ -72,15 +73,22 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
         LogErrorAndExit("Error trying to create top level acceleration structure\n");
     }
 
-    VkAccelerationStructureDeviceAddressInfoKHR accelerationStructureDeviceAddressInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
-    accelerationStructureDeviceAddressInfo.accelerationStructure = accelerationStructure;
-    accelerationStructureDeviceAddress = vulkanBackend.rayTracingKHR().vkGetAccelerationStructureDeviceAddressKHR(vulkanBackend.device(), &accelerationStructureDeviceAddressInfo);
+    if (initialInstances.size() > 0) {
+        updateCurrentInstanceCount(static_cast<uint32_t>(initialInstances.size()));
 
-    bool buildSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer cmdBuffer) {
-        build(cmdBuffer, BuildType::BuildInitial);
-    });
-    if (!buildSuccess) {
-        LogErrorAndExit("Error trying to build top level acceleration structure\n");
+        auto initialInstanceData = createInstanceData(initialInstances);
+        instanceBuffer->updateData(initialInstanceData);
+
+        VkAccelerationStructureDeviceAddressInfoKHR accelerationStructureDeviceAddressInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
+        accelerationStructureDeviceAddressInfo.accelerationStructure = accelerationStructure;
+        accelerationStructureDeviceAddress = vulkanBackend.rayTracingKHR().vkGetAccelerationStructureDeviceAddressKHR(vulkanBackend.device(), &accelerationStructureDeviceAddressInfo);
+
+        bool buildSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer cmdBuffer) {
+            build(cmdBuffer, AccelerationStructureBuildType::FullBuild);
+        });
+        if (!buildSuccess) {
+            LogErrorAndExit("Error trying to build top level acceleration structure (initial build)\n");
+        }
     }
 }
 
@@ -113,7 +121,7 @@ void VulkanTopLevelASKHR::setName(const std::string& name)
     }
 }
 
-void VulkanTopLevelASKHR::build(VkCommandBuffer commandBuffer, BuildType buildType)
+void VulkanTopLevelASKHR::build(VkCommandBuffer commandBuffer, AccelerationStructureBuildType buildType)
 {
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
@@ -137,12 +145,12 @@ void VulkanTopLevelASKHR::build(VkCommandBuffer commandBuffer, BuildType buildTy
     buildInfo.pGeometries = &instanceGeometry;
 
     switch (buildType) {
-    case BuildType::BuildInitial:
+    case AccelerationStructureBuildType::FullBuild:
         buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
         buildInfo.srcAccelerationStructure = VK_NULL_HANDLE;
         buildInfo.dstAccelerationStructure = accelerationStructure;
         break;
-    case BuildType::UpdateInPlace:
+    case AccelerationStructureBuildType::Update:
         buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR;
         buildInfo.srcAccelerationStructure = accelerationStructure;
         buildInfo.dstAccelerationStructure = accelerationStructure;
