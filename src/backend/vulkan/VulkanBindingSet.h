@@ -12,6 +12,8 @@ public:
 
     virtual void setName(const std::string& name) override;
 
+    void updateBindings();
+
     VkDescriptorPool descriptorPool;
     VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorSet descriptorSet;

@@ -154,221 +154,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
         }
     }
 
-    // Update descriptor set
-    {
-        std::vector<VkWriteDescriptorSet> descriptorSetWrites {};
-        CapList<VkDescriptorBufferInfo> descBufferInfos { 1024 };
-        CapList<VkDescriptorImageInfo> descImageInfos { 1024 };
-        CapList<VkWriteDescriptorSetAccelerationStructureNV> rtxAccelStructWrites { 10 };
-        CapList<VkWriteDescriptorSetAccelerationStructureKHR> khrAccelStructWrites { 10 };
-
-        for (auto& bindingInfo : shaderBindings()) {
-
-            VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
-            write.pTexelBufferView = nullptr;
-
-            write.dstSet = descriptorSet;
-            write.dstBinding = bindingInfo.bindingIndex;
-
-            switch (bindingInfo.type) {
-            case ShaderBindingType::UniformBuffer: {
-
-                ASSERT(bindingInfo.buffers.size() == 1);
-                ASSERT(bindingInfo.buffers[0]);
-                auto& buffer = static_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
-
-                VkDescriptorBufferInfo descBufferInfo {};
-                descBufferInfo.offset = 0;
-                descBufferInfo.range = VK_WHOLE_SIZE;
-                descBufferInfo.buffer = buffer.buffer;
-
-                descBufferInfos.push_back(descBufferInfo);
-                write.pBufferInfo = &descBufferInfos.back();
-                write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-
-                write.descriptorCount = 1;
-                write.dstArrayElement = 0;
-
-                break;
-            }
-
-            case ShaderBindingType::StorageBuffer: {
-
-                ASSERT(bindingInfo.buffers.size() == 1);
-                ASSERT(bindingInfo.buffers[0]);
-                auto& buffer = static_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
-
-                VkDescriptorBufferInfo descBufferInfo {};
-                descBufferInfo.offset = 0;
-                descBufferInfo.range = VK_WHOLE_SIZE;
-                descBufferInfo.buffer = buffer.buffer;
-
-                descBufferInfos.push_back(descBufferInfo);
-                write.pBufferInfo = &descBufferInfos.back();
-                write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-
-                write.descriptorCount = 1;
-                write.dstArrayElement = 0;
-
-                break;
-            }
-
-            case ShaderBindingType::StorageBufferArray: {
-
-                ASSERT(bindingInfo.count == bindingInfo.buffers.size());
-
-                if (bindingInfo.count == 0) {
-                    continue;
-                }
-
-                for (const Buffer* buffer : bindingInfo.buffers) {
-
-                    ASSERT(buffer);
-                    ASSERT(buffer->usage() == Buffer::Usage::StorageBuffer);
-                    auto& vulkanBuffer = static_cast<const VulkanBuffer&>(*buffer);
-
-                    VkDescriptorBufferInfo descBufferInfo {};
-                    descBufferInfo.offset = 0;
-                    descBufferInfo.range = VK_WHOLE_SIZE;
-                    descBufferInfo.buffer = vulkanBuffer.buffer;
-
-                    descBufferInfos.push_back(descBufferInfo);
-                }
-
-                // NOTE: This should point at the first VkDescriptorBufferInfo
-                write.pBufferInfo = &descBufferInfos.back() - (bindingInfo.count - 1);
-                write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-                write.descriptorCount = bindingInfo.count;
-                write.dstArrayElement = 0;
-
-                break;
-            }
-
-            case ShaderBindingType::StorageImage: {
-
-                ASSERT(bindingInfo.textures.size() == 1);
-                ASSERT(bindingInfo.textures[0]);
-                auto& texture = static_cast<const VulkanTexture&>(*bindingInfo.textures[0]);
-
-                VkDescriptorImageInfo descImageInfo {};
-                descImageInfo.sampler = texture.sampler;
-                descImageInfo.imageView = texture.imageView;
-
-                // The runtime systems make sure that the input texture is in the layout!
-                descImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
-
-                descImageInfos.push_back(descImageInfo);
-                write.pImageInfo = &descImageInfos.back();
-                write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
-
-                write.descriptorCount = 1;
-                write.dstArrayElement = 0;
-
-                break;
-            }
-
-            case ShaderBindingType::TextureSampler: {
-
-                ASSERT(bindingInfo.textures.size() == 1);
-                ASSERT(bindingInfo.textures[0]);
-                auto& texture = static_cast<const VulkanTexture&>(*bindingInfo.textures[0]);
-
-                VkDescriptorImageInfo descImageInfo {};
-                descImageInfo.sampler = texture.sampler;
-                descImageInfo.imageView = texture.imageView;
-
-                // The runtime systems make sure that the input texture is in the layout!
-                descImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-                descImageInfos.push_back(descImageInfo);
-                write.pImageInfo = &descImageInfos.back();
-                write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-
-                write.descriptorCount = 1;
-                write.dstArrayElement = 0;
-
-                break;
-            }
-
-            case ShaderBindingType::TextureSamplerArray: {
-
-                size_t numTextures = bindingInfo.textures.size();
-                ASSERT(numTextures > 0);
-
-                for (uint32_t i = 0; i < bindingInfo.count; ++i) {
-
-                    // NOTE: We always have to fill in the count here, but for the unused we just fill with a "default"
-                    const Texture* genTexture = (i >= numTextures) ? bindingInfo.textures.front() : bindingInfo.textures[i];
-                    ASSERT(genTexture);
-
-                    auto& texture = static_cast<const VulkanTexture&>(*genTexture);
-
-                    VkDescriptorImageInfo descImageInfo {};
-                    descImageInfo.sampler = texture.sampler;
-                    descImageInfo.imageView = texture.imageView;
-
-                    // The runtime systems make sure that the input texture is in the layout!
-                    descImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-                    descImageInfos.push_back(descImageInfo);
-                }
-
-                // NOTE: This should point at the first VkDescriptorImageInfo
-                write.pImageInfo = &descImageInfos.back() - (bindingInfo.count - 1);
-                write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-                write.descriptorCount = bindingInfo.count;
-                write.dstArrayElement = 0;
-
-                break;
-            }
-
-            case ShaderBindingType::RTAccelerationStructure: {
-
-                ASSERT(bindingInfo.textures.empty());
-                ASSERT(bindingInfo.buffers.empty());
-                ASSERT(bindingInfo.tlas != nullptr);
-
-                switch (vulkanBackend.rayTracingBackend()) {
-                case VulkanBackend::RayTracingBackend::NvExtension: {
-
-                    VkWriteDescriptorSetAccelerationStructureNV descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV };
-                    descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASNV&>(*bindingInfo.tlas).accelerationStructure;
-                    descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
-
-                    rtxAccelStructWrites.push_back(descriptorAccelerationStructureInfo);
-                    write.pNext = &rtxAccelStructWrites.back();
-                    write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
-
-                } break;
-                
-                case VulkanBackend::RayTracingBackend::KhrExtension: {
-
-                    VkWriteDescriptorSetAccelerationStructureKHR descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR };
-                    descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASKHR&>(*bindingInfo.tlas).accelerationStructure;
-                    descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
-
-                    khrAccelStructWrites.push_back(descriptorAccelerationStructureInfo);
-                    write.pNext = &khrAccelStructWrites.back();
-                    write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-
-                } break;
-                }
-
-                write.descriptorCount = 1;
-                write.dstArrayElement = 0;
-
-                break;
-            }
-
-            default:
-                ASSERT_NOT_REACHED();
-            }
-
-            descriptorSetWrites.push_back(write);
-        }
-
-        vkUpdateDescriptorSets(device, (uint32_t)descriptorSetWrites.size(), descriptorSetWrites.data(), 0, nullptr);
-    }
+    updateBindings();
 }
 
 VulkanBindingSet::~VulkanBindingSet()
@@ -426,5 +212,224 @@ void VulkanBindingSet::setName(const std::string& name)
             }
         }
     }
+}
+
+void VulkanBindingSet::updateBindings()
+{
+    auto& vulkanBackend = static_cast<const VulkanBackend&>(backend());
+
+    std::vector<VkWriteDescriptorSet> descriptorSetWrites {};
+    CapList<VkDescriptorBufferInfo> descBufferInfos { 4096 };
+    CapList<VkDescriptorImageInfo> descImageInfos { 4096 };
+    CapList<VkWriteDescriptorSetAccelerationStructureNV> rtxAccelStructWrites { 10 };
+    CapList<VkWriteDescriptorSetAccelerationStructureKHR> khrAccelStructWrites { 10 };
+
+    for (auto& bindingInfo : shaderBindings()) {
+
+        VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+        write.pTexelBufferView = nullptr;
+
+        write.dstSet = descriptorSet;
+        write.dstBinding = bindingInfo.bindingIndex;
+
+        switch (bindingInfo.type) {
+        case ShaderBindingType::UniformBuffer: {
+
+            ASSERT(bindingInfo.buffers.size() == 1);
+            ASSERT(bindingInfo.buffers[0]);
+            auto& buffer = static_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
+
+            VkDescriptorBufferInfo descBufferInfo {};
+            descBufferInfo.offset = 0;
+            descBufferInfo.range = VK_WHOLE_SIZE;
+            descBufferInfo.buffer = buffer.buffer;
+
+            descBufferInfos.push_back(descBufferInfo);
+            write.pBufferInfo = &descBufferInfos.back();
+            write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+
+            write.descriptorCount = 1;
+            write.dstArrayElement = 0;
+
+            break;
+        }
+
+        case ShaderBindingType::StorageBuffer: {
+
+            ASSERT(bindingInfo.buffers.size() == 1);
+            ASSERT(bindingInfo.buffers[0]);
+            auto& buffer = static_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
+
+            VkDescriptorBufferInfo descBufferInfo {};
+            descBufferInfo.offset = 0;
+            descBufferInfo.range = VK_WHOLE_SIZE;
+            descBufferInfo.buffer = buffer.buffer;
+
+            descBufferInfos.push_back(descBufferInfo);
+            write.pBufferInfo = &descBufferInfos.back();
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+            write.descriptorCount = 1;
+            write.dstArrayElement = 0;
+
+            break;
+        }
+
+        case ShaderBindingType::StorageBufferArray: {
+
+            ASSERT(bindingInfo.count == bindingInfo.buffers.size());
+
+            if (bindingInfo.count == 0) {
+                continue;
+            }
+
+            for (const Buffer* buffer : bindingInfo.buffers) {
+
+                ASSERT(buffer);
+                ASSERT(buffer->usage() == Buffer::Usage::StorageBuffer);
+                auto& vulkanBuffer = static_cast<const VulkanBuffer&>(*buffer);
+
+                VkDescriptorBufferInfo descBufferInfo {};
+                descBufferInfo.offset = 0;
+                descBufferInfo.range = VK_WHOLE_SIZE;
+                descBufferInfo.buffer = vulkanBuffer.buffer;
+
+                descBufferInfos.push_back(descBufferInfo);
+            }
+
+            // NOTE: This should point at the first VkDescriptorBufferInfo
+            write.pBufferInfo = &descBufferInfos.back() - (bindingInfo.count - 1);
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+            write.descriptorCount = bindingInfo.count;
+            write.dstArrayElement = 0;
+
+            break;
+        }
+
+        case ShaderBindingType::StorageImage: {
+
+            ASSERT(bindingInfo.textures.size() == 1);
+            ASSERT(bindingInfo.textures[0]);
+            auto& texture = static_cast<const VulkanTexture&>(*bindingInfo.textures[0]);
+
+            VkDescriptorImageInfo descImageInfo {};
+            descImageInfo.sampler = texture.sampler;
+            descImageInfo.imageView = texture.imageView;
+
+            // The runtime systems make sure that the input texture is in the layout!
+            descImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+
+            descImageInfos.push_back(descImageInfo);
+            write.pImageInfo = &descImageInfos.back();
+            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
+
+            write.descriptorCount = 1;
+            write.dstArrayElement = 0;
+
+            break;
+        }
+
+        case ShaderBindingType::TextureSampler: {
+
+            ASSERT(bindingInfo.textures.size() == 1);
+            ASSERT(bindingInfo.textures[0]);
+            auto& texture = static_cast<const VulkanTexture&>(*bindingInfo.textures[0]);
+
+            VkDescriptorImageInfo descImageInfo {};
+            descImageInfo.sampler = texture.sampler;
+            descImageInfo.imageView = texture.imageView;
+
+            // The runtime systems make sure that the input texture is in the layout!
+            descImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+            descImageInfos.push_back(descImageInfo);
+            write.pImageInfo = &descImageInfos.back();
+            write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+            write.descriptorCount = 1;
+            write.dstArrayElement = 0;
+
+            break;
+        }
+
+        case ShaderBindingType::TextureSamplerArray: {
+
+            size_t numTextures = bindingInfo.textures.size();
+            ASSERT(numTextures > 0);
+
+            for (uint32_t i = 0; i < bindingInfo.count; ++i) {
+
+                // NOTE: We always have to fill in the count here, but for the unused we just fill with a "default"
+                const Texture* genTexture = (i >= numTextures) ? bindingInfo.textures.front() : bindingInfo.textures[i];
+                ASSERT(genTexture);
+
+                auto& texture = static_cast<const VulkanTexture&>(*genTexture);
+
+                VkDescriptorImageInfo descImageInfo {};
+                descImageInfo.sampler = texture.sampler;
+                descImageInfo.imageView = texture.imageView;
+
+                // The runtime systems make sure that the input texture is in the layout!
+                descImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+                descImageInfos.push_back(descImageInfo);
+            }
+
+            // NOTE: This should point at the first VkDescriptorImageInfo
+            write.pImageInfo = &descImageInfos.back() - (bindingInfo.count - 1);
+            write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            write.descriptorCount = bindingInfo.count;
+            write.dstArrayElement = 0;
+
+            break;
+        }
+
+        case ShaderBindingType::RTAccelerationStructure: {
+
+            ASSERT(bindingInfo.textures.empty());
+            ASSERT(bindingInfo.buffers.empty());
+            ASSERT(bindingInfo.tlas != nullptr);
+
+            switch (vulkanBackend.rayTracingBackend()) {
+            case VulkanBackend::RayTracingBackend::NvExtension: {
+
+                VkWriteDescriptorSetAccelerationStructureNV descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV };
+                descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASNV&>(*bindingInfo.tlas).accelerationStructure;
+                descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
+
+                rtxAccelStructWrites.push_back(descriptorAccelerationStructureInfo);
+                write.pNext = &rtxAccelStructWrites.back();
+                write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
+
+            } break;
+
+            case VulkanBackend::RayTracingBackend::KhrExtension: {
+
+                VkWriteDescriptorSetAccelerationStructureKHR descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR };
+                descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASKHR&>(*bindingInfo.tlas).accelerationStructure;
+                descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
+
+                khrAccelStructWrites.push_back(descriptorAccelerationStructureInfo);
+                write.pNext = &khrAccelStructWrites.back();
+                write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
+
+            } break;
+            }
+
+            write.descriptorCount = 1;
+            write.dstArrayElement = 0;
+
+            break;
+        }
+
+        default:
+            ASSERT_NOT_REACHED();
+        }
+
+        descriptorSetWrites.push_back(write);
+    }
+
+    // TODO: We might want to batch multiple writes. This function is clearly not made for updating a single descriptor set.
+    vkUpdateDescriptorSets(vulkanBackend.device(), static_cast<uint32_t>(descriptorSetWrites.size()), descriptorSetWrites.data(), 0, nullptr);
 }
 
