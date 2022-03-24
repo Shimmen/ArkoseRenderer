@@ -135,7 +135,7 @@ std::unique_ptr<Texture> Texture::createFromImage(Backend& backend, const Image&
     };
 
     //validateTextureDescription(desc);
-    auto texture = Backend::get().createTexture(desc);
+    auto texture = backend.createTexture(desc);
 
     int width, height;
     const void* rawPixelData;
@@ -283,7 +283,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
         .multisampling = Texture::Multisampling::None
     };
 
-    auto texture = Backend::get().createTexture(desc);
+    auto texture = backend.createTexture(desc);
     texture->setName("Texture:" + imagePathSequencePattern);
 
     // Allocate temporary storage for pixel data ahead of upload to texture

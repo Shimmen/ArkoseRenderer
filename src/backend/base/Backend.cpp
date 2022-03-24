@@ -14,7 +14,7 @@ Backend& Backend::create(Backend::Type backendType, GLFWwindow* window, const Ba
         break;
     }
 
-    return Backend::get();
+    return *s_globalBackend;
 }
 
 void Backend::destroy()
