@@ -29,10 +29,10 @@ struct ShaderBinding {
     // Single top level acceleration structures
     ShaderBinding(uint32_t index, ShaderStage, TopLevelAS*);
 
-    // Multiple sampled textures in an array of fixed size (count)
-    ShaderBinding(uint32_t index, ShaderStage, const std::vector<Texture*>&, uint32_t count);
+    // Multiple sampled textures in an array (array count explicitly specified)
+    ShaderBinding(uint32_t index, ShaderStage, uint32_t count, const std::vector<Texture*>&);
 
-    // Multiple sampled textures in an array of undefined size
+    // Multiple sampled textures in an array (array count will be the vector size)
     ShaderBinding(uint32_t index, ShaderStage, const std::vector<Texture*>&);
 
     // Multiple storage buffers in a dynamic array

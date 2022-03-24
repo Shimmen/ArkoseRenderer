@@ -132,7 +132,8 @@ private:
     };
     std::vector<ManagedTexture> m_managedTextures {};
     std::unordered_map<Material::TextureDescription, TextureHandle> m_textureCache {};
-    static constexpr int MaxSupportedSceneTextures = 1'024;
+    std::vector<BindingSet::TextureBindingUpdate> m_pendingTextureUpdates {};
+    static constexpr int MaxSupportedSceneTextures = 4096;
 
     struct ManagedMaterial {
         ShaderMaterial material {};
@@ -143,6 +144,11 @@ private:
     std::unique_ptr<Buffer> m_materialDataBuffer { nullptr };
     bool m_materialDataBufferNeedsUpdate { false };
 
+    // NOTE: Currently this contains both textures and material data
+    static constexpr int MaterialBindingSetBindingIndexMaterials = 0;
+    static constexpr int MaterialBindingSetBindingIndexTextures = 1;
+    std::unique_ptr<BindingSet> m_materialBindingSet { nullptr };
+
     static constexpr uint32_t InitialMaxRayTracingGeometryInstanceCount { 1024 };
     std::vector<RTGeometryInstance> m_rayTracingGeometryInstances {};
     std::vector<std::unique_ptr<BottomLevelAS>> m_sceneBottomLevelAccelerationStructures {};
@@ -151,13 +157,8 @@ private:
 
     std::unique_ptr<Texture> m_environmentMapTexture {};
 
-    // TODO: Remove me!
-    // TODO: Remove me!
-    // TODO: Remove me!
-    // TODO: Remove me!
-    void rebuildGpuSceneData();
-
-    bool m_sceneDataNeedsRebuild { true };
-    
-    std::unique_ptr<BindingSet> m_materialBindingSet { nullptr };
+    // Common textures that can be used for various purposes
+    std::unique_ptr<Texture> m_blackTexture {};
+    std::unique_ptr<Texture> m_magentaTexture {};
+    std::unique_ptr<Texture> m_normalMapBlueTexture {};
 };

@@ -24,17 +24,22 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
 {
     m_maintainRayTracingScene = rayTracingCapable;
 
+    m_blackTexture = Texture::createFromPixel(backend(), vec4(0.0f, 0.0f, 0.0f, 0.0f), true);
+    m_magentaTexture = Texture::createFromPixel(backend(), vec4(1.0f, 0.0f, 1.0f, 1.0f), true);
+    m_normalMapBlueTexture = Texture::createFromPixel(backend(), vec4(0.5f, 0.5f, 1.0f, 1.0f), false);
+
     size_t materialBufferSize = MaxSupportedSceneMaterials * sizeof(ShaderMaterial);
     m_materialDataBuffer = backend().createBuffer(materialBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
     m_materialDataBuffer->setName("SceneMaterialData");
 
-    //std::vector<Texture*> placeholderTextures {};
-    //m_materialBindingSet = backend().createBindingSet({ { 0, ShaderStage::Any, m_materialDataBuffer.get() },
-    //                                                    { 1, ShaderStage::Any, placeholderTextures, MaxSupportedSceneTextures } });
-    //m_materialBindingSet->setName("SceneMaterialSet");
+    // TODO: Get rid of this placeholder that we use to write into all texture slots (i.e. support partially bound etc.)
+    std::vector<Texture*> placeholderTexture = { m_magentaTexture.get() };
+    m_materialBindingSet = backend().createBindingSet({ { MaterialBindingSetBindingIndexMaterials, ShaderStage::Any, m_materialDataBuffer.get() },
+                                                        { MaterialBindingSetBindingIndexTextures, ShaderStage::Any, MaxSupportedSceneTextures, placeholderTexture } });
+    m_materialBindingSet->setName("SceneMaterialSet");
 
     if (m_maintainRayTracingScene) {
-        m_sceneTopLevelAccelerationStructure = m_backend.createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, {});
+        m_sceneTopLevelAccelerationStructure = backend().createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, {});
     }
 }
 
@@ -205,13 +210,13 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                          { 4, ShaderStage::Any, iesProfileLUTs } });
     reg.publish("SceneLightSet", lightBindingSet);
 
-    // TODO: Remove me!
-    // TODO: Remove me!
-    // TODO: Remove me!
-    // TODO: Remove me!
-    rebuildGpuSceneData();
-
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
+
+        // Update bindless textures
+        if (m_pendingTextureUpdates.size() > 0) {
+            m_materialBindingSet->updateTextures(MaterialBindingSetBindingIndexTextures, m_pendingTextureUpdates);
+            m_pendingTextureUpdates.clear();
+        }
 
         // Update material data
         // TODO: support partial updates? E.g. ranges of materials or a list of indices needing update
@@ -390,13 +395,11 @@ Texture& GpuScene::environmentMapTexture()
 void GpuScene::registerLight(SpotLight& light)
 {
     m_spotLights.push_back(&light);
-    m_sceneDataNeedsRebuild = true;
 }
 
 void GpuScene::registerLight(DirectionalLight& light)
 {
     m_directionalLights.push_back(&light);
-    m_sceneDataNeedsRebuild = true;
 }
 
 void GpuScene::registerMesh(Mesh& mesh)
@@ -429,8 +432,6 @@ void GpuScene::registerMesh(Mesh& mesh)
         RTGeometryInstance rtGeometryInstance = createRTGeometryInstance(mesh, rtMeshIndex);
         m_rayTracingGeometryInstances.push_back(rtGeometryInstance);
     }
-
-    m_sceneDataNeedsRebuild = true;
 }
 
 RTGeometryInstance GpuScene::createRTGeometryInstance(Mesh& mesh, uint32_t meshIdx)
@@ -564,8 +565,15 @@ TextureHandle GpuScene::registerTexture(Material::TextureDescription& desc)
         }
 
         uint64_t textureIdx = m_managedTextures.size();
+        if (textureIdx >= MaxSupportedSceneTextures) {
+            LogErrorAndExit("Ran out of bindless scene texture slots, exiting.\n");
+        }
+
         auto handle = TextureHandle(textureIdx);
         m_textureCache[desc] = handle;
+
+        m_pendingTextureUpdates.push_back({ .texture = texture.get(),
+                                            .index = handle.indexOfType<uint32_t>() });
 
         m_managedTextures.push_back(ManagedTexture { .texture = std::move(texture),
                                                      .description = desc,
@@ -594,6 +602,12 @@ void GpuScene::unregisterTexture(TextureHandle handle)
     ManagedTexture& managedTexture = m_managedTextures[handle.index()];
     ASSERT(managedTexture.referenceCount > 0);
     managedTexture.referenceCount -= 1;
+
+    // TODO: Manage a free-list of indices to reuse!
+
+    // Write symbolic blank texture to the index
+    m_pendingTextureUpdates.push_back({ .texture = m_magentaTexture.get(),
+                                        .index = handle.indexOfType<uint32_t>() });
 
     if (managedTexture.referenceCount == 0) {
         // TODO: Put this handle in some handle free list for index reuse so we don't leave gaps
@@ -690,26 +704,6 @@ IndexType GpuScene::globalIndexBufferType() const
 {
     // For simplicity we keep a single 32-bit index buffer, since every mesh should fit in there.
     return IndexType::UInt32;
-}
-
-void GpuScene::rebuildGpuSceneData()
-{
-    SCOPED_PROFILE_ZONE();
-
-    // TODO: We will need to create a BindingSet (Vulkan: descriptor set) but not write anything (useful) to it,
-    //       then update it with real textures once we know those textures, i.e. before rendering if anything has changed.
-
-    std::vector<Texture*> sceneTextures {};
-    for (const ManagedTexture& managedTexture : m_managedTextures) {
-        sceneTextures.push_back(managedTexture.texture.get());
-    }
-
-    m_materialBindingSet = backend().createBindingSet({ { 0, ShaderStage::Any, m_materialDataBuffer.get() },
-                                                        { 1, ShaderStage::Any, sceneTextures, MaxSupportedSceneTextures } });
-    m_materialBindingSet->setName("SceneMaterialSet");
-
-    // Just rebuilt.
-    m_sceneDataNeedsRebuild = false;
 }
 
 BindingSet& GpuScene::globalMaterialBindingSet() const

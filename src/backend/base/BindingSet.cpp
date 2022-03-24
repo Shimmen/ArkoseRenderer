@@ -65,7 +65,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, TopLevelAS
     }
 }
 
-ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std::vector<Texture*>& textures, uint32_t count)
+ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, uint32_t count, const std::vector<Texture*>& textures)
     : bindingIndex(index)
     , count(count)
     , shaderStage(shaderStage)
