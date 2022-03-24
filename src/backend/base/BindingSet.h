@@ -55,6 +55,13 @@ public:
     BindingSet() = default;
     BindingSet(Backend&, std::vector<ShaderBinding>);
 
+    struct TextureBindingUpdate {
+        Texture* texture {};
+        uint32_t index { 0 };
+    };
+
+    virtual void updateTextures(uint32_t index, const std::vector<TextureBindingUpdate>&) = 0;
+
     const std::vector<ShaderBinding>& shaderBindings() const { return m_shaderBindings; }
 
 private:

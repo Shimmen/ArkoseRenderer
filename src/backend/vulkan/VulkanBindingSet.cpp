@@ -444,3 +444,53 @@ void VulkanBindingSet::updateBindings()
     vkUpdateDescriptorSets(vulkanBackend.device(), static_cast<uint32_t>(descriptorSetWrites.size()), descriptorSetWrites.data(), 0, nullptr);
 }
 
+void VulkanBindingSet::updateTextures(uint32_t bindingIndex, const std::vector<TextureBindingUpdate>& textureUpdates)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    if (bindingIndex >= shaderBindings().size()) {
+        LogErrorAndExit("BindingSet: trying to update texture for out-of-bounds shader binding, exiting.\n");
+    }
+
+    ShaderBindingType bindingType = shaderBindings()[bindingIndex].type;
+    if (bindingType != ShaderBindingType::TextureSampler && bindingType != ShaderBindingType::TextureSamplerArray) {
+        LogErrorAndExit("BindingSet: trying to update texture for shader binding that does not have texture(s), exiting.\n");
+    }
+
+    std::vector<VkWriteDescriptorSet> descriptorSetWrites {};
+    std::vector<VkDescriptorImageInfo> descImageInfos {};
+
+    descriptorSetWrites.reserve(textureUpdates.size());
+    descImageInfos.reserve(textureUpdates.size());
+
+    for (const TextureBindingUpdate& textureUpdate : textureUpdates) {
+
+        ASSERT(textureUpdate.texture != nullptr);
+        VulkanTexture& texture = *static_cast<VulkanTexture*>(textureUpdate.texture);
+
+        VkDescriptorImageInfo descImageInfo {};
+        descImageInfo.sampler = texture.sampler;
+        descImageInfo.imageView = texture.imageView;
+        descImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        descImageInfos.push_back(descImageInfo);
+
+        VkWriteDescriptorSet write = { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET };
+        write.dstSet = descriptorSet;
+
+        write.dstBinding = bindingIndex;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+
+        // TODO: Would it be a good idea to batch multiple together if they are consecutive?
+        write.dstArrayElement = textureUpdate.index;
+        write.descriptorCount = 1;
+        write.pImageInfo = &descImageInfos.back();
+
+        write.pBufferInfo = nullptr;
+        write.pTexelBufferView = nullptr;
+
+        descriptorSetWrites.push_back(write);
+    }
+
+    auto& vulkanBackend = static_cast<const VulkanBackend&>(backend());
+    vkUpdateDescriptorSets(vulkanBackend.device(), static_cast<uint32_t>(descriptorSetWrites.size()), descriptorSetWrites.data(), 0, nullptr);
+}
