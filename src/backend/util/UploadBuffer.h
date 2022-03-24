@@ -24,19 +24,19 @@ public:
 
     void reset();
 
-    BufferCopyOperation upload(const void* data, size_t size, Buffer& dstBuffer);
+    BufferCopyOperation upload(const void* data, size_t size, Buffer& dstBuffer, size_t dstOffset = 0);
 
     template<typename T>
-    BufferCopyOperation upload(const T& object, Buffer& dstBuffer)
+    BufferCopyOperation upload(const T& object, Buffer& dstBuffer, size_t dstOffset = 0)
     {
         const void* data = reinterpret_cast<const void*>(&object);
-        return upload(data, sizeof(T), dstBuffer);
+        return upload(data, sizeof(T), dstBuffer, dstOffset);
     }
 
     template<typename T>
-    BufferCopyOperation upload(const std::vector<T>& data, Buffer& dstBuffer)
+    BufferCopyOperation upload(const std::vector<T>& data, Buffer& dstBuffer, size_t dstOffset = 0)
     {
-        return upload(data.data(), sizeof(T) * data.size(), dstBuffer);
+        return upload(data.data(), sizeof(T) * data.size(), dstBuffer, dstOffset);
     }
 
 private:

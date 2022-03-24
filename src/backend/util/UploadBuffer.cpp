@@ -22,7 +22,7 @@ void UploadBuffer::reset()
         LogErrorAndExit("UploadBuffer: resetting although not all pending operations have been executed, exiting.\n");
 }
 
-BufferCopyOperation UploadBuffer::upload(const void* data, size_t size, Buffer& dstBuffer)
+BufferCopyOperation UploadBuffer::upload(const void* data, size_t size, Buffer& dstBuffer, size_t dstOffset)
 {
     size_t requiredSize = m_cursor + size;
     if (requiredSize > m_buffer->size())
@@ -35,7 +35,7 @@ BufferCopyOperation UploadBuffer::upload(const void* data, size_t size, Buffer& 
     copyOperation.srcOffset = m_cursor;
 
     copyOperation.dstBuffer = &dstBuffer;
-    copyOperation.dstOffset = 0;
+    copyOperation.dstOffset = dstOffset;
 
     m_buffer->updateDataAndGrowIfRequired(data, size, m_cursor);
     m_cursor += size;
