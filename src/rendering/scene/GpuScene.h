@@ -142,7 +142,7 @@ private:
     std::vector<ManagedMaterial> m_managedMaterials {};
     static constexpr int MaxSupportedSceneMaterials = 1'000;
     std::unique_ptr<Buffer> m_materialDataBuffer { nullptr };
-    bool m_materialDataBufferNeedsUpdate { false };
+    std::vector<uint32_t> m_pendingMaterialUpdates {};
 
     // NOTE: Currently this contains both textures and material data
     static constexpr int MaterialBindingSetBindingIndexMaterials = 0;

@@ -219,16 +219,15 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         }
 
         // Update material data
-        // TODO: support partial updates? E.g. ranges of materials or a list of indices needing update
-        if (m_materialDataBufferNeedsUpdate)
+        if (m_pendingMaterialUpdates.size() > 0)
         {
-            ASSERT(m_managedMaterials.size() <= MaxSupportedSceneMaterials);
-            std::vector<ShaderMaterial> shaderMaterialData {};
-            for (const ManagedMaterial& managedMaterial : m_managedMaterials) {
-                shaderMaterialData.push_back(managedMaterial.material);
+            // TODO: Probably batch all neighbouring indices into a single upload? (Or can we let the UploadBuffer do that optimization for us?)
+            for (uint32_t materialIdx : m_pendingMaterialUpdates) {
+                const ShaderMaterial& shaderMaterial = m_managedMaterials[materialIdx].material;
+                size_t bufferOffset = materialIdx * sizeof(ShaderMaterial);
+                uploadBuffer.upload(shaderMaterial, *m_materialDataBuffer, bufferOffset);
             }
-            uploadBuffer.upload(shaderMaterialData, *m_materialDataBuffer);
-            m_materialDataBufferNeedsUpdate = false;
+            m_pendingMaterialUpdates.clear();
         }
 
         // Update camera data
@@ -512,12 +511,16 @@ MaterialHandle GpuScene::registerMaterial(Material& material)
     shaderMaterial.maskCutoff = material.maskCutoff;
 
     uint64_t materialIdx = m_managedMaterials.size();
+    if (materialIdx >= MaxSupportedSceneMaterials) {
+        LogErrorAndExit("Ran out of managed scene materials, exiting.\n");
+    }
+
     auto handle = MaterialHandle(materialIdx);
 
     m_managedMaterials.push_back(ManagedMaterial { .material = shaderMaterial,
                                                    .referenceCount = 1 });
 
-    m_materialDataBufferNeedsUpdate = true;
+    m_pendingMaterialUpdates.push_back(handle.indexOfType<uint32_t>());
 
     return handle;
 }
@@ -533,12 +536,14 @@ void GpuScene::unregisterMaterial(MaterialHandle handle)
     ASSERT(managedMaterial.referenceCount == 1); // (for now, only a single ref.)
     managedMaterial.referenceCount -= 1;
 
+    // TODO: Manage a free-list of indices to reuse!
+
+    m_pendingMaterialUpdates.push_back(handle.indexOfType<uint32_t>());
+
     if (managedMaterial.referenceCount == 0) {
         // TODO: Put this handle in some handle free list for index reuse so we don't leave gaps
         managedMaterial = ManagedMaterial();
     }
-
-    m_materialDataBufferNeedsUpdate = true;
 }
 
 TextureHandle GpuScene::registerTexture(Material::TextureDescription& desc)
