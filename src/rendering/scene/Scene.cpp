@@ -104,12 +104,26 @@ DirectionalLight* Scene::firstDirectionalLight()
 
 size_t Scene::forEachLight(std::function<void(size_t, const Light&)> callback) const
 {
-    return gpuScene().forEachLight(callback);
+    size_t nextIndex = 0;
+    for (const auto& light : m_directionalLights) {
+        callback(nextIndex++, *light);
+    }
+    for (const auto& light : m_spotLights) {
+        callback(nextIndex++, *light);
+    }
+    return nextIndex;
 }
 
 size_t Scene::forEachLight(std::function<void(size_t, Light&)> callback)
 {
-    return gpuScene().forEachLight(callback);
+    size_t nextIndex = 0;
+    for (auto& light : m_directionalLights) {
+        callback(nextIndex++, *light);
+    }
+    for (auto& light : m_spotLights) {
+        callback(nextIndex++, *light);
+    }
+    return nextIndex;
 }
 
 void Scene::setEnvironmentMap(EnvironmentMap& environmentMap)

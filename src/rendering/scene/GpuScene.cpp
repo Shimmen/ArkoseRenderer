@@ -10,8 +10,6 @@
 
 // Shared shader headers
 using uint = uint32_t;
-#include "RTData.h"
-#include "LightData.h"
 #include "CameraState.h"
 
 GpuScene::GpuScene(Scene& scene, Backend& backend, Extent2D initialMainViewportSize)
@@ -63,31 +61,7 @@ size_t GpuScene::forEachMesh(std::function<void(size_t, const Mesh&)> callback) 
 
 size_t GpuScene::lightCount() const
 {
-    return m_directionalLights.size() + m_spotLights.size();
-}
-
-size_t GpuScene::forEachLight(std::function<void(size_t, Light&)> callback)
-{
-    size_t nextIndex = 0;
-    for (auto& light : m_directionalLights) {
-        callback(nextIndex++, *light);
-    }
-    for (auto& light : m_spotLights) {
-        callback(nextIndex++, *light);
-    }
-    return nextIndex;
-}
-
-size_t GpuScene::forEachLight(std::function<void(size_t, const Light&)> callback) const
-{
-    size_t nextIndex = 0;
-    for (const auto& light : m_directionalLights) {
-        callback(nextIndex++, *light);
-    }
-    for (const auto& light : m_spotLights) {
-        callback(nextIndex++, *light);
-    }
-    return nextIndex;
+    return m_managedDirectionalLights.size() + m_managedSpotLights.size();
 }
 
 size_t GpuScene::shadowCastingLightCount() const
@@ -99,13 +73,13 @@ size_t GpuScene::shadowCastingLightCount() const
 size_t GpuScene::forEachShadowCastingLight(std::function<void(size_t, Light&)> callback)
 {
     size_t nextIndex = 0;
-    for (auto& light : m_directionalLights) {
-        if (light->castsShadows())
-            callback(nextIndex++, *light);
+    for (auto& managedLight : m_managedDirectionalLights) {
+        if (managedLight.light->castsShadows())
+            callback(nextIndex++, *managedLight.light);
     }
-    for (auto& light : m_spotLights) {
-        if (light->castsShadows())
-            callback(nextIndex++, *light);
+    for (auto& managedLight : m_managedSpotLights) {
+        if (managedLight.light->castsShadows())
+            callback(nextIndex++, *managedLight.light);
     }
     return nextIndex;
 }
@@ -113,13 +87,13 @@ size_t GpuScene::forEachShadowCastingLight(std::function<void(size_t, Light&)> c
 size_t GpuScene::forEachShadowCastingLight(std::function<void(size_t, const Light&)> callback) const
 {
     size_t nextIndex = 0;
-    for (auto* light : m_directionalLights) {
-        if (light->castsShadows())
-            callback(nextIndex++, *light);
+    for (auto& managedLight : m_managedDirectionalLights) {
+        if (managedLight.light->castsShadows())
+            callback(nextIndex++, *managedLight.light);
     }
-    for (auto* light : m_spotLights) {
-        if (light->castsShadows())
-            callback(nextIndex++, *light);
+    for (auto& managedLight : m_managedSpotLights) {
+        if (managedLight.light->castsShadows())
+            callback(nextIndex++, *managedLight.light);
     }
     return nextIndex;
 }
@@ -190,24 +164,18 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     dirLightDataBuffer.setName("SceneDirectionalLightData");
     Buffer& spotLightDataBuffer = reg.createBuffer(10 * sizeof(SpotLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     spotLightDataBuffer.setName("SceneSpotLightData");
-    std::vector<Texture*> iesProfileLUTs;
+
     std::vector<Texture*> shadowMaps;
     // TODO: We need to be able to update the shadow map binding. Right now we can only do it once, at creation.
     scene().forEachLight([&](size_t, Light& light) {
-        if (light.type() == Light::Type::SpotLight)
-            iesProfileLUTs.push_back(&((SpotLight&)light).iesProfileLookupTexture()); // all this light stuff needs cleanup...
         if (light.castsShadows())
             shadowMaps.push_back(&light.shadowMap());
     });
-    // We can't upload empty texture arrays (for now.. would be better to fix deeper int the stack)
-    if (iesProfileLUTs.empty())
-        iesProfileLUTs.push_back(&reg.createPixelTexture(vec4(1.0f), true));
 
     BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStage::Any, &lightMetaDataBuffer },
                                                          { 1, ShaderStage::Any, &dirLightDataBuffer },
                                                          { 2, ShaderStage::Any, &spotLightDataBuffer },
-                                                         { 3, ShaderStage::Any, shadowMaps },
-                                                         { 4, ShaderStage::Any, iesProfileLUTs } });
+                                                         { 3, ShaderStage::Any, shadowMaps } });
     reg.publish("SceneLightSet", lightBindingSet);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
@@ -299,45 +267,54 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             std::vector<DirectionalLightData> dirLightData;
             std::vector<SpotLightData> spotLightData;
 
-            scene().forEachLight([&](size_t, Light& light) {
+            for (const ManagedDirectionalLight& managedLight : m_managedDirectionalLights) {
+
+                if (!managedLight.light) {
+                    continue;
+                }
+
+                const DirectionalLight& light = *managedLight.light;
+
                 int shadowMapIndex = light.castsShadows() ? nextShadowMapIndex++ : -1;
                 ShadowMapData shadowMapData { .textureIndex = shadowMapIndex };
 
                 vec3 lightColor = light.color * light.intensityValue() * lightPreExposure();
 
-                switch (light.type()) {
-                case Light::Type::DirectionalLight: {
-                    dirLightData.emplace_back(DirectionalLightData { .shadowMap = shadowMapData,
-                                                                     .color = lightColor,
-                                                                     .exposure = lightPreExposure(),
-                                                                     .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0),
-                                                                     .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0),
-                                                                     .lightProjectionFromWorld = light.viewProjection(),
-                                                                     .lightProjectionFromView = light.viewProjection() * worldFromView });
-                    break;
+                dirLightData.emplace_back(DirectionalLightData { .shadowMap = shadowMapData,
+                                                                 .color = lightColor,
+                                                                 .exposure = lightPreExposure(),
+                                                                 .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0),
+                                                                 .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0),
+                                                                 .lightProjectionFromWorld = light.viewProjection(),
+                                                                 .lightProjectionFromView = light.viewProjection() * worldFromView });
+            }
+
+            for (const ManagedSpotLight& managedLight : m_managedSpotLights) {
+
+                if (!managedLight.light) {
+                    continue;
                 }
-                case Light::Type::SpotLight: {
-                    SpotLight& spotLight = static_cast<SpotLight&>(light);
+
+                const SpotLight& light = *managedLight.light;
+
+                int shadowMapIndex = light.castsShadows() ? nextShadowMapIndex++ : -1;
+                ShadowMapData shadowMapData { .textureIndex = shadowMapIndex };
+
+                vec3 lightColor = light.color * light.intensityValue() * lightPreExposure();
+
                     spotLightData.emplace_back(SpotLightData { .shadowMap = shadowMapData,
-                                                               .color = lightColor,
-                                                               .exposure = lightPreExposure(),
-                                                               .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0f),
-                                                               .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0f),
-                                                               .lightProjectionFromWorld = light.viewProjection(),
-                                                               .lightProjectionFromView = light.viewProjection() * worldFromView,
-                                                               .worldSpacePosition = vec4(light.position(), 0.0f),
-                                                               .viewSpacePosition = viewFromWorld * vec4(light.position(), 1.0f),
-                                                               .outerConeHalfAngle = spotLight.outerConeAngle / 2.0f,
-                                                               .iesProfileIndex = 0 /* todo: set correctly */,
-                                                               ._pad0 = vec2() });
-                    break;
-                }
-                case Light::Type::PointLight:
-                default:
-                    ASSERT_NOT_REACHED();
-                    break;
-                }
-            });
+                                                           .color = lightColor,
+                                                           .exposure = lightPreExposure(),
+                                                           .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0f),
+                                                           .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0f),
+                                                           .lightProjectionFromWorld = light.viewProjection(),
+                                                           .lightProjectionFromView = light.viewProjection() * worldFromView,
+                                                           .worldSpacePosition = vec4(light.position(), 0.0f),
+                                                           .viewSpacePosition = viewFromWorld * vec4(light.position(), 1.0f),
+                                                           .outerConeHalfAngle = light.outerConeAngle / 2.0f,
+                                                           .iesProfileIndex = managedLight.iesLut.indexOfType<int>(),
+                                                           ._pad0 = vec2() });
+            }
 
             uploadBuffer.upload(dirLightData, dirLightDataBuffer);
             uploadBuffer.upload(spotLightData, spotLightDataBuffer);
@@ -393,12 +370,38 @@ Texture& GpuScene::environmentMapTexture()
 
 void GpuScene::registerLight(SpotLight& light)
 {
-    m_spotLights.push_back(&light);
+    TextureHandle iesLutHandle {};
+    if (light.hasIesProfile()) {
+        auto iesLut = light.iesProfile().createLookupTexture(backend(), SpotLight::IESLookupTextureSize);
+        iesLut->setName("IES-LUT:" + light.iesProfile().path());
+        iesLutHandle = registerTexture(std::move(iesLut));
+    }
+
+    TextureHandle shadowMapHandle {};
+    if (light.castsShadows()) {
+        auto shadowMap = createShadowMap(light);
+        shadowMapHandle = registerTexture(std::move(shadowMap));
+    }
+
+    ManagedSpotLight managedLight { .light = &light,
+                                    .iesLut = iesLutHandle,
+                                    .shadowMapTex = shadowMapHandle };
+
+    m_managedSpotLights.push_back(managedLight);
 }
 
 void GpuScene::registerLight(DirectionalLight& light)
 {
-    m_directionalLights.push_back(&light);
+    TextureHandle shadowMapHandle {};
+    if (light.castsShadows()) {
+        auto shadowMap = createShadowMap(light);
+        shadowMapHandle = registerTexture(std::move(shadowMap));
+    }
+
+    ManagedDirectionalLight managedLight { .light = &light,
+                                           .shadowMapTex = shadowMapHandle };
+
+    m_managedDirectionalLights.push_back(managedLight);
 }
 
 void GpuScene::registerMesh(Mesh& mesh)
@@ -488,6 +491,29 @@ RTGeometryInstance GpuScene::createRTGeometryInstance(Mesh& mesh, uint32_t meshI
     return instance;
 }
 
+std::unique_ptr<Texture> GpuScene::createShadowMap(const Light& light)
+{
+    ASSERT(light.shadowMapSize().width() > 0);
+    ASSERT(light.shadowMapSize().height() > 0);
+
+    Texture::Description textureDesc { .type = Texture::Type::Texture2D,
+                                       .arrayCount = 1,
+
+                                       .extent = Extent3D(light.shadowMapSize()),
+                                       .format = Texture::Format::Depth32F,
+
+                                       .filter = Texture::Filters::linear(),
+                                       .wrapMode = Texture::WrapModes::clampAllToEdge(),
+
+                                       .mipmap = Texture::Mipmap::None,
+                                       .multisampling = Texture::Multisampling::None };
+
+    auto shadowMapTex = backend().createTexture(textureDesc);
+    shadowMapTex->setName(light.name() + "ShadowMap");
+
+    return shadowMapTex;
+}
+
 MaterialHandle GpuScene::registerMaterial(Material& material)
 {
     SCOPED_PROFILE_ZONE();
@@ -495,10 +521,10 @@ MaterialHandle GpuScene::registerMaterial(Material& material)
     // NOTE: A material here is very lightweight (for now) so we don't cache them
 
     // Register textures
-    TextureHandle baseColor = registerTexture(material.baseColor);
-    TextureHandle emissive = registerTexture(material.emissive);
-    TextureHandle normalMap = registerTexture(material.normalMap);
-    TextureHandle metallicRoughness = registerTexture(material.metallicRoughness);
+    TextureHandle baseColor = registerMaterialTexture(material.baseColor);
+    TextureHandle emissive = registerMaterialTexture(material.emissive);
+    TextureHandle normalMap = registerMaterialTexture(material.normalMap);
+    TextureHandle metallicRoughness = registerMaterialTexture(material.metallicRoughness);
 
     ShaderMaterial shaderMaterial {};
 
@@ -546,12 +572,12 @@ void GpuScene::unregisterMaterial(MaterialHandle handle)
     }
 }
 
-TextureHandle GpuScene::registerTexture(Material::TextureDescription& desc)
+TextureHandle GpuScene::registerMaterialTexture(Material::TextureDescription& desc)
 {
     SCOPED_PROFILE_ZONE();
 
-    auto entry = m_textureCache.find(desc);
-    if (entry == m_textureCache.end()) {
+    auto entry = m_materialTextureCache.find(desc);
+    if (entry == m_materialTextureCache.end()) {
 
         std::unique_ptr<Texture> texture {};
         if (desc.hasImage()) {
@@ -569,20 +595,8 @@ TextureHandle GpuScene::registerTexture(Material::TextureDescription& desc)
             texture = Texture::createFromPixel(backend(), desc.fallbackColor, desc.sRGB);
         }
 
-        uint64_t textureIdx = m_managedTextures.size();
-        if (textureIdx >= MaxSupportedSceneTextures) {
-            LogErrorAndExit("Ran out of bindless scene texture slots, exiting.\n");
-        }
-
-        auto handle = TextureHandle(textureIdx);
-        m_textureCache[desc] = handle;
-
-        m_pendingTextureUpdates.push_back({ .texture = texture.get(),
-                                            .index = handle.indexOfType<uint32_t>() });
-
-        m_managedTextures.push_back(ManagedTexture { .texture = std::move(texture),
-                                                     .description = desc,
-                                                     .referenceCount = 1 });
+        TextureHandle handle = registerTexture(std::move(texture));
+        m_materialTextureCache[desc] = handle;
 
         return handle;
     }
@@ -593,6 +607,26 @@ TextureHandle GpuScene::registerTexture(Material::TextureDescription& desc)
     ASSERT(handle.index() < m_managedTextures.size());
     ManagedTexture& managedTexture = m_managedTextures[handle.index()];
     managedTexture.referenceCount += 1;
+
+    return handle;
+}
+
+TextureHandle GpuScene::registerTexture(std::unique_ptr<Texture>&& texture)
+{
+    SCOPED_PROFILE_ZONE();
+
+    uint64_t textureIdx = m_managedTextures.size();
+    if (textureIdx >= MaxSupportedSceneTextures) {
+        LogErrorAndExit("Ran out of bindless scene texture slots, exiting.\n");
+    }
+
+    auto handle = TextureHandle(textureIdx);
+
+    m_pendingTextureUpdates.push_back({ .texture = texture.get(),
+                                        .index = handle.indexOfType<uint32_t>() });
+
+    m_managedTextures.push_back(ManagedTexture { .texture = std::move(texture),
+                                                 .referenceCount = 1 });
 
     return handle;
 }

@@ -39,8 +39,10 @@ public:
     virtual float constantBias() override;
     virtual float slopeBias() override;
 
-    static constexpr int SpotLightIESLookupTextureSize = 256;
-    Texture& iesProfileLookupTexture();
+    bool hasIesProfile() const { return true; }
+    const IESProfile& iesProfile() const { return m_iesProfile; }
+
+    static constexpr int IESLookupTextureSize = 256;
 
     // Light luminous intensity (candelas)
     // TODO: Actually use physically based units!

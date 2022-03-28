@@ -43,7 +43,7 @@ public:
 
     //float requiredSpotLightConeAngle(float minThreshold) const;
 
-    std::unique_ptr<Texture> createLookupTexture(Backend&, int size = 256);
+    std::unique_ptr<Texture> createLookupTexture(Backend&, int size = 256) const;
 
     float lookupValue(float angleH, float angleV) const;
 

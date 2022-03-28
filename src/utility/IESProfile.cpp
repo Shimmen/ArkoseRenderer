@@ -54,7 +54,7 @@ float IESProfile::requiredSpotLightConeAngle(float minThreshold) const
 }
 */
 
-std::unique_ptr<Texture> IESProfile::createLookupTexture(Backend& backend, int size)
+std::unique_ptr<Texture> IESProfile::createLookupTexture(Backend& backend, int size) const
 {
     SCOPED_PROFILE_ZONE();
 

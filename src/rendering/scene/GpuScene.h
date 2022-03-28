@@ -11,6 +11,7 @@
 
 // Shared shader data
 using uint = uint32_t;
+#include "LightData.h"
 #include "SceneData.h"
 #include "RTData.h"
 
@@ -43,9 +44,6 @@ public:
     size_t forEachMesh(std::function<void(size_t, const Mesh&)> callback) const;
 
     size_t lightCount() const;
-    size_t forEachLight(std::function<void(size_t, Light&)>);
-    size_t forEachLight(std::function<void(size_t, const Light&)>) const;
-
     size_t shadowCastingLightCount() const;
     size_t forEachShadowCastingLight(std::function<void(size_t, Light&)>);
     size_t forEachShadowCastingLight(std::function<void(size_t, const Light&)>) const;
@@ -59,14 +57,16 @@ public:
 
     void registerLight(SpotLight&);
     void registerLight(DirectionalLight&);
+    // TODO: Unregister light!
 
     // TODO: Replace with something like "registerInstance" which takes a Model and a transform.. or something like that
     void registerMesh(Mesh&);
 
-    MaterialHandle registerMaterial(Material&);
+    [[nodiscard]] MaterialHandle registerMaterial(Material&);
     void unregisterMaterial(MaterialHandle);
 
-    TextureHandle registerTexture(Material::TextureDescription&);
+    [[nodiscard]] TextureHandle registerMaterialTexture(Material::TextureDescription&);
+    [[nodiscard]] TextureHandle registerTexture(std::unique_ptr<Texture>&&);
     void unregisterTexture(TextureHandle);
 
     // Lighting & environment
@@ -98,9 +98,6 @@ private:
     Scene& m_scene;
     Backend& m_backend;
 
-    std::vector<DirectionalLight*> m_directionalLights {};
-    std::vector<SpotLight*> m_spotLights {};
-
     bool m_maintainRayTracingScene { false };
     // NOTE: It's possible some RT pass would want more vertex info than this, but in all cases I can think of
     // we want either these and nothing more, or nothing at all (e.g. ray traced AO). Remember that vertex positions
@@ -109,6 +106,8 @@ private:
                                                     VertexComponent::TexCoord2F };
 
     RTGeometryInstance createRTGeometryInstance(Mesh&, uint32_t meshIdx);
+
+    std::unique_ptr<Texture> createShadowMap(const Light&);
 
     float m_lightPreExposure { 1.0f };
 
@@ -125,13 +124,25 @@ private:
     std::vector<RTTriangleMesh> m_rayTracingMeshData {};
     static constexpr int MaxSupportedSceneMeshes = 10'000;
 
+    struct ManagedDirectionalLight {
+        DirectionalLight* light {};
+        TextureHandle shadowMapTex {};
+    };
+    std::vector<ManagedDirectionalLight> m_managedDirectionalLights {};
+
+    struct ManagedSpotLight {
+        SpotLight* light {};
+        TextureHandle iesLut {};
+        TextureHandle shadowMapTex {};
+    };
+    std::vector<ManagedSpotLight> m_managedSpotLights {};
+
     struct ManagedTexture {
         std::unique_ptr<Texture> texture {};
-        Material::TextureDescription description {};
         uint64_t referenceCount { 0 };
     };
     std::vector<ManagedTexture> m_managedTextures {};
-    std::unordered_map<Material::TextureDescription, TextureHandle> m_textureCache {};
+    std::unordered_map<Material::TextureDescription, TextureHandle> m_materialTextureCache {};
     std::vector<BindingSet::TextureBindingUpdate> m_pendingTextureUpdates {};
     static constexpr int MaxSupportedSceneTextures = 4096;
 

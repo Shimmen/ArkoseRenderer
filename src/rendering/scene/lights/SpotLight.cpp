@@ -18,15 +18,6 @@ SpotLight::SpotLight(vec3 color, float luminousIntensity, const std::string& ies
     setShadowMapSize({ 512, 512 });
 }
 
-Texture& SpotLight::iesProfileLookupTexture()
-{
-    if (m_iesLookupTexture == nullptr) {
-        m_iesLookupTexture = m_iesProfile.createLookupTexture(Backend::get(), SpotLightIESLookupTextureSize);
-    }
-
-    return *m_iesLookupTexture;
-}
-
 float SpotLight::constantBias()
 {
     int maxShadowMapDim = std::max(shadowMapSize().width(), shadowMapSize().height());

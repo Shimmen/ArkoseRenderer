@@ -30,7 +30,6 @@ layout(set = 3, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMet
 layout(set = 3, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
 layout(set = 3, binding = 2) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
 layout(set = 3, binding = 3) uniform sampler2D shadowMaps[];
-layout(set = 3, binding = 4) uniform sampler2D iesLUTs[];
 
 NAMED_UNIFORMS_STRUCT(PushConstants, pushConstants)
 
@@ -91,7 +90,7 @@ vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, floa
 		float distanceAttenuation = 1.0 / square(distanceToLight); // epsilon term??
 
 		float cosConeAngle = dot(L, normalizedToLight);
-		float iesValue = evaluateIESLookupTable(iesLUTs[light.iesProfileIndex], light.outerConeHalfAngle, cosConeAngle);
+		float iesValue = evaluateIESLookupTable(textures[light.iesProfileIndex], light.outerConeHalfAngle, cosConeAngle);
 
 		vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
 		vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;
