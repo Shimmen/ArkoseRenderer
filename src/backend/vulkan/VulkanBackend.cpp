@@ -1464,6 +1464,8 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
     // Submit queue
     {
+        SCOPED_PROFILE_ZONE_BACKEND_NAMED("Submitting for queue");
+
         VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
 
         submitInfo.commandBufferCount = 1;
@@ -1489,6 +1491,8 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
     // Present results (synced on the semaphores)
     {
+        SCOPED_PROFILE_ZONE_BACKEND_NAMED("Presenting swapchain");
+
         VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 
         presentInfo.waitSemaphoreCount = 1;
