@@ -15,35 +15,35 @@ VulkanRayTracingKHR::VulkanRayTracingKHR(VulkanBackend& backend, VkPhysicalDevic
     m_accelerationStructureProperties.pNext = &m_rayTracingPipelineProperties;
     vkGetPhysicalDeviceProperties2(m_physicalDevice, &deviceProps2);
 
-    #define FetchProcAddr(function) function = reinterpret_cast<PFN_##function>(vkGetDeviceProcAddr(m_device, #function))
+    #define AssignProcAddr(function) function = reinterpret_cast<PFN_##function>(vkGetDeviceProcAddr(m_device, #function))
     {
         // VK_KHR_acceleration_structure
-        FetchProcAddr(vkBuildAccelerationStructuresKHR);
-        FetchProcAddr(vkCmdBuildAccelerationStructuresIndirectKHR);
-        FetchProcAddr(vkCmdBuildAccelerationStructuresKHR);
-        FetchProcAddr(vkCmdCopyAccelerationStructureKHR);
-        FetchProcAddr(vkCmdCopyAccelerationStructureToMemoryKHR);
-        FetchProcAddr(vkCmdCopyMemoryToAccelerationStructureKHR);
-        FetchProcAddr(vkCreateAccelerationStructureKHR);
-        FetchProcAddr(vkDestroyAccelerationStructureKHR);
-        FetchProcAddr(vkGetAccelerationStructureBuildSizesKHR);
-        FetchProcAddr(vkGetAccelerationStructureDeviceAddressKHR);
-        FetchProcAddr(vkGetDeviceAccelerationStructureCompatibilityKHR);
-        FetchProcAddr(vkWriteAccelerationStructuresPropertiesKHR);
+        AssignProcAddr(vkBuildAccelerationStructuresKHR);
+        AssignProcAddr(vkCmdBuildAccelerationStructuresIndirectKHR);
+        AssignProcAddr(vkCmdBuildAccelerationStructuresKHR);
+        AssignProcAddr(vkCmdCopyAccelerationStructureKHR);
+        AssignProcAddr(vkCmdCopyAccelerationStructureToMemoryKHR);
+        AssignProcAddr(vkCmdCopyMemoryToAccelerationStructureKHR);
+        AssignProcAddr(vkCreateAccelerationStructureKHR);
+        AssignProcAddr(vkDestroyAccelerationStructureKHR);
+        AssignProcAddr(vkGetAccelerationStructureBuildSizesKHR);
+        AssignProcAddr(vkGetAccelerationStructureDeviceAddressKHR);
+        AssignProcAddr(vkGetDeviceAccelerationStructureCompatibilityKHR);
+        AssignProcAddr(vkWriteAccelerationStructuresPropertiesKHR);
 
         // VK_KHR_ray_tracing_pipeline
-        FetchProcAddr(vkCmdSetRayTracingPipelineStackSizeKHR);
-        FetchProcAddr(vkCmdTraceRaysIndirectKHR);
-        FetchProcAddr(vkCmdTraceRaysKHR);
-        FetchProcAddr(vkCreateRayTracingPipelinesKHR);
-        FetchProcAddr(vkGetRayTracingCaptureReplayShaderGroupHandlesKHR);
-        FetchProcAddr(vkGetRayTracingShaderGroupHandlesKHR);
-        FetchProcAddr(vkGetRayTracingShaderGroupStackSizeKHR);
+        AssignProcAddr(vkCmdSetRayTracingPipelineStackSizeKHR);
+        AssignProcAddr(vkCmdTraceRaysIndirectKHR);
+        AssignProcAddr(vkCmdTraceRaysKHR);
+        AssignProcAddr(vkCreateRayTracingPipelinesKHR);
+        AssignProcAddr(vkGetRayTracingCaptureReplayShaderGroupHandlesKHR);
+        AssignProcAddr(vkGetRayTracingShaderGroupHandlesKHR);
+        AssignProcAddr(vkGetRayTracingShaderGroupStackSizeKHR);
 
         // VK_KHR_ray_query
         // ... are all in-shader
     }
-    #undef FetchProcAddr
+    #undef AssignProcAddr
 
     // Create shared buffer
     {
