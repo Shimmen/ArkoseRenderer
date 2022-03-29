@@ -4,6 +4,7 @@
 #include "utility/Profiling.h"
 #include <moos/matrix.h>
 #include <moos/vector.h>
+#include <optional>
 
 class Scene;
 
