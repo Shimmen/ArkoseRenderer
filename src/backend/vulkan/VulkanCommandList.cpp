@@ -1285,7 +1285,7 @@ void VulkanCommandList::debugBarrier()
 void VulkanCommandList::beginDebugLabel(const std::string& scopeName)
 {
     if (!backend().hasDebugUtilsSupport())
-        LogErrorAndExit("Trying to use debug utils stuff but there is no support!\n");
+        return;
 
     VkDebugUtilsLabelEXT label { VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT };
     label.pLabelName = scopeName.c_str();
@@ -1296,7 +1296,7 @@ void VulkanCommandList::beginDebugLabel(const std::string& scopeName)
 void VulkanCommandList::endDebugLabel()
 {
     if (!backend().hasDebugUtilsSupport())
-        LogErrorAndExit("Trying to use debug utils stuff but there is no support!\n");
+        return;
 
     m_backend.debugUtils().vkCmdEndDebugUtilsLabelEXT(m_commandBuffer);
 }
