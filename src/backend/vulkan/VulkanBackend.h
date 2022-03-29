@@ -15,6 +15,14 @@
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
+#if defined(TRACY_ENABLE)
+#include <TracyVulkan.hpp>
+#include "backend/vulkan/extensions/VulkanProcAddress.h"
+#define SCOPED_PROFILE_ZONE_GPU(tracyVulkanContext, commandBuffer, name) TracyVkZone(tracyVulkanContext, commandBuffer, name);
+#else
+#define SCOPED_PROFILE_ZONE_GPU(tracyVulkanContext, commandBuffer, name)
+#endif
+
 struct GLFWwindow;
 
 static constexpr bool vulkanDebugMode = true;
@@ -263,6 +271,10 @@ private:
         TimestampResult64 timestampResults[TimestampQueryPoolCount] = { 0 };
         uint32_t numTimestampsWrittenLastTime { 0 };
         VkQueryPool timestampQueryPool {};
+
+        #if defined(TRACY_ENABLE)
+            tracy::VkCtx* tracyVulkanContext {};
+        #endif
     };
 
     std::unique_ptr<VulkanRenderTarget> m_clearingRenderTarget {};

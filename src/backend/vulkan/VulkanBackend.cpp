@@ -643,6 +643,11 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     if (vulkanDebugMode && hasSupportForExtension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME))
         deviceExtensions.emplace_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
 
+    #if defined(TRACY_ENABLE)
+        ASSERT(hasSupportForExtension(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME));
+        deviceExtensions.emplace_back(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
+    #endif
+
     VkPhysicalDeviceFeatures2 features2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
     VkPhysicalDeviceFeatures& features = features2.features;
     VkPhysicalDeviceVulkan11Features vk11features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
@@ -1120,6 +1125,13 @@ void VulkanBackend::createFrameContexts()
             frameContext.timestampQueryPool = timestampQueryPool;
         }
 
+        // Create tracy GPU profiler context if enabled
+        #if defined(TRACY_ENABLE)
+            frameContext.tracyVulkanContext = TracyVkContextCalibrated(physicalDevice(), device(), m_graphicsQueue.queue, frameContext.commandBuffer,
+                                                                       FetchProcAddr(device(), vkGetPhysicalDeviceCalibrateableTimeDomainsEXT),
+                                                                       FetchProcAddr(device(), vkGetCalibratedTimestampsEXT));
+        #endif
+
         createFrameRenderTargets(referenceImageContext);
     }
 }
@@ -1127,6 +1139,11 @@ void VulkanBackend::createFrameContexts()
 void VulkanBackend::destroyFrameContexts()
 {
     for (std::unique_ptr<FrameContext>& frameContext : m_frameContexts) {
+
+        #if defined(TRACY_ENABLE)
+            TracyVkDestroy(frameContext->tracyVulkanContext);
+        #endif
+
         vkDestroyQueryPool(device(), frameContext->timestampQueryPool, nullptr);
         vkFreeCommandBuffers(device(), m_defaultCommandPool, 1, &frameContext->commandBuffer);
         vkDestroySemaphore(device(), frameContext->imageAvailableSemaphore, nullptr);
@@ -1379,6 +1396,8 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
         ImGui::Begin("Nodes (in order)");
         {
+            SCOPED_PROFILE_ZONE_GPU(frameContext.tracyVulkanContext, commandBuffer, "All nodes");
+
             std::string frameTimePerfString = m_frameTimer.createFormattedString();
             ImGui::Text("Frame time: %s", frameTimePerfString.c_str());
 
@@ -1387,6 +1406,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
                 std::string nodeTitle = fmt::format("{} | {}", nodeName, nodeTimePerfString);
                 ImGui::CollapsingHeader(nodeTitle.c_str(), ImGuiTreeNodeFlags_Leaf);
 
+                SCOPED_PROFILE_ZONE_GPU(frameContext.tracyVulkanContext, commandBuffer, "Node");
                 SCOPED_PROFILE_ZONE_DYNAMIC(nodeName, 0x00ffff);
                 double cpuStartTime = glfwGetTime();
 
@@ -1412,6 +1432,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
         cmdList.beginDebugLabel("GUI");
         {
+            SCOPED_PROFILE_ZONE_GPU(frameContext.tracyVulkanContext, commandBuffer, "GUI");
             SCOPED_PROFILE_ZONE_BACKEND_NAMED("GUI Rendering");
 
             ImGui::Render();
@@ -1454,6 +1475,10 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
         vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameContext.timestampQueryPool, frameEndTimestampIdx);
         frameContext.numTimestampsWrittenLastTime = nextTimestampQueryIdx;
         ASSERT(frameContext.numTimestampsWrittenLastTime < FrameContext::TimestampQueryPoolCount);
+
+        #if defined(TRACY_ENABLE)
+            TracyVkCollect(frameContext.tracyVulkanContext, commandBuffer);
+        #endif
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             LogError("VulkanBackend: error ending command buffer command!\n");
