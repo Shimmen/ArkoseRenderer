@@ -93,9 +93,9 @@ std::unique_ptr<Texture> Texture::createFromImage(Backend& backend, const Image&
         ? Texture::Mipmap::Linear
         : Texture::Mipmap::None;
 
-    Texture::Format format;
-    int numDesiredComponents;
-    int pixelSizeBytes;
+    Texture::Format format {};
+    int numDesiredComponents {};
+    int pixelSizeBytes {};
 
     switch (image.info().pixelType) {
     case Image::PixelType::Grayscale:
