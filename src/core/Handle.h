@@ -1,6 +1,6 @@
 #pragma once
 
-#include "utility/util.h"
+#include "core/Assert.h"
 #include <limits>
 #include <stdint.h>
 
@@ -31,7 +31,7 @@ struct Handle {
     T indexOfType() const
     {
         static_assert(std::numeric_limits<T>::max() <= std::numeric_limits<IndexType>::max());
-        ASSERT(m_index <= static_cast<IndexType>(std::numeric_limits<T>::max()));
+        ARKOSE_ASSERT(m_index <= static_cast<IndexType>(std::numeric_limits<T>::max()));
         return static_cast<T>(m_index);
     }
 

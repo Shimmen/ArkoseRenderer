@@ -1,6 +1,6 @@
 #include "TaskGraph.h"
 
-#include "utility/Logging.h"
+#include "core/Logging.h"
 #include "utility/Profiling.h"
 #include <fmt/format.h>
 
@@ -12,14 +12,14 @@ void TaskGraph::initialize()
 {
     SCOPED_PROFILE_ZONE_TASKGRAPH();
 
-    ASSERT(g_taskGraphInstance == nullptr);
+    ARKOSE_ASSERT(g_taskGraphInstance == nullptr);
 
     // For now only the "main thread" are dedicated and active most of the time
     constexpr int numDedicatedThreads = 1;
 
     unsigned int hardwareConcurrency = std::thread::hardware_concurrency();
     if (hardwareConcurrency == 1)
-        LogErrorAndExit("TaskGraph: this CPU only supports a single hardware thread, which is not compatible with this TaskGraph, exiting.\n");
+        ARKOSE_LOG(Fatal, "TaskGraph: this CPU only supports a single hardware thread, which is not compatible with this TaskGraph, exiting.");
     uint32_t numWorkerThreads = hardwareConcurrency - 1;
 
     g_taskGraphInstance = new TaskGraph(numWorkerThreads);
@@ -37,7 +37,7 @@ void TaskGraph::shutdown()
 
 TaskGraph& TaskGraph::get()
 {
-    ASSERT(g_taskGraphInstance != nullptr);
+    ARKOSE_ASSERT(g_taskGraphInstance != nullptr);
     return *g_taskGraphInstance;
 }
 
@@ -148,7 +148,7 @@ TaskGraph::Task::Task(TaskFunction&& taskFunction)
 
 TaskGraph::Task::~Task()
 {
-    //ASSERT(no remaining dependent tasks)
+    //ARKOSE_ASSERT(no remaining dependent tasks)
 }
 
 void TaskGraph::Task::execute() const
@@ -183,17 +183,17 @@ TaskGraph::Worker& TaskGraph::findLeastBusyWorker()
         }
     }
 
-    ASSERT(leastBusyWorker != nullptr);
-    ASSERT(fewestWaitingTasks != std::numeric_limits<uint64_t>::max());
+    ARKOSE_ASSERT(leastBusyWorker != nullptr);
+    ARKOSE_ASSERT(fewestWaitingTasks != std::numeric_limits<uint64_t>::max());
 
     return *leastBusyWorker;
 }
 
 TaskGraph::Worker& TaskGraph::findWorkerForTaskHandle(TaskHandle handle) const
 {
-    ASSERT(handle.workerId >= 1);
+    ARKOSE_ASSERT(handle.workerId >= 1);
     uint64_t workerIdx = handle.workerId - 1;
-    ASSERT(workerIdx < m_workers.size());
+    ARKOSE_ASSERT(workerIdx < m_workers.size());
     return *m_workers[workerIdx];
 }
 
@@ -224,8 +224,8 @@ TaskGraph::Worker::Worker(uint64_t workerId, std::string name)
                 taskToExecute = std::move(m_waitingTasks.front());
                 m_waitingTasks.erase(m_waitingTasks.begin());
 
-                ASSERT(taskToExecute != nullptr);
-                ASSERT(m_numWaitingTasks == m_waitingTasks.size());
+                ARKOSE_ASSERT(taskToExecute != nullptr);
+                ARKOSE_ASSERT(m_numWaitingTasks == m_waitingTasks.size());
             }
 
             if (taskToExecute != nullptr)
@@ -233,12 +233,12 @@ TaskGraph::Worker::Worker(uint64_t workerId, std::string name)
                 SCOPED_PROFILE_ZONE_NAME_AND_COLOR("Execute task", 0xaa33aa);
 
                 uint64_t taskSequentialId = taskToExecute->sequentialId();
-                ASSERT(taskSequentialId > m_lastStartedSequentialTaskId);
+                ARKOSE_ASSERT(taskSequentialId > m_lastStartedSequentialTaskId);
                 m_lastStartedSequentialTaskId = taskSequentialId;
 
                 taskToExecute->execute();
 
-                ASSERT(taskSequentialId > m_lastCompletedSequentialTaskId);
+                ARKOSE_ASSERT(taskSequentialId > m_lastCompletedSequentialTaskId);
                 m_lastCompletedSequentialTaskId = taskSequentialId;
 
             } else {
@@ -266,7 +266,7 @@ TaskGraph::Worker::~Worker()
 const std::thread::id& TaskGraph::Worker::threadId() const
 {
     // We must have at least started the thread at this point and assigned its thread id!
-    ASSERT(m_threadId != std::thread::id());
+    ARKOSE_ASSERT(m_threadId != std::thread::id());
 
     return m_threadId;
 }

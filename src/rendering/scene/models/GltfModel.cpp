@@ -1,8 +1,8 @@
 #include "GltfModel.h"
 
+#include "core/Logging.h"
 #include "utility/FileIO.h"
 #include "utility/Image.h"
-#include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <moos/transform.h>
 #include <string>
@@ -15,7 +15,7 @@ std::unique_ptr<Model> GltfModel::load(const std::string& path)
     SCOPED_PROFILE_ZONE();
 
     if (!FileIO::isFileReadable(path)) {
-        LogError("Could not find glTF model file at path '%s'\n", path.c_str());
+        ARKOSE_LOG(Error, "Could not find glTF model file at path '{}'", path);
         return nullptr;
     }
 
@@ -42,20 +42,20 @@ std::unique_ptr<Model> GltfModel::load(const std::string& path)
     }
 
     if (!warning.empty()) {
-        LogWarning("glTF loader warning: %s\n", warning.c_str());
+        ARKOSE_LOG(Warning, "glTF loader warning: {}", warning);
     }
 
     if (!error.empty()) {
-        LogError("glTF loader error: %s\n", error.c_str());
+        ARKOSE_LOG(Error, "glTF loader error: {}", error);
     }
 
     if (!result) {
-        LogError("glTF loader: could not load file '%s'\n", path.c_str());
+        ARKOSE_LOG(Error, "glTF loader: could not load file '{}'", path);
         return nullptr;
     }
 
     if (internal.defaultScene == -1 && internal.scenes.size() > 1) {
-        LogWarning("glTF loader: scene ambiguity in model '%s'\n", path.c_str());
+        ARKOSE_LOG(Warning, "glTF loader: scene ambiguity in model '{}'", path);
     }
 
     return std::make_unique<GltfModel>(path, internal);
@@ -74,7 +74,7 @@ GltfModel::GltfModel(std::string path, const tinygltf::Model& model)
     auto createMatrix = [](const tinygltf::Node& node) -> mat4 {
         if (!node.matrix.empty()) {
             const auto& vals = node.matrix;
-            ASSERT(vals.size() == 16);
+            ARKOSE_ASSERT(vals.size() == 16);
             return mat4(vec4((float)vals[0], (float)vals[1], (float)vals[2], (float)vals[3]),
                         vec4((float)vals[4], (float)vals[5], (float)vals[6], (float)vals[7]),
                         vec4((float)vals[8], (float)vals[9], (float)vals[10], (float)vals[11]),
@@ -166,11 +166,11 @@ GltfMesh::GltfMesh(std::string name, const GltfModel* parent, const tinygltf::Mo
     SCOPED_PROFILE_ZONE();
 
     if (primitive.mode != TINYGLTF_MODE_TRIANGLES) {
-        LogErrorAndExit("glTF mesh: primitive with mode other than triangles is not yet supported\n");
+        ARKOSE_LOG(Fatal, "glTF mesh: primitive with mode other than triangles is not yet supported");
     }
 
     const tinygltf::Accessor& position = *getAccessor("POSITION");
-    ASSERT(position.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && position.type == TINYGLTF_TYPE_VEC3);
+    ARKOSE_ASSERT(position.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && position.type == TINYGLTF_TYPE_VEC3);
     vec3 posMin = { (float)position.minValues[0], (float)position.minValues[1], (float)position.minValues[2] };
     vec3 posMax = { (float)position.maxValues[0], (float)position.maxValues[1], (float)position.maxValues[2] };
     m_aabb = moos::aabb3(posMin, posMax);
@@ -347,7 +347,7 @@ const tinygltf::Accessor* GltfMesh::getAccessor(const char* name) const
 {
     auto entry = m_primitive->attributes.find(name);
     if (entry == m_primitive->attributes.end()) {
-        LogError("glTF mesh: primitive is missing attribute of name '%s'\n", name);
+        ARKOSE_LOG(Error, "glTF mesh: primitive is missing attribute of name '{}'", name);
         return nullptr;
     }
     return &m_model->accessors[entry->second];
@@ -361,11 +361,11 @@ const std::vector<vec3>& GltfMesh::positionData() const
         return m_positionData.value();
 
     const tinygltf::Accessor& accessor = *getAccessor("POSITION");
-    ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-    ASSERT(accessor.type == TINYGLTF_TYPE_VEC3);
+    ARKOSE_ASSERT(accessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+    ARKOSE_ASSERT(accessor.type == TINYGLTF_TYPE_VEC3);
 
     const tinygltf::BufferView& view = m_model->bufferViews[accessor.bufferView];
-    ASSERT(view.byteStride == 0 || view.byteStride == 12); // (i.e. tightly packed)
+    ARKOSE_ASSERT(view.byteStride == 0 || view.byteStride == 12); // (i.e. tightly packed)
 
     const tinygltf::Buffer& buffer = m_model->buffers[view.buffer];
 
@@ -389,11 +389,11 @@ const std::vector<vec2>& GltfMesh::texcoordData() const
         return m_texcoordData.value();
     }
 
-    ASSERT(accessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-    ASSERT(accessor->type == TINYGLTF_TYPE_VEC2);
+    ARKOSE_ASSERT(accessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+    ARKOSE_ASSERT(accessor->type == TINYGLTF_TYPE_VEC2);
 
     const tinygltf::BufferView& view = m_model->bufferViews[accessor->bufferView];
-    ASSERT(view.byteStride == 0 || view.byteStride == 8); // (i.e. tightly packed)
+    ARKOSE_ASSERT(view.byteStride == 0 || view.byteStride == 8); // (i.e. tightly packed)
 
     const tinygltf::Buffer& buffer = m_model->buffers[view.buffer];
 
@@ -417,11 +417,11 @@ const std::vector<vec3>& GltfMesh::normalData() const
         return m_normalData.value();
     }
 
-    ASSERT(accessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-    ASSERT(accessor->type == TINYGLTF_TYPE_VEC3);
+    ARKOSE_ASSERT(accessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+    ARKOSE_ASSERT(accessor->type == TINYGLTF_TYPE_VEC3);
 
     const tinygltf::BufferView& view = m_model->bufferViews[accessor->bufferView];
-    ASSERT(view.byteStride == 0 || view.byteStride == 12); // (i.e. tightly packed)
+    ARKOSE_ASSERT(view.byteStride == 0 || view.byteStride == 12); // (i.e. tightly packed)
 
     const tinygltf::Buffer& buffer = m_model->buffers[view.buffer];
 
@@ -446,11 +446,11 @@ const std::vector<vec4>& GltfMesh::tangentData() const
         return m_tangentData.value();
     }
 
-    ASSERT(accessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
-    ASSERT(accessor->type == TINYGLTF_TYPE_VEC4);
+    ARKOSE_ASSERT(accessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+    ARKOSE_ASSERT(accessor->type == TINYGLTF_TYPE_VEC4);
 
     const tinygltf::BufferView& view = m_model->bufferViews[accessor->bufferView];
-    ASSERT(view.byteStride == 0 || view.byteStride == 16); // (i.e. tightly packed)
+    ARKOSE_ASSERT(view.byteStride == 0 || view.byteStride == 16); // (i.e. tightly packed)
 
     const tinygltf::Buffer& buffer = m_model->buffers[view.buffer];
 
@@ -468,12 +468,12 @@ const std::vector<uint32_t>& GltfMesh::indexData() const
     if (m_indexData.has_value())
         return m_indexData.value();
 
-    ASSERT(isIndexed());
+    ARKOSE_ASSERT(isIndexed());
     const tinygltf::Accessor& accessor = m_model->accessors[m_primitive->indices];
-    ASSERT(accessor.type == TINYGLTF_TYPE_SCALAR);
+    ARKOSE_ASSERT(accessor.type == TINYGLTF_TYPE_SCALAR);
 
     const tinygltf::BufferView& view = m_model->bufferViews[accessor.bufferView];
-    ASSERT(view.byteStride == 0); // (i.e. tightly packed)
+    ARKOSE_ASSERT(view.byteStride == 0); // (i.e. tightly packed)
 
     const tinygltf::Buffer& buffer = m_model->buffers[view.buffer];
     const unsigned char* start = buffer.data.data() + view.byteOffset + accessor.byteOffset;
@@ -516,9 +516,9 @@ const std::vector<uint32_t>& GltfMesh::indexData() const
 
 size_t GltfMesh::indexCount() const
 {
-    ASSERT(isIndexed());
+    ARKOSE_ASSERT(isIndexed());
     const tinygltf::Accessor& accessor = m_model->accessors[m_primitive->indices];
-    ASSERT(accessor.type == TINYGLTF_TYPE_SCALAR);
+    ARKOSE_ASSERT(accessor.type == TINYGLTF_TYPE_SCALAR);
 
     return accessor.count;
 }

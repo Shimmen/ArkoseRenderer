@@ -10,7 +10,7 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
-    ASSERT(vulkanBackend.hasRayTracingSupport());
+    ARKOSE_ASSERT(vulkanBackend.hasRayTracingSupport());
 
     accelerationStructureFlags = 0u;
     accelerationStructureFlags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_NV;
@@ -56,8 +56,8 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
     uint32_t maxInstanceCnt = this->maxInstanceCount();
     VkAccelerationStructureBuildSizesInfoKHR buildSizesInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
     vulkanBackend.rayTracingKHR().vkGetAccelerationStructureBuildSizesKHR(vulkanBackend.device(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &initialBuildInfo, &maxInstanceCnt, &buildSizesInfo);
-    ASSERT(buildSizesInfo.buildScratchSize <= VulkanRayTracingKHR::SharedScratchBufferSize);
-    ASSERT(buildSizesInfo.updateScratchSize <= VulkanRayTracingKHR::SharedScratchBufferSize);
+    ARKOSE_ASSERT(buildSizesInfo.buildScratchSize <= VulkanRayTracingKHR::SharedScratchBufferSize);
+    ARKOSE_ASSERT(buildSizesInfo.updateScratchSize <= VulkanRayTracingKHR::SharedScratchBufferSize);
 
     VkDeviceSize accelerationStructureBufferSize = buildSizesInfo.accelerationStructureSize; // (use min required size)
     accelerationStructureBufferAndAllocation = vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(accelerationStructureBufferSize, true, false);
@@ -70,7 +70,7 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
     accelerationStructureCreateInfo.offset = 0;
 
     if (vulkanBackend.rayTracingKHR().vkCreateAccelerationStructureKHR(vulkanBackend.device(), &accelerationStructureCreateInfo, nullptr, &accelerationStructure) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create top level acceleration structure\n");
+        ARKOSE_LOG(Fatal, "Error trying to create top level acceleration structure");
     }
 
     if (initialInstances.size() > 0) {
@@ -87,7 +87,7 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
             build(cmdBuffer, AccelerationStructureBuildType::FullBuild);
         });
         if (!buildSuccess) {
-            LogErrorAndExit("Error trying to build top level acceleration structure (initial build)\n");
+            ARKOSE_LOG(Fatal, "Error trying to build top level acceleration structure (initial build)");
         }
     }
 }
@@ -116,7 +116,7 @@ void VulkanTopLevelASKHR::setName(const std::string& name)
         nameInfo.pObjectName = name.c_str();
 
         if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-            LogWarning("Could not set debug name for vulkan top level acceleration structure resource.\n");
+            ARKOSE_LOG(Warning, "Could not set debug name for vulkan top level acceleration structure resource.");
         }
     }
 }
@@ -197,7 +197,7 @@ std::vector<VkAccelerationStructureInstanceKHR> VulkanTopLevelASKHR::createInsta
         const RTGeometryInstance& instance = instances[instanceIdx];
 
         auto* blas = dynamic_cast<const VulkanBottomLevelASKHR*>(&instance.blas);
-        ASSERT(blas != nullptr); // ensure we do in face have a KHR version here
+        ARKOSE_ASSERT(blas != nullptr); // ensure we do in face have a KHR version here
 
         VkAccelerationStructureInstanceKHR vkInstance {};
         vkInstance.transform = vulkanBackend.rayTracingKHR().toVkTransformMatrixKHR(instance.transform.worldMatrix());
@@ -219,12 +219,12 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
-    ASSERT(vulkanBackend.hasRayTracingSupport());
+    ARKOSE_ASSERT(vulkanBackend.hasRayTracingSupport());
 
     // All geometries in a BLAS must have the same type (i.e. AABB/triangles)
     bool isTriangleBLAS = geometries().front().hasTriangles();
     for (size_t i = 1; i < geometries().size(); ++i) {
-        ASSERT(geometries()[i].hasTriangles() == isTriangleBLAS);
+        ARKOSE_ASSERT(geometries()[i].hasTriangles() == isTriangleBLAS);
     }
 
     // TODO: Probably don't have a single buffer per transform. It's easy enough to manage a shared one for this.
@@ -241,7 +241,7 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
         transformBufferAndAllocation = vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(totalSize, false, true); // TODO: Can this really be read-only?
 
         if (!vulkanBackend.setBufferMemoryUsingMapping(transformBufferAndAllocation.second, (uint8_t*)transforms.data(), totalSize)) {
-            LogErrorAndExit("Error trying to copy data to the bottom level acceeration structure transform buffer.\n");
+            ARKOSE_LOG(Fatal, "Error trying to copy data to the bottom level acceeration structure transform buffer.");
         }
     }
 
@@ -373,7 +373,7 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
     accelerationStructureCreateInfo.offset = 0;
 
     if (vulkanBackend.rayTracingKHR().vkCreateAccelerationStructureKHR(vulkanBackend.device(), &accelerationStructureCreateInfo, nullptr, &accelerationStructure) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create bottom level acceleration structure\n");
+        ARKOSE_LOG(Fatal, "Error trying to create bottom level acceleration structure");
     }
 
     VkAccelerationStructureDeviceAddressInfoKHR accelerationStructureDeviceAddressInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
@@ -384,7 +384,7 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
     buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
     buildInfo.dstAccelerationStructure = accelerationStructure;
 
-    ASSERT(buildSizesInfo.buildScratchSize <= VulkanRayTracingKHR::SharedScratchBufferSize);
+    ARKOSE_ASSERT(buildSizesInfo.buildScratchSize <= VulkanRayTracingKHR::SharedScratchBufferSize);
     buildInfo.scratchData.deviceAddress = vulkanBackend.rayTracingKHR().sharedScratchBufferDeviceAddress();
 
     VkAccelerationStructureBuildRangeInfoKHR* rangeInfosData = rangeInfos.data();
@@ -392,7 +392,7 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
         vulkanBackend.rayTracingKHR().vkCmdBuildAccelerationStructuresKHR(cmdBuffer, 1, &buildInfo, &rangeInfosData);
     });
     if (!buildSuccess) {
-        LogErrorAndExit("Error trying to build bottom level acceleration structure\n");
+        ARKOSE_LOG(Fatal, "Error trying to build bottom level acceleration structure");
     }
 
     associatedBuffers.push_back(accelerationStructureBufferAndAllocation);
@@ -429,7 +429,7 @@ void VulkanBottomLevelASKHR::setName(const std::string& name)
         nameInfo.pObjectName = name.c_str();
 
         if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-            LogWarning("Could not set debug name for vulkan bottom level acceleration structure resource.\n");
+            ARKOSE_LOG(Warning, "Could not set debug name for vulkan bottom level acceleration structure resource.");
         }
     }
 }

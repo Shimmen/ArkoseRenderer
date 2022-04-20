@@ -1,7 +1,7 @@
 #include "Frustum.h"
 
 #include "utility/Profiling.h"
-#include "utility/util.h"
+#include "core/Assert.h"
 
 namespace geometry {
 
@@ -20,7 +20,7 @@ Frustum Frustum::createFromProjectionMatrix(mat4 M)
 Frustum::Frustum(Plane planes[6])
 {
     for (size_t i = 0; i < 6; ++i) {
-        ASSERT(!planes[i].isDegenerate());
+        ARKOSE_ASSERT(!planes[i].isDegenerate());
         m_planes[i] = planes[i];
     }
 }

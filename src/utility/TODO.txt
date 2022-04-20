@@ -1,0 +1,4 @@
+TODO
+====
+
+Over time we should try to eliminate this directory, or at least move thing that aren't "utility" away from here, which is most of it.

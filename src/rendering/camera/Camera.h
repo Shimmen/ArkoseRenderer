@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "utility/Badge.h"
+#include "core/Badge.h"
 #include "utility/Extent.h"
 #include "utility/Input.h"
 #include <moos/matrix.h>

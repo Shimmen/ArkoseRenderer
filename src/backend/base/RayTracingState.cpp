@@ -1,16 +1,16 @@
 #include "RayTracingState.h"
 
 #include "backend/shader/Shader.h"
-#include "utility/util.h"
+#include "core/Assert.h"
 
 HitGroup::HitGroup(ShaderFile closestHit, std::optional<ShaderFile> anyHit, std::optional<ShaderFile> intersection)
     : m_closestHit(closestHit)
     , m_anyHit(anyHit)
     , m_intersection(intersection)
 {
-    ASSERT(closestHit.type() == ShaderFileType::RTClosestHit);
-    ASSERT(!anyHit.has_value() || anyHit.value().type() == ShaderFileType::RTAnyHit);
-    ASSERT(!intersection.has_value() || intersection.value().type() == ShaderFileType::RTIntersection);
+    ARKOSE_ASSERT(closestHit.type() == ShaderFileType::RTClosestHit);
+    ARKOSE_ASSERT(!anyHit.has_value() || anyHit.value().type() == ShaderFileType::RTAnyHit);
+    ARKOSE_ASSERT(!intersection.has_value() || intersection.value().type() == ShaderFileType::RTIntersection);
 }
 
 ShaderBindingTable::ShaderBindingTable(ShaderFile rayGen, std::vector<HitGroup> hitGroups, std::vector<ShaderFile> missShaders)
@@ -18,10 +18,10 @@ ShaderBindingTable::ShaderBindingTable(ShaderFile rayGen, std::vector<HitGroup> 
     , m_hitGroups(std::move(hitGroups))
     , m_missShaders(std::move(missShaders))
 {
-    ASSERT(m_rayGen.type() == ShaderFileType::RTRaygen);
-    ASSERT(!m_hitGroups.empty());
+    ARKOSE_ASSERT(m_rayGen.type() == ShaderFileType::RTRaygen);
+    ARKOSE_ASSERT(!m_hitGroups.empty());
     for (const auto& miss : m_missShaders) {
-        ASSERT(miss.type() == ShaderFileType::RTMiss);
+        ARKOSE_ASSERT(miss.type() == ShaderFileType::RTMiss);
     }
 
     m_pseudoShader = Shader(allReferencedShaderFiles(), ShaderType::RayTrace);

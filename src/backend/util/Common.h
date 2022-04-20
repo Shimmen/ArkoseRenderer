@@ -1,13 +1,13 @@
 #pragma once
 
-#include "utility/util.h"
-#include "utility/Extent.h"
+#include "core/Assert.h"
+#include "core/Types.h"
 
 struct ClearColor {
 
     static ClearColor srgbColor(float r, float g, float b, float a = 1.0f)
     {
-        return ClearColor(pow(r, 2.2f), pow(g, 2.2f), pow(b, 2.2f), a);
+        return ClearColor(powf(r, 2.2f), powf(g, 2.2f), powf(b, 2.2f), a);
     }
 
     static ClearColor srgbColor(float rgb[3], float a = 1.0f)

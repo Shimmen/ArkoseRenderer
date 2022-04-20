@@ -19,7 +19,7 @@ struct StateBindings {
         for (uint32_t index = 0; index < m_orderedBindingSets.size(); ++index) {
             BindingSet* bindingSet = m_orderedBindingSets[index];
             if (bindingSet == nullptr && shouldAutoBind())
-                continue; //LogErrorAndExit("Non-contiguous bindings are not supported right now! (This can probably be changed later if we want to)");
+                continue; //ARKOSE_LOG(Fatal, "Non-contiguous bindings are not supported right now! (This can probably be changed later if we want to)");
             else
                 callback(index, *bindingSet);
         }

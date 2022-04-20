@@ -7,11 +7,12 @@
 #include "backend/vulkan/VulkanResources.h"
 #include "backend/shader/Shader.h"
 #include "backend/shader/ShaderManager.h"
+#include "core/Defer.h"
 #include "rendering/Registry.h"
 #include "utility/FileIO.h"
-#include "utility/Logging.h"
+#include "core/Logging.h"
 #include "utility/Profiling.h"
-#include "utility/util.h"
+#include "core/Assert.h"
 #include <algorithm>
 #include <cstring>
 #include <fmt/format.h>
@@ -53,9 +54,9 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
     std::vector<const char*> requestedLayers;
 
     if (vulkanDebugMode) {
-        LogInfo("VulkanBackend: debug mode enabled!\n");
+        ARKOSE_LOG(Info, "VulkanBackend: debug mode enabled!");
 
-        ASSERT(hasSupportForLayer("VK_LAYER_KHRONOS_validation"));
+        ARKOSE_ASSERT(hasSupportForLayer("VK_LAYER_KHRONOS_validation"));
         requestedLayers.emplace_back("VK_LAYER_KHRONOS_validation");
 
         auto dbgMessengerCreateInfo = VulkanDebugUtils::debugMessengerCreateInfo();
@@ -63,7 +64,7 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
 
         m_debugUtils = std::make_unique<VulkanDebugUtils>(*this, m_instance);
         if (debugUtils().vkCreateDebugUtilsMessengerEXT(m_instance, &dbgMessengerCreateInfo, nullptr, &m_debugMessenger) != VK_SUCCESS) {
-            LogErrorAndExit("VulkanBackend: could not create the debug messenger, exiting.\n");
+            ARKOSE_LOG(Fatal, "VulkanBackend: could not create the debug messenger, exiting.");
         }
 
         VkDebugReportCallbackCreateInfoEXT dbgReportCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT };
@@ -72,7 +73,7 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
         dbgReportCreateInfo.pUserData = nullptr;
 
         if (debugUtils().vkCreateDebugReportCallbackEXT(m_instance, &dbgReportCreateInfo, nullptr, &m_debugReportCallback) != VK_SUCCESS) {
-            LogErrorAndExit("VulkanBackend: could not create the debug reporter, exiting.\n");
+            ARKOSE_LOG(Fatal, "VulkanBackend: could not create the debug reporter, exiting.");
         }
 
     } else {
@@ -80,11 +81,12 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
     }
 
     if (glfwCreateWindowSurface(m_instance, window, nullptr, &m_surface) != VK_SUCCESS)
-        LogErrorAndExit("VulkanBackend: can't create window surface, exiting.\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: can't create window surface, exiting.");
 
     m_physicalDevice = pickBestPhysicalDevice();
     vkGetPhysicalDeviceProperties(physicalDevice(), &m_physicalDeviceProperties);
-    LogInfo("VulkanBackend: using physical device '%s'\n", m_physicalDeviceProperties.deviceName);
+    auto deviceName = std::string(m_physicalDeviceProperties.deviceName);
+    ARKOSE_LOG(Info, "VulkanBackend: using physical device '{}'", deviceName);
 
     findQueueFamilyIndices(m_physicalDevice, m_surface);
 
@@ -98,7 +100,7 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
     }
 
     if (!collectAndVerifyCapabilitySupport(appSpecification))
-        LogErrorAndExit("VulkanBackend: could not verify support for all capabilities required by the app\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not verify support for all capabilities required by the app");
 
     m_device = createDevice(requestedLayers, m_physicalDevice);
 
@@ -116,36 +118,36 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
         allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     }
     if (vmaCreateAllocator(&allocatorInfo, &m_memoryAllocator) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend: could not create memory allocator, exiting.\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not create memory allocator, exiting.");
     }
 
     VkCommandPoolCreateInfo poolCreateInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
     poolCreateInfo.queueFamilyIndex = m_graphicsQueue.familyIndex;
     poolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; // (so we can easily reuse them each frame)
     if (vkCreateCommandPool(device(), &poolCreateInfo, nullptr, &m_defaultCommandPool) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend: could not create command pool for the graphics queue, exiting.\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not create command pool for the graphics queue, exiting.");
     }
 
     VkCommandPoolCreateInfo transientPoolCreateInfo = { VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO };
     transientPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT;
     transientPoolCreateInfo.queueFamilyIndex = m_graphicsQueue.familyIndex;
     if (vkCreateCommandPool(device(), &transientPoolCreateInfo, nullptr, &m_transientCommandPool) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend: could not create transient command pool, exiting.\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not create transient command pool, exiting.");
     }
 
     if (hasActiveCapability(Backend::Capability::RayTracing)) {
         switch (rayTracingBackend()) {
         case RayTracingBackend::NvExtension:
             m_rayTracingNv = std::make_unique<VulkanRayTracingNV>(*this, physicalDevice(), device());
-            LogInfo("VulkanBackend: using NV ray tracing backend\n");
+            ARKOSE_LOG(Info, "VulkanBackend: using NV ray tracing backend");
             break;
         case RayTracingBackend::KhrExtension:
             m_rayTracingKhr = std::make_unique<VulkanRayTracingKHR>(*this, physicalDevice(), device());
-            LogInfo("VulkanBackend: using KHR ray tracing backend\n");
+            ARKOSE_LOG(Info, "VulkanBackend: using KHR ray tracing backend");
             break;
         }
     } else {
-        LogInfo("VulkanBackend: no ray tracing backend\n");
+        ARKOSE_LOG(Info, "VulkanBackend: no ray tracing backend");
     }
 
     // Create empty stub descriptor set layout (useful for filling gaps as Vulkan doesn't allow having gaps)
@@ -153,7 +155,7 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
     descriptorSetLayoutCreateInfo.bindingCount = 0;
     descriptorSetLayoutCreateInfo.pBindings = nullptr;
     if (vkCreateDescriptorSetLayout(device(), &descriptorSetLayoutCreateInfo, nullptr, &m_emptyDescriptorSetLayout) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create empty stub descriptor set layout\n");
+        ARKOSE_LOG(Fatal, "Error trying to create empty stub descriptor set layout");
     }
 
     m_pipelineCache = createAndLoadPipelineCacheFromDisk();
@@ -226,7 +228,7 @@ bool VulkanBackend::hasSupportForLayer(const std::string& name) const
 bool VulkanBackend::hasSupportForExtension(const std::string& name) const
 {
     if (m_physicalDevice == VK_NULL_HANDLE)
-        LogErrorAndExit("Checking support for extension but no physical device exist yet. Maybe you meant to check for instance extensions?\n");
+        ARKOSE_LOG(Fatal, "Checking support for extension but no physical device exist yet. Maybe you meant to check for instance extensions?");
 
     auto it = m_availableExtensions.find(name);
     if (it == m_availableExtensions.end())
@@ -316,7 +318,7 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
     bool allRequiredSupported = true;
 
     if (!features.samplerAnisotropy || !features.fillModeNonSolid || !features.fragmentStoresAndAtomics || !features.vertexPipelineStoresAndAtomics) {
-        LogError("VulkanBackend: no support for required common device feature\n");
+        ARKOSE_LOG(Error, "VulkanBackend: no support for required common device feature");
         allRequiredSupported = false;
     }
 
@@ -325,7 +327,7 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         !features.shaderStorageImageArrayDynamicIndexing || !vk12features.shaderStorageImageArrayNonUniformIndexing ||
         !features.shaderSampledImageArrayDynamicIndexing || !vk12features.shaderSampledImageArrayNonUniformIndexing ||
         !vk12features.runtimeDescriptorArray || !vk12features.descriptorBindingVariableDescriptorCount) {
-        LogError("VulkanBackend: no support for required common dynamic & non-uniform indexing device features\n");
+        ARKOSE_LOG(Error, "VulkanBackend: no support for required common dynamic & non-uniform indexing device features");
         allRequiredSupported = false;
     }
 
@@ -333,28 +335,28 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         !vk12features.descriptorBindingVariableDescriptorCount ||
         !vk12features.descriptorBindingUpdateUnusedWhilePending ||
         !vk12features.descriptorBindingSampledImageUpdateAfterBind) {
-        LogError("VulkanBackend: no support for required common descriptor-binding device features\n");
+        ARKOSE_LOG(Error, "VulkanBackend: no support for required common descriptor-binding device features");
         allRequiredSupported = false;
     }
 
     if (!vk12features.scalarBlockLayout) {
-        LogError("VulkanBackend: no support for scalar layout in shader storage blocks\n");
+        ARKOSE_LOG(Error, "VulkanBackend: no support for scalar layout in shader storage blocks");
         allRequiredSupported = false;
     }
 
     if (!vk12features.drawIndirectCount) {
-        LogError("VulkanBackend: no support for required common drawing related device features\n");
+        ARKOSE_LOG(Error, "VulkanBackend: no support for required common drawing related device features");
         allRequiredSupported = false;
     }
 
     if (!vk12features.imagelessFramebuffer) {
-        LogError("VulkanBackend: no support for imageless framebuffers which is required\n");
+        ARKOSE_LOG(Error, "VulkanBackend: no support for imageless framebuffers which is required");
         allRequiredSupported = false;
     }
 
     if (vulkanDebugMode && !(vk12features.bufferDeviceAddress && vk12features.bufferDeviceAddressCaptureReplay)) {
-        LogError("VulkanBackend: no support for buffer device address & buffer device address capture replay, which is required by e.g. Nsight for debugging. "
-                 "If this is a problem, try compiling and running with vulkanDebugMode set to false.\n");
+        ARKOSE_LOG(Error, "VulkanBackend: no support for buffer device address & buffer device address capture replay, which is required by e.g. Nsight for debugging. "
+                 "If this is a problem, try compiling and running with vulkanDebugMode set to false.");
         allRequiredSupported = false;
     }
 
@@ -362,7 +364,7 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         if (isSupported(cap)) {
             m_activeCapabilities[cap] = true;
         } else {
-            LogError("VulkanBackend: no support for required '%s' capability\n", capabilityName(cap).c_str());
+            ARKOSE_LOG(Error, "VulkanBackend: no support for required '{}' capability", capabilityName(cap));
             allRequiredSupported = false;
         }
     }
@@ -371,7 +373,7 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         if (isSupported(cap)) {
             m_activeCapabilities[cap] = true;
         } else {
-            LogInfo("VulkanBackend: no support for optional '%s' capability\n", capabilityName(cap).c_str());
+            ARKOSE_LOG(Info, "VulkanBackend: no support for optional '{}' capability", capabilityName(cap));
         }
     }
 
@@ -470,17 +472,17 @@ VkSurfaceFormatKHR VulkanBackend::pickBestSurfaceFormat() const
         // We use the *_UNORM format since "working directly with SRGB colors is a little bit challenging"
         // (https://vulkan-tutorial.com/Drawing_a_triangle/Presentation/Swap_chain). I don't really know what that's about..
         if (format.format == VK_FORMAT_B8G8R8A8_UNORM && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-            LogInfo("VulkanBackend: picked optimal RGBA8 sRGB surface format.\n");
+            ARKOSE_LOG(Info, "VulkanBackend: picked optimal RGBA8 sRGB surface format.");
             return format;
         }
     }
 
     // If we didn't find the optimal one, just chose an arbitrary one
-    LogInfo("VulkanBackend: couldn't find optimal surface format, so picked arbitrary supported format.\n");
+    ARKOSE_LOG(Info, "VulkanBackend: couldn't find optimal surface format, so picked arbitrary supported format.");
     VkSurfaceFormatKHR format = surfaceFormats[0];
 
     if (format.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-        LogWarning("VulkanBackend: could not find a sRGB surface format, so images won't be pretty!\n");
+        ARKOSE_LOG(Warning, "VulkanBackend: could not find a sRGB surface format, so images won't be pretty!");
     }
 
     return format;
@@ -496,13 +498,13 @@ VkPresentModeKHR VulkanBackend::pickBestPresentMode() const
     for (const auto& mode : presentModes) {
         // Try to chose the mailbox mode, i.e. use-last-fully-generated-image mode
         if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {
-            LogInfo("VulkanBackend: picked optimal mailbox present mode.\n");
+            ARKOSE_LOG(Info, "VulkanBackend: picked optimal mailbox present mode.");
             return mode;
         }
     }
 
     // VK_PRESENT_MODE_FIFO_KHR is guaranteed to be available and it basically corresponds to normal v-sync so it's fine
-    LogInfo("VulkanBackend: picked standard FIFO present mode.\n");
+    ARKOSE_LOG(Info, "VulkanBackend: picked standard FIFO present mode.");
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
@@ -511,12 +513,12 @@ VkExtent2D VulkanBackend::pickBestSwapchainExtent() const
     VkSurfaceCapabilitiesKHR surfaceCapabilities {};
 
     if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_physicalDevice, m_surface, &surfaceCapabilities) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend: could not get surface capabilities, exiting.\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not get surface capabilities, exiting.");
     }
 
     if (surfaceCapabilities.currentExtent.width != UINT32_MAX) {
         // The surface has specified the extent (probably to whatever the window extent is) and we should choose that
-        LogInfo("VulkanBackend: using optimal window extents for swap chain.\n");
+        ARKOSE_LOG(Info, "VulkanBackend: using optimal window extents for swap chain.");
         return surfaceCapabilities.currentExtent;
     }
 
@@ -528,7 +530,7 @@ VkExtent2D VulkanBackend::pickBestSwapchainExtent() const
 
     extent.width = std::clamp(static_cast<uint32_t>(framebufferWidth), surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
     extent.height = std::clamp(static_cast<uint32_t>(framebufferHeight), surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
-    LogInfo("VulkanBackend: using specified extents (%u x %u) for swap chain.\n", extent.width, extent.height);
+    ARKOSE_LOG(Info, "VulkanBackend: using specified extents ({} x {}) for swap chain.", extent.width, extent.height);
 
     return extent;
 }
@@ -539,7 +541,7 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
 
     for (auto& layer : requestedLayers) {
         if (!hasSupportForLayer(layer))
-            LogErrorAndExit("VulkanBackend: missing layer '%s'\n", layer);
+            ARKOSE_LOG(Fatal, "VulkanBackend: missing layer '{}'", layer);
     }
 
     bool includeValidationFeatures = false;
@@ -549,17 +551,17 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
         const char** requiredExtensions = glfwGetRequiredInstanceExtensions(&requiredCount);
         for (uint32_t i = 0; i < requiredCount; ++i) {
             const char* name = requiredExtensions[i];
-            ASSERT(hasSupportForInstanceExtension(name));
+            ARKOSE_ASSERT(hasSupportForInstanceExtension(name));
             instanceExtensions.emplace_back(name);
         }
 
         // Required for checking support of complex features. It's probably fine to always require it. If it doesn't exist, we deal with it then..
-        ASSERT(hasSupportForInstanceExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME));
+        ARKOSE_ASSERT(hasSupportForInstanceExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME));
         instanceExtensions.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
         // For debug messages etc.
         if (vulkanDebugMode) {
-            ASSERT(hasSupportForInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME));
+            ARKOSE_ASSERT(hasSupportForInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME));
             instanceExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
             if (hasSupportForInstanceExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME)) {
@@ -610,7 +612,7 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
 
     VkInstance instance;
     if (vkCreateInstance(&instanceCreateInfo, nullptr, &instance) != VK_SUCCESS)
-        LogErrorAndExit("VulkanBackend: could not create instance.\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not create instance.");
 
     return instance;
 }
@@ -637,14 +639,14 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 
     std::vector<const char*> deviceExtensions {};
 
-    ASSERT(hasSupportForExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
+    ARKOSE_ASSERT(hasSupportForExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
     deviceExtensions.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     if (vulkanDebugMode && hasSupportForExtension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME))
         deviceExtensions.emplace_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
 
     #if defined(TRACY_ENABLE)
-        ASSERT(hasSupportForExtension(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME));
+        ARKOSE_ASSERT(hasSupportForExtension(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME));
         deviceExtensions.emplace_back(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
     #endif
 
@@ -757,7 +759,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 
     VkDevice device;
     if (vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device) != VK_SUCCESS)
-        LogErrorAndExit("VulkanBackend: could not create a device, exiting.\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not create a device, exiting.");
 
     return device;
 }
@@ -799,13 +801,13 @@ void VulkanBackend::findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSu
     }
 
     if (!foundGraphicsQueue) {
-        LogErrorAndExit("VulkanBackend: could not find a graphics queue, exiting.\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not find a graphics queue, exiting.");
     }
     if (!foundComputeQueue) {
-        LogErrorAndExit("VulkanBackend: could not find a compute queue, exiting.\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not find a compute queue, exiting.");
     }
     if (!foundPresentQueue) {
-        LogErrorAndExit("VulkanBackend: could not find a present queue, exiting.\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not find a present queue, exiting.");
     }
 }
 
@@ -816,14 +818,14 @@ VkPhysicalDevice VulkanBackend::pickBestPhysicalDevice() const
     uint32_t count;
     vkEnumeratePhysicalDevices(m_instance, &count, nullptr);
     if (count < 1) {
-        LogErrorAndExit("VulkanBackend: could not find any physical devices with Vulkan support, exiting.\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not find any physical devices with Vulkan support, exiting.");
     }
 
     std::vector<VkPhysicalDevice> devices(count);
     vkEnumeratePhysicalDevices(m_instance, &count, devices.data());
 
     if (count > 1) {
-        LogWarning("VulkanBackend: more than one physical device available, one will be chosen arbitrarily (FIXME!)\n");
+        ARKOSE_LOG(Warning, "VulkanBackend: more than one physical device available, one will be chosen arbitrarily (FIXME!)");
     }
 
     // FIXME: Don't just pick the first one if there are more than one!
@@ -851,7 +853,7 @@ VkPipelineCache VulkanBackend::createAndLoadPipelineCacheFromDisk() const
 
     VkPipelineCache pipelineCache;
     if (vkCreatePipelineCache(device(), &pipelineCacheInfo, nullptr, &pipelineCache) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend: could not create pipeline cache, exiting.\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not create pipeline cache, exiting.");
     }
 
     return pipelineCache;
@@ -875,7 +877,7 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
 
     VkSurfaceCapabilitiesKHR surfaceCapabilities;
     if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physicalDevice, surface, &surfaceCapabilities) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend: could not get surface capabilities, exiting.\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not get surface capabilities, exiting.");
     }
 
     VkSwapchainCreateInfoKHR createInfo = { VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR };
@@ -923,7 +925,7 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
     createInfo.oldSwapchain = VK_NULL_HANDLE;
 
     if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &m_swapchain) != VK_SUCCESS) {
-        LogErrorAndExit("VulkanBackend: could not create swapchain, exiting.\n");
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not create swapchain, exiting.");
     }
 
     uint32_t numSwapchainImages;
@@ -961,7 +963,7 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
 
             VkImageView swapchainImageView;
             if (vkCreateImageView(device, &imageViewCreateInfo, nullptr, &swapchainImageView) != VK_SUCCESS) {
-                LogErrorAndExit("VulkanBackend: could not create image view %u (out of %u), exiting.\n", imageIdx, numSwapchainImages);
+                ARKOSE_LOG(Fatal, "VulkanBackend: could not create image view {} (out of {}), exiting.", imageIdx, numSwapchainImages);
             }
 
             swapchainImageContext->imageView = swapchainImageView;
@@ -1031,10 +1033,10 @@ Extent2D VulkanBackend::recreateSwapchain()
         int windowFramebufferWidth, windowFramebufferHeight;
         glfwGetFramebufferSize(m_window, &windowFramebufferWidth, &windowFramebufferHeight);
         if (windowFramebufferWidth == 0 || windowFramebufferHeight == 0) {
-            LogInfo("VulkanBackend: rendering paused since there are no pixels to draw to.\n");
+            ARKOSE_LOG(Info, "VulkanBackend: rendering paused since there are no pixels to draw to.");
             glfwWaitEvents();
         } else {
-            LogInfo("VulkanBackend: rendering resumed.\n");
+            ARKOSE_LOG(Info, "VulkanBackend: rendering resumed.");
             break;
         }
     }
@@ -1056,7 +1058,7 @@ Extent2D VulkanBackend::recreateSwapchain()
 void VulkanBackend::createFrameContexts()
 {
     // We need the swapchain to be created for reference!
-    ASSERT(m_swapchainImageContexts.size() > 0);
+    ARKOSE_ASSERT(m_swapchainImageContexts.size() > 0);
     SwapchainImageContext& referenceImageContext = *m_swapchainImageContexts[0];
 
     for (int i = 0; i < NumInFlightFrames; ++i) {
@@ -1077,7 +1079,7 @@ void VulkanBackend::createFrameContexts()
             fenceCreateInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
             if (vkCreateFence(device(), &fenceCreateInfo, nullptr, &frameContext.frameFence) != VK_SUCCESS) {
-                LogErrorAndExit("VulkanBackend: could not create frame context fence, exiting.\n");
+                ARKOSE_LOG(Fatal, "VulkanBackend: could not create frame context fence, exiting.");
             }
         }
 
@@ -1086,11 +1088,11 @@ void VulkanBackend::createFrameContexts()
             VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
             if (vkCreateSemaphore(device(), &semaphoreCreateInfo, nullptr, &frameContext.imageAvailableSemaphore) != VK_SUCCESS) {
-                LogErrorAndExit("VulkanBackend: could not create imageAvailableSemaphore, exiting.\n");
+                ARKOSE_LOG(Fatal, "VulkanBackend: could not create imageAvailableSemaphore, exiting.");
             }
 
             if (vkCreateSemaphore(device(), &semaphoreCreateInfo, nullptr, &frameContext.renderingFinishedSemaphore) != VK_SUCCESS) {
-                LogErrorAndExit("VulkanBackend: could not create renderingFinishedSemaphore, exiting.\n");
+                ARKOSE_LOG(Fatal, "VulkanBackend: could not create renderingFinishedSemaphore, exiting.");
             }
         }
 
@@ -1105,7 +1107,7 @@ void VulkanBackend::createFrameContexts()
 
             VkCommandBuffer commandBuffer;
             if (vkAllocateCommandBuffers(device(), &commandBufferAllocateInfo, &commandBuffer) != VK_SUCCESS) {
-                LogErrorAndExit("VulkanBackend: could not create command buffer, exiting.\n");
+                ARKOSE_LOG(Fatal, "VulkanBackend: could not create command buffer, exiting.");
             }
 
             frameContext.commandBuffer = commandBuffer;
@@ -1119,7 +1121,7 @@ void VulkanBackend::createFrameContexts()
 
             VkQueryPool timestampQueryPool;
             if (vkCreateQueryPool(device(), &timestampQueryPoolCreateInfo, nullptr, &timestampQueryPool) != VK_SUCCESS) {
-                LogErrorAndExit("VulkanBackend: could not create timestamp query pool, exiting.\n");
+                ARKOSE_LOG(Fatal, "VulkanBackend: could not create timestamp query pool, exiting.");
             }
 
             frameContext.timestampQueryPool = timestampQueryPool;
@@ -1202,13 +1204,13 @@ void VulkanBackend::setupDearImgui()
     descPoolCreateInfo.poolSizeCount = (uint32_t)IM_ARRAYSIZE(poolSizes);
     descPoolCreateInfo.pPoolSizes = poolSizes;
     if (vkCreateDescriptorPool(device(), &descPoolCreateInfo, nullptr, &m_guiDescriptorPool) != VK_SUCCESS) {
-        LogErrorAndExit("DearImGui error while setting up descriptor pool\n");
+        ARKOSE_LOG(Fatal, "DearImGui error while setting up descriptor pool");
     }
 
     ImGui_ImplVulkan_InitInfo initInfo = {};
     initInfo.CheckVkResultFn = [](VkResult result) {
         if (result != VK_SUCCESS) {
-            LogErrorAndExit("DearImGui vulkan error!\n");
+            ARKOSE_LOG(Fatal, "DearImGui vulkan error!");
         }
     };
 
@@ -1226,7 +1228,7 @@ void VulkanBackend::setupDearImgui()
     initInfo.DescriptorPool = m_guiDescriptorPool;
     initInfo.PipelineCache = VK_NULL_HANDLE;
 
-    ASSERT(m_guiRenderTargetForPresenting != nullptr); // make sure this is created after the swapchain is created so we know what to render to!
+    ARKOSE_ASSERT(m_guiRenderTargetForPresenting != nullptr); // make sure this is created after the swapchain is created so we know what to render to!
     VkRenderPass compatibleRenderPassForImGui = m_guiRenderTargetForPresenting->compatibleRenderPass;
     ImGui_ImplVulkan_Init(&initInfo, compatibleRenderPassForImGui);
 
@@ -1304,7 +1306,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
         VkResult result = vkWaitForFences(device(), 1, &frameContext.frameFence, VK_TRUE, timeout);
 
         if (result == VK_ERROR_DEVICE_LOST) {
-            LogErrorAndExit("VulkanBackend: device was lost while waiting for frame fence (frame %u).\n", m_currentFrameIndex);
+            ARKOSE_LOG(Fatal, "VulkanBackend: device was lost while waiting for frame fence (frame {}).", m_currentFrameIndex);
         }
     }
 
@@ -1325,11 +1327,11 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
         }
         if (acquireResult == VK_SUBOPTIMAL_KHR) {
             // Since we did manage to acquire an image, just roll with it for now, but it will probably resolve itself after presenting
-            LogWarning("VulkanBackend: next image was acquired but it's suboptimal, ignoring.\n");
+            ARKOSE_LOG(Warning, "VulkanBackend: next image was acquired but it's suboptimal, ignoring.");
         }
 
         if (acquireResult != VK_SUCCESS && acquireResult != VK_SUBOPTIMAL_KHR) {
-            LogError("VulkanBackend: error acquiring next swapchain image.\n");
+            ARKOSE_LOG(Error, "VulkanBackend: error acquiring next swapchain image.");
         }
     }
 
@@ -1351,7 +1353,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
             for (uint32_t startIdx = 0; startIdx < frameContext.numTimestampsWrittenLastTime; startIdx += 2) {
                 uint32_t endIdx = startIdx + 1;
                 if (frameContext.timestampResults[startIdx].available == 0 || frameContext.timestampResults[endIdx].available == 0) {
-                    LogError("VulkanBackend: timestamps not available (this probably shouldn't happen?)\n");
+                    ARKOSE_LOG(Error, "VulkanBackend: timestamps not available (this probably shouldn't happen?)");
                 }
             }
         }
@@ -1380,7 +1382,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
         VkCommandBuffer commandBuffer = frameContext.commandBuffer;
         if (vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo) != VK_SUCCESS) {
-            LogError("VulkanBackend: error beginning command buffer command!\n");
+            ARKOSE_LOG(Error, "VulkanBackend: error beginning command buffer command!");
         }
 
         m_currentlyExecutingMainCommandBuffer = true;
@@ -1474,14 +1476,14 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
         vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameContext.timestampQueryPool, frameEndTimestampIdx);
         frameContext.numTimestampsWrittenLastTime = nextTimestampQueryIdx;
-        ASSERT(frameContext.numTimestampsWrittenLastTime < FrameContext::TimestampQueryPoolCount);
+        ARKOSE_ASSERT(frameContext.numTimestampsWrittenLastTime < FrameContext::TimestampQueryPoolCount);
 
         #if defined(TRACY_ENABLE)
             TracyVkCollect(frameContext.tracyVulkanContext, commandBuffer);
         #endif
 
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
-            LogError("VulkanBackend: error ending command buffer command!\n");
+            ARKOSE_LOG(Error, "VulkanBackend: error ending command buffer command!");
         }
 
         m_currentlyExecutingMainCommandBuffer = false;
@@ -1505,12 +1507,12 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
         submitInfo.pSignalSemaphores = &frameContext.renderingFinishedSemaphore;
 
         if (vkResetFences(device(), 1, &frameContext.frameFence) != VK_SUCCESS) {
-            LogError("VulkanBackend: error resetting in-flight frame fence.\n");
+            ARKOSE_LOG(Error, "VulkanBackend: error resetting in-flight frame fence.");
         }
 
         VkResult submitStatus = vkQueueSubmit(m_graphicsQueue.queue, 1, &submitInfo, frameContext.frameFence);
         if (submitStatus != VK_SUCCESS) {
-            LogError("VulkanBackend: could not submit the graphics queue.\n");
+            ARKOSE_LOG(Error, "VulkanBackend: could not submit the graphics queue.");
         }
     }
 
@@ -1533,7 +1535,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
             recreateSwapchain();
             reconstructRenderPipelineResources(renderPipeline);
         } else if (presentResult != VK_SUCCESS) {
-            LogError("VulkanBackend: could not present swapchain (frame %u).\n", m_currentFrameIndex);
+            ARKOSE_LOG(Error, "VulkanBackend: could not present swapchain (frame {}).", m_currentFrameIndex);
         }
     }
 
@@ -1565,7 +1567,7 @@ void VulkanBackend::reconstructRenderPipelineResources(RenderPipeline& renderPip
     SCOPED_PROFILE_ZONE_BACKEND();
 
     size_t numFrameManagers = m_frameContexts.size();
-    ASSERT(numFrameManagers == NumInFlightFrames);
+    ARKOSE_ASSERT(numFrameManagers == NumInFlightFrames);
 
     // We use imageless framebuffers for this one so it doesn't matter that we don't construct the render pipeline knowing the exact images.
     const RenderTarget& templateWindowRenderTarget = *m_clearingRenderTarget;
@@ -1583,8 +1585,8 @@ void VulkanBackend::reconstructRenderPipelineResources(RenderPipeline& renderPip
 bool VulkanBackend::issueSingleTimeCommand(const std::function<void(VkCommandBuffer)>& callback) const
 {
     if (m_currentlyExecutingMainCommandBuffer && vulkanVerboseDebugMessages)
-        LogWarning("Issuing single-time command while also \"inside\" the main command buffer. This will cause a stall which "
-                   "can be avoided by e.g. using UploadBuffer to stage multiple uploads and copy them over on one go.\n");
+        ARKOSE_LOG(Warning, "Issuing single-time command while also \"inside\" the main command buffer. This will cause a stall which "
+                   "can be avoided by e.g. using UploadBuffer to stage multiple uploads and copy them over on one go.");
 
     VkCommandBufferAllocateInfo commandBufferAllocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
     commandBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
@@ -1601,14 +1603,14 @@ bool VulkanBackend::issueSingleTimeCommand(const std::function<void(VkCommandBuf
     beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     if (vkBeginCommandBuffer(oneTimeCommandBuffer, &beginInfo) != VK_SUCCESS) {
-        LogError("VulkanBackend: could not begin the command buffer.\n");
+        ARKOSE_LOG(Error, "VulkanBackend: could not begin the command buffer.");
         return false;
     }
 
     callback(oneTimeCommandBuffer);
 
     if (vkEndCommandBuffer(oneTimeCommandBuffer) != VK_SUCCESS) {
-        LogError("VulkanBackend: could not end the command buffer.\n");
+        ARKOSE_LOG(Error, "VulkanBackend: could not end the command buffer.");
         return false;
     }
 
@@ -1617,11 +1619,11 @@ bool VulkanBackend::issueSingleTimeCommand(const std::function<void(VkCommandBuf
     submitInfo.pCommandBuffers = &oneTimeCommandBuffer;
 
     if (vkQueueSubmit(m_graphicsQueue.queue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
-        LogError("VulkanBackend: could not submit the single-time command buffer.\n");
+        ARKOSE_LOG(Error, "VulkanBackend: could not submit the single-time command buffer.");
         return false;
     }
     if (vkQueueWaitIdle(m_graphicsQueue.queue) != VK_SUCCESS) {
-        LogError("VulkanBackend: error while waiting for the graphics queue to idle.\n");
+        ARKOSE_LOG(Error, "VulkanBackend: error while waiting for the graphics queue to idle.");
         return false;
     }
 
@@ -1642,7 +1644,7 @@ bool VulkanBackend::copyBuffer(VkBuffer source, VkBuffer destination, size_t siz
             vkCmdCopyBuffer(commandBuffer, source, destination, 1, &bufferCopyRegion);
         });
         if (!success) {
-            LogError("VulkanBackend: error copying buffer, refer to issueSingleTimeCommand errors for more information.\n");
+            ARKOSE_LOG(Error, "VulkanBackend: error copying buffer, refer to issueSingleTimeCommand errors for more information.");
             return false;
         }
     }
@@ -1660,7 +1662,7 @@ bool VulkanBackend::setBufferMemoryUsingMapping(VmaAllocation allocation, const 
 
     void* mappedMemory;
     if (vmaMapMemory(globalAllocator(), allocation, &mappedMemory) != VK_SUCCESS) {
-        LogError("VulkanBackend: could not map staging buffer.\n");
+        ARKOSE_LOG(Error, "VulkanBackend: could not map staging buffer.");
         return false;
     }
 
@@ -1691,7 +1693,7 @@ bool VulkanBackend::setBufferDataUsingStagingBuffer(VkBuffer buffer, const uint8
     VkBuffer stagingBuffer;
     VmaAllocation stagingAllocation;
     if (vmaCreateBuffer(globalAllocator(), &bufferCreateInfo, &allocCreateInfo, &stagingBuffer, &stagingAllocation, nullptr) != VK_SUCCESS) {
-        LogError("VulkanBackend: could not create staging buffer.\n");
+        ARKOSE_LOG(Error, "VulkanBackend: could not create staging buffer.");
     }
 
     AtScopeExit cleanUpStagingBuffer([&] {
@@ -1699,12 +1701,12 @@ bool VulkanBackend::setBufferDataUsingStagingBuffer(VkBuffer buffer, const uint8
     });
 
     if (!setBufferMemoryUsingMapping(stagingAllocation, data, size, 0)) {
-        LogError("VulkanBackend: could set staging buffer memory.\n");
+        ARKOSE_LOG(Error, "VulkanBackend: could set staging buffer memory.");
         return false;
     }
 
     if (!copyBuffer(stagingBuffer, buffer, size, offset, commandBuffer)) {
-        LogError("VulkanBackend: could not copy from staging buffer to buffer.\n");
+        ARKOSE_LOG(Error, "VulkanBackend: could not copy from staging buffer to buffer.");
         return false;
     }
 
@@ -1754,7 +1756,7 @@ std::optional<VkPushConstantRange> VulkanBackend::getPushConstantRangeForShader(
         spirv_cross::ShaderResources resources = compiler.get_shader_resources();
 
         if (!resources.push_constant_buffers.empty()) {
-            ASSERT(resources.push_constant_buffers.size() == 1);
+            ARKOSE_ASSERT(resources.push_constant_buffers.size() == 1);
             const spirv_cross::Resource& res = resources.push_constant_buffers[0];
             const spirv_cross::SPIRType& type = compiler.get_type(res.type_id);
             size_t pushConstantSize = compiler.get_declared_struct_size(type);
@@ -1767,7 +1769,7 @@ std::optional<VkPushConstantRange> VulkanBackend::getPushConstantRangeForShader(
                 pushConstantRange = range;
             } else {
                 if (pushConstantRange.value().size != pushConstantSize) {
-                    LogErrorAndExit("Different push constant sizes in the different shader files!\n");
+                    ARKOSE_LOG(Fatal, "Different push constant sizes in the different shader files!");
                 }
                 pushConstantRange.value().stageFlags |= stageFlag;
             }
@@ -1835,7 +1837,7 @@ std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>
                 uint32_t arrayCount = 1; // i.e. not an array
                 const spirv_cross::SPIRType& type = compiler.get_type(res.type_id);
                 if (!type.array.empty()) {
-                    ASSERT(type.array.size() == 1); // i.e. no multidimensional arrays
+                    ARKOSE_ASSERT(type.array.size() == 1); // i.e. no multidimensional arrays
                     arrayCount = type.array[0];
                 }
 
@@ -1870,7 +1872,7 @@ std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>
         }
 
         if (!resources.push_constant_buffers.empty()) {
-            ASSERT(resources.push_constant_buffers.size() == 1);
+            ARKOSE_ASSERT(resources.push_constant_buffers.size() == 1);
             const spirv_cross::Resource& res = resources.push_constant_buffers[0];
             const spirv_cross::SPIRType& type = compiler.get_type(res.type_id);
             size_t pushConstantSize = compiler.get_declared_struct_size(type);
@@ -1883,7 +1885,7 @@ std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>
                 pushConstantRange = range;
             } else {
                 if (pushConstantRange.value().size != pushConstantSize) {
-                    LogErrorAndExit("Different push constant sizes in the different shader files!\n");
+                    ARKOSE_LOG(Fatal, "Different push constant sizes in the different shader files!");
                 }
                 pushConstantRange.value().stageFlags |= stageFlag;
             }
@@ -1912,7 +1914,7 @@ std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>
         }
 
         if (vkCreateDescriptorSetLayout(device(), &descriptorSetLayoutCreateInfo, nullptr, &setLayouts[setId]) != VK_SUCCESS) {
-            LogErrorAndExit("Error trying to create descriptor set layout from shader\n");
+            ARKOSE_LOG(Fatal, "Error trying to create descriptor set layout from shader");
         }
     }
 
@@ -1939,7 +1941,7 @@ VkShaderStageFlags VulkanBackend::shaderStageToVulkanShaderStageFlags(ShaderStag
     if (isSet(shaderStage & ShaderStage::RTIntersection))
         stageFlags |= VK_SHADER_STAGE_INTERSECTION_BIT_NV;
 
-    ASSERT(stageFlags != 0);
+    ARKOSE_ASSERT(stageFlags != 0);
     return stageFlags;
 }
 
@@ -1987,25 +1989,25 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
         spirv_cross::ShaderResources resources = compiler.get_shader_resources();
 
         if (!resources.push_constant_buffers.empty()) {
-            ASSERT(resources.push_constant_buffers.size() == 1);
+            ARKOSE_ASSERT(resources.push_constant_buffers.size() == 1);
 
             const spirv_cross::Resource& pc_res = resources.push_constant_buffers[0];
             const spirv_cross::SPIRType& pc_type = compiler.get_type(pc_res.type_id);
 
             // With the NAMED_UNIFORMS macro all push constant blocks will contain exactly one struct with named members
             if (pc_type.member_types.size() != 1) {
-                LogErrorAndExit("identifyAllPushConstants: please use the NAMED_UNIFORMS macro to define push constants!");
+                ARKOSE_LOG(Fatal, "identifyAllPushConstants: please use the NAMED_UNIFORMS macro to define push constants!");
             }
 
             const spirv_cross::TypeID& struct_type_id = pc_type.member_types[0];
             const spirv_cross::SPIRType& struct_type = compiler.get_type(struct_type_id);
             if (struct_type.basetype != spirv_cross::SPIRType::Struct) {
-                LogErrorAndExit("identifyAllPushConstants: please use the NAMED_UNIFORMS macro to define push constants!");
+                ARKOSE_LOG(Fatal, "identifyAllPushConstants: please use the NAMED_UNIFORMS macro to define push constants!");
             }
 
             size_t memberCount = struct_type.member_types.size();
             if (infos.size() > 0 && infos.size() != memberCount) {
-                LogErrorAndExit("identifyAllPushConstants: mismatch in push constant layout (different member counts!)!");
+                ARKOSE_LOG(Fatal, "identifyAllPushConstants: mismatch in push constant layout (different member counts!)!");
             }
 
             for (int i = 0; i < memberCount; ++i) {
@@ -2027,7 +2029,7 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
                     // We've already seen push constants in another shader file, so just verify there is no mismatch
                     VulkanBackend::PushConstantInfo& existing = infos[i];
                     if (existing.name != member_name || existing.offset != offset || existing.size != size) {
-                        LogErrorAndExit("identifyAllPushConstants: mismatch in push constant layout!");
+                        ARKOSE_LOG(Fatal, "identifyAllPushConstants: mismatch in push constant layout!");
                     } else {
                         existing.stages = ShaderStage(existing.stages | stageFlag);
                     }
@@ -2058,5 +2060,6 @@ uint32_t VulkanBackend::findAppropriateMemory(uint32_t typeBits, VkMemoryPropert
         }
     }
 
-    LogErrorAndExit("VulkanBackend: could not find any appropriate memory, exiting.\n");
+    ARKOSE_LOG(Fatal, "VulkanBackend: could not find any appropriate memory, exiting.");
+    ASSERT_NOT_REACHED(); // todo: make ARKOSE_LOG(Fatal, ... ) prevent the missing return path warning
 }

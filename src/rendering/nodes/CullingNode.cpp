@@ -1,7 +1,6 @@
 #include "CullingNode.h"
 
 #include "math/Frustum.h"
-#include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 
@@ -65,7 +64,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
         auto cameraFrustum = geometry::Frustum::createFromProjectionMatrix(cameraViewProjection);
         size_t planesByteSize;
         const geometry::Plane* planesData = cameraFrustum.rawPlaneData(&planesByteSize);
-        ASSERT(planesByteSize == frustumPlaneBuffer.size());
+        ARKOSE_ASSERT(planesByteSize == frustumPlaneBuffer.size());
         uploadBuffer.upload(planesData, planesByteSize, frustumPlaneBuffer);
 
         std::vector<IndirectShaderDrawable> indirectDrawableData {};
@@ -82,7 +81,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
                                              .materialBlendMode = mesh.material().blendModeValue() });
         });
         size_t newSize = numInputDrawables * sizeof(IndirectShaderDrawable);
-        ASSERT(newSize <= indirectDrawableBuffer.size()); // fixme: grow instead of failing!
+        ARKOSE_ASSERT(newSize <= indirectDrawableBuffer.size()); // fixme: grow instead of failing!
         uploadBuffer.upload(indirectDrawableData, indirectDrawableBuffer);
 
         uint32_t zero = 0u;

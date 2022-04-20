@@ -15,11 +15,11 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
     computeShaderStage.stage = VK_SHADER_STAGE_COMPUTE_BIT;
     computeShaderStage.pName = "main";
     {
-        ASSERT(shader.type() == ShaderType::Compute);
-        ASSERT(shader.files().size() == 1);
+        ARKOSE_ASSERT(shader.type() == ShaderType::Compute);
+        ARKOSE_ASSERT(shader.files().size() == 1);
 
         const ShaderFile& file = shader.files().front();
-        ASSERT(file.type() == ShaderFileType::Compute);
+        ARKOSE_ASSERT(file.type() == ShaderFileType::Compute);
 
         // TODO: Maybe don't create new modules every time? Currently they are deleted later in this function
         VkShaderModuleCreateInfo moduleCreateInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };
@@ -29,7 +29,7 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
 
         VkShaderModule shaderModule {};
         if (vkCreateShaderModule(vulkanBackend.device(), &moduleCreateInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-            LogErrorAndExit("Error trying to create shader module\n");
+            ARKOSE_LOG(Fatal, "Error trying to create shader module");
         }
 
         computeShaderStage.module = shaderModule;
@@ -60,7 +60,7 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
     }
 
     if (vkCreatePipelineLayout(vulkanBackend.device(), &pipelineLayoutCreateInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create pipeline layout\n");
+        ARKOSE_LOG(Fatal, "Error trying to create pipeline layout");
     }
 
     //
@@ -74,7 +74,7 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
     pipelineCreateInfo.flags = 0u;
 
     if (vkCreateComputePipelines(vulkanBackend.device(), vulkanBackend.pipelineCache(), 1, &pipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create compute pipeline\n");
+        ARKOSE_LOG(Fatal, "Error trying to create compute pipeline");
     }
 
     // Remove shader modules, they are no longer needed after creating the pipeline
@@ -126,7 +126,7 @@ void VulkanComputeState::setName(const std::string& name)
             nameInfo.pObjectName = pipelineName.c_str();
 
             if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-                LogWarning("Could not set debug name for vulkan compute pipeline resource.\n");
+                ARKOSE_LOG(Warning, "Could not set debug name for vulkan compute pipeline resource.");
             }
         }
 
@@ -137,7 +137,7 @@ void VulkanComputeState::setName(const std::string& name)
             nameInfo.pObjectName = pipelineLayoutName.c_str();
 
             if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-                LogWarning("Could not set debug name for vulkan compute pipeline layout resource.\n");
+                ARKOSE_LOG(Warning, "Could not set debug name for vulkan compute pipeline layout resource.");
             }
         }
     }

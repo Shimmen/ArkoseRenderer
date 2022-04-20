@@ -1,7 +1,8 @@
 #include "Image.h"
 
+#include "core/Assert.h"
+#include "core/Logging.h"
 #include "utility/FileIO.h"
-#include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <memory>
 #include <moos/core.h>
@@ -24,7 +25,7 @@ Image::Info* Image::getInfo(const std::string& imagePath, bool quiet)
     FILE* file = fopen(imagePath.c_str(), "rb");
     if (file == nullptr) {
         if (!quiet)
-            LogError("Image: could not read file at path '%s', which is required for info.\n", imagePath.c_str());
+            ARKOSE_LOG(Error, "Image: could not read file at path '{}', which is required for info.", imagePath);
         return nullptr;
     }
 
@@ -33,7 +34,7 @@ Image::Info* Image::getInfo(const std::string& imagePath, bool quiet)
     int componentCount;
     stbi_info_from_file(file, &info.width, &info.height, &componentCount);
 
-    ASSERT(componentCount >= 1 && componentCount <= 4);
+    ARKOSE_ASSERT(componentCount >= 1 && componentCount <= 4);
     info.pixelType = static_cast<PixelType>(componentCount);
 
     // FIXME: Add support for 16-bit images (e.g. some PNGs)
@@ -56,24 +57,24 @@ Image* Image::load(const std::string& imagePath, PixelType pixelType, bool skipR
             Image* image = entry->second.get();
             // For now we only load RGBA images, but later we might wanna do some more advanced caching,
             //  where e.g. (path, RGBA) is loaded differently to a (path, RGB) (i.e., same path, different types)
-            ASSERT(image->info().pixelType == pixelType);
+            ARKOSE_ASSERT(image->info().pixelType == pixelType);
             return image;
         }
     }
 
     if (!skipReadableCheck) {
         if (!FileIO::isFileReadable(imagePath)) {
-            LogErrorAndExit("Image: could not read file at path '%s'.\n", imagePath.c_str());
+            ARKOSE_LOG(Fatal, "Image: could not read file at path '{}'.", imagePath);
         }
     }
 
-    //LogInfo("Image: actually loading texture '%s'\n", imagePath.c_str());
+    //ARKOSE_LOG(Info, "Image: actually loading texture '{}'", imagePath);
 
     FILE* file = fopen(imagePath.c_str(), "rb");
-    ASSERT(file);
+    ARKOSE_ASSERT(file);
 
     int desiredNumberOfComponents = static_cast<int>(pixelType);
-    ASSERT(desiredNumberOfComponents >= 1 && desiredNumberOfComponents <= 4);
+    ARKOSE_ASSERT(desiredNumberOfComponents >= 1 && desiredNumberOfComponents <= 4);
 
     Info info;
     info.pixelType = pixelType;

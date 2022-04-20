@@ -1,6 +1,6 @@
 #include "backend/base/RenderTarget.h"
 
-#include "utility/Logging.h"
+#include "core/Logging.h"
 
 RenderTarget::RenderTarget(Backend& backend, std::vector<Attachment> attachments)
     : Resource(backend)
@@ -9,7 +9,7 @@ RenderTarget::RenderTarget(Backend& backend, std::vector<Attachment> attachments
 
     for (const Attachment& attachment : attachments) {
         if (attachment.type == AttachmentType::Depth) {
-            ASSERT(!m_depthAttachment.has_value());
+            ARKOSE_ASSERT(!m_depthAttachment.has_value());
             m_depthAttachment = attachment;
         } else {
             m_colorAttachments.push_back(attachment);
@@ -17,14 +17,14 @@ RenderTarget::RenderTarget(Backend& backend, std::vector<Attachment> attachments
     }
 
     if (totalAttachmentCount() < 1) {
-        LogErrorAndExit("RenderTarget error: tried to create with less than one attachments!\n");
+        ARKOSE_LOG(Fatal, "RenderTarget error: tried to create with less than one attachments!");
     }
 
     for (auto& colorAttachment : m_colorAttachments) {
         if (!colorAttachment.texture->isMultisampled() && colorAttachment.multisampleResolveTexture != nullptr)
-            LogErrorAndExit("RenderTarget error: tried to create render target with texture that isn't multisampled but has a resolve texture\n");
+            ARKOSE_LOG(Fatal, "RenderTarget error: tried to create render target with texture that isn't multisampled but has a resolve texture");
         if (colorAttachment.texture->isMultisampled() && colorAttachment.multisampleResolveTexture == nullptr)
-            LogErrorAndExit("RenderTarget error: tried to create render target with multisample texture but no resolve texture\n");
+            ARKOSE_LOG(Fatal, "RenderTarget error: tried to create render target with multisample texture but no resolve texture");
     }
 
     Extent2D firstExtent = m_depthAttachment.has_value()
@@ -36,13 +36,13 @@ RenderTarget::RenderTarget(Backend& backend, std::vector<Attachment> attachments
 
     for (auto& attachment : m_colorAttachments) {
         if (attachment.texture->extent() != firstExtent) {
-            LogErrorAndExit("RenderTarget error: tried to create with attachments of different sizes: (%ix%i) vs (%ix%i)\n",
-                            attachment.texture->extent().width(), attachment.texture->extent().height(),
-                            firstExtent.width(), firstExtent.height());
+            ARKOSE_LOG(Fatal, "RenderTarget error: tried to create with attachments of different sizes: ({}x{}) vs ({}x{})",
+                       attachment.texture->extent().width(), attachment.texture->extent().height(),
+                       firstExtent.width(), firstExtent.height());
         }
         if (attachment.texture->multisampling() != firstMultisampling) {
-            LogErrorAndExit("RenderTarget error: tried to create with attachments of different multisampling sample counts: %u vs %u\n",
-                            static_cast<unsigned>(attachment.texture->multisampling()), static_cast<unsigned>(firstMultisampling));
+            ARKOSE_LOG(Fatal, "RenderTarget error: tried to create with attachments of different multisampling sample counts: {} vs {}",
+                       static_cast<unsigned>(attachment.texture->multisampling()), static_cast<unsigned>(firstMultisampling));
         }
     }
 
@@ -60,14 +60,14 @@ RenderTarget::RenderTarget(Backend& backend, std::vector<Attachment> attachments
 
     // Make sure we don't have duplicated attachment types & that the color attachments aren't sparse
     if (m_colorAttachments[0].type != AttachmentType::Color0)
-        LogErrorAndExit("RenderTarget error: sparse color attachments in render target\n");
+        ARKOSE_LOG(Fatal, "RenderTarget error: sparse color attachments in render target");
     auto lastType = AttachmentType::Color0;
     for (size_t i = 1; i < m_colorAttachments.size(); ++i) {
         const Attachment& attachment = m_colorAttachments[i];
         if (attachment.type == lastType)
-            LogErrorAndExit("RenderTarget error: duplicate attachment types in render target\n");
+            ARKOSE_LOG(Fatal, "RenderTarget error: duplicate attachment types in render target");
         if (static_cast<unsigned>(attachment.type) != static_cast<unsigned>(lastType) + 1)
-            LogErrorAndExit("RenderTarget error: sparse color attachments in render target\n");
+            ARKOSE_LOG(Fatal, "RenderTarget error: sparse color attachments in render target");
         lastType = attachment.type;
     }
 }

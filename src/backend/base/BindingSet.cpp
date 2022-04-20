@@ -2,7 +2,7 @@
 
 #include "Buffer.h"
 #include "Texture.h"
-#include "utility/Logging.h"
+#include "core/Logging.h"
 #include <algorithm>
 
 
@@ -15,7 +15,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Buffer* bu
     , textures()
 {
     if (!buffer) {
-        LogErrorAndExit("ShaderBinding error: null buffer\n");
+        ARKOSE_LOG(Fatal, "ShaderBinding error: null buffer");
     }
 
     switch (buffer->usage()) {
@@ -29,7 +29,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Buffer* bu
         type = ShaderBindingType::StorageBuffer;
         break;
     default:
-        LogErrorAndExit("ShaderBinding error: invalid buffer for shader binding (not index or uniform buffer)\n");
+        ARKOSE_LOG(Fatal, "ShaderBinding error: invalid buffer for shader binding (not index or uniform buffer)");
     }
 }
 
@@ -43,11 +43,11 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Texture* t
     , textures({ texture })
 {
     if (!texture) {
-        LogErrorAndExit("ShaderBinding error: null texture\n");
+        ARKOSE_LOG(Fatal, "ShaderBinding error: null texture");
     }
 
     if (type == ShaderBindingType::StorageImage && (texture->hasSrgbFormat() || texture->hasDepthFormat())) {
-        LogErrorAndExit("ShaderBinding error: can't use texture with sRGB or depth format as storage image\n");
+        ARKOSE_LOG(Fatal, "ShaderBinding error: can't use texture with sRGB or depth format as storage image");
     }
 }
 
@@ -61,7 +61,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, TopLevelAS
     , textures()
 {
     if (!tlas) {
-        LogErrorAndExit("ShaderBinding error: null acceleration structure\n");
+        ARKOSE_LOG(Fatal, "ShaderBinding error: null acceleration structure");
     }
 }
 
@@ -75,12 +75,12 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, uint32_t c
     , textures(textures)
 {
     if (count < textures.size()) {
-        LogErrorAndExit("ShaderBinding error: too many textures in list\n");
+        ARKOSE_LOG(Fatal, "ShaderBinding error: too many textures in list");
     }
 
     for (auto texture : textures) {
         if (!texture) {
-            LogErrorAndExit("ShaderBinding error: null texture in list\n");
+            ARKOSE_LOG(Fatal, "ShaderBinding error: null texture in list");
         }
     }
 }
@@ -95,12 +95,12 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std:
     , textures(textures)
 {
     if (count < 1) {
-        //LogErrorAndExit("ShaderBinding error: too few textures in list\n");
+        //ARKOSE_LOG(Fatal, "ShaderBinding error: too few textures in list");
     }
 
     for (auto texture : textures) {
         if (!texture) {
-            LogErrorAndExit("ShaderBinding error: null texture in list\n");
+            ARKOSE_LOG(Fatal, "ShaderBinding error: null texture in list");
         }
     }
 }
@@ -115,15 +115,15 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std:
     , textures()
 {
     if (count < 1) {
-        //LogErrorAndExit("ShaderBinding error: too few buffers in list\n");
+        //ARKOSE_LOG(Fatal, "ShaderBinding error: too few buffers in list");
     }
 
     for (auto buffer : buffers) {
         if (!buffer) {
-            LogErrorAndExit("ShaderBinding error: null buffer in list\n");
+            ARKOSE_LOG(Fatal, "ShaderBinding error: null buffer in list");
         }
         if (buffer->usage() != Buffer::Usage::StorageBuffer && buffer->usage() != Buffer::Usage::IndirectBuffer) {
-            LogErrorAndExit("ShaderBinding error: buffer in list is not a storage buffer\n");
+            ARKOSE_LOG(Fatal, "ShaderBinding error: buffer in list is not a storage buffer");
         }
     }
 }
@@ -139,7 +139,7 @@ BindingSet::BindingSet(Backend& backend, std::vector<ShaderBinding> shaderBindin
 
     for (size_t i = 0; i < m_shaderBindings.size() - 1; ++i) {
         if (m_shaderBindings[i].bindingIndex == m_shaderBindings[i + 1].bindingIndex) {
-            LogErrorAndExit("BindingSet error: duplicate bindings\n");
+            ARKOSE_LOG(Fatal, "BindingSet error: duplicate bindings");
         }
     }
 }

@@ -9,7 +9,7 @@ VulkanTopLevelASNV::VulkanTopLevelASNV(Backend& backend, uint32_t maxInstanceCou
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
-    ASSERT(vulkanBackend.hasRayTracingSupport());
+    ARKOSE_ASSERT(vulkanBackend.hasRayTracingSupport());
 
     // Something more here maybe? Like fast to build/traverse, can be compacted, etc.
     accelerationStructureFlags = 0u;
@@ -25,7 +25,7 @@ VulkanTopLevelASNV::VulkanTopLevelASNV(Backend& backend, uint32_t maxInstanceCou
     VkAccelerationStructureCreateInfoNV accelerationStructureCreateInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_NV };
     accelerationStructureCreateInfo.info = accelerationStructureInfo;
     if (vulkanBackend.rayTracingNV().vkCreateAccelerationStructureNV(vulkanBackend.device(), &accelerationStructureCreateInfo, nullptr, &accelerationStructure) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create top level acceleration structure\n");
+        ARKOSE_LOG(Fatal, "Error trying to create top level acceleration structure");
     }
 
     VkAccelerationStructureMemoryRequirementsInfoNV memoryRequirementsInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_NV };
@@ -38,18 +38,18 @@ VulkanTopLevelASNV::VulkanTopLevelASNV(Backend& backend, uint32_t maxInstanceCou
     memoryAllocateInfo.allocationSize = memoryRequirements2.memoryRequirements.size;
     memoryAllocateInfo.memoryTypeIndex = vulkanBackend.findAppropriateMemory(memoryRequirements2.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     if (vkAllocateMemory(vulkanBackend.device(), &memoryAllocateInfo, nullptr, &memory) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create allocate memory for acceleration structure\n");
+        ARKOSE_LOG(Fatal, "Error trying to create allocate memory for acceleration structure");
     }
 
     VkBindAccelerationStructureMemoryInfoNV accelerationStructureMemoryInfo { VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV };
     accelerationStructureMemoryInfo.accelerationStructure = accelerationStructure;
     accelerationStructureMemoryInfo.memory = memory;
     if (vulkanBackend.rayTracingNV().vkBindAccelerationStructureMemoryNV(vulkanBackend.device(), 1, &accelerationStructureMemoryInfo) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to bind memory to acceleration structure\n");
+        ARKOSE_LOG(Fatal, "Error trying to bind memory to acceleration structure");
     }
 
     if (vulkanBackend.rayTracingNV().vkGetAccelerationStructureHandleNV(vulkanBackend.device(), accelerationStructure, sizeof(uint64_t), &handle) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to get acceleration structure handle\n");
+        ARKOSE_LOG(Fatal, "Error trying to get acceleration structure handle");
     }
 
     size_t instanceBufferSize = this->maxInstanceCount() * sizeof(VulkanRayTracingNV::GeometryInstance);
@@ -65,7 +65,7 @@ VulkanTopLevelASNV::VulkanTopLevelASNV(Backend& backend, uint32_t maxInstanceCou
             build(commandBuffer, AccelerationStructureBuildType::FullBuild);
         });
         if (!buildSuccess) {
-            LogErrorAndExit("Error trying to build top level acceleration structure (initial build)\n");
+            ARKOSE_LOG(Fatal, "Error trying to build top level acceleration structure (initial build)");
         }
     }
 }
@@ -93,7 +93,7 @@ void VulkanTopLevelASNV::setName(const std::string& name)
         nameInfo.pObjectName = name.c_str();
 
         if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-            LogWarning("Could not set debug name for vulkan top level acceleration structure resource.\n");
+            ARKOSE_LOG(Warning, "Could not set debug name for vulkan top level acceleration structure resource.");
         }
     }
 }
@@ -168,12 +168,12 @@ VulkanBottomLevelASNV::VulkanBottomLevelASNV(Backend& backend, std::vector<RTGeo
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
-    ASSERT(vulkanBackend.hasRayTracingSupport());
+    ARKOSE_ASSERT(vulkanBackend.hasRayTracingSupport());
 
     // All geometries in a BLAS must have the same type (i.e. AABB/triangles)
     bool isTriangleBLAS = geometries().front().hasTriangles();
     for (size_t i = 1; i < geometries().size(); ++i) {
-        ASSERT(geometries()[i].hasTriangles() == isTriangleBLAS);
+        ARKOSE_ASSERT(geometries()[i].hasTriangles() == isTriangleBLAS);
     }
 
     VkBuffer transformBuffer = VK_NULL_HANDLE;
@@ -196,11 +196,11 @@ VulkanBottomLevelASNV::VulkanBottomLevelASNV(Backend& backend, std::vector<RTGeo
         allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
         if (vmaCreateBuffer(vulkanBackend.globalAllocator(), &bufferCreateInfo, &allocCreateInfo, &transformBuffer, &transformBufferAllocation, nullptr) != VK_SUCCESS) {
-            LogErrorAndExit("Error trying to create buffer for the bottom level acceeration structure transforms.\n");
+            ARKOSE_LOG(Fatal, "Error trying to create buffer for the bottom level acceeration structure transforms.");
         }
 
         if (!vulkanBackend.setBufferMemoryUsingMapping(transformBufferAllocation, (uint8_t*)transforms.data(), totalSize)) {
-            LogErrorAndExit("Error trying to copy data to the bottom level acceeration structure transform buffer.\n");
+            ARKOSE_LOG(Fatal, "Error trying to copy data to the bottom level acceeration structure transform buffer.");
         }
     }
 
@@ -286,7 +286,7 @@ VulkanBottomLevelASNV::VulkanBottomLevelASNV(Backend& backend, std::vector<RTGeo
     VkAccelerationStructureCreateInfoNV accelerationStructureCreateInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_NV };
     accelerationStructureCreateInfo.info = accelerationStructureInfo;
     if (vulkanBackend.rayTracingNV().vkCreateAccelerationStructureNV(vulkanBackend.device(), &accelerationStructureCreateInfo, nullptr, &accelerationStructure) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create bottom level acceleration structure\n");
+        ARKOSE_LOG(Fatal, "Error trying to create bottom level acceleration structure");
     }
 
     VkAccelerationStructureMemoryRequirementsInfoNV memoryRequirementsInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_MEMORY_REQUIREMENTS_INFO_NV };
@@ -299,18 +299,18 @@ VulkanBottomLevelASNV::VulkanBottomLevelASNV(Backend& backend, std::vector<RTGeo
     memoryAllocateInfo.allocationSize = memoryRequirements2.memoryRequirements.size;
     memoryAllocateInfo.memoryTypeIndex = vulkanBackend.findAppropriateMemory(memoryRequirements2.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
     if (vkAllocateMemory(vulkanBackend.device(), &memoryAllocateInfo, nullptr, &memory) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create allocate memory for acceleration structure\n");
+        ARKOSE_LOG(Fatal, "Error trying to create allocate memory for acceleration structure");
     }
 
     VkBindAccelerationStructureMemoryInfoNV accelerationStructureMemoryInfo { VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV };
     accelerationStructureMemoryInfo.accelerationStructure = accelerationStructure;
     accelerationStructureMemoryInfo.memory = memory;
     if (vulkanBackend.rayTracingNV().vkBindAccelerationStructureMemoryNV(vulkanBackend.device(), 1, &accelerationStructureMemoryInfo) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to bind memory to acceleration structure\n");
+        ARKOSE_LOG(Fatal, "Error trying to bind memory to acceleration structure");
     }
 
     if (vulkanBackend.rayTracingNV().vkGetAccelerationStructureHandleNV(vulkanBackend.device(), accelerationStructure, sizeof(uint64_t), &handle) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to get acceleration structure handle\n");
+        ARKOSE_LOG(Fatal, "Error trying to get acceleration structure handle");
     }
 
     VmaAllocation scratchAllocation;
@@ -370,7 +370,7 @@ void VulkanBottomLevelASNV::setName(const std::string& name)
         nameInfo.pObjectName = name.c_str();
 
         if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-            LogWarning("Could not set debug name for vulkan bottom level acceleration structure resource.\n");
+            ARKOSE_LOG(Warning, "Could not set debug name for vulkan bottom level acceleration structure resource.");
         }
     }
 }

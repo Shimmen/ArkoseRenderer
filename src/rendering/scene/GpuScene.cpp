@@ -1,8 +1,8 @@
 #include "GpuScene.h"
 
 #include "backend/Resources.h"
+#include "core/Logging.h"
 #include "rendering/Registry.h"
-#include "utility/Logging.h"
 #include <imgui.h>
 #include <ImGuizmo.h>
 #include <moos/aabb.h>
@@ -364,7 +364,7 @@ void GpuScene::updateEnvironmentMap(Scene::EnvironmentMap& environmentMap)
 
 Texture& GpuScene::environmentMapTexture()
 {
-    ASSERT(m_environmentMapTexture);
+    ARKOSE_ASSERT(m_environmentMapTexture);
     return *m_environmentMapTexture;
 }
 
@@ -412,7 +412,7 @@ void GpuScene::registerMesh(Mesh& mesh)
 
     Material& material = mesh.material();
     MaterialHandle materialHandle = registerMaterial(material);
-    ASSERT(materialHandle.valid());
+    ARKOSE_ASSERT(materialHandle.valid());
 
     // TODO: This is the legacy path, get rid of it! CullingNode still uses it directly, but I am not so sure it should..
     mesh.setMaterialIndex({}, materialHandle.indexOfType<int>());
@@ -443,7 +443,7 @@ RTGeometryInstance GpuScene::createRTGeometryInstance(Mesh& mesh, uint32_t meshI
     RTVertexFormat vertexFormat = RTVertexFormat::XYZ32F;
 
     const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(vertexLayout, *this);
-    ASSERT(drawCallDesc.type == DrawCallDescription::Type ::Indexed);
+    ARKOSE_ASSERT(drawCallDesc.type == DrawCallDescription::Type ::Indexed);
 
     IndexType indexType = globalIndexBufferType();
     size_t indexStride = sizeofIndexType(indexType);
@@ -476,7 +476,7 @@ RTGeometryInstance GpuScene::createRTGeometryInstance(Mesh& mesh, uint32_t meshI
     default:
         ASSERT_NOT_REACHED();
     }
-    ASSERT(hitMask != 0);
+    ARKOSE_ASSERT(hitMask != 0);
 
     m_sceneBottomLevelAccelerationStructures.emplace_back(backend().createBottomLevelAccelerationStructure({ geometry }));
     BottomLevelAS& blas = *m_sceneBottomLevelAccelerationStructures.back();
@@ -493,8 +493,8 @@ RTGeometryInstance GpuScene::createRTGeometryInstance(Mesh& mesh, uint32_t meshI
 
 std::unique_ptr<Texture> GpuScene::createShadowMap(const Light& light)
 {
-    ASSERT(light.shadowMapSize().width() > 0);
-    ASSERT(light.shadowMapSize().height() > 0);
+    ARKOSE_ASSERT(light.shadowMapSize().width() > 0);
+    ARKOSE_ASSERT(light.shadowMapSize().height() > 0);
 
     Texture::Description textureDesc { .type = Texture::Type::Texture2D,
                                        .arrayCount = 1,
@@ -538,7 +538,7 @@ MaterialHandle GpuScene::registerMaterial(Material& material)
 
     uint64_t materialIdx = m_managedMaterials.size();
     if (materialIdx >= MaxSupportedSceneMaterials) {
-        LogErrorAndExit("Ran out of managed scene materials, exiting.\n");
+        ARKOSE_LOG(Fatal, "Ran out of managed scene materials, exiting.");
     }
 
     auto handle = MaterialHandle(materialIdx);
@@ -555,11 +555,11 @@ void GpuScene::unregisterMaterial(MaterialHandle handle)
 {
     SCOPED_PROFILE_ZONE();
 
-    ASSERT(handle.valid());
-    ASSERT(handle.index() < m_managedMaterials.size());
+    ARKOSE_ASSERT(handle.valid());
+    ARKOSE_ASSERT(handle.index() < m_managedMaterials.size());
 
     ManagedMaterial& managedMaterial = m_managedMaterials[handle.index()];
-    ASSERT(managedMaterial.referenceCount == 1); // (for now, only a single ref.)
+    ARKOSE_ASSERT(managedMaterial.referenceCount == 1); // (for now, only a single ref.)
     managedMaterial.referenceCount -= 1;
 
     // TODO: Manage a free-list of indices to reuse!
@@ -602,9 +602,9 @@ TextureHandle GpuScene::registerMaterialTexture(Material::TextureDescription& de
     }
 
     TextureHandle handle = entry->second;
-    ASSERT(handle.valid());
+    ARKOSE_ASSERT(handle.valid());
 
-    ASSERT(handle.index() < m_managedTextures.size());
+    ARKOSE_ASSERT(handle.index() < m_managedTextures.size());
     ManagedTexture& managedTexture = m_managedTextures[handle.index()];
     managedTexture.referenceCount += 1;
 
@@ -617,7 +617,7 @@ TextureHandle GpuScene::registerTexture(std::unique_ptr<Texture>&& texture)
 
     uint64_t textureIdx = m_managedTextures.size();
     if (textureIdx >= MaxSupportedSceneTextures) {
-        LogErrorAndExit("Ran out of bindless scene texture slots, exiting.\n");
+        ARKOSE_LOG(Fatal, "Ran out of bindless scene texture slots, exiting.");
     }
 
     auto handle = TextureHandle(textureIdx);
@@ -635,11 +635,11 @@ void GpuScene::unregisterTexture(TextureHandle handle)
 {
     SCOPED_PROFILE_ZONE();
 
-    ASSERT(handle.valid());
-    ASSERT(handle.index() < m_managedTextures.size());
+    ARKOSE_ASSERT(handle.valid());
+    ARKOSE_ASSERT(handle.index() < m_managedTextures.size());
 
     ManagedTexture& managedTexture = m_managedTextures[handle.index()];
-    ASSERT(managedTexture.referenceCount > 0);
+    ARKOSE_ASSERT(managedTexture.referenceCount > 0);
     managedTexture.referenceCount -= 1;
 
     // TODO: Manage a free-list of indices to reuse!
@@ -660,7 +660,7 @@ DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Me
     const size_t initialVertexBufferSize = 50'000 * layout.packedVertexSize();
 
     bool doAlign = alignWith.has_value();
-    ASSERT(!alignWith || alignWith->sourceMesh == &mesh);
+    ARKOSE_ASSERT(!alignWith || alignWith->sourceMesh == &mesh);
 
     std::vector<uint8_t> vertexData = mesh.vertexData(layout);
 
@@ -728,14 +728,14 @@ Buffer& GpuScene::globalVertexBufferForLayout(const VertexLayout& layout) const
 {
     auto entry = m_globalVertexBuffers.find(layout);
     if (entry == m_globalVertexBuffers.end())
-        LogErrorAndExit("Can't get vertex buffer for layout since it has not been created! Please ensureDrawCallIsAvailable for at least one mesh before calling this.\n");
+        ARKOSE_LOG(Fatal, "Can't get vertex buffer for layout since it has not been created! Please ensureDrawCallIsAvailable for at least one mesh before calling this.");
     return *entry->second;
 }
 
 Buffer& GpuScene::globalIndexBuffer() const
 {
     if (m_global32BitIndexBuffer == nullptr)
-        LogErrorAndExit("Can't get global index buffer since it has not been created! Please ensureDrawCallIsAvailable for at least one indexed mesh before calling this.\n");
+        ARKOSE_LOG(Fatal, "Can't get global index buffer since it has not been created! Please ensureDrawCallIsAvailable for at least one indexed mesh before calling this.");
     return *m_global32BitIndexBuffer;
 }
 
@@ -747,14 +747,14 @@ IndexType GpuScene::globalIndexBufferType() const
 
 BindingSet& GpuScene::globalMaterialBindingSet() const
 {
-    ASSERT(m_materialBindingSet);
+    ARKOSE_ASSERT(m_materialBindingSet);
     return *m_materialBindingSet;
 }
 
 TopLevelAS& GpuScene::globalTopLevelAccelerationStructure() const
 {
-    ASSERT(m_maintainRayTracingScene);
-    ASSERT(m_sceneTopLevelAccelerationStructure);
+    ARKOSE_ASSERT(m_maintainRayTracingScene);
+    ARKOSE_ASSERT(m_sceneTopLevelAccelerationStructure);
     return *m_sceneTopLevelAccelerationStructure;
 }
 

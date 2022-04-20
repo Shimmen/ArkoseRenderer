@@ -1,7 +1,6 @@
 #pragma once
 
 #include "rendering/camera/Camera.h"
-#include "utility/Badge.h"
 #include "utility/Extent.h"
 #include "utility/Input.h"
 #include <moos/matrix.h>

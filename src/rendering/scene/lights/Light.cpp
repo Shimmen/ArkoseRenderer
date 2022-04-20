@@ -1,7 +1,7 @@
 #include "Light.h"
 
+#include "core/Assert.h"
 #include "rendering/Registry.h"
-#include "utility/Logging.h"
 #include "utility/Profiling.h"
 
 void Light::setShadowMapSize(Extent2D size)
@@ -19,7 +19,7 @@ Texture& Light::shadowMap()
     if (m_shadowMap)
         return *m_shadowMap;
 
-    ASSERT(m_shadowMapSize.width() > 0 && m_shadowMapSize.height() > 0);
+    ARKOSE_ASSERT(m_shadowMapSize.width() > 0 && m_shadowMapSize.height() > 0);
     Texture::Description textureDesc { .type = Texture::Type::Texture2D,
                                        .arrayCount = 1,
 

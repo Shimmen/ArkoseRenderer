@@ -1,8 +1,7 @@
 #pragma once
 
 #include "backend/Resources.h"
-#include "utility/Badge.h"
-#include "utility/util.h"
+#include "core/Badge.h"
 #include <memory>
 #include <vector>
 

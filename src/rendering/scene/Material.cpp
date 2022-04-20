@@ -3,7 +3,6 @@
 #include "rendering/Registry.h"
 #include "rendering/scene/Mesh.h"
 #include "rendering/scene/Model.h"
-#include "utility/Logging.h"
 
 bool Material::TextureDescription::operator==(const TextureDescription& other) const
 {

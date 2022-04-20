@@ -71,7 +71,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
 
             VkShaderModule shaderModule {};
             if (vkCreateShaderModule(device, &moduleCreateInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-                LogErrorAndExit("Error trying to create shader module\n");
+                ARKOSE_LOG(Fatal, "Error trying to create shader module");
             }
 
             VkPipelineShaderStageCreateInfo stageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
@@ -125,7 +125,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     }
 
     if (vkCreatePipelineLayout(device, &pipelineLayoutCreateInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create pipeline layout\n");
+        ARKOSE_LOG(Fatal, "Error trying to create pipeline layout");
     }
 
     //
@@ -322,7 +322,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     pipelineCreateInfo.basePipelineIndex = -1;
 
     if (vkCreateGraphicsPipelines(device, vulkanBackend.pipelineCache(), 1, &pipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create graphics pipeline\n");
+        ARKOSE_LOG(Fatal, "Error trying to create graphics pipeline");
     }
 
     // Remove shader modules, they are no longer needed after creating the pipeline
@@ -359,7 +359,7 @@ void VulkanRenderState::setName(const std::string& name)
             nameInfo.pObjectName = pipelineName.c_str();
 
             if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-                LogWarning("Could not set debug name for vulkan graphics pipeline resource.\n");
+                ARKOSE_LOG(Warning, "Could not set debug name for vulkan graphics pipeline resource.");
             }
         }
 
@@ -370,7 +370,7 @@ void VulkanRenderState::setName(const std::string& name)
             nameInfo.pObjectName = pipelineLayoutName.c_str();
 
             if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-                LogWarning("Could not set debug name for vulkan graphics pipeline layout resource.\n");
+                ARKOSE_LOG(Warning, "Could not set debug name for vulkan graphics pipeline layout resource.");
             }
         }
     }

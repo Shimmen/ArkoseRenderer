@@ -1,7 +1,7 @@
 #include "VulkanRayTracingNV.h"
 
 #include "backend/vulkan/VulkanBackend.h"
-#include "utility/Logging.h"
+#include "core/Logging.h"
 #include <vector>
 
 VulkanRayTracingNV::VulkanRayTracingNV(VulkanBackend& backend, VkPhysicalDevice physicalDevice, VkDevice device)
@@ -87,7 +87,7 @@ VkBuffer VulkanRayTracingNV::createScratchBufferForAccelerationStructure(VkAccel
 
     VkBuffer scratchBuffer;
     if (vmaCreateBuffer(m_backend.globalAllocator(), &scratchBufferCreateInfo, &scratchAllocCreateInfo, &scratchBuffer, &allocation, nullptr) != VK_SUCCESS) {
-        LogError("VulkanBackend::createScratchBufferForAccelerationStructure(): could not create scratch buffer.\n");
+        ARKOSE_LOG(Error, "VulkanBackend::createScratchBufferForAccelerationStructure(): could not create scratch buffer.");
     }
 
     return scratchBuffer;

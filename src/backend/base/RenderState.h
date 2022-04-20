@@ -83,7 +83,7 @@ public:
         , m_depthState(depthState)
         , m_stencilState(stencilState)
     {
-        ASSERT(shader.type() == ShaderType::Raster);
+        ARKOSE_ASSERT(shader.type() == ShaderType::Raster);
     }
 
     const RenderTarget& renderTarget() const { return *m_renderTarget; }

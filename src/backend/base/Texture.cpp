@@ -1,10 +1,11 @@
 #include "Texture.h"
 
 #include "backend/base/Backend.h"
+#include "core/Assert.h"
+#include "core/Defer.h"
+#include "core/Logging.h"
 #include "core/parallel/ParallelFor.h"
 #include "utility/Image.h"
-#include "utility/Logging.h"
-#include "utility/util.h"
 #include <cmath>
 #include <fmt/format.h>
 #include <stb_image.h>
@@ -14,10 +15,10 @@ Texture::Texture(Backend& backend, Description desc)
     , m_description(desc)
 {
     // (according to most specifications we can't have both multisampling and mipmapping)
-    ASSERT(multisampling() == Multisampling::None || mipmap() == Mipmap::None);
+    ARKOSE_ASSERT(multisampling() == Multisampling::None || mipmap() == Mipmap::None);
 
     // At least one item in an implicit array
-    ASSERT(arrayCount() > 0);
+    ARKOSE_ASSERT(arrayCount() > 0);
 }
 
 bool Texture::hasFloatingPointDataFormat() const
@@ -80,7 +81,7 @@ void Texture::pixelFormatAndTypeForImageInfo(const Image::Info& info, bool sRGB,
         pixelTypeToUse = Image::PixelType::RGBA;
         break;
     default:
-        LogErrorAndExit("Texture: currently no support for other than (s)RGB(F) and (s)RGBA(F) texture loading!\n");
+        ARKOSE_LOG(Fatal, "Texture: currently no support for other than (s)RGB(F) and (s)RGBA(F) texture loading!");
     }
 }
 
@@ -103,7 +104,7 @@ std::unique_ptr<Texture> Texture::createFromImage(Backend& backend, const Image&
             format = Texture::Format::R32F;
             pixelSizeBytes = sizeof(float);
         } else {
-            LogErrorAndExit("Registry: no support for grayscale non-HDR or sRGB texture loading (from image)!\n");
+            ARKOSE_LOG(Fatal, "Registry: no support for grayscale non-HDR or sRGB texture loading (from image)!");
         }
         break;
     case Image::PixelType::RGB:
@@ -120,7 +121,7 @@ std::unique_ptr<Texture> Texture::createFromImage(Backend& backend, const Image&
         }
         break;
     default:
-        LogErrorAndExit("Registry: currently no support for other than R32F, (s)RGB(F), and (s)RGBA(F) texture loading (from image)!\n");
+        ARKOSE_LOG(Fatal, "Registry: currently no support for other than R32F, (s)RGB(F), and (s)RGBA(F) texture loading (from image)!");
     }
 
     Texture::Description desc {
@@ -145,8 +146,8 @@ std::unique_ptr<Texture> Texture::createFromImage(Backend& backend, const Image&
             rawPixelData = (void*)stbi_loadf_from_memory((const stbi_uc*)image.data(), (int)image.size(), &width, &height, nullptr, numDesiredComponents);
         else
             rawPixelData = (void*)stbi_load_from_memory((const stbi_uc*)image.data(), (int)image.size(), &width, &height, nullptr, numDesiredComponents);
-        ASSERT(width == image.info().width);
-        ASSERT(height == image.info().height);
+        ARKOSE_ASSERT(width == image.info().width);
+        ARKOSE_ASSERT(height == image.info().height);
         break;
     case Image::MemoryType::RawBitMap:
         rawPixelData = image.data();
@@ -199,7 +200,7 @@ std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const st
 
     Image::Info* info = Image::getInfo(imagePath);
     if (!info)
-        LogErrorAndExit("Texture: could not read image '%s', exiting\n", imagePath.c_str());
+        ARKOSE_LOG(Fatal, "Texture: could not read image '{}', exiting", imagePath);
 
     Texture::Format format;
     Image::PixelType pixelTypeToUse;
@@ -252,7 +253,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     }
 
     if (imageInfos.size() == 0)
-        LogErrorAndExit("Registry: could not find any images in image array pattern <%s>, exiting\n", imagePathSequencePattern.c_str());
+        ARKOSE_LOG(Fatal, "Registry: could not find any images in image array pattern <{}>, exiting", imagePathSequencePattern);
 
     // Use the first one as "prototype" image info
     Image::Info& info = *imageInfos.front();
@@ -261,7 +262,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     // Ensure all are similar
     for (uint32_t idx = 1; idx < arrayCount; ++idx) {
         Image::Info& otherInfo = *imageInfos[idx];
-        ASSERT(info == otherInfo);
+        ARKOSE_ASSERT(info == otherInfo);
     }
 
     Texture::Format format;

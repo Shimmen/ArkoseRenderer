@@ -1,5 +1,6 @@
 #include "DDGINode.h"
 
+#include "core/Logging.h"
 #include "rendering/util/ScopedDebugZone.h"
 #include <imgui.h>
 
@@ -16,7 +17,7 @@ static_assert((DDGI_VISIBILITY_RES % DDGI_IRRADIANCE_RES) == 0 || (DDGI_IRRADIAN
 RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registry& reg)
 {
     if (!scene.scene().hasProbeGrid()) {
-        LogError("DDGINode is used but no probe grid is available, will no-op");
+        ARKOSE_LOG(Error, "DDGINode is used but no probe grid is available, will no-op");
         return RenderPipelineNode::NullExecuteCallback;
     }
 
@@ -225,8 +226,8 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
 
 Texture& DDGINode::createProbeAtlas(Registry& reg, const std::string& name, const ProbeGrid& probeGrid, const ClearColor& clearColor, Texture::Format format, int probeTileSize, int tileSidePadding) const
 {
-    ASSERT(probeTileSize > 0);
-    ASSERT(tileSidePadding >= 0);
+    ARKOSE_ASSERT(probeTileSize > 0);
+    ARKOSE_ASSERT(tileSidePadding >= 0);
 
     int sizePerTile = tileSidePadding + probeTileSize + tileSidePadding;
 

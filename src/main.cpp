@@ -1,9 +1,9 @@
 #include "backend/base/Backend.h"
 #include "backend/shader/ShaderManager.h"
+#include "core/Logging.h"
 #include "core/parallel/TaskGraph.h"
 #include "rendering/App.h"
 #include "utility/Input.h"
-#include "utility/Logging.h"
 #include "utility/Profiling.h"
 
 #define GLFW_INCLUDE_NONE
@@ -25,7 +25,7 @@ GLFWwindow* createWindow(Backend::Type backendType, WindowType windowType, const
     switch (backendType) {
     case Backend::Type::Vulkan:
         if (!glfwVulkanSupported()) {
-            LogErrorAndExit("ArkoseRenderer::createWindow(): Vulkan is not supported but the Vulkan backend is requested, exiting.\n");
+            ARKOSE_LOG(Fatal, "Vulkan is not supported but the Vulkan backend is requested, exiting.");
         }
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         windowTitle += " [Vulkan]";
@@ -48,7 +48,7 @@ GLFWwindow* createWindow(Backend::Type backendType, WindowType windowType, const
     }
 
     if (!window) {
-        LogErrorAndExit("ArkoseRenderer::createWindow(): could not create GLFW window with specified settings, exiting.\n");
+        ARKOSE_LOG(Fatal, "could not create GLFW window with specified settings, exiting.");
     }
 
     return window;
@@ -66,7 +66,7 @@ int main(int argc, char** argv)
     TaskGraph::initialize();
 
     if (!glfwInit()) {
-        LogErrorAndExit("ArkoseRenderer::main(): could not initialize GLFW, exiting.\n");
+        ARKOSE_LOG(Fatal, "could not initialize GLFW, exiting.");
     }
 
     auto backendType = Backend::Type::Vulkan;
@@ -86,7 +86,7 @@ int main(int argc, char** argv)
     app->setup(*scene, *renderPipeline);
     backend.renderPipelineDidChange(*renderPipeline);
 
-    LogInfo("ArkoseRenderer: main loop begin.\n");
+    ARKOSE_LOG(Info, "main loop begin.");
 
     std::mutex shaderFileWatchMutex {};
     std::vector<std::string> changedShaderFiles {};
@@ -133,7 +133,7 @@ int main(int argc, char** argv)
     }
 
     ShaderManager::instance().stopFileWatching();
-    LogInfo("ArkoseRenderer: main loop end.\n");
+    ARKOSE_LOG(Info, "main loop end.");
 
     backend.shutdown();
     scene.reset();

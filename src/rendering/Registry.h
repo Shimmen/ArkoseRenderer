@@ -6,8 +6,8 @@
 #include "backend/Resources.h"
 #include "backend/util/UploadBuffer.h"
 #include "utility/Image.h"
-#include "utility/Logging.h"
-#include "utility/util.h"
+#include "core/Assert.h"
+#include "core/Logging.h"
 #include <unordered_map>
 #include <unordered_set>
 
@@ -133,26 +133,24 @@ template<typename T>
 template<typename T>
 void Registry::publishResource(const std::string& name, T& resource, std::unordered_map<std::string, PublishedResource<T>>& map)
 {
-    ASSERT(m_currentNodeName.has_value());
+    ARKOSE_ASSERT(m_currentNodeName.has_value());
     auto nodeName = m_currentNodeName.value();
 
     if (resource.owningRegistry({}) != this) {
-        LogErrorAndExit("Registry: Attempt to publish the resource '%s' in node '%s', but the resource is not owned by this registry. "
-                        "This could be caused by a per-node resource being published as a per-frame node, or similar.\n",
-                        name.c_str(), nodeName.c_str());
+        ARKOSE_LOG(Fatal, "Registry: Attempt to publish the resource '{}' in node '{}', but the resource is not owned by this registry. "
+                          "This could be caused by a per-node resource being published as a per-frame node, or similar.", name, nodeName);
     }
 
     if (map.find(name) != map.end()) {
-        LogErrorAndExit("Registry: Attempt to publish the resource '%s' in node '%s', but a resource of that name (and type) "
-                        "has already been published. This is not valid, all resource must have unique names.\n",
-                        name.c_str(), nodeName.c_str());
+        ARKOSE_LOG(Fatal, "Registry: Attempt to publish the resource '{}' in node '{}', but a resource of that name (and type) "
+                          "has already been published. This is not valid, all resource must have unique names.", name, nodeName);
     }
 
     map[name] = PublishedResource { .resource = &resource,
                                     .publisher = nodeName };
 
     //if (!resource.name().empty())
-    //    LogInfo("Renaming during publishing: '%s' -> '%s'\n", resource.name().c_str(), name.c_str());
+    //    ARKOSE_LOG(Info, "Renaming during publishing: '{}' -> '{}'", resource.name(), name);
 
     // Also set debug name for resource to the same name when publishing
     resource.setName(name);
@@ -162,8 +160,8 @@ template<typename T>
 T* Registry::getResource(const std::string& name, const PublishedResourceMap<T>& map)
 {
     if (!m_currentNodeName.has_value()) {
-        LogErrorAndExit("Registry: Attempt to get resource while not in the render pipline construct phase, which is illegal. "
-                        "Any resources that you want to use in the execution phase you must first get in the construction phase.\n");
+        ARKOSE_LOG(Fatal, "Registry: Attempt to get resource while not in the render pipline construct phase, which is illegal. "
+                          "Any resources that you want to use in the execution phase you must first get in the construction phase.");
     }
 
     auto entry = map.find(name);

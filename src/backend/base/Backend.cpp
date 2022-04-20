@@ -19,14 +19,14 @@ Backend& Backend::create(Backend::Type backendType, GLFWwindow* window, const Ba
 
 void Backend::destroy()
 {
-    ASSERT(s_globalBackend != nullptr);
+    ARKOSE_ASSERT(s_globalBackend != nullptr);
     delete s_globalBackend;
     s_globalBackend = nullptr;
 }
 
 Backend& Backend::get()
 {
-    ASSERT(s_globalBackend != nullptr);
+    ARKOSE_ASSERT(s_globalBackend != nullptr);
     return *s_globalBackend;
 }
 

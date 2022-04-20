@@ -20,7 +20,6 @@
 #include "rendering/nodes/TonemapNode.h"
 #include "rendering/scene/models/GltfModel.h"
 #include "utility/Input.h"
-#include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 

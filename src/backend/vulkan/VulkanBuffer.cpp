@@ -1,8 +1,8 @@
 #include "VulkanBuffer.h"
 
 #include "backend/vulkan/VulkanBackend.h"
+#include "core/Logging.h"
 #include "utility/Profiling.h"
-#include "utility/Logging.h"
 
 VulkanBuffer::VulkanBuffer(Backend& backend, size_t size, Usage usage, MemoryHint memoryHint)
     : Buffer(backend, size, usage, memoryHint)
@@ -31,7 +31,7 @@ void VulkanBuffer::setName(const std::string& name)
         nameInfo.pObjectName = name.c_str();
 
         if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-            LogWarning("Could not set debug name for vulkan buffer resource.\n");
+            ARKOSE_LOG(Warning, "Could not set debug name for vulkan buffer resource.");
         }
     }
 }
@@ -43,26 +43,26 @@ void VulkanBuffer::updateData(const std::byte* data, size_t updateSize, size_t o
     if (updateSize == 0)
         return;
     if (offset + updateSize > size())
-        LogErrorAndExit("Attempt at updating buffer outside of bounds!\n");
+        ARKOSE_LOG(Fatal, "Attempt at updating buffer outside of bounds!");
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
     switch (memoryHint()) {
     case Buffer::MemoryHint::GpuOptimal:
         if (!vulkanBackend.setBufferDataUsingStagingBuffer(buffer, (uint8_t*)data, updateSize, offset)) {
-            LogError("Could not update the data of GPU-optimal buffer\n");
+            ARKOSE_LOG(Error, "Could not update the data of GPU-optimal buffer");
         }
         break;
     case Buffer::MemoryHint::TransferOptimal:
         if (!vulkanBackend.setBufferMemoryUsingMapping(allocation, (uint8_t*)data, updateSize, offset)) {
-            LogError("Could not update the data of transfer-optimal buffer\n");
+            ARKOSE_LOG(Error, "Could not update the data of transfer-optimal buffer");
         }
         break;
     case Buffer::MemoryHint::GpuOnly:
-        LogError("Can't update buffer with GpuOnly memory hint, ignoring\n");
+        ARKOSE_LOG(Error, "Can't update buffer with GpuOnly memory hint, ignoring");
         break;
     case Buffer::MemoryHint::Readback:
-        LogError("Can't update buffer with Readback memory hint, ignoring\n");
+        ARKOSE_LOG(Error, "Can't update buffer with Readback memory hint, ignoring");
         break;
     }
 }
@@ -72,7 +72,7 @@ void VulkanBuffer::reallocateWithSize(size_t newSize, ReallocateStrategy strateg
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     if (strategy == ReallocateStrategy::CopyExistingData && newSize < size())
-        LogErrorAndExit("Can't reallocate buffer ReallocateStrategy::CopyExistingData if the new size is smaller than the current size!");
+        ARKOSE_LOG(Fatal, "Can't reallocate buffer ReallocateStrategy::CopyExistingData if the new size is smaller than the current size!");
 
     switch (strategy) {
     case ReallocateStrategy::DiscardExistingData:
@@ -208,7 +208,7 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
 
     VmaAllocationInfo allocationInfo;
     if (vmaCreateBuffer(allocator, &bufferCreateInfo, &allocCreateInfo, &outBuffer, &outAllocation, &allocationInfo) != VK_SUCCESS) {
-        LogErrorAndExit("Could not create buffer of size %u.\n", size);
+        ARKOSE_LOG(Fatal, "Could not create buffer of size {}.", size);
     }
 }
 

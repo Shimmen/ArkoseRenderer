@@ -1,9 +1,9 @@
 #include "ShaderManager.h"
 
+#include "core/Assert.h"
+#include "core/Logging.h"
 #include "utility/FileIO.h"
-#include "utility/Logging.h"
 #include "utility/Profiling.h"
-#include "utility/util.h"
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
@@ -31,7 +31,7 @@ static shaderc_shader_kind glslShaderKindForShaderFile(const ShaderFile& shaderF
     case ShaderFileType::RTMiss:
         return shaderc_miss_shader;
     case ShaderFileType::Unknown:
-        LogWarning("Can't find glsl shader kind for shader file of unknown type ('%s')\n", shaderFile.path().c_str());
+        ARKOSE_LOG(Warning, "Can't find glsl shader kind for shader file of unknown type ('{}')", shaderFile.path());
         return shaderc_glsl_infer_from_source;
     default:
         ASSERT_NOT_REACHED();
@@ -89,7 +89,7 @@ public:
 
         } else {
             // TODO: Handle include errors slightly more gracefully
-            LogError("ShaderManager: could not find file '%s' included by '%s', exiting", requested_source, requesting_source);
+            ARKOSE_LOG(Error, "ShaderManager: could not find file '{}' included by '{}', exiting", requested_source, requesting_source);
         }
 
         return data;
@@ -138,14 +138,14 @@ void ShaderManager::startFileWatching(unsigned msBetweenPolls, FilesChangedCallb
                     if (latestTimestamp <= compiledShader->compiledTimestamp)
                         continue;
 
-                    LogInfo("Recompiling shader '%s'", compiledShader->resolvedFilePath.c_str());
+                    ARKOSE_LOG(Info, "Recompiling shader '{}'", compiledShader->resolvedFilePath);
 
                     if (compiledShader->recompile()) {
-                        LogInfo(" (success)\n");
+                        ARKOSE_LOG(Info, " (success)");
                         recompiledFiles.push_back(compiledShader->shaderFile.path());
                     } else {
                         // TODO: Pop an error window in the draw window instead.. that would be easier to keep track of
-                        LogError(" (error):\n  %s", compiledShader->lastCompileError.c_str());
+                        ARKOSE_LOG(Error, " (error):\n  {}", compiledShader->lastCompileError);
                     }
                 }
 
@@ -235,7 +235,7 @@ const ShaderManager::SpirvData& ShaderManager::spirv(const ShaderFile& shaderFil
     // NOTE: This function should only be called from some backend, so if the
     //  file doesn't exist in the set of loaded shaders something is wrong,
     //  because the frontend makes sure to not run if shaders don't work.
-    ASSERT(result != m_compiledShaders.end());
+    ARKOSE_ASSERT(result != m_compiledShaders.end());
 
     const ShaderManager::CompiledShader& data = *result->second;
     return data.currentSpirvBinary;
@@ -362,7 +362,7 @@ uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree(boo
     }
 
     // TODO: Implement better error reporting
-    ASSERT(anyMissingFiles == false);
+    ARKOSE_ASSERT(anyMissingFiles == false);
 
     lastEditTimestamp = latestTimestamp;
     return latestTimestamp;

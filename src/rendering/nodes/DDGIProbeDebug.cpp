@@ -1,7 +1,7 @@
 #include "DDGIProbeDebug.h"
 
 #include "rendering/scene/GpuScene.h"
-#include "utility/Logging.h"
+#include "core/Logging.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 

@@ -1,6 +1,6 @@
 #include "FileIO.h"
 
-#include "utility/Logging.h"
+#include "core/Logging.h"
 #include "utility/Profiling.h"
 #include <fstream>
 
@@ -47,7 +47,7 @@ void FileIO::writeBinaryDataToFile(const std::string& filePath, const char* data
     file.open(filePath, std::ios::out | std::ios::trunc | std::ios::binary);
 
     if (!file.is_open()) {
-        LogErrorAndExit("Could not create file '%s' for writing binary data\n", filePath.c_str());
+        ARKOSE_LOG(Fatal, "Could not create file '{}' for writing binary data", filePath);
         return;
     }
 
@@ -153,7 +153,7 @@ int FileIO::ParseContext::nextAsInt(const char* token)
     auto maybeInt = nextAsInt();
     if (maybeInt)
         return maybeInt.value();
-    LogErrorAndExit("Error parsing <%s> in %s file \"%s\"\n", token, m_fileType.c_str(), m_path.c_str());
+    ARKOSE_LOG(Fatal, "Error parsing <{}> in {} file '{}'", token, m_fileType, m_path);
     return -1;
 }
 
@@ -162,6 +162,6 @@ float FileIO::ParseContext::nextAsFloat(const char* token)
     auto maybeFloat = nextAsFloat();
     if (maybeFloat)
         return maybeFloat.value();
-    LogErrorAndExit("Error parsing <%s> in %s file \"%s\"\n", token, m_fileType.c_str(), m_path.c_str());
+    ARKOSE_LOG(Fatal, "Error parsing <{}> in {} file '{}'", token, m_fileType, m_path);
     return -1.0f;
 }

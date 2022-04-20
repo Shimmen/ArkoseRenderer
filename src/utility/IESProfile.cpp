@@ -1,10 +1,11 @@
 #include "IESProfile.h"
 
 #include "backend/Resources.h"
+#include "core/Assert.h"
+#include "core/Logging.h"
 #include "rendering/Registry.h"
 #include "utility/FileIO.h"
 #include "utility/Image.h"
-#include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <moos/vector.h>
 
@@ -37,8 +38,8 @@ float IESProfile::requiredSpotLightConeAngle(float minThreshold) const
     // IES uses degrees for everything
     float phi = moos::toRadians(maxH);
     float theta = moos::toRadians(maxV);
-    ASSERT(phi >= 0.0f && phi <= moos::TWO_PI);
-    ASSERT(theta >= 0.0f && theta <= moos::PI);
+    ARKOSE_ASSERT(phi >= 0.0f && phi <= moos::TWO_PI);
+    ARKOSE_ASSERT(theta >= 0.0f && theta <= moos::PI);
 
     // Map to spherical
     float sinTheta = sin(theta);
@@ -84,17 +85,17 @@ std::unique_ptr<Texture> IESProfile::createLookupTexture(Backend& backend, int s
 void IESProfile::parse(const std::string& path)
 {
     // We should never call parse a second time
-    ASSERT(m_anglesV.size() == 0 && m_anglesH.size() == 0 && m_candelaValues.size() == 0);
+    ARKOSE_ASSERT(m_anglesV.size() == 0 && m_anglesH.size() == 0 && m_candelaValues.size() == 0);
 
     FileIO::ParseContext parseContext { "IES", path };
     if (!parseContext.isValid()) {
-        LogErrorAndExit("IESProfile: could not read .ies file '%s'\n", path.c_str());
+        ARKOSE_LOG(Fatal, "IESProfile: could not read .ies file '{}'", path);
         return;
     }
 
     m_version = parseContext.nextLine();
     if (m_version != "IESNA91" && m_version != "IESNA:LM-63-1995" && m_version != "IESNA:LM-63-2002") {
-        LogErrorAndExit("IESProfile: bad .ies file, invalid version: '%s' ('%s')\n", m_version.c_str(), path.c_str());
+        ARKOSE_LOG(Fatal, "IESProfile: bad .ies file, invalid version: '{}' ('{}')", m_version, path);
         return;
     }
 
@@ -114,16 +115,16 @@ void IESProfile::parse(const std::string& path)
     }
 
     if (m_tilt != Tilt::None) {
-        LogErrorAndExit("IESProfile: only TILT=NONE is supported ('%s')\n", path.c_str());
+        ARKOSE_LOG(Fatal, "IESProfile: only TILT=NONE is supported ('{}')", path);
         return;
     }
 
     m_lampCount = parseContext.nextAsInt("# of lamps");
     if (m_lampCount <= 0) {
-        LogErrorAndExit("IESProfile: bad .ies file, invalid lamp count %d' ('%s')\n", m_lampCount, path.c_str());
+        ARKOSE_LOG(Fatal, "IESProfile: bad .ies file, invalid lamp count '{}' ('{}')", m_lampCount, path);
         return;
     } else if (m_lampCount != 1) {
-        LogErrorAndExit("IESProfile: only a lamp count of 1 is supported, found %d ('%s')\n", m_lampCount, path.c_str());
+        ARKOSE_LOG(Fatal, "IESProfile: only a lamp count of 1 is supported, found {} ('{}')", m_lampCount, path);
         return;
     }
 
@@ -131,7 +132,7 @@ void IESProfile::parse(const std::string& path)
 
     float candelaMultiplier = parseContext.nextAsFloat("candela multiplier");
     if (candelaMultiplier <= 0.0f) {
-        LogErrorAndExit("IESProfile: bad .ies file, candela multiplier must be greater than zero, found %f ('%s')\n", candelaMultiplier, path.c_str());
+        ARKOSE_LOG(Fatal, "IESProfile: bad .ies file, candela multiplier must be greater than zero, found {} ('{}')", candelaMultiplier, path);
         return;
     }
 
@@ -139,7 +140,7 @@ void IESProfile::parse(const std::string& path)
     int numAnglesH = parseContext.nextAsInt("# of horizontal angles");
     int numValues = numAnglesV * numAnglesH;
     if (numValues < 1) {
-        LogErrorAndExit("IESProfile: bad .ies file, number of vertical and horizontal angles must be greater than zero, found #V=%d, #H=%d ('%s')\n", numAnglesV, numAnglesH, path.c_str());
+        ARKOSE_LOG(Fatal, "IESProfile: bad .ies file, number of vertical and horizontal angles must be greater than zero, found #V={}, #H={} ('{}')", numAnglesV, numAnglesH, path);
         return;
     }
 
@@ -147,7 +148,7 @@ void IESProfile::parse(const std::string& path)
     if (photometricType == (int)PhotometricType::TypeA || photometricType == (int)PhotometricType::TypeB || photometricType == (int)PhotometricType::TypeC) {
         m_photometricType = static_cast<PhotometricType>(photometricType);
     } else {
-        LogErrorAndExit("IESProfile: bad .ies file, invalid photometric type %s ('%s')\n", photometricType, path.c_str());
+        ARKOSE_LOG(Fatal, "IESProfile: bad .ies file, invalid photometric type {} ('{}')", photometricType, path);
         return;
     }
 
@@ -155,7 +156,7 @@ void IESProfile::parse(const std::string& path)
     if (unitsType == (int)UnitsType::Feet || unitsType == (int)UnitsType::Meters) {
         m_unitsType = static_cast<UnitsType>(unitsType);
     } else {
-        LogErrorAndExit("IESProfile: bad .ies file, bad units type value %d ('%s')\n", unitsType, path.c_str());
+        ARKOSE_LOG(Fatal, "IESProfile: bad .ies file, bad units type value {} ('{}')", unitsType, path);
         return;
     }
 
@@ -172,7 +173,7 @@ void IESProfile::parse(const std::string& path)
     for (int vi = 0; vi < numAnglesV; ++vi) {
         float angle = parseContext.nextAsFloat("v angle");
         if (angle <= lastAngleV)
-            LogErrorAndExit("IESProfile: bad .ies file, vertical angles should be strictly increasing ('%s')\n", path.c_str());
+            ARKOSE_LOG(Fatal, "IESProfile: bad .ies file, vertical angles should be strictly increasing ('{}')", path);
         m_anglesV.emplace_back(angle);
         lastAngleV = angle;
     }
@@ -182,7 +183,7 @@ void IESProfile::parse(const std::string& path)
     for (int hi = 0; hi < numAnglesH; ++hi) {
         float angle = parseContext.nextAsFloat("h angle");
         if (angle <= lastAngleH)
-            LogErrorAndExit("IESProfile: bad .ies file, horizontal angles should be strictly increasing ('%s')\n", path.c_str());
+            ARKOSE_LOG(Fatal, "IESProfile: bad .ies file, horizontal angles should be strictly increasing ('{}')", path);
         m_anglesH.emplace_back(angle);
         lastAngleH = angle;
     }
@@ -242,7 +243,7 @@ float IESProfile::lookupValue(float angleH, float angleV) const
             lookupLocation = computeLookupLocation(angleH, angleV);
 
         } else {
-            LogErrorAndExit("IESProfile: bad .ies file, invalid last horizontal angle value %f ('%s')\n", m_anglesH.back(), path().c_str());
+            ARKOSE_LOG(Fatal, "IESProfile: bad .ies file, invalid last horizontal angle value {} ('{}')", m_anglesH.back(), path());
         }
         break;
     }
@@ -259,7 +260,7 @@ vec2 IESProfile::computeLookupLocation(float angleH, float angleV) const
 {
     auto computeScalarLookup = [](float angle, const std::vector<float>& list) -> float {
         
-        ASSERT(list.size() > 0);
+        ARKOSE_ASSERT(list.size() > 0);
 
         int startIdx = 0;
         int endIdx = static_cast<int>(list.size() - 1);
@@ -275,7 +276,7 @@ vec2 IESProfile::computeLookupLocation(float angleH, float angleV) const
                 // Our value is between start and end, interpolate to get the right one
 
                 float delta = list[endIdx] - list[startIdx];
-                ASSERT(delta >= 0.0f);
+                ARKOSE_ASSERT(delta >= 0.0f);
 
                 if (delta < 1e-3f)
                     return static_cast<float>(startIdx);
@@ -295,7 +296,7 @@ vec2 IESProfile::computeLookupLocation(float angleH, float angleV) const
         }
 
         // We landed right on the correct value, return its index
-        ASSERT(startIdx == endIdx);
+        ARKOSE_ASSERT(startIdx == endIdx);
         return static_cast<float>(startIdx);
     };
 

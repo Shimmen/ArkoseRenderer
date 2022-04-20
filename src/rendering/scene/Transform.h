@@ -1,6 +1,6 @@
 #pragma once
 
-#include "utility/Badge.h"
+#include "core/Badge.h"
 #include "utility/Profiling.h"
 #include <moos/matrix.h>
 #include <moos/vector.h>

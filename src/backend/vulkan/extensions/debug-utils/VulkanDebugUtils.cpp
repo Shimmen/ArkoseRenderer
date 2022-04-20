@@ -1,7 +1,7 @@
 #include "VulkanDebugUtils.h"
 
 #include "backend/vulkan/VulkanBackend.h"
-#include "utility/Logging.h"
+#include "core/Logging.h"
 
 VulkanDebugUtils::VulkanDebugUtils(VulkanBackend& backend, VkInstance instance)
     : m_backend(backend)
@@ -28,9 +28,19 @@ VulkanDebugUtils::VulkanDebugUtils(VulkanBackend& backend, VkInstance instance)
 VkBool32 VulkanDebugUtils::debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
                                                 const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
 {
-    if (messageSeverity > VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-        LogError("Vulkan debug message; %s\n", pCallbackData->pMessage);
-        return VK_FALSE;
+    switch (messageSeverity) {
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+        ARKOSE_LOG(Error, "Vulkan debug message; {}", pCallbackData->pMessage);
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+        ARKOSE_LOG(Warning, "Vulkan debug message; {}", pCallbackData->pMessage);
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+        ARKOSE_LOG(Info, "Vulkan debug message; {}", pCallbackData->pMessage);
+        break;
+    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+        ARKOSE_LOG(Verbose, "Vulkan debug message; {}", pCallbackData->pMessage);
+        break;
     }
 
     return VK_FALSE;
@@ -39,10 +49,19 @@ VkBool32 VulkanDebugUtils::debugMessageCallback(VkDebugUtilsMessageSeverityFlagB
 VkBool32 VulkanDebugUtils::debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location,
                                                int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
 {
-    if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-        return VK_FALSE;
+    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
+        ARKOSE_LOG(Error, "Vulkan debug report; [{}] {}", pLayerPrefix, pMessage);
 
-    LogError("Vulkan debug report; [%s] %s\n", pLayerPrefix, pMessage);
+    else if (flags & (VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT))
+        ARKOSE_LOG(Warning, "Vulkan debug report; [{}] {}", pLayerPrefix, pMessage);
+
+    // NOTE: We treat information as verbose, as it's very spammy otherwise and the info is not very useful anyway
+    if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
+        ARKOSE_LOG(Verbose, "Vulkan debug report; [{}] {}", pLayerPrefix, pMessage);
+
+    if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
+        ARKOSE_LOG(Verbose, "Vulkan debug report; [{}] {}", pLayerPrefix, pMessage);
+
     return VK_FALSE;
 }
 

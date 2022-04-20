@@ -1,6 +1,6 @@
 #pragma once
 
-#include "utility/util.h"
+#include "core/Assert.h"
 #include <condition_variable>
 #include <functional>
 #include <list>
@@ -44,7 +44,7 @@ public:
         Worker* workerToHandleTask = findFirstFreeWorker();
         if (!workerToHandleTask)
             workerToHandleTask = &findLeastBusyWorker();
-        ASSERT(workerToHandleTask);
+        ARKOSE_ASSERT(workerToHandleTask);
 
         auto task = std::make_unique<Task>(taskFunc);
         TaskHandle handle = workerToHandleTask->enqueTaskForWorker(std::move(task));

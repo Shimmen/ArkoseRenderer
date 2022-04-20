@@ -1,7 +1,6 @@
 #pragma once
 
 #include "backend/Resources.h"
-#include "utility/Badge.h"
 #include <moos/matrix.h>
 #include <fmt/format.h>
 

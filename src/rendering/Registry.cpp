@@ -2,8 +2,8 @@
 
 #include "utility/FileIO.h"
 #include "utility/Image.h"
-#include "utility/Logging.h"
-#include "utility/util.h"
+#include "core/Logging.h"
+#include "core/Assert.h"
 #include <fmt/format.h>
 #include <stb_image.h>
 
@@ -39,9 +39,9 @@ static void validateTextureDescription(Texture::Description desc)
 {
     // TODO: Add more validation
     if (desc.extent.width() == 0 || desc.extent.height() == 0 || desc.extent.depth() == 0)
-        LogErrorAndExit("Registry: One or more texture dimensions are zero (extent={%u, %u, %u})\n", desc.extent.width(), desc.extent.height(), desc.extent.depth());
+        ARKOSE_LOG(Fatal, "Registry: One or more texture dimensions are zero (extent={{{}, {}, {}}})", desc.extent.width(), desc.extent.height(), desc.extent.depth());
     if (desc.arrayCount == 0)
-        LogErrorAndExit("Registry: Texture array count must be >= 1 but is %u\n", desc.arrayCount);
+        ARKOSE_LOG(Fatal, "Registry: Texture array count must be >= 1 but is {}", desc.arrayCount);
 }
 
 Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
@@ -145,14 +145,14 @@ std::pair<Texture&, Registry::ReuseMode> Registry::createOrReuseTexture2D(const 
             if (oldTexture && oldTexture->reusable({}) && oldTexture->name() == name) {
 
                 // Verify that all parameters are the same (for reuse we obviouly need that it's the same between occations)
-                ASSERT(extent == oldTexture->extent());
-                ASSERT(format == oldTexture->format());
-                ASSERT(filters.min == oldTexture->minFilter());
-                ASSERT(filters.mag == oldTexture->magFilter());
-                ASSERT(mipmap == oldTexture->mipmap());
-                ASSERT(wrapMode.u == oldTexture->wrapMode().u);
-                ASSERT(wrapMode.v == oldTexture->wrapMode().v);
-                ASSERT(wrapMode.w == oldTexture->wrapMode().w);
+                ARKOSE_ASSERT(extent == oldTexture->extent());
+                ARKOSE_ASSERT(format == oldTexture->format());
+                ARKOSE_ASSERT(filters.min == oldTexture->minFilter());
+                ARKOSE_ASSERT(filters.mag == oldTexture->magFilter());
+                ARKOSE_ASSERT(mipmap == oldTexture->mipmap());
+                ARKOSE_ASSERT(wrapMode.u == oldTexture->wrapMode().u);
+                ARKOSE_ASSERT(wrapMode.v == oldTexture->wrapMode().v);
+                ARKOSE_ASSERT(wrapMode.w == oldTexture->wrapMode().w);
 
                 // Adopt the reused resource (m_previousRegistry will be destroyed so it's fine to move things from it)
                 oldTexture->setOwningRegistry({}, this);
@@ -177,15 +177,15 @@ Texture& Registry::createOrReuseTextureArray(const std::string& name, uint32_t i
             if (oldTexture && oldTexture->reusable({}) && oldTexture->name() == name) {
 
                 // Verify that all parameters are the same (for reuse we obviouly need that it's the same between occations)
-                ASSERT(itemCount == oldTexture->arrayCount());
-                ASSERT(extent == oldTexture->extent());
-                ASSERT(format == oldTexture->format());
-                ASSERT(filters.min == oldTexture->minFilter());
-                ASSERT(filters.mag == oldTexture->magFilter());
-                ASSERT(mipmap == oldTexture->mipmap());
-                ASSERT(wrapMode.u == oldTexture->wrapMode().u);
-                ASSERT(wrapMode.v == oldTexture->wrapMode().v);
-                ASSERT(wrapMode.w == oldTexture->wrapMode().w);
+                ARKOSE_ASSERT(itemCount == oldTexture->arrayCount());
+                ARKOSE_ASSERT(extent == oldTexture->extent());
+                ARKOSE_ASSERT(format == oldTexture->format());
+                ARKOSE_ASSERT(filters.min == oldTexture->minFilter());
+                ARKOSE_ASSERT(filters.mag == oldTexture->magFilter());
+                ARKOSE_ASSERT(mipmap == oldTexture->mipmap());
+                ARKOSE_ASSERT(wrapMode.u == oldTexture->wrapMode().u);
+                ARKOSE_ASSERT(wrapMode.v == oldTexture->wrapMode().v);
+                ARKOSE_ASSERT(wrapMode.w == oldTexture->wrapMode().w);
 
                 // Adopt the reused resource (m_previousRegistry will be destroyed so it's fine to move things from it)
                 oldTexture->setOwningRegistry({}, this);
@@ -206,7 +206,7 @@ Texture& Registry::createOrReuseTextureArray(const std::string& name, uint32_t i
 Buffer& Registry::createBuffer(size_t size, Buffer::Usage usage, Buffer::MemoryHint memoryHint)
 {
     if (size == 0)
-        LogWarning("Warning: creating buffer of size 0!\n");
+        ARKOSE_LOG(Warning, "Warning: creating buffer of size 0!");
 
     auto buffer = backend().createBuffer(size, usage, memoryHint);
     buffer->setOwningRegistry({}, this);

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "utility/util.h"
+#include "core/Assert.h"
+#include "core/Types.h"
 #include "utility/Hash.h"
-#include <cstdint>
 #include <moos/vector.h>
 
 struct Extent2D {
@@ -19,8 +19,8 @@ struct Extent2D {
         : m_width(width)
         , m_height(height)
     {
-        ASSERT(width >= 0);
-        ASSERT(height >= 0);
+        ARKOSE_ASSERT(width >= 0);
+        ARKOSE_ASSERT(height >= 0);
     }
     constexpr Extent2D(const Extent2D& other)
         : Extent2D(other.m_width, other.m_height)

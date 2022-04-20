@@ -1,6 +1,6 @@
 #include "RenderPipeline.h"
 
-#include "utility/Logging.h"
+#include "core/Logging.h"
 #include "utility/Profiling.h"
 #include "rendering/scene/GpuScene.h"
 #include <fmt/format.h>
@@ -20,7 +20,7 @@ void RenderPipeline::addNode(const std::string& name, RenderPipelineLambdaNode::
 void RenderPipeline::addNode(std::unique_ptr<RenderPipelineNode>&& node)
 {
     // All nodes should be added before construction!
-    ASSERT(m_nodeContexts.empty());
+    ARKOSE_ASSERT(m_nodeContexts.empty());
 
     m_ownedNodes.emplace_back(std::move(node));
     m_allNodes.push_back(m_ownedNodes.back().get());
@@ -33,11 +33,11 @@ void RenderPipeline::constructAll(Registry& registry)
     // TODO: This is slightly confusing.. why not make this "destruction" more explicit?
     m_nodeContexts.clear();
 
-    LogInfo("Constructing node resources:\n");
+    ARKOSE_LOG(Info, "Constructing node resources:");
     for (auto& node : m_allNodes) {
 
         SCOPED_PROFILE_ZONE_DYNAMIC(node->name(), 0x252515)
-        LogInfo("  %s\n", node->name().c_str());
+        ARKOSE_LOG(Info, "{}", node->name());
 
         registry.setCurrentNode({}, node->name());
         auto executeCallback = node->construct(*m_scene, registry);
@@ -54,7 +54,7 @@ void RenderPipeline::forEachNodeInResolvedOrder(const Registry& frameManager, st
     // TODO: Actually run the callback in the correctly resolved order!
     // TODO: We also have to make sure that nodes rendering to the screen are last (and in some respective order that makes sense)
 
-    ASSERT(m_nodeContexts.size() > 0);
+    ARKOSE_ASSERT(m_nodeContexts.size() > 0);
 
     for (auto& [node, execCallback] : m_nodeContexts) {
         callback(node->name(), node->timer(), execCallback);

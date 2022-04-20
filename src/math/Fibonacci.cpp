@@ -1,12 +1,14 @@
 #include "Fibonacci.h"
 
+#include "core/Assert.h"
+
 namespace geometry {
 
 // Source: http://extremelearning.com.au/how-to-evenly-distribute-points-on-a-sphere-more-effectively-than-the-canonical-fibonacci-lattice/
 
 vec2 fibonacciLattice(uint32_t i, uint32_t n)
 {
-    ASSERT(i < n);
+    ARKOSE_ASSERT(i < n);
 
     static const float goldenRatio = (1.0f + std::sqrt(5.0f)) / 2.0f;
 

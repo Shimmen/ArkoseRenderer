@@ -1,8 +1,6 @@
 #include "TAANode.h"
 
 #include "rendering/camera/Camera.h"
-#include "utility/Logging.h"
-#include "utility/Profiling.h"
 #include <imgui.h>
 
 TAANode::TAANode(Camera& camera)
@@ -61,7 +59,7 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(GpuScene& scene, Registry
         }
 
         // Grab a copy of the current state of the accumulation texture; this is our history for this frame and we overwrite/accumulate in the accumulation texture
-        ASSERT(accumulationTexture.extent() == historyTexture.extent());
+        ARKOSE_ASSERT(accumulationTexture.extent() == historyTexture.extent());
         cmdList.copyTexture(accumulationTexture, historyTexture);
 
         cmdList.setComputeState(taaComputeState);

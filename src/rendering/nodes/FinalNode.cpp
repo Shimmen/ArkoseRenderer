@@ -1,6 +1,6 @@
 #include "FinalNode.h"
 
-#include "utility/Logging.h"
+#include "core/Logging.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 
@@ -13,7 +13,7 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Regist
 {
     Texture* sourceTexture = reg.getTexture(m_sourceTextureName);
     if (!sourceTexture)
-        LogErrorAndExit("Final: specified source texture '%s' not found, exiting.\n", m_sourceTextureName.c_str());
+        ARKOSE_LOG(Fatal, "Final: specified source texture '{}' not found, exiting.", m_sourceTextureName);
 
     Texture& filmGrainTexture = reg.loadTextureArrayFromFileSequence("assets/blue-noise/64_64/HDR_RGBA_{}.png", false, false);
 

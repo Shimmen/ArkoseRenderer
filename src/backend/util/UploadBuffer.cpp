@@ -1,6 +1,6 @@
 #include "UploadBuffer.h"
 
-#include "utility/Logging.h"
+#include "core/Logging.h"
 
 UploadBuffer::UploadBuffer(Backend& backend, size_t size)
 {
@@ -19,14 +19,14 @@ void UploadBuffer::reset()
 {
     m_cursor = 0;
     if (m_pendingOperations.size() > 0)
-        LogErrorAndExit("UploadBuffer: resetting although not all pending operations have been executed, exiting.\n");
+        ARKOSE_LOG(Fatal, "UploadBuffer: resetting although not all pending operations have been executed, exiting.");
 }
 
 BufferCopyOperation UploadBuffer::upload(const void* data, size_t size, Buffer& dstBuffer, size_t dstOffset)
 {
     size_t requiredSize = m_cursor + size;
     if (requiredSize > m_buffer->size())
-        LogWarning("UploadBuffer: needs to grow to fit all requested uploads! It might be good to increase the default size so we don't have to pay this runtime cost\n");
+        ARKOSE_LOG(Warning, "UploadBuffer: needs to grow to fit all requested uploads! It might be good to increase the default size so we don't have to pay this runtime cost");
 
     BufferCopyOperation copyOperation;
     copyOperation.size = size;

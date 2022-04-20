@@ -1,8 +1,8 @@
 #include "VulkanCommandList.h"
 
+#include "core/Logging.h"
 #include "VulkanBackend.h"
 #include "VulkanResources.h"
-#include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <stb_image_write.h>
 #include <fmt/format.h>
@@ -22,7 +22,7 @@ void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     auto& colorTexture = static_cast<VulkanTexture&>(genColorTexture);
-    ASSERT(!colorTexture.hasDepthFormat());
+    ARKOSE_ASSERT(!colorTexture.hasDepthFormat());
 
     std::optional<VkImageLayout> originalLayout;
     if (colorTexture.currentLayout != VK_IMAGE_LAYOUT_GENERAL && colorTexture.currentLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
@@ -110,14 +110,14 @@ void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t s
     auto& src = static_cast<VulkanTexture&>(genSrc);
     auto& dst = static_cast<VulkanTexture&>(genDst);
 
-    ASSERT(!src.hasMipmaps() && !dst.hasMipmaps());
+    ARKOSE_ASSERT(!src.hasMipmaps() && !dst.hasMipmaps());
 
-    ASSERT(src.hasDepthFormat() == dst.hasDepthFormat());
-    ASSERT(src.hasStencilFormat() == dst.hasStencilFormat());
-    ASSERT(src.aspectMask() == dst.aspectMask());
+    ARKOSE_ASSERT(src.hasDepthFormat() == dst.hasDepthFormat());
+    ARKOSE_ASSERT(src.hasStencilFormat() == dst.hasStencilFormat());
+    ARKOSE_ASSERT(src.aspectMask() == dst.aspectMask());
     VkImageAspectFlags aspectMask = src.aspectMask();
 
-    ASSERT(src.currentLayout != VK_IMAGE_LAYOUT_UNDEFINED && src.currentLayout != VK_IMAGE_LAYOUT_PREINITIALIZED);
+    ARKOSE_ASSERT(src.currentLayout != VK_IMAGE_LAYOUT_UNDEFINED && src.currentLayout != VK_IMAGE_LAYOUT_PREINITIALIZED);
     VkImageLayout initialSrcLayout = src.currentLayout;
 
     VkImageLayout finalDstLayout = dst.currentLayout;
@@ -231,12 +231,12 @@ void VulkanCommandList::generateMipmaps(Texture& genTexture)
     auto& texture = static_cast<VulkanTexture&>(genTexture);
 
     if (!texture.hasMipmaps()) {
-        LogError("generateMipmaps called on command list for texture which doesn't have space for mipmaps allocated. Ignoring request.\n");
+        ARKOSE_LOG(Error, "generateMipmaps called on command list for texture which doesn't have space for mipmaps allocated. Ignoring request.");
         return;
     }
 
     if (texture.currentLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
-        LogError("generateMipmaps called on command list for texture which currently has the layout VK_IMAGE_LAYOUT_UNDEFINED. Ignoring request.\n");
+        ARKOSE_LOG(Error, "generateMipmaps called on command list for texture which currently has the layout VK_IMAGE_LAYOUT_UNDEFINED. Ignoring request.");
         return;
     }
 
@@ -432,13 +432,13 @@ void VulkanCommandList::executeBufferCopyOperations(std::vector<BufferCopyOperat
 void VulkanCommandList::beginRendering(const RenderState& genRenderState)
 {
     if (activeRenderState) {
-        LogWarning("setRenderState: already active render state!\n");
+        ARKOSE_LOG(Warning, "setRenderState: already active render state!");
         endCurrentRenderPassIfAny();
     }
 
     genRenderState.renderTarget().forEachAttachmentInOrder([](const RenderTarget::Attachment& attachment) {
         if (attachment.loadOp == LoadOp::Clear) {
-            LogErrorAndExit("CommandList: calling beginRendering (with no extra arguments) for rendering to a render target with LoadOp::Clear textures. "
+            ARKOSE_LOG(Fatal, "CommandList: calling beginRendering (with no extra arguments) for rendering to a render target with LoadOp::Clear textures. "
                             "For these render targets always use beginRendering with clear colors etc. specified. Exiting!");
         }
     });
@@ -456,7 +456,7 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (activeRenderState) {
-        LogWarning("setRenderState: already active render state!\n");
+        ARKOSE_LOG(Warning, "setRenderState: already active render state!");
         endCurrentRenderPassIfAny();
     }
     auto& renderState = static_cast<const VulkanRenderState&>(genRenderState);
@@ -611,7 +611,7 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
     VkRenderPassAttachmentBeginInfo attachmentBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO };
     if (renderTarget.framebufferIsImageless) {
 
-        ASSERT(renderTarget.totalAttachmentCount() == renderTarget.imagelessFramebufferAttachments.size());
+        ARKOSE_ASSERT(renderTarget.totalAttachmentCount() == renderTarget.imagelessFramebufferAttachments.size());
         attachmentBeginInfo.attachmentCount = (uint32_t)renderTarget.imagelessFramebufferAttachments.size();
         attachmentBeginInfo.pAttachments = renderTarget.imagelessFramebufferAttachments.data();
 
@@ -642,11 +642,11 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (!backend().hasRayTracingSupport()) {
-        LogErrorAndExit("Trying to set ray tracing state but there is no ray tracing support!\n");
+        ARKOSE_LOG(Fatal, "Trying to set ray tracing state but there is no ray tracing support!");
     }
 
     if (activeRenderState) {
-        LogWarning("setRayTracingState: active render state when starting ray tracing.\n");
+        ARKOSE_LOG(Warning, "setRayTracingState: active render state when starting ray tracing.");
         endCurrentRenderPassIfAny();
     }
 
@@ -758,7 +758,7 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (activeRenderState) {
-        LogWarning("setComputeState: active render state when starting compute state.\n");
+        ARKOSE_LOG(Warning, "setComputeState: active render state when starting compute state.");
         endCurrentRenderPassIfAny();
     }
 
@@ -845,10 +845,10 @@ void VulkanCommandList::bindSet(BindingSet& bindingSet, uint32_t index)
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (!activeRenderState && !activeRayTracingState && !activeComputeState) {
-        LogErrorAndExit("bindSet: no active render or compute or ray tracing state to bind to!\n");
+        ARKOSE_LOG(Fatal, "bindSet: no active render or compute or ray tracing state to bind to!");
     }
 
-    ASSERT(!(activeRenderState && activeRayTracingState && activeComputeState));
+    ARKOSE_ASSERT(!(activeRenderState && activeRayTracingState && activeComputeState));
 
     auto pipelinePair = getCurrentlyBoundPipelineLayout();
     VkPipelineLayout pipelineLayout = pipelinePair.first;
@@ -900,11 +900,11 @@ void VulkanCommandList::setNamedUniform(const std::string& name, void* data, siz
     std::optional<Shader::UniformBinding> binding = shader.uniformBindingForName(name);
     if (binding.has_value()) {
         if (size != binding->size) {
-            LogErrorAndExit("setNamedUniform: size mismatch for uniform named '%s' (provided=%u, actual=%u).\n", name.c_str(), size, binding->size);
+            ARKOSE_LOG(Fatal, "setNamedUniform: size mismatch for uniform named '{}' (provided={}, actual={}).", name, size, binding->size);
         }
         pushConstants(binding->stages, data, binding->size, binding->offset);
     } else {
-        LogError("setNamedUniform: no corresponding uniform for name '%s', ignoring.\n", name.c_str());
+        ARKOSE_LOG(Error, "setNamedUniform: no corresponding uniform for name '{}', ignoring.", name);
     }
 }
 
@@ -913,7 +913,7 @@ void VulkanCommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount)
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (!activeRenderState) {
-        LogErrorAndExit("draw: no active render state!\n");
+        ARKOSE_LOG(Fatal, "draw: no active render state!");
     }
 
     bindVertexBuffer(vertexBuffer);
@@ -925,7 +925,7 @@ void VulkanCommandList::drawIndexed(const Buffer& vertexBuffer, const Buffer& in
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (!activeRenderState) {
-        LogErrorAndExit("drawIndexed: no active render state!\n");
+        ARKOSE_LOG(Fatal, "drawIndexed: no active render state!");
     }
 
     bindVertexBuffer(vertexBuffer);
@@ -938,16 +938,16 @@ void VulkanCommandList::drawIndirect(const Buffer& indirectBuffer, const Buffer&
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (!activeRenderState)
-        LogErrorAndExit("drawIndirect: no active render state!\n");
+        ARKOSE_LOG(Fatal, "drawIndirect: no active render state!");
     if (!m_boundVertexBuffer)
-        LogErrorAndExit("drawIndirect: no bound vertex buffer!\n");
+        ARKOSE_LOG(Fatal, "drawIndirect: no bound vertex buffer!");
     if (!m_boundIndexBuffer)
-        LogErrorAndExit("drawIndirect: no bound index buffer!\n");
+        ARKOSE_LOG(Fatal, "drawIndirect: no bound index buffer!");
 
     if (indirectBuffer.usage() != Buffer::Usage::IndirectBuffer)
-        LogErrorAndExit("drawIndirect: supplied indirect buffer is not an indirect buffer!\n");
+        ARKOSE_LOG(Fatal, "drawIndirect: supplied indirect buffer is not an indirect buffer!");
     if (countBuffer.usage() != Buffer::Usage::IndirectBuffer)
-        LogErrorAndExit("drawIndirect: supplied count buffer is not an indirect buffer!\n");
+        ARKOSE_LOG(Fatal, "drawIndirect: supplied count buffer is not an indirect buffer!");
 
     VkBuffer vulkanIndirectBuffer = static_cast<const VulkanBuffer&>(indirectBuffer).buffer;
     VkBuffer vulkanCountBuffer = static_cast<const VulkanBuffer&>(countBuffer).buffer;
@@ -964,7 +964,7 @@ void VulkanCommandList::bindVertexBuffer(const Buffer& vertexBuffer)
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (vertexBuffer.usage() != Buffer::Usage::Vertex)
-        LogErrorAndExit("bindVertexBuffer: not a vertex buffer!\n");
+        ARKOSE_LOG(Fatal, "bindVertexBuffer: not a vertex buffer!");
 
     VkBuffer vulkanBuffer = static_cast<const VulkanBuffer&>(vertexBuffer).buffer;
     if (m_boundVertexBuffer == vulkanBuffer)
@@ -982,11 +982,11 @@ void VulkanCommandList::bindIndexBuffer(const Buffer& indexBuffer, IndexType ind
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (indexBuffer.usage() != Buffer::Usage::Index)
-        LogErrorAndExit("bindIndexBuffer: not an index buffer!\n");
+        ARKOSE_LOG(Fatal, "bindIndexBuffer: not an index buffer!");
 
     VkBuffer vulkanBuffer = static_cast<const VulkanBuffer&>(indexBuffer).buffer;
     if (m_boundIndexBuffer == vulkanBuffer) {
-        ASSERT(m_boundIndexBufferType == indexType);
+        ARKOSE_ASSERT(m_boundIndexBufferType == indexType);
         return;
     }
 
@@ -1015,13 +1015,13 @@ void VulkanCommandList::issueDrawCall(const DrawCallDescription& drawCall)
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (!activeRenderState)
-        LogErrorAndExit("issueDrawCall: no active render state!\n");
+        ARKOSE_LOG(Fatal, "issueDrawCall: no active render state!");
     if (static_cast<const VulkanBuffer*>(drawCall.vertexBuffer)->buffer != m_boundVertexBuffer)
-        LogErrorAndExit("issueDrawCall: bind the correct vertex buffer before calling this!\n");
+        ARKOSE_LOG(Fatal, "issueDrawCall: bind the correct vertex buffer before calling this!");
     if (static_cast<const VulkanBuffer*>(drawCall.indexBuffer)->buffer != m_boundIndexBuffer)
-        LogErrorAndExit("issueDrawCall: bind the correct index buffer before calling this!\n");
+        ARKOSE_LOG(Fatal, "issueDrawCall: bind the correct index buffer before calling this!");
 
-    ASSERT(drawCall.instanceCount > 0);
+    ARKOSE_ASSERT(drawCall.instanceCount > 0);
 
     switch (drawCall.type) {
     case DrawCallDescription::Type::NonIndexed:
@@ -1038,7 +1038,7 @@ void VulkanCommandList::buildTopLevelAcceratationStructure(TopLevelAS& tlas, Acc
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (!backend().hasRayTracingSupport())
-        LogErrorAndExit("Trying to rebuild a top level acceleration structure but there is no ray tracing support!\n");
+        ARKOSE_LOG(Fatal, "Trying to rebuild a top level acceleration structure but there is no ray tracing support!");
 
     beginDebugLabel("Rebuild TLAS");
 
@@ -1061,9 +1061,9 @@ void VulkanCommandList::traceRays(Extent2D extent)
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (!activeRayTracingState)
-        LogErrorAndExit("traceRays: no active ray tracing state!\n");
+        ARKOSE_LOG(Fatal, "traceRays: no active ray tracing state!");
     if (!backend().hasRayTracingSupport())
-        LogErrorAndExit("Trying to trace rays but there is no ray tracing support!\n");
+        ARKOSE_LOG(Fatal, "Trying to trace rays but there is no ray tracing support!");
 
     switch (backend().rayTracingBackend()) {
     case VulkanBackend::RayTracingBackend::KhrExtension: {
@@ -1092,7 +1092,7 @@ void VulkanCommandList::dispatch(uint32_t x, uint32_t y, uint32_t z)
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (!activeComputeState) {
-        LogErrorAndExit("Trying to dispatch compute but there is no active compute state!\n");
+        ARKOSE_LOG(Fatal, "Trying to dispatch compute but there is no active compute state!");
     }
     vkCmdDispatch(m_commandBuffer, x, y, z);
 }
@@ -1101,9 +1101,9 @@ void VulkanCommandList::slowBlockingReadFromBuffer(const Buffer& buffer, size_t 
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    ASSERT(offset < buffer.size());
-    ASSERT(size > 0);
-    ASSERT(size <= buffer.size() - offset);
+    ARKOSE_ASSERT(offset < buffer.size());
+    ARKOSE_ASSERT(size > 0);
+    ARKOSE_ASSERT(size <= buffer.size() - offset);
 
     auto& srcBuffer = static_cast<const VulkanBuffer&>(buffer);
     auto dstGenericBuffer = m_backend.createBuffer(buffer.size(), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::Readback);
@@ -1173,7 +1173,7 @@ void VulkanCommandList::slowBlockingReadFromBuffer(const Buffer& buffer, size_t 
 
     moos::u8* mappedBuffer;
     if (vmaMapMemory(allocator, allocation, (void**)&mappedBuffer) != VK_SUCCESS)
-        LogError("Failed to map readback buffer memory...\n");
+        ARKOSE_LOG(Error, "Failed to map readback buffer memory...");
     vmaInvalidateAllocation(allocator, allocation, offset, size);
 
     std::memcpy(dst, mappedBuffer + offset, size);
@@ -1210,7 +1210,7 @@ void VulkanCommandList::saveTextureToFile(const Texture& texture, const std::str
     VmaAllocation dstAllocation;
     VmaAllocationInfo dstAllocationInfo;
     if (vmaCreateImage(m_backend.globalAllocator(), &imageCreateInfo, &allocCreateInfo, &dstImage, &dstAllocation, &dstAllocationInfo) != VK_SUCCESS) {
-        LogErrorAndExit("Failed to create temp image for screenshot\n");
+        ARKOSE_LOG(Fatal, "Failed to create temp image for screenshot");
     }
 
     bool success = m_backend.issueSingleTimeCommand([&](VkCommandBuffer cmdBuffer) {
@@ -1237,7 +1237,7 @@ void VulkanCommandList::saveTextureToFile(const Texture& texture, const std::str
     });
 
     if (!success) {
-        LogError("Failed to setup screenshot image & data...\n");
+        ARKOSE_LOG(Error, "Failed to setup screenshot image & data...");
     }
 
     // Get layout of the image (including row pitch/stride)
@@ -1263,7 +1263,7 @@ void VulkanCommandList::saveTextureToFile(const Texture& texture, const std::str
     }
 
     if (!stbi_write_png(filePath.c_str(), texture.extent().width(), texture.extent().height(), 4, data, (int)subResourceLayout.rowPitch)) {
-        LogError("Failed to write screenshot to file...\n");
+        ARKOSE_LOG(Error, "Failed to write screenshot to file...");
     }
 
     vkUnmapMemory(device(), dstAllocationInfo.deviceMemory);
@@ -1415,10 +1415,10 @@ void VulkanCommandList::transitionImageLayoutDEBUG(VkImage image, VkImageLayout 
 void VulkanCommandList::requireExactlyOneStateToBeSet(const std::string& context) const
 {
     if (!activeRenderState && !activeRayTracingState && !activeComputeState) {
-        LogErrorAndExit("%s: no active render or compute or ray tracing state to bind to!\n", context.c_str());
+        ARKOSE_LOG(Fatal, "{}: no active render or compute or ray tracing state to bind to!", context);
     }
 
-    ASSERT(!(activeRenderState && activeRayTracingState && activeComputeState));
+    ARKOSE_ASSERT(!(activeRenderState && activeRayTracingState && activeComputeState));
 }
 
 std::pair<VkPipelineLayout, VkPipelineBindPoint> VulkanCommandList::getCurrentlyBoundPipelineLayout()

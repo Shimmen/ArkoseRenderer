@@ -1,7 +1,8 @@
 #include "Shader.h"
 
 #include "backend/shader/ShaderManager.h"
-#include "utility/Logging.h"
+#include "core/Assert.h"
+#include "core/Logging.h"
 
 Shader Shader::createVertexOnly(std::string vertexName, std::initializer_list<ShaderDefine> defines)
 {
@@ -51,7 +52,7 @@ std::optional<Shader::UniformBinding> Shader::uniformBindingForName(const std::s
 
 void Shader::setUniformBindings(std::unordered_map<std::string, Shader::UniformBinding> bindings)
 {
-    ASSERT(m_uniformBindingsSet == false);
+    ARKOSE_ASSERT(m_uniformBindingsSet == false);
     m_uniformBindings = std::move(bindings);
     m_uniformBindingsSet = true;
 }

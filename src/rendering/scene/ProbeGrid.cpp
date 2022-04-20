@@ -1,5 +1,7 @@
 #include "ProbeGrid.h"
 
+#include "core/Assert.h"
+
 int ProbeGrid::probeCount() const
 {
     return gridDimensions.width()
@@ -10,7 +12,7 @@ int ProbeGrid::probeCount() const
 moos::ivec3 ProbeGrid::probeIndexFromLinear(int index) const
 {
     auto findMSB = [](uint32_t val) -> int {
-        ASSERT(val != 0);
+        ARKOSE_ASSERT(val != 0);
         int index = 0;
         while ((val & 0x01) == 0 && index < 32) {
             val >>= 1;

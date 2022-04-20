@@ -1,7 +1,5 @@
 #include "SSAONode.h"
 
-#include "utility/Logging.h"
-#include "utility/Profiling.h"
 #include <imgui.h>
 #include <moos/random.h>
 
@@ -13,7 +11,7 @@ RenderPipelineNode::ExecuteCallback SSAONode::construct(GpuScene& scene, Registr
     ///////////////////////
     // constructNode
     static constexpr int KernelSampleCount = 32;
-    ASSERT(KernelSampleCount <= SSAO_KERNEL_SAMPLE_MAX_COUNT);
+    ARKOSE_ASSERT(KernelSampleCount <= SSAO_KERNEL_SAMPLE_MAX_COUNT);
     Buffer& kernelSampleBuffer = reg.createBuffer(generateKernel(KernelSampleCount), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOptimal);
     ///////////////////////
 

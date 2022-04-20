@@ -1,7 +1,7 @@
 #include "VulkanRayTracingKHR.h"
 
 #include "backend/vulkan/VulkanBackend.h"
-#include "utility/Logging.h"
+#include "core/Logging.h"
 
 VulkanRayTracingKHR::VulkanRayTracingKHR(VulkanBackend& backend, VkPhysicalDevice physicalDevice, VkDevice device)
     : m_backend(backend)
@@ -86,7 +86,7 @@ std::pair<VkBuffer, VmaAllocation> VulkanRayTracingKHR::createAccelerationStruct
     VkBuffer buffer;
     VmaAllocation allocation;
     if (vmaCreateBuffer(m_backend.globalAllocator(), &bufferCreateInfo, &scratchAllocCreateInfo, &buffer, &allocation, nullptr) != VK_SUCCESS) {
-        LogErrorAndExit("Vulkan ray tracing: could not create acceleration structure buffer.\n");
+        ARKOSE_LOG(Fatal, "Vulkan ray tracing: could not create acceleration structure buffer.");
     }
 
     return { buffer, allocation };

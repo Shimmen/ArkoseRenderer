@@ -2,7 +2,7 @@
 
 #include "backend/base/Backend.h"
 #include "backend/shader/ShaderManager.h"
-#include "utility/Logging.h"
+#include "core/Logging.h"
 #include <algorithm>
 #include <string>
 #include <initializer_list>
@@ -22,6 +22,7 @@ ShaderFile::ShaderFile(std::string path, ShaderFileType type, std::initializer_l
     , m_type(type)
 {
     if (isRayTracingShaderFile()) {
+        // TODO: We want to get rid of Backend::get(). What should we do here?
         ShaderDefine rayTracingDefine = Backend::get().rayTracingShaderDefine();
         if (rayTracingDefine.valid()) {
             m_defines.push_back(rayTracingDefine);
@@ -53,12 +54,12 @@ ShaderFile::ShaderFile(std::string path, ShaderFileType type, std::initializer_l
     do {
         maybeError = ShaderManager::instance().loadAndCompileImmediately(*this);
         if (maybeError.has_value()) {
-            LogError("Shader file error: %s\n", maybeError.value().c_str());
+            ARKOSE_LOG(Error, "Shader file error: {}", maybeError.value());
 #ifdef _WIN32
-            LogError("Edit & and save the shader, then ...\n");
+            ARKOSE_LOG(Error, "Edit & and save the shader, then ...");
             system("pause");
 #else
-            LogErrorAndExit("Exiting due to bad shader at startup.\n");
+            ARKOSE_LOG(Fatal, "Exiting due to bad shader at startup.");
 #endif
         }
     } while (maybeError.has_value());

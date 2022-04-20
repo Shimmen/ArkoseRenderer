@@ -1,6 +1,6 @@
 #include "Input.h"
 
-#include "utility/util.h"
+#include "core/Assert.h"
 #include <imgui.h>
 
 #define GLFW_INCLUDE_NONE
@@ -80,7 +80,7 @@ bool Input::wasButtonReleased(Button button) const
 
 vec2 Input::mousePosition() const
 {
-    ASSERT(m_associatedWindow != nullptr);
+    ARKOSE_ASSERT(m_associatedWindow != nullptr);
     double x, y;
     glfwGetCursorPos(m_associatedWindow, &x, &y);
     return vec2(float(x), float(y));

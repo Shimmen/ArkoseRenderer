@@ -85,32 +85,32 @@ public:
 
     VulkanRayTracingNV& rayTracingNV()
     {
-        ASSERT(m_rayTracingBackend == RayTracingBackend::NvExtension && m_rayTracingNv);
+        ARKOSE_ASSERT(m_rayTracingBackend == RayTracingBackend::NvExtension && m_rayTracingNv);
         return *m_rayTracingNv;
     }
 
     const VulkanRayTracingNV& rayTracingNV() const
     {
-        ASSERT(m_rayTracingBackend == RayTracingBackend::NvExtension && m_rayTracingNv);
+        ARKOSE_ASSERT(m_rayTracingBackend == RayTracingBackend::NvExtension && m_rayTracingNv);
         return *m_rayTracingNv;
     }
 
     VulkanRayTracingKHR& rayTracingKHR()
     {
-        ASSERT(m_rayTracingBackend == RayTracingBackend::KhrExtension && m_rayTracingKhr);
+        ARKOSE_ASSERT(m_rayTracingBackend == RayTracingBackend::KhrExtension && m_rayTracingKhr);
         return *m_rayTracingKhr;
     }
 
     const VulkanRayTracingKHR& rayTracingKHR() const
     {
-        ASSERT(m_rayTracingBackend == RayTracingBackend::KhrExtension && m_rayTracingKhr);
+        ARKOSE_ASSERT(m_rayTracingBackend == RayTracingBackend::KhrExtension && m_rayTracingKhr);
         return *m_rayTracingKhr;
     }
 
     bool hasDebugUtilsSupport() const { return m_debugUtils != nullptr; }
     VulkanDebugUtils& debugUtils()
     {
-        ASSERT(hasDebugUtilsSupport());
+        ARKOSE_ASSERT(hasDebugUtilsSupport());
         return *m_debugUtils;
     }
 

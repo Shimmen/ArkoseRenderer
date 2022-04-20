@@ -1,7 +1,6 @@
 #include "TonemapNode.h"
 
-#include "utility/Logging.h"
-#include "utility/Profiling.h"
+#include "core/Logging.h"
 #include <imgui.h>
 
 TonemapNode::TonemapNode(std::string sourceTextureName, Mode mode)
@@ -14,7 +13,7 @@ RenderPipelineNode::ExecuteCallback TonemapNode::construct(GpuScene& scene, Regi
 {
     Texture* sourceTexture = reg.getTexture(m_sourceTextureName);
     if (!sourceTexture)
-        LogErrorAndExit("Tonemap: specified source texture '%s' not found, exiting.\n", m_sourceTextureName.c_str());
+        ARKOSE_LOG(Fatal, "Tonemap: specified source texture '{}' not found, exiting.\n", m_sourceTextureName);
 
     const RenderTarget* ldrTarget;
     if (m_mode == Mode::RenderToWindow) {

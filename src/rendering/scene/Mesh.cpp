@@ -3,7 +3,6 @@
 #include "rendering/Registry.h"
 #include "rendering/scene/Model.h"
 #include "rendering/scene/GpuScene.h"
-#include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <array>
 

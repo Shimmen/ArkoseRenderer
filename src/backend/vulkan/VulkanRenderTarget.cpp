@@ -18,7 +18,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
     std::vector<VkAttachmentReference> resolveAttachmentRefs {};
 
     auto createAttachmentDescription = [&](Texture* genTexture, VkImageLayout finalLayout, LoadOp loadOp, StoreOp storeOp) -> uint32_t {
-        ASSERT(genTexture);
+        ARKOSE_ASSERT(genTexture);
         auto& texture = static_cast<VulkanTexture&>(*genTexture);
 
         VkAttachmentDescription attachment = {};
@@ -92,8 +92,8 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
 
     for (const Attachment& colorAttachment : colorAttachments()) {
 
-        ASSERT((colorAttachment.texture->isMultisampled() && colorAttachment.multisampleResolveTexture)
-               || (!colorAttachment.texture->isMultisampled() && !colorAttachment.multisampleResolveTexture));
+        ARKOSE_ASSERT((colorAttachment.texture->isMultisampled() && colorAttachment.multisampleResolveTexture)
+                      || (!colorAttachment.texture->isMultisampled() && !colorAttachment.multisampleResolveTexture));
 
         VkAttachmentReference ref = createAttachmentData(colorAttachment, true);
         colorAttachmentRefs.push_back(ref);
@@ -124,7 +124,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
 
     VkDevice device = static_cast<VulkanBackend&>(backend).device();
     if (vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &compatibleRenderPass) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create render pass\n");
+        ARKOSE_LOG(Fatal, "Error trying to create render pass");
     }
 
     VkFramebufferCreateInfo framebufferCreateInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO };
@@ -163,7 +163,7 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
     }
 
     if (vkCreateFramebuffer(device, &framebufferCreateInfo, nullptr, &framebuffer) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create framebuffer\n");
+        ARKOSE_LOG(Fatal, "Error trying to create framebuffer");
     }
 
     for (auto& colorAttachment : colorAttachments()) {
@@ -207,7 +207,7 @@ void VulkanRenderTarget::setName(const std::string& name)
             nameInfo.pObjectName = framebufferName.c_str();
 
             if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-                LogWarning("Could not set debug name for vulkan framebuffer resource.\n");
+                ARKOSE_LOG(Warning, "Could not set debug name for vulkan framebuffer resource.");
             }
         }
 
@@ -218,7 +218,7 @@ void VulkanRenderTarget::setName(const std::string& name)
             nameInfo.pObjectName = renderPassName.c_str();
 
             if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-                LogWarning("Could not set debug name for vulkan render pass resource.\n");
+                ARKOSE_LOG(Warning, "Could not set debug name for vulkan render pass resource.");
             }
         }
     }

@@ -1,6 +1,5 @@
 #include "ForwardRenderNode.h"
 
-#include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 

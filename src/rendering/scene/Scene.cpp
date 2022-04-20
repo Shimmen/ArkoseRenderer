@@ -1,5 +1,6 @@
 #include "Scene.h"
 
+#include "core/Assert.h"
 #include "rendering/camera/Camera.h"
 #include "rendering/camera/FpsCamera.h"
 #include "rendering/scene/GpuScene.h"
@@ -44,13 +45,13 @@ void Scene::setupFromDescription(const Description& description)
     gpuScene().initialize({}, description.maintainRayTracingScene);
 
     if (!FileIO::isFileReadable(description.path))
-        LogErrorAndExit("Could not read scene file '%s', exiting\n", description.path.c_str());
+        ARKOSE_LOG(Fatal, "Could not read scene file '{}', exiting", description.path);
     loadFromFile(description.path);
 }
 
 Model& Scene::addModel(std::unique_ptr<Model> model)
 {
-    ASSERT(model);
+    ARKOSE_ASSERT(model);
     m_models.push_back(std::move(model));
     Model& addedModel = *m_models.back();
 
@@ -79,7 +80,7 @@ void Scene::forEachModel(std::function<void(size_t, Model&)> callback)
 
 DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)
 {
-    ASSERT(light);
+    ARKOSE_ASSERT(light);
     m_directionalLights.push_back(std::move(light));
     DirectionalLight& addedLight = *m_directionalLights.back();
     gpuScene().registerLight(addedLight);
@@ -88,7 +89,7 @@ DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)
 
 SpotLight& Scene::addLight(std::unique_ptr<SpotLight> light)
 {
-    ASSERT(light);
+    ARKOSE_ASSERT(light);
     m_spotLights.push_back(std::move(light));
     SpotLight& addedLight = *m_spotLights.back();
     gpuScene().registerLight(addedLight);
@@ -191,13 +192,13 @@ void Scene::loadFromFile(const std::string& path)
 
     auto readVec3 = [&](const json& val) -> vec3 {
         std::vector<float> values = val;
-        ASSERT(values.size() == 3);
+        ARKOSE_ASSERT(values.size() == 3);
         return { values[0], values[1], values[2] };
     };
 
     auto readExtent3D = [&](const json& val) -> Extent3D {
         std::vector<uint32_t> values = val;
-        ASSERT(values.size() == 3);
+        ARKOSE_ASSERT(values.size() == 3);
         return Extent3D(values[0], values[1], values[2]);
     };
 

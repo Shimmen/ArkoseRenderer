@@ -1,6 +1,6 @@
 #pragma once
 
-#include "utility/util.h"
+#include "core/Assert.h"
 #include <vector>
 
 enum class VertexComponent : int {

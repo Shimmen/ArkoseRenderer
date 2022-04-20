@@ -1,6 +1,6 @@
 #include "GIComposeNode.h"
 
-#include "utility/Logging.h"
+#include "core/Logging.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 

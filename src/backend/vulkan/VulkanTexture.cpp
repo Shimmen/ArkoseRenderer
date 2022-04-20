@@ -1,8 +1,9 @@
 #include "VulkanTexture.h"
 
 #include "backend/vulkan/VulkanBackend.h"
+#include "core/Defer.h"
 #include "utility/Profiling.h"
-#include "utility/Logging.h"
+#include "core/Logging.h"
 #include <stb_image.h>
 
 VulkanTexture::VulkanTexture(Backend& backend, Description desc)
@@ -53,7 +54,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
         storageCapable = false;
         break;
     case Texture::Format::Unknown:
-        LogErrorAndExit("Trying to create new texture with format Unknown, which is not allowed!\n");
+        ARKOSE_LOG(Fatal, "Trying to create new texture with format Unknown, which is not allowed!");
     default:
         ASSERT_NOT_REACHED();
     }
@@ -116,7 +117,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
         SCOPED_PROFILE_ZONE_NAMED("vmaCreateImage");
         auto& allocator = static_cast<VulkanBackend&>(backend).globalAllocator();
         if (vmaCreateImage(allocator, &imageCreateInfo, &allocCreateInfo, &image, &allocation, nullptr) != VK_SUCCESS) {
-            LogError("VulkanBackend::newTexture(): could not create image.\n");
+            ARKOSE_LOG(Error, "VulkanBackend::newTexture(): could not create image.");
         }
     }
 
@@ -162,7 +163,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
 
     VkDevice device = static_cast<VulkanBackend&>(backend).device();
     if (vkCreateImageView(device, &viewCreateInfo, nullptr, &imageView) != VK_SUCCESS) {
-        LogError("VulkanBackend::newTexture(): could not create image view.\n");
+        ARKOSE_LOG(Error, "VulkanBackend::newTexture(): could not create image view.");
     }
 
     VkFilter vkMinFilter;
@@ -235,7 +236,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
     }
 
     if (vkCreateSampler(device, &samplerCreateInfo, nullptr, &sampler) != VK_SUCCESS) {
-        LogError("VulkanBackend::newTexture(): could not create sampler for the image.\n");
+        ARKOSE_LOG(Error, "VulkanBackend::newTexture(): could not create sampler for the image.");
     }
 
     currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -270,7 +271,7 @@ void VulkanTexture::setName(const std::string& name)
             nameInfo.pObjectName = name.c_str();
 
             if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-                LogWarning("Could not set debug name for vulkan image resource.\n");
+                ARKOSE_LOG(Warning, "Could not set debug name for vulkan image resource.");
             }
         }
 
@@ -281,7 +282,7 @@ void VulkanTexture::setName(const std::string& name)
             nameInfo.pObjectName = imageViewName.c_str();
 
             if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-                LogWarning("Could not set debug name for vulkan image view resource.\n");
+                ARKOSE_LOG(Warning, "Could not set debug name for vulkan image view resource.");
             }
         }
 
@@ -292,7 +293,7 @@ void VulkanTexture::setName(const std::string& name)
             nameInfo.pObjectName = samplerName.c_str();
 
             if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-                LogWarning("Could not set debug name for vulkan sampler resource.\n");
+                ARKOSE_LOG(Warning, "Could not set debug name for vulkan sampler resource.");
             }
         }
     }
@@ -305,7 +306,7 @@ void VulkanTexture::clear(ClearColor color)
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
     // TODO: Support depth texture clears!
-    ASSERT(!hasDepthFormat());
+    ARKOSE_ASSERT(!hasDepthFormat());
 
     std::optional<VkImageLayout> originalLayout;
     if (currentLayout != VK_IMAGE_LAYOUT_GENERAL && currentLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
@@ -340,7 +341,7 @@ void VulkanTexture::clear(ClearColor color)
                                  1, &imageBarrier);
         });
         if (!success) {
-            LogError("Could not transition image to general layout.\n");
+            ARKOSE_LOG(Error, "Could not transition image to general layout.");
             return;
         }
     }
@@ -364,7 +365,7 @@ void VulkanTexture::clear(ClearColor color)
         vkCmdClearColorImage(commandBuffer, image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &range);
     });
     if (!success) {
-        LogError("Could not clear the color image.\n");
+        ARKOSE_LOG(Error, "Could not clear the color image.");
         return;
     }
 
@@ -398,7 +399,7 @@ void VulkanTexture::clear(ClearColor color)
                                  1, &imageBarrier);
         });
         if (!success) {
-            LogError("Could not transition image back to original layout.\n");
+            ARKOSE_LOG(Error, "Could not transition image back to original layout.");
             return;
         }
     }
@@ -445,7 +446,7 @@ void VulkanTexture::setPixelData(vec4 pixel)
         break;
     }
 
-    ASSERT(numChannels == 4);
+    ARKOSE_ASSERT(numChannels == 4);
 
     if (isHdr) {
         setData(&pixel, sizeof(pixel));
@@ -476,11 +477,11 @@ void VulkanTexture::setData(const void* data, size_t size)
     VkBuffer stagingBuffer;
     VmaAllocation stagingAllocation;
     if (vmaCreateBuffer(vulkanBackend.globalAllocator(), &bufferCreateInfo, &allocCreateInfo, &stagingBuffer, &stagingAllocation, nullptr) != VK_SUCCESS) {
-        LogError("VulkanBackend::updateTexture(): could not create staging buffer.\n");
+        ARKOSE_LOG(Error, "VulkanBackend::updateTexture(): could not create staging buffer.");
     }
 
     if (!vulkanBackend.setBufferMemoryUsingMapping(stagingAllocation, (uint8_t*)data, size)) {
-        LogError("VulkanBackend::updateTexture(): could set the buffer memory for the staging buffer.\n");
+        ARKOSE_LOG(Error, "VulkanBackend::updateTexture(): could set the buffer memory for the staging buffer.");
         return;
     }
 
@@ -515,7 +516,7 @@ void VulkanTexture::setData(const void* data, size_t size)
                                  1, &imageBarrier);
         });
         if (!success) {
-            LogError("Could not transition the image to transfer optimal layout.\n");
+            ARKOSE_LOG(Error, "Could not transition the image to transfer optimal layout.");
             return;
         }
     }
@@ -552,7 +553,7 @@ void VulkanTexture::setData(const void* data, size_t size)
     });
 
     if (!copySuccess) {
-        LogError("Could not copy the staging buffer to the image.\n");
+        ARKOSE_LOG(Error, "Could not copy the staging buffer to the image.");
         return;
     }
 
@@ -587,7 +588,7 @@ void VulkanTexture::setData(const void* data, size_t size)
         });
 
         if (!success) {
-            LogError("Error transitioning layout after setting texture data\n");
+            ARKOSE_LOG(Error, "Error transitioning layout after setting texture data");
         }
     }
     currentLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -598,12 +599,12 @@ void VulkanTexture::generateMipmaps()
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     if (!hasMipmaps()) {
-        LogError("VulkanTexture: generateMipmaps() called on texture which doesn't have space for mipmaps allocated. Ignoring request.\n");
+        ARKOSE_LOG(Error, "VulkanTexture: generateMipmaps() called on texture which doesn't have space for mipmaps allocated. Ignoring request.");
         return;
     }
 
     if (currentLayout == VK_IMAGE_LAYOUT_UNDEFINED) {
-        LogError("VulkanTexture: generateMipmaps() called on texture which currently has the layout VK_IMAGE_LAYOUT_UNDEFINED. Ignoring request.\n");
+        ARKOSE_LOG(Error, "VulkanTexture: generateMipmaps() called on texture which currently has the layout VK_IMAGE_LAYOUT_UNDEFINED. Ignoring request.");
         return;
     }
 
@@ -719,7 +720,7 @@ void VulkanTexture::generateMipmaps()
     });
 
     if (!success) {
-        LogError("VulkanTexture: error while generating mipmaps\n");
+        ARKOSE_LOG(Error, "VulkanTexture: error while generating mipmaps");
     }
 }
 

@@ -1,6 +1,6 @@
 #include "StateBindings.h"
 
-#include "utility/util.h"
+#include "core/Assert.h"
 
 void StateBindings::at(uint32_t index, BindingSet& bindingSet)
 {
@@ -8,6 +8,6 @@ void StateBindings::at(uint32_t index, BindingSet& bindingSet)
         m_orderedBindingSets.resize(size_t(index) + 1);
     }
 
-    ASSERT(m_orderedBindingSets[index] == nullptr);
+    ARKOSE_ASSERT(m_orderedBindingSets[index] == nullptr);
     m_orderedBindingSets[index] = &bindingSet;
 }

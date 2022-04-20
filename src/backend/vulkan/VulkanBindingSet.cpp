@@ -76,7 +76,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
         descriptorPoolCreateInfo.maxSets = 1;
 
         if (vkCreateDescriptorPool(device, &descriptorPoolCreateInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
-            LogErrorAndExit("Error trying to create descriptor pool\n");
+            ARKOSE_LOG(Fatal, "Error trying to create descriptor pool");
         }
     }
 
@@ -135,7 +135,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
             bindingFlags.push_back(flagsForBinding);
         }
 
-        ASSERT(bindingFlags.size() == layoutBindings.size());
+        ARKOSE_ASSERT(bindingFlags.size() == layoutBindings.size());
 
         VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
         descriptorSetLayoutCreateInfo.flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT;
@@ -149,7 +149,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
         descriptorSetLayoutCreateInfo.pNext = &bindingFlagsCreateInfo;
 
         if (vkCreateDescriptorSetLayout(device, &descriptorSetLayoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS) {
-            LogErrorAndExit("Error trying to create descriptor set layout\n");
+            ARKOSE_LOG(Fatal, "Error trying to create descriptor set layout");
         }
     }
 
@@ -161,7 +161,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
         descriptorSetAllocateInfo.pSetLayouts = &descriptorSetLayout;
 
         if (vkAllocateDescriptorSets(device, &descriptorSetAllocateInfo, &descriptorSet) != VK_SUCCESS) {
-            LogErrorAndExit("Error trying to create descriptor set\n");
+            ARKOSE_LOG(Fatal, "Error trying to create descriptor set");
         }
     }
 
@@ -197,7 +197,7 @@ void VulkanBindingSet::setName(const std::string& name)
             nameInfo.pObjectName = descriptorSetName.c_str();
 
             if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-                LogWarning("Could not set debug name for vulkan descriptor set resource.\n");
+                ARKOSE_LOG(Warning, "Could not set debug name for vulkan descriptor set resource.");
             }
         }
 
@@ -208,7 +208,7 @@ void VulkanBindingSet::setName(const std::string& name)
             nameInfo.pObjectName = descriptorPoolName.c_str();
 
             if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-                LogWarning("Could not set debug name for vulkan descriptor pool resource.\n");
+                ARKOSE_LOG(Warning, "Could not set debug name for vulkan descriptor pool resource.");
             }
         }
 
@@ -219,7 +219,7 @@ void VulkanBindingSet::setName(const std::string& name)
             nameInfo.pObjectName = descriptorSetLayoutName.c_str();
 
             if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-                LogWarning("Could not set debug name for vulkan descriptor set layout resource.\n");
+                ARKOSE_LOG(Warning, "Could not set debug name for vulkan descriptor set layout resource.");
             }
         }
     }
@@ -246,8 +246,8 @@ void VulkanBindingSet::updateBindings()
         switch (bindingInfo.type) {
         case ShaderBindingType::UniformBuffer: {
 
-            ASSERT(bindingInfo.buffers.size() == 1);
-            ASSERT(bindingInfo.buffers[0]);
+            ARKOSE_ASSERT(bindingInfo.buffers.size() == 1);
+            ARKOSE_ASSERT(bindingInfo.buffers[0]);
             auto& buffer = static_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
 
             VkDescriptorBufferInfo descBufferInfo {};
@@ -267,8 +267,8 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::StorageBuffer: {
 
-            ASSERT(bindingInfo.buffers.size() == 1);
-            ASSERT(bindingInfo.buffers[0]);
+            ARKOSE_ASSERT(bindingInfo.buffers.size() == 1);
+            ARKOSE_ASSERT(bindingInfo.buffers[0]);
             auto& buffer = static_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
 
             VkDescriptorBufferInfo descBufferInfo {};
@@ -288,7 +288,7 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::StorageBufferArray: {
 
-            ASSERT(bindingInfo.count == bindingInfo.buffers.size());
+            ARKOSE_ASSERT(bindingInfo.count == bindingInfo.buffers.size());
 
             if (bindingInfo.count == 0) {
                 continue;
@@ -296,8 +296,8 @@ void VulkanBindingSet::updateBindings()
 
             for (const Buffer* buffer : bindingInfo.buffers) {
 
-                ASSERT(buffer);
-                ASSERT(buffer->usage() == Buffer::Usage::StorageBuffer);
+                ARKOSE_ASSERT(buffer);
+                ARKOSE_ASSERT(buffer->usage() == Buffer::Usage::StorageBuffer);
                 auto& vulkanBuffer = static_cast<const VulkanBuffer&>(*buffer);
 
                 VkDescriptorBufferInfo descBufferInfo {};
@@ -319,8 +319,8 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::StorageImage: {
 
-            ASSERT(bindingInfo.textures.size() == 1);
-            ASSERT(bindingInfo.textures[0]);
+            ARKOSE_ASSERT(bindingInfo.textures.size() == 1);
+            ARKOSE_ASSERT(bindingInfo.textures[0]);
             auto& texture = static_cast<const VulkanTexture&>(*bindingInfo.textures[0]);
 
             VkDescriptorImageInfo descImageInfo {};
@@ -342,8 +342,8 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::TextureSampler: {
 
-            ASSERT(bindingInfo.textures.size() == 1);
-            ASSERT(bindingInfo.textures[0]);
+            ARKOSE_ASSERT(bindingInfo.textures.size() == 1);
+            ARKOSE_ASSERT(bindingInfo.textures[0]);
             auto& texture = static_cast<const VulkanTexture&>(*bindingInfo.textures[0]);
 
             VkDescriptorImageInfo descImageInfo {};
@@ -366,13 +366,13 @@ void VulkanBindingSet::updateBindings()
         case ShaderBindingType::TextureSamplerArray: {
 
             size_t numTextures = bindingInfo.textures.size();
-            ASSERT(numTextures > 0);
+            ARKOSE_ASSERT(numTextures > 0);
 
             for (uint32_t i = 0; i < bindingInfo.count; ++i) {
 
                 // NOTE: We always have to fill in the count here, but for the unused we just fill with a "default"
                 const Texture* genTexture = (i >= numTextures) ? bindingInfo.textures.front() : bindingInfo.textures[i];
-                ASSERT(genTexture);
+                ARKOSE_ASSERT(genTexture);
 
                 auto& texture = static_cast<const VulkanTexture&>(*genTexture);
 
@@ -397,9 +397,9 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::RTAccelerationStructure: {
 
-            ASSERT(bindingInfo.textures.empty());
-            ASSERT(bindingInfo.buffers.empty());
-            ASSERT(bindingInfo.tlas != nullptr);
+            ARKOSE_ASSERT(bindingInfo.textures.empty());
+            ARKOSE_ASSERT(bindingInfo.buffers.empty());
+            ARKOSE_ASSERT(bindingInfo.tlas != nullptr);
 
             switch (vulkanBackend.rayTracingBackend()) {
             case VulkanBackend::RayTracingBackend::NvExtension: {
@@ -449,12 +449,12 @@ void VulkanBindingSet::updateTextures(uint32_t bindingIndex, const std::vector<T
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     if (bindingIndex >= shaderBindings().size()) {
-        LogErrorAndExit("BindingSet: trying to update texture for out-of-bounds shader binding, exiting.\n");
+        ARKOSE_LOG(Fatal, "BindingSet: trying to update texture for out-of-bounds shader binding, exiting.");
     }
 
     ShaderBindingType bindingType = shaderBindings()[bindingIndex].type;
     if (bindingType != ShaderBindingType::TextureSampler && bindingType != ShaderBindingType::TextureSamplerArray) {
-        LogErrorAndExit("BindingSet: trying to update texture for shader binding that does not have texture(s), exiting.\n");
+        ARKOSE_LOG(Fatal, "BindingSet: trying to update texture for shader binding that does not have texture(s), exiting.");
     }
 
     std::vector<VkWriteDescriptorSet> descriptorSetWrites {};
@@ -465,7 +465,7 @@ void VulkanBindingSet::updateTextures(uint32_t bindingIndex, const std::vector<T
 
     for (const TextureBindingUpdate& textureUpdate : textureUpdates) {
 
-        ASSERT(textureUpdate.texture != nullptr);
+        ARKOSE_ASSERT(textureUpdate.texture != nullptr);
         VulkanTexture& texture = *static_cast<VulkanTexture*>(textureUpdate.texture);
 
         VkDescriptorImageInfo descImageInfo {};

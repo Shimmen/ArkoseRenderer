@@ -11,8 +11,8 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
 
-    ASSERT(vulkanBackend.hasRayTracingSupport());
-    ASSERT(vulkanBackend.rayTracingBackend() == VulkanBackend::RayTracingBackend::KhrExtension);
+    ARKOSE_ASSERT(vulkanBackend.hasRayTracingSupport());
+    ARKOSE_ASSERT(vulkanBackend.rayTracingBackend() == VulkanBackend::RayTracingBackend::KhrExtension);
 
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
@@ -35,7 +35,7 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
     }
 
     if (vkCreatePipelineLayout(vulkanBackend.device(), &pipelineLayoutCreateInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
-        LogErrorAndExit("Error trying to create pipeline layout for ray tracing\n");
+        ARKOSE_LOG(Fatal, "Error trying to create pipeline layout for ray tracing");
     }
 
     std::vector<VkShaderModule> shaderModulesToRemove {};
@@ -51,7 +51,7 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
 
         VkShaderModule shaderModule {};
         if (vkCreateShaderModule(vulkanBackend.device(), &moduleCreateInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-            LogErrorAndExit("Error trying to create shader module for raygen shader for ray tracing state\n");
+            ARKOSE_LOG(Fatal, "Error trying to create shader module for raygen shader for ray tracing state");
         }
 
         VkPipelineShaderStageCreateInfo stageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
@@ -97,7 +97,7 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
 
             VkShaderModule shaderModule {};
             if (vkCreateShaderModule(vulkanBackend.device(), &moduleCreateInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-                LogErrorAndExit("Error trying to create shader module for closest hit shader for ray tracing state\n");
+                ARKOSE_LOG(Fatal, "Error trying to create shader module for closest hit shader for ray tracing state");
             }
 
             VkPipelineShaderStageCreateInfo stageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
@@ -118,7 +118,7 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
 
             VkShaderModule shaderModule {};
             if (vkCreateShaderModule(vulkanBackend.device(), &moduleCreateInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-                LogErrorAndExit("Error trying to create shader module for anyhit shader for ray tracing state\n");
+                ARKOSE_LOG(Fatal, "Error trying to create shader module for anyhit shader for ray tracing state");
             }
 
             VkPipelineShaderStageCreateInfo stageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
@@ -139,7 +139,7 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
 
             VkShaderModule shaderModule {};
             if (vkCreateShaderModule(vulkanBackend.device(), &moduleCreateInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-                LogErrorAndExit("Error trying to create shader module for intersection shader for ray tracing state\n");
+                ARKOSE_LOG(Fatal, "Error trying to create shader module for intersection shader for ray tracing state");
             }
 
             VkPipelineShaderStageCreateInfo stageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
@@ -165,7 +165,7 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
 
         VkShaderModule shaderModule {};
         if (vkCreateShaderModule(vulkanBackend.device(), &moduleCreateInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-            LogErrorAndExit("Error trying to create shader module for miss shader for ray tracing state\n");
+            ARKOSE_LOG(Fatal, "Error trying to create shader module for miss shader for ray tracing state");
         }
 
         VkPipelineShaderStageCreateInfo stageCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO };
@@ -209,7 +209,7 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
 
     VkDeferredOperationKHR deferredOperation = VK_NULL_HANDLE;
     if (vulkanBackend.rayTracingKHR().vkCreateRayTracingPipelinesKHR(vulkanBackend.device(), deferredOperation, vulkanBackend.pipelineCache(), 1, &rtPipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
-        LogErrorAndExit("Error creating ray tracing pipeline\n");
+        ARKOSE_LOG(Fatal, "Error creating ray tracing pipeline");
     }
 
     // Remove shader modules after creating the pipeline
@@ -223,7 +223,7 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
         uint32_t sizeOfAllHandles = sizeOfSingleHandle * (uint32_t)shaderGroups.size();
         std::vector<std::byte> shaderGroupHandles { sizeOfAllHandles };
         if (vulkanBackend.rayTracingKHR().vkGetRayTracingShaderGroupHandlesKHR(vulkanBackend.device(), pipeline, 0, (uint32_t)shaderGroups.size(), sizeOfAllHandles, shaderGroupHandles.data()) != VK_SUCCESS) {
-            LogErrorAndExit("Error trying to get shader group handles for the shader binding table.\n");
+            ARKOSE_LOG(Fatal, "Error trying to get shader group handles for the shader binding table.");
         }
 
         // TODO: For now we don't have any data, only shader handles, but we still have to consider the alignments & strides
@@ -254,11 +254,11 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
         sbtAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU; // Gpu only is probably perfectly fine, except we need to copy the data using a staging buffer
 
         if (vmaCreateBuffer(vulkanBackend.globalAllocator(), &sbtBufferCreateInfo, &sbtAllocCreateInfo, &sbtBuffer, &sbtBufferAllocation, nullptr) != VK_SUCCESS) {
-            LogErrorAndExit("Error trying to create buffer for the shader binding table.\n");
+            ARKOSE_LOG(Fatal, "Error trying to create buffer for the shader binding table.");
         }
 
         if (!vulkanBackend.setBufferMemoryUsingMapping(sbtBufferAllocation, (uint8_t*)sbtData.data(), sbtSize)) {
-            LogErrorAndExit("Error trying to copy data to the shader binding table.\n");
+            ARKOSE_LOG(Fatal, "Error trying to copy data to the shader binding table.");
         }
     }
 }
@@ -292,7 +292,7 @@ void VulkanRayTracingStateKHR::setName(const std::string& name)
             nameInfo.pObjectName = pipelineName.c_str();
 
             if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-                LogWarning("Could not set debug name for vulkan ray tracing pipeline resource.\n");
+                ARKOSE_LOG(Warning, "Could not set debug name for vulkan ray tracing pipeline resource.");
             }
         }
 
@@ -303,7 +303,7 @@ void VulkanRayTracingStateKHR::setName(const std::string& name)
             nameInfo.pObjectName = pipelineLayoutName.c_str();
 
             if (vulkanBackend.debugUtils().vkSetDebugUtilsObjectNameEXT(vulkanBackend.device(), &nameInfo) != VK_SUCCESS) {
-                LogWarning("Could not set debug name for vulkan ray tracing pipeline layout resource.\n");
+                ARKOSE_LOG(Warning, "Could not set debug name for vulkan ray tracing pipeline layout resource.");
             }
         }
     }

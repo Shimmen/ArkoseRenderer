@@ -1,7 +1,5 @@
 #include "PrepassNode.h"
 
-#include "utility/Logging.h"
-#include "utility/Profiling.h"
 #include <imgui.h>
 
 RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Registry& reg)

@@ -2,7 +2,6 @@
 
 #include "CameraState.h"
 #include "LightData.h"
-#include "utility/Logging.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 #include <moos/vector.h>
