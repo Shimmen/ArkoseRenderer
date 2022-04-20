@@ -243,7 +243,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     std::vector<std::string> imagePaths;
     std::vector<Image::Info*> imageInfos;
     for (size_t idx = 0;; ++idx) {
-        std::string imagePath = fmt::format(imagePathSequencePattern, idx);
+        std::string imagePath = fmt::format(fmt::runtime(imagePathSequencePattern), idx);
         Image::Info* imageInfo = Image::getInfo(imagePath, true);
         if (!imageInfo)
             break;
