@@ -615,6 +615,16 @@ TextureHandle GpuScene::registerTexture(std::unique_ptr<Texture>&& texture)
 {
     SCOPED_PROFILE_ZONE();
 
+    TextureHandle handle = registerTextureSlot();
+    updateTexture(handle, std::move(texture));
+
+    return handle;
+}
+
+TextureHandle GpuScene::registerTextureSlot()
+{
+    SCOPED_PROFILE_ZONE();
+
     uint64_t textureIdx = m_managedTextures.size();
     if (textureIdx >= MaxSupportedSceneTextures) {
         ARKOSE_LOG(Fatal, "Ran out of bindless scene texture slots, exiting.");
@@ -622,13 +632,25 @@ TextureHandle GpuScene::registerTexture(std::unique_ptr<Texture>&& texture)
 
     auto handle = TextureHandle(textureIdx);
 
-    m_pendingTextureUpdates.push_back({ .texture = texture.get(),
-                                        .index = handle.indexOfType<uint32_t>() });
-
-    m_managedTextures.push_back(ManagedTexture { .texture = std::move(texture),
+    m_managedTextures.push_back(ManagedTexture { .texture = nullptr,
                                                  .referenceCount = 1 });
 
     return handle;
+}
+
+void GpuScene::updateTexture(TextureHandle handle, std::unique_ptr<Texture>&& texture)
+{
+    SCOPED_PROFILE_ZONE();
+
+    ARKOSE_ASSERT(handle.valid());
+    ARKOSE_ASSERT(handle.index() < m_managedTextures.size());
+
+    auto index = handle.indexOfType<uint32_t>();
+    ManagedTexture& managedTexture = m_managedTextures[index];
+
+    managedTexture.texture = std::move(texture);
+    m_pendingTextureUpdates.push_back({ .texture = managedTexture.texture.get(),
+                                        .index = index });
 }
 
 void GpuScene::unregisterTexture(TextureHandle handle)

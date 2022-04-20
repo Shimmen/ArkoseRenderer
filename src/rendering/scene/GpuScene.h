@@ -67,6 +67,8 @@ public:
 
     [[nodiscard]] TextureHandle registerMaterialTexture(Material::TextureDescription&);
     [[nodiscard]] TextureHandle registerTexture(std::unique_ptr<Texture>&&);
+    [[nodiscard]] TextureHandle registerTextureSlot();
+    void updateTexture(TextureHandle, std::unique_ptr<Texture>&&);
     void unregisterTexture(TextureHandle);
 
     // Lighting & environment
