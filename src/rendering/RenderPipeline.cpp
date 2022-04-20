@@ -37,7 +37,7 @@ void RenderPipeline::constructAll(Registry& registry)
     for (auto& node : m_allNodes) {
 
         SCOPED_PROFILE_ZONE_DYNAMIC(node->name(), 0x252515)
-        ARKOSE_LOG(Info, "{}", node->name());
+        ARKOSE_LOG(Info, " {}", node->name());
 
         registry.setCurrentNode({}, node->name());
         auto executeCallback = node->construct(*m_scene, registry);
