@@ -117,6 +117,10 @@ void TaskGraph::waitFor(std::vector<TaskHandle> tasks) const
 {
     SCOPED_PROFILE_ZONE_COLOR(0xaa33aa);
 
+    if (tasks.empty()) {
+        return;
+    }
+
     while (!checkAllCompleted(tasks)) {
         std::this_thread::sleep_for(std::chrono::nanoseconds::min());
     }
