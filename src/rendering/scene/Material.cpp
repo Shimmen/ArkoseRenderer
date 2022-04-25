@@ -10,7 +10,10 @@ bool Material::TextureDescription::operator==(const TextureDescription& other) c
         return false;
     if (hasImage() && image != other.image)
         return false;
-    if (moos::dot(fallbackColor, other.fallbackColor) > 1e-3f)
+    // TODO: Use moos::distance (but it's not currently available for vec4.. instead now we just check max axis distance)
+    vec4 diff = fallbackColor - other.fallbackColor;
+    constexpr float maxDiff = 1e-3f;
+    if (diff.x > maxDiff || diff.y > maxDiff || diff.z > maxDiff || diff.w > maxDiff)
         return false;
     return sRGB == other.sRGB && mipmapped == other.mipmapped && wrapMode == other.wrapMode && filters == other.filters;
 }

@@ -74,12 +74,12 @@ template<>
 struct hash<Material::TextureDescription> {
     std::size_t operator()(const Material::TextureDescription& desc) const
     {
-        auto pathHash = std::hash<std::string>()(desc.path);
-        auto imageHash = std::hash<std::optional<Image>>()(desc.image);
-        auto fallbackHash = 0u;//std::hash<vec4>()(desc.fallbackColor); TODO!
+        // NOTE: This must follow the same "pattern" as the equality test!
+        // TODO: Implement hash for fallback color!
+        auto dataHash = desc.hasPath() ? std::hash<std::string>()(desc.path) : (desc.hasImage() ? std::hash<Image>()(desc.image.value()) : 0u);
         auto settingsHash = hashCombine(hashCombine(std::hash<bool>()(desc.sRGB), std::hash<bool>()(desc.mipmapped)),
                                         hashCombine(std::hash<Texture::WrapModes>()(desc.wrapMode), std::hash<Texture::Filters>()(desc.filters)));
-        return hashCombine(hashCombine(pathHash, imageHash), hashCombine(fallbackHash, settingsHash));
+        return hashCombine(dataHash, settingsHash);
     }
 };
 }
