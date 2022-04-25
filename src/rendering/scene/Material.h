@@ -45,6 +45,8 @@ public:
         bool hasImage() const { return image.has_value(); }
 
         bool operator==(const TextureDescription&) const;
+
+        std::string toString() const;
     };
 
     TextureDescription baseColor {};
