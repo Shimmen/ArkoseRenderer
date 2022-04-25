@@ -163,6 +163,23 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
     createSwapchain(physicalDevice(), device(), m_surface);
     createFrameContexts();
 
+    #if defined(TRACY_ENABLE)
+    {
+        VkCommandBufferAllocateInfo commandBufferAllocInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+        commandBufferAllocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        commandBufferAllocInfo.commandPool = m_defaultCommandPool;
+        commandBufferAllocInfo.commandBufferCount = 1;
+        vkAllocateCommandBuffers(device(), &commandBufferAllocInfo, &m_tracyCommandBuffer);
+
+        m_tracyVulkanContext = TracyVkContextCalibrated(physicalDevice(), device(), m_graphicsQueue.queue, m_tracyCommandBuffer,
+                                                        FetchProcAddr(device(), vkGetPhysicalDeviceCalibrateableTimeDomainsEXT),
+                                                        FetchProcAddr(device(), vkGetCalibratedTimestampsEXT));
+
+        const char tracyVulkanContextName[] = "Graphics Queue";
+        TracyVkContextName(m_tracyVulkanContext, tracyVulkanContextName, sizeof(tracyVulkanContextName));
+    }
+    #endif
+
     setupDearImgui();
 }
 
@@ -177,6 +194,13 @@ VulkanBackend::~VulkanBackend()
     m_pipelineRegistry.reset();
 
     destroyDearImgui();
+
+    #if defined(TRACY_ENABLE)
+    {
+        TracyVkDestroy(m_tracyVulkanContext);
+        vkFreeCommandBuffers(device(), m_defaultCommandPool, 1, &m_tracyCommandBuffer);
+    }
+    #endif
 
     destroyFrameRenderTargets();
     destroyFrameContexts();
@@ -1127,13 +1151,6 @@ void VulkanBackend::createFrameContexts()
             frameContext.timestampQueryPool = timestampQueryPool;
         }
 
-        // Create tracy GPU profiler context if enabled
-        #if defined(TRACY_ENABLE)
-            frameContext.tracyVulkanContext = TracyVkContextCalibrated(physicalDevice(), device(), m_graphicsQueue.queue, frameContext.commandBuffer,
-                                                                       FetchProcAddr(device(), vkGetPhysicalDeviceCalibrateableTimeDomainsEXT),
-                                                                       FetchProcAddr(device(), vkGetCalibratedTimestampsEXT));
-        #endif
-
         createFrameRenderTargets(referenceImageContext);
     }
 }
@@ -1141,11 +1158,6 @@ void VulkanBackend::createFrameContexts()
 void VulkanBackend::destroyFrameContexts()
 {
     for (std::unique_ptr<FrameContext>& frameContext : m_frameContexts) {
-
-        #if defined(TRACY_ENABLE)
-            TracyVkDestroy(frameContext->tracyVulkanContext);
-        #endif
-
         vkDestroyQueryPool(device(), frameContext->timestampQueryPool, nullptr);
         vkFreeCommandBuffers(device(), m_defaultCommandPool, 1, &frameContext->commandBuffer);
         vkDestroySemaphore(device(), frameContext->imageAvailableSemaphore, nullptr);
@@ -1398,7 +1410,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
         ImGui::Begin("Nodes (in order)");
         {
-            SCOPED_PROFILE_ZONE_GPU(frameContext.tracyVulkanContext, commandBuffer, "All nodes");
+            SCOPED_PROFILE_ZONE_GPU(commandBuffer, "All nodes");
 
             std::string frameTimePerfString = m_frameTimer.createFormattedString();
             ImGui::Text("Frame time: %s", frameTimePerfString.c_str());
@@ -1408,7 +1420,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
                 std::string nodeTitle = fmt::format("{} | {}", nodeName, nodeTimePerfString);
                 ImGui::CollapsingHeader(nodeTitle.c_str(), ImGuiTreeNodeFlags_Leaf);
 
-                SCOPED_PROFILE_ZONE_GPU(frameContext.tracyVulkanContext, commandBuffer, "Node");
+                SCOPED_PROFILE_ZONE_GPU(commandBuffer, "Node");
                 SCOPED_PROFILE_ZONE_DYNAMIC(nodeName, 0x00ffff);
                 double cpuStartTime = glfwGetTime();
 
@@ -1434,7 +1446,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
         cmdList.beginDebugLabel("GUI");
         {
-            SCOPED_PROFILE_ZONE_GPU(frameContext.tracyVulkanContext, commandBuffer, "GUI");
+            SCOPED_PROFILE_ZONE_GPU(commandBuffer, "GUI");
             SCOPED_PROFILE_ZONE_BACKEND_NAMED("GUI Rendering");
 
             ImGui::Render();
@@ -1478,16 +1490,38 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
         frameContext.numTimestampsWrittenLastTime = nextTimestampQueryIdx;
         ARKOSE_ASSERT(frameContext.numTimestampsWrittenLastTime < FrameContext::TimestampQueryPoolCount);
 
-        #if defined(TRACY_ENABLE)
-            TracyVkCollect(frameContext.tracyVulkanContext, commandBuffer);
-        #endif
-
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             ARKOSE_LOG(Error, "VulkanBackend: error ending command buffer command!");
         }
 
         m_currentlyExecutingMainCommandBuffer = false;
     }
+
+    #if defined(TRACY_ENABLE)
+    if (m_currentFrameIndex % TracyVulkanSubmitRate == 0) {
+        SCOPED_PROFILE_ZONE_BACKEND_NAMED("Submitting for VkTracy");
+
+        VkCommandBufferBeginInfo beginInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+        if (vkBeginCommandBuffer(m_tracyCommandBuffer, &beginInfo) != VK_SUCCESS) {
+            ARKOSE_LOG(Fatal, "VulkanBackend: could not begin the command buffer for TracyVkCollect.");
+        }
+
+        TracyVkCollect(m_tracyVulkanContext, m_tracyCommandBuffer);
+
+        if (vkEndCommandBuffer(m_tracyCommandBuffer) != VK_SUCCESS) {
+            ARKOSE_LOG(Fatal, "VulkanBackend: could not end the command buffer for TracyVkCollect.");
+        }
+
+        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &m_tracyCommandBuffer;
+
+        if (vkQueueSubmit(m_graphicsQueue.queue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+            ARKOSE_LOG(Fatal, "VulkanBackend: could not submit the command buffer for TracyVkCollect.");
+        }
+        
+    }
+    #endif
 
     // Submit queue
     {
