@@ -74,12 +74,19 @@ template<>
 struct hash<Material::TextureDescription> {
     std::size_t operator()(const Material::TextureDescription& desc) const
     {
-        // NOTE: This must follow the same "pattern" as the equality test!
-        // TODO: Implement hash for fallback color!
+        // NOTE: This must more or less follow the same "pattern" as the equality test!
         auto dataHash = desc.hasPath() ? std::hash<std::string>()(desc.path) : (desc.hasImage() ? std::hash<Image>()(desc.image.value()) : 0u);
+
+        uint64_t fallbackUniqueInt =                   static_cast<uint64_t>(clamp(desc.fallbackColor.x, 0.0f, 1.0f) * 255.99f);
+        fallbackUniqueInt = (fallbackUniqueInt << 8) | static_cast<uint64_t>(clamp(desc.fallbackColor.y, 0.0f, 1.0f) * 255.99f);
+        fallbackUniqueInt = (fallbackUniqueInt << 8) | static_cast<uint64_t>(clamp(desc.fallbackColor.z, 0.0f, 1.0f) * 255.99f);
+        fallbackUniqueInt = (fallbackUniqueInt << 8) | static_cast<uint64_t>(clamp(desc.fallbackColor.w, 0.0f, 1.0f) * 255.99f);
+        auto fallbackColorHash = std::hash<uint64_t>()(fallbackUniqueInt);
+
         auto settingsHash = hashCombine(hashCombine(std::hash<bool>()(desc.sRGB), std::hash<bool>()(desc.mipmapped)),
                                         hashCombine(std::hash<Texture::WrapModes>()(desc.wrapMode), std::hash<Texture::Filters>()(desc.filters)));
-        return hashCombine(dataHash, settingsHash);
+
+        return hashCombine(hashCombine(dataHash, fallbackColorHash), settingsHash);
     }
 };
 }
