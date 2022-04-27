@@ -1414,6 +1414,16 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
             std::string frameTimePerfString = m_frameTimer.createFormattedString();
             ImGui::Text("Frame time: %s", frameTimePerfString.c_str());
+            if (ImGui::TreeNode("Frame time plots")) {
+                static float plotRangeMin = 0.0f;
+                static float plotRangeMax = 16.667f;
+                ImGui::SliderFloat("Plot range min", &plotRangeMin, 0.0f, plotRangeMax);
+                ImGui::SliderFloat("Plot range max", &plotRangeMax, plotRangeMin, 40.0f);
+                static float plotHeight = 160.0f;
+                ImGui::SliderFloat("Plot height", &plotHeight, 40.0f, 350.0f);
+                m_frameTimer.plotTimes(plotRangeMin, plotRangeMax, plotHeight);
+                ImGui::TreePop();
+            }
 
             renderPipeline.forEachNodeInResolvedOrder(registry, [&](const std::string& nodeName, AvgElapsedTimer& nodeTimer, const RenderPipelineNode::ExecuteCallback& nodeExecuteCallback) {
                 std::string nodeTimePerfString = nodeTimer.createFormattedString();

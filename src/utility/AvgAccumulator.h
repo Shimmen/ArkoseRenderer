@@ -1,10 +1,13 @@
 #pragma once
 
+#include "core/Assert.h"
 #include <array>
 
-template<typename T, size_t RunningAvgWindowSize>
+template<typename T, size_t RunningAvgWindowSizeT>
 class AvgAccumulator {
 public:
+    static constexpr size_t RunningAvgWindowSize = RunningAvgWindowSizeT;
+
     AvgAccumulator() = default;
 
     void report(T value)
@@ -28,6 +31,17 @@ public:
         for (const T& sample : m_samples)
             sum += sample;
         return sum / static_cast<T>(RunningAvgWindowSize);
+    }
+
+    T valueAtSequentialIndex(size_t idx) const
+    {
+        ARKOSE_ASSERT(idx < RunningAvgWindowSize);
+
+        if (m_numReported < 1)
+            return static_cast<T>(0.0);
+
+        int circularIdx = (m_numReported + idx) % RunningAvgWindowSize;
+        return m_samples[circularIdx];
     }
 
 private:

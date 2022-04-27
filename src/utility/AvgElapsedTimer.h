@@ -12,8 +12,10 @@ public:
     double averageGpuTime() const;
 
     std::string createFormattedString() const;
+    void plotTimes(float rangeMin, float rangeMax, float plotHeight) const;
 
 private:
-    AvgAccumulator<double, 60> m_cpuAccumulator;
-    AvgAccumulator<double, 60> m_gpuAccumulator;
+    using AvgAccumulatorType = AvgAccumulator<double, 60>;
+    AvgAccumulatorType m_cpuAccumulator;
+    AvgAccumulatorType m_gpuAccumulator;
 };

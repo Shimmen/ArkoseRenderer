@@ -1,6 +1,7 @@
 #include "AvgElapsedTimer.h"
 
 #include <fmt/format.h>
+#include <imgui/imgui.h>
 
 void AvgElapsedTimer::reportCpuTime(double time)
 {
@@ -29,4 +30,19 @@ std::string AvgElapsedTimer::createFormattedString() const
     std::string cpuString = isnan(cpu) ? "-" : fmt::format("{:.2f} ms", cpu * 1000.0);
     std::string gpuString = isnan(gpu) ? "-" : fmt::format("{:.2f} ms", gpu * 1000.0);
     return fmt::format("CPU: {} | GPU: {}", cpuString.c_str(), gpuString.c_str());
+}
+
+void AvgElapsedTimer::plotTimes(float rangeMin, float rangeMax, float plotHeight) const
+{
+    auto avgAccumulatorValuesGetter = [](void* data, int idx) -> float {
+        const auto& avgAccumulator = *reinterpret_cast<AvgAccumulatorType*>(data);
+        return static_cast<float>(avgAccumulator.valueAtSequentialIndex(idx)) * 1000.0f;
+    };
+
+    int valuesCount = static_cast<int>(AvgAccumulatorType::RunningAvgWindowSize);
+    ImVec2 plotSize { 0.5f * ImGui::GetContentRegionAvail().x, plotHeight };
+
+    ImGui::PlotLines("", avgAccumulatorValuesGetter, (void*)&m_cpuAccumulator, valuesCount, 0, "CPU", rangeMin, rangeMax, plotSize);
+    ImGui::SameLine();
+    ImGui::PlotLines("", avgAccumulatorValuesGetter, (void*)&m_gpuAccumulator, valuesCount, 0, "GPU", rangeMin, rangeMax, plotSize);
 }
