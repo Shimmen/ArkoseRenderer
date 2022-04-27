@@ -1301,8 +1301,6 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
-    double cpuFrameStartTime = glfwGetTime();
-
     bool isRelativeFirstFrame = m_relativeFrameIndex < m_frameContexts.size();
     AppState appState { m_swapchainExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
 
@@ -1321,6 +1319,9 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
             ARKOSE_LOG(Fatal, "VulkanBackend: device was lost while waiting for frame fence (frame {}).", m_currentFrameIndex);
         }
     }
+
+    // NOTE: We're ignoring any time spent waiting for the fence, as that would factor e.g. GPU time & sync into the CPU time
+    double cpuFrameStartTime = glfwGetTime();
 
     uint32_t swapchainImageIndex;
     VkResult acquireResult;
@@ -1507,6 +1508,10 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
         m_currentlyExecutingMainCommandBuffer = false;
     }
 
+    // NOTE: We're ignoring any time relatig to TracyVk and also submitting & presenting, as that would factor e.g. GPU time & sync into the CPU time
+    double cpuFrameElapsedTime = glfwGetTime() - cpuFrameStartTime;
+    m_frameTimer.reportCpuTime(cpuFrameElapsedTime);
+
     #if defined(TRACY_ENABLE)
     if (m_currentFrameIndex % TracyVulkanSubmitRate == 0) {
         SCOPED_PROFILE_ZONE_BACKEND_NAMED("Submitting for VkTracy");
@@ -1585,9 +1590,6 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
     m_currentFrameIndex += 1;
     m_relativeFrameIndex += 1;
-
-    double cpuFrameElapsedTime = glfwGetTime() - cpuFrameStartTime;
-    m_frameTimer.reportCpuTime(cpuFrameElapsedTime);
 
     return true;
 }
