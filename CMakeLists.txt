@@ -185,6 +185,52 @@ if(NOT glfw_POPULATED)
 endif()
 target_link_libraries(ArkoseRenderer PRIVATE glfw)
 
+FetchContent_Declare(dearimgui_fetch
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG        ec48681455694c85982861dfa3f304fd544d3137) # NOTE: This is the docking branch!
+FetchContent_GetProperties(dearimgui_fetch)
+if(NOT dearimgui_fetch_POPULATED)
+    FetchContent_Populate(dearimgui_fetch)
+
+    add_library(dear_imgui
+        "${dearimgui_fetch_SOURCE_DIR}/imgui.cpp"
+        "${dearimgui_fetch_SOURCE_DIR}/imgui_draw.cpp"
+        "${dearimgui_fetch_SOURCE_DIR}/imgui_widgets.cpp"
+        "${dearimgui_fetch_SOURCE_DIR}/imgui_tables.cpp"
+        "${dearimgui_fetch_SOURCE_DIR}/imgui_demo.cpp"
+        "${dearimgui_fetch_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
+        "${dearimgui_fetch_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp") # TODO: What about non-vulkan builds?
+
+    target_compile_features(dear_imgui PRIVATE cxx_std_17)
+    target_include_directories(dear_imgui PUBLIC ${dearimgui_fetch_SOURCE_DIR})
+
+    target_link_libraries(dear_imgui glfw)
+
+    target_include_directories(dear_imgui PRIVATE Vulkan::Vulkan)
+    target_link_libraries(dear_imgui Vulkan::Vulkan)
+
+endif()
+target_link_libraries(ArkoseRenderer PRIVATE dear_imgui)
+
+FetchContent_Declare(imguizmo_fetch
+    GIT_REPOSITORY https://github.com/CedricGuillemet/ImGuizmo.git
+    GIT_TAG        8afa1d7050392111cb917a6439dc76450cda5aa6)
+FetchContent_GetProperties(imguizmo_fetch)
+if(NOT imguizmo_fetch_POPULATED)
+    FetchContent_Populate(imguizmo_fetch)
+
+    add_library(imguizmo
+        "${imguizmo_fetch_SOURCE_DIR}/ImGuizmo.cpp"
+        # NOTE: More files are available part of this repo
+        )
+
+    target_compile_features(imguizmo PRIVATE cxx_std_17)
+    target_include_directories(imguizmo PUBLIC ${imguizmo_fetch_SOURCE_DIR})
+    target_link_libraries(imguizmo PRIVATE dear_imgui)
+
+endif()
+target_link_libraries(ArkoseRenderer PRIVATE imguizmo)
+
 ##################################
 # In-tree built dependencies
 
@@ -196,9 +242,6 @@ target_link_libraries(ArkoseRenderer PRIVATE tiny_gltf)
 
 add_subdirectory(deps/vulkan_memory_allocator)
 target_link_libraries(ArkoseRenderer PRIVATE vulkan_memory_allocator)
-
-add_subdirectory(deps/dear-imgui)
-target_link_libraries(ArkoseRenderer PRIVATE dear_imgui)
 
 add_subdirectory(deps/half)
 target_link_libraries(ArkoseRenderer PRIVATE half)
