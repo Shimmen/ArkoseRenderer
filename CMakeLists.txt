@@ -231,6 +231,16 @@ if(NOT imguizmo_fetch_POPULATED)
 endif()
 target_link_libraries(ArkoseRenderer PRIVATE imguizmo)
 
+FetchContent_Declare(vulkan_memory_allocator
+    GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
+    GIT_TAG        "v3.0.0")
+FetchContent_GetProperties(vulkan_memory_allocator)
+if(NOT vulkan_memory_allocator_POPULATED)
+    FetchContent_Populate(vulkan_memory_allocator)
+    add_subdirectory(${vulkan_memory_allocator_SOURCE_DIR} ${vulkan_memory_allocator_BINARY_DIR})
+endif()
+target_link_libraries(ArkoseRenderer PRIVATE VulkanMemoryAllocator)
+
 ##################################
 # In-tree built dependencies
 
@@ -239,9 +249,6 @@ target_link_libraries(ArkoseRenderer PRIVATE stb_image)
 
 add_subdirectory(deps/tiny_gltf)
 target_link_libraries(ArkoseRenderer PRIVATE tiny_gltf)
-
-add_subdirectory(deps/vulkan_memory_allocator)
-target_link_libraries(ArkoseRenderer PRIVATE vulkan_memory_allocator)
 
 add_subdirectory(deps/half)
 target_link_libraries(ArkoseRenderer PRIVATE half)
