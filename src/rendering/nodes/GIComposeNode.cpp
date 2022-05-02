@@ -10,7 +10,10 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Re
     Texture& baseColorTex = *reg.getTexture("SceneBaseColor");
     Texture& ambientOcclusionTex = *reg.getTexture("AmbientOcclusion");
     Texture& diffuseGiTex = *reg.getTexture("DiffuseGI");
-    Texture& reflectionsTex = *reg.getTexture("Reflections");
+
+    Texture* reflectionsTex = reg.getTexture("Reflections");
+    if (!reflectionsTex)
+        reflectionsTex = &reg.createPixelTexture(vec4(0.0f), true);
 
     Texture& sceneColorWithGI = reg.createTexture2D(reg.windowRenderTarget().extent(), sceneColorBeforeGI.format(), Texture::Filters::nearest());
 
@@ -19,7 +22,7 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Re
                                                            { 2, ShaderStage::Compute, &baseColorTex, ShaderBindingType::TextureSampler },
                                                            { 3, ShaderStage::Compute, &ambientOcclusionTex, ShaderBindingType::TextureSampler },
                                                            { 4, ShaderStage::Compute, &diffuseGiTex, ShaderBindingType::TextureSampler },
-                                                           { 5, ShaderStage::Compute, &reflectionsTex, ShaderBindingType::TextureSampler } });
+                                                           { 5, ShaderStage::Compute, reflectionsTex, ShaderBindingType::TextureSampler } });
     ComputeState& giComposeState = reg.createComputeState(Shader::createCompute("compose/compose-gi.comp"), { &composeBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
