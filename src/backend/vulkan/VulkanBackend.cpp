@@ -1031,7 +1031,7 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
     }
 
     if (m_guiIsSetup) {
-        ImGui_ImplVulkan_SetMinImageCount(numSwapchainImages);
+        ImGui_ImplVulkan_SetMinImageCount(createInfo.minImageCount);
     }
 }
 
