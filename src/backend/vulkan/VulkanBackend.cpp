@@ -1195,7 +1195,6 @@ void VulkanBackend::setupDearImgui()
     ImGui::CreateContext();
 
     ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
     //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Do I want this really? Not convinced
@@ -1206,6 +1205,8 @@ void VulkanBackend::setupDearImgui()
         style.WindowRounding = 0.0f;
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
+
+    style.Colors[ImGuiCol_MenuBarBg] = ImColor(255, 255, 255, 1);
 
     ImGui_ImplGlfw_InitForVulkan(m_window, true);
 
