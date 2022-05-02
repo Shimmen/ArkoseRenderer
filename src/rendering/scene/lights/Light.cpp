@@ -31,6 +31,8 @@ Texture& Light::shadowMap()
 
                                        .mipmap = Texture::Mipmap::None,
                                        .multisampling = Texture::Multisampling::None };
+
+    // TODO: Let the GPU scene create and manage this instead!
     m_shadowMap = Backend::get().createTexture(textureDesc);
 
     std::string baseName;
@@ -57,6 +59,7 @@ RenderTarget& Light::shadowMapRenderTarget()
     if (m_shadowMapRenderTarget)
         return *m_shadowMapRenderTarget;
 
+    // TODO: Let the GPU scene create and manage this instead!
     m_shadowMapRenderTarget = Backend::get().createRenderTarget({ { RenderTarget::AttachmentType::Depth, &shadowMap() } });
 
     return *m_shadowMapRenderTarget;
