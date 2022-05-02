@@ -293,6 +293,8 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     AtScopeExit freeMemory { [&]() { free(textureArrayMemory); } };
 
     // Load images and set texture data
+    // TODO: Ensure this is not completely starved by async material texture loading!
+    constexpr bool UseSingleThreadedLoading = true;
     ParallelFor(imagePaths.size(), [&](size_t idx) {
 
         const std::string& imagePath = imagePaths[idx];
@@ -301,7 +303,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
         size_t offset = idx * image->size();
         std::memcpy(textureArrayMemory + offset, image->data(), image->size());
 
-    });
+    }, UseSingleThreadedLoading);
     texture->setData(textureArrayMemory, totalRequiredSize);
 
     return texture;

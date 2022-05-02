@@ -2,6 +2,7 @@
 
 #include "backend/Resources.h"
 #include "core/Logging.h"
+#include "core/parallel/TaskGraph.h"
 #include "rendering/Registry.h"
 #include <imgui.h>
 #include <ImGuizmo.h>
@@ -23,6 +24,7 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
     m_maintainRayTracingScene = rayTracingCapable;
 
     m_blackTexture = Texture::createFromPixel(backend(), vec4(0.0f, 0.0f, 0.0f, 0.0f), true);
+    m_lightGrayTexture = Texture::createFromPixel(backend(), vec4(0.75f, 0.75f, 0.75f, 1.0f), true);
     m_magentaTexture = Texture::createFromPixel(backend(), vec4(1.0f, 0.0f, 1.0f, 1.0f), true);
     m_normalMapBlueTexture = Texture::createFromPixel(backend(), vec4(0.5f, 0.5f, 1.0f, 1.0f), false);
 
@@ -179,6 +181,25 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     reg.publish("SceneLightSet", lightBindingSet);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
+
+        // If we're using async texture updates, create textures for the images we've now loaded in
+        // TODO: Also create the texture and set the data asynchronously so we avoid practically all stalls
+        if (m_asyncLoadedImages.size() > 0) {
+            SCOPED_PROFILE_ZONE_NAMED("Finalizing async-loaded images")
+            std::scoped_lock<std::mutex> lock { m_asyncLoadedImagesMutex };
+
+            size_t numToFinalize = std::min(MaxNumAsyncTextureLoadsToFinalizePerFrame, m_asyncLoadedImages.size());
+            for (size_t i = 0; i < numToFinalize; ++i) {
+                const LoadedImageForTextureCreation& loadedImageForTex = m_asyncLoadedImages[i];
+
+                auto texture = backend().createTexture(loadedImageForTex.textureDescription);
+                texture->setData(loadedImageForTex.image->data(), loadedImageForTex.image->size());
+                texture->setName("Texture:" + loadedImageForTex.path);
+
+                updateTexture(loadedImageForTex.textureHandle, std::move(texture));
+            }
+            m_asyncLoadedImages.erase(m_asyncLoadedImages.begin(), m_asyncLoadedImages.begin() + numToFinalize);
+        }
 
         // Update bindless textures
         if (m_pendingTextureUpdates.size() > 0) {
@@ -357,6 +378,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
 void GpuScene::updateEnvironmentMap(Scene::EnvironmentMap& environmentMap)
 {
+    SCOPED_PROFILE_ZONE();
+
     m_environmentMapTexture = environmentMap.assetPath.empty()
         ? Texture::createFromPixel(backend(), vec4(1.0f), true)
         : Texture::createFromImagePath(backend(), environmentMap.assetPath, true, false, Texture::WrapModes::repeatAll());
@@ -572,31 +595,87 @@ void GpuScene::unregisterMaterial(MaterialHandle handle)
     }
 }
 
-TextureHandle GpuScene::registerMaterialTexture(Material::TextureDescription& desc)
+TextureHandle GpuScene::registerMaterialTexture(Material::TextureDescription& description)
 {
     SCOPED_PROFILE_ZONE();
 
-    auto entry = m_materialTextureCache.find(desc);
+    auto entry = m_materialTextureCache.find(description);
     if (entry == m_materialTextureCache.end()) {
 
-        std::unique_ptr<Texture> texture {};
-        if (desc.hasImage()) {
-            texture = Texture::createFromImage(backend(), desc.image.value(), desc.sRGB, desc.mipmapped, desc.wrapMode);
-        } else if (desc.hasPath()) {
-            texture = Texture::createFromImagePath(backend(), desc.path, desc.sRGB, desc.mipmapped, desc.wrapMode);
-        } else {
-            // TODO: Maybe keep a cache of pixel textures so we don't create so many:
-            // NOTE: If we support HDR/float colors for pixel textures, this key won't be enough..
-            //  But right now we still only have RGBA8 or sRGBA8 pixel textures, so this is fine.
-            //uint32_t key = uint32_t(255.99f * moos::clamp(color.x, 0.0f, 1.0f))
-            //    | (uint32_t(255.99f * moos::clamp(color.y, 0.0f, 1.0f)) << 8)
-            //    | (uint32_t(255.99f * moos::clamp(color.z, 0.0f, 1.0f)) << 16)
-            //    | (uint32_t(255.99f * moos::clamp(color.w, 0.0f, 1.0f)) << 24);
-            texture = Texture::createFromPixel(backend(), desc.fallbackColor, desc.sRGB);
-        }
+        ARKOSE_LOG(Verbose, "GPUScene: Registering new material texture: {}", description.toString());
 
-        TextureHandle handle = registerTexture(std::move(texture));
-        m_materialTextureCache[desc] = handle;
+        auto createTextureFromMaterialTextureDesc = [](Backend& backend, Material::TextureDescription desc) -> std::unique_ptr<Texture> {
+            if (desc.hasImage()) {
+                return Texture::createFromImage(backend, desc.image.value(), desc.sRGB, desc.mipmapped, desc.wrapMode);
+            } else if (desc.hasPath()) {
+                return Texture::createFromImagePath(backend, desc.path, desc.sRGB, desc.mipmapped, desc.wrapMode);
+            } else {
+                return Texture::createFromPixel(backend, desc.fallbackColor, desc.sRGB);
+            }
+        };
+
+        TextureHandle handle = registerTextureSlot();
+        m_materialTextureCache[description] = handle;
+
+        // TODO: Right now we defer the final step, i.e. making a Texture from the loaded image, back to the main thread,
+        // so we should only do the loading in the async path. However, if we include the Texture creation in the async path
+        // it would make sense to also load the image-based Textures here. (Also, in most cases it's just paths.)
+        if (UseAsyncTextureLoads && description.hasPath()) {
+
+            // Put some placeholder texture for this texture slot before the async has loaded in fully
+            // TODO: Instead of guessing, maybe let the description describe what type of content we have (e.g. normal map)?
+            {
+                const vec4& pixelColor = description.fallbackColor;
+                auto almostEqual = [](float a, float b) -> bool { return std::abs(a - b) < 1e-2f; };
+                if (almostEqual(pixelColor.x, 0.5f) && almostEqual(pixelColor.y, 0.5f) && almostEqual(pixelColor.z, 1.0f) && almostEqual(pixelColor.w, 1.0f)) {
+                    updateTextureUnowned(handle, m_normalMapBlueTexture.get());
+                } else {
+                    updateTextureUnowned(handle, m_lightGrayTexture.get());
+                }
+            }
+
+            TaskGraph::get().enqueueTask([this, description, handle]() {
+
+                Image::Info* info = Image::getInfo(description.path);
+                if (!info) {
+                    ARKOSE_LOG(Fatal, "GpuScene: could not read image '{}', exiting", description.path);
+                }
+
+                Texture::Format format;
+                Image::PixelType pixelTypeToUse;
+                Texture::pixelFormatAndTypeForImageInfo(*info, description.sRGB, format, pixelTypeToUse);
+
+                auto mipmapMode = (description.mipmapped && info->width > 1 && info->height > 1)
+                    ? Texture::Mipmap::Linear
+                    : Texture::Mipmap::None;
+
+                Texture::Description desc {
+                    .type = Texture::Type::Texture2D,
+                    .arrayCount = 1u,
+                    .extent = { (uint32_t)info->width, (uint32_t)info->height, 1 },
+                    .format = format,
+                    .filter = Texture::Filters::linear(),
+                    .wrapMode = Texture::WrapModes::repeatAll(),
+                    .mipmap = mipmapMode,
+                    .multisampling = Texture::Multisampling::None
+                };
+
+                Image* image = Image::load(description.path, pixelTypeToUse, true);
+
+                {
+                    SCOPED_PROFILE_ZONE_NAMED("Pushing async-loaded image")
+                    std::scoped_lock<std::mutex> lock { m_asyncLoadedImagesMutex };
+                    m_asyncLoadedImages.push_back(LoadedImageForTextureCreation { .image = image,
+                                                                                  .path = description.path,
+                                                                                  .textureHandle = handle,
+                                                                                  .textureDescription = desc });
+                }
+            });
+
+        } else {
+            auto texture = createTextureFromMaterialTextureDesc(backend(), description);
+            updateTexture(handle, std::move(texture));
+        }
 
         return handle;
     }
@@ -623,8 +702,6 @@ TextureHandle GpuScene::registerTexture(std::unique_ptr<Texture>&& texture)
 
 TextureHandle GpuScene::registerTextureSlot()
 {
-    SCOPED_PROFILE_ZONE();
-
     uint64_t textureIdx = m_managedTextures.size();
     if (textureIdx >= MaxSupportedSceneTextures) {
         ARKOSE_LOG(Fatal, "Ran out of bindless scene texture slots, exiting.");
@@ -648,8 +725,28 @@ void GpuScene::updateTexture(TextureHandle handle, std::unique_ptr<Texture>&& te
     auto index = handle.indexOfType<uint32_t>();
     ManagedTexture& managedTexture = m_managedTextures[index];
 
+    // TODO: What if the managed texture is deleted between now and the pending update? We need to protect against that!
+    // One way would be to just put in the index in here and then when it's time to actually update, put in the texture pointer.
+
+    // TODO: Pending texture updates should be unique for an index! Only use the latest texture for a given index! Even better,
+    // why not just keep a single index to update here and we'll always use the managedTexture's texture for that index. The only
+    // problem is that our current API doesn't know about managedTextures, so would need to convert to what the API accepts.
+
     managedTexture.texture = std::move(texture);
     m_pendingTextureUpdates.push_back({ .texture = managedTexture.texture.get(),
+                                        .index = index });
+}
+
+void GpuScene::updateTextureUnowned(TextureHandle handle, Texture* texture)
+{
+    ARKOSE_ASSERT(handle.valid());
+    ARKOSE_ASSERT(handle.index() < m_managedTextures.size());
+
+    // TODO: If we have the same handle twice, probably remove/overwrite the first one! We don't want to send more updates than needed.
+    // We could use a set (hashed on index) and always overwrite? Or eliminate duplicates at final step (see updateTexture comment above).
+
+    auto index = handle.indexOfType<uint32_t>();
+    m_pendingTextureUpdates.push_back({ .texture = texture,
                                         .index = index });
 }
 

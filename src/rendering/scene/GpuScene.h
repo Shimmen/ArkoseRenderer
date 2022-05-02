@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Handle.h"
+#include "core/parallel/TaskGraph.h"
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/camera/Camera.h"
 #include "rendering/scene/Scene.h"
@@ -69,6 +70,7 @@ public:
     [[nodiscard]] TextureHandle registerTexture(std::unique_ptr<Texture>&&);
     [[nodiscard]] TextureHandle registerTextureSlot();
     void updateTexture(TextureHandle, std::unique_ptr<Texture>&&);
+    void updateTextureUnowned(TextureHandle, Texture*);
     void unregisterTexture(TextureHandle);
 
     // Lighting & environment
@@ -148,6 +150,18 @@ private:
     std::vector<BindingSet::TextureBindingUpdate> m_pendingTextureUpdates {};
     static constexpr int MaxSupportedSceneTextures = 4096;
 
+    static constexpr bool UseAsyncTextureLoads = true;
+    static constexpr size_t MaxNumAsyncTextureLoadsToFinalizePerFrame = 4;
+    struct LoadedImageForTextureCreation {
+        Image* image {};
+        std::string path {};
+        TextureHandle textureHandle {};
+        Texture::Description textureDescription {};
+    };
+    std::mutex m_asyncLoadedImagesMutex {};
+    std::vector<LoadedImageForTextureCreation> m_asyncLoadedImages {};
+    
+
     struct ManagedMaterial {
         ShaderMaterial material {};
         uint64_t referenceCount { 0 };
@@ -172,6 +186,7 @@ private:
 
     // Common textures that can be used for various purposes
     std::unique_ptr<Texture> m_blackTexture {};
+    std::unique_ptr<Texture> m_lightGrayTexture {};
     std::unique_ptr<Texture> m_magentaTexture {};
     std::unique_ptr<Texture> m_normalMapBlueTexture {};
 };
