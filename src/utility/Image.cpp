@@ -11,12 +11,16 @@
 #include <unordered_map>
 
 static std::unordered_map<std::string, Image::Info> s_infoCache {};
+static std::mutex s_infoCacheMutex {};
+
 static std::unordered_map<std::string, std::unique_ptr<Image>> s_imageCache {};
 static std::mutex s_imageCacheMutex {};
 
 Image::Info* Image::getInfo(const std::string& imagePath, bool quiet)
 {
     SCOPED_PROFILE_ZONE();
+
+    std::scoped_lock<std::mutex> lock { s_infoCacheMutex };
 
     auto entry = s_infoCache.find(imagePath);
     if (entry != s_infoCache.end())
