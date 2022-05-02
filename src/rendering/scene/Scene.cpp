@@ -34,9 +34,7 @@ void Scene::newFrame(Extent2D mainViewportSize, bool firstFrame)
 
 void Scene::update(float elapsedTime, float deltaTime)
 {
-    drawSceneGui();
     drawSceneGizmos();
-    gpuScene().drawGui();
 }
 
 void Scene::setupFromDescription(const Description& description)
@@ -336,9 +334,11 @@ void Scene::loadFromFile(const std::string& path)
     }
 }
 
-void Scene::drawSceneGui()
+void Scene::drawGui(bool includeContainingWindow)
 {
-    ImGui::Begin("Scene");
+    if (includeContainingWindow) {
+        ImGui::Begin("Scene");
+    }
 
     if (ImGui::TreeNode("Film grain")) {
         // TODO: I would love to estimate gain grain from ISO and scene light amount, but that's for later..
@@ -397,7 +397,9 @@ void Scene::drawSceneGui()
         ImGui::TreePop();
     }
 
-    ImGui::End();
+    if (includeContainingWindow) {
+        ImGui::End();
+    }
 }
 
 void Scene::drawSceneGizmos()

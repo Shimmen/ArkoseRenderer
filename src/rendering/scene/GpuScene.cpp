@@ -780,9 +780,11 @@ TopLevelAS& GpuScene::globalTopLevelAccelerationStructure() const
     return *m_sceneTopLevelAccelerationStructure;
 }
 
-void GpuScene::drawGui()
+void GpuScene::drawGui(bool includeContainingWindow)
 {
-    ImGui::Begin("GPU Scene");
+    if (includeContainingWindow) {
+        ImGui::Begin("GPU Scene");
+    }
 
     ImGui::Text("Number of managed resources:");
     ImGui::Columns(3);
@@ -793,5 +795,7 @@ void GpuScene::drawGui()
     ImGui::Text("textures: %u", m_managedTextures.size());
     ImGui::Columns(1);
 
-    ImGui::End();
+    if (includeContainingWindow) {
+        ImGui::End();
+    }
 }

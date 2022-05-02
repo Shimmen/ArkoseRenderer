@@ -7,7 +7,9 @@ class ShowcaseApp : public App {
 public:
     std::vector<Backend::Capability> requiredCapabilities();
     void setup(Scene&, RenderPipeline&) override;
-    void update(Scene&, float elapsedTime, float deltaTime) override;
+    bool update(Scene&, float elapsedTime, float deltaTime) override;
+
+    bool drawGui(Scene&);
 
     enum class AntiAliasing {
         None,

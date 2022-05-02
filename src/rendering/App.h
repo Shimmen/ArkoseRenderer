@@ -13,5 +13,5 @@ public:
     virtual std::vector<Backend::Capability> optionalCapabilities() { return {}; };
 
     virtual void setup(Scene&, RenderPipeline&) = 0;
-    virtual void update(Scene&, float elapsedTime, float deltaTime) {};
+    virtual bool update(Scene&, float elapsedTime, float deltaTime) { return true; };
 };

@@ -94,7 +94,7 @@ public:
 
     // Misc.
 
-    void drawGui();
+    void drawGui(bool includeContainingWindow);
 
 private:
     Scene& m_scene;

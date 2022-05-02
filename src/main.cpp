@@ -99,7 +99,9 @@ int main(int argc, char** argv)
     glfwSetTime(0.0);
     float lastTime = 0.0f;
     bool firstFrame = true;
-    while (!glfwWindowShouldClose(window)) {
+
+    bool exitRequested = false;
+    while (!exitRequested) {
 
         if (shaderFileWatchMutex.try_lock()) {
             if (changedShaderFiles.size() > 0) {
@@ -120,7 +122,10 @@ int main(int argc, char** argv)
         lastTime = elapsedTime;
 
         scene->update(elapsedTime, deltaTime);
-        app->update(*scene, elapsedTime, deltaTime);
+        bool keepRunning = app->update(*scene, elapsedTime, deltaTime);
+
+        exitRequested |= !keepRunning;
+        exitRequested |= static_cast<bool>(glfwWindowShouldClose(window));
 
         bool frameExecuted = false;
         while (!frameExecuted) {

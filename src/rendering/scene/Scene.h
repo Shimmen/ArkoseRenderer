@@ -90,16 +90,16 @@ public:
     void setSelectedMesh(Mesh* mesh) { m_selectedMesh = mesh; }
     Mesh* selectedMesh() { return m_selectedMesh; }
 
-    private:
+    // GUI
+
+    void drawGui(bool includeContainingWindow);
+    void drawSceneGizmos();
+
+private:
 
     // Serialization
 
     void loadFromFile(const std::string&);
-
-    // GUI
-
-    void drawSceneGui();
-    void drawSceneGizmos();
 
 private:
     Description m_description {};

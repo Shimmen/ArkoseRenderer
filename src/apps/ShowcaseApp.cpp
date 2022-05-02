@@ -97,8 +97,10 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<FinalNode>(finalTextureToScreen);
 }
 
-void ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
+bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
 {
+    bool exitRequested = drawGui(scene);
+
     // TODO: The scene should contain a Camera which doesn't have controls while the app has a CameraController which does.
     //       Here we would then just update the controller which somehow changes the Camera it's assigned to control.
     scene.camera().update(Input::instance(), deltaTime);
@@ -110,4 +112,58 @@ void ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
 
     DirectionalLight& sun = *scene.firstDirectionalLight();
     sun.direction = moos::rotateVector(rotation, sun.direction);
+
+    return !exitRequested;
+}
+
+bool ShowcaseApp::drawGui(Scene& scene)
+{
+    bool exitRequested = false;
+
+    static bool showAbout = false;
+    static bool showSceneGui = false;
+    static bool showGpuSceneGui = false;
+
+    if (showAbout) {
+        if (ImGui::Begin("About", &showAbout, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse)) {
+            ImGui::Text("Arkose Renderer");
+            ImGui::Separator();
+            ImGui::Text("This is a showcase of most things that this renderer can do, please enjoy!");
+            ImGui::Separator();
+            ImGui::Text("By Simon Moos | @SimonMoos | http://simon-moos.com | https://github.com/Shimmen/");
+            ImGui::Text("Arkose Renderer is licensed under the MIT License, see LICENSE for more information.");
+        }
+        ImGui::End();
+    }
+    
+    if (showSceneGui) {
+        if (ImGui::Begin("Scene settings", &showSceneGui, ImGuiWindowFlags_NoCollapse)) {
+            scene.drawGui(false);
+        }
+        ImGui::End();
+    }
+    
+    if (showGpuSceneGui) { 
+        if (ImGui::Begin("GPU scene stats", &showGpuSceneGui, ImGuiWindowFlags_NoCollapse)) {
+            scene.gpuScene().drawGui(false);
+        }
+        ImGui::End();
+    }
+
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            exitRequested = ImGui::MenuItem("Quit");
+            ImGui::Separator();
+            ImGui::MenuItem("About...", nullptr, &showAbout);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Settings & stats")) {
+            ImGui::MenuItem("Scene settings", nullptr, &showSceneGui);
+            ImGui::MenuItem("GPU scene stats", nullptr, &showGpuSceneGui);
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+
+    return exitRequested;
 }
