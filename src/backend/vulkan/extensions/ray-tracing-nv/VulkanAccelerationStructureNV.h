@@ -18,7 +18,7 @@ public:
     void updateInstanceDataWithUploadBuffer(const std::vector<RTGeometryInstance>&, UploadBuffer&) override;
 
     VkAccelerationStructureNV accelerationStructure;
-    VkDeviceMemory memory { VK_NULL_HANDLE };
+    VmaAllocation allocation { VK_NULL_HANDLE };
     uint64_t handle { 0u };
 
     VkBuildAccelerationStructureFlagsNV accelerationStructureFlags { 0u };
@@ -34,7 +34,7 @@ public:
     virtual void setName(const std::string& name) override;
 
     VkAccelerationStructureNV accelerationStructure;
-    VkDeviceMemory memory { VK_NULL_HANDLE };
+    VmaAllocation allocation { VK_NULL_HANDLE };
     uint64_t handle { 0u };
 
     std::vector<std::pair<VkBuffer, VmaAllocation>> associatedBuffers;

@@ -34,16 +34,18 @@ VulkanTopLevelASNV::VulkanTopLevelASNV(Backend& backend, uint32_t maxInstanceCou
     VkMemoryRequirements2 memoryRequirements2 {};
     vulkanBackend.rayTracingNV().vkGetAccelerationStructureMemoryRequirementsNV(vulkanBackend.device(), &memoryRequirementsInfo, &memoryRequirements2);
 
-    VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-    memoryAllocateInfo.allocationSize = memoryRequirements2.memoryRequirements.size;
-    memoryAllocateInfo.memoryTypeIndex = vulkanBackend.findAppropriateMemory(memoryRequirements2.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    if (vkAllocateMemory(vulkanBackend.device(), &memoryAllocateInfo, nullptr, &memory) != VK_SUCCESS) {
+    // See https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/issues/63#issuecomment-501246981
+    VmaAllocationInfo allocationInfo;
+    VmaAllocationCreateInfo allocationCreateInfo {};
+    allocationCreateInfo.memoryTypeBits = memoryRequirements2.memoryRequirements.memoryTypeBits;
+    if (vmaAllocateMemory(vulkanBackend.globalAllocator(), &memoryRequirements2.memoryRequirements, &allocationCreateInfo, &allocation, &allocationInfo) != VK_SUCCESS) {
         ARKOSE_LOG(Fatal, "Error trying to create allocate memory for acceleration structure");
     }
 
     VkBindAccelerationStructureMemoryInfoNV accelerationStructureMemoryInfo { VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV };
     accelerationStructureMemoryInfo.accelerationStructure = accelerationStructure;
-    accelerationStructureMemoryInfo.memory = memory;
+    accelerationStructureMemoryInfo.memory = allocationInfo.deviceMemory;
+    accelerationStructureMemoryInfo.memoryOffset = allocationInfo.offset;
     if (vulkanBackend.rayTracingNV().vkBindAccelerationStructureMemoryNV(vulkanBackend.device(), 1, &accelerationStructureMemoryInfo) != VK_SUCCESS) {
         ARKOSE_LOG(Fatal, "Error trying to bind memory to acceleration structure");
     }
@@ -77,7 +79,7 @@ VulkanTopLevelASNV::~VulkanTopLevelASNV()
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vulkanBackend.rayTracingNV().vkDestroyAccelerationStructureNV(vulkanBackend.device(), accelerationStructure, nullptr);
-    vkFreeMemory(vulkanBackend.device(), memory, nullptr);
+    vmaFreeMemory(vulkanBackend.globalAllocator(), allocation);
 }
 
 void VulkanTopLevelASNV::setName(const std::string& name)
@@ -295,16 +297,18 @@ VulkanBottomLevelASNV::VulkanBottomLevelASNV(Backend& backend, std::vector<RTGeo
     VkMemoryRequirements2 memoryRequirements2 {};
     vulkanBackend.rayTracingNV().vkGetAccelerationStructureMemoryRequirementsNV(vulkanBackend.device(), &memoryRequirementsInfo, &memoryRequirements2);
 
-    VkMemoryAllocateInfo memoryAllocateInfo = { VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO };
-    memoryAllocateInfo.allocationSize = memoryRequirements2.memoryRequirements.size;
-    memoryAllocateInfo.memoryTypeIndex = vulkanBackend.findAppropriateMemory(memoryRequirements2.memoryRequirements.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-    if (vkAllocateMemory(vulkanBackend.device(), &memoryAllocateInfo, nullptr, &memory) != VK_SUCCESS) {
+    // See https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator/issues/63#issuecomment-501246981
+    VmaAllocationInfo allocationInfo;
+    VmaAllocationCreateInfo allocationCreateInfo {};
+    allocationCreateInfo.memoryTypeBits = memoryRequirements2.memoryRequirements.memoryTypeBits;
+    if (vmaAllocateMemory(vulkanBackend.globalAllocator(), &memoryRequirements2.memoryRequirements, &allocationCreateInfo, &allocation, &allocationInfo) != VK_SUCCESS) {
         ARKOSE_LOG(Fatal, "Error trying to create allocate memory for acceleration structure");
     }
 
     VkBindAccelerationStructureMemoryInfoNV accelerationStructureMemoryInfo { VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV };
     accelerationStructureMemoryInfo.accelerationStructure = accelerationStructure;
-    accelerationStructureMemoryInfo.memory = memory;
+    accelerationStructureMemoryInfo.memory = allocationInfo.deviceMemory;
+    accelerationStructureMemoryInfo.memoryOffset = allocationInfo.offset;
     if (vulkanBackend.rayTracingNV().vkBindAccelerationStructureMemoryNV(vulkanBackend.device(), 1, &accelerationStructureMemoryInfo) != VK_SUCCESS) {
         ARKOSE_LOG(Fatal, "Error trying to bind memory to acceleration structure");
     }
@@ -348,7 +352,7 @@ VulkanBottomLevelASNV::~VulkanBottomLevelASNV()
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vulkanBackend.rayTracingNV().vkDestroyAccelerationStructureNV(vulkanBackend.device(), accelerationStructure, nullptr);
-    vkFreeMemory(vulkanBackend.device(), memory, nullptr);
+    vmaFreeMemory(vulkanBackend.globalAllocator(), allocation);
 
     for (auto& [buffer, allocation] : associatedBuffers) {
         vmaDestroyBuffer(vulkanBackend.globalAllocator(), buffer, allocation);
