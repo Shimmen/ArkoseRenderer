@@ -147,11 +147,17 @@ private:
     std::unordered_set<std::string> m_availableLayers;
     bool hasSupportForLayer(const std::string& name) const;
 
-    std::unordered_set<std::string> m_availableExtensions;
-    bool hasSupportForExtension(const std::string& name) const;
+    std::unordered_set<std::string> m_availableDeviceExtensions;
+    bool hasSupportForDeviceExtension(const std::string& name) const;
+
+    std::unordered_set<std::string> m_enabledDeviceExtensions;
+    bool hasEnabledDeviceExtension(const std::string& name) const;
 
     std::unordered_set<std::string> m_availableInstanceExtensions;
     bool hasSupportForInstanceExtension(const std::string& name) const;
+
+    std::unordered_set<std::string> m_enabledInstanceExtensions;
+    bool hasEnabledInstanceExtension(const std::string& name) const;
 
     std::unordered_map<Capability, bool> m_activeCapabilities;
     bool collectAndVerifyCapabilitySupport(const AppSpecification&);
@@ -200,7 +206,7 @@ private:
     VkPipelineCache createAndLoadPipelineCacheFromDisk() const;
     void savePipelineCacheToDisk(VkPipelineCache) const;
 
-    VkInstance createInstance(const std::vector<const char*>& requestedLayers, VkDebugUtilsMessengerCreateInfoEXT*) const;
+    VkInstance createInstance(const std::vector<const char*>& requestedLayers, VkDebugUtilsMessengerCreateInfoEXT*);
     VkDevice createDevice(const std::vector<const char*>& requestedLayers, VkPhysicalDevice);
 
     VkDebugUtilsMessengerEXT m_debugMessenger {};

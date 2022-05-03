@@ -96,7 +96,7 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
         std::vector<VkExtensionProperties> availableExtensions { extensionCount };
         vkEnumerateDeviceExtensionProperties(physicalDevice(), nullptr, &extensionCount, availableExtensions.data());
         for (auto& ext : availableExtensions)
-            m_availableExtensions.insert(ext.extensionName);
+            m_availableDeviceExtensions.insert(ext.extensionName);
     }
 
     if (!collectAndVerifyCapabilitySupport(appSpecification))
@@ -249,15 +249,20 @@ bool VulkanBackend::hasSupportForLayer(const std::string& name) const
     return true;
 }
 
-bool VulkanBackend::hasSupportForExtension(const std::string& name) const
+bool VulkanBackend::hasSupportForDeviceExtension(const std::string& name) const
 {
     if (m_physicalDevice == VK_NULL_HANDLE)
         ARKOSE_LOG(Fatal, "Checking support for extension but no physical device exist yet. Maybe you meant to check for instance extensions?");
 
-    auto it = m_availableExtensions.find(name);
-    if (it == m_availableExtensions.end())
+    auto it = m_availableDeviceExtensions.find(name);
+    if (it == m_availableDeviceExtensions.end())
         return false;
     return true;
+}
+
+bool VulkanBackend::hasEnabledDeviceExtension(const std::string& name) const
+{
+    return m_enabledDeviceExtensions.find(name) != m_enabledDeviceExtensions.end();
 }
 
 bool VulkanBackend::hasSupportForInstanceExtension(const std::string& name) const
@@ -266,6 +271,11 @@ bool VulkanBackend::hasSupportForInstanceExtension(const std::string& name) cons
     if (it == m_availableInstanceExtensions.end())
         return false;
     return true;
+}
+
+bool VulkanBackend::hasEnabledInstanceExtension(const std::string& name) const
+{
+    return m_enabledInstanceExtensions.find(name) != m_enabledInstanceExtensions.end();
 }
 
 bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& appSpecification)
@@ -293,20 +303,20 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
     auto isSupported = [&](Capability capability) -> bool {
         switch (capability) {
         case Capability::RayTracing: {
-            bool nvidiaRayTracingSupport = hasSupportForExtension(VK_NV_RAY_TRACING_EXTENSION_NAME);
+            bool nvidiaRayTracingSupport = hasSupportForDeviceExtension(VK_NV_RAY_TRACING_EXTENSION_NAME);
             bool khrRayTracingSupport =
-                hasSupportForExtension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
+                hasSupportForDeviceExtension(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
                     && khrRayTracingPipelineFeatures.rayTracingPipeline
                     && khrRayTracingPipelineFeatures.rayTracingPipelineTraceRaysIndirect
                     && khrRayTracingPipelineFeatures.rayTraversalPrimitiveCulling
-                && hasSupportForExtension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)
+                && hasSupportForDeviceExtension(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)
                     && khrAccelerationStructureFeatures.accelerationStructure
                     //&& khrAccelerationStructureFeatures.accelerationStructureIndirectBuild
                     && khrAccelerationStructureFeatures.descriptorBindingAccelerationStructureUpdateAfterBind
                     //&& khrAccelerationStructureFeatures.accelerationStructureHostCommands
-                && hasSupportForExtension(VK_KHR_RAY_QUERY_EXTENSION_NAME)
+                && hasSupportForDeviceExtension(VK_KHR_RAY_QUERY_EXTENSION_NAME)
                     && khrRayQueryFeatures.rayQuery
-                && hasSupportForExtension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)
+                && hasSupportForDeviceExtension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)
                 && vk12features.bufferDeviceAddress;
 
 #if 0
@@ -559,7 +569,7 @@ VkExtent2D VulkanBackend::pickBestSwapchainExtent() const
     return extent;
 }
 
-VkInstance VulkanBackend::createInstance(const std::vector<const char*>& requestedLayers, VkDebugUtilsMessengerCreateInfoEXT* debugMessengerCreateInfo) const
+VkInstance VulkanBackend::createInstance(const std::vector<const char*>& requestedLayers, VkDebugUtilsMessengerCreateInfoEXT* debugMessengerCreateInfo)
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
@@ -570,30 +580,35 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
 
     bool includeValidationFeatures = false;
     std::vector<const char*> instanceExtensions;
+    auto addInstanceExtension = [&](const char* extension) {
+        instanceExtensions.emplace_back(extension);
+        m_enabledInstanceExtensions.insert(extension);
+    };
+
     {
         uint32_t requiredCount;
         const char** requiredExtensions = glfwGetRequiredInstanceExtensions(&requiredCount);
         for (uint32_t i = 0; i < requiredCount; ++i) {
             const char* name = requiredExtensions[i];
             ARKOSE_ASSERT(hasSupportForInstanceExtension(name));
-            instanceExtensions.emplace_back(name);
+            addInstanceExtension(name);
         }
 
         // Required for checking support of complex features. It's probably fine to always require it. If it doesn't exist, we deal with it then..
         ARKOSE_ASSERT(hasSupportForInstanceExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME));
-        instanceExtensions.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        addInstanceExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
         // For debug messages etc.
         if (vulkanDebugMode) {
             ARKOSE_ASSERT(hasSupportForInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME));
-            instanceExtensions.emplace_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+            addInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
             if (hasSupportForInstanceExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME)) {
-                instanceExtensions.emplace_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+                addInstanceExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
             }
 
             if (hasSupportForInstanceExtension(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
-                instanceExtensions.emplace_back(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
+                addInstanceExtension(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);
                 includeValidationFeatures = true;
             }
         }
@@ -662,16 +677,20 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     //
 
     std::vector<const char*> deviceExtensions {};
+    auto addDeviceExtension = [&](const char* extension) {
+        deviceExtensions.emplace_back(extension);
+        m_enabledDeviceExtensions.insert(extension);
+    };
 
-    ARKOSE_ASSERT(hasSupportForExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
-    deviceExtensions.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    ARKOSE_ASSERT(hasSupportForDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
+    addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-    if (vulkanDebugMode && hasSupportForExtension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME))
-        deviceExtensions.emplace_back(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
+    if (vulkanDebugMode && hasSupportForDeviceExtension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME))
+        addDeviceExtension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
 
     #if defined(TRACY_ENABLE)
-        ARKOSE_ASSERT(hasSupportForExtension(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME));
-        deviceExtensions.emplace_back(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
+        ARKOSE_ASSERT(hasSupportForDeviceExtension(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME));
+        addDeviceExtension(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
     #endif
 
     VkPhysicalDeviceFeatures2 features2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
