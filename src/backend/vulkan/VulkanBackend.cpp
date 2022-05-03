@@ -2105,25 +2105,3 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
 
     return infos;
 }
-
-uint32_t VulkanBackend::findAppropriateMemory(uint32_t typeBits, VkMemoryPropertyFlags properties) const
-{
-    SCOPED_PROFILE_ZONE_BACKEND();
-
-    VkPhysicalDeviceMemoryProperties memoryProperties;
-    vkGetPhysicalDeviceMemoryProperties(physicalDevice(), &memoryProperties);
-
-    for (uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++) {
-        // Is type i at all supported, given the typeBits?
-        if (!(typeBits & (1u << i))) {
-            continue;
-        }
-
-        if ((memoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-            return i;
-        }
-    }
-
-    ARKOSE_LOG(Fatal, "VulkanBackend: could not find any appropriate memory, exiting.");
-    ASSERT_NOT_REACHED(); // todo: make ARKOSE_LOG(Fatal, ... ) prevent the missing return path warning
-}
