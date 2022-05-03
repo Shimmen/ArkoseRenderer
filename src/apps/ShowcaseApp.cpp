@@ -123,6 +123,7 @@ bool ShowcaseApp::drawGui(Scene& scene)
     static bool showAbout = false;
     static bool showSceneGui = false;
     static bool showGpuSceneGui = false;
+    static bool showVramUsageGui = true;
 
     if (showAbout) {
         if (ImGui::Begin("About", &showAbout, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse)) {
@@ -138,14 +139,21 @@ bool ShowcaseApp::drawGui(Scene& scene)
     
     if (showSceneGui) {
         if (ImGui::Begin("Scene settings", &showSceneGui, ImGuiWindowFlags_NoCollapse)) {
-            scene.drawGui(false);
+            scene.drawSettingsGui();
         }
         ImGui::End();
     }
     
     if (showGpuSceneGui) { 
         if (ImGui::Begin("GPU scene stats", &showGpuSceneGui, ImGuiWindowFlags_NoCollapse)) {
-            scene.gpuScene().drawGui(false);
+            scene.gpuScene().drawStatsGui();
+        }
+        ImGui::End();
+    }
+
+    if (showVramUsageGui) {
+        if (ImGui::Begin("VRAM usage", &showVramUsageGui, ImGuiWindowFlags_NoCollapse)) {
+            scene.gpuScene().drawVramUsageGui();
         }
         ImGui::End();
     }
@@ -157,9 +165,13 @@ bool ShowcaseApp::drawGui(Scene& scene)
             ImGui::MenuItem("About...", nullptr, &showAbout);
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Settings & stats")) {
+        if (ImGui::BeginMenu("Settings")) {
             ImGui::MenuItem("Scene settings", nullptr, &showSceneGui);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Stats")) {
             ImGui::MenuItem("GPU scene stats", nullptr, &showGpuSceneGui);
+            ImGui::MenuItem("VRAM usage stats", nullptr, &showVramUsageGui);
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();

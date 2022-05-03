@@ -52,6 +52,8 @@ public:
     void newFrame();
     bool executeFrame(const Scene&, RenderPipeline&, float elapsedTime, float deltaTime) override;
 
+    std::optional<VramStats> vramStats() override;
+
     ///////////////////////////////////////////////////////////////////////////
     /// Backend-specific resource types
 
@@ -197,6 +199,8 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     /// Vulkan core stuff (e.g. instance, device)
 
+    static constexpr auto VulkanApiVersion = VK_API_VERSION_1_2;
+
     VkSurfaceFormatKHR pickBestSurfaceFormat() const;
     VkPresentModeKHR pickBestPresentMode() const;
     VkExtent2D pickBestSwapchainExtent() const;
@@ -295,6 +299,9 @@ private:
     /// Resource & resource management members
 
     VmaAllocator m_memoryAllocator;
+
+    static constexpr uint32_t VramStatsQueryRate = 10;
+    std::optional<VramStats> m_lastQueriedVramStats {};
 
     std::unique_ptr<Registry> m_pipelineRegistry {};
 

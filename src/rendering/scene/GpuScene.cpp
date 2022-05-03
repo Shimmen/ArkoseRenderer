@@ -877,7 +877,7 @@ TopLevelAS& GpuScene::globalTopLevelAccelerationStructure() const
     return *m_sceneTopLevelAccelerationStructure;
 }
 
-void GpuScene::drawGui(bool includeContainingWindow)
+void GpuScene::drawStatsGui(bool includeContainingWindow)
 {
     if (includeContainingWindow) {
         ImGui::Begin("GPU Scene");
@@ -896,3 +896,37 @@ void GpuScene::drawGui(bool includeContainingWindow)
         ImGui::End();
     }
 }
+
+void GpuScene::drawVramUsageGui(bool includeContainingWindow)
+{
+    if (includeContainingWindow) {
+        ImGui::Begin("VRAM usage");
+    }
+
+    if (backend().vramStats().has_value()) {
+
+        Backend::VramStats stats = backend().vramStats().value();
+        float currentUsedMB = stats.totalUsed / (1024.0f * 1024.0f);
+        float availableMB = stats.totalAvailable / (1024.0f * 1024.0f);
+
+        m_vramUsageHistory.report(currentUsedMB);
+
+        auto valuesGetter = [](void* data, int idx) -> float {
+            const auto& avgAccumulator = *reinterpret_cast<decltype(m_vramUsageHistory)*>(data);
+            return static_cast<float>(avgAccumulator.valueAtSequentialIndex(idx));
+        };
+
+        int valuesCount = static_cast<int>(decltype(m_vramUsageHistory)::RunningAvgWindowSize);
+        ImGui::Text("Current VRAM usage (running average): %.1f MB", m_vramUsageHistory.runningAverage());
+        ImGui::PlotLines("##VramUsagePlot", valuesGetter, (void*)&m_vramUsageHistory, valuesCount, 0, "VRAM (MB)", 0.0f, availableMB, ImGui::GetContentRegionAvail());
+        
+    
+    } else {
+        ImGui::Text("VRAM usage data not provided by backend.");
+    }
+
+    if (includeContainingWindow) {
+        ImGui::End();
+    }
+}
+

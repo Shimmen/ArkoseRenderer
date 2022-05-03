@@ -92,7 +92,7 @@ public:
 
     // GUI
 
-    void drawGui(bool includeContainingWindow);
+    void drawSettingsGui(bool includeContainingWindow = false);
     void drawSceneGizmos();
 
 private:

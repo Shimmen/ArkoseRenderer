@@ -109,6 +109,7 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
     vkGetDeviceQueue(m_device, m_computeQueue.familyIndex, 0, &m_computeQueue.queue);
 
     VmaAllocatorCreateInfo allocatorInfo = {};
+    allocatorInfo.vulkanApiVersion = VulkanApiVersion;
     allocatorInfo.instance = m_instance;
     allocatorInfo.physicalDevice = physicalDevice();
     allocatorInfo.device = device();
@@ -116,6 +117,10 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
     if (hasActiveCapability(Backend::Capability::RayTracing)) {
         // Device address required if we use ray tracing
         allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
+    }
+    if (hasEnabledDeviceExtension(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME)) {
+        // Allow VMA to make use of the memory budget management data available from extension
+        allocatorInfo.flags |= VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
     }
     if (vmaCreateAllocator(&allocatorInfo, &m_memoryAllocator) != VK_SUCCESS) {
         ARKOSE_LOG(Fatal, "VulkanBackend: could not create memory allocator, exiting.");
@@ -631,7 +636,7 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
     appInfo.applicationVersion = VK_MAKE_VERSION(1, 0, 0); // NOLINT(hicpp-signed-bitwise)
     appInfo.pEngineName = "ArkoseRendererEngine";
     appInfo.engineVersion = VK_MAKE_VERSION(1, 0, 0); // NOLINT(hicpp-signed-bitwise)
-    appInfo.apiVersion = VK_API_VERSION_1_2; // NOLINT(hicpp-signed-bitwise)
+    appInfo.apiVersion = VulkanApiVersion; // NOLINT(hicpp-signed-bitwise)
 
     VkInstanceCreateInfo instanceCreateInfo = { VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO };
     instanceCreateInfo.pApplicationInfo = &appInfo;
@@ -684,6 +689,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 
     ARKOSE_ASSERT(hasSupportForDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
     addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+    if (hasSupportForDeviceExtension(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME))
+        addDeviceExtension(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
 
     if (vulkanDebugMode && hasSupportForDeviceExtension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME))
         addDeviceExtension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
@@ -1575,6 +1583,33 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
     }
     #endif
 
+    if (hasEnabledDeviceExtension(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME) && m_currentFrameIndex % VramStatsQueryRate == 0) {
+        SCOPED_PROFILE_ZONE_BACKEND_NAMED("Querying GPU memory budget");
+        ARKOSE_LOG(Verbose, "Querying GPU memory heaps (use / budget):");
+
+        VkPhysicalDeviceMemoryBudgetPropertiesEXT budgetProperties { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT };
+        VkPhysicalDeviceMemoryProperties2 memoryProperties2 { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2 };
+        memoryProperties2.pNext = &budgetProperties;
+        vkGetPhysicalDeviceMemoryProperties2(physicalDevice(), &memoryProperties2);
+
+        VkDeviceSize totalUsed {};
+        VkDeviceSize totalBudget {};
+        for (uint32_t heapIdx = 0; heapIdx < VK_MAX_MEMORY_HEAPS; ++heapIdx) {
+            VkDeviceSize heapBudget = budgetProperties.heapBudget[heapIdx];
+            if (heapBudget > 0) {
+                totalBudget += heapBudget;
+                totalUsed += budgetProperties.heapUsage[heapIdx];
+                ARKOSE_LOG(Verbose, " heap{}: {:.2f} / {:.2f} GB", heapIdx, budgetProperties.heapUsage[heapIdx] / (1024.0f * 1024.0f * 1024.0f), heapBudget / (1024.0f * 1024.0f * 1024.0f));
+            }
+        }
+
+        ARKOSE_LOG(Verbose, "Total GPU memory usage: {:.2f} / {:.2f} GB", totalUsed / (1024.0f * 1024.0f * 1024.0f), totalBudget / (1024.0f * 1024.0f * 1024.0f));
+
+        // TODO: Do we want to report more granular stats, e.g. per heap?
+        m_lastQueriedVramStats = VramStats { .totalUsed = totalUsed,
+                                             .totalAvailable = totalBudget };
+    }
+
     // Submit queue
     {
         SCOPED_PROFILE_ZONE_BACKEND_NAMED("Submitting for queue");
@@ -1629,6 +1664,11 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
     m_relativeFrameIndex += 1;
 
     return true;
+}
+
+std::optional<Backend::VramStats> VulkanBackend::vramStats()
+{
+    return m_lastQueriedVramStats;
 }
 
 void VulkanBackend::renderPipelineDidChange(RenderPipeline& renderPipeline)

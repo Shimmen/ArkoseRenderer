@@ -334,7 +334,7 @@ void Scene::loadFromFile(const std::string& path)
     }
 }
 
-void Scene::drawGui(bool includeContainingWindow)
+void Scene::drawSettingsGui(bool includeContainingWindow)
 {
     if (includeContainingWindow) {
         ImGui::Begin("Scene");

@@ -96,7 +96,8 @@ public:
 
     // Misc.
 
-    void drawGui(bool includeContainingWindow);
+    void drawStatsGui(bool includeContainingWindow = false);
+    void drawVramUsageGui(bool includeContainingWindow = false);
 
 private:
     Scene& m_scene;
@@ -189,4 +190,8 @@ private:
     std::unique_ptr<Texture> m_lightGrayTexture {};
     std::unique_ptr<Texture> m_magentaTexture {};
     std::unique_ptr<Texture> m_normalMapBlueTexture {};
+
+    // GPU management
+
+    AvgAccumulator<float, 20> m_vramUsageHistory {};
 };

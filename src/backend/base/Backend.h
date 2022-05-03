@@ -61,6 +61,13 @@ public:
     virtual void newFrame() = 0;
     virtual bool executeFrame(const Scene&, RenderPipeline&, float elapsedTime, float deltaTime) = 0;
 
+    struct VramStats {
+        size_t totalUsed { 0 };
+        size_t totalAvailable { 0 };
+    };
+
+    virtual std::optional<VramStats> vramStats() { return {}; }
+
     virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) = 0;
     virtual std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) = 0;
     virtual std::unique_ptr<Texture> createTexture(Texture::Description) = 0;
