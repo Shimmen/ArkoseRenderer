@@ -115,10 +115,12 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
 
     {
         SCOPED_PROFILE_ZONE_NAMED("vmaCreateImage");
+        VmaAllocationInfo allocationInfo;
         auto& allocator = static_cast<VulkanBackend&>(backend).globalAllocator();
-        if (vmaCreateImage(allocator, &imageCreateInfo, &allocCreateInfo, &image, &allocation, nullptr) != VK_SUCCESS) {
+        if (vmaCreateImage(allocator, &imageCreateInfo, &allocCreateInfo, &image, &allocation, &allocationInfo) != VK_SUCCESS) {
             ARKOSE_LOG(Error, "VulkanBackend::newTexture(): could not create image.");
         }
+        m_sizeInMemory = allocationInfo.size;
     }
 
     VkImageAspectFlags aspectFlags = 0u;

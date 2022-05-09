@@ -30,6 +30,8 @@ public:
     Usage usage() const { return m_usage; }
     MemoryHint memoryHint() const { return m_memoryHint; }
 
+    size_t sizeInMemory() { return m_sizeInMemory; }
+
     virtual void updateData(const std::byte* data, size_t size, size_t offset = 0) = 0;
     virtual bool updateDataAndGrowIfRequired(const std::byte* data, size_t size, size_t offset);
 
@@ -64,6 +66,7 @@ public:
 
 protected:
     size_t m_size { 0 };
+    size_t m_sizeInMemory { SIZE_MAX };
 
 private:
     Usage m_usage { Usage::Vertex };

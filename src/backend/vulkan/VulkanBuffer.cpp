@@ -210,6 +210,8 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
     if (vmaCreateBuffer(allocator, &bufferCreateInfo, &allocCreateInfo, &outBuffer, &outAllocation, &allocationInfo) != VK_SUCCESS) {
         ARKOSE_LOG(Fatal, "Could not create buffer of size {}.", size);
     }
+
+    m_sizeInMemory = allocationInfo.size;
 }
 
 void VulkanBuffer::destroyInternal(VkBuffer inBuffer, VmaAllocation inAllocation)

@@ -235,6 +235,11 @@ public:
         return m_description.format == Format::sRGBA8;
     }
 
+    size_t sizeInMemory() { return m_sizeInMemory; }
+
+protected:
+    size_t m_sizeInMemory { SIZE_MAX };
+
 private:
     Description m_description;
 };
