@@ -194,4 +194,6 @@ private:
     // GPU management
 
     AvgAccumulator<float, 20> m_vramUsageHistory {};
+
+    size_t m_managedTexturesVramUsage { 0 };
 };

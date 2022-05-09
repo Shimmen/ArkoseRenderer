@@ -195,6 +195,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 auto texture = backend().createTexture(loadedImageForTex.textureDescription);
                 texture->setData(loadedImageForTex.image->data(), loadedImageForTex.image->size());
                 texture->setName("Texture:" + loadedImageForTex.path);
+                m_managedTexturesVramUsage += texture->sizeInMemory();
 
                 updateTexture(loadedImageForTex.textureHandle, std::move(texture));
             }
@@ -674,6 +675,7 @@ TextureHandle GpuScene::registerMaterialTexture(Material::TextureDescription& de
 
         } else {
             auto texture = createTextureFromMaterialTextureDesc(backend(), description);
+            m_managedTexturesVramUsage += texture->sizeInMemory();
             updateTexture(handle, std::move(texture));
         }
 
@@ -693,6 +695,8 @@ TextureHandle GpuScene::registerMaterialTexture(Material::TextureDescription& de
 TextureHandle GpuScene::registerTexture(std::unique_ptr<Texture>&& texture)
 {
     SCOPED_PROFILE_ZONE();
+
+    m_managedTexturesVramUsage += texture->sizeInMemory();
 
     TextureHandle handle = registerTextureSlot();
     updateTexture(handle, std::move(texture));
@@ -768,6 +772,10 @@ void GpuScene::unregisterTexture(TextureHandle handle)
                                         .index = handle.indexOfType<uint32_t>() });
 
     if (managedTexture.referenceCount == 0) {
+
+        ARKOSE_ASSERT(m_managedTexturesVramUsage > managedTexture.texture->sizeInMemory());
+        m_managedTexturesVramUsage -= managedTexture.texture->sizeInMemory();
+
         // TODO: Put this handle in some handle free list for index reuse so we don't leave gaps
         managedTexture = ManagedTexture();
     }
@@ -918,11 +926,24 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
         int valuesCount = static_cast<int>(decltype(m_vramUsageHistory)::RunningAvgWindowSize);
         ImGui::Text("Current VRAM usage (running average): %.1f MB", m_vramUsageHistory.runningAverage());
-        ImGui::PlotLines("##VramUsagePlot", valuesGetter, (void*)&m_vramUsageHistory, valuesCount, 0, "VRAM (MB)", 0.0f, availableMB, ImGui::GetContentRegionAvail());
+        ImVec2 plotSize = ImVec2(ImGui::GetContentRegionAvail().x, 250.0f);
+        ImGui::PlotLines("##VramUsagePlot", valuesGetter, (void*)&m_vramUsageHistory, valuesCount, 0, "VRAM (MB)", 0.0f, availableMB, plotSize);
         
     
     } else {
-        ImGui::Text("VRAM usage data not provided by backend.");
+        ImGui::Text("(No VRAM usage data provided by the backend)");
+    }
+
+    ImGui::Separator();
+
+    ImGui::Text("VRAM usage breakdown:");
+    {
+        ImGui::Columns(2);
+        ImGui::Text("Managed textures");
+        ImGui::NextColumn();
+        float managedTexturesTotalGB = static_cast<float>(m_managedTexturesVramUsage) / (1024.0f * 1024.0f * 1024.0f);
+        ImGui::Text("%.2f GB", managedTexturesTotalGB);
+        ImGui::Text("");
     }
 
     if (includeContainingWindow) {
