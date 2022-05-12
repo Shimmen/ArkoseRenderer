@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Assert.h"
+#include <string>
 #include <vector>
 
 enum class VertexComponent : int {
@@ -25,9 +26,24 @@ static constexpr size_t vertexComponentSize(VertexComponent component)
     default:
         ASSERT_NOT_REACHED();
     }
+}
 
-    ASSERT_NOT_REACHED();
-    return 0;
+static constexpr const char* vertexComponentToString(VertexComponent component)
+{
+    switch (component) {
+    case VertexComponent::Position3F:
+        return "Position3F";
+    case VertexComponent::Normal3F:
+        return "Normal3F";
+    case VertexComponent::Position2F:
+        return "Position2F";
+    case VertexComponent::TexCoord2F:
+        return "TexCoord2F";
+    case VertexComponent::Tangent4F:
+        return "Tangent4F";
+    default:
+        ASSERT_NOT_REACHED();
+    }
 }
 
 class VertexLayout {
@@ -40,6 +56,8 @@ public:
     const std::vector<VertexComponent>& components() const { return m_components; }
 
     size_t packedVertexSize() const;
+
+    std::string toString(bool includeTypeName = true) const;
 
 private:
     std::vector<VertexComponent> m_components;

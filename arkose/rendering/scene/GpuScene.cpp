@@ -504,6 +504,7 @@ RTGeometryInstance GpuScene::createRTGeometryInstance(Mesh& mesh, uint32_t meshI
 
     m_sceneBottomLevelAccelerationStructures.emplace_back(backend().createBottomLevelAccelerationStructure({ geometry }));
     BottomLevelAS& blas = *m_sceneBottomLevelAccelerationStructures.back();
+    m_totalBlasVramUsage += blas.sizeInMemory();
 
     // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
     RTGeometryInstance instance = { .blas = blas,
@@ -938,12 +939,93 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
     ImGui::Text("VRAM usage breakdown:");
     {
-        ImGui::Columns(2);
-        ImGui::Text("Managed textures");
-        ImGui::NextColumn();
-        float managedTexturesTotalGB = static_cast<float>(m_managedTexturesVramUsage) / (1024.0f * 1024.0f * 1024.0f);
-        ImGui::Text("%.2f GB", managedTexturesTotalGB);
-        ImGui::Text("");
+        if (ImGui::BeginTabBar("VramUsageBreakdown")) {
+
+            if (ImGui::BeginTabItem("Managed textures")) {
+
+                ImGui::Text("Number of managed textures: %d", m_managedTextures.size());
+
+                float managedTexturesTotalGB = static_cast<float>(m_managedTexturesVramUsage) / (1024.0f * 1024.0f * 1024.0f);
+                ImGui::Text("Using %.2f GB", managedTexturesTotalGB);
+
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Mesh index data")) {
+
+                ImGui::Text("Using global index type %s", indexTypeToString(globalIndexBufferType()));
+
+                float allocatedSizeMB = globalIndexBuffer().sizeInMemory() / (1024.0f * 1024.0f);
+                float usedSizeMB = m_nextFreeIndex * sizeofIndexType(globalIndexBufferType()) / (1024.0f * 1024.0f);
+                ImGui::Text("Using %.1f MB (%.1f MB allocated)", usedSizeMB, allocatedSizeMB);
+
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Mesh vertex data")) {
+
+                float totalAllocatedSizeMB = 0.0f;
+                float totalUsedSizeMB = 0.0f;
+
+                if (ImGui::BeginTable("MeshVertexDataVramUsageTable", 3)) {
+
+                    ImGui::TableSetupColumn("Vertex layout", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableSetupColumn("Used size (MB)", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+                    ImGui::TableSetupColumn("Allocated size (MB)", ImGuiTableColumnFlags_WidthFixed, 140.0f);
+
+                    ImGui::TableHeadersRow();
+
+                    for (auto& [vertexLayout, buffer] : m_globalVertexBuffers) {
+
+                        ImGui::TableNextRow();
+
+                        ImGui::TableSetColumnIndex(0);
+                        std::string layoutDescription = vertexLayout.toString(false);
+                        ImGui::Text(layoutDescription.c_str());
+                        
+                        ImGui::TableSetColumnIndex(1);
+                        float usedSizeMB = m_nextFreeVertexIndex * vertexLayout.packedVertexSize() / (1024.0f * 1024.0f);
+                        ImGui::Text("%.2f", usedSizeMB);
+
+                        ImGui::TableSetColumnIndex(2);
+                        float allocatedSizeMB = buffer->sizeInMemory() / (1024.0f * 1024.0f);
+                        ImGui::Text("%.2f", allocatedSizeMB);
+
+                        totalAllocatedSizeMB += allocatedSizeMB;
+                        totalUsedSizeMB += usedSizeMB;
+                    }
+
+                    ImGui::EndTable();
+                }
+
+                ImGui::Separator();
+                ImGui::Text("Total: %.2f MB (%.2f MB allocated)", totalUsedSizeMB, totalAllocatedSizeMB);
+
+                ImGui::EndTabItem();
+            }
+
+            if (m_maintainRayTracingScene && ImGui::BeginTabItem("Ray Tracing BLAS")) {
+
+                size_t numBLAS = m_sceneBottomLevelAccelerationStructures.size();
+                ImGui::Text("Number of BLASs: %d", numBLAS);
+
+                float blasTotalSizeMB = m_totalBlasVramUsage / (1024.0f * 1024.0f);
+                ImGui::Text("BLAS total usage: %.2f MB", blasTotalSizeMB);
+
+                float blasAverageSizeMB = blasTotalSizeMB / numBLAS;
+                ImGui::Text("Average per BLAS: %.2f MB", blasAverageSizeMB);
+
+                ImGui::Separator();
+
+                std::string layoutDescription = m_rayTracingVertexLayout.toString(false);
+                ImGui::Text("Using vertex layout: [ %s ]", layoutDescription.c_str());
+                ImGui::TextColored(ImColor(0.75f, 0.75f, 0.75f), "(Note: This vertex data does not count to the BLAS size)");
+
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar();
+        }
     }
 
     if (includeContainingWindow) {

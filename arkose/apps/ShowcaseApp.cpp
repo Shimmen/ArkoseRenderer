@@ -152,7 +152,7 @@ bool ShowcaseApp::drawGui(Scene& scene)
     }
 
     if (showVramUsageGui) {
-        if (ImGui::Begin("VRAM usage", &showVramUsageGui, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse)) {
+        if (ImGui::Begin("VRAM usage", &showVramUsageGui, ImGuiWindowFlags_NoCollapse)) {
             scene.gpuScene().drawVramUsageGui();
         }
         ImGui::End();

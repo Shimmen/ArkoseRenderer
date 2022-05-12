@@ -196,4 +196,5 @@ private:
     AvgAccumulator<float, 20> m_vramUsageHistory {};
 
     size_t m_managedTexturesVramUsage { 0 };
+    size_t m_totalBlasVramUsage { 0 };
 };

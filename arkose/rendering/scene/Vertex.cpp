@@ -25,3 +25,25 @@ size_t VertexLayout::packedVertexSize() const
         size += vertexComponentSize(component);
     return size;
 }
+
+std::string VertexLayout::toString(bool includeTypeName) const
+{
+    std::string result {};
+
+    if (includeTypeName) {
+        result += "VertexLayout { ";
+    }
+
+    for (size_t i = 0, count = components().size(); i < count; ++i) {
+        result += vertexComponentToString(components()[i]);
+        if (i < count - 1) {
+            result += " ";
+        }
+    }
+
+    if (includeTypeName) {
+        result += "}";
+    }
+
+    return result;
+}
