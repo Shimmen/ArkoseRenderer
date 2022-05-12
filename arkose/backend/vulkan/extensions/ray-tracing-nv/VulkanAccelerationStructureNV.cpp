@@ -197,13 +197,16 @@ VulkanBottomLevelASNV::VulkanBottomLevelASNV(Backend& backend, std::vector<RTGeo
         VmaAllocationCreateInfo allocCreateInfo = {};
         allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
 
-        if (vmaCreateBuffer(vulkanBackend.globalAllocator(), &bufferCreateInfo, &allocCreateInfo, &transformBuffer, &transformBufferAllocation, nullptr) != VK_SUCCESS) {
+        VmaAllocationInfo allocationInfo;
+        if (vmaCreateBuffer(vulkanBackend.globalAllocator(), &bufferCreateInfo, &allocCreateInfo, &transformBuffer, &transformBufferAllocation, &allocationInfo) != VK_SUCCESS) {
             ARKOSE_LOG(Fatal, "Error trying to create buffer for the bottom level acceeration structure transforms.");
         }
 
         if (!vulkanBackend.setBufferMemoryUsingMapping(transformBufferAllocation, (uint8_t*)transforms.data(), totalSize)) {
             ARKOSE_LOG(Fatal, "Error trying to copy data to the bottom level acceeration structure transform buffer.");
         }
+
+        m_sizeInMemory += allocationInfo.size;
     }
 
     std::vector<VkGeometryNV> vkGeometries {};
@@ -304,6 +307,8 @@ VulkanBottomLevelASNV::VulkanBottomLevelASNV(Backend& backend, std::vector<RTGeo
     if (vmaAllocateMemory(vulkanBackend.globalAllocator(), &memoryRequirements2.memoryRequirements, &allocationCreateInfo, &allocation, &allocationInfo) != VK_SUCCESS) {
         ARKOSE_LOG(Fatal, "Error trying to create allocate memory for acceleration structure");
     }
+
+    m_sizeInMemory += allocationInfo.size;
 
     VkBindAccelerationStructureMemoryInfoNV accelerationStructureMemoryInfo { VK_STRUCTURE_TYPE_BIND_ACCELERATION_STRUCTURE_MEMORY_INFO_NV };
     accelerationStructureMemoryInfo.accelerationStructure = accelerationStructure;

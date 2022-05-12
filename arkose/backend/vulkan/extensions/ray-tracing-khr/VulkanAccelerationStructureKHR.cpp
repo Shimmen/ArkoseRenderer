@@ -240,6 +240,10 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
         size_t totalSize = transforms.size() * singleTransformSize;
         transformBufferAndAllocation = vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(totalSize, false, true); // TODO: Can this really be read-only?
 
+        VmaAllocationInfo allocationInfo {};
+        vmaGetAllocationInfo(vulkanBackend.globalAllocator(), transformBufferAndAllocation.second, &allocationInfo);
+        m_sizeInMemory += allocationInfo.size;
+
         if (!vulkanBackend.setBufferMemoryUsingMapping(transformBufferAndAllocation.second, (uint8_t*)transforms.data(), totalSize)) {
             ARKOSE_LOG(Fatal, "Error trying to copy data to the bottom level acceeration structure transform buffer.");
         }
@@ -365,6 +369,10 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
     VkDeviceSize accelerationStructureBufferSize = buildSizesInfo.accelerationStructureSize; // (use min required size)
     auto accelerationStructureBufferAndAllocation = vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(accelerationStructureBufferSize, true, false);
     VkBuffer accelerationStructureBuffer = accelerationStructureBufferAndAllocation.first;
+
+    VmaAllocationInfo allocationInfo {};
+    vmaGetAllocationInfo(vulkanBackend.globalAllocator(), accelerationStructureBufferAndAllocation.second, &allocationInfo);
+    m_sizeInMemory += allocationInfo.size;
 
     VkAccelerationStructureCreateInfoKHR accelerationStructureCreateInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
     accelerationStructureCreateInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;

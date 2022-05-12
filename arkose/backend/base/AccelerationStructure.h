@@ -62,6 +62,11 @@ public:
 
     [[nodiscard]] const std::vector<RTGeometry>& geometries() const;
 
+    size_t sizeInMemory() { return m_sizeInMemory; }
+
+protected:
+    size_t m_sizeInMemory { SIZE_MAX };
+
 private:
     std::vector<RTGeometry> m_geometries {};
 };
