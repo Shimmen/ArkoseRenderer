@@ -691,9 +691,12 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     ARKOSE_ASSERT(hasSupportForDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
     addDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
+    // Used to query for VRAM memory usage (also automatically used by VulkanMemoryAllocator internally)
     if (hasSupportForDeviceExtension(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME))
         addDeviceExtension(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
 
+    // Automatically used by VulkanMemoryAllocator internally to create dedicated allocations.
+    // See this blog post for more info: https://www.asawicki.info/articles/VK_KHR_dedicated_allocation.php5
     if (hasSupportForDeviceExtension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME))
         addDeviceExtension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
 
