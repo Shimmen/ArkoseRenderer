@@ -694,6 +694,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     if (hasSupportForDeviceExtension(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME))
         addDeviceExtension(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME);
 
+    if (hasSupportForDeviceExtension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME))
+        addDeviceExtension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
+
     if (vulkanDebugMode && hasSupportForDeviceExtension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME))
         addDeviceExtension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
 
