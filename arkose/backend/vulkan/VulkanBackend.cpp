@@ -70,7 +70,7 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
 
         VkDebugReportCallbackCreateInfoEXT dbgReportCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT };
         dbgReportCreateInfo.pfnCallback = VulkanDebugUtils::debugReportCallback;
-        dbgReportCreateInfo.flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT;
+        dbgReportCreateInfo.flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT;
         dbgReportCreateInfo.pUserData = nullptr;
 
         if (debugUtils().vkCreateDebugReportCallbackEXT(m_instance, &dbgReportCreateInfo, nullptr, &m_debugReportCallback) != VK_SUCCESS) {
