@@ -52,6 +52,7 @@ public:
     void newFrame();
     bool executeFrame(const Scene&, RenderPipeline&, float elapsedTime, float deltaTime) override;
 
+    int vramStatsReportRate() const override { return VramStatsQueryRate; }
     std::optional<VramStats> vramStats() override;
 
     ///////////////////////////////////////////////////////////////////////////
@@ -300,7 +301,7 @@ private:
 
     VmaAllocator m_memoryAllocator;
 
-    static constexpr uint32_t VramStatsQueryRate = 10;
+    static constexpr int VramStatsQueryRate = 10;
     std::optional<VramStats> m_lastQueriedVramStats {};
 
     std::unique_ptr<Registry> m_pipelineRegistry {};

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "backend/Resources.h"
+#include "backend/util/VramStats.h"
 #include "core/Badge.h"
 #include <memory>
 #include <vector>
@@ -61,11 +62,7 @@ public:
     virtual void newFrame() = 0;
     virtual bool executeFrame(const Scene&, RenderPipeline&, float elapsedTime, float deltaTime) = 0;
 
-    struct VramStats {
-        size_t totalUsed { 0 };
-        size_t totalAvailable { 0 };
-    };
-
+    virtual int vramStatsReportRate() const { return 0; }
     virtual std::optional<VramStats> vramStats() { return {}; }
 
     virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) = 0;

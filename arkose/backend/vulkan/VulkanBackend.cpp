@@ -7,6 +7,7 @@
 #include "backend/vulkan/VulkanResources.h"
 #include "backend/shader/Shader.h"
 #include "backend/shader/ShaderManager.h"
+#include "core/Conversion.h"
 #include "core/Defer.h"
 #include "rendering/Registry.h"
 #include "utility/FileIO.h"
@@ -1592,22 +1593,48 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
         memoryProperties2.pNext = &budgetProperties;
         vkGetPhysicalDeviceMemoryProperties2(physicalDevice(), &memoryProperties2);
 
-        VkDeviceSize totalUsed {};
-        VkDeviceSize totalBudget {};
+        VramStats stats {};
+
         for (uint32_t heapIdx = 0; heapIdx < VK_MAX_MEMORY_HEAPS; ++heapIdx) {
             VkDeviceSize heapBudget = budgetProperties.heapBudget[heapIdx];
+            VkDeviceSize heapUsage = budgetProperties.heapUsage[heapIdx];
             if (heapBudget > 0) {
-                totalBudget += heapBudget;
-                totalUsed += budgetProperties.heapUsage[heapIdx];
-                ARKOSE_LOG(Verbose, " heap{}: {:.2f} / {:.2f} GB", heapIdx, budgetProperties.heapUsage[heapIdx] / (1024.0f * 1024.0f * 1024.0f), heapBudget / (1024.0f * 1024.0f * 1024.0f));
+
+                ARKOSE_ASSERT(heapIdx < memoryProperties2.memoryProperties.memoryHeapCount);
+                VkMemoryHeap heap = memoryProperties2.memoryProperties.memoryHeaps[heapIdx];
+                bool deviceLocalHeap = (heap.flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) != 0;
+
+                stats.heaps.push_back(VramStats::MemoryHeap { .used = heapUsage,
+                                                              .available = heapBudget,
+                                                              .deviceLocal = deviceLocalHeap });
+
+                stats.totalUsed += heapUsage;
+
+
+                ARKOSE_LOG(Verbose, " heap{}: {:.2f} / {:.2f} GB", heapIdx, conversion::to::GB(heapUsage), conversion::to::GB(heapBudget));
             }
         }
 
-        ARKOSE_LOG(Verbose, "Total GPU memory usage: {:.2f} / {:.2f} GB", totalUsed / (1024.0f * 1024.0f * 1024.0f), totalBudget / (1024.0f * 1024.0f * 1024.0f));
+        for (size_t i = 0; i < memoryProperties2.memoryProperties.memoryTypeCount; ++i) {
+            VkMemoryType memoryType = memoryProperties2.memoryProperties.memoryTypes[i];
+            VramStats::MemoryHeap& heapStats = stats.heaps[memoryType.heapIndex];
 
-        // TODO: Do we want to report more granular stats, e.g. per heap?
-        m_lastQueriedVramStats = VramStats { .totalUsed = totalUsed,
-                                             .totalAvailable = totalBudget };
+            if (memoryType.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) {
+                ARKOSE_ASSERT(heapStats.deviceLocal);
+            }
+            
+            if (memoryType.propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) {
+                heapStats.hostVisible = true;
+            }
+
+            if (memoryType.propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) {
+                heapStats.hostCoherent = true;
+            }
+        }
+
+        ARKOSE_LOG(Verbose, "Total GPU memory usage: {:.2f} GB", conversion::to::GB(stats.totalUsed));
+
+        m_lastQueriedVramStats = stats;
     }
 
     // Submit queue
@@ -1666,7 +1693,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
     return true;
 }
 
-std::optional<Backend::VramStats> VulkanBackend::vramStats()
+std::optional<VramStats> VulkanBackend::vramStats()
 {
     return m_lastQueriedVramStats;
 }

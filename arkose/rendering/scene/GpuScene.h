@@ -193,7 +193,8 @@ private:
 
     // GPU management
 
-    AvgAccumulator<float, 20> m_vramUsageHistory {};
+    using VramUsageAvgAccumulatorType = AvgAccumulator<float, 20>;
+    std::vector<VramUsageAvgAccumulatorType> m_vramUsageHistoryPerHeap {};
 
     size_t m_managedTexturesVramUsage { 0 };
     size_t m_totalBlasVramUsage { 0 };
