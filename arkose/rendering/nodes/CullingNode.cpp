@@ -22,7 +22,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
 
     Buffer& opaqueDrawableBuffer = reg.createBuffer(initialBufferCount * sizeof(ShaderDrawable), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     opaqueDrawableBuffer.setName("MainViewCulledDrawablesOpaque");
-    BindingSet& opaqueDrawableBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(opaqueDrawableBuffer, ShaderStage::Vertex) }); // TODO: Vertex??
+    BindingSet& opaqueDrawableBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(opaqueDrawableBuffer, ShaderStage::Vertex) });
     reg.publish("MainViewCulledDrawablesOpaqueSet", opaqueDrawableBindingSet);
 
     Buffer& opaqueDrawsCmdBuffer = reg.createBuffer(initialBufferCount * sizeof(IndexedDrawCmd), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
@@ -35,7 +35,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
 
     Buffer& maskedDrawableBuffer = reg.createBuffer(initialBufferCount * sizeof(ShaderDrawable), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     maskedDrawableBuffer.setName("MainViewCulledDrawablesMasked");
-    BindingSet& maskedDrawableBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(maskedDrawableBuffer, ShaderStage::Vertex) }); // TODO: Vertex??
+    BindingSet& maskedDrawableBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(maskedDrawableBuffer, ShaderStage::Vertex) });
     reg.publish("MainViewCulledDrawablesMaskedSet", maskedDrawableBindingSet);
 
     Buffer& maskedDrawsCmdBuffer = reg.createBuffer(initialBufferCount * sizeof(IndexedDrawCmd), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);

@@ -33,15 +33,15 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
     for (size_t i = 1; i <= numDownsamples; ++i) {
 
         // (first iteration: to downsample[1] from downsample[0])
-        BindingSet& downsampleSet = reg.createBindingSet({ { 0, ShaderStage::Compute, captures.downsampleTextures[i], ShaderBindingType::StorageTexture },
-                                                           { 1, ShaderStage::Compute, captures.downsampleTextures[i - 1], ShaderBindingType::StorageTexture } });
+        BindingSet& downsampleSet = reg.createBindingSet({ ShaderBinding::storageTexture(*captures.downsampleTextures[i], ShaderStage::Compute),
+                                                           ShaderBinding::storageTexture(*captures.downsampleTextures[i - 1], ShaderStage::Compute) });
         captures.downsampleSets.push_back(&downsampleSet);
 
         // (first iteration: to upsample[0] from upsample[1] & downsample[0])
         if (i != numDownsamples) {
-            BindingSet& upsampleSet = reg.createBindingSet({ { 0, ShaderStage::Compute, captures.upsampleTextures[i - 1], ShaderBindingType::StorageTexture },
-                                                             { 1, ShaderStage::Compute, captures.upsampleTextures[i], ShaderBindingType::StorageTexture },
-                                                             { 2, ShaderStage::Compute, captures.downsampleTextures[i - 1], ShaderBindingType::StorageTexture } });
+            BindingSet& upsampleSet = reg.createBindingSet({ ShaderBinding::storageTexture(*captures.upsampleTextures[i - 1], ShaderStage::Compute),
+                                                             ShaderBinding::storageTexture(*captures.upsampleTextures[i], ShaderStage::Compute),
+                                                             ShaderBinding::storageTexture(*captures.downsampleTextures[i - 1], ShaderStage::Compute) });
             captures.upsampleSets.push_back(&upsampleSet);
         }
     }
@@ -52,8 +52,8 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
     Shader upsampleShader = Shader::createCompute("bloom/upsample.comp");
     ComputeState& upsampleState = reg.createComputeState(upsampleShader, captures.upsampleSets);
 
-    BindingSet& blendBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &mainTexture, ShaderBindingType::StorageTexture },
-                                                         { 1, ShaderStage::Compute, captures.upsampleTextures[0], ShaderBindingType::SampledTexture } });
+    BindingSet& blendBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(mainTexture, ShaderStage::Compute),
+                                                         ShaderBinding::sampledTexture(*captures.upsampleTextures[0], ShaderStage::Compute) });
     Shader bloomBlendShader = Shader::createCompute("bloom/blend.comp");
     ComputeState& bloomBlendComputeState = reg.createComputeState(bloomBlendShader, { &blendBindingSet });
 

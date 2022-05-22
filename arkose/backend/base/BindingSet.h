@@ -20,7 +20,7 @@ enum class ShaderBindingType {
 class ShaderBinding {
 public:
 
-    ShaderBinding(ShaderBindingType, ShaderStage, uint32_t index = ShaderBinding::ImplicitIndex);
+    ShaderBinding(ShaderBindingType, ShaderStage);
 
     // New, self-explanatory API (and with implicit index)
 
@@ -96,27 +96,10 @@ public:
         return m_storageTextures;
     }
 
-    ///////////////////////
-
-    // Single sampled texture or storage image
-    ShaderBinding(uint32_t index, ShaderStage, Texture*, ShaderBindingType);
-
-    // Single mip of/for a storage image
-    ShaderBinding(uint32_t index, ShaderStage, TextureMipView, ShaderBindingType);
-
-    // Multiple sampled textures in an array (array count explicitly specified)
-    ShaderBinding(uint32_t index, ShaderStage, uint32_t count, const std::vector<Texture*>&);
-
-    // Multiple sampled textures in an array (array count will be the vector size)
-    ShaderBinding(uint32_t index, ShaderStage, const std::vector<Texture*>&);
-
-    // Multiple storage buffers in a dynamic array
-    ShaderBinding(uint32_t index, ShaderStage, const std::vector<Buffer*>&);
-
     static constexpr uint32_t ImplicitIndex = UINT32_MAX;
 
 private:
-    uint32_t m_bindingIndex;
+    uint32_t m_bindingIndex { ImplicitIndex };
     ShaderBindingType m_type;
     ShaderStage m_shaderStage;
 

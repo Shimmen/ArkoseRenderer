@@ -7,7 +7,7 @@ RenderPipelineNode::ExecuteCallback RTFirstHitNode::construct(GpuScene& scene, R
     Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("RTFirstHit", storageImage);
 
-    BindingSet& environmentBindingSet = reg.createBindingSet({ { 0, ShaderStage::RTMiss, &scene.environmentMapTexture(), ShaderBindingType::SampledTexture } });
+    BindingSet& environmentBindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(scene.environmentMapTexture(), ShaderStage::RTMiss) });
     BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
     BindingSet& rtMeshDataBindingSet = *reg.getBindingSet("SceneRTMeshDataSet");
 

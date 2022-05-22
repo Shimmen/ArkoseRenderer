@@ -28,9 +28,8 @@ static bool isTextureStorageCapable(Texture& texture)
     return true;
 }
 
-ShaderBinding::ShaderBinding(ShaderBindingType type, ShaderStage shaderStage, uint32_t index)
-    : m_bindingIndex(index)
-    , m_type(type)
+ShaderBinding::ShaderBinding(ShaderBindingType type, ShaderStage shaderStage)
+    : m_type(type)
     , m_shaderStage(shaderStage)
 {
 }
@@ -136,149 +135,21 @@ ShaderBinding ShaderBinding::topLevelAccelerationStructure(TopLevelAS& tlas, Sha
     return binding;
 }
 
-ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Texture* texture, ShaderBindingType type)
-    : m_bindingIndex(index)
-    , m_arrayCount(1)
-    , m_shaderStage(shaderStage)
-    , m_type(type)
-    , m_topLevelAS(nullptr)
-    , m_buffers()
-    , m_sampledTextures()
-    , m_storageTextures()
-{
-    if (!texture) {
-        ARKOSE_LOG(Fatal, "ShaderBinding error: null texture");
-    }
-
-    if (type == ShaderBindingType::StorageTexture) {
-        if (texture->hasSrgbFormat() || texture->hasDepthFormat()) {
-            ARKOSE_LOG(Fatal, "ShaderBinding error: can't use texture with sRGB or depth format as storage image");
-        }
-        m_storageTextures.push_back(TextureMipView(*texture, 0));
-    }
-
-    if (type == ShaderBindingType::SampledTexture) {
-        m_sampledTextures.push_back(texture);
-    }
-
-}
-
-ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, TextureMipView textureMip, ShaderBindingType type)
-    : m_bindingIndex(index)
-    , m_arrayCount(1)
-    , m_shaderStage(shaderStage)
-    , m_type(type)
-    , m_topLevelAS(nullptr)
-    , m_buffers()
-    , m_sampledTextures()
-    , m_storageTextures()
-{
-    if (type != ShaderBindingType::StorageTexture) {
-        ARKOSE_LOG(Fatal, "ShaderBinding error: trying to pass a specific texture mip but not using storage image binding type");
-    }
-
-    m_storageTextures.emplace_back(std::move(textureMip));
-}
-
-ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, uint32_t count, const std::vector<Texture*>& textures)
-    : m_bindingIndex(index)
-    , m_arrayCount(count)
-    , m_shaderStage(shaderStage)
-    , m_type(ShaderBindingType::SampledTexture)
-    , m_topLevelAS(nullptr)
-    , m_buffers()
-    , m_sampledTextures(textures)
-    , m_storageTextures()
-{
-    if (count < textures.size()) {
-        ARKOSE_LOG(Fatal, "ShaderBinding error: too many textures in list");
-    }
-
-    for (auto texture : textures) {
-        if (!texture) {
-            ARKOSE_LOG(Fatal, "ShaderBinding error: null texture in list");
-        }
-    }
-}
-
-ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std::vector<Texture*>& textures)
-    : m_bindingIndex(index)
-    , m_arrayCount((uint32_t)textures.size())
-    , m_shaderStage(shaderStage)
-    , m_type(ShaderBindingType::SampledTexture)
-    , m_topLevelAS(nullptr)
-    , m_buffers()
-    , m_sampledTextures(textures)
-    , m_storageTextures()
-{
-    if (m_arrayCount < 1) {
-        //ARKOSE_LOG(Fatal, "ShaderBinding error: too few textures in list");
-    }
-
-    for (auto texture : textures) {
-        if (!texture) {
-            ARKOSE_LOG(Fatal, "ShaderBinding error: null texture in list");
-        }
-    }
-}
-
-ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std::vector<Buffer*>& buffers)
-    : m_bindingIndex(index)
-    , m_arrayCount((uint32_t)buffers.size())
-    , m_shaderStage(shaderStage)
-    , m_type(ShaderBindingType::StorageBuffer)
-    , m_topLevelAS(nullptr)
-    , m_buffers(buffers)
-    , m_sampledTextures()
-    , m_storageTextures()
-{
-    if (m_arrayCount < 1) {
-        //ARKOSE_LOG(Fatal, "ShaderBinding error: too few buffers in list");
-    }
-
-    for (auto buffer : buffers) {
-        if (!buffer) {
-            ARKOSE_LOG(Fatal, "ShaderBinding error: null buffer in list");
-        }
-        if (buffer->usage() != Buffer::Usage::StorageBuffer && buffer->usage() != Buffer::Usage::IndirectBuffer) {
-            ARKOSE_LOG(Fatal, "ShaderBinding error: buffer in list is not a storage buffer");
-        }
-    }
-}
-
-
 BindingSet::BindingSet(Backend& backend, std::vector<ShaderBinding> shaderBindings)
     : Resource(backend)
     , m_shaderBindings(std::move(shaderBindings))
 {
     ARKOSE_ASSERT(m_shaderBindings.size() >= 1);
+
     bool assignImplicitIndices = m_shaderBindings.front().bindingIndex() == ShaderBinding::ImplicitIndex;
+    ARKOSE_ASSERT(assignImplicitIndices); // There are no longer any APIs that allow you to set indices explicitly!
 
-    if (assignImplicitIndices) {
+    for (uint32_t idx = 0; idx < m_shaderBindings.size(); ++idx) {
+        ShaderBinding& binding = m_shaderBindings[idx];
 
-        for (uint32_t idx = 0; idx < m_shaderBindings.size(); ++idx) {
-            ShaderBinding& binding = m_shaderBindings[idx];
+        // Ensure that if any have implicit index, all of them need to have implicit index
+        ARKOSE_ASSERT(binding.bindingIndex() == ShaderBinding::ImplicitIndex);
 
-            // Ensure that if any have implicit index, all of them need to have implicit index
-            ARKOSE_ASSERT(binding.bindingIndex() == ShaderBinding::ImplicitIndex);
-
-            binding.updateBindingIndex({}, idx);
-        }
-
-    } else {
-
-        // In case of explicit indices, sort them and ensure there are no duplicates
-
-        std::sort(m_shaderBindings.begin(), m_shaderBindings.end(), [](const ShaderBinding& left, const ShaderBinding& right) {
-            ARKOSE_ASSERT(left.bindingIndex() != ShaderBinding::ImplicitIndex);
-            ARKOSE_ASSERT(right.bindingIndex() != ShaderBinding::ImplicitIndex);
-            return left.bindingIndex() < right.bindingIndex();
-        });
-
-        for (size_t idx = 0; idx < m_shaderBindings.size() - 1; ++idx) {
-            if (m_shaderBindings[idx].bindingIndex() == m_shaderBindings[idx + 1].bindingIndex()) {
-                ARKOSE_LOG(Fatal, "BindingSet error: duplicate bindings");
-            }
-        }
+        binding.updateBindingIndex({}, idx);
     }
 }

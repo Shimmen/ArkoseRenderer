@@ -17,12 +17,12 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Re
 
     Texture& sceneColorWithGI = reg.createTexture2D(reg.windowRenderTarget().extent(), sceneColorBeforeGI.format(), Texture::Filters::nearest());
 
-    BindingSet& composeBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &sceneColorWithGI, ShaderBindingType::StorageTexture },
-                                                           { 1, ShaderStage::Compute, &sceneColorBeforeGI, ShaderBindingType::SampledTexture },
-                                                           { 2, ShaderStage::Compute, &baseColorTex, ShaderBindingType::SampledTexture },
-                                                           { 3, ShaderStage::Compute, &ambientOcclusionTex, ShaderBindingType::SampledTexture },
-                                                           { 4, ShaderStage::Compute, &diffuseGiTex, ShaderBindingType::SampledTexture },
-                                                           { 5, ShaderStage::Compute, reflectionsTex, ShaderBindingType::SampledTexture } });
+    BindingSet& composeBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(sceneColorWithGI, ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(sceneColorBeforeGI, ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(baseColorTex, ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(ambientOcclusionTex, ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(diffuseGiTex, ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(*reflectionsTex, ShaderStage::Compute) });
     ComputeState& giComposeState = reg.createComputeState(Shader::createCompute("compose/compose-gi.comp"), { &composeBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
