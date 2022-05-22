@@ -131,8 +131,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         reg.publish("DiffuseGI", diffueGiTexture);
     }
 
-    Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
-    BindingSet& cameraBindingSet = reg.createBindingSet({ ShaderBinding::uniformBuffer(cameraBuffer, ShaderStage::AnyRasterize) });
+    Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::GpuOnly);
+    BindingSet& cameraBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(cameraBuffer, ShaderStage::AnyRasterize) });
     reg.publish("SceneCameraData", cameraBuffer);
     reg.publish("SceneCameraSet", cameraBindingSet);
 
@@ -161,7 +161,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     reg.publish("SceneShadowData", lightShadowDataBuffer);
 
     // Light data stuff
-    Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
+    Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::GpuOnly);
     lightMetaDataBuffer.setName("SceneLightMetaData");
     Buffer& dirLightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     dirLightDataBuffer.setName("SceneDirectionalLightData");
@@ -175,7 +175,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             shadowMaps.push_back(&light.shadowMap());
     });
 
-    BindingSet& lightBindingSet = reg.createBindingSet({ ShaderBinding::uniformBuffer(lightMetaDataBuffer),
+    BindingSet& lightBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(lightMetaDataBuffer),
                                                          ShaderBinding::storageBuffer(dirLightDataBuffer),
                                                          ShaderBinding::storageBuffer(spotLightDataBuffer),
                                                          ShaderBinding::sampledTextureBindlessArray(shadowMaps) });

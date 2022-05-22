@@ -10,7 +10,7 @@ class Texture;
 class TopLevelAS;
 
 enum class ShaderBindingType {
-    UniformBuffer, // TODO: Rename to ConstantBuffer
+    ConstantBuffer,
     StorageBuffer,
     StorageImage, // TODO: Rename to 'StorageTexture'
     TextureSampler, // TODO: Rename to 'SampledTexture'
@@ -26,7 +26,7 @@ public:
 
     // New, self-explanatory API (and with implicit index)
 
-    static ShaderBinding uniformBuffer(Buffer&, ShaderStage = ShaderStage::Any);
+    static ShaderBinding constantBuffer(Buffer&, ShaderStage = ShaderStage::Any);
     static ShaderBinding storageBuffer(Buffer&, ShaderStage = ShaderStage::Any);
     static ShaderBinding storageBufferBindlessArray(const std::vector<Buffer*>&, ShaderStage = ShaderStage::Any);
 
@@ -51,7 +51,7 @@ public:
 
     const Buffer& buffer() const
     {
-        ARKOSE_ASSERT(type() == ShaderBindingType::UniformBuffer || type() == ShaderBindingType::StorageBuffer);
+        ARKOSE_ASSERT(type() == ShaderBindingType::ConstantBuffer || type() == ShaderBindingType::StorageBuffer);
         ARKOSE_ASSERT(m_buffers.size() == 1);
         return *m_buffers.front();
     }

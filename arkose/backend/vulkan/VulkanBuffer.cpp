@@ -143,7 +143,7 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
             break;
         }
         break;
-    case Buffer::Usage::UniformBuffer:
+    case Buffer::Usage::ConstantBuffer:
         usageFlags |= VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
         break;
     case Buffer::Usage::StorageBuffer:

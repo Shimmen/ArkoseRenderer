@@ -35,11 +35,11 @@ ShaderBinding::ShaderBinding(ShaderBindingType type, ShaderStage shaderStage, ui
 {
 }
 
-ShaderBinding ShaderBinding::uniformBuffer(Buffer& buffer, ShaderStage shaderStage)
+ShaderBinding ShaderBinding::constantBuffer(Buffer& buffer, ShaderStage shaderStage)
 {
-    ShaderBinding binding { ShaderBindingType::UniformBuffer, shaderStage };
+    ShaderBinding binding { ShaderBindingType::ConstantBuffer, shaderStage };
 
-    ARKOSE_ASSERT(buffer.usage() == Buffer::Usage::UniformBuffer);
+    ARKOSE_ASSERT(buffer.usage() == Buffer::Usage::ConstantBuffer);
     binding.m_buffers.push_back(&buffer);
 
     return binding;
@@ -150,8 +150,8 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Buffer* bu
     }
 
     switch (buffer->usage()) {
-    case Buffer::Usage::UniformBuffer:
-        m_type = ShaderBindingType::UniformBuffer;
+    case Buffer::Usage::ConstantBuffer:
+        m_type = ShaderBindingType::ConstantBuffer;
         break;
     case Buffer::Usage::Vertex: // includes storage buffer support
     case Buffer::Usage::Index: // includes storage buffer support

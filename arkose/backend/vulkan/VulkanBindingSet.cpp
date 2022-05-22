@@ -30,7 +30,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 poolSize.descriptorCount = bindingInfo.arrayCount();
 
                 switch (type) {
-                case ShaderBindingType::UniformBuffer:
+                case ShaderBindingType::ConstantBuffer:
                     poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                     break;
                 case ShaderBindingType::StorageBuffer:
@@ -97,7 +97,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
             VkDescriptorBindingFlags flagsForBinding = 0u;
 
             switch (bindingInfo.type()) {
-            case ShaderBindingType::UniformBuffer:
+            case ShaderBindingType::ConstantBuffer:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                 break;
             case ShaderBindingType::StorageBuffer:
@@ -244,7 +244,7 @@ void VulkanBindingSet::updateBindings()
         write.dstBinding = bindingInfo.bindingIndex();
 
         switch (bindingInfo.type()) {
-        case ShaderBindingType::UniformBuffer: {
+        case ShaderBindingType::ConstantBuffer: {
 
             auto& buffer = static_cast<const VulkanBuffer&>(bindingInfo.buffer());
 

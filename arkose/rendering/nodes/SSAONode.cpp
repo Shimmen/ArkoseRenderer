@@ -12,7 +12,7 @@ RenderPipelineNode::ExecuteCallback SSAONode::construct(GpuScene& scene, Registr
     // constructNode
     static constexpr int KernelSampleCount = 32;
     ARKOSE_ASSERT(KernelSampleCount <= SSAO_KERNEL_SAMPLE_MAX_COUNT);
-    Buffer& kernelSampleBuffer = reg.createBuffer(generateKernel(KernelSampleCount), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOptimal);
+    Buffer& kernelSampleBuffer = reg.createBuffer(generateKernel(KernelSampleCount), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::GpuOptimal);
     ///////////////////////
 
     // TODO: Handle resource modifications! For proper async handling

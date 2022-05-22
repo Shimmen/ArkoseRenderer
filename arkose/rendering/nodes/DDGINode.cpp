@@ -28,7 +28,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
     DDGIProbeGridData probeGridData { .gridDimensions = ivec4(probeGrid.gridDimensions.asIntVector(), 0),
                                       .probeSpacing = vec4(probeGrid.probeSpacing, 0.0f),
                                       .offsetToFirst = vec4(probeGrid.offsetToFirst, 0.0f) };
-    Buffer& probeGridDataBuffer = reg.createBufferForData(probeGridData, Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOptimal);
+    Buffer& probeGridDataBuffer = reg.createBufferForData(probeGridData, Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::GpuOptimal);
 
     auto irradianceClearColor = ClearColor::dataValues(0, 0, 0, 0);
     Texture& probeAtlasIrradiance = createProbeAtlas(reg, "ddgi-irradiance", probeGrid, irradianceClearColor, Texture::Format::RGBA16F, DDGI_IRRADIANCE_RES, DDGI_ATLAS_PADDING);

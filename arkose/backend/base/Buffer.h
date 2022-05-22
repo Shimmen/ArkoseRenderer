@@ -10,7 +10,7 @@ public:
         Vertex,
         Index,
         RTInstanceBuffer,
-        UniformBuffer,
+        ConstantBuffer,
         StorageBuffer,
         IndirectBuffer,
         Transfer,

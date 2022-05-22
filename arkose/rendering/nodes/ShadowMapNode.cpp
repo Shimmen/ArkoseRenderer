@@ -7,7 +7,7 @@
 RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(GpuScene& scene, Registry& reg)
 {
     // TODO: This should be managed from some central location, e.g. the scene node or similar.
-    Buffer& transformDataBuffer = reg.createBuffer(scene.meshCount() * sizeof(mat4), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::TransferOptimal);
+    Buffer& transformDataBuffer = reg.createBuffer(scene.meshCount() * sizeof(mat4), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::TransferOptimal);
     BindingSet& transformBindingSet = reg.createBindingSet({ { 0, ShaderStage::Vertex, &transformDataBuffer } });
 
     Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
