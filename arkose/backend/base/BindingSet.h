@@ -12,7 +12,7 @@ class TopLevelAS;
 enum class ShaderBindingType {
     ConstantBuffer,
     StorageBuffer,
-    StorageImage, // TODO: Rename to 'StorageTexture'
+    StorageTexture,
     TextureSampler, // TODO: Rename to 'SampledTexture'
     TextureSamplerArray, // TODO: Rename to 'SampledTextureArray', OR... just remove this type? Is it really needed?? We already have an array count.
     StorageBufferArray, // TODO: As above, do we need array types here?
@@ -86,14 +86,14 @@ public:
 
     const TextureMipView& storageTexture() const
     {
-        ARKOSE_ASSERT(type() == ShaderBindingType::StorageImage);
+        ARKOSE_ASSERT(type() == ShaderBindingType::StorageTexture);
         ARKOSE_ASSERT(m_storageTextures.size() == 1);
         return m_storageTextures.front();
     }
 
     const std::vector<TextureMipView>& storageTextures() const
     {
-        ARKOSE_ASSERT(type() == ShaderBindingType::StorageImage);
+        ARKOSE_ASSERT(type() == ShaderBindingType::StorageTexture);
         ARKOSE_ASSERT(m_storageTextures.size() >= 1);
         return m_storageTextures;
     }

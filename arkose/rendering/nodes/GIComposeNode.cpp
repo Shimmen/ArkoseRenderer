@@ -17,7 +17,7 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Re
 
     Texture& sceneColorWithGI = reg.createTexture2D(reg.windowRenderTarget().extent(), sceneColorBeforeGI.format(), Texture::Filters::nearest());
 
-    BindingSet& composeBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &sceneColorWithGI, ShaderBindingType::StorageImage },
+    BindingSet& composeBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &sceneColorWithGI, ShaderBindingType::StorageTexture },
                                                            { 1, ShaderStage::Compute, &sceneColorBeforeGI, ShaderBindingType::TextureSampler },
                                                            { 2, ShaderStage::Compute, &baseColorTex, ShaderBindingType::TextureSampler },
                                                            { 3, ShaderStage::Compute, &ambientOcclusionTex, ShaderBindingType::TextureSampler },

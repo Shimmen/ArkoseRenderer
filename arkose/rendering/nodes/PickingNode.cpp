@@ -23,7 +23,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 
     Buffer& pickedIndexBuffer = reg.createBuffer(sizeof(moos::u32), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::Readback);
     Shader collectorShader = Shader::createCompute("picking/collectIndex.comp");
-    BindingSet& collectIndexBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &indexMap, ShaderBindingType::StorageImage },
+    BindingSet& collectIndexBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &indexMap, ShaderBindingType::StorageTexture },
                                                                 { 1, ShaderStage::Compute, &pickedIndexBuffer } });
     ComputeState& collectState = reg.createComputeState(collectorShader, { &collectIndexBindingSet });
 

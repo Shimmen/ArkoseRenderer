@@ -86,7 +86,7 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
                 for (auto& texture : bindingInfo.sampledTextures()) {
                     sampledTextures.push_back(texture);
                 }
-            } else if (bindingInfo.type() == ShaderBindingType::StorageImage) {
+            } else if (bindingInfo.type() == ShaderBindingType::StorageTexture) {
                 for (const TextureMipView& textureMip : bindingInfo.storageTextures()) {
                     storageImages.push_back(textureMip);
                 }

@@ -119,7 +119,7 @@ ShaderBinding ShaderBinding::storageTexture(Texture& texture, ShaderStage shader
 
 ShaderBinding ShaderBinding::storageTextureAtMip(Texture& texture, uint32_t mipLevel, ShaderStage shaderStage)
 {
-    ShaderBinding binding { ShaderBindingType::StorageImage, shaderStage };
+    ShaderBinding binding { ShaderBindingType::StorageTexture, shaderStage };
 
     ARKOSE_ASSERT(isTextureStorageCapable(texture));
     binding.m_storageTextures.push_back(TextureMipView(texture, mipLevel));
@@ -178,7 +178,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Texture* t
         ARKOSE_LOG(Fatal, "ShaderBinding error: null texture");
     }
 
-    if (type == ShaderBindingType::StorageImage) {
+    if (type == ShaderBindingType::StorageTexture) {
         if (texture->hasSrgbFormat() || texture->hasDepthFormat()) {
             ARKOSE_LOG(Fatal, "ShaderBinding error: can't use texture with sRGB or depth format as storage image");
         }
@@ -201,7 +201,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, TextureMip
     , m_sampledTextures()
     , m_storageTextures()
 {
-    if (type != ShaderBindingType::StorageImage) {
+    if (type != ShaderBindingType::StorageTexture) {
         ARKOSE_LOG(Fatal, "ShaderBinding error: trying to pass a specific texture mip but not using storage image binding type");
     }
 

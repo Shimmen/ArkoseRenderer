@@ -548,7 +548,7 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
                     vulkanTexture.currentLayout = targetLayout;
                 }
             }
-        } else if (bindingInfo.type() == ShaderBindingType::StorageImage) {
+        } else if (bindingInfo.type() == ShaderBindingType::StorageTexture) {
             for (TextureMipView textureMip : bindingInfo.storageTextures()) {
                 auto& vulkanTexture = static_cast<VulkanTexture&>(textureMip.texture());
 
@@ -677,7 +677,7 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
                     vulkanTexture.currentLayout = targetLayout;
                 }
             }
-        } else if (bindingInfo.type() == ShaderBindingType::StorageImage) {
+        } else if (bindingInfo.type() == ShaderBindingType::StorageTexture) {
             for (TextureMipView textureMip : bindingInfo.storageTextures()) {
                 auto& vulkanTexture = static_cast<VulkanTexture&>(textureMip.texture());
 

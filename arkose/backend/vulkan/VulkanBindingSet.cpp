@@ -37,7 +37,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 case ShaderBindingType::StorageBufferArray:
                     poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                     break;
-                case ShaderBindingType::StorageImage:
+                case ShaderBindingType::StorageTexture:
                     poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
                     break;
                 case ShaderBindingType::TextureSampler:
@@ -104,7 +104,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
             case ShaderBindingType::StorageBufferArray:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                 break;
-            case ShaderBindingType::StorageImage:
+            case ShaderBindingType::StorageTexture:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
                 break;
             case ShaderBindingType::TextureSampler:
@@ -313,7 +313,7 @@ void VulkanBindingSet::updateBindings()
             break;
         }
 
-        case ShaderBindingType::StorageImage: {
+        case ShaderBindingType::StorageTexture: {
 
             auto& texture = static_cast<const VulkanTexture&>(bindingInfo.storageTexture().texture());
 

@@ -60,9 +60,9 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
                                                          { 2, ShaderStage::RTRayGen, &probeGridDataBuffer },
                                                          { 3, ShaderStage::RTRayGen, &scene.environmentMapTexture(), ShaderBindingType::TextureSampler },
 #if USE_DEBUG_TARGET
-                                                         { 4, ShaderStage::RTRayGen, &storageImage, ShaderBindingType::StorageImage } });
+                                                         { 4, ShaderStage::RTRayGen, &storageImage, ShaderBindingType::StorageTexture } });
 #else
-                                                         { 4, ShaderStage::RTRayGen, &surfelImage, ShaderBindingType::StorageImage } });
+                                                         { 4, ShaderStage::RTRayGen, &surfelImage, ShaderBindingType::StorageTexture } });
 #endif
 
     ShaderFile raygen { "ddgi/raygen.rgen" };
@@ -80,17 +80,17 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
     constexpr uint32_t maxRecursionDepth = 2; // raygen -> closest/any hit -> shadow ray
     RayTracingState& surfelRayTracingState = reg.createRayTracingState(sbt, rtStateDataBindings, maxRecursionDepth);
 
-    BindingSet& irradianceUpdateBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &surfelImage, ShaderBindingType::StorageImage },
-                                                                    { 1, ShaderStage::Compute, &probeAtlasIrradiance, ShaderBindingType::StorageImage } });
+    BindingSet& irradianceUpdateBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &surfelImage, ShaderBindingType::StorageTexture },
+                                                                    { 1, ShaderStage::Compute, &probeAtlasIrradiance, ShaderBindingType::StorageTexture } });
     ComputeState& irradianceProbeUpdateState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateIrradiance.comp"), { &irradianceUpdateBindingSet });
 
 
-    BindingSet& visibilityUpdateBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &surfelImage, ShaderBindingType::StorageImage },
-                                                                    { 1, ShaderStage::Compute, &probeAtlasVisibility, ShaderBindingType::StorageImage } });
+    BindingSet& visibilityUpdateBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &surfelImage, ShaderBindingType::StorageTexture },
+                                                                    { 1, ShaderStage::Compute, &probeAtlasVisibility, ShaderBindingType::StorageTexture } });
     ComputeState& visibilityProbeUpdateState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateVisibility.comp"), { &visibilityUpdateBindingSet });
 
-    BindingSet& probeBorderCopyBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &probeAtlasIrradiance, ShaderBindingType::StorageImage },
-                                                                   { 1, ShaderStage::Compute, &probeAtlasVisibility, ShaderBindingType::StorageImage } });
+    BindingSet& probeBorderCopyBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &probeAtlasIrradiance, ShaderBindingType::StorageTexture },
+                                                                   { 1, ShaderStage::Compute, &probeAtlasVisibility, ShaderBindingType::StorageTexture } });
     ComputeState& probeBorderCopyCornersState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyCorners.comp"), { &probeBorderCopyBindingSet });
     ComputeState& probeBorderCopyIrradianceEdgesState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyEdges.comp", { ShaderDefine::makeInt("TILE_SIZE", DDGI_IRRADIANCE_RES) }), { &probeBorderCopyBindingSet });
     ComputeState& probeBorderCopyVisibilityEdgesState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyEdges.comp", { ShaderDefine::makeInt("TILE_SIZE", DDGI_VISIBILITY_RES) }), { &probeBorderCopyBindingSet });
