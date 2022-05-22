@@ -208,21 +208,6 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, TextureMip
     m_storageTextures.emplace_back(std::move(textureMip));
 }
 
-ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, TopLevelAS* tlas)
-    : m_bindingIndex(index)
-    , m_arrayCount(1)
-    , m_shaderStage(shaderStage)
-    , m_type(ShaderBindingType::RTAccelerationStructure)
-    , m_topLevelAS(tlas)
-    , m_buffers()
-    , m_sampledTextures()
-    , m_storageTextures()
-{
-    if (!tlas) {
-        ARKOSE_LOG(Fatal, "ShaderBinding error: null acceleration structure");
-    }
-}
-
 ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, uint32_t count, const std::vector<Texture*>& textures)
     : m_bindingIndex(index)
     , m_arrayCount(count)

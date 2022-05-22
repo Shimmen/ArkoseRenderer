@@ -12,9 +12,9 @@ RenderPipelineNode::ExecuteCallback RTFirstHitNode::construct(GpuScene& scene, R
     BindingSet& rtMeshDataBindingSet = *reg.getBindingSet("SceneRTMeshDataSet");
 
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
-    BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage::RTRayGen, &sceneTLAS },
-                                                         { 1, ShaderStage::RTRayGen, reg.getBuffer("SceneCameraData") },
-                                                         { 2, ShaderStage::RTRayGen, &storageImage, ShaderBindingType::StorageTexture } });
+    BindingSet& frameBindingSet = reg.createBindingSet({ ShaderBinding::topLevelAccelerationStructure(sceneTLAS, ShaderStage::RTRayGen),
+                                                         ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::RTRayGen),
+                                                         ShaderBinding::storageTexture(storageImage, ShaderStage::RTRayGen) });
 
     ShaderFile raygen = ShaderFile("rt-firsthit/raygen.rgen");
     HitGroup mainHitGroup { ShaderFile("rt-firsthit/closestHit.rchit") };

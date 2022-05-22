@@ -10,10 +10,10 @@ RenderPipelineNode::ExecuteCallback RTDirectLightNode::construct(GpuScene& scene
     BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");
 
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
-    BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, &sceneTLAS },
-                                                         { 1, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, reg.getBuffer("SceneCameraData") },
-                                                         { 2, ShaderStage::RTRayGen, &scene.environmentMapTexture(), ShaderBindingType::SampledTexture },
-                                                         { 3, ShaderStage::RTRayGen, &storageImage, ShaderBindingType::StorageTexture } });
+    BindingSet& frameBindingSet = reg.createBindingSet({ ShaderBinding::topLevelAccelerationStructure(sceneTLAS, ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
+                                                         ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
+                                                         ShaderBinding::sampledTexture(scene.environmentMapTexture(), ShaderStage::RTRayGen),
+                                                         ShaderBinding::storageTexture(storageImage, ShaderStage::RTRayGen) });
 
     ShaderFile raygen { "rt-direct-light/raygen.rgen" };
     ShaderFile defaultMissShader { "rt-direct-light/miss.rmiss" };

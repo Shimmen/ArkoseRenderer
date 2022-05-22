@@ -55,14 +55,14 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
 #endif
 
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
-    BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, &sceneTLAS },
-                                                         { 1, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, reg.getBuffer("SceneCameraData") },
-                                                         { 2, ShaderStage::RTRayGen, &probeGridDataBuffer },
-                                                         { 3, ShaderStage::RTRayGen, &scene.environmentMapTexture(), ShaderBindingType::SampledTexture },
+    BindingSet& frameBindingSet = reg.createBindingSet({ ShaderBinding::topLevelAccelerationStructure(sceneTLAS, ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
+                                                         ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
+                                                         ShaderBinding::constantBuffer(probeGridDataBuffer, ShaderStage::RTRayGen),
+                                                         ShaderBinding::sampledTexture(scene.environmentMapTexture(), ShaderStage::RTRayGen),
 #if USE_DEBUG_TARGET
-                                                         { 4, ShaderStage::RTRayGen, &storageImage, ShaderBindingType::StorageTexture } });
+                                                         ShaderBinding::storageTexture(storageImage, ShaderStage::RTRayGen) });
 #else
-                                                         { 4, ShaderStage::RTRayGen, &surfelImage, ShaderBindingType::StorageTexture } });
+                                                         ShaderBinding::storageTexture(surfelImage, ShaderStage::RTRayGen) });
 #endif
 
     ShaderFile raygen { "ddgi/raygen.rgen" };

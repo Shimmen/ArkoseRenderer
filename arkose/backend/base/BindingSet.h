@@ -107,9 +107,6 @@ public:
     // Single mip of/for a storage image
     ShaderBinding(uint32_t index, ShaderStage, TextureMipView, ShaderBindingType);
 
-    // Single top level acceleration structures
-    ShaderBinding(uint32_t index, ShaderStage, TopLevelAS*);
-
     // Multiple sampled textures in an array (array count explicitly specified)
     ShaderBinding(uint32_t index, ShaderStage, uint32_t count, const std::vector<Texture*>&);
 
