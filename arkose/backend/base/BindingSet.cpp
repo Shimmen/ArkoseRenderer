@@ -57,7 +57,7 @@ ShaderBinding ShaderBinding::storageBuffer(Buffer& buffer, ShaderStage shaderSta
 
 ShaderBinding ShaderBinding::storageBufferBindlessArray(const std::vector<Buffer*>& buffers, ShaderStage shaderStage)
 {
-    ShaderBinding binding { ShaderBindingType::StorageBufferArray, shaderStage };
+    ShaderBinding binding { ShaderBindingType::StorageBuffer, shaderStage };
     binding.m_arrayCount = static_cast<uint32_t>(buffers.size());
 
     binding.m_buffers.reserve(binding.m_arrayCount);
@@ -269,7 +269,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std:
     : m_bindingIndex(index)
     , m_arrayCount((uint32_t)buffers.size())
     , m_shaderStage(shaderStage)
-    , m_type(ShaderBindingType::StorageBufferArray)
+    , m_type(ShaderBindingType::StorageBuffer)
     , m_topLevelAS(nullptr)
     , m_buffers(buffers)
     , m_sampledTextures()

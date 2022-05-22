@@ -14,7 +14,6 @@ enum class ShaderBindingType {
     StorageBuffer,
     StorageTexture,
     SampledTexture,
-    StorageBufferArray, // TODO: As above, do we need array types here?
     RTAccelerationStructure,
 };
 
@@ -57,7 +56,7 @@ public:
 
     const std::vector<Buffer*>& buffers() const
     {
-        ARKOSE_ASSERT(type() == ShaderBindingType::StorageBufferArray);
+        ARKOSE_ASSERT(type() == ShaderBindingType::ConstantBuffer || type() == ShaderBindingType::StorageBuffer);
         ARKOSE_ASSERT(m_buffers.size() >= 1);
         return m_buffers;
     }

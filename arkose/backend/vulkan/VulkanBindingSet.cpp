@@ -34,7 +34,6 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                     poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                     break;
                 case ShaderBindingType::StorageBuffer:
-                case ShaderBindingType::StorageBufferArray:
                     poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                     break;
                 case ShaderBindingType::StorageTexture:
@@ -100,7 +99,6 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                 break;
             case ShaderBindingType::StorageBuffer:
-            case ShaderBindingType::StorageBufferArray:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
                 break;
             case ShaderBindingType::StorageTexture:
@@ -263,25 +261,6 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::StorageBuffer: {
 
-            auto& buffer = static_cast<const VulkanBuffer&>(bindingInfo.buffer());
-
-            VkDescriptorBufferInfo descBufferInfo {};
-            descBufferInfo.offset = 0;
-            descBufferInfo.range = VK_WHOLE_SIZE;
-            descBufferInfo.buffer = buffer.buffer;
-
-            descBufferInfos.push_back(descBufferInfo);
-            write.pBufferInfo = &descBufferInfos.back();
-            write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-
-            write.descriptorCount = 1;
-            write.dstArrayElement = 0;
-
-            break;
-        }
-
-        case ShaderBindingType::StorageBufferArray: {
-
             ARKOSE_ASSERT(bindingInfo.arrayCount() == bindingInfo.buffers().size());
 
             if (bindingInfo.arrayCount() == 0) {
@@ -291,7 +270,6 @@ void VulkanBindingSet::updateBindings()
             for (const Buffer* buffer : bindingInfo.buffers()) {
 
                 ARKOSE_ASSERT(buffer);
-                ARKOSE_ASSERT(buffer->usage() == Buffer::Usage::StorageBuffer);
                 auto& vulkanBuffer = static_cast<const VulkanBuffer&>(*buffer);
 
                 VkDescriptorBufferInfo descBufferInfo {};
@@ -302,7 +280,7 @@ void VulkanBindingSet::updateBindings()
                 descBufferInfos.push_back(descBufferInfo);
             }
 
-            // NOTE: This should point at the first VkDescriptorBufferInfo
+            // NOTE: This should point at the first VkDescriptorBufferInfo of the ones just pushed
             write.pBufferInfo = &descBufferInfos.back() - (bindingInfo.arrayCount() - 1);
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
             write.descriptorCount = bindingInfo.arrayCount();
