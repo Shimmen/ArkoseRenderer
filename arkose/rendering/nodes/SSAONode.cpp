@@ -23,8 +23,8 @@ RenderPipelineNode::ExecuteCallback SSAONode::construct(GpuScene& scene, Registr
     reg.publish("AmbientOcclusion", ambientOcclusionTex);
 
     BindingSet& ssaoBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &ambientOcclusionTex, ShaderBindingType::StorageTexture },
-                                                        { 1, ShaderStage::Compute, sceneOpaqueDepth, ShaderBindingType::TextureSampler },
-                                                        { 2, ShaderStage::Compute, sceneOpaqueNormals, ShaderBindingType::TextureSampler },
+                                                        { 1, ShaderStage::Compute, sceneOpaqueDepth, ShaderBindingType::SampledTexture },
+                                                        { 2, ShaderStage::Compute, sceneOpaqueNormals, ShaderBindingType::SampledTexture },
                                                         { 3, ShaderStage::Compute, reg.getBuffer("SceneCameraData") },
                                                         { 4, ShaderStage::Compute, &kernelSampleBuffer } });
     ComputeState& ssaoComputeState = reg.createComputeState(Shader::createCompute("ssao/ssao.comp"), { &ssaoBindingSet });

@@ -40,7 +40,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 case ShaderBindingType::StorageTexture:
                     poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
                     break;
-                case ShaderBindingType::TextureSampler:
+                case ShaderBindingType::SampledTexture:
                 case ShaderBindingType::TextureSamplerArray:
                     poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                     break;
@@ -107,7 +107,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
             case ShaderBindingType::StorageTexture:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
                 break;
-            case ShaderBindingType::TextureSampler:
+            case ShaderBindingType::SampledTexture:
             case ShaderBindingType::TextureSamplerArray:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 flagsForBinding |= VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT; // TODO: Maybe allow this for more/all types?
@@ -334,7 +334,7 @@ void VulkanBindingSet::updateBindings()
             break;
         }
 
-        case ShaderBindingType::TextureSampler: {
+        case ShaderBindingType::SampledTexture: {
 
             auto& texture = static_cast<const VulkanTexture&>(bindingInfo.sampledTexture());
 
@@ -442,7 +442,7 @@ void VulkanBindingSet::updateTextures(uint32_t bindingIndex, const std::vector<T
     }
 
     ShaderBindingType bindingType = shaderBindings()[bindingIndex].type();
-    if (bindingType != ShaderBindingType::TextureSampler && bindingType != ShaderBindingType::TextureSamplerArray) {
+    if (bindingType != ShaderBindingType::SampledTexture && bindingType != ShaderBindingType::TextureSamplerArray) {
         ARKOSE_LOG(Fatal, "BindingSet: trying to update texture for shader binding that does not have texture(s), exiting.");
     }
 

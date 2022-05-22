@@ -53,7 +53,7 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
     ComputeState& upsampleState = reg.createComputeState(upsampleShader, captures.upsampleSets);
 
     BindingSet& blendBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &mainTexture, ShaderBindingType::StorageTexture },
-                                                         { 1, ShaderStage::Compute, captures.upsampleTextures[0], ShaderBindingType::TextureSampler } });
+                                                         { 1, ShaderStage::Compute, captures.upsampleTextures[0], ShaderBindingType::SampledTexture } });
     Shader bloomBlendShader = Shader::createCompute("bloom/blend.comp");
     ComputeState& bloomBlendComputeState = reg.createComputeState(bloomBlendShader, { &blendBindingSet });
 

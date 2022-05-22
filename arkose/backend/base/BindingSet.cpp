@@ -72,7 +72,7 @@ ShaderBinding ShaderBinding::storageBufferBindlessArray(const std::vector<Buffer
 
 ShaderBinding ShaderBinding::sampledTexture(Texture& texture, ShaderStage shaderStage)
 {
-    ShaderBinding binding { ShaderBindingType::TextureSampler, shaderStage };
+    ShaderBinding binding { ShaderBindingType::SampledTexture, shaderStage };
 
     binding.m_sampledTextures.push_back(&texture);
 
@@ -185,7 +185,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Texture* t
         m_storageTextures.push_back(TextureMipView(*texture, 0));
     }
 
-    if (type == ShaderBindingType::TextureSampler) {
+    if (type == ShaderBindingType::SampledTexture) {
         m_sampledTextures.push_back(texture);
     }
 

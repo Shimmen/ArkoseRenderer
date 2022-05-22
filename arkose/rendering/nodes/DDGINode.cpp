@@ -38,8 +38,8 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
     Texture& probeAtlasVisibility = createProbeAtlas(reg, "ddgi-visibility", probeGrid, visibilityClearColor, Texture::Format::RG16F, DDGI_VISIBILITY_RES, DDGI_ATLAS_PADDING);
 
     BindingSet& ddgiSamplingBindingSet = reg.createBindingSet({ { 0, ShaderStage::Fragment, &probeGridDataBuffer },
-                                                                { 1, ShaderStage::Fragment, &probeAtlasIrradiance, ShaderBindingType::TextureSampler },
-                                                                { 2, ShaderStage::Fragment, &probeAtlasVisibility, ShaderBindingType::TextureSampler } });
+                                                                { 1, ShaderStage::Fragment, &probeAtlasIrradiance, ShaderBindingType::SampledTexture },
+                                                                { 2, ShaderStage::Fragment, &probeAtlasVisibility, ShaderBindingType::SampledTexture } });
     reg.publish("DDGISamplingSet", ddgiSamplingBindingSet);
     ///////////////////////
 
@@ -58,7 +58,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, &sceneTLAS },
                                                          { 1, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, reg.getBuffer("SceneCameraData") },
                                                          { 2, ShaderStage::RTRayGen, &probeGridDataBuffer },
-                                                         { 3, ShaderStage::RTRayGen, &scene.environmentMapTexture(), ShaderBindingType::TextureSampler },
+                                                         { 3, ShaderStage::RTRayGen, &scene.environmentMapTexture(), ShaderBindingType::SampledTexture },
 #if USE_DEBUG_TARGET
                                                          { 4, ShaderStage::RTRayGen, &storageImage, ShaderBindingType::StorageTexture } });
 #else

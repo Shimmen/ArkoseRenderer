@@ -15,11 +15,11 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ { 0, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, &sceneTLAS },
                                                          { 1, ShaderStage::RTRayGen, &reflectionsImage, ShaderBindingType::StorageTexture },
-                                                         { 2, ShaderStage::RTRayGen, reg.getTexture("SceneMaterial"), ShaderBindingType::TextureSampler },
-                                                         { 3, ShaderStage::RTRayGen, reg.getTexture("SceneNormalVelocity"), ShaderBindingType::TextureSampler },
-                                                         { 4, ShaderStage::RTRayGen, reg.getTexture("SceneDepth"), ShaderBindingType::TextureSampler },
+                                                         { 2, ShaderStage::RTRayGen, reg.getTexture("SceneMaterial"), ShaderBindingType::SampledTexture },
+                                                         { 3, ShaderStage::RTRayGen, reg.getTexture("SceneNormalVelocity"), ShaderBindingType::SampledTexture },
+                                                         { 4, ShaderStage::RTRayGen, reg.getTexture("SceneDepth"), ShaderBindingType::SampledTexture },
                                                          { 5, ShaderStage::RTRayGen | ShaderStage::RTClosestHit, reg.getBuffer("SceneCameraData") },
-                                                         { 6, ShaderStage::RTRayGen, &scene.environmentMapTexture(), ShaderBindingType::TextureSampler } });
+                                                         { 6, ShaderStage::RTRayGen, &scene.environmentMapTexture(), ShaderBindingType::SampledTexture } });
 
     ShaderFile raygen { "rt-reflections/raygen.rgen" };
     ShaderFile defaultMissShader { "rt-reflections/miss.rmiss" };

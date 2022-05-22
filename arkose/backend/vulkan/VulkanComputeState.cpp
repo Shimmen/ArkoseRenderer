@@ -82,7 +82,7 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
 
     for (auto& set : bindingSets) {
         for (auto& bindingInfo : set->shaderBindings()) {
-            if (bindingInfo.type() == ShaderBindingType::TextureSampler || bindingInfo.type() == ShaderBindingType::TextureSamplerArray) {
+            if (bindingInfo.type() == ShaderBindingType::SampledTexture || bindingInfo.type() == ShaderBindingType::TextureSamplerArray) {
                 for (auto& texture : bindingInfo.sampledTextures()) {
                     sampledTextures.push_back(texture);
                 }

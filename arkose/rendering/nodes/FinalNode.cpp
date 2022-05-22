@@ -17,8 +17,8 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Regist
 
     Texture& filmGrainTexture = reg.loadTextureArrayFromFileSequence("assets/blue-noise/64_64/HDR_RGBA_{}.png", false, false);
 
-    BindingSet& bindingSet = reg.createBindingSet({ { 0, ShaderStage::Fragment, sourceTexture, ShaderBindingType::TextureSampler },
-                                                    { 1, ShaderStage::Fragment, &filmGrainTexture, ShaderBindingType::TextureSampler } });
+    BindingSet& bindingSet = reg.createBindingSet({ { 0, ShaderStage::Fragment, sourceTexture, ShaderBindingType::SampledTexture },
+                                                    { 1, ShaderStage::Fragment, &filmGrainTexture, ShaderBindingType::SampledTexture } });
 
     std::vector<vec2> fullScreenTriangle { { -1, -3 }, { -1, 1 }, { 3, 1 } };
     Buffer& vertexBuffer = reg.createBuffer(std::move(fullScreenTriangle), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
