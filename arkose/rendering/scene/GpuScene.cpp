@@ -35,8 +35,8 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
 
     // TODO: Get rid of this placeholder that we use to write into all texture slots (i.e. support partially bound etc.)
     std::vector<Texture*> placeholderTexture = { m_magentaTexture.get() };
-    m_materialBindingSet = backend().createBindingSet({ { MaterialBindingSetBindingIndexMaterials, ShaderStage::Any, m_materialDataBuffer.get() },
-                                                        { MaterialBindingSetBindingIndexTextures, ShaderStage::Any, MaxSupportedSceneTextures, placeholderTexture } });
+    m_materialBindingSet = backend().createBindingSet({ ShaderBinding::storageBuffer(*m_materialDataBuffer.get()),
+                                                        ShaderBinding::sampledTextureBindlessArray(MaxSupportedSceneTextures, placeholderTexture) });
     m_materialBindingSet->setName("SceneMaterialSet");
 
     if (m_maintainRayTracingScene) {
@@ -132,7 +132,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     }
 
     Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::UniformBuffer, Buffer::MemoryHint::GpuOnly);
-    BindingSet& cameraBindingSet = reg.createBindingSet({ { 0, ShaderStage::AnyRasterize, &cameraBuffer } });
+    BindingSet& cameraBindingSet = reg.createBindingSet({ ShaderBinding::uniformBuffer(cameraBuffer, ShaderStage::AnyRasterize) });
     reg.publish("SceneCameraData", cameraBuffer);
     reg.publish("SceneCameraSet", cameraBindingSet);
 
@@ -141,16 +141,16 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     size_t objectDataBufferSize = meshCount() * sizeof(ShaderDrawable);
     Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     objectDataBuffer.setName("SceneObjectData");
-    BindingSet& objectBindingSet = reg.createBindingSet({ { 0, ShaderStage::Vertex, &objectDataBuffer } });
+    BindingSet& objectBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(objectDataBuffer, ShaderStage::Vertex) });
     reg.publish("objectSet", objectBindingSet);
 
     if (m_maintainRayTracingScene) {
 
         // TODO: Make buffer big enough to contain all meshes we may want
         Buffer& meshBuffer = reg.createBuffer(m_rayTracingMeshData, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
-        BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ { 0, ShaderStage::AnyRayTrace, &meshBuffer },
-                                                                  { 1, ShaderStage::AnyRayTrace, &globalIndexBuffer() },
-                                                                  { 2, ShaderStage::AnyRayTrace, &globalVertexBufferForLayout(m_rayTracingVertexLayout) } });
+        BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(meshBuffer, ShaderStage::AnyRayTrace),
+                                                                  ShaderBinding::storageBuffer(globalIndexBuffer(), ShaderStage::AnyRayTrace),
+                                                                  ShaderBinding::storageBuffer(globalVertexBufferForLayout(m_rayTracingVertexLayout), ShaderStage::AnyRayTrace) });
 
         reg.publish("SceneRTMeshDataSet", rtMeshDataBindingSet);
     }
@@ -175,10 +175,10 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             shadowMaps.push_back(&light.shadowMap());
     });
 
-    BindingSet& lightBindingSet = reg.createBindingSet({ { 0, ShaderStage::Any, &lightMetaDataBuffer },
-                                                         { 1, ShaderStage::Any, &dirLightDataBuffer },
-                                                         { 2, ShaderStage::Any, &spotLightDataBuffer },
-                                                         { 3, ShaderStage::Any, shadowMaps } });
+    BindingSet& lightBindingSet = reg.createBindingSet({ ShaderBinding::uniformBuffer(lightMetaDataBuffer),
+                                                         ShaderBinding::storageBuffer(dirLightDataBuffer),
+                                                         ShaderBinding::storageBuffer(spotLightDataBuffer),
+                                                         ShaderBinding::sampledTextureBindlessArray(shadowMaps) });
     reg.publish("SceneLightSet", lightBindingSet);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {

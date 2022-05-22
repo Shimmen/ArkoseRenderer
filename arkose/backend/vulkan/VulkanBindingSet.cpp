@@ -21,15 +21,15 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
 
         for (auto& bindingInfo : shaderBindings()) {
 
-            ShaderBindingType type = bindingInfo.type;
+            ShaderBindingType type = bindingInfo.type();
 
             auto entry = bindingTypeIndex.find(type);
             if (entry == bindingTypeIndex.end()) {
 
                 VkDescriptorPoolSize poolSize = {};
-                poolSize.descriptorCount = bindingInfo.count;
+                poolSize.descriptorCount = bindingInfo.arrayCount();
 
-                switch (bindingInfo.type) {
+                switch (type) {
                 case ShaderBindingType::UniformBuffer:
                     poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                     break;
@@ -65,7 +65,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
 
                 size_t index = entry->second;
                 VkDescriptorPoolSize& poolSize = descriptorPoolSizes[index];
-                poolSize.descriptorCount += bindingInfo.count;
+                poolSize.descriptorCount += bindingInfo.arrayCount();
             }
         }
 
@@ -91,12 +91,12 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
         for (auto& bindingInfo : shaderBindings()) {
 
             VkDescriptorSetLayoutBinding binding = {};
-            binding.binding = bindingInfo.bindingIndex;
-            binding.descriptorCount = bindingInfo.count;
+            binding.binding = bindingInfo.bindingIndex();
+            binding.descriptorCount = bindingInfo.arrayCount();
 
             VkDescriptorBindingFlags flagsForBinding = 0u;
 
-            switch (bindingInfo.type) {
+            switch (bindingInfo.type()) {
             case ShaderBindingType::UniformBuffer:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
                 break;
@@ -127,7 +127,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
             }
 
             const auto& vulkanBackend = static_cast<const VulkanBackend&>(backend);
-            binding.stageFlags = vulkanBackend.shaderStageToVulkanShaderStageFlags(bindingInfo.shaderStage);
+            binding.stageFlags = vulkanBackend.shaderStageToVulkanShaderStageFlags(bindingInfo.shaderStage());
 
             binding.pImmutableSamplers = nullptr;
 
@@ -241,14 +241,12 @@ void VulkanBindingSet::updateBindings()
         write.pTexelBufferView = nullptr;
 
         write.dstSet = descriptorSet;
-        write.dstBinding = bindingInfo.bindingIndex;
+        write.dstBinding = bindingInfo.bindingIndex();
 
-        switch (bindingInfo.type) {
+        switch (bindingInfo.type()) {
         case ShaderBindingType::UniformBuffer: {
 
-            ARKOSE_ASSERT(bindingInfo.buffers.size() == 1);
-            ARKOSE_ASSERT(bindingInfo.buffers[0]);
-            auto& buffer = static_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
+            auto& buffer = static_cast<const VulkanBuffer&>(bindingInfo.buffer());
 
             VkDescriptorBufferInfo descBufferInfo {};
             descBufferInfo.offset = 0;
@@ -267,9 +265,7 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::StorageBuffer: {
 
-            ARKOSE_ASSERT(bindingInfo.buffers.size() == 1);
-            ARKOSE_ASSERT(bindingInfo.buffers[0]);
-            auto& buffer = static_cast<const VulkanBuffer&>(*bindingInfo.buffers[0]);
+            auto& buffer = static_cast<const VulkanBuffer&>(bindingInfo.buffer());
 
             VkDescriptorBufferInfo descBufferInfo {};
             descBufferInfo.offset = 0;
@@ -288,13 +284,13 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::StorageBufferArray: {
 
-            ARKOSE_ASSERT(bindingInfo.count == bindingInfo.buffers.size());
+            ARKOSE_ASSERT(bindingInfo.arrayCount() == bindingInfo.buffers().size());
 
-            if (bindingInfo.count == 0) {
+            if (bindingInfo.arrayCount() == 0) {
                 continue;
             }
 
-            for (const Buffer* buffer : bindingInfo.buffers) {
+            for (const Buffer* buffer : bindingInfo.buffers()) {
 
                 ARKOSE_ASSERT(buffer);
                 ARKOSE_ASSERT(buffer->usage() == Buffer::Usage::StorageBuffer);
@@ -309,9 +305,9 @@ void VulkanBindingSet::updateBindings()
             }
 
             // NOTE: This should point at the first VkDescriptorBufferInfo
-            write.pBufferInfo = &descBufferInfos.back() - (bindingInfo.count - 1);
+            write.pBufferInfo = &descBufferInfos.back() - (bindingInfo.arrayCount() - 1);
             write.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-            write.descriptorCount = bindingInfo.count;
+            write.descriptorCount = bindingInfo.arrayCount();
             write.dstArrayElement = 0;
 
             break;
@@ -319,9 +315,7 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::StorageImage: {
 
-            ARKOSE_ASSERT(bindingInfo.textures.size() == 1);
-            ARKOSE_ASSERT(bindingInfo.textures[0]);
-            auto& texture = static_cast<const VulkanTexture&>(*bindingInfo.textures[0]);
+            auto& texture = static_cast<const VulkanTexture&>(bindingInfo.storageTexture().texture());
 
             VkDescriptorImageInfo descImageInfo {};
             descImageInfo.sampler = texture.sampler;
@@ -342,9 +336,7 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::TextureSampler: {
 
-            ARKOSE_ASSERT(bindingInfo.textures.size() == 1);
-            ARKOSE_ASSERT(bindingInfo.textures[0]);
-            auto& texture = static_cast<const VulkanTexture&>(*bindingInfo.textures[0]);
+            auto& texture = static_cast<const VulkanTexture&>(bindingInfo.sampledTexture());
 
             VkDescriptorImageInfo descImageInfo {};
             descImageInfo.sampler = texture.sampler;
@@ -365,13 +357,14 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::TextureSamplerArray: {
 
-            size_t numTextures = bindingInfo.textures.size();
+            const auto& sampledTextures = bindingInfo.sampledTextures();
+            size_t numTextures = sampledTextures.size();
             ARKOSE_ASSERT(numTextures > 0);
 
-            for (uint32_t i = 0; i < bindingInfo.count; ++i) {
+            for (uint32_t i = 0; i < bindingInfo.arrayCount(); ++i) {
 
                 // NOTE: We always have to fill in the count here, but for the unused we just fill with a "default"
-                const Texture* genTexture = (i >= numTextures) ? bindingInfo.textures.front() : bindingInfo.textures[i];
+                const Texture* genTexture = (i >= numTextures) ? sampledTextures.front() : sampledTextures[i];
                 ARKOSE_ASSERT(genTexture);
 
                 auto& texture = static_cast<const VulkanTexture&>(*genTexture);
@@ -387,9 +380,9 @@ void VulkanBindingSet::updateBindings()
             }
 
             // NOTE: This should point at the first VkDescriptorImageInfo
-            write.pImageInfo = &descImageInfos.back() - (bindingInfo.count - 1);
+            write.pImageInfo = &descImageInfos.back() - (bindingInfo.arrayCount() - 1);
             write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-            write.descriptorCount = bindingInfo.count;
+            write.descriptorCount = bindingInfo.arrayCount();
             write.dstArrayElement = 0;
 
             break;
@@ -397,15 +390,11 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::RTAccelerationStructure: {
 
-            ARKOSE_ASSERT(bindingInfo.textures.empty());
-            ARKOSE_ASSERT(bindingInfo.buffers.empty());
-            ARKOSE_ASSERT(bindingInfo.tlas != nullptr);
-
             switch (vulkanBackend.rayTracingBackend()) {
             case VulkanBackend::RayTracingBackend::NvExtension: {
 
                 VkWriteDescriptorSetAccelerationStructureNV descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV };
-                descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASNV&>(*bindingInfo.tlas).accelerationStructure;
+                descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASNV&>(bindingInfo.topLevelAS()).accelerationStructure;
                 descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
 
                 rtxAccelStructWrites.push_back(descriptorAccelerationStructureInfo);
@@ -417,7 +406,7 @@ void VulkanBindingSet::updateBindings()
             case VulkanBackend::RayTracingBackend::KhrExtension: {
 
                 VkWriteDescriptorSetAccelerationStructureKHR descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR };
-                descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASKHR&>(*bindingInfo.tlas).accelerationStructure;
+                descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASKHR&>(bindingInfo.topLevelAS()).accelerationStructure;
                 descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
 
                 khrAccelStructWrites.push_back(descriptorAccelerationStructureInfo);
@@ -452,7 +441,7 @@ void VulkanBindingSet::updateTextures(uint32_t bindingIndex, const std::vector<T
         ARKOSE_LOG(Fatal, "BindingSet: trying to update texture for out-of-bounds shader binding, exiting.");
     }
 
-    ShaderBindingType bindingType = shaderBindings()[bindingIndex].type;
+    ShaderBindingType bindingType = shaderBindings()[bindingIndex].type();
     if (bindingType != ShaderBindingType::TextureSampler && bindingType != ShaderBindingType::TextureSamplerArray) {
         ARKOSE_LOG(Fatal, "BindingSet: trying to update texture for shader binding that does not have texture(s), exiting.");
     }

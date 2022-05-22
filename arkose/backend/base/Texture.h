@@ -244,6 +244,25 @@ private:
     Description m_description;
 };
 
+// Used for storage textures when referencing a specific MIP of the texture 
+class TextureMipView {
+public:
+    TextureMipView(Texture& texture, uint32_t mipLevel)
+        : m_texture(&texture)
+        , m_mipLevel(mipLevel)
+    {
+    }
+
+    const Texture& texture() const { return *m_texture; }
+    Texture& texture() { return *m_texture; }
+    
+    uint32_t mipLevel() const { return m_mipLevel; }
+
+private:
+    Texture* m_texture { nullptr };
+    uint32_t m_mipLevel { 0 };
+};
+
 // Define hash functions
 namespace std {
 

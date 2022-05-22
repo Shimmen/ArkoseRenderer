@@ -1,6 +1,7 @@
 #pragma once
 
 #include "backend/Resource.h"
+#include "backend/base/Texture.h"
 #include "backend/shader/Shader.h"
 #include <vector>
 
@@ -9,22 +10,104 @@ class Texture;
 class TopLevelAS;
 
 enum class ShaderBindingType {
-    UniformBuffer,
+    UniformBuffer, // TODO: Rename to ConstantBuffer
     StorageBuffer,
-    StorageImage,
-    TextureSampler,
-    TextureSamplerArray,
-    StorageBufferArray,
+    StorageImage, // TODO: Rename to 'StorageTexture'
+    TextureSampler, // TODO: Rename to 'SampledTexture'
+    TextureSamplerArray, // TODO: Rename to 'SampledTextureArray', OR... just remove this type? Is it really needed?? We already have an array count.
+    StorageBufferArray, // TODO: As above, do we need array types here?
     RTAccelerationStructure,
 };
 
-struct ShaderBinding {
+class ShaderBinding {
+public:
+
+    ShaderBinding(ShaderBindingType, ShaderStage, uint32_t index = ShaderBinding::ImplicitIndex);
+
+    // New, self-explanatory API (and with implicit index)
+
+    static ShaderBinding uniformBuffer(Buffer&, ShaderStage = ShaderStage::Any);
+    static ShaderBinding storageBuffer(Buffer&, ShaderStage = ShaderStage::Any);
+    static ShaderBinding storageBufferBindlessArray(const std::vector<Buffer*>&, ShaderStage = ShaderStage::Any);
+
+    static ShaderBinding sampledTexture(Texture&, ShaderStage = ShaderStage::Any);
+    static ShaderBinding sampledTextureBindlessArray(const std::vector<Texture*>&, ShaderStage = ShaderStage::Any);
+    static ShaderBinding sampledTextureBindlessArray(uint32_t count, const std::vector<Texture*>&, ShaderStage = ShaderStage::Any);
+    
+    static ShaderBinding storageTexture(Texture&, ShaderStage = ShaderStage::Any);
+    static ShaderBinding storageTextureAtMip(Texture&, uint32_t mipLevel, ShaderStage = ShaderStage::Any);
+
+    static ShaderBinding topLevelAccelerationStructure(TopLevelAS&, ShaderStage = ShaderStage::Any);
+
+    //
+
+    ShaderBindingType type() const { return m_type; }
+    uint32_t arrayCount() const { return m_arrayCount; }
+
+    ShaderStage shaderStage() const { return m_shaderStage; }
+
+    uint32_t bindingIndex() const { return m_bindingIndex; }
+    void updateBindingIndex(Badge<class BindingSet>, uint32_t index) { m_bindingIndex = index; }
+
+    const Buffer& buffer() const
+    {
+        ARKOSE_ASSERT(type() == ShaderBindingType::UniformBuffer || type() == ShaderBindingType::StorageBuffer);
+        ARKOSE_ASSERT(m_buffers.size() == 1);
+        return *m_buffers.front();
+    }
+
+    const std::vector<Buffer*>& buffers() const
+    {
+        ARKOSE_ASSERT(type() == ShaderBindingType::StorageBufferArray);
+        ARKOSE_ASSERT(m_buffers.size() >= 1);
+        return m_buffers;
+    }
+
+    const TopLevelAS& topLevelAS() const
+    {
+        ARKOSE_ASSERT(type() == ShaderBindingType::RTAccelerationStructure);
+        ARKOSE_ASSERT(m_topLevelAS != nullptr);
+        return *m_topLevelAS;
+    }
+
+    const Texture& sampledTexture() const
+    {
+        ARKOSE_ASSERT(type() == ShaderBindingType::TextureSampler);
+        ARKOSE_ASSERT(m_sampledTextures.size() == 1);
+        return *m_sampledTextures.front();
+    }
+
+    const std::vector<Texture*>& sampledTextures() const
+    {
+        ARKOSE_ASSERT(type() == ShaderBindingType::TextureSampler || type() == ShaderBindingType::TextureSamplerArray);
+        ARKOSE_ASSERT(m_sampledTextures.size() >= 1);
+        return m_sampledTextures;
+    }
+
+    const TextureMipView& storageTexture() const
+    {
+        ARKOSE_ASSERT(type() == ShaderBindingType::StorageImage);
+        ARKOSE_ASSERT(m_storageTextures.size() == 1);
+        return m_storageTextures.front();
+    }
+
+    const std::vector<TextureMipView>& storageTextures() const
+    {
+        ARKOSE_ASSERT(type() == ShaderBindingType::StorageImage);
+        ARKOSE_ASSERT(m_storageTextures.size() >= 1);
+        return m_storageTextures;
+    }
+
+    ///////////////////////
 
     // Single uniform or storage buffer
     ShaderBinding(uint32_t index, ShaderStage, Buffer*);
 
     // Single sampled texture or storage image
     ShaderBinding(uint32_t index, ShaderStage, Texture*, ShaderBindingType);
+
+    // Single mip of/for a storage image
+    ShaderBinding(uint32_t index, ShaderStage, TextureMipView, ShaderBindingType);
 
     // Single top level acceleration structures
     ShaderBinding(uint32_t index, ShaderStage, TopLevelAS*);
@@ -38,15 +121,19 @@ struct ShaderBinding {
     // Multiple storage buffers in a dynamic array
     ShaderBinding(uint32_t index, ShaderStage, const std::vector<Buffer*>&);
 
-    uint32_t bindingIndex;
-    uint32_t count;
+    static constexpr uint32_t ImplicitIndex = UINT32_MAX;
 
-    ShaderStage shaderStage;
+private:
+    uint32_t m_bindingIndex;
+    ShaderBindingType m_type;
+    ShaderStage m_shaderStage;
 
-    ShaderBindingType type;
-    TopLevelAS* tlas;
-    std::vector<Buffer*> buffers;
-    std::vector<Texture*> textures;
+    uint32_t m_arrayCount { 1 };
+
+    std::vector<Buffer*> m_buffers {};
+    std::vector<Texture*> m_sampledTextures {};
+    std::vector<TextureMipView> m_storageTextures {};
+    TopLevelAS* m_topLevelAS { nullptr };
 };
 
 class BindingSet : public Resource {

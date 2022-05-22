@@ -520,13 +520,9 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
     // Explicitly transition the layouts of the referenced textures to an optimal layout (if it isn't already)
     std::vector<VkImageMemoryBarrier> imageMemoryBarriers {};
     renderState.stateBindings().forEachBinding([&](const ShaderBinding& bindingInfo) {
-        for (Texture* texture : bindingInfo.textures) {
-
-            auto& vulkanTexture = static_cast<VulkanTexture&>(*texture);
-
-            switch (bindingInfo.type) {
-            case ShaderBindingType::TextureSampler:
-            case ShaderBindingType::TextureSamplerArray: {
+        if (bindingInfo.type() == ShaderBindingType::TextureSampler || bindingInfo.type() == ShaderBindingType::TextureSamplerArray) {
+            for (Texture* texture : bindingInfo.sampledTextures()) {
+                auto& vulkanTexture = static_cast<VulkanTexture&>(*texture);
 
                 constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 if (vulkanTexture.currentLayout != targetLayout) {
@@ -551,10 +547,10 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
 
                     vulkanTexture.currentLayout = targetLayout;
                 }
-
-            } break;
-
-            case ShaderBindingType::StorageImage: {
+            }
+        } else if (bindingInfo.type() == ShaderBindingType::StorageImage) {
+            for (TextureMipView textureMip : bindingInfo.storageTextures()) {
+                auto& vulkanTexture = static_cast<VulkanTexture&>(textureMip.texture());
 
                 constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_GENERAL;
                 if (vulkanTexture.currentLayout != targetLayout) {
@@ -579,11 +575,6 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
 
                     vulkanTexture.currentLayout = targetLayout;
                 }
-
-            } break;
-
-            default:
-                ASSERT_NOT_REACHED();
             }
         }
     });
@@ -656,13 +647,11 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
     // Explicitly transition the layouts of the referenced textures to an optimal layout (if it isn't already)
     std::vector<VkImageMemoryBarrier> imageMemoryBarriers {};
     rtState.stateBindings().forEachBinding([&](const ShaderBinding& bindingInfo) {
-        for (Texture* texture : bindingInfo.textures) {
+        if (bindingInfo.type() == ShaderBindingType::TextureSampler || bindingInfo.type() == ShaderBindingType::TextureSamplerArray) {
+            for (Texture* texture : bindingInfo.sampledTextures()) {
 
-            auto& vulkanTexture = static_cast<VulkanTexture&>(*texture);
-
-            switch (bindingInfo.type) {
-            case ShaderBindingType::TextureSampler:
-            case ShaderBindingType::TextureSamplerArray: {
+                auto& vulkanTexture = static_cast<VulkanTexture&>(*texture);
+                ARKOSE_ASSERT(bindingInfo.type() == ShaderBindingType::TextureSampler || bindingInfo.type() == ShaderBindingType::TextureSamplerArray);
 
                 constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 if (vulkanTexture.currentLayout != targetLayout) {
@@ -687,10 +676,10 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
 
                     vulkanTexture.currentLayout = targetLayout;
                 }
-
-            } break;
-
-            case ShaderBindingType::StorageImage: {
+            }
+        } else if (bindingInfo.type() == ShaderBindingType::StorageImage) {
+            for (TextureMipView textureMip : bindingInfo.storageTextures()) {
+                auto& vulkanTexture = static_cast<VulkanTexture&>(textureMip.texture());
 
                 constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_GENERAL;
                 if (vulkanTexture.currentLayout != targetLayout) {
@@ -715,11 +704,6 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
 
                     vulkanTexture.currentLayout = targetLayout;
                 }
-
-            } break;
-
-            default:
-                ASSERT_NOT_REACHED();
             }
         }
     });
@@ -802,8 +786,8 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
             }
         }
 
-        for (Texture* genTexture : computeState.storageImages) {
-            auto& texture = static_cast<VulkanTexture&>(*genTexture);
+        for (TextureMipView textureMip : computeState.storageImages) {
+            auto& texture = static_cast<VulkanTexture&>(textureMip.texture());
 
             constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_GENERAL;
             if (texture.currentLayout != targetLayout) {

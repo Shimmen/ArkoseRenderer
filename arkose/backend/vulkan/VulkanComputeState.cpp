@@ -82,16 +82,13 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
 
     for (auto& set : bindingSets) {
         for (auto& bindingInfo : set->shaderBindings()) {
-            for (auto texture : bindingInfo.textures) {
-                switch (bindingInfo.type) {
-                case ShaderBindingType::StorageImage:
-                    storageImages.push_back(texture);
-                    break;
-                case ShaderBindingType::TextureSampler:
+            if (bindingInfo.type() == ShaderBindingType::TextureSampler || bindingInfo.type() == ShaderBindingType::TextureSamplerArray) {
+                for (auto& texture : bindingInfo.sampledTextures()) {
                     sampledTextures.push_back(texture);
-                    break;
-                default:
-                    ASSERT_NOT_REACHED();
+                }
+            } else if (bindingInfo.type() == ShaderBindingType::StorageImage) {
+                for (const TextureMipView& textureMip : bindingInfo.storageTextures()) {
+                    storageImages.push_back(textureMip);
                 }
             }
         }

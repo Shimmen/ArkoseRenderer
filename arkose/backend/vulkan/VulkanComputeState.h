@@ -2,6 +2,7 @@
 
 #include "backend/base/ComputeState.h"
 
+#include "backend/base/Texture.h"
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
@@ -16,5 +17,5 @@ public:
     VkPipeline pipeline;
 
     std::vector<Texture*> sampledTextures;
-    std::vector<Texture*> storageImages;
+    std::vector<TextureMipView> storageImages;
 };
