@@ -520,7 +520,7 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
     // Explicitly transition the layouts of the referenced textures to an optimal layout (if it isn't already)
     std::vector<VkImageMemoryBarrier> imageMemoryBarriers {};
     renderState.stateBindings().forEachBinding([&](const ShaderBinding& bindingInfo) {
-        if (bindingInfo.type() == ShaderBindingType::SampledTexture || bindingInfo.type() == ShaderBindingType::TextureSamplerArray) {
+        if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
             for (Texture* texture : bindingInfo.sampledTextures()) {
                 auto& vulkanTexture = static_cast<VulkanTexture&>(*texture);
 
@@ -647,11 +647,9 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
     // Explicitly transition the layouts of the referenced textures to an optimal layout (if it isn't already)
     std::vector<VkImageMemoryBarrier> imageMemoryBarriers {};
     rtState.stateBindings().forEachBinding([&](const ShaderBinding& bindingInfo) {
-        if (bindingInfo.type() == ShaderBindingType::SampledTexture || bindingInfo.type() == ShaderBindingType::TextureSamplerArray) {
+        if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
             for (Texture* texture : bindingInfo.sampledTextures()) {
-
                 auto& vulkanTexture = static_cast<VulkanTexture&>(*texture);
-                ARKOSE_ASSERT(bindingInfo.type() == ShaderBindingType::SampledTexture || bindingInfo.type() == ShaderBindingType::TextureSamplerArray);
 
                 constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 if (vulkanTexture.currentLayout != targetLayout) {

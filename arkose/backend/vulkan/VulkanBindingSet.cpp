@@ -41,7 +41,6 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                     poolSize.type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
                     break;
                 case ShaderBindingType::SampledTexture:
-                case ShaderBindingType::TextureSamplerArray:
                     poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                     break;
                 case ShaderBindingType::RTAccelerationStructure:
@@ -108,7 +107,6 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE;
                 break;
             case ShaderBindingType::SampledTexture:
-            case ShaderBindingType::TextureSamplerArray:
                 binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                 flagsForBinding |= VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT; // TODO: Maybe allow this for more/all types?
                 break;
@@ -336,27 +334,6 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::SampledTexture: {
 
-            auto& texture = static_cast<const VulkanTexture&>(bindingInfo.sampledTexture());
-
-            VkDescriptorImageInfo descImageInfo {};
-            descImageInfo.sampler = texture.sampler;
-            descImageInfo.imageView = texture.imageView;
-
-            // The runtime systems make sure that the input texture is in the layout!
-            descImageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-
-            descImageInfos.push_back(descImageInfo);
-            write.pImageInfo = &descImageInfos.back();
-            write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-
-            write.descriptorCount = 1;
-            write.dstArrayElement = 0;
-
-            break;
-        }
-
-        case ShaderBindingType::TextureSamplerArray: {
-
             const auto& sampledTextures = bindingInfo.sampledTextures();
             size_t numTextures = sampledTextures.size();
             ARKOSE_ASSERT(numTextures > 0);
@@ -379,7 +356,7 @@ void VulkanBindingSet::updateBindings()
                 descImageInfos.push_back(descImageInfo);
             }
 
-            // NOTE: This should point at the first VkDescriptorImageInfo
+            // NOTE: This should point at the first VkDescriptorImageInfo of the ones we just pushed
             write.pImageInfo = &descImageInfos.back() - (bindingInfo.arrayCount() - 1);
             write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             write.descriptorCount = bindingInfo.arrayCount();
@@ -442,7 +419,7 @@ void VulkanBindingSet::updateTextures(uint32_t bindingIndex, const std::vector<T
     }
 
     ShaderBindingType bindingType = shaderBindings()[bindingIndex].type();
-    if (bindingType != ShaderBindingType::SampledTexture && bindingType != ShaderBindingType::TextureSamplerArray) {
+    if (bindingType != ShaderBindingType::SampledTexture) {
         ARKOSE_LOG(Fatal, "BindingSet: trying to update texture for shader binding that does not have texture(s), exiting.");
     }
 

@@ -14,7 +14,6 @@ enum class ShaderBindingType {
     StorageBuffer,
     StorageTexture,
     SampledTexture,
-    TextureSamplerArray, // TODO: Rename to 'SampledTextureArray', OR... just remove this type? Is it really needed?? We already have an array count.
     StorageBufferArray, // TODO: As above, do we need array types here?
     RTAccelerationStructure,
 };
@@ -79,7 +78,7 @@ public:
 
     const std::vector<Texture*>& sampledTextures() const
     {
-        ARKOSE_ASSERT(type() == ShaderBindingType::SampledTexture || type() == ShaderBindingType::TextureSamplerArray);
+        ARKOSE_ASSERT(type() == ShaderBindingType::SampledTexture);
         ARKOSE_ASSERT(m_sampledTextures.size() >= 1);
         return m_sampledTextures;
     }

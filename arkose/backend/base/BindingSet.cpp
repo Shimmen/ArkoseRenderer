@@ -81,7 +81,7 @@ ShaderBinding ShaderBinding::sampledTexture(Texture& texture, ShaderStage shader
 
 ShaderBinding ShaderBinding::sampledTextureBindlessArray(const std::vector<Texture*>& textures, ShaderStage shaderStage)
 {
-    ShaderBinding binding { ShaderBindingType::TextureSamplerArray, shaderStage };
+    ShaderBinding binding { ShaderBindingType::SampledTexture, shaderStage };
     binding.m_arrayCount = static_cast<uint32_t>(textures.size());
 
     binding.m_sampledTextures.reserve(textures.size());
@@ -95,7 +95,7 @@ ShaderBinding ShaderBinding::sampledTextureBindlessArray(const std::vector<Textu
 
 ShaderBinding ShaderBinding::sampledTextureBindlessArray(uint32_t count, const std::vector<Texture*>& textures, ShaderStage shaderStage)
 {
-    ShaderBinding binding { ShaderBindingType::TextureSamplerArray, shaderStage };
+    ShaderBinding binding { ShaderBindingType::SampledTexture, shaderStage };
 
     if (count < textures.size()) {
         ARKOSE_LOG(Fatal, "ShaderBinding error: too many textures in list ({}) compared to specified count {}", textures.size(), count);
@@ -227,7 +227,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, uint32_t c
     : m_bindingIndex(index)
     , m_arrayCount(count)
     , m_shaderStage(shaderStage)
-    , m_type(ShaderBindingType::TextureSamplerArray)
+    , m_type(ShaderBindingType::SampledTexture)
     , m_topLevelAS(nullptr)
     , m_buffers()
     , m_sampledTextures(textures)
@@ -248,7 +248,7 @@ ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, const std:
     : m_bindingIndex(index)
     , m_arrayCount((uint32_t)textures.size())
     , m_shaderStage(shaderStage)
-    , m_type(ShaderBindingType::TextureSamplerArray)
+    , m_type(ShaderBindingType::SampledTexture)
     , m_topLevelAS(nullptr)
     , m_buffers()
     , m_sampledTextures(textures)
