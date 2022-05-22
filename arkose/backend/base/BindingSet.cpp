@@ -136,34 +136,6 @@ ShaderBinding ShaderBinding::topLevelAccelerationStructure(TopLevelAS& tlas, Sha
     return binding;
 }
 
-ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Buffer* buffer)
-    : m_bindingIndex(index)
-    , m_arrayCount(1)
-    , m_shaderStage(shaderStage)
-    , m_topLevelAS(nullptr)
-    , m_buffers({ buffer })
-    , m_sampledTextures()
-    , m_storageTextures()
-{
-    if (!buffer) {
-        ARKOSE_LOG(Fatal, "ShaderBinding error: null buffer");
-    }
-
-    switch (buffer->usage()) {
-    case Buffer::Usage::ConstantBuffer:
-        m_type = ShaderBindingType::ConstantBuffer;
-        break;
-    case Buffer::Usage::Vertex: // includes storage buffer support
-    case Buffer::Usage::Index: // includes storage buffer support
-    case Buffer::Usage::StorageBuffer:
-    case Buffer::Usage::IndirectBuffer:
-        m_type = ShaderBindingType::StorageBuffer;
-        break;
-    default:
-        ARKOSE_LOG(Fatal, "ShaderBinding error: invalid buffer for shader binding (not index or uniform buffer)");
-    }
-}
-
 ShaderBinding::ShaderBinding(uint32_t index, ShaderStage shaderStage, Texture* texture, ShaderBindingType type)
     : m_bindingIndex(index)
     , m_arrayCount(1)

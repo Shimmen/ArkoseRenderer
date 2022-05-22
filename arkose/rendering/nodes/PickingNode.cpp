@@ -14,7 +14,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
                                                                   { RenderTarget::AttachmentType::Depth, &indexDepthMap, LoadOp::Clear, StoreOp::Discard } });
 
     Buffer& transformDataBuffer = reg.createBuffer(256 * sizeof(mat4), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
-    BindingSet& drawIndexBindingSet = reg.createBindingSet({ { 0, ShaderStage::Vertex, &transformDataBuffer } });
+    BindingSet& drawIndexBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(transformDataBuffer, ShaderStage::Vertex) });
 
     Shader drawIndexShader = Shader::createBasicRasterize("picking/drawIndices.vert", "picking/drawIndices.frag");
     RenderStateBuilder renderStateBuilder(indexMapRenderTarget, drawIndexShader, VertexLayout { VertexComponent::Position3F });
@@ -23,8 +23,8 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 
     Buffer& pickedIndexBuffer = reg.createBuffer(sizeof(moos::u32), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::Readback);
     Shader collectorShader = Shader::createCompute("picking/collectIndex.comp");
-    BindingSet& collectIndexBindingSet = reg.createBindingSet({ { 0, ShaderStage::Compute, &indexMap, ShaderBindingType::StorageTexture },
-                                                                { 1, ShaderStage::Compute, &pickedIndexBuffer } });
+    BindingSet& collectIndexBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(indexMap, ShaderStage::Compute),
+                                                                ShaderBinding::storageBuffer(pickedIndexBuffer, ShaderStage::Compute) });
     ComputeState& collectState = reg.createComputeState(collectorShader, { &collectIndexBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {

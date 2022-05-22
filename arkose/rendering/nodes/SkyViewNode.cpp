@@ -9,8 +9,8 @@ RenderPipelineNode::ExecuteCallback SkyViewNode::construct(GpuScene& scene, Regi
     Texture& sceneNormalVelocity = *reg.getTexture("SceneNormalVelocity"); // todo: velocity shouldn't be strictly required as it is now!
     Texture& depthStencilImage = *reg.getTexture("SceneDepth");
 
-    BindingSet& skyViewRasterizeBindingSet = reg.createBindingSet({ { 0, ShaderStage::AnyRasterize, reg.getBuffer("SceneCameraData") },
-                                                                    { 1, ShaderStage::Fragment, &scene.environmentMapTexture(), ShaderBindingType::SampledTexture } });
+    BindingSet& skyViewRasterizeBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::AnyRasterize),
+                                                                    ShaderBinding::sampledTexture(scene.environmentMapTexture(), ShaderStage::Fragment) });
 
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &sceneColor, LoadOp::Load, StoreOp::Store },
                                                           { RenderTarget::AttachmentType::Color1, &sceneNormalVelocity, LoadOp::Load, StoreOp::Store },

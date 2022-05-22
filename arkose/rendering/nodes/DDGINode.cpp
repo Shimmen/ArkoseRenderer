@@ -37,9 +37,9 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
     auto visibilityClearColor = ClearColor::dataValues(cameraZFar, cameraZFar * cameraZFar, 0, 0);
     Texture& probeAtlasVisibility = createProbeAtlas(reg, "ddgi-visibility", probeGrid, visibilityClearColor, Texture::Format::RG16F, DDGI_VISIBILITY_RES, DDGI_ATLAS_PADDING);
 
-    BindingSet& ddgiSamplingBindingSet = reg.createBindingSet({ { 0, ShaderStage::Fragment, &probeGridDataBuffer },
-                                                                { 1, ShaderStage::Fragment, &probeAtlasIrradiance, ShaderBindingType::SampledTexture },
-                                                                { 2, ShaderStage::Fragment, &probeAtlasVisibility, ShaderBindingType::SampledTexture } });
+    BindingSet& ddgiSamplingBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(probeGridDataBuffer, ShaderStage::Fragment),
+                                                                ShaderBinding::sampledTexture(probeAtlasIrradiance, ShaderStage::Fragment),
+                                                                ShaderBinding::sampledTexture(probeAtlasVisibility, ShaderStage::Fragment) });
     reg.publish("DDGISamplingSet", ddgiSamplingBindingSet);
     ///////////////////////
 

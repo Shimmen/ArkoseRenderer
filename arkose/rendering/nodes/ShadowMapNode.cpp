@@ -8,10 +8,10 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(GpuScene& scene, Re
 {
     // TODO: This should be managed from some central location, e.g. the scene node or similar.
     Buffer& transformDataBuffer = reg.createBuffer(scene.meshCount() * sizeof(mat4), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::TransferOptimal);
-    BindingSet& transformBindingSet = reg.createBindingSet({ { 0, ShaderStage::Vertex, &transformDataBuffer } });
+    BindingSet& transformBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(transformDataBuffer, ShaderStage::Vertex) });
 
     Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
-    BindingSet& shadowDataBindingSet = reg.createBindingSet({ { 0, ShaderStage::Vertex, reg.getBuffer("SceneShadowData") } });
+    BindingSet& shadowDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(*reg.getBuffer("SceneShadowData"), ShaderStage::Vertex) });
 
     // HACK: Well, this really is a hack, together with the whole render state cache..
     scene.forEachShadowCastingLight([&](size_t shadowLightIndex, Light& light) {

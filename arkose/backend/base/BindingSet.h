@@ -98,9 +98,6 @@ public:
 
     ///////////////////////
 
-    // Single uniform or storage buffer
-    ShaderBinding(uint32_t index, ShaderStage, Buffer*);
-
     // Single sampled texture or storage image
     ShaderBinding(uint32_t index, ShaderStage, Texture*, ShaderBindingType);
 
