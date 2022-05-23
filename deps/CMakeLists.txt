@@ -31,6 +31,10 @@ FetchContent_Declare(vulkan_memory_allocator
     GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
     GIT_TAG        "v3.0.0")
 
+FetchContent_Declare(directx_headers
+    GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
+    GIT_TAG        "v1.0.2")
+
 ##################################
 # FetchContent dependencies without cmake files
 
@@ -105,4 +109,4 @@ add_subdirectory(half)
 ##################################
 # Finalize FetchContent dependencies
 
-FetchContent_MakeAvailable(mooslib json fmt glfw vulkan_memory_allocator)
+FetchContent_MakeAvailable(mooslib json fmt glfw vulkan_memory_allocator directx_headers)

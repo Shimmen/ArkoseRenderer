@@ -129,7 +129,8 @@ target_link_libraries(ArkoseRenderer PRIVATE
     tracy
     Vulkan::Vulkan
     VulkanMemoryAllocator
-    d3d12
+    d3dcompiler dxguid d3d12 dxgi # core stuff
+    DirectX-Headers # utility stuff
     )
 
 ##################################
