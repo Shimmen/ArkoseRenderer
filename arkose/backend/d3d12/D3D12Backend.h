@@ -1,10 +1,7 @@
 #include "backend/base/Backend.h"
 
-#include <d3d12.h>
+#include "backend/d3d12/D3D12Common.h"
 #include <dxgi.h>
-
-#include <wrl.h>
-using namespace Microsoft::WRL;
 
 static constexpr bool d3d12debugMode = true;
 
@@ -56,6 +53,9 @@ public:
     ID3D12CommandQueue& commandQueue() { return *m_commandQueue.Get(); }
 
     void waitForFence(ID3D12Fence* fence, UINT64 completionValue, HANDLE waitEvent) const;
+
+    bool setBufferDataUsingMapping(ID3D12Resource&, const uint8_t* data, size_t size, size_t offset = 0);
+    bool setBufferDataUsingStagingBuffer(struct D3D12Buffer&, const uint8_t* data, size_t size, size_t offset = 0);
 
     void issueUploadCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const;
 
@@ -110,12 +110,10 @@ private:
         ComPtr<ID3D12RootSignature> rootSignature;
         ComPtr<ID3D12PipelineState> pso;
     
-        ComPtr<ID3D12Resource> uploadBuffer;
-
-        ComPtr<ID3D12Resource> vertexBuffer;
+        std::unique_ptr<D3D12Buffer> vertexBuffer;
         D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
 
-        ComPtr<ID3D12Resource> indexBuffer;
+        std::unique_ptr<D3D12Buffer> indexBuffer;
         D3D12_INDEX_BUFFER_VIEW indexBufferView;
 
         const char shaders[1542] = "#ifdef D3D12_SAMPLE_BASIC\n"

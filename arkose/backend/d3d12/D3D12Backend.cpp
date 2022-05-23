@@ -9,9 +9,6 @@
 #include "core/Logging.h"
 #include "rendering/AppState.h"
 
-// The D3D12 "helper" library
-#include <directx/d3dx12.h>
-
 // The d3d HLSL compiler
 #include <d3dcompiler.h>
 
@@ -253,10 +250,7 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
                 float uv[2];
             };
 
-            // Declare upload buffer data as 'static' so it persists after returning from this function.
-            // Otherwise, we would need to explicitly wait for the GPU to copy data from the upload buffer
-            // to vertex/index default buffers due to how the GPU processes commands asynchronously.
-            static const Vertex vertices[4] = {
+            const Vertex vertices[4] = {
                 // Upper Left
                 { { -1.0f, 1.0f, 0 }, { 0, 0 } },
                 // Upper Right
@@ -267,76 +261,27 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
                 { { -1.0f, -1.0f, 0 }, { 0, 1 } }
             };
 
-            static const int indices[6] = {
+            const int indices[6] = {
                 0, 1, 2, 2, 3, 0
             };
 
             static const int uploadBufferSize = sizeof(vertices) + sizeof(indices);
-            static const auto uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-            static const auto uploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(uploadBufferSize);
+            auto uploadBuffer = std::make_unique<D3D12Buffer>(*this, uploadBufferSize, Buffer::Usage::Transfer, Buffer::MemoryHint::TransferOptimal);
 
-            // Create upload buffer on CPU
-            device().CreateCommittedResource(&uploadHeapProperties,
-                                             D3D12_HEAP_FLAG_NONE,
-                                             &uploadBufferDesc,
-                                             D3D12_RESOURCE_STATE_GENERIC_READ,
-                                             nullptr,
-                                             IID_PPV_ARGS(&m_demo.uploadBuffer));
+            m_demo.vertexBuffer = std::make_unique<D3D12Buffer>(*this, sizeof(vertices), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOnly);
+            m_demo.indexBuffer = std::make_unique<D3D12Buffer>(*this, sizeof(indices), Buffer::Usage::Index, Buffer::MemoryHint::GpuOnly);
 
-            // Create vertex & index buffer on the GPU
-            // HEAP_TYPE_DEFAULT is on GPU, we also initialize with COPY_DEST state
-            // so we don't have to transition into this before copying into them
-            static const auto defaultHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-
-            static const auto vertexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(vertices));
-            device().CreateCommittedResource(&defaultHeapProperties,
-                                             D3D12_HEAP_FLAG_NONE,
-                                             &vertexBufferDesc,
-                                             D3D12_RESOURCE_STATE_COPY_DEST,
-                                             nullptr,
-                                             IID_PPV_ARGS(&m_demo.vertexBuffer));
-
-            static const auto indexBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(sizeof(indices));
-            device().CreateCommittedResource(&defaultHeapProperties,
-                                             D3D12_HEAP_FLAG_NONE,
-                                             &indexBufferDesc,
-                                             D3D12_RESOURCE_STATE_COPY_DEST,
-                                             nullptr,
-                                             IID_PPV_ARGS(&m_demo.indexBuffer));
+            setBufferDataUsingStagingBuffer(*m_demo.vertexBuffer, reinterpret_cast<const uint8_t*>(vertices), sizeof(vertices));
+            setBufferDataUsingStagingBuffer(*m_demo.indexBuffer, reinterpret_cast<const uint8_t*>(indices), sizeof(indices));
 
             // Create buffer views
-            m_demo.vertexBufferView.BufferLocation = m_demo.vertexBuffer->GetGPUVirtualAddress();
-            m_demo.vertexBufferView.SizeInBytes = sizeof(vertices);
+            m_demo.vertexBufferView.BufferLocation = m_demo.vertexBuffer->bufferResource->GetGPUVirtualAddress();
+            m_demo.vertexBufferView.SizeInBytes = UINT(m_demo.vertexBuffer->size());
             m_demo.vertexBufferView.StrideInBytes = sizeof(Vertex);
 
-            m_demo.indexBufferView.BufferLocation = m_demo.indexBuffer->GetGPUVirtualAddress();
-            m_demo.indexBufferView.SizeInBytes = sizeof(indices);
+            m_demo.indexBufferView.BufferLocation = m_demo.indexBuffer->bufferResource->GetGPUVirtualAddress();
+            m_demo.indexBufferView.SizeInBytes = UINT(m_demo.indexBuffer->size());
             m_demo.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-
-            // Copy data on CPU into the upload buffer
-            void* p;
-            m_demo.uploadBuffer->Map(0, nullptr, &p);
-            ::memcpy(p, vertices, sizeof(vertices));
-            ::memcpy(static_cast<unsigned char*>(p) + sizeof(vertices), indices, sizeof(indices));
-            m_demo.uploadBuffer->Unmap(0, nullptr);
-
-            issueUploadCommand([this](ID3D12GraphicsCommandList& uploadCommandList) {
-
-                // Copy data from upload buffer on CPU into the index/vertex buffer on the GPU
-                uploadCommandList.CopyBufferRegion(m_demo.vertexBuffer.Get(), 0,
-                                                   m_demo.uploadBuffer.Get(), 0, sizeof(vertices));
-                uploadCommandList.CopyBufferRegion(m_demo.indexBuffer.Get(), 0,
-                                                   m_demo.uploadBuffer.Get(), sizeof(vertices), sizeof(indices));
-
-                // Barriers, batch them together
-                const CD3DX12_RESOURCE_BARRIER barriers[2] = {
-                    CD3DX12_RESOURCE_BARRIER::Transition(m_demo.vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER),
-                    CD3DX12_RESOURCE_BARRIER::Transition(m_demo.indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER)
-                };
-
-                uploadCommandList.ResourceBarrier(2, barriers);
-
-            });
         }
     }
 }
@@ -402,7 +347,7 @@ bool D3D12Backend::executeFrame(const Scene& scene, RenderPipeline& pipeline, fl
                                         static_cast<float>(m_swapChainExtent.width()),
                                         static_cast<float>(m_swapChainExtent.height()),
                                         0.0f, 1.0f };
-            D3D12_RECT scissorRect = { 0, 0, m_swapChainExtent.width(), m_swapChainExtent.height() };
+            D3D12_RECT scissorRect = { 0, 0, LONG(m_swapChainExtent.width()), LONG(m_swapChainExtent.height()) };
 
             commandList->OMSetRenderTargets(1, &renderTargetHandle, true, nullptr);
             commandList->RSSetViewports(1, &viewport);
@@ -479,6 +424,85 @@ void D3D12Backend::waitForFence(ID3D12Fence* fence, UINT64 completionValue, HAND
     if (WaitForSingleObject(waitEvent, INFINITE) != WAIT_OBJECT_0) {
         ARKOSE_LOG(Error, "D3D12Backend: failed waiting for event (for fence), exiting.");
     }
+}
+
+bool D3D12Backend::setBufferDataUsingMapping(ID3D12Resource& bufferResource, const uint8_t* data, size_t size, size_t offset)
+{
+    SCOPED_PROFILE_ZONE_BACKEND();
+
+    ARKOSE_ASSERT(bufferResource.GetDesc().Dimension == D3D12_RESOURCE_DIMENSION_BUFFER);
+    ARKOSE_ASSERT(bufferResource.GetDesc().Width >= offset + size);
+
+    if (size == 0) {
+        return true;
+    }
+
+    void* mappedMemory = nullptr;
+
+    if (auto hr = bufferResource.Map(0, nullptr, &mappedMemory); FAILED(hr)) {
+        ARKOSE_LOG(Error, "D3D12Backend: could not map buffer resource.");
+        return false;
+    }
+
+    uint8_t* destination = ((uint8_t*)mappedMemory) + offset;
+    std::memcpy(destination, data, size);
+
+    bufferResource.Unmap(0, nullptr);
+
+    return true;
+}
+
+bool D3D12Backend::setBufferDataUsingStagingBuffer(D3D12Buffer& buffer, const uint8_t* data, size_t size, size_t offset)
+{
+    SCOPED_PROFILE_ZONE_BACKEND();
+
+    ARKOSE_ASSERT(buffer.size() >= offset + size);
+
+    if (size == 0) {
+        return true;
+    }
+
+    const auto uploadHeapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+    const auto uploadBufferDesc = CD3DX12_RESOURCE_DESC::Buffer(size);
+
+    ComPtr<ID3D12Resource> uploadBuffer;
+    auto hr = device().CreateCommittedResource(&uploadHeapProperties, D3D12_HEAP_FLAG_NONE,
+                                               &uploadBufferDesc, D3D12_RESOURCE_STATE_GENERIC_READ, nullptr,
+                                               IID_PPV_ARGS(&uploadBuffer));
+    if (FAILED(hr)) {
+        ARKOSE_LOG(Error, "D3D12Backend: could create upload buffer.");
+        return false;
+    }
+
+    if (!setBufferDataUsingMapping(*uploadBuffer.Get(), data, size, 0)) {
+        ARKOSE_LOG(Error, "D3D12Backend: failed to set data to upload buffer.");
+        return false;
+    }
+
+    // Make sure we reset back to this resource state when we're done
+    auto baseResourceState = buffer.resourceState;
+    auto idealCopyState = D3D12_RESOURCE_STATE_COPY_DEST;
+
+    ID3D12Resource* bufferResource = buffer.bufferResource.Get();
+    issueUploadCommand([&](ID3D12GraphicsCommandList& uploadCommandList) {
+
+        if (baseResourceState != idealCopyState) {
+            auto transitionBeforeCopy = CD3DX12_RESOURCE_BARRIER::Transition(bufferResource, baseResourceState, D3D12_RESOURCE_STATE_COPY_DEST);
+            uploadCommandList.ResourceBarrier(1, &transitionBeforeCopy);
+        }
+
+        // Copy data from upload buffer on CPU into the buffer on the GPU
+        uploadCommandList.CopyBufferRegion(bufferResource, offset,
+                                           uploadBuffer.Get(), 0, size);
+
+        if (baseResourceState != idealCopyState) {
+            auto transitionAfterCopy = CD3DX12_RESOURCE_BARRIER::Transition(bufferResource, D3D12_RESOURCE_STATE_COPY_DEST, baseResourceState);
+            uploadCommandList.ResourceBarrier(1, &transitionAfterCopy);
+        }
+    });
+
+    return true;
+
 }
 
 void D3D12Backend::issueUploadCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const

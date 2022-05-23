@@ -1,6 +1,7 @@
 #pragma once
 
 #include "backend/base/Buffer.h"
+#include "backend/d3d12/D3D12Common.h"
 
 struct D3D12Buffer final : public Buffer {
 public:
@@ -11,4 +12,7 @@ public:
 
     void updateData(const std::byte* data, size_t size, size_t offset) override;
     void reallocateWithSize(size_t newSize, ReallocateStrategy) override;
+
+    ComPtr<ID3D12Resource> bufferResource;
+    D3D12_RESOURCE_STATES resourceState;
 };
