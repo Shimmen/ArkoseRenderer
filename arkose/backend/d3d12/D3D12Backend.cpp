@@ -7,6 +7,7 @@
 #include "backend/d3d12/D3D12RenderTarget.h"
 #include "backend/d3d12/D3D12Texture.h"
 #include "core/Logging.h"
+#include "rendering/AppState.h"
 
 // The D3D12 "helper" library
 #include <directx/d3dx12.h>
@@ -32,6 +33,11 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
 
     int windowFramebufferWidth, windowFramebufferHeight;
     glfwGetFramebufferSize(m_window, &windowFramebufferWidth, &windowFramebufferHeight);
+
+    m_swapChainExtent = Extent2D(windowFramebufferWidth, windowFramebufferHeight);
+    //glfwSetFramebufferSizeCallback(window, static_cast<GLFWframebuffersizefun>([](GLFWwindow* window, int width, int height) {
+    //                                   m_swapChainExtent = Extent2D(width, height);
+    //                               }));
 
     if constexpr (d3d12debugMode) {
         ComPtr<ID3D12Debug> debugController;
@@ -86,89 +92,97 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
 
     m_renderTargetViewDescriptorSize  = device().GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-    /////////////////////////////////
+    // Create a heap that can contains QueueSlotCount number of descriptors
+    CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle {};
+    {
+        D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
+        heapDesc.NumDescriptors = QueueSlotCount;
+        heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        if (auto hr = device().CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_renderTargetDescriptorHeap)); FAILED(hr)) {
+            ARKOSE_LOG(Fatal, "D3D12Backend: failed to create descriptor heaps, exiting.");
+        }
 
-    m_currentFenceValue = 1;
+        rtvHandle = m_renderTargetDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    }
 
-    // Create fences for each frame so we can protect resources and wait for any given frame
+    // Set up frame contexts
     for (int i = 0; i < QueueSlotCount; ++i) {
 
-        m_frameFenceEvents[i] = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-        m_fenceValues[i] = 0;
+        if (m_frameContexts[i] == nullptr)
+            m_frameContexts[i] = std::make_unique<FrameContext>();
+        FrameContext& frameContext = *m_frameContexts[i];
 
-        if (auto hr = device().CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_frameFences[i])); FAILED(hr)) {
-            ARKOSE_LOG(Fatal, "D3D12Backend: failed to create frame fence, exiting.");
+        // Create fences for each frame so we can protect resources and wait for any given frame
+        {
+            if (auto hr = device().CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&frameContext.frameFence)); FAILED(hr)) {
+                ARKOSE_LOG(Fatal, "D3D12Backend: failed to create frame fence, exiting.");
+            }
+
+            frameContext.frameFenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+            frameContext.frameFenceValue = 0;
+        }
+
+        // Get the render target for the respective target in the swap chain
+        if (auto hr = swapChain().GetBuffer(i, IID_PPV_ARGS(&frameContext.renderTarget)); FAILED(hr)) {
+            ARKOSE_LOG(Fatal, "D3D12Backend: failed to get buffer from swap chain, exiting.");
+        }
+
+        // Create a render target view for each target in the swap chain
+        {
+            D3D12_RENDER_TARGET_VIEW_DESC viewDesc;
+            viewDesc.Format = SwapChainRenderTargetViewFormat;
+            viewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
+            viewDesc.Texture2D.MipSlice = 0;
+            viewDesc.Texture2D.PlaneSlice = 0;
+
+            device().CreateRenderTargetView(frameContext.renderTarget.Get(), &viewDesc, rtvHandle);
+            rtvHandle.Offset(m_renderTargetViewDescriptorSize);
+        }
+
+        // Create command allocator and command list for the frame context
+        {
+            if (auto hr = device().CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&frameContext.commandAllocator)); FAILED(hr)) {
+                ARKOSE_LOG(Fatal, "D3D12Backend: failed to create command allocator, exiting.");
+            }
+
+            if (auto hr = device().CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frameContext.commandAllocator.Get(), nullptr, IID_PPV_ARGS(&frameContext.commandList)); FAILED(hr)) {
+                ARKOSE_LOG(Fatal, "D3D12Backend: failed to create command list, exiting.");
+            }
+            
+            frameContext.commandList->Close();
         }
     }
 
-    for (int i = 0; i < QueueSlotCount; ++i) {
-        swapChain().GetBuffer(i, IID_PPV_ARGS(&m_renderTargets[i]));
-    }
-
-    D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-    heapDesc.NumDescriptors = QueueSlotCount;
-    heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-    heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-    if (auto hr = device().CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_renderTargetDescriptorHeap)); FAILED(hr)) {
-        ARKOSE_LOG(Fatal, "D3D12Backend: failed to create descriptor heaps, exiting.");
-    }
-
-    D3D12_CPU_DESCRIPTOR_HANDLE rtvHandle { m_renderTargetDescriptorHeap->GetCPUDescriptorHandleForHeapStart() };
-
-    for (int i = 0; i < QueueSlotCount; ++i) {
-        D3D12_RENDER_TARGET_VIEW_DESC viewDesc;
-        viewDesc.Format = SwapChainRenderTargetViewFormat;
-        viewDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
-        viewDesc.Texture2D.MipSlice = 0;
-        viewDesc.Texture2D.PlaneSlice = 0;
-
-        device().CreateRenderTargetView(m_renderTargets[i].Get(), &viewDesc, rtvHandle);
-        rtvHandle.ptr += INT64(m_renderTargetViewDescriptorSize);
-    }
-
     /////////////////////////////////
 
-    for (int i = 0; i < QueueSlotCount; ++i) {
-        device().CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocators[i]));
-        device().CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocators[i].Get(), nullptr, IID_PPV_ARGS(&m_commandLists[i]));
-        m_commandLists[i]->Close();
-    }
-
-    m_viewport = { 0.0f, 0.0f,
-                   static_cast<float>(windowFramebufferWidth),
-                   static_cast<float>(windowFramebufferHeight),
-                   0.0f, 1.0f };
-    m_viewportRectScissor = { 0, 0, windowFramebufferWidth, windowFramebufferHeight };
-
-    /////////////////////////////////
-
-    // "The texture and mesh data is uploaded using an upload heap. This happens during the initialization and shows how to transfer data to the GPU.
-    //  Ideally, this should be running on the copy queue but for the sake of simplicity it is run on the general graphics queue."
-
-    // Create our upload fence, command list and command allocator. This will be only used while creating the mesh buffer and the texture to upload data to the GPU.
-    ComPtr<ID3D12Fence> uploadFence;
-    device().CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&uploadFence));
-
-    ComPtr<ID3D12CommandAllocator> uploadCommandAllocator;
-    device().CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&uploadCommandAllocator));
-    
-    ComPtr<ID3D12GraphicsCommandList> uploadCommandList;
-    device().CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, uploadCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&uploadCommandList));
-
-    // Demo impl
+    // Demo implementation
     {
-        //CreateRootSignature();
+        // "The texture and mesh data is uploaded using an upload heap. This happens during the initialization and shows how to transfer data to the GPU.
+        //  Ideally, this should be running on the copy queue but for the sake of simplicity it is run on the general graphics queue."
+
+        // Create our upload fence, command list and command allocator. This will be only used while creating the mesh buffer and the texture to upload data to the GPU.
+        ComPtr<ID3D12Fence> uploadFence;
+        device().CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&uploadFence));
+
+        ComPtr<ID3D12CommandAllocator> uploadCommandAllocator;
+        device().CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&uploadCommandAllocator));
+
+        ComPtr<ID3D12GraphicsCommandList> uploadCommandList;
+        device().CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, uploadCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&uploadCommandList));
+
+        // Create root signature
         {
-            // We have two root parameters, one is a pointer to a descriptor heap with a SRV, the second is a constant buffer view
-            CD3DX12_ROOT_PARAMETER parameters[1];
+            // NOTE: We currently aren't using this root signature, or rather, it's a no-op right now.
+
+            CD3DX12_ROOT_PARAMETER parameter;
 
             // Our constant buffer view
-            parameters[0].InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
-
-            CD3DX12_ROOT_SIGNATURE_DESC descRootSignature;
+            parameter.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
 
             // Create the root signature
-            descRootSignature.Init(1, parameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+            CD3DX12_ROOT_SIGNATURE_DESC descRootSignature;
+            descRootSignature.Init(1, &parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
             ComPtr<ID3DBlob> rootBlob;
             ComPtr<ID3DBlob> errorBlob;
@@ -181,9 +195,7 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
             }
         }
 
-        #if 1
-
-        //CreatePipelineStateObject();
+        // Create pipeline state object
         {
             static const D3D12_INPUT_ELEMENT_DESC layout[] = { { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
                                                                { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 } };
@@ -201,19 +213,26 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
                        "PS_main", "ps_5_0", 0, 0, &pixelShader, nullptr);
 
             D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+
             psoDesc.VS.BytecodeLength = vertexShader->GetBufferSize();
             psoDesc.VS.pShaderBytecode = vertexShader->GetBufferPointer();
+
             psoDesc.PS.BytecodeLength = pixelShader->GetBufferSize();
             psoDesc.PS.pShaderBytecode = pixelShader->GetBufferPointer();
+
             psoDesc.pRootSignature = m_demo.rootSignature.Get();
+
             psoDesc.NumRenderTargets = 1;
             psoDesc.RTVFormats[0] = SwapChainRenderTargetViewFormat;
             psoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+
             psoDesc.InputLayout.NumElements = std::extent<decltype(layout)>::value;
             psoDesc.InputLayout.pInputElementDescs = layout;
+
             psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-            psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+
             // Simple alpha blending
+            psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
             psoDesc.BlendState.RenderTarget[0].BlendEnable = true;
             psoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
             psoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
@@ -222,10 +241,14 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
             psoDesc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
             psoDesc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
             psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-            psoDesc.SampleDesc.Count = 1;
+
+            psoDesc.SampleDesc.Count = 1; // no multisampling
+
             psoDesc.DepthStencilState.DepthEnable = false;
             psoDesc.DepthStencilState.StencilEnable = false;
+
             psoDesc.SampleMask = 0xFFFFFFFF;
+
             psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 
             if (auto hr = device().CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_demo.pso)); FAILED(hr)) {
@@ -233,7 +256,7 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
             }
         }
 
-        //CreateMeshBuffers(uploadCommandList);
+        // Create mesh buffers
         {
             struct Vertex {
                 float position[3];
@@ -307,8 +330,7 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
             ::memcpy(static_cast<unsigned char*>(p) + sizeof(vertices), indices, sizeof(indices));
             m_demo.uploadBuffer->Unmap(0, nullptr);
 
-            // Copy data from upload buffer on CPU into the index/vertex buffer on
-            // the GPU
+            // Copy data from upload buffer on CPU into the index/vertex buffer on the GPU
             uploadCommandList->CopyBufferRegion(m_demo.vertexBuffer.Get(), 0,
                                                 m_demo.uploadBuffer.Get(), 0, sizeof(vertices));
             uploadCommandList->CopyBufferRegion(m_demo.indexBuffer.Get(), 0,
@@ -323,29 +345,25 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
             uploadCommandList->ResourceBarrier(2, barriers);
         }
 
-        #endif
+        uploadCommandList->Close();
+
+        // Execute the upload and finish the command list
+        ID3D12CommandList* commandLists[] = { uploadCommandList.Get() };
+        commandQueue().ExecuteCommandLists(std::extent<decltype(commandLists)>::value, commandLists);
+        commandQueue().Signal(uploadFence.Get(), 1);
+
+        auto waitEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+        if (waitEvent == nullptr) {
+            ARKOSE_LOG(Fatal, "D3D12Backend: could not create a wait event, exiting.");
+        }
+
+        waitForFence(uploadFence.Get(), 1, waitEvent);
+
+        // Clean up our upload handle
+        uploadCommandAllocator->Reset();
+
+        CloseHandle(waitEvent);
     }
-
-    uploadCommandList->Close();
-
-    /////////////////////////////////
-
-    // Execute the upload and finish the command list
-    ID3D12CommandList* commandLists[] = { uploadCommandList.Get() };
-    commandQueue().ExecuteCommandLists(std::extent<decltype(commandLists)>::value, commandLists);
-    commandQueue().Signal(uploadFence.Get(), 1);
-
-    auto waitEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-    if (waitEvent == nullptr) {
-        ARKOSE_LOG(Fatal, "D3D12Backend: could not create a wait event, exiting.");
-    }
-
-    waitForFence(uploadFence.Get(), 1, waitEvent);
-
-    // Clean up our upload handle
-    uploadCommandAllocator->Reset();
-
-    CloseHandle(waitEvent);
 }
 
 D3D12Backend::~D3D12Backend()
@@ -367,99 +385,99 @@ void D3D12Backend::newFrame()
 
 bool D3D12Backend::executeFrame(const Scene& scene, RenderPipeline& pipeline, float elapsedTime, float deltaTime)
 {
-    static int frameIdx = 0;
-    m_currentBackBuffer = frameIdx % QueueSlotCount;
+    bool isRelativeFirstFrame = m_relativeFrameIndex < m_frameContexts.size();
+    AppState appState { m_swapChainExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
+
+    uint32_t frameContextIndex = m_currentFrameIndex % m_frameContexts.size();
+    FrameContext& frameContext = *m_frameContexts[frameContextIndex];
+
+    // Can we not have separate frame context index from swapchain image index? Or am I just mixing up things?
+    uint32_t backBufferIndex = frameContextIndex;
 
     {
-        waitForFence(m_frameFences[m_currentBackBuffer].Get(), m_fenceValues[m_currentBackBuffer], m_frameFenceEvents[m_currentBackBuffer]);
+        SCOPED_PROFILE_ZONE_BACKEND_NAMED("Waiting for fence");
+        waitForFence(frameContext.frameFence.Get(), frameContext.frameFenceValue, frameContext.frameFenceEvent);
     }
 
-    //PrepareRender();
+    // Draw frame
     {
-        m_commandAllocators[m_currentBackBuffer]->Reset();
+        ID3D12CommandAllocator* commandAllocator = frameContext.commandAllocator.Get();
+        commandAllocator->Reset();
 
-        ID3D12GraphicsCommandList* commandList = m_commandLists[m_currentBackBuffer].Get();
-        commandList->Reset(m_commandAllocators[m_currentBackBuffer].Get(), nullptr);
+        ID3D12GraphicsCommandList* commandList = frameContext.commandList.Get();
+        commandList->Reset(commandAllocator, nullptr);
 
-        D3D12_CPU_DESCRIPTOR_HANDLE renderTargetHandle;
-        CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(renderTargetHandle, m_renderTargetDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
-                                                     m_currentBackBuffer, m_renderTargetViewDescriptorSize);
+        // Transition swapchain buffer to be a render target
+        D3D12_RESOURCE_BARRIER presentToRenderTargetBarrier;
+        presentToRenderTargetBarrier.Transition.pResource = frameContext.renderTarget.Get();
+        presentToRenderTargetBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        presentToRenderTargetBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        presentToRenderTargetBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
+        presentToRenderTargetBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        presentToRenderTargetBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        commandList->ResourceBarrier(1, &presentToRenderTargetBarrier);
 
-        commandList->OMSetRenderTargets(1, &renderTargetHandle, true, nullptr);
-        commandList->RSSetViewports(1, &m_viewport);
-        commandList->RSSetScissorRects(1, &m_viewportRectScissor);
-
-        // Transition back buffer
-        D3D12_RESOURCE_BARRIER barrier;
-        barrier.Transition.pResource = m_renderTargets[m_currentBackBuffer].Get();
-        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_PRESENT;
-        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-
-        commandList->ResourceBarrier(1, &barrier);
-
-        static const float clearColor[] = { 0.042f, 0.042f, 0.042f, 1.0f };
-        commandList->ClearRenderTargetView(renderTargetHandle, clearColor, 0, nullptr);    
-    }
-
-    auto commandList = m_commandLists[m_currentBackBuffer].Get();
-
-    //RenderImpl(commandList);
-    {
-        // base impl
+        // Render the demo
         {
+            D3D12_CPU_DESCRIPTOR_HANDLE renderTargetHandle;
+            CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(renderTargetHandle, m_renderTargetDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+                                                         backBufferIndex, m_renderTargetViewDescriptorSize);
+
+            D3D12_VIEWPORT viewport = { 0.0f, 0.0f,
+                                        static_cast<float>(m_swapChainExtent.width()),
+                                        static_cast<float>(m_swapChainExtent.height()),
+                                        0.0f, 1.0f };
+            D3D12_RECT scissorRect = { 0, 0, m_swapChainExtent.width(), m_swapChainExtent.height() };
+
+            commandList->OMSetRenderTargets(1, &renderTargetHandle, true, nullptr);
+            commandList->RSSetViewports(1, &viewport);
+            commandList->RSSetScissorRects(1, &scissorRect);
+
+            static const float clearColor[] = { 0.042f, 0.042f, 0.042f, 1.0f };
+            commandList->ClearRenderTargetView(renderTargetHandle, clearColor, 0, nullptr);
+
             // Set our state (shaders, etc.)
             commandList->SetPipelineState(m_demo.pso.Get());
 
             // Set our root signature
             commandList->SetGraphicsRootSignature(m_demo.rootSignature.Get());
-        }
 
-        // demo impl
-        {
-            
             commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
             commandList->IASetVertexBuffers(0, 1, &m_demo.vertexBufferView);
             commandList->IASetIndexBuffer(&m_demo.indexBufferView);
             commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
         }
-    }
 
-    //FinalizeRender();
-    {
         // Transition the swap chain back to present
-        D3D12_RESOURCE_BARRIER barrier;
-        barrier.Transition.pResource = m_renderTargets[m_currentBackBuffer].Get();
-        barrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-        barrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-        barrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        barrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
-        barrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-
-        auto commandList = m_commandLists[m_currentBackBuffer].Get();
-        commandList->ResourceBarrier(1, &barrier);
+        D3D12_RESOURCE_BARRIER renderTargetToPresentBarrier;
+        renderTargetToPresentBarrier.Transition.pResource = frameContext.renderTarget.Get();
+        renderTargetToPresentBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        renderTargetToPresentBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        renderTargetToPresentBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        renderTargetToPresentBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_PRESENT;
+        renderTargetToPresentBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+        commandList->ResourceBarrier(1, &renderTargetToPresentBarrier);
 
         commandList->Close();
 
-        // Execute our commands
+        // Execute our commands (i.e. submit)
         ID3D12CommandList* commandLists[] = { commandList };
         commandQueue().ExecuteCommandLists(std::extent<decltype(commandLists)>::value, commandLists);
     }
 
     // Present
     {
-        swapChain().Present(1, 0);
+        UINT syncInterval = 1; // i.e. normal vsync
+        UINT presentFlags = 0;
+        swapChain().Present(syncInterval, presentFlags);
 
-        // Mark the fence for the current frame.
-        const auto fenceValue = m_currentFenceValue;
-        commandQueue().Signal(m_frameFences[m_currentBackBuffer].Get(), fenceValue);
-        m_fenceValues[m_currentBackBuffer] = fenceValue;
-        ++m_currentFenceValue;
+        // Mark the fence for the current frame
+        frameContext.frameFenceValue = m_nextSequentialFenceValue++;
+        commandQueue().Signal(frameContext.frameFence.Get(), frameContext.frameFenceValue);
     }
 
-    frameIdx += 1;
+    m_currentFrameIndex += 1;
+    m_relativeFrameIndex += 1;
 
     return true;
 }
@@ -467,9 +485,9 @@ bool D3D12Backend::executeFrame(const Scene& scene, RenderPipeline& pipeline, fl
 void D3D12Backend::shutdown()
 {
     // Drain the queue, wait for everything to finish
-    for (int i = 0; i < QueueSlotCount; ++i) {
-        waitForFence(m_frameFences[i].Get(), m_fenceValues[i], m_frameFenceEvents[i]);
-        CloseHandle(m_frameFenceEvents[i]);
+    for (auto& frameContext : m_frameContexts) {
+        waitForFence(frameContext->frameFence.Get(), frameContext->frameFenceValue, frameContext->frameFenceEvent);
+        CloseHandle(frameContext->frameFenceEvent);
     }
 }
 

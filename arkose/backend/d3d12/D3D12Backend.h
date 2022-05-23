@@ -64,9 +64,7 @@ private:
     ComPtr<ID3D12Device> m_device {};
 
     ComPtr<IDXGISwapChain> m_swapChain {};
-
-    D3D12_VIEWPORT m_viewport {};
-    D3D12_RECT m_viewportRectScissor {};
+    Extent2D m_swapChainExtent {};
 
     int32_t m_renderTargetViewDescriptorSize {};
 
@@ -79,18 +77,24 @@ private:
     /// Frame management related members
 
     static constexpr int QueueSlotCount = 3;
-    int m_currentBackBuffer = 0;
 
-    ComPtr<ID3D12CommandAllocator> m_commandAllocators[QueueSlotCount];
-    ComPtr<ID3D12GraphicsCommandList> m_commandLists[QueueSlotCount];
+    uint32_t m_currentFrameIndex { 0 };
+    uint32_t m_relativeFrameIndex { 0 };
 
-    HANDLE m_frameFenceEvents[QueueSlotCount];
-    ComPtr<ID3D12Fence> m_frameFences[QueueSlotCount];
+    UINT64 m_nextSequentialFenceValue { 1 };
 
-    ComPtr<ID3D12Resource> m_renderTargets[QueueSlotCount];
+    struct FrameContext {
+        ComPtr<ID3D12Fence> frameFence;
+        HANDLE frameFenceEvent;
+        UINT64 frameFenceValue;
 
-    UINT64 m_currentFenceValue {};
-    UINT64 m_fenceValues[QueueSlotCount];
+        ComPtr<ID3D12CommandAllocator> commandAllocator;
+        ComPtr<ID3D12GraphicsCommandList> commandList;
+
+        ComPtr<ID3D12Resource> renderTarget;
+    };
+
+    std::array<std::unique_ptr<FrameContext>, QueueSlotCount> m_frameContexts {};
 
     ComPtr<ID3D12DescriptorHeap> m_renderTargetDescriptorHeap;
 
