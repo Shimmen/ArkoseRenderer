@@ -49,17 +49,20 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
         ARKOSE_LOG(Fatal, "D3D12Backend: could not create the device, exiting.");
     }
 
-    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-    queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-    queueDesc.NodeMask = 0;
-    
-    if (d3d12debugMode) {
-        queueDesc.Flags |= D3D12_COMMAND_QUEUE_FLAG_DISABLE_GPU_TIMEOUT;
-    }
+    // Create the default / direct / graphics command queue
+    {
+        D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+        queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+        queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+        queueDesc.NodeMask = 0;
 
-    if (auto hr = device().CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)); FAILED(hr)) {
-        ARKOSE_LOG(Fatal, "D3D12Backend: could not create the default command queue, exiting.");
+        if (d3d12debugMode) {
+            queueDesc.Flags |= D3D12_COMMAND_QUEUE_FLAG_DISABLE_GPU_TIMEOUT;
+        }
+
+        if (auto hr = device().CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)); FAILED(hr)) {
+            ARKOSE_LOG(Fatal, "D3D12Backend: could not create the default command queue, exiting.");
+        }
     }
 
     ComPtr<IDXGIFactory4> dxgiFactory;
@@ -158,19 +161,6 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
 
     // Demo implementation
     {
-        // "The texture and mesh data is uploaded using an upload heap. This happens during the initialization and shows how to transfer data to the GPU.
-        //  Ideally, this should be running on the copy queue but for the sake of simplicity it is run on the general graphics queue."
-
-        // Create our upload fence, command list and command allocator. This will be only used while creating the mesh buffer and the texture to upload data to the GPU.
-        ComPtr<ID3D12Fence> uploadFence;
-        device().CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&uploadFence));
-
-        ComPtr<ID3D12CommandAllocator> uploadCommandAllocator;
-        device().CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&uploadCommandAllocator));
-
-        ComPtr<ID3D12GraphicsCommandList> uploadCommandList;
-        device().CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, uploadCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&uploadCommandList));
-
         // Create root signature
         {
             // NOTE: We currently aren't using this root signature, or rather, it's a no-op right now.
@@ -330,39 +320,24 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
             ::memcpy(static_cast<unsigned char*>(p) + sizeof(vertices), indices, sizeof(indices));
             m_demo.uploadBuffer->Unmap(0, nullptr);
 
-            // Copy data from upload buffer on CPU into the index/vertex buffer on the GPU
-            uploadCommandList->CopyBufferRegion(m_demo.vertexBuffer.Get(), 0,
-                                                m_demo.uploadBuffer.Get(), 0, sizeof(vertices));
-            uploadCommandList->CopyBufferRegion(m_demo.indexBuffer.Get(), 0,
-                                                m_demo.uploadBuffer.Get(), sizeof(vertices), sizeof(indices));
+            issueUploadCommand([this](ID3D12GraphicsCommandList& uploadCommandList) {
 
-            // Barriers, batch them together
-            const CD3DX12_RESOURCE_BARRIER barriers[2] = {
-                CD3DX12_RESOURCE_BARRIER::Transition(m_demo.vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER),
-                CD3DX12_RESOURCE_BARRIER::Transition(m_demo.indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER)
-            };
+                // Copy data from upload buffer on CPU into the index/vertex buffer on the GPU
+                uploadCommandList.CopyBufferRegion(m_demo.vertexBuffer.Get(), 0,
+                                                   m_demo.uploadBuffer.Get(), 0, sizeof(vertices));
+                uploadCommandList.CopyBufferRegion(m_demo.indexBuffer.Get(), 0,
+                                                   m_demo.uploadBuffer.Get(), sizeof(vertices), sizeof(indices));
 
-            uploadCommandList->ResourceBarrier(2, barriers);
+                // Barriers, batch them together
+                const CD3DX12_RESOURCE_BARRIER barriers[2] = {
+                    CD3DX12_RESOURCE_BARRIER::Transition(m_demo.vertexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER),
+                    CD3DX12_RESOURCE_BARRIER::Transition(m_demo.indexBuffer.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_INDEX_BUFFER)
+                };
+
+                uploadCommandList.ResourceBarrier(2, barriers);
+
+            });
         }
-
-        uploadCommandList->Close();
-
-        // Execute the upload and finish the command list
-        ID3D12CommandList* commandLists[] = { uploadCommandList.Get() };
-        commandQueue().ExecuteCommandLists(std::extent<decltype(commandLists)>::value, commandLists);
-        commandQueue().Signal(uploadFence.Get(), 1);
-
-        auto waitEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-        if (waitEvent == nullptr) {
-            ARKOSE_LOG(Fatal, "D3D12Backend: could not create a wait event, exiting.");
-        }
-
-        waitForFence(uploadFence.Get(), 1, waitEvent);
-
-        // Clean up our upload handle
-        uploadCommandAllocator->Reset();
-
-        CloseHandle(waitEvent);
     }
 }
 
@@ -493,10 +468,56 @@ void D3D12Backend::shutdown()
 
 void D3D12Backend::waitForFence(ID3D12Fence* fence, UINT64 completionValue, HANDLE waitEvent) const
 {
-    if (fence->GetCompletedValue() < completionValue) {
-        fence->SetEventOnCompletion(completionValue, waitEvent);
-        WaitForSingleObject(waitEvent, INFINITE);
+    if (fence->GetCompletedValue() >= completionValue) {
+        return;
     }
+
+    if (auto hr = fence->SetEventOnCompletion(completionValue, waitEvent); FAILED(hr)) {
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not attach event to fence value completion, exiting.");
+    }
+
+    if (WaitForSingleObject(waitEvent, INFINITE) != WAIT_OBJECT_0) {
+        ARKOSE_LOG(Error, "D3D12Backend: failed waiting for event (for fence), exiting.");
+    }
+}
+
+void D3D12Backend::issueUploadCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const
+{
+    // "The texture and mesh data is uploaded using an upload heap. This happens during the initialization and shows how to transfer data to the GPU.
+    //  Ideally, this should be running on the copy queue but for the sake of simplicity it is run on the general graphics queue."
+
+    // Create our upload fence, command list and command allocator. This will be only used while creating the mesh buffer and the texture to upload data to the GPU.
+    ComPtr<ID3D12Fence> uploadFence;
+    if (auto hr = device().CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&uploadFence)); FAILED(hr)) {
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not create fence for one-off upload command, exiting.");
+    }
+
+    ComPtr<ID3D12CommandAllocator> uploadCommandAllocator;
+    if (auto hr = device().CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&uploadCommandAllocator)); FAILED(hr)) {
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not create command allocator for one-off upload command, exiting.");
+    }
+
+    ComPtr<ID3D12GraphicsCommandList> uploadCommandList;
+    if (auto hr = device().CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, uploadCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&uploadCommandList)); FAILED(hr)) {
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not create command list for one-off upload command, exiting.");
+    }
+
+    callback(*uploadCommandList.Get());
+
+    uploadCommandList->Close();
+
+    ID3D12CommandList* commandLists[] = { uploadCommandList.Get() };
+    m_commandQueue->ExecuteCommandLists(std::extent<decltype(commandLists)>::value, commandLists);
+    m_commandQueue->Signal(uploadFence.Get(), 1);
+
+    auto waitEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+    ARKOSE_ASSERT(waitEvent != nullptr);
+
+    waitForFence(uploadFence.Get(), 1, waitEvent);
+
+    uploadCommandAllocator->Reset();
+    CloseHandle(waitEvent);
+
 }
 
 std::unique_ptr<Buffer> D3D12Backend::createBuffer(size_t size, Buffer::Usage usage, Buffer::MemoryHint memoryHint)

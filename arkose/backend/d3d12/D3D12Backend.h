@@ -50,10 +50,14 @@ public:
     /// Utilities
 
     ID3D12Device& device() { return *m_device.Get(); }
+    ID3D12Device& device() const { return *m_device.Get(); }
+
     IDXGISwapChain& swapChain() { return *m_swapChain.Get(); }
     ID3D12CommandQueue& commandQueue() { return *m_commandQueue.Get(); }
 
     void waitForFence(ID3D12Fence* fence, UINT64 completionValue, HANDLE waitEvent) const;
+
+    void issueUploadCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const;
 
 private:
     ///////////////////////////////////////////////////////////////////////////
