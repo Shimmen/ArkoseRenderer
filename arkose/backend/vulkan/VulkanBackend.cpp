@@ -1312,6 +1312,38 @@ void VulkanBackend::destroyDearImgui()
 
 void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameContext& frameContext, SwapchainImageContext& swapchainImageContext)
 {
+    VulkanTexture& swapchainTexture = *swapchainImageContext.mockColorTexture;
+    if (swapchainTexture.currentLayout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+
+        // Performing explicit swapchain layout transition. This should only happen if we haven't rendered anything before GUI.
+
+        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        imageBarrier.oldLayout = swapchainTexture.currentLayout;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        imageBarrier.image = swapchainTexture.image;
+        imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageBarrier.subresourceRange.baseMipLevel = 0;
+        imageBarrier.subresourceRange.levelCount = 1;
+        imageBarrier.subresourceRange.baseArrayLayer = 0;
+        imageBarrier.subresourceRange.layerCount = 1;
+
+        // Wait for all color attachment writes ...
+        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
+        imageBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        // ... before allowing it can be read or written to
+        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT |VK_ACCESS_MEMORY_WRITE_BIT;
+
+        vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0,
+                             0, nullptr,
+                             0, nullptr,
+                             1, &imageBarrier);
+    }
+
     VkRenderPassBeginInfo passBeginInfo = {};
     passBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     passBeginInfo.renderPass = m_guiRenderTargetForPresenting->compatibleRenderPass;
@@ -1331,7 +1363,6 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameCon
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
     vkCmdEndRenderPass(commandBuffer);
 
-    VulkanTexture& swapchainTexture = *swapchainImageContext.mockColorTexture;
     swapchainTexture.currentLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 }
 
