@@ -47,9 +47,9 @@ public:
     void renderPipelineDidChange(RenderPipeline&) override;
     void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline&) override;
 
-    void shutdown();
+    void shutdown() override;
 
-    void newFrame();
+    void newFrame() override;
     bool executeFrame(const Scene&, RenderPipeline&, float elapsedTime, float deltaTime) override;
 
     int vramStatsReportRate() const override { return VramStatsQueryRate; }
