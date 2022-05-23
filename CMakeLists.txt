@@ -26,6 +26,7 @@ add_subdirectory(deps)
 add_executable(ArkoseRenderer
     ${TRACY_CLIENT_SOURCE}
     arkose/main.cpp
+    arkose/apps/BootstrappingApp.cpp
     arkose/apps/ShowcaseApp.cpp
     arkose/backend/Resource.cpp
     arkose/backend/shader/Shader.cpp
@@ -43,6 +44,14 @@ add_executable(ArkoseRenderer
     arkose/core/parallel/TaskGraph.cpp
     arkose/backend/util/StateBindings.cpp
     arkose/backend/util/UploadBuffer.cpp
+    arkose/backend/d3d12/D3D12Backend.cpp
+    arkose/backend/d3d12/D3D12BindingSet.cpp
+    arkose/backend/d3d12/D3D12Buffer.cpp
+    arkose/backend/d3d12/D3D12CommandList.cpp
+    arkose/backend/d3d12/D3D12ComputeState.cpp
+    arkose/backend/d3d12/D3D12RenderState.cpp
+    arkose/backend/d3d12/D3D12RenderTarget.cpp
+    arkose/backend/d3d12/D3D12Texture.cpp
     arkose/backend/vulkan/VulkanBackend.cpp
     arkose/backend/vulkan/VulkanBindingSet.cpp
     arkose/backend/vulkan/VulkanBuffer.cpp
@@ -120,6 +129,7 @@ target_link_libraries(ArkoseRenderer PRIVATE
     tracy
     Vulkan::Vulkan
     VulkanMemoryAllocator
+    d3d12
     )
 
 ##################################

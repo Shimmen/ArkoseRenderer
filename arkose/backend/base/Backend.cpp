@@ -1,5 +1,6 @@
 #include "Backend.h"
 
+#include "backend/d3d12/D3D12Backend.h"
 #include "backend/vulkan/VulkanBackend.h"
 
 Backend* Backend::s_globalBackend { nullptr };
@@ -11,6 +12,9 @@ Backend& Backend::create(Backend::Type backendType, GLFWwindow* window, const Ba
     switch (backendType) {
     case Backend::Type::Vulkan:
         s_globalBackend = new VulkanBackend({}, window, appSpecification);
+        break;
+    case Backend::Type::D3D12:
+        s_globalBackend = new D3D12Backend({}, window, appSpecification);
         break;
     }
 

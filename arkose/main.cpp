@@ -9,7 +9,7 @@
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
 
-#include "app-selector.h"
+#include "settings.h"
 
 enum class WindowType {
     Windowed,
@@ -29,6 +29,10 @@ GLFWwindow* createWindow(Backend::Type backendType, WindowType windowType, const
         }
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         windowTitle += " [Vulkan]";
+        break;
+    case Backend::Type::D3D12:
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        windowTitle += " [D3D12]";
         break;
     }
 
@@ -69,7 +73,7 @@ int main(int argc, char** argv)
         ARKOSE_LOG(Fatal, "could not initialize GLFW, exiting.");
     }
 
-    auto backendType = Backend::Type::Vulkan;
+    auto backendType = SelectedBackendType;
     GLFWwindow* window = createWindow(backendType, WindowType::Windowed, { 1920, 1080 });
     Input::registerWindow(window);
 

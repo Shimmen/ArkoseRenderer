@@ -29,7 +29,8 @@ protected:
 public:
 
     enum class Type {
-        Vulkan
+        Vulkan,
+        D3D12,
     };
 
     enum class Capability {
