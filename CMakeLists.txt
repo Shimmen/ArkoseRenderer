@@ -12,7 +12,6 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 find_package(Vulkan REQUIRED)
 find_package(Shaderc REQUIRED)
-find_package(SpirvCross REQUIRED)
 
 ##################################
 # In-tree built dependencies
@@ -123,7 +122,7 @@ target_link_libraries(ArkoseRenderer PRIVATE
     mooslib
     nlohmann_json::nlohmann_json
     Shaderc::Shaderc
-    SpirvCross::SpirvCross
+    spirv-cross-core
     stb_image
     tiny_gltf
     tracy
