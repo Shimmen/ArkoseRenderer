@@ -37,6 +37,13 @@ void FileIO::ensureDirectoryForFile(const std::string& filePath)
     ensureDirectory(directoryPath);
 }
 
+void FileIO::writeTextDataToFile(const std::string& filePath, const std::string& text)
+{
+    const char* textData = text.data();
+    size_t sizeInBytes = text.size();
+    writeBinaryDataToFile(filePath, textData, sizeInBytes);
+}
+
 void FileIO::writeBinaryDataToFile(const std::string& filePath, const char* data, size_t size)
 {
     SCOPED_PROFILE_ZONE();

@@ -33,6 +33,7 @@ std::optional<std::vector<T>> readBinaryDataFromFile(const std::string& filePath
     return binaryData;
 }
 
+void writeTextDataToFile(const std::string& filePath, const std::string& text);
 void writeBinaryDataToFile(const std::string& filePath, const char* data, size_t size);
 
 template<typename T>
