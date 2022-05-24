@@ -1623,7 +1623,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
     if (hasEnabledDeviceExtension(VK_EXT_MEMORY_BUDGET_EXTENSION_NAME) && m_currentFrameIndex % VramStatsQueryRate == 0) {
         SCOPED_PROFILE_ZONE_BACKEND_NAMED("Querying GPU memory budget");
-        ARKOSE_LOG(Verbose, "Querying GPU memory heaps (use / budget):");
+        //ARKOSE_LOG(Verbose, "Querying GPU memory heaps (use / budget):");
 
         VkPhysicalDeviceMemoryBudgetPropertiesEXT budgetProperties { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_BUDGET_PROPERTIES_EXT };
         VkPhysicalDeviceMemoryProperties2 memoryProperties2 { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MEMORY_PROPERTIES_2 };
@@ -1648,7 +1648,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
                 stats.totalUsed += heapUsage;
 
 
-                ARKOSE_LOG(Verbose, " heap{}: {:.2f} / {:.2f} GB", heapIdx, conversion::to::GB(heapUsage), conversion::to::GB(heapBudget));
+                //ARKOSE_LOG(Verbose, " heap{}: {:.2f} / {:.2f} GB", heapIdx, conversion::to::GB(heapUsage), conversion::to::GB(heapBudget));
             }
         }
 
@@ -1669,7 +1669,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
             }
         }
 
-        ARKOSE_LOG(Verbose, "Total GPU memory usage: {:.2f} GB", conversion::to::GB(stats.totalUsed));
+        //ARKOSE_LOG(Verbose, "Total GPU memory usage: {:.2f} GB", conversion::to::GB(stats.totalUsed));
 
         m_lastQueriedVramStats = stats;
     }
