@@ -8,9 +8,10 @@
 #include "backend/d3d12/D3D12Texture.h"
 #include "core/Logging.h"
 #include "rendering/AppState.h"
+#include "utility/FileIO.h"
 
-// The (old, up to SM5) d3d HLSL compiler
-#include <d3dcompiler.h>
+// The DirectX Compiler API
+#include <dxcapi.h>
 
 // Surface setup
 #include <dxgi1_4.h>
@@ -40,6 +41,11 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
         ComPtr<ID3D12Debug> debugController;
         D3D12GetDebugInterface(IID_PPV_ARGS(&debugController));
         debugController->EnableDebugLayer();
+    }
+
+    // Enable "experimental" feature of shader model 6
+    if (auto hr = D3D12EnableExperimentalFeatures(1, &D3D12ExperimentalShaderModels, nullptr, 0); FAILED(hr)) {
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not enable shader model 6 support, exiting.");
     }
 
     if (auto hr = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_device)); FAILED(hr)) {
@@ -187,25 +193,80 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
             static const D3D12_INPUT_ELEMENT_DESC layout[] = { { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
                                                                { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 } };
 
-            static const D3D_SHADER_MACRO macros[] = { { "D3D12_SAMPLE_BASIC", "1" }, { nullptr, nullptr } };
+            ComPtr<IDxcLibrary> library;
+            if (auto hr = DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library)); FAILED(hr)) {
+                ARKOSE_LOG(Fatal, "D3D12Backend: failed to create dxc library, exiting.");
+            }
 
-            ComPtr<ID3DBlob> vertexShader;
-            D3DCompile(m_demo.shaders, sizeof(m_demo.shaders),
-                       "", macros, nullptr,
-                       "VS_main", "vs_5_0", 0, 0, &vertexShader, nullptr);
+            ComPtr<IDxcCompiler> compiler;
+            if (auto hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)); FAILED(hr)) {
+                ARKOSE_LOG(Fatal, "D3D12Backend: failed to create dxc compiler, exiting.");
+            }
+                
+            auto compileHlslFile = [&](const wchar_t* filePath, const wchar_t* entryPoint, const wchar_t* shaderModel, std::vector<DxcDefine> defines = {}) -> ComPtr<IDxcBlob> {
+                
+                // TODO: Probably use library->CreateBlobWithEncodingFromPinned(..) to create from text instead of a file
 
-            ComPtr<ID3DBlob> pixelShader;
-            D3DCompile(m_demo.shaders, sizeof(m_demo.shaders),
-                       "", macros, nullptr,
-                       "PS_main", "ps_5_0", 0, 0, &pixelShader, nullptr);
+                // NOTE: This code will produced unsigned binaries which will generate D3D12 warnings in the output log. There are fixes to this,
+                //       but it's a bit complex for this little test funciton I have right now. When we want to add proper shader compilation, and
+                //       probably also go through HLSL->DXIL->runtime, we should implement this fully. Here are some useful links:
+                //       https://github.com/microsoft/DirectXShaderCompiler/issues/2550
+                //       https://www.wihlidal.com/blog/pipeline/2018-09-16-dxil-signing-post-compile/
+                //       https://github.com/gwihlidal/dxil-signing
+
+                // Always just assume UTF-8 for the input file
+                uint32_t codePage = CP_UTF8;
+
+                ComPtr<IDxcBlobEncoding> sourceBlob;
+                if (auto hr = library->CreateBlobFromFile(filePath, &codePage, &sourceBlob); FAILED(hr)) {
+                    ARKOSE_LOG(Fatal, "D3D12Backend: failed to create source blob for shader, exiting.");
+                }
+
+                ComPtr<IDxcOperationResult> compilationResult;
+                auto hr = compiler->Compile(sourceBlob.Get(), filePath,
+                                            entryPoint, shaderModel,
+                                            nullptr, 0,
+                                            defines.data(), UINT32(defines.size()),
+                                            nullptr, // generated HLSL code, no includes needed
+                                            &compilationResult);
+                    
+                if (SUCCEEDED(hr)) {
+                    compilationResult->GetStatus(&hr);
+                }
+
+                if (FAILED(hr)) {
+                    if (compilationResult) {
+                        ComPtr<IDxcBlobEncoding> errorsBlob;
+                        hr = compilationResult->GetErrorBuffer(&errorsBlob);
+                        if (SUCCEEDED(hr) && errorsBlob) {
+                            auto* errorMessage = reinterpret_cast<const char*>(errorsBlob->GetBufferPointer());
+                            ARKOSE_LOG(Fatal, "D3D12Backend: failed to compile generated HLSL: {}", errorMessage);
+                        }
+                    }
+                } else {
+                    ComPtr<IDxcBlob> compiledCode;
+                    if (auto hr = compilationResult->GetResult(&compiledCode); FAILED(hr)) {
+                        ARKOSE_LOG(Fatal, "D3D12Backend: failed to get dxc compilation results, exiting.");
+                    }
+
+                    return compiledCode;
+                }
+
+                return nullptr;
+            };
+
+            const wchar_t* hlslSourceName = L"shaders/d3d12-bootstrap/demo.hlsl";
+            DxcDefine define { .Name = L"D3D12_SAMPLE_BASIC", .Value = L"1" };
+            ComPtr<IDxcBlob> vertexCode = compileHlslFile(hlslSourceName, L"VS_main", L"vs_6_0", { define });
+            ComPtr<IDxcBlob> pixelCode = compileHlslFile(hlslSourceName, L"PS_main", L"ps_6_0", { define });
 
             D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 
-            psoDesc.VS.BytecodeLength = vertexShader->GetBufferSize();
-            psoDesc.VS.pShaderBytecode = vertexShader->GetBufferPointer();
+            psoDesc.VS.BytecodeLength = vertexCode->GetBufferSize();
+            psoDesc.VS.pShaderBytecode = vertexCode->GetBufferPointer();
 
-            psoDesc.PS.BytecodeLength = pixelShader->GetBufferSize();
-            psoDesc.PS.pShaderBytecode = pixelShader->GetBufferPointer();
+            psoDesc.PS.BytecodeLength = pixelCode->GetBufferSize();
+            psoDesc.PS.pShaderBytecode = pixelCode->GetBufferPointer();
 
             psoDesc.pRootSignature = m_demo.rootSignature.Get();
 
@@ -252,13 +313,13 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
 
             const Vertex vertices[4] = {
                 // Upper Left
-                { { -1.0f, 1.0f, 0 }, { 0, 0 } },
+                { { -0.5f, 0.5f, 0 }, { 0, 0 } },
                 // Upper Right
-                { { 1.0f, 1.0f, 0 }, { 1, 0 } },
+                { { 0.5f, 0.5f, 0 }, { 1, 0 } },
                 // Bottom right
-                { { 1.0f, -1.0f, 0 }, { 1, 1 } },
+                { { 0.5f, -0.5f, 0 }, { 1, 1 } },
                 // Bottom left
-                { { -1.0f, -1.0f, 0 }, { 0, 1 } }
+                { { -0.5f, -0.5f, 0 }, { 0, 1 } }
             };
 
             const int indices[6] = {

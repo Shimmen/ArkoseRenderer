@@ -132,7 +132,8 @@ target_link_libraries(ArkoseRenderer PRIVATE
     VulkanMemoryAllocator
 
     # D3D12 backend
-    d3d12 dxgi d3dcompiler dxguid  # core stuff
+    d3d12 dxgi dxguid  # core stuff
+    dxcompiler # for HLSL shader compilation
     DirectX-Headers # utility stuff, e.g. CD3DX12
     spirv-cross-hlsl # for spirv->hlsl
     )
