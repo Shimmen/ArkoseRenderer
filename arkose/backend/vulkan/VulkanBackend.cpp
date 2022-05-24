@@ -20,7 +20,7 @@
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
-#include <spirv_cross/spirv_cross.hpp>
+#include <spirv_cross.hpp>
 #include <unordered_map>
 #include <unordered_set>
 
