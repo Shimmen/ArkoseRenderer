@@ -9,7 +9,7 @@
 #include "core/Logging.h"
 #include "rendering/AppState.h"
 
-// The d3d HLSL compiler
+// The (old, up to SM5) d3d HLSL compiler
 #include <d3dcompiler.h>
 
 // Surface setup

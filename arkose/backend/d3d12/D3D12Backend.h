@@ -1,7 +1,8 @@
 #include "backend/base/Backend.h"
 
 #include "backend/d3d12/D3D12Common.h"
-#include <dxgi.h>
+struct IDXGISwapChain;
+
 
 static constexpr bool d3d12debugMode = true;
 

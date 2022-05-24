@@ -1,6 +1,6 @@
 #include "backend/base/CommandList.h"
 
-#include "backend/d3d12/D3D12Backend.h"
+class D3D12Backend;
 
 class D3D12CommandList final : public CommandList {
 public:
