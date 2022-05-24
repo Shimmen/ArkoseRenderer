@@ -126,10 +126,15 @@ target_link_libraries(ArkoseRenderer PRIVATE
     stb_image
     tiny_gltf
     tracy
+
+    # Vulkan backend
     Vulkan::Vulkan
     VulkanMemoryAllocator
-    d3dcompiler dxguid d3d12 dxgi # core stuff
-    DirectX-Headers # utility stuff
+
+    # D3D12 backend
+    d3d12 dxgi d3dcompiler dxguid  # core stuff
+    DirectX-Headers # utility stuff, e.g. CD3DX12
+    spirv-cross-hlsl # for spirv->hlsl
     )
 
 ##################################
