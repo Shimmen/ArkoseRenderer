@@ -26,6 +26,7 @@ public:
 
     std::string resolveSpirvPath(const ShaderFile&) const;
     std::string resolveSpirvAssemblyPath(const ShaderFile&) const;
+    std::string resolveHlslPath(const ShaderFile&) const;
 
     std::optional<std::string> loadAndCompileImmediately(const ShaderFile&);
 

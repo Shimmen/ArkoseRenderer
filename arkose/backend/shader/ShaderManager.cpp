@@ -10,6 +10,7 @@
 #include <thread>
 #include <sys/stat.h>
 #include <shaderc/shaderc.hpp>
+#include <spirv_hlsl.hpp>
 
 static shaderc_shader_kind glslShaderKindForShaderFile(const ShaderFile& shaderFile)
 {
@@ -196,6 +197,13 @@ std::string ShaderManager::resolveSpirvAssemblyPath(const ShaderFile& shaderFile
     return resolvedPath;
 }
 
+std::string ShaderManager::resolveHlslPath(const ShaderFile& shaderFile) const
+{
+    std::string hlslName = createShaderIdentifier(shaderFile) + ".hlsl";
+    std::string resolvedPath = m_shaderBasePath + "/.cache/" + hlslName;
+    return resolvedPath;
+}
+
 std::optional<std::string> ShaderManager::loadAndCompileImmediately(const ShaderFile& shaderFile)
 {
     std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
@@ -319,9 +327,26 @@ bool ShaderManager::CompiledShader::recompile()
 
         {
             // NOTE: This causes a weird crash in ShaderC for some reason *for some shaders*
-            //SCOPED_PROFILE_ZONE_NAMED("ShaderC ASM work");
+            //SCOPED_PROFILE_ZONE_NAMED("SPIR-V binary to ASM");
             //shaderc::AssemblyCompilationResult asmResult = compiler.CompileGlslToSpvAssembly(glslSource, shaderKind, resolvedFilePath.c_str(), options);
             //FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvAssemblyPath(shaderFile), std::vector<char>(asmResult.cbegin(), asmResult.cend()));
+        }
+
+        {
+            SCOPED_PROFILE_ZONE_NAMED("SPIR-V to HLSL");
+
+            spirv_cross::CompilerHLSL::Options options {};
+            options.shader_model = 66; // i.e. shader model 6.6
+
+            spirv_cross::CompilerHLSL hlslCompiler { currentSpirvBinary };
+            hlslCompiler.set_hlsl_options(options);
+
+            try {
+                std::string hlsl = hlslCompiler.compile();
+                FileIO::writeBinaryDataToFile(shaderManager.resolveHlslPath(shaderFile), hlsl.data(), hlsl.size());
+            } catch (const spirv_cross::CompilerError& compilerError) {
+                ARKOSE_LOG(Verbose, "Failed to compile '{}' to HLSL: {}. Ignoring, for now.", shaderFile.path(), compilerError.what());
+            }
         }
 
     } else {
