@@ -40,7 +40,7 @@ FetchContent_Declare(vulkan_memory_allocator
 
 FetchContent_Declare(directx_headers
     GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
-    GIT_TAG        "v1.0.2")
+    GIT_TAG        "v1.602.0")
 
 ##################################
 # FetchContent dependencies without cmake files
