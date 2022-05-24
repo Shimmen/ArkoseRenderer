@@ -62,19 +62,22 @@ public:
 
 private:
     ///////////////////////////////////////////////////////////////////////////
+    /// Utility functions
+
+    ComPtr<ID3D12Device> createDeviceAtMaxSupportedFeatureLevel() const;
+    ComPtr<ID3D12CommandQueue> createDefaultCommandQueue() const;
+    ComPtr<IDXGISwapChain> createSwapChain(GLFWwindow*, ID3D12CommandQueue*) const;
+
+    ///////////////////////////////////////////////////////////////////////////
     /// Window and swapchain related members
 
     GLFWwindow* m_window;
-    
+    Extent2D m_windowFramebufferExtent { 0, 0 };
+
     ComPtr<ID3D12Device> m_device {};
-
-    ComPtr<IDXGISwapChain> m_swapChain {};
-    Extent2D m_swapChainExtent {};
-
-    int32_t m_renderTargetViewDescriptorSize {};
-
     ComPtr<ID3D12CommandQueue> m_commandQueue {};
 
+    ComPtr<IDXGISwapChain> m_swapChain {};
     static constexpr DXGI_FORMAT SwapChainFormat                 = DXGI_FORMAT_R8G8B8A8_UNORM;
     static constexpr DXGI_FORMAT SwapChainRenderTargetViewFormat = DXGI_FORMAT_R8G8B8A8_UNORM_SRGB;
 
@@ -105,6 +108,9 @@ private:
 
     ///////////////////////////////////////////////////////////////////////////
     /// Demo stuff
+
+    // kind of demo stuff
+    int32_t m_renderTargetViewDescriptorSize {};
 
     struct Demo {
 

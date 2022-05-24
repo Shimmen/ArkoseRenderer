@@ -30,11 +30,10 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
     //
 
     int windowFramebufferWidth, windowFramebufferHeight;
-    glfwGetFramebufferSize(m_window, &windowFramebufferWidth, &windowFramebufferHeight);
-
-    m_swapChainExtent = Extent2D(windowFramebufferWidth, windowFramebufferHeight);
+    glfwGetFramebufferSize(window, &windowFramebufferWidth, &windowFramebufferHeight);
+    m_windowFramebufferExtent = { windowFramebufferWidth, windowFramebufferHeight };
     //glfwSetFramebufferSizeCallback(window, static_cast<GLFWframebuffersizefun>([](GLFWwindow* window, int width, int height) {
-    //                                   m_swapChainExtent = Extent2D(width, height);
+    //                                   m_windowFramebufferExtent = Extent2D(width, height);
     //                               }));
 
     if constexpr (d3d12debugMode) {
@@ -48,51 +47,9 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
         ARKOSE_LOG(Fatal, "D3D12Backend: could not enable shader model 6 support, exiting.");
     }
 
-    if (auto hr = D3D12CreateDevice(nullptr, D3D_FEATURE_LEVEL_12_0, IID_PPV_ARGS(&m_device)); FAILED(hr)) {
-        ARKOSE_LOG(Fatal, "D3D12Backend: could not create the device, exiting.");
-    }
-
-    // Create the default / direct / graphics command queue
-    {
-        D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-        queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-        queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-        queueDesc.NodeMask = 0;
-
-        if (d3d12debugMode) {
-            queueDesc.Flags |= D3D12_COMMAND_QUEUE_FLAG_DISABLE_GPU_TIMEOUT;
-        }
-
-        if (auto hr = device().CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)); FAILED(hr)) {
-            ARKOSE_LOG(Fatal, "D3D12Backend: could not create the default command queue, exiting.");
-        }
-    }
-
-    ComPtr<IDXGIFactory4> dxgiFactory;
-    if (auto hr = CreateDXGIFactory1(IID_PPV_ARGS(&dxgiFactory)); FAILED(hr)) {
-        ARKOSE_LOG(Fatal, "D3D12Backend: could not create the DXGI factory, exiting.");
-    }
-
-    DXGI_SWAP_CHAIN_DESC swapChainDesc;
-    ::ZeroMemory(&swapChainDesc, sizeof(swapChainDesc));
-    
-    swapChainDesc.BufferDesc.Format = SwapChainFormat;
-    swapChainDesc.BufferDesc.Width = windowFramebufferWidth;
-    swapChainDesc.BufferDesc.Height = windowFramebufferHeight;
-
-    swapChainDesc.SampleDesc.Count = 1; // No multisampling into the swap chain
-
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-    swapChainDesc.BufferCount = QueueSlotCount;
-    
-    swapChainDesc.OutputWindow = glfwGetWin32Window(m_window);
-    swapChainDesc.Windowed = glfwGetWindowMonitor(m_window) == nullptr;
-    
-    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-
-    if (auto hr = dxgiFactory->CreateSwapChain(m_commandQueue.Get(), &swapChainDesc, &m_swapChain); FAILED(hr)) {
-        ARKOSE_LOG(Fatal, "D3D12Backend: could not create a swapchain, exiting.");
-    }
+    m_device = createDeviceAtMaxSupportedFeatureLevel();
+    m_commandQueue = createDefaultCommandQueue();
+    m_swapChain = createSwapChain(m_window, m_commandQueue.Get());
 
     /////////////////////////////////
 
@@ -367,7 +324,7 @@ void D3D12Backend::newFrame()
 bool D3D12Backend::executeFrame(const Scene& scene, RenderPipeline& pipeline, float elapsedTime, float deltaTime)
 {
     bool isRelativeFirstFrame = m_relativeFrameIndex < m_frameContexts.size();
-    AppState appState { m_swapChainExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
+    AppState appState { m_windowFramebufferExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
 
     uint32_t frameContextIndex = m_currentFrameIndex % m_frameContexts.size();
     FrameContext& frameContext = *m_frameContexts[frameContextIndex];
@@ -405,10 +362,10 @@ bool D3D12Backend::executeFrame(const Scene& scene, RenderPipeline& pipeline, fl
                                                          backBufferIndex, m_renderTargetViewDescriptorSize);
 
             D3D12_VIEWPORT viewport = { 0.0f, 0.0f,
-                                        static_cast<float>(m_swapChainExtent.width()),
-                                        static_cast<float>(m_swapChainExtent.height()),
+                                        static_cast<float>(m_windowFramebufferExtent.width()),
+                                        static_cast<float>(m_windowFramebufferExtent.height()),
                                         0.0f, 1.0f };
-            D3D12_RECT scissorRect = { 0, 0, LONG(m_swapChainExtent.width()), LONG(m_swapChainExtent.height()) };
+            D3D12_RECT scissorRect = { 0, 0, LONG(m_windowFramebufferExtent.width()), LONG(m_windowFramebufferExtent.height()) };
 
             commandList->OMSetRenderTargets(1, &renderTargetHandle, true, nullptr);
             commandList->RSSetViewports(1, &viewport);
@@ -603,6 +560,106 @@ void D3D12Backend::issueUploadCommand(const std::function<void(ID3D12GraphicsCom
     uploadCommandAllocator->Reset();
     CloseHandle(waitEvent);
 
+}
+
+ComPtr<ID3D12Device> D3D12Backend::createDeviceAtMaxSupportedFeatureLevel() const
+{
+    ComPtr<ID3D12Device> device;
+
+    // Create device at the min-spec feature level for Arkose
+    constexpr D3D_FEATURE_LEVEL minSpecFeatureLevel { D3D_FEATURE_LEVEL_12_0 };
+    if (auto hr = D3D12CreateDevice(nullptr, minSpecFeatureLevel, IID_PPV_ARGS(&device)); FAILED(hr)) {
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not create the device for feature level 12.0, exiting.");
+    }
+    
+    D3D_FEATURE_LEVEL currentFeatureLevel = minSpecFeatureLevel;
+
+    // If we now have a device, see if we can get a new one at higher feature level (we want the highest possible)
+
+    std::array<D3D_FEATURE_LEVEL, 3> featureLevelsToQuery = { D3D_FEATURE_LEVEL_12_0,
+                                                              D3D_FEATURE_LEVEL_12_1,
+                                                              D3D_FEATURE_LEVEL_12_2 };
+
+    D3D12_FEATURE_DATA_FEATURE_LEVELS query {};
+    query.NumFeatureLevels = UINT(featureLevelsToQuery.size());
+    query.pFeatureLevelsRequested = featureLevelsToQuery.data();
+    if (auto hr = device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &query, sizeof(query)); SUCCEEDED(hr)) {
+        if (currentFeatureLevel < query.MaxSupportedFeatureLevel) {
+            if (auto hr = D3D12CreateDevice(nullptr, query.MaxSupportedFeatureLevel, IID_PPV_ARGS(&device)); FAILED(hr)) {
+                ARKOSE_LOG(Fatal, "D3D12Backend: could not create the device at max feature level, exiting.");
+            }
+            currentFeatureLevel = query.MaxSupportedFeatureLevel;
+        }
+    } else {
+        ARKOSE_LOG(Warning, "D3D12Backend: could not check feature support for the device, we'll just stick to 12.0.");
+    }
+
+    switch (currentFeatureLevel) {
+    case D3D_FEATURE_LEVEL_12_0:
+        ARKOSE_LOG(Info, "D3D12Backend: using device at feature level 12.0");
+        break;
+    case D3D_FEATURE_LEVEL_12_1:
+        ARKOSE_LOG(Info, "D3D12Backend: using device at feature level 12.1");
+        break;
+    case D3D_FEATURE_LEVEL_12_2:
+        ARKOSE_LOG(Info, "D3D12Backend: using device at feature level 12.2");
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+
+    return device;
+}
+
+ComPtr<ID3D12CommandQueue> D3D12Backend::createDefaultCommandQueue() const
+{
+    D3D12_COMMAND_QUEUE_DESC queueDesc = {};
+    queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+    queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
+    queueDesc.NodeMask = 0; // for GPU 0
+
+    if (d3d12debugMode) {
+        queueDesc.Flags |= D3D12_COMMAND_QUEUE_FLAG_DISABLE_GPU_TIMEOUT;
+    }
+
+    ComPtr<ID3D12CommandQueue> commandQueue;
+    if (auto hr = device().CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&commandQueue)); FAILED(hr)) {
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not create the default command queue, exiting.");
+    }
+
+    return commandQueue;
+}
+
+ComPtr<IDXGISwapChain> D3D12Backend::createSwapChain(GLFWwindow* window, ID3D12CommandQueue* commandQueue) const
+{
+    ComPtr<IDXGIFactory4> dxgiFactory;
+    if (auto hr = CreateDXGIFactory(IID_PPV_ARGS(&dxgiFactory)); FAILED(hr)) {
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not create the DXGI factory, exiting.");
+    }
+
+    DXGI_SWAP_CHAIN_DESC swapChainDesc {};
+
+    swapChainDesc.OutputWindow = glfwGetWin32Window(window);
+    swapChainDesc.Windowed = glfwGetWindowMonitor(window) == nullptr;
+
+    swapChainDesc.BufferDesc.Width = UINT(m_windowFramebufferExtent.width());
+    swapChainDesc.BufferDesc.Height = UINT(m_windowFramebufferExtent.height());
+
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+
+    // No multisampling into the swap chain (if you want multisampling, just resolve before final target).
+    swapChainDesc.SampleDesc.Count = 1;
+
+    swapChainDesc.BufferCount = QueueSlotCount;
+    swapChainDesc.BufferDesc.Format = SwapChainFormat; // TODO: Maybe query for best format instead?
+    swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // TODO: Investigate the different ones
+
+    ComPtr<IDXGISwapChain> swapChain;
+    if (auto hr = dxgiFactory->CreateSwapChain(commandQueue, &swapChainDesc, &swapChain); FAILED(hr)) {
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not create a swapchain, exiting.");
+    }
+
+    return swapChain;
 }
 
 std::unique_ptr<Buffer> D3D12Backend::createBuffer(size_t size, Buffer::Usage usage, Buffer::MemoryHint memoryHint)
