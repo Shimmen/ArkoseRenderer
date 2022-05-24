@@ -11,25 +11,23 @@ FetchContent_Declare(mooslib
     GIT_REPOSITORY https://github.com/Shimmen/mooslib.git
     GIT_TAG        46d4420381ee38e96ffe1aef9936168719a4f3f6)
 
-set(SPIRV_CROSS_SKIP_INSTALL ON)
-set(SPIRV_CROSS_ENABLE_TESTS OFF)
-set(SPIRV_CROSS_CLI OFF)
+set(SPIRV_CROSS_SKIP_INSTALL ON CACHE INTERNAL "")
+set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE INTERNAL "")
+set(SPIRV_CROSS_CLI OFF CACHE INTERNAL "")
 FetchContent_Declare(spirv-cross
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
     GIT_TAG        "sdk-1.3.211.0")
 
 FetchContent_Declare(json
     GIT_REPOSITORY https://github.com/ArthurSonzogni/nlohmann_json_cmake_fetchcontent.git
-    GIT_TAG        v3.7.3)
+    GIT_TAG        "v3.7.3")
 
 FetchContent_Declare(fmt
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-    GIT_TAG        8.1.1)
+    GIT_TAG        "8.1.1")
 
-set(GLFW_INSTALL OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(GLFW_BUILD_EXAMPLES OFF)
+set(GLFW_BUILD_TESTS OFF)
 FetchContent_Declare(glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
     GIT_TAG        "3.3-stable")
