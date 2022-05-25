@@ -54,6 +54,7 @@ public:
     ID3D12CommandQueue& commandQueue() { return *m_commandQueue.Get(); }
 
     void waitForFence(ID3D12Fence* fence, UINT64 completionValue, HANDLE waitEvent) const;
+    void waitForDeviceIdle();
 
     bool setBufferDataUsingMapping(ID3D12Resource&, const uint8_t* data, size_t size, size_t offset = 0);
     bool setBufferDataUsingStagingBuffer(struct D3D12Buffer&, const uint8_t* data, size_t size, size_t offset = 0);
@@ -105,12 +106,10 @@ private:
     std::array<std::unique_ptr<FrameContext>, QueueSlotCount> m_frameContexts {};
 
     ComPtr<ID3D12DescriptorHeap> m_renderTargetDescriptorHeap;
+    int32_t m_renderTargetViewDescriptorSize {};
 
     ///////////////////////////////////////////////////////////////////////////
     /// Demo stuff
-
-    // kind of demo stuff
-    int32_t m_renderTargetViewDescriptorSize {};
 
     struct Demo {
 
@@ -124,5 +123,8 @@ private:
         D3D12_INDEX_BUFFER_VIEW indexBufferView;
 
     } m_demo;
+
+    void setUpDemo();
+    void renderDemo(D3D12_CPU_DESCRIPTOR_HANDLE renderTargetHandle, ID3D12GraphicsCommandList*);
 
 };

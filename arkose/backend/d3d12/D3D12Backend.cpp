@@ -58,11 +58,11 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
     // Create a heap that can contains QueueSlotCount number of descriptors
     CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle {};
     {
-        D3D12_DESCRIPTOR_HEAP_DESC heapDesc = {};
-        heapDesc.NumDescriptors = QueueSlotCount;
-        heapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-        heapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        if (auto hr = device().CreateDescriptorHeap(&heapDesc, IID_PPV_ARGS(&m_renderTargetDescriptorHeap)); FAILED(hr)) {
+        D3D12_DESCRIPTOR_HEAP_DESC descriptorHeapDesc = {};
+        descriptorHeapDesc.NumDescriptors = QueueSlotCount;
+        descriptorHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        descriptorHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        if (auto hr = device().CreateDescriptorHeap(&descriptorHeapDesc, IID_PPV_ARGS(&m_renderTargetDescriptorHeap)); FAILED(hr)) {
             ARKOSE_LOG(Fatal, "D3D12Backend: failed to create descriptor heaps, exiting.");
         }
 
@@ -119,189 +119,7 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
 
     /////////////////////////////////
 
-    // Demo implementation
-    {
-        // Create root signature
-        {
-            // NOTE: We currently aren't using this root signature, or rather, it's a no-op right now.
-
-            CD3DX12_ROOT_PARAMETER parameter;
-
-            // Our constant buffer view
-            parameter.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
-
-            // Create the root signature
-            CD3DX12_ROOT_SIGNATURE_DESC descRootSignature;
-            descRootSignature.Init(1, &parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-            ComPtr<ID3DBlob> rootBlob;
-            ComPtr<ID3DBlob> errorBlob;
-            if (auto hr = D3D12SerializeRootSignature(&descRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &rootBlob, &errorBlob); FAILED(hr)) {
-                ARKOSE_LOG(Fatal, "D3D12Backend: failed to serialize demo root signature, exiting.");
-            }
-
-            if (auto hr = device().CreateRootSignature(0, rootBlob->GetBufferPointer(), rootBlob->GetBufferSize(), IID_PPV_ARGS(&m_demo.rootSignature)); FAILED(hr)) {
-                ARKOSE_LOG(Fatal, "D3D12Backend: failed to create demo root signature, exiting.");
-            }
-        }
-
-        // Create pipeline state object
-        {
-            static const D3D12_INPUT_ELEMENT_DESC layout[] = { { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
-                                                               { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 } };
-
-            ComPtr<IDxcLibrary> library;
-            if (auto hr = DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library)); FAILED(hr)) {
-                ARKOSE_LOG(Fatal, "D3D12Backend: failed to create dxc library, exiting.");
-            }
-
-            ComPtr<IDxcCompiler> compiler;
-            if (auto hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)); FAILED(hr)) {
-                ARKOSE_LOG(Fatal, "D3D12Backend: failed to create dxc compiler, exiting.");
-            }
-                
-            auto compileHlslFile = [&](const wchar_t* filePath, const wchar_t* entryPoint, const wchar_t* shaderModel, std::vector<DxcDefine> defines = {}) -> ComPtr<IDxcBlob> {
-                
-                // TODO: Probably use library->CreateBlobWithEncodingFromPinned(..) to create from text instead of a file
-
-                // NOTE: This code will produced unsigned binaries which will generate D3D12 warnings in the output log. There are fixes to this,
-                //       but it's a bit complex for this little test funciton I have right now. When we want to add proper shader compilation, and
-                //       probably also go through HLSL->DXIL->runtime, we should implement this fully. Here are some useful links:
-                //       https://github.com/microsoft/DirectXShaderCompiler/issues/2550
-                //       https://www.wihlidal.com/blog/pipeline/2018-09-16-dxil-signing-post-compile/
-                //       https://github.com/gwihlidal/dxil-signing
-
-                // Always just assume UTF-8 for the input file
-                uint32_t codePage = CP_UTF8;
-
-                ComPtr<IDxcBlobEncoding> sourceBlob;
-                if (auto hr = library->CreateBlobFromFile(filePath, &codePage, &sourceBlob); FAILED(hr)) {
-                    ARKOSE_LOG(Fatal, "D3D12Backend: failed to create source blob for shader, exiting.");
-                }
-
-                ComPtr<IDxcOperationResult> compilationResult;
-                auto hr = compiler->Compile(sourceBlob.Get(), filePath,
-                                            entryPoint, shaderModel,
-                                            nullptr, 0,
-                                            defines.data(), UINT32(defines.size()),
-                                            nullptr, // generated HLSL code, no includes needed
-                                            &compilationResult);
-                    
-                if (SUCCEEDED(hr)) {
-                    compilationResult->GetStatus(&hr);
-                }
-
-                if (FAILED(hr)) {
-                    if (compilationResult) {
-                        ComPtr<IDxcBlobEncoding> errorsBlob;
-                        hr = compilationResult->GetErrorBuffer(&errorsBlob);
-                        if (SUCCEEDED(hr) && errorsBlob) {
-                            auto* errorMessage = reinterpret_cast<const char*>(errorsBlob->GetBufferPointer());
-                            ARKOSE_LOG(Fatal, "D3D12Backend: failed to compile generated HLSL: {}", errorMessage);
-                        }
-                    }
-                } else {
-                    ComPtr<IDxcBlob> compiledCode;
-                    if (auto hr = compilationResult->GetResult(&compiledCode); FAILED(hr)) {
-                        ARKOSE_LOG(Fatal, "D3D12Backend: failed to get dxc compilation results, exiting.");
-                    }
-
-                    return compiledCode;
-                }
-
-                return nullptr;
-            };
-
-            const wchar_t* hlslSourceName = L"shaders/d3d12-bootstrap/demo.hlsl";
-            DxcDefine define { .Name = L"D3D12_SAMPLE_BASIC", .Value = L"1" };
-            ComPtr<IDxcBlob> vertexCode = compileHlslFile(hlslSourceName, L"VS_main", L"vs_6_0", { define });
-            ComPtr<IDxcBlob> pixelCode = compileHlslFile(hlslSourceName, L"PS_main", L"ps_6_0", { define });
-
-            D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-
-            psoDesc.VS.BytecodeLength = vertexCode->GetBufferSize();
-            psoDesc.VS.pShaderBytecode = vertexCode->GetBufferPointer();
-
-            psoDesc.PS.BytecodeLength = pixelCode->GetBufferSize();
-            psoDesc.PS.pShaderBytecode = pixelCode->GetBufferPointer();
-
-            psoDesc.pRootSignature = m_demo.rootSignature.Get();
-
-            psoDesc.NumRenderTargets = 1;
-            psoDesc.RTVFormats[0] = SwapChainRenderTargetViewFormat;
-            psoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
-
-            psoDesc.InputLayout.NumElements = std::extent<decltype(layout)>::value;
-            psoDesc.InputLayout.pInputElementDescs = layout;
-
-            psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-
-            // Simple alpha blending
-            psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-            psoDesc.BlendState.RenderTarget[0].BlendEnable = true;
-            psoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
-            psoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
-            psoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
-            psoDesc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
-            psoDesc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
-            psoDesc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
-            psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
-
-            psoDesc.SampleDesc.Count = 1; // no multisampling
-
-            psoDesc.DepthStencilState.DepthEnable = false;
-            psoDesc.DepthStencilState.StencilEnable = false;
-
-            psoDesc.SampleMask = 0xFFFFFFFF;
-
-            psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-
-            if (auto hr = device().CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_demo.pso)); FAILED(hr)) {
-                ARKOSE_LOG(Fatal, "D3D12Backend: failed to create demo graphics pipeline state, exiting.");
-            }
-        }
-
-        // Create mesh buffers
-        {
-            struct Vertex {
-                float position[3];
-                float uv[2];
-            };
-
-            const Vertex vertices[4] = {
-                // Upper Left
-                { { -0.5f, 0.5f, 0 }, { 0, 0 } },
-                // Upper Right
-                { { 0.5f, 0.5f, 0 }, { 1, 0 } },
-                // Bottom right
-                { { 0.5f, -0.5f, 0 }, { 1, 1 } },
-                // Bottom left
-                { { -0.5f, -0.5f, 0 }, { 0, 1 } }
-            };
-
-            const int indices[6] = {
-                0, 1, 2, 2, 3, 0
-            };
-
-            static const int uploadBufferSize = sizeof(vertices) + sizeof(indices);
-            auto uploadBuffer = std::make_unique<D3D12Buffer>(*this, uploadBufferSize, Buffer::Usage::Transfer, Buffer::MemoryHint::TransferOptimal);
-
-            m_demo.vertexBuffer = std::make_unique<D3D12Buffer>(*this, sizeof(vertices), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOnly);
-            m_demo.indexBuffer = std::make_unique<D3D12Buffer>(*this, sizeof(indices), Buffer::Usage::Index, Buffer::MemoryHint::GpuOnly);
-
-            setBufferDataUsingStagingBuffer(*m_demo.vertexBuffer, reinterpret_cast<const uint8_t*>(vertices), sizeof(vertices));
-            setBufferDataUsingStagingBuffer(*m_demo.indexBuffer, reinterpret_cast<const uint8_t*>(indices), sizeof(indices));
-
-            // Create buffer views
-            m_demo.vertexBufferView.BufferLocation = m_demo.vertexBuffer->bufferResource->GetGPUVirtualAddress();
-            m_demo.vertexBufferView.SizeInBytes = UINT(m_demo.vertexBuffer->size());
-            m_demo.vertexBufferView.StrideInBytes = sizeof(Vertex);
-
-            m_demo.indexBufferView.BufferLocation = m_demo.indexBuffer->bufferResource->GetGPUVirtualAddress();
-            m_demo.indexBufferView.SizeInBytes = UINT(m_demo.indexBuffer->size());
-            m_demo.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
-        }
-    }
+    setUpDemo();
 }
 
 D3D12Backend::~D3D12Backend()
@@ -355,36 +173,12 @@ bool D3D12Backend::executeFrame(const Scene& scene, RenderPipeline& pipeline, fl
         presentToRenderTargetBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         commandList->ResourceBarrier(1, &presentToRenderTargetBarrier);
 
-        // Render the demo
-        {
-            D3D12_CPU_DESCRIPTOR_HANDLE renderTargetHandle;
-            CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(renderTargetHandle, m_renderTargetDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
-                                                         backBufferIndex, m_renderTargetViewDescriptorSize);
+        D3D12_CPU_DESCRIPTOR_HANDLE renderTargetHandle;
+        CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(renderTargetHandle, m_renderTargetDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+                                                     backBufferIndex, m_renderTargetViewDescriptorSize);
 
-            D3D12_VIEWPORT viewport = { 0.0f, 0.0f,
-                                        static_cast<float>(m_windowFramebufferExtent.width()),
-                                        static_cast<float>(m_windowFramebufferExtent.height()),
-                                        0.0f, 1.0f };
-            D3D12_RECT scissorRect = { 0, 0, LONG(m_windowFramebufferExtent.width()), LONG(m_windowFramebufferExtent.height()) };
-
-            commandList->OMSetRenderTargets(1, &renderTargetHandle, true, nullptr);
-            commandList->RSSetViewports(1, &viewport);
-            commandList->RSSetScissorRects(1, &scissorRect);
-
-            static const float clearColor[] = { 0.042f, 0.042f, 0.042f, 1.0f };
-            commandList->ClearRenderTargetView(renderTargetHandle, clearColor, 0, nullptr);
-
-            // Set our state (shaders, etc.)
-            commandList->SetPipelineState(m_demo.pso.Get());
-
-            // Set our root signature
-            commandList->SetGraphicsRootSignature(m_demo.rootSignature.Get());
-
-            commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-            commandList->IASetVertexBuffers(0, 1, &m_demo.vertexBufferView);
-            commandList->IASetIndexBuffer(&m_demo.indexBufferView);
-            commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
-        }
+        // TODO: Replace with real drawing!
+        renderDemo(renderTargetHandle, commandList);
 
         // Transition the swap chain back to present
         D3D12_RESOURCE_BARRIER renderTargetToPresentBarrier;
@@ -422,11 +216,7 @@ bool D3D12Backend::executeFrame(const Scene& scene, RenderPipeline& pipeline, fl
 
 void D3D12Backend::shutdown()
 {
-    // Drain the queue, wait for everything to finish
-    for (auto& frameContext : m_frameContexts) {
-        waitForFence(frameContext->frameFence.Get(), frameContext->frameFenceValue, frameContext->frameFenceEvent);
-        CloseHandle(frameContext->frameFenceEvent);
-    }
+    waitForDeviceIdle();
 }
 
 void D3D12Backend::waitForFence(ID3D12Fence* fence, UINT64 completionValue, HANDLE waitEvent) const
@@ -441,6 +231,21 @@ void D3D12Backend::waitForFence(ID3D12Fence* fence, UINT64 completionValue, HAND
 
     if (WaitForSingleObject(waitEvent, INFINITE) != WAIT_OBJECT_0) {
         ARKOSE_LOG(Error, "D3D12Backend: failed waiting for event (for fence), exiting.");
+    }
+}
+
+void D3D12Backend::waitForDeviceIdle()
+{
+    for (auto& frameContext : m_frameContexts) {
+
+        ID3D12Fence* fence = frameContext->frameFence.Get();
+        uint64_t fenceValueForSignal = ++frameContext->frameFenceValue;
+
+        if (auto hr = commandQueue().Signal(fence, fenceValueForSignal); FAILED(hr)) {
+            ARKOSE_LOG(Fatal, "D3D12Backend: could not signal fence for a wait device idle call, exiting.");
+        }
+
+        waitForFence(fence, fenceValueForSignal, frameContext->frameFenceEvent);
     }
 }
 
@@ -656,7 +461,7 @@ ComPtr<IDXGISwapChain> D3D12Backend::createSwapChain(GLFWwindow* window, ID3D12C
 
     ComPtr<IDXGISwapChain> swapChain;
     if (auto hr = dxgiFactory->CreateSwapChain(commandQueue, &swapChainDesc, &swapChain); FAILED(hr)) {
-        ARKOSE_LOG(Fatal, "D3D12Backend: could not create a swapchain, exiting.");
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not create swapchain, exiting.");
     }
 
     return swapChain;
@@ -707,4 +512,214 @@ std::unique_ptr<TopLevelAS> D3D12Backend::createTopLevelAccelerationStructure(ui
 std::unique_ptr<RayTracingState> D3D12Backend::createRayTracingState(ShaderBindingTable& sbt, const StateBindings& stateBindings, uint32_t maxRecursionDepth)
 {
     return nullptr;
+}
+
+void D3D12Backend::setUpDemo()
+{
+    // Create root signature
+    {
+        // NOTE: We currently aren't using this root signature, or rather, it's a no-op right now.
+
+        CD3DX12_ROOT_PARAMETER parameter;
+
+        // Our constant buffer view
+        parameter.InitAsConstantBufferView(0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+
+        // Create the root signature
+        CD3DX12_ROOT_SIGNATURE_DESC descRootSignature;
+        descRootSignature.Init(1, &parameter, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+
+        ComPtr<ID3DBlob> rootBlob;
+        ComPtr<ID3DBlob> errorBlob;
+        if (auto hr = D3D12SerializeRootSignature(&descRootSignature, D3D_ROOT_SIGNATURE_VERSION_1, &rootBlob, &errorBlob); FAILED(hr)) {
+            ARKOSE_LOG(Fatal, "D3D12Backend: failed to serialize demo root signature, exiting.");
+        }
+
+        if (auto hr = device().CreateRootSignature(0, rootBlob->GetBufferPointer(), rootBlob->GetBufferSize(), IID_PPV_ARGS(&m_demo.rootSignature)); FAILED(hr)) {
+            ARKOSE_LOG(Fatal, "D3D12Backend: failed to create demo root signature, exiting.");
+        }
+    }
+
+    // Create pipeline state object
+    {
+        static const D3D12_INPUT_ELEMENT_DESC layout[] = { { "POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 },
+                                                           { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0 } };
+
+        ComPtr<IDxcLibrary> library;
+        if (auto hr = DxcCreateInstance(CLSID_DxcLibrary, IID_PPV_ARGS(&library)); FAILED(hr)) {
+            ARKOSE_LOG(Fatal, "D3D12Backend: failed to create dxc library, exiting.");
+        }
+
+        ComPtr<IDxcCompiler> compiler;
+        if (auto hr = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&compiler)); FAILED(hr)) {
+            ARKOSE_LOG(Fatal, "D3D12Backend: failed to create dxc compiler, exiting.");
+        }
+
+        auto compileHlslFile = [&](const wchar_t* filePath, const wchar_t* entryPoint, const wchar_t* shaderModel, std::vector<DxcDefine> defines = {}) -> ComPtr<IDxcBlob> {
+            // TODO: Probably use library->CreateBlobWithEncodingFromPinned(..) to create from text instead of a file
+
+            // NOTE: This code will produced unsigned binaries which will generate D3D12 warnings in the output log. There are fixes to this,
+            //       but it's a bit complex for this little test funciton I have right now. When we want to add proper shader compilation, and
+            //       probably also go through HLSL->DXIL->runtime, we should implement this fully. Here are some useful links:
+            //       https://github.com/microsoft/DirectXShaderCompiler/issues/2550
+            //       https://www.wihlidal.com/blog/pipeline/2018-09-16-dxil-signing-post-compile/
+            //       https://github.com/gwihlidal/dxil-signing
+
+            // Always just assume UTF-8 for the input file
+            uint32_t codePage = CP_UTF8;
+
+            ComPtr<IDxcBlobEncoding> sourceBlob;
+            if (auto hr = library->CreateBlobFromFile(filePath, &codePage, &sourceBlob); FAILED(hr)) {
+                ARKOSE_LOG(Fatal, "D3D12Backend: failed to create source blob for shader, exiting.");
+            }
+
+            ComPtr<IDxcOperationResult> compilationResult;
+            auto hr = compiler->Compile(sourceBlob.Get(), filePath,
+                                        entryPoint, shaderModel,
+                                        nullptr, 0,
+                                        defines.data(), UINT32(defines.size()),
+                                        nullptr, // generated HLSL code, no includes needed
+                                        &compilationResult);
+
+            if (SUCCEEDED(hr)) {
+                compilationResult->GetStatus(&hr);
+            }
+
+            if (FAILED(hr)) {
+                if (compilationResult) {
+                    ComPtr<IDxcBlobEncoding> errorsBlob;
+                    hr = compilationResult->GetErrorBuffer(&errorsBlob);
+                    if (SUCCEEDED(hr) && errorsBlob) {
+                        auto* errorMessage = reinterpret_cast<const char*>(errorsBlob->GetBufferPointer());
+                        ARKOSE_LOG(Fatal, "D3D12Backend: failed to compile generated HLSL: {}", errorMessage);
+                    }
+                }
+            } else {
+                ComPtr<IDxcBlob> compiledCode;
+                if (auto hr = compilationResult->GetResult(&compiledCode); FAILED(hr)) {
+                    ARKOSE_LOG(Fatal, "D3D12Backend: failed to get dxc compilation results, exiting.");
+                }
+
+                return compiledCode;
+            }
+
+            return nullptr;
+        };
+
+        const wchar_t* hlslSourceName = L"shaders/d3d12-bootstrap/demo.hlsl";
+        DxcDefine define { .Name = L"D3D12_SAMPLE_BASIC", .Value = L"1" };
+        ComPtr<IDxcBlob> vertexCode = compileHlslFile(hlslSourceName, L"VS_main", L"vs_6_0", { define });
+        ComPtr<IDxcBlob> pixelCode = compileHlslFile(hlslSourceName, L"PS_main", L"ps_6_0", { define });
+
+        D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
+
+        psoDesc.VS.BytecodeLength = vertexCode->GetBufferSize();
+        psoDesc.VS.pShaderBytecode = vertexCode->GetBufferPointer();
+
+        psoDesc.PS.BytecodeLength = pixelCode->GetBufferSize();
+        psoDesc.PS.pShaderBytecode = pixelCode->GetBufferPointer();
+
+        psoDesc.pRootSignature = m_demo.rootSignature.Get();
+
+        psoDesc.NumRenderTargets = 1;
+        psoDesc.RTVFormats[0] = SwapChainRenderTargetViewFormat;
+        psoDesc.DSVFormat = DXGI_FORMAT_UNKNOWN;
+
+        psoDesc.InputLayout.NumElements = std::extent<decltype(layout)>::value;
+        psoDesc.InputLayout.pInputElementDescs = layout;
+
+        psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+
+        // Simple alpha blending
+        psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+        psoDesc.BlendState.RenderTarget[0].BlendEnable = true;
+        psoDesc.BlendState.RenderTarget[0].SrcBlend = D3D12_BLEND_SRC_ALPHA;
+        psoDesc.BlendState.RenderTarget[0].DestBlend = D3D12_BLEND_INV_SRC_ALPHA;
+        psoDesc.BlendState.RenderTarget[0].BlendOp = D3D12_BLEND_OP_ADD;
+        psoDesc.BlendState.RenderTarget[0].SrcBlendAlpha = D3D12_BLEND_ONE;
+        psoDesc.BlendState.RenderTarget[0].DestBlendAlpha = D3D12_BLEND_ZERO;
+        psoDesc.BlendState.RenderTarget[0].BlendOpAlpha = D3D12_BLEND_OP_ADD;
+        psoDesc.BlendState.RenderTarget[0].RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+
+        psoDesc.SampleDesc.Count = 1; // no multisampling
+
+        psoDesc.DepthStencilState.DepthEnable = false;
+        psoDesc.DepthStencilState.StencilEnable = false;
+
+        psoDesc.SampleMask = 0xFFFFFFFF;
+
+        psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+
+        if (auto hr = device().CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_demo.pso)); FAILED(hr)) {
+            ARKOSE_LOG(Fatal, "D3D12Backend: failed to create demo graphics pipeline state, exiting.");
+        }
+    }
+
+    // Create mesh buffers
+    {
+        struct Vertex {
+            float position[3];
+            float uv[2];
+        };
+
+        const Vertex vertices[4] = {
+            // Upper Left
+            { { -0.5f, 0.5f, 0 }, { 0, 0 } },
+            // Upper Right
+            { { 0.5f, 0.5f, 0 }, { 1, 0 } },
+            // Bottom right
+            { { 0.5f, -0.5f, 0 }, { 1, 1 } },
+            // Bottom left
+            { { -0.5f, -0.5f, 0 }, { 0, 1 } }
+        };
+
+        const int indices[6] = {
+            0, 1, 2, 2, 3, 0
+        };
+
+        static const int uploadBufferSize = sizeof(vertices) + sizeof(indices);
+        auto uploadBuffer = std::make_unique<D3D12Buffer>(*this, uploadBufferSize, Buffer::Usage::Transfer, Buffer::MemoryHint::TransferOptimal);
+
+        m_demo.vertexBuffer = std::make_unique<D3D12Buffer>(*this, sizeof(vertices), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOnly);
+        m_demo.indexBuffer = std::make_unique<D3D12Buffer>(*this, sizeof(indices), Buffer::Usage::Index, Buffer::MemoryHint::GpuOnly);
+
+        setBufferDataUsingStagingBuffer(*m_demo.vertexBuffer, reinterpret_cast<const uint8_t*>(vertices), sizeof(vertices));
+        setBufferDataUsingStagingBuffer(*m_demo.indexBuffer, reinterpret_cast<const uint8_t*>(indices), sizeof(indices));
+
+        // Create buffer views
+        m_demo.vertexBufferView.BufferLocation = m_demo.vertexBuffer->bufferResource->GetGPUVirtualAddress();
+        m_demo.vertexBufferView.SizeInBytes = UINT(m_demo.vertexBuffer->size());
+        m_demo.vertexBufferView.StrideInBytes = sizeof(Vertex);
+
+        m_demo.indexBufferView.BufferLocation = m_demo.indexBuffer->bufferResource->GetGPUVirtualAddress();
+        m_demo.indexBufferView.SizeInBytes = UINT(m_demo.indexBuffer->size());
+        m_demo.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+    }
+}
+
+void D3D12Backend::renderDemo(D3D12_CPU_DESCRIPTOR_HANDLE renderTargetHandle, ID3D12GraphicsCommandList* commandList)
+{
+    D3D12_VIEWPORT viewport = { 0.0f, 0.0f,
+                                static_cast<float>(m_windowFramebufferExtent.width()),
+                                static_cast<float>(m_windowFramebufferExtent.height()),
+                                0.0f, 1.0f };
+    D3D12_RECT scissorRect = { 0, 0, LONG(m_windowFramebufferExtent.width()), LONG(m_windowFramebufferExtent.height()) };
+
+    commandList->OMSetRenderTargets(1, &renderTargetHandle, true, nullptr);
+    commandList->RSSetViewports(1, &viewport);
+    commandList->RSSetScissorRects(1, &scissorRect);
+
+    static const float clearColor[] = { 0.042f, 0.042f, 0.042f, 1.0f };
+    commandList->ClearRenderTargetView(renderTargetHandle, clearColor, 0, nullptr);
+
+    // Set our state (shaders, etc.)
+    commandList->SetPipelineState(m_demo.pso.Get());
+
+    // Set our root signature
+    commandList->SetGraphicsRootSignature(m_demo.rootSignature.Get());
+
+    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    commandList->IASetVertexBuffers(0, 1, &m_demo.vertexBufferView);
+    commandList->IASetIndexBuffer(&m_demo.indexBufferView);
+    commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
 }
