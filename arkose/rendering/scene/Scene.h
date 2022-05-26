@@ -21,8 +21,10 @@ public:
     Scene(Backend&, Extent2D initialMainViewportSize);
     ~Scene();
 
-    void newFrame(Extent2D mainViewportSize, bool firstFrame);
     void update(float elapsedTime, float deltaTime);
+
+    void preRender();
+    void postRender();
 
     struct Description {
         std::string path {};

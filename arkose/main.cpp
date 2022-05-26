@@ -102,7 +102,7 @@ int main(int argc, char** argv)
 
     glfwSetTime(0.0);
     float lastTime = 0.0f;
-    bool firstFrame = true;
+    Extent2D currentViewportSize { 0, 0 };
 
     bool exitRequested = false;
     while (!exitRequested) {
@@ -119,7 +119,12 @@ int main(int argc, char** argv)
         glfwPollEvents();
 
         backend.newFrame();
-        scene->newFrame(windowFramebufferSize(window), firstFrame);
+
+        Extent2D viewportSize = windowFramebufferSize(window);
+        if (viewportSize != currentViewportSize) {
+            currentViewportSize = viewportSize;
+            scene->camera().setViewport(viewportSize);
+        }
 
         float elapsedTime = static_cast<float>(glfwGetTime());
         float deltaTime = elapsedTime - lastTime;
@@ -131,12 +136,14 @@ int main(int argc, char** argv)
         exitRequested |= !keepRunning;
         exitRequested |= static_cast<bool>(glfwWindowShouldClose(window));
 
+        scene->preRender();
+
         bool frameExecuted = false;
         while (!frameExecuted) {
             frameExecuted = backend.executeFrame(*scene, *renderPipeline, elapsedTime, deltaTime);
         }
 
-        firstFrame = false;
+        scene->postRender();
 
         END_OF_FRAME_PROFILE_MARKER();
     }

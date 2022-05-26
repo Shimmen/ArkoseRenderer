@@ -70,7 +70,8 @@ add_executable(ArkoseRenderer
     arkose/math/Frustum.cpp
     arkose/math/Halton.cpp
     arkose/rendering/camera/Camera.cpp
-    arkose/rendering/camera/FpsCamera.cpp
+    arkose/rendering/camera/CameraController.cpp
+    arkose/rendering/camera/FpsCameraController.cpp
     arkose/rendering/nodes/BloomNode.cpp
     arkose/rendering/nodes/CullingNode.cpp
     arkose/rendering/nodes/DDGINode.cpp

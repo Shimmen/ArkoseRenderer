@@ -1,7 +1,6 @@
 #pragma once
 
 #include "rendering/RenderPipelineNode.h"
-#include "rendering/camera/FpsCamera.h"
 #include "rendering/scene/Model.h"
 #include "rendering/scene/GpuScene.h"
 

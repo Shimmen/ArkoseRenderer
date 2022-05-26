@@ -6,36 +6,46 @@
 
 class Scene;
 
-void Camera::newFrame(Badge<Scene>, Extent2D viewportSize, bool firstFrame)
+void Camera::preRender(Badge<Scene>)
 {
-    if (!firstFrame) {
-        m_previousFrameViewFromWorld = viewMatrix();
-        m_previousFrameProjectionFromView = projectionMatrix();
-    }
-    
-    if (isFrustumJitteringEnabled()) {
+    // TODO: Consider if we really should expect m_viewFromWorld and m_projectionFromView to be set up at this point, or if we should do it here from parameters?
 
-        if (!firstFrame)
-            m_previousFrameFrustumJitterPixelOffset = frustumJitterPixelOffset();
+    if (m_frustumJitteringEnabled) {
 
         int haltonSampleIdx = ((m_frameIndex++) % 8) + 1; // (+1 to avoid zero jitter)
         vec2 haltonSample01 = vec2(halton::generateHaltonSample(haltonSampleIdx, 3),
                                    halton::generateHaltonSample(haltonSampleIdx, 2));
-        m_frustumJitterPixelOffset = haltonSample01 - vec2(0.5f); // (center over pixel)
+        vec2 jitterPixelOffset = haltonSample01 - vec2(0.5f); // (center over pixel)
+
+        float uvOffsetX = float(jitterPixelOffset.x) / viewport().width();
+        float uvOffsetY = float(jitterPixelOffset.y) / viewport().height();
+        float ndcOffsetX = uvOffsetX * 2.0f;
+        float ndcOffsetY = uvOffsetY * 2.0f;
+
+        m_projectionFromView[2][0] += ndcOffsetX;
+        m_projectionFromView[2][1] += ndcOffsetY;
+        m_frustumJitterPixelOffset = jitterPixelOffset;
+    }
+}
+
+void Camera::postRender(Badge<Scene>)
+{
+    m_previousFrameViewFromWorld = viewMatrix();
+    m_previousFrameProjectionFromView = projectionMatrix();
+
+    if (isFrustumJitteringEnabled()) {
+        m_previousFrameFrustumJitterPixelOffset = frustumJitterPixelOffset();
     }
 
-    // Reset at frame boundary
-    if (!firstFrame)
-        m_modified = false;
-
-    m_viewportSize = viewportSize;
+    // We reset here at the frame boundary now when we've rendered with this exact camera
+    m_modified = false;
 }
 
 mat4 Camera::pixelProjectionMatrix() const
 {
     // Ensures e.g. NDC (1,1) projects to (width-1,height-1)
-    float roundingPixelsX = (float)viewportSize().width() - 0.001f;
-    float roundingPixelsY = (float)viewportSize().height() - 0.001f;
+    float roundingPixelsX = (float)viewport().width() - 0.001f;
+    float roundingPixelsY = (float)viewport().height() - 0.001f;
 
     mat4 pixelFromNDC = moos::scale(vec3(roundingPixelsX, roundingPixelsY, 1.0f)) * moos::translate(vec3(0.5f, 0.5f, 0.0f)) * moos::scale(vec3(0.5f, 0.5f, 1.0f));
     return pixelFromNDC * projectionMatrix();
@@ -58,8 +68,8 @@ void Camera::lookAt(const vec3& position, const vec3& target, const vec3& up)
 
 float Camera::aspectRatio() const
 {
-    float width = static_cast<float>(viewportSize().width());
-    float height = static_cast<float>(viewportSize().height());
+    float width = static_cast<float>(viewport().width());
+    float height = static_cast<float>(viewport().height());
     return (height > 1e-6f) ? (width / height) : 1.0f;
 }
 
@@ -127,24 +137,14 @@ void Camera::setProjectionFromView(mat4 projectionFromView)
         m_projectionFromView = projectionFromView;
         markAsModified();
     }
-
-    // NOTE: We intentionally ignore the jittering when considering camera modified state
-    if (m_frustumJitteringEnabled) {
-        float uvOffsetX = float(frustumJitterPixelOffset().x) / viewportSize().width();
-        float uvOffsetY = float(frustumJitterPixelOffset().y) / viewportSize().height();
-        float ndcOffsetX = uvOffsetX * 2.0f;
-        float ndcOffsetY = uvOffsetY * 2.0f;
-        m_projectionFromView[2][0] += ndcOffsetX;
-        m_projectionFromView[2][1] += ndcOffsetY;
-    }
 }
 
 vec2 Camera::frustumJitterUVCorrection() const
 {
     // Remove this frame's offset, we're now "neutral", then add previous frame's offset
     vec2 totalJitterPixelOffset = -frustumJitterPixelOffset() + previousFrameFrustumJitterPixelOffset();
-    float x = totalJitterPixelOffset.x / float(viewportSize().width());
-    float y = totalJitterPixelOffset.y / float(viewportSize().height());
+    float x = totalJitterPixelOffset.x / float(viewport().width());
+    float y = totalJitterPixelOffset.y / float(viewport().height());
     return vec2(x, y);
 }
 

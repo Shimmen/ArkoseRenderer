@@ -2,6 +2,7 @@
 
 #include "rendering/App.h"
 #include "rendering/scene/Scene.h"
+#include "rendering/camera/FpsCameraController.h"
 
 class ShowcaseApp : public App {
 public:
@@ -16,4 +17,6 @@ public:
         TAA,
         FXAA,
     };
+
+    FpsCameraController m_fpsCameraController {};
 };

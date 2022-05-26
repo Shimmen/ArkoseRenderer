@@ -42,6 +42,9 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     scene.setupFromDescription({ .path = "assets/sample/sponza.json",
                                  .maintainRayTracingScene = rtxOn });
 
+    Camera& camera = scene.camera();
+    m_fpsCameraController.takeControlOfCamera(camera);
+
     if (!scene.hasProbeGrid()) {
         scene.generateProbeGridFromBoundingBox();
     }
@@ -101,9 +104,7 @@ bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
 {
     bool exitRequested = drawGui(scene);
 
-    // TODO: The scene should contain a Camera which doesn't have controls while the app has a CameraController which does.
-    //       Here we would then just update the controller which somehow changes the Camera it's assigned to control.
-    scene.camera().update(Input::instance(), deltaTime);
+    m_fpsCameraController.update(Input::instance(), deltaTime);
 
     float sunRotation = 0.0f;
     sunRotation -= Input::instance().isKeyDown(Key::Left) ? 1.0f : 0.0f;

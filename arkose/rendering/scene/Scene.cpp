@@ -2,7 +2,6 @@
 
 #include "core/Assert.h"
 #include "rendering/camera/Camera.h"
-#include "rendering/camera/FpsCamera.h"
 #include "rendering/scene/GpuScene.h"
 #include "rendering/scene/models/GltfModel.h"
 #include "utility/FileIO.h"
@@ -20,21 +19,26 @@ Scene::~Scene()
 {
 }
 
-void Scene::newFrame(Extent2D mainViewportSize, bool firstFrame)
+void Scene::update(float elapsedTime, float deltaTime)
 {
-    camera().newFrame({}, mainViewportSize, firstFrame);
+    drawSceneGizmos();
+}
+
+void Scene::preRender()
+{
+    camera().preRender({});
+}
+
+void Scene::postRender()
+{
+    camera().postRender({});
 
     // NOTE: We only want to do this on leaf-nodes right now, i.e. meshes not models.
     forEachModel([&](size_t modelIdx, Model& model) {
         model.forEachMesh([&](Mesh& mesh) {
-            mesh.transform().newFrame({}, firstFrame);
+            mesh.transform().postRender({});
         });
     });
-}
-
-void Scene::update(float elapsedTime, float deltaTime)
-{
-    drawSceneGizmos();
 }
 
 void Scene::setupFromDescription(const Description& description)
@@ -302,9 +306,7 @@ void Scene::loadFromFile(const std::string& path)
 
     for (auto& jsonCamera : jsonScene.at("cameras")) {
 
-        // TODO: For now always just make FpsCamera objects. Later we probably want to be able to change etc.
-        // E.g. make a camera controller class which wraps or refers to a Camera object.
-        auto camera = std::make_unique<FpsCamera>();
+        auto camera = std::make_unique<Camera>();
 
         vec3 position = readVec3(jsonCamera.at("position"));
         vec3 direction = normalize(readVec3(jsonCamera.at("direction")));

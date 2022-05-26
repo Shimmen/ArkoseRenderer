@@ -12,13 +12,13 @@
 
 class Scene;
 
-class Camera {
+class Camera final {
 public:
     Camera() = default;
     ~Camera() = default;
 
-    virtual void newFrame(Badge<Scene>, Extent2D viewportSize, bool firstFrame);
-    virtual void update(const Input&, float deltaTime) {}
+    void preRender(Badge<Scene>);
+    void postRender(Badge<Scene>);
 
     void renderExposureGUI();
     void renderManualExposureGUI();
@@ -28,7 +28,8 @@ public:
 
     void lookAt(const vec3& position, const vec3& target, const vec3& up = moos::globalY);
 
-    Extent2D viewportSize() const { return m_viewportSize; }
+    Extent2D viewport() const { return m_viewportSize; }
+    void setViewport(Extent2D viewportSize) { m_viewportSize = viewportSize; }
     float aspectRatio() const;
 
     float fieldOfView() const { return m_fieldOfView; }
@@ -73,10 +74,10 @@ public:
     float exposureCompensation { 0.0f };
     float adaptionRate { 0.0018f };
 
-protected:
     void setViewFromWorld(mat4);
     void setProjectionFromView(mat4);
 
+protected:
     void markAsModified() { m_modified = true; }
 
 private:

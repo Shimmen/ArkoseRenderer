@@ -54,10 +54,9 @@ public:
         return normalMatrix;
     }
 
-    void newFrame(Badge<Scene>, bool firstFrame)
+    void postRender(Badge<Scene>)
     {
-        if (!firstFrame)
-            m_previousFrameWorldMatrix = worldMatrix();
+        m_previousFrameWorldMatrix = worldMatrix();
     }
 
     mat4 previousFrameWorldMatrix() const
