@@ -22,11 +22,11 @@ struct CameraState {
 
     float near;
     float far;
-    float _pad1;
+    float focalLength;
     float _pad2;
 
     float iso;
-    float aperture;
+    float aperture; // i.e. f-number
     float shutterSpeed;
     float exposureCompensation; // for automatic exposure only
 };

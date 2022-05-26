@@ -33,7 +33,8 @@ public:
     void setViewport(Extent2D viewportSize) { m_viewportSize = viewportSize; }
     float aspectRatio() const;
 
-    float focalLength() const { return m_focalLength; }
+    float focalLengthMeters() const { return m_focalLength / 1000.0f; }
+    float focalLengthMillimeters() const { return m_focalLength; }
     void setFocalLength(float);
 
     // NOTE: *horizontal* field of view
@@ -71,7 +72,7 @@ public:
     static constexpr float zFar { 10000.0f };
 
     // Default manual values according to the "sunny 16 rule" (https://en.wikipedia.org/wiki/Sunny_16_rule)
-    float aperture { 16.0f }; // i.e. f-number, i.e. the denominator of f/16
+    float aperture { 16.0f }; // i.e. f-number, i.e. the denominator of f/XX
     float iso { 400.0f };
     float shutterSpeed { 1.0f / iso };
 

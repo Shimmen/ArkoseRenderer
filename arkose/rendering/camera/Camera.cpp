@@ -83,7 +83,7 @@ void Camera::setFocalLength(float focalLength)
 
 float Camera::fieldOfView() const
 {
-    return calculateFieldOfView(focalLength());
+    return calculateFieldOfView(m_focalLength);
 }
 
 void Camera::setFieldOfView(float fov)
@@ -92,12 +92,12 @@ void Camera::setFieldOfView(float fov)
     setFocalLength(focalLength);
 }
 
-float Camera::calculateFieldOfView(float focalLenght) const
+float Camera::calculateFieldOfView(float focalLength) const
 {
     // See formula: https://www.edmundoptics.co.uk/knowledge-center/application-notes/imaging/understanding-focal-length-and-field-of-view/
     //  fov = 2atan(H / 2f)
 
-    const float f = std::max(1.0f, focalLength());
+    const float f = std::max(1.0f, focalLength);
     const float H = m_sensorSize.y; // we want vertical anglular field of view
     float fov = 2.0f * atan2(H, 2.0f * f);
 
@@ -192,7 +192,7 @@ void Camera::drawGui(bool includeContainingWindow)
         ImGui::Begin("Camera");
     }
 
-    ImGui::Text("Focal length (f):   %.1f mm", focalLength());
+    ImGui::Text("Focal length (f):   %.1f mm", focalLengthMillimeters());
     ImGui::Text("Effective VFOV:     %.1f degrees", moos::toDegrees(fieldOfView()));
     ImGui::Text("Sensor size:        %.1f x %.1f mm", m_sensorSize.x, m_sensorSize.y);
 
@@ -231,7 +231,7 @@ void Camera::drawManualExposureGui()
         constexpr float apertureMin = steps[0];
         constexpr float apertureMax = steps[stepCount - 1];
 
-        ImGui::Text("Aperture f/%.1f", aperture);
+        ImGui::Text("Aperture f/%.1f - f-number", aperture);
 
         // A kind of snapping SliderFloat implementation
         {

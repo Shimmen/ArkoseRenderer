@@ -4,6 +4,7 @@
 #include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/DDGINode.h"
 #include "rendering/nodes/DDGIProbeDebug.h"
+#include "rendering/nodes/DepthOfFieldNode.h"
 #include "rendering/nodes/ForwardRenderNode.h"
 #include "rendering/nodes/FinalNode.h"
 #include "rendering/nodes/FXAANode.h"
@@ -70,7 +71,9 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<GIComposeNode>();
     
     pipeline.addNode<SkyViewNode>();
+
     pipeline.addNode<BloomNode>();
+    pipeline.addNode<DepthOfFieldNode>();
 
     if (rtxOn) {
         pipeline.addNode<DDGIProbeDebug>();

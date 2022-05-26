@@ -244,6 +244,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 .near = camera.zNear,
                 .far = camera.zFar,
 
+                .focalLength = camera.focalLengthMeters(),
+
                 .iso = camera.iso,
                 .aperture = camera.aperture,
                 .shutterSpeed = camera.shutterSpeed,
