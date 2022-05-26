@@ -122,9 +122,10 @@ bool ShowcaseApp::drawGui(Scene& scene)
     bool exitRequested = false;
 
     static bool showAbout = false;
+    static bool showCameraGui = false;
     static bool showSceneGui = false;
     static bool showGpuSceneGui = false;
-    static bool showVramUsageGui = true;
+    static bool showVramUsageGui = false;
 
     if (showAbout) {
         if (ImGui::Begin("About", &showAbout, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse)) {
@@ -134,6 +135,13 @@ bool ShowcaseApp::drawGui(Scene& scene)
             ImGui::Separator();
             ImGui::Text("By Simon Moos | @SimonMoos | http://simon-moos.com | https://github.com/Shimmen/");
             ImGui::Text("Arkose Renderer is licensed under the MIT License, see LICENSE for more information.");
+        }
+        ImGui::End();
+    }
+
+    if (showCameraGui) {
+        if (ImGui::Begin("Camera", &showCameraGui, ImGuiWindowFlags_NoCollapse)) {
+            scene.camera().drawGui();
         }
         ImGui::End();
     }
@@ -164,6 +172,10 @@ bool ShowcaseApp::drawGui(Scene& scene)
             exitRequested = ImGui::MenuItem("Quit");
             ImGui::Separator();
             ImGui::MenuItem("About...", nullptr, &showAbout);
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Window")) {
+            ImGui::MenuItem("Camera", nullptr, &showCameraGui);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Settings")) {

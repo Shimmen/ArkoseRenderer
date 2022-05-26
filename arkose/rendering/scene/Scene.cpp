@@ -392,13 +392,6 @@ void Scene::drawSettingsGui(bool includeContainingWindow)
         }
     }
 
-    ImGui::Separator();
-
-    if (ImGui::TreeNode("Exposure control")) {
-        camera().renderExposureGUI();
-        ImGui::TreePop();
-    }
-
     if (includeContainingWindow) {
         ImGui::End();
     }

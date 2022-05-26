@@ -20,9 +20,10 @@ public:
     void preRender(Badge<Scene>);
     void postRender(Badge<Scene>);
 
-    void renderExposureGUI();
-    void renderManualExposureGUI();
-    void renderAutomaticExposureGUI();
+    void drawGui(bool includeContainingWindow = false);
+    void drawExposureGui();
+    void drawManualExposureGui();
+    void drawAutomaticExposureGui();
 
     bool hasChangedSinceLastFrame() const { return m_modified; }
 

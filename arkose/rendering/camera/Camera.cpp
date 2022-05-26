@@ -186,23 +186,43 @@ vec2 Camera::frustumJitterUVCorrection() const
     return vec2(x, y);
 }
 
-void Camera::renderExposureGUI()
+void Camera::drawGui(bool includeContainingWindow)
+{
+    if (includeContainingWindow) {
+        ImGui::Begin("Camera");
+    }
+
+    ImGui::Text("Focal length (f):   %.1f mm", focalLength());
+    ImGui::Text("Effective VFOV:     %.1f degrees", moos::toDegrees(fieldOfView()));
+    ImGui::Text("Sensor size:        %.1f x %.1f mm", m_sensorSize.x, m_sensorSize.y);
+
+    ImGui::Separator();
+
+    if (ImGui::TreeNode("Exposure controls")) {
+        drawExposureGui();
+        ImGui::TreePop();
+    }
+
+    if (includeContainingWindow) {
+        ImGui::End();
+    }
+}
+
+void Camera::drawExposureGui()
 {
     if (ImGui::RadioButton("Automatic exposure", useAutomaticExposure))
         useAutomaticExposure = true;
     if (ImGui::RadioButton("Manual exposure", !useAutomaticExposure))
         useAutomaticExposure = false;
 
-    ImGui::Spacing();
-    ImGui::Spacing();
-
-    if (useAutomaticExposure)
-        renderAutomaticExposureGUI();
-    else
-        renderManualExposureGUI();
+    if (useAutomaticExposure) {
+        drawAutomaticExposureGui();
+    } else {
+        drawManualExposureGui();
+    }
 }
 
-void Camera::renderManualExposureGUI()
+void Camera::drawManualExposureGui()
 {
     // Aperture
     {
@@ -260,10 +280,10 @@ void Camera::renderManualExposureGUI()
     }
 }
 
-void Camera::renderAutomaticExposureGUI()
+void Camera::drawAutomaticExposureGui()
 {
     ImGui::Text("Adaption rate", &adaptionRate);
-    ImGui::SliderFloat("", &adaptionRate, 0.0001f, 2.0f, "%.4f", 5.0f);
+    ImGui::SliderFloat("", &adaptionRate, 0.0001f, 2.0f, "%.4f", ImGuiSliderFlags_Logarithmic);
 
     ImGui::Text("Exposure Compensation", &exposureCompensation);
     ImGui::SliderFloat("ECs", &exposureCompensation, -5.0f, +5.0f, "%.1f");
