@@ -32,7 +32,11 @@ public:
     void setViewport(Extent2D viewportSize) { m_viewportSize = viewportSize; }
     float aspectRatio() const;
 
-    float fieldOfView() const { return m_fieldOfView; }
+    float focalLength() const { return m_focalLength; }
+    void setFocalLength(float);
+
+    // NOTE: *horizontal* field of view
+    float fieldOfView() const;
     void setFieldOfView(float);
 
     vec3 position() const { return m_position; }
@@ -66,7 +70,7 @@ public:
     static constexpr float zFar { 10000.0f };
 
     // Default manual values according to the "sunny 16 rule" (https://en.wikipedia.org/wiki/Sunny_16_rule)
-    float aperture { 16.0f }; // i.e. f/16
+    float aperture { 16.0f }; // i.e. f-number, i.e. the denominator of f/16
     float iso { 400.0f };
     float shutterSpeed { 1.0f / iso };
 
@@ -80,10 +84,20 @@ public:
 protected:
     void markAsModified() { m_modified = true; }
 
+    float calculateFieldOfView(float focalLenght) const;
+    float calculateFocalLength(float fieldOfView) const;
+
 private:
+
+    float m_focalLength { 30.0f }; // millimeters (mm)
+
+    // i.e. 35mm film. We assume no crop factor for now and base everything on this
+    vec2 m_sensorSize { 36.0f, 24.0f };
+
+    //
+
     vec3 m_position {};
     quat m_orientation {};
-    float m_fieldOfView { moos::toRadians(60.0f) };
 
     mat4 m_viewFromWorld {};
     mat4 m_projectionFromView {};

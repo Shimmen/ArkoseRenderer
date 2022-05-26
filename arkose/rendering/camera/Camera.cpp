@@ -73,12 +73,50 @@ float Camera::aspectRatio() const
     return (height > 1e-6f) ? (width / height) : 1.0f;
 }
 
-void Camera::setFieldOfView(float fov)
+void Camera::setFocalLength(float focalLength)
 {
-    if (std::abs(fov - m_fieldOfView) > 1e-6f) {
-        m_fieldOfView = fov;
+    if (std::abs(focalLength - m_focalLength) > 1e-4f) {
+        m_focalLength = focalLength;
         markAsModified();
     }
+}
+
+float Camera::fieldOfView() const
+{
+    return calculateFieldOfView(focalLength());
+}
+
+void Camera::setFieldOfView(float fov)
+{
+    float focalLength = calculateFocalLength(fov);
+    setFocalLength(focalLength);
+}
+
+float Camera::calculateFieldOfView(float focalLenght) const
+{
+    // See formula: https://www.edmundoptics.co.uk/knowledge-center/application-notes/imaging/understanding-focal-length-and-field-of-view/
+    //  fov = 2atan(H / 2f)
+
+    const float f = std::max(1.0f, focalLength());
+    const float H = m_sensorSize.y; // we want vertical anglular field of view
+    float fov = 2.0f * atan2(H, 2.0f * f);
+
+    return fov;
+}
+
+float Camera::calculateFocalLength(float fieldOfView) const
+{
+    //          fov = 2atan(H / 2f)
+    //      fov / 2 = atan(H / 2f)
+    // tan(fov / 2) = H / 2f
+    //           2f = H / tan(fov / 2)
+    //            f = H / 2tan(fov / 2)
+
+    const float& fov = fieldOfView;
+    const float& H = m_sensorSize.y;
+    float focalLength = H / (2.0f * tan(fov / 2.0f));
+
+    return focalLength;
 }
 
 // TODO: Add to mooslib instead of here!
