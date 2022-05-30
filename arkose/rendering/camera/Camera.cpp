@@ -81,30 +81,38 @@ void Camera::setFocalLength(float focalLength)
     }
 }
 
+void Camera::setFocusDepth(float focusDepth)
+{
+    if (std::abs(m_focusDepth - focusDepth) > 1e-2f) { // (1 cm)
+        m_focusDepth = focusDepth;
+        markAsModified();
+    }
+}
+
 float Camera::fieldOfView() const
 {
-    return calculateFieldOfView(m_focalLength);
+    return calculateFieldOfView(m_focalLength, m_sensorSize);
 }
 
 void Camera::setFieldOfView(float fov)
 {
-    float focalLength = calculateFocalLength(fov);
+    float focalLength = calculateFocalLength(fov, m_sensorSize);
     setFocalLength(focalLength);
 }
 
-float Camera::calculateFieldOfView(float focalLength) const
+float Camera::calculateFieldOfView(float focalLength, vec2 sensorSize)
 {
     // See formula: https://www.edmundoptics.co.uk/knowledge-center/application-notes/imaging/understanding-focal-length-and-field-of-view/
     //  fov = 2atan(H / 2f)
 
     const float f = std::max(1.0f, focalLength);
-    const float H = m_sensorSize.y; // we want vertical anglular field of view
+    const float H = sensorSize.y; // we want vertical anglular field of view
     float fov = 2.0f * atan2(H, 2.0f * f);
 
     return fov;
 }
 
-float Camera::calculateFocalLength(float fieldOfView) const
+float Camera::calculateFocalLength(float fieldOfView, vec2 sensorSize)
 {
     //          fov = 2atan(H / 2f)
     //      fov / 2 = atan(H / 2f)
@@ -113,10 +121,65 @@ float Camera::calculateFocalLength(float fieldOfView) const
     //            f = H / 2tan(fov / 2)
 
     const float& fov = fieldOfView;
-    const float& H = m_sensorSize.y;
+    const float& H = sensorSize.y; // we want vertical anglular field of view
     float focalLength = H / (2.0f * tan(fov / 2.0f));
 
     return focalLength;
+}
+
+vec2 Camera::calculateAdjustedSensorSize(vec2 sensorSize, Extent2D viewportSize)
+{
+    float framebufferAspectRatio = static_cast<float>(viewportSize.width()) / static_cast<float>(viewportSize.height());
+    return vec2(sensorSize.y * framebufferAspectRatio, sensorSize.y);
+}
+
+vec2 Camera::calculateSensorPixelSize(vec2 sensorSize, Extent2D viewportSize)
+{
+    // NOTE: x and y will be identical since we assume square pixels (for now).
+    // Later we might want to consider non-square pixels and instead of "adjusting"
+    // the sensor size we will use a crop of it.
+    vec2 adjustedSensorSize = calculateAdjustedSensorSize(sensorSize, viewportSize);
+    return vec2(adjustedSensorSize.x / viewportSize.width(), adjustedSensorSize.y / viewportSize.height());
+}
+
+float Camera::calculateAcceptableCircleOfConfusion(vec2 sensorSize, Extent2D viewportSize)
+{
+    // NOTE: There are classical answers for this based on various properties of the eye and film.
+    // However, in this context we mostly care about if we're going to blur the pixel or not for a
+    // DoF-like effect. For this it makes sense to consider anything CoC less than a pixel's size
+    // to be in focus, hence we're basing the calculation on that.
+    vec2 pixelSizeInSensor = calculateSensorPixelSize(sensorSize, viewportSize);
+    float circleRadius = std::min(pixelSizeInSensor.x, pixelSizeInSensor.y);
+    return circleRadius;
+
+}
+
+float Camera::convertCircleOfConfusionToPixelUnits(float circleOfConfusion, vec2 sensorSize, Extent2D viewportSize)
+{
+    // NOTE: We're still assuming square pixels..
+    float pixelFromSensorMillimeters = 1.0f / calculateSensorPixelSize(sensorSize, viewportSize).x;
+    return circleOfConfusion * pixelFromSensorMillimeters;
+}
+
+float Camera::calculateDepthOfField(float acceptibleCircleOfConfusionMM, float focalLengthMM, float fNumber, float focusDepthM)
+{
+    // See approximate formula: https://en.wikipedia.org/wiki/Depth_of_field#Factors_affecting_depth_of_field
+    // DOF = (2u^2 N c) / f^2
+
+    const float c = acceptibleCircleOfConfusionMM / 1000.0f; // (mm) -> (m)
+    const float f = std::max(1.0f, focalLengthMM) / 1000.0f; // (mm) -> (m)
+    const float& u = focusDepthM; // (m)
+    const float& N = fNumber;
+
+    return (2.0f * moos::square(u) * N * c) / moos::square(f);
+}
+
+vec2 Camera::calculateDepthOfFieldRange(float focusDepthM, float depthOfField)
+{
+    float halfField = depthOfField / 2.0f;
+    float rangeMin = std::max(0.0f, focusDepthM - halfField);
+    float rangeMax = std::max(0.0f, focusDepthM + halfField);
+    return vec2(rangeMin, rangeMax);
 }
 
 // TODO: Add to mooslib instead of here!
@@ -194,9 +257,37 @@ void Camera::drawGui(bool includeContainingWindow)
 
     ImGui::Text("Focal length (f):   %.1f mm", focalLengthMillimeters());
     ImGui::Text("Effective VFOV:     %.1f degrees", moos::toDegrees(fieldOfView()));
+
+    vec2 sensorPixelSize = calculateSensorPixelSize(m_sensorSize, viewport());
     ImGui::Text("Sensor size:        %.1f x %.1f mm", m_sensorSize.x, m_sensorSize.y);
+    ImGui::Text("Sensor pixel size:  %.4f x %.4f mm", sensorPixelSize.x, sensorPixelSize.y);
 
     ImGui::Separator();
+
+    ImGui::Text("Focus depth:        %.2f m", focusDepth());
+
+    float acceptibleCocMm = calculateAcceptableCircleOfConfusion(m_sensorSize, viewport());
+    float acceptibleCocPx = convertCircleOfConfusionToPixelUnits(acceptibleCocMm, m_sensorSize, viewport());
+    float acceptibleDof = calculateDepthOfField(acceptibleCocMm, focalLengthMillimeters(), fNumber(), focusDepth());
+    vec2 acceptibleDofRange = calculateDepthOfFieldRange(focusDepth(), acceptibleDof);
+    ImGui::Text("Acceptable DOF:     %.2f m (range: %.2f m to %.2f m)", acceptibleDof, acceptibleDofRange.x, acceptibleDofRange.y);
+    ImGui::Text("                    (using CoC of %.3f mm or %.2f px)", acceptibleCocMm, acceptibleCocPx);
+
+    ImGui::Separator();
+
+    if (ImGui::TreeNode("Focus controls")) {
+        // TODO: Implement auto-focus!
+        bool manualFocus = true;
+        ImGui::RadioButton("Manual focus", manualFocus);
+
+        if (manualFocus) {
+            ImGui::SliderFloat("Focus depth", &m_focusDepth, 0.25f, 100.0f);
+        } else {
+            NOT_YET_IMPLEMENTED();
+        }
+        
+        ImGui::TreePop();
+    }
 
     if (ImGui::TreeNode("Exposure controls")) {
         drawExposureGui();

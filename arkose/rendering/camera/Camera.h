@@ -37,6 +37,11 @@ public:
     float focalLengthMillimeters() const { return m_focalLength; }
     void setFocalLength(float);
 
+    float fNumber() const { return aperture; }
+
+    float focusDepth() const { return m_focusDepth; }
+    void setFocusDepth(float focusDepth);
+
     // NOTE: *horizontal* field of view
     float fieldOfView() const;
     void setFieldOfView(float);
@@ -86,8 +91,18 @@ public:
 protected:
     void markAsModified() { m_modified = true; }
 
-    float calculateFieldOfView(float focalLenght) const;
-    float calculateFocalLength(float fieldOfView) const;
+    static float calculateFieldOfView(float focalLenght, vec2 sensorSize);
+    static float calculateFocalLength(float fieldOfView, vec2 sensorSize);
+
+    static vec2 calculateAdjustedSensorSize(vec2 sensorSize, Extent2D viewportSize);
+    static vec2 calculateSensorPixelSize(vec2 sensorSize, Extent2D viewportSize);
+    
+    static float calculateAcceptableCircleOfConfusion(vec2 sensorSize, Extent2D viewportSize);
+    static float convertCircleOfConfusionToPixelUnits(float circleOfConfusion, vec2 sensorSize, Extent2D viewportSize);
+
+    // I.e. the depth (m) that would be considered in focus about the focus depth
+    static float calculateDepthOfField(float acceptibleCircleOfConfusionMM, float focalLengthMM, float fNumber, float focusDepthM);
+    static vec2 calculateDepthOfFieldRange(float focusDepthM, float depthOfField);
 
 private:
 
@@ -95,6 +110,8 @@ private:
 
     // i.e. 35mm film. We assume no crop factor for now and base everything on this
     vec2 m_sensorSize { 36.0f, 24.0f };
+
+    float m_focusDepth { 5.0f }; // meters (m)
 
     //
 

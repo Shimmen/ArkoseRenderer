@@ -19,17 +19,13 @@ RenderPipelineNode::ExecuteCallback DepthOfFieldNode::construct(GpuScene& scene,
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         Extent2D targetSize = reg.windowRenderTarget().extent();
-
-        // TODO: Figure out how we want to provide this. Probably from the scene.
-        //scene.scene().usesFocusDepth() && float depth = scene.scene().focusDepth()
-        static float focusDepth = 5.0f; // (m)
-        ImGui::SliderFloat("Focus depth [test]", &focusDepth, 0.1f, 20.0f);
+        Camera& camera = scene.scene().camera();
 
         // Calculte CoC at full resolution
         cmdList.setComputeState(calculateCocState);
         cmdList.bindSet(calculateCocBindingSet, 0);
         cmdList.setNamedUniform("targetSize", targetSize);
-        cmdList.setNamedUniform("focusDepth", focusDepth);
+        cmdList.setNamedUniform("focusDepth", camera.focusDepth());
         cmdList.dispatch(targetSize, { 8, 8, 1 });
 
         cmdList.textureWriteBarrier(circleOfConfusionTex);
