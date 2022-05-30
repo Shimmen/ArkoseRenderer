@@ -314,14 +314,17 @@ void Scene::loadFromFile(const std::string& path)
 
         if (jsonCamera.find("exposure") != jsonCamera.end()) {
             if (jsonCamera.at("exposure") == "manual") {
-                camera->useAutomaticExposure = false;
-                camera->iso = jsonCamera.at("ISO");
-                camera->aperture = jsonCamera.at("aperture");
-                camera->shutterSpeed = 1.0f / jsonCamera.at("shutter");
+                float iso = jsonCamera.at("ISO");
+                float aperture = jsonCamera.at("aperture");
+                float shutterSpeed = 1.0f / jsonCamera.at("shutter");
+                camera->setExposureMode(Camera::ExposureMode::Manual);
+                camera->setManualExposureParameters(aperture, shutterSpeed, iso);
             } else if (jsonCamera.at("exposure") == "auto") {
-                camera->useAutomaticExposure = true;
-                camera->exposureCompensation = jsonCamera.at("EC");
-                camera->adaptionRate = jsonCamera.at("adaptionRate");
+                float exposureCompensation = jsonCamera.at("EC");
+                float adaptionRate = jsonCamera.at("adaptionRate");
+                camera->setExposureMode(Camera::ExposureMode::Auto);
+                camera->setExposureCompensation(exposureCompensation);
+                camera->setAutoExposureAdaptionRate(adaptionRate);
             }
         }
 

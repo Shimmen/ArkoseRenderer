@@ -246,10 +246,10 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 .focalLength = camera.focalLengthMeters(),
 
-                .iso = camera.iso,
-                .aperture = camera.aperture,
-                .shutterSpeed = camera.shutterSpeed,
-                .exposureCompensation = camera.exposureCompensation,
+                .iso = camera.ISO(),
+                .aperture = camera.fNumber(),
+                .shutterSpeed = camera.shutterSpeed(),
+                .exposureCompensation = camera.exposureCompensation(),
             };
 
             uploadBuffer.upload(cameraState, cameraBuffer);
@@ -271,17 +271,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         }
 
         // Update exposure data
-        {
-            if (camera().useAutomaticExposure) {
-                ASSERT_NOT_REACHED();
-            } else {
-                // See camera.glsl for reference
-                auto& camera = this->camera();
-                float ev100 = std::log2f((camera.aperture * camera.aperture) / camera.shutterSpeed * 100.0f / camera.iso);
-                float maxLuminance = 1.2f * std::pow(2.0f, ev100);
-                m_lightPreExposure = 1.0f / maxLuminance;
-            }
-        }
+        // NOTE: If auto exposure we can't treat the value as-is since it's from the previous frame!
+        m_lightPreExposure = camera().exposure();
 
         // Update light data
         {

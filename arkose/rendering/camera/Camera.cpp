@@ -1,5 +1,6 @@
 #include "Camera.h"
 
+#include "core/Logging.h"
 #include "math/Halton.h"
 #include <moos/transform.h>
 #include <imgui/imgui.h>
@@ -98,6 +99,74 @@ void Camera::setFieldOfView(float fov)
 {
     float focalLength = calculateFocalLength(fov, m_sensorSize);
     setFocalLength(focalLength);
+}
+
+void Camera::setExposureMode(ExposureMode mode)
+{
+    if (m_exposureMode != mode) {
+        m_exposureMode = mode;
+        markAsModified();
+    }
+}
+
+void Camera::setManualExposureParameters(float fNumber, float shutterSpeed, float ISO)
+{
+    m_fNumber = fNumber;
+    m_shutterSpeed = shutterSpeed;
+    m_iso = ISO;
+
+    markAsModified();
+}
+
+float Camera::exposure() const
+{
+    switch (m_exposureMode) {
+    case ExposureMode::Auto:
+        NOT_YET_IMPLEMENTED();
+        return 0.0f;
+    case ExposureMode::Manual:
+        return calculateManualExposure(fNumber(), shutterSpeed(), ISO());
+    }
+}
+
+float Camera::exposureCompensation() const
+{
+    switch (m_exposureMode) {
+    case ExposureMode::Auto:
+        return m_exposureCompensation;
+    default:
+        ARKOSE_LOG(Verbose, "Getting EC for camera but not using auto-exposure, is this intended?");
+        return 0.0f;
+    }
+}
+
+void Camera::setExposureCompensation(float EC)
+{
+    if (abs(m_exposureCompensation - EC) > 1e-2f) {
+        m_exposureCompensation = EC;
+        markAsModified();
+    }
+}
+
+void Camera::setAutoExposureAdaptionRate(float adaptionRate)
+{
+    if (abs(m_adaptionRate - adaptionRate) > 1e-2f) {
+        m_adaptionRate = adaptionRate;
+        markAsModified();
+    }
+}
+
+float Camera::calculateEV100(float fNumber, float shutterSpeed, float ISO)
+{
+    return std::log2f((fNumber * fNumber) / shutterSpeed * 100.0f / ISO);
+}
+
+float Camera::calculateManualExposure(float fNumber, float shutterSpeed, float ISO)
+{
+    // See camera.glsl for reference
+    float ev100 = calculateEV100(fNumber, shutterSpeed, ISO);
+    float maxLuminance = 1.2f * std::pow(2.0f, ev100);
+    return 1.0f / maxLuminance;
 }
 
 float Camera::calculateFieldOfView(float focalLength, vec2 sensorSize)
@@ -301,41 +370,44 @@ void Camera::drawGui(bool includeContainingWindow)
 
 void Camera::drawExposureGui()
 {
-    if (ImGui::RadioButton("Automatic exposure", useAutomaticExposure))
-        useAutomaticExposure = true;
-    if (ImGui::RadioButton("Manual exposure", !useAutomaticExposure))
-        useAutomaticExposure = false;
+    if (ImGui::RadioButton("Automatic exposure", m_focusMode == FocusMode::Auto))
+        m_focusMode = FocusMode::Auto;
+    if (ImGui::RadioButton("Manual exposure", m_focusMode == FocusMode::Manual))
+        m_focusMode == FocusMode::Manual;
 
-    if (useAutomaticExposure) {
+    switch (m_focusMode) {
+    case FocusMode::Auto:
         drawAutomaticExposureGui();
-    } else {
+        break;
+    case FocusMode::Manual:
         drawManualExposureGui();
+        break;
     }
 }
 
 void Camera::drawManualExposureGui()
 {
-    // Aperture
+    // Aperture / f-number
     {
         constexpr float steps[] = { 1.4f, 2.0f, 2.8f, 4.0f, 5.6f, 8.0f, 11.0f, 16.0f };
         constexpr int stepCount = sizeof(steps) / sizeof(steps[0]);
         constexpr float apertureMin = steps[0];
         constexpr float apertureMax = steps[stepCount - 1];
 
-        ImGui::Text("Aperture f/%.1f - f-number", aperture);
+        ImGui::Text("Aperture f/%.1f - f-number", fNumber());
 
         // A kind of snapping SliderFloat implementation
         {
-            ImGui::SliderFloat("aperture", &aperture, apertureMin, apertureMax, "");
+            ImGui::SliderFloat("aperture", &m_fNumber, apertureMin, apertureMax, "");
 
             int index = 1;
-            for (; index < stepCount && aperture >= steps[index]; ++index) { }
-            float distUp = std::abs(steps[index] - aperture);
-            float distDown = std::abs(steps[index - 1] - aperture);
+            for (; index < stepCount && m_fNumber >= steps[index]; ++index) { }
+            float distUp = std::abs(steps[index] - m_fNumber);
+            float distDown = std::abs(steps[index - 1] - m_fNumber);
             if (distDown < distUp)
                 index -= 1;
 
-            aperture = steps[index];
+            m_fNumber = steps[index];
         }
     }
 
@@ -347,9 +419,9 @@ void Camera::drawManualExposureGui()
         // Find the current value, snapped to the denominators
         int index = 1;
         {
-            for (; index < denominatorCount && shutterSpeed >= (1.0f / denominators[index]); ++index) { }
-            float distUp = std::abs(1.0f / denominators[index] - shutterSpeed);
-            float distDown = std::abs(1.0f / denominators[index - 1] - shutterSpeed);
+            for (; index < denominatorCount && m_shutterSpeed >= (1.0f / denominators[index]); ++index) { }
+            float distUp = std::abs(1.0f / denominators[index] - m_shutterSpeed);
+            float distDown = std::abs(1.0f / denominators[index - 1] - m_shutterSpeed);
             if (distDown < distUp)
                 index -= 1;
         }
@@ -357,25 +429,25 @@ void Camera::drawManualExposureGui()
         ImGui::Text("Shutter speed  1/%i s", denominators[index]);
         ImGui::SliderInt("shutter", &index, 0, denominatorCount - 1, "");
 
-        shutterSpeed = 1.0f / denominators[index];
+        m_shutterSpeed = 1.0f / denominators[index];
     }
 
     // ISO
     {
-        int isoHundreds = int(iso + 0.5f) / 100;
+        int isoHundreds = int(m_iso + 0.5f) / 100;
 
         ImGui::Text("ISO %i", 100 * isoHundreds);
         ImGui::SliderInt("ISO", &isoHundreds, 1, 64, "");
 
-        iso = float(isoHundreds * 100.0f);
+        m_iso = float(isoHundreds * 100.0f);
     }
 }
 
 void Camera::drawAutomaticExposureGui()
 {
-    ImGui::Text("Adaption rate", &adaptionRate);
-    ImGui::SliderFloat("", &adaptionRate, 0.0001f, 2.0f, "%.4f", ImGuiSliderFlags_Logarithmic);
+    ImGui::Text("Adaption rate", &m_adaptionRate);
+    ImGui::SliderFloat("", &m_adaptionRate, 0.0001f, 2.0f, "%.4f", ImGuiSliderFlags_Logarithmic);
 
-    ImGui::Text("Exposure Compensation", &exposureCompensation);
-    ImGui::SliderFloat("ECs", &exposureCompensation, -5.0f, +5.0f, "%.1f");
+    ImGui::Text("Exposure Compensation", &m_exposureCompensation);
+    ImGui::SliderFloat("ECs", &m_exposureCompensation, -5.0f, +5.0f, "%.1f");
 }

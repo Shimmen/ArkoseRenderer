@@ -37,7 +37,20 @@ public:
     float focalLengthMillimeters() const { return m_focalLength; }
     void setFocalLength(float);
 
-    float fNumber() const { return aperture; }
+    enum class ExposureMode {
+        Auto,
+        Manual,
+    };
+
+    float shutterSpeed() const { return m_shutterSpeed; }
+    float aperture() const { return m_fNumber; }
+    float fNumber() const { return m_fNumber; }
+    float ISO() const { return m_iso; }
+
+    enum class FocusMode {
+        Auto,
+        Manual,
+    };
 
     float focusDepth() const { return m_focusDepth; }
     void setFocusDepth(float focusDepth);
@@ -45,6 +58,18 @@ public:
     // NOTE: *horizontal* field of view
     float fieldOfView() const;
     void setFieldOfView(float);
+
+    void setExposureMode(ExposureMode);
+    void setManualExposureParameters(float fNumber, float shutterSpeed, float ISO);
+
+    float exposureCompensation() const;
+    void setExposureCompensation(float EC);
+
+    void setAutoExposureAdaptionRate(float);
+    float autoExposureAdaptionRate() const { return m_adaptionRate; }
+
+    float EV100() const { return calculateEV100(fNumber(), shutterSpeed(), ISO()); }
+    float exposure() const;
 
     vec3 position() const { return m_position; }
     void setPosition(vec3);
@@ -76,20 +101,14 @@ public:
     static constexpr float zNear { 0.25f };
     static constexpr float zFar { 10000.0f };
 
-    // Default manual values according to the "sunny 16 rule" (https://en.wikipedia.org/wiki/Sunny_16_rule)
-    float aperture { 16.0f }; // i.e. f-number, i.e. the denominator of f/XX
-    float iso { 400.0f };
-    float shutterSpeed { 1.0f / iso };
-
-    bool useAutomaticExposure { true };
-    float exposureCompensation { 0.0f };
-    float adaptionRate { 0.0018f };
-
     void setViewFromWorld(mat4);
     void setProjectionFromView(mat4);
 
 protected:
     void markAsModified() { m_modified = true; }
+
+    static float calculateEV100(float fNumber, float shutterSpeed, float ISO);
+    static float calculateManualExposure(float fNumber, float shutterSpeed, float ISO);
 
     static float calculateFieldOfView(float focalLenght, vec2 sensorSize);
     static float calculateFocalLength(float fieldOfView, vec2 sensorSize);
@@ -106,17 +125,42 @@ protected:
 
 private:
 
+    ////////////////////////////////////////////////////////////////////////////
+    // Focus parameters
+
+    FocusMode m_focusMode { FocusMode::Manual };
+
     float m_focalLength { 30.0f }; // millimeters (mm)
+    float m_focusDepth { 5.0f }; // meters (m)
 
     // i.e. 35mm film. We assume no crop factor for now and base everything on this
     vec2 m_sensorSize { 36.0f, 24.0f };
 
-    float m_focusDepth { 5.0f }; // meters (m)
+    ////////////////////////////////////////////////////////////////////////////
+    // Exposure paramers
 
-    //
+    ExposureMode m_exposureMode { ExposureMode::Manual };
+
+    // Manual exposure
+
+    // Default manual values according to the "sunny 16 rule" (https://en.wikipedia.org/wiki/Sunny_16_rule)
+    float m_fNumber { 16.0f }; // i.e. the denominator of f/XX, the aperture settings
+    float m_iso { 400.0f };
+    float m_shutterSpeed { 1.0f / m_iso };
+
+    // Auto-exposure
+    
+    float m_exposureCompensation { 0.0f };
+    float m_adaptionRate { 0.0018f };
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Physical position & orentation of the camera
 
     vec3 m_position {};
     quat m_orientation {};
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Meta
 
     mat4 m_viewFromWorld {};
     mat4 m_projectionFromView {};
