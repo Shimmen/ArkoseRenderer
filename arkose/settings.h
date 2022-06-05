@@ -4,11 +4,11 @@
 
 #include "backend/base/Backend.h"
 
-static constexpr auto SelectedBackendType = Backend::Type::D3D12;
+static constexpr auto SelectedBackendType = Backend::Type::Vulkan;
 
 // Specify app to run: 'SelectedApp'
 
 #include "apps/ShowcaseApp.h"
 #include "apps/BootstrappingApp.h"
 
-using SelectedApp = BootstrappingApp;
+using SelectedApp = ShowcaseApp;
