@@ -126,7 +126,10 @@ void main()
     float metallic = metallicRoughness.b;
     float roughness = metallicRoughness.g;
 
-#if 1
+// NOTE: This is only really for debugging! In general we try to avoid permutations for very common cases (almost everything will be normal mapped in practice)
+// (If we want to make normal mapping a proper permutation we would also want to exclude interpolats vTangent and vBitangentSign)
+#define FORWARD_USE_NORMAL_MAPPING 1
+#if FORWARD_USE_NORMAL_MAPPING
     vec3 packedNormal = texture(textures[material.normalMap], vTexCoord).rgb;
     vec3 tangentNormal = normalize(packedNormal * 2.0 - 1.0);
 
