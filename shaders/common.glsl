@@ -4,7 +4,8 @@
 #define PI     (3.14159265358979323846)
 #define TWO_PI (2.0 * PI)
 
-#define GOLDEN_RATIO ((1.0 + sqrt(5.0)) / 2.0)
+#define GOLDEN_RATIO (1.618034) // ((1.0 + sqrt(5.0)) / 2.0)
+#define GOLDEN_ANGLE (2.399963)
 
 #include <shared/SphericalHarmonics.h>
 
