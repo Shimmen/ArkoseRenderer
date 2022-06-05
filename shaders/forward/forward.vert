@@ -14,9 +14,11 @@ layout(set = 3, binding = 0) buffer readonly PerObjectBlock { ShaderDrawable per
 layout(location = 0) flat out int vMaterialIndex;
 layout(location = 1) out vec2 vTexCoord;
 layout(location = 2) out vec3 vPosition;
-layout(location = 3) out vec4 vCurrFrameProjectedPos;
-layout(location = 4) out vec4 vPrevFrameProjectedPos;
-layout(location = 5 /*, 6, 7*/) out mat3 vTbnMatrix;
+layout(location = 3) out vec3 vNormal;
+layout(location = 4) out vec3 vTangent;
+layout(location = 5) out flat float vBitangentSign;
+layout(location = 6) out vec4 vCurrFrameProjectedPos;
+layout(location = 7) out vec4 vPrevFrameProjectedPos;
 
 void main()
 {
@@ -32,10 +34,9 @@ void main()
     vPrevFrameProjectedPos = camera.previousFrameProjectionFromView * camera.previousFrameViewFromWorld * object.previousFrameWorldFromLocal * vec4(aPosition, 1.0);
 
     mat3 viewFromTangent = mat3(camera.viewFromWorld) * mat3(object.worldFromTangent);
-    vec3 viewSpaceNormal = normalize(viewFromTangent * aNormal);
-    vec3 viewSpaceTangent = normalize(viewFromTangent * aTangent.xyz);
-    vec3 viewSpaceBitangent = cross(viewSpaceNormal, viewSpaceTangent) * aTangent.w;
-    vTbnMatrix = mat3(viewSpaceTangent, viewSpaceBitangent, viewSpaceNormal);
+    vNormal = normalize(viewFromTangent * aNormal);
+    vTangent = normalize(viewFromTangent * aTangent.xyz);
+    vBitangentSign = aTangent.w;
 
     gl_Position = vCurrFrameProjectedPos;
 }

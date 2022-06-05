@@ -15,9 +15,11 @@
 layout(location = 0) flat in int vMaterialIndex;
 layout(location = 1) in vec2 vTexCoord;
 layout(location = 2) in vec3 vPosition;
-layout(location = 3) in vec4 vCurrFrameProjectedPos;
-layout(location = 4) in vec4 vPrevFrameProjectedPos;
-layout(location = 5 /*, 6, 7*/) in mat3 vTbnMatrix;
+layout(location = 3) in vec3 vNormal;
+layout(location = 4) in vec3 vTangent;
+layout(location = 5) in flat float vBitangentSign;
+layout(location = 6) in vec4 vCurrFrameProjectedPos;
+layout(location = 7) in vec4 vPrevFrameProjectedPos;
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 
@@ -126,10 +128,13 @@ void main()
 
 #if 1
     vec3 packedNormal = texture(textures[material.normalMap], vTexCoord).rgb;
-    vec3 mappedNormal = normalize(packedNormal * 2.0 - 1.0);
-    vec3 N = normalize(vTbnMatrix * mappedNormal);
+    vec3 tangentNormal = normalize(packedNormal * 2.0 - 1.0);
+
+    // Using MikkT space (http://www.mikktspace.com/)
+    vec3 bitangent = vBitangentSign * cross(vNormal, vTangent);
+    vec3 N = normalize(tangentNormal.x * vTangent + tangentNormal.y * bitangent + tangentNormal.z * vNormal);
 #else
-    vec3 N = vTbnMatrix[2];
+    vec3 N = vNormal;
 #endif
 
     vec3 V = -normalize(vPosition);
