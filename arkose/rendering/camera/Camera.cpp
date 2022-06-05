@@ -90,6 +90,12 @@ void Camera::setFocusDepth(float focusDepth)
     }
 }
 
+float Camera::circleOfConfusionMmToPxFactor() const
+{
+    float refCircleOfConfusion = 1.0f; // i.e. 1 mm
+    return convertCircleOfConfusionToPixelUnits(refCircleOfConfusion, m_sensorSize, m_viewportSize);
+}
+
 float Camera::fieldOfView() const
 {
     return calculateFieldOfView(m_focalLength, m_sensorSize);
@@ -350,7 +356,8 @@ void Camera::drawGui(bool includeContainingWindow)
         ImGui::RadioButton("Manual focus", manualFocus);
 
         if (manualFocus) {
-            ImGui::SliderFloat("Focus depth", &m_focusDepth, 0.25f, 100.0f);
+            ImGui::DragFloat("Focus depth (rough)", &m_focusDepth, 0.1f, 0.25f, 1000.0f, "%.1f");
+            ImGui::DragFloat("Focus depth (fine)", &m_focusDepth, 0.001f, 0.25f, 1000.0f, "%.3f");
         } else {
             NOT_YET_IMPLEMENTED();
         }

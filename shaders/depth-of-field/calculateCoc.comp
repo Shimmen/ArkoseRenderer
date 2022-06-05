@@ -22,7 +22,7 @@ void main()
         return;
 
     float sceneDepthNonLinear = texelFetch(sceneDepthTex, pixelCoord, 0).r;
-    float sceneDepth = calculateLinearDepth(sceneDepthNonLinear, camera);
+    float sceneDepth = -calculateLinearDepth(sceneDepthNonLinear, camera); // -z is into the screen
 
     // Formula from Wikipedia: https://en.wikipedia.org/wiki/Circle_of_confusion#Determining_a_circle_of_confusion_diameter_from_the_object_field
 
@@ -31,12 +31,14 @@ void main()
     float f = camera.focalLength; // (m) (same as depth)
     float N = camera.aperture; // i.e. f-number
 
-    float fac1 = abs(S2 - S1) / S2;
+    float fac1 = abs(S2 - S1) / S2; // (note: as S2 goes to infinity, this factor will become 1)
     float fac2 = square(f) / (N * (S1 - f));
-    float coc = fac1 * fac2;
+    float cocM = fac1 * fac2;
+    float cocMm = cocM * 1000.0;
 
-    // NOTE: Resulting CoC will be in (m) as all inputs are too, we will need to rescale to have it in pixels
-    //       by dividing by the sensor size, or something similar (we need same aspect ratio as the screen!)
+    // Encode depth differences in sign of CoC
+    float positiveIfFurther = sign(S2 - S1);
+    float encodedCoc = abs(cocMm) * positiveIfFurther;
 
-    imageStore(circleOfConfusionImg, pixelCoord, vec4(coc, 0.0, 0.0, 0.0));
+    imageStore(circleOfConfusionImg, pixelCoord, vec4(encodedCoc, 0.0, 0.0, 0.0));
 }

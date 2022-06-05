@@ -1,0 +1,72 @@
+#version 460
+
+#include <common.glsl>
+#include <common/camera.glsl>
+#include <common/namedUniforms.glsl>
+
+layout(set = 0, binding = 0, rgba16f) uniform writeonly image2D depthOfFieldImg;
+layout(set = 0, binding = 1) uniform sampler2D circleOfConfusionTex;
+layout(set = 0, binding = 2) uniform sampler2D sceneColorTex;
+layout(set = 0, binding = 3) uniform CameraStateBlock { CameraState camera; };
+
+NAMED_UNIFORMS(constants,
+    uvec2 targetSize;
+    float circleOfConfusionMmToPx;
+    float maxBlurSize;
+    float radiusScale; // smaller => nicer blur but slower
+    bool debugOutputClampedRadius;
+)
+
+// Well, not actually bokeh right now.. but it looks nice
+// Based on this post: http://tuxedolabs.blogspot.com/2018/05/bokeh-depth-of-field-in-single-pass.html
+
+layout(local_size_x = 8, local_size_y = 8) in;
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(pixelCoord, constants.targetSize)))
+        return;
+
+    float coc = texelFetch(circleOfConfusionTex, pixelCoord, 0).r;
+    float cocPixels = abs(coc) * constants.circleOfConfusionMmToPx;
+
+    vec2 pixelSize = vec2(1.0) / vec2(constants.targetSize);
+    vec2 texCoord = (vec2(pixelCoord) + vec2(0.5)) * pixelSize;
+
+    vec3 color = texelFetch(sceneColorTex, pixelCoord, 0).rgb;
+    float totalWeight = 1.0;
+
+    float radius = constants.radiusScale;
+    for (float angle = 0.0; radius < constants.maxBlurSize; angle += GOLDEN_ANGLE)
+    {
+        vec2 sampleTexCoord = texCoord + vec2(cos(angle), sin(angle)) * radius * pixelSize;
+        
+        vec3 sampleColor = texture(sceneColorTex, sampleTexCoord).rgb;
+        float sampleCoc = texture(circleOfConfusionTex, sampleTexCoord).r;
+
+        // From reference implementation:
+        //   if (sampleDepth > centerDepth)
+        // In this case we don't have depths available, but we encode which side of the focus distance we're at,
+        // such that positive CoC's are further and negative CoC's are closer to the focal distance.
+        if (sampleCoc > coc) {
+            sampleCoc = clamp(abs(sampleCoc), 0.0, abs(coc) * 2.0);
+        }
+
+        // NOTE: We have to take abs of the CoC to convert from the sign-encoded version to the raw value
+        float sampleCocPixels = abs(sampleCoc) * constants.circleOfConfusionMmToPx;
+
+        float m = smoothstep(radius - 0.5, radius + 0.5, sampleCocPixels);
+        color += mix(color / totalWeight, sampleColor, m);
+        
+        totalWeight += 1.0;
+        radius += constants.radiusScale / radius;
+    }
+
+    vec3 blurredColor = color / totalWeight;
+
+    if (constants.debugOutputClampedRadius && cocPixels > constants.maxBlurSize) {
+        blurredColor = vec3(1, 0, 1);
+    }
+
+    imageStore(depthOfFieldImg, pixelCoord, vec4(blurredColor, 0.0));
+}

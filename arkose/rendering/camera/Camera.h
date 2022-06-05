@@ -55,6 +55,8 @@ public:
     float focusDepth() const { return m_focusDepth; }
     void setFocusDepth(float focusDepth);
 
+    float circleOfConfusionMmToPxFactor() const;
+
     // NOTE: *horizontal* field of view
     float fieldOfView() const;
     void setFieldOfView(float);

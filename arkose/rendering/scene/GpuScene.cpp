@@ -107,27 +107,32 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     {
         Extent2D windowExtent = reg.windowRenderTarget().extent();
 
-        Texture& depthTexture = reg.createTexture2D(windowExtent, Texture::Format::Depth24Stencil8, Texture::Filters::nearest());
+        auto nearestFilter = Texture::Filters::nearest();
+        auto linerFilter = Texture::Filters::linear();
+        auto mipMode = Texture::Mipmap::None;
+        auto wrapMode = Texture::WrapModes::clampAllToEdge();
+
+        Texture& depthTexture = reg.createTexture2D(windowExtent, Texture::Format::Depth24Stencil8, nearestFilter, mipMode, wrapMode);
         reg.publish("SceneDepth", depthTexture);
 
         // rgb: scene color, a: unused
-        Texture& colorTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
+        Texture& colorTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F, linerFilter, mipMode, wrapMode);
         reg.publish("SceneColor", colorTexture);
 
         // rg: encoded normal, ba: velocity in image plane (2D)
-        Texture& normalVelocityTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
+        Texture& normalVelocityTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F, linerFilter, mipMode, wrapMode);
         reg.publish("SceneNormalVelocity", normalVelocityTexture);
 
         // r: roughness, g: metallic, b: unused, a: unused
-        Texture& materialTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
+        Texture& materialTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F, linerFilter, mipMode, wrapMode);
         reg.publish("SceneMaterial", materialTexture);
 
         // rgb: base color, a: unused
-        Texture& baseColorTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA8);
+        Texture& baseColorTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA8, linerFilter, mipMode, wrapMode);
         reg.publish("SceneBaseColor", baseColorTexture);
 
         // rgb: diffuse color, a: unused
-        Texture& diffueGiTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F);
+        Texture& diffueGiTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F, linerFilter, mipMode, wrapMode);
         reg.publish("DiffuseGI", diffueGiTexture);
     }
 

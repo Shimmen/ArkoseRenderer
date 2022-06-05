@@ -6,4 +6,11 @@ class DepthOfFieldNode final : public RenderPipelineNode {
 public:
     std::string name() const override { return "Depth of Field"; }
     ExecuteCallback construct(GpuScene&, Registry&) override;
+
+private:
+    float m_maxBlurSize { 20.0f };
+    float m_radiusScale { 0.85f };
+
+    bool m_debugShowCircleOfConfusion { false };
+    bool m_debugShowClampedBlurSize { false };
 };
