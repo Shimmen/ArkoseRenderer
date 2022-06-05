@@ -370,16 +370,16 @@ void Camera::drawGui(bool includeContainingWindow)
 
 void Camera::drawExposureGui()
 {
-    if (ImGui::RadioButton("Automatic exposure", m_focusMode == FocusMode::Auto))
-        m_focusMode = FocusMode::Auto;
-    if (ImGui::RadioButton("Manual exposure", m_focusMode == FocusMode::Manual))
-        m_focusMode == FocusMode::Manual;
+    if (ImGui::RadioButton("Automatic exposure", m_exposureMode == ExposureMode::Auto))
+        m_exposureMode = ExposureMode::Auto;
+    if (ImGui::RadioButton("Manual exposure", m_exposureMode == ExposureMode::Manual))
+        m_exposureMode == ExposureMode::Manual;
 
-    switch (m_focusMode) {
-    case FocusMode::Auto:
+    switch (m_exposureMode) {
+    case ExposureMode::Auto:
         drawAutomaticExposureGui();
         break;
-    case FocusMode::Manual:
+    case ExposureMode::Manual:
         drawManualExposureGui();
         break;
     }
