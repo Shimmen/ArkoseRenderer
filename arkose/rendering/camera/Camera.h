@@ -10,6 +10,7 @@
 #include <moos/vector.h>
 #include <optional>
 
+class CameraController;
 class Scene;
 
 class Camera final {
@@ -106,6 +107,9 @@ public:
     void setViewFromWorld(mat4);
     void setProjectionFromView(mat4);
 
+    void setController(Badge<CameraController>, CameraController* controller) { m_controller = controller; }
+    CameraController* controller() { return m_controller; }
+
 protected:
     void markAsModified() { m_modified = true; }
 
@@ -175,6 +179,8 @@ private:
     std::optional<mat4> m_previousFrameViewFromWorld { std::nullopt };
     std::optional<mat4> m_previousFrameProjectionFromView { std::nullopt };
     std::optional<vec2> m_previousFrameFrustumJitterPixelOffset { std::nullopt };
+
+    CameraController* m_controller { nullptr };
 
     bool m_modified { true };
 };
