@@ -11,7 +11,15 @@ public:
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:
-    mutable std::optional<Buffer*> m_lastResultBuffer {};
+    struct DeferredResult {
+        Buffer* resultBuffer {};
 
-    bool didClick(Button) const;
+        // What should we use the result for?
+        bool selectMesh { false };
+        bool specifyFocusDepth { false };
+    };
+
+    std::optional<DeferredResult> m_pendingDeferredResult {};
+
+    void processDeferredResult(CommandList& cmdList, GpuScene&, const DeferredResult&);
 };

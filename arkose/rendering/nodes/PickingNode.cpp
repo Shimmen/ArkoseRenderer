@@ -6,25 +6,29 @@
 #include <imgui.h>
 #include <moos/vector.h>
 
+// Shader headers
+#include "PickingData.h"
+
 RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Registry& reg)
 {
-    Texture& indexMap = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R32);
-    Texture& indexDepthMap = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth32F);
-    RenderTarget& indexMapRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &indexMap, LoadOp::Clear, StoreOp::Store },
-                                                                  { RenderTarget::AttachmentType::Depth, &indexDepthMap, LoadOp::Clear, StoreOp::Discard } });
+    Buffer& resultBuffer = reg.createBuffer(sizeof(PickingData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::Readback);
 
-    Buffer& transformDataBuffer = reg.createBuffer(256 * sizeof(mat4), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
-    BindingSet& drawIndexBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(transformDataBuffer, ShaderStage::Vertex) });
+    Texture& indexTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R32);
+    Texture& depthTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth32F);
+    RenderTarget& indexMapRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &indexTexture },
+                                                                  { RenderTarget::AttachmentType::Depth, &depthTexture } });
 
     Shader drawIndexShader = Shader::createBasicRasterize("picking/drawIndices.vert", "picking/drawIndices.frag");
     RenderStateBuilder renderStateBuilder(indexMapRenderTarget, drawIndexShader, VertexLayout { VertexComponent::Position3F });
-    renderStateBuilder.stateBindings().at(0, drawIndexBindingSet);
+    renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneObjectSet"));
     RenderState& drawIndicesState = reg.createRenderState(renderStateBuilder);
 
-    Buffer& pickedIndexBuffer = reg.createBuffer(sizeof(moos::u32), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::Readback);
-    Shader collectorShader = Shader::createCompute("picking/collectIndex.comp");
-    BindingSet& collectIndexBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(indexMap, ShaderStage::Compute),
-                                                                ShaderBinding::storageBuffer(pickedIndexBuffer, ShaderStage::Compute) });
+    
+    Shader collectorShader = Shader::createCompute("picking/collectData.comp");
+    BindingSet& collectIndexBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(resultBuffer, ShaderStage::Compute),
+                                                                ShaderBinding::storageTexture(indexTexture, ShaderStage::Compute),
+                                                                ShaderBinding::sampledTexture(depthTexture, ShaderStage::Compute),
+                                                                ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::Compute) });
     ComputeState& collectState = reg.createComputeState(collectorShader, { &collectIndexBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
@@ -33,33 +37,16 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
         // is ready at this point. Just because it's from the previous frame doesn't mean it must be done.
         // What if we submit the queue and immediately start work on the next frame before the first is
         // even started? And many more similar scenarios.
-        if (m_lastResultBuffer.has_value()) {
-
-            moos::u32 selectedIndex;
-            cmdList.slowBlockingReadFromBuffer(*m_lastResultBuffer.value(), 0, sizeof(moos::u32), &selectedIndex);
-            if (selectedIndex < scene.meshCount()) {
-                scene.forEachMesh([&](size_t index, Mesh& mesh) {
-                    if (index == selectedIndex) {
-                        scene.scene().setSelectedMesh(&mesh);
-                        scene.scene().setSelectedModel(mesh.model());
-                    }
-                });
-            } else {
-                scene.scene().setSelectedMesh(nullptr);
-                scene.scene().setSelectedModel(nullptr);
-            }
-
-            m_lastResultBuffer.reset();
+        if (m_pendingDeferredResult.has_value()) {
+            processDeferredResult(cmdList, scene, m_pendingDeferredResult.value());
+            m_pendingDeferredResult.reset();
         }
 
-        if (didClick(Button::Middle)) {
+        auto& input = Input::instance();
+        bool meshSelectPick = input.didClickButton(Button::Left);
+        bool focusDepthPick = input.didClickButton(Button::Middle);
 
-            std::vector<mat4> objectTransforms {}; 
-            scene.forEachMesh([&](size_t index, Mesh& mesh) {
-                objectTransforms.push_back(mesh.transform().worldMatrix());
-                mesh.ensureDrawCallIsAvailable({ VertexComponent::Position3F }, scene);
-            });
-            transformDataBuffer.updateDataAndGrowIfRequired(objectTransforms.data(), objectTransforms.size() * sizeof(mat4));
+        if (meshSelectPick || focusDepthPick) {
 
             cmdList.beginRendering(drawIndicesState, ClearColor::srgbColor(1, 0, 1), 1.0f);
             cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
@@ -74,33 +61,51 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
             });
 
             cmdList.endRendering();
+            
+            cmdList.textureWriteBarrier(indexTexture);
+            cmdList.textureWriteBarrier(depthTexture);
 
             cmdList.setComputeState(collectState);
             cmdList.bindSet(collectIndexBindingSet, 0);
 
-            vec2 pickLocation = Input::instance().mousePosition();
+            vec2 pickLocation = input.mousePosition();
             cmdList.setNamedUniform("mousePosition", pickLocation);
 
-            cmdList.dispatch(indexMap.extent(), { 16, 16, 1 });
-            m_lastResultBuffer = &pickedIndexBuffer;
+            cmdList.dispatch(indexTexture.extent(), { 16, 16, 1 });
+
+            m_pendingDeferredResult = DeferredResult { .resultBuffer = &resultBuffer,
+                                                       .selectMesh = meshSelectPick,
+                                                       .specifyFocusDepth = focusDepthPick };
         }
     };
 }
 
-bool PickingNode::didClick(Button button) const
+void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, const DeferredResult& deferredResult)
 {
-    static std::optional<vec2> mouseDownLocation {};
-    auto& input = Input::instance();
+    // At least one must be specified
+    ARKOSE_ASSERT(deferredResult.selectMesh || deferredResult.specifyFocusDepth);
+    
+    PickingData pickingData;
+    cmdList.slowBlockingReadFromBuffer(*deferredResult.resultBuffer, 0, sizeof(pickingData), &pickingData);
 
-    if (input.wasButtonPressed(button))
-        mouseDownLocation = input.mousePosition();
-
-    if (input.wasButtonReleased(button) && mouseDownLocation.has_value()) {
-        float distance = moos::distance(input.mousePosition(), mouseDownLocation.value());
-        mouseDownLocation.reset();
-        if (distance < 4.0f)
-            return true;
+    if (deferredResult.selectMesh) {
+        int selectedMeshIdx = pickingData.meshIdx;
+        if (selectedMeshIdx < scene.meshCount()) {
+            scene.forEachMesh([&](size_t index, Mesh& mesh) {
+                if (index == selectedMeshIdx) {
+                    scene.scene().setSelectedMesh(&mesh);
+                    scene.scene().setSelectedModel(mesh.model());
+                }
+            });
+        } else {
+            scene.scene().setSelectedMesh(nullptr);
+            scene.scene().setSelectedModel(nullptr);
+        }
     }
 
-    return false;
+    if (deferredResult.specifyFocusDepth) {
+        float focusDepth = pickingData.depth;
+        // TODO: Check if the scene has a camera controller first, if so, set the *target* focus depth for it instead so it can interpolate
+        scene.scene().camera().setFocusDepth(focusDepth);
+    }
 }

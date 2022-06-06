@@ -1,0 +1,34 @@
+#version 460
+
+#include <common/camera.glsl>
+#include <common/namedUniforms.glsl>
+#include <shared/PickingData.h>
+
+layout(set = 0, binding = 0) buffer writeonly ResultBlock { PickingData pickingData; };
+layout(set = 0, binding = 1, r32ui) uniform readonly uimage2D indexImage;
+layout(set = 0, binding = 2) uniform sampler2D depthTexture;
+layout(set = 0, binding = 3) uniform CameraStateBlock { CameraState camera; };
+
+NAMED_UNIFORMS(constants,
+    vec2 mousePosition;
+)
+
+layout(local_size_x = 16, local_size_y = 16) in;
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(pixelCoord, imageSize(indexImage))))
+        return;
+
+    vec2 fragCoord = vec2(pixelCoord) + vec2(0.5);
+    if (all(lessThanEqual(abs(constants.mousePosition - fragCoord), vec2(0.5)))) {
+
+        uint index = imageLoad(indexImage, pixelCoord).r;
+        pickingData.meshIdx = int(index);
+
+        float nonlinearDepth = texelFetch(depthTexture, pixelCoord, 0).r;
+        float linearDepth = -calculateLinearDepth(nonlinearDepth, camera); // -z is into the screen
+        pickingData.depth = linearDepth;
+
+    }
+}
