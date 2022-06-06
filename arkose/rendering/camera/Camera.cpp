@@ -380,7 +380,7 @@ void Camera::drawExposureGui()
     if (ImGui::RadioButton("Automatic exposure", m_exposureMode == ExposureMode::Auto))
         m_exposureMode = ExposureMode::Auto;
     if (ImGui::RadioButton("Manual exposure", m_exposureMode == ExposureMode::Manual))
-        m_exposureMode == ExposureMode::Manual;
+        m_exposureMode = ExposureMode::Manual;
 
     switch (m_exposureMode) {
     case ExposureMode::Auto:
