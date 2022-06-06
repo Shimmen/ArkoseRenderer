@@ -36,6 +36,7 @@ void Input::preEventPoll()
 
     memset(input.m_wasButtonPressed, false, MouseButtonCount * sizeof(bool));
     memset(input.m_wasButtonReleased, false, MouseButtonCount * sizeof(bool));
+    memset(input.m_wasButtonClicked, false, MouseButtonCount * sizeof(bool));
 
     input.m_lastXPosition = input.m_currentXPosition;
     input.m_lastYPosition = input.m_currentYPosition;
@@ -76,6 +77,12 @@ bool Input::wasButtonReleased(Button button) const
 {
     int val = static_cast<int>(button);
     return m_wasButtonReleased[val];
+}
+
+bool Input::didClickButton(Button button) const
+{
+    int val = static_cast<int>(button);
+    return m_wasButtonClicked[val];
 }
 
 vec2 Input::mousePosition() const
@@ -176,15 +183,26 @@ void Input::mouseButtonEventCallback(GLFWwindow* window, int button, int action,
 {
     auto input = static_cast<Input*>(glfwGetWindowUserPointer(window));
 
+    vec2 mousePos = input->mousePosition();
+
     switch (action) {
     case GLFW_PRESS:
         input->m_wasButtonPressed[button] = true;
         input->m_isButtonDown[button] = true;
+        input->m_buttonPressMousePosition[button] = mousePos;
         break;
 
     case GLFW_RELEASE:
         input->m_wasButtonReleased[button] = true;
         input->m_isButtonDown[button] = false;
+
+        if (input->m_buttonPressMousePosition[button].has_value()) {
+            if (moos::distance(input->m_buttonPressMousePosition[button].value(), mousePos) <= MouseClickMaxAllowedDelta) {
+                input->m_wasButtonClicked[button] = true;
+                input->m_buttonPressMousePosition[button].reset();
+            }
+        }
+
         break;
 
     case GLFW_REPEAT:

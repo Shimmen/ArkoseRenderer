@@ -1,6 +1,7 @@
 #pragma once
 
 #include <moos/vector.h>
+#include <optional>
 
 // Values map directly to GLFW's key defines
 enum class Key : int {
@@ -172,6 +173,7 @@ public:
     [[nodiscard]] bool isButtonDown(Button) const;
     [[nodiscard]] bool wasButtonPressed(Button) const;
     [[nodiscard]] bool wasButtonReleased(Button) const;
+    [[nodiscard]] bool didClickButton(Button) const;
 
     [[nodiscard]] vec2 mousePosition() const;
     [[nodiscard]] vec2 mouseDelta() const;
@@ -193,6 +195,7 @@ private:
     static constexpr int MouseButtonCount { static_cast<int>(Button::__Count) };
 
     static constexpr float GamepadDeadzone { 0.25f };
+    static constexpr float MouseClickMaxAllowedDelta { 4.0f };
 
     GLFWwindow* m_associatedWindow { nullptr };
 
@@ -203,6 +206,9 @@ private:
     bool m_isButtonDown[MouseButtonCount] {};
     bool m_wasButtonPressed[MouseButtonCount] {};
     bool m_wasButtonReleased[MouseButtonCount] {};
+
+    bool m_wasButtonClicked[MouseButtonCount] {};
+    std::optional<vec2> m_buttonPressMousePosition[MouseButtonCount] {};
 
     double m_currentXPosition { 0.0 };
     double m_currentYPosition { 0.0 };
