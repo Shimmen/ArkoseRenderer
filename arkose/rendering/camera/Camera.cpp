@@ -2,6 +2,7 @@
 
 #include "core/Logging.h"
 #include "math/Halton.h"
+#include "rendering/camera/CameraController.h"
 #include <moos/transform.h>
 #include <imgui/imgui.h>
 
@@ -84,7 +85,7 @@ void Camera::setFocalLength(float focalLength)
 
 void Camera::setFocusDepth(float focusDepth)
 {
-    if (std::abs(m_focusDepth - focusDepth) > 1e-2f) { // (1 cm)
+    if (std::abs(m_focusDepth - focusDepth) > 1e-6f) {
         m_focusDepth = focusDepth;
         markAsModified();
     }
@@ -356,8 +357,14 @@ void Camera::drawGui(bool includeContainingWindow)
         ImGui::RadioButton("Manual focus", manualFocus);
 
         if (manualFocus) {
-            ImGui::DragFloat("Focus depth (rough)", &m_focusDepth, 0.1f, 0.25f, 1000.0f, "%.1f");
-            ImGui::DragFloat("Focus depth (fine)", &m_focusDepth, 0.001f, 0.25f, 1000.0f, "%.3f");
+            // Even as manual it can be controlled by the camera controller as it may have other manual controls. If these sliders are
+            // adjusted here though we have to stop the camera controller from overriding whatever the user does directly here and now.
+            bool adjustedFocusWithSliders = false;
+            adjustedFocusWithSliders |= ImGui::DragFloat("Focus depth (rough)", &m_focusDepth, 0.1f, 0.25f, 1000.0f, "%.1f");
+            adjustedFocusWithSliders |= ImGui::DragFloat("Focus depth (fine)", &m_focusDepth, 0.001f, 0.25f, 1000.0f, "%.3f");
+            if (adjustedFocusWithSliders && controller()) {
+                controller()->clearTargetFocusDepth();
+            }
         } else {
             NOT_YET_IMPLEMENTED();
         }

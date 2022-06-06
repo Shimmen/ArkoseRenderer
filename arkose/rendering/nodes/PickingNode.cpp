@@ -1,7 +1,6 @@
 #include "PickingNode.h"
 
-#include "CameraState.h"
-#include "LightData.h"
+#include "rendering/camera/CameraController.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 #include <moos/vector.h>
@@ -105,7 +104,12 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
 
     if (deferredResult.specifyFocusDepth) {
         float focusDepth = pickingData.depth;
-        // TODO: Check if the scene has a camera controller first, if so, set the *target* focus depth for it instead so it can interpolate
-        scene.scene().camera().setFocusDepth(focusDepth);
+        Camera& camera = scene.camera();
+
+        if (CameraController* cameraController = camera.controller()) {
+            cameraController->setTargetFocusDepth(focusDepth);
+        } else {
+            camera.setFocusDepth(focusDepth);
+        }
     }
 }

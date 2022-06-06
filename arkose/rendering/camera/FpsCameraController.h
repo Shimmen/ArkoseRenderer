@@ -4,6 +4,7 @@
 #include <moos/matrix.h>
 #include <moos/vector.h>
 #include <moos/quaternion.h>
+#include <optional>
 
 class FpsCameraController : public CameraController {
 public:
@@ -15,6 +16,9 @@ public:
     float maxSpeed() const { return m_maxSpeed; }
     void setMaxSpeed(float maxSpeed) { m_maxSpeed = maxSpeed; }
 
+    void setTargetFocusDepth(float) override;
+    void clearTargetFocusDepth() override;
+
 private:
     vec3 m_velocity {};
     float m_maxSpeed { 10.0f };
@@ -23,6 +27,9 @@ private:
     quat m_bankingOrientation { { 0, 0, 0 }, 1 };
     
     float m_targetFieldOfView { -1.0f };
+
+    std::optional<float> m_targetFocusDepth {};
+    float m_focusDepthLerpSpeed { 10.0f };
 
     static constexpr float TimeToMaxSpeed { 0.25f };
     static constexpr float TimeFromMaxSpeed { 0.60f };

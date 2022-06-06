@@ -16,6 +16,16 @@ Camera* FpsCameraController::relinquishControl()
     return CameraController::relinquishControl();
 }
 
+void FpsCameraController::setTargetFocusDepth(float focusDepth)
+{
+    m_targetFocusDepth = focusDepth;
+}
+
+void FpsCameraController::clearTargetFocusDepth()
+{
+    m_targetFocusDepth = std::nullopt;
+}
+
 void FpsCameraController::update(const Input& input, float dt)
 {
     ARKOSE_ASSERT(isCurrentlyControllingCamera());
@@ -127,6 +137,13 @@ void FpsCameraController::update(const Input& input, float dt)
     }
     float fov = moos::lerp(camera.fieldOfView(), m_targetFieldOfView, 1.0f - pow(0.01f, dt));
     camera.setFieldOfView(fov);
+
+    // Apply focus adjustments
+
+    if (m_targetFocusDepth.has_value()) {
+        float focusDepth = moos::lerp(camera.focusDepth(), m_targetFocusDepth.value(), 1.0f - std::exp2(-m_focusDepthLerpSpeed * dt));
+        camera.setFocusDepth(focusDepth);
+    }
 
     // Create the view matrix
 

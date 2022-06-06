@@ -17,6 +17,9 @@ public:
 
 	virtual void update(const Input&, float deltaTime) = 0;
 
+    virtual void setTargetFocusDepth(float) {};
+    virtual void clearTargetFocusDepth() {};
+
 private:
     Camera* m_controlledCamera { nullptr };
 	
