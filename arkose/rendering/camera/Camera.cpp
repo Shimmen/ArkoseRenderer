@@ -134,6 +134,8 @@ float Camera::exposure() const
     case ExposureMode::Manual:
         return calculateManualExposure(fNumber(), shutterSpeed(), ISO());
     }
+
+    ASSERT_NOT_REACHED();
 }
 
 float Camera::exposureCompensation() const
