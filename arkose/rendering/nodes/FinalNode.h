@@ -12,4 +12,10 @@ public:
 
 private:
     std::string m_sourceTextureName;
+
+    bool m_addFilmGrain { true };
+    float m_filmGrainScale { 2.5f };
+
+    bool m_applyVignette { true };
+    float m_vignetteIntensity { 0.18f };
 };

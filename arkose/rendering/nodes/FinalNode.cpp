@@ -32,18 +32,22 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Regist
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        static bool addFilmGrain = true;
-        ImGui::Checkbox("Add film grain", &addFilmGrain);
-        float filmGrainGain = addFilmGrain ? scene.scene().filmGrainGain() : 0.0f;
+        ImGui::Checkbox("Add film grain", &m_addFilmGrain);
+        ImGui::SliderFloat("Film grain scale", &m_filmGrainScale, 1.0f, 10.0f);
+        float filmGrainGain = m_addFilmGrain ? scene.scene().filmGrainGain() : 0.0f;
 
-        static float filmGrainScale = 2.5f;
-        ImGui::SliderFloat("Film grain scale", &filmGrainScale, 1.0f, 10.0f);
+        ImGui::Checkbox("Apply vignette", &m_applyVignette);
+        ImGui::SliderFloat("Vignette intensity", &m_vignetteIntensity, 0.0f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+        float vignetteIntensity = m_applyVignette ? m_vignetteIntensity : 0.0f;
 
         cmdList.beginRendering(renderState, ClearColor::black(), 1.0f);
         {
             cmdList.setNamedUniform("filmGrainGain", filmGrainGain);
-            cmdList.setNamedUniform("filmGrainScale", filmGrainScale);
+            cmdList.setNamedUniform("filmGrainScale", m_filmGrainScale);
             cmdList.setNamedUniform("filmGrainArrayIdx", appState.frameIndex() % filmGrainTexture.arrayCount());
+
+            cmdList.setNamedUniform("vignetteIntensity", vignetteIntensity);
+            cmdList.setNamedUniform("aspectRatio", scene.camera().aspectRatio());
         }
         cmdList.draw(vertexBuffer, 3);
         cmdList.endRendering();
