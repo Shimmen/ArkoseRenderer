@@ -113,60 +113,18 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
         ASSERT_NOT_REACHED();
     }
 
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
+
     {
         SCOPED_PROFILE_ZONE_NAMED("vmaCreateImage");
         VmaAllocationInfo allocationInfo;
-        auto& allocator = static_cast<VulkanBackend&>(backend).globalAllocator();
-        if (vmaCreateImage(allocator, &imageCreateInfo, &allocCreateInfo, &image, &allocation, &allocationInfo) != VK_SUCCESS) {
+        if (vmaCreateImage(vulkanBackend.globalAllocator(), &imageCreateInfo, &allocCreateInfo, &image, &allocation, &allocationInfo) != VK_SUCCESS) {
             ARKOSE_LOG(Error, "VulkanBackend::newTexture(): could not create image.");
         }
         m_sizeInMemory = allocationInfo.size;
     }
 
-    VkImageAspectFlags aspectFlags = 0u;
-    if (hasDepthFormat()) {
-        // Create view for the depth aspect only
-        aspectFlags |= VK_IMAGE_ASPECT_DEPTH_BIT;
-    } else {
-        aspectFlags |= VK_IMAGE_ASPECT_COLOR_BIT;
-    }
-
-    VkImageViewCreateInfo viewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
-    viewCreateInfo.subresourceRange.aspectMask = aspectFlags;
-    viewCreateInfo.image = image;
-    viewCreateInfo.format = vkFormat;
-    viewCreateInfo.components = {
-        VK_COMPONENT_SWIZZLE_IDENTITY,
-        VK_COMPONENT_SWIZZLE_IDENTITY,
-        VK_COMPONENT_SWIZZLE_IDENTITY,
-        VK_COMPONENT_SWIZZLE_IDENTITY
-    };
-    viewCreateInfo.subresourceRange.baseMipLevel = 0;
-    viewCreateInfo.subresourceRange.levelCount = mipLevels();
-
-    switch (type()) {
-    case Type::Texture2D:
-        viewCreateInfo.subresourceRange.baseArrayLayer = 0;
-        viewCreateInfo.subresourceRange.layerCount = layerCount();
-        viewCreateInfo.viewType = isArray()
-            ? VK_IMAGE_VIEW_TYPE_2D_ARRAY
-            : VK_IMAGE_VIEW_TYPE_2D;
-        break;
-    case Type::Cubemap:
-        viewCreateInfo.subresourceRange.baseArrayLayer = 0;
-        viewCreateInfo.subresourceRange.layerCount = layerCount();
-        viewCreateInfo.viewType = isArray()
-            ? VK_IMAGE_VIEW_TYPE_CUBE_ARRAY
-            : VK_IMAGE_VIEW_TYPE_CUBE;
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-    }
-
-    VkDevice device = static_cast<VulkanBackend&>(backend).device();
-    if (vkCreateImageView(device, &viewCreateInfo, nullptr, &imageView) != VK_SUCCESS) {
-        ARKOSE_LOG(Error, "VulkanBackend::newTexture(): could not create image view.");
-    }
+    imageView = createImageView(0, mipLevels());
 
     VkFilter vkMinFilter;
     switch (minFilter()) {
@@ -237,7 +195,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
         break;
     }
 
-    if (vkCreateSampler(device, &samplerCreateInfo, nullptr, &sampler) != VK_SUCCESS) {
+    if (vkCreateSampler(vulkanBackend.device(), &samplerCreateInfo, nullptr, &sampler) != VK_SUCCESS) {
         ARKOSE_LOG(Error, "VulkanBackend::newTexture(): could not create sampler for the image.");
     }
 
@@ -751,4 +709,59 @@ VkImageAspectFlags VulkanTexture::aspectMask() const
     }
 
     return mask;
+}
+
+VkImageView VulkanTexture::createImageView(uint32_t baseMip, uint32_t numMips) const
+{
+    VkImageViewCreateInfo viewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
+    viewCreateInfo.image = image;
+    viewCreateInfo.format = vkFormat;
+    viewCreateInfo.components = {
+        VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY,
+        VK_COMPONENT_SWIZZLE_IDENTITY
+    };
+
+    if (hasDepthFormat()) {
+        // Create view for the depth aspect only
+        viewCreateInfo.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_DEPTH_BIT;
+    } else {
+        viewCreateInfo.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+
+    ARKOSE_ASSERT(numMips > 0);
+    ARKOSE_ASSERT(baseMip < mipLevels());
+    ARKOSE_ASSERT(baseMip + numMips - 1 < mipLevels());
+
+    viewCreateInfo.subresourceRange.baseMipLevel = baseMip;
+    viewCreateInfo.subresourceRange.levelCount = numMips;
+
+    switch (type()) {
+    case Type::Texture2D:
+        viewCreateInfo.subresourceRange.baseArrayLayer = 0;
+        viewCreateInfo.subresourceRange.layerCount = layerCount();
+        viewCreateInfo.viewType = isArray()
+            ? VK_IMAGE_VIEW_TYPE_2D_ARRAY
+            : VK_IMAGE_VIEW_TYPE_2D;
+        break;
+    case Type::Cubemap:
+        viewCreateInfo.subresourceRange.baseArrayLayer = 0;
+        viewCreateInfo.subresourceRange.layerCount = layerCount();
+        viewCreateInfo.viewType = isArray()
+            ? VK_IMAGE_VIEW_TYPE_CUBE_ARRAY
+            : VK_IMAGE_VIEW_TYPE_CUBE;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+
+    VkDevice device = static_cast<const VulkanBackend&>(backend()).device();
+
+    VkImageView imageView {};
+    if (vkCreateImageView(device, &viewCreateInfo, nullptr, &imageView) != VK_SUCCESS) {
+        ARKOSE_LOG(Fatal, "VulkanBackend: could not create image view.");
+    }
+
+    return imageView;
 }
