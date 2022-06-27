@@ -206,6 +206,8 @@ public:
     [[nodiscard]] const Extent2D extent() const { return { m_description.extent.width(), m_description.extent.height() }; }
     [[nodiscard]] const Extent3D extent3D() const { return m_description.extent; }
 
+    [[nodiscard]] const Extent2D extentAtMip(uint32_t mip) const;
+
     [[nodiscard]] Format format() const { return m_description.format; }
 
     [[nodiscard]] MinFilter minFilter() const { return m_description.filter.min; }

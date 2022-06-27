@@ -40,6 +40,28 @@ bool Texture::hasFloatingPointDataFormat() const
     }
 }
 
+const Extent2D Texture::extentAtMip(uint32_t mip) const
+{
+    ARKOSE_ASSERT(mip < mipLevels());
+
+    if (mip == 0) {
+        return extent();
+    }
+
+    // TODO: We can make this non-looping..
+    uint32_t x = extent().width();
+    uint32_t y = extent().height();
+    for (int i = 0; i < mip; ++i) {
+        x /= 2;
+        y /= 2;
+    }
+
+    x = x > 1 ? x : 1;
+    y = y > 1 ? y : 1;
+
+    return { x, y };
+}
+
 bool Texture::hasMipmaps() const
 {
     return mipmap() != Mipmap::None;
