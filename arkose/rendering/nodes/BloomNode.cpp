@@ -62,8 +62,9 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
         cmdList.setComputeState(downsampleState);
         for (size_t targetMip = 1; targetMip < NumMipLevels; ++targetMip) {
 
-            // TODO: Use named uniform!
-            cmdList.pushConstant(ShaderStage::Compute, targetMip == 1);
+            // Only for mip0 -> mip1, apply brightness normalization to prevent fireflies.
+            bool applyNormalization = targetMip == 1;
+            cmdList.setNamedUniform("applyNormalization", applyNormalization);
 
             size_t bindingSetIdx = targetMip - 1;
             cmdList.bindSet(*m_downsampleSets[bindingSetIdx], 0);
@@ -77,7 +78,7 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
 
         // Iteratively upsample the stack
         cmdList.setComputeState(upsampleState);
-        cmdList.pushConstant(ShaderStage::Compute, m_upsampleBlurRadius, 0);
+        cmdList.setNamedUniform("blurRadius", m_upsampleBlurRadius);
         for (int targetMip = NumMipLevels - 2; targetMip >= 0; --targetMip) {
 
             size_t bindingSetIdx = targetMip;

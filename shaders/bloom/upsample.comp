@@ -1,14 +1,15 @@
 #version 460
 
+#include <common/namedUniforms.glsl>
 #include <common/sampling.glsl>
 
 layout(set = 0, binding = 0, rgba16f) restrict writeonly uniform image2D targetImg;              // A' : level0 upsampled     |
 layout(set = 0, binding = 1, rgba16f) restrict readonly uniform image2D nextLevelUpsampledImg;   // B' : level1 upsampled     |=>  A' = A + blur(B')
 layout(set = 0, binding = 2, rgba16f) restrict readonly uniform image2D sameLevelDownsampledImg; // A  : level0 downsampled   |
 
-layout(push_constant) uniform PushConstants {
+NAMED_UNIFORMS(constants,
     float blurRadius;
-};
+)
 
 vec4 sampleNextLevelUpsampledBilinear(vec2 uv)
 {
@@ -55,7 +56,7 @@ void main()
         return;
 
     vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(targetSize);
-    vec2 offset = vec2(1.0, targetSize.x / targetSize.y) * vec2(blurRadius);
+    vec2 offset = vec2(1.0, targetSize.x / targetSize.y) * vec2(constants.blurRadius);
     vec4 blurred = tent3x3Upsample(uv, offset);
 
     vec4 original = imageLoad(sameLevelDownsampledImg, pixelCoord);
