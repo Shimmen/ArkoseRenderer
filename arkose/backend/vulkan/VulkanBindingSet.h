@@ -19,4 +19,7 @@ public:
     VkDescriptorPool descriptorPool;
     VkDescriptorSetLayout descriptorSetLayout;
     VkDescriptorSet descriptorSet;
+
+private:
+    std::vector<VkImageView> m_additionalImageViews {};
 };

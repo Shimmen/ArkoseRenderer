@@ -169,6 +169,11 @@ VulkanBindingSet::~VulkanBindingSet()
     if (!hasBackend())
         return;
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+
+    for (VkImageView imageView : m_additionalImageViews) {
+        vkDestroyImageView(vulkanBackend.device(), imageView, nullptr);
+    }
+
     vkDestroyDescriptorPool(vulkanBackend.device(), descriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(vulkanBackend.device(), descriptorSetLayout, nullptr);
 }
@@ -292,10 +297,16 @@ void VulkanBindingSet::updateBindings()
         case ShaderBindingType::StorageTexture: {
 
             auto& texture = static_cast<const VulkanTexture&>(bindingInfo.storageTexture().texture());
+            uint32_t mipLevel = bindingInfo.storageTexture().mipLevel();
 
             VkDescriptorImageInfo descImageInfo {};
-            descImageInfo.sampler = texture.sampler;
-            descImageInfo.imageView = texture.imageView;
+            if (mipLevel == 0) {
+                // All textures have an image view for mip0 already available
+                descImageInfo.imageView = texture.imageView;
+            } else {
+                descImageInfo.imageView = texture.createImageView(mipLevel, 1);
+                m_additionalImageViews.push_back(descImageInfo.imageView);
+            }
 
             // The runtime systems make sure that the input texture is in the layout!
             descImageInfo.imageLayout = VK_IMAGE_LAYOUT_GENERAL;
