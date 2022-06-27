@@ -12,23 +12,25 @@ layout(push_constant) uniform PushConstants {
 
 vec4 sampleNextLevelUpsampledBilinear(vec2 uv)
 {
-    vec2 clampedUv = clamp(uv, vec2(0.0), vec2(1.0));
-    vec2 coord = clampedUv * vec2(imageSize(nextLevelUpsampledImg));
+    ivec2 sourceMax = imageSize(nextLevelUpsampledImg) - ivec2(1, 1);
 
-    ivec2 iCoord = ivec2(floor(coord - vec2(0.5)));
+    vec2 clampedUv = clamp(uv, vec2(0.0), vec2(1.0));
+    vec2 coord = clampedUv * vec2(sourceMax);
+
+    ivec2 iCoord = ivec2(coord);
     vec2 fCoord = fract(coord);
 
-    vec4 bl = imageLoad(nextLevelUpsampledImg, iCoord + ivec2(0, 0));
-    vec4 br = imageLoad(nextLevelUpsampledImg, iCoord + ivec2(1, 0));
-    vec4 tl = imageLoad(nextLevelUpsampledImg, iCoord + ivec2(0, 1));
-    vec4 tr = imageLoad(nextLevelUpsampledImg, iCoord + ivec2(1, 1));
+    vec4 tl = imageLoad(nextLevelUpsampledImg, min(iCoord + ivec2(0, 0), sourceMax));
+    vec4 tr = imageLoad(nextLevelUpsampledImg, min(iCoord + ivec2(1, 0), sourceMax));
+    vec4 bl = imageLoad(nextLevelUpsampledImg, min(iCoord + ivec2(0, 1), sourceMax));
+    vec4 br = imageLoad(nextLevelUpsampledImg, min(iCoord + ivec2(1, 1), sourceMax));
     return bilinearFilter(tl, tr, bl, br, fCoord);
 }
 
 // See https://www.iryoku.com/next-generation-post-processing-in-call-of-duty-advanced-warfare
 vec4 tent3x3Upsample(vec2 uv, vec2 offset)
 {
-    vec4 color = 6.0 * sampleNextLevelUpsampledBilinear(uv);
+    vec4 color = 4.0 * sampleNextLevelUpsampledBilinear(uv);
 
     color += 2.0 * sampleNextLevelUpsampledBilinear(uv + vec2(-offset.x, 0.0));
     color += 2.0 * sampleNextLevelUpsampledBilinear(uv + vec2(+offset.x, 0.0));
@@ -40,7 +42,7 @@ vec4 tent3x3Upsample(vec2 uv, vec2 offset)
     color += 1.0 * sampleNextLevelUpsampledBilinear(uv + vec2(+offset.x, -offset.y));
     color += 1.0 * sampleNextLevelUpsampledBilinear(uv + vec2(+offset.x, +offset.y));
 
-    return color / vec4(18.0);
+    return color / vec4(16.0);
 }
 
 layout(local_size_x = 16, local_size_y = 16) in;

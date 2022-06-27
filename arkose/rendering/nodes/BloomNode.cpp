@@ -62,6 +62,9 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
         cmdList.setComputeState(downsampleState);
         for (size_t targetMip = 1; targetMip < NumMipLevels; ++targetMip) {
 
+            // TODO: Use named uniform!
+            cmdList.pushConstant(ShaderStage::Compute, targetMip == 1);
+
             size_t bindingSetIdx = targetMip - 1;
             cmdList.bindSet(*m_downsampleSets[bindingSetIdx], 0);
 
