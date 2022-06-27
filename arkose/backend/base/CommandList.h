@@ -8,7 +8,7 @@
 class CommandList {
 public:
     virtual void clearTexture(Texture&, ClearColor) = 0;
-    virtual void copyTexture(Texture& src, Texture& dst, uint32_t srcLayer = 0, uint32_t dstLayer = 0) = 0;
+    virtual void copyTexture(Texture& src, Texture& dst, uint32_t srcMip = 0, uint32_t dstMip = 0) = 0;
     virtual void generateMipmaps(Texture&) = 0;
 
     virtual void executeBufferCopyOperations(UploadBuffer&);
@@ -53,6 +53,7 @@ public:
     virtual void endDebugLabel() = 0;
 
     virtual void textureWriteBarrier(const Texture&) = 0;
+    virtual void textureMipWriteBarrier(const Texture&, uint32_t mip) = 0;
     virtual void bufferWriteBarrier(std::vector<Buffer*>) = 0;
 
     virtual void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) = 0;
