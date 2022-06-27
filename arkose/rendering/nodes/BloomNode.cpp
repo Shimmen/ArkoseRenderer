@@ -5,59 +5,68 @@
 
 RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Registry& reg)
 {
+    //m_downsampleTextures.clear();
+    //m_upsampleTextures.clear();
+    m_downsampleSets.clear();
+    m_upsampleSets.clear();
+
     Texture& mainTexture = *reg.getTexture("SceneColor");
-    Extent2D baseExtent = mainTexture.extent();
+    //Extent2D baseExtent = mainTexture.extent();
 
-    const size_t numDownsamples = 6;
-    const size_t numLevels = numDownsamples + 1;
+    Texture& downsampleTex = reg.createTexture2D(mainTexture.extent(), Texture::Format::RGBA16F, Texture::Filters::linear(), Texture::Mipmap::Linear, Texture::WrapModes::clampAllToEdge());
+    downsampleTex.setName("BloomDownsampleTexture");
 
-    struct {
-        std::vector<Texture*> downsampleTextures;
-        std::vector<Texture*> upsampleTextures;
+    Texture& upsampleTex = reg.createTexture2D(mainTexture.extent(), Texture::Format::RGBA16F, Texture::Filters::linear(), Texture::Mipmap::Linear, Texture::WrapModes::clampAllToEdge());
+    upsampleTex.setName("BloomUpsampleTexture");
 
-        std::vector<BindingSet*> downsampleSets;
-        std::vector<BindingSet*> upsampleSets;
-    } captures;
-
+    /*
     Extent2D extent = baseExtent;
-    for (size_t i = 0; i < numLevels; ++i) {
+    for (size_t i = 0; i < NumMipLevels; ++i) {
         extent = { extent.width() / 2, extent.height() / 2 };
 
         Texture& downsampleTex = reg.createTexture2D(extent, Texture::Format::RGBA16F, Texture::Filters::linear(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
         Texture& upsampleTex = reg.createTexture2D(extent, Texture::Format::RGBA16F, Texture::Filters::linear(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
 
-        captures.downsampleTextures.push_back(&downsampleTex);
-        captures.upsampleTextures.push_back(&upsampleTex);
+        m_downsampleTextures.push_back(&downsampleTex);
+        m_upsampleTextures.push_back(&upsampleTex);
     }
+    */
 
-    for (size_t i = 1; i <= numDownsamples; ++i) {
+    for (size_t i = 1; i < NumMipLevels; ++i) {
 
         // (first iteration: to downsample[1] from downsample[0])
-        BindingSet& downsampleSet = reg.createBindingSet({ ShaderBinding::storageTexture(*captures.downsampleTextures[i], ShaderStage::Compute),
-                                                           ShaderBinding::storageTexture(*captures.downsampleTextures[i - 1], ShaderStage::Compute) });
-        captures.downsampleSets.push_back(&downsampleSet);
+        //BindingSet& downsampleSet = reg.createBindingSet({ ShaderBinding::storageTexture(*m_downsampleTextures[i], ShaderStage::Compute),
+        //                                                   ShaderBinding::storageTexture(*m_downsampleTextures[i - 1], ShaderStage::Compute) });
+        BindingSet& downsampleSet = reg.createBindingSet({ ShaderBinding::storageTextureAtMip(downsampleTex, i, ShaderStage::Compute),
+                                                           ShaderBinding::storageTextureAtMip(downsampleTex, i - 1, ShaderStage::Compute) });
+        m_downsampleSets.push_back(&downsampleSet);
 
         // (first iteration: to upsample[0] from upsample[1] & downsample[0])
-        if (i != numDownsamples) {
-            BindingSet& upsampleSet = reg.createBindingSet({ ShaderBinding::storageTexture(*captures.upsampleTextures[i - 1], ShaderStage::Compute),
-                                                             ShaderBinding::storageTexture(*captures.upsampleTextures[i], ShaderStage::Compute),
-                                                             ShaderBinding::storageTexture(*captures.downsampleTextures[i - 1], ShaderStage::Compute) });
-            captures.upsampleSets.push_back(&upsampleSet);
-        }
+        //bool isLastMip = i == BottomMipLevel; // NumMipLevels - 1;
+        //if (isLastMip == false) {
+            //BindingSet& upsampleSet = reg.createBindingSet({ ShaderBinding::storageTexture(*m_upsampleTextures[i - 1], ShaderStage::Compute),
+            //                                                 ShaderBinding::storageTexture(*m_upsampleTextures[i], ShaderStage::Compute),
+            //                                                 ShaderBinding::storageTexture(*m_downsampleTextures[i - 1], ShaderStage::Compute) });
+            BindingSet& upsampleSet = reg.createBindingSet({ ShaderBinding::storageTextureAtMip(upsampleTex, i - 1, ShaderStage::Compute),
+                                                             ShaderBinding::storageTextureAtMip(upsampleTex, i, ShaderStage::Compute),
+                                                             ShaderBinding::storageTextureAtMip(downsampleTex, i - 1, ShaderStage::Compute) });
+            m_upsampleSets.push_back(&upsampleSet);
+        //}
     }
 
     Shader downsampleShader = Shader::createCompute("bloom/downsample.comp");
-    ComputeState& downsampleState = reg.createComputeState(downsampleShader, captures.downsampleSets);
+    ComputeState& downsampleState = reg.createComputeState(downsampleShader, m_downsampleSets);
 
     Shader upsampleShader = Shader::createCompute("bloom/upsample.comp");
-    ComputeState& upsampleState = reg.createComputeState(upsampleShader, captures.upsampleSets);
+    ComputeState& upsampleState = reg.createComputeState(upsampleShader, m_upsampleSets);
 
     BindingSet& blendBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(mainTexture, ShaderStage::Compute),
-                                                         ShaderBinding::sampledTexture(*captures.upsampleTextures[0], ShaderStage::Compute) });
+                                                         //ShaderBinding::sampledTexture(*m_upsampleTextures[0], ShaderStage::Compute) });
+                                                         ShaderBinding::sampledTexture(upsampleTex, ShaderStage::Compute) });
     Shader bloomBlendShader = Shader::createCompute("bloom/blend.comp");
     ComputeState& bloomBlendComputeState = reg.createComputeState(bloomBlendShader, { &blendBindingSet });
 
-    return [&mainTexture, &downsampleState, &upsampleState, &bloomBlendComputeState, &blendBindingSet, captures](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         static bool enabled = true;
         ImGui::Checkbox("Enabled##bloom", &enabled);
@@ -68,25 +77,33 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
         constexpr Extent3D localSizeForComp { 16, 16, 1 };
 
         // Copy image to the top level of the downsample stack
-        cmdList.copyTexture(mainTexture, *captures.downsampleTextures[0]);
+        //cmdList.copyTexture(mainTexture, *m_downsampleTextures[0]);
+        cmdList.copyTexture(mainTexture, downsampleTex, 0);
 
         // Iteratively downsample the stack
 
         cmdList.setComputeState(downsampleState);
-        for (size_t i = 0; i < numDownsamples; ++i) {
+        for (size_t targetMip = 1; targetMip < NumMipLevels; ++targetMip) {
 
-            BindingSet& downsampleBindingSet = *captures.downsampleSets[i];
-            Texture& targetTexture = *captures.downsampleTextures[i + 1];
+            size_t bindingSetIdx = targetMip - 1;
+            BindingSet& downsampleBindingSet = *m_downsampleSets[bindingSetIdx];
+            //Texture& targetTexture = *m_downsampleTextures[i + 1]; // TODO: We need this for the size only now! Maybe we can have a function Texture::extentForMip(i)?
 
             cmdList.bindSet(downsampleBindingSet, 0);
-            cmdList.dispatch(targetTexture.extent(), localSizeForComp);
-            cmdList.textureWriteBarrier(targetTexture);
+
+            //cmdList.dispatch(targetTexture.extent(), localSizeForComp);
+            cmdList.dispatch(downsampleTex.extentAtMip(targetMip), localSizeForComp);
+
+            //cmdList.textureWriteBarrier(targetTexture);
+            cmdList.textureMipWriteBarrier(downsampleTex, targetMip);
         }
 
         // Copy from (the bottom level of) the downsample stack to the upsample stack
 
-        size_t bottomLevel = numLevels - 1;
-        cmdList.copyTexture(*captures.downsampleTextures[bottomLevel], *captures.upsampleTextures[bottomLevel]);
+        
+        //cmdList.copyTexture(*m_downsampleTextures[bottomLevel], *m_upsampleTextures[bottomLevel]);
+        //cmdList.copyTexture(downsampleTex, *m_upsampleTextures[bottomLevel], bottomLevel, 0);
+        cmdList.copyTexture(downsampleTex, upsampleTex, BottomMipLevel, BottomMipLevel);
 
         // Iteratively upsample the stack
 
@@ -95,14 +112,19 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
 
         cmdList.setComputeState(upsampleState);
         cmdList.pushConstant(ShaderStage::Compute, upsampleBlurRadius, 0);
-        for (int i = numDownsamples - 2; i >= 0; --i) {
+        for (int targetMip = NumMipLevels - 2; targetMip >= 0; --targetMip) {
 
-            BindingSet& upsampleBindingSet = *captures.upsampleSets[i];
-            Texture& targetTexture = *captures.upsampleTextures[i];
+            size_t bindingSetIdx = targetMip;
+            BindingSet& upsampleBindingSet = *m_upsampleSets[bindingSetIdx];
+            //Texture& targetTexture = *m_upsampleTextures[i];
 
             cmdList.bindSet(upsampleBindingSet, 0);
-            cmdList.dispatch(targetTexture.extent(), localSizeForComp);
-            cmdList.textureWriteBarrier(targetTexture);
+
+            //cmdList.dispatch(targetTexture.extent(), localSizeForComp);
+            cmdList.dispatch(upsampleTex.extentAtMip(targetMip), localSizeForComp);
+
+            //cmdList.textureWriteBarrier(targetTexture);
+            cmdList.textureMipWriteBarrier(downsampleTex, targetMip);
         }
 
         // Blend the bloom contribution back into the target texture
