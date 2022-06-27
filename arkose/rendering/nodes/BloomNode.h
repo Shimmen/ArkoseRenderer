@@ -15,4 +15,7 @@ public:
 private:
     std::vector<BindingSet*> m_downsampleSets {};
     std::vector<BindingSet*> m_upsampleSets {};
+
+    float m_upsampleBlurRadius { 0.0036f };
+    float m_bloomBlend { 0.04f };
 };
