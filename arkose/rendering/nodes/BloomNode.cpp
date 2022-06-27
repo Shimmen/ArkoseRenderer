@@ -16,7 +16,7 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
     Texture& upsampleTex = reg.createTexture2D(mainTexture.extent(), Texture::Format::RGBA16F, Texture::Filters::linear(), Texture::Mipmap::Linear, Texture::WrapModes::clampAllToEdge());
     upsampleTex.setName("BloomUpsampleTexture");
 
-    for (size_t i = 1; i < NumMipLevels; ++i) {
+    for (uint32_t i = 1; i < NumMipLevels; ++i) {
 
         // (first iteration: to downsample[1] from downsample[0])
         BindingSet& downsampleSet = reg.createBindingSet({ ShaderBinding::storageTextureAtMip(downsampleTex, i, ShaderStage::Compute),
@@ -60,7 +60,7 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
 
         // Iteratively downsample the stack
         cmdList.setComputeState(downsampleState);
-        for (size_t targetMip = 1; targetMip < NumMipLevels; ++targetMip) {
+        for (uint32_t targetMip = 1; targetMip < NumMipLevels; ++targetMip) {
 
             // Only for mip0 -> mip1, apply brightness normalization to prevent fireflies.
             bool applyNormalization = targetMip == 1;
