@@ -7,7 +7,7 @@ public:
     explicit D3D12CommandList(D3D12Backend&);
 
     void clearTexture(Texture&, ClearColor) override;
-    void copyTexture(Texture& src, Texture& dst, uint32_t srcLayer = 0, uint32_t dstLayer = 0) override;
+    void copyTexture(Texture& src, Texture& dst, uint32_t srcMip, uint32_t dstMip) override;
     void generateMipmaps(Texture&) override;
 
     void executeBufferCopyOperations(std::vector<BufferCopyOperation>) override;
@@ -42,6 +42,7 @@ public:
     void endDebugLabel() override;
 
     void textureWriteBarrier(const Texture&) override;
+    void textureMipWriteBarrier(const Texture&, uint32_t mip) override;
     void bufferWriteBarrier(std::vector<Buffer*>) override;
 
     void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) override;

@@ -12,7 +12,7 @@ void D3D12CommandList::clearTexture(Texture& genColorTexture, ClearColor color)
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
-void D3D12CommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t srcLayer, uint32_t dstLayer)
+void D3D12CommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t srcMip, uint32_t dstMip)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
@@ -138,6 +138,10 @@ void D3D12CommandList::endDebugLabel()
 }
 
 void D3D12CommandList::textureWriteBarrier(const Texture& genTexture)
+{
+}
+
+void D3D12CommandList::textureMipWriteBarrier(const Texture& genTexture, uint32_t mip)
 {
 }
 
