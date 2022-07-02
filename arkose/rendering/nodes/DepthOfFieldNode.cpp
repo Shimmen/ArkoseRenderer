@@ -29,10 +29,8 @@ RenderPipelineNode::ExecuteCallback DepthOfFieldNode::construct(GpuScene& scene,
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        static bool enabled = true;
-        ImGui::Checkbox("Enabled##dof", &enabled);
-
-        if (!enabled)
+        ImGui::Checkbox("Enabled##dof", &m_enabled);
+        if (!m_enabled)
             return;
 
         Extent2D targetSize = reg.windowRenderTarget().extent();

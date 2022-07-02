@@ -73,7 +73,9 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<SkyViewNode>();
 
     pipeline.addNode<BloomNode>();
-    pipeline.addNode<DepthOfFieldNode>();
+
+    auto& dofNode = pipeline.addNode<DepthOfFieldNode>();
+    dofNode.setEnabled(false);
 
     if (rtxOn) {
         pipeline.addNode<DDGIProbeDebug>();

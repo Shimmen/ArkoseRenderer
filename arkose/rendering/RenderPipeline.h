@@ -17,13 +17,13 @@ public:
     RenderPipeline& operator=(RenderPipeline&) = delete;
 
     void addNode(const std::string& name, RenderPipelineLambdaNode::ConstructorFunction);
-    void addNode(std::unique_ptr<RenderPipelineNode>&&);
+    RenderPipelineNode& addNode(std::unique_ptr<RenderPipelineNode>&&);
 
     template<typename NodeType, typename... Args>
-    void addNode(Args&&... args)
+    NodeType& addNode(Args&&... args)
     {
         auto nodePtr = std::make_unique<NodeType>(std::forward<Args>(args)...);
-        addNode(std::move(nodePtr));
+        return static_cast<NodeType&>(addNode(std::move(nodePtr)));
     }
 
     void constructAll(Registry& registry);

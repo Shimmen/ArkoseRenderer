@@ -17,13 +17,15 @@ void RenderPipeline::addNode(const std::string& name, RenderPipelineLambdaNode::
     addNode(std::make_unique<RenderPipelineLambdaNode>(name, constructorFunction));
 }
 
-void RenderPipeline::addNode(std::unique_ptr<RenderPipelineNode>&& node)
+RenderPipelineNode& RenderPipeline::addNode(std::unique_ptr<RenderPipelineNode>&& node)
 {
     // All nodes should be added before construction!
     ARKOSE_ASSERT(m_nodeContexts.empty());
 
     m_ownedNodes.emplace_back(std::move(node));
     m_allNodes.push_back(m_ownedNodes.back().get());
+
+    return *m_ownedNodes.back().get();
 }
 
 void RenderPipeline::constructAll(Registry& registry)
