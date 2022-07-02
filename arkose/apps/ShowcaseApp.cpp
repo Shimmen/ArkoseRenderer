@@ -64,7 +64,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<ForwardRenderNode>();
 
     if (rtxOn) {
-        pipeline.addNode<RTReflectionsNode>();
+        //pipeline.addNode<RTReflectionsNode>();
     }
 
     pipeline.addNode<SSAONode>();
