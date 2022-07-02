@@ -24,6 +24,7 @@ Texture::Texture(Backend& backend, Description desc)
 bool Texture::hasFloatingPointDataFormat() const
 {
     switch (format()) {
+    case Texture::Format::R8:
     case Texture::Format::R32:
     case Texture::Format::RGBA8:
     case Texture::Format::sRGBA8:

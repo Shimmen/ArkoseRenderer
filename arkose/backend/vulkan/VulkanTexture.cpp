@@ -17,6 +17,9 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
     bool storageCapable = true;
 
     switch (format()) {
+    case Texture::Format::R8:
+        vkFormat = VK_FORMAT_R8_UINT;
+        break;
     case Texture::Format::R32:
         vkFormat = VK_FORMAT_R32_UINT;
         break;
@@ -373,6 +376,10 @@ void VulkanTexture::setPixelData(vec4 pixel)
     bool isHdr = false;
 
     switch (format()) {
+    case Texture::Format::R8:
+        numChannels = 1;
+        isHdr = false;
+        break;
     case Texture::Format::R32:
         numChannels = 1;
         isHdr = false;

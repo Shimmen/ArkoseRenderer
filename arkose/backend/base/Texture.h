@@ -20,6 +20,7 @@ public:
 
     enum class Format {
         Unknown,
+        R8,
         R32,
         R16F,
         R32F,
