@@ -3,12 +3,13 @@
 #include <common.glsl>
 #include <common/namedUniforms.glsl>
 #include <shared/LightData.h>
+#include <shared/SceneData.h>
 #include <shared/ShadowData.h>
 
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec3 aNormal;
 
-layout(set = 0, binding = 0) uniform TransformDataBlock { mat4 objectTransforms[SHADOW_MAX_OCCLUDERS]; };
+layout(set = 0, binding = 0) buffer readonly PerObjectBlock { ShaderDrawable perObject[]; };
 layout(set = 1, binding = 0) buffer readonly ShadowDataBlock { PerLightShadowData lightDatas[]; };
 
 NAMED_UNIFORMS(pushConstants,
@@ -18,7 +19,7 @@ NAMED_UNIFORMS(pushConstants,
 void main()
 {
     int objectIndex = gl_InstanceIndex;
-    mat4 worldFromLocal = objectTransforms[objectIndex];
+    mat4 worldFromLocal = perObject[objectIndex].worldFromLocal;
 
     PerLightShadowData lightData = lightDatas[pushConstants.lightIndex];
 

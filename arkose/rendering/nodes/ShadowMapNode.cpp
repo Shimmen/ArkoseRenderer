@@ -6,9 +6,7 @@
 
 RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(GpuScene& scene, Registry& reg)
 {
-    // TODO: This should be managed from some central location, e.g. the scene node or similar.
-    Buffer& transformDataBuffer = reg.createBuffer(scene.meshCount() * sizeof(mat4), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::TransferOptimal);
-    BindingSet& transformBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(transformDataBuffer, ShaderStage::Vertex) });
+    BindingSet& sceneObjectBindingSet = *reg.getBindingSet("SceneObjectSet");
 
     Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
     BindingSet& shadowDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(*reg.getBuffer("SceneShadowData"), ShaderStage::Vertex) });
@@ -20,13 +18,9 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(GpuScene& scene, Re
 
     return [&, shadowMapShader](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        // TODO: This should be managed from some central location, e.g. the scene node or similar.
-        mat4 objectTransforms[SHADOW_MAX_OCCLUDERS];
-        int meshCount = scene.forEachMesh([&](size_t idx, Mesh& mesh) {
-            objectTransforms[idx] = mesh.transform().worldMatrix();
+        scene.forEachMesh([&](size_t idx, Mesh& mesh) {
             mesh.ensureDrawCallIsAvailable(m_vertexLayout, scene);
         });
-        transformDataBuffer.updateData(objectTransforms, meshCount * sizeof(mat4));
 
         scene.forEachShadowCastingLight([&](size_t shadowLightIndex, Light& light) {
             SCOPED_PROFILE_ZONE_NAMED("Processing light");
@@ -36,7 +30,7 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(GpuScene& scene, Re
             RenderState& renderState = light.getOrCreateCachedShadowMapRenderState("ShadowMapNode::defaultShadowMapping", [&]() -> RenderState& {
                 RenderStateBuilder renderStateBuilder { light.shadowMapRenderTarget(), shadowMapShader, m_vertexLayout };
                 renderStateBuilder.stateBindings().disableAutoBinding();
-                renderStateBuilder.stateBindings().at(0, transformBindingSet);
+                renderStateBuilder.stateBindings().at(0, sceneObjectBindingSet);
                 renderStateBuilder.stateBindings().at(1, shadowDataBindingSet);
                 return reg.createRenderState(renderStateBuilder);
             });
@@ -50,7 +44,7 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(GpuScene& scene, Re
                 // HACK: Since we only cache one render state per light we can't use the auto-binding, because then we only have the right sets 1/n times.
                 // Yeah.. this is a horrible hack. I need to figure out how we want to do this for real. Maybe just manage all the render states here in
                 // this node and possibly add some local caching here. This will at least let us manage the different frame contexts etc.
-                cmdList.bindSet(transformBindingSet, 0);
+                cmdList.bindSet(sceneObjectBindingSet, 0);
                 cmdList.bindSet(shadowDataBindingSet, 1);
 
                 uint32_t index = (uint32_t)shadowLightIndex;
