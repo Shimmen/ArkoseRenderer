@@ -12,9 +12,4 @@ float evaluateShadow(sampler2D shadowMap, mat4 lightProjectionFromView, vec3 vie
     return (mapDepth < posInShadowMap.z) ? 0.0 : 1.0;
 }
 
-float evaluateDirectionalShadow(sampler2D shadowMap, mat4 lightProjectionFromView, vec3 viewSpacePos)
-{
-    return evaluateShadow(shadowMap, lightProjectionFromView, viewSpacePos);
-}
-
 #endif // SHADOW_GLSL
