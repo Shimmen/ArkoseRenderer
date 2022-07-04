@@ -21,7 +21,6 @@ public:
     enum class Format {
         Unknown,
         R8,
-        R32,
         R16F,
         R32F,
         RG16F,
@@ -32,6 +31,7 @@ public:
         RGBA32F,
         Depth32F,
         Depth24Stencil8,
+        R32Uint,
     };
 
     enum class MinFilter {

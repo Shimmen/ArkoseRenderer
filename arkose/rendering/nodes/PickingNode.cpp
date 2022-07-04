@@ -12,7 +12,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 {
     Buffer& resultBuffer = reg.createBuffer(sizeof(PickingData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::Readback);
 
-    Texture& indexTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R32);
+    Texture& indexTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R32Uint);
     Texture& depthTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth32F);
     RenderTarget& indexMapRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &indexTexture },
                                                                   { RenderTarget::AttachmentType::Depth, &depthTexture } });

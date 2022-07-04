@@ -20,9 +20,6 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
     case Texture::Format::R8:
         vkFormat = VK_FORMAT_R8_UNORM;
         break;
-    case Texture::Format::R32:
-        vkFormat = VK_FORMAT_R32_UINT;
-        break;
     case Texture::Format::RGBA8:
         vkFormat = VK_FORMAT_R8G8B8A8_UNORM;
         break;
@@ -55,6 +52,9 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
     case Texture::Format::Depth24Stencil8:
         vkFormat = VK_FORMAT_D24_UNORM_S8_UINT;
         storageCapable = false;
+        break;
+    case Texture::Format::R32Uint:
+        vkFormat = VK_FORMAT_R32_UINT;
         break;
     case Texture::Format::Unknown:
         ARKOSE_LOG(Fatal, "Trying to create new texture with format Unknown, which is not allowed!");
@@ -380,10 +380,6 @@ void VulkanTexture::setPixelData(vec4 pixel)
         numChannels = 1;
         isHdr = false;
         break;
-    case Texture::Format::R32:
-        numChannels = 1;
-        isHdr = false;
-        break;
     case Texture::Format::R16F:
     case Texture::Format::R32F:
         numChannels = 1;
@@ -407,6 +403,10 @@ void VulkanTexture::setPixelData(vec4 pixel)
     case Texture::Format::Depth32F:
         numChannels = 1;
         isHdr = true;
+        break;
+    case Texture::Format::R32Uint:
+        numChannels = 1;
+        isHdr = false;
         break;
     case Texture::Format::Unknown:
         ASSERT_NOT_REACHED();
