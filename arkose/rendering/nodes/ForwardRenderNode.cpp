@@ -17,6 +17,9 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
     Texture* diffueGiTexture = reg.getTexture("DiffuseGI");
     Texture* depthTexture = reg.getTexture("SceneDepth");
 
+    Texture& dirLightProjectedShadow = *reg.getTexture("DirectionalLightProjectedShadow");
+    BindingSet& dirLightProjectedShadowSet = reg.createBindingSet({ ShaderBinding::sampledTexture(dirLightProjectedShadow) });
+
     auto makeRenderTarget = [&](LoadOp loadOp) -> RenderTarget& {
         // For depth, if we have prepass we should never do any other load op than to load
         LoadOp depthLoadOp = reg.hasPreviousNode("Prepass") ? LoadOp::Load : loadOp;
@@ -54,6 +57,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
         renderStateBuilder.stateBindings().at(1, materialBindingSet);
         renderStateBuilder.stateBindings().at(2, lightBindingSet);
         renderStateBuilder.stateBindings().at(3, opaqueDrawablesBindingSet);
+        renderStateBuilder.stateBindings().at(4, dirLightProjectedShadowSet);
         if (useDDGI)
             renderStateBuilder.stateBindings().at(5, *ddgiSamplingBindingSet);
 
@@ -73,6 +77,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
         renderStateBuilder.stateBindings().at(1, materialBindingSet);
         renderStateBuilder.stateBindings().at(2, lightBindingSet);
         renderStateBuilder.stateBindings().at(3, maskedDrawablesBindingSet);
+        renderStateBuilder.stateBindings().at(4, dirLightProjectedShadowSet);
         if (useDDGI)
             renderStateBuilder.stateBindings().at(5, *ddgiSamplingBindingSet);
 
@@ -92,10 +97,11 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
             mesh.ensureDrawCallIsAvailable(m_vertexLayout, scene);
         });
 
-        auto setCommonNamedUniforms = [&]() {
+        auto setCommonNamedUniforms = [&](const RenderState& renderState) {
             cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
             cmdList.setNamedUniform("indirectExposure", scene.lightPreExposure());
             cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
+            cmdList.setNamedUniform("invTargetSize", renderState.renderTarget().extent().inverse());
         };
 
         cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
@@ -104,8 +110,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
         cmdList.beginDebugLabel("Opaque");
         cmdList.beginRendering(*renderStateOpaque, ClearColor::srgbColor(0, 0, 0, 0), 1.0f);
         {
-            setCommonNamedUniforms();
-            
+            setCommonNamedUniforms(*renderStateOpaque);
             cmdList.drawIndirect(opaqueDrawCmdsBuffer, opaqueDrawCountBuffer);
         }
         cmdList.endRendering();
@@ -114,7 +119,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
         cmdList.beginDebugLabel("Masked");
         cmdList.beginRendering(*renderStateMasked);
         {
-            setCommonNamedUniforms();
+            setCommonNamedUniforms(*renderStateMasked);
             cmdList.drawIndirect(maskedDrawCmdsBuffer, maskedDrawCountBuffer);
         }
         cmdList.endRendering();

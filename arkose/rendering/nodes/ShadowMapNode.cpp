@@ -23,6 +23,11 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(GpuScene& scene, Re
         });
 
         scene.forEachShadowCastingLight([&](size_t shadowLightIndex, Light& light) {
+
+            // Directional lights are handled separately!
+            if (light.type() == Light::Type::DirectionalLight)
+                return;
+
             SCOPED_PROFILE_ZONE_NAMED("Processing light");
 
             // TODO: Use a proper cache instead of just using a name as a "cache identifier". This will require implementing operator== on a lot of

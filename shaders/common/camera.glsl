@@ -99,6 +99,13 @@ vec3 unprojectPixelCoordAndDepthToViewSpace(ivec2 pixelCoord, float depth, Camer
     return viewSpacePos.xyz;
 }
 
+vec3 unprojectUvCoordAndDepthToViewSpace(vec2 uvCoord, float depth, CameraState camera)
+{
+    vec4 viewSpacePos = camera.viewFromProjection * vec4(uvCoord * 2.0 - 1.0, depth, 1.0);
+    viewSpacePos.xyz /= viewSpacePos.w;
+    return viewSpacePos.xyz;
+}
+
 float calculateLinearDepth(float nonlinearDepth, CameraState camera)
 {
     return camera.near * camera.far / ((nonlinearDepth * (camera.far - camera.near)) - camera.far);

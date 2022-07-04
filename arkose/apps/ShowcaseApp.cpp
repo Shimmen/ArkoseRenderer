@@ -5,6 +5,7 @@
 #include "rendering/nodes/DDGINode.h"
 #include "rendering/nodes/DDGIProbeDebug.h"
 #include "rendering/nodes/DepthOfFieldNode.h"
+#include "rendering/nodes/DirectionalLightShadowNode.h"
 #include "rendering/nodes/ForwardRenderNode.h"
 #include "rendering/nodes/FinalNode.h"
 #include "rendering/nodes/FXAANode.h"
@@ -61,6 +62,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<ShadowMapNode>();
     pipeline.addNode<CullingNode>();
     pipeline.addNode<PrepassNode>();
+    pipeline.addNode<DirectionalLightShadowNode>();
     pipeline.addNode<ForwardRenderNode>();
 
     if (rtxOn) {

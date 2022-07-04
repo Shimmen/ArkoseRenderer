@@ -39,6 +39,13 @@ struct Extent2D {
         return m_width == other.m_width && m_height == other.m_height;
     }
 
+    Extent2D operator/(int factor) const
+    {
+        return { m_width / factor, m_height / factor };
+    }
+
+    moos::vec2 inverse() const { return moos::vec2(1.0f / m_width, 1.0f / m_height); }
+
     moos::uvec2 asUIntVector() const { return moos::uvec2(m_width, m_height); }
     moos::ivec2 asIntVector() const { return moos::ivec2(m_width, m_height); }
 

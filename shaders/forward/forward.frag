@@ -31,6 +31,8 @@ layout(set = 2, binding = 1) buffer readonly DirLightDataBlock { DirectionalLigh
 layout(set = 2, binding = 2) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
 layout(set = 2, binding = 3) uniform sampler2D shadowMaps[];
 
+layout(set = 4, binding = 0) uniform sampler2D directionalLightProjectedShadowTex;
+
 #if FORWARD_INCLUDE_DDGI
 #include <shared/DDGIData.h>
 #include <ddgi/probeSampling.glsl>
@@ -43,6 +45,7 @@ NAMED_UNIFORMS(pushConstants,
     float ambientAmount;
     float indirectExposure;
     vec2 frustumJitterCorrection;
+    vec2 invTargetSize;
 )
 
 layout(location = 0) out vec4 oColor;
@@ -55,7 +58,8 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
 {
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
-    float shadowFactor = evaluateDirectionalShadow(shadowMaps[light.shadowMap.textureIndex], light.lightProjectionFromView, vPosition);
+    vec2 sampleTexCoords = gl_FragCoord.xy * pushConstants.invTargetSize;
+    float shadowFactor = texture(directionalLightProjectedShadowTex, sampleTexCoords).r;
 
     vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
     vec3 directLight = light.color * shadowFactor;

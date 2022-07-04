@@ -77,6 +77,7 @@ add_executable(ArkoseRenderer
     arkose/rendering/nodes/DDGINode.cpp
     arkose/rendering/nodes/DDGIProbeDebug.cpp
     arkose/rendering/nodes/DepthOfFieldNode.cpp
+    arkose/rendering/nodes/DirectionalLightShadowNode.cpp
     arkose/rendering/nodes/ForwardRenderNode.cpp
     arkose/rendering/nodes/FinalNode.cpp
     arkose/rendering/nodes/FXAANode.cpp

@@ -18,7 +18,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
 
     switch (format()) {
     case Texture::Format::R8:
-        vkFormat = VK_FORMAT_R8_UINT;
+        vkFormat = VK_FORMAT_R8_UNORM;
         break;
     case Texture::Format::R32:
         vkFormat = VK_FORMAT_R32_UINT;
