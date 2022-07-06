@@ -17,6 +17,7 @@ using uint = uint32_t;
 #include "RTData.h"
 
 class DirectionalLight;
+class Light;
 class Mesh;
 class SpotLight;
 
