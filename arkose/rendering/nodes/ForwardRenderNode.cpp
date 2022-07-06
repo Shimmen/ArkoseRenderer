@@ -1,5 +1,6 @@
 #include "ForwardRenderNode.h"
 
+#include "rendering/util/ScopedDebugZone.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 
@@ -10,88 +11,18 @@ using uint = uint32_t;
 
 RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene, Registry& reg)
 {
-    Texture* colorTexture = reg.getTexture("SceneColor");
-    Texture* normalVelocityTexture = reg.getTexture("SceneNormalVelocity");
-    Texture* materialTexture = reg.getTexture("SceneMaterial");
-    Texture* baseColorTexture = reg.getTexture("SceneBaseColor");
-    Texture* diffueGiTexture = reg.getTexture("DiffuseGI");
-    Texture* depthTexture = reg.getTexture("SceneDepth");
+    // TODO: Improve the way culling is handled so we don't have to special-case these so much.
+    // It's okay now, but when we have multiple materials/shaders doing this would be a big pain.
 
-    Texture& dirLightProjectedShadow = *reg.getTexture("DirectionalLightProjectedShadow");
-    BindingSet& dirLightProjectedShadowSet = reg.createBindingSet({ ShaderBinding::sampledTexture(dirLightProjectedShadow) });
-
-    auto makeRenderTarget = [&](LoadOp loadOp) -> RenderTarget& {
-        // For depth, if we have prepass we should never do any other load op than to load
-        LoadOp depthLoadOp = reg.hasPreviousNode("Prepass") ? LoadOp::Load : loadOp;
-        return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, colorTexture, loadOp, StoreOp::Store },
-                                        { RenderTarget::AttachmentType::Color1, normalVelocityTexture, loadOp, StoreOp::Store },
-                                        { RenderTarget::AttachmentType::Color2, materialTexture, loadOp, StoreOp::Store },
-                                        { RenderTarget::AttachmentType::Color3, baseColorTexture, loadOp, StoreOp::Store },
-                                        { RenderTarget::AttachmentType::Color4, diffueGiTexture, loadOp, StoreOp::Store },
-                                        { RenderTarget::AttachmentType::Depth, depthTexture, depthLoadOp, StoreOp::Store } });
-    };
-
-    BindingSet& cameraBindingSet = *reg.getBindingSet("SceneCameraSet");
-    BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
-    BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");
-
-    BindingSet& opaqueDrawablesBindingSet = *reg.getBindingSet("MainViewCulledDrawablesOpaqueSet");
-    BindingSet& maskedDrawablesBindingSet = *reg.getBindingSet("MainViewCulledDrawablesMaskedSet");
-
-    BindingSet* ddgiSamplingBindingSet = nullptr;
-    if (reg.hasPreviousNode("DDGI")) {
-        ddgiSamplingBindingSet = reg.getBindingSet("DDGISamplingSet");
-    }
-    bool useDDGI = ddgiSamplingBindingSet != nullptr;
-    auto includeDDGIDefine = ShaderDefine::makeBool("FORWARD_INCLUDE_DDGI", useDDGI);
-
-    RenderState* renderStateOpaque;
-    {
-        auto blendModeDefine = ShaderDefine::makeInt("FORWARD_BLEND_MODE", BLEND_MODE_OPAQUE);
-        Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", { includeDDGIDefine, blendModeDefine });
-
-        RenderStateBuilder renderStateBuilder { makeRenderTarget(LoadOp::Clear), shader, m_vertexLayout };
-        renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
-        renderStateBuilder.stencilMode = reg.hasPreviousNode("Prepass") ? StencilMode::PassIfNotZero : StencilMode::AlwaysWrite;
-        renderStateBuilder.stateBindings().at(0, cameraBindingSet);
-        renderStateBuilder.stateBindings().at(1, materialBindingSet);
-        renderStateBuilder.stateBindings().at(2, lightBindingSet);
-        renderStateBuilder.stateBindings().at(3, opaqueDrawablesBindingSet);
-        renderStateBuilder.stateBindings().at(4, dirLightProjectedShadowSet);
-        if (useDDGI)
-            renderStateBuilder.stateBindings().at(5, *ddgiSamplingBindingSet);
-
-        renderStateOpaque = &reg.createRenderState(renderStateBuilder);
-        renderStateOpaque->setName("ForwardOpaque");
-    }
-
-    RenderState* renderStateMasked;
-    {
-        auto blendModeDefine = ShaderDefine::makeInt("FORWARD_BLEND_MODE", BLEND_MODE_MASKED);
-        Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", { includeDDGIDefine, blendModeDefine });
-
-        RenderStateBuilder renderStateBuilder { makeRenderTarget(LoadOp::Load), shader, m_vertexLayout };
-        renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
-        renderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
-        renderStateBuilder.stateBindings().at(0, cameraBindingSet);
-        renderStateBuilder.stateBindings().at(1, materialBindingSet);
-        renderStateBuilder.stateBindings().at(2, lightBindingSet);
-        renderStateBuilder.stateBindings().at(3, maskedDrawablesBindingSet);
-        renderStateBuilder.stateBindings().at(4, dirLightProjectedShadowSet);
-        if (useDDGI)
-            renderStateBuilder.stateBindings().at(5, *ddgiSamplingBindingSet);
-
-        renderStateMasked = &reg.createRenderState(renderStateBuilder);
-        renderStateMasked->setName("ForwardMasked");
-    }
-
+    RenderState& renderStateOpaque = makeRenderState(reg, scene, ForwardPass::Opaque);
     Buffer& opaqueDrawCmdsBuffer = *reg.getBuffer("MainViewOpaqueDrawCmds");
     Buffer& opaqueDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
 
+    RenderState& renderStateMasked = makeRenderState(reg, scene, ForwardPass::Masked);
     Buffer& maskedDrawCmdsBuffer = *reg.getBuffer("MainViewMaskedDrawCmds");
     Buffer& maskedDrawCountBuffer = *reg.getBuffer("MainViewMaskedDrawCount");
 
-    return [&, renderStateOpaque, renderStateMasked](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         scene.forEachMesh([&](size_t, Mesh& mesh) {
             mesh.ensureDrawCallIsAvailable(m_vertexLayout, scene);
@@ -107,22 +38,101 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
         cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
         cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
 
-        cmdList.beginDebugLabel("Opaque");
-        cmdList.beginRendering(*renderStateOpaque, ClearColor::srgbColor(0, 0, 0, 0), 1.0f);
         {
-            setCommonNamedUniforms(*renderStateOpaque);
+            ScopedDebugZone zone { cmdList, "Opaque" };
+            cmdList.beginRendering(renderStateOpaque, ClearColor::srgbColor(0, 0, 0, 0), 1.0f);
+            setCommonNamedUniforms(renderStateOpaque);
             cmdList.drawIndirect(opaqueDrawCmdsBuffer, opaqueDrawCountBuffer);
+            cmdList.endRendering();
         }
-        cmdList.endRendering();
-        cmdList.endDebugLabel();
 
-        cmdList.beginDebugLabel("Masked");
-        cmdList.beginRendering(*renderStateMasked);
         {
-            setCommonNamedUniforms(*renderStateMasked);
+            ScopedDebugZone zone { cmdList, "Masked" };
+            cmdList.beginRendering(renderStateMasked);
+            setCommonNamedUniforms(renderStateMasked);
             cmdList.drawIndirect(maskedDrawCmdsBuffer, maskedDrawCountBuffer);
+            cmdList.endRendering();
         }
-        cmdList.endRendering();
-        cmdList.endDebugLabel();
     };
+}
+
+RenderTarget& ForwardRenderNode::makeRenderTarget(Registry& reg, LoadOp loadOp) const
+{
+    Texture* colorTexture = reg.getTexture("SceneColor");
+    Texture* normalVelocityTexture = reg.getTexture("SceneNormalVelocity");
+    Texture* materialTexture = reg.getTexture("SceneMaterial");
+    Texture* baseColorTexture = reg.getTexture("SceneBaseColor");
+    Texture* diffueGiTexture = reg.getTexture("DiffuseGI");
+    Texture* depthTexture = reg.getTexture("SceneDepth");
+        
+    // For depth, if we have prepass we should never do any other load op than to load
+    LoadOp depthLoadOp = reg.hasPreviousNode("Prepass") ? LoadOp::Load : loadOp;
+    
+    return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, colorTexture, loadOp, StoreOp::Store },
+                                    { RenderTarget::AttachmentType::Color1, normalVelocityTexture, loadOp, StoreOp::Store },
+                                    { RenderTarget::AttachmentType::Color2, materialTexture, loadOp, StoreOp::Store },
+                                    { RenderTarget::AttachmentType::Color3, baseColorTexture, loadOp, StoreOp::Store },
+                                    { RenderTarget::AttachmentType::Color4, diffueGiTexture, loadOp, StoreOp::Store },
+                                    { RenderTarget::AttachmentType::Depth, depthTexture, depthLoadOp, StoreOp::Store } });
+}
+
+RenderState& ForwardRenderNode::makeRenderState(Registry& reg, const GpuScene& scene, ForwardPass forwardPass) const
+{
+    BindingSet* drawablesBindingSet = nullptr;
+    const char* stateName = nullptr;
+    int blendModeInt = 0;
+    LoadOp loadOp;
+
+    switch (forwardPass) {
+    case ForwardPass::Opaque:
+        drawablesBindingSet = reg.getBindingSet("MainViewCulledDrawablesOpaqueSet");
+        stateName = "ForwardOpaque";
+        blendModeInt = BLEND_MODE_OPAQUE;
+        loadOp = LoadOp::Clear;
+        
+        break;
+    case ForwardPass::Masked:
+        drawablesBindingSet = reg.getBindingSet("MainViewCulledDrawablesMaskedSet");
+        stateName = "ForwardMasked";
+        blendModeInt = BLEND_MODE_MASKED;
+        loadOp = LoadOp::Load;
+        break;
+    }
+
+    std::vector<ShaderDefine> shaderDefines {};
+
+    ARKOSE_ASSERT(blendModeInt != 0);
+    shaderDefines.push_back(ShaderDefine::makeInt("FORWARD_BLEND_MODE", blendModeInt));
+
+    BindingSet* ddgiSamplingBindingSet = reg.getBindingSet("DDGISamplingSet");
+    bool usingDDGI = ddgiSamplingBindingSet != nullptr;
+    shaderDefines.push_back(ShaderDefine::makeBool("FORWARD_INCLUDE_DDGI", usingDDGI));
+
+    Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", shaderDefines);
+
+    RenderStateBuilder renderStateBuilder { makeRenderTarget(reg, loadOp), shader, m_vertexLayout };
+    renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
+    
+    renderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
+    if (forwardPass == ForwardPass::Opaque && reg.hasPreviousNode("Prepass")) {
+        renderStateBuilder.stencilMode = StencilMode::PassIfNotZero;
+    }
+
+    Texture& dirLightProjectedShadow = *reg.getTexture("DirectionalLightProjectedShadow");
+    BindingSet& dirLightProjectedShadowSet = reg.createBindingSet({ ShaderBinding::sampledTexture(dirLightProjectedShadow) });
+
+    StateBindings& bindings = renderStateBuilder.stateBindings();
+    bindings.at(0, *reg.getBindingSet("SceneCameraSet"));
+    bindings.at(1, scene.globalMaterialBindingSet());
+    bindings.at(2, *reg.getBindingSet("SceneLightSet"));
+    bindings.at(3, *drawablesBindingSet);
+    bindings.at(4, dirLightProjectedShadowSet);
+    if (usingDDGI) {
+        renderStateBuilder.stateBindings().at(5, *ddgiSamplingBindingSet);
+    }
+
+    RenderState& renderState = reg.createRenderState(renderStateBuilder);
+    renderState.setName(stateName);
+
+    return renderState;
 }

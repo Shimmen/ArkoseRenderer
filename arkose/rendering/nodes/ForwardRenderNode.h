@@ -15,4 +15,12 @@ private:
                                   VertexComponent::TexCoord2F,
                                   VertexComponent::Normal3F,
                                   VertexComponent::Tangent4F };
+
+    enum class ForwardPass {
+        Opaque,
+        Masked,
+    };
+
+    RenderTarget& makeRenderTarget(Registry&, LoadOp) const;
+    RenderState& makeRenderState(Registry&, const GpuScene&, ForwardPass) const;
 };
