@@ -54,12 +54,12 @@ layout(location = 2) out vec4 oMaterialProps;
 layout(location = 3) out vec4 oBaseColor;
 layout(location = 4) out vec4 oDiffuseGI;
 
-vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
     vec2 sampleTexCoords = gl_FragCoord.xy * pushConstants.invTargetSize;
-    float shadowFactor = texture(directionalLightProjectedShadowTex, sampleTexCoords).r;
+    float shadowFactor = hasShadow ? texture(directionalLightProjectedShadowTex, sampleTexCoords).r : 1.0;
 
     vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
     vec3 directLight = light.color * shadowFactor;
@@ -149,12 +149,17 @@ void main()
     vec3 ambient = pushConstants.ambientAmount * baseColor;
     vec3 color = emissive + ambient;
 
+    for (uint i = 0; i < lightMeta.numDirectionalLights; ++i) {
+
+        // We only have shadow for the 0th directional light as they are pre-projected. If needed we could quite easily support up to 4 shadowed directional light
+        // by storing the projected shadow in an RGBA texture with a projected shadow per channel. However, a single dir. shadow should almost always be enough.
+        bool hasShadow = i == 0;
+
+        color += evaluateDirectionalLight(directionalLights[i], hasShadow, V, N, baseColor, roughness, metallic);
+    }
+
     // TODO: Use tiles or clusters to minimize number of light evaluations!
     {
-        for (uint i = 0; i < lightMeta.numDirectionalLights; ++i) {
-            color += evaluateDirectionalLight(directionalLights[i], V, N, baseColor, roughness, metallic);
-        }
-
         for (uint i = 0; i < lightMeta.numSpotLights; ++i) {
             color += evaluateSpotLight(spotLights[i], V, N, baseColor, roughness, metallic);
         }
