@@ -39,9 +39,9 @@ struct Shader {
         uint32_t size;
     };
 
-    static Shader createVertexOnly(std::string vertexName, std::initializer_list<ShaderDefine> = {});
-    static Shader createBasicRasterize(std::string vertexName, std::string fragmentName, std::initializer_list<ShaderDefine> = {});
-    static Shader createCompute(std::string computeName, std::initializer_list<ShaderDefine> = {});
+    static Shader createVertexOnly(std::string vertexName, std::vector<ShaderDefine> = {});
+    static Shader createBasicRasterize(std::string vertexName, std::string fragmentName, std::vector<ShaderDefine> = {});
+    static Shader createCompute(std::string computeName, std::vector<ShaderDefine> = {});
 
     Shader() = default;
     Shader(std::vector<ShaderFile>, ShaderType type);

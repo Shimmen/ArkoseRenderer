@@ -4,20 +4,20 @@
 #include "core/Assert.h"
 #include "core/Logging.h"
 
-Shader Shader::createVertexOnly(std::string vertexName, std::initializer_list<ShaderDefine> defines)
+Shader Shader::createVertexOnly(std::string vertexName, std::vector<ShaderDefine> defines)
 {
     ShaderFile vertexFile { std::move(vertexName), ShaderFileType::Vertex, defines };
     return Shader({ vertexFile }, ShaderType::Raster);
 }
 
-Shader Shader::createBasicRasterize(std::string vertexName, std::string fragmentName, std::initializer_list<ShaderDefine> defines)
+Shader Shader::createBasicRasterize(std::string vertexName, std::string fragmentName, std::vector<ShaderDefine> defines)
 {
     ShaderFile vertexFile { std::move(vertexName), ShaderFileType::Vertex, defines };
     ShaderFile fragmentFile { std::move(fragmentName), ShaderFileType::Fragment, defines };
     return Shader({ vertexFile, fragmentFile }, ShaderType::Raster);
 }
 
-Shader Shader::createCompute(std::string computeName, std::initializer_list<ShaderDefine> defines)
+Shader Shader::createCompute(std::string computeName, std::vector<ShaderDefine> defines)
 {
     ShaderFile computeFile { std::move(computeName), ShaderFileType::Compute, defines };
     return Shader({ computeFile }, ShaderType::Compute);

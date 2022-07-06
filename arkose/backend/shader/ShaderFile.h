@@ -52,8 +52,8 @@ enum class ShaderFileType {
 
 struct ShaderFile {
     ShaderFile() = default;
-    explicit ShaderFile(const std::string& path, std::initializer_list<ShaderDefine> = {});
-    ShaderFile(std::string path, ShaderFileType, std::initializer_list<ShaderDefine> = {});
+    explicit ShaderFile(const std::string& path, std::vector<ShaderDefine> = {});
+    ShaderFile(std::string path, ShaderFileType, std::vector<ShaderDefine> = {});
 
     [[nodiscard]] const std::string& path() const;
     [[nodiscard]] const std::vector<ShaderDefine>& defines() const;

@@ -11,12 +11,12 @@
 #include <cstdio>
 #endif
 
-ShaderFile::ShaderFile(const std::string& path, std::initializer_list<ShaderDefine> defines)
+ShaderFile::ShaderFile(const std::string& path, std::vector<ShaderDefine> defines)
     : ShaderFile(path, typeFromPath(path), std::move(defines))
 {
 }
 
-ShaderFile::ShaderFile(std::string path, ShaderFileType type, std::initializer_list<ShaderDefine> defines)
+ShaderFile::ShaderFile(std::string path, ShaderFileType type, std::vector<ShaderDefine> defines)
     : m_path(std::move(path))
     , m_defines(std::move(defines))
     , m_type(type)
