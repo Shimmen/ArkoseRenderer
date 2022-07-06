@@ -3,6 +3,7 @@
 #include "math/Frustum.h"
 #include "rendering/scene/GpuScene.h"
 #include "rendering/scene/lights/Light.h"
+#include "rendering/util/ScopedDebugZone.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 
@@ -60,9 +61,12 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
             mesh.ensureDrawCallIsAvailable(m_vertexLayout, scene);
         });
 
-        constexpr float clearDepth = 1.0f;
-        cmdList.beginRendering(renderState, ClearColor::srgbColor(0, 0, 0), clearDepth);
         {
+            ScopedDebugZone zone { cmdList, "Shadow Map Drawing" };
+
+            constexpr float clearDepth = 1.0f;
+            cmdList.beginRendering(renderState, ClearColor::srgbColor(0, 0, 0), clearDepth);
+
             uint32_t index = 0; // first directional light is always index 0
             cmdList.setNamedUniform("lightIndex", index);
 
@@ -84,17 +88,22 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
 
                 cmdList.issueDrawCall(drawCall);
             });
+
+            cmdList.endRendering();
         }
-        cmdList.endRendering();
 
-        ImGui::SliderFloat("Light disc radius", &m_lightDiscRadius, 0.0f, 5.0f);
-        vec2 radiusInShadowMapUVs = m_lightDiscRadius * shadowMap.extent().inverse();
+        {
+            ScopedDebugZone zone { cmdList, "Shadow Map Projection" };
 
-        cmdList.setComputeState(shadowProjectionState);
-        cmdList.bindSet(shadowProjectionBindingSet, 0);
-        cmdList.setNamedUniform<mat4>("lightProjectionFromView", lightProjectionFromView);
-        cmdList.setNamedUniform<vec2>("lightDiscRadiusInShadowMapUVs", radiusInShadowMapUVs);
-        cmdList.setNamedUniform<int>("frameIndexMod8", appState.frameIndex() % 8);
-        cmdList.dispatch(projectedShadowTex.extent3D(), { 16, 16, 1 });
+            ImGui::SliderFloat("Light disc radius", &m_lightDiscRadius, 0.0f, 5.0f);
+            vec2 radiusInShadowMapUVs = m_lightDiscRadius * shadowMap.extent().inverse();
+
+            cmdList.setComputeState(shadowProjectionState);
+            cmdList.bindSet(shadowProjectionBindingSet, 0);
+            cmdList.setNamedUniform<mat4>("lightProjectionFromView", lightProjectionFromView);
+            cmdList.setNamedUniform<vec2>("lightDiscRadiusInShadowMapUVs", radiusInShadowMapUVs);
+            cmdList.setNamedUniform<int>("frameIndexMod8", appState.frameIndex() % 8);
+            cmdList.dispatch(projectedShadowTex.extent3D(), { 16, 16, 1 });
+        }
     };
 }
