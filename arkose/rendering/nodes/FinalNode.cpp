@@ -15,8 +15,7 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Regist
     if (!sourceTexture)
         ARKOSE_LOG(Fatal, "Final: specified source texture '{}' not found, exiting.", m_sourceTextureName);
 
-    Texture& filmGrainTexture = reg.loadTextureArrayFromFileSequence("assets/blue-noise/64_64/HDR_RGBA_{}.png", false, false);
-
+    Texture& filmGrainTexture = *reg.getTexture("BlueNoise");
     BindingSet& bindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(*sourceTexture, ShaderStage::Fragment),
                                                     ShaderBinding::sampledTexture(filmGrainTexture, ShaderStage::Fragment) });
 

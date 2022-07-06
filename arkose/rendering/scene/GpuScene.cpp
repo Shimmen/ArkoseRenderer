@@ -186,6 +186,10 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                          ShaderBinding::sampledTextureBindlessArray(shadowMaps) });
     reg.publish("SceneLightSet", lightBindingSet);
 
+    // Misc. data
+    Texture& blueNoiseTextureArray = reg.loadTextureArrayFromFileSequence("assets/blue-noise/64_64/HDR_RGBA_{}.png", false, false);
+    reg.publish("BlueNoise", blueNoiseTextureArray);
+
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         // If we're using async texture updates, create textures for the images we've now loaded in
