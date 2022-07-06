@@ -133,6 +133,7 @@ template<typename T>
 template<typename T>
 void Registry::publishResource(const std::string& name, T& resource, std::unordered_map<std::string, PublishedResource<T>>& map)
 {
+    ARKOSE_ASSERT(name.length() > 0);
     ARKOSE_ASSERT(m_currentNodeName.has_value());
     auto nodeName = m_currentNodeName.value();
 
