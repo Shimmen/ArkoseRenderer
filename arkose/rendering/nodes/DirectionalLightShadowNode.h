@@ -10,4 +10,7 @@ public:
 private:
     VertexLayout m_vertexLayout { VertexComponent::Position3F,
                                   VertexComponent::Normal3F };
+
+    // NOTE: No physical unit to this right now..
+    float m_lightDiscRadius = 3.6f;
 };

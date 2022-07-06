@@ -4,11 +4,13 @@
 #include "rendering/scene/GpuScene.h"
 #include "rendering/scene/lights/Light.h"
 #include "utility/Profiling.h"
+#include <imgui.h>
 
 RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& sceneDepth = *reg.getTexture("SceneDepth");
     Buffer& cameraDataBuffer = *reg.getBuffer("SceneCameraData");
+    Texture& blueNoiseTexArray = *reg.getTexture("BlueNoise");
 
     Texture& projectedShadowTex = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R8);
     reg.publish("DirectionalLightProjectedShadow", projectedShadowTex);
@@ -34,7 +36,8 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
     BindingSet& shadowProjectionBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(projectedShadowTex, ShaderStage::Compute),
                                                                     ShaderBinding::sampledTexture(shadowMap, ShaderStage::Compute),
                                                                     ShaderBinding::sampledTexture(sceneDepth, ShaderStage::Compute),
-                                                                    ShaderBinding::constantBuffer(cameraDataBuffer, ShaderStage::Compute) });
+                                                                    ShaderBinding::constantBuffer(cameraDataBuffer, ShaderStage::Compute),
+                                                                    ShaderBinding::sampledTexture(blueNoiseTexArray, ShaderStage::Compute) });
     ComputeState& shadowProjectionState = reg.createComputeState(shadowProjectionShader, { &shadowProjectionBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
@@ -79,9 +82,14 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
         }
         cmdList.endRendering();
 
+        ImGui::SliderFloat("Light disc radius", &m_lightDiscRadius, 0.0f, 5.0f);
+        vec2 radiusInShadowMapUVs = m_lightDiscRadius * shadowMap.extent().inverse();
+
         cmdList.setComputeState(shadowProjectionState);
         cmdList.bindSet(shadowProjectionBindingSet, 0);
-        cmdList.setNamedUniform("lightProjectionFromView", lightProjectionFromView);
+        cmdList.setNamedUniform<mat4>("lightProjectionFromView", lightProjectionFromView);
+        cmdList.setNamedUniform<vec2>("lightDiscRadiusInShadowMapUVs", radiusInShadowMapUVs);
+        cmdList.setNamedUniform<int>("frameIndexMod8", appState.frameIndex() % 8);
         cmdList.dispatch(projectedShadowTex.extent3D(), { 16, 16, 1 });
     };
 }

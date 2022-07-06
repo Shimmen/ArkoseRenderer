@@ -2,16 +2,32 @@
 
 #include <common/camera.glsl>
 #include <common/namedUniforms.glsl>
-#include <common/shadow.glsl>
 
 layout(set = 0, binding = 0, r8) restrict uniform image2D projectedShadowImg;
 layout(set = 0, binding = 1)              uniform sampler2D shadowMapTex;
 layout(set = 0, binding = 2)              uniform sampler2D sceneDepthTex;
 layout(set = 0, binding = 3)              uniform CameraStateBlock { CameraState camera; };
+layout(set = 0, binding = 4)              uniform sampler2DArray blueNoiseTexArray;
 
 NAMED_UNIFORMS(constants,
     mat4 lightProjectionFromView;
+    vec2 lightDiscRadiusInShadowMapUVs;
+    int frameIndexMod8;
 )
+
+// 9 sample Fibbonaci spiral with radius 1.0
+const int numFibShadowSamples = 9;
+const vec2 fibShadowSamples[] = vec2[numFibShadowSamples](
+    vec2(0.0, 0.0),
+    vec2(-0.2457896260261067, -0.22516343142050776),
+    vec2(0.041212881865007774, 0.46959953214478733),
+    vec2(0.3512823401715744, -0.45818560738735076),
+    vec2(-0.6564756568769521, 0.11612130025287623),
+    vec2(0.6288980651919658, 0.40005347036784666),
+    vec2(-0.2119660273461883, -0.7885030563781865),
+    vec2(-0.4064817883047546, 0.7826559483926168),
+    vec2(0.8856006111249612, -0.3234199228000402)
+);
 
 layout(local_size_x = 16, local_size_y = 16) in;
 void main()
@@ -21,11 +37,31 @@ void main()
     if (any(greaterThanEqual(pixelCoord, targetSize)))
         return;
 
-    vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(targetSize);
-    float sceneDepth = texture(sceneDepthTex, uv).x;
-    vec3 viewSpacePosition = unprojectUvCoordAndDepthToViewSpace(uv, sceneDepth, camera);
+    vec2 targetUv = (vec2(pixelCoord) + 0.5) / vec2(targetSize);
+    float sceneDepth = texture(sceneDepthTex, targetUv).x;
+    vec3 viewSpacePosition = unprojectUvCoordAndDepthToViewSpace(targetUv, sceneDepth, camera);
+    vec4 posInShadowMap = constants.lightProjectionFromView * vec4(viewSpacePosition, 1.0);
+    posInShadowMap.xyz /= posInShadowMap.w;
 
-    float shadowFactor = evaluateShadow(shadowMapTex, constants.lightProjectionFromView, viewSpacePosition);
+    // Generate blue-noise rotation value
+    ivec3 noiseCoord = ivec3(pixelCoord % ivec2(64), constants.frameIndexMod8);
+    float angle = TWO_PI * texelFetch(blueNoiseTexArray, noiseCoord, 0).r;
+    float cosAngle = cos(angle);
+    float sinAngle = sin(angle);
+    mat2 sampleRot = mat2(cosAngle, sinAngle, -sinAngle, cosAngle);
+
+    float shadowAccumulation = 0.0;
+    for (int i = 0; i < numFibShadowSamples; ++i)
+    {
+        vec2 sampleOffset = constants.lightDiscRadiusInShadowMapUVs * (sampleRot * fibShadowSamples[i]);
+        vec2 shadowMapUv = (posInShadowMap.xy * 0.5 + 0.5) + sampleOffset;
+
+        float mapDepth = texture(shadowMapTex, shadowMapUv).x;
+        float shadowValue = (mapDepth < posInShadowMap.z) ? 0.0 : 1.0;
+
+        shadowAccumulation += shadowValue;
+    }
+    float shadowFactor = shadowAccumulation / numFibShadowSamples;
 
     imageStore(projectedShadowImg, pixelCoord, vec4(shadowFactor, 0.0, 0.0, 0.0));
 }
