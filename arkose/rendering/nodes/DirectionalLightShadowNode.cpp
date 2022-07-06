@@ -8,6 +8,11 @@
 
 RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuScene& scene, Registry& reg)
 {
+    //
+    // NOTE: We shouldn't rely on TAA to clean up the noise produced by this as the noise messes with history samples.
+    // We should ensure we denoise it before we pass it on, and let TAA just smooth out the last little bit.
+    //
+
     Texture& sceneDepth = *reg.getTexture("SceneDepth");
     Buffer& cameraDataBuffer = *reg.getBuffer("SceneCameraData");
     Texture& blueNoiseTexArray = *reg.getTexture("BlueNoise");

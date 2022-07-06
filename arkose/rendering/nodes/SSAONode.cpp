@@ -8,6 +8,11 @@
 
 RenderPipelineNode::ExecuteCallback SSAONode::construct(GpuScene& scene, Registry& reg)
 {
+    //
+    // NOTE: We shouldn't rely on TAA to clean up the noise produced by this as the noise messes with history samples.
+    // We should ensure we denoise it before we pass it on, and let TAA just smooth out the last little bit.
+    //
+
     ///////////////////////
     // constructNode
     static constexpr int KernelSampleCount = 32;
