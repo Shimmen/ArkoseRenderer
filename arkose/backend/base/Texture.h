@@ -1,6 +1,7 @@
 #pragma once
 
-#include "backend/util/Common.h"
+#include "backend/util/ClearValue.h"
+#include "backend/util/IndexType.h"
 #include "backend/Resource.h"
 #include "utility/Extent.h"
 #include "utility/Hash.h"

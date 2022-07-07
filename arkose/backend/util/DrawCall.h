@@ -1,7 +1,7 @@
 #pragma once
 
 #include "backend/base/Buffer.h"
-#include "backend/util/Common.h"
+#include "backend/util/IndexType.h"
 
 struct DrawCallDescription {
 
