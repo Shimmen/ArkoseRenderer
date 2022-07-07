@@ -64,8 +64,7 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
         {
             ScopedDebugZone zone { cmdList, "Shadow Map Drawing" };
 
-            constexpr float clearDepth = 1.0f;
-            cmdList.beginRendering(renderState, ClearColor::srgbColor(0, 0, 0), clearDepth);
+            cmdList.beginRendering(renderState, ClearValue::blackAtMaxDepth());
 
             uint32_t index = 0; // first directional light is always index 0
             cmdList.setNamedUniform("lightIndex", index);

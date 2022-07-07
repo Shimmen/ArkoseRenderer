@@ -14,8 +14,8 @@ public:
     virtual void executeBufferCopyOperations(UploadBuffer&);
     virtual void executeBufferCopyOperations(std::vector<BufferCopyOperation>) = 0;
 
-    virtual void beginRendering(const RenderState&) = 0;
-    virtual void beginRendering(const RenderState&, ClearColor, float clearDepth, uint32_t clearStencil = 0) = 0;
+    virtual void beginRendering(const RenderState&, bool autoSetViewport = true) = 0;
+    virtual void beginRendering(const RenderState&, ClearValue, bool autoSetViewport = true) = 0;
     virtual void endRendering() = 0;
 
     virtual void setRayTracingState(const RayTracingState&) = 0;

@@ -40,7 +40,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
 
         {
             ScopedDebugZone zone { cmdList, "Opaque" };
-            cmdList.beginRendering(renderStateOpaque, ClearColor::srgbColor(0, 0, 0, 0), 1.0f);
+            cmdList.beginRendering(renderStateOpaque, ClearValue::blackAtMaxDepth());
             setCommonNamedUniforms(renderStateOpaque);
             cmdList.drawIndirect(opaqueDrawCmdsBuffer, opaqueDrawCountBuffer);
             cmdList.endRendering();

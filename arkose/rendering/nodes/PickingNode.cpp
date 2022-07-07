@@ -47,7 +47,10 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 
         if (meshSelectPick || focusDepthPick) {
 
-            cmdList.beginRendering(drawIndicesState, ClearColor::srgbColor(1, 0, 1), 1.0f);
+            ClearValue clearValue { .color = ClearColor::srgbColor(1, 0, 1),
+                                    .depth = 1.0f };
+
+            cmdList.beginRendering(drawIndicesState, clearValue);
             cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
 
             cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout({ VertexComponent::Position3F }));

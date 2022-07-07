@@ -40,8 +40,7 @@ RenderPipelineNode::ExecuteCallback ShadowMapNode::construct(GpuScene& scene, Re
                 return reg.createRenderState(renderStateBuilder);
             });
 
-            constexpr float clearDepth = 1.0f;
-            cmdList.beginRendering(renderState, ClearColor::srgbColor(0, 0, 0), clearDepth);
+            cmdList.beginRendering(renderState, ClearValue::blackAtMaxDepth());
             {
                 mat4 lightProjectionFromWorld = light.viewProjection();
                 auto lightFrustum = geometry::Frustum::createFromProjectionMatrix(lightProjectionFromWorld);

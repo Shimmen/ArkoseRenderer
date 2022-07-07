@@ -443,7 +443,7 @@ void VulkanCommandList::executeBufferCopyOperations(std::vector<BufferCopyOperat
     endDebugLabel();
 }
 
-void VulkanCommandList::beginRendering(const RenderState& genRenderState)
+void VulkanCommandList::beginRendering(const RenderState& genRenderState, bool autoSetViewport)
 {
     if (activeRenderState) {
         ARKOSE_LOG(Warning, "setRenderState: already active render state!");
@@ -457,15 +457,10 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState)
         }
     });
 
-    // NOTE: These will not be used, but we need to pass something in for the current API
-    ClearColor clearColor = ClearColor::srgbColor(0, 0, 0);
-    float clearDepth = 1.0f;
-    uint32_t clearStencil = 0;
-
-    beginRendering(genRenderState, clearColor, clearDepth, clearStencil);
+    beginRendering(genRenderState, ClearValue(), autoSetViewport);
 }
 
-void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearColor clearColor, float clearDepth, uint32_t clearStencil)
+void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearValue clearValue, bool autoSetViewport)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
@@ -485,9 +480,10 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
     renderTarget.forEachAttachmentInOrder([&](const RenderTarget::Attachment& attachment) {
         VkClearValue value = {};
         if (attachment.type == RenderTarget::AttachmentType::Depth) {
-            value.depthStencil = { clearDepth, clearStencil };
+            value.depthStencil.depth = clearValue.depth;
+            value.depthStencil.stencil = clearValue.stencil;
         } else {
-            value.color = { { clearColor.r, clearColor.g, clearColor.b, clearColor.a } };
+            value.color = { { clearValue.color.r, clearValue.color.g, clearValue.color.b, clearValue.color.a } };
         }
 
         clearValues.push_back(value);
@@ -633,8 +629,9 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
         });
     }
 
-    // TODO: Allow users to specify that they don't want to do this if they instead want to setup their own viewport & scissor
-    setViewport({ 0, 0 }, renderTarget.extent().asIntVector());
+    if (autoSetViewport) {
+        setViewport({ 0, 0 }, renderTarget.extent().asIntVector());
+    }
 }
 
 void VulkanCommandList::endRendering()

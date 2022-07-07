@@ -12,8 +12,8 @@ public:
 
     void executeBufferCopyOperations(std::vector<BufferCopyOperation>) override;
 
-    void beginRendering(const RenderState&) override;
-    void beginRendering(const RenderState&, ClearColor, float clearDepth, uint32_t clearStencil) override;
+    void beginRendering(const RenderState&, bool autoSetViewport) override;
+    void beginRendering(const RenderState&, ClearValue, bool autoSetViewport) override;
     void endRendering() override;
 
     void setRayTracingState(const RayTracingState&) override;

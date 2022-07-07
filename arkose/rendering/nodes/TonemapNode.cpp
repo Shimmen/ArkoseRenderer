@@ -40,7 +40,7 @@ RenderPipelineNode::ExecuteCallback TonemapNode::construct(GpuScene& scene, Regi
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         if (m_mode == Mode::RenderToWindow)
-            cmdList.beginRendering(tonemapRenderState, ClearColor::black(), 1.0f);
+            cmdList.beginRendering(tonemapRenderState, ClearValue::blackAtMaxDepth());
         else
             cmdList.beginRendering(tonemapRenderState);
 

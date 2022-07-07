@@ -41,6 +41,18 @@ private:
     }
 };
 
+struct ClearValue {
+    ClearColor color { ClearColor::black() };
+    float depth { 1.0f };
+    uint32_t stencil { 0 };
+
+    static ClearValue blackAtMaxDepth()
+    {
+        return ClearValue { .color = ClearColor::black(),
+                            .depth = 1.0f };
+    }
+};
+
 enum class IndexType {
     UInt16,
     UInt32,

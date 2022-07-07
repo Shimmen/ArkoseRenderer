@@ -39,7 +39,7 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Regist
         ImGui::SliderFloat("Vignette intensity", &m_vignetteIntensity, 0.0f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
         float vignetteIntensity = m_applyVignette ? m_vignetteIntensity : 0.0f;
 
-        cmdList.beginRendering(renderState, ClearColor::black(), 1.0f);
+        cmdList.beginRendering(renderState, ClearValue::blackAtMaxDepth());
         {
             cmdList.setNamedUniform("filmGrainGain", filmGrainGain);
             cmdList.setNamedUniform("filmGrainScale", m_filmGrainScale);

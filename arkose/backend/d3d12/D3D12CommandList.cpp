@@ -27,17 +27,19 @@ void D3D12CommandList::executeBufferCopyOperations(std::vector<BufferCopyOperati
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
-void D3D12CommandList::beginRendering(const RenderState& genRenderState)
+void D3D12CommandList::beginRendering(const RenderState& genRenderState, bool autoSetViewport)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
-void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearColor clearColor, float clearDepth, uint32_t clearStencil)
+void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearValue clearValue, bool autoSetViewport)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
 void D3D12CommandList::endRendering()
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
 void D3D12CommandList::setRayTracingState(const RayTracingState& rtState)

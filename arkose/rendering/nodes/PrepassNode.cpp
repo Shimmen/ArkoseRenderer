@@ -23,7 +23,7 @@ RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Regi
             mesh.ensureDrawCallIsAvailable(m_prepassVertexLayout, scene);
         });
 
-        cmdList.beginRendering(prepassRenderState, ClearColor::srgbColor(0, 0, 0, 0), 1.0f);
+        cmdList.beginRendering(prepassRenderState, ClearValue::blackAtMaxDepth());
 
         cmdList.setNamedUniform("depthOffset", 0.00005f);
         cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
