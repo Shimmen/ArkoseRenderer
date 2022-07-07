@@ -634,25 +634,7 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
     }
 
     // TODO: Allow users to specify that they don't want to do this if they instead want to setup their own viewport & scissor
-    {
-        Extent2D extent = renderTarget.extent();
-
-        VkViewport viewport = {};
-        viewport.x = 0.0f;
-        viewport.y = 0.0f;
-        viewport.width = static_cast<float>(extent.width());
-        viewport.height = static_cast<float>(extent.height());
-        viewport.minDepth = 0.0f;
-        viewport.maxDepth = 1.0f;
-
-        VkRect2D scissorRect = {};
-        scissorRect.offset = { 0, 0 };
-        scissorRect.extent.width = extent.width();
-        scissorRect.extent.height = extent.height();
-
-        vkCmdSetViewport(m_commandBuffer, 0, 1, &viewport);
-        vkCmdSetScissor(m_commandBuffer, 0, 1, &scissorRect);
-    }
+    setViewport({ 0, 0 }, renderTarget.extent().asIntVector());
 }
 
 void VulkanCommandList::endRendering()
@@ -974,6 +956,31 @@ void VulkanCommandList::drawIndirect(const Buffer& indirectBuffer, const Buffer&
     uint32_t maxDrawCount = (uint32_t)indirectBuffer.size() / indirectDataStride;
 
     vkCmdDrawIndexedIndirectCount(m_commandBuffer, vulkanIndirectBuffer, 0u, vulkanCountBuffer, 0u, maxDrawCount, indirectDataStride);
+}
+
+void VulkanCommandList::setViewport(ivec2 origin, ivec2 size)
+{
+    ARKOSE_ASSERT(origin.x >= 0);
+    ARKOSE_ASSERT(origin.y >= 0);
+    ARKOSE_ASSERT(size.x > 0);
+    ARKOSE_ASSERT(size.x > 0);
+
+    VkViewport viewport = {};
+    viewport.x = static_cast<float>(origin.x);
+    viewport.y = static_cast<float>(origin.x);
+    viewport.width = static_cast<float>(size.x);
+    viewport.height = static_cast<float>(size.y);
+    viewport.minDepth = 0.0f;
+    viewport.maxDepth = 1.0f;
+
+    // TODO: Allow independent scissor control
+    VkRect2D scissorRect = {};
+    scissorRect.offset = { origin.x, origin.y };
+    scissorRect.extent.width = size.x;
+    scissorRect.extent.height = size.y;
+
+    vkCmdSetViewport(m_commandBuffer, 0, 1, &viewport);
+    vkCmdSetScissor(m_commandBuffer, 0, 1, &scissorRect);
 }
 
 void VulkanCommandList::bindVertexBuffer(const Buffer& vertexBuffer)

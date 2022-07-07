@@ -35,6 +35,8 @@ public:
     virtual void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex = 0) = 0;
     virtual void drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer) = 0;
 
+    virtual void setViewport(ivec2 origin, ivec2 size) = 0;
+
     virtual void bindVertexBuffer(const Buffer&) = 0;
     virtual void bindIndexBuffer(const Buffer&, IndexType) = 0;
     virtual void issueDrawCall(const DrawCallDescription&) = 0;
