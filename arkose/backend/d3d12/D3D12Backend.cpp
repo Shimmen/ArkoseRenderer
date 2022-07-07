@@ -489,9 +489,9 @@ std::unique_ptr<BindingSet> D3D12Backend::createBindingSet(std::vector<ShaderBin
 
 std::unique_ptr<RenderState> D3D12Backend::createRenderState(const RenderTarget& renderTarget, const VertexLayout& vertexLayout,
                                                               const Shader& shader, const StateBindings& stateBindings,
-                                                              const Viewport& viewport, const BlendState& blendState, const RasterState& rasterState, const DepthState& depthState, const StencilState& stencilState)
+                                                              const BlendState& blendState, const RasterState& rasterState, const DepthState& depthState, const StencilState& stencilState)
 {
-    return std::make_unique<D3D12RenderState>(*this, renderTarget, vertexLayout, shader, stateBindings, viewport, blendState, rasterState, depthState, stencilState);
+    return std::make_unique<D3D12RenderState>(*this, renderTarget, vertexLayout, shader, stateBindings, blendState, rasterState, depthState, stencilState);
 }
 
 std::unique_ptr<ComputeState> D3D12Backend::createComputeState(const Shader& shader, std::vector<BindingSet*> bindingSets)

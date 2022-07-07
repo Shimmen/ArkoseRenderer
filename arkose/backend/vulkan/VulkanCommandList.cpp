@@ -632,6 +632,27 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearC
             bindSet(bindingSet, setIndex);
         });
     }
+
+    // TODO: Allow users to specify that they don't want to do this if they instead want to setup their own viewport & scissor
+    {
+        Extent2D extent = renderTarget.extent();
+
+        VkViewport viewport = {};
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = static_cast<float>(extent.width());
+        viewport.height = static_cast<float>(extent.height());
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+
+        VkRect2D scissorRect = {};
+        scissorRect.offset = { 0, 0 };
+        scissorRect.extent.width = extent.width();
+        scissorRect.extent.height = extent.height();
+
+        vkCmdSetViewport(m_commandBuffer, 0, 1, &viewport);
+        vkCmdSetScissor(m_commandBuffer, 0, 1, &scissorRect);
+    }
 }
 
 void VulkanCommandList::endRendering()

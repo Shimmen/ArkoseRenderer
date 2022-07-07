@@ -7,20 +7,6 @@ RenderStateBuilder::RenderStateBuilder(const RenderTarget& renderTarget, const S
 {
 }
 
-Viewport RenderStateBuilder::viewport() const
-{
-    if (m_viewport.has_value()) {
-        return m_viewport.value();
-    }
-
-    Viewport view {
-        .x = 0.0f,
-        .y = 0.0f,
-        .extent = renderTarget.extent()
-    };
-    return view;
-}
-
 BlendState RenderStateBuilder::blendState() const
 {
     if (m_blendState.has_value()) {

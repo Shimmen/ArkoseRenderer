@@ -265,15 +265,15 @@ Texture& Registry::loadTextureArrayFromFileSequence(const std::string& imagePath
 RenderState& Registry::createRenderState(const RenderStateBuilder& builder)
 {
     return createRenderState(builder.renderTarget, builder.vertexLayout, builder.shader,
-                             builder.stateBindings(), builder.viewport(), builder.blendState(), builder.rasterState(), builder.depthState(), builder.stencilState());
+                             builder.stateBindings(), builder.blendState(), builder.rasterState(), builder.depthState(), builder.stencilState());
 }
 
 RenderState& Registry::createRenderState(
     const RenderTarget& renderTarget, const VertexLayout& vertexLayout,
     const Shader& shader, const StateBindings& stateBindings,
-    const Viewport& viewport, const BlendState& blendState, const RasterState& rasterState, const DepthState& depthState, const StencilState& stencilState)
+    const BlendState& blendState, const RasterState& rasterState, const DepthState& depthState, const StencilState& stencilState)
 {
-    auto renderState = backend().createRenderState(renderTarget, vertexLayout, shader, stateBindings, viewport, blendState, rasterState, depthState, stencilState);
+    auto renderState = backend().createRenderState(renderTarget, vertexLayout, shader, stateBindings, blendState, rasterState, depthState, stencilState);
     renderState->setOwningRegistry({}, this);
 
     m_renderStates.push_back(std::move(renderState));

@@ -6,8 +6,8 @@
 
 VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& renderTarget, VertexLayout vertexLayout,
                                      Shader shader, const StateBindings& stateBindings,
-                                     Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState, StencilState stencilState)
-    : RenderState(backend, renderTarget, vertexLayout, shader, stateBindings, viewport, blendState, rasterState, depthState, stencilState)
+                                     BlendState blendState, RasterState rasterState, DepthState depthState, StencilState stencilState)
+    : RenderState(backend, renderTarget, vertexLayout, shader, stateBindings, blendState, rasterState, depthState, stencilState)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
@@ -141,25 +141,19 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     inputAssemblyState.primitiveRestartEnable = VK_FALSE;
 
-    VkViewport vkViewport = {};
-    vkViewport.x = fixedViewport().x;
-    vkViewport.y = fixedViewport().y;
-    vkViewport.width = static_cast<float>(fixedViewport().extent.width());
-    vkViewport.height = static_cast<float>(fixedViewport().extent.height());
-    vkViewport.minDepth = 0.0f;
-    vkViewport.maxDepth = 1.0f;
+    std::vector<VkDynamicState> activeDynamicStates {};
+    activeDynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);
+    activeDynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
 
-    // TODO: Should we always use the viewport settings if no scissor is specified?
-    VkRect2D scissor = {};
-    scissor.offset = { 0, 0 };
-    scissor.extent.width = uint32_t(fixedViewport().extent.width());
-    scissor.extent.height = uint32_t(fixedViewport().extent.height());
+    VkPipelineDynamicStateCreateInfo dynamicState = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
+    dynamicState.dynamicStateCount = static_cast<uint32_t>(activeDynamicStates.size());
+    dynamicState.pDynamicStates = activeDynamicStates.data();
 
     VkPipelineViewportStateCreateInfo viewportState = { VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO };
     viewportState.viewportCount = 1;
-    viewportState.pViewports = &vkViewport;
+    viewportState.pViewports = nullptr; // (dynamic state)
     viewportState.scissorCount = 1;
-    viewportState.pScissors = &scissor;
+    viewportState.pScissors = nullptr;// (dynamic state)
 
     VkPipelineRasterizationStateCreateInfo rasterizer = { VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO };
     rasterizer.depthClampEnable = VK_FALSE;
@@ -307,7 +301,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     pipelineCreateInfo.pMultisampleState = &multisampling;
     pipelineCreateInfo.pDepthStencilState = &depthStencilState;
     pipelineCreateInfo.pColorBlendState = &colorBlending;
-    pipelineCreateInfo.pDynamicState = nullptr;
+    pipelineCreateInfo.pDynamicState = &dynamicState;
 
     // pipeline layout
     pipelineCreateInfo.layout = pipelineLayout;

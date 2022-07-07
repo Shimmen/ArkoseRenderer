@@ -71,7 +71,7 @@ public:
     virtual std::unique_ptr<Texture> createTexture(Texture::Description) = 0;
     virtual std::unique_ptr<BindingSet> createBindingSet(std::vector<ShaderBinding>) = 0;
     virtual std::unique_ptr<RenderState> createRenderState(const RenderTarget&, const VertexLayout&, const Shader&, const StateBindings&,
-                                                           const Viewport&, const BlendState&, const RasterState&, const DepthState&, const StencilState&)
+                                                           const BlendState&, const RasterState&, const DepthState&, const StencilState&)
         = 0;
     virtual std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(std::vector<RTGeometry>) = 0;
     virtual std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance>) = 0;

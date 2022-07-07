@@ -59,25 +59,18 @@ struct RasterState {
     PolygonMode polygonMode { PolygonMode::Filled };
 };
 
-struct Viewport {
-    float x { 0.0f };
-    float y { 0.0f };
-    Extent2D extent;
-};
-
 class RenderState : public Resource {
 public:
     RenderState() = default;
     RenderState(Backend& backend,
                 const RenderTarget& renderTarget, VertexLayout vertexLayout,
                 Shader shader, const StateBindings& stateBindings,
-                Viewport viewport, BlendState blendState, RasterState rasterState, DepthState depthState, StencilState stencilState)
+                BlendState blendState, RasterState rasterState, DepthState depthState, StencilState stencilState)
         : Resource(backend)
         , m_renderTarget(&renderTarget)
         , m_vertexLayout(vertexLayout)
         , m_shader(shader)
         , m_stateBindings(stateBindings)
-        , m_viewport(viewport)
         , m_blendState(blendState)
         , m_rasterState(rasterState)
         , m_depthState(depthState)
@@ -92,7 +85,6 @@ public:
     const Shader& shader() const { return m_shader; }
     const StateBindings& stateBindings() const { return m_stateBindings; }
 
-    const Viewport& fixedViewport() const { return m_viewport; }
     const BlendState& blendState() const { return m_blendState; }
     const RasterState& rasterState() const { return m_rasterState; }
     const DepthState& depthState() const { return m_depthState; }
@@ -105,7 +97,6 @@ private:
     Shader m_shader;
     StateBindings m_stateBindings;
 
-    Viewport m_viewport;
     BlendState m_blendState;
     RasterState m_rasterState;
     DepthState m_depthState;
@@ -129,7 +120,6 @@ public:
     bool cullBackfaces { true };
     TriangleWindingOrder frontFace { TriangleWindingOrder::CounterClockwise };
 
-    [[nodiscard]] Viewport viewport() const;
     [[nodiscard]] BlendState blendState() const;
     [[nodiscard]] RasterState rasterState() const;
     [[nodiscard]] DepthState depthState() const;
@@ -139,7 +129,6 @@ public:
     StateBindings& stateBindings() { return m_stateBindings; }
 
 private:
-    std::optional<Viewport> m_viewport {};
     std::optional<BlendState> m_blendState {};
     std::optional<RasterState> m_rasterState {};
     StateBindings m_stateBindings {};
