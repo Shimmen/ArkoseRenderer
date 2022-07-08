@@ -23,6 +23,16 @@ void VulkanCommandList::clearTexture(Texture& genTexture, ClearValue clearValue)
 
     auto& texture = static_cast<VulkanTexture&>(genTexture);
 
+    VkImageAspectFlags aspectMask = 0u;
+    if (texture.hasDepthFormat()) {
+        aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        if (texture.hasStencilFormat()) {
+            aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+    } else {
+        aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+
     std::optional<VkImageLayout> originalLayout;
     if (texture.currentLayout != VK_IMAGE_LAYOUT_GENERAL && texture.currentLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
         originalLayout = texture.currentLayout;
@@ -34,7 +44,7 @@ void VulkanCommandList::clearTexture(Texture& genTexture, ClearValue clearValue)
         imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
         imageBarrier.image = texture.image;
-        imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageBarrier.subresourceRange.aspectMask = aspectMask;
         imageBarrier.subresourceRange.baseMipLevel = 0;
         imageBarrier.subresourceRange.levelCount = texture.mipLevels();
         imageBarrier.subresourceRange.baseArrayLayer = 0;
@@ -56,17 +66,13 @@ void VulkanCommandList::clearTexture(Texture& genTexture, ClearValue clearValue)
     }
 
     VkImageSubresourceRange range {};
+    range.aspectMask = aspectMask;
     range.baseMipLevel = 0;
     range.levelCount = texture.mipLevels();
     range.baseArrayLayer = 0;
     range.layerCount = texture.layerCount();
 
     if (texture.hasDepthFormat()) {
-        range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        if (texture.hasStencilFormat()) {
-            range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-        }
-
         VkClearDepthStencilValue clearDepthStencil {};
         clearDepthStencil.depth = clearValue.depth;
         clearDepthStencil.stencil = clearValue.stencil;
@@ -74,8 +80,6 @@ void VulkanCommandList::clearTexture(Texture& genTexture, ClearValue clearValue)
         vkCmdClearDepthStencilImage(m_commandBuffer, texture.image, VK_IMAGE_LAYOUT_GENERAL, &clearDepthStencil, 1, &range);
 
     } else {
-        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
         VkClearColorValue clearColor {};
         clearColor.float32[0] = clearValue.color.r;
         clearColor.float32[1] = clearValue.color.g;
@@ -93,7 +97,7 @@ void VulkanCommandList::clearTexture(Texture& genTexture, ClearValue clearValue)
         imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
         imageBarrier.image = texture.image;
-        imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        imageBarrier.subresourceRange.aspectMask = aspectMask;
         imageBarrier.subresourceRange.baseMipLevel = 0;
         imageBarrier.subresourceRange.levelCount = texture.mipLevels();
         imageBarrier.subresourceRange.baseArrayLayer = 0;
