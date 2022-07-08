@@ -124,7 +124,6 @@ target_link_libraries(ArkoseRenderer PRIVATE
     glfw
     half
     imguizmo
-    mooslib
     nlohmann_json::nlohmann_json
     Shaderc::Shaderc
     spirv-cross-core

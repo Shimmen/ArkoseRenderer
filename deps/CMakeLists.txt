@@ -6,11 +6,6 @@ set_directory_properties(PROPERTIES EXCLUDE_FROM_ALL YES)
 ##################################
 # FetchContent dependencies with CMakeLists.txt
 
-set(MOOSLIB_BuildTests OFF)
-FetchContent_Declare(mooslib
-    GIT_REPOSITORY https://github.com/Shimmen/mooslib.git
-    GIT_TAG        46d4420381ee38e96ffe1aef9936168719a4f3f6)
-
 set(SPIRV_CROSS_SKIP_INSTALL ON CACHE INTERNAL "")
 set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE INTERNAL "")
 set(SPIRV_CROSS_CLI OFF CACHE INTERNAL "")
@@ -114,4 +109,4 @@ add_subdirectory(half)
 ##################################
 # Finalize FetchContent dependencies
 
-FetchContent_MakeAvailable(mooslib spirv-cross json fmt glfw vulkan_memory_allocator directx_headers)
+FetchContent_MakeAvailable(spirv-cross json fmt glfw vulkan_memory_allocator directx_headers)
