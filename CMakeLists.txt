@@ -17,6 +17,7 @@ find_package(Shaderc REQUIRED)
 # In-tree built dependencies
 
 add_subdirectory(deps)
+add_subdirectory(arklib)
 
 ##################################
 ###### MAIN TARGET: ARKOSE #######
@@ -117,6 +118,7 @@ target_include_directories(ArkoseRenderer PRIVATE arkose/)
 target_include_directories(ArkoseRenderer PRIVATE shaders/shared)
 
 target_link_libraries(ArkoseRenderer PRIVATE
+    arklib
     dear_imgui
     fmt
     glfw
