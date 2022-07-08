@@ -101,6 +101,23 @@ size_t GpuScene::forEachShadowCastingLight(std::function<void(size_t, const Ligh
     return nextIndex;
 }
 
+size_t GpuScene::forEachLocalLight(std::function<void(size_t, Light&)> callback)
+{
+    size_t nextIndex = 0;
+    for (auto& managedLight : m_managedSpotLights) {
+        callback(nextIndex++, *managedLight.light);
+    }
+    return nextIndex;
+}
+size_t GpuScene::forEachLocalLight(std::function<void(size_t, const Light&)> callback) const
+{
+    size_t nextIndex = 0;
+    for (auto& managedLight : m_managedSpotLights) {
+        callback(nextIndex++, *managedLight.light);
+    }
+    return nextIndex;
+}
+
 RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg)
 {
     // G-Buffer textures

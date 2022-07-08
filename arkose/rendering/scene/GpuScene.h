@@ -49,6 +49,8 @@ public:
     size_t shadowCastingLightCount() const;
     size_t forEachShadowCastingLight(std::function<void(size_t, Light&)>);
     size_t forEachShadowCastingLight(std::function<void(size_t, const Light&)>) const;
+    size_t forEachLocalLight(std::function<void(size_t, Light&)>);
+    size_t forEachLocalLight(std::function<void(size_t, const Light&)>) const;
 
     // RenderPipelineNode interface
 
