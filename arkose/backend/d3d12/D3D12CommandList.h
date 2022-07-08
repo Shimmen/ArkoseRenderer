@@ -6,7 +6,7 @@ class D3D12CommandList final : public CommandList {
 public:
     explicit D3D12CommandList(D3D12Backend&);
 
-    void clearTexture(Texture&, ClearColor) override;
+    void clearTexture(Texture&, ClearValue) override;
     void copyTexture(Texture& src, Texture& dst, uint32_t srcMip, uint32_t dstMip) override;
     void generateMipmaps(Texture&) override;
 

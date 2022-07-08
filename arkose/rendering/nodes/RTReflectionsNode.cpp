@@ -37,7 +37,7 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
     RayTracingState& rtState = reg.createRayTracingState(sbt, stateDataBindings, maxRecursionDepth);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
-        cmdList.clearTexture(reflectionsImage, ClearColor::black());
+        cmdList.clearTexture(reflectionsImage, ClearValue::blackAtMaxDepth());
         cmdList.setRayTracingState(rtState);
 
         static float injectedAmbient = 500.0f;

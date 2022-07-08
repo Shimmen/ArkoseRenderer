@@ -17,16 +17,15 @@ VulkanCommandList::VulkanCommandList(VulkanBackend& backend, VkCommandBuffer com
 {
 }
 
-void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
+void VulkanCommandList::clearTexture(Texture& genTexture, ClearValue clearValue)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    auto& colorTexture = static_cast<VulkanTexture&>(genColorTexture);
-    ARKOSE_ASSERT(!colorTexture.hasDepthFormat());
+    auto& texture = static_cast<VulkanTexture&>(genTexture);
 
     std::optional<VkImageLayout> originalLayout;
-    if (colorTexture.currentLayout != VK_IMAGE_LAYOUT_GENERAL && colorTexture.currentLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-        originalLayout = colorTexture.currentLayout;
+    if (texture.currentLayout != VK_IMAGE_LAYOUT_GENERAL && texture.currentLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+        originalLayout = texture.currentLayout;
 
         VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
         imageBarrier.oldLayout = originalLayout.value();
@@ -34,12 +33,12 @@ void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
         imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-        imageBarrier.image = colorTexture.image;
+        imageBarrier.image = texture.image;
         imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         imageBarrier.subresourceRange.baseMipLevel = 0;
-        imageBarrier.subresourceRange.levelCount = colorTexture.mipLevels();
+        imageBarrier.subresourceRange.levelCount = texture.mipLevels();
         imageBarrier.subresourceRange.baseArrayLayer = 0;
-        imageBarrier.subresourceRange.layerCount = colorTexture.layerCount();
+        imageBarrier.subresourceRange.layerCount = texture.layerCount();
 
         // FIXME: Probably overly aggressive barriers!
 
@@ -56,22 +55,35 @@ void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
                              1, &imageBarrier);
     }
 
-    VkClearColorValue clearValue {};
-    clearValue.float32[0] = color.r;
-    clearValue.float32[1] = color.g;
-    clearValue.float32[2] = color.b;
-    clearValue.float32[3] = color.a;
-
     VkImageSubresourceRange range {};
-    range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-
     range.baseMipLevel = 0;
-    range.levelCount = colorTexture.mipLevels();
-
+    range.levelCount = texture.mipLevels();
     range.baseArrayLayer = 0;
-    range.layerCount = colorTexture.layerCount();
+    range.layerCount = texture.layerCount();
 
-    vkCmdClearColorImage(m_commandBuffer, colorTexture.image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &range);
+    if (texture.hasDepthFormat()) {
+        range.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        if (texture.hasStencilFormat()) {
+            range.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+
+        VkClearDepthStencilValue clearDepthStencil {};
+        clearDepthStencil.depth = clearValue.depth;
+        clearDepthStencil.stencil = clearValue.stencil;
+
+        vkCmdClearDepthStencilImage(m_commandBuffer, texture.image, VK_IMAGE_LAYOUT_GENERAL, &clearDepthStencil, 1, &range);
+
+    } else {
+        range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+
+        VkClearColorValue clearColor {};
+        clearColor.float32[0] = clearValue.color.r;
+        clearColor.float32[1] = clearValue.color.g;
+        clearColor.float32[2] = clearValue.color.b;
+        clearColor.float32[3] = clearValue.color.a;
+
+        vkCmdClearColorImage(m_commandBuffer, texture.image, VK_IMAGE_LAYOUT_GENERAL, &clearColor, 1, &range);
+    }
 
     if (originalLayout.has_value() && originalLayout.value() != VK_IMAGE_LAYOUT_UNDEFINED && originalLayout.value() != VK_IMAGE_LAYOUT_PREINITIALIZED) {
         VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
@@ -80,12 +92,12 @@ void VulkanCommandList::clearTexture(Texture& genColorTexture, ClearColor color)
         imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-        imageBarrier.image = colorTexture.image;
+        imageBarrier.image = texture.image;
         imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         imageBarrier.subresourceRange.baseMipLevel = 0;
-        imageBarrier.subresourceRange.levelCount = colorTexture.mipLevels();
+        imageBarrier.subresourceRange.levelCount = texture.mipLevels();
         imageBarrier.subresourceRange.baseArrayLayer = 0;
-        imageBarrier.subresourceRange.layerCount = colorTexture.layerCount();
+        imageBarrier.subresourceRange.layerCount = texture.layerCount();
 
         // FIXME: Probably overly aggressive barriers!
 

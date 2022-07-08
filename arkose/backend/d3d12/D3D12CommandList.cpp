@@ -7,7 +7,7 @@ D3D12CommandList::D3D12CommandList(D3D12Backend& backend)
 {
 }
 
-void D3D12CommandList::clearTexture(Texture& genColorTexture, ClearColor color)
+void D3D12CommandList::clearTexture(Texture& genColorTexture, ClearValue clearValue)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }

@@ -6,7 +6,7 @@ class VulkanCommandList final : public CommandList {
 public:
     explicit VulkanCommandList(VulkanBackend&, VkCommandBuffer);
 
-    void clearTexture(Texture&, ClearColor) override;
+    void clearTexture(Texture&, ClearValue) override;
     void copyTexture(Texture& src, Texture& dst, uint32_t srcMip = 0, uint32_t dstMip = 0) override;
     void generateMipmaps(Texture&) override;
 
