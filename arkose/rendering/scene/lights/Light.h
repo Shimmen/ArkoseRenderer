@@ -42,8 +42,8 @@ public:
     float customConstantBias = 0.0f;
     float customSlopeBias = 0.0f;
 
-    virtual float constantBias() = 0;
-    virtual float slopeBias() = 0;
+    virtual float constantBias() const = 0;
+    virtual float slopeBias() const = 0;
 
     bool castsShadows() const { return m_castsShadows; }
 

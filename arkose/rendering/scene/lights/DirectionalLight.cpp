@@ -12,7 +12,7 @@ DirectionalLight::DirectionalLight(vec3 color, float illuminance, vec3 direction
     customSlopeBias = 2.5f;
 }
 
-float DirectionalLight::constantBias()
+float DirectionalLight::constantBias() const
 {
     int maxShadowMapDim = std::max(shadowMapSize().width(), shadowMapSize().height());
     float worldTexelScale = shadowMapWorldExtent / maxShadowMapDim;
@@ -24,7 +24,7 @@ float DirectionalLight::constantBias()
     return bias;
 }
 
-float DirectionalLight::slopeBias()
+float DirectionalLight::slopeBias() const
 {
     return 0.1f * customSlopeBias * constantBias();
 }

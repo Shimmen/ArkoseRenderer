@@ -17,13 +17,13 @@ SpotLight::SpotLight(vec3 color, float luminousIntensity, const std::string& ies
     setShadowMapSize({ 512, 512 });
 }
 
-float SpotLight::constantBias()
+float SpotLight::constantBias() const
 {
     int maxShadowMapDim = std::max(shadowMapSize().width(), shadowMapSize().height());
     return 0.1f * customConstantBias / float(maxShadowMapDim);
 }
 
-float SpotLight::slopeBias()
+float SpotLight::slopeBias() const
 {
     return customSlopeBias * constantBias();
 }

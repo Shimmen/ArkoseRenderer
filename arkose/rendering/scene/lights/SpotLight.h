@@ -36,8 +36,8 @@ public:
         return ark::perspectiveProjectionToVulkanClipSpace(outerConeAngle, 1.0f, m_zNear, m_zFar);
     }
 
-    virtual float constantBias() override;
-    virtual float slopeBias() override;
+    virtual float constantBias() const override;
+    virtual float slopeBias() const override;
 
     bool hasIesProfile() const { return true; }
     const IESProfile& iesProfile() const { return m_iesProfile; }
