@@ -1192,7 +1192,7 @@ void VulkanCommandList::slowBlockingReadFromBuffer(const Buffer& buffer, size_t 
     VmaAllocator allocator = m_backend.globalAllocator();
     VmaAllocation allocation = dstBuffer.allocation;
 
-    moos::u8* mappedBuffer;
+    ark::u8* mappedBuffer;
     if (vmaMapMemory(allocator, allocation, (void**)&mappedBuffer) != VK_SUCCESS)
         ARKOSE_LOG(Error, "Failed to map readback buffer memory...");
     vmaInvalidateAllocation(allocator, allocation, offset, size);

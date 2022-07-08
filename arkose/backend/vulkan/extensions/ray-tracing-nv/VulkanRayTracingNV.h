@@ -1,7 +1,7 @@
 #pragma once
 
 #include "backend/vulkan/VulkanResources.h"
-#include <moos/matrix.h>
+#include <ark/matrix.h>
 #include <optional>
 #include <vulkan/vulkan.h>
 
@@ -24,7 +24,7 @@ public:
     const VkPhysicalDeviceRayTracingPropertiesNV& properties() const;
 
     struct GeometryInstance {
-        moos::mat3x4 transform;
+        ark::mat3x4 transform;
         uint32_t instanceId : 24;
         uint32_t mask : 8;
         uint32_t instanceOffset : 24;

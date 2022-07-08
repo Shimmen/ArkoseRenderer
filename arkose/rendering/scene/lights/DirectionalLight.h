@@ -1,7 +1,7 @@
 #pragma once
 
 #include "Light.h"
-#include <moos/transform.h>
+#include <ark/transform.h>
 
 class DirectionalLight final : public Light {
 public:
@@ -21,12 +21,12 @@ public:
 
     mat4 lightViewMatrix() const final
     {
-        return moos::lookAt(shadowMapWorldOrigin, shadowMapWorldOrigin + normalize(direction));
+        return ark::lookAt(shadowMapWorldOrigin, shadowMapWorldOrigin + normalize(direction));
     }
 
     mat4 projectionMatrix() const final
     {
-        return moos::orthographicProjectionToVulkanClipSpace(shadowMapWorldExtent, -0.5f * shadowMapWorldExtent, 0.5f * shadowMapWorldExtent);
+        return ark::orthographicProjectionToVulkanClipSpace(shadowMapWorldExtent, -0.5f * shadowMapWorldExtent, 0.5f * shadowMapWorldExtent);
     }
 
     virtual float constantBias() override;

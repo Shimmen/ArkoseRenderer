@@ -4,7 +4,7 @@
 #include "rendering/scene/Mesh.h"
 #include "rendering/scene/Transform.h"
 #include <functional>
-#include <moos/vector.h>
+#include <ark/vector.h>
 
 class Model {
 public:

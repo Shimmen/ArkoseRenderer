@@ -23,7 +23,7 @@ vec2 fibonacciLattice(uint32_t i, uint32_t n)
 vec2 fibonacciSpiral(uint32_t i, uint32_t n)
 {
     vec2 latticePoint = fibonacciLattice(i, n);
-    float angle = moos::TWO_PI * latticePoint.x;
+    float angle = ark::TWO_PI * latticePoint.x;
     float radius = sqrt(latticePoint.y);
     return vec2(angle, radius);
 }
@@ -31,7 +31,7 @@ vec2 fibonacciSpiral(uint32_t i, uint32_t n)
 vec3 sphericalFibonacci(uint32_t i, uint32_t n)
 {
     vec2 latticePoint = fibonacciLattice(i, n);
-    float theta = moos::TWO_PI * latticePoint.x;
+    float theta = ark::TWO_PI * latticePoint.x;
     float phi = acos(2.0f * latticePoint.y - 1.0f);
 
     float sinPhi = sin(phi);

@@ -4,7 +4,7 @@
 #include "utility/FileIO.h"
 #include "utility/Image.h"
 #include "utility/Profiling.h"
-#include <moos/transform.h>
+#include <ark/transform.h>
 #include <string>
 #include <unordered_map>
 
@@ -82,13 +82,13 @@ GltfModel::GltfModel(std::string path, const tinygltf::Model& model)
         } else {
             mat4 translation = node.translation.empty()
                 ? mat4(1.0f)
-                : moos::translate(vec3((float)node.translation[0], (float)node.translation[1], (float)node.translation[2]));
+                : ark::translate(vec3((float)node.translation[0], (float)node.translation[1], (float)node.translation[2]));
             mat4 rotation = node.rotation.empty()
                 ? mat4(1.0f)
-                : moos::rotate(quat(vec3((float)node.rotation[0], (float)node.rotation[1], (float)node.rotation[2]), (float)node.rotation[3]));
+                : ark::rotate(quat(vec3((float)node.rotation[0], (float)node.rotation[1], (float)node.rotation[2]), (float)node.rotation[3]));
             mat4 scale = node.scale.empty()
                 ? mat4(1.0f)
-                : moos::scale(vec3((float)node.scale[0], (float)node.scale[1], (float)node.scale[2]));
+                : ark::scale(vec3((float)node.scale[0], (float)node.scale[1], (float)node.scale[2]));
             return translation * rotation * scale;
         }
     };
@@ -173,7 +173,7 @@ GltfMesh::GltfMesh(std::string name, const GltfModel* parent, const tinygltf::Mo
     ARKOSE_ASSERT(position.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT && position.type == TINYGLTF_TYPE_VEC3);
     vec3 posMin = { (float)position.minValues[0], (float)position.minValues[1], (float)position.minValues[2] };
     vec3 posMax = { (float)position.maxValues[0], (float)position.maxValues[1], (float)position.maxValues[2] };
-    m_aabb = moos::aabb3(posMin, posMax);
+    m_aabb = ark::aabb3(posMin, posMax);
 
     vec3 center = (posMax + posMin) / 2.0f;
     float radius = length(posMax - posMin) / 2.0f;

@@ -3,7 +3,7 @@
 #include "core/Logging.h"
 #include "math/Halton.h"
 #include "rendering/camera/CameraController.h"
-#include <moos/transform.h>
+#include <ark/transform.h>
 #include <imgui/imgui.h>
 
 class Scene;
@@ -49,7 +49,7 @@ mat4 Camera::pixelProjectionMatrix() const
     float roundingPixelsX = (float)viewport().width() - 0.001f;
     float roundingPixelsY = (float)viewport().height() - 0.001f;
 
-    mat4 pixelFromNDC = moos::scale(vec3(roundingPixelsX, roundingPixelsY, 1.0f)) * moos::translate(vec3(0.5f, 0.5f, 0.0f)) * moos::scale(vec3(0.5f, 0.5f, 1.0f));
+    mat4 pixelFromNDC = ark::scale(vec3(roundingPixelsX, roundingPixelsY, 1.0f)) * ark::translate(vec3(0.5f, 0.5f, 0.0f)) * ark::scale(vec3(0.5f, 0.5f, 1.0f));
     return pixelFromNDC * projectionMatrix();
 }
 
@@ -59,13 +59,13 @@ void Camera::lookAt(const vec3& position, const vec3& target, const vec3& up)
 
     vec3 forward = normalize(target - position);
     // TODO: Apparently I never bothered to implement lookRotation ...
-    //m_orientation = moos::lookRotation(direction, up);
+    //m_orientation = ark::lookRotation(direction, up);
     vec3 right = cross(forward, up);
     vec3 properUp = cross(right, forward);
     mat3 orientationMat = mat3(right, properUp, -forward);
-    m_orientation = moos::quatFromMatrix(mat4(orientationMat));
+    m_orientation = ark::quatFromMatrix(mat4(orientationMat));
 
-    setViewFromWorld(moos::lookAt(m_position, target, up));
+    setViewFromWorld(ark::lookAt(m_position, target, up));
 }
 
 float Camera::aspectRatio() const
@@ -249,7 +249,7 @@ float Camera::calculateDepthOfField(float acceptibleCircleOfConfusionMM, float f
     const float& u = focusDepthM; // (m)
     const float& N = fNumber;
 
-    return (2.0f * moos::square(u) * N * c) / moos::square(f);
+    return (2.0f * ark::square(u) * N * c) / ark::square(f);
 }
 
 vec2 Camera::calculateDepthOfFieldRange(float focusDepthM, float depthOfField)
@@ -334,7 +334,7 @@ void Camera::drawGui(bool includeContainingWindow)
     }
 
     ImGui::Text("Focal length (f):   %.1f mm", focalLengthMillimeters());
-    ImGui::Text("Effective VFOV:     %.1f degrees", moos::toDegrees(fieldOfView()));
+    ImGui::Text("Effective VFOV:     %.1f degrees", ark::toDegrees(fieldOfView()));
 
     vec2 sensorPixelSize = calculateSensorPixelSize(m_sensorSize, viewport());
     ImGui::Text("Sensor size:        %.1f x %.1f mm", m_sensorSize.x, m_sensorSize.y);

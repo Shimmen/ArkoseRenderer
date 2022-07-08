@@ -1,7 +1,7 @@
 #include "SSAONode.h"
 
 #include <imgui.h>
-#include <moos/random.h>
+#include <ark/random.h>
 
 // Shader data
 #include "SSAOData.h"
@@ -72,7 +72,7 @@ std::vector<vec4> SSAONode::generateKernel(int numSamples) const
     std::vector<vec4> kernelSamples {};
     kernelSamples.reserve(numSamples);
 
-    moos::Random rng {};
+    ark::Random rng {};
     for (int i = 0; i < numSamples; ++i) {
 
         // Places samples somewhat randomly in the xy-hemisphere but ensures they appropriately cover the entire radius,
@@ -81,7 +81,7 @@ std::vector<vec4> SSAONode::generateKernel(int numSamples) const
                                      rng.randomFloatInRange(-1.0f, +1.0f),
                                      rng.randomFloatInRange(0.0f, +1.0f));
         float sampleScale = float(i) / float(numSamples - 1);
-        sampleScale = moos::lerp(0.1f, 1.0f, sampleScale * sampleScale);
+        sampleScale = ark::lerp(0.1f, 1.0f, sampleScale * sampleScale);
         vec3 sample = sampleScale * normalize(hemisphereSample);
 
         kernelSamples.push_back(vec4(sample, 0.0f));

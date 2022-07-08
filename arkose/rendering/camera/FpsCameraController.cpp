@@ -3,7 +3,7 @@
 #include "core/Assert.h"
 #include "rendering/camera/Camera.h"
 #include "utility/Input.h"
-#include <moos/transform.h>
+#include <ark/transform.h>
 
 void FpsCameraController::takeControlOfCamera(Camera& camera)
 {
@@ -37,30 +37,30 @@ void FpsCameraController::update(const Input& input, float dt)
 
     vec2 controllerMovement = input.leftStick();
     bool usingController = length(controllerMovement) > 0.0f;
-    acceleration += controllerMovement.x * moos::globalRight;
-    acceleration += controllerMovement.y * moos::globalForward;
+    acceleration += controllerMovement.x * ark::globalRight;
+    acceleration += controllerMovement.y * ark::globalForward;
 
     if (input.isKeyDown(Key::W))
-        acceleration += moos::globalForward;
+        acceleration += ark::globalForward;
     if (input.isKeyDown(Key::S))
-        acceleration -= moos::globalForward;
+        acceleration -= ark::globalForward;
 
     if (input.isKeyDown(Key::D))
-        acceleration += moos::globalRight;
+        acceleration += ark::globalRight;
     if (input.isKeyDown(Key::A))
-        acceleration -= moos::globalRight;
+        acceleration -= ark::globalRight;
 
     if (input.isKeyDown(Key::Space) || input.isKeyDown(Key::E))
-        acceleration += moos::globalUp;
+        acceleration += ark::globalUp;
     if (input.isKeyDown(Key::LeftShift) || input.isKeyDown(Key::Q))
-        acceleration -= moos::globalUp;
+        acceleration -= ark::globalUp;
 
     if (usingController) {
-        m_velocity += moos::rotateVector(camera.orientation(), acceleration);
+        m_velocity += ark::rotateVector(camera.orientation(), acceleration);
     } else {
-        if (moos::length2(acceleration) > 0.01f && !input.isGuiUsingKeyboard()) {
+        if (ark::length2(acceleration) > 0.01f && !input.isGuiUsingKeyboard()) {
             acceleration = normalize(acceleration) * (m_maxSpeed / TimeToMaxSpeed) * dt;
-            m_velocity += moos::rotateVector(camera.orientation(), acceleration);
+            m_velocity += ark::rotateVector(camera.orientation(), acceleration);
         } else {
             // If no input and movement to acceleration decelerate instead
             if (length2(m_velocity) < StopThreshold) {
@@ -76,7 +76,7 @@ void FpsCameraController::update(const Input& input, float dt)
 
     float speed = length(m_velocity);
     if (speed > 0.0f) {
-        speed = moos::clamp(speed, 0.0f, m_maxSpeed);
+        speed = ark::clamp(speed, 0.0f, m_maxSpeed);
         m_velocity = normalize(m_velocity) * speed;
         camera.moveBy(m_velocity * dt);
     }
@@ -100,8 +100,8 @@ void FpsCameraController::update(const Input& input, float dt)
 
     // Calculate banking due to movement
 
-    vec3 right = rotateVector(camera.orientation(), moos::globalRight);
-    vec3 forward = rotateVector(camera.orientation(), moos::globalForward);
+    vec3 right = rotateVector(camera.orientation(), ark::globalRight);
+    vec3 forward = rotateVector(camera.orientation(), ark::globalForward);
 
     if (speed > 0.0f) {
         auto direction = m_velocity / speed;
@@ -111,10 +111,10 @@ void FpsCameraController::update(const Input& input, float dt)
 
         float rotationAlongY = m_pitchYawRoll.x;
         float signOrZeroRotation = float(rotationAlongY > 0.0f) - float(rotationAlongY < 0.0f);
-        float bankAmountRotation = moos::clamp(std::abs(rotationAlongY) * 100.0f, 0.0f, 3.0f);
+        float bankAmountRotation = ark::clamp(std::abs(rotationAlongY) * 100.0f, 0.0f, 3.0f);
 
         float targetBank = ((signOrZeroSpeed * bankAmountSpeed) + (signOrZeroRotation * bankAmountRotation)) * BaselineBankAngle;
-        m_pitchYawRoll.z = moos::lerp(m_pitchYawRoll.z, targetBank, 1.0f - pow(0.35f, dt));
+        m_pitchYawRoll.z = ark::lerp(m_pitchYawRoll.z, targetBank, 1.0f - pow(0.35f, dt));
     }
 
     // Damp rotation continuously
@@ -127,21 +127,21 @@ void FpsCameraController::update(const Input& input, float dt)
     newOrientation = axisAngle(vec3(0, 1, 0), m_pitchYawRoll.x) * newOrientation;
     camera.setOrientation(newOrientation);
 
-    m_bankingOrientation = moos::axisAngle(forward, m_pitchYawRoll.z);
+    m_bankingOrientation = ark::axisAngle(forward, m_pitchYawRoll.z);
 
     // Apply zoom
 
     if (!input.isGuiUsingMouse()) {
         m_targetFieldOfView += -input.scrollDelta() * ZoomSensitivity;
-        m_targetFieldOfView = moos::clamp(m_targetFieldOfView, MinFieldOfView, MaxFieldOfView);
+        m_targetFieldOfView = ark::clamp(m_targetFieldOfView, MinFieldOfView, MaxFieldOfView);
     }
-    float fov = moos::lerp(camera.fieldOfView(), m_targetFieldOfView, 1.0f - pow(0.01f, dt));
+    float fov = ark::lerp(camera.fieldOfView(), m_targetFieldOfView, 1.0f - pow(0.01f, dt));
     camera.setFieldOfView(fov);
 
     // Apply focus adjustments
 
     if (m_targetFocusDepth.has_value()) {
-        float focusDepth = moos::lerp(camera.focusDepth(), m_targetFocusDepth.value(), 1.0f - std::exp2(-m_focusDepthLerpSpeed * dt));
+        float focusDepth = ark::lerp(camera.focusDepth(), m_targetFocusDepth.value(), 1.0f - std::exp2(-m_focusDepthLerpSpeed * dt));
         camera.setFocusDepth(focusDepth);
     }
 
@@ -151,9 +151,9 @@ void FpsCameraController::update(const Input& input, float dt)
     auto up = rotateVector(m_bankingOrientation, preAdjustedUp);
 
     vec3 target = camera.position() + forward;
-    camera.setViewFromWorld(moos::lookAt(camera.position(), target, up));
+    camera.setViewFromWorld(ark::lookAt(camera.position(), target, up));
 
     // Create the projection matrix
 
-    camera.setProjectionFromView(moos::perspectiveProjectionToVulkanClipSpace(camera.fieldOfView(), camera.aspectRatio(), camera.zNear, camera.zFar));
+    camera.setProjectionFromView(ark::perspectiveProjectionToVulkanClipSpace(camera.fieldOfView(), camera.aspectRatio(), camera.zNear, camera.zFar));
 }

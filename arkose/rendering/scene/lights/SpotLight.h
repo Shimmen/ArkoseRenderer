@@ -3,7 +3,7 @@
 #include "rendering/scene/lights/Light.h"
 #include "rendering/scene/Transform.h"
 #include "utility/IESProfile.h"
-#include <moos/transform.h>
+#include <ark/transform.h>
 
 class SpotLight final : public Light {
 public:
@@ -28,12 +28,12 @@ public:
 
     mat4 lightViewMatrix() const final
     {
-        return moos::lookAt(m_position, m_position + forwardDirection());
+        return ark::lookAt(m_position, m_position + forwardDirection());
     }
 
     mat4 projectionMatrix() const final
     {
-        return moos::perspectiveProjectionToVulkanClipSpace(outerConeAngle, 1.0f, m_zNear, m_zFar);
+        return ark::perspectiveProjectionToVulkanClipSpace(outerConeAngle, 1.0f, m_zNear, m_zFar);
     }
 
     virtual float constantBias() override;
@@ -49,7 +49,7 @@ public:
     float luminousIntensity { 1.0f };
 
     // This will scale the IES profile so that it fits within the given angle
-    float outerConeAngle { moos::toRadians(120.0f) };
+    float outerConeAngle { ark::toRadians(120.0f) };
 
 private:
 

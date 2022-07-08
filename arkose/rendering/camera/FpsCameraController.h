@@ -1,9 +1,9 @@
 #pragma once
 
 #include "rendering/camera/CameraController.h"
-#include <moos/matrix.h>
-#include <moos/vector.h>
-#include <moos/quaternion.h>
+#include <ark/matrix.h>
+#include <ark/vector.h>
+#include <ark/quaternion.h>
 #include <optional>
 
 class FpsCameraController : public CameraController {
@@ -39,9 +39,9 @@ private:
     static constexpr float RotationDampening { 0.000005f };
 
     static constexpr float ZoomSensitivity { 0.15f };
-    static constexpr float MinFieldOfView { moos::toRadians(15.0f) };
-    static constexpr float MaxFieldOfView { moos::toRadians(60.0f) };
+    static constexpr float MinFieldOfView { ark::toRadians(15.0f) };
+    static constexpr float MaxFieldOfView { ark::toRadians(60.0f) };
 
-    static constexpr float BaselineBankAngle { moos::toRadians(30.0f) };
+    static constexpr float BaselineBankAngle { ark::toRadians(30.0f) };
 
 };

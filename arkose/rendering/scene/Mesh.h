@@ -6,8 +6,8 @@
 #include "rendering/scene/Material.h"
 #include "rendering/scene/Transform.h"
 #include "rendering/scene/Vertex.h"
-#include <moos/aabb.h>
-#include <moos/vector.h>
+#include <ark/aabb.h>
+#include <ark/vector.h>
 #include <unordered_map>
 
 class Model;
@@ -32,7 +32,7 @@ public:
     std::optional<int> materialIndex() const { return m_materialIndex; }
     void setMaterialIndex(Badge<GpuScene>, int index) { m_materialIndex = index; }
 
-    virtual moos::aabb3 boundingBox() const = 0;
+    virtual ark::aabb3 boundingBox() const = 0;
     virtual geometry::Sphere boundingSphere() const = 0;
 
     void ensureDrawCallIsAvailable(const VertexLayout&, GpuScene&);

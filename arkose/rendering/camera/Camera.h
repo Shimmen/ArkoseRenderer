@@ -5,9 +5,9 @@
 #include "core/Badge.h"
 #include "utility/Extent.h"
 #include "utility/Input.h"
-#include <moos/matrix.h>
-#include <moos/quaternion.h>
-#include <moos/vector.h>
+#include <ark/matrix.h>
+#include <ark/quaternion.h>
+#include <ark/vector.h>
 #include <optional>
 
 class CameraController;
@@ -28,7 +28,7 @@ public:
 
     bool hasChangedSinceLastFrame() const { return m_modified; }
 
-    void lookAt(const vec3& position, const vec3& target, const vec3& up = moos::globalY);
+    void lookAt(const vec3& position, const vec3& target, const vec3& up = ark::globalY);
 
     Extent2D viewport() const { return m_viewportSize; }
     void setViewport(Extent2D viewportSize) { m_viewportSize = viewportSize; }
@@ -81,9 +81,9 @@ public:
     quat orientation() const { return m_orientation; }
     void setOrientation(quat);
 
-    vec3 forward() const { return moos::rotateVector(orientation(), moos::globalForward); }
-    vec3 right() const { return moos::rotateVector(orientation(), moos::globalRight); }
-    vec3 up() const { return moos::rotateVector(orientation(), moos::globalUp); }
+    vec3 forward() const { return ark::rotateVector(orientation(), ark::globalForward); }
+    vec3 right() const { return ark::rotateVector(orientation(), ark::globalRight); }
+    vec3 up() const { return ark::rotateVector(orientation(), ark::globalUp); }
 
     [[nodiscard]] mat4 viewMatrix() const { return m_viewFromWorld; }
     [[nodiscard]] mat4 projectionMatrix() const { return m_projectionFromView; }

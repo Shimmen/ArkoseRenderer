@@ -7,7 +7,7 @@
 #include "utility/FileIO.h"
 #include "utility/Image.h"
 #include "utility/Profiling.h"
-#include <moos/vector.h>
+#include <ark/vector.h>
 
 IESProfile::IESProfile(const std::string& path)
     : m_path(path)
@@ -36,10 +36,10 @@ float IESProfile::requiredSpotLightConeAngle(float minThreshold) const
     }
 
     // IES uses degrees for everything
-    float phi = moos::toRadians(maxH);
-    float theta = moos::toRadians(maxV);
-    ARKOSE_ASSERT(phi >= 0.0f && phi <= moos::TWO_PI);
-    ARKOSE_ASSERT(theta >= 0.0f && theta <= moos::PI);
+    float phi = ark::toRadians(maxH);
+    float theta = ark::toRadians(maxV);
+    ARKOSE_ASSERT(phi >= 0.0f && phi <= ark::TWO_PI);
+    ARKOSE_ASSERT(theta >= 0.0f && theta <= ark::PI);
 
     // Map to spherical
     float sinTheta = sin(theta);
@@ -308,8 +308,8 @@ vec2 IESProfile::computeLookupLocation(float angleH, float angleV) const
 float IESProfile::getValue(vec2 lookupLocation) const
 {
     auto getRawValue = [this](int x, int y) -> float {
-        x = moos::clamp(x, 0, int(m_anglesH.size() - 1));
-        y = moos::clamp(y, 0, int(m_anglesV.size() - 1));
+        x = ark::clamp(x, 0, int(m_anglesH.size() - 1));
+        y = ark::clamp(y, 0, int(m_anglesV.size() - 1));
         return m_candelaValues[y + m_anglesV.size() * x];
     };
 
@@ -324,10 +324,10 @@ float IESProfile::getValue(vec2 lookupLocation) const
     float br = getRawValue(x + 1, y + 0);
     float tr = getRawValue(x + 1, y + 1);
 
-    float top = moos::lerp(tl, tr, dx);
-    float bot = moos::lerp(bl, br, dx);
+    float top = ark::lerp(tl, tr, dx);
+    float bot = ark::lerp(bl, br, dx);
 
-    float value = moos::lerp(bot, top, dy);
+    float value = ark::lerp(bot, top, dy);
 
     return value;
 }

@@ -7,8 +7,8 @@
 #include "rendering/Registry.h"
 #include <imgui.h>
 #include <ImGuizmo.h>
-#include <moos/aabb.h>
-#include <moos/transform.h>
+#include <ark/aabb.h>
+#include <ark/transform.h>
 
 // Shared shader headers
 using uint = uint32_t;

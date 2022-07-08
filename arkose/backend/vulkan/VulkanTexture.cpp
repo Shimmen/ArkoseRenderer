@@ -418,11 +418,11 @@ void VulkanTexture::setPixelData(vec4 pixel)
     if (isHdr) {
         setData(&pixel, sizeof(pixel));
     } else {
-        moos::u8 pixelUint8Data[4];
-        pixelUint8Data[0] = (moos::u8)(moos::clamp(pixel.x, 0.0f, 1.0f) * 255.99f);
-        pixelUint8Data[1] = (moos::u8)(moos::clamp(pixel.y, 0.0f, 1.0f) * 255.99f);
-        pixelUint8Data[2] = (moos::u8)(moos::clamp(pixel.z, 0.0f, 1.0f) * 255.99f);
-        pixelUint8Data[3] = (moos::u8)(moos::clamp(pixel.w, 0.0f, 1.0f) * 255.99f);
+        ark::u8 pixelUint8Data[4];
+        pixelUint8Data[0] = (ark::u8)(ark::clamp(pixel.x, 0.0f, 1.0f) * 255.99f);
+        pixelUint8Data[1] = (ark::u8)(ark::clamp(pixel.y, 0.0f, 1.0f) * 255.99f);
+        pixelUint8Data[2] = (ark::u8)(ark::clamp(pixel.z, 0.0f, 1.0f) * 255.99f);
+        pixelUint8Data[3] = (ark::u8)(ark::clamp(pixel.w, 0.0f, 1.0f) * 255.99f);
         setData(pixelUint8Data, sizeof(pixelUint8Data));
     }
 }

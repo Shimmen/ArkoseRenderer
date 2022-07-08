@@ -116,10 +116,10 @@ bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
     float sunRotation = 0.0f;
     sunRotation -= Input::instance().isKeyDown(Key::Left) ? 1.0f : 0.0f;
     sunRotation += Input::instance().isKeyDown(Key::Right) ? 1.0f : 0.0f;
-    quat rotation = axisAngle(moos::globalRight, sunRotation * deltaTime * 0.2f);
+    quat rotation = axisAngle(ark::globalRight, sunRotation * deltaTime * 0.2f);
 
     DirectionalLight& sun = *scene.firstDirectionalLight();
-    sun.direction = moos::rotateVector(rotation, sun.direction);
+    sun.direction = ark::rotateVector(rotation, sun.direction);
 
     return !exitRequested;
 }

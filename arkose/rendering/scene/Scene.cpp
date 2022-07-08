@@ -147,12 +147,12 @@ void Scene::generateProbeGridFromBoundingBox()
     constexpr int maxGridSideSize = 16;
     constexpr float boxPadding = 0.0f;
 
-    moos::aabb3 sceneBox {};
+    ark::aabb3 sceneBox {};
     scene().forEachMesh([&](size_t, Mesh& mesh) {
         // TODO: Transform the bounding box first, obviously..
         // But we aren't using this path right now so not going
         // to spend time on it right now.
-        moos::aabb3 meshBox = mesh.boundingBox();
+        ark::aabb3 meshBox = mesh.boundingBox();
         sceneBox.expandWithPoint(meshBox.min);
         sceneBox.expandWithPoint(meshBox.max);
     });
@@ -241,13 +241,13 @@ void Scene::loadFromFile(const std::string& path)
         if (rotType == "axis-angle") {
             vec3 axis = readVec3(jsonRotation.at("axis"));
             float angle = jsonRotation.at("angle");
-            rotationMatrix = moos::quatToMatrix(moos::axisAngle(axis, angle));
+            rotationMatrix = ark::quatToMatrix(ark::axisAngle(axis, angle));
         } else {
             ASSERT_NOT_REACHED();
         }
 
-        mat4 localMatrix = moos::translate(readVec3(transform.at("translation")))
-            * rotationMatrix * moos::scale(readVec3(transform.at("scale")));
+        mat4 localMatrix = ark::translate(readVec3(transform.at("translation")))
+            * rotationMatrix * ark::scale(readVec3(transform.at("scale")));
         model->transform().setLocalMatrix(localMatrix);
 
         addModel(std::move(model));
@@ -310,7 +310,7 @@ void Scene::loadFromFile(const std::string& path)
 
         vec3 position = readVec3(jsonCamera.at("position"));
         vec3 direction = normalize(readVec3(jsonCamera.at("direction")));
-        camera->lookAt(position, position + direction, moos::globalUp);
+        camera->lookAt(position, position + direction, ark::globalUp);
 
         if (jsonCamera.find("exposure") != jsonCamera.end()) {
             if (jsonCamera.at("exposure") == "manual") {

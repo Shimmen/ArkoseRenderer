@@ -1,7 +1,7 @@
 #pragma once
 
 #include "backend/vulkan/VulkanResources.h"
-#include <moos/matrix.h>
+#include <ark/matrix.h>
 #include <vulkan/vulkan.h>
 
 class VulkanBackend;

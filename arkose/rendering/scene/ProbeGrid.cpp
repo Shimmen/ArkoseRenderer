@@ -9,7 +9,7 @@ int ProbeGrid::probeCount() const
         * gridDimensions.depth();
 }
 
-moos::ivec3 ProbeGrid::probeIndexFromLinear(int index) const
+ark::ivec3 ProbeGrid::probeIndexFromLinear(int index) const
 {
     auto findMSB = [](uint32_t val) -> int {
         ARKOSE_ASSERT(val != 0);
@@ -21,7 +21,7 @@ moos::ivec3 ProbeGrid::probeIndexFromLinear(int index) const
         return index;
     };
 
-    moos::ivec3 probeIndex;
+    ark::ivec3 probeIndex;
     probeIndex.x = index & (gridDimensions.width() - 1);
     probeIndex.y = (index & ((gridDimensions.width() * gridDimensions.height()) - 1)) >> findMSB(gridDimensions.width());
     probeIndex.z = index >> findMSB(gridDimensions.width() * gridDimensions.height());
@@ -29,7 +29,7 @@ moos::ivec3 ProbeGrid::probeIndexFromLinear(int index) const
     return probeIndex;
 }
 
-vec3 ProbeGrid::probePositionForIndex(moos::ivec3 index) const
+vec3 ProbeGrid::probePositionForIndex(ark::ivec3 index) const
 {
     vec3 floatIndex = { (float)index.x,
                         (float)index.y,

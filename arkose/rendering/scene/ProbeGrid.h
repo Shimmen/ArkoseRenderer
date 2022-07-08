@@ -1,6 +1,6 @@
 #pragma once
 
-#include <moos/vector.h>
+#include <ark/vector.h>
 #include <utility/Extent.h>
 
 struct ProbeGrid {
@@ -10,6 +10,6 @@ struct ProbeGrid {
 
     int probeCount() const;
 
-    moos::ivec3 probeIndexFromLinear(int index) const;
-    vec3 probePositionForIndex(moos::ivec3) const;
+    ark::ivec3 probeIndexFromLinear(int index) const;
+    vec3 probePositionForIndex(ark::ivec3) const;
 };

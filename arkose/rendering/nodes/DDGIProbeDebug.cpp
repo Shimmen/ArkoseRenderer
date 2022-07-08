@@ -81,7 +81,7 @@ void DDGIProbeDebug::setUpSphereRenderData(GpuScene& scene, Registry& reg)
     constexpr int rings = 48;
     constexpr int sectors = 48;
 
-    using namespace moos;
+    using namespace ark;
 
     std::vector<vec3> positions {};
     std::vector<uint16_t> indices {};

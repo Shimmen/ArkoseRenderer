@@ -182,9 +182,9 @@ VulkanBottomLevelASNV::VulkanBottomLevelASNV(Backend& backend, std::vector<RTGeo
     VmaAllocation transformBufferAllocation;
     size_t singleTransformSize = 3 * 4 * sizeof(float);
     if (isTriangleBLAS) {
-        std::vector<moos::mat3x4> transforms {};
+        std::vector<ark::mat3x4> transforms {};
         for (auto& geo : geometries()) {
-            moos::mat3x4 mat34 = transpose(geo.triangles().transform);
+            ark::mat3x4 mat34 = transpose(geo.triangles().transform);
             transforms.push_back(mat34);
         }
 

@@ -3,7 +3,7 @@
 #include "core/Assert.h"
 #include "core/Types.h"
 #include "utility/Hash.h"
-#include <moos/vector.h>
+#include <ark/vector.h>
 
 struct Extent2D {
     constexpr Extent2D()
@@ -44,10 +44,15 @@ struct Extent2D {
         return { m_width / factor, m_height / factor };
     }
 
-    moos::vec2 inverse() const { return moos::vec2(1.0f / m_width, 1.0f / m_height); }
+    Extent2D shrinkOnAllSidesBy(int x) const
+    {
+        return { m_width - (2 * x), m_height - (2 * x) };
+    }
 
-    moos::uvec2 asUIntVector() const { return moos::uvec2(m_width, m_height); }
-    moos::ivec2 asIntVector() const { return moos::ivec2(m_width, m_height); }
+    ark::vec2 inverse() const { return ark::vec2(1.0f / m_width, 1.0f / m_height); }
+
+    ark::uvec2 asUIntVector() const { return ark::uvec2(m_width, m_height); }
+    ark::ivec2 asIntVector() const { return ark::ivec2(m_width, m_height); }
 
 private:
     uint32_t m_width {};
@@ -87,8 +92,8 @@ struct Extent3D {
         return m_width == other.m_width && m_height == other.m_height && m_depth == other.m_depth;
     }
 
-    moos::uvec3 asUIntVector() const { return moos::uvec3(m_width, m_height, m_depth); }
-    moos::ivec3 asIntVector() const { return moos::ivec3(m_width, m_height, m_depth); }
+    ark::uvec3 asUIntVector() const { return ark::uvec3(m_width, m_height, m_depth); }
+    ark::ivec3 asIntVector() const { return ark::ivec3(m_width, m_height, m_depth); }
 
 private:
     uint32_t m_width {};

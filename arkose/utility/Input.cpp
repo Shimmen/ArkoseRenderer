@@ -197,7 +197,7 @@ void Input::mouseButtonEventCallback(GLFWwindow* window, int button, int action,
         input->m_isButtonDown[button] = false;
 
         if (input->m_buttonPressMousePosition[button].has_value()) {
-            if (moos::distance(input->m_buttonPressMousePosition[button].value(), mousePos) <= MouseClickMaxAllowedDelta) {
+            if (ark::distance(input->m_buttonPressMousePosition[button].value(), mousePos) <= MouseClickMaxAllowedDelta) {
                 input->m_wasButtonClicked[button] = true;
                 input->m_buttonPressMousePosition[button].reset();
             }
