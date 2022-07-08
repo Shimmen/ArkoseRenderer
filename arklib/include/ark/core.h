@@ -106,6 +106,12 @@ constexpr T square(T x)
     return x * x;
 }
 
+template<typename T, ENABLE_IF_INTEGRAL(T)>
+constexpr bool isPowerOfTwo(T x)
+{
+    return x > 0 && (x & (x - 1)) == 0;
+}
+
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
 constexpr T lerp(T a, T b, T x)
 {
