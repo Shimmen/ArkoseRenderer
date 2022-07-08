@@ -60,9 +60,6 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         scene.setAmbientIlluminance(250.0f);
     }
 
-    // TODO: Remove me!
-    pipeline.addNode<ShadowMapNode>();
-
     pipeline.addNode<CullingNode>();
     pipeline.addNode<PrepassNode>();
 

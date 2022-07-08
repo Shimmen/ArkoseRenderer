@@ -6,7 +6,6 @@
 #include <common/gBuffer.glsl>
 #include <common/iesProfile.glsl>
 #include <common/namedUniforms.glsl>
-#include <common/shadow.glsl>
 #include <shared/BlendMode.h>
 #include <shared/CameraState.h>
 #include <shared/SceneData.h>
@@ -29,7 +28,6 @@ layout(set = 1, binding = 1) uniform sampler2D textures[];
 layout(set = 2, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
 layout(set = 2, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
 layout(set = 2, binding = 2) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
-layout(set = 2, binding = 3) uniform sampler2D shadowMaps[];
 
 layout(set = 4, binding = 0) uniform sampler2D directionalLightProjectedShadowTex;
 layout(set = 4, binding = 1) uniform sampler2D localLightShadowMapAtlasTex;
@@ -94,7 +92,6 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3
 {
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
-    //float shadowFactor = evaluateShadow(shadowMaps[light.shadowMap.textureIndex], light.lightProjectionFromView, vPosition);
     float shadowFactor = evaluateLocalLightShadow(shadowIdx, light.lightProjectionFromView, vPosition);
 
     vec3 toLight = light.viewSpacePosition.xyz - vPosition;

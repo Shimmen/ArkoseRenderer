@@ -190,17 +190,9 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     Buffer& spotLightDataBuffer = reg.createBuffer(10 * sizeof(SpotLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     spotLightDataBuffer.setName("SceneSpotLightData");
 
-    std::vector<Texture*> shadowMaps;
-    // TODO: We need to be able to update the shadow map binding. Right now we can only do it once, at creation.
-    scene().forEachLight([&](size_t, Light& light) {
-        if (light.castsShadows())
-            shadowMaps.push_back(&light.shadowMap());
-    });
-
     BindingSet& lightBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(lightMetaDataBuffer),
                                                          ShaderBinding::storageBuffer(dirLightDataBuffer),
-                                                         ShaderBinding::storageBuffer(spotLightDataBuffer),
-                                                         ShaderBinding::sampledTextureBindlessArray(shadowMaps) });
+                                                         ShaderBinding::storageBuffer(spotLightDataBuffer) });
     reg.publish("SceneLightSet", lightBindingSet);
 
     // Misc. data
