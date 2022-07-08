@@ -10,6 +10,7 @@
 #include "rendering/nodes/FinalNode.h"
 #include "rendering/nodes/FXAANode.h"
 #include "rendering/nodes/GIComposeNode.h"
+#include "rendering/nodes/LocalLightShadowNode.h"
 #include "rendering/nodes/PrepassNode.h"
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/RTDirectLightNode.h"
@@ -59,10 +60,15 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         scene.setAmbientIlluminance(250.0f);
     }
 
+    // TODO: Remove me!
     pipeline.addNode<ShadowMapNode>();
+
     pipeline.addNode<CullingNode>();
     pipeline.addNode<PrepassNode>();
+
     pipeline.addNode<DirectionalLightShadowNode>();
+    pipeline.addNode<LocalLightShadowNode>();
+
     pipeline.addNode<ForwardRenderNode>();
 
     if (rtxOn) {

@@ -83,6 +83,7 @@ add_executable(ArkoseRenderer
     arkose/rendering/nodes/FinalNode.cpp
     arkose/rendering/nodes/FXAANode.cpp
     arkose/rendering/nodes/GIComposeNode.cpp
+    arkose/rendering/nodes/LocalLightShadowNode.cpp
     arkose/rendering/nodes/PickingNode.cpp
     arkose/rendering/nodes/PrepassNode.cpp
     arkose/rendering/nodes/RTDirectLightNode.cpp
