@@ -119,7 +119,12 @@ RenderState& ForwardRenderNode::makeRenderState(Registry& reg, const GpuScene& s
     }
 
     Texture& dirLightProjectedShadow = *reg.getTexture("DirectionalLightProjectedShadow");
-    BindingSet& dirLightProjectedShadowSet = reg.createBindingSet({ ShaderBinding::sampledTexture(dirLightProjectedShadow) });
+    Texture& localLightShadowMapAtlas = *reg.getTexture("LocalLightShadowMapAtlas");
+    Buffer& localLightShadowAllocations = *reg.getBuffer("LocalLightShadowAllocations");
+
+    BindingSet& dirLightProjectedShadowSet = reg.createBindingSet({ ShaderBinding::sampledTexture(dirLightProjectedShadow),
+                                                                    ShaderBinding::sampledTexture(localLightShadowMapAtlas),
+                                                                    ShaderBinding::storageBuffer(localLightShadowAllocations) });
 
     StateBindings& bindings = renderStateBuilder.stateBindings();
     bindings.at(0, *reg.getBindingSet("SceneCameraSet"));

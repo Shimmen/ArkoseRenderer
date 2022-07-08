@@ -18,6 +18,10 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
                                                   Texture::WrapModes::clampAllToEdge());
     reg.publish("LocalLightShadowMapAtlas", shadowMapAtlas);
 
+    // TODO: Handle many lights!
+    Buffer& shadowAllocationBuffer = reg.createBuffer(sizeof(vec4) * 32, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
+    reg.publish("LocalLightShadowAllocations", shadowAllocationBuffer);
+
     RenderTarget& atlasRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &shadowMapAtlas } });
 
     BindingSet& sceneObjectBindingSet = *reg.getBindingSet("SceneObjectSet");
@@ -44,6 +48,10 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
             cmdList.clearTexture(shadowMapAtlas, shadowMapClearValue);
             return;
         }
+
+        std::vector<vec4> shadowMapViewports = collectAtlasViewportDataForAllocations(scene, shadowMapAtlas.extent(), shadowMapAllocations);
+        uploadBuffer.upload(shadowMapViewports, shadowAllocationBuffer);
+        cmdList.executeBufferCopyOperations(uploadBuffer);
 
         // NOTE: We assume that all or most meshes will be drawn in a shadow map so we prepare all of them
         scene.forEachMesh([&](size_t idx, Mesh& mesh) {
@@ -166,6 +174,35 @@ std::vector<LocalLightShadowNode::ShadowMapAtlasAllocation> LocalLightShadowNode
     }
 
     return allocations;
+}
+
+std::vector<vec4> LocalLightShadowNode::collectAtlasViewportDataForAllocations(const GpuScene& scene, Extent2D atlasExtent, const std::vector<ShadowMapAtlasAllocation>& shadowMapAllocations) const
+{
+    std::vector<vec4> viewports {};
+
+    scene.forEachLocalLight([&](uint32_t idx, const Light& light) {
+
+        vec4 viewport = vec4(0, 0, 0, 0);
+
+        if (light.castsShadows()) {
+            // Performance: this won't scale very well with many lights.. (still O(n) w.r.t. total light count though)
+            for (const ShadowMapAtlasAllocation& allocation : shadowMapAllocations) {
+                if (allocation.light == &light) {
+
+                    float x = static_cast<float>(allocation.rect.origin.x) / atlasExtent.width();
+                    float y = static_cast<float>(allocation.rect.origin.y) / atlasExtent.height();
+                    float w = static_cast<float>(allocation.rect.size.x) / atlasExtent.width();
+                    float h = static_cast<float>(allocation.rect.size.y) / atlasExtent.height();
+
+                    viewport = vec4(x, y, w, h);
+                }
+            }
+        }
+
+        viewports.push_back(viewport);
+    });
+
+    return viewports;
 }
 
 void LocalLightShadowNode::drawSpotLightShadowMap(CommandList& cmdList, GpuScene& scene, const ShadowMapAtlasAllocation& shadowMapAllocation) const

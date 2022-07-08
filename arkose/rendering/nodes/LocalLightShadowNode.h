@@ -27,6 +27,7 @@ private:
     };
 
     std::vector<ShadowMapAtlasAllocation> allocateShadowMapsInAtlas(const GpuScene&, const Texture& atlas) const;
+    std::vector<vec4> collectAtlasViewportDataForAllocations(const GpuScene&, Extent2D atlasExtent, const std::vector<ShadowMapAtlasAllocation>&) const;
 
     void drawSpotLightShadowMap(CommandList&, GpuScene&, const ShadowMapAtlasAllocation&) const;
     void drawShadowCasters(CommandList&, GpuScene&, geometry::Frustum& lightFrustum) const;

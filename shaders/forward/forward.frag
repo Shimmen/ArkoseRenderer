@@ -32,6 +32,8 @@ layout(set = 2, binding = 2) buffer readonly SpotLightDataBlock { SpotLightData 
 layout(set = 2, binding = 3) uniform sampler2D shadowMaps[];
 
 layout(set = 4, binding = 0) uniform sampler2D directionalLightProjectedShadowTex;
+layout(set = 4, binding = 1) uniform sampler2D localLightShadowMapAtlasTex;
+layout(set = 4, binding = 2) buffer readonly ShadowMapViewportBlock { vec4 localLightShadowMapViewports[]; };
 
 #if FORWARD_INCLUDE_DDGI
 #include <shared/DDGIData.h>
@@ -68,11 +70,32 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, vec3 V
     return brdf * LdotN * directLight;
 }
 
-vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+float evaluateLocalLightShadow(uint shadowIdx, mat4 lightProjectionFromView, vec3 viewSpacePos)
+{
+    vec4 shadowViewport = localLightShadowMapViewports[shadowIdx];
+
+    // No shadow for this light
+    if (lengthSquared(shadowViewport) < 1e-4) {
+        return 1.0;
+    }
+
+    vec4 posInShadowMap = lightProjectionFromView * vec4(viewSpacePos, 1.0);
+    posInShadowMap.xyz /= posInShadowMap.w;
+
+    vec2 shadowMapUv = (posInShadowMap.xy * 0.5 + 0.5); // uv in the whole atlas
+    shadowMapUv *= shadowViewport.zw; // scale to the appropriate viewport size
+    shadowMapUv += shadowViewport.xy; // offset to the first pixel of the viewport
+
+    float mapDepth = texture(localLightShadowMapAtlasTex, shadowMapUv).x;
+    return (mapDepth < posInShadowMap.z) ? 0.0 : 1.0;
+}
+
+vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
-    float shadowFactor = evaluateShadow(shadowMaps[light.shadowMap.textureIndex], light.lightProjectionFromView, vPosition);
+    //float shadowFactor = evaluateShadow(shadowMaps[light.shadowMap.textureIndex], light.lightProjectionFromView, vPosition);
+    float shadowFactor = evaluateLocalLightShadow(shadowIdx, light.lightProjectionFromView, vPosition);
 
     vec3 toLight = light.viewSpacePosition.xyz - vPosition;
     float dist = length(toLight);
@@ -160,8 +183,9 @@ void main()
 
     // TODO: Use tiles or clusters to minimize number of light evaluations!
     {
+        uint shadowIdx = 0;
         for (uint i = 0; i < lightMeta.numSpotLights; ++i) {
-            color += evaluateSpotLight(spotLights[i], V, N, baseColor, roughness, metallic);
+            color += evaluateSpotLight(spotLights[i], shadowIdx++, V, N, baseColor, roughness, metallic);
         }
     }
 

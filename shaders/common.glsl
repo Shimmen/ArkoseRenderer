@@ -31,6 +31,11 @@ float lengthSquared(vec3 v)
     return dot(v, v);
 }
 
+float lengthSquared(vec4 v)
+{
+    return dot(v, v);
+}
+
 float distanceSquared(vec2 a, vec2 b)
 {
     return lengthSquared(a - b);
