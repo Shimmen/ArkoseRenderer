@@ -79,6 +79,8 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
 
 std::vector<LocalLightShadowNode::ShadowMapAtlasAllocation> LocalLightShadowNode::allocateShadowMapsInAtlas(const GpuScene& scene, const Texture& atlas) const
 {
+    SCOPED_PROFILE_ZONE();
+
     std::vector<const Light*> shadowCastingLights {};
     scene.forEachShadowCastingLight([&](size_t, const Light& light) {
         if (light.castsShadows() && light.type() != Light::Type::DirectionalLight) {
@@ -176,6 +178,8 @@ std::vector<LocalLightShadowNode::ShadowMapAtlasAllocation> LocalLightShadowNode
 
 std::vector<vec4> LocalLightShadowNode::collectAtlasViewportDataForAllocations(const GpuScene& scene, Extent2D atlasExtent, const std::vector<ShadowMapAtlasAllocation>& shadowMapAllocations) const
 {
+    SCOPED_PROFILE_ZONE();
+
     std::vector<vec4> viewports {};
 
     scene.forEachLocalLight([&](uint32_t idx, const Light& light) {
@@ -205,11 +209,13 @@ std::vector<vec4> LocalLightShadowNode::collectAtlasViewportDataForAllocations(c
 
 void LocalLightShadowNode::drawSpotLightShadowMap(CommandList& cmdList, GpuScene& scene, const ShadowMapAtlasAllocation& shadowMapAllocation) const
 {
+    SCOPED_PROFILE_ZONE();
+
     ARK_ASSERT(shadowMapAllocation.light);
     ARK_ASSERT(shadowMapAllocation.light->type() == Light::Type::SpotLight);
     const Light& light = *shadowMapAllocation.light;
 
-    std::string zoneName = fmt::format(FMT_STRING("Light {}"), light.name());
+    std::string zoneName = fmt::format(FMT_STRING("Light [{}]"), light.name());
     ScopedDebugZone zone { cmdList, zoneName };
 
     mat4 lightProjectionFromWorld = light.viewProjection();
