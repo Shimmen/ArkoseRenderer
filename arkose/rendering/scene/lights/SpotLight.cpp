@@ -12,18 +12,15 @@ SpotLight::SpotLight(vec3 color, float luminousIntensity, const std::string& ies
     // NOTE: Feel free to adjust these on a per-light/case basis, but probably in the scene.json
     customConstantBias = 1.0f;
     customSlopeBias = 0.66f;
-
-    // Good default for spot lights
-    setShadowMapSize({ 512, 512 });
 }
 
-float SpotLight::constantBias() const
+float SpotLight::constantBias(Extent2D shadowMapSize) const
 {
-    int maxShadowMapDim = std::max(shadowMapSize().width(), shadowMapSize().height());
+    int maxShadowMapDim = std::max(shadowMapSize.width(), shadowMapSize.height());
     return 0.1f * customConstantBias / float(maxShadowMapDim);
 }
 
-float SpotLight::slopeBias() const
+float SpotLight::slopeBias(Extent2D shadowMapSize) const
 {
-    return customSlopeBias * constantBias();
+    return customSlopeBias * constantBias(shadowMapSize);
 }

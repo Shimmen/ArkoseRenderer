@@ -36,37 +36,19 @@ public:
     virtual mat4 projectionMatrix() const = 0;
     mat4 viewProjection() const { return projectionMatrix() * lightViewMatrix(); };
 
-    Extent2D shadowMapSize() const { return m_shadowMapSize; }
-    void setShadowMapSize(Extent2D size);
-
     float customConstantBias = 0.0f;
     float customSlopeBias = 0.0f;
 
-    virtual float constantBias() const = 0;
-    virtual float slopeBias() const = 0;
+    virtual float constantBias(Extent2D shadowMapSize) const = 0;
+    virtual float slopeBias(Extent2D shadowMapSize) const = 0;
 
     bool castsShadows() const { return m_castsShadows; }
-
-    Texture& shadowMap();
-    RenderTarget& shadowMapRenderTarget();
-
-    // TODO: Remove this API and replace it with something less stupid.
-    RenderState& getOrCreateCachedShadowMapRenderState(const std::string& cacheIdentifier, std::function<RenderState&()> creationCallback);
-    void invalidateRenderStateCache();
 
     void setName(std::string name) { m_name = std::move(name); }
     const std::string& name() const { return m_name; }
 
 private:
     Type m_type;
-
     bool m_castsShadows { true };
-    Extent2D m_shadowMapSize { 1024u, 1024u };
-    std::unique_ptr<Texture> m_shadowMap { nullptr };
-    std::unique_ptr<RenderTarget> m_shadowMapRenderTarget { nullptr };
-
-    // NOTE: Uses raw ptr since the registry owns the resource
-    std::unordered_map<std::string, RenderState*> m_cachedRenderStates {};
-
     std::string m_name {};
 };

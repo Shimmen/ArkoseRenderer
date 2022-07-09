@@ -204,14 +204,6 @@ void Scene::loadFromFile(const std::string& path)
         return Extent3D(values[0], values[1], values[2]);
     };
 
-    auto optionallyParseShadowMapSize = [](const json& jsonLight, Light& light) {
-        if (jsonLight.find("shadowMapSize") != jsonLight.end()) {
-            int mapSize[2];
-            jsonLight.at("shadowMapSize").get_to(mapSize);
-            light.setShadowMapSize({ mapSize[0], mapSize[1] });
-        }
-    };
-
     auto optionallyParseLightName = [](const json& jsonLight, Light& light) {
         if (jsonLight.find("name") != jsonLight.end())
             light.setName(jsonLight.at("name"));
@@ -264,7 +256,6 @@ void Scene::loadFromFile(const std::string& path)
 
             auto light = std::make_unique<DirectionalLight>(color, illuminance, direction);
 
-            optionallyParseShadowMapSize(jsonLight, *light);
             optionallyParseLightName(jsonLight, *light);
 
             light->shadowMapWorldOrigin = { 0, 0, 0 };
@@ -282,7 +273,6 @@ void Scene::loadFromFile(const std::string& path)
 
             auto light = std::make_unique<SpotLight>(color, luminousIntensity, iesPath, position, direction);
 
-            optionallyParseShadowMapSize(jsonLight, *light);
             optionallyParseLightName(jsonLight, *light);
 
             addLight(std::move(light));

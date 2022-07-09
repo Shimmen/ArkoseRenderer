@@ -115,8 +115,6 @@ private:
 
     RTGeometryInstance createRTGeometryInstance(Mesh&, uint32_t meshIdx);
 
-    std::unique_ptr<Texture> createShadowMap(const Light&);
-
     float m_lightPreExposure { 1.0f };
 
     // GPU data
@@ -134,14 +132,12 @@ private:
 
     struct ManagedDirectionalLight {
         DirectionalLight* light {};
-        TextureHandle shadowMapTex {};
     };
     std::vector<ManagedDirectionalLight> m_managedDirectionalLights {};
 
     struct ManagedSpotLight {
         SpotLight* light {};
         TextureHandle iesLut {};
-        TextureHandle shadowMapTex {};
     };
     std::vector<ManagedSpotLight> m_managedSpotLights {};
 

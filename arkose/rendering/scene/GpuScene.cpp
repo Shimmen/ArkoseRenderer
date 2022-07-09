@@ -177,11 +177,6 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         reg.publish("SceneRTMeshDataSet", rtMeshDataBindingSet);
     }
 
-    // Light shadow data stuff (todo: make not fixed!)
-    size_t numShadowCastingLights = shadowCastingLightCount();
-    Buffer& lightShadowDataBuffer = reg.createBuffer(numShadowCastingLights * sizeof(PerLightShadowData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
-    reg.publish("SceneShadowData", lightShadowDataBuffer);
-
     // Light data stuff
     Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::GpuOnly);
     lightMetaDataBuffer.setName("SceneLightMetaData");
@@ -297,7 +292,6 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             mat4 viewFromWorld = camera().viewMatrix();
             mat4 worldFromView = inverse(viewFromWorld);
 
-            int nextShadowMapIndex = 0;
             std::vector<DirectionalLightData> dirLightData;
             std::vector<SpotLightData> spotLightData;
 
@@ -309,13 +303,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 const DirectionalLight& light = *managedLight.light;
 
-                int shadowMapIndex = light.castsShadows() ? nextShadowMapIndex++ : -1;
-                ShadowMapData shadowMapData { .textureIndex = shadowMapIndex };
-
-                vec3 lightColor = light.color * light.intensityValue() * lightPreExposure();
-
-                dirLightData.emplace_back(DirectionalLightData { .shadowMap = shadowMapData,
-                                                                 .color = lightColor,
+                dirLightData.emplace_back(DirectionalLightData { .color = light.color * light.intensityValue() * lightPreExposure(),
                                                                  .exposure = lightPreExposure(),
                                                                  .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0),
                                                                  .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0),
@@ -331,13 +319,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 const SpotLight& light = *managedLight.light;
 
-                int shadowMapIndex = light.castsShadows() ? nextShadowMapIndex++ : -1;
-                ShadowMapData shadowMapData { .textureIndex = shadowMapIndex };
-
-                vec3 lightColor = light.color * light.intensityValue() * lightPreExposure();
-
-                    spotLightData.emplace_back(SpotLightData { .shadowMap = shadowMapData,
-                                                           .color = lightColor,
+                spotLightData.emplace_back(SpotLightData { .color = light.color * light.intensityValue() * lightPreExposure(),
                                                            .exposure = lightPreExposure(),
                                                            .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0f),
                                                            .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0f),
@@ -356,15 +338,6 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             LightMetaData metaData { .numDirectionalLights = (int)dirLightData.size(),
                                      .numSpotLights = (int)spotLightData.size() };
             uploadBuffer.upload(metaData, lightMetaDataBuffer);
-
-            std::vector<PerLightShadowData> shadowData;
-            forEachShadowCastingLight([&](size_t, Light& light) {
-                shadowData.push_back({ .lightViewFromWorld = light.lightViewMatrix(),
-                                       .lightProjectionFromWorld = light.viewProjection(),
-                                       .constantBias = light.constantBias(),
-                                       .slopeBias = light.slopeBias() });
-            });
-            uploadBuffer.upload(shadowData, lightShadowDataBuffer);
         }
 
         cmdList.executeBufferCopyOperations(uploadBuffer);
@@ -413,30 +386,15 @@ void GpuScene::registerLight(SpotLight& light)
         iesLutHandle = registerTexture(std::move(iesLut));
     }
 
-    TextureHandle shadowMapHandle {};
-    if (light.castsShadows()) {
-        auto shadowMap = createShadowMap(light);
-        shadowMapHandle = registerTexture(std::move(shadowMap));
-    }
-
     ManagedSpotLight managedLight { .light = &light,
-                                    .iesLut = iesLutHandle,
-                                    .shadowMapTex = shadowMapHandle };
+                                    .iesLut = iesLutHandle };
 
     m_managedSpotLights.push_back(managedLight);
 }
 
 void GpuScene::registerLight(DirectionalLight& light)
 {
-    TextureHandle shadowMapHandle {};
-    if (light.castsShadows()) {
-        auto shadowMap = createShadowMap(light);
-        shadowMapHandle = registerTexture(std::move(shadowMap));
-    }
-
-    ManagedDirectionalLight managedLight { .light = &light,
-                                           .shadowMapTex = shadowMapHandle };
-
+    ManagedDirectionalLight managedLight { .light = &light };
     m_managedDirectionalLights.push_back(managedLight);
 }
 
@@ -526,29 +484,6 @@ RTGeometryInstance GpuScene::createRTGeometryInstance(Mesh& mesh, uint32_t meshI
                                     .hitMask = hitMask };
 
     return instance;
-}
-
-std::unique_ptr<Texture> GpuScene::createShadowMap(const Light& light)
-{
-    ARKOSE_ASSERT(light.shadowMapSize().width() > 0);
-    ARKOSE_ASSERT(light.shadowMapSize().height() > 0);
-
-    Texture::Description textureDesc { .type = Texture::Type::Texture2D,
-                                       .arrayCount = 1,
-
-                                       .extent = Extent3D(light.shadowMapSize()),
-                                       .format = Texture::Format::Depth32F,
-
-                                       .filter = Texture::Filters::linear(),
-                                       .wrapMode = Texture::WrapModes::clampAllToEdge(),
-
-                                       .mipmap = Texture::Mipmap::None,
-                                       .multisampling = Texture::Multisampling::None };
-
-    auto shadowMapTex = backend().createTexture(textureDesc);
-    shadowMapTex->setName(light.name() + "ShadowMap");
-
-    return shadowMapTex;
 }
 
 MaterialHandle GpuScene::registerMaterial(Material& material)

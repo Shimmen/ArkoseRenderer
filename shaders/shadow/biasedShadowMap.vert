@@ -3,7 +3,6 @@
 #include <common.glsl>
 #include <common/namedUniforms.glsl>
 #include <shared/SceneData.h>
-#include <shared/ShadowData.h>
 
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec3 aNormal;

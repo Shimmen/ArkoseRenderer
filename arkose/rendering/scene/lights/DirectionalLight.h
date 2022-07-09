@@ -29,8 +29,8 @@ public:
         return ark::orthographicProjectionToVulkanClipSpace(shadowMapWorldExtent, -0.5f * shadowMapWorldExtent, 0.5f * shadowMapWorldExtent);
     }
 
-    virtual float constantBias() const override;
-    virtual float slopeBias() const override;
+    virtual float constantBias(Extent2D shadowMapSize) const override;
+    virtual float slopeBias(Extent2D shadowMapSize) const override;
 
     // Light illuminance (lux, lx = lm / m^2)
     // TODO: Actually use physically based units!

@@ -16,7 +16,6 @@
 #include "rendering/nodes/RTDirectLightNode.h"
 #include "rendering/nodes/RTFirstHitNode.h"
 #include "rendering/nodes/RTReflectionsNode.h"
-#include "rendering/nodes/ShadowMapNode.h"
 #include "rendering/nodes/SkyViewNode.h"
 #include "rendering/nodes/SSAONode.h"
 #include "rendering/nodes/TAANode.h"

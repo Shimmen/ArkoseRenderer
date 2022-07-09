@@ -25,12 +25,10 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
     RenderTarget& atlasRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &shadowMapAtlas } });
 
     BindingSet& sceneObjectBindingSet = *reg.getBindingSet("SceneObjectSet");
-    BindingSet& shadowDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(*reg.getBuffer("SceneShadowData"), ShaderStage::Vertex) });
 
     Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
     RenderStateBuilder renderStateBuilder { atlasRenderTarget, shadowMapShader, m_vertexLayout };
     renderStateBuilder.stateBindings().at(0, sceneObjectBindingSet);
-    renderStateBuilder.stateBindings().at(1, shadowDataBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
@@ -217,10 +215,12 @@ void LocalLightShadowNode::drawSpotLightShadowMap(CommandList& cmdList, GpuScene
     mat4 lightProjectionFromWorld = light.viewProjection();
     auto lightFrustum = geometry::Frustum::createFromProjectionMatrix(lightProjectionFromWorld);
 
+    Extent2D effectiveShadowMapExtent = { shadowMapAllocation.rect.size.x, shadowMapAllocation.rect.size.y };
+
     cmdList.setNamedUniform<mat4>("lightProjectionFromWorld", lightProjectionFromWorld);
     cmdList.setNamedUniform<vec3>("worldLightDirection", light.forwardDirection());
-    cmdList.setNamedUniform<float>("constantBias", light.constantBias());
-    cmdList.setNamedUniform<float>("slopeBias", light.slopeBias());
+    cmdList.setNamedUniform<float>("constantBias", light.constantBias(effectiveShadowMapExtent));
+    cmdList.setNamedUniform<float>("slopeBias", light.slopeBias(effectiveShadowMapExtent));
 
     Rect2D viewportRect = shadowMapAllocation.rect;
     cmdList.setViewport(viewportRect.origin, viewportRect.size);

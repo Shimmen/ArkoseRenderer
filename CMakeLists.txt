@@ -89,7 +89,6 @@ add_executable(ArkoseRenderer
     arkose/rendering/nodes/RTDirectLightNode.cpp
     arkose/rendering/nodes/RTFirstHitNode.cpp
     arkose/rendering/nodes/RTReflectionsNode.cpp
-    arkose/rendering/nodes/ShadowMapNode.cpp
     arkose/rendering/nodes/SkyViewNode.cpp
     arkose/rendering/nodes/SSAONode.cpp
     arkose/rendering/nodes/TAANode.cpp
@@ -97,7 +96,6 @@ add_executable(ArkoseRenderer
     arkose/rendering/Registry.cpp
     arkose/rendering/RenderPipeline.cpp
     arkose/rendering/RenderPipelineNode.cpp
-    arkose/rendering/scene/lights/Light.cpp
     arkose/rendering/scene/lights/DirectionalLight.cpp
     arkose/rendering/scene/lights/SpotLight.cpp
     arkose/rendering/scene/Material.cpp

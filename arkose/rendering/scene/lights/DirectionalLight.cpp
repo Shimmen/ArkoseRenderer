@@ -12,9 +12,9 @@ DirectionalLight::DirectionalLight(vec3 color, float illuminance, vec3 direction
     customSlopeBias = 2.5f;
 }
 
-float DirectionalLight::constantBias() const
+float DirectionalLight::constantBias(Extent2D shadowMapSize) const
 {
-    int maxShadowMapDim = std::max(shadowMapSize().width(), shadowMapSize().height());
+    int maxShadowMapDim = std::max(shadowMapSize.width(), shadowMapSize.height());
     float worldTexelScale = shadowMapWorldExtent / maxShadowMapDim;
 
     // For the projection we use [-extent/2, +extent/2] for near & far so the full extent is the depth range
@@ -24,7 +24,7 @@ float DirectionalLight::constantBias() const
     return bias;
 }
 
-float DirectionalLight::slopeBias() const
+float DirectionalLight::slopeBias(Extent2D shadowMapSize) const
 {
-    return 0.1f * customSlopeBias * constantBias();
+    return 0.1f * customSlopeBias * constantBias(shadowMapSize);
 }
