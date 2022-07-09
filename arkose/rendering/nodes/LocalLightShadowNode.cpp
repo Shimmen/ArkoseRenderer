@@ -27,7 +27,7 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
     BindingSet& sceneObjectBindingSet = *reg.getBindingSet("SceneObjectSet");
     BindingSet& shadowDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(*reg.getBuffer("SceneShadowData"), ShaderStage::Vertex) });
 
-    Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap2.vert");
+    Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
     RenderStateBuilder renderStateBuilder { atlasRenderTarget, shadowMapShader, m_vertexLayout };
     renderStateBuilder.stateBindings().at(0, sceneObjectBindingSet);
     renderStateBuilder.stateBindings().at(1, shadowDataBindingSet);

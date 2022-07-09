@@ -30,12 +30,10 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
     RenderTarget& shadowMapRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &shadowMap } });
 
     BindingSet& sceneObjectBindingSet = *reg.getBindingSet("SceneObjectSet");
-    BindingSet& shadowDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(*reg.getBuffer("SceneShadowData"), ShaderStage::Vertex) });
 
     Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
     RenderStateBuilder renderStateBuilder { shadowMapRenderTarget, shadowMapShader, m_vertexLayout };
     renderStateBuilder.stateBindings().at(0, sceneObjectBindingSet);
-    renderStateBuilder.stateBindings().at(1, shadowDataBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
     Shader shadowProjectionShader = Shader::createCompute("shadow/projectShadow.comp");
@@ -66,8 +64,10 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
 
             cmdList.beginRendering(renderState, ClearValue::blackAtMaxDepth());
 
-            uint32_t index = 0; // first directional light is always index 0
-            cmdList.setNamedUniform("lightIndex", index);
+            cmdList.setNamedUniform<mat4>("lightProjectionFromWorld", lightProjectionFromWorld);
+            cmdList.setNamedUniform<vec3>("worldLightDirection", light->forwardDirection());
+            cmdList.setNamedUniform<float>("constantBias", light->constantBias());
+            cmdList.setNamedUniform<float>("slopeBias", light->slopeBias());
 
             cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
             cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
