@@ -1,4 +1,9 @@
 cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+
+# "MSVC runtime library flags are selected by an abstraction."
+# See https://cmake.org/cmake/help/latest/policy/CMP0091.html
+cmake_policy(SET CMP0091 NEW)
+
 project(ArkoseRenderer)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
@@ -130,6 +135,9 @@ target_link_libraries(ArkoseRenderer PRIVATE
     tiny_gltf
     tracy
 
+    # Physics
+    Jolt
+
     # Vulkan backend
     Vulkan::Vulkan
     VulkanMemoryAllocator
@@ -146,6 +154,14 @@ target_link_libraries(ArkoseRenderer PRIVATE
 ##################################
 
 set_property(TARGET ArkoseRenderer PROPERTY CXX_STANDARD 20)
+
+if (MSVC)
+    # Ensure we're using the dynamically linked runtime library for MSVC.
+    # When linking with Tracy this is required, as it will dynamically load dlls.
+    set(MSVC_RUNTIME_LIBRARY_STRING "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+    set_property(TARGET ArkoseRenderer PROPERTY MSVC_RUNTIME_LIBRARY ${MSVC_RUNTIME_LIBRARY_STRING})
+    set_property(TARGET Jolt PROPERTY MSVC_RUNTIME_LIBRARY ${MSVC_RUNTIME_LIBRARY_STRING})
+endif()
 
 # Enable tracy real-time debugger? It does leak memory when enabled, so maybe keep off by default?
 target_compile_definitions(ArkoseRenderer PUBLIC TRACY_ENABLE)

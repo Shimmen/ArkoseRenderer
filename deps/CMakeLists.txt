@@ -35,6 +35,16 @@ FetchContent_Declare(directx_headers
     GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
     GIT_TAG        "v1.602.0")
 
+set(TARGET_UNIT_TESTS OFF)
+set(TARGET_HELLO_WORLD OFF)
+set(TARGET_PERFORMANCE_TEST OFF)
+set(TARGET_SAMPLES OFF)
+set(TARGET_VIEWER OFF)
+FetchContent_Declare(jolt-physics
+    GIT_REPOSITORY https://github.com/jrouwe/JoltPhysics.git
+    GIT_TAG        "84d4c6f01ef2aac7c11695366b5007cbbda1477e" # (latest release doesn't include https://github.com/jrouwe/JoltPhysics/pull/175 which we need)
+    SOURCE_SUBDIR  "Build")
+
 ##################################
 # FetchContent dependencies without cmake files
 
@@ -109,4 +119,4 @@ add_subdirectory(half)
 ##################################
 # Finalize FetchContent dependencies
 
-FetchContent_MakeAvailable(spirv-cross json fmt glfw vulkan_memory_allocator directx_headers)
+FetchContent_MakeAvailable(spirv-cross json fmt glfw vulkan_memory_allocator directx_headers jolt-physics)
