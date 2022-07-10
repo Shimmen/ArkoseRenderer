@@ -20,6 +20,10 @@ GLFWwindow* createWindow(Backend::Type backendType, WindowType windowType, const
 {
     SCOPED_PROFILE_ZONE();
 
+    if (!glfwInit()) {
+        ARKOSE_LOG(Fatal, "could not initialize windowing system, exiting.");
+    }
+
     std::string windowTitle = "Arkose Renderer";
 
     switch (backendType) {
@@ -52,7 +56,7 @@ GLFWwindow* createWindow(Backend::Type backendType, WindowType windowType, const
     }
 
     if (!window) {
-        ARKOSE_LOG(Fatal, "could not create GLFW window with specified settings, exiting.");
+        ARKOSE_LOG(Fatal, "could not create window with specified settings, exiting.");
     }
 
     return window;
@@ -68,10 +72,6 @@ Extent2D windowFramebufferSize(GLFWwindow* window)
 int main(int argc, char** argv)
 {
     TaskGraph::initialize();
-
-    if (!glfwInit()) {
-        ARKOSE_LOG(Fatal, "could not initialize GLFW, exiting.");
-    }
 
     auto backendType = SelectedBackendType;
     GLFWwindow* window = createWindow(backendType, WindowType::Windowed, { 1920, 1080 });
