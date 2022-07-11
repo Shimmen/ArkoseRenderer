@@ -1,6 +1,8 @@
 #pragma once
 
 #include "core/Assert.h"
+#include "core/Types.h"
+#include <functional>
 #include <limits>
 #include <stdint.h>
 
