@@ -55,7 +55,7 @@ public:
 
     virtual ShaderDefine rayTracingShaderDefine() const = 0;
 
-    virtual void shutdown() = 0;
+    virtual void completePendingOperations() = 0;
 
     virtual void renderPipelineDidChange(RenderPipeline&) = 0;
     virtual void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline&) = 0;

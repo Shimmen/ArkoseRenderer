@@ -192,7 +192,7 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
 VulkanBackend::~VulkanBackend()
 {
     // Before destroying stuff, make sure we're done with all scheduled work
-    shutdown();
+    completePendingOperations();
 
     m_rayTracingNv.reset();
     m_rayTracingKhr.reset();
@@ -234,7 +234,7 @@ VulkanBackend::~VulkanBackend()
     vkDestroyInstance(m_instance, nullptr);
 }
 
-void VulkanBackend::shutdown()
+void VulkanBackend::completePendingOperations()
 {
     vkDeviceWaitIdle(device());
 }

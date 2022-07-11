@@ -28,7 +28,7 @@ public:
     void newFrame() override;
     bool executeFrame(const Scene&, RenderPipeline&, float elapsedTime, float deltaTime) override;
 
-    void shutdown() override;
+    void completePendingOperations() override;
 
     ///////////////////////////////////////////////////////////////////////////
     /// Backend-specific resource types

@@ -214,7 +214,7 @@ bool D3D12Backend::executeFrame(const Scene& scene, RenderPipeline& pipeline, fl
     return true;
 }
 
-void D3D12Backend::shutdown()
+void D3D12Backend::completePendingOperations()
 {
     waitForDeviceIdle();
 }

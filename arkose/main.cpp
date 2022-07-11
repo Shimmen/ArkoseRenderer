@@ -71,24 +71,30 @@ Extent2D windowFramebufferSize(GLFWwindow* window)
 
 int main(int argc, char** argv)
 {
+    // Initialize core systems
     TaskGraph::initialize();
 
+    // Create window & input handling for that window
     auto backendType = SelectedBackendType;
     GLFWwindow* window = createWindow(backendType, WindowType::Windowed, { 1920, 1080 });
     Input::registerWindow(window);
 
+    // Create the app that will drive this "engine"
     auto app = std::make_unique<SelectedApp>();
-
     Backend::AppSpecification appSpec;
     appSpec.requiredCapabilities = app->requiredCapabilities();
     appSpec.optionalCapabilities = app->optionalCapabilities();
-    Backend& backend = Backend::create(backendType, window, appSpec);
 
-    auto scene = std::make_unique<Scene>(backend, windowFramebufferSize(window));
+    // Create backends
+    Backend& graphicsBackend = Backend::create(backendType, window, appSpec);
+
+    // Create the scene
+    auto scene = std::make_unique<Scene>(graphicsBackend, windowFramebufferSize(window));
+
+    // Let the app define the render pipeline and push it to the graphics backend
     auto renderPipeline = std::make_unique<RenderPipeline>(&scene->gpuScene());
-
     app->setup(*scene, *renderPipeline);
-    backend.renderPipelineDidChange(*renderPipeline);
+    graphicsBackend.renderPipelineDidChange(*renderPipeline);
 
     ARKOSE_LOG(Info, "main loop begin.");
 
@@ -109,7 +115,7 @@ int main(int argc, char** argv)
 
         if (shaderFileWatchMutex.try_lock()) {
             if (changedShaderFiles.size() > 0) {
-                backend.shadersDidRecompile(changedShaderFiles, *renderPipeline);
+                graphicsBackend.shadersDidRecompile(changedShaderFiles, *renderPipeline);
                 changedShaderFiles.clear();
             }
             shaderFileWatchMutex.unlock();
@@ -118,7 +124,7 @@ int main(int argc, char** argv)
         Input::preEventPoll();
         glfwPollEvents();
 
-        backend.newFrame();
+        graphicsBackend.newFrame();
 
         Extent2D viewportSize = windowFramebufferSize(window);
         if (viewportSize != currentViewportSize) {
@@ -140,7 +146,7 @@ int main(int argc, char** argv)
 
         bool frameExecuted = false;
         while (!frameExecuted) {
-            frameExecuted = backend.executeFrame(*scene, *renderPipeline, elapsedTime, deltaTime);
+            frameExecuted = graphicsBackend.executeFrame(*scene, *renderPipeline, elapsedTime, deltaTime);
         }
 
         scene->postRender();
@@ -151,14 +157,18 @@ int main(int argc, char** argv)
     ShaderManager::instance().stopFileWatching();
     ARKOSE_LOG(Info, "main loop end.");
 
-    backend.shutdown();
+    // Destroy the scene (ensure that all GPU stuff are completed first)
+    graphicsBackend.completePendingOperations();
     scene.reset();
 
+    // Destroy backends
     Backend::destroy();
 
+    // Destroy window & windowing system
     glfwDestroyWindow(window);
     glfwTerminate();
 
+    // Shutdown core systems
     TaskGraph::shutdown();
 
     return 0;
