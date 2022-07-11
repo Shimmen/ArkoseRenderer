@@ -27,16 +27,20 @@ Scene::~Scene()
 
 void Scene::update(float elapsedTime, float deltaTime)
 {
+    SCOPED_PROFILE_ZONE();
     drawSceneGizmos();
 }
 
 void Scene::preRender()
 {
+    SCOPED_PROFILE_ZONE();
     camera().preRender({});
 }
 
 void Scene::postRender()
 {
+    SCOPED_PROFILE_ZONE();
+
     camera().postRender({});
 
     // NOTE: We only want to do this on leaf-nodes right now, i.e. meshes not models.

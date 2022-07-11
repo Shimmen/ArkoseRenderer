@@ -143,10 +143,13 @@ int main(int argc, char** argv)
         lastTime = elapsedTime;
 
         scene->update(elapsedTime, deltaTime);
-        bool keepRunning = app->update(*scene, elapsedTime, deltaTime);
+        {
+            SCOPED_PROFILE_ZONE_NAME_AND_COLOR("App update", 0xff00ff);
+            bool keepRunning = app->update(*scene, elapsedTime, deltaTime);
 
-        exitRequested |= !keepRunning;
-        exitRequested |= static_cast<bool>(glfwWindowShouldClose(window));
+            exitRequested |= !keepRunning;
+            exitRequested |= static_cast<bool>(glfwWindowShouldClose(window));
+        }
 
         if (physicsBackend) {
             physicsBackend->update(elapsedTime, deltaTime);
