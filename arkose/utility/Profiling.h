@@ -24,6 +24,9 @@ inline void setNameForActiveThread(const char* name);
 #define SCOPED_PROFILE_ZONE_BACKEND() ZoneScopedC(0x00ff00);
 #define SCOPED_PROFILE_ZONE_BACKEND_NAMED(name) ZoneScopedNC(name, 0x00ff00);
 
+#define SCOPED_PROFILE_ZONE_PHYSICS() ZoneScopedC(0xdddddd);
+#define SCOPED_PROFILE_ZONE_PHYSICS_NAMED(name) ZoneScopedNC(name, 0xdddddd);
+
 #define SCOPED_PROFILE_ZONE_GPUCOMMAND() ZoneScopedC(0xff0000);
 #define SCOPED_PROFILE_ZONE_GPURESOURCE() ZoneScopedC(0x0000ff);
 
@@ -46,6 +49,9 @@ void Profiling::setNameForActiveThread(const char* name)
 
 #define SCOPED_PROFILE_ZONE_BACKEND()
 #define SCOPED_PROFILE_ZONE_BACKEND_NAMED(name)
+
+#define SCOPED_PROFILE_ZONE_PHYSICS()
+#define SCOPED_PROFILE_ZONE_PHYSICS_NAMED(name)
 
 #define SCOPED_PROFILE_ZONE_GPUCOMMAND()
 #define SCOPED_PROFILE_ZONE_GPURESOURCE()

@@ -2,8 +2,8 @@
 
 #include "core/Assert.h"
 #include "core/Logging.h"
+#include "utility/Profiling.h"
 
-#include <thread>
 #include <cstdarg> // for va_list, va_start
 
 // The Jolt headers don't include Jolt.h. Always include Jolt.h before including any other Jolt header.
@@ -193,4 +193,36 @@ void JoltPhysicsBackend::shutdown()
 {
     delete JPH::Factory::sInstance;
     JPH::Factory::sInstance = nullptr;
+}
+
+void JoltPhysicsBackend::update(float elapsedTime, float deltaTime)
+{
+    SCOPED_PROFILE_ZONE_PHYSICS();
+
+    ARKOSE_ASSERT(deltaTime >= 1e-6f);
+    m_fixedRateAccumulation += deltaTime;
+
+    // If you take larger steps than 1 / 60th of a second you need to do multiple collision steps in order to keep the simulation stable.
+    // Do 1 collision step per 1 / 60th of a second (round up).
+    float numCollisionSteps = std::ceil(m_fixedRateAccumulation / FixedUpdateRate);
+
+    if (numCollisionSteps >= 1.0f) {
+
+        float timeToStep = numCollisionSteps * FixedUpdateRate;
+        fixedRateUpdate(timeToStep, numCollisionSteps);
+
+        m_fixedRateAccumulation -= timeToStep;
+    }
+}
+
+void JoltPhysicsBackend::fixedRateUpdate(float fixedRate, int numCollisionSteps)
+{
+    SCOPED_PROFILE_ZONE_PHYSICS();
+
+    ARKOSE_ASSERT(numCollisionSteps >= 1);
+
+    // If you want more accurate step results you can do multiple sub steps within a collision step. Usually you would set this to 1.
+    constexpr int NumIntegrationSubSteps = 1;
+
+    m_physicsSystem->Update(fixedRate, numCollisionSteps, NumIntegrationSubSteps, m_tempAllocator.get(), m_jobSystem.get());
 }

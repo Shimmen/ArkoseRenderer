@@ -15,6 +15,8 @@ public:
     static PhysicsBackend* create(PhysicsBackend::Type);
     static void destroy();
 
+    virtual void update(float elapsedTime, float deltaTime) = 0;
+
 protected:
 
     virtual bool initialize() = 0;

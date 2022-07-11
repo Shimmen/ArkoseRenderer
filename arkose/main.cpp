@@ -148,6 +148,10 @@ int main(int argc, char** argv)
         exitRequested |= !keepRunning;
         exitRequested |= static_cast<bool>(glfwWindowShouldClose(window));
 
+        if (physicsBackend) {
+            physicsBackend->update(elapsedTime, deltaTime);
+        }
+
         scene->preRender();
 
         bool frameExecuted = false;
