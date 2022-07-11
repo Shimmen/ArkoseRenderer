@@ -17,7 +17,7 @@ Scene::Scene(Backend& backend, PhysicsBackend* physicsBackend, Extent2D initialM
     m_gpuScene = std::make_unique<GpuScene>(*this, backend, initialMainViewportSize);
 
     if (physicsBackend != nullptr) {
-        m_physicsScene = std::make_unique<PhysicsScene>(*physicsBackend);
+        m_physicsScene = std::make_unique<PhysicsScene>(*this, *physicsBackend);
     }
 }
 

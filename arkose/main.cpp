@@ -73,11 +73,14 @@ Extent2D windowFramebufferSize(GLFWwindow* window)
 
 int main(int argc, char** argv)
 {
+    // Grab relevant info from settings.h
+    auto backendType = SelectedBackendType;
+    auto physicsBackendType = SelectedPhysicsBackendType;
+
     // Initialize core systems
     TaskGraph::initialize();
 
     // Create window & input handling for that window
-    auto backendType = SelectedBackendType;
     GLFWwindow* window = createWindow(backendType, WindowType::Windowed, { 1920, 1080 });
     Input::registerWindow(window);
 
@@ -89,7 +92,7 @@ int main(int argc, char** argv)
 
     // Create backends
     Backend& graphicsBackend = Backend::create(backendType, window, appSpec);
-    PhysicsBackend* physicsBackend = PhysicsBackend::create(PhysicsBackend::Type::Jolt);
+    PhysicsBackend* physicsBackend = PhysicsBackend::create(physicsBackendType);
 
     // Create the scene
     auto scene = std::make_unique<Scene>(graphicsBackend, physicsBackend, windowFramebufferSize(window));

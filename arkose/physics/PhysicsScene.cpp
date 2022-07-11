@@ -5,8 +5,9 @@
 #include "core/Assert.h"
 #include "core/Logging.h"
 
-PhysicsScene::PhysicsScene(PhysicsBackend& backend)
-    : m_backend(backend)
+PhysicsScene::PhysicsScene(Scene& scene, PhysicsBackend& backend)
+    : m_scene(scene)
+    , m_backend(backend)
 {
 }
 

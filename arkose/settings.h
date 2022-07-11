@@ -1,10 +1,12 @@
 #pragma once
 
-// Specify backend to use
+// Specify backends to use
 
 #include "backend/base/Backend.h"
+#include "physics/backend/base/PhysicsBackend.h"
 
 static constexpr auto SelectedBackendType = Backend::Type::Vulkan;
+static constexpr auto SelectedPhysicsBackendType = PhysicsBackend::Type::Jolt;
 
 // Specify app to run: 'SelectedApp'
 
