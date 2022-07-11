@@ -75,6 +75,9 @@ add_executable(ArkoseRenderer
     arkose/math/Fibonacci.cpp
     arkose/math/Frustum.cpp
     arkose/math/Halton.cpp
+    arkose/physics/PhysicsScene.cpp
+    arkose/physics/backend/base/PhysicsBackend.cpp
+    arkose/physics/backend/jolt/JoltPhysicsBackend.cpp
     arkose/rendering/camera/Camera.cpp
     arkose/rendering/camera/CameraController.cpp
     arkose/rendering/camera/FpsCameraController.cpp

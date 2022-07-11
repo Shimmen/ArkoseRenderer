@@ -2,6 +2,8 @@
 #include "backend/shader/ShaderManager.h"
 #include "core/Logging.h"
 #include "core/parallel/TaskGraph.h"
+#include "physics/PhysicsScene.h"
+#include "physics/backend/base/PhysicsBackend.h"
 #include "rendering/App.h"
 #include "utility/Input.h"
 #include "utility/Profiling.h"
@@ -87,9 +89,10 @@ int main(int argc, char** argv)
 
     // Create backends
     Backend& graphicsBackend = Backend::create(backendType, window, appSpec);
+    PhysicsBackend* physicsBackend = PhysicsBackend::create(PhysicsBackend::Type::Jolt);
 
     // Create the scene
-    auto scene = std::make_unique<Scene>(graphicsBackend, windowFramebufferSize(window));
+    auto scene = std::make_unique<Scene>(graphicsBackend, physicsBackend, windowFramebufferSize(window));
 
     // Let the app define the render pipeline and push it to the graphics backend
     auto renderPipeline = std::make_unique<RenderPipeline>(&scene->gpuScene());
@@ -163,6 +166,7 @@ int main(int argc, char** argv)
 
     // Destroy backends
     Backend::destroy();
+    PhysicsBackend::destroy();
 
     // Destroy window & windowing system
     glfwDestroyWindow(window);

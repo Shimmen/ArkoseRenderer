@@ -15,10 +15,12 @@
 class Backend;
 class SceneNode;
 class GpuScene;
+class PhysicsBackend;
+class PhysicsScene;
 
 class Scene final {
 public:
-    Scene(Backend&, Extent2D initialMainViewportSize);
+    Scene(Backend&, PhysicsBackend*, Extent2D initialMainViewportSize);
     ~Scene();
 
     void update(float elapsedTime, float deltaTime);
@@ -37,7 +39,10 @@ public:
 
     GpuScene& gpuScene() { return *m_gpuScene; }
     const GpuScene& gpuScene() const { return *m_gpuScene; }
-    //PhysicScene& physicsScene() { return m_physicsScene; }
+
+    bool hasPhysicsScene() const { return m_physicsScene != nullptr; }
+    PhysicsScene& physicsScene() { return *m_physicsScene; }
+    const PhysicsScene& physicsScene() const { return *m_physicsScene; }
 
     // Camera
 
@@ -108,6 +113,8 @@ private:
 
     // Manages all GPU & render specific data of this scene
     std::unique_ptr<GpuScene> m_gpuScene {};
+    // Manages all physics & collision for this scene
+    std::unique_ptr<PhysicsScene> m_physicsScene {};
 
     Camera* m_currentMainCamera {};
     std::unordered_map<std::string, std::unique_ptr<Camera>> m_allCameras {};

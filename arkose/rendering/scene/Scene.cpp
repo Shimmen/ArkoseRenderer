@@ -4,15 +4,21 @@
 #include "rendering/camera/Camera.h"
 #include "rendering/scene/GpuScene.h"
 #include "rendering/scene/models/GltfModel.h"
+#include "physics/PhysicsScene.h"
+#include "physics/backend/base/PhysicsBackend.h"
 #include "utility/FileIO.h"
 #include <imgui.h>
 #include <ImGuizmo.h>
 #include <nlohmann/json.hpp>
 #include <fstream>
 
-Scene::Scene(Backend& backend, Extent2D initialMainViewportSize)
+Scene::Scene(Backend& backend, PhysicsBackend* physicsBackend, Extent2D initialMainViewportSize)
 {
     m_gpuScene = std::make_unique<GpuScene>(*this, backend, initialMainViewportSize);
+
+    if (physicsBackend != nullptr) {
+        m_physicsScene = std::make_unique<PhysicsScene>(*physicsBackend);
+    }
 }
 
 Scene::~Scene()
