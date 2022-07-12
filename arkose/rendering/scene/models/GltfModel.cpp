@@ -157,13 +157,15 @@ std::string GltfModel::directory() const
 }
 
 GltfMesh::GltfMesh(std::string name, const GltfModel* parent, const tinygltf::Model& model, const tinygltf::Primitive& primitive, mat4 matrix)
-    : Mesh(Transform(matrix, &parent->transform()))
+    : Mesh(Transform(&parent->transform()))
     , m_name(std::move(name))
     , m_parentModel(parent)
     , m_model(&model)
     , m_primitive(&primitive)
 {
     SCOPED_PROFILE_ZONE();
+
+    transform().setFromMatrix(matrix);
 
     if (primitive.mode != TINYGLTF_MODE_TRIANGLES) {
         ARKOSE_LOG(Fatal, "glTF mesh: primitive with mode other than triangles is not yet supported");

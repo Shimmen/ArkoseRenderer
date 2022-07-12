@@ -238,19 +238,20 @@ void Scene::loadFromFile(const std::string& path)
         auto transform = jsonModel.at("transform");
         auto jsonRotation = transform.at("rotation");
 
-        mat4 rotationMatrix;
+        quat orientation;
         std::string rotType = jsonRotation.at("type");
         if (rotType == "axis-angle") {
             vec3 axis = readVec3(jsonRotation.at("axis"));
             float angle = jsonRotation.at("angle");
-            rotationMatrix = ark::quatToMatrix(ark::axisAngle(axis, angle));
+            orientation = ark::axisAngle(axis, angle);
         } else {
             ASSERT_NOT_REACHED();
         }
 
-        mat4 localMatrix = ark::translate(readVec3(transform.at("translation")))
-            * rotationMatrix * ark::scale(readVec3(transform.at("scale")));
-        model->transform().setLocalMatrix(localMatrix);
+        vec3 translation = readVec3(transform.at("translation"));
+        vec3 scale = readVec3(transform.at("scale"));
+
+        model->transform().set(translation, orientation, scale);
 
         addModel(std::move(model));
     }
@@ -430,6 +431,6 @@ void Scene::drawSceneGizmos()
 
         mat4 matrix = selectedModel()->transform().localMatrix();
         ImGuizmo::Manipulate(value_ptr(viewMatrix), value_ptr(projMatrix), operation, mode, value_ptr(matrix));
-        selectedModel()->transform().setLocalMatrix(matrix);
+        selectedModel()->transform().setFromMatrix(matrix);
     }
 }
