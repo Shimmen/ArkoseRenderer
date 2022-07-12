@@ -63,6 +63,25 @@ constexpr tmat4<T> rotate(const tquat<T>& q)
 }
 
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr void decomposeMatrixToTranslationRotationScale(tmat4<T> m, tvec3<T>& translation, tquat<T>& orientation, tvec3<T>& scale)
+{
+    // Extract translation and zero in matrix
+    translation = m.w.xyz();
+    m.w = vec4(0, 0, 0, 1);
+
+    // Scale along each of the axes is the length of the column vectors
+    scale = tvec3<T>(length(m.x), length(m.y), length(m.z));
+
+    // Ortho-normalize the matrix
+    m.x /= scale.x;
+    m.y /= scale.y;
+    m.z /= scale.z;
+
+    // Assuming no shear, matrix is now the rotation part
+    orientation = quatFromMatrix(m);
+}
+
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
 constexpr tmat4<T> lookAt(const tvec3<T>& eye, const tvec3<T>& target, const tvec3<T>& tempUp = globalUp)
 {
     tvec3<T> forward = normalize(target - eye);
