@@ -28,7 +28,12 @@ Scene::~Scene()
 void Scene::update(float elapsedTime, float deltaTime)
 {
     SCOPED_PROFILE_ZONE();
+
     drawSceneGizmos();
+
+    if (hasPhysicsScene()) {
+        physicsScene().commitInstancesAwaitingAdd();
+    }
 }
 
 void Scene::preRender()
@@ -70,6 +75,12 @@ Model& Scene::addModel(std::unique_ptr<Model> model)
     addedModel.forEachMesh([&](Mesh& mesh) {
         gpuScene().registerMesh(mesh);
     });
+
+    if (hasPhysicsScene()) {
+        // TODO: Keep track of the instance handle somewhere
+        // (possibly m_models contains a struct containing the Model* and the optional physics handle)
+        PhysicsInstanceHandle physicsInstanceHandle = physicsScene().createInstanceFromModel(addedModel, MotionType::Static);
+    }
 
     return addedModel;
 }
