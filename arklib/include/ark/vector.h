@@ -547,8 +547,67 @@ struct tvec4<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
     constexpr tvec4<T> operator+() const { return *this; }
     constexpr tvec4<T> operator-() const { return { -x, -y, -z, -w }; }
 
+    constexpr tvec4<T> operator+(T t) const { return { x + t, y + t, z + t, w + t }; }
     constexpr tvec4<T> operator+(const tvec4<T>& v) const { return { x + v.x, y + v.y, z + v.z, w + v.w }; }
+    constexpr tvec4<T>& operator+=(const tvec4<T>& v)
+    {
+        x += v.x;
+        y += v.y;
+        z += v.z;
+        w += v.w;
+        return *this;
+    }
+
+    constexpr tvec4<T> operator-(T t) const { return { x - t, y - t, z - t, w - t }; }
     constexpr tvec4<T> operator-(const tvec4<T>& v) const { return { x - v.x, y - v.y, z - v.z, w - v.w }; }
+    constexpr tvec4<T>& operator-=(const tvec4<T>& v)
+    {
+        x -= v.x;
+        y -= v.y;
+        z -= v.z;
+        w -= v.w;
+        return *this;
+    }
+
+    constexpr tvec4<T> operator*(const tvec4<T>& v) const { return { x * v.x, y * v.y, z * v.z, w * v.w }; }
+    constexpr tvec4<T>& operator*=(const tvec4<T>& v)
+    {
+        x *= v.x;
+        y *= v.y;
+        z *= v.z;
+        w *= v.w;
+        return *this;
+    }
+
+    constexpr tvec4<T> operator/(const tvec4<T>& v) const { return { x / v.x, y / v.y, z / v.z, w / v.w }; }
+    constexpr tvec4<T>& operator/=(const tvec4<T>& v)
+    {
+        x /= v.x;
+        y /= v.y;
+        z /= v.z;
+        w /= v.w;
+        return *this;
+    }
+
+    constexpr tvec4<T> operator*(T f) const { return { x * f, y * f, z * f, w * f }; }
+    constexpr tvec4<T>& operator*=(T f)
+    {
+        x *= f;
+        y *= f;
+        z *= f;
+        w *= f;
+        return *this;
+    }
+
+    constexpr tvec4<T> operator/(T f) const { return { x / f, y / f, z / f, w / f }; }
+    constexpr tvec4<T>& operator/=(T f)
+    {
+        x /= f;
+        y /= f;
+        z /= f;
+        w /= f;
+        return *this;
+    }
 
     // (a rare member function to simulate swizzling)
     constexpr tvec3<T> xyz() const
@@ -574,6 +633,30 @@ inline f32 dot(const tvec4<f32>& lhs, const tvec4<f32>& rhs)
 #else
     return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
 #endif
+}
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr T length2(const tvec4<T>& v)
+{
+    return dot(v, v);
+}
+
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr T length(const tvec4<T>& v)
+{
+    return std::sqrt(length2(v));
+}
+
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr T distance(const tvec4<T>& a, const tvec4<T>& b)
+{
+    return length(a - b);
+}
+
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr tvec4<T> normalize(const tvec4<T>& v)
+{
+    return v / length(v);
 }
 
 using vec4 = tvec4<Float>;
