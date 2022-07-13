@@ -10,6 +10,8 @@
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/PhysicsSystem.h>
 
+class JoltVisualiser;
+
 class ArkoseBroadPhaseLayerInterface final : public JPH::BroadPhaseLayerInterface {
 public:
     ArkoseBroadPhaseLayerInterface();
@@ -61,6 +63,10 @@ private:
     std::unique_ptr<JPH::PhysicsSystem> m_physicsSystem {};
     std::unique_ptr<JPH::TempAllocator> m_tempAllocator {};
     std::unique_ptr<JPH::JobSystem> m_jobSystem {};
+
+#if JPH_DEBUG_RENDERER
+    std::unique_ptr<JoltVisualiser> m_visualiser {};
+#endif
 
     ArkoseBroadPhaseLayerInterface m_broadPhaseLayerInterface {};
 

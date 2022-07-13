@@ -3,6 +3,7 @@
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "physics/backend/PhysicsLayers.h"
+#include "physics/backend/jolt/JoltVisualiser.h"
 #include "rendering/scene/Model.h"
 #include "rendering/scene/Transform.h"
 #include "utility/Profiling.h"
@@ -188,6 +189,10 @@ bool JoltPhysicsBackend::initialize()
     // Note that this is called from a job so whatever you do here needs to be thread safe.
     //MyContactListener contact_listener;
     //physics_system.SetContactListener(&contact_listener);
+
+#if JPH_DEBUG_RENDERER
+    m_visualiser = std::make_unique<JoltVisualiser>();
+#endif
 
     return m_jobSystem && m_physicsSystem;
 }

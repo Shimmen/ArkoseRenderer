@@ -78,6 +78,7 @@ add_executable(ArkoseRenderer
     arkose/physics/PhysicsScene.cpp
     arkose/physics/backend/base/PhysicsBackend.cpp
     arkose/physics/backend/jolt/JoltPhysicsBackend.cpp
+    arkose/physics/backend/jolt/JoltVisualiser.cpp
     arkose/rendering/camera/Camera.cpp
     arkose/rendering/camera/CameraController.cpp
     arkose/rendering/camera/FpsCameraController.cpp
