@@ -6,7 +6,7 @@
 #include "physics/backend/base/PhysicsBackend.h"
 
 static constexpr auto SelectedBackendType = Backend::Type::Vulkan;
-static constexpr auto SelectedPhysicsBackendType = PhysicsBackend::Type::Jolt;
+static constexpr auto SelectedPhysicsBackendType = PhysicsBackend::Type::None;
 
 // Specify app to run: 'SelectedApp'
 
