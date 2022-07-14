@@ -26,13 +26,18 @@ vec2 calculateAtlasSampleUV(in DDGIProbeGridData gridData, ivec3 probeGridCoord,
     return atlasSampleUV;
 }
 
-vec3 sampleIrradianceProbe(in DDGIProbeGridData gridData, ivec3 probeGridCoord, vec3 direction, sampler2D irradianceAtlas)
+vec3 sampleIrradianceProbeRaw(in DDGIProbeGridData gridData, ivec3 probeGridCoord, vec3 direction, sampler2D irradianceAtlas)
 {
     // TODO: We should just pass this in:
     vec2 invAtlasTextureSize = vec2(1.0) / textureSize(irradianceAtlas, 0);
 
     vec2 uv = calculateAtlasSampleUV(gridData, probeGridCoord, direction, DDGI_IRRADIANCE_RES, DDGI_ATLAS_PADDING, invAtlasTextureSize);
     return texture(irradianceAtlas, uv).rgb;
+}
+
+vec3 sampleIrradianceProbe(in DDGIProbeGridData gridData, ivec3 probeGridCoord, vec3 direction, sampler2D irradianceAtlas)
+{
+    return pow(sampleIrradianceProbeRaw(gridData, probeGridCoord, direction, irradianceAtlas), vec3(DDGI_IRRADIANCE_GAMMA));
 }
 
 vec2 sampleVisibilityProbe(in DDGIProbeGridData gridData, ivec3 probeGridCoord, vec3 direction, sampler2D visibilityAtlas)
@@ -51,7 +56,8 @@ ivec3 baseGridCoord(in DDGIProbeGridData probeGrid, vec3 position)
                  ivec3(probeGrid.gridDimensions) - ivec3(1, 1, 1));
 }
 
-vec3 gridCoordToPosition(in DDGIProbeGridData probeGrid, ivec3 gridCoord) {
+vec3 gridCoordToPosition(in DDGIProbeGridData probeGrid, ivec3 gridCoord)
+{
     return probeGrid.offsetToFirst.xyz + vec3(gridCoord) * probeGrid.probeSpacing.xyz;
 }
 
@@ -130,7 +136,8 @@ vec3 sampleDynamicDiffuseGlobalIllumination(vec3 wsPosition, vec3 wsNormal, in D
 
         weight *= trilinearWeight;
 
-        vec3 probeIrradiance = sampleIrradianceProbe(gridData, probeGridCoord, normalize(wsNormal), irradianceAtlas);
+        // NOTE: we sample the raw variant here, since we do the decoding ourselves below
+        vec3 probeIrradiance = sampleIrradianceProbeRaw(gridData, probeGridCoord, normalize(wsNormal), irradianceAtlas);
 
         // "Decode the tone curve, but leave a gamma = 2 curve (=sqrt here) to approximate sRGB blending for the trilinear"
         probeIrradiance = pow(probeIrradiance, vec3(DDGI_IRRADIANCE_GAMMA * 0.5));

@@ -13,21 +13,15 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(GpuScene& scene, R
     if (!reg.hasPreviousNode("DDGI"))
         return RenderPipelineNode::NullExecuteCallback;
 
-    ///////////////////////
-    // constructNode
-    BindingSet& m_ddgiSamplingSet = *reg.getBindingSet("DDGISamplingSet");
-    const_cast<DDGIProbeDebug*>(this)->setUpSphereRenderData(scene, reg);
-    ///////////////////////
+    m_sphereDrawCall = createSphereRenderData(scene, reg);
 
-    Texture& depthTexture = *reg.getTexture("SceneDepth");
-    Texture& colorTexture = *reg.getTexture("SceneColor");
-    RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &colorTexture, LoadOp::Load, StoreOp::Store },
-                                                          { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Load, StoreOp::Discard } });
+    RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, reg.getTexture("SceneColor"), LoadOp::Load, StoreOp::Store },
+                                                          { RenderTarget::AttachmentType::Depth, reg.getTexture("SceneDepth"), LoadOp::Load, StoreOp::Discard } });
 
     Shader debugShader = Shader::createBasicRasterize("ddgi/probeDebug.vert", "ddgi/probeDebug.frag");
     RenderStateBuilder stateBuilder { renderTarget, debugShader, VertexLayout { VertexComponent::Position3F }};
     stateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneCameraSet"));
-    stateBuilder.stateBindings().at(1, m_ddgiSamplingSet);
+    stateBuilder.stateBindings().at(1, *reg.getBindingSet("DDGISamplingSet"));
     stateBuilder.writeDepth = true;
     stateBuilder.testDepth = true;
     RenderState& renderState = reg.createRenderState(stateBuilder);
@@ -49,34 +43,26 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(GpuScene& scene, R
         if (debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_DISABLED)
             return;
 
-        static float probeScale = 0.05f;
-        ImGui::SliderFloat("Probe size (m)", &probeScale, 0.01f, 1.0f);
-
-        static float distanceScale = 0.002f;
-        ImGui::SliderFloat("Distance scale", &distanceScale, 0.001f, 0.1f);
+        ImGui::SliderFloat("Probe size (m)", &m_probeScale, 0.01f, 1.0f);
+        ImGui::SliderFloat("Distance scale", &m_distanceScale, 0.001f, 0.1f);
 
         cmdList.beginRendering(renderState);
-        cmdList.setNamedUniform("probeScale", probeScale);
-        cmdList.setNamedUniform("distanceScale", distanceScale);
+        cmdList.setNamedUniform("probeScale", m_probeScale);
+        cmdList.setNamedUniform("distanceScale", m_distanceScale);
         cmdList.setNamedUniform("debugVisualisation", debugVisualisation);
 
-        // TODO: Use instanced rendering instead.. it's sufficient for debug visualisation but it's not great.
-        for (int probeIdx = 0; probeIdx < scene.scene().probeGrid().probeCount(); ++probeIdx) {
-            
-            ivec3 probeIdx3D = scene.scene().probeGrid().probeIndexFromLinear(probeIdx);
-            vec3 probeLocation = scene.scene().probeGrid().probePositionForIndex(probeIdx3D);
+        DrawCallDescription probesDrawCall = m_sphereDrawCall;
+        probesDrawCall.instanceCount = scene.scene().probeGrid().probeCount();
 
-            cmdList.setNamedUniform("probeGridCoord", probeIdx3D);
-            cmdList.setNamedUniform("probeLocation", probeLocation);
-
-            cmdList.drawIndexed(*m_sphereVertexBuffer, *m_sphereIndexBuffer, m_indexCount, IndexType::UInt16);
-        }
+        cmdList.bindVertexBuffer(*probesDrawCall.vertexBuffer);
+        cmdList.bindIndexBuffer(*probesDrawCall.indexBuffer, probesDrawCall.indexType);
+        cmdList.issueDrawCall(probesDrawCall);
 
         cmdList.endRendering();
     };
 }
 
-void DDGIProbeDebug::setUpSphereRenderData(GpuScene& scene, Registry& reg)
+DrawCallDescription DDGIProbeDebug::createSphereRenderData(GpuScene& scene, Registry& reg)
 {
     constexpr int rings = 48;
     constexpr int sectors = 48;
@@ -117,10 +103,11 @@ void DDGIProbeDebug::setUpSphereRenderData(GpuScene& scene, Registry& reg)
                 indices.push_back(i0);
             }
         }
-
-        m_indexCount = (uint32_t)indices.size();
     }
 
-    m_sphereVertexBuffer = &reg.createBuffer(std::move(positions), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-    m_sphereIndexBuffer = &reg.createBuffer(std::move(indices), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+    auto indexCount = static_cast<uint32_t>(indices.size());
+    Buffer& vertexBuffer = reg.createBuffer(std::move(positions), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+    Buffer& indexBuffer = reg.createBuffer(std::move(indices), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+
+    return DrawCallDescription::makeSimpleIndexed(vertexBuffer, indexBuffer, indexCount, IndexType::UInt16);
 }
