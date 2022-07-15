@@ -83,9 +83,6 @@ add_executable(ArkoseRenderer
     arkose/rendering/Registry.cpp
     arkose/rendering/RenderPipeline.cpp
     arkose/rendering/RenderPipelineNode.cpp
-    arkose/rendering/camera/Camera.cpp
-    arkose/rendering/camera/CameraController.cpp
-    arkose/rendering/camera/FpsCameraController.cpp
     arkose/rendering/nodes/BloomNode.cpp
     arkose/rendering/nodes/CullingNode.cpp
     arkose/rendering/nodes/DDGINode.cpp
@@ -106,15 +103,18 @@ add_executable(ArkoseRenderer
     arkose/rendering/nodes/SSAONode.cpp
     arkose/rendering/nodes/TAANode.cpp
     arkose/rendering/nodes/TonemapNode.cpp
-    arkose/rendering/scene/lights/DirectionalLight.cpp
-    arkose/rendering/scene/lights/SpotLight.cpp
-    arkose/rendering/scene/Material.cpp
-    arkose/rendering/scene/Mesh.cpp
-    arkose/rendering/scene/Model.cpp
-    arkose/rendering/scene/models/GltfModel.cpp
-    arkose/rendering/scene/ProbeGrid.cpp
-    arkose/rendering/scene/Scene.cpp
-    arkose/rendering/scene/Vertex.cpp
+    arkose/scene/Material.cpp
+    arkose/scene/Mesh.cpp
+    arkose/scene/Model.cpp
+    arkose/scene/ProbeGrid.cpp
+    arkose/scene/Scene.cpp
+    arkose/scene/Vertex.cpp
+    arkose/scene/camera/Camera.cpp
+    arkose/scene/camera/CameraController.cpp
+    arkose/scene/camera/FpsCameraController.cpp
+    arkose/scene/lights/DirectionalLight.cpp
+    arkose/scene/lights/SpotLight.cpp
+    arkose/scene/models/GltfModel.cpp
     arkose/utility/AvgElapsedTimer.cpp
     arkose/utility/FileIO.cpp
     arkose/utility/IESProfile.cpp

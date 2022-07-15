@@ -2,7 +2,7 @@
 
 #include "rendering/RenderPipelineNode.h"
 #include "RTData.h"
-#include "rendering/scene/Model.h"
+#include "scene/Model.h"
 
 class RTFirstHitNode final : public RenderPipelineNode {
 public:

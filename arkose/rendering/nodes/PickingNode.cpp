@@ -1,6 +1,6 @@
 #include "PickingNode.h"
 
-#include "rendering/camera/CameraController.h"
+#include "scene/camera/CameraController.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 #include <ark/vector.h>

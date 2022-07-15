@@ -3,9 +3,9 @@
 #include "backend/util/DrawCall.h"
 #include "backend/Resources.h"
 #include "core/math/Sphere.h"
-#include "rendering/scene/Material.h"
-#include "rendering/scene/Transform.h"
-#include "rendering/scene/Vertex.h"
+#include "scene/Material.h"
+#include "scene/Transform.h"
+#include "scene/Vertex.h"
 #include <ark/aabb.h>
 #include <ark/vector.h>
 #include <unordered_map>

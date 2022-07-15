@@ -2,7 +2,7 @@
 
 #include "core/Logging.h"
 #include "core/math/Halton.h"
-#include "rendering/camera/CameraController.h"
+#include "scene/camera/CameraController.h"
 #include <ark/transform.h>
 #include <imgui/imgui.h>
 

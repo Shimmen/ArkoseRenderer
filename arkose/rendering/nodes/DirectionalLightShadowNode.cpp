@@ -2,7 +2,7 @@
 
 #include "core/math/Frustum.h"
 #include "rendering/GpuScene.h"
-#include "rendering/scene/lights/Light.h"
+#include "scene/lights/Light.h"
 #include "rendering/util/ScopedDebugZone.h"
 #include "utility/Profiling.h"
 #include <imgui.h>

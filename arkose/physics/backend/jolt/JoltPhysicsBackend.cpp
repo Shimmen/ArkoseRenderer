@@ -4,8 +4,8 @@
 #include "core/Logging.h"
 #include "physics/backend/PhysicsLayers.h"
 #include "physics/backend/jolt/JoltVisualiser.h"
-#include "rendering/scene/Model.h"
-#include "rendering/scene/Transform.h"
+#include "scene/Model.h"
+#include "scene/Transform.h"
 #include "utility/Profiling.h"
 
 #include <cstdarg> // for va_list, va_start

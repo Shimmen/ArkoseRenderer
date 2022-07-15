@@ -2,7 +2,7 @@
 
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/GpuScene.h"
-#include "rendering/scene/Model.h"
+#include "scene/Model.h"
 
 class PickingNode final : public RenderPipelineNode {
 public:

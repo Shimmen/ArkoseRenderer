@@ -7,7 +7,7 @@
 #include <vector>
 
 // TODO: Avoid importing frontend stuff from backend
-#include "rendering/scene/Transform.h" // for Transform object
+#include "scene/Transform.h" // for Transform object
 
 class UploadBuffer;
 

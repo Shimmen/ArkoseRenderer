@@ -1,8 +1,8 @@
 #pragma once
 
-#include "rendering/scene/Material.h"
-#include "rendering/scene/Mesh.h"
-#include "rendering/scene/Transform.h"
+#include "scene/Material.h"
+#include "scene/Mesh.h"
+#include "scene/Transform.h"
 #include <functional>
 #include <ark/vector.h>
 

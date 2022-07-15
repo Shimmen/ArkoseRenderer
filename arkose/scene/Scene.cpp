@@ -1,9 +1,9 @@
 #include "Scene.h"
 
 #include "core/Assert.h"
-#include "rendering/camera/Camera.h"
 #include "rendering/GpuScene.h"
-#include "rendering/scene/models/GltfModel.h"
+#include "scene/camera/Camera.h"
+#include "scene/models/GltfModel.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
 #include "utility/FileIO.h"

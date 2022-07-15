@@ -1,7 +1,7 @@
 #pragma once
 
-#include "rendering/scene/lights/Light.h"
-#include "rendering/scene/Transform.h"
+#include "scene/lights/Light.h"
+#include "scene/Transform.h"
 #include "utility/IESProfile.h"
 #include <ark/transform.h>
 

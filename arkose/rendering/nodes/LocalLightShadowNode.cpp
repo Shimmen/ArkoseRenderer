@@ -2,8 +2,8 @@
 
 #include "core/math/Frustum.h"
 #include "rendering/GpuScene.h"
-#include "rendering/scene/lights/Light.h"
-#include "rendering/scene/lights/SpotLight.h"
+#include "scene/lights/Light.h"
+#include "scene/lights/SpotLight.h"
 #include "rendering/util/ScopedDebugZone.h"
 #include "utility/Profiling.h"
 #include <ark/rect.h>

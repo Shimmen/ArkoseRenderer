@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rendering/camera/CameraController.h"
+#include "scene/camera/CameraController.h"
 #include <ark/matrix.h>
 #include <ark/vector.h>
 #include <ark/quaternion.h>

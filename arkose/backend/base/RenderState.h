@@ -6,7 +6,7 @@
 #include "backend/util/StateBindings.h"
 
 // TODO: Clean up: shouln't refer to frontend from backend!
-#include "rendering/scene/Vertex.h"
+#include "scene/Vertex.h"
 
 struct BlendState {
     bool enabled { false };

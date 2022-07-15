@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rendering/scene/Model.h"
+#include "scene/Model.h"
 #include <memory>
 #include <string>
 #include <tiny_gltf.h>

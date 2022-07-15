@@ -1,7 +1,7 @@
-#include "rendering/camera/FpsCameraController.h"
+#include "FpsCameraController.h"
 
 #include "core/Assert.h"
-#include "rendering/camera/Camera.h"
+#include "scene/camera/Camera.h"
 #include "utility/Input.h"
 #include <ark/transform.h>
 

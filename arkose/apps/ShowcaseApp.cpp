@@ -20,7 +20,10 @@
 #include "rendering/nodes/SSAONode.h"
 #include "rendering/nodes/TAANode.h"
 #include "rendering/nodes/TonemapNode.h"
-#include "rendering/scene/models/GltfModel.h"
+#include "scene/Scene.h"
+#include "scene/camera/Camera.h"
+#include "scene/models/GltfModel.h"
+#include "scene/lights/DirectionalLight.h"
 #include "utility/Input.h"
 #include "utility/Profiling.h"
 #include <imgui.h>

@@ -3,8 +3,8 @@
 #include "core/Handle.h"
 #include "core/parallel/TaskGraph.h"
 #include "rendering/RenderPipelineNode.h"
-#include "rendering/camera/Camera.h"
-#include "rendering/scene/Scene.h"
+#include "scene/Scene.h"
+#include "scene/camera/Camera.h"
 #include <memory>
 #include <optional>
 #include <string>

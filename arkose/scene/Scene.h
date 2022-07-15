@@ -2,10 +2,10 @@
 
 #include "Model.h"
 #include "rendering/RenderPipelineNode.h"
-#include "rendering/camera/Camera.h"
-#include "rendering/scene/ProbeGrid.h"
-#include "rendering/scene/lights/DirectionalLight.h"
-#include "rendering/scene/lights/SpotLight.h"
+#include "scene/camera/Camera.h"
+#include "scene/ProbeGrid.h"
+#include "scene/lights/DirectionalLight.h"
+#include "scene/lights/SpotLight.h"
 #include <memory>
 #include <nlohmann/json_fwd.hpp>
 #include <optional>

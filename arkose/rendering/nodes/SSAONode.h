@@ -1,8 +1,6 @@
 #pragma once
 
 #include "rendering/RenderPipelineNode.h"
-#include "rendering/GpuScene.h"
-#include "rendering/scene/Model.h"
 
 class SSAONode final : public RenderPipelineNode {
 public:

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "apps/App.h"
-#include "rendering/camera/FpsCameraController.h"
+#include "scene/camera/FpsCameraController.h"
 
 class ShowcaseApp : public App {
 public:

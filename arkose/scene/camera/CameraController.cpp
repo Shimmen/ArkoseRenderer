@@ -1,6 +1,6 @@
-#include "rendering/camera/CameraController.h"
+#include "CameraController.h"
 
-#include "rendering/camera/Camera.h"
+#include "scene/camera/Camera.h"
 
 void CameraController::takeControlOfCamera(Camera& camera)
 {

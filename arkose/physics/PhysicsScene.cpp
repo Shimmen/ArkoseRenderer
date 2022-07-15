@@ -2,7 +2,7 @@
 
 #include "core/Assert.h"
 #include "core/Logging.h"
-#include "rendering/scene/Transform.h"
+#include "scene/Transform.h"
 #include "physics/backend/base/PhysicsBackend.h"
 
 PhysicsScene::PhysicsScene(Scene& scene, PhysicsBackend& backend)

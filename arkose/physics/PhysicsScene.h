@@ -2,7 +2,7 @@
 
 #include "physics/HandleTypes.h"
 #include "physics/MotionType.h"
-#include "rendering/scene/Model.h"
+#include "scene/Model.h"
 
 class Transform;
 class Scene;

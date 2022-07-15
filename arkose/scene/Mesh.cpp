@@ -2,7 +2,7 @@
 
 #include "rendering/Registry.h"
 #include "rendering/GpuScene.h"
-#include "rendering/scene/Model.h"
+#include "scene/Model.h"
 #include "utility/Profiling.h"
 #include <array>
 

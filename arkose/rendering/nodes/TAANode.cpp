@@ -1,6 +1,6 @@
 #include "TAANode.h"
 
-#include "rendering/camera/Camera.h"
+#include "scene/camera/Camera.h"
 #include <imgui.h>
 
 TAANode::TAANode(Camera& camera)

@@ -2,7 +2,7 @@
 
 #include "rendering/Registry.h"
 #include "rendering/RenderPipeline.h"
-#include "rendering/scene/Scene.h"
+#include "scene/Scene.h"
 
 class App {
 public:
