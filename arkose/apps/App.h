@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Registry.h"
-#include "RenderPipeline.h"
+#include "rendering/Registry.h"
+#include "rendering/RenderPipeline.h"
 #include "rendering/scene/Scene.h"
 
 class App {

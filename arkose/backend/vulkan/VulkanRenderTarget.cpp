@@ -1,6 +1,7 @@
 #include "VulkanRenderTarget.h"
 
 #include "backend/vulkan/VulkanBackend.h"
+#include "core/Logging.h"
 #include "utility/Profiling.h"
 
 VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment> attachments, bool imageless, QuirkMode quirkMode)

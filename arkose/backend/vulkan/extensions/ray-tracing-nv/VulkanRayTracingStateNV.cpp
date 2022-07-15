@@ -2,6 +2,7 @@
 
 #include "backend/vulkan/VulkanBackend.h"
 #include "backend/shader/ShaderManager.h"
+#include "core/Logging.h"
 #include "utility/Profiling.h"
 
 VulkanRayTracingStateNV::VulkanRayTracingStateNV(Backend& backend, ShaderBindingTable sbt, const StateBindings& stateBindings, uint32_t maxRecursionDepth)

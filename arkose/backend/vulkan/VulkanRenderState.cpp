@@ -2,6 +2,7 @@
 
 #include "backend/vulkan/VulkanBackend.h"
 #include "backend/shader/ShaderManager.h"
+#include "core/Logging.h"
 #include "utility/Profiling.h"
 
 VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& renderTarget, VertexLayout vertexLayout,

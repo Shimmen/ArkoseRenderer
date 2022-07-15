@@ -3,6 +3,8 @@
 #include "backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.h"
 #include "backend/shader/ShaderManager.h"
 #include "backend/vulkan/VulkanBackend.h"
+#include "backend/util/UploadBuffer.h"
+#include "core/Logging.h"
 
 VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceCount, std::vector<RTGeometryInstance> initialInstances)
     : TopLevelAS(backend, maxInstanceCount)

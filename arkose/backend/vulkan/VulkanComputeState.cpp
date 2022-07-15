@@ -2,6 +2,7 @@
 
 #include "backend/vulkan/VulkanBackend.h"
 #include "backend/shader/ShaderManager.h"
+#include "core/Logging.h"
 #include "utility/Profiling.h"
 
 VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vector<BindingSet*> bindingSets)

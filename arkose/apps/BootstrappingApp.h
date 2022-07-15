@@ -1,7 +1,6 @@
 #pragma once
 
-#include "rendering/App.h"
-#include "rendering/scene/Scene.h"
+#include "apps/App.h"
 
 class BootstrappingApp : public App {
 public:

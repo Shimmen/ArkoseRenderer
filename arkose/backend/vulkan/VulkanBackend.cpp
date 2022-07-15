@@ -10,6 +10,7 @@
 #include "core/Conversion.h"
 #include "core/Defer.h"
 #include "rendering/Registry.h"
+#include "rendering/RenderPipeline.h"
 #include "utility/FileIO.h"
 #include "core/Logging.h"
 #include "utility/Profiling.h"

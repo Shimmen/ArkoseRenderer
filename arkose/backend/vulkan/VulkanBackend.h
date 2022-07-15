@@ -6,11 +6,11 @@
 #include "backend/vulkan/extensions/debug-utils/VulkanDebugUtils.h"
 #include "backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.h"
 #include "backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingNV.h"
-#include "rendering/App.h"
 #include "utility/AvgElapsedTimer.h"
 #include <array>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>

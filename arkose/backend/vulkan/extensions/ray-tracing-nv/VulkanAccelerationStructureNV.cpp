@@ -2,6 +2,8 @@
 
 #include "backend/vulkan/VulkanBackend.h"
 #include "backend/shader/ShaderManager.h"
+#include "backend/util/UploadBuffer.h"
+#include "core/Logging.h"
 
 VulkanTopLevelASNV::VulkanTopLevelASNV(Backend& backend, uint32_t maxInstanceCount, std::vector<RTGeometryInstance> initialInstances)
     : TopLevelAS(backend, maxInstanceCount)
