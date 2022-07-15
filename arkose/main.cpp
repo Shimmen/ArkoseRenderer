@@ -1,10 +1,10 @@
 #include "apps/App.h"
-#include "backend/base/Backend.h"
-#include "backend/shader/ShaderManager.h"
 #include "core/Logging.h"
 #include "core/parallel/TaskGraph.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
+#include "rendering/backend/base/Backend.h"
+#include "rendering/backend/shader/ShaderManager.h"
 #include "utility/Input.h"
 #include "utility/Profiling.h"
 

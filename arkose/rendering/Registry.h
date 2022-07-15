@@ -2,9 +2,9 @@
 
 #include "AppState.h"
 #include "NodeDependency.h"
-#include "backend/base/Backend.h"
-#include "backend/Resources.h"
-#include "backend/util/UploadBuffer.h"
+#include "rendering/backend/base/Backend.h"
+#include "rendering/backend/Resources.h"
+#include "rendering/backend/util/UploadBuffer.h"
 #include "utility/Image.h"
 #include "core/Assert.h"
 #include "core/Logging.h"

@@ -1,6 +1,6 @@
 #include "IESProfile.h"
 
-#include "backend/Resources.h"
+#include "rendering/backend/Resources.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "rendering/Registry.h"

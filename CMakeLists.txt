@@ -33,44 +33,6 @@ add_executable(ArkoseRenderer
     arkose/main.cpp
     arkose/apps/BootstrappingApp.cpp
     arkose/apps/ShowcaseApp.cpp
-    arkose/backend/Resource.cpp
-    arkose/backend/shader/Shader.cpp
-    arkose/backend/shader/ShaderFile.cpp
-    arkose/backend/shader/ShaderManager.cpp
-    arkose/backend/base/AccelerationStructure.cpp
-    arkose/backend/base/Backend.cpp
-    arkose/backend/base/BindingSet.cpp
-    arkose/backend/base/Buffer.cpp
-    arkose/backend/base/ComputeState.cpp
-    arkose/backend/base/RayTracingState.cpp
-    arkose/backend/base/RenderState.cpp
-    arkose/backend/base/RenderTarget.cpp
-    arkose/backend/base/Texture.cpp
-    arkose/backend/util/StateBindings.cpp
-    arkose/backend/util/UploadBuffer.cpp
-    arkose/backend/d3d12/D3D12Backend.cpp
-    arkose/backend/d3d12/D3D12BindingSet.cpp
-    arkose/backend/d3d12/D3D12Buffer.cpp
-    arkose/backend/d3d12/D3D12CommandList.cpp
-    arkose/backend/d3d12/D3D12ComputeState.cpp
-    arkose/backend/d3d12/D3D12RenderState.cpp
-    arkose/backend/d3d12/D3D12RenderTarget.cpp
-    arkose/backend/d3d12/D3D12Texture.cpp
-    arkose/backend/vulkan/VulkanBackend.cpp
-    arkose/backend/vulkan/VulkanBindingSet.cpp
-    arkose/backend/vulkan/VulkanBuffer.cpp
-    arkose/backend/vulkan/VulkanCommandList.cpp
-    arkose/backend/vulkan/VulkanComputeState.cpp
-    arkose/backend/vulkan/VulkanRenderState.cpp
-    arkose/backend/vulkan/VulkanRenderTarget.cpp
-    arkose/backend/vulkan/VulkanTexture.cpp
-    arkose/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.cpp
-    arkose/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.cpp
-    arkose/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.cpp
-    arkose/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.cpp
-    arkose/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingNV.cpp
-    arkose/backend/vulkan/extensions/ray-tracing-nv/VulkanAccelerationStructureNV.cpp
-    arkose/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingStateNV.cpp
     arkose/core/math/Fibonacci.cpp
     arkose/core/math/Frustum.cpp
     arkose/core/math/Halton.cpp
@@ -83,6 +45,44 @@ add_executable(ArkoseRenderer
     arkose/rendering/Registry.cpp
     arkose/rendering/RenderPipeline.cpp
     arkose/rendering/RenderPipelineNode.cpp
+    arkose/rendering/backend/Resource.cpp
+    arkose/rendering/backend/shader/Shader.cpp
+    arkose/rendering/backend/shader/ShaderFile.cpp
+    arkose/rendering/backend/shader/ShaderManager.cpp
+    arkose/rendering/backend/base/AccelerationStructure.cpp
+    arkose/rendering/backend/base/Backend.cpp
+    arkose/rendering/backend/base/BindingSet.cpp
+    arkose/rendering/backend/base/Buffer.cpp
+    arkose/rendering/backend/base/ComputeState.cpp
+    arkose/rendering/backend/base/RayTracingState.cpp
+    arkose/rendering/backend/base/RenderState.cpp
+    arkose/rendering/backend/base/RenderTarget.cpp
+    arkose/rendering/backend/base/Texture.cpp
+    arkose/rendering/backend/util/StateBindings.cpp
+    arkose/rendering/backend/util/UploadBuffer.cpp
+    arkose/rendering/backend/d3d12/D3D12Backend.cpp
+    arkose/rendering/backend/d3d12/D3D12BindingSet.cpp
+    arkose/rendering/backend/d3d12/D3D12Buffer.cpp
+    arkose/rendering/backend/d3d12/D3D12CommandList.cpp
+    arkose/rendering/backend/d3d12/D3D12ComputeState.cpp
+    arkose/rendering/backend/d3d12/D3D12RenderState.cpp
+    arkose/rendering/backend/d3d12/D3D12RenderTarget.cpp
+    arkose/rendering/backend/d3d12/D3D12Texture.cpp
+    arkose/rendering/backend/vulkan/VulkanBackend.cpp
+    arkose/rendering/backend/vulkan/VulkanBindingSet.cpp
+    arkose/rendering/backend/vulkan/VulkanBuffer.cpp
+    arkose/rendering/backend/vulkan/VulkanCommandList.cpp
+    arkose/rendering/backend/vulkan/VulkanComputeState.cpp
+    arkose/rendering/backend/vulkan/VulkanRenderState.cpp
+    arkose/rendering/backend/vulkan/VulkanRenderTarget.cpp
+    arkose/rendering/backend/vulkan/VulkanTexture.cpp
+    arkose/rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.cpp
+    arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.cpp
+    arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.cpp
+    arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.cpp
+    arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingNV.cpp
+    arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanAccelerationStructureNV.cpp
+    arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingStateNV.cpp
     arkose/rendering/nodes/BloomNode.cpp
     arkose/rendering/nodes/CullingNode.cpp
     arkose/rendering/nodes/DDGINode.cpp

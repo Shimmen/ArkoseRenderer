@@ -1,6 +1,6 @@
 #include "GpuScene.h"
 
-#include "backend/Resources.h"
+#include "rendering/backend/Resources.h"
 #include "core/Conversion.h"
 #include "core/Logging.h"
 #include "core/parallel/TaskGraph.h"

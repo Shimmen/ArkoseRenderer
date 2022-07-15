@@ -2,7 +2,7 @@
 
 // Specify backends to use
 
-#include "backend/base/Backend.h"
+#include "rendering/backend/base/Backend.h"
 #include "physics/backend/base/PhysicsBackend.h"
 
 static constexpr auto SelectedBackendType = Backend::Type::Vulkan;
