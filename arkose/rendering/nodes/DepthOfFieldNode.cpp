@@ -1,6 +1,6 @@
 #include "DepthOfFieldNode.h"
 
-#include "rendering/scene/GpuScene.h"
+#include "rendering/GpuScene.h"
 #include <imgui.h>
 
 RenderPipelineNode::ExecuteCallback DepthOfFieldNode::construct(GpuScene& scene, Registry& reg)

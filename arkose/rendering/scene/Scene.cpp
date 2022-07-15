@@ -2,7 +2,7 @@
 
 #include "core/Assert.h"
 #include "rendering/camera/Camera.h"
-#include "rendering/scene/GpuScene.h"
+#include "rendering/GpuScene.h"
 #include "rendering/scene/models/GltfModel.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"

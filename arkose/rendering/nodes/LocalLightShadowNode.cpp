@@ -1,7 +1,7 @@
 #include "LocalLightShadowNode.h"
 
 #include "core/math/Frustum.h"
-#include "rendering/scene/GpuScene.h"
+#include "rendering/GpuScene.h"
 #include "rendering/scene/lights/Light.h"
 #include "rendering/scene/lights/SpotLight.h"
 #include "rendering/util/ScopedDebugZone.h"

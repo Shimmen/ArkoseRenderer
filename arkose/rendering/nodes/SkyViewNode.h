@@ -1,7 +1,7 @@
 #pragma once
 
 #include "rendering/RenderPipelineNode.h"
-#include "rendering/scene/GpuScene.h"
+#include "rendering/GpuScene.h"
 
 class SkyViewNode final : public RenderPipelineNode {
 public:

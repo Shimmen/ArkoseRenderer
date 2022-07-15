@@ -2,8 +2,8 @@
 
 #include "rendering/RenderPipelineNode.h"
 #include "RTData.h"
+#include "rendering/GpuScene.h"
 #include "rendering/scene/Model.h"
-#include "rendering/scene/GpuScene.h"
 
 class RTDirectLightNode final : public RenderPipelineNode {
 public:

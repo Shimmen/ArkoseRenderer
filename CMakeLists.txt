@@ -79,6 +79,10 @@ add_executable(ArkoseRenderer
     arkose/physics/backend/base/PhysicsBackend.cpp
     arkose/physics/backend/jolt/JoltPhysicsBackend.cpp
     arkose/physics/backend/jolt/JoltVisualiser.cpp
+    arkose/rendering/GpuScene.cpp
+    arkose/rendering/Registry.cpp
+    arkose/rendering/RenderPipeline.cpp
+    arkose/rendering/RenderPipelineNode.cpp
     arkose/rendering/camera/Camera.cpp
     arkose/rendering/camera/CameraController.cpp
     arkose/rendering/camera/FpsCameraController.cpp
@@ -102,9 +106,6 @@ add_executable(ArkoseRenderer
     arkose/rendering/nodes/SSAONode.cpp
     arkose/rendering/nodes/TAANode.cpp
     arkose/rendering/nodes/TonemapNode.cpp
-    arkose/rendering/Registry.cpp
-    arkose/rendering/RenderPipeline.cpp
-    arkose/rendering/RenderPipelineNode.cpp
     arkose/rendering/scene/lights/DirectionalLight.cpp
     arkose/rendering/scene/lights/SpotLight.cpp
     arkose/rendering/scene/Material.cpp
@@ -113,7 +114,6 @@ add_executable(ArkoseRenderer
     arkose/rendering/scene/models/GltfModel.cpp
     arkose/rendering/scene/ProbeGrid.cpp
     arkose/rendering/scene/Scene.cpp
-    arkose/rendering/scene/GpuScene.cpp
     arkose/rendering/scene/Vertex.cpp
     arkose/utility/AvgElapsedTimer.cpp
     arkose/utility/FileIO.cpp

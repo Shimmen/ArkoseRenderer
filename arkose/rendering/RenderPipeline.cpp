@@ -2,7 +2,7 @@
 
 #include "core/Logging.h"
 #include "utility/Profiling.h"
-#include "rendering/scene/GpuScene.h"
+#include "rendering/GpuScene.h"
 #include <fmt/format.h>
 
 RenderPipeline::RenderPipeline(GpuScene* scene)

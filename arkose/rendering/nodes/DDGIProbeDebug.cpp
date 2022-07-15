@@ -1,6 +1,6 @@
 #include "DDGIProbeDebug.h"
 
-#include "rendering/scene/GpuScene.h"
+#include "rendering/GpuScene.h"
 #include "core/Logging.h"
 #include "utility/Profiling.h"
 #include <imgui.h>

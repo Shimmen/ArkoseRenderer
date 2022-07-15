@@ -1,6 +1,6 @@
 #include "RTReflectionsNode.h"
 
-#include "rendering/scene/GpuScene.h"
+#include "rendering/GpuScene.h"
 #include <imgui.h>
 
 RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene, Registry& reg)

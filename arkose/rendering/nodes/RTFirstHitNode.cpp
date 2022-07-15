@@ -1,6 +1,6 @@
 #include "RTFirstHitNode.h"
 
-#include "rendering/scene/GpuScene.h"
+#include "rendering/GpuScene.h"
 
 RenderPipelineNode::ExecuteCallback RTFirstHitNode::construct(GpuScene& scene, Registry& reg)
 {

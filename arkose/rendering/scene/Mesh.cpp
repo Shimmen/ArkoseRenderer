@@ -1,8 +1,8 @@
 #include "Mesh.h"
 
 #include "rendering/Registry.h"
+#include "rendering/GpuScene.h"
 #include "rendering/scene/Model.h"
-#include "rendering/scene/GpuScene.h"
 #include "utility/Profiling.h"
 #include <array>
 

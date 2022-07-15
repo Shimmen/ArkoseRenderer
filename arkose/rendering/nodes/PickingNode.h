@@ -1,8 +1,8 @@
 #pragma once
 
 #include "rendering/RenderPipelineNode.h"
+#include "rendering/GpuScene.h"
 #include "rendering/scene/Model.h"
-#include "rendering/scene/GpuScene.h"
 
 class PickingNode final : public RenderPipelineNode {
 public:
