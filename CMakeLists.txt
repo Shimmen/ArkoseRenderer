@@ -46,7 +46,6 @@ add_executable(ArkoseRenderer
     arkose/backend/base/RenderState.cpp
     arkose/backend/base/RenderTarget.cpp
     arkose/backend/base/Texture.cpp
-    arkose/core/parallel/TaskGraph.cpp
     arkose/backend/util/StateBindings.cpp
     arkose/backend/util/UploadBuffer.cpp
     arkose/backend/d3d12/D3D12Backend.cpp
@@ -72,9 +71,10 @@ add_executable(ArkoseRenderer
     arkose/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingNV.cpp
     arkose/backend/vulkan/extensions/ray-tracing-nv/VulkanAccelerationStructureNV.cpp
     arkose/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingStateNV.cpp
-    arkose/math/Fibonacci.cpp
-    arkose/math/Frustum.cpp
-    arkose/math/Halton.cpp
+    arkose/core/math/Fibonacci.cpp
+    arkose/core/math/Frustum.cpp
+    arkose/core/math/Halton.cpp
+    arkose/core/parallel/TaskGraph.cpp
     arkose/physics/PhysicsScene.cpp
     arkose/physics/backend/base/PhysicsBackend.cpp
     arkose/physics/backend/jolt/JoltPhysicsBackend.cpp

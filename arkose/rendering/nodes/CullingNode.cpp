@@ -1,6 +1,6 @@
 #include "CullingNode.h"
 
-#include "math/Frustum.h"
+#include "core/math/Frustum.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 

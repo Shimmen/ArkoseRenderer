@@ -1,6 +1,6 @@
 #pragma once
 
-#include "math/Frustum.h"
+#include "core/math/Frustum.h"
 #include "rendering/RenderPipelineNode.h"
 #include <vector>
 #include <ark/rect.h>
