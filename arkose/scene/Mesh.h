@@ -3,7 +3,7 @@
 #include "rendering/backend/util/DrawCall.h"
 #include "rendering/backend/Resources.h"
 #include "core/math/Sphere.h"
-#include "scene/Material.h"
+#include "rendering/Material.h"
 #include "scene/Transform.h"
 #include "scene/Vertex.h"
 #include <ark/aabb.h>

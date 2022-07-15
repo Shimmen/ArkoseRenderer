@@ -1,6 +1,6 @@
 #pragma once
 
-#include "scene/Material.h"
+#include "rendering/Material.h"
 #include "scene/Mesh.h"
 #include "scene/Transform.h"
 #include <functional>

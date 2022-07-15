@@ -42,6 +42,7 @@ add_executable(ArkoseRenderer
     arkose/physics/backend/jolt/JoltPhysicsBackend.cpp
     arkose/physics/backend/jolt/JoltVisualiser.cpp
     arkose/rendering/GpuScene.cpp
+    arkose/rendering/Material.cpp
     arkose/rendering/Registry.cpp
     arkose/rendering/RenderPipeline.cpp
     arkose/rendering/RenderPipelineNode.cpp
@@ -103,7 +104,6 @@ add_executable(ArkoseRenderer
     arkose/rendering/nodes/SSAONode.cpp
     arkose/rendering/nodes/TAANode.cpp
     arkose/rendering/nodes/TonemapNode.cpp
-    arkose/scene/Material.cpp
     arkose/scene/Mesh.cpp
     arkose/scene/Model.cpp
     arkose/scene/ProbeGrid.cpp

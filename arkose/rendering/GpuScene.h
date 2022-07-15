@@ -22,7 +22,6 @@ class Mesh;
 class SpotLight;
 
 DEFINE_HANDLE_TYPE(TextureHandle);
-DEFINE_HANDLE_TYPE(MaterialHandle);
 
 class GpuScene final : public RenderPipelineNode {
 public:

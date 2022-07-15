@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/Handle.h"
 #include "rendering/backend/Resources.h"
 #include "utility/Image.h"
 #include <memory>
@@ -13,6 +14,8 @@
 
 class Mesh;
 class Registry;
+
+DEFINE_HANDLE_TYPE(MaterialHandle)
 
 class Material {
 public:
