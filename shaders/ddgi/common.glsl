@@ -19,6 +19,10 @@ struct Vertex {
 struct RayPayload {
 	vec3 color;
 	float hitT;
+	vec3 baseColor;
+	vec3 normal;
+	float roughness;
+	float metallic;
 };
 
 struct RayTracingPushConstants {

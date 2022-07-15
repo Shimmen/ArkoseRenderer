@@ -1,24 +1,34 @@
 #version 460
 
+#include <common/brdf.glsl>
 #include <common/namedUniforms.glsl>
 #include <common/spherical.glsl>
 #include <common/rayTracing.glsl>
 #include <ddgi/common.glsl>
+#include <ddgi/probeSampling.glsl>
 #include <shared/CameraState.h>
 
 layout(set = 0, binding = 0) uniform AccelerationStructure topLevelAS;
 layout(set = 0, binding = 1) uniform CameraStateBlock { CameraState camera; };
-layout(set = 0, binding = 2) uniform GridDataBlock { DDGIProbeGridData probeGridData; };
-layout(set = 0, binding = 3) uniform sampler2D environmentMap;
-layout(set = 0, binding = 4, rgba16f) uniform image2D surfelImage;
+layout(set = 0, binding = 2) uniform sampler2D environmentMap;
+layout(set = 0, binding = 3, rgba16f) uniform image2D surfelImage;
+
+layout(set = 4, binding = 0) uniform DDGIGridDataBlock { DDGIProbeGridData probeGridData; };
+layout(set = 4, binding = 1) uniform sampler2D ddgiIrradianceAtlas;
+layout(set = 4, binding = 2) uniform sampler2D ddgiVisibilityAtlas;
 
 NAMED_UNIFORMS_STRUCT(RayTracingPushConstants, pushConstants)
 
 layout(location = 0) rayPayload RayPayload payload;
 
 struct HitResult {
+    bool didHit;
     vec3 color;
     float dist;
+    vec3 baseColor;
+    vec3 normal;
+    float metallic;
+    float roughness;
 };
 
 HitResult tracePrimaryRay(vec3 origin, vec3 direction)
@@ -69,34 +79,29 @@ HitResult tracePrimaryRay(vec3 origin, vec3 direction)
     HitResult result;
     result.color = color;
     result.dist = tmax;
+    result.didHit = numHits > 0;
+    if (numHits > 0) {
+        result.baseColor = payload.baseColor;
+        result.normal = payload.normal;
+        result.metallic = payload.metallic;
+        result.roughness = payload.roughness;
+    }
     return result;
 }
 
-HitResult traceRayForProbe(uint probeIdx, uint sampleIdx, uint sampleCount)
+vec3 evaluateIndirectLightFromPreviousFrame(vec3 P, vec3 V, vec3 N, vec3 baseColor, float metallic)
 {
-    vec3 probePosition = calculateProbePosition(probeGridData, probeIdx);
-    vec3 sampleDirection = calculateRotatedSphericalFibonacciSample(probeIdx, sampleIdx, sampleCount, pushConstants.frameIdx);
-    HitResult result = tracePrimaryRay(probePosition, sampleDirection);
-    return result;
+    // For diffuse, simply pretend half vector is normal
+    vec3 H = N;
+
+    vec3 F0 = mix(vec3(DIELECTRIC_REFLECTANCE), baseColor, metallic);
+    vec3 F = F_Schlick(max(0.0, dot(V, H)), F0);
+
+    vec3 irradiance = sampleDynamicDiffuseGlobalIllumination(P, N, probeGridData, ddgiIrradianceAtlas, ddgiVisibilityAtlas);
+    vec3 indirectDiffuse = vec3(1.0 - metallic) * vec3(1.0 - F) * irradiance;
+
+    return indirectDiffuse;
 }
-
-/*
-// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-// TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO TODO
-vec3 evaluateIndirectLight(vec3 P, vec3 N, vec3 baseColor, float metallic, float roughness)
-{
-    // TODO: Use physically plausible amounts! For now we just use a silly estimate for F since we don't actually include glossy stuff at the moment.
-    float a = square(roughness);
-    float fakeF = pow(a, 5.0);
-
-    vec3 irradiance = sampleDynamicDiffuseGlobalIllumination(P, N, probeGridData, probeIrradianceTex, probeVisibilityTex);
-    vec3 indirectDiffuse = vec3(1.0 - metallic) * vec3(1.0 - fakeF) * baseColor * irradiance;
-
-    return indirectDiffuse + indirectGlossy;
-}
-*/
 
 void main()
 {
@@ -108,12 +113,23 @@ void main()
     uint probeIdx = rt_LaunchID.x;
     uint sampleIdx = rt_LaunchID.y;
     uint sampleCount = imageSize(surfelImage).y;
-    HitResult probeSample = traceRayForProbe(probeIdx, sampleIdx, sampleCount);
 
-    // TODO: Sample previous frame indirect for temporal multi-bounce!
-    //probeSample.color += evaluateIndirectLight(hitPos, hitNormal, hitBaseColor, hitMetallic, hitRoughness);
+    vec3 probePosition = calculateProbePosition(probeGridData, probeIdx);
+    vec3 sampleDirection = calculateRotatedSphericalFibonacciSample(probeIdx, sampleIdx, sampleCount, pushConstants.frameIdx);
+    HitResult hit = tracePrimaryRay(probePosition, sampleDirection);
 
-    imageStore(surfelImage, targetPixel, vec4(probeSample.color, probeSample.dist));
+    vec3 color = hit.color;
+
+    if (hit.didHit) {
+        vec3 hitPos = probePosition + hit.dist * sampleDirection;
+
+        // TODO: This seems way too dark..? Almost no difference to having only a single bounce
+
+        color += hit.color * evaluateIndirectLightFromPreviousFrame(hitPos, -sampleDirection, hit.normal, hit.baseColor, hit.metallic);
+        //color += vec3(0.2) * evaluateIndirectLightFromPreviousFrame(hitPos, -sampleDirection, hit.normal, hit.baseColor, hit.metallic);
+    }
+
+    imageStore(surfelImage, targetPixel, vec4(color, hit.dist));
 
     //////////////////////////
 

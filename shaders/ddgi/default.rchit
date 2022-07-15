@@ -90,7 +90,7 @@ vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, floa
 		float distanceAttenuation = 1.0 / square(distanceToLight); // epsilon term??
 
 		float cosConeAngle = dot(L, normalizedToLight);
-		float iesValue = evaluateIESLookupTable(textures[light.iesProfileIndex], light.outerConeHalfAngle, cosConeAngle);
+		float iesValue = evaluateIESLookupTable(textures[nonuniformEXT(light.iesProfileIndex)], light.outerConeHalfAngle, cosConeAngle);
 
 		vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
 		vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;
@@ -122,10 +122,10 @@ void main()
 
 	vec2 uv = v0.texCoord.xy * b.x + v1.texCoord.xy * b.y + v2.texCoord.xy * b.z;
 
-	vec3 baseColor = texture(textures[material.baseColor], uv).rgb;
-	vec3 emissive = texture(textures[material.emissive], uv).rgb;
+	vec3 baseColor = texture(textures[nonuniformEXT(material.baseColor)], uv).rgb;
+	vec3 emissive = texture(textures[nonuniformEXT(material.emissive)], uv).rgb;
 
-	vec4 metallicRoughness = texture(textures[material.metallicRoughness], uv);
+	vec4 metallicRoughness = texture(textures[nonuniformEXT(material.metallicRoughness)], uv);
 	float metallic = metallicRoughness.b;
 	float roughness = metallicRoughness.g;
 
@@ -146,4 +146,9 @@ void main()
 	//payload.color = vec3(uv, 0.0);
 	payload.color = color;
 	payload.hitT = rt_RayHitT;
+
+	payload.baseColor = baseColor;
+	payload.normal = N;
+	payload.metallic = metallic;
+	payload.roughness = roughness;
 }

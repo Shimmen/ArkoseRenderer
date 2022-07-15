@@ -32,7 +32,7 @@ void main()
 	const vec3 b = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
 	vec2 uv = v0.texCoord.xy * b.x + v1.texCoord.xy * b.y + v2.texCoord.xy * b.z;
-	float mask = texture(textures[material.baseColor], uv).a;
+	float mask = texture(textures[nonuniformEXT(material.baseColor)], uv).a;
 
 	if (mask < material.maskCutoff) {
 		ignoreIntersection();

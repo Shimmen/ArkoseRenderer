@@ -22,9 +22,6 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
     }
 
     const ProbeGrid& probeGrid = scene.scene().probeGrid();
-
-    ///////////////////////
-    // constructNode
     DDGIProbeGridData probeGridData { .gridDimensions = ivec4(probeGrid.gridDimensions.asIntVector(), 0),
                                       .probeSpacing = vec4(probeGrid.probeSpacing, 0.0f),
                                       .offsetToFirst = vec4(probeGrid.offsetToFirst, 0.0f) };
@@ -41,10 +38,9 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
                                                                 ShaderBinding::sampledTexture(probeAtlasIrradiance),
                                                                 ShaderBinding::sampledTexture(probeAtlasVisibility) });
     reg.publish("DDGISamplingSet", ddgiSamplingBindingSet);
-    ///////////////////////
 
     const int probeCount = probeGrid.probeCount(); // TODO: maybe don't expect to be able to update all in one surfel image?
-    static constexpr int maxNumProbeSamples = 128; // we dynamically choose to do fewer samples but not more since it's the fixed image size now
+    static constexpr int maxNumProbeSamples = 128; // we can dynamically choose to do fewer samples but not more since it's the fixed image size now
     Texture& surfelImage = reg.createTexture2D({ probeCount, maxNumProbeSamples }, Texture::Format::RGBA16F);
 
     #define USE_DEBUG_TARGET 0
@@ -57,7 +53,6 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ ShaderBinding::topLevelAccelerationStructure(sceneTLAS, ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
                                                          ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
-                                                         ShaderBinding::constantBuffer(probeGridDataBuffer, ShaderStage::RTRayGen),
                                                          ShaderBinding::sampledTexture(scene.environmentMapTexture(), ShaderStage::RTRayGen),
 #if USE_DEBUG_TARGET
                                                          ShaderBinding::storageTexture(storageImage, ShaderStage::RTRayGen) });
@@ -76,6 +71,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
     rtStateDataBindings.at(1, *reg.getBindingSet("SceneRTMeshDataSet"));
     rtStateDataBindings.at(2, scene.globalMaterialBindingSet());
     rtStateDataBindings.at(3, *reg.getBindingSet("SceneLightSet"));
+    rtStateDataBindings.at(4, ddgiSamplingBindingSet);
 
     constexpr uint32_t maxRecursionDepth = 2; // raygen -> closest/any hit -> shadow ray
     RayTracingState& surfelRayTracingState = reg.createRayTracingState(sbt, rtStateDataBindings, maxRecursionDepth);
@@ -213,14 +209,6 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
                 cmdList.dispatch(probeCountX, probeCountY, 1);
             }
         }
-
-        // 6. Ensure all probes have been updated
-        {
-            // TODO: The render graph should take care of this!
-            cmdList.textureWriteBarrier(probeAtlasIrradiance);
-            cmdList.textureWriteBarrier(probeAtlasVisibility);
-        }
-        
     };
 }
 
