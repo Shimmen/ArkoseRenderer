@@ -34,12 +34,27 @@ public:
 
     void set(vec3 translation, quat orientation, vec3 scale = vec3(1.0f))
     {
-        m_translation = translation;
-        m_orientation = orientation;
-        m_scale = scale;
+        setTranslation(translation);
+        setOrientation(orientation);
+        setScale(scale);
 
         // Reset matrix
         m_matrix = {};
+    }
+
+    void setTranslation(vec3 translation)
+    {
+        m_translation = translation;
+    }
+
+    void setOrientation(quat orientation)
+    {
+        m_orientation = orientation;
+    }
+
+    void setScale(vec3 scale)
+    {
+        m_scale = scale;
     }
 
     void setFromMatrix(mat4 matrix)
