@@ -252,6 +252,15 @@ struct tmat4<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
                  dot(trans.w, v) };
     }
 
+    constexpr tvec3<T> operator*(const tvec3<T>& v) const
+    {
+        // TODO(optimization): Maybe make a version which doesn't require transpose first!
+        tmat4<T> trans = transpose(*this);
+        return { dotVec4WithVec3ImplicitW1(trans.x, v),
+                 dotVec4WithVec3ImplicitW1(trans.y, v),
+                 dotVec4WithVec3ImplicitW1(trans.z, v) };
+    }
+
     constexpr tmat4<T> operator*(T f) const
     {
         return { f * x, f * y, f * z, f * w };

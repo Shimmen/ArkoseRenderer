@@ -636,6 +636,12 @@ inline f32 dot(const tvec4<f32>& lhs, const tvec4<f32>& rhs)
 }
 
 template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr T dotVec4WithVec3ImplicitW1(const tvec4<T>& lhs, const tvec3<T>& rhs)
+{
+    return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * static_cast<T>(1.0);
+}
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
 constexpr T length2(const tvec4<T>& v)
 {
     return dot(v, v);

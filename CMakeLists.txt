@@ -46,6 +46,7 @@ add_executable(ArkoseRenderer
     arkose/rendering/Registry.cpp
     arkose/rendering/RenderPipeline.cpp
     arkose/rendering/RenderPipelineNode.cpp
+    arkose/rendering/StaticMesh.cpp
     arkose/rendering/backend/Resource.cpp
     arkose/rendering/backend/shader/Shader.cpp
     arkose/rendering/backend/shader/ShaderFile.cpp
@@ -114,7 +115,8 @@ add_executable(ArkoseRenderer
     arkose/scene/camera/FpsCameraController.cpp
     arkose/scene/lights/DirectionalLight.cpp
     arkose/scene/lights/SpotLight.cpp
-    arkose/scene/models/GltfModel.cpp
+    arkose/scene/loader/GltfLoader.cpp
+    arkose/scene/models/GltfModel.cpp # todo: remove me!
     arkose/utility/AvgElapsedTimer.cpp
     arkose/utility/FileIO.cpp
     arkose/utility/IESProfile.cpp

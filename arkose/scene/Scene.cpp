@@ -3,6 +3,7 @@
 #include "core/Assert.h"
 #include "rendering/GpuScene.h"
 #include "scene/camera/Camera.h"
+#include "scene/loader/GltfLoader.h"
 #include "scene/models/GltfModel.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
@@ -242,6 +243,17 @@ void Scene::loadFromFile(const std::string& path)
         auto model = GltfModel::load(modelGltf);
         if (!model)
             continue;
+
+        {
+            TaskHandle handle = TaskGraph::get().enqueueTask([gltfFilePath = modelGltf]() {
+                // TODO: New API stuff, integrate properly
+                GltfLoader gltfLoader {};
+                std::optional<GltfLoader::LoadResult> result = gltfLoader.load(gltfFilePath, GltfLoader::LoadMode::Meshes);
+                if (result.has_value()) {
+                    // ..
+                }
+            });
+        }
 
         std::string name = jsonModel.at("name");
         model->setName(name);
