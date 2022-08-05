@@ -92,7 +92,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     if (rtxOn) {
         // Uncomment for ray tracing visualisations
-        pipeline.addNode<RTVisualisationNode>(RTVisualisationNode::Mode::DirectLight); sceneTexture = "RTVisualisation";
+        //pipeline.addNode<RTVisualisationNode>(RTVisualisationNode::Mode::DirectLight); sceneTexture = "RTVisualisation";
     }
 
     pipeline.addNode<TonemapNode>(sceneTexture);

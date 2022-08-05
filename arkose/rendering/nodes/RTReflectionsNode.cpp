@@ -14,17 +14,18 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
 
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ ShaderBinding::topLevelAccelerationStructure(sceneTLAS, ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
+                                                         ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
                                                          ShaderBinding::storageTexture(reflectionsImage, ShaderStage::RTRayGen),
                                                          ShaderBinding::sampledTexture(*reg.getTexture("SceneMaterial"), ShaderStage::RTRayGen),
                                                          ShaderBinding::sampledTexture(*reg.getTexture("SceneNormalVelocity"), ShaderStage::RTRayGen),
                                                          ShaderBinding::sampledTexture(*reg.getTexture("SceneDepth"), ShaderStage::RTRayGen),
-                                                         ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
                                                          ShaderBinding::sampledTexture(scene.environmentMapTexture(), ShaderStage::RTRayGen) });
 
     ShaderFile raygen { "rt-reflections/raygen.rgen" };
-    ShaderFile defaultMissShader { "rt-reflections/miss.rmiss" };
-    ShaderFile shadowMissShader { "rt-reflections/shadow.rmiss" };
-    HitGroup mainHitGroup { ShaderFile("rt-reflections/default.rchit"), ShaderFile("rt-reflections/masked.rahit") };
+    ShaderFile defaultMissShader { "rayTracing/common/miss.rmiss" };
+    ShaderFile shadowMissShader { "rayTracing/common/shadow.rmiss" };
+    HitGroup mainHitGroup { ShaderFile("rayTracing/common/opaque.rchit"),
+                            ShaderFile("rayTracing/common/masked.rahit") };
     ShaderBindingTable sbt { raygen, { mainHitGroup }, { defaultMissShader, shadowMissShader } };
 
     StateBindings stateDataBindings;
@@ -44,14 +45,14 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
         ImGui::SliderFloat("Injected ambient", &injectedAmbient, 0.0f, 1'000.0f);
         cmdList.setNamedUniform("ambientAmount", injectedAmbient * scene.lightPreExposure());
 
+        cmdList.setNamedUniform("environmentMultiplier", scene.preExposedEnvironmentBrightnessFactor());
+
         static float mirrorRoughnessThreshold = 0.2f;
         static float fullyDiffuseRoughnessThreshold = 0.96f;
         ImGui::SliderFloat("Perfect mirror threshold", &mirrorRoughnessThreshold, 0.0f, fullyDiffuseRoughnessThreshold - 0.01f);
         ImGui::SliderFloat("Fully diffuse threshold", &fullyDiffuseRoughnessThreshold, mirrorRoughnessThreshold + 0.01f, 1.0f);
-        cmdList.setNamedUniform("mirrorRoughnessThreshold", mirrorRoughnessThreshold);
-        cmdList.setNamedUniform("fullyDiffuseRoughnessThreshold", fullyDiffuseRoughnessThreshold);
-
-        cmdList.setNamedUniform("environmentMultiplier", scene.preExposedEnvironmentBrightnessFactor());
+        cmdList.setNamedUniform("parameter1", mirrorRoughnessThreshold);
+        cmdList.setNamedUniform("parameter2", fullyDiffuseRoughnessThreshold);
 
         cmdList.traceRays(appState.windowExtent());
     };

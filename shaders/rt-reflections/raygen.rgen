@@ -5,21 +5,22 @@
 #include <common/gBuffer.glsl>
 #include <common/namedUniforms.glsl>
 #include <common/spherical.glsl>
-#include <common/rayTracing.glsl>
-#include <rt-reflections/common.glsl>
+#include <rayTracing/common/common.glsl>
 #include <shared/CameraState.h>
 
 layout(set = 0, binding = 0) uniform AccelerationStructure topLevelAS;
-layout(set = 0, binding = 1, rgba16f) uniform writeonly image2D resultImage;
-layout(set = 0, binding = 2) uniform sampler2D sceneMaterialTex;
-layout(set = 0, binding = 3) uniform sampler2D sceneNormalTex;
-layout(set = 0, binding = 4) uniform sampler2D sceneDepthTex;
-layout(set = 0, binding = 5) uniform CameraStateBlock { CameraState camera; };
+layout(set = 0, binding = 1) uniform CameraStateBlock { CameraState camera; };
+layout(set = 0, binding = 2, rgba16f) uniform writeonly image2D resultImage;
+layout(set = 0, binding = 3) uniform sampler2D sceneMaterialTex;
+layout(set = 0, binding = 4) uniform sampler2D sceneNormalTex;
+layout(set = 0, binding = 5) uniform sampler2D sceneDepthTex;
 layout(set = 0, binding = 6) uniform sampler2D environmentTex;
 
-NAMED_UNIFORMS_STRUCT(PushConstants, pushConstants)
+NAMED_UNIFORMS_STRUCT(RayTracingPushConstants, constants);
+// parameter1 => mirrorRoughnessThreshold;
+// parameter2 => fullyDiffuseRoughnessThreshold;
 
-layout(location = 0) rayPayload RayPayload payload;
+layout(location = 0) rayPayload RayPayloadMain payload;
 
 void main()
 {
@@ -48,10 +49,10 @@ void main()
 	vec3 viewRay = normalize(cameraTarget.xyz - cameraOrigin.xyz);
 
 	vec3 rayDirection;
-	if (roughness <= pushConstants.mirrorRoughnessThreshold) {
+	if (roughness <= constants.parameter1 /*i.e. mirrorRoughnessThreshold*/) {
 		// Perfect mirror reflection
 		rayDirection = reflect(viewRay, N);
-	} else if (roughness >= pushConstants.fullyDiffuseRoughnessThreshold) {
+	} else if (roughness >= constants.parameter2 /*i.e. fullyDiffuseRoughnessThreshold*/) {
 		// TODO: Don't trace a ray, just sample the diffuse GI and weight accordinly
 		imageStore(resultImage, pixelCoord, vec4(1, 0, 1, 0));
 		return;
@@ -61,8 +62,8 @@ void main()
 		return;
 	}
 
-	float tmin = 0.001;
-	float tmax = 1000.0;
+	float tmin = camera.zNear;
+	float tmax = camera.zFar;
 
 	int numHits = 0;
 	vec3 reflectionColor = vec3(0.0);
@@ -83,7 +84,7 @@ void main()
 	// Draw environment if miss
 	if (numHits == 0) {
 		vec2 sampleUv = sphericalUvFromDirection(rayDirection);
-		reflectionColor = pushConstants.environmentMultiplier * texture(environmentTex, sampleUv).rgb;
+		reflectionColor = constants.environmentMultiplier * texture(environmentTex, sampleUv).rgb;
 	}
 
 	imageStore(resultImage, ivec2(rt_LaunchID.xy), vec4(reflectionColor, 0.0));

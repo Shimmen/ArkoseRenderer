@@ -20,10 +20,13 @@ struct RayPayloadShadow {
     bool inShadow;
 };
 
-// TODO: Remove this from here (but we need ambient..)
 struct RayTracingPushConstants {
     float ambientAmount;
     float environmentMultiplier;
+
+    // Well, I hate this, but not sure how to reuse the closest hit shader (where we need ambient amount) if we don't do this
+    float parameter1;
+    float parameter2;
 };
 
 #endif // RAYTRACING_COMMON_GLSL
