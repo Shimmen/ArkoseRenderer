@@ -264,23 +264,4 @@ void LocalLightShadowNode::drawShadowCasters(CommandList& cmdList, GpuScene& sce
             }
         }
     }
-
-    /*
-    scene.forEachMesh([&](size_t idx, Mesh& mesh) {
-        // Don't render translucent objects. We still do masked though and pretend they are opaque. This may fail
-        // in some cases but in general if the masked features are small enough it's not really noticable.
-        if (mesh.material().blendMode == Material::BlendMode::Translucent) {
-            return;
-        }
-
-        geometry::Sphere sphere = mesh.boundingSphere().transformed(mesh.transform().worldMatrix());
-        if (!lightFrustum.includesSphere(sphere))
-            return;
-
-        DrawCallDescription drawCall = mesh.drawCallDescription(m_vertexLayout, scene);
-        drawCall.firstInstance = static_cast<uint32_t>(idx);
-
-        cmdList.issueDrawCall(drawCall);
-    });
-    */
 }

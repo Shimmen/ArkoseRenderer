@@ -97,21 +97,6 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
             }
         }
 
-        /*
-        size_t numInputDrawables = scene.forEachMesh([&](size_t, Mesh& mesh) {
-            DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, scene);
-            indirectDrawableData.push_back({ .drawable = { .worldFromLocal = mesh.transform().worldMatrix(),
-                                                           .worldFromTangent = mat4(mesh.transform().worldNormalMatrix()),
-                                                           .previousFrameWorldFromLocal = mesh.transform().previousFrameWorldMatrix(),
-                                                           .materialIndex = mesh.materialIndex().value_or(0) },
-                                             .localBoundingSphere = vec4(mesh.boundingSphere().center(), mesh.boundingSphere().radius()),
-                                             .indexCount = drawCall.indexCount,
-                                             .firstIndex = drawCall.firstIndex,
-                                             .vertexOffset = drawCall.vertexOffset,
-                                             .materialBlendMode = mesh.material().blendModeValue() });
-        });
-        */
-
         size_t newSize = numInputDrawables * sizeof(IndirectShaderDrawable);
         ARKOSE_ASSERT(newSize <= indirectDrawableBuffer.size()); // fixme: grow instead of failing!
         uploadBuffer.upload(indirectDrawableData, indirectDrawableBuffer);
