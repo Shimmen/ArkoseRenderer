@@ -122,11 +122,7 @@ void main()
 
     if (hit.didHit) {
         vec3 hitPos = probePosition + hit.dist * sampleDirection;
-
-        // TODO: This seems way too dark..? Almost no difference to having only a single bounce
-
-        color += hit.color * evaluateIndirectLightFromPreviousFrame(hitPos, -sampleDirection, hit.normal, hit.baseColor, hit.metallic);
-        //color += vec3(0.2) * evaluateIndirectLightFromPreviousFrame(hitPos, -sampleDirection, hit.normal, hit.baseColor, hit.metallic);
+        color += hit.baseColor * evaluateIndirectLightFromPreviousFrame(hitPos, -sampleDirection, hit.normal, hit.baseColor, hit.metallic);
     }
 
     imageStore(surfelImage, targetPixel, vec4(color, hit.dist));
