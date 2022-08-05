@@ -1,6 +1,5 @@
 #pragma once
 
-#include "Model.h"
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/StaticMesh.h"
 #include "scene/camera/Camera.h"
@@ -52,10 +51,7 @@ public:
     const Camera& camera() const { return *m_currentMainCamera; }
     Camera& camera() { return *m_currentMainCamera; }
 
-    // Models // NOTE: Old stuff, to be removed!
-    //Model& addModel(std::unique_ptr<Model>);
-
-    // Meshes (TODO: Maybe the Scene shouldn't have any knowledge about meshes, and let the GpuScene handle all mesh logic?)
+    // Meshes
 
     StaticMeshInstance addMesh(std::shared_ptr<StaticMesh>, Transform);
 
@@ -122,9 +118,6 @@ private:
 
     Camera* m_currentMainCamera {};
     std::unordered_map<std::string, std::unique_ptr<Camera>> m_allCameras {};
-
-    // TODO: Remove me!
-    std::vector<std::unique_ptr<Model>> m_models {};
     
     // Various loaders, which needs to be kept in memory as they own their loaded resources until someone takes over
     GltfLoader m_gltfLoader {};

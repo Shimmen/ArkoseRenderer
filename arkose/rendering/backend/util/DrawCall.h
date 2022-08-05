@@ -10,9 +10,6 @@ struct DrawCallDescription {
         NonIndexed,
     };
 
-    // (optional)
-    //const class Mesh* sourceMesh { nullptr };
-
     const Buffer* vertexBuffer;
     const Buffer* indexBuffer;
 

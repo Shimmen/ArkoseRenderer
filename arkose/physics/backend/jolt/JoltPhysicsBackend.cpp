@@ -4,7 +4,6 @@
 #include "core/Logging.h"
 #include "physics/backend/PhysicsLayers.h"
 #include "physics/backend/jolt/JoltVisualiser.h"
-#include "scene/Model.h"
 #include "scene/Transform.h"
 #include "utility/Profiling.h"
 
@@ -248,6 +247,7 @@ void JoltPhysicsBackend::setGravity(vec3 gravity)
     m_physicsSystem->SetGravity(joltGravity);
 }
 
+/*
 PhysicsShapeHandle JoltPhysicsBackend::createPhysicsShapeForModel(const Model& model)
 {
     SCOPED_PROFILE_ZONE_PHYSICS();
@@ -316,6 +316,7 @@ PhysicsShapeHandle JoltPhysicsBackend::createPhysicsShapeForModel(const Model& m
         return PhysicsShapeHandle();
     }
 }
+*/
 
 PhysicsInstanceHandle JoltPhysicsBackend::createInstance(PhysicsShapeHandle shapeHandle, vec3 position, quat orientation, MotionType motionType, PhysicsLayer physicsLayer)
 {

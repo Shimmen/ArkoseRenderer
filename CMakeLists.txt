@@ -105,8 +105,6 @@ add_executable(ArkoseRenderer
     arkose/rendering/nodes/SSAONode.cpp
     arkose/rendering/nodes/TAANode.cpp
     arkose/rendering/nodes/TonemapNode.cpp
-    arkose/scene/Mesh.cpp
-    arkose/scene/Model.cpp
     arkose/scene/ProbeGrid.cpp
     arkose/scene/Scene.cpp
     arkose/scene/Vertex.cpp
@@ -116,7 +114,6 @@ add_executable(ArkoseRenderer
     arkose/scene/lights/DirectionalLight.cpp
     arkose/scene/lights/SpotLight.cpp
     arkose/scene/loader/GltfLoader.cpp
-    arkose/scene/models/GltfModel.cpp # todo: remove me!
     arkose/utility/AvgElapsedTimer.cpp
     arkose/utility/FileIO.cpp
     arkose/utility/IESProfile.cpp

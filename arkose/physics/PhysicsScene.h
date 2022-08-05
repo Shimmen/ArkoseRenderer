@@ -2,7 +2,7 @@
 
 #include "physics/HandleTypes.h"
 #include "physics/MotionType.h"
-#include "scene/Model.h"
+#include <ark/vector.h>
 
 class Transform;
 class Scene;
@@ -25,7 +25,7 @@ public:
     // For physics shapes that have a simpler version than the actual triangle mesh that info is kept inside the Model
     // and when we create an instance from a model we will register both shapes, one for simple and one for complex.
 
-    PhysicsInstanceHandle createInstanceFromModel(const Model&, MotionType);
+    //PhysicsInstanceHandle createInstanceFromModel(const Model&, MotionType);
     void removeInstance(PhysicsInstanceHandle);
 
     // TODO: Add interface for updating(?) physics objects

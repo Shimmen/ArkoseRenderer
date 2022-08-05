@@ -1,8 +1,6 @@
 #include "Material.h"
 
 #include "rendering/Registry.h"
-#include "scene/Mesh.h"
-#include "scene/Model.h"
 
 bool Material::TextureDescription::operator==(const TextureDescription& other) const
 {

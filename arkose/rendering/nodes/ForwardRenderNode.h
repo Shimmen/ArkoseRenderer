@@ -1,8 +1,6 @@
 #pragma once
 
 #include "rendering/RenderPipelineNode.h"
-#include "rendering/GpuScene.h"
-#include "scene/Model.h"
 
 class ForwardRenderNode final : public RenderPipelineNode {
 public:

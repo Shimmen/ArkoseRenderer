@@ -3,7 +3,6 @@
 #include "core/Assert.h"
 #include "rendering/GpuScene.h"
 #include "scene/camera/Camera.h"
-#include "scene/models/GltfModel.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
 #include "utility/FileIO.h"
@@ -52,14 +51,6 @@ void Scene::postRender()
 
     camera().postRender({});
 
-    // NOTE: We only want to do this on leaf-nodes right now, i.e. meshes not models.
-    // TODO: Remove this first loop, we only want to operate on instances soon
-    for (size_t i = 0; i < m_models.size(); ++i) {
-        Model& model = *m_models[i];
-        model.forEachMesh([&](Mesh& mesh) {
-            mesh.transform().postRender({});
-        });
-    }
     for (auto& instance : m_staticMeshInstances) {
         instance.transform.postRender({});
     }
@@ -74,27 +65,6 @@ void Scene::setupFromDescription(const Description& description)
         ARKOSE_LOG(Fatal, "Could not read scene file '{}', exiting", description.path);
     loadFromFile(description.path);
 }
-
-/*
-Model& Scene::addModel(std::unique_ptr<Model> model)
-{
-    ARKOSE_ASSERT(model);
-    m_models.push_back(std::move(model));
-    Model& addedModel = *m_models.back();
-
-    addedModel.forEachMesh([&](Mesh& mesh) {
-        gpuScene().registerMesh(mesh);
-    });
-
-    if (hasPhysicsScene()) {
-        // TODO: Keep track of the instance handle somewhere
-        // (possibly m_models contains a struct containing the Model* and the optional physics handle)
-        PhysicsInstanceHandle physicsInstanceHandle = physicsScene().createInstanceFromModel(addedModel, MotionType::Static);
-    }
-
-    return addedModel;
-}
-*/
 
 StaticMeshInstance Scene::addMesh(std::shared_ptr<StaticMesh> staticMesh, Transform transform)
 {
@@ -250,8 +220,6 @@ void Scene::loadFromFile(const std::string& path)
     for (auto& jsonModel : jsonScene.at("models")) {
         std::string modelGltf = jsonModel.at("gltf");
 
-        
-
         auto transform = jsonModel.at("transform");
         auto jsonRotation = transform.at("rotation");
 
@@ -268,61 +236,47 @@ void Scene::loadFromFile(const std::string& path)
         vec3 translation = readVec3(transform.at("translation"));
         vec3 scale = readVec3(transform.at("scale"));
 
-        std::string modelName = jsonModel.at("name");
+        GltfLoader::LoadResult result = m_gltfLoader.load(modelGltf, GltfLoader::LoadMode::Meshes);
 
-        if (true) {
+        // Register materials & create translation table from local to global material handles
 
-            GltfLoader::LoadResult result = m_gltfLoader.load(modelGltf, GltfLoader::LoadMode::Meshes);
+        std::unordered_map<MaterialHandle, MaterialHandle> materialHandleMap;
 
-            // Register materials & create translation table from local to global material handles
+        for (size_t localMaterialIdx = 0; localMaterialIdx < result.materials.size(); ++localMaterialIdx) {
 
-            std::unordered_map<MaterialHandle, MaterialHandle> materialHandleMap;
+            MaterialHandle localMaterialHandle = MaterialHandle(static_cast<MaterialHandle::IndexType>(localMaterialIdx));
+            MaterialHandle materialHandle = gpuScene().registerMaterial(*result.materials[localMaterialIdx]);
 
-            for (size_t localMaterialIdx = 0; localMaterialIdx < result.materials.size(); ++localMaterialIdx) {
+            materialHandleMap[localMaterialHandle] = materialHandle;
+        }
 
-                MaterialHandle localMaterialHandle = MaterialHandle(static_cast<MaterialHandle::IndexType>(localMaterialIdx));
-                MaterialHandle materialHandle = gpuScene().registerMaterial(*result.materials[localMaterialIdx]);
+        // Translate material handles for meshes
 
-                materialHandleMap[localMaterialHandle] = materialHandle;
-            }
+        for (auto& staticMesh : result.staticMeshes) {
 
-            // Translate material handles for meshes
+            // NOTE: We might want to add a suffix number for each separate mesh?
+            std::string modelName = jsonModel.at("name");
+            staticMesh->setName(modelName);
 
-            for (auto& staticMesh : result.staticMeshes) {
+            for (StaticMeshLOD& lod : staticMesh->LODs()) {
+                for (StaticMeshSegment& segment : lod.meshSegments) {
 
-                // NOTE: We might want to add a suffix number for each separate mesh?
-                staticMesh->setName(modelName);
+                    auto entry = materialHandleMap.find(segment.material);
+                    ARKOSE_ASSERT(entry != materialHandleMap.end());
 
-                for (StaticMeshLOD& lod : staticMesh->LODs()) {
-                    for (StaticMeshSegment& segment : lod.meshSegments) {
-
-                        auto entry = materialHandleMap.find(segment.material);
-                        ARKOSE_ASSERT(entry != materialHandleMap.end());
-
-                        segment.material = entry->second;
-                    }
+                    segment.material = entry->second;
                 }
             }
-
-            // Add meshes & create instances
-
-            Transform xform { translation, orientation, scale };
-
-            for (auto& staticMesh : result.staticMeshes) {
-                StaticMeshInstance instance = addMesh(staticMesh, xform);
-            }
-        } else {
-
-            auto model = GltfModel::load(modelGltf);
-            if (!model)
-                continue;
-
-            model->setName(modelName);
-            model->transform().set(translation, orientation, scale);
-
-            //addModel(std::move(model));
-
         }
+
+        // Add meshes & create instances
+
+        Transform xform { translation, orientation, scale };
+
+        for (auto& staticMesh : result.staticMeshes) {
+            StaticMeshInstance instance = addMesh(staticMesh, xform);
+        }
+        
     }
 
     for (auto& jsonLight : jsonScene.at("lights")) {

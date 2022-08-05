@@ -1,5 +1,6 @@
 #include "ForwardRenderNode.h"
 
+#include "rendering/GpuScene.h"
 #include "rendering/util/ScopedDebugZone.h"
 #include "utility/Profiling.h"
 #include <imgui.h>

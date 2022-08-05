@@ -7,7 +7,6 @@
 #include <ark/quaternion.h>
 #include <vector>
 
-class Model;
 class PhysicsShape;
 
 class PhysicsBackend {
@@ -30,7 +29,7 @@ public:
     virtual void setGravity(vec3) = 0;
 
     // Treat a whole model as a single rigid body (i.e. individual meshes can't move independently)
-    virtual PhysicsShapeHandle createPhysicsShapeForModel(const Model&) = 0;
+    //virtual PhysicsShapeHandle createPhysicsShapeForModel(const Model&) = 0;
 
     virtual PhysicsInstanceHandle createInstance(PhysicsShapeHandle, vec3 position, quat orientation, MotionType, PhysicsLayer) = 0;
 

@@ -44,17 +44,6 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
     }
 }
 
-/*
-size_t GpuScene::forEachMesh(std::function<void(size_t, Mesh&)> callback)
-{
-    size_t nextIndex = 0;
-    for (Mesh* mesh : m_managedMeshes) {
-        callback(nextIndex++, *mesh);
-    }
-    return nextIndex;
-}
-*/
-
 size_t GpuScene::forEachStaticMesh(std::function<void(size_t, StaticMesh&)> callback)
 {
     size_t nextIndex = 0;
@@ -236,6 +225,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
+        SCOPED_PROFILE_ZONE_NAMED("GpuScene update")
+
         // If we're using async texture updates, create textures for the images we've now loaded in
         // TODO: Also create the texture and set the data asynchronously so we avoid practically all stalls
         if (m_asyncLoadedImages.size() > 0) {
@@ -333,18 +324,6 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                     rasterizerMeshData.push_back(drawable);
                 }
             }
-
-            /*
-            for (int i = 0; i < meshCount(); ++i) {
-
-                const Mesh& mesh = *m_managedMeshes[i];
-                ShaderDrawable& drawable = m_rasterizerMeshData[i];
-
-                drawable.worldFromLocal = mesh.transform().worldMatrix();
-                drawable.worldFromTangent = mat4(mesh.transform().worldNormalMatrix());
-                drawable.previousFrameWorldFromLocal = mesh.transform().previousFrameWorldMatrix();
-            }
-            */
 
             uploadBuffer.upload(rasterizerMeshData, objectDataBuffer);
         }
@@ -526,40 +505,6 @@ void GpuScene::registerLight(DirectionalLight& light)
     m_managedDirectionalLights.push_back(managedLight);
 }
 
-/*
-void GpuScene::registerMesh(Mesh& mesh)
-{
-    SCOPED_PROFILE_ZONE();
-
-    m_managedMeshes.push_back(&mesh);
-
-    Material& material = mesh.material();
-    MaterialHandle materialHandle = registerMaterial(material);
-    ARKOSE_ASSERT(materialHandle.valid());
-
-    // TODO: This is the legacy path, get rid of it! CullingNode still uses it directly, but I am not so sure it should..
-    mesh.setMaterialIndex({}, materialHandle.indexOfType<int>());
-
-    // NOTE: Matrices are set at "render-time" before each frame starts
-    ShaderDrawable shaderDrawable;
-    shaderDrawable.materialIndex = materialHandle.indexOfType<int>();
-    m_rasterizerMeshData.push_back(shaderDrawable);
-
-    if (m_maintainRayTracingScene) {
-
-        uint32_t rtMeshIndex = static_cast<uint32_t>(m_rayTracingMeshData.size());
-
-        const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(m_rayTracingVertexLayout, *this);
-        m_rayTracingMeshData.push_back(RTTriangleMesh { .firstVertex = drawCallDesc.vertexOffset,
-                                                        .firstIndex = (int32_t)drawCallDesc.firstIndex,
-                                                        .materialIndex = materialHandle.indexOfType<int>() });
-
-        RTGeometryInstance rtGeometryInstance = createRTGeometryInstance(mesh, rtMeshIndex);
-        m_rayTracingGeometryInstances.push_back(rtGeometryInstance);
-    }
-}
-*/
-
 StaticMeshHandle GpuScene::registerStaticMesh(std::shared_ptr<StaticMesh> staticMesh)
 {
     // TODO: Maybe do some kind of caching here, and if we're trying to add the same mesh twice just ignore it and reuse the exisiting
@@ -571,27 +516,6 @@ StaticMeshHandle GpuScene::registerStaticMesh(std::shared_ptr<StaticMesh> static
     StaticMeshHandle handle = StaticMeshHandle(m_managedStaticMeshes.size());
     m_managedStaticMeshes.push_back(ManagedStaticMesh { .staticMesh = staticMesh });
 
-    /*
-    if (m_maintainRayTracingScene) {
-
-        // TODO: Make use of all LODs
-        ARKOSE_ASSERT(staticMesh->numLODs() >= 1);
-        StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
-
-        for (StaticMeshSegment& meshSegment : lod.meshSegments) {
-
-            uint32_t rtMeshIndex = static_cast<uint32_t>(m_rayTracingMeshData.size());
-
-            const DrawCallDescription& drawCallDesc = meshSegment.drawCallDescription(m_rayTracingVertexLayout, *this);
-            m_rayTracingMeshData.push_back(RTTriangleMesh { .firstVertex = drawCallDesc.vertexOffset,
-                                                            .firstIndex = (int32_t)drawCallDesc.firstIndex,
-                                                            .materialIndex = meshSegment.material.indexOfType<int>() });
-
-            RTGeometryInstance rtGeometryInstance = createRTGeometryInstance(meshSegment, rtMeshIndex);
-            m_rayTracingGeometryInstances.push_back(rtGeometryInstance);
-        }
-    }
-    */
 
     return handle;
 }
@@ -608,63 +532,6 @@ void GpuScene::ensureDrawCallIsAvailableForAll(VertexLayout vertexLayout)
     }
 }
 
-/*
-RTGeometryInstance GpuScene::createRTGeometryInstance(Mesh& mesh, uint32_t meshIdx)
-{
-    VertexLayout vertexLayout = { VertexComponent::Position3F };
-    size_t vertexStride = vertexLayout.packedVertexSize();
-    RTVertexFormat vertexFormat = RTVertexFormat::XYZ32F;
-
-    const DrawCallDescription& drawCallDesc = mesh.drawCallDescription(vertexLayout, *this);
-    ARKOSE_ASSERT(drawCallDesc.type == DrawCallDescription::Type ::Indexed);
-
-    IndexType indexType = globalIndexBufferType();
-    size_t indexStride = sizeofIndexType(indexType);
-
-    uint32_t indexOfFirstVertex = drawCallDesc.vertexOffset; // Yeah this is confusing naming for sure.. Offset should probably always be byte offset
-    size_t vertexOffset = indexOfFirstVertex * vertexStride;
-
-    RTTriangleGeometry geometry { .vertexBuffer = *drawCallDesc.vertexBuffer,
-                                  .vertexCount = drawCallDesc.vertexCount,
-                                  .vertexOffset = vertexOffset,
-                                  .vertexStride = vertexStride,
-                                  .vertexFormat = vertexFormat,
-                                  .indexBuffer = *drawCallDesc.indexBuffer,
-                                  .indexCount = drawCallDesc.indexCount,
-                                  .indexOffset = indexStride * drawCallDesc.firstIndex,
-                                  .indexType = indexType,
-                                  .transform = mesh.transform().localMatrix() };
-
-    uint8_t hitMask = 0x00;
-    switch (mesh.material().blendMode) {
-    case Material::BlendMode::Opaque:
-        hitMask = RT_HIT_MASK_OPAQUE;
-        break;
-    case Material::BlendMode::Masked:
-        hitMask = RT_HIT_MASK_MASKED;
-        break;
-    case Material::BlendMode::Translucent:
-        hitMask = RT_HIT_MASK_BLEND;
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-    }
-    ARKOSE_ASSERT(hitMask != 0);
-
-    m_sceneBottomLevelAccelerationStructures.emplace_back(backend().createBottomLevelAccelerationStructure({ geometry }));
-    BottomLevelAS& blas = *m_sceneBottomLevelAccelerationStructures.back();
-    m_totalBlasVramUsage += blas.sizeInMemory();
-
-    // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
-    RTGeometryInstance instance = { .blas = blas,
-                                    .transform = mesh.model()->transform(),
-                                    .shaderBindingTableOffset = 0, // todo: generalize!
-                                    .customInstanceId = meshIdx,
-                                    .hitMask = hitMask };
-
-    return instance;
-}
-*/
 std::unique_ptr<BottomLevelAS> GpuScene::createBottomLevelAccelerationStructure(StaticMeshSegment& meshSegment, uint32_t meshIdx)
 {
     VertexLayout vertexLayout = { VertexComponent::Position3F };
@@ -938,83 +805,12 @@ void GpuScene::unregisterTexture(TextureHandle handle)
     }
 }
 
-DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh& mesh, const VertexLayout& layout, std::optional<DrawCallDescription> alignWith)
-{
-    const size_t initialIndexBufferSize = 100'000 * sizeofIndexType(globalIndexBufferType());
-    const size_t initialVertexBufferSize = 50'000 * layout.packedVertexSize();
-
-    bool doAlign = alignWith.has_value();
-    //ARKOSE_ASSERT(!alignWith || alignWith->sourceMesh == &mesh);
-
-    std::vector<uint8_t> vertexData = mesh.vertexData(layout);
-
-    auto entry = m_globalVertexBuffers.find(layout);
-    if (entry == m_globalVertexBuffers.end()) {
-
-        size_t offset = doAlign ? (alignWith->vertexOffset * layout.packedVertexSize()) : 0;
-        size_t minRequiredBufferSize = offset + vertexData.size();
-
-        m_globalVertexBuffers[layout] = backend().createBuffer(std::max(initialVertexBufferSize, minRequiredBufferSize), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-        m_globalVertexBuffers[layout]->setName("SceneVertexBuffer");
-    }
-
-    Buffer& vertexBuffer = *m_globalVertexBuffers[layout];
-    size_t newDataStartOffset = doAlign
-        ? alignWith->vertexOffset * layout.packedVertexSize()
-        : m_nextFreeVertexIndex * layout.packedVertexSize();
-
-    vertexBuffer.updateDataAndGrowIfRequired(vertexData.data(), vertexData.size(), newDataStartOffset);
-
-    if (doAlign) {
-        // TODO: Maybe ensure we haven't already fitted this mesh+layout combo and is just overwriting at this point. Well, before doing it I guess..
-        DrawCallDescription reusedDrawCall = alignWith.value();
-        reusedDrawCall.vertexBuffer = m_globalVertexBuffers[layout].get();
-        return reusedDrawCall;
-    }
-
-    uint32_t vertexCount = (uint32_t)mesh.vertexCountForLayout(layout);
-    uint32_t vertexOffset = m_nextFreeVertexIndex;
-    m_nextFreeVertexIndex += vertexCount;
-
-
-    DrawCallDescription drawCall {};
-    //drawCall.sourceMesh = &mesh;
-
-    drawCall.vertexBuffer = &vertexBuffer;
-    drawCall.vertexCount = vertexCount;
-    drawCall.vertexOffset = vertexOffset;
-
-    // Fit index data
-    {
-        std::vector<uint32_t> indexData = mesh.indexData();
-        size_t requiredAdditionalSize = indexData.size() * sizeof(uint32_t);
-
-        if (m_global32BitIndexBuffer == nullptr) {
-            m_global32BitIndexBuffer = backend().createBuffer(std::max(initialIndexBufferSize, requiredAdditionalSize), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
-            m_global32BitIndexBuffer->setName("SceneIndexBuffer");
-        }
-
-        uint32_t firstIndex = m_nextFreeIndex;
-        m_nextFreeIndex += (uint32_t)indexData.size();
-
-        m_global32BitIndexBuffer->updateDataAndGrowIfRequired(indexData.data(), requiredAdditionalSize, firstIndex * sizeof(uint32_t));
-
-        drawCall.indexBuffer = m_global32BitIndexBuffer.get();
-        drawCall.indexCount = (uint32_t)indexData.size();
-        drawCall.indexType = IndexType::UInt32;
-        drawCall.firstIndex = firstIndex;
-    }
-
-    return drawCall;
-}
-
 DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<StaticMeshSegment>, const StaticMeshSegment& meshSegment, const VertexLayout& layout, std::optional<DrawCallDescription> alignWith)
 {
     const size_t initialIndexBufferSize = 100'000 * sizeofIndexType(globalIndexBufferType());
     const size_t initialVertexBufferSize = 50'000 * layout.packedVertexSize();
 
     bool doAlign = alignWith.has_value();
-    //ARKOSE_ASSERT(!alignWith || alignWith->sourceMesh == &mesh);
 
     std::vector<uint8_t> vertexData = meshSegment.assembleVertexData(layout);
 
@@ -1047,7 +843,6 @@ DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<StaticMeshSegme
     m_nextFreeVertexIndex += vertexCount;
 
     DrawCallDescription drawCall {};
-    //drawCall.sourceMesh = &mesh;
 
     drawCall.vertexBuffer = &vertexBuffer;
     drawCall.vertexCount = vertexCount;
@@ -1055,7 +850,7 @@ DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<StaticMeshSegme
 
     // Fit index data
     {
-        std::vector<uint32_t> indexData = meshSegment.indices;// mesh.indexData();
+        std::vector<uint32_t> indexData = meshSegment.indices;
         size_t requiredAdditionalSize = indexData.size() * sizeof(uint32_t);
 
         if (m_global32BitIndexBuffer == nullptr) {

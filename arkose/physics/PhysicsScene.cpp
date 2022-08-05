@@ -35,6 +35,7 @@ void PhysicsScene::commitInstancesAwaitingAdd()
     m_instancesAwaitingAdd.clear();
 }
 
+/*
 PhysicsInstanceHandle PhysicsScene::createInstanceFromModel(const Model& model, MotionType motionType)
 {
     SCOPED_PROFILE_ZONE_PHYSICS();
@@ -65,6 +66,7 @@ PhysicsInstanceHandle PhysicsScene::createInstanceFromModel(const Model& model, 
 
     return instanceHandle;
 }
+*/
 
 void PhysicsScene::removeInstance(PhysicsInstanceHandle instanceHandle)
 {

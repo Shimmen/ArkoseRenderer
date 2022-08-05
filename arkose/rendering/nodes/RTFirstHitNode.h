@@ -1,8 +1,6 @@
 #pragma once
 
 #include "rendering/RenderPipelineNode.h"
-#include "RTData.h"
-#include "scene/Model.h"
 
 class RTFirstHitNode final : public RenderPipelineNode {
 public:
