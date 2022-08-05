@@ -96,7 +96,10 @@ Image* Image::load(const std::string& imagePath, PixelType pixelType, bool skipR
         size = info.width * info.height * desiredNumberOfComponents * sizeof(stbi_uc);
     }
 
-    auto image = std::make_unique<Image>(MemoryType::EncodedImage, info, data, size);
+    uint8_t* dataPtr = reinterpret_cast<uint8_t*>(data);
+    std::vector<uint8_t> pixelByteData { dataPtr, dataPtr + size };
+
+    auto image = std::make_unique<Image>(MemoryType::EncodedImage, info, std::move(pixelByteData));
 
     {
         //SCOPED_PROFILE_ZONE_NAMED("Image cache mutex");
@@ -106,9 +109,8 @@ Image* Image::load(const std::string& imagePath, PixelType pixelType, bool skipR
     }
 }
 
-Image::Image(MemoryType type, Info info, void* data, size_t size)
-    : m_data(data)
-    , m_size(size)
+Image::Image(MemoryType type, Info info, std::vector<uint8_t> data)
+    : m_data(std::move(data))
     , m_info(info)
     , m_type(type)
 {

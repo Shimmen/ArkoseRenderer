@@ -2,6 +2,7 @@
 
 #include "utility/Hash.h"
 #include <string>
+#include <vector>
 
 class Image {
 public:
@@ -53,24 +54,22 @@ public:
     const Info& info() const { return m_info; }
 
     MemoryType memoryType() const { return m_type; }
-    const void* data() const { return m_data; }
-    size_t size() const { return m_size; }
+    const void* data() const { return m_data.data(); }
+    size_t size() const { return m_data.size(); }
 
-    Image(MemoryType, Info, void* data, size_t size);
+    Image(MemoryType, Info, std::vector<uint8_t> data);
     ~Image() = default;
 
     bool operator==(const Image& other) const
     {
         return m_info == other.m_info
             && m_data == other.m_data
-            && m_size == other.m_size
             && m_type == other.m_type;
     }
 
 private:
     Info m_info;
-    void* m_data; // NOTE: this memory is assumed to be owned by someone else
-    size_t m_size;
+    std::vector<uint8_t> m_data;
     MemoryType m_type;
 };
 

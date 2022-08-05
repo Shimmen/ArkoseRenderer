@@ -242,8 +242,9 @@ std::unique_ptr<Material> GltfMesh::createMaterial()
 
             size_t dataSize = bufferView.byteLength;
             const uint8_t* data = buffer.data.data() + bufferView.byteOffset;
+            std::vector<uint8_t> pixelByteData { data, data + dataSize };
 
-            desc = Material::TextureDescription(Image(Image::MemoryType::EncodedImage, info, (void*)data, dataSize));
+            desc = Material::TextureDescription(Image(Image::MemoryType::EncodedImage, info, std::move(pixelByteData)));
         }
 
         auto wrapModeFromTinyGltf = [](int filterMode) -> Texture::WrapMode {
