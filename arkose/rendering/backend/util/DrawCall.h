@@ -11,7 +11,7 @@ struct DrawCallDescription {
     };
 
     // (optional)
-    const class Mesh* sourceMesh { nullptr };
+    //const class Mesh* sourceMesh { nullptr };
 
     const Buffer* vertexBuffer;
     const Buffer* indexBuffer;

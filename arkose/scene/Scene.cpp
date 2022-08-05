@@ -3,7 +3,6 @@
 #include "core/Assert.h"
 #include "rendering/GpuScene.h"
 #include "scene/camera/Camera.h"
-#include "scene/loader/GltfLoader.h"
 #include "scene/models/GltfModel.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
@@ -50,11 +49,16 @@ void Scene::postRender()
     camera().postRender({});
 
     // NOTE: We only want to do this on leaf-nodes right now, i.e. meshes not models.
-    forEachModel([&](size_t modelIdx, Model& model) {
+    // TODO: Remove this first loop, we only want to operate on instances soon
+    for (size_t i = 0; i < m_models.size(); ++i) {
+        Model& model = *m_models[i];
         model.forEachMesh([&](Mesh& mesh) {
             mesh.transform().postRender({});
         });
-    });
+    }
+    for (auto& instance : m_staticMeshInstances) {
+        instance.transform.postRender({});
+    }
 }
 
 void Scene::setupFromDescription(const Description& description)
@@ -86,20 +90,20 @@ Model& Scene::addModel(std::unique_ptr<Model> model)
     return addedModel;
 }
 
-void Scene::forEachModel(std::function<void(size_t, const Model&)> callback) const
+StaticMeshInstance Scene::addMesh(std::shared_ptr<StaticMesh> staticMesh, Transform transform)
 {
-    for (size_t i = 0; i < m_models.size(); ++i) {
-        const Model& model = *m_models[i];
-        callback(i, model);
-    }
-}
+    StaticMeshHandle staticMeshHandle = gpuScene().registerStaticMesh(std::move(staticMesh));
 
-void Scene::forEachModel(std::function<void(size_t, Model&)> callback)
-{
-    for (size_t i = 0; i < m_models.size(); ++i) {
-        Model& model = *m_models[i];
-        callback(i, model);
+    m_staticMeshInstances.push_back({ .mesh = staticMeshHandle,
+                                      .transform = transform });
+
+    if (hasPhysicsScene()) {
+        // TODO:
+        //  1) register the static mesh shape(s)
+        //  2) register a physics shape for this instance
     }
+
+    return m_staticMeshInstances.back();
 }
 
 DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)
@@ -240,23 +244,7 @@ void Scene::loadFromFile(const std::string& path)
     for (auto& jsonModel : jsonScene.at("models")) {
         std::string modelGltf = jsonModel.at("gltf");
 
-        auto model = GltfModel::load(modelGltf);
-        if (!model)
-            continue;
-
-        {
-            TaskHandle handle = TaskGraph::get().enqueueTask([gltfFilePath = modelGltf]() {
-                // TODO: New API stuff, integrate properly
-                GltfLoader gltfLoader {};
-                std::optional<GltfLoader::LoadResult> result = gltfLoader.load(gltfFilePath, GltfLoader::LoadMode::Meshes);
-                if (result.has_value()) {
-                    // ..
-                }
-            });
-        }
-
-        std::string name = jsonModel.at("name");
-        model->setName(name);
+        
 
         auto transform = jsonModel.at("transform");
         auto jsonRotation = transform.at("rotation");
@@ -274,9 +262,58 @@ void Scene::loadFromFile(const std::string& path)
         vec3 translation = readVec3(transform.at("translation"));
         vec3 scale = readVec3(transform.at("scale"));
 
-        model->transform().set(translation, orientation, scale);
+        if (false) {
 
-        addModel(std::move(model));
+            GltfLoader::LoadResult result = m_gltfLoader.load(modelGltf, GltfLoader::LoadMode::Meshes);
+
+            // Register materials & create translation table from local to global material handles
+
+            std::unordered_map<MaterialHandle, MaterialHandle> materialHandleMap;
+
+            for (size_t localMaterialIdx = 0; localMaterialIdx < result.materials.size(); ++localMaterialIdx) {
+
+                MaterialHandle localMaterialHandle = MaterialHandle(static_cast<MaterialHandle::IndexType>(localMaterialIdx));
+                MaterialHandle materialHandle = gpuScene().registerMaterial(*result.materials[localMaterialIdx]);
+
+                materialHandleMap[localMaterialHandle] = materialHandle;
+            }
+
+            // Translate material handles for meshes
+
+            for (auto& staticMesh : result.staticMeshes) {
+                for (StaticMeshLOD& lod : staticMesh->LODs()) {
+                    for (StaticMeshSegment& segment : lod.meshSegments) {
+
+                        auto entry = materialHandleMap.find(segment.material);
+                        ARKOSE_ASSERT(entry != materialHandleMap.end());
+
+                        segment.material = entry->second;
+                    }
+                }
+            }
+
+            // Add meshes & create instances
+
+            Transform xform { translation, orientation, scale };
+
+            for (auto& staticMesh : result.staticMeshes) {
+                StaticMeshInstance instance = addMesh(staticMesh, xform);
+                m_staticMeshInstances.push_back(instance);
+            }
+        } else {
+
+            auto model = GltfModel::load(modelGltf);
+            if (!model)
+                continue;
+
+            std::string name = jsonModel.at("name");
+            model->setName(name);
+
+            model->transform().set(translation, orientation, scale);
+
+            addModel(std::move(model));
+
+        }
     }
 
     for (auto& jsonLight : jsonScene.at("lights")) {

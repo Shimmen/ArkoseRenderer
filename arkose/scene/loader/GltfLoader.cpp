@@ -2,6 +2,8 @@
 
 #include "core/Assert.h"
 #include "core/Logging.h"
+#include "rendering/GpuScene.h"
+#include "scene/Scene.h"
 #include "utility/Profiling.h"
 #include "utility/FileIO.h"
 
@@ -71,7 +73,8 @@ GltfLoader::LoadResult GltfLoader::load(const std::string& gltfFilePath, LoadMod
 
             // TODO: Ensure we're in fact loading in a *static* mesh
             if (std::unique_ptr<StaticMesh> staticMesh = createStaticMesh(gltfModel, gltfMesh, transform)) {
-                result.staticMeshes.push_back(std::move(staticMesh));
+                m_staticMeshes.push_back(std::move(staticMesh));
+                result.staticMeshes.push_back(m_staticMeshes.back());
             }
         }
 
@@ -90,7 +93,8 @@ GltfLoader::LoadResult GltfLoader::load(const std::string& gltfFilePath, LoadMod
     // Create all materials defined in the glTF file (even if some may be unused)
     for (const tinygltf::Material& gltfMaterial : gltfModel.materials) {
         std::unique_ptr<Material> material = createMaterial(gltfModel, gltfMaterial, findDirectoryOfGltfFile(gltfFilePath));
-        result.materials.push_back(std::move(material));
+        m_materials.push_back(std::move(material));
+        result.materials.push_back(m_materials.back());
     }
 
     return result;
@@ -156,7 +160,7 @@ std::unique_ptr<StaticMesh> GltfLoader::createStaticMesh(const tinygltf::Model& 
     // Only a sinle LOD used for glTF (without extensions)
     StaticMeshLOD& lod0 = staticMesh->m_lods.emplace_back();
 
-    lod0.m_meshSegments.reserve(gltfMesh.primitives.size());
+    lod0.meshSegments.reserve(gltfMesh.primitives.size());
     for (size_t primIdx = 0; primIdx < gltfMesh.primitives.size(); ++primIdx) {
 
         SCOPED_PROFILE_ZONE_NAMED("Creating mesh segment");
@@ -174,28 +178,28 @@ std::unique_ptr<StaticMesh> GltfLoader::createStaticMesh(const tinygltf::Model& 
 
         vec3 posMin = meshMatrix * createVec3(positionAccessor.minValues);
         vec3 posMax = meshMatrix * createVec3(positionAccessor.maxValues);
-        lod0.m_boundingBox = ark::aabb3(posMin, posMax);
+        lod0.boundingBox = ark::aabb3(posMin, posMax);
 
         vec3 center = (posMax + posMin) / 2.0f;
         float radius = length(posMax - posMin) / 2.0f;
-        lod0.m_boundingSphere = geometry::Sphere(center, radius);
+        lod0.boundingSphere = geometry::Sphere(center, radius);
 
-        StaticMeshSegment& meshSegment = lod0.m_meshSegments.emplace_back();
+        StaticMeshSegment& meshSegment = lod0.meshSegments.emplace_back();
 
         // NOTE: Materials here in this stage use handles which are gltf-file-referred, meaning they will need to be translated
         // into whatever the scene works with before they can be used in a scene with multiple loaded models or similar.
         int materialIdx = gltfPrimitive.material;
-        meshSegment.m_material = MaterialHandle(materialIdx);
+        meshSegment.material = MaterialHandle(materialIdx);
 
         {
             SCOPED_PROFILE_ZONE_NAMED("Copy position data");
 
-            meshSegment.m_positions.reserve(positionAccessor.count);
+            meshSegment.positions.reserve(positionAccessor.count);
             const vec3* firstPosition = getTypedMemoryBufferForAccessor<vec3>(gltfModel, positionAccessor);
             for (size_t i = 0; i < positionAccessor.count; ++i) {
                 vec3 sourceValue = *(firstPosition + i);
                 vec3 transformedValue = meshMatrix * sourceValue;
-                meshSegment.m_positions.push_back(transformedValue);
+                meshSegment.positions.push_back(transformedValue);
             }
         }
 
@@ -206,7 +210,7 @@ std::unique_ptr<StaticMesh> GltfLoader::createStaticMesh(const tinygltf::Model& 
             ARKOSE_ASSERT(accessor->type == TINYGLTF_TYPE_VEC2);
 
             const vec2* firstTexcoord = getTypedMemoryBufferForAccessor<vec2>(gltfModel, *accessor);
-            meshSegment.m_texcoord0s = std::vector<vec2>(firstTexcoord, firstTexcoord + accessor->count);
+            meshSegment.texcoord0s = std::vector<vec2>(firstTexcoord, firstTexcoord + accessor->count);
         }
 
         if (const tinygltf::Accessor* accessor = findAccessorForPrimitive(gltfModel, gltfPrimitive, "NORMAL")) {
@@ -215,12 +219,12 @@ std::unique_ptr<StaticMesh> GltfLoader::createStaticMesh(const tinygltf::Model& 
             ARKOSE_ASSERT(accessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
             ARKOSE_ASSERT(accessor->type == TINYGLTF_TYPE_VEC3);
 
-            meshSegment.m_normals.reserve(accessor->count);
+            meshSegment.normals.reserve(accessor->count);
             const vec3* firstNormal = getTypedMemoryBufferForAccessor<vec3>(gltfModel, *accessor);
             for (size_t i = 0; i < accessor->count; ++i) {
                 vec3 sourceNormal = *(firstNormal + i);
                 vec3 transformedNormal = meshNormalMatrix * sourceNormal;
-                meshSegment.m_normals.push_back(transformedNormal);
+                meshSegment.normals.push_back(transformedNormal);
             }
         }
 
@@ -230,13 +234,13 @@ std::unique_ptr<StaticMesh> GltfLoader::createStaticMesh(const tinygltf::Model& 
             ARKOSE_ASSERT(accessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
             ARKOSE_ASSERT(accessor->type == TINYGLTF_TYPE_VEC4);
 
-            meshSegment.m_tangents.reserve(accessor->count);
+            meshSegment.tangents.reserve(accessor->count);
             const vec4* firstTangent = getTypedMemoryBufferForAccessor<vec4>(gltfModel, *accessor);
             for (size_t i = 0; i < accessor->count; ++i) {
                 vec4 sourceTangent = *(firstTangent + i);
                 vec3 transformedTangent = meshNormalMatrix * sourceTangent.xyz();
                 vec4 finalTangent = vec4(transformedTangent, sourceTangent.w);
-                meshSegment.m_tangents.push_back(finalTangent);
+                meshSegment.tangents.push_back(finalTangent);
             }
         }
 
@@ -245,26 +249,26 @@ std::unique_ptr<StaticMesh> GltfLoader::createStaticMesh(const tinygltf::Model& 
             const tinygltf::Accessor& accessor = gltfModel.accessors[gltfPrimitive.indices];
             ARKOSE_ASSERT(accessor.type == TINYGLTF_TYPE_SCALAR);
 
-            meshSegment.m_indices.reserve(accessor.count);
+            meshSegment.indices.reserve(accessor.count);
 
             switch (accessor.componentType) {
             case TINYGLTF_COMPONENT_TYPE_BYTE:
-                copyIndexData<int8_t>(meshSegment.m_indices, gltfModel, accessor);
+                copyIndexData<int8_t>(meshSegment.indices, gltfModel, accessor);
                 break;
             case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                copyIndexData<uint8_t>(meshSegment.m_indices, gltfModel, accessor);
+                copyIndexData<uint8_t>(meshSegment.indices, gltfModel, accessor);
                 break;
             case TINYGLTF_COMPONENT_TYPE_SHORT:
-                copyIndexData<int16_t>(meshSegment.m_indices, gltfModel, accessor);
+                copyIndexData<int16_t>(meshSegment.indices, gltfModel, accessor);
                 break;
             case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                copyIndexData<uint16_t>(meshSegment.m_indices, gltfModel, accessor);
+                copyIndexData<uint16_t>(meshSegment.indices, gltfModel, accessor);
                 break;
             case TINYGLTF_COMPONENT_TYPE_INT:
-                copyIndexData<int32_t>(meshSegment.m_indices, gltfModel, accessor);
+                copyIndexData<int32_t>(meshSegment.indices, gltfModel, accessor);
                 break;
             case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                copyIndexData<uint32_t>(meshSegment.m_indices, gltfModel, accessor);
+                copyIndexData<uint32_t>(meshSegment.indices, gltfModel, accessor);
                 break;
             default:
                 ASSERT_NOT_REACHED();
@@ -343,8 +347,9 @@ std::unique_ptr<Material> GltfLoader::createMaterial(const tinygltf::Model& gltf
 
             size_t dataSize = bufferView.byteLength;
             const uint8_t* data = buffer.data.data() + bufferView.byteOffset;
+            std::vector<uint8_t> pixelByteData { data, data + dataSize };
 
-            desc = Material::TextureDescription(Image(Image::MemoryType::EncodedImage, info, (void*)data, dataSize));
+            desc = Material::TextureDescription(Image(Image::MemoryType::EncodedImage, info, std::move(pixelByteData)));
         }
 
         auto wrapModeFromTinyGltf = [](int filterMode) -> Texture::WrapMode {

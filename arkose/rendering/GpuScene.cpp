@@ -53,13 +53,33 @@ size_t GpuScene::forEachMesh(std::function<void(size_t, Mesh&)> callback)
     return nextIndex;
 }
 
-size_t GpuScene::forEachMesh(std::function<void(size_t, const Mesh&)> callback) const
+size_t GpuScene::forEachStaticMesh(std::function<void(size_t, StaticMesh&)> callback)
 {
     size_t nextIndex = 0;
-    for (const Mesh* mesh : m_managedMeshes) {
-        callback(nextIndex++, *mesh);
+    for (auto& staticMesh : m_managedStaticMeshes) {
+        callback(nextIndex++, *staticMesh);
     }
     return nextIndex;
+}
+
+const StaticMesh* GpuScene::staticMeshForHandle(StaticMeshHandle handle) const
+{
+    if (handle.valid()) {
+        ARKOSE_ASSERT(handle.index() < m_managedStaticMeshes.size());
+        return m_managedStaticMeshes[handle.index()].get();
+    }
+
+    return nullptr;
+}
+
+const Material* GpuScene::materialForHandle(MaterialHandle handle) const
+{
+    if (handle.valid()) {
+        ARKOSE_ASSERT(handle.index() < m_managedMaterials.size());
+        return &m_managedMaterials[handle.index()].sourceMaterial;
+    }
+
+    return nullptr;
 }
 
 size_t GpuScene::lightCount() const
@@ -227,7 +247,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         {
             // TODO: Probably batch all neighbouring indices into a single upload? (Or can we let the UploadBuffer do that optimization for us?)
             for (uint32_t materialIdx : m_pendingMaterialUpdates) {
-                const ShaderMaterial& shaderMaterial = m_managedMaterials[materialIdx].material;
+                const ShaderMaterial& shaderMaterial = m_managedMaterials[materialIdx].shaderMaterial;
                 size_t bufferOffset = materialIdx * sizeof(ShaderMaterial);
                 uploadBuffer.upload(shaderMaterial, *m_materialDataBuffer, bufferOffset);
             }
@@ -270,6 +290,11 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
         // Update object data
         {
+            // TODO: This will need to be fixed up for the new APIs
+            // TODO: This will need to be fixed up for the new APIs
+            // TODO: This will need to be fixed up for the new APIs
+            // TODO: This will need to be fixed up for the new APIs
+
             for (int i = 0; i < meshCount(); ++i) {
 
                 const Mesh& mesh = *m_managedMeshes[i];
@@ -345,6 +370,12 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         if (m_maintainRayTracingScene) {
 
             TopLevelAS& sceneTlas = *m_sceneTopLevelAccelerationStructure;
+
+            // TODO: This *MAYBE* will need to be fixed up for the new APIs
+            // TODO: This *MAYBE* will need to be fixed up for the new APIs
+            // TODO: This *MAYBE* will need to be fixed up for the new APIs
+            // TODO: This *MAYBE* will need to be fixed up for the new APIs
+            // (specifically how we manage m_rayTracingGeometryInstances)
 
             sceneTlas.updateInstanceDataWithUploadBuffer(m_rayTracingGeometryInstances, uploadBuffer);
             cmdList.executeBufferCopyOperations(uploadBuffer);
@@ -427,6 +458,63 @@ void GpuScene::registerMesh(Mesh& mesh)
 
         RTGeometryInstance rtGeometryInstance = createRTGeometryInstance(mesh, rtMeshIndex);
         m_rayTracingGeometryInstances.push_back(rtGeometryInstance);
+    }
+}
+
+StaticMeshHandle GpuScene::registerStaticMesh(std::shared_ptr<StaticMesh> staticMesh)
+{
+    // TODO: Maybe do some kind of caching here, and if we're trying to add the same mesh twice just ignore it and reuse the exisiting
+
+    SCOPED_PROFILE_ZONE();
+
+    ARKOSE_ASSERT(staticMesh);
+
+    StaticMeshHandle handle = StaticMeshHandle(m_managedStaticMeshes.size());
+    m_managedStaticMeshes.push_back(staticMesh);
+
+    // TODO: Make use of all LODs
+    ARKOSE_ASSERT(staticMesh->numLODs() >= 1);
+    StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
+
+    for (StaticMeshSegment& meshSegment : lod.meshSegments) {
+
+        // NOTE: Matrices are set at "render-time" before each frame starts
+        ShaderDrawable shaderDrawable;
+        shaderDrawable.materialIndex = meshSegment.material.indexOfType<int>();
+        m_rasterizerMeshData.push_back(shaderDrawable);
+
+        // TODO: Do ray tracing stuff!
+        // TODO: Do ray tracing stuff!
+        // TODO: Do ray tracing stuff!
+        // TODO: Do ray tracing stuff!
+
+        /*
+        if (m_maintainRayTracingScene) {
+
+            uint32_t rtMeshIndex = static_cast<uint32_t>(m_rayTracingMeshData.size());
+
+            const DrawCallDescription& drawCallDesc = meshSegment.drawCallDescription(m_rayTracingVertexLayout, *this);
+            m_rayTracingMeshData.push_back(RTTriangleMesh { .firstVertex = drawCallDesc.vertexOffset,
+                                                            .firstIndex = (int32_t)drawCallDesc.firstIndex,
+                                                            .materialIndex = meshSegment.material.indexOfType<int>() });
+
+            RTGeometryInstance rtGeometryInstance = createRTGeometryInstance(mesh, rtMeshIndex);
+            m_rayTracingGeometryInstances.push_back(rtGeometryInstance);
+        }
+        */
+    }
+
+    return handle;
+}
+
+void GpuScene::ensureDrawCallIsAvailableForAll(VertexLayout vertexLayout)
+{
+    for (auto& staticMesh : m_managedStaticMeshes) {
+        for (StaticMeshLOD& staticMeshLOD : staticMesh->LODs()) {
+            for (StaticMeshSegment& meshSegment : staticMeshLOD.meshSegments) {
+                meshSegment.ensureDrawCallIsAvailable(vertexLayout, *this);
+            }
+        }
     }
 }
 
@@ -515,7 +603,8 @@ MaterialHandle GpuScene::registerMaterial(Material& material)
 
     auto handle = MaterialHandle(materialIdx);
 
-    m_managedMaterials.push_back(ManagedMaterial { .material = shaderMaterial,
+    m_managedMaterials.push_back(ManagedMaterial { .sourceMaterial = material,
+                                                   .shaderMaterial = shaderMaterial,
                                                    .referenceCount = 1 });
 
     m_pendingMaterialUpdates.push_back(handle.indexOfType<uint32_t>());
@@ -735,7 +824,7 @@ DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Me
     const size_t initialVertexBufferSize = 50'000 * layout.packedVertexSize();
 
     bool doAlign = alignWith.has_value();
-    ARKOSE_ASSERT(!alignWith || alignWith->sourceMesh == &mesh);
+    //ARKOSE_ASSERT(!alignWith || alignWith->sourceMesh == &mesh);
 
     std::vector<uint8_t> vertexData = mesh.vertexData(layout);
 
@@ -769,7 +858,7 @@ DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Me
 
 
     DrawCallDescription drawCall {};
-    drawCall.sourceMesh = &mesh;
+    //drawCall.sourceMesh = &mesh;
 
     drawCall.vertexBuffer = &vertexBuffer;
     drawCall.vertexCount = vertexCount;
@@ -778,6 +867,75 @@ DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<Mesh>, const Me
     // Fit index data
     {
         std::vector<uint32_t> indexData = mesh.indexData();
+        size_t requiredAdditionalSize = indexData.size() * sizeof(uint32_t);
+
+        if (m_global32BitIndexBuffer == nullptr) {
+            m_global32BitIndexBuffer = backend().createBuffer(std::max(initialIndexBufferSize, requiredAdditionalSize), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+            m_global32BitIndexBuffer->setName("SceneIndexBuffer");
+        }
+
+        uint32_t firstIndex = m_nextFreeIndex;
+        m_nextFreeIndex += (uint32_t)indexData.size();
+
+        m_global32BitIndexBuffer->updateDataAndGrowIfRequired(indexData.data(), requiredAdditionalSize, firstIndex * sizeof(uint32_t));
+
+        drawCall.indexBuffer = m_global32BitIndexBuffer.get();
+        drawCall.indexCount = (uint32_t)indexData.size();
+        drawCall.indexType = IndexType::UInt32;
+        drawCall.firstIndex = firstIndex;
+    }
+
+    return drawCall;
+}
+
+DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<StaticMeshSegment>, const StaticMeshSegment& meshSegment, const VertexLayout& layout, std::optional<DrawCallDescription> alignWith)
+{
+    const size_t initialIndexBufferSize = 100'000 * sizeofIndexType(globalIndexBufferType());
+    const size_t initialVertexBufferSize = 50'000 * layout.packedVertexSize();
+
+    bool doAlign = alignWith.has_value();
+    //ARKOSE_ASSERT(!alignWith || alignWith->sourceMesh == &mesh);
+
+    std::vector<uint8_t> vertexData = meshSegment.assembleVertexData(layout);
+
+    auto entry = m_globalVertexBuffers.find(layout);
+    if (entry == m_globalVertexBuffers.end()) {
+
+        size_t offset = doAlign ? (alignWith->vertexOffset * layout.packedVertexSize()) : 0;
+        size_t minRequiredBufferSize = offset + vertexData.size();
+
+        m_globalVertexBuffers[layout] = backend().createBuffer(std::max(initialVertexBufferSize, minRequiredBufferSize), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+        m_globalVertexBuffers[layout]->setName("SceneVertexBuffer");
+    }
+
+    Buffer& vertexBuffer = *m_globalVertexBuffers[layout];
+    size_t newDataStartOffset = doAlign
+        ? alignWith->vertexOffset * layout.packedVertexSize()
+        : m_nextFreeVertexIndex * layout.packedVertexSize();
+
+    vertexBuffer.updateDataAndGrowIfRequired(vertexData.data(), vertexData.size(), newDataStartOffset);
+
+    if (doAlign) {
+        // TODO: Maybe ensure we haven't already fitted this mesh+layout combo and is just overwriting at this point. Well, before doing it I guess..
+        DrawCallDescription reusedDrawCall = alignWith.value();
+        reusedDrawCall.vertexBuffer = m_globalVertexBuffers[layout].get();
+        return reusedDrawCall;
+    }
+
+    uint32_t vertexCount = (uint32_t)meshSegment.vertexCount();
+    uint32_t vertexOffset = m_nextFreeVertexIndex;
+    m_nextFreeVertexIndex += vertexCount;
+
+    DrawCallDescription drawCall {};
+    //drawCall.sourceMesh = &mesh;
+
+    drawCall.vertexBuffer = &vertexBuffer;
+    drawCall.vertexCount = vertexCount;
+    drawCall.vertexOffset = vertexOffset;
+
+    // Fit index data
+    {
+        std::vector<uint32_t> indexData = meshSegment.indices;// mesh.indexData();
         size_t requiredAdditionalSize = indexData.size() * sizeof(uint32_t);
 
         if (m_global32BitIndexBuffer == nullptr) {

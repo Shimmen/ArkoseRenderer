@@ -29,7 +29,7 @@
 #include <imgui.h>
 
 constexpr bool keepRenderDocCompatible = false;
-constexpr bool rtxOn = true && !keepRenderDocCompatible;
+constexpr bool rtxOn = false && !keepRenderDocCompatible; // TODO (RT stuff)
 
 std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
 {
@@ -54,18 +54,18 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         scene.generateProbeGridFromBoundingBox();
     }
 
-    pipeline.addNode<PickingNode>();
+    //pipeline.addNode<PickingNode>(); // TODO!
 
     if (rtxOn) {
         pipeline.addNode<DDGINode>();
     } else {
-        scene.setAmbientIlluminance(250.0f);
+        scene.setAmbientIlluminance(500.0f);
     }
 
     pipeline.addNode<CullingNode>();
-    pipeline.addNode<PrepassNode>();
+    //pipeline.addNode<PrepassNode>(); // TODO!
 
-    pipeline.addNode<DirectionalLightShadowNode>();
+    pipeline.addNode<DirectionalLightShadowNode>(); // NOTE: Needs prepass!!! 
     pipeline.addNode<LocalLightShadowNode>();
 
     pipeline.addNode<ForwardRenderNode>();

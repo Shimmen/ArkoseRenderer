@@ -2,10 +2,13 @@
 
 #include "Model.h"
 #include "rendering/RenderPipelineNode.h"
+#include "rendering/StaticMesh.h"
 #include "scene/camera/Camera.h"
 #include "scene/ProbeGrid.h"
 #include "scene/lights/DirectionalLight.h"
 #include "scene/lights/SpotLight.h"
+#include "scene/loader/GltfLoader.h"
+#include "scene/MeshInstance.h"
 #include <memory>
 #include <nlohmann/json_fwd.hpp>
 #include <optional>
@@ -49,14 +52,18 @@ public:
     const Camera& camera() const { return *m_currentMainCamera; }
     Camera& camera() { return *m_currentMainCamera; }
 
-    // Models
-
+    // Models // NOTE: Old stuff, to be removed!
     Model& addModel(std::unique_ptr<Model>);
 
-    size_t modelCount() const { return m_models.size(); }
+    // Meshes (TODO: Maybe the Scene shouldn't have any knowledge about meshes, and let the GpuScene handle all mesh logic?)
 
-    void forEachModel(std::function<void(size_t, const Model&)> callback) const;
-    void forEachModel(std::function<void(size_t, Model&)> callback);
+    StaticMeshInstance addMesh(std::shared_ptr<StaticMesh>, Transform);
+
+    std::vector<StaticMeshInstance>& staticMeshInstances() { return m_staticMeshInstances; }
+    const std::vector<StaticMeshInstance>& staticMeshInstances() const { return m_staticMeshInstances; }
+
+    // TODO: Later, also count skeletal meshes here
+    uint32_t meshInstanceCount() const { return static_cast<uint32_t>(m_staticMeshInstances.size()); }
 
     // Lighting - direct & indirect
 
@@ -119,7 +126,13 @@ private:
     Camera* m_currentMainCamera {};
     std::unordered_map<std::string, std::unique_ptr<Camera>> m_allCameras {};
 
+    // TODO: Remove me!
     std::vector<std::unique_ptr<Model>> m_models {};
+    
+    // Various loaders, which needs to be kept in memory as they own their loaded resources until someone takes over
+    GltfLoader m_gltfLoader {};
+
+    std::vector<StaticMeshInstance> m_staticMeshInstances {};
     
     std::vector<std::unique_ptr<DirectionalLight>> m_directionalLights {};
     std::vector<std::unique_ptr<SpotLight>> m_spotLights {};

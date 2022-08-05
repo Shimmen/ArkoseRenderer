@@ -42,7 +42,15 @@ public:
 
     size_t meshCount() const { return m_managedMeshes.size(); }
     size_t forEachMesh(std::function<void(size_t, Mesh&)> callback);
-    size_t forEachMesh(std::function<void(size_t, const Mesh&)> callback) const;
+
+    // size_t meshCount() const { return m_managedStaticMeshes.size(); }
+    size_t forEachStaticMesh(std::function<void(size_t, StaticMesh&)> callback);
+
+    const StaticMesh* staticMeshForHandle(StaticMeshHandle handle) const;
+    const Material* materialForHandle(MaterialHandle handle) const;
+
+    // TODO: This is a temporary helper, remove me!
+    void ensureDrawCallIsAvailableForAll(VertexLayout);
 
     size_t lightCount() const;
     size_t shadowCastingLightCount() const;
@@ -64,6 +72,9 @@ public:
 
     // TODO: Replace with something like "registerInstance" which takes a Model and a transform.. or something like that
     void registerMesh(Mesh&);
+
+    StaticMeshHandle registerStaticMesh(std::shared_ptr<StaticMesh>);
+    // TODO: void unregisterStaticMesh(StaticMeshHandle);
 
     [[nodiscard]] MaterialHandle registerMaterial(Material&);
     void unregisterMaterial(MaterialHandle);
@@ -87,6 +98,7 @@ public:
     // Managed GPU assets
 
     DrawCallDescription fitVertexAndIndexDataForMesh(Badge<Mesh>, const Mesh&, const VertexLayout&, std::optional<DrawCallDescription> alignWith = {});
+    DrawCallDescription fitVertexAndIndexDataForMesh(Badge<StaticMeshSegment>, const StaticMeshSegment&, const VertexLayout&, std::optional<DrawCallDescription> alignWith = {});
 
     Buffer& globalVertexBufferForLayout(const VertexLayout&) const;
     Buffer& globalIndexBuffer() const;
@@ -124,7 +136,11 @@ private:
     std::unordered_map<VertexLayout, std::unique_ptr<Buffer>> m_globalVertexBuffers {};
     uint32_t m_nextFreeVertexIndex { 0 };
 
+    std::vector<std::shared_ptr<StaticMesh>> m_managedStaticMeshes {};
+
+    // TODO: Remove me!
     std::vector<Mesh*> m_managedMeshes {};
+
     std::vector<ShaderDrawable> m_rasterizerMeshData {}; // TODO: Rename to something like m_drawInstances and the type ShaderDrawInstance? Something like that :^)
     std::vector<RTTriangleMesh> m_rayTracingMeshData {};
     static constexpr int MaxSupportedSceneMeshes = 10'000;
@@ -162,7 +178,8 @@ private:
     
 
     struct ManagedMaterial {
-        ShaderMaterial material {};
+        Material sourceMaterial;
+        ShaderMaterial shaderMaterial {};
         uint64_t referenceCount { 0 };
     };
     std::vector<ManagedMaterial> m_managedMaterials {};

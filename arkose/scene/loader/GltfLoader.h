@@ -21,14 +21,17 @@ public:
     };
 
     struct LoadResult {
-        std::vector<std::unique_ptr<Material>> materials {};
-        std::vector<std::unique_ptr<StaticMesh>> staticMeshes {};
+        std::vector<std::shared_ptr<Material>> materials {};
+        std::vector<std::shared_ptr<StaticMesh>> staticMeshes {};
     };
 
-    // NOTE: This will always try to load and never cache. If you want to cache, do that before calling this
+    // TODO: Implement caching (on file path level, at least)
     LoadResult load(const std::string& gltfFilePath, LoadMode);
 
 private:
+
+    std::vector<std::shared_ptr<Material>> m_materials {};
+    std::vector<std::shared_ptr<StaticMesh>> m_staticMeshes {};
 
     std::unique_ptr<Material> createMaterial(const tinygltf::Model&, const tinygltf::Material&, const std::string& gltfFilePath) const;
     std::unique_ptr<StaticMesh> createStaticMesh(const tinygltf::Model&, const tinygltf::Mesh&, Transform&) const;
@@ -64,6 +67,8 @@ const Type* GltfLoader::getTypedMemoryBufferForAccessor(const tinygltf::Model& g
 template<typename SourceType>
 void GltfLoader::copyIndexData(std::vector<uint32_t>& target, const tinygltf::Model& gltfModel, const tinygltf::Accessor& gltfAccessor) const
 {
+    SCOPED_PROFILE_ZONE_NAMED("Copy index data");
+
     const tinygltf::BufferView& gltfView = gltfModel.bufferViews[gltfAccessor.bufferView];
     ARKOSE_ASSERT(gltfView.byteStride == 0); // (i.e. tightly packed)
 
