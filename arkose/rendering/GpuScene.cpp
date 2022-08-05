@@ -285,8 +285,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 .pixelFromView = pixelFromView,
                 .viewFromPixel = inverse(pixelFromView),
 
-                .near = camera.zNear,
-                .far = camera.zFar,
+                .zNear = camera.zNear,
+                .zFar = camera.zFar,
 
                 .focalLength = camera.focalLengthMeters(),
 

@@ -20,8 +20,8 @@ struct CameraState {
     mat4 pixelFromView;
     mat4 viewFromPixel;
 
-    float near;
-    float far;
+    float zNear;
+    float zFar;
     float focalLength;
     float _pad2;
 

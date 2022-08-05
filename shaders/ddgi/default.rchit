@@ -62,7 +62,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
 	if (LdotN > 0.0) {
 
 		vec3 hitPoint = rt_WorldRayOrigin + rt_RayHitT * rt_WorldRayDirection;
-		float shadowFactor = traceShadowRay(hitPoint, L, 2.0 * camera.far);
+		float shadowFactor = traceShadowRay(hitPoint, L, 2.0 * camera.zFar);
 
 		vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
 		vec3 directLight = light.color * shadowFactor;

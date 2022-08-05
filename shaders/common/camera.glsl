@@ -108,7 +108,7 @@ vec3 unprojectUvCoordAndDepthToViewSpace(vec2 uvCoord, float depth, CameraState 
 
 float calculateLinearDepth(float nonlinearDepth, CameraState camera)
 {
-    return camera.near * camera.far / ((nonlinearDepth * (camera.far - camera.near)) - camera.far);
+    return camera.zNear * camera.zFar / ((nonlinearDepth * (camera.zFar - camera.zNear)) - camera.zFar);
 }
 
 #endif // CAMERA_GLSL
