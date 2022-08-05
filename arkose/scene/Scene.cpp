@@ -29,6 +29,10 @@ void Scene::update(float elapsedTime, float deltaTime)
 {
     SCOPED_PROFILE_ZONE();
 
+    if (Input::instance().wasKeyReleased(Key::Escape)) {
+        setSelectedInstance(nullptr);
+    }
+
     drawSceneGizmos();
 
     if (hasPhysicsScene()) {
@@ -478,7 +482,7 @@ void Scene::drawSceneGizmos()
     else if (input.wasKeyPressed(Key::Y))
         operation = ImGuizmo::SCALE;
 
-    if (selectedModel()) {
+    if (selectedInstance()) {
 
         ImGuizmo::BeginFrame();
         ImGuizmo::SetRect(0, 0, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
@@ -494,8 +498,8 @@ void Scene::drawSceneGizmos()
         // Silly stuff, since ImGuizmo doesn't seem to like my projection matrix..
         projMatrix.y = -projMatrix.y;
 
-        mat4 matrix = selectedModel()->transform().localMatrix();
+        mat4 matrix = selectedInstance()->transform.localMatrix();
         ImGuizmo::Manipulate(value_ptr(viewMatrix), value_ptr(projMatrix), operation, mode, value_ptr(matrix));
-        selectedModel()->transform().setFromMatrix(matrix);
+        selectedInstance()->transform.setFromMatrix(matrix);
     }
 }

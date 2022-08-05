@@ -32,8 +32,6 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        /*
-
         // TODO: Implement some proper CPU readback context so we know for sure that the previous result
         // is ready at this point. Just because it's from the previous frame doesn't mean it must be done.
         // What if we submit the queue and immediately start work on the next frame before the first is
@@ -49,6 +47,8 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 
         if (meshSelectPick || focusDepthPick) {
 
+            scene.ensureDrawCallIsAvailableForAll({ VertexComponent::Position3F });
+
             ClearValue clearValue { .color = ClearColor::srgbColor(1, 0, 1),
                                     .depth = 1.0f };
 
@@ -58,12 +58,20 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
             cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout({ VertexComponent::Position3F }));
             cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
 
-            scene.forEachMesh([&](size_t index, Mesh& mesh) {
-                DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, scene);
-                drawCall.firstInstance = static_cast<uint32_t>(index);
-                cmdList.issueDrawCall(drawCall);
-            });
-            scene.ensureDrawCallIsAvailableForAll({ VertexComponent::Position3F });
+            uint32_t drawIdx = 0;
+            for (StaticMeshInstance& instance : scene.scene().staticMeshInstances()) {
+                if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance.mesh)) {
+
+                    // TODO: Pick LOD properly (i.e. the same as drawn in the main passes)
+                    const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
+
+                    for (const StaticMeshSegment& meshSegment : lod.meshSegments) {
+                        DrawCallDescription drawCall = meshSegment.drawCallDescription({ VertexComponent::Position3F }, scene);
+                        drawCall.firstInstance = static_cast<uint32_t>(drawIdx++);
+                        cmdList.issueDrawCall(drawCall);
+                    }
+                }
+            }
 
             cmdList.endRendering();
             
@@ -82,16 +90,11 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
                                                        .selectMesh = meshSelectPick,
                                                        .specifyFocusDepth = focusDepthPick };
         }
-
-        */
-
     };
 }
 
 void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, const DeferredResult& deferredResult)
 {
-    /*
-
     // At least one must be specified
     ARKOSE_ASSERT(deferredResult.selectMesh || deferredResult.specifyFocusDepth);
     
@@ -99,18 +102,30 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
     cmdList.slowBlockingReadFromBuffer(*deferredResult.resultBuffer, 0, sizeof(pickingData), &pickingData);
 
     if (deferredResult.selectMesh) {
-        int selectedMeshIdx = pickingData.meshIdx;
-        if (selectedMeshIdx < scene.meshCount()) {
-            scene.forEachMesh([&](size_t index, Mesh& mesh) {
-                if (index == selectedMeshIdx) {
-                    scene.scene().setSelectedMesh(&mesh);
-                    scene.scene().setSelectedModel(mesh.model());
+        int selectedIdx = pickingData.meshIdx;
+
+        uint32_t drawIdx = 0;
+        for (StaticMeshInstance& instance : scene.scene().staticMeshInstances()) {
+            if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance.mesh)) {
+
+                // TODO: Pick LOD properly (i.e. the same as drawn in the main passes)
+                const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
+
+                for (const StaticMeshSegment& meshSegment : lod.meshSegments) {
+
+                    if (drawIdx == selectedIdx) {
+                        // TODO: This will break if/when we resize the instance vector
+                        scene.scene().setSelectedInstance(&instance);
+                        return;
+                    }
+
+                    drawIdx += 1;
                 }
-            });
-        } else {
-            scene.scene().setSelectedMesh(nullptr);
-            scene.scene().setSelectedModel(nullptr);
+            }
         }
+
+        // If no mesh was found, we must have clicked on the background so deselect current
+        scene.scene().setSelectedInstance(nullptr);
     }
 
     if (deferredResult.specifyFocusDepth) {
@@ -123,6 +138,4 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
             camera.setFocusDepth(focusDepth);
         }
     }
-
-    */
 }

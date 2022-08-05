@@ -54,7 +54,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         scene.generateProbeGridFromBoundingBox();
     }
 
-    //pipeline.addNode<PickingNode>(); // TODO!
+    pipeline.addNode<PickingNode>();
 
     if (rtxOn) {
         pipeline.addNode<DDGINode>();

@@ -98,11 +98,8 @@ public:
 
     // Meta
 
-    void setSelectedModel(Model* model) { m_selectedModel = model; }
-    Model* selectedModel() { return m_selectedModel; }
-
-    void setSelectedMesh(Mesh* mesh) { m_selectedMesh = mesh; }
-    Mesh* selectedMesh() { return m_selectedMesh; }
+    void setSelectedInstance(StaticMeshInstance* instance) { m_selectedInstance = instance; }
+    StaticMeshInstance* selectedInstance() { return m_selectedInstance; }
 
     // GUI
 
@@ -145,7 +142,7 @@ private:
     // TODO: Maybe move to the camera?
     float m_fixedFilmGrainGain { 0.040f };
 
-    Model* m_selectedModel { nullptr };
-    Mesh* m_selectedMesh { nullptr };
+    // TODO: Generalize to all objects in the scene, not just static meshes
+    StaticMeshInstance* m_selectedInstance { nullptr };
 
 };
