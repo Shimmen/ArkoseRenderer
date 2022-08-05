@@ -98,8 +98,7 @@ add_executable(ArkoseRenderer
     arkose/rendering/nodes/LocalLightShadowNode.cpp
     arkose/rendering/nodes/PickingNode.cpp
     arkose/rendering/nodes/PrepassNode.cpp
-    arkose/rendering/nodes/RTDirectLightNode.cpp
-    arkose/rendering/nodes/RTFirstHitNode.cpp
+    arkose/rendering/nodes/RTVisualisationNode.cpp
     arkose/rendering/nodes/RTReflectionsNode.cpp
     arkose/rendering/nodes/SkyViewNode.cpp
     arkose/rendering/nodes/SSAONode.cpp

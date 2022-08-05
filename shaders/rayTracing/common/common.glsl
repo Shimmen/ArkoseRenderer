@@ -1,0 +1,29 @@
+#ifndef RAYTRACING_COMMON_GLSL
+#define RAYTRACING_COMMON_GLSL
+
+#include <common/rayTracing.glsl>
+#include <shared/RTData.h>
+
+#define HIT_T_MISS (-1.0)
+
+struct Vertex {
+    vec3 normal;
+    vec2 texCoord;
+};
+
+struct RayPayloadMain {
+    vec3 color;
+    float hitT;
+};
+
+struct RayPayloadShadow {
+    bool inShadow;
+};
+
+// TODO: Remove this from here (but we need ambient..)
+struct RayTracingPushConstants {
+    float ambientAmount;
+    float environmentMultiplier;
+};
+
+#endif // RAYTRACING_COMMON_GLSL

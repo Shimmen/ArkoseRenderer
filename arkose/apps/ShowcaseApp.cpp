@@ -13,8 +13,7 @@
 #include "rendering/nodes/LocalLightShadowNode.h"
 #include "rendering/nodes/PrepassNode.h"
 #include "rendering/nodes/PickingNode.h"
-#include "rendering/nodes/RTDirectLightNode.h"
-#include "rendering/nodes/RTFirstHitNode.h"
+#include "rendering/nodes/RTVisualisationNode.h"
 #include "rendering/nodes/RTReflectionsNode.h"
 #include "rendering/nodes/SkyViewNode.h"
 #include "rendering/nodes/SSAONode.h"
@@ -93,8 +92,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     if (rtxOn) {
         // Uncomment for ray tracing visualisations
-        //pipeline.addNode<RTFirstHitNode>(); sceneTexture = "RTFirstHit";
-        //pipeline.addNode<RTDirectLightNode>(); sceneTexture = "RTDirectLight";
+        pipeline.addNode<RTVisualisationNode>(RTVisualisationNode::Mode::DirectLight); sceneTexture = "RTVisualisation";
     }
 
     pipeline.addNode<TonemapNode>(sceneTexture);

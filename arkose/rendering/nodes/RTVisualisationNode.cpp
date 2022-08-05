@@ -1,9 +1,16 @@
-#include "RTDirectLightNode.h"
+#include "RTVisualisationNode.h"
 
-RenderPipelineNode::ExecuteCallback RTDirectLightNode::construct(GpuScene& scene, Registry& reg)
+#include "rendering/GpuScene.h"
+
+RTVisualisationNode::RTVisualisationNode(Mode mode)
+    : m_mode(mode)
+{
+}
+
+RenderPipelineNode::ExecuteCallback RTVisualisationNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
-    reg.publish("RTDirectLight", storageImage);
+    reg.publish("RTVisualisation", storageImage);
 
     BindingSet& rtMeshDataBindingSet = *reg.getBindingSet("SceneRTMeshDataSet");
     BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
@@ -15,10 +22,14 @@ RenderPipelineNode::ExecuteCallback RTDirectLightNode::construct(GpuScene& scene
                                                          ShaderBinding::sampledTexture(scene.environmentMapTexture(), ShaderStage::RTRayGen),
                                                          ShaderBinding::storageTexture(storageImage, ShaderStage::RTRayGen) });
 
-    ShaderFile raygen { "rt-direct-light/raygen.rgen" };
-    ShaderFile defaultMissShader { "rt-direct-light/miss.rmiss" };
-    ShaderFile shadowMissShader { "rt-direct-light/shadow.rmiss" };
-    HitGroup mainHitGroup { ShaderFile("rt-direct-light/default.rchit"), ShaderFile("rt-direct-light/masked.rahit") };
+    bool evaluateDirectLight = m_mode == Mode::DirectLight;
+    auto hitGroupDefines = { ShaderDefine::makeBool("RT_EVALUATE_DIRECT_LIGHT", evaluateDirectLight) };
+
+    ShaderFile raygen { "rt-visualisation/raygen.rgen" };
+    ShaderFile defaultMissShader { "rayTracing/common/miss.rmiss" };
+    ShaderFile shadowMissShader { "rayTracing/common/shadow.rmiss" };
+    HitGroup mainHitGroup { ShaderFile("rayTracing/common/opaque.rchit", hitGroupDefines),
+                            ShaderFile("rayTracing/common/masked.rahit", hitGroupDefines) };
     ShaderBindingTable sbt { raygen, { mainHitGroup }, { defaultMissShader, shadowMissShader } };
 
     StateBindings stateDataBindings;
