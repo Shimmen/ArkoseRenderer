@@ -10,6 +10,7 @@
 #include <ark/vector.h>
 #include <string>
 #include <vector>
+#include <memory>
 
 DEFINE_HANDLE_TYPE(StaticMeshHandle)
 
@@ -35,6 +36,12 @@ struct StaticMeshSegment {
 
     // Material used for rendering this mesh segment
     MaterialHandle material {};
+
+    // Bottom level acceleration structure (optional; only needed for ray tracing)
+    // TODO: Create a geometry per StaticMeshLOD and use the SBT to lookup materials for the segments.
+    // For now we create one per segment so we can ensure one material per "draw" and keep it simple
+    //std::unique_ptr<BottomLevelAS> blas { nullptr };
+    BottomLevelAS* blas { nullptr };
 
     size_t vertexCount() const;
     std::vector<uint8_t> assembleVertexData(const VertexLayout&) const;

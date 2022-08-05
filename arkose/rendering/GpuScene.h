@@ -46,6 +46,7 @@ public:
     size_t meshCount() const { return m_managedStaticMeshes.size(); }
     size_t forEachStaticMesh(std::function<void(size_t, StaticMesh&)> callback);
 
+    StaticMesh* staticMeshForHandle(StaticMeshHandle handle);
     const StaticMesh* staticMeshForHandle(StaticMeshHandle handle) const;
     const Material* materialForHandle(MaterialHandle handle) const;
 
@@ -124,7 +125,11 @@ private:
     const VertexLayout m_rayTracingVertexLayout = { VertexComponent::Normal3F,
                                                     VertexComponent::TexCoord2F };
 
-    RTGeometryInstance createRTGeometryInstance(Mesh&, uint32_t meshIdx);
+    //RTGeometryInstance createRTGeometryInstance(Mesh&, uint32_t meshIdx);
+
+    // TODO: Create a geometry per mesh (or rather, per LOD) and use the SBT to lookup material.
+    // For now we create one per segment so we can ensure one material per "draw"
+    std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(StaticMeshSegment&, uint32_t meshIdx);
 
     float m_lightPreExposure { 1.0f };
 
@@ -136,14 +141,17 @@ private:
     std::unordered_map<VertexLayout, std::unique_ptr<Buffer>> m_globalVertexBuffers {};
     uint32_t m_nextFreeVertexIndex { 0 };
 
-    std::vector<std::shared_ptr<StaticMesh>> m_managedStaticMeshes {};
+    struct ManagedStaticMesh {
+        std::shared_ptr<StaticMesh> staticMesh {};
+    };
+    std::vector<ManagedStaticMesh> m_managedStaticMeshes {};
 
     // TODO: Remove me!
     //std::vector<Mesh*> m_managedMeshes {};
 
     //std::vector<ShaderDrawable> m_rasterizerMeshData {}; // TODO: Rename to something like m_drawInstances and the type ShaderDrawInstance? Something like that :^)
-    std::vector<RTTriangleMesh> m_rayTracingMeshData {};
-    static constexpr int MaxSupportedSceneMeshes = 10'000;
+    //std::vector<RTTriangleMesh> m_rayTracingMeshData {};
+    //static constexpr int MaxSupportedSceneMeshes = 10'000;
 
     struct ManagedDirectionalLight {
         DirectionalLight* light {};
@@ -192,9 +200,10 @@ private:
     static constexpr int MaterialBindingSetBindingIndexTextures = 1;
     std::unique_ptr<BindingSet> m_materialBindingSet { nullptr };
 
+    std::vector<std::unique_ptr<BottomLevelAS>> m_allBottomLevelAccelerationStructures {};
+
     static constexpr uint32_t InitialMaxRayTracingGeometryInstanceCount { 1024 };
-    std::vector<RTGeometryInstance> m_rayTracingGeometryInstances {};
-    std::vector<std::unique_ptr<BottomLevelAS>> m_sceneBottomLevelAccelerationStructures {};
+    //std::vector<RTGeometryInstance> m_rayTracingGeometryInstances {};
     std::unique_ptr<TopLevelAS> m_sceneTopLevelAccelerationStructure {};
     uint32_t m_framesUntilNextFullTlasBuild { 0u };
 
@@ -213,4 +222,5 @@ private:
 
     size_t m_managedTexturesVramUsage { 0 };
     size_t m_totalBlasVramUsage { 0 };
+    size_t m_totalNumBlas { 0 };
 };

@@ -58,17 +58,27 @@ size_t GpuScene::forEachMesh(std::function<void(size_t, Mesh&)> callback)
 size_t GpuScene::forEachStaticMesh(std::function<void(size_t, StaticMesh&)> callback)
 {
     size_t nextIndex = 0;
-    for (auto& staticMesh : m_managedStaticMeshes) {
-        callback(nextIndex++, *staticMesh);
+    for (auto& managedStaticMesh : m_managedStaticMeshes) {
+        callback(nextIndex++, *managedStaticMesh.staticMesh);
     }
     return nextIndex;
+}
+
+StaticMesh* GpuScene::staticMeshForHandle(StaticMeshHandle handle)
+{
+    if (handle.valid()) {
+        ARKOSE_ASSERT(handle.index() < m_managedStaticMeshes.size());
+        return m_managedStaticMeshes[handle.index()].staticMesh.get();
+    }
+
+    return nullptr;
 }
 
 const StaticMesh* GpuScene::staticMeshForHandle(StaticMeshHandle handle) const
 {
     if (handle.valid()) {
         ARKOSE_ASSERT(handle.index() < m_managedStaticMeshes.size());
-        return m_managedStaticMeshes[handle.index()].get();
+        return m_managedStaticMeshes[handle.index()].staticMesh.get();
     }
 
     return nullptr;
@@ -181,7 +191,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     reg.publish("SceneCameraSet", cameraBindingSet);
 
     // Object data stuff
-    // TODO: Resize the buffer if needed when more meshes are added
+    // TODO: Resize the buffer if needed when more meshes are added, OR crash hard
     // TODO: Make a more reasonable default too... we need: #meshes * #LODs * #segments-per-lod
     size_t objectDataBufferSize = 10'000 * sizeof(ShaderDrawable);
     Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
@@ -189,16 +199,23 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     BindingSet& objectBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(objectDataBuffer, ShaderStage::Vertex) });
     reg.publish("SceneObjectSet", objectBindingSet);
 
-    if (m_maintainRayTracingScene) {
 
-        // TODO: Make buffer big enough to contain all meshes we may want
-        Buffer& meshBuffer = reg.createBuffer(m_rayTracingMeshData, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
-        BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(meshBuffer, ShaderStage::AnyRayTrace),
+    // TODO: My lambda-system kind of fails horribly here. I need a reference-type for the capture to work nicely,
+    //       and I also want to scope it under the if check. I either need to fix that or I'll need to make a pointer
+    //       for it and then explicitly capture that pointer for this to work.
+    //if (m_maintainRayTracingScene) {
+        if (m_maintainRayTracingScene) {
+            ensureDrawCallIsAvailableForAll(m_rayTracingVertexLayout);
+        }
+
+        // TODO: Resize the buffer if needed when more meshes are added, OR crash hard
+        // TODO: Make a more reasonable default too... we need: #meshes * #LODs * #segments-per-lod
+        Buffer& rtTriangleMeshBuffer = reg.createBuffer(10'000 * sizeof(RTTriangleMesh), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+        BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(rtTriangleMeshBuffer, ShaderStage::AnyRayTrace),
                                                                   ShaderBinding::storageBuffer(globalIndexBuffer(), ShaderStage::AnyRayTrace),
                                                                   ShaderBinding::storageBuffer(globalVertexBufferForLayout(m_rayTracingVertexLayout), ShaderStage::AnyRayTrace) });
-
         reg.publish("SceneRTMeshDataSet", rtMeshDataBindingSet);
-    }
+    //}
 
     // Light data stuff
     Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::GpuOnly);
@@ -299,7 +316,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             for (int i = 0, count = staticMeshInstances.size(); i < count; ++i) {
 
                 const StaticMeshInstance& instance = staticMeshInstances[i];
-                const StaticMesh& staticMesh = *m_managedStaticMeshes[i];
+                const StaticMesh& staticMesh = *m_managedStaticMeshes[i].staticMesh;
                 
                 // TODO: Make use of all LODs
                 ARKOSE_ASSERT(staticMesh.numLODs() >= 1);
@@ -393,25 +410,81 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
         if (m_maintainRayTracingScene) {
 
+            auto tlasBuildType = AccelerationStructureBuildType::Update;
+
+            // TODO: Fill in both of these and upload to the GPU buffers. For now they will be 1:1
+            std::vector<RTTriangleMesh> rayTracingMeshData {};
+            std::vector<RTGeometryInstance> rayTracingGeometryInstances {};
+
+            for (StaticMeshInstance& instance : scene().staticMeshInstances()) {
+                if (StaticMesh* staticMesh = staticMeshForHandle(instance.mesh)) {
+                    for (StaticMeshLOD& staticMeshLOD : staticMesh->LODs()) {
+                        for (StaticMeshSegment& meshSegment : staticMeshLOD.meshSegments) {
+
+                            uint32_t rtMeshIndex = static_cast<uint32_t>(rayTracingMeshData.size());
+
+                            const DrawCallDescription& drawCallDesc = meshSegment.drawCallDescription(m_rayTracingVertexLayout, *this);
+                            rayTracingMeshData.push_back(RTTriangleMesh { .firstVertex = drawCallDesc.vertexOffset,
+                                                                          .firstIndex = (int32_t)drawCallDesc.firstIndex,
+                                                                          .materialIndex = meshSegment.material.indexOfType<int>() });
+
+                            if (meshSegment.blas == nullptr) {
+
+                                // TODO: We should just store the unique_ptr in the mesh segment but due to compilers complaining I'm currently not..
+                                m_allBottomLevelAccelerationStructures.push_back(createBottomLevelAccelerationStructure(meshSegment, rtMeshIndex));
+                                meshSegment.blas = m_allBottomLevelAccelerationStructures.back().get();
+
+                                m_totalNumBlas += 1;
+                                m_totalBlasVramUsage += meshSegment.blas->sizeInMemory();
+
+                                // We have new instances, a full build is needed
+                                tlasBuildType = AccelerationStructureBuildType::FullBuild;
+                            }
+
+                            uint8_t hitMask = 0x00;
+                            if (const Material* material = materialForHandle(meshSegment.material)) {
+                                switch (material->blendMode) {
+                                case Material::BlendMode::Opaque:
+                                    hitMask = RT_HIT_MASK_OPAQUE;
+                                    break;
+                                case Material::BlendMode::Masked:
+                                    hitMask = RT_HIT_MASK_MASKED;
+                                    break;
+                                case Material::BlendMode::Translucent:
+                                    hitMask = RT_HIT_MASK_BLEND;
+                                    break;
+                                default:
+                                    ASSERT_NOT_REACHED();
+                                }
+                            }
+                            ARKOSE_ASSERT(hitMask != 0);
+
+                            // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
+                            rayTracingGeometryInstances.push_back(RTGeometryInstance { .blas = *meshSegment.blas,
+                                                                                       .transform = instance.transform, // NOTE: This is a reference!
+                                                                                       .shaderBindingTableOffset = 0, // TODO: Generalize!
+                                                                                       .customInstanceId = rtMeshIndex,
+                                                                                       .hitMask = hitMask });
+                        }
+                    }
+                }
+            }
+
+            uploadBuffer.upload(rayTracingMeshData, rtTriangleMeshBuffer);
+
             TopLevelAS& sceneTlas = *m_sceneTopLevelAccelerationStructure;
-
-            // TODO: This *MAYBE* will need to be fixed up for the new APIs
-            // TODO: This *MAYBE* will need to be fixed up for the new APIs
-            // TODO: This *MAYBE* will need to be fixed up for the new APIs
-            // TODO: This *MAYBE* will need to be fixed up for the new APIs
-            // (specifically how we manage m_rayTracingGeometryInstances)
-
-            sceneTlas.updateInstanceDataWithUploadBuffer(m_rayTracingGeometryInstances, uploadBuffer);
+            sceneTlas.updateInstanceDataWithUploadBuffer(rayTracingGeometryInstances, uploadBuffer);
             cmdList.executeBufferCopyOperations(uploadBuffer);
 
             // Only do an update most frame, but every x frames require a full rebuild
-            auto buildType = AccelerationStructureBuildType::Update;
             if (m_framesUntilNextFullTlasBuild == 0) {
-                buildType = AccelerationStructureBuildType::FullBuild;
+                tlasBuildType = AccelerationStructureBuildType::FullBuild;
+            }
+            if (tlasBuildType == AccelerationStructureBuildType::FullBuild) {
                 m_framesUntilNextFullTlasBuild = 60;
             }
-            
-            cmdList.buildTopLevelAcceratationStructure(sceneTlas, buildType);
+
+            cmdList.buildTopLevelAcceratationStructure(sceneTlas, tlasBuildType);
             m_framesUntilNextFullTlasBuild -= 1;
         }
     };
@@ -496,26 +569,16 @@ StaticMeshHandle GpuScene::registerStaticMesh(std::shared_ptr<StaticMesh> static
     ARKOSE_ASSERT(staticMesh);
 
     StaticMeshHandle handle = StaticMeshHandle(m_managedStaticMeshes.size());
-    m_managedStaticMeshes.push_back(staticMesh);
+    m_managedStaticMeshes.push_back(ManagedStaticMesh { .staticMesh = staticMesh });
 
-    // TODO: Make use of all LODs
-    ARKOSE_ASSERT(staticMesh->numLODs() >= 1);
-    StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
+    /*
+    if (m_maintainRayTracingScene) {
 
-    for (StaticMeshSegment& meshSegment : lod.meshSegments) {
+        // TODO: Make use of all LODs
+        ARKOSE_ASSERT(staticMesh->numLODs() >= 1);
+        StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
 
-        // NOTE: Matrices are set at "render-time" before each frame starts
-        //ShaderDrawable shaderDrawable;
-        //shaderDrawable.materialIndex = meshSegment.material.indexOfType<int>();
-        //m_rasterizerMeshData.push_back(shaderDrawable);
-
-        // TODO: Do ray tracing stuff!
-        // TODO: Do ray tracing stuff!
-        // TODO: Do ray tracing stuff!
-        // TODO: Do ray tracing stuff!
-
-        /*
-        if (m_maintainRayTracingScene) {
+        for (StaticMeshSegment& meshSegment : lod.meshSegments) {
 
             uint32_t rtMeshIndex = static_cast<uint32_t>(m_rayTracingMeshData.size());
 
@@ -524,19 +587,20 @@ StaticMeshHandle GpuScene::registerStaticMesh(std::shared_ptr<StaticMesh> static
                                                             .firstIndex = (int32_t)drawCallDesc.firstIndex,
                                                             .materialIndex = meshSegment.material.indexOfType<int>() });
 
-            RTGeometryInstance rtGeometryInstance = createRTGeometryInstance(mesh, rtMeshIndex);
+            RTGeometryInstance rtGeometryInstance = createRTGeometryInstance(meshSegment, rtMeshIndex);
             m_rayTracingGeometryInstances.push_back(rtGeometryInstance);
         }
-        */
     }
+    */
 
     return handle;
 }
 
 void GpuScene::ensureDrawCallIsAvailableForAll(VertexLayout vertexLayout)
 {
-    for (auto& staticMesh : m_managedStaticMeshes) {
-        for (StaticMeshLOD& staticMeshLOD : staticMesh->LODs()) {
+    for (const ManagedStaticMesh& managedStaticMesh : m_managedStaticMeshes) {
+        StaticMesh& staticMesh = *managedStaticMesh.staticMesh;
+        for (StaticMeshLOD& staticMeshLOD : staticMesh.LODs()) {
             for (StaticMeshSegment& meshSegment : staticMeshLOD.meshSegments) {
                 meshSegment.ensureDrawCallIsAvailable(vertexLayout, *this);
             }
@@ -544,6 +608,7 @@ void GpuScene::ensureDrawCallIsAvailableForAll(VertexLayout vertexLayout)
     }
 }
 
+/*
 RTGeometryInstance GpuScene::createRTGeometryInstance(Mesh& mesh, uint32_t meshIdx)
 {
     VertexLayout vertexLayout = { VertexComponent::Position3F };
@@ -598,6 +663,35 @@ RTGeometryInstance GpuScene::createRTGeometryInstance(Mesh& mesh, uint32_t meshI
                                     .hitMask = hitMask };
 
     return instance;
+}
+*/
+std::unique_ptr<BottomLevelAS> GpuScene::createBottomLevelAccelerationStructure(StaticMeshSegment& meshSegment, uint32_t meshIdx)
+{
+    VertexLayout vertexLayout = { VertexComponent::Position3F };
+    size_t vertexStride = vertexLayout.packedVertexSize();
+    RTVertexFormat vertexFormat = RTVertexFormat::XYZ32F;
+
+    const DrawCallDescription& drawCallDesc = meshSegment.drawCallDescription(vertexLayout, *this);
+    ARKOSE_ASSERT(drawCallDesc.type == DrawCallDescription::Type ::Indexed);
+
+    IndexType indexType = globalIndexBufferType();
+    size_t indexStride = sizeofIndexType(indexType);
+
+    uint32_t indexOfFirstVertex = drawCallDesc.vertexOffset; // Yeah this is confusing naming for sure.. Offset should probably always be byte offset
+    size_t vertexOffset = indexOfFirstVertex * vertexStride;
+
+    RTTriangleGeometry geometry { .vertexBuffer = *drawCallDesc.vertexBuffer,
+                                  .vertexCount = drawCallDesc.vertexCount,
+                                  .vertexOffset = vertexOffset,
+                                  .vertexStride = vertexStride,
+                                  .vertexFormat = vertexFormat,
+                                  .indexBuffer = *drawCallDesc.indexBuffer,
+                                  .indexCount = drawCallDesc.indexCount,
+                                  .indexOffset = indexStride * drawCallDesc.firstIndex,
+                                  .indexType = indexType,
+                                  .transform = mat4(1.0f) };
+
+    return backend().createBottomLevelAccelerationStructure({ geometry });
 }
 
 MaterialHandle GpuScene::registerMaterial(Material& material)
@@ -1200,13 +1294,12 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
         if (m_maintainRayTracingScene && ImGui::BeginTabItem("Ray Tracing BLAS")) {
 
-            size_t numBLAS = m_sceneBottomLevelAccelerationStructures.size();
-            ImGui::Text("Number of BLASs: %d", numBLAS);
+            ImGui::Text("Number of BLASs: %d", m_totalNumBlas);
 
             float blasTotalSizeMB = conversion::to::MB(m_totalBlasVramUsage);
             ImGui::Text("BLAS total usage: %.2f MB", blasTotalSizeMB);
 
-            float blasAverageSizeMB = blasTotalSizeMB / numBLAS;
+            float blasAverageSizeMB = blasTotalSizeMB / m_totalNumBlas;
             ImGui::Text("Average per BLAS: %.2f MB", blasAverageSizeMB);
 
             ImGui::Separator();

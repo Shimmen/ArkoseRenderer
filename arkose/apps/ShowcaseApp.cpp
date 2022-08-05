@@ -29,7 +29,7 @@
 #include <imgui.h>
 
 constexpr bool keepRenderDocCompatible = false;
-constexpr bool rtxOn = false && !keepRenderDocCompatible; // TODO (RT stuff)
+constexpr bool rtxOn = true && !keepRenderDocCompatible;
 
 std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
 {
@@ -59,7 +59,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     if (rtxOn) {
         pipeline.addNode<DDGINode>();
     } else {
-        scene.setAmbientIlluminance(500.0f);
+        scene.setAmbientIlluminance(250.0f);
     }
 
     pipeline.addNode<CullingNode>();
