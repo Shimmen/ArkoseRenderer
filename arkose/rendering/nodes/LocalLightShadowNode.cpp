@@ -52,9 +52,7 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
         cmdList.executeBufferCopyOperations(uploadBuffer);
 
         // NOTE: We assume that all or most meshes will be drawn in a shadow map so we prepare all of them
-        scene.forEachMesh([&](size_t idx, Mesh& mesh) {
-            mesh.ensureDrawCallIsAvailable(m_vertexLayout, scene);
-        });
+        scene.ensureDrawCallIsAvailableForAll(m_vertexLayout);
 
         cmdList.beginRendering(renderState, shadowMapClearValue);
 
@@ -237,6 +235,37 @@ void LocalLightShadowNode::drawSpotLightShadowMap(CommandList& cmdList, GpuScene
 void LocalLightShadowNode::drawShadowCasters(CommandList& cmdList, GpuScene& scene, geometry::Frustum& lightFrustum) const
 {
     // TODO: Use GPU based culling
+
+    uint32_t drawIdx = 0;
+    for (StaticMeshInstance& instance : scene.scene().staticMeshInstances()) {
+        if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance.mesh)) {
+
+            // TODO: Pick LOD properly
+            const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
+
+            geometry::Sphere sphere = lod.boundingSphere.transformed(instance.transform.worldMatrix());
+            if (lightFrustum.includesSphere(sphere)) {
+
+                for (const StaticMeshSegment& meshSegment : lod.meshSegments) {
+
+                    // Don't render translucent objects. We still do masked though and pretend they are opaque. This may fail
+                    // in some cases but in general if the masked features are small enough it's not really noticable.
+                    if (const Material* material = scene.materialForHandle(meshSegment.material)) {
+                        if (material->blendMode == Material::BlendMode::Translucent) {
+                            break;
+                        }
+                    }
+
+                    DrawCallDescription drawCall = meshSegment.drawCallDescription(m_vertexLayout, scene);
+                    drawCall.firstInstance = drawIdx++; // TODO: Put this in some buffer instead!
+
+                    cmdList.issueDrawCall(drawCall);
+                }
+            }
+        }
+    }
+
+    /*
     scene.forEachMesh([&](size_t idx, Mesh& mesh) {
         // Don't render translucent objects. We still do masked though and pretend they are opaque. This may fail
         // in some cases but in general if the masked features are small enough it's not really noticable.
@@ -253,4 +282,5 @@ void LocalLightShadowNode::drawShadowCasters(CommandList& cmdList, GpuScene& sce
 
         cmdList.issueDrawCall(drawCall);
     });
+    */
 }

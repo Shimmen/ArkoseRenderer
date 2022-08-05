@@ -44,6 +44,7 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
     }
 }
 
+/*
 size_t GpuScene::forEachMesh(std::function<void(size_t, Mesh&)> callback)
 {
     size_t nextIndex = 0;
@@ -52,6 +53,7 @@ size_t GpuScene::forEachMesh(std::function<void(size_t, Mesh&)> callback)
     }
     return nextIndex;
 }
+*/
 
 size_t GpuScene::forEachStaticMesh(std::function<void(size_t, StaticMesh&)> callback)
 {
@@ -180,7 +182,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
     // Object data stuff
     // TODO: Resize the buffer if needed when more meshes are added
-    size_t objectDataBufferSize = meshCount() * sizeof(ShaderDrawable);
+    // TODO: Make a more reasonable default too... we need: #meshes * #LODs * #segments-per-lod
+    size_t objectDataBufferSize = 10'000 * sizeof(ShaderDrawable);
     Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     objectDataBuffer.setName("SceneObjectData");
     BindingSet& objectBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(objectDataBuffer, ShaderStage::Vertex) });
@@ -290,11 +293,31 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
         // Update object data
         {
-            // TODO: This will need to be fixed up for the new APIs
-            // TODO: This will need to be fixed up for the new APIs
-            // TODO: This will need to be fixed up for the new APIs
-            // TODO: This will need to be fixed up for the new APIs
+            std::vector<ShaderDrawable> rasterizerMeshData {};
 
+            const auto& staticMeshInstances = scene().staticMeshInstances();
+            for (int i = 0, count = staticMeshInstances.size(); i < count; ++i) {
+
+                const StaticMeshInstance& instance = staticMeshInstances[i];
+                const StaticMesh& staticMesh = *m_managedStaticMeshes[i];
+                
+                // TODO: Make use of all LODs
+                ARKOSE_ASSERT(staticMesh.numLODs() >= 1);
+                const StaticMeshLOD& lod = staticMesh.lodAtIndex(0);
+
+                for (const StaticMeshSegment& meshSegment : lod.meshSegments) {
+
+                    ShaderDrawable drawable;
+                    drawable.materialIndex = meshSegment.material.indexOfType<int>();
+                    drawable.worldFromLocal = instance.transform.worldMatrix();
+                    drawable.worldFromTangent = mat4(instance.transform.worldNormalMatrix());
+                    drawable.previousFrameWorldFromLocal = instance.transform.previousFrameWorldMatrix();
+
+                    rasterizerMeshData.push_back(drawable);
+                }
+            }
+
+            /*
             for (int i = 0; i < meshCount(); ++i) {
 
                 const Mesh& mesh = *m_managedMeshes[i];
@@ -304,8 +327,9 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 drawable.worldFromTangent = mat4(mesh.transform().worldNormalMatrix());
                 drawable.previousFrameWorldFromLocal = mesh.transform().previousFrameWorldMatrix();
             }
+            */
 
-            uploadBuffer.upload(m_rasterizerMeshData, objectDataBuffer);
+            uploadBuffer.upload(rasterizerMeshData, objectDataBuffer);
         }
 
         // Update exposure data
@@ -429,6 +453,7 @@ void GpuScene::registerLight(DirectionalLight& light)
     m_managedDirectionalLights.push_back(managedLight);
 }
 
+/*
 void GpuScene::registerMesh(Mesh& mesh)
 {
     SCOPED_PROFILE_ZONE();
@@ -460,6 +485,7 @@ void GpuScene::registerMesh(Mesh& mesh)
         m_rayTracingGeometryInstances.push_back(rtGeometryInstance);
     }
 }
+*/
 
 StaticMeshHandle GpuScene::registerStaticMesh(std::shared_ptr<StaticMesh> staticMesh)
 {
@@ -479,9 +505,9 @@ StaticMeshHandle GpuScene::registerStaticMesh(std::shared_ptr<StaticMesh> static
     for (StaticMeshSegment& meshSegment : lod.meshSegments) {
 
         // NOTE: Matrices are set at "render-time" before each frame starts
-        ShaderDrawable shaderDrawable;
-        shaderDrawable.materialIndex = meshSegment.material.indexOfType<int>();
-        m_rasterizerMeshData.push_back(shaderDrawable);
+        //ShaderDrawable shaderDrawable;
+        //shaderDrawable.materialIndex = meshSegment.material.indexOfType<int>();
+        //m_rasterizerMeshData.push_back(shaderDrawable);
 
         // TODO: Do ray tracing stuff!
         // TODO: Do ray tracing stuff!
@@ -999,7 +1025,7 @@ void GpuScene::drawStatsGui(bool includeContainingWindow)
 
     ImGui::Text("Number of managed resources:");
     ImGui::Columns(3);
-    ImGui::Text("meshes: %u", m_managedMeshes.size());
+    ImGui::Text("static meshes: %u", m_managedStaticMeshes.size());
     ImGui::NextColumn();
     ImGui::Text("materials: %u", m_managedMaterials.size());
     ImGui::NextColumn();

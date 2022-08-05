@@ -19,9 +19,7 @@ RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Regi
     Buffer& indirectDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
-        scene.forEachMesh([&](size_t, Mesh& mesh) {
-            mesh.ensureDrawCallIsAvailable(m_prepassVertexLayout, scene);
-        });
+        scene.ensureDrawCallIsAvailableForAll(m_prepassVertexLayout);
 
         cmdList.beginRendering(prepassRenderState, ClearValue::blackAtMaxDepth());
 

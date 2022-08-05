@@ -71,6 +71,7 @@ void Scene::setupFromDescription(const Description& description)
     loadFromFile(description.path);
 }
 
+/*
 Model& Scene::addModel(std::unique_ptr<Model> model)
 {
     ARKOSE_ASSERT(model);
@@ -89,6 +90,7 @@ Model& Scene::addModel(std::unique_ptr<Model> model)
 
     return addedModel;
 }
+*/
 
 StaticMeshInstance Scene::addMesh(std::shared_ptr<StaticMesh> staticMesh, Transform transform)
 {
@@ -262,7 +264,9 @@ void Scene::loadFromFile(const std::string& path)
         vec3 translation = readVec3(transform.at("translation"));
         vec3 scale = readVec3(transform.at("scale"));
 
-        if (false) {
+        std::string modelName = jsonModel.at("name");
+
+        if (true) {
 
             GltfLoader::LoadResult result = m_gltfLoader.load(modelGltf, GltfLoader::LoadMode::Meshes);
 
@@ -281,6 +285,10 @@ void Scene::loadFromFile(const std::string& path)
             // Translate material handles for meshes
 
             for (auto& staticMesh : result.staticMeshes) {
+
+                // NOTE: We might want to add a suffix number for each separate mesh?
+                staticMesh->setName(modelName);
+
                 for (StaticMeshLOD& lod : staticMesh->LODs()) {
                     for (StaticMeshSegment& segment : lod.meshSegments) {
 
@@ -298,7 +306,6 @@ void Scene::loadFromFile(const std::string& path)
 
             for (auto& staticMesh : result.staticMeshes) {
                 StaticMeshInstance instance = addMesh(staticMesh, xform);
-                m_staticMeshInstances.push_back(instance);
             }
         } else {
 
@@ -306,12 +313,10 @@ void Scene::loadFromFile(const std::string& path)
             if (!model)
                 continue;
 
-            std::string name = jsonModel.at("name");
-            model->setName(name);
-
+            model->setName(modelName);
             model->transform().set(translation, orientation, scale);
 
-            addModel(std::move(model));
+            //addModel(std::move(model));
 
         }
     }

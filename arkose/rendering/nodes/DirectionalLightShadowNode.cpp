@@ -14,6 +14,10 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
     // We should ensure we denoise it before we pass it on, and let TAA just smooth out the last little bit.
     //
 
+    if (!(reg.hasPreviousNode("Prepass") || reg.hasPreviousNode("Forward"))) {
+        ARKOSE_LOG(Fatal, "Directional light shadow needs scene depth information, can't progress");
+    }
+
     Texture& sceneDepth = *reg.getTexture("SceneDepth");
     Buffer& cameraDataBuffer = *reg.getBuffer("SceneCameraData");
     Texture& blueNoiseTexArray = *reg.getTexture("BlueNoise");
@@ -55,9 +59,7 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
         auto lightFrustum = geometry::Frustum::createFromProjectionMatrix(lightProjectionFromWorld);
         mat4 lightProjectionFromView = lightProjectionFromWorld * inverse(scene.camera().viewMatrix());
 
-        scene.forEachMesh([&](size_t idx, Mesh& mesh) {
-            mesh.ensureDrawCallIsAvailable(m_vertexLayout, scene);
-        });
+        scene.ensureDrawCallIsAvailableForAll(m_vertexLayout);
 
         {
             ScopedDebugZone zone { cmdList, "Shadow Map Drawing" };
@@ -72,6 +74,36 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
             cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
             cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
 
+            uint32_t drawIdx = 0;
+            for (StaticMeshInstance& instance : scene.scene().staticMeshInstances()) {
+                if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance.mesh)) {
+
+                    // TODO: Pick LOD properly
+                    const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
+
+                    geometry::Sphere sphere = lod.boundingSphere.transformed(instance.transform.worldMatrix());
+                    if (lightFrustum.includesSphere(sphere)) {
+
+                        for (const StaticMeshSegment& meshSegment : lod.meshSegments) {
+
+                            // Don't render translucent objects. We still do masked though and pretend they are opaque. This may fail
+                            // in some cases but in general if the masked features are small enough it's not really noticable.
+                            if (const Material* material = scene.materialForHandle(meshSegment.material)) {
+                                if (material->blendMode == Material::BlendMode::Translucent) {
+                                    break;
+                                }
+                            }
+
+                            DrawCallDescription drawCall = meshSegment.drawCallDescription(m_vertexLayout, scene);
+                            drawCall.firstInstance = drawIdx++; // TODO: Put this in some buffer instead!
+
+                            cmdList.issueDrawCall(drawCall);
+                        }
+                    }
+                }
+            }
+
+            /*
             scene.forEachMesh([&](size_t idx, Mesh& mesh) {
                 // Don't render translucent objects. We still do masked though and pretend they are opaque. This may fail
                 // in some cases but in general if the masked features are small enough it's not really noticable.
@@ -87,6 +119,7 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
 
                 cmdList.issueDrawCall(drawCall);
             });
+            */
 
             cmdList.endRendering();
         }

@@ -63,9 +63,9 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     }
 
     pipeline.addNode<CullingNode>();
-    //pipeline.addNode<PrepassNode>(); // TODO!
+    pipeline.addNode<PrepassNode>();
 
-    pipeline.addNode<DirectionalLightShadowNode>(); // NOTE: Needs prepass!!! 
+    pipeline.addNode<DirectionalLightShadowNode>();
     pipeline.addNode<LocalLightShadowNode>();
 
     pipeline.addNode<ForwardRenderNode>();

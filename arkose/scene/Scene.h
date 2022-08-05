@@ -53,7 +53,7 @@ public:
     Camera& camera() { return *m_currentMainCamera; }
 
     // Models // NOTE: Old stuff, to be removed!
-    Model& addModel(std::unique_ptr<Model>);
+    //Model& addModel(std::unique_ptr<Model>);
 
     // Meshes (TODO: Maybe the Scene shouldn't have any knowledge about meshes, and let the GpuScene handle all mesh logic?)
 

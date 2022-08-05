@@ -40,10 +40,10 @@ public:
     Camera& camera() { return scene().camera(); }
     const Camera& camera() const { return scene().camera(); }
 
-    size_t meshCount() const { return m_managedMeshes.size(); }
-    size_t forEachMesh(std::function<void(size_t, Mesh&)> callback);
+    //size_t meshCount() const { return m_managedMeshes.size(); }
+    //size_t forEachMesh(std::function<void(size_t, Mesh&)> callback);
 
-    // size_t meshCount() const { return m_managedStaticMeshes.size(); }
+    size_t meshCount() const { return m_managedStaticMeshes.size(); }
     size_t forEachStaticMesh(std::function<void(size_t, StaticMesh&)> callback);
 
     const StaticMesh* staticMeshForHandle(StaticMeshHandle handle) const;
@@ -71,7 +71,7 @@ public:
     // TODO: Unregister light!
 
     // TODO: Replace with something like "registerInstance" which takes a Model and a transform.. or something like that
-    void registerMesh(Mesh&);
+    //void registerMesh(Mesh&);
 
     StaticMeshHandle registerStaticMesh(std::shared_ptr<StaticMesh>);
     // TODO: void unregisterStaticMesh(StaticMeshHandle);
@@ -139,9 +139,9 @@ private:
     std::vector<std::shared_ptr<StaticMesh>> m_managedStaticMeshes {};
 
     // TODO: Remove me!
-    std::vector<Mesh*> m_managedMeshes {};
+    //std::vector<Mesh*> m_managedMeshes {};
 
-    std::vector<ShaderDrawable> m_rasterizerMeshData {}; // TODO: Rename to something like m_drawInstances and the type ShaderDrawInstance? Something like that :^)
+    //std::vector<ShaderDrawable> m_rasterizerMeshData {}; // TODO: Rename to something like m_drawInstances and the type ShaderDrawInstance? Something like that :^)
     std::vector<RTTriangleMesh> m_rayTracingMeshData {};
     static constexpr int MaxSupportedSceneMeshes = 10'000;
 

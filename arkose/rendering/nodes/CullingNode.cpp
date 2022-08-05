@@ -68,6 +68,36 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
         uploadBuffer.upload(planesData, planesByteSize, frustumPlaneBuffer);
 
         std::vector<IndirectShaderDrawable> indirectDrawableData {};
+
+        size_t numInputDrawables = 0;
+        for (StaticMeshInstance& instance : scene.scene().staticMeshInstances()) {
+            if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance.mesh)) {
+
+                // TODO: Pick LOD properly
+                const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
+
+                // TODO: Culling (e.g. frustum) should be done on mesh/LOD level, not per segment, but this will work for now
+                for (const StaticMeshSegment& meshSegment : lod.meshSegments) {
+
+                    const Material& material = *scene.materialForHandle(meshSegment.material);
+
+                    DrawCallDescription drawCall = meshSegment.drawCallDescription({ VertexComponent::Position3F }, scene);
+                    indirectDrawableData.push_back({ .drawable = { .worldFromLocal = instance.transform.worldMatrix(),
+                                                                   .worldFromTangent = mat4(instance.transform.worldNormalMatrix()),
+                                                                   .previousFrameWorldFromLocal = instance.transform.previousFrameWorldMatrix(),
+                                                                   .materialIndex = meshSegment.material.indexOfType<int>() },
+                                                     .localBoundingSphere = vec4(lod.boundingSphere.center(), lod.boundingSphere.radius()),
+                                                     .indexCount = drawCall.indexCount,
+                                                     .firstIndex = drawCall.firstIndex,
+                                                     .vertexOffset = drawCall.vertexOffset,
+                                                     .materialBlendMode = material.blendModeValue() });
+
+                    numInputDrawables += 1;
+                }
+            }
+        }
+
+        /*
         size_t numInputDrawables = scene.forEachMesh([&](size_t, Mesh& mesh) {
             DrawCallDescription drawCall = mesh.drawCallDescription({ VertexComponent::Position3F }, scene);
             indirectDrawableData.push_back({ .drawable = { .worldFromLocal = mesh.transform().worldMatrix(),
@@ -80,6 +110,8 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
                                              .vertexOffset = drawCall.vertexOffset,
                                              .materialBlendMode = mesh.material().blendModeValue() });
         });
+        */
+
         size_t newSize = numInputDrawables * sizeof(IndirectShaderDrawable);
         ARKOSE_ASSERT(newSize <= indirectDrawableBuffer.size()); // fixme: grow instead of failing!
         uploadBuffer.upload(indirectDrawableData, indirectDrawableBuffer);

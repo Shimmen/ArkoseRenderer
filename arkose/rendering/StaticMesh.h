@@ -73,6 +73,7 @@ public:
     // Just make the loaders access into the private bits so we can keep their interfaces nice and simple
     friend class GltfLoader;
 
+    void setName(std::string name) { m_name = std::move(name); }
     std::string_view name() const { return m_name; }
 
     uint32_t numLODs() const { return static_cast<uint32_t>(m_lods.size()); }

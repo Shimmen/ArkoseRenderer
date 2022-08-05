@@ -24,9 +24,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        scene.forEachMesh([&](size_t, Mesh& mesh) {
-            mesh.ensureDrawCallIsAvailable(m_vertexLayout, scene);
-        });
+        scene.ensureDrawCallIsAvailableForAll(m_vertexLayout);
 
         auto setCommonNamedUniforms = [&](const RenderState& renderState) {
             cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());

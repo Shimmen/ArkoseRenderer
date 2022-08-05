@@ -32,6 +32,8 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
+        /*
+
         // TODO: Implement some proper CPU readback context so we know for sure that the previous result
         // is ready at this point. Just because it's from the previous frame doesn't mean it must be done.
         // What if we submit the queue and immediately start work on the next frame before the first is
@@ -61,6 +63,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
                 drawCall.firstInstance = static_cast<uint32_t>(index);
                 cmdList.issueDrawCall(drawCall);
             });
+            scene.ensureDrawCallIsAvailableForAll({ VertexComponent::Position3F });
 
             cmdList.endRendering();
             
@@ -79,11 +82,16 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
                                                        .selectMesh = meshSelectPick,
                                                        .specifyFocusDepth = focusDepthPick };
         }
+
+        */
+
     };
 }
 
 void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, const DeferredResult& deferredResult)
 {
+    /*
+
     // At least one must be specified
     ARKOSE_ASSERT(deferredResult.selectMesh || deferredResult.specifyFocusDepth);
     
@@ -115,4 +123,6 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
             camera.setFocusDepth(focusDepth);
         }
     }
+
+    */
 }
