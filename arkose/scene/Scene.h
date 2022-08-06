@@ -53,10 +53,13 @@ public:
 
     // Meshes
 
-    StaticMeshInstance addMesh(std::shared_ptr<StaticMesh>, Transform);
+    std::vector<StaticMeshInstance*> loadMeshes(const std::string& filePath);
+    void unloadAllMeshes();
 
-    std::vector<StaticMeshInstance>& staticMeshInstances() { return m_staticMeshInstances; }
-    const std::vector<StaticMeshInstance>& staticMeshInstances() const { return m_staticMeshInstances; }
+    StaticMeshInstance& addMesh(std::shared_ptr<StaticMesh>, Transform);
+
+    std::vector<std::unique_ptr<StaticMeshInstance>>& staticMeshInstances() { return m_staticMeshInstances; }
+    const std::vector<std::unique_ptr<StaticMeshInstance>>& staticMeshInstances() const { return m_staticMeshInstances; }
 
     // TODO: Later, also count skeletal meshes here
     uint32_t meshInstanceCount() const { return static_cast<uint32_t>(m_staticMeshInstances.size()); }
@@ -122,7 +125,7 @@ private:
     // Various loaders, which needs to be kept in memory as they own their loaded resources until someone takes over
     GltfLoader m_gltfLoader {};
 
-    std::vector<StaticMeshInstance> m_staticMeshInstances {};
+    std::vector<std::unique_ptr<StaticMeshInstance>> m_staticMeshInstances {};
     
     std::vector<std::unique_ptr<DirectionalLight>> m_directionalLights {};
     std::vector<std::unique_ptr<SpotLight>> m_spotLights {};

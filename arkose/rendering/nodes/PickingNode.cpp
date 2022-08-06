@@ -62,8 +62,8 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
             cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
 
             uint32_t drawIdx = 0;
-            for (StaticMeshInstance& instance : scene.scene().staticMeshInstances()) {
-                if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance.mesh)) {
+            for (auto& instance : scene.scene().staticMeshInstances()) {
+                if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh)) {
 
                     // TODO: Pick LOD properly (i.e. the same as drawn in the main passes)
                     const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
@@ -108,8 +108,8 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
         int selectedIdx = pickingData.meshIdx;
 
         uint32_t drawIdx = 0;
-        for (StaticMeshInstance& instance : scene.scene().staticMeshInstances()) {
-            if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance.mesh)) {
+        for (auto& instance : scene.scene().staticMeshInstances()) {
+            if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh)) {
 
                 // TODO: Pick LOD properly (i.e. the same as drawn in the main passes)
                 const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
@@ -118,7 +118,7 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
 
                     if (drawIdx == selectedIdx) {
                         // TODO: This will break if/when we resize the instance vector
-                        scene.scene().setSelectedInstance(&instance);
+                        scene.scene().setSelectedInstance(instance.get());
                         return;
                     }
 

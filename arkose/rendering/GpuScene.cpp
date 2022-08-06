@@ -310,7 +310,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             const auto& staticMeshInstances = scene().staticMeshInstances();
             for (int i = 0, count = staticMeshInstances.size(); i < count; ++i) {
 
-                const StaticMeshInstance& instance = staticMeshInstances[i];
+                const StaticMeshInstance& instance = *staticMeshInstances[i];
                 const StaticMesh& staticMesh = *m_managedStaticMeshes[i].staticMesh;
                 
                 // TODO: Make use of all LODs
@@ -399,8 +399,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             std::vector<RTTriangleMesh> rayTracingMeshData {};
             std::vector<RTGeometryInstance> rayTracingGeometryInstances {};
 
-            for (StaticMeshInstance& instance : scene().staticMeshInstances()) {
-                if (StaticMesh* staticMesh = staticMeshForHandle(instance.mesh)) {
+            for (auto& instance : scene().staticMeshInstances()) {
+                if (StaticMesh* staticMesh = staticMeshForHandle(instance->mesh)) {
                     for (StaticMeshLOD& staticMeshLOD : staticMesh->LODs()) {
                         for (StaticMeshSegment& meshSegment : staticMeshLOD.meshSegments) {
 
@@ -444,7 +444,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                             // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
                             rayTracingGeometryInstances.push_back(RTGeometryInstance { .blas = *meshSegment.blas,
-                                                                                       .transform = instance.transform, // NOTE: This is a reference!
+                                                                                       .transform = instance->transform, // NOTE: This is a reference!
                                                                                        .shaderBindingTableOffset = 0, // TODO: Generalize!
                                                                                        .customInstanceId = rtMeshIndex,
                                                                                        .hitMask = hitMask });

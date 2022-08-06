@@ -75,13 +75,13 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
             cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
 
             uint32_t drawIdx = 0;
-            for (StaticMeshInstance& instance : scene.scene().staticMeshInstances()) {
-                if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance.mesh)) {
+            for (auto& instance : scene.scene().staticMeshInstances()) {
+                if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh)) {
 
                     // TODO: Pick LOD properly
                     const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
 
-                    geometry::Sphere sphere = lod.boundingSphere.transformed(instance.transform.worldMatrix());
+                    geometry::Sphere sphere = lod.boundingSphere.transformed(instance->transform.worldMatrix());
                     if (lightFrustum.includesSphere(sphere)) {
 
                         for (const StaticMeshSegment& meshSegment : lod.meshSegments) {

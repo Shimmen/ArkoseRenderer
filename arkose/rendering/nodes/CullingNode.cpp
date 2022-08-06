@@ -70,8 +70,8 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
         std::vector<IndirectShaderDrawable> indirectDrawableData {};
 
         size_t numInputDrawables = 0;
-        for (StaticMeshInstance& instance : scene.scene().staticMeshInstances()) {
-            if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance.mesh)) {
+        for (auto& instance : scene.scene().staticMeshInstances()) {
+            if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh)) {
 
                 // TODO: Pick LOD properly
                 const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
@@ -82,9 +82,9 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
                     const Material& material = *scene.materialForHandle(meshSegment.material);
 
                     DrawCallDescription drawCall = meshSegment.drawCallDescription({ VertexComponent::Position3F }, scene);
-                    indirectDrawableData.push_back({ .drawable = { .worldFromLocal = instance.transform.worldMatrix(),
-                                                                   .worldFromTangent = mat4(instance.transform.worldNormalMatrix()),
-                                                                   .previousFrameWorldFromLocal = instance.transform.previousFrameWorldMatrix(),
+                    indirectDrawableData.push_back({ .drawable = { .worldFromLocal = instance->transform.worldMatrix(),
+                                                                   .worldFromTangent = mat4(instance->transform.worldNormalMatrix()),
+                                                                   .previousFrameWorldFromLocal = instance->transform.previousFrameWorldMatrix(),
                                                                    .materialIndex = meshSegment.material.indexOfType<int>() },
                                                      .localBoundingSphere = vec4(lod.boundingSphere.center(), lod.boundingSphere.radius()),
                                                      .indexCount = drawCall.indexCount,

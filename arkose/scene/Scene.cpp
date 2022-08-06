@@ -52,7 +52,7 @@ void Scene::postRender()
     camera().postRender({});
 
     for (auto& instance : m_staticMeshInstances) {
-        instance.transform.postRender({});
+        instance->transform.postRender({});
     }
 }
 
@@ -61,17 +61,68 @@ void Scene::setupFromDescription(const Description& description)
     // NOTE: Must initialize GPU scene before we start registering meshes etc.
     gpuScene().initialize({}, description.maintainRayTracingScene);
 
-    if (!FileIO::isFileReadable(description.path))
-        ARKOSE_LOG(Fatal, "Could not read scene file '{}', exiting", description.path);
-    loadFromFile(description.path);
+    if (FileIO::isFileReadable(description.path)) {
+        loadFromFile(description.path);
+    }
 }
 
-StaticMeshInstance Scene::addMesh(std::shared_ptr<StaticMesh> staticMesh, Transform transform)
+std::vector<StaticMeshInstance*> Scene::loadMeshes(const std::string& filePath)
+{
+    // For now we only load glTF
+    ARKOSE_ASSERT(filePath.ends_with(".gltf") || filePath.ends_with(".glb"));
+    GltfLoader::LoadResult result = m_gltfLoader.load(filePath);
+
+    // Register materials & create translation table from local to global material handles
+
+    std::unordered_map<MaterialHandle, MaterialHandle> materialHandleMap;
+
+    for (size_t localMaterialIdx = 0; localMaterialIdx < result.materials.size(); ++localMaterialIdx) {
+
+        MaterialHandle localMaterialHandle = MaterialHandle(static_cast<MaterialHandle::IndexType>(localMaterialIdx));
+        MaterialHandle materialHandle = gpuScene().registerMaterial(*result.materials[localMaterialIdx]);
+
+        materialHandleMap[localMaterialHandle] = materialHandle;
+    }
+
+    // Translate material handles for meshes
+
+    for (auto& staticMesh : result.staticMeshes) {
+        for (StaticMeshLOD& lod : staticMesh->LODs()) {
+            for (StaticMeshSegment& segment : lod.meshSegments) {
+
+                auto entry = materialHandleMap.find(segment.material);
+                ARKOSE_ASSERT(entry != materialHandleMap.end());
+
+                segment.material = entry->second;
+            }
+        }
+    }
+
+    // Add meshes & create instances
+
+    std::vector<StaticMeshInstance*> instances {};
+
+    for (auto& staticMesh : result.staticMeshes) {
+        StaticMeshInstance& instance = addMesh(staticMesh, Transform());
+        instances.push_back(&instance);
+    }
+
+    return instances;
+}
+
+void Scene::unloadAllMeshes()
+{
+    // TODO: Also make sure we unregister the meshes from the GpuScene and delete unused materials & textures
+    //gpuScene().unregisterMesh() ...
+
+    m_staticMeshInstances.clear();
+}
+
+StaticMeshInstance& Scene::addMesh(std::shared_ptr<StaticMesh> staticMesh, Transform transform)
 {
     StaticMeshHandle staticMeshHandle = gpuScene().registerStaticMesh(std::move(staticMesh));
 
-    m_staticMeshInstances.push_back({ .mesh = staticMeshHandle,
-                                      .transform = transform });
+    m_staticMeshInstances.push_back(std::make_unique<StaticMeshInstance>(staticMeshHandle, transform));
 
     if (hasPhysicsScene()) {
         // TODO:
@@ -79,7 +130,7 @@ StaticMeshInstance Scene::addMesh(std::shared_ptr<StaticMesh> staticMesh, Transf
         //  2) register a physics shape for this instance
     }
 
-    return m_staticMeshInstances.back();
+    return *m_staticMeshInstances.back();
 }
 
 DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)
@@ -236,47 +287,18 @@ void Scene::loadFromFile(const std::string& path)
         vec3 translation = readVec3(transform.at("translation"));
         vec3 scale = readVec3(transform.at("scale"));
 
-        GltfLoader::LoadResult result = m_gltfLoader.load(modelGltf);
-
-        // Register materials & create translation table from local to global material handles
-
-        std::unordered_map<MaterialHandle, MaterialHandle> materialHandleMap;
-
-        for (size_t localMaterialIdx = 0; localMaterialIdx < result.materials.size(); ++localMaterialIdx) {
-
-            MaterialHandle localMaterialHandle = MaterialHandle(static_cast<MaterialHandle::IndexType>(localMaterialIdx));
-            MaterialHandle materialHandle = gpuScene().registerMaterial(*result.materials[localMaterialIdx]);
-
-            materialHandleMap[localMaterialHandle] = materialHandle;
-        }
-
-        // Translate material handles for meshes
-
-        for (auto& staticMesh : result.staticMeshes) {
-
-            // NOTE: We might want to add a suffix number for each separate mesh?
-            std::string modelName = jsonModel.at("name");
-            staticMesh->setName(modelName);
-
-            for (StaticMeshLOD& lod : staticMesh->LODs()) {
-                for (StaticMeshSegment& segment : lod.meshSegments) {
-
-                    auto entry = materialHandleMap.find(segment.material);
-                    ARKOSE_ASSERT(entry != materialHandleMap.end());
-
-                    segment.material = entry->second;
-                }
-            }
-        }
-
-        // Add meshes & create instances
-
         Transform xform { translation, orientation, scale };
 
-        for (auto& staticMesh : result.staticMeshes) {
-            StaticMeshInstance instance = addMesh(staticMesh, xform);
+        std::string modelName = jsonModel.at("name");
+
+        std::vector<StaticMeshInstance*> loadedInstances = loadMeshes(modelGltf);
+        for (StaticMeshInstance* instance : loadedInstances) {
+
+            // NOTE: We might want to add a suffix number for each separate mesh?
+            instance->name = modelName;
+
+            instance->transform = xform;
         }
-        
     }
 
     for (auto& jsonLight : jsonScene.at("lights")) {
