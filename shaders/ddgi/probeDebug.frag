@@ -34,6 +34,7 @@ void main()
         return;
     case DDGI_PROBE_DEBUG_VISUALIZE_DISTANCE:
         outColor = vec4(vec3(pushConstants.distanceScale * visibility.x), 1.0);
+        if (visibility.x < 0.0) outColor.rgb = vec3(1, 0, 1);
         return;
     case DDGI_PROBE_DEBUG_VISUALIZE_DISTANCE2:
         outColor = vec4(vec3(pushConstants.distanceScale * visibility.y), 1.0);
