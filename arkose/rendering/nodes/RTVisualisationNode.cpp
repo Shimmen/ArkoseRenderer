@@ -18,7 +18,7 @@ RenderPipelineNode::ExecuteCallback RTVisualisationNode::construct(GpuScene& sce
 
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ ShaderBinding::topLevelAccelerationStructure(sceneTLAS, ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
-                                                         ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
+                                                         ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::AnyRayTrace),
                                                          ShaderBinding::sampledTexture(scene.environmentMapTexture(), ShaderStage::RTRayGen),
                                                          ShaderBinding::storageTexture(storageImage, ShaderStage::RTRayGen) });
 

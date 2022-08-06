@@ -178,7 +178,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     }
 
     Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::GpuOnly);
-    BindingSet& cameraBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(cameraBuffer, ShaderStage::AnyRasterize) });
+    BindingSet& cameraBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(cameraBuffer, ShaderStage::Any) });
     reg.publish("SceneCameraData", cameraBuffer);
     reg.publish("SceneCameraSet", cameraBindingSet);
 

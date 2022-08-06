@@ -74,7 +74,7 @@ void main()
 		uint cullMask = RT_HIT_MASK_OPAQUE;
 
 		traceRay(topLevelAS, rayFlags, cullMask, 0, 0, 0, rayOrigin, tmin, rayDirection, tmax, 0);
-		if (payload.hitT != HIT_T_MISS) {
+		if (payload.hitT <= tmax) {
 			tmax = payload.hitT;
 			reflectionColor = payload.color;
 			numHits += 1;

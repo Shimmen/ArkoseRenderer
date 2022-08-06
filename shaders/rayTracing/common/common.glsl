@@ -8,8 +8,6 @@
 #define RT_USE_EXTENDED_RAY_PAYLOAD 0
 #endif
 
-#define HIT_T_MISS (-1.0)
-
 struct Vertex {
     vec3 normal;
     vec2 texCoord;
