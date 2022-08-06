@@ -99,7 +99,7 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3
     float distanceAttenuation = 1.0 / square(dist);
 
     float cosConeAngle = dot(L, toLight / dist);
-    float iesValue = evaluateIESLookupTable(textures[light.iesProfileIndex], light.outerConeHalfAngle, cosConeAngle);
+    float iesValue = evaluateIESLookupTable(textures[nonuniformEXT(light.iesProfileIndex)], light.outerConeHalfAngle, cosConeAngle);
 
     vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
     vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;
@@ -134,7 +134,7 @@ void main()
 {
     ShaderMaterial material = materials[vMaterialIndex];
 
-    vec4 inputBaseColor = texture(textures[material.baseColor], vTexCoord).rgba;
+    vec4 inputBaseColor = texture(textures[nonuniformEXT(material.baseColor)], vTexCoord).rgba;
 
 #if FORWARD_BLEND_MODE == BLEND_MODE_MASKED
     float mask = inputBaseColor.a;
@@ -144,9 +144,9 @@ void main()
 #endif
 
     vec3 baseColor = inputBaseColor.rgb;
-    vec3 emissive = texture(textures[material.emissive], vTexCoord).rgb;
+    vec3 emissive = texture(textures[nonuniformEXT(material.emissive)], vTexCoord).rgb;
 
-    vec4 metallicRoughness = texture(textures[material.metallicRoughness], vTexCoord);
+    vec4 metallicRoughness = texture(textures[nonuniformEXT(material.metallicRoughness)], vTexCoord);
     float metallic = metallicRoughness.b;
     float roughness = metallicRoughness.g;
 
@@ -154,7 +154,7 @@ void main()
 // (If we want to make normal mapping a proper permutation we would also want to exclude interpolats vTangent and vBitangentSign)
 #define FORWARD_USE_NORMAL_MAPPING 1
 #if FORWARD_USE_NORMAL_MAPPING
-    vec3 packedNormal = texture(textures[material.normalMap], vTexCoord).rgb;
+    vec3 packedNormal = texture(textures[nonuniformEXT(material.normalMap)], vTexCoord).rgb;
     vec3 tangentNormal = normalize(packedNormal * 2.0 - 1.0);
 
     // Using MikkT space (http://www.mikktspace.com/)
