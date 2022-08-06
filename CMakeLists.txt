@@ -163,9 +163,11 @@ if (MSVC)
     # Ensure we're using the dynamically linked runtime library for MSVC.
     # When linking with Tracy this is required, as it will dynamically load dlls.
     set(MSVC_RUNTIME_LIBRARY_STRING "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-    target_compile_definitions(ArkoseRenderer PUBLIC WIN32_LEAN_AND_MEAN)
     set_property(TARGET ArkoseRenderer PROPERTY MSVC_RUNTIME_LIBRARY ${MSVC_RUNTIME_LIBRARY_STRING})
     set_property(TARGET Jolt PROPERTY MSVC_RUNTIME_LIBRARY ${MSVC_RUNTIME_LIBRARY_STRING})
+
+    # Avoid including too much noise from windows.h
+    target_compile_definitions(ArkoseRenderer PUBLIC WIN32_LEAN_AND_MEAN)
 endif()
 
 # Enable tracy real-time debugger? It does leak memory when enabled, so maybe keep off by default?
