@@ -45,10 +45,12 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(GpuScene& scene, R
 
         ImGui::SliderFloat("Probe size (m)", &m_probeScale, 0.01f, 1.0f);
         ImGui::SliderFloat("Distance scale", &m_distanceScale, 0.001f, 0.1f);
+        ImGui::Checkbox("Render probes with offsets", &m_useProbeOffset);
 
         cmdList.beginRendering(renderState);
         cmdList.setNamedUniform("probeScale", m_probeScale);
         cmdList.setNamedUniform("distanceScale", m_distanceScale);
+        cmdList.setNamedUniform("useProbeOffset", m_useProbeOffset);
         cmdList.setNamedUniform("debugVisualisation", debugVisualisation);
 
         DrawCallDescription probesDrawCall = m_sphereDrawCall;

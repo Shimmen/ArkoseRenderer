@@ -1,0 +1,94 @@
+#version 460
+
+#ifndef SURFELS_PER_PROBE
+#error "Please define SURFELS_PER_PROBE"
+#endif
+
+#include <common.glsl>
+#include <common/namedUniforms.glsl>
+#include <common/octahedral.glsl>
+#include <ddgi/common.glsl>
+
+layout(set = 0, binding = 0, rgba16f) uniform readonly image2D surfelImage;
+layout(set = 0, binding = 1) buffer ProbeOffsetBlock { vec3 probeOffsets[]; };
+
+NAMED_UNIFORMS(constants,
+    uint raysPerProbe;
+    uint frameIdx;
+    float deltaTime;
+    float maxOffset;
+)
+
+layout(local_size_x = 1, local_size_y = SURFELS_PER_PROBE, local_size_z = 1) in;
+shared vec4 probeSurfelData[SURFELS_PER_PROBE];
+
+void main()
+{
+    uint probeIdx = gl_GlobalInvocationID.x;
+
+    uint sampleIdx = gl_GlobalInvocationID.y;
+    if (sampleIdx >= constants.raysPerProbe) {
+        return;
+    }
+
+    vec3 rayDirection = calculateRotatedSphericalFibonacciSample(probeIdx, sampleIdx, constants.raysPerProbe, constants.frameIdx);
+    float surfelRayDistance = imageLoad(surfelImage, ivec2(probeIdx, sampleIdx)).a;
+    probeSurfelData[sampleIdx] = vec4(rayDirection, surfelRayDistance);
+
+    groupMemoryBarrier();
+
+    if (sampleIdx == 0) {
+
+        vec3 currentOffset = probeOffsets[probeIdx];
+        vec3 offset = vec3(0.0);
+
+        uint backfaceCount = 0;
+        vec3 accumBackfaceDir = vec3(0.0);
+
+        uint nearFrontfaceCount = 0;
+        vec3 accumNearFrontfaceDir = vec3(0.0);
+
+        for (uint i = 0; i < constants.raysPerProbe; ++i) {
+            vec4 data = probeSurfelData[i];
+            if (data.a > 0.0 && data.a < constants.maxOffset) {
+                accumNearFrontfaceDir += data.xyz;
+                nearFrontfaceCount += 1;
+            } else if (data.a < 0.0) {
+                backfaceCount += 1;
+                accumBackfaceDir += data.xyz;
+            }
+        }
+
+        // NOTE: These can be adjusted freely to create something nice & stable
+        const float stepSize = 0.125;
+        const float lerpSpeed = 10.0;
+
+        // If we're seeing backfaces in 25% or more of samples assume we're inside a mesh and need to move out of it.
+        // Simply take a small step *towards* the average direction we're seeing backfaces in to get through them.
+        if (float(backfaceCount) / float(constants.raysPerProbe) >= 0.25) {
+            offset += normalize(accumBackfaceDir) * stepSize;
+        }
+
+        // If we're near frontfaces, move away from them a bit so we're not too close
+        else if (nearFrontfaceCount >= 1) {
+            offset -= normalize(accumNearFrontfaceDir) * stepSize;
+        }
+
+        // If nothing else pushes on us, move back towards the original position
+        else {
+            offset -= currentOffset * stepSize;
+        }
+
+        vec3 newOffset = currentOffset + offset;
+
+        // Clamp the new offset to the max offset distance
+        if (length(newOffset) > constants.maxOffset) {
+            newOffset = constants.maxOffset * normalize(newOffset);
+        }
+
+        // Exponential lerp towards target
+        newOffset = mix(newOffset, currentOffset, exp2(-lerpSpeed * constants.deltaTime));
+
+        probeOffsets[probeIdx] = newOffset;
+    }
+}

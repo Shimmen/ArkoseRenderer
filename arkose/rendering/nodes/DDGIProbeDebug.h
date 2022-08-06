@@ -15,4 +15,5 @@ private:
 
     float m_probeScale { 0.05f };
     float m_distanceScale { 0.002f };
+    bool m_useProbeOffset { true };
 };

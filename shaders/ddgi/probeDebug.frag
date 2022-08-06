@@ -7,13 +7,15 @@ layout(location = 0) in vec3 vNormal;
 layout(location = 1) flat in uint vProbeIdx;
 
 layout(set = 1, binding = 0) uniform DDGIGridDataBlock { DDGIProbeGridData ddgiProbeGridData; };
-layout(set = 1, binding = 1) uniform sampler2D ddgiIrradianceAtlas;
-layout(set = 1, binding = 2) uniform sampler2D ddgiVisibilityAtlas;
+layout(set = 1, binding = 1) buffer ProbeOffsetBlock { vec3 probeOffsets[]; };
+layout(set = 1, binding = 2) uniform sampler2D ddgiIrradianceAtlas;
+layout(set = 1, binding = 3) uniform sampler2D ddgiVisibilityAtlas;
 
 NAMED_UNIFORMS(pushConstants,
     int debugVisualisation;
     float probeScale;
     float distanceScale;
+    bool useProbeOffset;
 )
 
 layout(location = 0) out vec4 outColor;

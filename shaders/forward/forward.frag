@@ -37,8 +37,9 @@ layout(set = 4, binding = 2) buffer readonly ShadowMapViewportBlock { vec4 local
 #include <shared/DDGIData.h>
 #include <ddgi/probeSampling.glsl>
 layout(set = 5, binding = 0) uniform DDGIGridDataBlock { DDGIProbeGridData ddgiProbeGridData; };
-layout(set = 5, binding = 1) uniform sampler2D ddgiIrradianceAtlas;
-layout(set = 5, binding = 2) uniform sampler2D ddgiVisibilityAtlas;
+layout(set = 5, binding = 1) buffer ProbeOffsetBlock { vec3 probeOffsets[]; };
+layout(set = 5, binding = 2) uniform sampler2D ddgiIrradianceAtlas;
+layout(set = 5, binding = 3) uniform sampler2D ddgiVisibilityAtlas;
 #endif
 
 NAMED_UNIFORMS(pushConstants,

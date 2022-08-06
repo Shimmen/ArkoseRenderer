@@ -14,8 +14,9 @@ layout(set = 0, binding = 2) uniform sampler2D environmentMap;
 layout(set = 0, binding = 3, rgba16f) uniform image2D surfelImage;
 
 layout(set = 4, binding = 0) uniform DDGIGridDataBlock { DDGIProbeGridData probeGridData; };
-layout(set = 4, binding = 1) uniform sampler2D ddgiIrradianceAtlas;
-layout(set = 4, binding = 2) uniform sampler2D ddgiVisibilityAtlas;
+layout(set = 4, binding = 1) buffer ProbeOffsetBlock { vec3 probeOffsets[]; };
+layout(set = 4, binding = 2) uniform sampler2D ddgiIrradianceAtlas;
+layout(set = 4, binding = 3) uniform sampler2D ddgiVisibilityAtlas;
 
 NAMED_UNIFORMS_STRUCT(RayTracingPushConstants, constants)
 
@@ -41,7 +42,8 @@ HitResult tracePrimaryRay(vec3 origin, vec3 direction)
 
     // Opaque
     {
-        uint rayFlags = RayFlags_Opaque | RayFlags_CullBackFacingTriangles;
+        // NOTE: No backface culling, we need backface info
+        uint rayFlags = RayFlags_Opaque;
         uint cullMask = RT_HIT_MASK_OPAQUE;
 
         traceRay(topLevelAS, rayFlags, cullMask, 0, 0, 0, origin, tmin, direction, tmax, 0);
@@ -115,6 +117,8 @@ void main()
     uint sampleCount = imageSize(surfelImage).y;
 
     vec3 probePosition = calculateProbePosition(probeGridData, probeIdx);
+    probePosition += probeOffsets[probeIdx];
+
     vec3 sampleDirection = calculateRotatedSphericalFibonacciSample(probeIdx, sampleIdx, sampleCount, uint(round(constants.parameter1)) /* i.e. frameIdx*/);
     HitResult hit = tracePrimaryRay(probePosition, sampleDirection);
 
@@ -125,5 +129,6 @@ void main()
         color += hit.baseColor * evaluateIndirectLightFromPreviousFrame(hitPos, -sampleDirection, hit.normal, hit.baseColor, hit.metallic);
     }
 
+    // NOTE: hit.dist is <0 if it's a backface hit!
     imageStore(surfelImage, targetPixel, vec4(color, hit.dist));
 }

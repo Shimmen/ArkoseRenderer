@@ -34,7 +34,11 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
     auto visibilityClearColor = ClearColor::dataValues(cameraZFar, cameraZFar * cameraZFar, 0, 0);
     Texture& probeAtlasVisibility = createProbeAtlas(reg, "ddgi-visibility", probeGrid, visibilityClearColor, Texture::Format::RG16F, DDGI_VISIBILITY_RES, DDGI_ATLAS_PADDING);
 
+    std::vector<vec3> initialProbeOffsets { static_cast<size_t>(probeGrid.probeCount()), vec3(0.0) };
+    Buffer& probeOffsetBuffer = reg.createBuffer(initialProbeOffsets, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+
     BindingSet& ddgiSamplingBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(probeGridDataBuffer),
+                                                                ShaderBinding::storageBuffer(probeOffsetBuffer),
                                                                 ShaderBinding::sampledTexture(probeAtlasIrradiance),
                                                                 ShaderBinding::sampledTexture(probeAtlasVisibility) });
     reg.publish("DDGISamplingSet", ddgiSamplingBindingSet);
@@ -83,6 +87,10 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
     ComputeState& probeBorderCopyCornersState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyCorners.comp"), { &probeBorderCopyBindingSet });
     ComputeState& probeBorderCopyIrradianceEdgesState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyEdges.comp", { ShaderDefine::makeInt("TILE_SIZE", DDGI_IRRADIANCE_RES) }), { &probeBorderCopyBindingSet });
     ComputeState& probeBorderCopyVisibilityEdgesState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyEdges.comp", { ShaderDefine::makeInt("TILE_SIZE", DDGI_VISIBILITY_RES) }), { &probeBorderCopyBindingSet });
+
+    BindingSet& probeUpdateOffsetBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(surfelImage, ShaderStage::Compute),
+                                                                     ShaderBinding::storageBuffer(probeOffsetBuffer, ShaderStage::Compute) });
+    ComputeState& probeMoveComputeState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateOffset.comp", { ShaderDefine::makeInt("SURFELS_PER_PROBE", maxNumProbeSamples) }), { &probeUpdateOffsetBindingSet });
 
     return [&, probeCount](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         static int raysPerProbeInt = maxNumProbeSamples;
@@ -197,6 +205,27 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
                 cmdList.bindSet(probeBorderCopyBindingSet, 0);
                 cmdList.dispatch(probeCountX, probeCountY, 1);
             }
+        }
+
+        // 6. Move probes away from (static) surfaces and out from backfacing meshes
+        {
+            ScopedDebugZone traceRaysZone(cmdList, "Update probe positions");
+
+            cmdList.setComputeState(probeMoveComputeState);
+            cmdList.bindSet(probeUpdateOffsetBindingSet, 0);
+
+            cmdList.setNamedUniform("raysPerProbe", raysPerProbe);
+            cmdList.setNamedUniform("frameIdx", frameIdx);
+            cmdList.setNamedUniform("deltaTime", appState.deltaTime());
+
+            float minAxialSpacing = minComponent(probeGrid.probeSpacing);
+            float maxProbeOffset = minAxialSpacing / 2.0f;
+            cmdList.setNamedUniform("maxOffset", maxProbeOffset);
+
+            // Use a subgroup per probe so we can count backfaces 
+            uint32_t probeCount = surfelImage.extent().width();
+            uint32_t sampleCount = surfelImage.extent().height();
+            cmdList.dispatch({ probeCount, 1, 1 }, { 1, sampleCount, 1 });
         }
     };
 }

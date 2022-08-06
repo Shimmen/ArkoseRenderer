@@ -7,7 +7,9 @@
 layout(location = 0) in vec3 aPosition;
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
+
 layout(set = 1, binding = 0) uniform DDGIGridDataBlock { DDGIProbeGridData ddgiProbeGridData; };
+layout(set = 1, binding = 1) buffer ProbeOffsetBlock { vec3 probeOffsets[]; };
 
 layout(location = 0) out vec3 vNormal;
 layout(location = 1) flat out uint vProbeIdx;
@@ -16,6 +18,7 @@ NAMED_UNIFORMS(pushConstants,
     int debugVisualisation;
     float probeScale;
     float distanceScale;
+    bool useProbeOffset;
 )
 
 void main()
@@ -24,6 +27,9 @@ void main()
 
     vProbeIdx = uint(gl_InstanceIndex);
     vec3 probePosition = calculateProbePosition(ddgiProbeGridData, vProbeIdx);
+    if (pushConstants.useProbeOffset) {
+        probePosition += probeOffsets[vProbeIdx];
+    }
 
     vec4 worldSpacePos = vec4(pushConstants.probeScale * aPosition + probePosition, 1.0);
     gl_Position = camera.projectionFromView * camera.viewFromWorld * worldSpacePos;
