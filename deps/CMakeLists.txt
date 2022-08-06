@@ -98,7 +98,7 @@ endif()
 
 FetchContent_Declare(tracy_fetch
     GIT_REPOSITORY https://github.com/wolfpld/tracy.git
-    GIT_TAG        "v0.8")
+    GIT_TAG        "v0.8.2")
 FetchContent_GetProperties(tracy_fetch)
 if(NOT tracy_fetch_POPULATED)
     FetchContent_Populate(tracy_fetch)
