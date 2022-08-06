@@ -19,8 +19,8 @@ public:
     bool isFirstFrame() const { return m_frameIndex == 0; }
     bool isRelativeFirstFrame() const { return m_isRelativeFirstFrame; }
     const Extent2D& windowExtent() const { return m_windowExtent; }
-    double deltaTime() const { return m_deltaTime; }
-    double elapsedTime() const { return m_timeSinceStartup; }
+    float deltaTime() const { return m_deltaTime; }
+    float elapsedTime() const { return m_timeSinceStartup; }
 
     [[nodiscard]] AppState updateWindowExtent(Extent2D& newExtent)
     {
