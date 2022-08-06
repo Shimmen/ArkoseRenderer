@@ -236,7 +236,7 @@ void Scene::loadFromFile(const std::string& path)
         vec3 translation = readVec3(transform.at("translation"));
         vec3 scale = readVec3(transform.at("scale"));
 
-        GltfLoader::LoadResult result = m_gltfLoader.load(modelGltf, GltfLoader::LoadMode::Meshes);
+        GltfLoader::LoadResult result = m_gltfLoader.load(modelGltf);
 
         // Register materials & create translation table from local to global material handles
 

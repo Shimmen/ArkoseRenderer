@@ -13,20 +13,13 @@ public:
     GltfLoader() = default;
     ~GltfLoader() = default;
 
-    enum class LoadMode {
-        // Load the meshes with materials from the glTF file, but ignore camera & lights etc.
-        Meshes,
-        // Load in the glTF file as is, including cameras & lights
-        //Scene,
-    };
-
     struct LoadResult {
         std::vector<std::shared_ptr<Material>> materials {};
         std::vector<std::shared_ptr<StaticMesh>> staticMeshes {};
     };
 
     // TODO: Implement caching (on file path level, at least)
-    LoadResult load(const std::string& gltfFilePath, LoadMode);
+    LoadResult load(const std::string& gltfFilePath);
 
 private:
 

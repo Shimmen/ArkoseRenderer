@@ -7,7 +7,7 @@
 #include "utility/Profiling.h"
 #include "utility/FileIO.h"
 
-GltfLoader::LoadResult GltfLoader::load(const std::string& gltfFilePath, LoadMode loadMode)
+GltfLoader::LoadResult GltfLoader::load(const std::string& gltfFilePath)
 {
     SCOPED_PROFILE_ZONE();
 
