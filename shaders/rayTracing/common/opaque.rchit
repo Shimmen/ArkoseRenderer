@@ -126,7 +126,8 @@ void main()
     bool backface = dot(N, normalize(rt_ObjectRayDirection)) > 1e-6;
     N = (backface) ? -N : N;
 
-    mat3 normalMatrix = transpose(mat3(rt_WorldToObject));
+    // NOTE: Assumes uniform scaling!
+    mat3 normalMatrix = mat3(rt_ObjectToWorld);
     N = normalize(normalMatrix * N);
 
     vec2 uv = v0.texCoord.xy * b.x + v1.texCoord.xy * b.y + v2.texCoord.xy * b.z;
