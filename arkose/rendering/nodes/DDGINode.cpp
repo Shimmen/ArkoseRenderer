@@ -43,22 +43,11 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
     static constexpr int maxNumProbeSamples = 128; // we can dynamically choose to do fewer samples but not more since it's the fixed image size now
     Texture& surfelImage = reg.createTexture2D({ probeCount, maxNumProbeSamples }, Texture::Format::RGBA16F);
 
-    #define USE_DEBUG_TARGET 0
-
-#if USE_DEBUG_TARGET
-    Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
-    reg.publish("DDGITestTarget", storageImage);
-#endif
-
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ ShaderBinding::topLevelAccelerationStructure(sceneTLAS, ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
                                                          ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
                                                          ShaderBinding::sampledTexture(scene.environmentMapTexture(), ShaderStage::RTRayGen),
-#if USE_DEBUG_TARGET
-                                                         ShaderBinding::storageTexture(storageImage, ShaderStage::RTRayGen) });
-#else
                                                          ShaderBinding::storageTexture(surfelImage, ShaderStage::RTRayGen) });
-#endif
 
     auto shaderDefines = { ShaderDefine::makeBool("RT_EVALUATE_DIRECT_LIGHT", true),
                            ShaderDefine::makeBool("RT_USE_EXTENDED_RAY_PAYLOAD", true) };
@@ -135,11 +124,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
             cmdList.setNamedUniform("environmentMultiplier", scene.preExposedEnvironmentBrightnessFactor());
             cmdList.setNamedUniform<float>("parameter1", static_cast<float>(frameIdx));
 
-#if USE_DEBUG_TARGET
-            cmdList.traceRays(appState.windowExtent());
-#else
             cmdList.traceRays(surfelImage.extent());
-#endif
         }
 
         // 2. Ensure all surfel data has been written

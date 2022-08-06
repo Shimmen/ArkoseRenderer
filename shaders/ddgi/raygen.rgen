@@ -126,21 +126,4 @@ void main()
     }
 
     imageStore(surfelImage, targetPixel, vec4(color, hit.dist));
-
-    //////////////////////////
-
-#if 0 // for debugging the ray tracing code and displaying it on a texture instead of rendering into the probes
-
-    const vec2 pixelCenter = vec2(rt_LaunchID.xy) + vec2(0.5);
-    const vec2 inUV = pixelCenter / vec2(rt_LaunchSize.xy);
-    vec2 d = inUV * 2.0 - 1.0;
-
-    vec4 origin = camera.worldFromView * vec4(0, 0, 0, 1);
-    vec4 target = camera.viewFromProjection * vec4(d.x, d.y, 1.0, 1.0);
-    vec4 direction = camera.worldFromView * vec4(normalize(target.xyz / target.w), 0.0);
-
-    HitResult result = tracePrimaryRay(origin.xyz, direction.xyz);
-    imageStore(surfelImage, targetPixel, vec4(result.color, 0.0));
-
-#endif
 }
