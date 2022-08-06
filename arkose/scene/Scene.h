@@ -48,6 +48,8 @@ public:
 
     // Camera
 
+    Camera& addCamera(const std::string& name, bool makeDefault);
+
     const Camera& camera() const { return *m_currentMainCamera; }
     Camera& camera() { return *m_currentMainCamera; }
 
@@ -92,7 +94,7 @@ public:
         float brightnessFactor { 1.0f };
     };
 
-    void setEnvironmentMap(EnvironmentMap&);
+    void setEnvironmentMap(EnvironmentMap);
     const EnvironmentMap& environmentMap() const { return m_environmentMap; }
 
     // Meta

@@ -66,6 +66,17 @@ void Scene::setupFromDescription(const Description& description)
     }
 }
 
+Camera& Scene::addCamera(const std::string& name, bool makeDefault)
+{
+    m_allCameras[name] = std::make_unique<Camera>();
+
+    if (makeDefault || m_currentMainCamera == nullptr) {
+        m_currentMainCamera = m_allCameras[name].get();
+    }
+
+    return *m_allCameras[name];
+}
+
 std::vector<StaticMeshInstance*> Scene::loadMeshes(const std::string& filePath)
 {
     // For now we only load glTF
@@ -182,7 +193,7 @@ size_t Scene::forEachLight(std::function<void(size_t, Light&)> callback)
     return nextIndex;
 }
 
-void Scene::setEnvironmentMap(EnvironmentMap& environmentMap)
+void Scene::setEnvironmentMap(EnvironmentMap environmentMap)
 {
     if (m_environmentMap.assetPath != environmentMap.assetPath) {
         gpuScene().updateEnvironmentMap(environmentMap);

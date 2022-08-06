@@ -32,6 +32,7 @@ add_executable(ArkoseRenderer
     ${TRACY_CLIENT_SOURCE}
     arkose/main.cpp
     arkose/apps/BootstrappingApp.cpp
+    arkose/apps/MeshViewerApp.cpp
     arkose/apps/ShowcaseApp.cpp
     arkose/core/math/Fibonacci.cpp
     arkose/core/math/Frustum.cpp
