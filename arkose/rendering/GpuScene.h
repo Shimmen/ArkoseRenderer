@@ -192,6 +192,10 @@ private:
 
     std::unique_ptr<Texture> m_environmentMapTexture {};
 
+    // Common buffers that can be used
+    std::unique_ptr<Buffer> m_emptyVertexBuffer {};
+    std::unique_ptr<Buffer> m_emptyIndexBuffer {};
+
     // Common textures that can be used for various purposes
     std::unique_ptr<Texture> m_blackTexture {};
     std::unique_ptr<Texture> m_lightGrayTexture {};

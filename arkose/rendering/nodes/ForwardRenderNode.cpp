@@ -117,20 +117,29 @@ RenderState& ForwardRenderNode::makeRenderState(Registry& reg, const GpuScene& s
         renderStateBuilder.stencilMode = StencilMode::PassIfNotZero;
     }
 
-    Texture& dirLightProjectedShadow = *reg.getTexture("DirectionalLightProjectedShadow");
-    Texture& localLightShadowMapAtlas = *reg.getTexture("LocalLightShadowMapAtlas");
-    Buffer& localLightShadowAllocations = *reg.getBuffer("LocalLightShadowAllocations");
+    Texture* dirLightProjectedShadow = reg.getTexture("DirectionalLightProjectedShadow");
+    Texture* localLightShadowMapAtlas = reg.getTexture("LocalLightShadowMapAtlas");
+    Buffer* localLightShadowAllocations = reg.getBuffer("LocalLightShadowAllocations");
 
-    BindingSet& dirLightProjectedShadowSet = reg.createBindingSet({ ShaderBinding::sampledTexture(dirLightProjectedShadow),
-                                                                    ShaderBinding::sampledTexture(localLightShadowMapAtlas),
-                                                                    ShaderBinding::storageBuffer(localLightShadowAllocations) });
+    // Allow running without shadows
+    if (!dirLightProjectedShadow || !localLightShadowMapAtlas || !localLightShadowAllocations) {
+        Texture& placeholderTex = reg.createPixelTexture(vec4(1.0f), false);
+        Buffer& placeholderBuffer = reg.createBufferForData(std::vector<int>(0), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+        dirLightProjectedShadow = dirLightProjectedShadow ? dirLightProjectedShadow : &placeholderTex;
+        localLightShadowMapAtlas = localLightShadowMapAtlas ? localLightShadowMapAtlas : &placeholderTex;
+        localLightShadowAllocations = localLightShadowAllocations ? localLightShadowAllocations : &placeholderBuffer;
+    }
+
+    BindingSet& shadowBindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(*dirLightProjectedShadow),
+                                                          ShaderBinding::sampledTexture(*localLightShadowMapAtlas),
+                                                          ShaderBinding::storageBuffer(*localLightShadowAllocations) });
 
     StateBindings& bindings = renderStateBuilder.stateBindings();
     bindings.at(0, *reg.getBindingSet("SceneCameraSet"));
     bindings.at(1, scene.globalMaterialBindingSet());
     bindings.at(2, *reg.getBindingSet("SceneLightSet"));
     bindings.at(3, *drawablesBindingSet);
-    bindings.at(4, dirLightProjectedShadowSet);
+    bindings.at(4, shadowBindingSet);
     if (usingDDGI) {
         renderStateBuilder.stateBindings().at(5, *ddgiSamplingBindingSet);
     }

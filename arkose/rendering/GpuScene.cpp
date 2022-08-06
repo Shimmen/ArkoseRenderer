@@ -24,6 +24,9 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
 {
     m_maintainRayTracingScene = rayTracingCapable;
 
+    m_emptyVertexBuffer = backend().createBuffer(1, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+    m_emptyIndexBuffer = backend().createBuffer(1, Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+
     m_blackTexture = Texture::createFromPixel(backend(), vec4(0.0f, 0.0f, 0.0f, 0.0f), true);
     m_lightGrayTexture = Texture::createFromPixel(backend(), vec4(0.75f, 0.75f, 0.75f, 1.0f), true);
     m_magentaTexture = Texture::createFromPixel(backend(), vec4(1.0f, 0.0f, 1.0f, 1.0f), true);
@@ -876,16 +879,24 @@ DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<StaticMeshSegme
 
 Buffer& GpuScene::globalVertexBufferForLayout(const VertexLayout& layout) const
 {
+    if (m_globalVertexBuffers.size() == 0) {
+        return *m_emptyVertexBuffer;
+    }
+
     auto entry = m_globalVertexBuffers.find(layout);
-    if (entry == m_globalVertexBuffers.end())
+    if (entry == m_globalVertexBuffers.end()) {
         ARKOSE_LOG(Fatal, "Can't get vertex buffer for layout since it has not been created! Please ensureDrawCallIsAvailable for at least one mesh before calling this.");
+    }
+
     return *entry->second;
 }
 
 Buffer& GpuScene::globalIndexBuffer() const
 {
-    if (m_global32BitIndexBuffer == nullptr)
-        ARKOSE_LOG(Fatal, "Can't get global index buffer since it has not been created! Please ensureDrawCallIsAvailable for at least one indexed mesh before calling this.");
+    if (m_global32BitIndexBuffer == nullptr) {
+        return *m_emptyIndexBuffer;
+    }
+
     return *m_global32BitIndexBuffer;
 }
 
