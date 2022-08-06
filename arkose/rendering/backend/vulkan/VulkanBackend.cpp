@@ -1490,7 +1490,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
 
         ImGui::Begin("Nodes (in order)");
         {
-            SCOPED_PROFILE_ZONE_GPU(commandBuffer, "All nodes");
+            SCOPED_PROFILE_ZONE_GPU(commandBuffer, "Render Pipeline");
 
             std::string frameTimePerfString = m_frameTimer.createFormattedString();
             ImGui::Text("Frame time: %s", frameTimePerfString.c_str());
@@ -1510,7 +1510,7 @@ bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipel
                 std::string nodeTitle = fmt::format("{} | {}", nodeName, nodeTimePerfString);
                 ImGui::CollapsingHeader(nodeTitle.c_str(), ImGuiTreeNodeFlags_Leaf);
 
-                SCOPED_PROFILE_ZONE_GPU(commandBuffer, "Node");
+                SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandBuffer, nodeName);
                 SCOPED_PROFILE_ZONE_DYNAMIC(nodeName, 0x00ffff);
                 double cpuStartTime = glfwGetTime();
 

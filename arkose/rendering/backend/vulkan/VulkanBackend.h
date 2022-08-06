@@ -18,9 +18,11 @@
 #if defined(TRACY_ENABLE)
 #include <TracyVulkan.hpp>
 #include "rendering/backend/vulkan/extensions/VulkanProcAddress.h"
-#define SCOPED_PROFILE_ZONE_GPU(commandBuffer, name) TracyVkZone(m_tracyVulkanContext, commandBuffer, name);
+#define SCOPED_PROFILE_ZONE_GPU(commandBuffer, nameLiteral) TracyVkZone(m_tracyVulkanContext, commandBuffer, nameLiteral);
+#define SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandBuffer, nameString) TracyVkZoneTransient(m_tracyVulkanContext, TracyConcat(ScopedProfileZone, nameString), commandBuffer, nameString.c_str(), nameString.size());
 #else
-#define SCOPED_PROFILE_ZONE_GPU(commandBuffer, name)
+#define SCOPED_PROFILE_ZONE_GPU(commandBuffer, nameLiteral)
+#define SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandBuffer, nameString)
 #endif
 
 struct GLFWwindow;
