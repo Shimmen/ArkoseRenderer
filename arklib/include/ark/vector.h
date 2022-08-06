@@ -199,6 +199,18 @@ constexpr tvec2<T> max(const tvec2<T>& lhs, const tvec2<T>& rhs)
     return { std::max(lhs.x, rhs.x), std::max(lhs.y, rhs.y) };
 }
 
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr T minComponent(const tvec2<T>& v)
+{
+    return std::min(v.x, v.y);
+}
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr T maxComponent(const tvec2<T>& v)
+{
+    return std::max(v.x, v.y);
+}
+
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
 constexpr tvec2<T> lerp(const tvec2<T>& a, const tvec2<T>& b, T x)
 {
@@ -425,6 +437,18 @@ template<typename T, ENABLE_IF_ARITHMETIC(T)>
 constexpr tvec3<T> max(const tvec3<T>& lhs, const tvec3<T>& rhs)
 {
     return { std::max(lhs.x, rhs.x), std::max(lhs.y, rhs.y), std::max(lhs.z, rhs.z) };
+}
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr T minComponent(const tvec3<T>& v)
+{
+    return std::min(v.x, std::min(v.y, v.z));
+}
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr T maxComponent(const tvec3<T>& v)
+{
+    return std::max(v.x, std::max(v.y, v.z));
 }
 
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
