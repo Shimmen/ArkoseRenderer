@@ -29,8 +29,12 @@
 
 // Common globals (prefixed with rt_)
 
+#define rt_ObjectRayOrigin gl_ObjectRayOriginEXT
+#define rt_ObjectRayDirection gl_ObjectRayDirectionEXT
+
 #define rt_WorldRayOrigin gl_WorldRayOriginEXT
 #define rt_WorldRayDirection gl_WorldRayDirectionEXT
+
 #define rt_RayHitT gl_HitTEXT
 
 #define rt_WorldToObject gl_WorldToObjectEXT

@@ -28,11 +28,12 @@ void main()
 	float tmax = camera.zFar;
 
 	int numHits = 0;
+	int numBackfaceHits = 0;
 	vec3 color = vec3(0.0);
 
 	// Opaque
 	{
-		uint rayFlags = RayFlags_Opaque | RayFlags_CullBackFacingTriangles;
+		uint rayFlags = RayFlags_Opaque;
 		uint cullMask = RT_HIT_MASK_OPAQUE;
 
 		traceRay(topLevelAS, rayFlags, cullMask, 0, 0, 0, origin.xyz, tmin, direction.xyz, tmax, 0);
@@ -40,6 +41,9 @@ void main()
 			tmax = payload.hitT;
 			color = payload.color;
 			numHits += 1;
+			if (payload.hitT < 0.0) {
+				numBackfaceHits += 1;
+			}
 		}
 	}
 
@@ -65,6 +69,11 @@ void main()
 	if (numHits == 0) {
 		vec2 sampleUv = sphericalUvFromDirection(direction.xyz);
 		color = constants.environmentMultiplier * texture(environmentMap, sampleUv).rgb;
+	}
+
+	// Highlight backface hits
+	if (numBackfaceHits > 0) {
+		color = mix(color, vec3(1, 0, 1), 0.5);
 	}
 
 	imageStore(u_image, ivec2(rt_LaunchID.xy), vec4(color, 0.0));

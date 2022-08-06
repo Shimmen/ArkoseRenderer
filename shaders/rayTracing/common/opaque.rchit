@@ -122,6 +122,10 @@ void main()
     const vec3 b = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
     vec3 N = normalize(v0.normal.xyz * b.x + v1.normal.xyz * b.y + v2.normal.xyz * b.z);
+    // TODO: This is not 100% accurate due to the smooth interpolation. With GL_EXT_ray_tracing we can just check hit kind.
+    bool backface = dot(N, normalize(rt_ObjectRayDirection)) > 1e-6;
+    N = (backface) ? -N : N;
+
     mat3 normalMatrix = transpose(mat3(rt_WorldToObject));
     N = normalize(normalMatrix * N);
 
@@ -157,7 +161,7 @@ void main()
     }
     #endif
 
-    payload.hitT = rt_RayHitT;
+    payload.hitT = (backface) ? -rt_RayHitT : rt_RayHitT;
 
     #if RT_USE_EXTENDED_RAY_PAYLOAD
         payload.baseColor = baseColor;
