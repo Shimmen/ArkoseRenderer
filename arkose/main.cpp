@@ -1,4 +1,6 @@
 #include "apps/App.h"
+#include "apps/MeshViewerApp.h"
+#include "apps/ShowcaseApp.h"
 #include "core/Logging.h"
 #include "core/parallel/TaskGraph.h"
 #include "physics/PhysicsScene.h"
@@ -71,8 +73,22 @@ Extent2D windowFramebufferSize(GLFWwindow* window)
     return Extent2D(width, height);
 }
 
+std::unique_ptr<App> createApp(const std::vector<std::string> arguments)
+{
+    if (std::find(arguments.begin(), arguments.end(), "-meshviewer") != arguments.end()) {
+        return std::make_unique<MeshViewerApp>();
+    }
+
+    return std::make_unique<ShowcaseApp>();
+}
+
 int main(int argc, char** argv)
 {
+    std::vector<std::string> arguments;
+    for (int idx = 1; idx < argc; ++idx) {
+        arguments.emplace_back(argv[idx]);
+    }
+
     // Grab relevant info from settings.h
     auto backendType = SelectedBackendType;
     auto physicsBackendType = SelectedPhysicsBackendType;
@@ -85,7 +101,7 @@ int main(int argc, char** argv)
     Input::registerWindow(window);
 
     // Create the app that will drive this "engine"
-    auto app = std::make_unique<SelectedApp>();
+    auto app = createApp(arguments);
     Backend::AppSpecification appSpec;
     appSpec.requiredCapabilities = app->requiredCapabilities();
     appSpec.optionalCapabilities = app->optionalCapabilities();
