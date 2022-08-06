@@ -61,7 +61,7 @@ vec3 gridCoordToPosition(in DDGIProbeGridData probeGrid, ivec3 gridCoord)
     return probeGrid.offsetToFirst.xyz + vec3(gridCoord) * probeGrid.probeSpacing.xyz;
 }
 
-vec3 sampleDynamicDiffuseGlobalIllumination(vec3 wsPosition, vec3 wsNormal, in DDGIProbeGridData gridData,
+vec3 sampleDynamicDiffuseGlobalIllumination(vec3 wsPosition, vec3 wsNormal, vec3 wsView, in DDGIProbeGridData gridData,
                                             in sampler2D irradianceAtlas, in sampler2D visibilityAtlas)
 {
     ivec3 baseGridCoord = baseGridCoord(gridData, wsPosition);
@@ -88,11 +88,16 @@ vec3 sampleDynamicDiffuseGlobalIllumination(vec3 wsPosition, vec3 wsNormal, in D
 
         float weight = 1.0;
 
+        const float tunableShadowBias = 0.3; // TODO: make tunable!
+        float minDistanceBetweenProbes = min(gridData.probeSpacing.x, min(gridData.probeSpacing.y, gridData.probeSpacing.z));
+        vec3 selfShadowBias = (wsNormal * 0.2 + wsView * 0.8) * (0.75 * minDistanceBetweenProbes) * tunableShadowBias;
+        vec3 biasedPosition = wsPosition + selfShadowBias;
+
         // Make cosine falloff in tangent plane with respect to the angle from the surface to the probe so that we never
         // test a probe that is *behind* the surface.
         // It doesn't have to be cosine, but that is efficient to compute and we must clip to the tangent plane.
         vec3 probePos = gridCoordToPosition(gridData, probeGridCoord);
-        vec3 pointToProbe = probePos - wsPosition;
+        vec3 pointToProbe = probePos - biasedPosition;
         vec3 directionToProbe = normalize(pointToProbe);
 
 #if 0

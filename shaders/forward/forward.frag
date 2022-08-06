@@ -114,6 +114,7 @@ vec3 evaluateDDGIIndirectLight(vec3 P, vec3 V, vec3 N, vec3 baseColor, float met
 {
     vec3 worldSpacePos = vec3(camera.worldFromView * vec4(P, 1.0));
     vec3 worldSpaceNormal = normalize(mat3(camera.worldFromView) * N);
+    vec3 worldSpaceView = normalize(mat3(camera.worldFromView) * V);
 
     // For diffuse, simply pretend half vector is normal
     vec3 H = N;
@@ -124,7 +125,7 @@ vec3 evaluateDDGIIndirectLight(vec3 P, vec3 V, vec3 N, vec3 baseColor, float met
     //float a = square(roughness);
     //float fakeF = pow(a, 5.0);
 
-    vec3 irradiance = sampleDynamicDiffuseGlobalIllumination(worldSpacePos, worldSpaceNormal, ddgiProbeGridData, ddgiIrradianceAtlas, ddgiVisibilityAtlas);
+    vec3 irradiance = sampleDynamicDiffuseGlobalIllumination(worldSpacePos, worldSpaceNormal, worldSpaceView, ddgiProbeGridData, ddgiIrradianceAtlas, ddgiVisibilityAtlas);
     vec3 indirectDiffuse = vec3(1.0 - metallic) * vec3(1.0 - F) * irradiance;
 
     return indirectDiffuse;
