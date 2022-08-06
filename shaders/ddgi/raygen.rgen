@@ -3,9 +3,9 @@
 #include <common/brdf.glsl>
 #include <common/namedUniforms.glsl>
 #include <common/spherical.glsl>
-#include <common/rayTracing.glsl>
 #include <ddgi/common.glsl>
 #include <ddgi/probeSampling.glsl>
+#include <rayTracing/common/common.glsl>
 #include <shared/CameraState.h>
 
 layout(set = 0, binding = 0) uniform AccelerationStructure topLevelAS;
@@ -17,9 +17,9 @@ layout(set = 4, binding = 0) uniform DDGIGridDataBlock { DDGIProbeGridData probe
 layout(set = 4, binding = 1) uniform sampler2D ddgiIrradianceAtlas;
 layout(set = 4, binding = 2) uniform sampler2D ddgiVisibilityAtlas;
 
-NAMED_UNIFORMS_STRUCT(RayTracingPushConstants, pushConstants)
+NAMED_UNIFORMS_STRUCT(RayTracingPushConstants, constants)
 
-layout(location = 0) rayPayload RayPayload payload;
+layout(location = 0) rayPayload RayPayloadMain payload;
 
 struct HitResult {
     bool didHit;
@@ -73,7 +73,7 @@ HitResult tracePrimaryRay(vec3 origin, vec3 direction)
         tmax = camera.zFar; // if miss, use camera far distance as hit distance
 
         vec2 sampleUv = sphericalUvFromDirection(direction);
-        color = pushConstants.environmentMultiplier * texture(environmentMap, sampleUv).rgb;
+        color = constants.environmentMultiplier * texture(environmentMap, sampleUv).rgb;
     }
 
     HitResult result;
@@ -115,7 +115,7 @@ void main()
     uint sampleCount = imageSize(surfelImage).y;
 
     vec3 probePosition = calculateProbePosition(probeGridData, probeIdx);
-    vec3 sampleDirection = calculateRotatedSphericalFibonacciSample(probeIdx, sampleIdx, sampleCount, pushConstants.frameIdx);
+    vec3 sampleDirection = calculateRotatedSphericalFibonacciSample(probeIdx, sampleIdx, sampleCount, uint(round(constants.parameter1)) /* i.e. frameIdx*/);
     HitResult hit = tracePrimaryRay(probePosition, sampleDirection);
 
     vec3 color = hit.color;

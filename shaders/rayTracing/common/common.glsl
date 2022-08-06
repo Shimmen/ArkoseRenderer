@@ -4,6 +4,10 @@
 #include <common/rayTracing.glsl>
 #include <shared/RTData.h>
 
+#ifndef RT_USE_EXTENDED_RAY_PAYLOAD
+#define RT_USE_EXTENDED_RAY_PAYLOAD 0
+#endif
+
 #define HIT_T_MISS (-1.0)
 
 struct Vertex {
@@ -14,6 +18,13 @@ struct Vertex {
 struct RayPayloadMain {
     vec3 color;
     float hitT;
+
+    #if RT_USE_EXTENDED_RAY_PAYLOAD
+        vec3 baseColor;
+        vec3 normal;
+        float roughness;
+        float metallic;
+    #endif
 };
 
 struct RayPayloadShadow {

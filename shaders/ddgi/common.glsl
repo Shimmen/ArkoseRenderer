@@ -6,30 +6,8 @@
 #include <shared/RTData.h>
 #include <shared/DDGIData.h>
 
-#define HIT_T_MISS (-1.0)
-
 #define DDGI_IRRADIANCE_GAMMA     (5.0)
 #define DDGI_IRRADIANCE_INV_GAMMA (1.0 / DDGI_IRRADIANCE_GAMMA)
-
-struct Vertex {
-	vec3 normal;
-	vec2 texCoord;
-};
-
-struct RayPayload {
-	vec3 color;
-	float hitT;
-	vec3 baseColor;
-	vec3 normal;
-	float roughness;
-	float metallic;
-};
-
-struct RayTracingPushConstants {
-	float ambientAmount;
-	float environmentMultiplier;
-	uint frameIdx;
-};
 
 vec3 calculateRotatedSphericalFibonacciSample(uint probeIdx, uint sampleIdx, uint sampleCount, uint frameIdx)
 {

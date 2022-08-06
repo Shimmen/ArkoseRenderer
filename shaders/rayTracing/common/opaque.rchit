@@ -158,4 +158,11 @@ void main()
     #endif
 
     payload.hitT = rt_RayHitT;
+
+    #if RT_USE_EXTENDED_RAY_PAYLOAD
+        payload.baseColor = baseColor;
+        payload.normal = N;
+        payload.roughness = roughness;
+        payload.metallic = metallic;
+    #endif
 }

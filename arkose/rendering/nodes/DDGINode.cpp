@@ -60,10 +60,14 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
                                                          ShaderBinding::storageTexture(surfelImage, ShaderStage::RTRayGen) });
 #endif
 
-    ShaderFile raygen { "ddgi/raygen.rgen" };
-    ShaderFile defaultMissShader { "ddgi/miss.rmiss" };
-    ShaderFile shadowMissShader { "ddgi/shadow.rmiss" };
-    HitGroup mainHitGroup { ShaderFile("ddgi/default.rchit"), ShaderFile("ddgi/masked.rahit") };
+    auto shaderDefines = { ShaderDefine::makeBool("RT_EVALUATE_DIRECT_LIGHT", true),
+                           ShaderDefine::makeBool("RT_USE_EXTENDED_RAY_PAYLOAD", true) };
+
+    ShaderFile raygen { "ddgi/raygen.rgen", shaderDefines };
+    ShaderFile defaultMissShader { "rayTracing/common/miss.rmiss" };
+    ShaderFile shadowMissShader { "rayTracing/common/shadow.rmiss" };
+    HitGroup mainHitGroup { ShaderFile("rayTracing/common/opaque.rchit", shaderDefines),
+                            ShaderFile("rayTracing/common/masked.rahit", shaderDefines) };
     ShaderBindingTable sbt { raygen, { mainHitGroup }, { defaultMissShader, shadowMissShader } };
 
     StateBindings rtStateDataBindings;
@@ -129,7 +133,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
 
             cmdList.setNamedUniform("ambientAmount", ambientLx * scene.lightPreExposure());
             cmdList.setNamedUniform("environmentMultiplier", scene.preExposedEnvironmentBrightnessFactor());
-            cmdList.setNamedUniform("frameIdx", frameIdx);
+            cmdList.setNamedUniform<float>("parameter1", static_cast<float>(frameIdx));
 
 #if USE_DEBUG_TARGET
             cmdList.traceRays(appState.windowExtent());
