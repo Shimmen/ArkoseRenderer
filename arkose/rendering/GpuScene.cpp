@@ -192,19 +192,20 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     // TODO: My lambda-system kind of fails horribly here. I need a reference-type for the capture to work nicely,
     //       and I also want to scope it under the if check. I either need to fix that or I'll need to make a pointer
     //       for it and then explicitly capture that pointer for this to work.
-    //if (m_maintainRayTracingScene) {
-        if (m_maintainRayTracingScene) {
-            ensureDrawCallIsAvailableForAll(m_rayTracingVertexLayout);
-        }
+    Buffer* rtTriangleMeshBufferPtr = nullptr;
+    if (m_maintainRayTracingScene) {
+        ensureDrawCallIsAvailableForAll(m_rayTracingVertexLayout);
 
         // TODO: Resize the buffer if needed when more meshes are added, OR crash hard
         // TODO: Make a more reasonable default too... we need: #meshes * #LODs * #segments-per-lod
         Buffer& rtTriangleMeshBuffer = reg.createBuffer(10'000 * sizeof(RTTriangleMesh), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+        rtTriangleMeshBufferPtr = &rtTriangleMeshBuffer;
+
         BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(rtTriangleMeshBuffer, ShaderStage::AnyRayTrace),
                                                                   ShaderBinding::storageBuffer(globalIndexBuffer(), ShaderStage::AnyRayTrace),
                                                                   ShaderBinding::storageBuffer(globalVertexBufferForLayout(m_rayTracingVertexLayout), ShaderStage::AnyRayTrace) });
         reg.publish("SceneRTMeshDataSet", rtMeshDataBindingSet);
-    //}
+    }
 
     // Light data stuff
     Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::GpuOnly);
@@ -223,7 +224,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     Texture& blueNoiseTextureArray = reg.loadTextureArrayFromFileSequence("assets/blue-noise/64_64/HDR_RGBA_{}.png", false, false);
     reg.publish("BlueNoise", blueNoiseTextureArray);
 
-    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
+    return [&, rtTriangleMeshBufferPtr](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         SCOPED_PROFILE_ZONE_NAMED("GpuScene update")
 
@@ -449,7 +450,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 }
             }
 
-            uploadBuffer.upload(rayTracingMeshData, rtTriangleMeshBuffer);
+            ARKOSE_ASSERT(rtTriangleMeshBufferPtr != nullptr);
+            uploadBuffer.upload(rayTracingMeshData, *rtTriangleMeshBufferPtr);
 
             TopLevelAS& sceneTlas = *m_sceneTopLevelAccelerationStructure;
             sceneTlas.updateInstanceDataWithUploadBuffer(rayTracingGeometryInstances, uploadBuffer);
