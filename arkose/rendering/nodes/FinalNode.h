@@ -10,6 +10,9 @@ public:
     std::string name() const override { return "Final"; }
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
+    void setRenderFilmGrain(bool enabled) { m_addFilmGrain = enabled; }
+    void setRenderVignette(bool enabled) { m_applyVignette = enabled; }
+
 private:
     std::string m_sourceTextureName;
 
