@@ -128,6 +128,7 @@ target_link_libraries(ArkoseRenderer PRIVATE
     dear_imgui
     fmt
     glfw
+    nfd
     half
     imguizmo
     nlohmann_json::nlohmann_json

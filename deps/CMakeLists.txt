@@ -27,6 +27,10 @@ FetchContent_Declare(glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
     GIT_TAG        "3.3-stable")
 
+FetchContent_Declare(nativefiledialog-extended
+    GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
+    GIT_TAG        "33115928184cc3cc1b945a0f94bbc574d137224c")
+
 FetchContent_Declare(vulkan_memory_allocator
     GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
     GIT_TAG        "v3.0.0")
@@ -119,4 +123,4 @@ add_subdirectory(half)
 ##################################
 # Finalize FetchContent dependencies
 
-FetchContent_MakeAvailable(spirv-cross json fmt glfw vulkan_memory_allocator directx_headers jolt-physics)
+FetchContent_MakeAvailable(spirv-cross json fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers jolt-physics)
