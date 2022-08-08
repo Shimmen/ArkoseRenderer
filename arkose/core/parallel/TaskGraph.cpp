@@ -20,7 +20,7 @@ void TaskGraph::initialize()
     unsigned int hardwareConcurrency = std::thread::hardware_concurrency();
     if (hardwareConcurrency == 1)
         ARKOSE_LOG(Fatal, "TaskGraph: this CPU only supports a single hardware thread, which is not compatible with this TaskGraph, exiting.");
-    uint32_t numWorkerThreads = hardwareConcurrency - 1;
+    uint32_t numWorkerThreads = std::min(hardwareConcurrency - 1, 10u);
 
     g_taskGraphInstance = new TaskGraph(numWorkerThreads);
 }
