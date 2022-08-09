@@ -97,7 +97,7 @@ std::vector<LocalLightShadowNode::ShadowMapAtlasAllocation> LocalLightShadowNode
         return allocations;
     }
 
-    if (!ark::isPowerOfTwo(atlas.extent().width()) || !ark::isPowerOfTwo(atlas.extent().width())) {
+    if (!ark::isPowerOfTwo(atlas.extent().width()) || !ark::isPowerOfTwo(atlas.extent().height())) {
         ARKOSE_LOG(Warning, "Shadow map atlas texture does not have a power-of-two size, which is optimal for our subdivision strategy.");
     }
 
