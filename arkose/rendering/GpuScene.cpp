@@ -308,7 +308,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             std::vector<ShaderDrawable> rasterizerMeshData {};
 
             const auto& staticMeshInstances = scene().staticMeshInstances();
-            for (int i = 0, count = staticMeshInstances.size(); i < count; ++i) {
+            for (size_t i = 0, count = staticMeshInstances.size(); i < count; ++i) {
 
                 const StaticMeshInstance& instance = *staticMeshInstances[i];
                 const StaticMesh& staticMesh = *staticMeshForHandle(instance.mesh);

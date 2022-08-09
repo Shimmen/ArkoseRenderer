@@ -52,7 +52,7 @@ const Extent2D Texture::extentAtMip(uint32_t mip) const
     // TODO: We can make this non-looping..
     uint32_t x = extent().width();
     uint32_t y = extent().height();
-    for (int i = 0; i < mip; ++i) {
+    for (uint32_t i = 0; i < mip; ++i) {
         x /= 2;
         y /= 2;
     }

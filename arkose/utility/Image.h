@@ -37,9 +37,9 @@ public:
 
         size_t requiredStorageSize() const
         {
-            int componentCount = static_cast<int>(pixelType);
-            int componentSize = static_cast<int>(componentType);
-            return width * height * componentCount * componentSize;
+            size_t componentCount = static_cast<size_t>(pixelType);
+            int componentSize = static_cast<size_t>(componentType);
+            return static_cast<size_t>(width) * static_cast<size_t>(height) * componentCount * componentSize;
         }
     };
 

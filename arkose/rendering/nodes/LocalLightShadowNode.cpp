@@ -184,7 +184,7 @@ std::vector<vec4> LocalLightShadowNode::collectAtlasViewportDataForAllocations(c
 
     std::vector<vec4> viewports {};
 
-    scene.forEachLocalLight([&](uint32_t idx, const Light& light) {
+    scene.forEachLocalLight([&](size_t, const Light& light) {
 
         vec4 viewport = vec4(0, 0, 0, 0);
 
