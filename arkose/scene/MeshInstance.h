@@ -6,7 +6,7 @@
 
 struct StaticMeshInstance {
 
-    NON_COPYABLE(StaticMeshInstance);
+    NON_COPYABLE(StaticMeshInstance)
 
     StaticMeshInstance(StaticMeshHandle inMesh, Transform inTransform)
         : mesh(inMesh)
