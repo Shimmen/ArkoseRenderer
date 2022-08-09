@@ -698,7 +698,7 @@ TextureHandle GpuScene::registerMaterialTexture(Material::TextureDescription& de
 
                 Image::Info* info = Image::getInfo(description.path);
                 if (!info) {
-                    ARKOSE_LOG(Fatal, "GpuScene: could not read image '{}', exiting", description.path);
+                    ARKOSE_LOG_FATAL("GpuScene: could not read image '{}', exiting", description.path);
                 }
 
                 Texture::Format format;

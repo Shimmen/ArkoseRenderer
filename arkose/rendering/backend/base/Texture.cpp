@@ -222,8 +222,9 @@ std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const st
     // FIXME (maybe): Add async loading?
 
     Image::Info* info = Image::getInfo(imagePath);
-    if (!info)
-        ARKOSE_LOG(Fatal, "Texture: could not read image '{}', exiting", imagePath);
+    if (!info) {
+        ARKOSE_LOG_FATAL("Texture: could not read image '{}', exiting", imagePath);
+    }
 
     Texture::Format format;
     Image::PixelType pixelTypeToUse;

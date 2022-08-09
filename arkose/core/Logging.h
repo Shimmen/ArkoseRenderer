@@ -16,8 +16,8 @@ enum class LogLevel {
     All
 };
 
-constexpr LogLevel currentLogLevel = LogLevel::Info;
-constexpr int errorAndExitExitCode = 13;
+constexpr LogLevel CurrentLogLevel = LogLevel::Info;
+constexpr int FatalErrorExitCode = 13;
 
 // See https://fmt.dev/latest/api.html#argument-lists for reference
 
@@ -26,15 +26,10 @@ inline void _internal_vlog(fmt::string_view format, fmt::format_args args)
 {
     static_assert(level > LogLevel::None && level < LogLevel::All, "Invalid log level passed to log function");
 
-    if constexpr (level <= currentLogLevel) {
+    if constexpr (level <= CurrentLogLevel) {
         // TODO: Maybe add some more logging context (e.g. function name)?
         fmt::vprint(format, args);
         fmt::print("\n");
-    }
-
-    if constexpr (level == LogLevel::Fatal) {
-        DEBUG_BREAK();
-        exit(errorAndExitExitCode);
     }
 }
 
@@ -49,3 +44,6 @@ inline void _internal_log(const StringType& format, Args&&... args)
 #define MAKE_QUALIFIED_LOG_LEVEL(level) Logging::LogLevel::##level
 
 #define ARKOSE_LOG(logLevel, format, ...) Logging::_internal_log<MAKE_QUALIFIED_LOG_LEVEL(logLevel)>(FMT_STRING(format), __VA_ARGS__)
+#define ARKOSE_LOG_FATAL(format, ...) Logging::_internal_log<Logging::LogLevel::Fatal>(FMT_STRING(format), __VA_ARGS__); \
+                                      DEBUG_BREAK();                                                                     \
+                                      exit(Logging::FatalErrorExitCode)
