@@ -15,7 +15,10 @@ Texture::Texture(Backend& backend, Description desc)
     , m_description(desc)
 {
     // (according to most specifications we can't have both multisampling and mipmapping)
+#pragma warning(push)
+#pragma warning(disable : 26813)
     ARKOSE_ASSERT(multisampling() == Multisampling::None || mipmap() == Mipmap::None);
+#pragma warning(pop)
 
     // At least one item in an implicit array
     ARKOSE_ASSERT(arrayCount() > 0);
