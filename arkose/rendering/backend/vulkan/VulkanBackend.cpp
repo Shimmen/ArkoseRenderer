@@ -1376,7 +1376,7 @@ void VulkanBackend::newFrame()
     ImGui::NewFrame();
 }
 
-bool VulkanBackend::executeFrame(const Scene& scene, RenderPipeline& renderPipeline, float elapsedTime, float deltaTime)
+bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTime, float deltaTime)
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 

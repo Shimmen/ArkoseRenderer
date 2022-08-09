@@ -26,7 +26,7 @@ public:
     void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline&) override;
 
     void newFrame() override;
-    bool executeFrame(const Scene&, RenderPipeline&, float elapsedTime, float deltaTime) override;
+    bool executeFrame(RenderPipeline&, float elapsedTime, float deltaTime) override;
 
     void completePendingOperations() override;
 

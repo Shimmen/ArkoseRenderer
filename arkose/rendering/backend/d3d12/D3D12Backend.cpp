@@ -147,7 +147,7 @@ void D3D12Backend::newFrame()
 {
 }
 
-bool D3D12Backend::executeFrame(const Scene& scene, RenderPipeline& pipeline, float elapsedTime, float deltaTime)
+bool D3D12Backend::executeFrame(RenderPipeline& pipeline, float elapsedTime, float deltaTime)
 {
     if (s_unhandledWindowResize) {
         recreateSwapChain();

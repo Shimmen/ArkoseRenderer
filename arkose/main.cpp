@@ -175,7 +175,7 @@ int main(int argc, char** argv)
 
         bool frameExecuted = false;
         while (!frameExecuted) {
-            frameExecuted = graphicsBackend.executeFrame(*scene, *renderPipeline, elapsedTime, deltaTime);
+            frameExecuted = graphicsBackend.executeFrame(*renderPipeline, elapsedTime, deltaTime);
         }
 
         scene->postRender();

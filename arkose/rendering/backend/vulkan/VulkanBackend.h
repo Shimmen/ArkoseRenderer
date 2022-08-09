@@ -52,7 +52,7 @@ public:
     void completePendingOperations() override;
 
     void newFrame() override;
-    bool executeFrame(const Scene&, RenderPipeline&, float elapsedTime, float deltaTime) override;
+    bool executeFrame(RenderPipeline&, float elapsedTime, float deltaTime) override;
 
     int vramStatsReportRate() const override { return VramStatsQueryRate; }
     std::optional<VramStats> vramStats() override;

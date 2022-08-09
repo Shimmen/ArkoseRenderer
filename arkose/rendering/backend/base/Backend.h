@@ -7,7 +7,6 @@
 #include <vector>
 
 class RenderPipeline;
-class Scene;
 
 struct GLFWwindow;
 
@@ -61,7 +60,7 @@ public:
     virtual void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline&) = 0;
 
     virtual void newFrame() = 0;
-    virtual bool executeFrame(const Scene&, RenderPipeline&, float elapsedTime, float deltaTime) = 0;
+    virtual bool executeFrame(RenderPipeline&, float elapsedTime, float deltaTime) = 0;
 
     virtual int vramStatsReportRate() const { return 0; }
     virtual std::optional<VramStats> vramStats() { return {}; }
