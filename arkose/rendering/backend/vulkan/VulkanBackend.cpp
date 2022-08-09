@@ -1466,7 +1466,7 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
         uint32_t frameStartTimestampIdx = nextTimestampQueryIdx++;
         uint32_t frameEndTimestampIdx = nextTimestampQueryIdx++;
         double gpuFrameElapsedTime = elapsedSecondsBetweenTimestamps(frameStartTimestampIdx, frameEndTimestampIdx);
-        m_frameTimer.reportGpuTime(gpuFrameElapsedTime);
+        renderPipeline.timer().reportGpuTime(gpuFrameElapsedTime);
 
         VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
         commandBufferBeginInfo.flags = 0u;
@@ -1488,27 +1488,11 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
         vkCmdResetQueryPool(commandBuffer, frameContext.timestampQueryPool, 0, FrameContext::TimestampQueryPoolCount);
         vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameContext.timestampQueryPool, frameStartTimestampIdx);
 
-        ImGui::Begin("Nodes (in order)");
         {
             SCOPED_PROFILE_ZONE_GPU(commandBuffer, "Render Pipeline");
+            renderPipeline.forEachNodeInResolvedOrder(registry, [&](RenderPipelineNode& node, const RenderPipelineNode::ExecuteCallback& nodeExecuteCallback) {
 
-            std::string frameTimePerfString = m_frameTimer.createFormattedString();
-            ImGui::Text("Frame time: %s", frameTimePerfString.c_str());
-            if (ImGui::TreeNode("Frame time plots")) {
-                static float plotRangeMin = 0.0f;
-                static float plotRangeMax = 16.667f;
-                ImGui::SliderFloat("Plot range min", &plotRangeMin, 0.0f, plotRangeMax);
-                ImGui::SliderFloat("Plot range max", &plotRangeMax, plotRangeMin, 40.0f);
-                static float plotHeight = 160.0f;
-                ImGui::SliderFloat("Plot height", &plotHeight, 40.0f, 350.0f);
-                m_frameTimer.plotTimes(plotRangeMin, plotRangeMax, plotHeight);
-                ImGui::TreePop();
-            }
-
-            renderPipeline.forEachNodeInResolvedOrder(registry, [&](const std::string& nodeName, AvgElapsedTimer& nodeTimer, const RenderPipelineNode::ExecuteCallback& nodeExecuteCallback) {
-                std::string nodeTimePerfString = nodeTimer.createFormattedString();
-                std::string nodeTitle = fmt::format("{} | {}", nodeName, nodeTimePerfString);
-                ImGui::CollapsingHeader(nodeTitle.c_str(), ImGuiTreeNodeFlags_Leaf);
+                std::string nodeName = node.name();
 
                 SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandBuffer, nodeName);
                 SCOPED_PROFILE_ZONE_DYNAMIC(nodeName, 0x00ffff);
@@ -1517,7 +1501,7 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
                 // NOTE: This works assuming we never modify the list of nodes (add/remove/reorder)
                 uint32_t nodeStartTimestampIdx = nextTimestampQueryIdx++;
                 uint32_t nodeEndTimestampIdx = nextTimestampQueryIdx++;
-                nodeTimer.reportGpuTime(elapsedSecondsBetweenTimestamps(nodeStartTimestampIdx, nodeEndTimestampIdx));
+                node.timer().reportGpuTime(elapsedSecondsBetweenTimestamps(nodeStartTimestampIdx, nodeEndTimestampIdx));
 
                 vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameContext.timestampQueryPool, nodeStartTimestampIdx);
 
@@ -1529,10 +1513,9 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
                 vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameContext.timestampQueryPool, nodeEndTimestampIdx);
 
                 double cpuElapsed = glfwGetTime() - cpuStartTime;
-                nodeTimer.reportCpuTime(cpuElapsed);
+                node.timer().reportCpuTime(cpuElapsed);
             });
         }
-        ImGui::End();
 
         cmdList.beginDebugLabel("GUI");
         {
@@ -1594,7 +1577,7 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
 
     // NOTE: We're ignoring any time relatig to TracyVk and also submitting & presenting, as that would factor e.g. GPU time & sync into the CPU time
     double cpuFrameElapsedTime = glfwGetTime() - cpuFrameStartTime;
-    m_frameTimer.reportCpuTime(cpuFrameElapsedTime);
+    renderPipeline.timer().reportCpuTime(cpuFrameElapsedTime);
 
     #if defined(TRACY_ENABLE)
     if (m_currentFrameIndex % TracyVulkanSubmitRate == 0) {

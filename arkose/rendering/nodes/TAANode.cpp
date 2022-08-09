@@ -10,6 +10,17 @@ TAANode::TAANode(Camera& camera)
     }
 }
 
+void TAANode::drawGui()
+{
+    ImGui::Checkbox("Enabled##taa", &m_taaEnabled);
+
+    if (ImGui::TreeNode("Advanced##taa")) {
+        ImGui::SliderFloat("Hysteresis", &m_hysteresis, 0.0f, 1.0f);
+        ImGui::Checkbox("Use Catmull-Rom history sampling", &m_useCatmullRom);
+        ImGui::TreePop();
+    }
+}
+
 RenderPipelineNode::ExecuteCallback TAANode::construct(GpuScene& scene, Registry& reg)
 {
     ///////////////////////
@@ -33,16 +44,7 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(GpuScene& scene, Registry
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        ImGui::Checkbox("Enabled##taa", &m_taaEnabled);
         scene.camera().setFrustumJitteringEnabled(m_taaEnabled);
-
-        static float hysteresis = 0.95f;
-        static bool useCatmullRom = true;
-        if (ImGui::TreeNode("Advanced##taa")) {
-            ImGui::SliderFloat("Hysteresis", &hysteresis, 0.0f, 1.0f);
-            ImGui::Checkbox("Use Catmull-Rom history sampling", &useCatmullRom);
-            ImGui::TreePop();
-        }
 
         const bool wasEnabledThisFrame = m_taaEnabled && !m_taaEnabledPreviousFrame;
         m_taaEnabledPreviousFrame = m_taaEnabled;
@@ -65,8 +67,8 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(GpuScene& scene, Registry
         cmdList.setComputeState(taaComputeState);
         cmdList.bindSet(taaBindingSet, 0);
 
-        cmdList.setNamedUniform("hysteresis", hysteresis);
-        cmdList.setNamedUniform("useCatmullRom", useCatmullRom);
+        cmdList.setNamedUniform("hysteresis", m_hysteresis);
+        cmdList.setNamedUniform("useCatmullRom", m_useCatmullRom);
 
         cmdList.dispatch(currentFrameTexture.extent3D(), { 16, 16, 1 });
 

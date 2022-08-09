@@ -3,6 +3,20 @@
 #include "rendering/GpuScene.h"
 #include <imgui.h>
 
+void DepthOfFieldNode::drawGui()
+{
+    ImGui::Checkbox("Enabled##dof", &m_enabled);
+
+    ImGui::SliderFloat("Max blur size (px)", &m_maxBlurSize, 0.0f, 25.0f);
+    ImGui::SliderFloat("Radius scale", &m_radiusScale, 0.1f, 2.0f); // smaller results in nicer quality
+
+    if (ImGui::TreeNode("Debug##fov")) {
+        ImGui::Checkbox("Show pixels where blur size is clamped", &m_debugShowClampedBlurSize);
+        ImGui::Checkbox("Output circle of confusion visualisation", &m_debugShowCircleOfConfusion);
+        ImGui::TreePop();
+    }
+}
+
 RenderPipelineNode::ExecuteCallback DepthOfFieldNode::construct(GpuScene& scene, Registry& reg)
 {
     Buffer& sceneCameraBuffer = *reg.getBuffer("SceneCameraData");
@@ -29,9 +43,9 @@ RenderPipelineNode::ExecuteCallback DepthOfFieldNode::construct(GpuScene& scene,
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        ImGui::Checkbox("Enabled##dof", &m_enabled);
-        if (!m_enabled)
+        if (!m_enabled) {
             return;
+        }
 
         Extent2D targetSize = reg.windowRenderTarget().extent();
         Camera& camera = scene.scene().camera();
@@ -44,15 +58,6 @@ RenderPipelineNode::ExecuteCallback DepthOfFieldNode::construct(GpuScene& scene,
         cmdList.dispatch(targetSize, { 8, 8, 1 });
 
         cmdList.textureWriteBarrier(circleOfConfusionTex);
-
-        ImGui::SliderFloat("Max blur size (px)", &m_maxBlurSize, 0.0f, 25.0f);
-        ImGui::SliderFloat("Radius scale", &m_radiusScale, 0.1f, 2.0f); // smaller results in nicer quality
-
-        if (ImGui::TreeNode("Debug##fov")) {
-            ImGui::Checkbox("Show pixels where blur size is clamped", &m_debugShowClampedBlurSize);
-            ImGui::Checkbox("Output circle of confusion visualisation", &m_debugShowCircleOfConfusion);
-            ImGui::TreePop();
-        }
 
         // NOTE: Assuming full-res DoF effect, i.e. same resolution as the camera viewport
         float cocMmToPx = camera.circleOfConfusionMmToPxFactor();

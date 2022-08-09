@@ -9,6 +9,11 @@
 #include <ark/rect.h>
 #include <imgui.h>
 
+void LocalLightShadowNode::drawGui()
+{
+    ImGui::SliderInt("Max number of shadow maps", &m_maxNumShadowMaps, 0, 32);
+}
+
 RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& shadowMapAtlas = reg.createTexture2D({ 4096, 4096 },
@@ -35,7 +40,6 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
 
         auto shadowMapClearValue = ClearValue::blackAtMaxDepth();
 
-        ImGui::SliderInt("Max number of shadow maps", &m_maxNumShadowMaps, 0, 32);
         if (m_maxNumShadowMaps == 0) {
             cmdList.clearTexture(shadowMapAtlas, shadowMapClearValue);
             return;

@@ -28,6 +28,9 @@ public:
 
     virtual ExecuteCallback construct(GpuScene&, Registry&) = 0;
 
+    // Draw GUI for this node
+    virtual void drawGui() {};
+
 private:
     AvgElapsedTimer m_timer;
 };

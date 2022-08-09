@@ -313,8 +313,6 @@ private:
 
     VkDescriptorSetLayout m_emptyDescriptorSetLayout {};
 
-    AvgElapsedTimer m_frameTimer {};
-
     #if defined(TRACY_ENABLE)
         static constexpr uint32_t TracyVulkanSubmitRate = 10;
         static_assert(TracyVulkanSubmitRate > NumInFlightFrames, "We don't fence the submissions for the Tracy commands; instead we rely on the frame fences");

@@ -4,6 +4,29 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
+void GIComposeNode::drawGui()
+{
+    if (ImGui::RadioButton("Full compose", m_composeMode == ComposeMode::FullCompose)) {
+        m_composeMode = ComposeMode::FullCompose;
+    }
+    if (ImGui::RadioButton("Direct light only", m_composeMode == ComposeMode::DirectOnly)) {
+        m_composeMode = ComposeMode::DirectOnly;
+    }
+    if (ImGui::RadioButton("Diffuse indirect only", m_composeMode == ComposeMode::DiffuseIndirectOnly)) {
+        m_composeMode = ComposeMode::DiffuseIndirectOnly;
+    }
+    if (ImGui::RadioButton("Diffuse indirect only (ignore material color)", m_composeMode == ComposeMode::DiffuseIndirectOnlyNoBaseColor)) {
+        m_composeMode = ComposeMode::DiffuseIndirectOnlyNoBaseColor;
+    }
+    if (ImGui::RadioButton("Glossy indirect only", m_composeMode == ComposeMode::GlossyIndirectOnly)) {
+        m_composeMode = ComposeMode::GlossyIndirectOnly;
+    }
+
+    ImGui::Separator();
+
+    ImGui::Checkbox("Include ambient occlusion (for diffuse indirect)", &m_includeAmbientOcclusion);
+}
+
 RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& sceneColorBeforeGI = *reg.getTexture("SceneColor");
@@ -27,76 +50,53 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Re
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        cmdList.setComputeState(giComposeState);
-        cmdList.bindSet(composeBindingSet, 0);
+        bool includeSceneColor = true;
+        bool includeDiffuseGI = true;
+        bool includeGlossyGI = true;
+        bool withMaterialColor = true;
 
-        cmdList.setNamedUniform("targetSize", sceneColorWithGI.extent());
-
-        static bool includeSceneColor = true;
-        static bool includeDiffuseGI = true;
-        static bool includeGlossyGI = true;
-        static bool withMaterialColor = true;
-        static bool withAmbientOcclusion = true;
-#if 0
-        ImGui::Checkbox("Include scene color", &includeSceneColor);
-        ImGui::Checkbox("Include diffuse GI", &includeDiffuseGI);
-        if (includeDiffuseGI) {
-            ImGui::Checkbox("... with material color", &withMaterialColor);
-            ImGui::Checkbox("... with ambient occlusion", &withAmbientOcclusion);
-        }
-#else
-        enum class ComposeMode {
-            FullCompose,
-            DirectOnly,
-            DiffuseIndirectOnly,
-            DiffuseIndirectOnlyNoBaseColor,
-            GlossyIndirectOnly,
-        };
-        static ComposeMode composeMode = ComposeMode::FullCompose;
-
-        if (ImGui::RadioButton("Full compose", composeMode == ComposeMode::FullCompose)) {
-            composeMode = ComposeMode::FullCompose;
+        switch (m_composeMode) {
+        case ComposeMode::FullCompose:
             includeSceneColor = true;
             includeDiffuseGI = true;
             includeGlossyGI = true;
             withMaterialColor = true;
-        }
-        if (ImGui::RadioButton("Direct light only", composeMode == ComposeMode::DirectOnly)) {
-            composeMode = ComposeMode::DirectOnly;
+            break;
+        case ComposeMode::DirectOnly:
             includeSceneColor = true;
             includeDiffuseGI = false;
             includeGlossyGI = false;
-        }
-        if (ImGui::RadioButton("Diffuse indirect only", composeMode == ComposeMode::DiffuseIndirectOnly)) {
-            composeMode = ComposeMode::DiffuseIndirectOnly;
+            withMaterialColor = true;
+            break;
+        case ComposeMode::DiffuseIndirectOnly:
             includeSceneColor = false;
             includeDiffuseGI = true;
             includeGlossyGI = false;
             withMaterialColor = true;
-        }
-        if (ImGui::RadioButton("Diffuse indirect only (ignore material color)", composeMode == ComposeMode::DiffuseIndirectOnlyNoBaseColor)) {
-            composeMode = ComposeMode::DiffuseIndirectOnlyNoBaseColor;
+            break;
+        case ComposeMode::DiffuseIndirectOnlyNoBaseColor:
             includeSceneColor = false;
             includeDiffuseGI = true;
             includeGlossyGI = false;
             withMaterialColor = false;
-        }
-        if (ImGui::RadioButton("Glossy indirect only", composeMode == ComposeMode::GlossyIndirectOnly)) {
-            composeMode = ComposeMode::GlossyIndirectOnly;
+            break;
+        case ComposeMode::GlossyIndirectOnly:
             includeSceneColor = false;
             includeDiffuseGI = false;
             includeGlossyGI = true;
             withMaterialColor = true;
+            break;
         }
-        
-        ImGui::Separator();
-        ImGui::Checkbox("Include ambient occlusion (for diffuse indirect)", &withAmbientOcclusion);
-#endif
+
+        cmdList.setComputeState(giComposeState);
+        cmdList.bindSet(composeBindingSet, 0);
+
+        cmdList.setNamedUniform("targetSize", sceneColorWithGI.extent());
         cmdList.setNamedUniform("includeSceneColor", includeSceneColor);
         cmdList.setNamedUniform("includeDiffuseGI", includeDiffuseGI);
         cmdList.setNamedUniform("includeGlossyGI", includeGlossyGI);
         cmdList.setNamedUniform("withMaterialColor", withMaterialColor);
-        cmdList.setNamedUniform("withAmbientOcclusion", withAmbientOcclusion);
+        cmdList.setNamedUniform("withAmbientOcclusion", m_includeAmbientOcclusion);
 
         cmdList.dispatch({ sceneColorWithGI.extent(), 1 }, { 32, 32, 1 });
 

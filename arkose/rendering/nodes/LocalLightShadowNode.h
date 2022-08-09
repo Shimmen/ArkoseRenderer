@@ -10,6 +10,8 @@ class Light;
 class LocalLightShadowNode final : public RenderPipelineNode {
 public:
     std::string name() const override { return "Local light shadows"; }
+    void drawGui() override;
+
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:

@@ -17,5 +17,7 @@ public:
         FXAA,
     };
 
+    bool m_guiEnabled { true };
+    RenderPipeline* m_renderPipeline { nullptr };
     FpsCameraController m_fpsCameraController {};
 };

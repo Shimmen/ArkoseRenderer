@@ -8,6 +8,8 @@ public:
     explicit FinalNode(std::string sourceTextureName);
 
     std::string name() const override { return "Final"; }
+    void drawGui() override;
+
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
     void setRenderFilmGrain(bool enabled) { m_addFilmGrain = enabled; }

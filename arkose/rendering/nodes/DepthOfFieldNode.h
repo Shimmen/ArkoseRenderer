@@ -5,6 +5,8 @@
 class DepthOfFieldNode final : public RenderPipelineNode {
 public:
     std::string name() const override { return "Depth of Field"; }
+    void drawGui() override;
+
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
     void setEnabled(bool enabled) { m_enabled = enabled; }

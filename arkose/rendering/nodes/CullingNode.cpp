@@ -113,6 +113,6 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
         cmdList.dispatch(Extent3D(static_cast<uint32_t>(numInputDrawables), 1, 1), Extent3D(64, 1, 1));
 
         // It would be nice if we could do GPU readback from last frame's count buffer (on the other hand, we do have renderdoc for this)
-        //ImGui::Text("Issued draw calls: %i", numDrawCallsIssued);
+        //ImGui::Text("Issued draw calls: %i", numDrawCallsIssued); (in gui())
     };
 }

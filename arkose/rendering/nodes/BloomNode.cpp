@@ -3,6 +3,13 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
+void BloomNode::drawGui()
+{
+    ImGui::Checkbox("Enabled##bloom", &m_enabled);
+    ImGui::SliderFloat("Upsample blur radius", &m_upsampleBlurRadius, 0.0f, 0.01f, "%.4f");
+    ImGui::SliderFloat("Bloom blend", &m_bloomBlend, 0.0f, 1.0f, "%.6f", ImGuiSliderFlags_Logarithmic);
+}
+
 RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Registry& reg)
 {
     m_downsampleSets.clear();
@@ -44,14 +51,8 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        static bool enabled = true;
-        ImGui::Checkbox("Enabled##bloom", &enabled);
-
-        if (!enabled)
+        if (!m_enabled)
             return;
-
-        ImGui::SliderFloat("Upsample blur radius", &m_upsampleBlurRadius, 0.0f, 0.01f, "%.4f");
-        ImGui::SliderFloat("Bloom blend", &m_bloomBlend, 0.0f, 1.0f, "%.6f", ImGuiSliderFlags_Logarithmic);
 
         constexpr Extent3D localSizeForComp { 16, 16, 1 };
 

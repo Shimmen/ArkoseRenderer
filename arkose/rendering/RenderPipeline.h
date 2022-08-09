@@ -29,7 +29,10 @@ public:
     void constructAll(Registry& registry);
 
     // The callback is called for each node (in correct order)
-    void forEachNodeInResolvedOrder(const Registry&, std::function<void(std::string, AvgElapsedTimer&, const RenderPipelineNode::ExecuteCallback&)>) const;
+    void forEachNodeInResolvedOrder(const Registry&, std::function<void(RenderPipelineNode&, const RenderPipelineNode::ExecuteCallback&)>) const;
+
+    AvgElapsedTimer& timer() { return m_pipelineTimer; }
+    void drawGui(bool includeContainingWindow = false) const;
 
 private:
 
@@ -43,6 +46,7 @@ private:
     };
 
     std::vector<NodeContext> m_nodeContexts {};
+    AvgElapsedTimer m_pipelineTimer {};
 
     GpuScene* m_scene {};
 };

@@ -3,6 +3,16 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
+void SkyViewNode::drawGui()
+{
+    if (ImGui::RadioButton("Sky view enabled", m_skyViewEnabled)) {
+        m_skyViewEnabled = true;
+    }
+    if (ImGui::RadioButton("Velocity only", !m_skyViewEnabled)) {
+        m_skyViewEnabled = false;
+    }
+}
+
 RenderPipelineNode::ExecuteCallback SkyViewNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& sceneColor = *reg.getTexture("SceneColor");
@@ -29,13 +39,7 @@ RenderPipelineNode::ExecuteCallback SkyViewNode::construct(GpuScene& scene, Regi
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        static bool skyViewEnabled = true;
-        if (ImGui::RadioButton("Sky view enabled", skyViewEnabled))
-            skyViewEnabled = true;
-        if (ImGui::RadioButton("Velocity only", !skyViewEnabled))
-            skyViewEnabled = false;
-
-        float envMultiplier = skyViewEnabled ? scene.preExposedEnvironmentBrightnessFactor() : 0.0f;
+        float envMultiplier = m_skyViewEnabled ? scene.preExposedEnvironmentBrightnessFactor() : 0.0f;
 
         cmdList.beginRendering(skyViewRenderState);
         cmdList.setNamedUniform("environmentMultiplier", envMultiplier);

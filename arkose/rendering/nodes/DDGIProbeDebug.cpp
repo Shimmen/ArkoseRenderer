@@ -8,6 +8,28 @@
 // Shared shader headers
 #include "DDGIData.h"
 
+void DDGIProbeDebug::drawGui()
+{
+    ImGui::Text("Debug visualisation:");
+
+    if (ImGui::RadioButton("Disabled", m_debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_DISABLED)) {
+        m_debugVisualisation = DDGI_PROBE_DEBUG_VISUALIZE_DISABLED;
+    }
+    if (ImGui::RadioButton("Irradiance", m_debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_IRRADIANCE)) {
+        m_debugVisualisation = DDGI_PROBE_DEBUG_VISUALIZE_IRRADIANCE;
+    }
+    if (ImGui::RadioButton("Visibility distance", m_debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_DISTANCE)) {
+        m_debugVisualisation = DDGI_PROBE_DEBUG_VISUALIZE_DISTANCE;
+    }
+    if (ImGui::RadioButton("Visibility distance^2", m_debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_DISTANCE2)) {
+        m_debugVisualisation = DDGI_PROBE_DEBUG_VISUALIZE_DISTANCE2;
+    }
+
+    ImGui::SliderFloat("Probe size (m)", &m_probeScale, 0.01f, 1.0f);
+    ImGui::SliderFloat("Distance scale", &m_distanceScale, 0.001f, 0.1f);
+    ImGui::Checkbox("Render probes with offsets", &m_useProbeOffset);
+}
+
 RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(GpuScene& scene, Registry& reg)
 {
     if (!reg.hasPreviousNode("DDGI"))
@@ -27,31 +49,15 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(GpuScene& scene, R
     RenderState& renderState = reg.createRenderState(stateBuilder);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
-        SCOPED_PROFILE_ZONE();
 
-        ImGui::Text("Debug visualisation:");
-        static int debugVisualisation = DDGI_PROBE_DEBUG_VISUALIZE_DISABLED;
-        if (ImGui::RadioButton("Disabled", debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_DISABLED))
-            debugVisualisation = DDGI_PROBE_DEBUG_VISUALIZE_DISABLED;
-        if (ImGui::RadioButton("Irradiance", debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_IRRADIANCE))
-            debugVisualisation = DDGI_PROBE_DEBUG_VISUALIZE_IRRADIANCE;
-        if (ImGui::RadioButton("Visibility distance", debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_DISTANCE))
-            debugVisualisation = DDGI_PROBE_DEBUG_VISUALIZE_DISTANCE;
-        if (ImGui::RadioButton("Visibility distance^2", debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_DISTANCE2))
-            debugVisualisation = DDGI_PROBE_DEBUG_VISUALIZE_DISTANCE2;
-
-        if (debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_DISABLED)
+        if (m_debugVisualisation == DDGI_PROBE_DEBUG_VISUALIZE_DISABLED)
             return;
-
-        ImGui::SliderFloat("Probe size (m)", &m_probeScale, 0.01f, 1.0f);
-        ImGui::SliderFloat("Distance scale", &m_distanceScale, 0.001f, 0.1f);
-        ImGui::Checkbox("Render probes with offsets", &m_useProbeOffset);
 
         cmdList.beginRendering(renderState);
         cmdList.setNamedUniform("probeScale", m_probeScale);
         cmdList.setNamedUniform("distanceScale", m_distanceScale);
         cmdList.setNamedUniform("useProbeOffset", m_useProbeOffset);
-        cmdList.setNamedUniform("debugVisualisation", debugVisualisation);
+        cmdList.setNamedUniform("debugVisualisation", m_debugVisualisation);
 
         DrawCallDescription probesDrawCall = m_sphereDrawCall;
         probesDrawCall.instanceCount = scene.scene().probeGrid().probeCount();

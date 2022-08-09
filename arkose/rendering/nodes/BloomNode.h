@@ -6,6 +6,8 @@
 class BloomNode final : public RenderPipelineNode {
 public:
     std::string name() const override { return "Bloom"; }
+    void drawGui() override;
+
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
     static constexpr size_t _NumDownsamples = 6;
@@ -16,6 +18,7 @@ private:
     std::vector<BindingSet*> m_downsampleSets {};
     std::vector<BindingSet*> m_upsampleSets {};
 
+    bool m_enabled { true };
     float m_upsampleBlurRadius { 0.0036f };
     float m_bloomBlend { 0.04f };
 };

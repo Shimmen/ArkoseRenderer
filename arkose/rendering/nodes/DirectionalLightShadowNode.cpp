@@ -7,6 +7,11 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
+void DirectionalLightShadowNode::drawGui()
+{
+    ImGui::SliderFloat("Light disc radius", &m_lightDiscRadius, 0.0f, 5.0f);
+}
+
 RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuScene& scene, Registry& reg)
 {
     //
@@ -109,7 +114,6 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
         {
             ScopedDebugZone zone { cmdList, "Shadow Map Projection" };
 
-            ImGui::SliderFloat("Light disc radius", &m_lightDiscRadius, 0.0f, 5.0f);
             vec2 radiusInShadowMapUVs = m_lightDiscRadius * shadowMap.extent().inverse();
 
             cmdList.setComputeState(shadowProjectionState);

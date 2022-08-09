@@ -107,17 +107,30 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     }
 
     pipeline.addNode<FinalNode>(finalTextureToScreen);
+
+    // Save reference to the render pipeline for GUI purposes
+    m_renderPipeline = &pipeline;
 }
 
 bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
 {
-    bool exitRequested = drawGui(scene);
+    const Input& input = Input::instance();
 
-    m_fpsCameraController.update(Input::instance(), deltaTime);
+    // Toggle GUI with the ` key
+    if (input.wasKeyReleased(Key::GraveAccent)) {
+        m_guiEnabled = !m_guiEnabled;
+    }
+
+    bool exitRequested = false;
+    if (m_guiEnabled) {
+        exitRequested = drawGui(scene);
+    }
+
+    m_fpsCameraController.update(input, deltaTime);
 
     float sunRotation = 0.0f;
-    sunRotation -= Input::instance().isKeyDown(Key::Left) ? 1.0f : 0.0f;
-    sunRotation += Input::instance().isKeyDown(Key::Right) ? 1.0f : 0.0f;
+    sunRotation -= input.isKeyDown(Key::Left) ? 1.0f : 0.0f;
+    sunRotation += input.isKeyDown(Key::Right) ? 1.0f : 0.0f;
     quat rotation = axisAngle(ark::globalRight, sunRotation * deltaTime * 0.2f);
 
     DirectionalLight& sun = *scene.firstDirectionalLight();
@@ -135,6 +148,7 @@ bool ShowcaseApp::drawGui(Scene& scene)
     static bool showSceneGui = false;
     static bool showGpuSceneGui = false;
     static bool showVramUsageGui = false;
+    static bool showRenderPipelineGui = true;
 
     if (showAbout) {
         if (ImGui::Begin("About", &showAbout, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse)) {
@@ -176,6 +190,13 @@ bool ShowcaseApp::drawGui(Scene& scene)
         ImGui::End();
     }
 
+    if (m_renderPipeline && showRenderPipelineGui) {
+        if (ImGui::Begin("Render Pipeline", &showRenderPipelineGui)) {
+            m_renderPipeline->drawGui();
+        }
+        ImGui::End();
+    }
+
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             exitRequested = ImGui::MenuItem("Quit");
@@ -183,12 +204,10 @@ bool ShowcaseApp::drawGui(Scene& scene)
             ImGui::MenuItem("About...", nullptr, &showAbout);
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Window")) {
-            ImGui::MenuItem("Camera", nullptr, &showCameraGui);
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Settings")) {
+        if (ImGui::BeginMenu("View")) {
             ImGui::MenuItem("Scene settings", nullptr, &showSceneGui);
+            ImGui::MenuItem("Render pipeline", nullptr, &showRenderPipelineGui);
+            ImGui::MenuItem("Camera", nullptr, &showCameraGui);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Stats")) {

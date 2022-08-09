@@ -4,6 +4,7 @@
 #include "utility/Profiling.h"
 #include "rendering/GpuScene.h"
 #include <fmt/format.h>
+#include <imgui.h>
 
 RenderPipeline::RenderPipeline(GpuScene* scene)
     : m_scene(scene)
@@ -51,7 +52,7 @@ void RenderPipeline::constructAll(Registry& registry)
     registry.setCurrentNode({}, std::nullopt);
 }
 
-void RenderPipeline::forEachNodeInResolvedOrder(const Registry& frameManager, std::function<void(std::string nodeName, AvgElapsedTimer& timer, const RenderPipelineNode::ExecuteCallback&)> callback) const
+void RenderPipeline::forEachNodeInResolvedOrder(const Registry& frameManager, std::function<void(RenderPipelineNode&, const RenderPipelineNode::ExecuteCallback&)> callback) const
 {
     // TODO: Actually run the callback in the correctly resolved order!
     // TODO: We also have to make sure that nodes rendering to the screen are last (and in some respective order that makes sense)
@@ -59,6 +60,43 @@ void RenderPipeline::forEachNodeInResolvedOrder(const Registry& frameManager, st
     ARKOSE_ASSERT(m_nodeContexts.size() > 0);
 
     for (auto& [node, execCallback] : m_nodeContexts) {
-        callback(node->name(), node->timer(), execCallback);
+        callback(*node, execCallback);
+    }
+}
+
+void RenderPipeline::drawGui(bool includeContainingWindow) const
+{
+    if (includeContainingWindow) {
+        ImGui::Begin("Render Pipeline");
+    }
+
+    std::string frameTimePerfString = m_pipelineTimer.createFormattedString();
+    ImGui::Text("Pipline frame time: %s", frameTimePerfString.c_str());
+
+    if (ImGui::TreeNode("Frame time plots")) {
+
+        static float plotRangeMin = 0.0f;
+        static float plotRangeMax = 16.667f;
+        ImGui::SliderFloat("Plot range min", &plotRangeMin, 0.0f, plotRangeMax);
+        ImGui::SliderFloat("Plot range max", &plotRangeMax, plotRangeMin, 40.0f);
+        static float plotHeight = 160.0f;
+        ImGui::SliderFloat("Plot height", &plotHeight, 40.0f, 350.0f);
+
+        m_pipelineTimer.plotTimes(plotRangeMin, plotRangeMax, plotHeight);
+
+        ImGui::TreePop();
+    }
+
+    for (auto& [node, execCallback] : m_nodeContexts) {
+        std::string nodeName = node->name();
+        std::string nodeTimePerfString = node->timer().createFormattedString();
+        std::string nodeTitle = fmt::format("{} | {}###{}", nodeName, nodeTimePerfString, nodeName);
+        if (ImGui::CollapsingHeader(nodeTitle.c_str())) {
+            node->drawGui();
+        }
+    }
+
+    if (includeContainingWindow) {
+        ImGui::End();
     }
 }

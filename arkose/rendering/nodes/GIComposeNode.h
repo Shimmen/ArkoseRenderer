@@ -6,5 +6,19 @@
 class GIComposeNode final : public RenderPipelineNode {
 public:
     std::string name() const override { return "GI Compose"; }
+    void drawGui() override;
+
     ExecuteCallback construct(GpuScene&, Registry&) override;
+
+    enum class ComposeMode {
+        FullCompose,
+        DirectOnly,
+        DiffuseIndirectOnly,
+        DiffuseIndirectOnlyNoBaseColor,
+        GlossyIndirectOnly,
+    };
+
+private:
+    ComposeMode m_composeMode { ComposeMode::FullCompose };
+    bool m_includeAmbientOcclusion { true };
 };

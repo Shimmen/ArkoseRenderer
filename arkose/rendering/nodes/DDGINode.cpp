@@ -14,6 +14,22 @@ static_assert((DDGI_VISIBILITY_RES & (DDGI_VISIBILITY_RES - 1)) == 0);
 // The two different resolutions should be a integer multiplier different
 static_assert((DDGI_VISIBILITY_RES % DDGI_IRRADIANCE_RES) == 0 || (DDGI_IRRADIANCE_RES % DDGI_VISIBILITY_RES) == 0);
 
+void DDGINode::drawGui()
+{
+    ImGui::SliderInt("Rays per probe", &m_raysPerProbeInt, 1, MaxNumProbeSamples);
+
+    ImGui::SliderFloat("Hysteresis (irradiance)", &m_hysteresisIrradiance, 0.85f, 0.98f);
+    ImGui::SliderFloat("Hysteresis (visibility)", &m_hysteresisVisibility, 0.85f, 0.98f);
+
+    ImGui::SliderFloat("Visibility sharpness", &m_visibilitySharpness, 1.0f, 10.0f);
+
+    ImGui::Checkbox("Use scene ambient light", &m_useSceneAmbient);
+    if (!m_useSceneAmbient) {
+        // todo: make inactive instead of disappear!
+        ImGui::SliderFloat("Injected ambient (lx)", &m_injectedAmbientLx, 0.0f, 10'000.0f, "%.0f");
+    }
+}
+
 RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registry& reg)
 {
     if (!scene.scene().hasProbeGrid()) {
@@ -44,8 +60,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
     reg.publish("DDGISamplingSet", ddgiSamplingBindingSet);
 
     const int probeCount = probeGrid.probeCount(); // TODO: maybe don't expect to be able to update all in one surfel image?
-    static constexpr int maxNumProbeSamples = 128; // we can dynamically choose to do fewer samples but not more since it's the fixed image size now
-    Texture& surfelImage = reg.createTexture2D({ probeCount, maxNumProbeSamples }, Texture::Format::RGBA16F);
+    Texture& surfelImage = reg.createTexture2D({ probeCount, MaxNumProbeSamples }, Texture::Format::RGBA16F);
 
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ ShaderBinding::topLevelAccelerationStructure(sceneTLAS, ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
@@ -90,32 +105,13 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
 
     BindingSet& probeUpdateOffsetBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(surfelImage, ShaderStage::Compute),
                                                                      ShaderBinding::storageBuffer(probeOffsetBuffer, ShaderStage::Compute) });
-    ComputeState& probeMoveComputeState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateOffset.comp", { ShaderDefine::makeInt("SURFELS_PER_PROBE", maxNumProbeSamples) }), { &probeUpdateOffsetBindingSet });
+    ComputeState& probeMoveComputeState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateOffset.comp", { ShaderDefine::makeInt("SURFELS_PER_PROBE", MaxNumProbeSamples) }), { &probeUpdateOffsetBindingSet });
 
     return [&, probeCount](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
-        static int raysPerProbeInt = maxNumProbeSamples;
-        ImGui::SliderInt("Rays per probe", &raysPerProbeInt, 1, maxNumProbeSamples);
-        uint32_t raysPerProbe = static_cast<uint32_t>(raysPerProbeInt);
-
-        static float hysteresisIrradiance = 0.98f;
-        static float hysteresisVisibility = 0.98f;
-        ImGui::SliderFloat("Hysteresis (irradiance)", &hysteresisIrradiance, 0.85f, 0.98f);
-        ImGui::SliderFloat("Hysteresis (visibility)", &hysteresisVisibility, 0.85f, 0.98f);
-
-        // TODO: What's a good default?!
-        static float visibilitySharpness = 5.0f;
-        ImGui::SliderFloat("Visibility sharpness", &visibilitySharpness, 1.0f, 10.0f);
-
-        float ambientLx = scene.scene().ambientIlluminance();
-        static bool useSceneAmbient = true;
-        ImGui::Checkbox("Use scene ambient light", &useSceneAmbient);
-        if (!useSceneAmbient) {
-            static float injectedAmbientLx = 100.0f;
-            ImGui::SliderFloat("Injected ambient (lx)", &injectedAmbientLx, 0.0f, 10'000.0f, "%.0f");
-            ambientLx = injectedAmbientLx;
-        }
-
+        
         uint32_t frameIdx = appState.frameIndex();
+        uint32_t raysPerProbe = static_cast<uint32_t>(m_raysPerProbeInt);
+        float ambientLx = m_useSceneAmbient ? scene.scene().ambientIlluminance() : m_injectedAmbientLx;
 
         ivec3 gridDimensions = ivec3(
             scene.scene().probeGrid().gridDimensions.width(),
@@ -147,7 +143,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
             cmdList.setComputeState(irradianceProbeUpdateState);
             cmdList.bindSet(irradianceUpdateBindingSet, 0);
 
-            cmdList.setNamedUniform("hysterisis", appState.isFirstFrame() ? 0.0f : hysteresisIrradiance);
+            cmdList.setNamedUniform("hysterisis", appState.isFirstFrame() ? 0.0f : m_hysteresisIrradiance);
             cmdList.setNamedUniform("gridDimensions", gridDimensions);
             cmdList.setNamedUniform("raysPerProbe", raysPerProbe);
             cmdList.setNamedUniform("frameIdx", frameIdx);
@@ -162,8 +158,8 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
             cmdList.setComputeState(visibilityProbeUpdateState);
             cmdList.bindSet(visibilityUpdateBindingSet, 0);
 
-            cmdList.setNamedUniform("hysterisis", appState.isFirstFrame() ? 0.0f : hysteresisVisibility);
-            cmdList.setNamedUniform("visibilitySharpness", visibilitySharpness);
+            cmdList.setNamedUniform("hysterisis", appState.isFirstFrame() ? 0.0f : m_hysteresisVisibility);
+            cmdList.setNamedUniform("visibilitySharpness", m_visibilitySharpness);
             cmdList.setNamedUniform("gridDimensions", gridDimensions);
             cmdList.setNamedUniform("raysPerProbe", raysPerProbe);
             cmdList.setNamedUniform("frameIdx", frameIdx);

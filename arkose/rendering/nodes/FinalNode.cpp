@@ -9,11 +9,21 @@ FinalNode::FinalNode(std::string sourceTextureName)
 {
 }
 
+void FinalNode::drawGui()
+{
+    ImGui::Checkbox("Add film grain", &m_addFilmGrain);
+    ImGui::SliderFloat("Film grain scale", &m_filmGrainScale, 1.0f, 10.0f);
+
+    ImGui::Checkbox("Apply vignette", &m_applyVignette);
+    ImGui::SliderFloat("Vignette intensity", &m_vignetteIntensity, 0.0f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+}
+
 RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture* sourceTexture = reg.getTexture(m_sourceTextureName);
-    if (!sourceTexture)
+    if (!sourceTexture) {
         ARKOSE_LOG(Fatal, "Final: specified source texture '{}' not found, exiting.", m_sourceTextureName);
+    }
 
     Texture& filmGrainTexture = *reg.getTexture("BlueNoise");
     BindingSet& bindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(*sourceTexture, ShaderStage::Fragment),
@@ -31,20 +41,14 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Regist
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        ImGui::Checkbox("Add film grain", &m_addFilmGrain);
-        ImGui::SliderFloat("Film grain scale", &m_filmGrainScale, 1.0f, 10.0f);
-        float filmGrainGain = m_addFilmGrain ? scene.scene().filmGrainGain() : 0.0f;
-
-        ImGui::Checkbox("Apply vignette", &m_applyVignette);
-        ImGui::SliderFloat("Vignette intensity", &m_vignetteIntensity, 0.0f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
-        float vignetteIntensity = m_applyVignette ? m_vignetteIntensity : 0.0f;
-
         cmdList.beginRendering(renderState, ClearValue::blackAtMaxDepth());
         {
+            float filmGrainGain = m_addFilmGrain ? scene.scene().filmGrainGain() : 0.0f;
             cmdList.setNamedUniform("filmGrainGain", filmGrainGain);
             cmdList.setNamedUniform("filmGrainScale", m_filmGrainScale);
             cmdList.setNamedUniform("filmGrainArrayIdx", appState.frameIndex() % filmGrainTexture.arrayCount());
 
+            float vignetteIntensity = m_applyVignette ? m_vignetteIntensity : 0.0f;
             cmdList.setNamedUniform("vignetteIntensity", vignetteIntensity);
             cmdList.setNamedUniform("aspectRatio", scene.camera().aspectRatio());
         }

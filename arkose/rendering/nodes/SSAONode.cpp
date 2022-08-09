@@ -6,6 +6,15 @@
 // Shader data
 #include "SSAOData.h"
 
+void SSAONode::drawGui()
+{
+    ImGui::SliderFloat("Kernel radius (m)", &m_kernelRadius, 0.01f, 1.5f);
+    ImGui::SliderFloat("Kernel exponent", &m_kernelExponent, 0.5f, 5.0f);
+
+    // static bool applyBlur = true;
+    // ImGui::Checkbox("Apply blur", &applyBlur);
+}
+
 RenderPipelineNode::ExecuteCallback SSAONode::construct(GpuScene& scene, Registry& reg)
 {
     //
@@ -36,21 +45,12 @@ RenderPipelineNode::ExecuteCallback SSAONode::construct(GpuScene& scene, Registr
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        static float kernelRadius = 0.58f;
-        ImGui::SliderFloat("Kernel radius (m)", &kernelRadius, 0.01f, 1.5f);
-
-        static float kernelExponent = 1.75f;
-        ImGui::SliderFloat("Kernel exponent", &kernelExponent, 0.5f, 5.0f);
-
-        //static bool applyBlur = true;
-        //ImGui::Checkbox("Apply blur", &applyBlur);
-
         cmdList.setComputeState(ssaoComputeState);
         cmdList.bindSet(ssaoBindingSet, 0);
 
         cmdList.setNamedUniform("targetSize", appState.windowExtent());
-        cmdList.setNamedUniform("kernelRadius", kernelRadius);
-        cmdList.setNamedUniform("kernelExponent", kernelExponent);
+        cmdList.setNamedUniform("kernelRadius", m_kernelRadius);
+        cmdList.setNamedUniform("kernelExponent", m_kernelExponent);
         cmdList.setNamedUniform("kernelSampleCount", KernelSampleCount);
 
         cmdList.dispatch({ ambientOcclusionTex.extent(), 1 }, { 32, 32, 1 });
