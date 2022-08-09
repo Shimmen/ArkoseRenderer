@@ -311,8 +311,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             for (int i = 0, count = staticMeshInstances.size(); i < count; ++i) {
 
                 const StaticMeshInstance& instance = *staticMeshInstances[i];
-                const StaticMesh& staticMesh = *m_managedStaticMeshes[i].staticMesh;
-                
+                const StaticMesh& staticMesh = *staticMeshForHandle(instance.mesh);
+
                 // TODO: Make use of all LODs
                 ARKOSE_ASSERT(staticMesh.numLODs() >= 1);
                 const StaticMeshLOD& lod = staticMesh.lodAtIndex(0);
@@ -517,21 +517,51 @@ StaticMeshHandle GpuScene::registerStaticMesh(std::shared_ptr<StaticMesh> static
     SCOPED_PROFILE_ZONE();
 
     ARKOSE_ASSERT(staticMesh);
+    auto managedStaticMesh = ManagedStaticMesh { .staticMesh = staticMesh,
+                                                 .referenceCount = 1 };
 
-    StaticMeshHandle handle = StaticMeshHandle(m_managedStaticMeshes.size());
-    m_managedStaticMeshes.push_back(ManagedStaticMesh { .staticMesh = staticMesh });
+    StaticMeshHandle handle;
+    if (m_managedStaticMeshFreeList.size() > 0) {
 
+        handle = StaticMeshHandle(m_managedStaticMeshFreeList.back());
+        m_managedStaticMeshFreeList.pop_back();
+
+        m_managedStaticMeshes[handle.index()] = managedStaticMesh;
+
+    } else {
+
+        handle = StaticMeshHandle(m_managedStaticMeshes.size());
+        m_managedStaticMeshes.push_back(managedStaticMesh);
+
+    }
 
     return handle;
+}
+
+void GpuScene::unregisterStaticMesh(StaticMeshHandle handle)
+{
+    // Do we really want to reference count this..? Or do we want some more explicit load/unload control?
+    // This way it would be easy to add some function `registerExistingStaticMesh` or so which just increments
+    // the reference count and returns the same handle? Not sure if that's a good use case, but this will work
+    // for now and allows us to delete unused meshes...
+    
+    ManagedStaticMesh& managedStaticMesh = m_managedStaticMeshes[handle.index()];
+    managedStaticMesh.referenceCount -= 1;
+
+    if (managedStaticMesh.referenceCount == 0) {
+        managedStaticMesh.staticMesh.reset();
+        m_managedStaticMeshFreeList.push_back(handle.index());
+    }
 }
 
 void GpuScene::ensureDrawCallIsAvailableForAll(VertexLayout vertexLayout)
 {
     for (const ManagedStaticMesh& managedStaticMesh : m_managedStaticMeshes) {
-        StaticMesh& staticMesh = *managedStaticMesh.staticMesh;
-        for (StaticMeshLOD& staticMeshLOD : staticMesh.LODs()) {
-            for (StaticMeshSegment& meshSegment : staticMeshLOD.meshSegments) {
-                meshSegment.ensureDrawCallIsAvailable(vertexLayout, *this);
+        if (auto& staticMesh = managedStaticMesh.staticMesh) {
+            for (StaticMeshLOD& staticMeshLOD : staticMesh->LODs()) {
+                for (StaticMeshSegment& meshSegment : staticMeshLOD.meshSegments) {
+                    meshSegment.ensureDrawCallIsAvailable(vertexLayout, *this);
+                }
             }
         }
     }

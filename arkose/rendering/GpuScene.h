@@ -69,7 +69,7 @@ public:
     // TODO: Unregister light!
 
     StaticMeshHandle registerStaticMesh(std::shared_ptr<StaticMesh>);
-    // TODO: void unregisterStaticMesh(StaticMeshHandle);
+    void unregisterStaticMesh(StaticMeshHandle);
 
     [[nodiscard]] MaterialHandle registerMaterial(Material&);
     void unregisterMaterial(MaterialHandle);
@@ -134,8 +134,10 @@ private:
 
     struct ManagedStaticMesh {
         std::shared_ptr<StaticMesh> staticMesh {};
+        uint64_t referenceCount { 0 };
     };
     std::vector<ManagedStaticMesh> m_managedStaticMeshes {};
+    std::vector<size_t> m_managedStaticMeshFreeList {};
 
     struct ManagedDirectionalLight {
         DirectionalLight* light {};

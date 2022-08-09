@@ -55,10 +55,14 @@ public:
 
     // Meshes
 
+    // NOTE: Perhaps this should have a more apt name. It's essentially equivalent to loading in a scene..
     std::vector<StaticMeshInstance*> loadMeshes(const std::string& filePath);
+
+    // NOTE: This is more of a utility for now to clear out the current level
     void unloadAllMeshes();
 
     StaticMeshInstance& addMesh(std::shared_ptr<StaticMesh>, Transform);
+    StaticMeshInstance& createStaticMeshInstance(StaticMeshHandle, Transform);
 
     std::vector<std::unique_ptr<StaticMeshInstance>>& staticMeshInstances() { return m_staticMeshInstances; }
     const std::vector<std::unique_ptr<StaticMeshInstance>>& staticMeshInstances() const { return m_staticMeshInstances; }

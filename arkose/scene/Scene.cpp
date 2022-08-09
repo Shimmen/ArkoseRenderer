@@ -123,8 +123,9 @@ std::vector<StaticMeshInstance*> Scene::loadMeshes(const std::string& filePath)
 
 void Scene::unloadAllMeshes()
 {
-    // TODO: Also make sure we unregister the meshes from the GpuScene and delete unused materials & textures
-    //gpuScene().unregisterMesh() ...
+    for (auto& instance : m_staticMeshInstances) {
+        gpuScene().unregisterStaticMesh(instance->mesh);
+    }
 
     m_staticMeshInstances.clear();
 }
@@ -132,15 +133,20 @@ void Scene::unloadAllMeshes()
 StaticMeshInstance& Scene::addMesh(std::shared_ptr<StaticMesh> staticMesh, Transform transform)
 {
     StaticMeshHandle staticMeshHandle = gpuScene().registerStaticMesh(std::move(staticMesh));
-
-    m_staticMeshInstances.push_back(std::make_unique<StaticMeshInstance>(staticMeshHandle, transform));
-
     if (hasPhysicsScene()) {
-        // TODO:
-        //  1) register the static mesh shape(s)
-        //  2) register a physics shape for this instance
+        // TODO: register the static mesh shape(s)
     }
 
+    return createStaticMeshInstance(staticMeshHandle, transform);
+}
+
+StaticMeshInstance& Scene::createStaticMeshInstance(StaticMeshHandle staticMeshHandle, Transform transform)
+{
+    if (hasPhysicsScene()) {
+        // TODO: register a physics instance for this instance
+    }
+
+    m_staticMeshInstances.push_back(std::make_unique<StaticMeshInstance>(staticMeshHandle, transform));
     return *m_staticMeshInstances.back();
 }
 
