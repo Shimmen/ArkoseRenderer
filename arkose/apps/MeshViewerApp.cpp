@@ -26,6 +26,9 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     
     scene.setupFromDescription({ .maintainRayTracingScene = false });
 
+    auto boxMeshes = scene.loadMeshes("assets/sample/models/Box.glb");
+    boxMeshes.front()->transform.setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(30.0f)));
+
     scene.setAmbientIlluminance(600.0f);
     scene.setEnvironmentMap({ .assetPath = "assets/sample/hdri/tiergarten_2k.hdr",
                               .brightnessFactor = 5000.0f });
@@ -34,7 +37,7 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     DirectionalLight& sun = scene.addLight(std::make_unique<DirectionalLight>(vec3(1.0f), 90'000.0f, sunDirecton));
 
     Camera& camera = scene.addCamera("default", true);
-    camera.lookAt(vec3(0, 0, 4.0f), vec3(0, 0, 0));
+    camera.lookAt(vec3(0, 1.0f, 4.0f), vec3(0, 0, 0));
     camera.setManualExposureParameters(11.0f, 1.0f / 125.0f, 400.0f);
     m_fpsCameraController.takeControlOfCamera(camera);
 
@@ -56,22 +59,7 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
 
 bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
 {
-    static bool showCameraGui = false;
-    static bool showSceneGui = false;
-
-    if (showCameraGui) {
-        if (ImGui::Begin("Camera", &showCameraGui, ImGuiWindowFlags_NoCollapse)) {
-            scene.camera().drawGui();
-        }
-        ImGui::End();
-    }
-
-    if (showSceneGui) {
-        if (ImGui::Begin("Scene", &showSceneGui, ImGuiWindowFlags_NoCollapse)) {
-            scene.drawSettingsGui();
-        }
-        ImGui::End();
-    }
+    ImGui::DockSpaceOverViewport(nullptr, ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingInCentralNode);
 
     bool showNewSceneModalHack = false;
     if (ImGui::BeginMainMenuBar()) {
@@ -79,11 +67,6 @@ bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
             if (ImGui::MenuItem("New empty...", "Ctrl+N")) { showNewSceneModalHack = true; }
             if (ImGui::MenuItem("Open...", "Ctrl+O")) { loadMeshWithDialog(scene); }
             if (ImGui::MenuItem("Save...", "Ctrl+S")) { saveMeshWithDialog(scene); }
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("View")) {
-            ImGui::MenuItem("Camera", nullptr, &showCameraGui);
-            ImGui::MenuItem("Scene", nullptr, &showSceneGui);
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();

@@ -7,7 +7,7 @@ size_t StaticMeshSegment::vertexCount() const
     size_t count = positions.size();
     
     ARKOSE_ASSERT(normals.size() == count);
-    ARKOSE_ASSERT(texcoord0s.size() == count);
+    //ARKOSE_ASSERT(texcoord0s.size() == count);
     //ARKOSE_ASSERT(tangents.size() == count); // TODO: Ensure we always have tangents!
 
     return count;
