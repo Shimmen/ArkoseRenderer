@@ -114,7 +114,7 @@ void main()
 
     uint probeIdx = rt_LaunchID.x;
     uint sampleIdx = rt_LaunchID.y;
-    uint sampleCount = imageSize(surfelImage).y;
+    uint sampleCount = uint(round(constants.parameter2)); // i.e. raysPerProbe;
 
     vec3 probePosition = calculateProbePosition(probeGridData, probeIdx);
     probePosition += probeOffsets[probeIdx];

@@ -127,6 +127,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
             cmdList.setNamedUniform("ambientAmount", ambientLx * scene.lightPreExposure());
             cmdList.setNamedUniform("environmentMultiplier", scene.preExposedEnvironmentBrightnessFactor());
             cmdList.setNamedUniform<float>("parameter1", static_cast<float>(frameIdx));
+            cmdList.setNamedUniform<float>("parameter2", static_cast<float>(raysPerProbe));
 
             cmdList.traceRays(surfelImage.extent());
         }
