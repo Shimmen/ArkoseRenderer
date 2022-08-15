@@ -151,6 +151,9 @@ target_link_libraries(ArkoseRenderer PRIVATE
     dxcompiler # for HLSL shader compilation
     DirectX-Headers # utility stuff, e.g. CD3DX12
     spirv-cross-hlsl # for spirv->hlsl
+
+    # Texture compression
+    bc7enc_lib
     )
 
 ##################################
