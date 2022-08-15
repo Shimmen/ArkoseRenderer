@@ -16,12 +16,12 @@ static_assert((DDGI_VISIBILITY_RES % DDGI_IRRADIANCE_RES) == 0 || (DDGI_IRRADIAN
 
 void DDGINode::drawGui()
 {
-    ImGui::SliderInt("Rays per probe", &m_raysPerProbeInt, 1, MaxNumProbeSamples);
+    ImGui::SliderInt("Rays per probe", &m_raysPerProbeInt, 128, MaxNumProbeSamples);
 
     ImGui::SliderFloat("Hysteresis (irradiance)", &m_hysteresisIrradiance, 0.85f, 0.98f);
     ImGui::SliderFloat("Hysteresis (visibility)", &m_hysteresisVisibility, 0.85f, 0.98f);
 
-    ImGui::SliderFloat("Visibility sharpness", &m_visibilitySharpness, 1.0f, 10.0f);
+    ImGui::SliderFloat("Visibility sharpness", &m_visibilitySharpness, 1.0f, 100.0f);
 
     ImGui::Checkbox("Use scene ambient light", &m_useSceneAmbient);
     if (!m_useSceneAmbient) {
@@ -61,6 +61,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
 
     const int probeCount = probeGrid.probeCount(); // TODO: maybe don't expect to be able to update all in one surfel image?
     Texture& surfelImage = reg.createTexture2D({ probeCount, MaxNumProbeSamples }, Texture::Format::RGBA16F);
+    //ARKOSE_LOG(Info, "DDGI surfel size in memory = {}", surfelImage.sizeInMemory());
 
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ ShaderBinding::topLevelAccelerationStructure(sceneTLAS, ShaderStage::RTRayGen | ShaderStage::RTClosestHit),

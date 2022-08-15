@@ -109,9 +109,6 @@ void main()
 {
     ivec2 targetPixel = ivec2(rt_LaunchID.xy);
 
-    // TODO: We're "supposed" to report *negative* ray distance when we hit a backface, so that we can optimize probe offsets! We're not doing that yet though.
-    //    see gl_HitKindFrontFacingTriangleNV & gl_HitKindBackFacingTriangleNV
-
     uint probeIdx = rt_LaunchID.x;
     uint sampleIdx = rt_LaunchID.y;
     uint sampleCount = uint(round(constants.parameter2)); // i.e. raysPerProbe;

@@ -14,7 +14,7 @@ vec3 calculateRotatedSphericalFibonacciSample(uint probeIdx, uint sampleIdx, uin
     vec3 sampleDir = sphericalFibonacciSample(sampleIdx, sampleCount);
 
     // Seed the rng uniquely for this combination of probe & frame
-    const uint paramSpacing = 64;
+    const uint paramSpacing = 512;
     seedRandom(paramSpacing * probeIdx + frameIdx % paramSpacing);
 
     // Grab random values enough to define a rotation

@@ -20,9 +20,9 @@ private:
     Texture& createProbeAtlas(Registry&, const std::string& name, const ProbeGrid&, const ClearColor&, Texture::Format, int probeTileSize, int tileSidePadding) const;
 
     // we can dynamically choose to do fewer samples but not more since it defines the fixed image size
-    static constexpr int MaxNumProbeSamples { 128 };
+    static constexpr int MaxNumProbeSamples { 512 };
 
-    int m_raysPerProbeInt = MaxNumProbeSamples;
+    int m_raysPerProbeInt = 256;
     float m_hysteresisIrradiance { 0.98f };
     float m_hysteresisVisibility { 0.98f };
 
