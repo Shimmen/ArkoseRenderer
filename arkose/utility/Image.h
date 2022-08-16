@@ -66,7 +66,7 @@ public:
 
     const Info& info() const { return m_info; }
 
-    const void* data() const { return m_data.data(); }
+    const uint8_t* data() const { return m_data.data(); }
     size_t dataSize() const { return m_data.size(); }
 
     Image(Info, std::vector<uint8_t> data);
