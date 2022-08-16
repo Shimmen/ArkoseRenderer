@@ -164,32 +164,10 @@ std::unique_ptr<Texture> Texture::createFromImage(Backend& backend, const Image&
     //validateTextureDescription(desc);
     auto texture = backend.createTexture(desc);
 
-    int width, height;
-    const void* rawPixelData;
-    switch (image.memoryType()) {
-    case Image::MemoryType::EncodedImage:
-        if (image.info().isHdr())
-            rawPixelData = (void*)stbi_loadf_from_memory((const stbi_uc*)image.data(), (int)image.size(), &width, &height, nullptr, numDesiredComponents);
-        else
-            rawPixelData = (void*)stbi_load_from_memory((const stbi_uc*)image.data(), (int)image.size(), &width, &height, nullptr, numDesiredComponents);
-        ARKOSE_ASSERT(width == image.info().width);
-        ARKOSE_ASSERT(height == image.info().height);
-        break;
-    case Image::MemoryType::RawBitMap:
-        rawPixelData = image.data();
-        width = image.info().width;
-        height = image.info().height;
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-
-    uint32_t rawDataSize = width * height * pixelSizeBytes;
-    texture->setData(rawPixelData, rawDataSize);
-
-    if (image.memoryType() == Image::MemoryType::EncodedImage)
-        stbi_image_free(const_cast<void*>(rawPixelData));
+    // TODO: Also handle compressed data! requiredStorageSize() should do most heavy lifting,
+    // but we do have to create the correct image format up above too.
+    ARKOSE_ASSERT(image.info().compressionType == Image::CompressionType::Uncompressed);
+    texture->setData(image.data(), image.dataSize());
 
     return texture;
 }
@@ -251,7 +229,7 @@ std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const st
     Image* image = Image::load(imagePath, pixelTypeToUse, true);
 
     auto texture = backend.createTexture(desc);
-    texture->setData(image->data(), image->size());
+    texture->setData(image->data(), image->dataSize());
     texture->setName("Texture:" + imagePath);
 
     return texture;
@@ -327,8 +305,8 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
         const std::string& imagePath = imagePaths[idx];
         Image* image = Image::load(imagePath, pixelTypeToUse, true);
 
-        size_t offset = idx * image->size();
-        std::memcpy(textureArrayMemory + offset, image->data(), image->size());
+        size_t offset = idx * image->dataSize();
+        std::memcpy(textureArrayMemory + offset, image->data(), image->dataSize());
 
     }, UseSingleThreadedLoading);
     texture->setData(textureArrayMemory, totalRequiredSize);

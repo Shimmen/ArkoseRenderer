@@ -77,12 +77,13 @@ std::unique_ptr<Texture> IESProfile::createLookupTexture(Backend& backend, int s
     info.height = size;
     info.pixelType = Image::PixelType::Grayscale;
     info.componentType = Image::ComponentType::Float;
+    info.compressionType = Image::CompressionType::Uncompressed;
 
     uint8_t* data = reinterpret_cast<uint8_t*>(pixels.data());
     size_t byteSize = pixels.size() * sizeof(float);
     std::vector<uint8_t> pixelByteData { data, data + byteSize };
 
-    Image image { Image::MemoryType::RawBitMap, info, std::move(pixelByteData) };
+    Image image { info, std::move(pixelByteData) };
     return Texture::createFromImage(backend, image, false, false, Texture::WrapModes::clampAllToEdge());
 }
 

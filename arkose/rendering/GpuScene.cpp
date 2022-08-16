@@ -242,7 +242,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 const LoadedImageForTextureCreation& loadedImageForTex = m_asyncLoadedImages[i];
 
                 auto texture = backend().createTexture(loadedImageForTex.textureDescription);
-                texture->setData(loadedImageForTex.image->data(), loadedImageForTex.image->size());
+                texture->setData(loadedImageForTex.image->data(), loadedImageForTex.image->dataSize());
                 texture->setName("Texture:" + loadedImageForTex.path);
                 m_managedTexturesVramUsage += texture->sizeInMemory();
 

@@ -6,6 +6,7 @@
 #include "scene/Scene.h"
 #include "utility/Profiling.h"
 #include "utility/FileIO.h"
+#include <stb_image.h>
 
 GltfLoader::LoadResult GltfLoader::load(const std::string& gltfFilePath)
 {
@@ -345,11 +346,25 @@ std::unique_ptr<Material> GltfLoader::createMaterial(const tinygltf::Model& gltf
             const tinygltf::BufferView& bufferView = gltfModel.bufferViews[image.bufferView];
             const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
 
-            size_t dataSize = bufferView.byteLength;
-            const uint8_t* data = buffer.data.data() + bufferView.byteOffset;
-            std::vector<uint8_t> pixelByteData { data, data + dataSize };
+            size_t encodedDataSize = bufferView.byteLength;
+            const uint8_t* encodedData = buffer.data.data() + bufferView.byteOffset;
 
-            desc = Material::TextureDescription(Image(Image::MemoryType::EncodedImage, info, std::move(pixelByteData)));
+            int width, height;
+            stbi_uc* pixelData = stbi_load_from_memory(encodedData, static_cast<int>(encodedDataSize), &width, &height, nullptr, image.component);
+
+            // Ensure the values are what the glTF file said they would be
+            ARKOSE_ASSERT(width == info.width);
+            ARKOSE_ASSERT(height == info.height);
+
+            // Copy data over to owned memory
+            size_t pixelDataSize = width * height * image.component * sizeof(stbi_uc);
+            std::vector<uint8_t> pixelByteData { pixelData, pixelData + pixelDataSize };
+            stbi_image_free(pixelData);
+
+            // After stb_image has loaded this in we're dealing with raw pixel data
+            info.compressionType = Image::CompressionType::Uncompressed;
+
+            desc = Material::TextureDescription(Image(info, std::move(pixelByteData)));
         }
 
         auto wrapModeFromTinyGltf = [](int filterMode) -> Texture::WrapMode {
