@@ -49,6 +49,16 @@ FetchContent_Declare(jolt-physics
     GIT_TAG        "84d4c6f01ef2aac7c11695366b5007cbbda1477e" # (latest release doesn't include https://github.com/jrouwe/JoltPhysics/pull/175 which we need)
     SOURCE_SUBDIR  "Build")
 
+set(ZSTD_LEGACY_SUPPORT OFF)
+set(ZSTD_USE_STATIC_RUNTIME OFF)
+set(ZSTD_BUILD_STATIC ON)
+set(ZSTD_BUILD_SHARED OFF)
+set(ZSTD_BUILD_PROGRAMS OFF)
+FetchContent_Declare(zstd
+    GIT_REPOSITORY https://github.com/facebook/zstd.git
+    GIT_TAG        "v1.5.2"
+    SOURCE_SUBDIR  "build/cmake")
+
 ##################################
 # FetchContent dependencies without cmake files
 
@@ -155,4 +165,4 @@ add_subdirectory(half)
 ##################################
 # Finalize FetchContent dependencies
 
-FetchContent_MakeAvailable(spirv-cross json fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers jolt-physics)
+FetchContent_MakeAvailable(spirv-cross json fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers jolt-physics zstd)

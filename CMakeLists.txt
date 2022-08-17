@@ -152,8 +152,9 @@ target_link_libraries(ArkoseRenderer PRIVATE
     DirectX-Headers # utility stuff, e.g. CD3DX12
     spirv-cross-hlsl # for spirv->hlsl
 
-    # Texture compression
-    bc7enc_lib
+    # Asset packing
+    libzstd_static # generic lossless compression
+    bc7enc_lib # texture compression
     )
 
 ##################################
