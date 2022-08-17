@@ -9,13 +9,13 @@ const char* Arkblob::fileExtensionForType(Type type)
 {
     switch (type) {
     case Type::Image:
-        return ".arkimg";
+        return "arkimg";
     case Type::Material:
-        return ".arkmat";
+        return "arkmat";
     case Type::Mesh:
-        return ".arkmsh";
+        return "arkmsh";
     case Type::Scene:
-        return ".arkscn";
+        return "arkscn";
     }
 
     ASSERT_NOT_REACHED();
@@ -100,7 +100,7 @@ bool Arkblob::writeToFile(std::string_view filePath) const
     const char* extension = fileExtensionForType(m_type);
     std::string filePathWithExtension = filePath.ends_with(extension)
         ? std::string(filePath)
-        : std::string(filePath) + extension;
+        : std::string(filePath) + "." + extension;
     
     FileIO::ensureDirectoryForFile(filePathWithExtension);
 

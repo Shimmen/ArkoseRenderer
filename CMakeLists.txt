@@ -117,6 +117,7 @@ add_executable(ArkoseRenderer
     arkose/scene/lights/SpotLight.cpp
     arkose/scene/loader/GltfLoader.cpp
     arkose/utility/AvgElapsedTimer.cpp
+    arkose/utility/FileDialog.cpp
     arkose/utility/FileIO.cpp
     arkose/utility/IESProfile.cpp
     arkose/utility/Image.cpp

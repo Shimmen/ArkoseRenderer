@@ -11,11 +11,10 @@
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
 #include "scene/lights/DirectionalLight.h"
+#include "utility/FileDialog.h"
 #include "utility/Input.h"
 #include "utility/Profiling.h"
-
 #include <imgui.h>
-#include <nfd.h>
 
 void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
 {
@@ -107,47 +106,24 @@ bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
 
 void MeshViewerApp::loadMeshWithDialog(Scene& scene)
 {
-    if (NFD_Init() != NFD_OKAY) {
-        ARKOSE_LOG(Fatal, "Can't init NFD!");
-    }
+    std::vector<FileDialog::FilterItem> filterItems = { { "Source meshes", "gltf,glb" },
+                                                        { "Arkblob mesh", Arkblob::fileExtensionForType(Arkblob::Type::Mesh) } };
 
-    nfdchar_t* outPath;
-    nfdfilteritem_t filterItem[] = { { "Source meshes", "gltf,glb" },
-                                     { "Binary arkose data", "arkblob" } };
-    if (NFD_OpenDialog(&outPath, filterItem, 2, nullptr) == NFD_OKAY) {
-        
-        ARKOSE_LOG(Info, "Loading mesh from file '{}'", outPath);
+    if (auto maybePath = FileDialog::open(filterItems)) {
+
+        std::string openPath = maybePath.value();
+        ARKOSE_LOG(Info, "Loading mesh from file '{}'", openPath);
+
         scene.unloadAllMeshes();
-        m_targets = scene.loadMeshes(outPath);
-        NFD_FreePath(outPath);
-
-    } else if (const char* error = NFD_GetError()) {
-        ARKOSE_LOG(Error, "Open file dialog error: {}.", error);
-        NFD_ClearError();
+        m_targets = scene.loadMeshes(openPath);
     }
-
-    NFD_Quit();
 }
 
 void MeshViewerApp::saveMeshWithDialog(Scene& scene)
 {
-    if (NFD_Init() != NFD_OKAY) {
-        ARKOSE_LOG(Fatal, "Can't init NFD!");
-    }
-
-    nfdchar_t* savePath;
-    nfdfilteritem_t filterItem[] = { { "Binary arkose data", "arkblob" } };
-    if (NFD_SaveDialog(&savePath, filterItem, 1, "assets/", nullptr) == NFD_OKAY) {
-        
+    if (auto maybePath = FileDialog::save({ { "Binary arkose data", Arkblob::fileExtensionForType(Arkblob::Type::Mesh) } })) {
+        std::string savePath = maybePath.value();
         ARKOSE_LOG(Info, "Saving mesh to file '{}'", savePath);
         // TODO: Save all(?) m_targets to savePath
-        NFD_FreePath(savePath);
-
-    } else if (const char* error = NFD_GetError()) {
-        ARKOSE_LOG(Error, "Save file dialog error: {}.", error);
-        NFD_ClearError();
     }
-
-    NFD_Quit();
 }
-
