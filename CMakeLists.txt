@@ -38,6 +38,7 @@ add_executable(ArkoseRenderer
     arkose/core/math/Frustum.cpp
     arkose/core/math/Halton.cpp
     arkose/core/parallel/TaskGraph.cpp
+    arkose/pack/TextureCompressor.cpp
     arkose/physics/PhysicsScene.cpp
     arkose/physics/backend/base/PhysicsBackend.cpp
     arkose/physics/backend/jolt/JoltPhysicsBackend.cpp
