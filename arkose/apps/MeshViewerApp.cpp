@@ -29,6 +29,17 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     auto boxMeshes = scene.loadMeshes("assets/sample/models/Box.glb");
     boxMeshes.front()->transform.setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(30.0f)));
 
+    /*
+    // Spawn a grid of static mesh instances for a little stress test of instances
+    Transform t2 = boxMeshes.front()->transform;
+    for (int z = 0; z < 50; z++) {
+        for (int x = 0; x < 50; x++) {
+            t2.setTranslation(vec3(1.5f + 1.5f * x, 0.0f, -1.5f - 1.5f * z));
+            scene.createStaticMeshInstance(boxMeshes.front()->mesh, t2);
+        }
+    }
+    */
+
     scene.setAmbientIlluminance(600.0f);
     scene.setEnvironmentMap({ .assetPath = "assets/sample/hdri/tiergarten_2k.hdr",
                               .brightnessFactor = 5000.0f });

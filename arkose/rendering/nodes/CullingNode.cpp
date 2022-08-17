@@ -12,7 +12,7 @@ using uint = uint32_t;
 RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Registry& reg)
 {
     // todo: maybe default to smaller, and definitely actually grow when needed!
-    static constexpr size_t initialBufferCount = 1024;
+    static constexpr size_t initialBufferCount = 16 * 1024;
 
     Buffer& frustumPlaneBuffer = reg.createBuffer(6 * sizeof(vec4), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
     Buffer& indirectDrawableBuffer = reg.createBuffer(initialBufferCount * sizeof(IndirectShaderDrawable), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::TransferOptimal);
