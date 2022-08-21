@@ -16,9 +16,36 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
+// For texture compression testing
+#include "pack/Arkblob.h"
+#include "pack/TextureCompressor.h"
+
 void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
 {
     SCOPED_PROFILE_ZONE();
+
+    // Test compressed textures
+    {
+        SCOPED_PROFILE_ZONE_NAMED("Arkblob & texture compression test");
+
+        Image* image = Image::load("assets/test-pattern.png", Image::PixelType::RGBA);
+
+        TextureCompressor compressor {};
+        std::unique_ptr<Image> compressedImage = compressor.compressBC7(*image);
+
+        if (compressedImage) {
+
+            std::unique_ptr<Arkblob> imageBlobWrite = Arkblob::makeImageBlob(*compressedImage);
+            imageBlobWrite->writeToFile("assets/test-pattern"); // extension optional, derived from type
+
+            {
+                SCOPED_PROFILE_ZONE_NAMED("Waiting for files to resolve...");
+                std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            }
+
+            std::unique_ptr<Image> reconstructedImage = Arkblob::readImageFromBlob("assets/test-pattern.arkimg");
+        }
+    }
 
     ////////////////////////////////////////////////////////////////////////////
     // Scene setup
