@@ -28,7 +28,7 @@ add_subdirectory(arklib)
 ###### MAIN TARGET: ARKOSE #######
 ##################################
 
-add_executable(ArkoseRenderer
+set(ARKOSE_SOURCES
     ${TRACY_CLIENT_SOURCE}
     arkose/main.cpp
     arkose/apps/BootstrappingApp.cpp
@@ -124,6 +124,11 @@ add_executable(ArkoseRenderer
     arkose/utility/Input.cpp
     )
 
+if(MSVC)
+    list(APPEND ARKOSE_SOURCES "arkose/Arkose.natvis")
+endif()
+
+add_executable(ArkoseRenderer ${ARKOSE_SOURCES})
 target_include_directories(ArkoseRenderer PRIVATE arkose/)
 target_include_directories(ArkoseRenderer PRIVATE shaders/shared)
 
