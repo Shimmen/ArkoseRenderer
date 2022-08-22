@@ -16,6 +16,10 @@ struct StaticMeshInstance {
 
     // NOTE: If all meshes have the same handle value we know they can be instanced! :^)
     StaticMeshHandle mesh;
+
+    // Optional; only needed if you want physics
+    PhysicsInstanceHandle physicsInstance;
+
     Transform transform;
     std::string name;
 };

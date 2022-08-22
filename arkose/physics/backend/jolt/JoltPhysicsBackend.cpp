@@ -18,6 +18,7 @@
 #include <Jolt/Core/TempAllocator.h>
 #include <Jolt/Physics/Body/BodyActivationListener.h>
 #include <Jolt/Physics/Body/BodyCreationSettings.h>
+#include <Jolt/Physics/Collision/PhysicsMaterialSimple.h>
 #include <Jolt/Physics/Collision/Shape/BoxShape.h>
 #include <Jolt/Physics/Collision/Shape/MeshShape.h>
 #include <Jolt/Physics/PhysicsSettings.h>
@@ -247,50 +248,42 @@ void JoltPhysicsBackend::setGravity(vec3 gravity)
     m_physicsSystem->SetGravity(joltGravity);
 }
 
-/*
-PhysicsShapeHandle JoltPhysicsBackend::createPhysicsShapeForModel(const Model& model)
+PhysicsShapeHandle JoltPhysicsBackend::createPhysicsShapeForTriangleMesh(PhysicsMesh const& mesh)
+{
+    return createPhysicsShapeForTriangleMeshes({ mesh });
+}
+
+PhysicsShapeHandle JoltPhysicsBackend::createPhysicsShapeForTriangleMeshes(std::vector<PhysicsMesh> const& meshes)
 {
     SCOPED_PROFILE_ZONE_PHYSICS();
 
-    // TODO: Add physics materials
-    constexpr uint32_t physicsMaterialIdx = 0;
+    JPH::VertexList vertices {}; // OPTIMIZATION: Can we avoid copying vertex data? JPH::VertexList is just a std::vector with a 3xFloat struct inside
+    JPH::IndexedTriangleList indexedTriangles {};
     JPH::PhysicsMaterialList physicsMaterials {};
 
-    // TODO: Can we avoid copying all this data? Or does Jolt need to be able to modify it?
-    JPH::VertexList vertices {};
-    JPH::IndexedTriangleList indexedTriangles {};
-
     uint32_t indexOffset = 0;
-    model.forEachMesh([&](const Mesh& mesh) {
+    for (PhysicsMesh const& mesh : meshes) {
 
-        SCOPED_PROFILE_ZONE_PHYSICS_NAMED("Create shape for mesh");
+        // TODO: Use the physics materials from the PhysicsMesh!
+        constexpr uint32_t physicsMaterialIdx = 0;
 
-        mat4 meshMatrix = mesh.transform().localMatrix();
-
-        const auto& meshPositions = mesh.positionData();
-        for (const auto& position : meshPositions) {
-
-            // Transform to "mesh-space" where they are effectively positioned within the model
-            vec4 meshSpacePosition = meshMatrix * vec4(position, 1.0f);
-            ARKOSE_ASSERT(std::abs(meshSpacePosition.w - 1.0f) < 1e-6f);
-
-            vertices.emplace_back(meshSpacePosition.x, meshSpacePosition.y, meshSpacePosition.z);
+        for (vec3 const& position : mesh.positions) {
+            vertices.emplace_back(position.x, position.y, position.z);
         }
 
-        const auto& meshIndices = mesh.indexData();
-        ARKOSE_ASSERT(meshIndices.size() % 3 == 0);
-        size_t numTriangles = meshIndices.size() / 3;
+        ARKOSE_ASSERT(mesh.indices.size() % 3 == 0);
+        size_t numTriangles = mesh.indices.size() / 3;
 
         for (size_t triangleIdx = 0; triangleIdx < numTriangles; ++triangleIdx) {
-            uint32_t i0 = meshIndices[3 * triangleIdx + 0];
-            uint32_t i1 = meshIndices[3 * triangleIdx + 1];
-            uint32_t i2 = meshIndices[3 * triangleIdx + 2];
+            uint32_t i0 = mesh.indices[3 * triangleIdx + 0] + indexOffset;
+            uint32_t i1 = mesh.indices[3 * triangleIdx + 1] + indexOffset;
+            uint32_t i2 = mesh.indices[3 * triangleIdx + 2] + indexOffset;
             indexedTriangles.emplace_back(i0, i1, i2, physicsMaterialIdx);
         }
 
-        indexOffset += static_cast<uint32_t>(vertices.size());
-    });
-
+        ARKOSE_ASSERT(vertices.size() <= UINT32_MAX);
+        indexOffset = static_cast<uint32_t>(vertices.size());
+    }
 
     JPH::MeshShapeSettings meshShapeSettings;
     {
@@ -316,7 +309,6 @@ PhysicsShapeHandle JoltPhysicsBackend::createPhysicsShapeForModel(const Model& m
         return PhysicsShapeHandle();
     }
 }
-*/
 
 PhysicsInstanceHandle JoltPhysicsBackend::createInstance(PhysicsShapeHandle shapeHandle, vec3 position, quat orientation, MotionType motionType, PhysicsLayer physicsLayer)
 {

@@ -61,7 +61,6 @@ public:
     // NOTE: This is more of a utility for now to clear out the current level
     void unloadAllMeshes();
 
-    StaticMeshInstance& addMesh(std::shared_ptr<StaticMesh>, Transform);
     StaticMeshInstance& createStaticMeshInstance(StaticMeshHandle, Transform);
 
     std::vector<std::unique_ptr<StaticMeshInstance>>& staticMeshInstances() { return m_staticMeshInstances; }

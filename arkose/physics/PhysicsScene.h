@@ -16,6 +16,10 @@ public:
     Scene& scene() { return m_scene; }
     const Scene& scene() const { return m_scene; }
 
+    // TODO: Is this a hack or a "leak" to expose the backend to a higher level abstraction? Possibly.. but it works for now.
+    PhysicsBackend& backend() { return m_backend; }
+    const PhysicsBackend& backend() const { return m_backend; }
+
     void setGravity(vec3);
     vec3 gravity() const { return m_gravity; }
 
@@ -25,7 +29,7 @@ public:
     // For physics shapes that have a simpler version than the actual triangle mesh that info is kept inside the Model
     // and when we create an instance from a model we will register both shapes, one for simple and one for complex.
 
-    //PhysicsInstanceHandle createInstanceFromModel(const Model&, MotionType);
+    PhysicsInstanceHandle createInstance(PhysicsShapeHandle, MotionType, Transform initialTransform);
     void removeInstance(PhysicsInstanceHandle);
 
     // TODO: Add interface for updating(?) physics objects

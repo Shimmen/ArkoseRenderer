@@ -1,6 +1,7 @@
 #pragma once
 
 #include "physics/MotionType.h"
+#include "physics/PhysicsMesh.h"
 #include "physics/backend/PhysicsLayers.h"
 #include "physics/HandleTypes.h"
 #include <ark/vector.h>
@@ -28,8 +29,8 @@ public:
 
     virtual void setGravity(vec3) = 0;
 
-    // Treat a whole model as a single rigid body (i.e. individual meshes can't move independently)
-    //virtual PhysicsShapeHandle createPhysicsShapeForModel(const Model&) = 0;
+    virtual PhysicsShapeHandle createPhysicsShapeForTriangleMesh(PhysicsMesh const&) = 0;
+    virtual PhysicsShapeHandle createPhysicsShapeForTriangleMeshes(std::vector<PhysicsMesh> const&) = 0;
 
     virtual PhysicsInstanceHandle createInstance(PhysicsShapeHandle, vec3 position, quat orientation, MotionType, PhysicsLayer) = 0;
 

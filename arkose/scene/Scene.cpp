@@ -3,6 +3,7 @@
 #include "core/Assert.h"
 #include "rendering/GpuScene.h"
 #include "scene/camera/Camera.h"
+#include "physics/PhysicsMesh.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
 #include "utility/FileIO.h"
@@ -109,12 +110,44 @@ std::vector<StaticMeshInstance*> Scene::loadMeshes(const std::string& filePath)
         }
     }
 
+    // Create physics representations for loaded meshes
+    // NOTE: When loading in akblob meshes they should already have physics setup
+
+    if (hasPhysicsScene()) {
+
+        for (auto& staticMesh : result.staticMeshes) {
+            for (StaticMeshLOD& lod : staticMesh->LODs()) {
+
+                // From a phyiscs point of view, all segments are together one shape, but they can have multiple physics materials.
+
+                std::vector<PhysicsMesh> physicsMeshes {};
+                physicsMeshes.reserve(lod.meshSegments.size());
+
+                for (StaticMeshSegment& segment : lod.meshSegments) {
+
+                    PhysicsMesh physicsMesh;
+                    physicsMesh.positions = segment.positions;
+                    physicsMesh.indices = segment.indices;
+                    physicsMesh.material = PhysicsMaterial();
+
+                    physicsMeshes.push_back(physicsMesh);
+                }
+
+                PhysicsShapeHandle physicsShape = physicsScene().backend().createPhysicsShapeForTriangleMeshes(physicsMeshes);
+                lod.physicsShape = physicsShape;
+
+            }
+        }
+
+    }
+
     // Add meshes & create instances
 
     std::vector<StaticMeshInstance*> instances {};
 
     for (auto& staticMesh : result.staticMeshes) {
-        StaticMeshInstance& instance = addMesh(staticMesh, Transform());
+        StaticMeshHandle staticMeshHandle = gpuScene().registerStaticMesh(staticMesh);
+        StaticMeshInstance& instance = createStaticMeshInstance(staticMeshHandle, Transform());
         instances.push_back(&instance);
     }
 
@@ -130,24 +163,22 @@ void Scene::unloadAllMeshes()
     m_staticMeshInstances.clear();
 }
 
-StaticMeshInstance& Scene::addMesh(std::shared_ptr<StaticMesh> staticMesh, Transform transform)
-{
-    StaticMeshHandle staticMeshHandle = gpuScene().registerStaticMesh(std::move(staticMesh));
-    if (hasPhysicsScene()) {
-        // TODO: register the static mesh shape(s)
-    }
-
-    return createStaticMeshInstance(staticMeshHandle, transform);
-}
-
 StaticMeshInstance& Scene::createStaticMeshInstance(StaticMeshHandle staticMeshHandle, Transform transform)
 {
+    m_staticMeshInstances.push_back(std::make_unique<StaticMeshInstance>(staticMeshHandle, transform));
+    StaticMeshInstance& instance = *m_staticMeshInstances.back();
+
     if (hasPhysicsScene()) {
-        // TODO: register a physics instance for this instance
+        // TODO: What about the other LODs?
+        StaticMesh* staticMesh = gpuScene().staticMeshForHandle(staticMeshHandle);
+        if (staticMesh->numLODs() > 0 && staticMesh->lodAtIndex(0).physicsShape.valid()) {
+            PhysicsShapeHandle physicsShape = staticMesh->lodAtIndex(0).physicsShape;
+            PhysicsInstanceHandle physicsInstanceHandle = physicsScene().createInstance(physicsShape, MotionType::Static, Transform());
+            instance.physicsInstance = physicsInstanceHandle;
+        }
     }
 
-    m_staticMeshInstances.push_back(std::make_unique<StaticMeshInstance>(staticMeshHandle, transform));
-    return *m_staticMeshInstances.back();
+    return instance;
 }
 
 DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)

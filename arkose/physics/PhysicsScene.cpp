@@ -35,17 +35,12 @@ void PhysicsScene::commitInstancesAwaitingAdd()
     m_instancesAwaitingAdd.clear();
 }
 
-/*
-PhysicsInstanceHandle PhysicsScene::createInstanceFromModel(const Model& model, MotionType motionType)
+PhysicsInstanceHandle PhysicsScene::createInstance(PhysicsShapeHandle shapeHandle, MotionType motionType, Transform initialTransform)
 {
     SCOPED_PROFILE_ZONE_PHYSICS();
 
-    // TODO: Reuse these model shapes!
-    PhysicsShapeHandle shapeHandle = m_backend.createPhysicsShapeForModel(model);
-
-    const Transform& transform = model.transform();
-    vec3 worldPosition = transform.translation();
-    quat worldOrientation = transform.orientation();
+    vec3 worldPosition = initialTransform.positionInWorld();
+    quat worldOrientation = initialTransform.orientationInWorld();
 
     PhysicsLayer physicsLayer {};
     bool activate = true;
@@ -66,7 +61,6 @@ PhysicsInstanceHandle PhysicsScene::createInstanceFromModel(const Model& model, 
 
     return instanceHandle;
 }
-*/
 
 void PhysicsScene::removeInstance(PhysicsInstanceHandle instanceHandle)
 {

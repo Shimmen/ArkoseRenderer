@@ -41,7 +41,8 @@ public:
 
     virtual void setGravity(vec3) override;
 
-    //virtual PhysicsShapeHandle createPhysicsShapeForModel(const Model&) override;
+    virtual PhysicsShapeHandle createPhysicsShapeForTriangleMesh(PhysicsMesh const&) override;
+    virtual PhysicsShapeHandle createPhysicsShapeForTriangleMeshes(std::vector<PhysicsMesh> const&) override;
 
     virtual PhysicsInstanceHandle createInstance(PhysicsShapeHandle, vec3 position, quat orientation, MotionType, PhysicsLayer) override;
 

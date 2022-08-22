@@ -28,17 +28,18 @@ public:
     {
     }
 
-    vec3 translation() const { return m_translation; }
-    quat orientation() const { return m_orientation; }
-    vec3 scale() const { return m_scale; }
+    vec3 localTranslation() const { return m_translation; }
+    quat localOrientation() const { return m_orientation; }
+    vec3 localScale() const { return m_scale; }
+
+    vec3 positionInWorld() const { return m_parent ? m_parent->worldMatrix() * m_translation : m_translation; }
+    quat orientationInWorld() const { return m_parent ? m_parent->orientationInWorld() * m_orientation : m_orientation; }
 
     void set(vec3 translation, quat orientation, vec3 scale = vec3(1.0f))
     {
         setTranslation(translation);
         setOrientation(orientation);
         setScale(scale);
-
-        // Reset matrix
         m_matrix = {};
     }
 
