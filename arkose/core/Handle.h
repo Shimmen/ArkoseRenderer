@@ -14,7 +14,7 @@ struct Handle {
     static constexpr IndexType InvalidIndex = std::numeric_limits<IndexType>::max();
 
     Handle() = default;
-    Handle(IndexType index)
+    explicit Handle(IndexType index)
         : m_index(index)
     {
     }
