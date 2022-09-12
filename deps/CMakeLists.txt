@@ -49,6 +49,13 @@ FetchContent_Declare(jolt-physics
     GIT_TAG        "84d4c6f01ef2aac7c11695366b5007cbbda1477e" # (latest release doesn't include https://github.com/jrouwe/JoltPhysics/pull/175 which we need)
     SOURCE_SUBDIR  "Build")
 
+set(FLATBUFFERS_BUILD_TESTS OFF)
+set(FLATBUFFERS_BUILD_FLATHASH OFF)
+set(FLATBUFFERS_INSTALL OFF)
+FetchContent_Declare(flatbuffers
+    GIT_REPOSITORY https://github.com/google/flatbuffers.git
+    GIT_TAG        "v2.0.7")
+
 set(ZSTD_LEGACY_SUPPORT OFF)
 set(ZSTD_USE_STATIC_RUNTIME OFF)
 set(ZSTD_BUILD_STATIC ON)
@@ -165,4 +172,4 @@ add_subdirectory(half)
 ##################################
 # Finalize FetchContent dependencies
 
-FetchContent_MakeAvailable(spirv-cross json fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers jolt-physics zstd)
+FetchContent_MakeAvailable(spirv-cross json fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers jolt-physics flatbuffers zstd)

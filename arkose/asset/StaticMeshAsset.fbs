@@ -1,0 +1,91 @@
+// StaticMeshAsset - flatbuffers schema
+
+include "CommonTypes.fbs";
+include "MaterialAsset.fbs";
+
+namespace Arkose.Asset;
+file_identifier "ARKA";
+
+file_extension "arkmsh";
+
+table PhysicsDataInput {
+    // TODO!
+}
+
+table PhysicsData {
+
+    // What we can regenerate the physics data from if we need to.
+    input_data: PhysicsDataInput;
+
+    // TODO: Figure out how we want to store physics data!
+    // e.g., a list of basic shapes that we create in runtime? Or maybe just the
+    // Jolt physics intermediate (non-cooked) binary blob (but eh, we want to keep text
+    // for non-cooked so this breaks that..)
+}
+
+union MaterialIndirection {
+    asset: MaterialAsset, // asset directly
+    path: string, // path to asset
+}
+
+table StaticMeshSegment {
+
+    // Position vertex data for mesh segment
+    positions: [Vec3] (required);
+
+    // TexCoord[0] vertex data for mesh segment
+    texcoord0s: [Vec2];
+
+    // Normal vertex data for mesh segment
+    normals: [Vec3];
+
+    // Tangent vertex data for mesh segment
+    tangents: [Vec4];
+
+    // Indices used for indexed meshes (only needed for indexed meshes). For all vertex data types
+    // the arrays must either be empty or have as many entries as the largest index in this array.
+    indices: [uint];
+
+    // Path to a material asset used for rendering this mesh segment (one of these must be set but not both)
+    material: MaterialIndirection;
+
+    user_data: UserData (native_inline);
+}
+
+table StaticMeshLOD {
+
+    // List of static mesh segments to be rendered (at least one needed)
+    mesh_segments: [StaticMeshSegment] (required);
+
+    // Physics data for this LOD, usually 1:1 to the visual triange mesh
+    //physics_data: PhysicsData;
+
+    // Bounding box, pre object transform
+    bounding_box: AABB (required, native_inline);
+
+    // Bounding sphere, pre object transform
+    bounding_sphere: Sphere (required, native_inline);
+
+}
+
+table StaticMeshAsset {
+
+    // Name of the mesh, usually set when loaded from some source file
+    name: string;
+
+    // Static mesh render data for each LODs (at least LOD0 needed)
+    lods: [StaticMeshLOD] (required);
+
+    // LOD settings for rendering
+    min_lod: uint = 0;
+    max_lod: uint = 99;
+
+    // Simple physics representation of this static mesh.
+    // This would usually be a simplified representation of the mesh (e.g. convex hull or box)
+    //physics_data: PhysicsData;
+
+    user_data: UserData (native_inline);
+
+}
+
+root_type StaticMeshAsset;

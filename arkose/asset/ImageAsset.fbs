@@ -1,0 +1,56 @@
+// ImageAsset - flatbuffers schema
+
+include "CommonTypes.fbs";
+
+namespace Arkose.Asset;
+file_identifier "ARKA";
+
+file_extension "arkimg";
+
+enum ColorSpace : ubyte {
+    Data = 0,
+    sRGB_linear,
+    sRGB_encoded,
+}
+
+enum ImageFormat : uint {
+    Unknown = 0,
+
+    // 8-bit per component formats
+    R8 = 100,
+    RG8,
+    RGB8,
+    RGBA8,
+
+    // 32-bit float formats
+    R32F = 200,
+    RG32F,
+    RGB32F,
+    RGBA32F,
+
+    // Block-compressed formats
+    BC7 = 300,
+}
+
+table ImageAsset {
+    width: uint;
+    height: uint;
+    depth: uint = 1;
+
+    format: ImageFormat;
+    color_space: ColorSpace;
+
+    // Pixel data binary blob
+    pixel_data: [ubyte];
+
+    // Optional lossless compression applied to `pixel_data`
+    is_compressed: bool = false;
+    compressed_size: uint = 0;
+    uncompressed_size: uint = 0;
+
+    source_asset_path: string;
+
+    user_data: UserData (native_inline);
+}
+
+root_type ImageAsset;

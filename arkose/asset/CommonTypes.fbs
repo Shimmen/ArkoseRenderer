@@ -1,0 +1,43 @@
+// flatbuffers include "header" for common types
+
+namespace Arkose.Asset;
+file_identifier "ARKA";
+
+struct Vec2 {
+    x: float;
+    y: float;
+}
+
+struct Vec3 {
+    x: float;
+    y: float;
+    z: float;
+}
+
+struct Vec4 {
+    x: float;
+    y: float;
+    z: float;
+    w: float;
+}
+
+struct ColorRGBA {
+    r: float;
+    g: float;
+    b: float;
+    a: float;
+}
+
+struct AABB {
+    min: Vec3;
+    max: Vec3;
+}
+
+struct Sphere {
+    center: Vec3;
+    radius: float;
+}
+
+struct UserData {
+    integer: int;
+}

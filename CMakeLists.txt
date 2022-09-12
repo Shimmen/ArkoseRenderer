@@ -25,6 +25,25 @@ add_subdirectory(deps)
 add_subdirectory(arklib)
 
 ##################################
+### Build flatbuffers schemas ####
+##################################
+
+set(ARKOSE_FLATBUFFERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/arkose/asset")
+function(build_flatbuffers_schema fbs_filename)
+  string(REPLACE ".fbs" "_generated.h" gen_filename ${fbs_filename})
+  add_custom_command(
+    DEPENDS "${ARKOSE_FLATBUFFERS_DIR}/${fbs_filename}"
+    OUTPUT  "${ARKOSE_FLATBUFFERS_DIR}/${gen_filename}"
+    COMMAND flatc --cpp --scoped-enums --gen-object-api -o ${ARKOSE_FLATBUFFERS_DIR} "${ARKOSE_FLATBUFFERS_DIR}/${fbs_filename}"
+    VERBATIM)
+endfunction()
+
+build_flatbuffers_schema("CommonTypes.fbs")
+build_flatbuffers_schema("ImageAsset.fbs")
+build_flatbuffers_schema("MaterialAsset.fbs")
+build_flatbuffers_schema("StaticMeshAsset.fbs")
+
+##################################
 ###### MAIN TARGET: ARKOSE #######
 ##################################
 
@@ -34,6 +53,16 @@ set(ARKOSE_SOURCES
     arkose/apps/BootstrappingApp.cpp
     arkose/apps/MeshViewerApp.cpp
     arkose/apps/ShowcaseApp.cpp
+    arkose/asset/AssetHelpers.cpp
+    arkose/asset/AssetImporter.cpp
+    arkose/asset/CommonTypes_generated.h
+    arkose/asset/ImageAsset.cpp
+    arkose/asset/ImageAsset_generated.h
+    arkose/asset/MaterialAsset.cpp
+    arkose/asset/MaterialAsset_generated.h
+    arkose/asset/StaticMeshAsset.cpp
+    arkose/asset/StaticMeshAsset_generated.h
+    arkose/asset/import/GltfLoader.cpp
     arkose/core/math/Fibonacci.cpp
     arkose/core/math/Frustum.cpp
     arkose/core/math/Halton.cpp
@@ -161,6 +190,7 @@ target_link_libraries(ArkoseRenderer PRIVATE
     spirv-cross-hlsl # for spirv->hlsl
 
     # Asset packing
+    flatbuffers # binary & json serialization
     libzstd_static # generic lossless compression
     bc7enc_lib # texture compression
     )

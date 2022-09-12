@@ -1,0 +1,68 @@
+// MaterialAsset - flatbuffers schema
+
+include "CommonTypes.fbs";
+include "ImageAsset.fbs";
+
+namespace Arkose.Asset;
+file_identifier "ARKA";
+
+file_extension "arkmat";
+
+enum WrapMode : byte {
+    Repeat,
+    MirroredRepeat,
+    ClampToEdge,
+}
+
+struct WrapModes {
+    u: WrapMode = Repeat;
+    v: WrapMode = Repeat;
+    w: WrapMode = Repeat;
+}
+
+enum ImageFilter : byte {
+    Nearest,
+    Linear,
+}
+
+union ImageIndirection {
+    asset: ImageAsset, // asset directly
+    path: string, // path to asset
+}
+
+table MaterialInput {
+    image: ImageIndirection;
+
+    wrap_modes: WrapModes (native_inline);
+
+    min_filter: ImageFilter = Linear;
+    mag_filter: ImageFilter = Linear;
+
+    use_mipmapping: bool = true;
+    generate_mipmaps_in_runtime: bool;
+    mip_filter: ImageFilter = Linear;
+
+    user_data: UserData (native_inline);
+}
+
+enum BlendMode : byte {
+    Opaque = 1,
+    Masked = 2,
+    Translucent = 3,
+}
+
+table MaterialAsset {
+    base_color: MaterialInput;
+    emissive_color: MaterialInput;
+    normal_map: MaterialInput;
+    material_properties: MaterialInput;
+
+    color_tint: ColorRGBA (native_inline);
+
+    blend_mode: BlendMode = Opaque;
+    mask_cutoff: float = 1.0;
+
+    user_data: UserData (native_inline);
+}
+
+root_type MaterialAsset;
