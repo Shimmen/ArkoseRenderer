@@ -37,6 +37,75 @@ void FileIO::ensureDirectoryForFile(const std::string& filePath)
     ensureDirectory(directoryPath);
 }
 
+size_t FileIO::indexOfLashSlash(std::string_view path)
+{
+    size_t lastSlash = path.rfind('/');
+
+    if (lastSlash == std::string::npos) {
+        lastSlash = path.rfind('\\');
+    }
+
+    return lastSlash;
+}
+
+std::string_view FileIO::extractDirectoryFromPath(std::string_view path)
+{
+    size_t lastSlash = indexOfLashSlash(path);
+    if (lastSlash == std::string::npos) {
+        return "";
+    }
+
+    // Remove filename, keep the final '/'
+    path.remove_suffix(path.length() - lastSlash - 1);
+    return path;
+}
+
+
+std::string_view FileIO::extractFileNameFromPath(std::string_view path)
+{
+    size_t lastSlash = indexOfLashSlash(path);
+    if (lastSlash == std::string::npos) {
+        return "";
+    }
+
+    path.remove_prefix(lastSlash + 1);
+    return path;
+}
+
+std::string_view FileIO::removeExtensionFromPath(std::string_view path)
+{
+    size_t lastDot = path.find_last_of('.');
+    if (lastDot != std::string::npos) {
+        return path.substr(0, lastDot);
+    } else {
+        return path;
+    }
+}
+
+uint8_t* FileIO::readBinaryDataFromFileRawPtr(const std::string& filePath, size_t* outSize)
+{
+    SCOPED_PROFILE_ZONE();
+
+    // Open file as binary and immediately seek to the end
+    std::ifstream file(filePath, std::ios::ate | std::ios::binary);
+    if (!file.is_open())
+        return nullptr;
+
+    size_t dataSize = file.tellg();
+    uint8_t* data = reinterpret_cast<uint8_t*>(malloc(dataSize));
+
+    file.seekg(0);
+    file.read(reinterpret_cast<char*>(data), dataSize);
+
+    file.close();
+
+    if (outSize != nullptr) {
+        *outSize = dataSize;
+    }
+
+    return data;
+}
+
 void FileIO::writeTextDataToFile(const std::string& filePath, const std::string& text)
 {
     const char* textData = text.data();

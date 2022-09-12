@@ -12,6 +12,11 @@ namespace FileIO {
 void ensureDirectory(const std::string& directoryPath);
 void ensureDirectoryForFile(const std::string& filePath);
 
+size_t indexOfLashSlash(std::string_view path);
+std::string_view extractDirectoryFromPath(std::string_view path);
+std::string_view extractFileNameFromPath(std::string_view path);
+std::string_view removeExtensionFromPath(std::string_view path);
+
 template<typename T>
 std::optional<std::vector<T>> readBinaryDataFromFile(const std::string& filePath)
 {
@@ -33,8 +38,15 @@ std::optional<std::vector<T>> readBinaryDataFromFile(const std::string& filePath
     return binaryData;
 }
 
+uint8_t* readBinaryDataFromFileRawPtr(const std::string& filePath, size_t* outSize);
+
 void writeTextDataToFile(const std::string& filePath, const std::string& text);
 void writeBinaryDataToFile(const std::string& filePath, const char* data, size_t size);
+
+inline void writeBinaryDataToFile(const std::string& filePath, const uint8_t* data, size_t size)
+{
+    writeBinaryDataToFile(filePath, reinterpret_cast<const char*>(data), size);
+}
 
 template<typename T>
 void writeBinaryDataToFile(const std::string& filePath, const std::vector<T>& vector)
