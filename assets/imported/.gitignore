@@ -1,0 +1,5 @@
+# Ignore any imported assets here, if we want to keep them then move them elsewhere.
+*
+
+# Keep this gitignore file around though
+!.gitignore
