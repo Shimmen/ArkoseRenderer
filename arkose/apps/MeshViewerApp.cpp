@@ -31,7 +31,6 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     auto boxMeshes = scene.loadMeshes("assets/sample/models/Box.glb");
     boxMeshes.front()->transform.setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(30.0f)));
-    m_target = boxMeshes.front();
 
     /*
     // Spawn a grid of static mesh instances for a little stress test of instances
@@ -78,11 +77,9 @@ bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
 
     ImGuiID dockspace = ImGui::DockSpaceOverViewport(nullptr, ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingInCentralNode);
 
-    if (m_target != nullptr) {
-        drawMeshHierarchyPanel();
-        drawMeshMaterialPanel();
-        drawMeshPhysicsPanel();
-    }
+    drawMeshHierarchyPanel();
+    drawMeshMaterialPanel();
+    drawMeshPhysicsPanel();
 
     //ImGui::DockBuilderSplitNode(dockspace, ImGuiDir_Left, 0.2f, nullptr, &dockspace_id);
     //ImGui::SetNextWindowDockID(dockspace, ImGuiCond_Always);
@@ -136,55 +133,73 @@ void MeshViewerApp::drawMenuBar()
 void MeshViewerApp::drawMeshHierarchyPanel()
 {
     ImGui::Begin("Hierarchy");
+    if (m_target != nullptr) {
 
-    StaticMesh* staticMesh = m_scene->gpuScene().staticMeshForHandle(target().mesh);
-    ARKOSE_ASSERT(staticMesh);
+        ImGui::Text(!target().name.empty()
+                        ? target().name.data()
+                        : "Mesh");
 
-    ImGui::Text(!staticMesh->name().empty()
-                    ? staticMesh->name().data()
-                    : "Mesh");
+        if (ImGui::BeginTabBar("MeshViewerLODTabBar")) {
 
-    if (ImGui::TreeNode("LODs")) {
+            for (uint32_t lodIdx = 0; lodIdx < target().lods.size(); ++lodIdx) {
+                std::string lodLabel = std::format("LOD{}", lodIdx);
+                if (ImGui::BeginTabItem(lodLabel.c_str())) {
 
-        for (uint32_t lodIdx = 0; lodIdx < staticMesh->numLODs(); ++lodIdx) {
-            std::string lodLabel = std::format("LOD{}", lodIdx);
-            if (ImGui::TreeNode(lodLabel.c_str())) {
+                    StaticMeshLOD_NEW& lod = *target().lods[lodIdx];
 
-                const char* previewText = "todo: correct preview text";
-                if (ImGui::BeginCombo("Segment", previewText)) {
-
-                    StaticMeshLOD& lod = staticMesh->lodAtIndex(lodIdx);
-                    for (size_t segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
-
-                        std::string segmentLabel = std::format("segment{:04}", segmentIdx);
-                        if (ImGui::Selectable(segmentLabel.c_str())) {
-                            ARKOSE_LOG(Info, "Selected {}", segmentLabel);
-                        }
-
-                        // ImGui::Text(segmentLabel.c_str());
+                    // TODO: Allow more than 20 segments..
+                    int numSegments = static_cast<int>(lod.mesh_segments.size());
+                    if (numSegments > 20) {
+                        numSegments = 20;
                     }
 
-                    ImGui::EndCombo();
+                    // TODO: Allow segments to have actual names?
+                    static const char* segmentNames[] = {
+                        "segment00",
+                        "segment01",
+                        "segment02",
+                        "segment03",
+                        "segment04",
+                        "segment05",
+                        "segment06",
+                        "segment07",
+                        "segment08",
+                        "segment09",
+                        "segment10",
+                        "segment11",
+                        "segment12",
+                        "segment13",
+                        "segment14",
+                        "segment15",
+                        "segment16",
+                        "segment17",
+                        "segment18",
+                        "segment19",
+                    };
+
+                    static int currentItem = 0;
+                    bool selectionDidChange = ImGui::ListBox("Mesh segments", &currentItem, segmentNames, numSegments);
+
+                    if (selectionDidChange) {
+                        ARKOSE_LOG(Info, "Clicked on segment '{}'", segmentNames[currentItem]);
+                    }
+
+                    ImGui::EndTabItem();
                 }
-                ImGui::TreePop();
             }
+
+            ImGui::EndTabBar();
         }
-
-        ImGui::TreePop();
     }
-
     ImGui::End();
 }
 
 void MeshViewerApp::drawMeshMaterialPanel()
 {
     ImGui::Begin("Materials");
-
-    StaticMesh* staticMesh = m_scene->gpuScene().staticMeshForHandle(target().mesh);
-    ARKOSE_ASSERT(staticMesh);
-
-    ImGui::Text("TODO!");
-
+    if (m_target != nullptr) {
+        ImGui::Text("TODO!");
+    }
     ImGui::End();
 }
 
@@ -192,12 +207,9 @@ void MeshViewerApp::drawMeshMaterialPanel()
 void MeshViewerApp::drawMeshPhysicsPanel()
 {
     ImGui::Begin("Physics");
-
-    StaticMesh* staticMesh = m_scene->gpuScene().staticMeshForHandle(target().mesh);
-    ARKOSE_ASSERT(staticMesh);
-
-    ImGui::Text("TODO!");
-
+    if (m_target != nullptr) {
+        ImGui::Text("TODO!");
+    }
     ImGui::End();
 }
 
@@ -228,16 +240,16 @@ void MeshViewerApp::loadMeshWithDialog()
         std::string openPath = maybePath.value();
         ARKOSE_LOG(Info, "Loading mesh from file '{}'", openPath);
 
-        StaticMeshAsset* staticMesh = StaticMeshAsset::loadFromArkmsh(openPath);
-
-        m_target = nullptr;
-        m_scene->unloadAllMeshes();
-
         // TODO: Load the static mesh asset into the scene & gpu-scene!
         //       Keep a reference to the *asset*, but not the runtime mesh
 
-        //m_targets = m_scene->loadMeshes(openPath);
+        StaticMeshAsset* staticMesh = StaticMeshAsset::loadFromArkmsh(openPath);
+        if (staticMesh != nullptr) {
+            m_target = staticMesh;
+        }
 
+        //m_scene->unloadAllMeshes();
+        //m_targets = m_scene->loadMeshes(openPath);
     }
 }
 
