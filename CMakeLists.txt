@@ -62,13 +62,12 @@ set(ARKOSE_SOURCES
     arkose/asset/MaterialAsset_generated.h
     arkose/asset/StaticMeshAsset.cpp
     arkose/asset/StaticMeshAsset_generated.h
+    arkose/asset/TextureCompressor.cpp
     arkose/asset/import/GltfLoader.cpp
     arkose/core/math/Fibonacci.cpp
     arkose/core/math/Frustum.cpp
     arkose/core/math/Halton.cpp
     arkose/core/parallel/TaskGraph.cpp
-    arkose/pack/Arkblob.cpp
-    arkose/pack/TextureCompressor.cpp
     arkose/physics/PhysicsScene.cpp
     arkose/physics/backend/base/PhysicsBackend.cpp
     arkose/physics/backend/jolt/JoltPhysicsBackend.cpp
