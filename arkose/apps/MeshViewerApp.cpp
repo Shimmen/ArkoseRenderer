@@ -1,5 +1,6 @@
 #include "MeshViewerApp.h"
 
+#include "asset/AssetImporter.h"
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/FinalNode.h"
@@ -12,9 +13,11 @@
 #include "scene/camera/Camera.h"
 #include "scene/lights/DirectionalLight.h"
 #include "utility/FileDialog.h"
+#include "utility/FileIO.h"
 #include "utility/Input.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
+
 
 // For texture compression testing
 #include "pack/Arkblob.h"
@@ -25,7 +28,7 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     SCOPED_PROFILE_ZONE();
 
     // Test compressed textures
-    {
+    if (false) {
         SCOPED_PROFILE_ZONE_NAMED("Arkblob & texture compression test");
 
         Image* image = Image::load("assets/test-pattern.png", Image::PixelType::RGBA);
@@ -50,10 +53,13 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     ////////////////////////////////////////////////////////////////////////////
     // Scene setup
     
+    m_scene = &scene;
+
     scene.setupFromDescription({ .maintainRayTracingScene = false });
 
     auto boxMeshes = scene.loadMeshes("assets/sample/models/Box.glb");
     boxMeshes.front()->transform.setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(30.0f)));
+    m_target = boxMeshes.front();
 
     /*
     // Spawn a grid of static mesh instances for a little stress test of instances
@@ -96,14 +102,41 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
 
 bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
 {
-    ImGui::DockSpaceOverViewport(nullptr, ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingInCentralNode);
+    drawMenuBar();
 
+    ImGuiID dockspace = ImGui::DockSpaceOverViewport(nullptr, ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingInCentralNode);
+
+    if (m_target != nullptr) {
+        drawMeshHierarchyPanel();
+        drawMeshMaterialPanel();
+        drawMeshPhysicsPanel();
+    }
+
+    //ImGui::DockBuilderSplitNode(dockspace, ImGuiDir_Left, 0.2f, nullptr, &dockspace_id);
+    //ImGui::SetNextWindowDockID(dockspace, ImGuiCond_Always);
+
+    m_fpsCameraController.update(Input::instance(), deltaTime);
+    return true;
+}
+
+void MeshViewerApp::drawMenuBar()
+{
     bool showNewSceneModalHack = false;
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
-            if (ImGui::MenuItem("New empty...", "Ctrl+N")) { showNewSceneModalHack = true; }
-            if (ImGui::MenuItem("Open...", "Ctrl+O")) { loadMeshWithDialog(scene); }
-            if (ImGui::MenuItem("Save...", "Ctrl+S")) { saveMeshWithDialog(scene); }
+            if (ImGui::MenuItem("New empty...", "Ctrl+N")) {
+                showNewSceneModalHack = true;
+            }
+            if (ImGui::MenuItem("Open...", "Ctrl+O")) {
+                loadMeshWithDialog();
+            }
+            if (ImGui::MenuItem("Save...", "Ctrl+S")) {
+                saveMeshWithDialog();
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Import...", "Ctrl+I")) {
+                openImportMeshDialog();
+            }
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
@@ -117,7 +150,7 @@ bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
     if (ImGui::BeginPopupModal("Create a new scene")) {
         ImGui::Text("You are about to create a scene and potentially loose any unchanged settings. Are you sure you want to proceed?");
         if (ImGui::Button("Yes")) {
-            scene.unloadAllMeshes();
+            m_scene->unloadAllMeshes();
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -126,31 +159,123 @@ bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
         }
         ImGui::EndPopup();
     }
-
-    m_fpsCameraController.update(Input::instance(), deltaTime);
-    return true;
 }
 
-void MeshViewerApp::loadMeshWithDialog(Scene& scene)
+void MeshViewerApp::drawMeshHierarchyPanel()
 {
-    std::vector<FileDialog::FilterItem> filterItems = { { "Source meshes", "gltf,glb" },
-                                                        { "Arkblob mesh", Arkblob::fileExtensionForType(Arkblob::Type::Mesh) } };
+    ImGui::Begin("Hierarchy");
+
+    StaticMesh* staticMesh = m_scene->gpuScene().staticMeshForHandle(target().mesh);
+    ARKOSE_ASSERT(staticMesh);
+
+    ImGui::Text(!staticMesh->name().empty()
+                    ? staticMesh->name().data()
+                    : "Mesh");
+
+    if (ImGui::TreeNode("LODs")) {
+
+        for (uint32_t lodIdx = 0; lodIdx < staticMesh->numLODs(); ++lodIdx) {
+            std::string lodLabel = std::format("LOD{}", lodIdx);
+            if (ImGui::TreeNode(lodLabel.c_str())) {
+
+                const char* previewText = "todo: correct preview text";
+                if (ImGui::BeginCombo("Segment", previewText)) {
+
+                    StaticMeshLOD& lod = staticMesh->lodAtIndex(lodIdx);
+                    for (size_t segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
+
+                        std::string segmentLabel = std::format("segment{:04}", segmentIdx);
+                        if (ImGui::Selectable(segmentLabel.c_str())) {
+                            ARKOSE_LOG(Info, "Selected {}", segmentLabel);
+                        }
+
+                        // ImGui::Text(segmentLabel.c_str());
+                    }
+
+                    ImGui::EndCombo();
+                }
+                ImGui::TreePop();
+            }
+        }
+
+        ImGui::TreePop();
+    }
+
+    ImGui::End();
+}
+
+void MeshViewerApp::drawMeshMaterialPanel()
+{
+    ImGui::Begin("Materials");
+
+    StaticMesh* staticMesh = m_scene->gpuScene().staticMeshForHandle(target().mesh);
+    ARKOSE_ASSERT(staticMesh);
+
+    ImGui::Text("TODO!");
+
+    ImGui::End();
+}
+
+
+void MeshViewerApp::drawMeshPhysicsPanel()
+{
+    ImGui::Begin("Physics");
+
+    StaticMesh* staticMesh = m_scene->gpuScene().staticMeshForHandle(target().mesh);
+    ARKOSE_ASSERT(staticMesh);
+
+    ImGui::Text("TODO!");
+
+    ImGui::End();
+}
+
+void MeshViewerApp::openImportMeshDialog()
+{
+    std::vector<FileDialog::FilterItem> filterItems = { { "glTF", "gltf,glb" } };
 
     if (auto maybePath = FileDialog::open(filterItems)) {
+
+        std::string importFilePath = maybePath.value();
+        ARKOSE_LOG(Info, "Importing mesh from file '{}'", importFilePath);
+
+        std::string_view importFileName = FileIO::extractFileNameFromPath(importFilePath);
+        std::string targetDirectory = std::format("assets/imported/{}", FileIO::removeExtensionFromPath(importFileName));
+
+        AssetImporter importer {};
+        ImportResult assets = importer.importAsset(importFilePath, targetDirectory);
+
+        ARKOSE_LOG(Info, "Imported {} static meshes, {} materials, and {} images.",
+                   assets.staticMeshes.size(), assets.materials.size(), assets.images.size());
+    }
+}
+
+void MeshViewerApp::loadMeshWithDialog()
+{
+    if (auto maybePath = FileDialog::open({ { "Arkose mesh", Arkose::Asset::StaticMeshAssetExtension() } })) {
 
         std::string openPath = maybePath.value();
         ARKOSE_LOG(Info, "Loading mesh from file '{}'", openPath);
 
-        scene.unloadAllMeshes();
-        m_targets = scene.loadMeshes(openPath);
+        StaticMeshAsset* staticMesh = StaticMeshAsset::loadFromArkmsh(openPath);
+
+        m_target = nullptr;
+        m_scene->unloadAllMeshes();
+
+        // TODO: Load the static mesh asset into the scene & gpu-scene!
+        //       Keep a reference to the *asset*, but not the runtime mesh
+
+        //m_targets = m_scene->loadMeshes(openPath);
+
     }
 }
 
-void MeshViewerApp::saveMeshWithDialog(Scene& scene)
+void MeshViewerApp::saveMeshWithDialog()
 {
-    if (auto maybePath = FileDialog::save({ { "Binary arkose data", Arkblob::fileExtensionForType(Arkblob::Type::Mesh) } })) {
+    if (auto maybePath = FileDialog::save({ { "Arkose mesh", Arkose::Asset::StaticMeshAssetExtension() } })) {
+        
         std::string savePath = maybePath.value();
         ARKOSE_LOG(Info, "Saving mesh to file '{}'", savePath);
         // TODO: Save all(?) m_targets to savePath
+
     }
 }

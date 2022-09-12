@@ -1,7 +1,9 @@
 #pragma once
 
 #include "apps/App.h"
+#include "asset/StaticMeshAsset.h"
 #include "scene/camera/FpsCameraController.h"
+#include <memory>
 
 class MeshViewerApp : public App {
 public:
@@ -12,10 +14,21 @@ public:
     FpsCameraController m_fpsCameraController {};
 
 private:
-    // The meshes we're currently viewing & editing
-    std::vector<StaticMeshInstance*> m_targets { nullptr };
+    Scene* m_scene { nullptr };
 
-    void loadMeshWithDialog(Scene&);
-    void saveMeshWithDialog(Scene&);
+    std::unique_ptr<StaticMeshAsset> m_staticMeshAsset {};
+
+    // The mesh we're currently viewing & editing
+    StaticMeshInstance* m_target {};
+    StaticMeshInstance& target() { return *m_target; }
+
+    void drawMenuBar();
+    void drawMeshHierarchyPanel();
+    void drawMeshMaterialPanel();
+    void drawMeshPhysicsPanel();
+
+    void openImportMeshDialog();
+    void loadMeshWithDialog();
+    void saveMeshWithDialog();
 
 };
