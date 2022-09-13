@@ -1,6 +1,7 @@
 #include "MeshViewerApp.h"
 
 #include "asset/AssetImporter.h"
+#include "asset/MaterialAsset.h"
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/FinalNode.h"
@@ -17,6 +18,7 @@
 #include "utility/Input.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
+#include <imgui_internal.h>
 
 void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
 {
@@ -78,8 +80,8 @@ bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
     ImGuiID dockspace = ImGui::DockSpaceOverViewport(nullptr, ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingInCentralNode);
 
     drawMeshHierarchyPanel();
-    drawMeshMaterialPanel();
     drawMeshPhysicsPanel();
+    drawMeshMaterialPanel();
 
     //ImGui::DockBuilderSplitNode(dockspace, ImGuiDir_Left, 0.2f, nullptr, &dockspace_id);
     //ImGui::SetNextWindowDockID(dockspace, ImGuiCond_Always);
@@ -145,11 +147,11 @@ void MeshViewerApp::drawMeshHierarchyPanel()
                 std::string lodLabel = std::format("LOD{}", lodIdx);
                 if (ImGui::BeginTabItem(lodLabel.c_str())) {
 
-                    m_selectedLod = lodIdx;
+                    m_selectedLodIdx = lodIdx;
                     StaticMeshLOD_NEW& lod = *target().lods[lodIdx];
 
-                    if (m_selectedSegment >= lod.mesh_segments.size()) {
-                        m_selectedSegment = 0;
+                    if (m_selectedSegmentIdx >= lod.mesh_segments.size()) {
+                        m_selectedSegmentIdx = 0;
                     }
 
                     // Preload the cache first time around (or if the segment count is massive)..
@@ -170,10 +172,10 @@ void MeshViewerApp::drawMeshHierarchyPanel()
 
                     int numSegments = static_cast<int>(lod.mesh_segments.size());
                     int numToDisplay = std::min(numSegments, 15);
-                    bool didClickSegment = ImGui::ListBox("Mesh segments", &m_selectedSegment, itemGetter, &m_segmentNameCache, numSegments, numToDisplay);
+                    bool didClickSegment = ImGui::ListBox("Mesh segments", &m_selectedSegmentIdx, itemGetter, &m_segmentNameCache, numSegments, numToDisplay);
 
                     if (didClickSegment) {
-                        ARKOSE_LOG(Info, "Clicked on segment '{}'", m_segmentNameCache[m_selectedSegment]);
+                        //ARKOSE_LOG(Info, "Clicked on segment '{}'", m_segmentNameCache[m_selectedSegmentIdx]);
                     }
 
                     ImGui::EndTabItem();
@@ -188,13 +190,204 @@ void MeshViewerApp::drawMeshHierarchyPanel()
 
 void MeshViewerApp::drawMeshMaterialPanel()
 {
-    ImGui::Begin("Materials");
-    if (m_target != nullptr) {
-        ImGui::Text("TODO!");
+    ImGui::Begin("Material");
+    if (StaticMeshSegment_NEW* segment = selectedSegment()) {
+
+        // Only handle non-packaged up assets here, i.e. using a path, not a direct assets as it would be in a packed case
+        ARKOSE_ASSERT(segment->material.type == Arkose::Asset::MaterialIndirection::path);
+        std::string& materialPath = *segment->material.Aspath();
+
+        ImGui::BeginDisabled();
+        ImGui::InputText("Material asset", materialPath.data(), materialPath.length(), ImGuiInputTextFlags_ReadOnly);
+        ImGui::EndDisabled();
+
+        if (MaterialAsset* material = MaterialAsset::loadFromArkmat(materialPath)) {
+
+            auto drawMaterialInputGui = [&](const char* name, MaterialInput* materialInput) {
+
+                ImGui::PushID(name);
+
+                ImGuiTreeNodeFlags flags = 0;
+                if (materialInput == nullptr) {
+                    //flags = ImGuiTreeNodeFlags_Leaf;
+                    ImGui::BeginDisabled();
+                }
+
+                if (ImGui::CollapsingHeader(name, flags)) {
+                    if (materialInput) {
+
+                        // Only handle non-packaged up assets here, i.e. using a path, not a direct assets as it would be in a packed case
+                        ARKOSE_ASSERT(materialInput->image.type == Arkose::Asset::ImageIndirection::path);
+                        std::string& imagePath = *materialInput->image.Aspath();
+
+                        ImGui::BeginDisabled();
+                        ImGui::InputText("Image asset", imagePath.data(), imagePath.length(), ImGuiInputTextFlags_ReadOnly);
+                        ImGui::EndDisabled();
+
+                        drawWrapModeSelectorGui("Wrap modes", materialInput->wrap_modes);
+
+                        drawImageFilterSelectorGui("Mag. filter", materialInput->mag_filter);
+                        drawImageFilterSelectorGui("Min. filter", materialInput->min_filter);
+
+                        ImGui::Checkbox("Using mip mapping", &materialInput->use_mipmapping);
+                        if (materialInput->use_mipmapping) {
+                            drawImageFilterSelectorGui("Mipmap filter", materialInput->mip_filter);
+                        }
+                    }
+                }
+
+                if (materialInput == nullptr) {
+                    ImGui::EndDisabled();
+                }
+
+                ImGui::PopID();
+            };
+
+            // TODO: Add something for when we actually support multiple BRDFs..
+            int currentBrdfItem = 0;
+            ImGui::Combo("BRDF", &currentBrdfItem, "GGX-based microfacet model");
+
+            drawMaterialInputGui("Base color", material->base_color.get());
+            drawMaterialInputGui("Emissive color", material->emissive_color.get());
+            drawMaterialInputGui("Normal map", material->normal_map.get());
+            drawMaterialInputGui("Properties map", material->material_properties.get());
+
+            ImGui::ColorEdit4("Tint", reinterpret_cast<float*>(&material->color_tint));
+
+            drawBlendModeSelectorGui("Blend mode", material->blend_mode);
+            if (material->blend_mode == Arkose::Asset::BlendMode::Masked) {
+                ImGui::SliderFloat("Mask cutoff", &material->mask_cutoff, 0.0f, 1.0f);
+            }
+        }
     }
     ImGui::End();
 }
 
+void MeshViewerApp::drawWrapModeSelectorGui(const char* id, Arkose::Asset::WrapModes& wrapModes)
+{
+    auto drawWrapModeComboBox = [](const char* innerId, Arkose::Asset::WrapMode& wrapMode) {
+
+        int currentWrapModeIdx = static_cast<int>(wrapMode);
+        const char* currentWrapModeString = Arkose::Asset::EnumNameWrapMode(wrapMode);
+
+        if (ImGui::BeginCombo(innerId, currentWrapModeString)) {
+
+            bool valueChanged = false;
+
+            int wrapModeMin = static_cast<int>(Arkose::Asset::WrapMode::MIN);
+            int wrapModeMax = static_cast<int>(Arkose::Asset::WrapMode::MAX);
+
+            for (int i = wrapModeMin; i <= wrapModeMax; i++) {
+                ImGui::PushID(i);
+
+                auto itemWrapMode = static_cast<Arkose::Asset::WrapMode>(i);
+                const char* itemText = Arkose::Asset::EnumNameWrapMode(itemWrapMode);
+
+                if (ImGui::Selectable(itemText, i == currentWrapModeIdx)) {
+                    wrapMode = itemWrapMode;
+                    valueChanged = true;
+                }
+
+                if (valueChanged) {
+                    ImGui::SetItemDefaultFocus();
+                }
+
+                ImGui::PopID();
+            }
+            ImGui::EndCombo();
+        }
+    };
+
+    Arkose::Asset::WrapMode u = wrapModes.u();
+    Arkose::Asset::WrapMode v = wrapModes.v();
+    Arkose::Asset::WrapMode w = wrapModes.w();
+
+    // TODO: Fix layout!
+    if (ImGui::BeginTable(id, 4, ImGuiTableFlags_NoBordersInBody)) {
+
+        ImGui::TableNextColumn();
+        drawWrapModeComboBox("##WrapModeComboBoxU", u);
+
+        ImGui::TableNextColumn();
+        drawWrapModeComboBox("##WrapModeComboBoxV", v);
+
+        ImGui::TableNextColumn();
+        drawWrapModeComboBox("##WrapModeComboBoxW", w);
+
+        ImGui::TableNextColumn();
+        ImGui::Text("Wrap mode");
+
+        ImGui::EndTable();
+    }
+
+    wrapModes = Arkose::Asset::WrapModes(u, v, w);
+}
+
+void MeshViewerApp::drawBlendModeSelectorGui(const char* id, Arkose::Asset::BlendMode& blendMode)
+{
+    int currentBlendModeIdx = static_cast<int>(blendMode);
+    const char* currentBlendModeString = Arkose::Asset::EnumNameBlendMode(blendMode);
+
+    if (ImGui::BeginCombo(id, currentBlendModeString)) {
+
+        bool valueChanged = false;
+
+        int blendModeMin = static_cast<int>(Arkose::Asset::BlendMode::MIN);
+        int blendModeMax = static_cast<int>(Arkose::Asset::BlendMode::MAX);
+
+        for (int i = blendModeMin; i <= blendModeMax; i++) {
+            ImGui::PushID(i);
+
+            auto itemBlendMode = static_cast<Arkose::Asset::BlendMode>(i);
+            const char* itemText = Arkose::Asset::EnumNameBlendMode(itemBlendMode);
+
+            if (ImGui::Selectable(itemText, i == currentBlendModeIdx)) {
+                blendMode = itemBlendMode;
+                valueChanged = true;
+            }
+
+            if (valueChanged) {
+                ImGui::SetItemDefaultFocus();
+            }
+
+            ImGui::PopID();
+        }
+        ImGui::EndCombo();
+    }
+}
+
+void MeshViewerApp::drawImageFilterSelectorGui(const char* id, Arkose::Asset::ImageFilter& imageFilter)
+{
+    int currentImageFilterIdx = static_cast<int>(imageFilter);
+    const char* currentImageFilterString = Arkose::Asset::EnumNameImageFilter(imageFilter);
+
+    if (ImGui::BeginCombo(id, currentImageFilterString)) {
+
+        bool valueChanged = false;
+
+        int imageFilterMin = static_cast<int>(Arkose::Asset::ImageFilter::MIN);
+        int imageFilterMax = static_cast<int>(Arkose::Asset::ImageFilter::MAX);
+
+        for (int i = imageFilterMin; i <= imageFilterMax; i++) {
+            ImGui::PushID(i);
+
+            auto itemImageFilter = static_cast<Arkose::Asset::ImageFilter>(i);
+            const char* itemText = Arkose::Asset::EnumNameImageFilter(itemImageFilter);
+
+            if (ImGui::Selectable(itemText, i == currentImageFilterIdx)) {
+                imageFilter = itemImageFilter;
+                valueChanged = true;
+            }
+
+            if (valueChanged) {
+                ImGui::SetItemDefaultFocus();
+            }
+
+            ImGui::PopID();
+        }
+        ImGui::EndCombo();
+    }
+}
 
 void MeshViewerApp::drawMeshPhysicsPanel()
 {

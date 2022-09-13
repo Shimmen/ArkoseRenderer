@@ -18,14 +18,23 @@ private:
 
     // The mesh we're currently viewing & editing
     StaticMeshAsset* m_target {};
-    StaticMeshAsset& target() { return *m_target; }
 
-    int m_selectedLod { 0 };
-    int m_selectedSegment { 0 };
+    int m_selectedLodIdx { 0 };
+    int m_selectedSegmentIdx { 0 };
+
+    StaticMeshAsset& target() { return *m_target; }
+    StaticMeshLOD_NEW* selectedLOD() { return m_target ? target().lods[m_selectedLodIdx].get() : nullptr; }
+    StaticMeshSegment_NEW* selectedSegment() { return selectedLOD() ? selectedLOD()->mesh_segments[m_selectedSegmentIdx].get() : nullptr; }
 
     void drawMenuBar();
+
     void drawMeshHierarchyPanel();
+    
     void drawMeshMaterialPanel();
+    void drawWrapModeSelectorGui(const char* id, Arkose::Asset::WrapModes&);
+    void drawBlendModeSelectorGui(const char* id, Arkose::Asset::BlendMode&);
+    void drawImageFilterSelectorGui(const char* id, Arkose::Asset::ImageFilter&);
+    
     void drawMeshPhysicsPanel();
 
     void openImportMeshDialog();
