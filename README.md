@@ -42,6 +42,7 @@ Arkose
 |-- arkose          # all arkose engine code
 |   | main.cpp      # application entry point
 |   |-- apps        # apps, e.g. a game or a graphics showcase
+|   |-- asset       # asset types & flatbuffers schemas for serialisation
 |   |-- core        # various core features: maths, task graph, etc.
 |   |-- physics     # root for physics code
 |   |-- rendering   # root for rendering code
