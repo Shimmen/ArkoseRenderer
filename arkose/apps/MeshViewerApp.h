@@ -20,6 +20,9 @@ private:
     StaticMeshAsset* m_target {};
     StaticMeshAsset& target() { return *m_target; }
 
+    int m_selectedLod { 0 };
+    int m_selectedSegment { 0 };
+
     void drawMenuBar();
     void drawMeshHierarchyPanel();
     void drawMeshMaterialPanel();
@@ -28,5 +31,8 @@ private:
     void openImportMeshDialog();
     void loadMeshWithDialog();
     void saveMeshWithDialog();
+
+    // Since ImGui uses `const char*` for everything and we don't have a natural storage for these names we have to keep it in here...
+    std::vector<std::string> m_segmentNameCache {};
 
 };

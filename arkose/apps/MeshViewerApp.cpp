@@ -145,43 +145,35 @@ void MeshViewerApp::drawMeshHierarchyPanel()
                 std::string lodLabel = std::format("LOD{}", lodIdx);
                 if (ImGui::BeginTabItem(lodLabel.c_str())) {
 
+                    m_selectedLod = lodIdx;
                     StaticMeshLOD_NEW& lod = *target().lods[lodIdx];
 
-                    // TODO: Allow more than 20 segments..
-                    int numSegments = static_cast<int>(lod.mesh_segments.size());
-                    if (numSegments > 20) {
-                        numSegments = 20;
+                    if (m_selectedSegment >= lod.mesh_segments.size()) {
+                        m_selectedSegment = 0;
                     }
 
-                    // TODO: Allow segments to have actual names?
-                    static const char* segmentNames[] = {
-                        "segment00",
-                        "segment01",
-                        "segment02",
-                        "segment03",
-                        "segment04",
-                        "segment05",
-                        "segment06",
-                        "segment07",
-                        "segment08",
-                        "segment09",
-                        "segment10",
-                        "segment11",
-                        "segment12",
-                        "segment13",
-                        "segment14",
-                        "segment15",
-                        "segment16",
-                        "segment17",
-                        "segment18",
-                        "segment19",
+                    // Preload the cache first time around (or if the segment count is massive)..
+                    // We can never have this list grow during rendering of this ImGui frame.
+                    if (lod.mesh_segments.size() > m_segmentNameCache.size()) {
+                        size_t numSegmentNames = std::max(1'000ull, lod.mesh_segments.size());
+                        for (int idx = 0; idx < numSegmentNames; ++idx) {
+                            m_segmentNameCache.push_back(std::format("segment{:03}", idx));
+                        }
+                    }
+
+                    auto itemGetter = [](void* data, int idx, const char** outText) -> bool {
+                        auto& segmentNameCache = *reinterpret_cast<std::vector<std::string>*>(data);
+                        ARKOSE_ASSERT(idx < segmentNameCache.size());
+                        *outText = segmentNameCache[idx].data();
+                        return true;
                     };
 
-                    static int currentItem = 0;
-                    bool selectionDidChange = ImGui::ListBox("Mesh segments", &currentItem, segmentNames, numSegments);
+                    int numSegments = static_cast<int>(lod.mesh_segments.size());
+                    int numToDisplay = std::min(numSegments, 15);
+                    bool didClickSegment = ImGui::ListBox("Mesh segments", &m_selectedSegment, itemGetter, &m_segmentNameCache, numSegments, numToDisplay);
 
-                    if (selectionDidChange) {
-                        ARKOSE_LOG(Info, "Clicked on segment '{}'", segmentNames[currentItem]);
+                    if (didClickSegment) {
+                        ARKOSE_LOG(Info, "Clicked on segment '{}'", m_segmentNameCache[m_selectedSegment]);
                     }
 
                     ImGui::EndTabItem();
