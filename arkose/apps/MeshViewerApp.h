@@ -23,8 +23,8 @@ private:
     int m_selectedSegmentIdx { 0 };
 
     StaticMeshAsset& target() { return *m_target; }
-    StaticMeshLOD_NEW* selectedLOD() { return m_target ? target().lods[m_selectedLodIdx].get() : nullptr; }
-    StaticMeshSegment_NEW* selectedSegment() { return selectedLOD() ? selectedLOD()->mesh_segments[m_selectedSegmentIdx].get() : nullptr; }
+    StaticMeshLODAsset* selectedLOD() { return m_target ? target().lods[m_selectedLodIdx].get() : nullptr; }
+    StaticMeshSegmentAsset* selectedSegment() { return selectedLOD() ? selectedLOD()->mesh_segments[m_selectedSegmentIdx].get() : nullptr; }
 
     void drawMenuBar();
 

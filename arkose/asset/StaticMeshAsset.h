@@ -7,8 +7,8 @@
 // Generated flatbuffer code
 #include "StaticMeshAsset_generated.h"
 
-using StaticMeshSegment_NEW = Arkose::Asset::StaticMeshSegmentT;
-using StaticMeshLOD_NEW = Arkose::Asset::StaticMeshLODT;
+using StaticMeshSegmentAsset = Arkose::Asset::StaticMeshSegmentT;
+using StaticMeshLODAsset = Arkose::Asset::StaticMeshLODT;
 
 class StaticMeshAsset : public Arkose::Asset::StaticMeshAssetT {
 public:

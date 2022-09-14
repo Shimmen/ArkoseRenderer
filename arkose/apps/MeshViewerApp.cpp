@@ -148,7 +148,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
                 if (ImGui::BeginTabItem(lodLabel.c_str())) {
 
                     m_selectedLodIdx = lodIdx;
-                    StaticMeshLOD_NEW& lod = *target().lods[lodIdx];
+                    StaticMeshLODAsset& lod = *target().lods[lodIdx];
 
                     if (m_selectedSegmentIdx >= lod.mesh_segments.size()) {
                         m_selectedSegmentIdx = 0;
@@ -191,7 +191,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
 void MeshViewerApp::drawMeshMaterialPanel()
 {
     ImGui::Begin("Material");
-    if (StaticMeshSegment_NEW* segment = selectedSegment()) {
+    if (StaticMeshSegmentAsset* segment = selectedSegment()) {
 
         // Only handle non-packaged up assets here, i.e. using a path, not a direct assets as it would be in a packed case
         ARKOSE_ASSERT(segment->material.type == Arkose::Asset::MaterialIndirection::path);

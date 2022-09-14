@@ -181,8 +181,8 @@ std::unique_ptr<StaticMeshAsset> GltfLoader_NEW::createStaticMesh(const tinygltf
     staticMesh->name = gltfMesh.name;
 
     // Only a sinle LOD used for glTF (without extensions)
-    staticMesh->lods.emplace_back(std::make_unique<StaticMeshLOD_NEW>());
-    StaticMeshLOD_NEW& lod0 = *staticMesh->lods.back();
+    staticMesh->lods.emplace_back(std::make_unique<StaticMeshLODAsset>());
+    StaticMeshLODAsset& lod0 = *staticMesh->lods.back();
 
     // NOTE: Using reserve is important to maintain the mesh segment addresses for the segment material map!
     lod0.mesh_segments.reserve(gltfMesh.primitives.size());
@@ -210,8 +210,8 @@ std::unique_ptr<StaticMeshAsset> GltfLoader_NEW::createStaticMesh(const tinygltf
         float radius = length(posMax - posMin) / 2.0f;
         lod0.bounding_sphere = Arkose::Asset::Sphere(createAssetVec3(center), radius);
 
-        lod0.mesh_segments.emplace_back(std::make_unique<StaticMeshSegment_NEW>());
-        StaticMeshSegment_NEW& meshSegment = *lod0.mesh_segments.back();
+        lod0.mesh_segments.emplace_back(std::make_unique<StaticMeshSegmentAsset>());
+        StaticMeshSegmentAsset& meshSegment = *lod0.mesh_segments.back();
 
         // Write glTF material index to user data until we can resolve file paths
         const int materialIdx = gltfPrimitive.material;
