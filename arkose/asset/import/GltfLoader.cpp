@@ -105,7 +105,7 @@ ImportResult GltfLoader_NEW::load(const std::string& gltfFilePath)
         }
 
         // Assign the best-guess color space for this image
-        auto entry = imageColorSpaceBestGuess.find(idx);
+        auto entry = imageColorSpaceBestGuess.find(static_cast<int>(idx));
         if (entry != imageColorSpaceBestGuess.end()) {
             image->color_space = entry->second;
         }
