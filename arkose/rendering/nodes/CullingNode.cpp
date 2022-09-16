@@ -87,7 +87,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
                 // TODO: Culling (e.g. frustum) should be done on mesh/LOD level, not per segment, but this will work for now
                 for (const StaticMeshSegment& meshSegment : lod.meshSegments) {
 
-                    const Material& material = *scene.materialForHandle(meshSegment.material);
+                    const ShaderMaterial& material = *scene.materialForHandle(meshSegment.material);
 
                     DrawCallDescription drawCall = meshSegment.drawCallDescription({ VertexComponent::Position3F }, scene);
                     indirectDrawableData.push_back({ .drawable = { .worldFromLocal = instance->transform.worldMatrix(),
@@ -98,7 +98,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
                                                      .indexCount = drawCall.indexCount,
                                                      .firstIndex = drawCall.firstIndex,
                                                      .vertexOffset = drawCall.vertexOffset,
-                                                     .materialBlendMode = material.blendModeValue() });
+                                                     .materialBlendMode = material.blendMode });
 
                     numInputDrawables += 1;
                 }

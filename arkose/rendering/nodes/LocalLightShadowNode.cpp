@@ -254,8 +254,8 @@ void LocalLightShadowNode::drawShadowCasters(CommandList& cmdList, GpuScene& sce
 
                     // Don't render translucent objects. We still do masked though and pretend they are opaque. This may fail
                     // in some cases but in general if the masked features are small enough it's not really noticable.
-                    if (const Material* material = scene.materialForHandle(meshSegment.material)) {
-                        if (material->blendMode == Material::BlendMode::Translucent) {
+                    if (const ShaderMaterial* material = scene.materialForHandle(meshSegment.material)) {
+                        if (material->blendMode == BLEND_MODE_TRANSLUCENT) {
                             break;
                         }
                     }

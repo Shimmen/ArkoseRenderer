@@ -45,7 +45,7 @@ public:
 
     StaticMesh* staticMeshForHandle(StaticMeshHandle handle);
     const StaticMesh* staticMeshForHandle(StaticMeshHandle handle) const;
-    const Material* materialForHandle(MaterialHandle handle) const;
+    const ShaderMaterial* materialForHandle(MaterialHandle handle) const;
 
     // TODO: This is a temporary helper, remove me eventually!
     void ensureDrawCallIsAvailableForAll(VertexLayout);
@@ -172,7 +172,6 @@ private:
     
 
     struct ManagedMaterial {
-        Material sourceMaterial;
         ShaderMaterial shaderMaterial {};
         uint64_t referenceCount { 0 };
     };

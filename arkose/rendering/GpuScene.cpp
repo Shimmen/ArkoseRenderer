@@ -76,11 +76,11 @@ const StaticMesh* GpuScene::staticMeshForHandle(StaticMeshHandle handle) const
     return nullptr;
 }
 
-const Material* GpuScene::materialForHandle(MaterialHandle handle) const
+const ShaderMaterial* GpuScene::materialForHandle(MaterialHandle handle) const
 {
     if (handle.valid()) {
         ARKOSE_ASSERT(handle.index() < m_managedMaterials.size());
-        return &m_managedMaterials[handle.index()].sourceMaterial;
+        return &m_managedMaterials[handle.index()].shaderMaterial;
     }
 
     return nullptr;
@@ -425,15 +425,15 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                             }
 
                             uint8_t hitMask = 0x00;
-                            if (const Material* material = materialForHandle(meshSegment.material)) {
+                            if (const ShaderMaterial* material = materialForHandle(meshSegment.material)) {
                                 switch (material->blendMode) {
-                                case Material::BlendMode::Opaque:
+                                case BLEND_MODE_OPAQUE:
                                     hitMask = RT_HIT_MASK_OPAQUE;
                                     break;
-                                case Material::BlendMode::Masked:
+                                case BLEND_MODE_MASKED:
                                     hitMask = RT_HIT_MASK_MASKED;
                                     break;
-                                case Material::BlendMode::Translucent:
+                                case BLEND_MODE_TRANSLUCENT:
                                     hitMask = RT_HIT_MASK_BLEND;
                                     break;
                                 default:
@@ -625,8 +625,7 @@ MaterialHandle GpuScene::registerMaterial(Material& material)
 
     auto handle = MaterialHandle(materialIdx);
 
-    m_managedMaterials.push_back(ManagedMaterial { .sourceMaterial = material,
-                                                   .shaderMaterial = shaderMaterial,
+    m_managedMaterials.push_back(ManagedMaterial { .shaderMaterial = shaderMaterial,
                                                    .referenceCount = 1 });
 
     m_pendingMaterialUpdates.push_back(handle.indexOfType<uint32_t>());
