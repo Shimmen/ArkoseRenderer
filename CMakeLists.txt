@@ -211,8 +211,10 @@ if (MSVC)
     target_compile_definitions(ArkoseRenderer PUBLIC WIN32_LEAN_AND_MEAN)
 endif()
 
-# Enable tracy real-time debugger? It does leak memory when enabled, so maybe keep off by default?
+# Keep tracy enabled at all time but with on-demand only, meaning we don't accumulate tracy data
+# in the Arkose process which can hog a lot of memory, which looks a lot like a memory leak.
 target_compile_definitions(ArkoseRenderer PUBLIC TRACY_ENABLE)
+target_compile_definitions(ArkoseRenderer PUBLIC TRACY_ON_DEMAND)
 
 if (MSVC)
     target_compile_options(ArkoseRenderer PUBLIC
