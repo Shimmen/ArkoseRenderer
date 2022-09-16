@@ -58,6 +58,28 @@ ImportResult GltfLoader_NEW::load(const std::string& gltfFilePath)
 
     std::string gltfDirectory = std::string(FileIO::extractDirectoryFromPath(gltfFilePath));
 
+    // Make best guesses for images' color spaces
+    std::unordered_map<int, ColorSpace> imageColorSpaceBestGuess {};
+    for (tinygltf::Material const& gltfMaterial : gltfModel.materials) {
+        auto imageIdxForTexture = [&](int gltfTextureIdx) {
+            if (gltfTextureIdx == -1) {
+                return -1;
+            }
+
+            tinygltf::Texture& gltfTexture = gltfModel.textures[gltfTextureIdx];
+            return gltfTexture.source;
+        };
+
+        int emissiveIdx = gltfMaterial.emissiveTexture.index;
+        int normalMapIdx = gltfMaterial.normalTexture.index;
+
+        // Note that we're relying on all -1 i.e. invalid textures mapping to the same slot which will be unused anyway
+        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index)] = ColorSpace::sRGB_encoded;
+        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index)] = ColorSpace::Data;
+        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.emissiveTexture.index)] = ColorSpace::sRGB_encoded;
+        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.normalTexture.index)] = ColorSpace::Data;
+    }
+
     // Create all images defined in the glTF file (even potentially unused ones)
     for (size_t idx = 0; idx < gltfModel.images.size(); ++idx) {
 
@@ -80,6 +102,12 @@ ImportResult GltfLoader_NEW::load(const std::string& gltfFilePath)
 
             image = ImageAsset::createFromSourceAsset(encodedData, encodedDataSize);
 
+        }
+
+        // Assign the best-guess color space for this image
+        auto entry = imageColorSpaceBestGuess.find(idx);
+        if (entry != imageColorSpaceBestGuess.end()) {
+            image->color_space = entry->second;
         }
 
         // Write glTF image index to user data until we can resolve file paths
@@ -320,7 +348,7 @@ std::unique_ptr<MaterialAsset> GltfLoader_NEW::createMaterial(const tinygltf::Mo
 {
     SCOPED_PROFILE_ZONE();
 
-    auto toMaterialInput = [&](int texIndex, Arkose::Asset::ColorSpace colorSpace, vec4 fallbackColor) -> std::unique_ptr<MaterialInput> {
+    auto toMaterialInput = [&](int texIndex) -> std::unique_ptr<MaterialInput> {
 
         if (texIndex == -1) {
             return nullptr;
@@ -330,7 +358,6 @@ std::unique_ptr<MaterialAsset> GltfLoader_NEW::createMaterial(const tinygltf::Mo
 
         auto& gltfTexture = gltfModel.textures[texIndex];
         auto& gltfSampler = gltfModel.samplers[gltfTexture.sampler];
-        auto& gltfImage = gltfModel.images[gltfTexture.source];
 
         // Write glTF image index to user data until we can resolve file paths
         input->user_data = Arkose::Asset::UserData(texIndex);
@@ -431,16 +458,16 @@ std::unique_ptr<MaterialAsset> GltfLoader_NEW::createMaterial(const tinygltf::Mo
     vec4 baseColorFactor = vec4((float)c[0], (float)c[1], (float)c[2], (float)c[3]);
 
     int baseColorIdx = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
-    material->base_color = toMaterialInput(baseColorIdx, Arkose::Asset::ColorSpace::sRGB_encoded, baseColorFactor);
+    material->base_color = toMaterialInput(baseColorIdx);
 
     int emissiveIdx = gltfMaterial.emissiveTexture.index;
-    material->emissive_color = toMaterialInput(emissiveIdx, Arkose::Asset::ColorSpace::sRGB_encoded, vec4(0.0f, 0.0f, 0.0f, 0.0f));
+    material->emissive_color = toMaterialInput(emissiveIdx);
 
     int normalMapIdx = gltfMaterial.normalTexture.index;
-    material->normal_map = toMaterialInput(normalMapIdx, Arkose::Asset::ColorSpace::Data, vec4(0.5f, 0.5f, 1.0f, 1.0f));
+    material->normal_map = toMaterialInput(normalMapIdx);
 
     int metallicRoughnessIdx = gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
-    material->material_properties = toMaterialInput(metallicRoughnessIdx, Arkose::Asset::ColorSpace::Data, vec4(0.0f, 0.0f, 0.0f, 0.0f));
+    material->material_properties = toMaterialInput(metallicRoughnessIdx);
 
     if (baseColorIdx != -1) {
         material->color_tint = Arkose::Asset::ColorRGBA((float)c[0], (float)c[1], (float)c[2], (float)c[3]);

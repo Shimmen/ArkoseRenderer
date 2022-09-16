@@ -8,6 +8,7 @@ file_identifier "ARKA";
 
 file_extension "arkmsh";
 
+/*
 table PhysicsDataInput {
     // TODO!
 }
@@ -22,6 +23,7 @@ table PhysicsData {
     // Jolt physics intermediate (non-cooked) binary blob (but eh, we want to keep text
     // for non-cooked so this breaks that..)
 }
+*/
 
 union MaterialIndirection {
     asset: MaterialAsset, // asset directly

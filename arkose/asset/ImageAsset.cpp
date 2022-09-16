@@ -53,19 +53,32 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
     bool isFloatType = false;
     int width, height, channelsInFile;
 
+    int success = stbi_info_from_memory(sourceAssetData, static_cast<int>(sourceAssetSize), &width, &height, &channelsInFile);
+
+    if (not success) {
+        ARKOSE_LOG(Error, "Failed to load to load image asset (stb reported error, likely invalid file)");
+        return nullptr;
+    }
+
+    // TODO: Allow storing 3-component RGB images. We do this for now to avoid handling it in runtime, because e.g. Vulkan doesn't always support sRGB8
+    int desiredChannels = channelsInFile;
+    if (channelsInFile == STBI_rgb) {
+        desiredChannels = STBI_rgb_alpha;
+    }
+
     if (stbi_is_hdr_from_memory(sourceAssetData, static_cast<int>(sourceAssetSize))) {
-        data = stbi_loadf_from_memory(sourceAssetData, static_cast<int>(sourceAssetSize), &width, &height, &channelsInFile, STBI_default);
-        size = width * height * channelsInFile * sizeof(float);
+        data = stbi_loadf_from_memory(sourceAssetData, static_cast<int>(sourceAssetSize), &width, &height, &channelsInFile, desiredChannels);
+        size = width * height * desiredChannels * sizeof(float);
         isFloatType = true;
     } else {
-        data = stbi_load_from_memory(sourceAssetData, static_cast<int>(sourceAssetSize), &width, &height, &channelsInFile, STBI_default);
-        size = width * height * channelsInFile * sizeof(stbi_uc);
+        data = stbi_load_from_memory(sourceAssetData, static_cast<int>(sourceAssetSize), &width, &height, &channelsInFile, desiredChannels);
+        size = width * height * desiredChannels * sizeof(stbi_uc);
     }
 
     auto format { Arkose::Asset::ImageFormat::Unknown };
     #define SelectFormat(intFormat, floatFormat) (isFloatType ? Arkose::Asset::ImageFormat::##floatFormat : Arkose::Asset::ImageFormat::##intFormat)
 
-    switch (channelsInFile) {
+    switch (desiredChannels) {
     case 1:
         format = SelectFormat(R8, R32F);
         break;

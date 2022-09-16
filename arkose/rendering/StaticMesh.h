@@ -1,5 +1,6 @@
 #pragma once
 
+#include "asset/StaticMeshAsset.h"
 #include "core/Handle.h"
 #include "core/Types.h"
 #include "core/math/Sphere.h"
@@ -74,6 +75,10 @@ class StaticMesh {
     
 public:
 
+    // TODO: This is only temporary while we're doing the big copy from asset to this..
+    friend class GpuScene;
+
+    StaticMesh(StaticMeshAsset*);
     StaticMesh() = default;
     ~StaticMesh() = default;
 
@@ -102,6 +107,9 @@ public:
     }
 
 private:
+
+    // Optional asset that this is created from
+    StaticMeshAsset* m_asset { nullptr };
 
     // Optional name of the mesh, usually set when loaded from some source file
     std::string m_name {};

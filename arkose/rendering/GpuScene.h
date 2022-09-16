@@ -1,5 +1,7 @@
 #pragma once
 
+#include "asset/MaterialAsset.h"
+#include "asset/StaticMeshAsset.h"
 #include "core/Handle.h"
 #include "core/parallel/TaskGraph.h"
 #include "rendering/RenderPipelineNode.h"
@@ -69,12 +71,17 @@ public:
     // TODO: Unregister light!
 
     StaticMeshHandle registerStaticMesh(std::shared_ptr<StaticMesh>);
+    StaticMeshHandle registerStaticMesh(StaticMeshAsset*);
     void unregisterStaticMesh(StaticMeshHandle);
 
     [[nodiscard]] MaterialHandle registerMaterial(Material&);
+    [[nodiscard]] MaterialHandle registerMaterial(MaterialAsset*);
+    //[[nodiscard]] MaterialHandle registerMaterial(MaterialAssetRaw*); TODO!
     void unregisterMaterial(MaterialHandle);
 
     [[nodiscard]] TextureHandle registerMaterialTexture(Material::TextureDescription&);
+    [[nodiscard]] TextureHandle registerMaterialTexture(MaterialInput*, /*MaterialTextureFallback const&*/ Texture* fallback);
+    //[[nodiscard]] TextureHandle registerMaterialTexture(MaterialInputRaw*); TODO!
     [[nodiscard]] TextureHandle registerTexture(std::unique_ptr<Texture>&&);
     [[nodiscard]] TextureHandle registerTextureSlot();
     void updateTexture(TextureHandle, std::unique_ptr<Texture>&&);
@@ -133,6 +140,7 @@ private:
     uint32_t m_nextFreeVertexIndex { 0 };
 
     struct ManagedStaticMesh {
+        StaticMeshAsset* staticMeshAsset {};
         std::shared_ptr<StaticMesh> staticMesh {};
         uint64_t referenceCount { 0 };
     };

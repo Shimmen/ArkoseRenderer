@@ -8,8 +8,14 @@
 #include "MaterialAsset_generated.h"
 
 using BlendMode = Arkose::Asset::BlendMode;
+using WrapMode = Arkose::Asset::WrapMode;
+using WrapModes = Arkose::Asset::WrapModes;
+using ImageFilter = Arkose::Asset::ImageFilter;
+
+using MaterialInputRaw = Arkose::Asset::MaterialInput;
 using MaterialInput = Arkose::Asset::MaterialInputT;
 
+using MaterialAssetRaw = Arkose::Asset::MaterialAsset;
 class MaterialAsset : public Arkose::Asset::MaterialAssetT {
 public:
     MaterialAsset();

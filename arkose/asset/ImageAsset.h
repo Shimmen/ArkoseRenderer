@@ -9,6 +9,9 @@
 
 class StreamedImageAsset;
 
+using ImageFormat = Arkose::Asset::ImageFormat;
+using ColorSpace = Arkose::Asset::ColorSpace;
+
 class ImageAsset: public Arkose::Asset::ImageAssetT {
 public:
     ImageAsset();

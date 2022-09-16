@@ -1,5 +1,8 @@
 #include "GpuScene.h"
 
+#include "asset/ImageAsset.h"
+#include "asset/MaterialAsset.h"
+#include "asset/StaticMeshAsset.h"
 #include "rendering/backend/Resources.h"
 #include "core/Conversion.h"
 #include "core/Logging.h"
@@ -538,6 +541,90 @@ StaticMeshHandle GpuScene::registerStaticMesh(std::shared_ptr<StaticMesh> static
     return handle;
 }
 
+StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
+{
+    // TODO: Maybe do some kind of caching here, and if we're trying to add the same mesh twice just ignore it and reuse the exisiting
+
+    SCOPED_PROFILE_ZONE();
+
+    // Make a runtime static mesh from the asset type
+
+    // TODO: Stop using shared_ptr!
+    auto staticMesh = std::make_shared<StaticMesh>(staticMeshAsset);
+    for (auto& lodAsset : staticMeshAsset->lods) {
+
+        staticMesh->m_lods.push_back(StaticMeshLOD());
+        StaticMeshLOD& lod = staticMesh->m_lods.back();
+
+        lod.boundingBox = ark::aabb3(vec3(lodAsset->bounding_box.min().x(), lodAsset->bounding_box.min().y(), lodAsset->bounding_box.min().z()),
+                                     vec3(lodAsset->bounding_box.max().x(), lodAsset->bounding_box.max().y(), lodAsset->bounding_box.max().z()));
+        lod.boundingSphere = geometry::Sphere(vec3(lodAsset->bounding_sphere.center().x(), lodAsset->bounding_sphere.center().y(), lodAsset->bounding_sphere.center().z()),
+                                              lodAsset->bounding_sphere.radius());
+
+        lod.physicsShape = PhysicsShapeHandle();
+
+        for (auto& segmentAsset : lodAsset->mesh_segments) {
+
+            lod.meshSegments.push_back(StaticMeshSegment());
+            StaticMeshSegment& segment = lod.meshSegments.back();
+
+            // TODO: We don't want to copy over all this data, instead we want to not keep any bulk data in the runtime version
+            // TODO: As step one, we can at least avoid copying here and just do it from the source asset on demand for GPU upload
+
+            segment.positions.reserve(segmentAsset->positions.size());
+            for (Arkose::Asset::Vec3 pos : segmentAsset->positions) {
+                segment.positions.emplace_back(pos.x(), pos.y(), pos.z());
+            }
+
+            segment.texcoord0s.reserve(segmentAsset->texcoord0s.size());
+            for (Arkose::Asset::Vec2 texcoord0 : segmentAsset->texcoord0s) {
+                segment.texcoord0s.emplace_back(texcoord0.x(), texcoord0.y());
+            }
+
+            segment.normals.reserve(segmentAsset->normals.size());
+            for (Arkose::Asset::Vec3 norm : segmentAsset->normals) {
+                segment.normals.emplace_back(norm.x(), norm.y(), norm.z());
+            }
+
+            segment.tangents.reserve(segmentAsset->tangents.size());
+            for (Arkose::Asset::Vec4 tang : segmentAsset->tangents) {
+                segment.tangents.emplace_back(tang.x(), tang.y(), tang.z(), tang.w());
+                //ARKOSE_LOG(Info, "tang = {{ {}, {}, {}, {} }}", tang.x(), tang.y(), tang.z(), tang.w());
+            }
+
+            // We always use 32-bit indices so it's safe to copy over directly
+            segment.indices = segmentAsset->indices;
+
+            ARKOSE_ASSERT(segmentAsset->material.type == Arkose::Asset::MaterialIndirection::path);
+            std::string const& materialAssetPath = *segmentAsset->material.Aspath();
+            MaterialAsset* materialAsset = MaterialAsset::loadFromArkmat(materialAssetPath);
+            segment.material = registerMaterial(materialAsset);
+
+            segment.blas = nullptr; // will be created on demand
+
+        }
+    }
+
+    auto managedStaticMesh = ManagedStaticMesh { .staticMesh = staticMesh,
+                                                 .referenceCount = 1 };
+
+    StaticMeshHandle handle;
+    if (m_managedStaticMeshFreeList.size() > 0) {
+
+        handle = StaticMeshHandle(m_managedStaticMeshFreeList.back());
+        m_managedStaticMeshFreeList.pop_back();
+
+        m_managedStaticMeshes[handle.index()] = managedStaticMesh;
+
+    } else {
+
+        handle = StaticMeshHandle(m_managedStaticMeshes.size());
+        m_managedStaticMeshes.push_back(managedStaticMesh);
+    }
+
+    return handle;
+}
+
 void GpuScene::unregisterStaticMesh(StaticMeshHandle handle)
 {
     // Do we really want to reference count this..? Or do we want some more explicit load/unload control?
@@ -632,6 +719,62 @@ MaterialHandle GpuScene::registerMaterial(Material& material)
 
     return handle;
 }
+
+MaterialHandle GpuScene::registerMaterial(MaterialAsset* materialAsset)
+{
+    SCOPED_PROFILE_ZONE();
+
+    // NOTE: A material in this context is very lightweight (for now) so we don't cache them
+
+    // Register textures / material inputs
+    TextureHandle baseColor = registerMaterialTexture(materialAsset->base_color.get(), m_magentaTexture.get());
+    TextureHandle emissive = registerMaterialTexture(materialAsset->emissive_color.get(), m_blackTexture.get());
+    TextureHandle normalMap = registerMaterialTexture(materialAsset->normal_map.get(), m_normalMapBlueTexture.get());
+    TextureHandle metallicRoughness = registerMaterialTexture(materialAsset->material_properties.get(), m_blackTexture.get());
+
+    ShaderMaterial shaderMaterial {};
+
+    shaderMaterial.baseColor = baseColor.indexOfType<int>();
+    shaderMaterial.normalMap = normalMap.indexOfType<int>();
+    shaderMaterial.metallicRoughness = metallicRoughness.indexOfType<int>();
+    shaderMaterial.emissive = emissive.indexOfType<int>();
+
+    auto translateBlendModeToShaderMaterial = [](BlendMode blendMode) -> int {
+        switch (blendMode) {
+        case BlendMode::Opaque:
+            return BLEND_MODE_OPAQUE;
+        case BlendMode::Masked:
+            return BLEND_MODE_MASKED;
+        case BlendMode::Translucent:
+            return BLEND_MODE_TRANSLUCENT;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+    };
+
+    shaderMaterial.blendMode = translateBlendModeToShaderMaterial(materialAsset->blend_mode);
+    shaderMaterial.maskCutoff = materialAsset->mask_cutoff;
+
+    uint64_t materialIdx = m_managedMaterials.size();
+    if (materialIdx >= MaxSupportedSceneMaterials) {
+        ARKOSE_LOG(Fatal, "Ran out of managed scene materials, exiting.");
+    }
+
+    auto handle = MaterialHandle(materialIdx);
+
+    m_managedMaterials.push_back(ManagedMaterial { .shaderMaterial = shaderMaterial,
+                                                   .referenceCount = 1 });
+
+    m_pendingMaterialUpdates.push_back(handle.indexOfType<uint32_t>());
+
+    return handle;
+}
+
+//MaterialHandle GpuScene::registerMaterial(MaterialAssetRaw* materialAsset)
+//{
+//    SCOPED_PROFILE_ZONE();
+//    ASSERT_NOT_REACHED();
+//}
 
 void GpuScene::unregisterMaterial(MaterialHandle handle)
 {
@@ -749,6 +892,123 @@ TextureHandle GpuScene::registerMaterialTexture(Material::TextureDescription& de
 
     return handle;
 }
+
+TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, /*MaterialTextureFallback const& fallback*/ Texture* fallback)
+{
+    SCOPED_PROFILE_ZONE();
+
+    // TODO: Cache on material inputs!
+
+    TextureHandle handle = registerTextureSlot();
+
+    if (input == nullptr) {
+        updateTextureUnowned(handle, fallback);
+        return handle;
+    }
+
+    ARKOSE_ASSERT(input->image.type == Arkose::Asset::ImageIndirection::path);
+    std::string const& imageAssetPath = *input->image.Aspath();
+
+    // TODO: Async load the image!
+    // TODO: Load for streaming? I.e. don't unpack
+    ImageAsset* imageAsset = ImageAsset::loadFromArkimg(imageAssetPath);
+
+    if (imageAsset == nullptr) {
+        updateTextureUnowned(handle, fallback);
+        return handle;
+    }
+
+    // TODO: Handle 2D arrays & 3D textures here too
+    ARKOSE_ASSERT(imageAsset->depth == 1);
+
+    auto translateImageFormat = [](ImageFormat imageFormat, ColorSpace colorSpace) -> Texture::Format {
+        bool sRGB = colorSpace == ColorSpace::sRGB_encoded;
+        switch (imageFormat) {
+        case ImageFormat::RGBA8:
+            return sRGB ? Texture::Format::sRGBA8 : Texture::Format::RGBA8;
+        default:
+            ASSERT_NOT_REACHED();
+            return Texture::Format::Unknown;
+        }
+    };
+
+    auto translateImageMinFilter = [](ImageFilter minFilter) -> Texture::MinFilter {
+        switch (minFilter) {
+        case ImageFilter::Nearest:
+            return Texture::MinFilter::Nearest;
+        case ImageFilter::Linear:
+            return Texture::MinFilter::Linear;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+    };
+
+    auto translateImageMagFilter = [](ImageFilter magFilter) -> Texture::MagFilter {
+        switch (magFilter) {
+        case ImageFilter::Nearest:
+            return Texture::MagFilter::Nearest;
+        case ImageFilter::Linear:
+            return Texture::MagFilter::Linear;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+    };
+
+    auto translateImageWrapMode = [](WrapMode wrapMode) -> Texture::WrapMode {
+        switch (wrapMode) {
+        case WrapMode::Repeat:
+            return Texture::WrapMode::Repeat;
+        case WrapMode::MirroredRepeat:
+            return Texture::WrapMode::MirroredRepeat;
+        case WrapMode::ClampToEdge:
+            return Texture::WrapMode::ClampToEdge;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+    };
+
+    auto translateImageMipmapMode = [](ImageFilter mipFilter, bool useMipmap) -> Texture::Mipmap {
+        if (useMipmap) {
+            switch (mipFilter) {
+            case ImageFilter::Nearest:
+                return Texture::Mipmap::Nearest;
+            case ImageFilter::Linear:
+                return Texture::Mipmap::Linear;
+            default:
+                ASSERT_NOT_REACHED();
+            }
+        } else {
+            return Texture::Mipmap::None;
+        }
+    };
+
+    std::unique_ptr<Texture> texture = m_backend.createTexture(Texture::Description {
+        .type = Texture::Type::Texture2D,
+        .arrayCount = 1,
+        .extent = { imageAsset->width, imageAsset->height, imageAsset->depth },
+        .format = translateImageFormat(imageAsset->format, imageAsset->color_space),
+        .filter = Texture::Filters(translateImageMinFilter(input->min_filter),
+                                   translateImageMagFilter(input->mag_filter)),
+        .wrapMode = Texture::WrapModes(translateImageWrapMode(input->wrap_modes.u()),
+                                       translateImageWrapMode(input->wrap_modes.v()),
+                                       translateImageWrapMode(input->wrap_modes.w())),
+        .mipmap = translateImageMipmapMode(input->mip_filter, input->use_mipmapping),
+        .multisampling = Texture::Multisampling::None });
+
+    texture->setData(imageAsset->pixel_data.data(), imageAsset->pixel_data.size());
+    texture->setName("Texture:" + imageAssetPath);
+
+    m_managedTexturesVramUsage += texture->sizeInMemory();
+    updateTexture(handle, std::move(texture));
+
+    return handle;
+}
+
+//TextureHandle GpuScene::registerMaterialTexture(MaterialInputRaw* input)
+//{
+//    SCOPED_PROFILE_ZONE();
+//    ASSERT_NOT_REACHED();
+//}
 
 TextureHandle GpuScene::registerTexture(std::unique_ptr<Texture>&& texture)
 {

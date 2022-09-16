@@ -1,5 +1,6 @@
 #include "Scene.h"
 
+#include "asset/StaticMeshAsset.h"
 #include "core/Assert.h"
 #include "rendering/GpuScene.h"
 #include "scene/camera/Camera.h"
@@ -152,6 +153,18 @@ std::vector<StaticMeshInstance*> Scene::loadMeshes(const std::string& filePath)
     }
 
     return instances;
+}
+
+StaticMeshInstance& Scene::addMesh(StaticMeshAsset* staticMesh, Transform transform)
+{
+    StaticMeshHandle staticMeshHandle = gpuScene().registerStaticMesh(staticMesh);
+    StaticMeshInstance& instance = createStaticMeshInstance(staticMeshHandle, Transform());
+
+    if (hasPhysicsScene()) {
+        // TODO!
+    }
+
+    return instance;
 }
 
 void Scene::unloadAllMeshes()

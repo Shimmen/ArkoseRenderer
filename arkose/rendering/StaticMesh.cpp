@@ -1,6 +1,12 @@
 #include "StaticMesh.h"
 
+#include "asset/StaticMeshAsset.h"
 #include "rendering/GpuScene.h"
+
+StaticMesh::StaticMesh(StaticMeshAsset* asset)
+    : m_asset(asset)
+{
+}
 
 size_t StaticMeshSegment::vertexCount() const
 {

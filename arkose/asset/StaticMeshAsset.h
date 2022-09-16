@@ -10,6 +10,7 @@
 using StaticMeshSegmentAsset = Arkose::Asset::StaticMeshSegmentT;
 using StaticMeshLODAsset = Arkose::Asset::StaticMeshLODT;
 
+using StaticMeshAssetRaw = Arkose::Asset::StaticMeshAsset;
 class StaticMeshAsset : public Arkose::Asset::StaticMeshAssetT {
 public:
     StaticMeshAsset();

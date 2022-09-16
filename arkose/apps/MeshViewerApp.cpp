@@ -425,16 +425,13 @@ void MeshViewerApp::loadMeshWithDialog()
         std::string openPath = maybePath.value();
         ARKOSE_LOG(Info, "Loading mesh from file '{}'", openPath);
 
-        // TODO: Load the static mesh asset into the scene & gpu-scene!
-        //       Keep a reference to the *asset*, but not the runtime mesh
-
         StaticMeshAsset* staticMesh = StaticMeshAsset::loadFromArkmsh(openPath);
         if (staticMesh != nullptr) {
             m_target = staticMesh;
-        }
 
-        //m_scene->unloadAllMeshes();
-        //m_targets = m_scene->loadMeshes(openPath);
+            m_scene->unloadAllMeshes();
+            m_scene->addMesh(staticMesh);
+        }
     }
 }
 
