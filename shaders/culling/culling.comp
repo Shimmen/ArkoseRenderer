@@ -17,7 +17,8 @@ layout(set = 0, binding = 5) writeonly buffer MaskedDrawables { ShaderDrawable m
 layout(set = 0, binding = 6) writeonly buffer MaskedDrawCmds  { IndexedDrawCmd maskedDrawCmds[]; };
 layout(set = 0, binding = 7)           buffer MaskedCount     { uint maskedCount; };
 
-NAMED_UNIFORMS(pushConstants,
+NAMED_UNIFORMS(constants,
+    bool frustumCull;
     uint numInputDrawables;
 )
 
@@ -49,14 +50,14 @@ layout(local_size_x = 64, local_size_y = 1) in;
 void main()
 {
     const uint objectIdx = gl_GlobalInvocationID.x;
-    if (objectIdx >= pushConstants.numInputDrawables)
+    if (objectIdx >= constants.numInputDrawables)
         return;
 
     IndirectShaderDrawable inputDrawable = inputDrawables[objectIdx];
 
     mat4 transform = inputDrawable.drawable.worldFromLocal;
     vec4 transformedSphere = transformSphere(inputDrawable.localBoundingSphere, transform);
-    if (!sphereIsIncludedInFrustum(transformedSphere))
+    if (constants.frustumCull && !sphereIsIncludedInFrustum(transformedSphere))
         return;
 
     IndexedDrawCmd cmd;

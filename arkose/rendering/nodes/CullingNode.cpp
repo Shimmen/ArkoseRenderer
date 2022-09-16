@@ -9,6 +9,14 @@ using uint = uint32_t;
 #include "IndirectData.h"
 #include "LightData.h"
 
+void CullingNode::drawGui()
+{
+    if (ImGui::TreeNode("Debug##culling")) {
+        ImGui::Checkbox("Frustum cull", &m_frustumCull);
+        ImGui::TreePop();
+    }
+}
+
 RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Registry& reg)
 {
     // todo: maybe default to smaller, and definitely actually grow when needed!
@@ -110,6 +118,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
         cmdList.setComputeState(cullingState);
         cmdList.bindSet(cullingBindingSet, 0);
         cmdList.setNamedUniform<uint32_t>("numInputDrawables", static_cast<uint32_t>(numInputDrawables));
+        cmdList.setNamedUniform<bool>("frustumCull", m_frustumCull);
         cmdList.dispatch(Extent3D(static_cast<uint32_t>(numInputDrawables), 1, 1), Extent3D(64, 1, 1));
 
         // It would be nice if we could do GPU readback from last frame's count buffer (on the other hand, we do have renderdoc for this)
