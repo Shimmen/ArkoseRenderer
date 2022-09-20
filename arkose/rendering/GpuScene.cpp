@@ -547,6 +547,10 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
 
     SCOPED_PROFILE_ZONE();
 
+    if (staticMeshAsset == nullptr) {
+        return StaticMeshHandle();
+    }
+
     // Make a runtime static mesh from the asset type
 
     // TODO: Stop using shared_ptr!

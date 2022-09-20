@@ -157,6 +157,8 @@ std::vector<StaticMeshInstance*> Scene::loadMeshes(const std::string& filePath)
 
 StaticMeshInstance& Scene::addMesh(StaticMeshAsset* staticMesh, Transform transform)
 {
+    ARKOSE_ASSERT(staticMesh != nullptr);
+
     StaticMeshHandle staticMeshHandle = gpuScene().registerStaticMesh(staticMesh);
     StaticMeshInstance& instance = createStaticMeshInstance(staticMeshHandle, Transform());
 
