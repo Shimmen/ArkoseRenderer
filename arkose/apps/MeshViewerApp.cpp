@@ -1,7 +1,7 @@
 #include "MeshViewerApp.h"
 
-#include "asset/AssetImporter.h"
 #include "asset/MaterialAsset.h"
+#include "asset/import/AssetImporter.h"
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/FinalNode.h"

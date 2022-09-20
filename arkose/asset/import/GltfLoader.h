@@ -1,10 +1,10 @@
 #pragma once
 
 #include "core/Assert.h"
-#include "asset/AssetImporter.h"
 #include "asset/ImageAsset.h"
 #include "asset/MaterialAsset.h"
 #include "asset/StaticMeshAsset.h"
+#include "asset/import/AssetImporter.h"
 #include "scene/Transform.h"
 #include <string>
 #include <memory>
