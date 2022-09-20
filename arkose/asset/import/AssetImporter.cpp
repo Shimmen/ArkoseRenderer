@@ -22,6 +22,14 @@ ImportResult AssetImporter::importAsset(std::string_view assetFilePath, std::str
     return ImportResult();
 }
 
+static Arkose::Asset::PathT createAssetPath(std::string_view assetFilePath)
+{
+    Arkose::Asset::PathT path {};
+    path.path = std::string(assetFilePath);
+
+    return path;
+}
+
 ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::string_view targetDirectory)
 {
     FileIO::ensureDirectory(std::string(targetDirectory));
@@ -56,7 +64,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
                 int gltfIdx = materialInput->user_data.integer();
                 ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < result.images.size());
                 auto& image = result.images[gltfIdx];
-                materialInput->image.Set(std::string(image->assetFilePath()));
+                materialInput->image.Set(createAssetPath(image->assetFilePath()));
             }
         };
 
@@ -84,7 +92,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
                     int gltfIdx = meshSegment->user_data.integer();
                     ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < result.materials.size());
                     auto& material = result.materials[gltfIdx];
-                    meshSegment->material.Set(std::string(material->assetFilePath()));
+                    meshSegment->material.Set(createAssetPath(material->assetFilePath()));
                 }
             }
         }
@@ -92,8 +100,8 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         std::string fileName = std::format("staticmesh{:04}", unnamedMeshIdx++);
         std::string targetFilePath = std::format("{}/{}.arkmsh", targetDirectory, fileName);
 
-        // TODO: Write to json when importing!
-        staticMesh->writeToArkmsh(targetFilePath);
+        // TODO: Write to json when importing! It's currently super slow with all the data we have, but if we separate out the core data it will be fine.
+        staticMesh->writeToArkmsh(targetFilePath, AssetStorage::Binary);
     }
 
     return result;

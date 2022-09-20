@@ -27,7 +27,7 @@ enum ImageFilter : byte {
 
 union ImageIndirection {
     asset: ImageAsset, // asset directly
-    path: string, // path to asset
+    path: Path, // path to asset
 }
 
 table MaterialInput {

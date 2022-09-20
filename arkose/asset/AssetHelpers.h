@@ -12,6 +12,6 @@ namespace AssetHelpers {
 
 bool isValidAssetPath(std::string_view assetPath, std::string_view extensionWithoutDot);
 
-std::unique_ptr<flatbuffers::Parser> createMaterialAssetParser();
+std::unique_ptr<flatbuffers::Parser> createAssetRuntimeParser(std::string_view schemaFilename);
 
 }

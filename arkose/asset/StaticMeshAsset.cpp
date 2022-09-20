@@ -10,6 +10,7 @@
 namespace {
     static std::mutex s_staticMeshAssetCacheMutex {};
     static std::unordered_map<std::string, std::unique_ptr<StaticMeshAsset>> s_staticMeshAssetCache {};
+    static std::unique_ptr<flatbuffers::Parser> s_staticMeshAssetParser {};
 }
 
 StaticMeshAsset::StaticMeshAsset() = default;
@@ -64,7 +65,7 @@ StaticMeshAsset* StaticMeshAsset::loadFromArkmsh(std::string const& filePath)
     }
 }
 
-bool StaticMeshAsset::writeToArkmsh(std::string_view filePath)
+bool StaticMeshAsset::writeToArkmsh(std::string_view filePath, AssetStorage assetStorage)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -88,7 +89,26 @@ bool StaticMeshAsset::writeToArkmsh(std::string_view filePath)
     uint8_t* data = builder.GetBufferPointer();
     size_t size = static_cast<size_t>(builder.GetSize());
 
-    FileIO::writeBinaryDataToFile(std::string(filePath), data, size);
+    switch (assetStorage) {
+    case AssetStorage::Binary:
+        FileIO::writeBinaryDataToFile(std::string(filePath), data, size);
+        break;
+    case AssetStorage::Json: {
+
+        if (not s_staticMeshAssetParser) {
+            s_staticMeshAssetParser = AssetHelpers::createAssetRuntimeParser("StaticMeshAsset.fbs");
+        }
+
+        std::string jsonText;
+        if (not flatbuffers::GenerateText(*s_staticMeshAssetParser, data, &jsonText)) {
+            ARKOSE_LOG(Error, "Failed to generate json text for static mesh asset");
+            return false;
+        }
+
+        FileIO::writeTextDataToFile(std::string(filePath), jsonText);
+
+    } break;
+    }
 
     return true;
 }

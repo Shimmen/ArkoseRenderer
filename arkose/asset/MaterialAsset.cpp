@@ -9,6 +9,7 @@
 namespace {
     static std::mutex s_materialAssetCacheMutex {};
     static std::unordered_map<std::string, std::unique_ptr<MaterialAsset>> s_materialAssetCache {};
+    static std::unique_ptr<flatbuffers::Parser> s_materialAssetParser {};
 }
 
 MaterialAsset::MaterialAsset() = default;
@@ -92,15 +93,19 @@ bool MaterialAsset::writeToArkmat(std::string_view filePath, AssetStorage assetS
         FileIO::writeBinaryDataToFile(std::string(filePath), data, size);
         break;
     case AssetStorage::Json: {
-        // NOTE: This is completely untested!
-        ASSERT_NOT_REACHED();
-        /*
-        std::string jsonString;
-        auto parser = AssetHelpers::createMaterialAssetParser();
-        if (flatbuffers::GenerateText(*parser, data, &jsonString)) {
-            FileIO::writeTextDataToFile(std::string(filePath) + ".json", jsonString);
+
+        if (not s_materialAssetParser) {
+            s_materialAssetParser = AssetHelpers::createAssetRuntimeParser("MaterialAsset.fbs");
         }
-        */
+
+        std::string jsonText;
+        if (not flatbuffers::GenerateText(*s_materialAssetParser, data, &jsonText)) {
+            ARKOSE_LOG(Error, "Failed to generate json text for material asset");
+            return false;
+        }
+
+        FileIO::writeTextDataToFile(std::string(filePath), jsonText);
+
     } break;
     }
 

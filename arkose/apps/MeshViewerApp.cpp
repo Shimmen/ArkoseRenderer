@@ -195,7 +195,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
 
         // Only handle non-packaged up assets here, i.e. using a path, not a direct assets as it would be in a packed case
         ARKOSE_ASSERT(segment->material.type == Arkose::Asset::MaterialIndirection::path);
-        std::string& materialPath = *segment->material.Aspath();
+        std::string& materialPath = segment->material.Aspath()->path;
 
         ImGui::BeginDisabled();
         ImGui::InputText("Material asset", materialPath.data(), materialPath.length(), ImGuiInputTextFlags_ReadOnly);
@@ -218,7 +218,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
 
                         // Only handle non-packaged up assets here, i.e. using a path, not a direct assets as it would be in a packed case
                         ARKOSE_ASSERT(materialInput->image.type == Arkose::Asset::ImageIndirection::path);
-                        std::string& imagePath = *materialInput->image.Aspath();
+                        std::string& imagePath = materialInput->image.Aspath()->path;
 
                         ImGui::BeginDisabled();
                         ImGui::InputText("Image asset", imagePath.data(), imagePath.length(), ImGuiInputTextFlags_ReadOnly);

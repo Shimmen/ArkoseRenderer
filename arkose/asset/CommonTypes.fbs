@@ -41,3 +41,10 @@ struct Sphere {
 struct UserData {
     integer: int;
 }
+
+// This simple type is required for our asset indirections where we can point to an asset or a path. Specifically,
+// for json having a string or struct in a union is not supported so this is our workaround. We might also find it
+// useful in the future that we can add more members here, e.g. bool for absolute or relative paths.
+table Path {
+    path: string;
+}

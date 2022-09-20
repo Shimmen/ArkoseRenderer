@@ -1,7 +1,9 @@
 #include "AssetHelpers.h"
 
 #include "core/Assert.h"
+#include "core/Logging.h"
 #include "utility/FileIO.h"
+#include <fmt/format.h>
 
 bool AssetHelpers::isValidAssetPath(std::string_view assetPath, std::string_view extensionWithoutDot)
 {
@@ -23,18 +25,31 @@ bool AssetHelpers::isValidAssetPath(std::string_view assetPath, std::string_view
     return true;
 }
 
-std::unique_ptr<flatbuffers::Parser> AssetHelpers::createMaterialAssetParser()
+std::unique_ptr<flatbuffers::Parser> AssetHelpers::createAssetRuntimeParser(std::string_view schemaFilename)
 {
-    //constexpr const char* FlatbuffersDirectory = "arkose/asset/";
-    //const char* IncludeDirectories[] = { FlatbuffersDirectory };
+    // TODO: Set this from CMake depending on where we copy files to during pre-build!
+    constexpr const char* RuntimeSchemaDirectory = "schema";
 
-    //constexpr const char* MaterialAssetSchemaPath = "arkose/asset/MaterialAsset.fbs";
-    constexpr const char* MaterialAssetSchemaPath = "MaterialAsset.fbs";
-    std::string schema = FileIO::readEntireFile(MaterialAssetSchemaPath).value();
+    // Relative to the schema asset we're loading the include directory is the current one
+    constexpr const char* schemaDirRelativeToSource = "";
+    const char* includePaths[] = { schemaDirRelativeToSource, nullptr };
+
+    std::string schemaFilePath = fmt::format("{}/{}", RuntimeSchemaDirectory, schemaFilename);
+    auto maybeSchema = FileIO::readEntireFile(schemaFilePath);
+    if (not maybeSchema.has_value()) {
+        ARKOSE_LOG(Error, "Failed to read flatbuffers schema file '{}' at path '{}'", schemaFilename, schemaFilePath);
+        return nullptr;
+    }
+
+    std::string const& schemaString = maybeSchema.value();
 
     auto parser = std::make_unique<flatbuffers::Parser>();
-    bool success = parser->Parse(schema.data(), nullptr /*IncludeDirectories*/, MaterialAssetSchemaPath);
+    bool parseSuccess = parser->Parse(schemaString.data(), includePaths, schemaFilePath.data());
 
-    ARKOSE_ASSERT(success);
+    if (not parseSuccess) {
+        ARKOSE_LOG(Error, "Error trying to parse flatbuffers schema:\n\t{}", parser->error_);
+        return nullptr;
+    }
+
     return parser;
 }

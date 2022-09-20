@@ -20,7 +20,7 @@ public:
     // TODO: Figure out how we want to return this! Basic type, e.g. StaticMeshAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
     static StaticMeshAsset* loadFromArkmsh(std::string const& filePath);
 
-    bool writeToArkmsh(std::string_view filePath);
+    bool writeToArkmsh(std::string_view filePath, AssetStorage);
 
 private:
     // Construct a static mesh asset from a loaded flatbuffer material asset file

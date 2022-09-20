@@ -596,7 +596,7 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
             segment.indices = segmentAsset->indices;
 
             ARKOSE_ASSERT(segmentAsset->material.type == Arkose::Asset::MaterialIndirection::path);
-            std::string const& materialAssetPath = *segmentAsset->material.Aspath();
+            std::string const& materialAssetPath = segmentAsset->material.Aspath()->path;
             MaterialAsset* materialAsset = MaterialAsset::loadFromArkmat(materialAssetPath);
             segment.material = registerMaterial(materialAsset);
 
@@ -907,7 +907,7 @@ TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, /*Material
     }
 
     ARKOSE_ASSERT(input->image.type == Arkose::Asset::ImageIndirection::path);
-    std::string const& imageAssetPath = *input->image.Aspath();
+    std::string const& imageAssetPath = input->image.Aspath()->path;
 
     // TODO: Async load the image!
     // TODO: Load for streaming? I.e. don't unpack

@@ -28,20 +28,21 @@ add_subdirectory(arklib)
 ### Build flatbuffers schemas ####
 ##################################
 
-set(ARKOSE_FLATBUFFERS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/arkose/asset")
 function(build_flatbuffers_schema fbs_filename)
   string(REPLACE ".fbs" "_generated.h" gen_filename ${fbs_filename})
+  get_filename_component(output_dir ${gen_filename} DIRECTORY)
   add_custom_command(
-    DEPENDS "${ARKOSE_FLATBUFFERS_DIR}/${fbs_filename}"
-    OUTPUT  "${ARKOSE_FLATBUFFERS_DIR}/${gen_filename}"
-    COMMAND flatc --cpp --scoped-enums --gen-object-api -o ${ARKOSE_FLATBUFFERS_DIR} "${ARKOSE_FLATBUFFERS_DIR}/${fbs_filename}"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${fbs_filename}"
+    OUTPUT  "${CMAKE_CURRENT_SOURCE_DIR}/${gen_filename}"
+    COMMAND flatc --cpp --scoped-enums --gen-object-api -o "${CMAKE_CURRENT_SOURCE_DIR}/${output_dir}" "${CMAKE_CURRENT_SOURCE_DIR}/${fbs_filename}"
+    COMMENT "Compiling flatbuffers schema file '${fbs_filename}'"
     VERBATIM)
 endfunction()
 
-build_flatbuffers_schema("CommonTypes.fbs")
-build_flatbuffers_schema("ImageAsset.fbs")
-build_flatbuffers_schema("MaterialAsset.fbs")
-build_flatbuffers_schema("StaticMeshAsset.fbs")
+build_flatbuffers_schema("arkose/asset/CommonTypes.fbs")
+build_flatbuffers_schema("arkose/asset/ImageAsset.fbs")
+build_flatbuffers_schema("arkose/asset/MaterialAsset.fbs")
+build_flatbuffers_schema("arkose/asset/StaticMeshAsset.fbs")
 
 ##################################
 ###### MAIN TARGET: ARKOSE #######
@@ -230,6 +231,22 @@ endif()
 ##################################
 #### CUSTOM BUILD STEPS ETC. #####
 ##################################
+
+# Make flatbuffers schemas accessible in runtime relative to the exe-location
+
+set(ARKOSE_FLATBUFFERS_RUNTIME_DIR "${CMAKE_CURRENT_BINARY_DIR}/schema")
+
+add_custom_command(TARGET ArkoseRenderer PRE_BUILD
+  COMMAND ${CMAKE_COMMAND} -E make_directory ${ARKOSE_FLATBUFFERS_RUNTIME_DIR})
+
+file(GLOB_RECURSE ARKOSE_FLATBUFFERS_SCHEMA_FILES "arkose/*.fbs")
+foreach(FLATBUFFERS_SCHEMA_FILE IN LISTS ARKOSE_FLATBUFFERS_SCHEMA_FILES)
+    add_custom_command(TARGET ArkoseRenderer PRE_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FLATBUFFERS_SCHEMA_FILE} ${ARKOSE_FLATBUFFERS_RUNTIME_DIR}
+        COMMENT "Copying flatbuffers schema file '${CurrentHeaderFile}' at pre-build")
+endforeach()
+
+# Make assets & shaders accessible in runtime relative to the exe-location
 
 set(ARKOSE_ASSET_DIR_NAME "assets")
 set(ARKOSE_SHADER_DIR_NAME "shaders")

@@ -27,7 +27,7 @@ table PhysicsData {
 
 union MaterialIndirection {
     asset: MaterialAsset, // asset directly
-    path: string, // path to asset
+    path: Path, // path to asset
 }
 
 table StaticMeshSegment {
