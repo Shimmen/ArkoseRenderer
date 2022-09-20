@@ -54,7 +54,6 @@ set(ARKOSE_SOURCES
     arkose/apps/MeshViewerApp.cpp
     arkose/apps/ShowcaseApp.cpp
     arkose/asset/AssetHelpers.cpp
-    arkose/asset/AssetImporter.cpp
     arkose/asset/CommonTypes_generated.h
     arkose/asset/ImageAsset.cpp
     arkose/asset/ImageAsset_generated.h
@@ -63,6 +62,7 @@ set(ARKOSE_SOURCES
     arkose/asset/StaticMeshAsset.cpp
     arkose/asset/StaticMeshAsset_generated.h
     arkose/asset/TextureCompressor.cpp
+    arkose/asset/import/AssetImporter.cpp
     arkose/asset/import/GltfLoader.cpp
     arkose/core/math/Fibonacci.cpp
     arkose/core/math/Frustum.cpp
