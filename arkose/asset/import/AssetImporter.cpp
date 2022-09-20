@@ -3,6 +3,7 @@
 #include "asset/import/GltfLoader.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
+#include "core/parallel/ParallelFor.h"
 #include "utility/FileIO.h"
 
 ImportResult AssetImporter::importAsset(std::string_view assetFilePath, std::string_view targetDirectory)
@@ -36,6 +37,11 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
     GltfLoader_NEW gltfLoader {};
     ImportResult result = gltfLoader.load(std::string(gltfFilePath));
+
+    // Compress all images (the slow part of this process) in parallel
+    ParallelFor(result.images.size(), [&](size_t idx) {
+        result.images[idx]->compress();
+    });
 
     int unnamedImageIdx = 0;
     for (auto& image : result.images) {
