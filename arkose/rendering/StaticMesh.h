@@ -98,16 +98,6 @@ public:
 
     StaticMeshAsset* asset() const { return m_asset; }
 
-    void writeToFile(/* some file stream */) const;
-    void readFromFile(/* some file stream */) const;
-
-    static StaticMesh createFromFile(/* some file stream */)
-    {
-        StaticMesh staticMesh {};
-        staticMesh.readFromFile(/* some file stream */);
-        return staticMesh;
-    }
-
 private:
 
     // Optional asset that this is created from
