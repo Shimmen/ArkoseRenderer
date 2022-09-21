@@ -89,9 +89,10 @@ constexpr tquat<T> axisAngle(const tvec3<T>& axis, T angle)
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
 constexpr tquat<T> lookRotation(const tvec3<T>& forward, const tvec3<T>& tempUp)
 {
-    // TODO: Implement something like this: https://answers.unity.com/questions/467614/what-is-the-source-code-of-quaternionlookrotation.html
-    //  However, I think Unity is left-handed, so maybe not exactly like that...
-    return {};
+    tvec3<T> right = cross(forward, tempUp);
+    tvec3<T> up = cross(right, forward);
+    mat3 orientationMat = mat3(right, up, -forward);
+    return quatFromMatrix(mat4(orientationMat));
 }
 
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>

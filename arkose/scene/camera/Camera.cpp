@@ -58,12 +58,7 @@ void Camera::lookAt(const vec3& position, const vec3& target, const vec3& up)
     m_position = position;
 
     vec3 forward = normalize(target - position);
-    // TODO: Apparently I never bothered to implement lookRotation ...
-    //m_orientation = ark::lookRotation(direction, up);
-    vec3 right = cross(forward, up);
-    vec3 properUp = cross(right, forward);
-    mat3 orientationMat = mat3(right, properUp, -forward);
-    m_orientation = ark::quatFromMatrix(mat4(orientationMat));
+    m_orientation = ark::lookRotation(forward, up);
 
     setViewFromWorld(ark::lookAt(m_position, target, up));
 }
