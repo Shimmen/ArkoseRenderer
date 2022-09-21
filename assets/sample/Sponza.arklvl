@@ -1,0 +1,228 @@
+{
+  name: "ExportedLevel",
+  objects: [
+    {
+      name: "sponza",
+      transform: {
+        position: {
+          x: 0.0,
+          y: 0.0,
+          z: 0.0
+        },
+        orientation: {
+          x: 0.0,
+          y: 0.0,
+          z: 0.0,
+          w: 1.0
+        },
+        scale: {
+          x: 1.0,
+          y: 1.0,
+          z: 1.0
+        }
+      },
+      mesh_asset_type: "path",
+      mesh_asset: {
+        path: "assets/imported/Sponza/staticmesh0000.arkmsh"
+      }
+    },
+    {
+      name: "helmet",
+      transform: {
+        position: {
+          x: 0.0,
+          y: 8.5,
+          z: 0.0
+        },
+        orientation: {
+          x: 0.0,
+          y: 0.479426,
+          z: 0.0,
+          w: 0.877583
+        },
+        scale: {
+          x: 1.2,
+          y: 1.2,
+          z: 1.2
+        }
+      },
+      mesh_asset_type: "path",
+      mesh_asset: {
+        path: "assets/imported/DamagedHelmet/staticmesh0000.arkmsh"
+      }
+    }
+  ],
+  lights_type: [
+    "DirectionalLight",
+    "SpotLight",
+    "SpotLight",
+    "SpotLight"
+  ],
+  lights: [
+    {
+      name: "sun",
+      transform: {
+        position: {
+          x: 0.0,
+          y: 0.0,
+          z: 0.0
+        },
+        orientation: {
+          x: -0.452407,
+          y: -0.132559,
+          z: -0.060505,
+          w: 0.688651
+        },
+        scale: {
+          x: 1.0,
+          y: 1.0,
+          z: 1.0
+        }
+      },
+      color: {
+        x: 1.0,
+        y: 1.0,
+        z: 1.0
+      },
+      illuminance: 90000.0
+    },
+    {
+      name: "green-spot",
+      transform: {
+        position: {
+          x: 3.0,
+          y: 1.0,
+          z: 0.0
+        },
+        orientation: {
+          x: 0.086546,
+          y: 0.84545,
+          z: 0.300118,
+          w: -0.277084
+        },
+        scale: {
+          x: 1.0,
+          y: 1.0,
+          z: 1.0
+        }
+      },
+      color: {
+        x: 0.25,
+        y: 1.0,
+        z: 0.25
+      },
+      luminous_intensity: 150.0,
+      ies_profile_type: "path",
+      ies_profile: {
+        path: "assets/sample/ies/three-lobe-umbrella.ies"
+      }
+    },
+    {
+      name: "red-spot",
+      transform: {
+        position: {
+          x: 0.0,
+          y: 1.0,
+          z: 0.0
+        },
+        orientation: {
+          x: 0.0,
+          y: 0.853553,
+          z: 0.353553,
+          w: -0.0
+        },
+        scale: {
+          x: 1.0,
+          y: 1.0,
+          z: 1.0
+        }
+      },
+      color: {
+        x: 1.0,
+        y: 0.25,
+        z: 0.25
+      },
+      luminous_intensity: 150.0,
+      ies_profile_type: "path",
+      ies_profile: {
+        path: "assets/sample/ies/three-lobe-umbrella.ies"
+      }
+    },
+    {
+      name: "blue-spot",
+      transform: {
+        position: {
+          x: -3.0,
+          y: 1.0,
+          z: 0.0
+        },
+        orientation: {
+          x: -0.086546,
+          y: 0.84545,
+          z: 0.300118,
+          w: 0.277084
+        },
+        scale: {
+          x: 1.0,
+          y: 1.0,
+          z: 1.0
+        }
+      },
+      color: {
+        x: 0.25,
+        y: 0.25,
+        z: 1.0
+      },
+      luminous_intensity: 150.0,
+      ies_profile_type: "path",
+      ies_profile: {
+        path: "assets/sample/ies/three-lobe-umbrella.ies"
+      }
+    }
+  ],
+  cameras: [
+    {
+      name: "main",
+      transform: {
+        position: {
+          x: 8.84,
+          y: 5.11,
+          z: -0.83
+        },
+        orientation: {
+          x: -0.059595,
+          y: 0.696774,
+          z: 0.05789,
+          w: 0.707534
+        },
+        scale: {
+          x: 1.0,
+          y: 1.0,
+          z: 1.0
+        }
+      },
+      exposure_type: "ManualExposure",
+      exposure: {
+        f_number: 11.0,
+        shutter_speed: 0.008
+      }
+    }
+  ],
+  probe_grid: {
+    dimensions: {
+      x: 16.0,
+      y: 16.0,
+      z: 8.0
+    },
+    spacing: {
+      x: 1.375,
+      y: 0.7375,
+      z: 1.2875
+    },
+    offset: {
+      x: -10.0,
+      y: 0.6,
+      z: -4.8
+    }
+  }
+}
