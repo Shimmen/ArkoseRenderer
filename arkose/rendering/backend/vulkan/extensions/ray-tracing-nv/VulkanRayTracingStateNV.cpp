@@ -195,8 +195,11 @@ VulkanRayTracingStateNV::VulkanRayTracingStateNV(Backend& backend, ShaderBinding
     rtPipelineCreateInfo.pGroups = shaderGroups.data();
     rtPipelineCreateInfo.layout = pipelineLayout;
 
-    if (vulkanBackend.rayTracingNV().vkCreateRayTracingPipelinesNV(vulkanBackend.device(), vulkanBackend.pipelineCache(), 1, &rtPipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
-        ARKOSE_LOG(Fatal, "Error creating ray tracing pipeline");
+    {
+        SCOPED_PROFILE_ZONE_BACKEND_NAMED("vkCreateRayTracingPipelinesNV");
+        if (vulkanBackend.rayTracingNV().vkCreateRayTracingPipelinesNV(vulkanBackend.device(), vulkanBackend.pipelineCache(), 1, &rtPipelineCreateInfo, nullptr, &pipeline) != VK_SUCCESS) {
+            ARKOSE_LOG(Fatal, "Error creating ray tracing pipeline");
+        }
     }
 
     // Remove shader modules after creating the pipeline
