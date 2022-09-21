@@ -41,6 +41,7 @@ endfunction()
 
 build_flatbuffers_schema("arkose/asset/CommonTypes.fbs")
 build_flatbuffers_schema("arkose/asset/ImageAsset.fbs")
+build_flatbuffers_schema("arkose/asset/LevelAsset.fbs")
 build_flatbuffers_schema("arkose/asset/MaterialAsset.fbs")
 build_flatbuffers_schema("arkose/asset/StaticMeshAsset.fbs")
 
@@ -58,6 +59,8 @@ set(ARKOSE_SOURCES
     arkose/asset/CommonTypes_generated.h
     arkose/asset/ImageAsset.cpp
     arkose/asset/ImageAsset_generated.h
+    arkose/asset/LevelAsset.cpp
+    arkose/asset/LevelAsset_generated.h
     arkose/asset/MaterialAsset.cpp
     arkose/asset/MaterialAsset_generated.h
     arkose/asset/StaticMeshAsset.cpp

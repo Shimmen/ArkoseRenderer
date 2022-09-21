@@ -21,6 +21,13 @@ struct Vec4 {
     w: float;
 }
 
+struct Quat {
+    x: float;
+    y: float;
+    z: float;
+    w: float;
+}
+
 struct ColorRGBA {
     r: float;
     g: float;

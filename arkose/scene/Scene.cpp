@@ -68,6 +68,116 @@ void Scene::setupFromDescription(const Description& description)
     }
 }
 
+std::unique_ptr<LevelAsset> Scene::exportToLevelAsset() const
+{
+    auto levelAsset = std::make_unique<LevelAsset>();
+    levelAsset->name = "ExportedLevel";
+
+    auto translateTransform = [](Transform const& xform) -> std::unique_ptr<Arkose::Asset::TransformT> {
+        auto result = std::make_unique<Arkose::Asset::TransformT>();
+        result->position = Arkose::Asset::Vec3(xform.positionInWorld().x,
+                                               xform.positionInWorld().y,
+                                               xform.positionInWorld().z);
+        result->orientation = Arkose::Asset::Quat(xform.orientationInWorld().vec.x,
+                                                  xform.orientationInWorld().vec.y,
+                                                  xform.orientationInWorld().vec.z,
+                                                  xform.orientationInWorld().w);
+        result->scale = Arkose::Asset::Vec3(xform.localScale().x,
+                                            xform.localScale().y,
+                                            xform.localScale().z);
+        return result;
+    };
+
+    for (auto& staticMeshInstance : m_staticMeshInstances) {
+        Arkose::Asset::SceneObjectT& sceneObject = *levelAsset->objects.emplace_back(std::make_unique<Arkose::Asset::SceneObjectT>());
+
+        StaticMesh const* staticMesh = gpuScene().staticMeshForHandle(staticMeshInstance->mesh);
+        StaticMeshAsset const* staticMeshAsset = staticMesh->asset();
+
+        sceneObject.name = staticMeshInstance->name;
+        sceneObject.transform = translateTransform(staticMeshInstance->transform);
+
+        Arkose::Asset::PathT path;
+        path.path = "placeholder-path"; // staticMeshAsset->assetFilePath(); TODO!
+        sceneObject.mesh_asset.Set(path);
+    }
+
+    for (auto const& dirLight : m_directionalLights) {
+        DirectionalLightAsset dirLightAsset {};
+        
+        dirLightAsset.name = dirLight->name();
+
+        // TODO: Assume direction is not pointing straight up.
+        ark::quat orientation = ark::lookRotation(dirLight->forwardDirection(), ark::globalUp);
+        Transform transform { dirLight->position(), orientation };
+        dirLightAsset.transform = translateTransform(transform);
+
+        dirLightAsset.color = Arkose::Asset::Vec3(dirLight->color.x,
+                                                  dirLight->color.y,
+                                                  dirLight->color.z);
+        dirLightAsset.illuminance = dirLight->illuminance;
+
+        dirLightAsset.world_extent = dirLight->shadowMapWorldExtent;
+        
+        LightAsset& lightAsset = levelAsset->lights.emplace_back();
+        lightAsset.Set(dirLightAsset);
+    }
+
+    for (auto const& spotLight : m_spotLights) {
+        SpotLightAsset spotLightAsset {};
+
+        spotLightAsset.name = spotLight->name();
+
+        // TODO: Assume direction is not pointing straight up.
+        ark::quat orientation = ark::lookRotation(spotLight->forwardDirection(), ark::globalUp);
+        Transform transform { spotLight->position(), orientation };
+        spotLightAsset.transform = translateTransform(transform);
+
+        spotLightAsset.color = Arkose::Asset::Vec3(spotLight->color.x,
+                                                   spotLight->color.y,
+                                                   spotLight->color.z);
+        spotLightAsset.luminous_intensity = spotLight->luminousIntensity;
+
+        Arkose::Asset::PathT path;
+        path.path = spotLight->iesProfile().path();
+        spotLightAsset.ies_profile.Set(path);
+
+        LightAsset& lightAsset = levelAsset->lights.emplace_back();
+        lightAsset.Set(spotLightAsset);
+    }
+
+    for (auto const& [name, camera] : m_allCameras) {
+        CameraAsset& cameraAsset = *levelAsset->cameras.emplace_back(std::make_unique<CameraAsset>());
+
+        cameraAsset.name = name;
+
+        Transform transform { camera->position(), camera->orientation() };
+        cameraAsset.transform = translateTransform(transform);
+
+        // NOTE: Assumes manual exposure
+        Arkose::Asset::ManualExposureT manualExposure {};
+        manualExposure.f_number = camera->fNumber();
+        manualExposure.iso = camera->ISO();
+        manualExposure.shutter_speed = camera->shutterSpeed();
+        cameraAsset.exposure.Set(manualExposure);
+    }
+
+    if (hasProbeGrid()) {
+        levelAsset->probe_grid = std::make_unique<ProbeGridAsset>();
+        levelAsset->probe_grid->dimensions = Arkose::Asset::Vec3(static_cast<float>(probeGrid().gridDimensions.width()),
+                                                                 static_cast<float>(probeGrid().gridDimensions.height()),
+                                                                 static_cast<float>(probeGrid().gridDimensions.depth()));
+        levelAsset->probe_grid->spacing = Arkose::Asset::Vec3(probeGrid().probeSpacing.x,
+                                                              probeGrid().probeSpacing.y,
+                                                              probeGrid().probeSpacing.z);
+        levelAsset->probe_grid->offset = Arkose::Asset::Vec3(probeGrid().offsetToFirst.x,
+                                                             probeGrid().offsetToFirst.y,
+                                                             probeGrid().offsetToFirst.z);
+    }
+
+    return levelAsset;
+}
+
 Camera& Scene::addCamera(const std::string& name, bool makeDefault)
 {
     m_allCameras[name] = std::make_unique<Camera>();

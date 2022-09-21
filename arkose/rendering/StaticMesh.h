@@ -96,6 +96,8 @@ public:
     std::vector<StaticMeshLOD>& LODs(){ return m_lods; }
     const std::vector<StaticMeshLOD>& LODs() const { return m_lods; }
 
+    StaticMeshAsset* asset() const { return m_asset; }
+
     void writeToFile(/* some file stream */) const;
     void readFromFile(/* some file stream */) const;
 

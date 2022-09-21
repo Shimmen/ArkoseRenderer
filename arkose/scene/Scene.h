@@ -1,5 +1,6 @@
 #pragma once
 
+#include "asset/LevelAsset.h"
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/StaticMesh.h"
 #include "scene/camera/Camera.h"
@@ -37,6 +38,9 @@ public:
     };
 
     void setupFromDescription(const Description&);
+
+    // TODO: Temporary for the transition period, so we can get the first scene jsons out on file
+    std::unique_ptr<LevelAsset> exportToLevelAsset() const;
 
     // Scene variant accessors
 

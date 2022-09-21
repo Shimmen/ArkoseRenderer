@@ -22,6 +22,8 @@ public:
 
     bool writeToArkmsh(std::string_view filePath, AssetStorage);
 
+    std::string_view assetFilePath() const { return m_assetFilePath; }
+
 private:
     // Construct a static mesh asset from a loaded flatbuffer material asset file
     StaticMeshAsset(Arkose::Asset::StaticMeshAsset const*, std::string filePath);
