@@ -1,11 +1,10 @@
 #include "IESProfile.h"
 
-#include "rendering/backend/Resources.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "rendering/Registry.h"
+#include "rendering/backend/Resources.h"
 #include "utility/FileIO.h"
-#include "utility/Image.h"
 #include "utility/Profiling.h"
 #include <ark/vector.h>
 
@@ -72,19 +71,25 @@ std::unique_ptr<Texture> IESProfile::createLookupTexture(Backend& backend, int s
         }
     }
 
-    Image::Info info {};
-    info.width = size;
-    info.height = size;
-    info.pixelType = Image::PixelType::Grayscale;
-    info.componentType = Image::ComponentType::Float;
-    info.compressionType = Image::CompressionType::Uncompressed;
+    Texture::Description desc {
+        .type = Texture::Type::Texture2D,
+        .arrayCount = 1u,
+        .extent = { static_cast<uint32_t>(size), static_cast<uint32_t>(size), 1 },
+        .format = Texture::Format::R32F,
+        .filter = Texture::Filters::linear(),
+        .wrapMode = Texture::WrapModes::clampAllToEdge(),
+        .mipmap = Texture::Mipmap::None,
+        .multisampling = Texture::Multisampling::None
+    };
+
+    // validateTextureDescription(desc);
+    auto texture = backend.createTexture(desc);
 
     uint8_t* data = reinterpret_cast<uint8_t*>(pixels.data());
     size_t byteSize = pixels.size() * sizeof(float);
-    std::vector<uint8_t> pixelByteData { data, data + byteSize };
+    texture->setData(data, byteSize);
 
-    Image image { info, std::move(pixelByteData) };
-    return Texture::createFromImage(backend, image, false, false, Texture::WrapModes::clampAllToEdge());
+    return texture;
 }
 
 void IESProfile::parse(const std::string& path)
