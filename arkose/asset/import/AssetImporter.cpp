@@ -93,7 +93,6 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         std::string fileName = std::format("material{:04}", unnamedMaterialIdx++);
         std::string targetFilePath = std::format("{}/{}.arkmat", targetDirectory, fileName);
 
-        // TODO: Write to json when importing!
         material->writeToArkmat(targetFilePath, AssetStorage::Json);
     }
 

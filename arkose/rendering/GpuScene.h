@@ -80,7 +80,7 @@ public:
     void unregisterMaterial(MaterialHandle);
 
     [[nodiscard]] TextureHandle registerMaterialTexture(Material::TextureDescription&);
-    [[nodiscard]] TextureHandle registerMaterialTexture(MaterialInput*, /*MaterialTextureFallback const&*/ Texture* fallback);
+    [[nodiscard]] TextureHandle registerMaterialTexture(MaterialInput*, bool sRGB, Texture* fallback);
     //[[nodiscard]] TextureHandle registerMaterialTexture(MaterialInputRaw*); TODO!
     [[nodiscard]] TextureHandle registerTexture(std::unique_ptr<Texture>&&);
     [[nodiscard]] TextureHandle registerTextureSlot();

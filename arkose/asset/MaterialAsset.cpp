@@ -48,6 +48,32 @@ MaterialAsset* MaterialAsset::loadFromArkmat(std::string const& filePath)
     }
 
     void* binaryData = maybeBinaryData.value().data();
+
+    bool isValidBinaryBuffer = Arkose::Asset::MaterialAssetBufferHasIdentifier(binaryData);
+    if (not isValidBinaryBuffer) {
+
+        // See if we can parse it as json
+
+        // First check: do we at least start with a '{' character?
+        if (maybeBinaryData.value().size() == 0 || *reinterpret_cast<const char*>(binaryData) != '{') {
+            return nullptr;
+        }
+
+        std::string asciiData = FileIO::readEntireFile(filePath).value();
+
+        if (not s_materialAssetParser) {
+            s_materialAssetParser = AssetHelpers::createAssetRuntimeParser("MaterialAsset.fbs");
+        }
+
+        if (not s_materialAssetParser->ParseJson(asciiData.c_str(), filePath.c_str())) {
+            ARKOSE_LOG(Error, "Failed to parse json text for material asset:\n\t{}", s_materialAssetParser->error_);
+            return nullptr;
+        }
+
+        // Use the now filled-in builder's buffer as the binary data input
+        binaryData = s_materialAssetParser->builder_.GetBufferPointer();
+    }
+
     auto const* flatbuffersMaterialAsset = Arkose::Asset::GetMaterialAsset(binaryData);
 
     if (!flatbuffersMaterialAsset) {

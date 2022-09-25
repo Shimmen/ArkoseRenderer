@@ -165,6 +165,21 @@ ImageAsset* ImageAsset::loadFromArkimg(std::string const& filePath)
     }
 }
 
+ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
+{
+    if (AssetHelpers::isValidAssetPath(filePath, Arkose::Asset::ImageAssetExtension())) {
+        return loadFromArkimg(filePath);
+    } else {
+        std::unique_ptr<ImageAsset> newImageAsset = createFromSourceAsset(filePath);
+        {
+            SCOPED_PROFILE_ZONE_NAMED("Image cache - store source asset");
+            std::scoped_lock<std::mutex> lock { s_imageAssetCacheMutex };
+            s_imageAssetCache[filePath] = std::move(newImageAsset);
+            return s_imageAssetCache[filePath].get();
+        }
+    }
+}
+
 StreamedImageAsset ImageAsset::loadForStreaming(std::string const& filePath)
 {
     if (not AssetHelpers::isValidAssetPath(filePath, Arkose::Asset::ImageAssetExtension())) {

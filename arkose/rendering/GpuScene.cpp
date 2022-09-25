@@ -731,10 +731,10 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset* materialAsset)
     // NOTE: A material in this context is very lightweight (for now) so we don't cache them
 
     // Register textures / material inputs
-    TextureHandle baseColor = registerMaterialTexture(materialAsset->base_color.get(), m_magentaTexture.get());
-    TextureHandle emissive = registerMaterialTexture(materialAsset->emissive_color.get(), m_blackTexture.get());
-    TextureHandle normalMap = registerMaterialTexture(materialAsset->normal_map.get(), m_normalMapBlueTexture.get());
-    TextureHandle metallicRoughness = registerMaterialTexture(materialAsset->material_properties.get(), m_blackTexture.get());
+    TextureHandle baseColor = registerMaterialTexture(materialAsset->base_color.get(), true, m_magentaTexture.get());
+    TextureHandle emissive = registerMaterialTexture(materialAsset->emissive_color.get(), true, m_blackTexture.get());
+    TextureHandle normalMap = registerMaterialTexture(materialAsset->normal_map.get(), false, m_normalMapBlueTexture.get());
+    TextureHandle metallicRoughness = registerMaterialTexture(materialAsset->material_properties.get(), false, m_blackTexture.get());
 
     ShaderMaterial shaderMaterial {};
 
@@ -897,7 +897,7 @@ TextureHandle GpuScene::registerMaterialTexture(Material::TextureDescription& de
     return handle;
 }
 
-TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, /*MaterialTextureFallback const& fallback*/ Texture* fallback)
+TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, bool sRGB, Texture* fallback)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -915,7 +915,7 @@ TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, /*Material
 
     // TODO: Async load the image!
     // TODO: Load for streaming? I.e. don't unpack
-    ImageAsset* imageAsset = ImageAsset::loadFromArkimg(imageAssetPath);
+    ImageAsset* imageAsset = ImageAsset::loadOrCreate(imageAssetPath);
 
     if (imageAsset == nullptr) {
         updateTextureUnowned(handle, fallback);
@@ -925,8 +925,9 @@ TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, /*Material
     // TODO: Handle 2D arrays & 3D textures here too
     ARKOSE_ASSERT(imageAsset->depth == 1);
 
-    auto translateImageFormat = [](ImageFormat imageFormat, ColorSpace colorSpace) -> Texture::Format {
-        bool sRGB = colorSpace == ColorSpace::sRGB_encoded;
+    auto translateImageFormat = [](ImageFormat imageFormat, ColorSpace colorSpace, bool sRGBoverride) -> Texture::Format {
+        // TODO: Respect the color space of the source texture!
+        bool sRGB = sRGBoverride;// (colorSpace == ColorSpace::sRGB_encoded);
         switch (imageFormat) {
         case ImageFormat::RGBA8:
             return sRGB ? Texture::Format::sRGBA8 : Texture::Format::RGBA8;
@@ -990,7 +991,7 @@ TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, /*Material
         .type = Texture::Type::Texture2D,
         .arrayCount = 1,
         .extent = { imageAsset->width, imageAsset->height, imageAsset->depth },
-        .format = translateImageFormat(imageAsset->format, imageAsset->color_space),
+        .format = translateImageFormat(imageAsset->format, imageAsset->color_space, sRGB),
         .filter = Texture::Filters(translateImageMinFilter(input->min_filter),
                                    translateImageMagFilter(input->mag_filter)),
         .wrapMode = Texture::WrapModes(translateImageWrapMode(input->wrap_modes.u()),
