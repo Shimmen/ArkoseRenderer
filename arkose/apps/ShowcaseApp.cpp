@@ -43,7 +43,6 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     SCOPED_PROFILE_ZONE();
 
     scene.setupFromDescription({ .path = "assets/sample/Sponza.arklvl",
-    //scene.setupFromDescription({ .path = "assets/sample/sponza.json",
                                  .maintainRayTracingScene = rtxOn });
 
     auto levelAssetToWrite = scene.exportAsLevelAsset();
