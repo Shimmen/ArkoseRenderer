@@ -6,7 +6,7 @@
 #include "core/parallel/ParallelFor.h"
 #include "utility/FileIO.h"
 
-ImportResult AssetImporter::importAsset(std::string_view assetFilePath, std::string_view targetDirectory)
+ImportResult AssetImporter::importAsset(std::string_view assetFilePath, std::string_view targetDirectory, Options options)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -16,7 +16,7 @@ ImportResult AssetImporter::importAsset(std::string_view assetFilePath, std::str
     }
 
     if (assetFilePath.ends_with(".gltf") || assetFilePath.ends_with(".glb")) {
-        return importGltf(assetFilePath, targetDirectory);
+        return importGltf(assetFilePath, targetDirectory, options);
     }
 
     ARKOSE_LOG(Error, "Trying to import asset '{}' of unsupported file type.", assetFilePath);
@@ -31,7 +31,7 @@ static Arkose::Asset::PathT createAssetPath(std::string_view assetFilePath)
     return path;
 }
 
-ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::string_view targetDirectory)
+ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::string_view targetDirectory, Options options)
 {
     FileIO::ensureDirectory(std::string(targetDirectory));
 
@@ -40,23 +40,31 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
     // Compress all images (the slow part of this process) in parallel
     ParallelFor(result.images.size(), [&](size_t idx) {
-        result.images[idx]->compress();
+        auto& image = result.images[idx];
+
+        // Only compress if we're importing images in arkimg format
+        if (image->source_asset_path.empty() || options.alwaysMakeImageAsset) {
+            image->compress();
+        }
     });
 
     int unnamedImageIdx = 0;
     for (auto& image : result.images) {
 
-        std::string fileName;
-        if (not image->source_asset_path.empty()) {
-            fileName = std::string(FileIO::extractFileNameFromPath(image->source_asset_path));
-            fileName = std::string(FileIO::removeExtensionFromPath(fileName));
-        } else {
-            fileName = std::format("image{:04}", unnamedImageIdx++);
+        if (image->source_asset_path.empty() || options.alwaysMakeImageAsset) {
+
+            std::string fileName;
+            if (not image->source_asset_path.empty()) {
+                fileName = std::string(FileIO::extractFileNameFromPath(image->source_asset_path));
+                fileName = std::string(FileIO::removeExtensionFromPath(fileName));
+            } else {
+                fileName = std::format("image{:04}", unnamedImageIdx++);
+            }
+
+            std::string targetFilePath = std::format("{}/{}.arkimg", targetDirectory, fileName);
+
+            image->writeToArkimg(targetFilePath);
         }
-
-        std::string targetFilePath = std::format("{}/{}.arkimg", targetDirectory, fileName);
-
-        image->writeToArkimg(targetFilePath);
     }
 
     int unnamedMaterialIdx = 0;
@@ -70,7 +78,10 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
                 int gltfIdx = materialInput->user_data.integer();
                 ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < result.images.size());
                 auto& image = result.images[gltfIdx];
-                materialInput->image.Set(createAssetPath(image->assetFilePath()));
+                std::string_view imagePath = (image->source_asset_path.empty() || options.alwaysMakeImageAsset)
+                    ? image->assetFilePath()
+                    : image->source_asset_path;
+                materialInput->image.Set(createAssetPath(imagePath));
             }
         };
 
@@ -83,7 +94,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         std::string targetFilePath = std::format("{}/{}.arkmat", targetDirectory, fileName);
 
         // TODO: Write to json when importing!
-        material->writeToArkmat(targetFilePath, AssetStorage::Binary);
+        material->writeToArkmat(targetFilePath, AssetStorage::Json);
     }
 
     int unnamedMeshIdx = 0;

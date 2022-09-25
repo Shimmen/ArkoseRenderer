@@ -15,7 +15,12 @@ struct ImportResult {
 class AssetImporter {
 public:
 
-    ImportResult importAsset(std::string_view assetFilePath, std::string_view targetDirectory);
-    ImportResult importGltf(std::string_view gltfFilePath, std::string_view targetDirectory);
+    struct Options {
+        // By default we keep png/jpeg/etc. in their source formats. Set this to true to import all images as asset types.
+        bool alwaysMakeImageAsset { false };
+    };
+
+    ImportResult importAsset(std::string_view assetFilePath, std::string_view targetDirectory, Options = Options());
+    ImportResult importGltf(std::string_view gltfFilePath, std::string_view targetDirectory, Options = Options());
 
 };
