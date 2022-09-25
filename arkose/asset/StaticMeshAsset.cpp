@@ -49,6 +49,32 @@ StaticMeshAsset* StaticMeshAsset::loadFromArkmsh(std::string const& filePath)
     }
 
     void* binaryData = maybeBinaryData.value().data();
+
+    bool isValidBinaryBuffer = Arkose::Asset::StaticMeshAssetBufferHasIdentifier(binaryData);
+    if (not isValidBinaryBuffer) {
+
+        // See if we can parse it as json
+
+        // First check: do we at least start with a '{' character?
+        if (maybeBinaryData.value().size() == 0 || *reinterpret_cast<const char*>(binaryData) != '{') {
+            return nullptr;
+        }
+
+        std::string asciiData = FileIO::readEntireFile(filePath).value();
+
+        if (not s_staticMeshAssetParser) {
+            s_staticMeshAssetParser = AssetHelpers::createAssetRuntimeParser("StaticMeshAsset.fbs");
+        }
+
+        if (not s_staticMeshAssetParser->ParseJson(asciiData.c_str(), filePath.c_str())) {
+            ARKOSE_LOG(Error, "Failed to parse json text for static mesh asset:\n\t{}", s_staticMeshAssetParser->error_);
+            return nullptr;
+        }
+
+        // Use the now filled-in builder's buffer as the binary data input
+        binaryData = s_staticMeshAssetParser->builder_.GetBufferPointer();
+    }
+
     auto const* flatbuffersStaticMeshAsset = Arkose::Asset::GetStaticMeshAsset(binaryData);
 
     if (!flatbuffersStaticMeshAsset) {
