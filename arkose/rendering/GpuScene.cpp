@@ -593,7 +593,6 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
             segment.tangents.reserve(segmentAsset->tangents.size());
             for (Arkose::Asset::Vec4 tang : segmentAsset->tangents) {
                 segment.tangents.emplace_back(tang.x(), tang.y(), tang.z(), tang.w());
-                //ARKOSE_LOG(Info, "tang = {{ {}, {}, {}, {} }}", tang.x(), tang.y(), tang.z(), tang.w());
             }
 
             // We always use 32-bit indices so it's safe to copy over directly
