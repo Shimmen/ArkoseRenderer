@@ -132,7 +132,7 @@ void main()
 
     vec2 uv = v0.texCoord.xy * b.x + v1.texCoord.xy * b.y + v2.texCoord.xy * b.z;
 
-    vec3 baseColor = texture(textures[nonuniformEXT(material.baseColor)], uv).rgb;
+    vec3 baseColor = texture(textures[nonuniformEXT(material.baseColor)], uv).rgb * material.colorTint.rgb;
     vec3 emissive = texture(textures[nonuniformEXT(material.emissive)], uv).rgb;
 
     vec4 metallicRoughness = texture(textures[nonuniformEXT(material.metallicRoughness)], uv);

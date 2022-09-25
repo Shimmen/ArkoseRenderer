@@ -207,6 +207,7 @@ private:
 
     // Common textures that can be used for various purposes
     std::unique_ptr<Texture> m_blackTexture {};
+    std::unique_ptr<Texture> m_whiteTexture {};
     std::unique_ptr<Texture> m_lightGrayTexture {};
     std::unique_ptr<Texture> m_magentaTexture {};
     std::unique_ptr<Texture> m_normalMapBlueTexture {};

@@ -18,6 +18,8 @@ struct ShaderMaterial {
     int blendMode;
     float maskCutoff;
     float _pad0, _pad1;
+
+    vec4 colorTint;
 };
 
 struct IndirectShaderDrawable {

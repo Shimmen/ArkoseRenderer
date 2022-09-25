@@ -1,5 +1,6 @@
 #include "GpuScene.h"
 
+#include "asset/AssetTypes.h"
 #include "asset/ImageAsset.h"
 #include "asset/MaterialAsset.h"
 #include "asset/StaticMeshAsset.h"
@@ -31,6 +32,7 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
     m_emptyIndexBuffer = backend().createBuffer(1, Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
 
     m_blackTexture = Texture::createFromPixel(backend(), vec4(0.0f, 0.0f, 0.0f, 0.0f), true);
+    m_whiteTexture = Texture::createFromPixel(backend(), vec4(1.0f, 1.0f, 1.0f, 1.0f), true);
     m_lightGrayTexture = Texture::createFromPixel(backend(), vec4(0.75f, 0.75f, 0.75f, 1.0f), true);
     m_magentaTexture = Texture::createFromPixel(backend(), vec4(1.0f, 0.0f, 1.0f, 1.0f), true);
     m_normalMapBlueTexture = Texture::createFromPixel(backend(), vec4(0.5f, 0.5f, 1.0f, 1.0f), false);
@@ -708,6 +710,8 @@ MaterialHandle GpuScene::registerMaterial(Material& material)
     shaderMaterial.blendMode = material.blendModeValue();
     shaderMaterial.maskCutoff = material.maskCutoff;
 
+    shaderMaterial.colorTint = material.baseColorFactor;
+
     uint64_t materialIdx = m_managedMaterials.size();
     if (materialIdx >= MaxSupportedSceneMaterials) {
         ARKOSE_LOG(Fatal, "Ran out of managed scene materials, exiting.");
@@ -730,7 +734,7 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset* materialAsset)
     // NOTE: A material in this context is very lightweight (for now) so we don't cache them
 
     // Register textures / material inputs
-    TextureHandle baseColor = registerMaterialTexture(materialAsset->base_color.get(), true, m_magentaTexture.get());
+    TextureHandle baseColor = registerMaterialTexture(materialAsset->base_color.get(), true, m_whiteTexture.get());
     TextureHandle emissive = registerMaterialTexture(materialAsset->emissive_color.get(), true, m_blackTexture.get());
     TextureHandle normalMap = registerMaterialTexture(materialAsset->normal_map.get(), false, m_normalMapBlueTexture.get());
     TextureHandle metallicRoughness = registerMaterialTexture(materialAsset->material_properties.get(), false, m_blackTexture.get());
@@ -757,6 +761,8 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset* materialAsset)
 
     shaderMaterial.blendMode = translateBlendModeToShaderMaterial(materialAsset->blend_mode);
     shaderMaterial.maskCutoff = materialAsset->mask_cutoff;
+
+    shaderMaterial.colorTint = AssetTypes::convert(materialAsset->color_tint);
 
     uint64_t materialIdx = m_managedMaterials.size();
     if (materialIdx >= MaxSupportedSceneMaterials) {

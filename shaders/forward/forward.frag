@@ -145,7 +145,7 @@ void main()
     }
 #endif
 
-    vec3 baseColor = inputBaseColor.rgb;
+    vec3 baseColor = inputBaseColor.rgb * material.colorTint.rgb;
     vec3 emissive = texture(textures[nonuniformEXT(material.emissive)], vTexCoord).rgb;
 
     vec4 metallicRoughness = texture(textures[nonuniformEXT(material.metallicRoughness)], vTexCoord);
