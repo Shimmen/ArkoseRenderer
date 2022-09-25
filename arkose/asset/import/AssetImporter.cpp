@@ -34,6 +34,9 @@ static Arkose::Asset::PathT createAssetPath(std::string_view assetFilePath)
 ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::string_view targetDirectory, Options options)
 {
     FileIO::ensureDirectory(std::string(targetDirectory));
+    if (targetDirectory.ends_with('/')) {
+        targetDirectory.remove_suffix(1);
+    }
 
     GltfLoader_NEW gltfLoader {};
     ImportResult result = gltfLoader.load(std::string(gltfFilePath));

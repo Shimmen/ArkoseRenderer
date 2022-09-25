@@ -408,8 +408,8 @@ void MeshViewerApp::openImportMeshDialog()
         std::string importFilePath = maybePath.value();
         ARKOSE_LOG(Info, "Importing mesh from file '{}'", importFilePath);
 
-        std::string_view importFileName = FileIO::extractFileNameFromPath(importFilePath);
-        std::string targetDirectory = std::format("assets/imported/{}", FileIO::removeExtensionFromPath(importFileName));
+        std::string_view importFileDir = FileIO::extractDirectoryFromPath(importFilePath);
+        std::string targetDirectory = FileIO::normalizePath(importFileDir);
 
         AssetImporter importer {};
         ImportResult assets = importer.importAsset(importFilePath, targetDirectory);

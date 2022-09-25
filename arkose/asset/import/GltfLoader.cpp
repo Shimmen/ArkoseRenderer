@@ -87,7 +87,9 @@ ImportResult GltfLoader_NEW::load(const std::string& gltfFilePath)
         std::unique_ptr<ImageAsset> image {};
         if (not gltfImage.uri.empty()) {
 
-            image = ImageAsset::createFromSourceAsset(gltfDirectory + gltfImage.uri);
+            std::string absolutePath = gltfDirectory + gltfImage.uri;
+            std::string path = FileIO::normalizePath(absolutePath);
+            image = ImageAsset::createFromSourceAsset(path);
 
         } else {
 
