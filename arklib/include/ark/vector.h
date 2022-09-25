@@ -537,7 +537,12 @@ struct tvec4<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
     {
     }
 
-    explicit constexpr tvec4(T e = static_cast<T>(0)) noexcept
+    constexpr tvec4() noexcept
+        : tvec4(0, 0, 0, 0)
+    {
+    }
+
+    explicit constexpr tvec4(T e) noexcept
         : tvec4(e, e, e, e)
     {
     }
