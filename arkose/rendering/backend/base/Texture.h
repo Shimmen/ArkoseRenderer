@@ -1,5 +1,6 @@
 #pragma once
 
+#include "asset/ImageAsset.h"
 #include "rendering/backend/util/ClearValue.h"
 #include "rendering/backend/util/IndexType.h"
 #include "rendering/backend/Resource.h"
@@ -184,6 +185,7 @@ public:
     Texture(Backend&, Description);
 
     static void pixelFormatAndTypeForImageInfo(const Image::Info& info, bool sRGB, Texture::Format& format, Image::PixelType& pixelTypeToUse);
+    static Texture::Format convertImageFormatToTextureFormat(ImageFormat, ColorSpace);
 
     static std::unique_ptr<Texture> createFromImage(Backend&, const Image&, bool sRGB, bool generateMipmaps, Texture::WrapModes);
     static std::unique_ptr<Texture> createFromPixel(Backend&, vec4 pixelColor, bool sRGB);

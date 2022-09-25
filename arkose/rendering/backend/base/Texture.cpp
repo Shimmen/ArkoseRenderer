@@ -1,14 +1,13 @@
 #include "Texture.h"
 
-#include "rendering/backend/base/Backend.h"
+#include "asset/ImageAsset.h"
 #include "core/Assert.h"
 #include "core/Defer.h"
 #include "core/Logging.h"
 #include "core/parallel/ParallelFor.h"
-#include "utility/Image.h"
+#include "rendering/backend/base/Backend.h"
 #include <cmath>
 #include <fmt/format.h>
-#include <stb_image.h>
 
 Texture::Texture(Backend& backend, Description desc)
     : Resource(backend)
@@ -42,6 +41,51 @@ bool Texture::hasFloatingPointDataFormat() const
         ASSERT_NOT_REACHED();
         return false;
     }
+}
+
+Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageFormat, ColorSpace colorSpace)
+{
+    if (colorSpace == ColorSpace::sRGB_encoded) {
+        switch (imageFormat) {
+        case ImageFormat::RGBA8:
+            return Format::sRGBA8;
+        case ImageFormat::RGBA32F:
+            return Format::RGBA32F;
+        case ImageFormat::BC7:
+            NOT_YET_IMPLEMENTED();
+            //return Format::BC7sRGB;
+        }
+
+        // TODO: Add fmt support for flatbuffers enums!
+        ARKOSE_LOG_FATAL("Texture: using sRGB color space but no suitabe image format ({}), exiting.", static_cast<int>(imageFormat));
+    }
+
+    // From now on, no sRGB ...
+
+    switch (imageFormat) {
+    case ImageFormat::R8:
+        return Format::R8;
+    case ImageFormat::RG8:
+        NOT_YET_IMPLEMENTED();
+    case ImageFormat::RGB8:
+        NOT_YET_IMPLEMENTED();
+    case ImageFormat::RGBA8:
+        return Format::RGBA8;
+    case ImageFormat::R32F:
+        return Format::R32F;
+    case ImageFormat::RG32F:
+        return Format::RG32F;
+    case ImageFormat::RGB32F:
+        NOT_YET_IMPLEMENTED();
+    case ImageFormat::RGBA32F:
+        return Format::RGBA32F;
+    case ImageFormat::BC7:
+        NOT_YET_IMPLEMENTED();
+    }
+
+    // TODO: Add fmt support for flatbuffers enums!
+    ARKOSE_LOG_FATAL("No good conversion from image format {}", static_cast<int>(imageFormat));
+    return Format::Unknown;
 }
 
 const Extent2D Texture::extentAtMip(uint32_t mip) const
@@ -196,43 +240,43 @@ std::unique_ptr<Texture> Texture::createFromPixel(Backend& backend, vec4 pixelCo
 }
 
 
-std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const std::string& imagePath, bool sRGB, bool generateMipmaps, Texture::WrapModes)
+std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const std::string& imagePath, bool sRGB, bool generateMipmaps, Texture::WrapModes wrapModes)
 {
-    SCOPED_PROFILE_ZONE()
+    SCOPED_PROFILE_ZONE();
 
     // FIXME (maybe): Add async loading?
 
-    Image::Info* info = Image::getInfo(imagePath);
-    if (!info) {
-        ARKOSE_LOG_FATAL("Texture: could not read image '{}', exiting", imagePath);
+    if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(imagePath)) {
+
+        auto mipmapMode = (generateMipmaps && imageAsset->width > 1 && imageAsset->height > 1)
+            ? Texture::Mipmap::Linear
+            : Texture::Mipmap::None;
+
+        Texture::Description desc {
+
+            // TODO: Support other types than non-array texture 2D?
+            .type = Texture::Type::Texture2D,
+            .arrayCount = 1u,
+
+            .extent = { imageAsset->width, imageAsset->height, imageAsset->depth },
+            .format = convertImageFormatToTextureFormat(imageAsset->format, imageAsset->color_space),
+            .filter = Texture::Filters::linear(),
+            .wrapMode = wrapModes,
+            .mipmap = mipmapMode,
+
+            .multisampling = Texture::Multisampling::None
+        };
+
+        auto texture = backend.createTexture(desc);
+        texture->setName("Texture:" + imagePath);
+
+        texture->setData(imageAsset->pixel_data.data(), imageAsset->pixel_data.size());
+
+        return texture;
+
     }
 
-    Texture::Format format;
-    Image::PixelType pixelTypeToUse;
-    Texture::pixelFormatAndTypeForImageInfo(*info, sRGB, format, pixelTypeToUse);
-
-    auto mipmapMode = (generateMipmaps && info->width > 1 && info->height > 1)
-        ? Texture::Mipmap::Linear
-        : Texture::Mipmap::None;
-
-    Texture::Description desc {
-        .type = Texture::Type::Texture2D,
-        .arrayCount = 1u,
-        .extent = { (uint32_t)info->width, (uint32_t)info->height, 1 },
-        .format = format,
-        .filter = Texture::Filters::linear(),
-        .wrapMode = Texture::WrapModes::repeatAll(),
-        .mipmap = mipmapMode,
-        .multisampling = Texture::Multisampling::None
-    };
-
-    Image* image = Image::load(imagePath, pixelTypeToUse, true);
-
-    auto texture = backend.createTexture(desc);
-    texture->setData(image->data(), image->dataSize());
-    texture->setName("Texture:" + imagePath);
-
-    return texture;
+    return nullptr;
 }
 
 std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, const std::string& imagePathSequencePattern, bool sRGB, bool generateMipmaps, Texture::WrapModes)
