@@ -1,11 +1,5 @@
 # Sponza
 
-## Screenshot
-
-Lights are shown here, they are not part of the model.
-
-![screenshot](screenshot/large.jpg)
-
 ## Model notes
 
 Tangents have been computed using MikkTSpace, as the original OBJ model did not have them.
