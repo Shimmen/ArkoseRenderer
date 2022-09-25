@@ -1,0 +1,56 @@
+{
+  base_color: {
+    image_type: "path",
+    image: {
+      path: "assets/sample/models/Sponza/5792855332885324923.jpg"
+    },
+    wrap_modes: {
+      u: "Repeat",
+      v: "Repeat",
+      w: "Repeat"
+    },
+    generate_mipmaps_in_runtime: true,
+    user_data: {
+      integer: 13
+    }
+  },
+  normal_map: {
+    image_type: "path",
+    image: {
+      path: "assets/sample/models/Sponza/16299174074766089871.jpg"
+    },
+    wrap_modes: {
+      u: "Repeat",
+      v: "Repeat",
+      w: "Repeat"
+    },
+    generate_mipmaps_in_runtime: true,
+    user_data: {
+      integer: 12
+    }
+  },
+  material_properties: {
+    image_type: "path",
+    image: {
+      path: "assets/sample/models/Sponza/11968150294050148237.jpg"
+    },
+    wrap_modes: {
+      u: "Repeat",
+      v: "Repeat",
+      w: "Repeat"
+    },
+    generate_mipmaps_in_runtime: true,
+    user_data: {
+      integer: 14
+    }
+  },
+  color_tint: {
+    r: 0.588,
+    g: 0.588,
+    b: 0.588,
+    a: 1.0
+  },
+  user_data: {
+    integer: 5
+  }
+}

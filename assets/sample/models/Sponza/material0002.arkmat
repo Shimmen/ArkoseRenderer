@@ -1,0 +1,26 @@
+{
+  base_color: {
+    image_type: "path",
+    image: {
+      path: "assets/sample/models/Sponza/white.png"
+    },
+    wrap_modes: {
+      u: "Repeat",
+      v: "Repeat",
+      w: "Repeat"
+    },
+    generate_mipmaps_in_runtime: true,
+    user_data: {
+      integer: 68
+    }
+  },
+  color_tint: {
+    r: 0.588,
+    g: 0.588,
+    b: 0.588,
+    a: 1.0
+  },
+  user_data: {
+    integer: 2
+  }
+}
