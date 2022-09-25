@@ -45,9 +45,6 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     scene.setupFromDescription({ .path = "assets/sample/Sponza.arklvl",
                                  .maintainRayTracingScene = rtxOn });
 
-    auto levelAssetToWrite = scene.exportAsLevelAsset();
-    levelAssetToWrite->writeToArklvl("assets/sample/SponzaTEST.arklvl", AssetStorage::Json);
-
     Camera& camera = scene.camera();
     m_fpsCameraController.takeControlOfCamera(camera);
 
