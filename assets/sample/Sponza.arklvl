@@ -1,5 +1,5 @@
 {
-  name: "ExportedLevel",
+  name: "Sponza Sample",
   objects: [
     {
       name: "sponza",
@@ -23,7 +23,7 @@
       },
       mesh_asset_type: "path",
       mesh_asset: {
-        path: "assets/imported/Sponza/staticmesh0000.arkmsh"
+        path: "assets/sample/models/Sponza/Sponza.arkmsh"
       }
     },
     {
@@ -48,7 +48,7 @@
       },
       mesh_asset_type: "path",
       mesh_asset: {
-        path: "assets/imported/DamagedHelmet/staticmesh0000.arkmsh"
+        path: "assets/sample/models/DamagedHelmet/DamagedHelmet.arkmsh"
       }
     }
   ],
