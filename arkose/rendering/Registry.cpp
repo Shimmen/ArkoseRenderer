@@ -86,17 +86,6 @@ Texture& Registry::createTextureArray(uint32_t itemCount, Extent2D extent, Textu
     return *m_textures.back();
 }
 
-Texture& Registry::createTextureFromImage(const Image& image, bool srgb, bool generateMipmaps, Texture::WrapModes wrapMode)
-{
-    SCOPED_PROFILE_ZONE()
-
-    auto texture = Texture::createFromImage(m_backend, image, srgb, generateMipmaps, wrapMode);
-    texture->setOwningRegistry({}, this);
-
-    m_textures.push_back(std::move(texture));
-    return *m_textures.back();
-}
-
 Texture& Registry::createMultisampledTexture2D(Extent2D extent, Texture::Format format, Texture::Multisampling multisampling, Texture::Mipmap mipmap)
 {
     Texture::Description desc {
