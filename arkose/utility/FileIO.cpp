@@ -82,6 +82,24 @@ std::string_view FileIO::removeExtensionFromPath(std::string_view path)
     }
 }
 
+std::string FileIO::normalizePath(std::string_view absolutePath)
+{
+    std::string normalizedPath = std::string(absolutePath);
+
+    for (char& c : normalizedPath) {
+        if (c == '\\') {
+            c = '/';
+        }
+    }
+
+    size_t idxOfAssetsDir = normalizedPath.find("/assets/");
+    if (idxOfAssetsDir != std::string::npos) {
+        normalizedPath = normalizedPath.substr(idxOfAssetsDir + 1);
+    }
+
+    return normalizedPath;
+}
+
 uint8_t* FileIO::readBinaryDataFromFileRawPtr(const std::string& filePath, size_t* outSize)
 {
     SCOPED_PROFILE_ZONE();

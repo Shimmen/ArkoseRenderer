@@ -17,6 +17,8 @@ std::string_view extractDirectoryFromPath(std::string_view path);
 std::string_view extractFileNameFromPath(std::string_view path);
 std::string_view removeExtensionFromPath(std::string_view path);
 
+std::string normalizePath(std::string_view absolutePath);
+
 template<typename T>
 std::optional<std::vector<T>> readBinaryDataFromFile(const std::string& filePath)
 {
