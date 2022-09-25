@@ -109,7 +109,7 @@ bool MaterialAsset::writeToArkmat(std::string_view filePath, AssetStorage assetS
         return false;
     }
 
-    builder.Finish(asset);
+    builder.Finish(asset, Arkose::Asset::MaterialAssetIdentifier());
 
     uint8_t* data = builder.GetBufferPointer();
     size_t size = static_cast<size_t>(builder.GetSize());

@@ -217,7 +217,7 @@ bool ImageAsset::writeToArkimg(std::string_view filePath)
         return false;
     }
 
-    builder.Finish(asset);
+    builder.Finish(asset, Arkose::Asset::ImageAssetIdentifier());
 
     uint8_t* data = builder.GetBufferPointer();
     size_t size = static_cast<size_t>(builder.GetSize());

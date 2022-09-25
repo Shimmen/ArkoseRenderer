@@ -110,7 +110,7 @@ bool StaticMeshAsset::writeToArkmsh(std::string_view filePath, AssetStorage asse
         return false;
     }
 
-    builder.Finish(asset);
+    builder.Finish(asset, Arkose::Asset::StaticMeshAssetIdentifier());
 
     uint8_t* data = builder.GetBufferPointer();
     size_t size = static_cast<size_t>(builder.GetSize());

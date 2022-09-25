@@ -4,8 +4,7 @@ include "CommonTypes.fbs";
 include "MaterialAsset.fbs";
 
 namespace Arkose.Asset;
-file_identifier "ARKA";
-
+file_identifier "AMSH";
 file_extension "arkmsh";
 
 /*
