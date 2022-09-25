@@ -9,7 +9,11 @@
 
 using ProbeGridAsset = Arkose::Asset::ProbeGridT;
 
+using EnvironmentMapAsset = Arkose::Asset::EnvironmentMapT;
+
 using CameraAsset = Arkose::Asset::CameraT;
+
+using SceneObjectAsset = Arkose::Asset::SceneObjectT;
 
 using LightAsset = Arkose::Asset::LightUnion;
 using DirectionalLightAsset = Arkose::Asset::DirectionalLightT;

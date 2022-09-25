@@ -37,13 +37,13 @@ union CameraExposure {
 
 table Camera {
     name: string;
-    transform: Transform;
-    exposure: CameraExposure;
+    transform: Transform (required);
+    exposure: CameraExposure (required);
 }
 
 table DirectionalLight {
     name: string;
-    transform: Transform;
+    transform: Transform (required);
 
     color: Vec3 (native_inline);
     illuminance: float;
@@ -54,7 +54,7 @@ table DirectionalLight {
 
 table SpotLight {
     name: string;
-    transform: Transform;
+    transform: Transform (required);
 
     color: Vec3 (native_inline);
     luminous_intensity: float;
@@ -74,8 +74,13 @@ union MeshIndirection {
 
 table SceneObject {
     name: string;
-    transform: Transform;
-    mesh_asset: MeshIndirection;
+    transform: Transform (required);
+    mesh_asset: MeshIndirection (required);
+}
+
+table EnvironmentMap {
+    image : ImageIndirection (required);
+    brightness_factor: float;
 }
 
 // This type is very ad-hoc and will likely need to be redone..
@@ -92,6 +97,9 @@ table LevelAsset {
 
     // List of predetermined cameras, of which the first one is the default
     cameras: [Camera];
+
+    // Environment map, used for skybox etc.
+    environment_map: EnvironmentMap;
 
     // For use with spatial probe grid based algorithms such as DDGI
     probe_grid: ProbeGrid;

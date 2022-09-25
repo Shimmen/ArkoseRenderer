@@ -39,8 +39,7 @@ public:
 
     void setupFromDescription(const Description&);
 
-    // TODO: Temporary for the transition period, so we can get the first scene jsons out on file
-    std::unique_ptr<LevelAsset> exportToLevelAsset() const;
+    std::unique_ptr<LevelAsset> exportAsLevelAsset() const;
 
     // Scene variant accessors
 
@@ -50,6 +49,11 @@ public:
     bool hasPhysicsScene() const { return m_physicsScene != nullptr; }
     PhysicsScene& physicsScene() { return *m_physicsScene; }
     const PhysicsScene& physicsScene() const { return *m_physicsScene; }
+
+    // Level
+
+    void addLevel(LevelAsset*);
+    //void removeLevel(LevelAsset*);
 
     // Camera
 
@@ -132,7 +136,7 @@ private:
     // Manages all physics & collision for this scene
     std::unique_ptr<PhysicsScene> m_physicsScene {};
 
-    Camera* m_currentMainCamera {};
+    Camera* m_currentMainCamera { nullptr };
     std::unordered_map<std::string, std::unique_ptr<Camera>> m_allCameras {};
     
     // Various loaders, which needs to be kept in memory as they own their loaded resources until someone takes over
