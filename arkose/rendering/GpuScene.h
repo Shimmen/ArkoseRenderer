@@ -70,16 +70,13 @@ public:
     void registerLight(DirectionalLight&);
     // TODO: Unregister light!
 
-    StaticMeshHandle registerStaticMesh(std::shared_ptr<StaticMesh>);
     StaticMeshHandle registerStaticMesh(StaticMeshAsset*);
     void unregisterStaticMesh(StaticMeshHandle);
 
-    [[nodiscard]] MaterialHandle registerMaterial(Material&);
     [[nodiscard]] MaterialHandle registerMaterial(MaterialAsset*);
     //[[nodiscard]] MaterialHandle registerMaterial(MaterialAssetRaw*); TODO!
     void unregisterMaterial(MaterialHandle);
 
-    [[nodiscard]] TextureHandle registerMaterialTexture(Material::TextureDescription&);
     [[nodiscard]] TextureHandle registerMaterialTexture(MaterialInput*, bool sRGB, Texture* fallback);
     //[[nodiscard]] TextureHandle registerMaterialTexture(MaterialInputRaw*); TODO!
     [[nodiscard]] TextureHandle registerTexture(std::unique_ptr<Texture>&&);
@@ -141,7 +138,7 @@ private:
 
     struct ManagedStaticMesh {
         StaticMeshAsset* staticMeshAsset {};
-        std::shared_ptr<StaticMesh> staticMesh {};
+        std::unique_ptr<StaticMesh> staticMesh {};
         uint64_t referenceCount { 0 };
     };
     std::vector<ManagedStaticMesh> m_managedStaticMeshes {};

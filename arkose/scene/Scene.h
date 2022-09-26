@@ -64,10 +64,6 @@ public:
 
     // Meshes
 
-    // NOTE: Perhaps this should have a more apt name. It's essentially equivalent to loading in a scene..
-    // TODO: This is the old way, remove it!
-    std::vector<StaticMeshInstance*> loadMeshes(const std::string& filePath);
-
     StaticMeshInstance& addMesh(StaticMeshAsset*, Transform = Transform());
 
     // NOTE: This is more of a utility for now to clear out the current level
@@ -121,12 +117,6 @@ public:
 
     void drawSettingsGui(bool includeContainingWindow = false);
     void drawSceneGizmos();
-
-private:
-
-    // Serialization
-
-    void loadFromFile(const std::string&);
 
 private:
     Description m_description {};

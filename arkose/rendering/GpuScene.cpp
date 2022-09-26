@@ -515,34 +515,6 @@ void GpuScene::registerLight(DirectionalLight& light)
     m_managedDirectionalLights.push_back(managedLight);
 }
 
-StaticMeshHandle GpuScene::registerStaticMesh(std::shared_ptr<StaticMesh> staticMesh)
-{
-    // TODO: Maybe do some kind of caching here, and if we're trying to add the same mesh twice just ignore it and reuse the exisiting
-
-    SCOPED_PROFILE_ZONE();
-
-    ARKOSE_ASSERT(staticMesh);
-    auto managedStaticMesh = ManagedStaticMesh { .staticMesh = staticMesh,
-                                                 .referenceCount = 1 };
-
-    StaticMeshHandle handle;
-    if (m_managedStaticMeshFreeList.size() > 0) {
-
-        handle = StaticMeshHandle(m_managedStaticMeshFreeList.back());
-        m_managedStaticMeshFreeList.pop_back();
-
-        m_managedStaticMeshes[handle.index()] = managedStaticMesh;
-
-    } else {
-
-        handle = StaticMeshHandle(m_managedStaticMeshes.size());
-        m_managedStaticMeshes.push_back(managedStaticMesh);
-
-    }
-
-    return handle;
-}
-
 StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
 {
     // TODO: Maybe do some kind of caching here, and if we're trying to add the same mesh twice just ignore it and reuse the exisiting
@@ -555,8 +527,7 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
 
     // Make a runtime static mesh from the asset type
 
-    // TODO: Stop using shared_ptr!
-    auto staticMesh = std::make_shared<StaticMesh>(staticMeshAsset);
+    auto staticMesh = std::make_unique<StaticMesh>(staticMeshAsset);
     for (auto& lodAsset : staticMeshAsset->lods) {
 
         staticMesh->m_lods.push_back(StaticMeshLOD());
@@ -610,7 +581,7 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
         }
     }
 
-    auto managedStaticMesh = ManagedStaticMesh { .staticMesh = staticMesh,
+    auto managedStaticMesh = ManagedStaticMesh { .staticMesh = std::move(staticMesh),
                                                  .referenceCount = 1 };
 
     StaticMeshHandle handle;
@@ -619,12 +590,12 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
         handle = StaticMeshHandle(m_managedStaticMeshFreeList.back());
         m_managedStaticMeshFreeList.pop_back();
 
-        m_managedStaticMeshes[handle.index()] = managedStaticMesh;
+        m_managedStaticMeshes[handle.index()] = std::move(managedStaticMesh);
 
     } else {
 
         handle = StaticMeshHandle(m_managedStaticMeshes.size());
-        m_managedStaticMeshes.push_back(managedStaticMesh);
+        m_managedStaticMeshes.emplace_back(std::move(managedStaticMesh));
     }
 
     return handle;
@@ -686,45 +657,6 @@ std::unique_ptr<BottomLevelAS> GpuScene::createBottomLevelAccelerationStructure(
                                   .transform = mat4(1.0f) };
 
     return backend().createBottomLevelAccelerationStructure({ geometry });
-}
-
-MaterialHandle GpuScene::registerMaterial(Material& material)
-{
-    SCOPED_PROFILE_ZONE();
-
-    // NOTE: A material here is very lightweight (for now) so we don't cache them
-
-    // Register textures
-    TextureHandle baseColor = registerMaterialTexture(material.baseColor);
-    TextureHandle emissive = registerMaterialTexture(material.emissive);
-    TextureHandle normalMap = registerMaterialTexture(material.normalMap);
-    TextureHandle metallicRoughness = registerMaterialTexture(material.metallicRoughness);
-
-    ShaderMaterial shaderMaterial {};
-
-    shaderMaterial.baseColor = baseColor.indexOfType<int>();
-    shaderMaterial.normalMap = normalMap.indexOfType<int>();
-    shaderMaterial.metallicRoughness = metallicRoughness.indexOfType<int>();
-    shaderMaterial.emissive = emissive.indexOfType<int>();
-
-    shaderMaterial.blendMode = material.blendModeValue();
-    shaderMaterial.maskCutoff = material.maskCutoff;
-
-    shaderMaterial.colorTint = material.baseColorFactor;
-
-    uint64_t materialIdx = m_managedMaterials.size();
-    if (materialIdx >= MaxSupportedSceneMaterials) {
-        ARKOSE_LOG(Fatal, "Ran out of managed scene materials, exiting.");
-    }
-
-    auto handle = MaterialHandle(materialIdx);
-
-    m_managedMaterials.push_back(ManagedMaterial { .shaderMaterial = shaderMaterial,
-                                                   .referenceCount = 1 });
-
-    m_pendingMaterialUpdates.push_back(handle.indexOfType<uint32_t>());
-
-    return handle;
 }
 
 MaterialHandle GpuScene::registerMaterial(MaterialAsset* materialAsset)
@@ -804,107 +736,6 @@ void GpuScene::unregisterMaterial(MaterialHandle handle)
         // TODO: Put this handle in some handle free list for index reuse so we don't leave gaps
         managedMaterial = ManagedMaterial();
     }
-}
-
-TextureHandle GpuScene::registerMaterialTexture(Material::TextureDescription& description)
-{
-    SCOPED_PROFILE_ZONE();
-
-    /*
-    auto entry = m_materialTextureCache.find(description);
-    if (entry == m_materialTextureCache.end()) {
-
-        ARKOSE_LOG(Verbose, "GPUScene: Registering new material texture: {}", description.toString());
-
-        auto createTextureFromMaterialTextureDesc = [](Backend& backend, Material::TextureDescription desc) -> std::unique_ptr<Texture> {
-            if (desc.hasImage()) {
-                return Texture::createFromImage(backend, desc.image.value(), desc.sRGB, desc.mipmapped, desc.wrapMode);
-            } else if (desc.hasPath()) {
-                return Texture::createFromImagePath(backend, desc.path, desc.sRGB, desc.mipmapped, desc.wrapMode);
-            } else {
-                return Texture::createFromPixel(backend, desc.fallbackColor, desc.sRGB);
-            }
-        };
-
-        TextureHandle handle = registerTextureSlot();
-        m_materialTextureCache[description] = handle;
-
-        // TODO: Right now we defer the final step, i.e. making a Texture from the loaded image, back to the main thread,
-        // so we should only do the loading in the async path. However, if we include the Texture creation in the async path
-        // it would make sense to also load the image-based Textures here. (Also, in most cases it's just paths.)
-        if (UseAsyncTextureLoads && description.hasPath()) {
-
-            // Put some placeholder texture for this texture slot before the async has loaded in fully
-            // TODO: Instead of guessing, maybe let the description describe what type of content we have (e.g. normal map)?
-            {
-                const vec4& pixelColor = description.fallbackColor;
-                auto almostEqual = [](float a, float b) -> bool { return std::abs(a - b) < 1e-2f; };
-                if (almostEqual(pixelColor.x, 0.5f) && almostEqual(pixelColor.y, 0.5f) && almostEqual(pixelColor.z, 1.0f) && almostEqual(pixelColor.w, 1.0f)) {
-                    updateTextureUnowned(handle, m_normalMapBlueTexture.get());
-                } else {
-                    updateTextureUnowned(handle, m_lightGrayTexture.get());
-                }
-            }
-
-            TaskGraph::get().enqueueTask([this, description, handle]() {
-
-                Image::Info* info = Image::getInfo(description.path);
-                if (!info) {
-                    ARKOSE_LOG_FATAL("GpuScene: could not read image '{}', exiting", description.path);
-                }
-
-                Texture::Format format;
-                Image::PixelType pixelTypeToUse;
-                Texture::pixelFormatAndTypeForImageInfo(*info, description.sRGB, format, pixelTypeToUse);
-
-                auto mipmapMode = (description.mipmapped && info->width > 1 && info->height > 1)
-                    ? Texture::Mipmap::Linear
-                    : Texture::Mipmap::None;
-
-                Texture::Description desc {
-                    .type = Texture::Type::Texture2D,
-                    .arrayCount = 1u,
-                    .extent = { (uint32_t)info->width, (uint32_t)info->height, 1 },
-                    .format = format,
-                    .filter = Texture::Filters::linear(),
-                    .wrapMode = Texture::WrapModes::repeatAll(),
-                    .mipmap = mipmapMode,
-                    .multisampling = Texture::Multisampling::None
-                };
-
-                Image* image = Image::load(description.path, pixelTypeToUse, true);
-
-                {
-                    SCOPED_PROFILE_ZONE_NAMED("Pushing async-loaded image")
-                    std::scoped_lock<std::mutex> lock { m_asyncLoadedImagesMutex };
-                    m_asyncLoadedImages.push_back(LoadedImageForTextureCreation { .image = image,
-                                                                                  .path = description.path,
-                                                                                  .textureHandle = handle,
-                                                                                  .textureDescription = desc });
-                }
-            });
-
-        } else {
-            auto texture = createTextureFromMaterialTextureDesc(backend(), description);
-            m_managedTexturesVramUsage += texture->sizeInMemory();
-            updateTexture(handle, std::move(texture));
-        }
-
-        return handle;
-    }
-
-    TextureHandle handle = entry->second;
-    ARKOSE_ASSERT(handle.valid());
-
-    ARKOSE_ASSERT(handle.index() < m_managedTextures.size());
-    ManagedTexture& managedTexture = m_managedTextures[handle.index()];
-    managedTexture.referenceCount += 1;
-
-    return handle;
-    */
-
-    ASSERT_NOT_REACHED();
-    return TextureHandle();
 }
 
 TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, bool sRGB, Texture* fallback)
