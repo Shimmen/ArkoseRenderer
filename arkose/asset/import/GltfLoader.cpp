@@ -5,7 +5,7 @@
 #include "utility/Profiling.h"
 #include "utility/FileIO.h"
 
-ImportResult GltfLoader_NEW::load(const std::string& gltfFilePath)
+ImportResult GltfLoader::load(const std::string& gltfFilePath)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -165,7 +165,7 @@ ImportResult GltfLoader_NEW::load(const std::string& gltfFilePath)
     return result;
 }
 
-void GltfLoader_NEW::createTransformForNode(Transform& transform, const tinygltf::Node& node) const
+void GltfLoader::createTransformForNode(Transform& transform, const tinygltf::Node& node) const
 {
     if (!node.matrix.empty()) {
         const auto& vals = node.matrix;
@@ -195,7 +195,7 @@ void GltfLoader_NEW::createTransformForNode(Transform& transform, const tinygltf
     }
 }
 
-std::unique_ptr<StaticMeshAsset> GltfLoader_NEW::createStaticMesh(const tinygltf::Model& gltfModel, const tinygltf::Mesh& gltfMesh, Transform& transform)
+std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Model& gltfModel, const tinygltf::Mesh& gltfMesh, Transform& transform)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -332,7 +332,7 @@ std::unique_ptr<StaticMeshAsset> GltfLoader_NEW::createStaticMesh(const tinygltf
     return staticMesh;
 }
 
-const tinygltf::Accessor* GltfLoader_NEW::findAccessorForPrimitive(const tinygltf::Model& gltfModel, const tinygltf::Primitive& gltfPrimitive, const char* name) const
+const tinygltf::Accessor* GltfLoader::findAccessorForPrimitive(const tinygltf::Model& gltfModel, const tinygltf::Primitive& gltfPrimitive, const char* name) const
 {
     auto entry = gltfPrimitive.attributes.find(name);
     if (entry == gltfPrimitive.attributes.end()) {
@@ -343,7 +343,7 @@ const tinygltf::Accessor* GltfLoader_NEW::findAccessorForPrimitive(const tinyglt
     return &gltfModel.accessors[entry->second];
 }
 
-std::unique_ptr<MaterialAsset> GltfLoader_NEW::createMaterial(const tinygltf::Model& gltfModel, const tinygltf::Material& gltfMaterial)
+std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model& gltfModel, const tinygltf::Material& gltfMaterial)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -471,7 +471,7 @@ std::unique_ptr<MaterialAsset> GltfLoader_NEW::createMaterial(const tinygltf::Mo
     return material;
 }
 
-vec3 GltfLoader_NEW::createVec3(const std::vector<double>& values) const
+vec3 GltfLoader::createVec3(const std::vector<double>& values) const
 {
     ARKOSE_ASSERT(values.size() >= 3);
     return { static_cast<float>(values[0]),
@@ -479,12 +479,12 @@ vec3 GltfLoader_NEW::createVec3(const std::vector<double>& values) const
              static_cast<float>(values[2]) };
 }
 
-Arkose::Asset::Vec3 GltfLoader_NEW::createAssetVec3(vec3 v) const
+Arkose::Asset::Vec3 GltfLoader::createAssetVec3(vec3 v) const
 {
     return Arkose::Asset::Vec3(v.x, v.y, v.z);
 }
 
-Arkose::Asset::Vec4 GltfLoader_NEW::createAssetVec4(vec4 v) const
+Arkose::Asset::Vec4 GltfLoader::createAssetVec4(vec4 v) const
 {
     return Arkose::Asset::Vec4(v.x, v.y, v.z, v.w);
 }

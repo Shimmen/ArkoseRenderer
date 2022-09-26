@@ -38,7 +38,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         targetDirectory.remove_suffix(1);
     }
 
-    GltfLoader_NEW gltfLoader {};
+    GltfLoader gltfLoader {};
     ImportResult result = gltfLoader.load(std::string(gltfFilePath));
 
     // Compress all images (the slow part of this process) in parallel

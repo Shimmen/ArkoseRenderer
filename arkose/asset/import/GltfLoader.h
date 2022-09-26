@@ -10,12 +10,12 @@
 #include <memory>
 #include <tiny_gltf.h>
 
-class GltfLoader_NEW {
+class GltfLoader {
 
 public:
 
-    GltfLoader_NEW() = default;
-    ~GltfLoader_NEW() = default;
+    GltfLoader() = default;
+    ~GltfLoader() = default;
 
     ImportResult load(const std::string& gltfFilePath);
 
@@ -42,7 +42,7 @@ private:
 };
 
 template<typename Type>
-const Type* GltfLoader_NEW::getTypedMemoryBufferForAccessor(const tinygltf::Model& gltfModel, const tinygltf::Accessor& gltfAccessor) const
+const Type* GltfLoader::getTypedMemoryBufferForAccessor(const tinygltf::Model& gltfModel, const tinygltf::Accessor& gltfAccessor) const
 {
     const tinygltf::BufferView& gltfView = gltfModel.bufferViews[gltfAccessor.bufferView];
     ARKOSE_ASSERT(gltfView.byteStride == 0 || gltfView.byteStride == sizeof(Type)); // (i.e. tightly packed)
@@ -56,7 +56,7 @@ const Type* GltfLoader_NEW::getTypedMemoryBufferForAccessor(const tinygltf::Mode
 }
 
 template<typename SourceType>
-void GltfLoader_NEW::copyIndexData(std::vector<uint32_t>& target, const tinygltf::Model& gltfModel, const tinygltf::Accessor& gltfAccessor) const
+void GltfLoader::copyIndexData(std::vector<uint32_t>& target, const tinygltf::Model& gltfModel, const tinygltf::Accessor& gltfAccessor) const
 {
     SCOPED_PROFILE_ZONE_NAMED("Copy index data");
 
