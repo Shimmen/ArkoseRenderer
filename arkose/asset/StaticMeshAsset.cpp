@@ -2,7 +2,6 @@
 
 #include "core/Assert.h"
 #include "core/Logging.h"
-#include "scene/loader/GltfLoader.h"
 #include "utility/FileIO.h"
 #include "utility/Profiling.h"
 #include <mutex>

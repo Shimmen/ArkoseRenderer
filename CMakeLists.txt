@@ -147,7 +147,6 @@ set(ARKOSE_SOURCES
     arkose/scene/camera/FpsCameraController.cpp
     arkose/scene/lights/DirectionalLight.cpp
     arkose/scene/lights/SpotLight.cpp
-    arkose/scene/loader/GltfLoader.cpp
     arkose/utility/AvgElapsedTimer.cpp
     arkose/utility/FileDialog.cpp
     arkose/utility/FileIO.cpp

@@ -7,7 +7,6 @@
 #include "scene/ProbeGrid.h"
 #include "scene/lights/DirectionalLight.h"
 #include "scene/lights/SpotLight.h"
-#include "scene/loader/GltfLoader.h"
 #include "scene/MeshInstance.h"
 #include <memory>
 #include <nlohmann/json_fwd.hpp>
@@ -128,9 +127,6 @@ private:
 
     Camera* m_currentMainCamera { nullptr };
     std::unordered_map<std::string, std::unique_ptr<Camera>> m_allCameras {};
-    
-    // Various loaders, which needs to be kept in memory as they own their loaded resources until someone takes over
-    GltfLoader m_gltfLoader {};
 
     std::vector<std::unique_ptr<StaticMeshInstance>> m_staticMeshInstances {};
     
