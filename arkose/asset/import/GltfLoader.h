@@ -29,9 +29,6 @@ private:
     vec3 createVec3(const std::vector<double>&) const;
     void createTransformForNode(Transform&, const tinygltf::Node&) const;
 
-    Arkose::Asset::Vec3 createAssetVec3(vec3) const;
-    Arkose::Asset::Vec4 createAssetVec4(vec4) const;
-
     const tinygltf::Accessor* findAccessorForPrimitive(const tinygltf::Model&, const tinygltf::Primitive&, const char* name) const;
 
     template<typename Type>

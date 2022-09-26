@@ -1,5 +1,6 @@
 #include "GltfLoader.h"
 
+#include "asset/AssetTypes.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "utility/Profiling.h"
@@ -231,11 +232,11 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
 
         vec3 posMin = meshMatrix * createVec3(positionAccessor.minValues);
         vec3 posMax = meshMatrix * createVec3(positionAccessor.maxValues);
-        lod0.bounding_box = Arkose::Asset::AABB(createAssetVec3(posMin), createAssetVec3(posMax));
+        lod0.bounding_box = Arkose::Asset::AABB(AssetTypes::convert(posMin), AssetTypes::convert(posMax));
 
         vec3 center = (posMax + posMin) / 2.0f;
         float radius = length(posMax - posMin) / 2.0f;
-        lod0.bounding_sphere = Arkose::Asset::Sphere(createAssetVec3(center), radius);
+        lod0.bounding_sphere = Arkose::Asset::Sphere(AssetTypes::convert(center), radius);
 
         lod0.mesh_segments.emplace_back(std::make_unique<StaticMeshSegmentAsset>());
         StaticMeshSegmentAsset& meshSegment = *lod0.mesh_segments.back();
@@ -252,7 +253,7 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
             for (size_t i = 0; i < positionAccessor.count; ++i) {
                 vec3 sourceValue = *(firstPosition + i);
                 vec3 transformedValue = meshMatrix * sourceValue;
-                meshSegment.positions.push_back(createAssetVec3(transformedValue));
+                meshSegment.positions.push_back(AssetTypes::convert(transformedValue));
             }
         }
 
@@ -277,7 +278,7 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
             for (size_t i = 0; i < accessor->count; ++i) {
                 vec3 sourceNormal = *(firstNormal + i);
                 vec3 transformedNormal = meshNormalMatrix * sourceNormal;
-                meshSegment.normals.push_back(createAssetVec3(transformedNormal));
+                meshSegment.normals.push_back(AssetTypes::convert(transformedNormal));
             }
         }
 
@@ -293,7 +294,7 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
                 vec4 sourceTangent = *(firstTangent + i);
                 vec3 transformedTangent = meshNormalMatrix * sourceTangent.xyz();
                 vec4 finalTangent = vec4(transformedTangent, sourceTangent.w);
-                meshSegment.tangents.push_back(createAssetVec4(finalTangent));
+                meshSegment.tangents.push_back(AssetTypes::convert(finalTangent));
             }
         }
 
@@ -477,14 +478,4 @@ vec3 GltfLoader::createVec3(const std::vector<double>& values) const
     return { static_cast<float>(values[0]),
              static_cast<float>(values[1]),
              static_cast<float>(values[2]) };
-}
-
-Arkose::Asset::Vec3 GltfLoader::createAssetVec3(vec3 v) const
-{
-    return Arkose::Asset::Vec3(v.x, v.y, v.z);
-}
-
-Arkose::Asset::Vec4 GltfLoader::createAssetVec4(vec4 v) const
-{
-    return Arkose::Asset::Vec4(v.x, v.y, v.z, v.w);
 }

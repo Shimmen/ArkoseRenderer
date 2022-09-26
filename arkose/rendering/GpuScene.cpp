@@ -694,7 +694,7 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset* materialAsset)
     shaderMaterial.blendMode = translateBlendModeToShaderMaterial(materialAsset->blend_mode);
     shaderMaterial.maskCutoff = materialAsset->mask_cutoff;
 
-    shaderMaterial.colorTint = AssetTypes::convert(materialAsset->color_tint);
+    shaderMaterial.colorTint = AssetTypes::convertColorRGBA(materialAsset->color_tint);
 
     uint64_t materialIdx = m_managedMaterials.size();
     if (materialIdx >= MaxSupportedSceneMaterials) {
