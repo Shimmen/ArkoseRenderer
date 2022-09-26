@@ -95,7 +95,7 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
                             // in some cases but in general if the masked features are small enough it's not really noticable.
                             if (const ShaderMaterial* material = scene.materialForHandle(meshSegment.material)) {
                                 if (material->blendMode == BLEND_MODE_TRANSLUCENT) {
-                                    break;
+                                    continue;
                                 }
                             }
 
