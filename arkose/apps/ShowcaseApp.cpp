@@ -61,7 +61,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     }
 
     pipeline.addNode<CullingNode>();
-    pipeline.addNode<PrepassNode>();
+    pipeline.addNode<PrepassNode>(PrepassMode::AllOpaquePixels);
 
     pipeline.addNode<DirectionalLightShadowNode>();
     pipeline.addNode<LocalLightShadowNode>();

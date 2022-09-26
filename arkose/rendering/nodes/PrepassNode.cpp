@@ -1,36 +1,111 @@
 #include "PrepassNode.h"
 
+#include "rendering/util/ScopedDebugZone.h"
 #include <imgui.h>
+
+PrepassNode::PrepassNode(PrepassMode mode)
+    : m_mode(mode)
+{
+}
 
 RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Registry& reg)
 {
-    Texture* sceneDepth = reg.getTexture("SceneDepth");
-    BindingSet& opaqueDrawableBindingSet = *reg.getBindingSet("MainViewCulledDrawablesOpaqueSet");
+    RenderState& prepassOpaqueRenderState = makeRenderState(reg, scene, PassType::Opaque);
+    Buffer& opaqueIndirectDrawCmdsBuffer = *reg.getBuffer("MainViewOpaqueDrawCmds");
+    Buffer& opaqueIndirectDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
 
-    Shader prepassShader = Shader::createVertexOnly("forward/prepass.vert");
-    RenderTarget& prepassRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, sceneDepth, LoadOp::Clear, StoreOp::Store } });
-    RenderStateBuilder prepassRenderStateBuilder { prepassRenderTarget, prepassShader, m_prepassVertexLayout };
-    prepassRenderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
-    prepassRenderStateBuilder.stateBindings().at(0, opaqueDrawableBindingSet);
-    RenderState& prepassRenderState = reg.createRenderState(prepassRenderStateBuilder);
-    prepassRenderState.setName("ForwardZPrepass");
-
-    Buffer& indirectDrawCmdsBuffer = *reg.getBuffer("MainViewOpaqueDrawCmds");
-    Buffer& indirectDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
+    RenderState& prepassMaskedRenderState = makeRenderState(reg, scene, PassType::Masked);
+    Buffer& maskedIndirectDrawCmdsBuffer = *reg.getBuffer("MainViewMaskedDrawCmds");
+    Buffer& maskedIndirectDrawCountBuffer = *reg.getBuffer("MainViewMaskedDrawCount");
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
-        scene.ensureDrawCallIsAvailableForAll(m_prepassVertexLayout);
 
-        cmdList.beginRendering(prepassRenderState, ClearValue::blackAtMaxDepth());
+        auto setCommonConstants = [&]() {
+            cmdList.setNamedUniform("depthOffset", 0.00005f);
+            cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
+        };
 
-        cmdList.setNamedUniform("depthOffset", 0.00005f);
-        cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
+        if (m_mode == PrepassMode::OpaqueObjectsOnly || m_mode == PrepassMode::AllOpaquePixels) {
+            ScopedDebugZone zone { cmdList, "Opaque" };
 
-        cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_prepassVertexLayout));
-        cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
+            VertexLayout opaqueVertexLayout = prepassOpaqueRenderState.vertexLayout();
+            scene.ensureDrawCallIsAvailableForAll(opaqueVertexLayout);
 
-        cmdList.drawIndirect(indirectDrawCmdsBuffer, indirectDrawCountBuffer);
+            cmdList.beginRendering(prepassOpaqueRenderState, ClearValue::blackAtMaxDepth());
+            setCommonConstants();
 
-        cmdList.endRendering();
+            cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(opaqueVertexLayout));
+            cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
+
+            cmdList.drawIndirect(opaqueIndirectDrawCmdsBuffer, opaqueIndirectDrawCountBuffer);
+
+            cmdList.endRendering();
+        }
+
+        if (m_mode == PrepassMode::AllOpaquePixels) {
+            ScopedDebugZone zone { cmdList, "Masked" };
+
+            VertexLayout maskedVertexLayout = prepassMaskedRenderState.vertexLayout();
+            scene.ensureDrawCallIsAvailableForAll(maskedVertexLayout);
+
+            cmdList.beginRendering(prepassMaskedRenderState);
+            setCommonConstants();
+
+            cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(maskedVertexLayout));
+            cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
+
+            cmdList.drawIndirect(maskedIndirectDrawCmdsBuffer, maskedIndirectDrawCountBuffer);
+
+            cmdList.endRendering();
+        }
     };
+}
+
+RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, PassType type) const
+{
+    Shader shader {};
+    VertexLayout vertexLayout {};
+    BindingSet* drawablesBindingSet = nullptr;
+    const char* stateName = "";
+    LoadOp loadOp = LoadOp::Clear;
+
+    switch (type) {
+    case PassType::Opaque:
+        shader = Shader::createVertexOnly("forward/prepass.vert");
+        vertexLayout = { VertexComponent::Position3F };
+        drawablesBindingSet = reg.getBindingSet("MainViewCulledDrawablesOpaqueSet");
+        stateName = "PrepassOpaque";
+        loadOp = LoadOp::Clear;
+        break;
+    case PassType::Masked:
+        shader = Shader::createBasicRasterize("forward/prepassMasked.vert", "forward/prepassMasked.frag");
+        vertexLayout = { VertexComponent::Position3F, VertexComponent::TexCoord2F };
+        drawablesBindingSet = reg.getBindingSet("MainViewCulledDrawablesMaskedSet");
+        stateName = "PrepassMasked";
+        loadOp = LoadOp::Load;
+        break;
+    }
+
+    Texture* sceneDepth = reg.getTexture("SceneDepth");
+    RenderTarget& prepassRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, sceneDepth, loadOp, StoreOp::Store } });
+    
+    RenderStateBuilder renderStateBuilder { prepassRenderTarget, shader, vertexLayout };
+
+    renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
+    renderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
+
+    switch (type) {
+    case PassType::Opaque:
+        renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("MainViewCulledDrawablesOpaqueSet"));
+        break;
+    case PassType::Masked:
+        renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("MainViewCulledDrawablesMaskedSet"));
+        renderStateBuilder.stateBindings().at(1, scene.globalMaterialBindingSet());
+        break;
+    }
+
+    RenderState& renderState = reg.createRenderState(renderStateBuilder);
+    renderState.setName(stateName);
+
+    return renderState;
 }
