@@ -247,8 +247,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 const LoadedImageForTextureCreation& loadedImageForTex = m_asyncLoadedImages[i];
 
                 auto texture = backend().createTexture(loadedImageForTex.textureDescription);
-                texture->setData(loadedImageForTex.image->data(), loadedImageForTex.image->dataSize());
-                texture->setName("Texture:" + loadedImageForTex.path);
+                texture->setData(loadedImageForTex.imageAsset->pixel_data.data(), loadedImageForTex.imageAsset->pixel_data.size());
+                texture->setName("Texture:" + std::string(loadedImageForTex.imageAsset->assetFilePath()));
                 m_managedTexturesVramUsage += texture->sizeInMemory();
 
                 updateTexture(loadedImageForTex.textureHandle, std::move(texture));
@@ -810,6 +810,7 @@ TextureHandle GpuScene::registerMaterialTexture(Material::TextureDescription& de
 {
     SCOPED_PROFILE_ZONE();
 
+    /*
     auto entry = m_materialTextureCache.find(description);
     if (entry == m_materialTextureCache.end()) {
 
@@ -900,17 +901,18 @@ TextureHandle GpuScene::registerMaterialTexture(Material::TextureDescription& de
     managedTexture.referenceCount += 1;
 
     return handle;
+    */
+
+    ASSERT_NOT_REACHED();
+    return TextureHandle();
 }
 
 TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, bool sRGB, Texture* fallback)
 {
     SCOPED_PROFILE_ZONE();
 
-    // TODO: Cache on material inputs!
-
-    TextureHandle handle = registerTextureSlot();
-
     if (input == nullptr) {
+        TextureHandle handle = registerTextureSlot();
         updateTextureUnowned(handle, fallback);
         return handle;
     }
@@ -918,98 +920,74 @@ TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, bool sRGB,
     ARKOSE_ASSERT(input->image.type == Arkose::Asset::ImageIndirection::path);
     std::string const& imageAssetPath = input->image.Aspath()->path;
 
-    // TODO: Async load the image!
-    // TODO: Load for streaming? I.e. don't unpack
-    ImageAsset* imageAsset = ImageAsset::loadOrCreate(imageAssetPath);
+    // TODO: Cache on material inputs, beyond just the key
+    auto entry = m_materialTextureCache.find(imageAssetPath);
+    if (entry == m_materialTextureCache.end()) {
 
-    if (imageAsset == nullptr) {
-        updateTextureUnowned(handle, fallback);
+        auto makeTextureDescription = [](ImageAsset const& imageAsset, MaterialInput const& input, bool sRGB) -> Texture::Description {
+            // TODO: Handle 2D arrays & 3D textures here too
+            ARKOSE_ASSERT(imageAsset.depth == 1);
+
+            return Texture::Description {
+                .type = Texture::Type::Texture2D,
+                .arrayCount = 1,
+                .extent = { imageAsset.width, imageAsset.height, imageAsset.depth },
+                .format = AssetTypes::convertFormat(imageAsset.format, imageAsset.color_space, sRGB),
+                .filter = Texture::Filters(AssetTypes::convertMinFilter(input.min_filter),
+                                           AssetTypes::convertMagFilter(input.mag_filter)),
+                .wrapMode = Texture::WrapModes(AssetTypes::convertWrapMode(input.wrap_modes.u()),
+                                               AssetTypes::convertWrapMode(input.wrap_modes.v()),
+                                               AssetTypes::convertWrapMode(input.wrap_modes.w())),
+                .mipmap = AssetTypes::convertMipFilter(input.mip_filter, input.use_mipmapping),
+                .multisampling = Texture::Multisampling::None
+            };
+        };
+
+        TextureHandle handle = registerTextureSlot();
+        m_materialTextureCache[imageAssetPath] = handle;
+
+        // TODO: Also make the texture GPU resource itself on a worker thread, not just the image loading!
+        if (UseAsyncTextureLoads) {
+
+            // Put some placeholder texture for this texture slot before the async has loaded in fully
+            updateTextureUnowned(handle, fallback);
+
+            TaskGraph::get().enqueueTask([this, &makeTextureDescription, handle, sRGB, path = imageAssetPath, input = *input]() {
+
+                if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(path)) {
+                    Texture::Description desc = makeTextureDescription(*imageAsset, input, sRGB);
+                    {
+                        SCOPED_PROFILE_ZONE_NAMED("Pushing async-loaded image asset")
+                        std::scoped_lock<std::mutex> lock { m_asyncLoadedImagesMutex };
+                        this->m_asyncLoadedImages.push_back(LoadedImageForTextureCreation { .imageAsset = imageAsset,
+                                                                                            .textureHandle = handle,
+                                                                                            .textureDescription = desc });
+                    }
+                }
+            });
+
+        } else {
+            if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(imageAssetPath)) {
+                std::unique_ptr<Texture> texture = m_backend.createTexture(makeTextureDescription(*imageAsset, *input, sRGB));
+                texture->setData(imageAsset->pixel_data.data(), imageAsset->pixel_data.size());
+                texture->setName("Texture:" + imageAssetPath);
+
+                m_managedTexturesVramUsage += texture->sizeInMemory();
+                updateTexture(handle, std::move(texture));
+            } else {
+                updateTextureUnowned(handle, fallback);
+            }
+        }
+
         return handle;
     }
 
-    // TODO: Handle 2D arrays & 3D textures here too
-    ARKOSE_ASSERT(imageAsset->depth == 1);
+    TextureHandle handle = entry->second;
+    ARKOSE_ASSERT(handle.valid());
 
-    auto translateImageFormat = [](ImageFormat imageFormat, ColorSpace colorSpace, bool sRGBoverride) -> Texture::Format {
-        // TODO: Respect the color space of the source texture!
-        bool sRGB = sRGBoverride;// (colorSpace == ColorSpace::sRGB_encoded);
-        switch (imageFormat) {
-        case ImageFormat::RGBA8:
-            return sRGB ? Texture::Format::sRGBA8 : Texture::Format::RGBA8;
-        default:
-            ASSERT_NOT_REACHED();
-            return Texture::Format::Unknown;
-        }
-    };
-
-    auto translateImageMinFilter = [](ImageFilter minFilter) -> Texture::MinFilter {
-        switch (minFilter) {
-        case ImageFilter::Nearest:
-            return Texture::MinFilter::Nearest;
-        case ImageFilter::Linear:
-            return Texture::MinFilter::Linear;
-        default:
-            ASSERT_NOT_REACHED();
-        }
-    };
-
-    auto translateImageMagFilter = [](ImageFilter magFilter) -> Texture::MagFilter {
-        switch (magFilter) {
-        case ImageFilter::Nearest:
-            return Texture::MagFilter::Nearest;
-        case ImageFilter::Linear:
-            return Texture::MagFilter::Linear;
-        default:
-            ASSERT_NOT_REACHED();
-        }
-    };
-
-    auto translateImageWrapMode = [](WrapMode wrapMode) -> Texture::WrapMode {
-        switch (wrapMode) {
-        case WrapMode::Repeat:
-            return Texture::WrapMode::Repeat;
-        case WrapMode::MirroredRepeat:
-            return Texture::WrapMode::MirroredRepeat;
-        case WrapMode::ClampToEdge:
-            return Texture::WrapMode::ClampToEdge;
-        default:
-            ASSERT_NOT_REACHED();
-        }
-    };
-
-    auto translateImageMipmapMode = [](ImageFilter mipFilter, bool useMipmap) -> Texture::Mipmap {
-        if (useMipmap) {
-            switch (mipFilter) {
-            case ImageFilter::Nearest:
-                return Texture::Mipmap::Nearest;
-            case ImageFilter::Linear:
-                return Texture::Mipmap::Linear;
-            default:
-                ASSERT_NOT_REACHED();
-            }
-        } else {
-            return Texture::Mipmap::None;
-        }
-    };
-
-    std::unique_ptr<Texture> texture = m_backend.createTexture(Texture::Description {
-        .type = Texture::Type::Texture2D,
-        .arrayCount = 1,
-        .extent = { imageAsset->width, imageAsset->height, imageAsset->depth },
-        .format = translateImageFormat(imageAsset->format, imageAsset->color_space, sRGB),
-        .filter = Texture::Filters(translateImageMinFilter(input->min_filter),
-                                   translateImageMagFilter(input->mag_filter)),
-        .wrapMode = Texture::WrapModes(translateImageWrapMode(input->wrap_modes.u()),
-                                       translateImageWrapMode(input->wrap_modes.v()),
-                                       translateImageWrapMode(input->wrap_modes.w())),
-        .mipmap = translateImageMipmapMode(input->mip_filter, input->use_mipmapping),
-        .multisampling = Texture::Multisampling::None });
-
-    texture->setData(imageAsset->pixel_data.data(), imageAsset->pixel_data.size());
-    texture->setName("Texture:" + imageAssetPath);
-
-    m_managedTexturesVramUsage += texture->sizeInMemory();
-    updateTexture(handle, std::move(texture));
+    ARKOSE_ASSERT(handle.index() < m_managedTextures.size());
+    ManagedTexture& managedTexture = m_managedTextures[handle.index()];
+    managedTexture.referenceCount += 1;
 
     return handle;
 }

@@ -170,7 +170,20 @@ ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
     if (AssetHelpers::isValidAssetPath(filePath, Arkose::Asset::ImageAssetExtension())) {
         return loadFromArkimg(filePath);
     } else {
+
+        {
+            SCOPED_PROFILE_ZONE_NAMED("Image cache - load source asset");
+            std::scoped_lock<std::mutex> lock { s_imageAssetCacheMutex };
+
+            auto entry = s_imageAssetCache.find(filePath);
+            if (entry != s_imageAssetCache.end()) {
+                return entry->second.get();
+            }
+        }
+
         std::unique_ptr<ImageAsset> newImageAsset = createFromSourceAsset(filePath);
+        newImageAsset->m_assetFilePath = filePath;
+
         {
             SCOPED_PROFILE_ZONE_NAMED("Image cache - store source asset");
             std::scoped_lock<std::mutex> lock { s_imageAssetCacheMutex };

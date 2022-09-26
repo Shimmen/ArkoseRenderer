@@ -163,15 +163,15 @@ private:
         uint64_t referenceCount { 0 };
     };
     std::vector<ManagedTexture> m_managedTextures {};
-    std::unordered_map<Material::TextureDescription, TextureHandle> m_materialTextureCache {};
+    // TODO: This key should probably be not just the path but also some meta-info, e.g. what wrap modes we want!
+    std::unordered_map<std::string, TextureHandle> m_materialTextureCache {};
     std::vector<BindingSet::TextureBindingUpdate> m_pendingTextureUpdates {};
     static constexpr int MaxSupportedSceneTextures = 4096;
 
     static constexpr bool UseAsyncTextureLoads = true;
     static constexpr size_t MaxNumAsyncTextureLoadsToFinalizePerFrame = 4;
     struct LoadedImageForTextureCreation {
-        Image* image {};
-        std::string path {};
+        ImageAsset* imageAsset { nullptr };
         TextureHandle textureHandle {};
         Texture::Description textureDescription {};
     };
