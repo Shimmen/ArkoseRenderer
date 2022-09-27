@@ -18,6 +18,9 @@ public:
         GlossyIndirectOnly,
     };
 
+    ComposeMode composeMode() const { return m_composeMode; }
+    void setComposeMode(ComposeMode mode) { m_composeMode = mode; }
+
 private:
     ComposeMode m_composeMode { ComposeMode::FullCompose };
     bool m_includeAmbientOcclusion { true };
