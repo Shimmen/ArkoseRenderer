@@ -3,10 +3,20 @@
 #include "rendering/GpuScene.h"
 #include <imgui.h>
 
+void RTReflectionsNode::drawGui()
+{
+    ImGui::SliderFloat("Injected ambient (lx)", &m_injectedAmbient, 0.0f, 1'000.0f);
+
+    ImGui::SliderFloat("Perfect mirror threshold", &m_mirrorRoughnessThreshold, 0.0f, m_fullyDiffuseRoughnessThreshold - 0.01f);
+    ImGui::SliderFloat("Fully diffuse threshold", &m_fullyDiffuseRoughnessThreshold, m_mirrorRoughnessThreshold + 0.01f, 1.0f);
+}
+
 RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& reflectionsImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
     reg.publish("Reflections", reflectionsImage);
+
+    Texture& blueNoiseTexture = *reg.getTexture("BlueNoise");
 
     BindingSet& rtMeshDataBindingSet = *reg.getBindingSet("SceneRTMeshDataSet");
     BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
@@ -19,7 +29,8 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
                                                          ShaderBinding::sampledTexture(*reg.getTexture("SceneMaterial"), ShaderStage::RTRayGen),
                                                          ShaderBinding::sampledTexture(*reg.getTexture("SceneNormalVelocity"), ShaderStage::RTRayGen),
                                                          ShaderBinding::sampledTexture(*reg.getTexture("SceneDepth"), ShaderStage::RTRayGen),
-                                                         ShaderBinding::sampledTexture(scene.environmentMapTexture(), ShaderStage::RTRayGen) });
+                                                         ShaderBinding::sampledTexture(scene.environmentMapTexture(), ShaderStage::RTRayGen),
+                                                         ShaderBinding::sampledTexture(blueNoiseTexture, ShaderStage::RTRayGen) });
 
     ShaderFile raygen { "rt-reflections/raygen.rgen" };
     ShaderFile defaultMissShader { "rayTracing/common/miss.rmiss" };
@@ -41,18 +52,11 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
         cmdList.clearTexture(reflectionsImage, ClearValue::blackAtMaxDepth());
         cmdList.setRayTracingState(rtState);
 
-        static float injectedAmbient = 500.0f;
-        ImGui::SliderFloat("Injected ambient", &injectedAmbient, 0.0f, 1'000.0f);
-        cmdList.setNamedUniform("ambientAmount", injectedAmbient * scene.lightPreExposure());
-
+        cmdList.setNamedUniform("ambientAmount", m_injectedAmbient * scene.lightPreExposure());
         cmdList.setNamedUniform("environmentMultiplier", scene.preExposedEnvironmentBrightnessFactor());
-
-        static float mirrorRoughnessThreshold = 0.2f;
-        static float fullyDiffuseRoughnessThreshold = 0.96f;
-        ImGui::SliderFloat("Perfect mirror threshold", &mirrorRoughnessThreshold, 0.0f, fullyDiffuseRoughnessThreshold - 0.01f);
-        ImGui::SliderFloat("Fully diffuse threshold", &fullyDiffuseRoughnessThreshold, mirrorRoughnessThreshold + 0.01f, 1.0f);
-        cmdList.setNamedUniform("parameter1", mirrorRoughnessThreshold);
-        cmdList.setNamedUniform("parameter2", fullyDiffuseRoughnessThreshold);
+        cmdList.setNamedUniform<float>("parameter1", m_mirrorRoughnessThreshold);
+        cmdList.setNamedUniform<float>("parameter2", m_fullyDiffuseRoughnessThreshold);
+        cmdList.setNamedUniform<float>("parameter3", static_cast<float>(appState.frameIndex() % blueNoiseTexture.arrayCount()));
 
         cmdList.traceRays(appState.windowExtent());
     };

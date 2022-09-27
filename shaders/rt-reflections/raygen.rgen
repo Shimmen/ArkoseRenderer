@@ -15,10 +15,30 @@ layout(set = 0, binding = 3) uniform sampler2D sceneMaterialTex;
 layout(set = 0, binding = 4) uniform sampler2D sceneNormalTex;
 layout(set = 0, binding = 5) uniform sampler2D sceneDepthTex;
 layout(set = 0, binding = 6) uniform sampler2D environmentTex;
+layout(set = 0, binding = 7) uniform sampler2DArray blueNoiseTexture;
 
 NAMED_UNIFORMS_STRUCT(RayTracingPushConstants, constants);
-// parameter1 => mirrorRoughnessThreshold;
-// parameter2 => fullyDiffuseRoughnessThreshold;
+float mirrorRoughnessThreshold() { return constants.parameter1; }
+float fullyDiffuseRoughnessThreshold() { return constants.parameter2; }
+float blueNoiseArrayLayerIndexForFrame() { return constants.parameter3; }
+
+mat3 createIsotropicTBN(vec3 N)
+{
+	// Pick abitrary tangent that is orthogonal to the normal
+	vec3 T;
+	if (abs(N.z) > 0.0) {
+		float k = sqrt(N.y * N.y + N.z * N.z);
+		T = vec3(0.0, -N.z / k, N.y / k);
+	} else {
+		float k = sqrt(N.x * N.x + N.y * N.y);
+		T = vec3(N.y / k, -N.x / k, 0.0);
+	}
+
+	vec3 B = cross(N, T);
+
+	mat3 TBN = mat3(T, B, N);
+	return transpose(TBN);
+}
 
 layout(location = 0) rayPayload RayPayloadMain payload;
 
@@ -34,12 +54,19 @@ void main()
 		return;
 	}
 
-	vec3 viewSpaceNormal = decodeNormal(texelFetch(sceneNormalTex, pixelCoord, 0).rg);
-	vec3 N = mat3(camera.worldFromView) * viewSpaceNormal;
-
 	vec4 materialProps = texelFetch(sceneMaterialTex, pixelCoord, 0).rgba;
 	float roughness = materialProps.r;
 	float metallic = materialProps.g;
+
+	if (roughness >= fullyDiffuseRoughnessThreshold()) {
+		// TODO: Maybe just early return if all lanes agree on this, otherwise trace anyway
+		// (although, would add more noise to the image overall)
+		imageStore(resultImage, pixelCoord, vec4(0, 0, 0, 0));
+		return;
+	}
+
+	vec3 viewSpaceNormal = decodeNormal(texelFetch(sceneNormalTex, pixelCoord, 0).rg);
+	vec3 N = mat3(camera.worldFromView) * viewSpaceNormal;
 
 	vec4 cameraOrigin = camera.worldFromView * vec4(0, 0, 0, 1);
 	vec4 cameraTarget = camera.worldFromView * camera.viewFromProjection * vec4(inUV * 2.0 - 1.0, nonLinearDepth, 1.0);
@@ -48,19 +75,19 @@ void main()
 	vec3 rayOrigin = cameraTarget.xyz;
 	vec3 viewRay = normalize(cameraTarget.xyz - cameraOrigin.xyz);
 
-	vec3 rayDirection;
-	if (roughness <= constants.parameter1 /*i.e. mirrorRoughnessThreshold*/) {
-		// Perfect mirror reflection
-		rayDirection = reflect(viewRay, N);
-	} else if (roughness >= constants.parameter2 /*i.e. fullyDiffuseRoughnessThreshold*/) {
-		// TODO: Don't trace a ray, just sample the diffuse GI and weight accordinly
-		imageStore(resultImage, pixelCoord, vec4(1, 0, 1, 0));
-		return;
-	} else {
-		// TODO: Support non-mirror reflections (importance sample BRDF!)
-		imageStore(resultImage, pixelCoord, vec4(0, 0, 0, 0));
-		return;
-	}
+	vec3 lookupCoord = vec3(pixelCenter / vec2(textureSize(blueNoiseTexture, 0).xy), blueNoiseArrayLayerIndexForFrame());
+	vec2 randomness = textureLod(blueNoiseTexture, lookupCoord, 0.0).xy;
+
+	mat3 TBN = createIsotropicTBN(N);
+	mat3 inverseTBN = transpose(TBN); // rotation only
+
+	// In tangent space!
+	vec3 viewDirection = TBN * (-viewRay);
+	vec3 sampledNormal = sampleSpecularBRDF(viewDirection, roughness, randomness);
+	vec3 reflectedDirection = reflect(-viewDirection, sampledNormal);
+
+	// Transform back to view space
+	vec3 rayDirection = inverseTBN * reflectedDirection;
 
 	float tmin = camera.zNear;
 	float tmax = camera.zFar;
@@ -70,7 +97,7 @@ void main()
 
 	// Opaque
 	{
-		uint rayFlags = RayFlags_Opaque | RayFlags_CullBackFacingTriangles;
+		uint rayFlags = RayFlags_Opaque;
 		uint cullMask = RT_HIT_MASK_OPAQUE;
 
 		traceRay(topLevelAS, rayFlags, cullMask, 0, 0, 0, rayOrigin, tmin, rayDirection, tmax, 0);
