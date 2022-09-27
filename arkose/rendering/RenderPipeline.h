@@ -10,6 +10,10 @@
 
 class RenderPipeline {
 public:
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Pipeline setup
+
     explicit RenderPipeline(GpuScene* scene);
     ~RenderPipeline() = default;
 
@@ -26,6 +30,9 @@ public:
         return static_cast<NodeType&>(addNode(std::move(nodePtr)));
     }
 
+    ////////////////////////////////////////////////////////////////////////////
+    // Pipeline execution
+
     void constructAll(Registry& registry);
 
     // The callback is called for each node (in correct order)
@@ -33,6 +40,16 @@ public:
 
     AvgElapsedTimer& timer() { return m_pipelineTimer; }
     void drawGui(bool includeContainingWindow = false) const;
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Data & functions for cross-node communication
+    
+    // ..
+
+    // TODO: Now when nodes have access to the render pipeline we can use this to store various info about the current.. pipeline!
+    // Any cross-node communication can be done through this. They can explicitly put data here, e.g. a list of lights that will get
+    // ray traced shadows and another for lights that will get shadow maps, or they can essentially register interfaces; a shadow
+    // management interface which all the other nodes can interact with without knowing the exact nodes involved in it.
 
 private:
 

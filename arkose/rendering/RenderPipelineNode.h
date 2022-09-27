@@ -1,7 +1,8 @@
 #pragma once
 
-#include "AppState.h"
-#include "Registry.h"
+#include "core/Badge.h"
+#include "rendering/AppState.h"
+#include "rendering/Registry.h"
 #include "rendering/backend/base/CommandList.h"
 #include "rendering/backend/Resources.h"
 #include "utility/AvgElapsedTimer.h"
@@ -10,6 +11,7 @@
 #include <string>
 
 class GpuScene;
+class RenderPipeline;
 class UploadBuffer;
 
 class RenderPipelineNode {
@@ -31,8 +33,12 @@ public:
     // Draw GUI for this node
     virtual void drawGui() {};
 
+    void setPipeline(Badge<RenderPipeline>, RenderPipeline& owningPipeline) { m_owningPipeline = &owningPipeline; }
+    RenderPipeline& pipeline() const { return *m_owningPipeline; }
+
 private:
     AvgElapsedTimer m_timer;
+    RenderPipeline* m_owningPipeline { nullptr };
 };
 
 class RenderPipelineLambdaNode final : public RenderPipelineNode {

@@ -23,6 +23,8 @@ RenderPipelineNode& RenderPipeline::addNode(std::unique_ptr<RenderPipelineNode>&
     // All nodes should be added before construction!
     ARKOSE_ASSERT(m_nodeContexts.empty());
 
+    node->setPipeline({}, *this);
+
     m_ownedNodes.emplace_back(std::move(node));
     m_allNodes.push_back(m_ownedNodes.back().get());
 
