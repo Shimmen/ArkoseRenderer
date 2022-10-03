@@ -66,8 +66,8 @@ public:
             path = m_shaderManager.resolveGlslPath(requested_source);
             break;
         case shaderc_include_type_relative:
-            // FIXME: Support relative includes!
-            NOT_YET_IMPLEMENTED();
+            std::string_view dirOfRequesting = FileIO::extractDirectoryFromPath(requesting_source);
+            path = std::string(dirOfRequesting) + requested_source;
             break;
         }
 
