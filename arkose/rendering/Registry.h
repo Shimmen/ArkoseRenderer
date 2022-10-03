@@ -1,7 +1,9 @@
 #pragma once
 
-#include "AppState.h"
-#include "NodeDependency.h"
+#include "core/Conversion.h"
+#include "core/memory/BumpAllocator.h"
+#include "rendering/AppState.h"
+#include "rendering/NodeDependency.h"
 #include "rendering/backend/base/Backend.h"
 #include "rendering/backend/Resources.h"
 #include "rendering/backend/util/UploadBuffer.h"
@@ -55,6 +57,9 @@ public:
     [[nodiscard]] RayTracingState& createRayTracingState(ShaderBindingTable&, const StateBindings&, uint32_t maxRecursionDepth);
 
     [[nodiscard]] ComputeState& createComputeState(const Shader&, std::vector<BindingSet*>);
+
+    template<typename T, typename... Args>
+    [[nodiscard]] T& allocate(Args&&...);
 
     bool hasPreviousNode(const std::string& name) const;
 
@@ -111,6 +116,9 @@ private:
     std::vector<std::unique_ptr<TopLevelAS>> m_topLevelAS;
     std::vector<std::unique_ptr<RayTracingState>> m_rayTracingStates;
     std::vector<std::unique_ptr<ComputeState>> m_computeStates;
+
+    static constexpr size_t PersistentBufferSize = 10 * conversion::constants::BytesToKilobytes;
+    BumpAllocator m_persistentBuffer { PersistentBufferSize };
 };
 
 template<typename T>
@@ -127,6 +135,21 @@ template<typename T>
     constexpr size_t dataSize = sizeof(T);
     auto* binaryData = reinterpret_cast<const std::byte*>(&inData);
     return createBuffer(binaryData, dataSize, usage, memoryHint);
+}
+
+template<typename T, typename... Args>
+[[nodiscard]] T& Registry::allocate(Args&&... args)
+{
+    if (T* data = m_persistentBuffer.allocateAligned<T>()) {
+
+        new (data) T(std::forward<Args>(args)...);
+        return *data; // return as reference type
+
+    } else {
+        ARKOSE_LOG_FATAL("Registry ran out of persistent storage space while trying to allocate {} bytes. "
+                         "This shouldn't fail, we probably want to increase the buffer size (current size {})",
+                         sizeof(T), PersistentBufferSize);
+    }
 }
 
 template<typename T>
