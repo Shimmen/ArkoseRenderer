@@ -1,0 +1,92 @@
+#version 460
+
+#include <common/camera.glsl>
+#include <common/gBuffer.glsl>
+#include <common/namedUniforms.glsl>
+
+layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
+layout(set = 0, binding = 1, rgba16f) restrict uniform image2D resolvedRadianceAndVarianceImg;
+layout(set = 0, binding = 2) uniform sampler2D radianceTex;
+layout(set = 0, binding = 3) uniform sampler2D varianceTex;
+layout(set = 0, binding = 4) uniform sampler2D averageRadianceTex;
+layout(set = 0, binding = 5) uniform sampler2D sceneDepthTex;
+layout(set = 0, binding = 6) uniform sampler2D sceneMaterialTex;
+layout(set = 0, binding = 7) uniform sampler2D sceneNormalVelocityTex;
+
+NAMED_UNIFORMS(constants,
+    float noTracingRoughnessThreshold;
+)
+
+////////////////////////////////////////////////////////////////////////////////
+// Texture writes
+
+void FFX_DNSR_Reflections_StorePrefilteredReflections(ivec2 pixelCoord, vec3 resolvedRadiance, float resolvedVariance)
+{
+    imageStore(resolvedRadianceAndVarianceImg, pixelCoord, vec4(resolvedRadiance, resolvedVariance));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Texture reads
+
+void FFX_DNSR_Reflections_LoadNeighborhood(ivec2 pixelCoord, out vec3 radiance, out float variance,
+                                           out vec3 normal, out float depth, ivec2 screenSize)
+{
+    radiance = texelFetch(radianceTex, pixelCoord, 0).rgb;
+    variance = texelFetch(varianceTex, pixelCoord, 0).r;
+
+    // OPTIMIZATION: Optimize memory access (we only need the normal components, rg, from this texture)
+    vec3 viewSpaceNormal = decodeNormal(texelFetch(sceneNormalVelocityTex, pixelCoord, 0).rg);
+    // NOTE: As long as all normals here are in the same space it shouldn't matter what space (I believe, from looking at the code)
+    //vec3 worldSpaceNormal = mat3(camera.worldFromView) * viewSpaceNormal;
+    normal = viewSpaceNormal;//worldSpaceNormal;
+
+    // NOTE: In the sample code the linear depth is returned
+    // NOTE: In the sample they return abs(x) for the linear depth!
+    float nonlinearDepth = texelFetch(sceneDepthTex, pixelCoord, 0).x;
+    float linearDepth = calculateLinearDepth(nonlinearDepth, camera);
+    depth = abs(linearDepth);
+}
+
+float FFX_DNSR_Reflections_LoadRoughness(ivec2 pixelCoord)
+{
+    // OPTIMIZATION: Optimize memory access (we don't need other channels from this texture)
+    return texelFetch(sceneMaterialTex, pixelCoord, 0).r;
+}
+
+vec3 FFX_DNSR_Reflections_SampleAverageRadiance(vec2 uv)
+{
+    return textureLod(averageRadianceTex, uv, 0.0).rgb;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Etc
+
+// TODO: Probably move to shared header as it's used from multiple shaders
+
+bool FFX_DNSR_Reflections_IsGlossyReflection(float roughness)
+{
+    // This test should essentially be equivalent to the check if we're tracing at all or if we're just assuming diffuse / environment map lookup.
+    return roughness < constants.noTracingRoughnessThreshold;
+}
+
+bool FFX_DNSR_Reflections_IsMirrorReflection(float roughness)
+{
+    // TODO: Make parameter(?)
+    return roughness < 0.001;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Main
+
+#include <common/hlsl-on-glsl.glsl> // translation layer for FidelityFX shader (hlsl)
+#include "ffx-denoiser/ffx_denoiser_reflections_prefilter.h"
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main()
+{
+    ivec2 dispatchThreadId = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 groupThreadId = ivec2(gl_LocalInvocationID.xy);
+    uvec2 targetSize = uvec2(imageSize(resolvedRadianceAndVarianceImg));
+
+    FFX_DNSR_Reflections_Prefilter(dispatchThreadId, groupThreadId, targetSize);
+}

@@ -34,7 +34,7 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Re
     Texture& ambientOcclusionTex = *reg.getTexture("AmbientOcclusion");
     Texture& diffuseGiTex = *reg.getTexture("DiffuseGI");
 
-    Texture* reflectionsTex = reg.getTexture("Reflections");
+    Texture* reflectionsTex = reg.getTexture("DenoisedReflections");
     if (!reflectionsTex)
         reflectionsTex = &reg.createPixelTexture(vec4(0.0f), true);
 

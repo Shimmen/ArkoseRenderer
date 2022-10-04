@@ -1,0 +1,92 @@
+#version 460
+
+#include <common/camera.glsl>
+#include <common/gBuffer.glsl>
+#include <common/namedUniforms.glsl>
+
+layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
+layout(set = 0, binding = 1, rgba16f) restrict uniform image2D temporalAccumulationImg;
+layout(set = 0, binding = 2) uniform sampler2D radianceTex;
+layout(set = 0, binding = 3) uniform sampler2D varianceTex;
+layout(set = 0, binding = 4) uniform sampler2D numSamplesTex;
+layout(set = 0, binding = 5) uniform sampler2D averageRadianceTex;
+layout(set = 0, binding = 6) uniform sampler2D reprojectedRadianceTex;
+layout(set = 0, binding = 7) uniform sampler2D sceneMaterialTex;
+
+NAMED_UNIFORMS(constants,
+    float noTracingRoughnessThreshold;
+    float temporalStability;
+)
+
+////////////////////////////////////////////////////////////////////////////////
+// Texture writes
+
+void FFX_DNSR_Reflections_StoreTemporalAccumulation(ivec2 pixelCoord, vec3 newSignal, float newVariance)
+{
+    imageStore(temporalAccumulationImg, pixelCoord, vec4(newSignal, newVariance));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Texture reads
+
+vec3 FFX_DNSR_Reflections_LoadRadiance(ivec2 pixelCoord)
+{
+    return texelFetch(radianceTex, pixelCoord, 0).rgb;
+}
+
+float FFX_DNSR_Reflections_LoadVariance(ivec2 pixelCoord)
+{
+    return texelFetch(varianceTex, pixelCoord, 0).r;
+}
+
+float FFX_DNSR_Reflections_LoadRoughness(ivec2 pixelCoord)
+{
+    // OPTIMIZATION: Optimize memory access (we don't need other channels from this texture)
+    return texelFetch(sceneMaterialTex, pixelCoord, 0).r;
+}
+
+float FFX_DNSR_Reflections_LoadNumSamples(ivec2 pixelCoord)
+{
+    return texelFetch(numSamplesTex, pixelCoord, 0).r;
+}
+
+vec3 FFX_DNSR_Reflections_SampleAverageRadiance(vec2 uv)
+{
+    return textureLod(averageRadianceTex, uv, 0.0).rgb;
+}
+
+vec3 FFX_DNSR_Reflections_LoadRadianceReprojected(ivec2 pixelCoord)
+{
+    return texelFetch(reprojectedRadianceTex, pixelCoord, 0).rgb;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Etc
+
+// TODO: Probably move to shared header as it's used from multiple shaders
+
+bool FFX_DNSR_Reflections_IsGlossyReflection(float roughness)
+{
+    // This test should essentially be equivalent to the check if we're tracing at all or if we're just assuming diffuse / environment map lookup.
+    return roughness < constants.noTracingRoughnessThreshold;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Main
+
+#include <common/hlsl-on-glsl.glsl> // translation layer for FidelityFX shader (hlsl)
+#include "ffx-denoiser/ffx_denoiser_reflections_resolve_temporal.h"
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main()
+{
+    ivec2 dispatchThreadId = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 groupThreadId = ivec2(gl_LocalInvocationID.xy);
+
+    uvec2 targetSize = uvec2(imageSize(temporalAccumulationImg));
+    vec2 invTargetSize = vec2(1.0) / vec2(targetSize);
+
+    float historyClipWeight = constants.temporalStability;
+
+    FFX_DNSR_Reflections_ResolveTemporal(dispatchThreadId, groupThreadId, targetSize, invTargetSize, historyClipWeight);
+}

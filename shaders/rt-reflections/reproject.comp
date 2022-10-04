@@ -1,0 +1,190 @@
+#version 460
+
+#include <common/camera.glsl>
+#include <common/gBuffer.glsl>
+#include <common/namedUniforms.glsl>
+
+layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
+layout(set = 0, binding = 1, rgba16f) restrict uniform image2D reprojectedRadianceImg;
+layout(set = 0, binding = 2, rgba16f) restrict uniform image2D averageRadianceImg;
+layout(set = 0, binding = 3, r32f)    restrict uniform image2D varianceImg; // Use 16-bit?
+layout(set = 0, binding = 4, r32f)    restrict uniform image2D numSamplesImg; // Use 16-bit?
+layout(set = 0, binding = 5) uniform sampler2D radianceTex;
+layout(set = 0, binding = 6) uniform sampler2D radianceHistoryTex;
+layout(set = 0, binding = 7) uniform sampler2D worldSpaceNormalHistoryTex;
+layout(set = 0, binding = 8) uniform sampler2D depthRoughnessVarianceNumSamplesHistoryTex;
+layout(set = 0, binding = 9) uniform sampler2D sceneDepthTex;
+layout(set = 0, binding = 10) uniform sampler2D sceneMaterialTex;
+layout(set = 0, binding = 11) uniform sampler2D sceneNormalVelocityTex;
+
+NAMED_UNIFORMS(constants,
+    float noTracingRoughnessThreshold;
+    float temporalStability;
+)
+
+////////////////////////////////////////////////////////////////////////////////
+// Texture writes
+
+void FFX_DNSR_Reflections_StoreRadianceReprojected(ivec2 pixelCoord, vec3 reprojectedRadiance)
+{
+    imageStore(reprojectedRadianceImg, pixelCoord, vec4(reprojectedRadiance, 0.0));
+}
+
+void FFX_DNSR_Reflections_StoreAverageRadiance(ivec2 pixelCoord, vec3 averageRadiance)
+{
+    imageStore(averageRadianceImg, pixelCoord, vec4(averageRadiance, 0.0));
+}
+
+void FFX_DNSR_Reflections_StoreVariance(ivec2 pixelCoord, float variance)
+{
+    imageStore(varianceImg, pixelCoord, vec4(variance, 0.0, 0.0, 0.0));
+}
+
+void FFX_DNSR_Reflections_StoreNumSamples(ivec2 pixelCoord, float numSamples)
+{
+    imageStore(numSamplesImg, pixelCoord, vec4(numSamples, 0.0, 0.0, 0.0));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Texture reads
+
+vec3 FFX_DNSR_Reflections_LoadRadiance(ivec2 pixelCoord)
+{
+    return texelFetch(radianceTex, pixelCoord, 0).rgb;
+}
+
+float FFX_DNSR_Reflections_LoadRayLength(ivec2 pixelCoord)
+{
+    return texelFetch(radianceTex, pixelCoord, 0).a;
+}
+
+float FFX_DNSR_Reflections_LoadRoughness(ivec2 pixelCoord)
+{
+    // OPTIMIZATION: Optimize memory access (we don't need other channels from this texture)
+    return texelFetch(sceneMaterialTex, pixelCoord, 0).r;
+}
+
+float FFX_DNSR_Reflections_LoadDepth(ivec2 pixelCoord)
+{
+    return texelFetch(sceneDepthTex, pixelCoord, 0).x;
+}
+
+vec3 FFX_DNSR_Reflections_LoadWorldSpaceNormal(ivec2 pixelCoord)
+{
+    vec3 viewSpaceNormal = decodeNormal(texelFetch(sceneNormalVelocityTex, pixelCoord, 0).rg);
+    return mat3(camera.worldFromView) * viewSpaceNormal;
+}
+
+vec2 FFX_DNSR_Reflections_LoadMotionVector(ivec2 pixelCoord)
+{
+    // NOTE: Motion vector expected in UV-space and pointing from previous to current.
+    // This happens to be te same convention that we're using anyway.
+    return texelFetch(sceneNormalVelocityTex, pixelCoord, 0).ba;
+}
+
+vec3 FFX_DNSR_Reflections_LoadWorldSpaceNormalHistory(ivec2 pixelCoord)
+{
+    return texelFetch(worldSpaceNormalHistoryTex, pixelCoord, 0).rgb;
+}
+
+vec3 FFX_DNSR_Reflections_SampleWorldSpaceNormalHistory(vec2 uv)
+{
+    return textureLod(worldSpaceNormalHistoryTex, uv, 0.0).rgb;
+}
+
+vec3 FFX_DNSR_Reflections_LoadRadianceHistory(ivec2 pixelCoord)
+{
+    return texelFetch(radianceHistoryTex, pixelCoord, 0).rgb;
+}
+
+vec3 FFX_DNSR_Reflections_SampleRadianceHistory(vec2 uv)
+{
+    return textureLod(radianceHistoryTex, uv, 0.0).rgb;
+}
+
+float FFX_DNSR_Reflections_LoadDepthHistory(ivec2 pixelCoord)
+{
+    // TODO: linear depth?? I guess whatever is stored in history, but I'm not sure what we want to be stored there
+    return texelFetch(depthRoughnessVarianceNumSamplesHistoryTex, pixelCoord, 0).r;
+}
+
+float FFX_DNSR_Reflections_SampleDepthHistory(vec2 uv)
+{
+    // TODO: linear depth?? I guess whatever is stored in history, but I'm not sure what we want to be stored there
+    return textureLod(depthRoughnessVarianceNumSamplesHistoryTex, uv, 0.0).r;
+}
+
+float FFX_DNSR_Reflections_SampleRoughnessHistory(vec2 uv)
+{
+    return textureLod(depthRoughnessVarianceNumSamplesHistoryTex, uv, 0.0).g;
+}
+
+float FFX_DNSR_Reflections_SampleVarianceHistory(vec2 uv)
+{
+    return textureLod(depthRoughnessVarianceNumSamplesHistoryTex, uv, 0.0).b;
+}
+
+float FFX_DNSR_Reflections_SampleNumSamplesHistory(vec2 uv)
+{
+    return textureLod(depthRoughnessVarianceNumSamplesHistoryTex, uv, 0.0).a;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Transformations
+
+vec3 FFX_DNSR_Reflections_ScreenSpaceToViewSpace(vec3 screenSpace)
+{
+    // Screen space in this context means (uv.x, uv.y, depth), all in [0, 1] range
+    return unprojectUvCoordAndDepthToViewSpace(screenSpace.xy, screenSpace.z, camera);
+}
+
+vec3 FFX_DNSR_Reflections_ViewSpaceToWorldSpace(vec4 viewSpace)
+{
+    return (camera.worldFromView * viewSpace).xyz;
+}
+
+vec3 FFX_DNSR_Reflections_WorldSpaceToScreenSpacePrevious(vec3 worldSpace)
+{
+    vec4 previousViewSpace = camera.previousFrameViewFromWorld * vec4(worldSpace, 1.0);
+    vec4 previousProjection = camera.previousFrameProjectionFromView * previousViewSpace;
+    previousProjection.xyz /= previousProjection.w;
+
+    // Screen space in this context means (uv.x, uv.y, depth), all in [0, 1] range
+    // Our 'projection' space refers to xy: [-1, -1], z: [0, 1] (normalized device coordinates)
+    return vec3(previousProjection.xy * vec2(0.5) + vec2(0.5), previousProjection.z);
+}
+
+float FFX_DNSR_Reflections_GetLinearDepth(vec2 uv, float nonlinearDepth)
+{
+    // NOTE: In the sample they return abs(x) for the linear depth!
+    return calculateLinearDepth(nonlinearDepth, camera);
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Etc
+
+// TODO: Probably move to shared header as it's used from multiple shaders
+
+bool FFX_DNSR_Reflections_IsGlossyReflection(float roughness)
+{
+    // This test should essentially be equivalent to the check if we're tracing at all or if we're just assuming diffuse / environment map lookup.
+    return roughness < constants.noTracingRoughnessThreshold;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// Main
+
+#include <common/hlsl-on-glsl.glsl> // translation layer for FidelityFX shader (hlsl)
+#include "ffx-denoiser/ffx_denoiser_reflections_reproject.h"
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main()
+{
+    ivec2 dispatchThreadId = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 groupThreadId = ivec2(gl_LocalInvocationID.xy);
+    uvec2 targetSize = uvec2(textureSize(radianceTex, 0));
+
+    const int maxNumSamples = 32;
+
+    FFX_DNSR_Reflections_Reproject(dispatchThreadId, groupThreadId, targetSize, constants.temporalStability, maxNumSamples);
+}

@@ -1,0 +1,42 @@
+#version 460
+
+#include <common/camera.glsl>
+#include <common/gBuffer.glsl>
+#include <common/namedUniforms.glsl>
+
+layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
+layout(set = 0, binding = 1, rgba16f) restrict uniform image2D radianceHistoryImg;
+layout(set = 0, binding = 2, rgba16f) restrict uniform image2D worldSpaceNormalHistoryImg;
+layout(set = 0, binding = 3, rgba16f) restrict uniform image2D depthRoughnessVarianceNumSamplesHistoryImg;
+layout(set = 0, binding = 4) uniform sampler2D radianceTex;
+layout(set = 0, binding = 5) uniform sampler2D varianceTex;
+layout(set = 0, binding = 6) uniform sampler2D numSamplesTex;
+layout(set = 0, binding = 7) uniform sampler2D sceneDepthTex;
+layout(set = 0, binding = 8) uniform sampler2D sceneMaterialTex;
+layout(set = 0, binding = 9) uniform sampler2D sceneNormalVelocityTex; // NOTE: View space normals are encoded here!
+
+NAMED_UNIFORMS(constants,
+    bool firstCopy;
+)
+
+layout(local_size_x = 8, local_size_y = 8, local_size_z = 1) in;
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 targetSize = ivec2(imageSize(radianceHistoryImg));
+    if (any(greaterThanEqual(pixelCoord, targetSize)))
+        return;
+
+    vec3 radiance = texelFetch(radianceTex, pixelCoord, 0).rgb;
+    imageStore(radianceHistoryImg, pixelCoord, vec4(radiance, 0.0));
+
+    vec3 viewSpaceNormal = decodeNormal(texelFetch(sceneNormalVelocityTex, pixelCoord, 0).rg);
+    vec3 worldSpaceNormal = mat3(camera.worldFromView) * viewSpaceNormal;
+    imageStore(worldSpaceNormalHistoryImg, pixelCoord, vec4(worldSpaceNormal, 0.0));
+
+    float depth = texelFetch(sceneDepthTex, pixelCoord, 0).x;
+    float roughness = texelFetch(sceneMaterialTex, pixelCoord, 0).r;
+    float variance = (constants.firstCopy) ? 0.0 : texelFetch(varianceTex, pixelCoord, 0).r;
+    float numSamples = (constants.firstCopy) ? 0.0 : texelFetch(numSamplesTex, pixelCoord, 0).r;
+    imageStore(depthRoughnessVarianceNumSamplesHistoryImg, pixelCoord, vec4(depth, roughness, variance, numSamples));
+}

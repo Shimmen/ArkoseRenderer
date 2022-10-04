@@ -46,9 +46,9 @@ void main()
     }
 
     if (pushConstants.includeGlossyGI) {
-        // TODO: Do reflections properly!
+        // TODO: Do reflections properly! Multiply with base color only for metallic! Also, consider fresnel!
         vec3 reflections = texelFetch(reflectionsTex, pixelCoord, 0).rgb;
-        sceneColor.rgb += reflections;
+        sceneColor.rgb += materialBaseColor * reflections;
     }
 
     imageStore(sceneColorWithGI, pixelCoord, sceneColor);
