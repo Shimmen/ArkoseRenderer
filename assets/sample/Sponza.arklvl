@@ -31,7 +31,7 @@
       transform: {
         position: {
           x: 0.0,
-          y: 8.5,
+          y: 4.5,
           z: 0.0
         },
         orientation: {
