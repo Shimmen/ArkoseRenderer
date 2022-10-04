@@ -37,9 +37,10 @@ FFX_DNSR_Reflections_NeighborhoodSample FFX_DNSR_Reflections_LoadFromGroupShared
     uint2       packed_radiance   = uint2(g_ffx_dnsr_shared_0[idx.y][idx.x], g_ffx_dnsr_shared_1[idx.y][idx.x]);
     min16float3 unpacked_radiance = FFX_DNSR_Reflections_UnpackFloat16_4(packed_radiance).xyz;
 
-    FFX_DNSR_Reflections_NeighborhoodSample sample;
-    sample.radiance = unpacked_radiance;
-    return sample;
+    // EDIT: Underscore suffix added as 'sample' is an illegal identifier in glsl
+    FFX_DNSR_Reflections_NeighborhoodSample sample_;
+    sample_.radiance = unpacked_radiance;
+    return sample_;
 }
 
 struct FFX_DNSR_Reflections_Moments {
@@ -49,8 +50,8 @@ struct FFX_DNSR_Reflections_Moments {
 
 FFX_DNSR_Reflections_Moments FFX_DNSR_Reflections_EstimateLocalNeighborhoodInGroup(int2 group_thread_id) {
     FFX_DNSR_Reflections_Moments estimate;
-    estimate.mean                 = 0;
-    estimate.variance             = 0;
+    estimate.mean                 = min16float3(0); //0; // EDIT
+    estimate.variance             = min16float3(0); //0; // EDIT
     min16float accumulated_weight = 0;
     for (int j = -FFX_DNSR_REFLECTIONS_LOCAL_NEIGHBORHOOD_RADIUS; j <= FFX_DNSR_REFLECTIONS_LOCAL_NEIGHBORHOOD_RADIUS; ++j) {
         for (int i = -FFX_DNSR_REFLECTIONS_LOCAL_NEIGHBORHOOD_RADIUS; i <= FFX_DNSR_REFLECTIONS_LOCAL_NEIGHBORHOOD_RADIUS; ++i) {
@@ -98,7 +99,8 @@ void FFX_DNSR_Reflections_InitializeGroupSharedMemory(int2 dispatch_thread_id, i
 }
 
 void FFX_DNSR_Reflections_ResolveTemporal(int2 dispatch_thread_id, int2 group_thread_id, uint2 screen_size, float2 inv_screen_size, float history_clip_weight) {
-    FFX_DNSR_Reflections_InitializeGroupSharedMemory(dispatch_thread_id, group_thread_id, screen_size);
+    //FFX_DNSR_Reflections_InitializeGroupSharedMemory(dispatch_thread_id, group_thread_id, screen_size);
+    FFX_DNSR_Reflections_InitializeGroupSharedMemory(dispatch_thread_id, group_thread_id, int2(screen_size)); // EDIT: glsl is more strict with signedness
     GroupMemoryBarrierWithGroupSync();
 
     group_thread_id += 4; // Center threads in groupshared memory
@@ -134,8 +136,8 @@ void FFX_DNSR_Reflections_ResolveTemporal(int2 dispatch_thread_id, int2 group_th
         // Blend with history
         new_signal                                      = lerp(new_signal, clipped_old_signal, weight);
         new_variance                                    = lerp(FFX_DNSR_Reflections_ComputeTemporalVariance(new_signal.xyz, clipped_old_signal.xyz), new_variance, weight);
-        if (any(isinf(new_signal)) || any(isnan(new_signal)) || any(isinf(new_variance)) || any(isnan(new_variance))) {
-            new_signal   = 0.0;
+        if (any(isinf(new_signal)) || any(isnan(new_signal)) || (isinf(new_variance)) || (isnan(new_variance))) {
+            new_signal   = min16float3(0.0); //0.0; // EDIT
             new_variance = 0.0;
         }
 

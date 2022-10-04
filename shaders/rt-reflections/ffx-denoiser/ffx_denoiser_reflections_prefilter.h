@@ -45,12 +45,13 @@ FFX_DNSR_Reflections_NeighborhoodSample FFX_DNSR_Reflections_LoadFromGroupShared
     uint2       packed_normal_variance   = uint2(g_ffx_dnsr_shared_2[idx.y][idx.x], g_ffx_dnsr_shared_3[idx.y][idx.x]);
     min16float4 unpacked_normal_variance = FFX_DNSR_Reflections_UnpackFloat16_4(packed_normal_variance);
 
-    FFX_DNSR_Reflections_NeighborhoodSample sample;
-    sample.radiance = unpacked_radiance.xyz;
-    sample.normal   = unpacked_normal_variance.xyz;
-    sample.variance = unpacked_normal_variance.w;
-    sample.depth    = g_ffx_dnsr_shared_depth[idx.y][idx.x];
-    return sample;
+    // EDIT: Underscore suffix added as 'sample' is an illegal identifier in glsl
+    FFX_DNSR_Reflections_NeighborhoodSample sample_;
+    sample_.radiance = unpacked_radiance.xyz;
+    sample_.normal   = unpacked_normal_variance.xyz;
+    sample_.variance = unpacked_normal_variance.w;
+    sample_.depth    = g_ffx_dnsr_shared_depth[idx.y][idx.x];
+    return sample_;
 }
 
 void FFX_DNSR_Reflections_StoreInGroupSharedMemory(int2 group_thread_id, min16float3 radiance, min16float variance, min16float3 normal, float depth) {
@@ -137,7 +138,8 @@ void FFX_DNSR_Reflections_Resolve(int2 group_thread_id, min16float3 avg_radiance
 
 void FFX_DNSR_Reflections_Prefilter(int2 dispatch_thread_id, int2 group_thread_id, uint2 screen_size) {
     min16float center_roughness = FFX_DNSR_Reflections_LoadRoughness(dispatch_thread_id);
-    FFX_DNSR_Reflections_InitializeGroupSharedMemory(dispatch_thread_id, group_thread_id, screen_size);
+    //FFX_DNSR_Reflections_InitializeGroupSharedMemory(dispatch_thread_id, group_thread_id, screen_size);
+    FFX_DNSR_Reflections_InitializeGroupSharedMemory(dispatch_thread_id, group_thread_id, int2(screen_size)); // EDIT: glsl is more strict with signedness
     GroupMemoryBarrierWithGroupSync();
 
     group_thread_id += 4; // Center threads in groupshared memory

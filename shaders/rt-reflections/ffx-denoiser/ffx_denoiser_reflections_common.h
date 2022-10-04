@@ -60,13 +60,15 @@ min16float FFX_DNSR_Reflections_ComputeTemporalVariance(min16float3 history_radi
 }
 
 uint FFX_DNSR_Reflections_PackFloat16(min16float2 v) {
-    uint2 p = f32tof16(float2(v));
-    return p.x | (p.y << 16);
+    //uint2 p = f32tof16(float2(v));
+    //return p.x | (p.y << 16);
+    return packHalf2x16(v); // EDIT: glsl has a fused operation for this exact thing!
 }
 
 min16float2 FFX_DNSR_Reflections_UnpackFloat16(uint a) {
-    float2 tmp = f16tof32(uint2(a & 0xFFFF, a >> 16));
-    return min16float2(tmp);
+    //float2 tmp = f16tof32(uint2(a & 0xFFFF, a >> 16));
+    //return min16float2(tmp);
+    return unpackHalf2x16(a); // EDIT: glsl has a fused operation for this exact thing!
 }
 
 uint2 FFX_DNSR_Reflections_PackFloat16_4(min16float4 v) { return uint2(FFX_DNSR_Reflections_PackFloat16(v.xy), FFX_DNSR_Reflections_PackFloat16(v.zw)); }
@@ -75,7 +77,8 @@ min16float4 FFX_DNSR_Reflections_UnpackFloat16_4(uint2 a) { return min16float4(F
 
 // Rounds value to the nearest multiple of 8
 uint2 FFX_DNSR_Reflections_RoundUp8(uint2 value) {
-    uint2 round_down = value & ~0b111;
+    //uint2 round_down = value & ~0b111;
+    uint2 round_down = value & ~0x7; // EDIT: glsl does not have binary literals
     return (round_down == value) ? value : value + 8;
 }
 
