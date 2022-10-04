@@ -14,6 +14,8 @@ public:
 
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
+    void setEnabled(bool enabled) { m_taaEnabled = enabled; }
+
 private:
     bool m_taaEnabled { true };
     bool m_taaEnabledPreviousFrame { false };
