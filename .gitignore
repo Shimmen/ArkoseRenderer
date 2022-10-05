@@ -10,3 +10,6 @@ CMakeSettings.json
 
 # Application cache etc.
 imgui.ini
+
+# Nsight graphics projects
+*.ngfx-proj
