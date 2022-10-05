@@ -38,7 +38,7 @@ private:
     Texture* m_numSamplesTex { nullptr };
     Texture* m_temporalAccumulationTex { nullptr };
 
-    RayTracingState& createRayTracingState(GpuScene&, Registry&, Texture& reflectionsTexture, Texture& blueNoiseTexture) const;
+    RayTracingState& createRayTracingState(GpuScene&, Registry&, Texture& reflectionsTexture, Texture& reflectionDirectionTex, Texture& blueNoiseTexture) const;
 
     struct DenoiserPassData {
         DenoiserPassData(ComputeState& inState, BindingSet& inBindings, Extent3D inGlobalSize, Extent3D inLocalSize)

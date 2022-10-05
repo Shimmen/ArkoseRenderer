@@ -11,11 +11,12 @@
 layout(set = 0, binding = 0) uniform AccelerationStructure topLevelAS;
 layout(set = 0, binding = 1) uniform CameraStateBlock { CameraState camera; };
 layout(set = 0, binding = 2, rgba16f) uniform writeonly image2D resultImage;
-layout(set = 0, binding = 3) uniform sampler2D sceneMaterialTex;
-layout(set = 0, binding = 4) uniform sampler2D sceneNormalTex;
-layout(set = 0, binding = 5) uniform sampler2D sceneDepthTex;
-layout(set = 0, binding = 6) uniform sampler2D environmentTex;
-layout(set = 0, binding = 7) uniform sampler2DArray blueNoiseTexture;
+layout(set = 0, binding = 3, rgba16f) uniform writeonly image2D reflectionDirectionImg;
+layout(set = 0, binding = 4) uniform sampler2D sceneMaterialTex;
+layout(set = 0, binding = 5) uniform sampler2D sceneNormalTex;
+layout(set = 0, binding = 6) uniform sampler2D sceneDepthTex;
+layout(set = 0, binding = 7) uniform sampler2D environmentTex;
+layout(set = 0, binding = 8) uniform sampler2DArray blueNoiseTexture;
 
 NAMED_UNIFORMS_STRUCT(RayTracingPushConstants, constants);
 float mirrorRoughnessThreshold() { return constants.parameter1; }
@@ -62,6 +63,7 @@ void main()
 		// TODO: Maybe just early return if all lanes agree on this, otherwise trace anyway
 		// (although, would add more noise to the image overall)
 		imageStore(resultImage, pixelCoord, vec4(0, 0, 0, 0));
+		imageStore(reflectionDirectionImg, pixelCoord, vec4(0, 0, 0, 0));
 		return;
 	}
 
@@ -86,7 +88,7 @@ void main()
 	vec3 sampledNormal = sampleSpecularBRDF(viewDirection, roughness, randomness);
 	vec3 reflectedDirection = reflect(-viewDirection, sampledNormal);
 
-	// Transform back to view space
+	// Transform back to world space
 	vec3 rayDirection = inverseTBN * reflectedDirection;
 
 	float tmin = camera.zNear;
@@ -117,5 +119,6 @@ void main()
 	// Need distance from reflection point to hit point for denoiser
 	float rayLength = tmax;
 
-	imageStore(resultImage, ivec2(rt_LaunchID.xy), vec4(reflectedRadiance, rayLength));
+	imageStore(resultImage, pixelCoord, vec4(reflectedRadiance, rayLength));
+	imageStore(reflectionDirectionImg, pixelCoord, vec4(rayDirection, 0.0));
 }

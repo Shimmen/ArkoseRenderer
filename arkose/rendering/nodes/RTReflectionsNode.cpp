@@ -30,11 +30,15 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
     Texture& reflectionsTex = reg.createTexture2D(extent, Texture::Format::RGBA16F);
     reg.publish("Reflections", reflectionsTex);
 
+    // TODO: Use octahedral encoding and RG16F!
+    Texture& reflectionDirectionTex = reg.createTexture2D(extent, Texture::Format::RGBA16F);
+    reg.publish("ReflectionDirection", reflectionDirectionTex);
+
     // TODO: Maybe just keep this name throughout?
     m_radianceTex = &reflectionsTex;
 
     // Ray-traced reflections
-    RayTracingState& rtState = createRayTracingState(scene, reg, reflectionsTex, blueNoiseTexture);
+    RayTracingState& rtState = createRayTracingState(scene, reg, reflectionsTex, reflectionDirectionTex, blueNoiseTexture);
 
     // Denoising
 
@@ -135,7 +139,7 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
     };
 }
 
-RayTracingState& RTReflectionsNode::createRayTracingState(GpuScene& scene, Registry& reg, Texture& reflectionsTexture, Texture& blueNoiseTexture) const
+RayTracingState& RTReflectionsNode::createRayTracingState(GpuScene& scene, Registry& reg, Texture& reflectionsTexture, Texture& reflectionDirectionTex, Texture& blueNoiseTexture) const
 {
     BindingSet& rtMeshDataBindingSet = *reg.getBindingSet("SceneRTMeshDataSet");
     BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
@@ -145,6 +149,7 @@ RayTracingState& RTReflectionsNode::createRayTracingState(GpuScene& scene, Regis
     BindingSet& frameBindingSet = reg.createBindingSet({ ShaderBinding::topLevelAccelerationStructure(sceneTLAS, ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
                                                          ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::AnyRayTrace),
                                                          ShaderBinding::storageTexture(reflectionsTexture, ShaderStage::RTRayGen),
+                                                         ShaderBinding::storageTexture(reflectionDirectionTex, ShaderStage::RTRayGen),
                                                          ShaderBinding::sampledTexture(*reg.getTexture("SceneMaterial"), ShaderStage::RTRayGen),
                                                          ShaderBinding::sampledTexture(*reg.getTexture("SceneNormalVelocity"), ShaderStage::RTRayGen),
                                                          ShaderBinding::sampledTexture(*reg.getTexture("SceneDepth"), ShaderStage::RTRayGen),
