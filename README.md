@@ -31,6 +31,7 @@ This list is not complete, it's just a showcase of various features that are imp
  - A realistic camera model, with focus and exposure controls familiar to photographers
  - Depth of field, respecting the realistic camera model paramer such as aperture size and focal length
  - Dynamic Diffuse Global Illumination (DDGI) – a probe based global illumination solution with infinite light bounces.
+ - Ray traced reflections with denoising
 
  > **DISCLAIMER:** There is still a long list of features to add, many of them quite basic. The philosophy with this project has always been to work on whatever I feel like at that point in time, so there is no real concept of natural order here or minimum viable product. We're not in production after all :^) Some of these obvious basic features that I can think of right now are: skeletal meshes and animations, light culling to make the rendering tiled or clustered, and rendering of transparent objects.
 
