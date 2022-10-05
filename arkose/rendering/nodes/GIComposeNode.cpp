@@ -29,59 +29,71 @@ void GIComposeNode::drawGui()
 
 RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Registry& reg)
 {
-    Texture& sceneColorBeforeGI = *reg.getTexture("SceneColor");
-    Texture& baseColorTex = *reg.getTexture("SceneBaseColor");
-    Texture& ambientOcclusionTex = *reg.getTexture("AmbientOcclusion");
-    Texture& diffuseGiTex = *reg.getTexture("DiffuseGI");
+    Texture& sceneColor = *reg.getTexture("SceneColor");
+    
+    Texture* ambientOcclusionTex = reg.getTexture("AmbientOcclusion");
+    if (!ambientOcclusionTex)
+        ambientOcclusionTex = &reg.createPixelTexture(vec4(1.0f), false);
+
+    // TODO: Make it optional!
+    BindingSet& ddgiSamplingBindingSet = *reg.getBindingSet("DDGISamplingSet");
 
     Texture* reflectionsTex = reg.getTexture("DenoisedReflections");
     if (!reflectionsTex)
         reflectionsTex = &reg.createPixelTexture(vec4(0.0f), true);
 
-    Texture& sceneColorWithGI = reg.createTexture2D(reg.windowRenderTarget().extent(), sceneColorBeforeGI.format(), Texture::Filters::nearest());
+    // TODO: Make it optional
+    Texture* reflectionDirectionTex = reg.getTexture("ReflectionDirection");
+    ARKOSE_ASSERT(reflectionDirectionTex);
 
-    BindingSet& composeBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(sceneColorWithGI, ShaderStage::Compute),
-                                                           ShaderBinding::sampledTexture(sceneColorBeforeGI, ShaderStage::Compute),
-                                                           ShaderBinding::sampledTexture(baseColorTex, ShaderStage::Compute),
-                                                           ShaderBinding::sampledTexture(ambientOcclusionTex, ShaderStage::Compute),
-                                                           ShaderBinding::sampledTexture(diffuseGiTex, ShaderStage::Compute),
-                                                           ShaderBinding::sampledTexture(*reflectionsTex, ShaderStage::Compute) });
-    ComputeState& giComposeState = reg.createComputeState(Shader::createCompute("compose/compose-gi.comp"), { &composeBindingSet });
+    Texture& sceneColorWithGI = reg.createTexture2D(reg.windowRenderTarget().extent(), sceneColor.format(), Texture::Filters::nearest());
+
+    BindingSet& composeBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::Compute),
+                                                           ShaderBinding::storageTexture(sceneColorWithGI, ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(*reg.getTexture("SceneBaseColor"), ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(*reg.getTexture("SceneMaterial"), ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(*reg.getTexture("SceneNormalVelocity"), ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(*reg.getTexture("SceneDepth"), ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(sceneColor, ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(*reflectionsTex, ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(*reflectionDirectionTex, ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(*ambientOcclusionTex, ShaderStage::Compute) });
+    ComputeState& giComposeState = reg.createComputeState(Shader::createCompute("compose/compose-gi.comp"), { &composeBindingSet, &ddgiSamplingBindingSet });
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        bool includeSceneColor = true;
+        bool includeDirectLight = true;
         bool includeDiffuseGI = true;
         bool includeGlossyGI = true;
         bool withMaterialColor = true;
 
         switch (m_composeMode) {
         case ComposeMode::FullCompose:
-            includeSceneColor = true;
+            includeDirectLight = true;
             includeDiffuseGI = true;
             includeGlossyGI = true;
             withMaterialColor = true;
             break;
         case ComposeMode::DirectOnly:
-            includeSceneColor = true;
+            includeDirectLight = true;
             includeDiffuseGI = false;
             includeGlossyGI = false;
             withMaterialColor = true;
             break;
         case ComposeMode::DiffuseIndirectOnly:
-            includeSceneColor = false;
+            includeDirectLight = false;
             includeDiffuseGI = true;
             includeGlossyGI = false;
             withMaterialColor = true;
             break;
         case ComposeMode::DiffuseIndirectOnlyNoBaseColor:
-            includeSceneColor = false;
+            includeDirectLight = false;
             includeDiffuseGI = true;
             includeGlossyGI = false;
             withMaterialColor = false;
             break;
         case ComposeMode::GlossyIndirectOnly:
-            includeSceneColor = false;
+            includeDirectLight = false;
             includeDiffuseGI = false;
             includeGlossyGI = true;
             withMaterialColor = true;
@@ -90,20 +102,20 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Re
 
         cmdList.setComputeState(giComposeState);
         cmdList.bindSet(composeBindingSet, 0);
+        cmdList.bindSet(ddgiSamplingBindingSet, 1);
 
         cmdList.setNamedUniform("targetSize", sceneColorWithGI.extent());
-        cmdList.setNamedUniform("includeSceneColor", includeSceneColor);
+        cmdList.setNamedUniform("includeDirectLight", includeDirectLight);
         cmdList.setNamedUniform("includeDiffuseGI", includeDiffuseGI);
         cmdList.setNamedUniform("includeGlossyGI", includeGlossyGI);
         cmdList.setNamedUniform("withMaterialColor", withMaterialColor);
         cmdList.setNamedUniform("withAmbientOcclusion", m_includeAmbientOcclusion);
 
-        cmdList.dispatch({ sceneColorWithGI.extent(), 1 }, { 32, 32, 1 });
+        cmdList.dispatch({ sceneColorWithGI.extent(), 1 }, { 8, 8, 1 });
 
         // TODO: Figure out a good way of actually chaining these calls & reusing textures etc.
         cmdList.textureWriteBarrier(sceneColorWithGI);
-        cmdList.copyTexture(sceneColorWithGI, sceneColorBeforeGI);
-        cmdList.textureWriteBarrier(sceneColorBeforeGI);
+        cmdList.copyTexture(sceneColorWithGI, sceneColor);
 
     };
 }

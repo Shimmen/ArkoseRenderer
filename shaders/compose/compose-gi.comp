@@ -1,24 +1,38 @@
 #version 460
 
+#include <common.glsl>
+#include <common/brdf.glsl>
+#include <common/camera.glsl>
+#include <common/gBuffer.glsl>
 #include <common/namedUniforms.glsl>
 
-layout(set = 0, binding = 0, rgba16f) uniform writeonly image2D sceneColorWithGI;
-layout(set = 0, binding = 1) uniform sampler2D sceneColorBeforeGI;
-layout(set = 0, binding = 2) uniform sampler2D baseColorTex;
-layout(set = 0, binding = 3) uniform sampler2D ambientOcclusionTex;
-layout(set = 0, binding = 4) uniform sampler2D diffuseGiTex;
-layout(set = 0, binding = 5) uniform sampler2D reflectionsTex;
+layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
+layout(set = 0, binding = 1, rgba16f) uniform writeonly image2D sceneColorWithGI;
+layout(set = 0, binding = 2) uniform sampler2D sceneBaseColorTex;
+layout(set = 0, binding = 3) uniform sampler2D sceneMaterialTex;
+layout(set = 0, binding = 4) uniform sampler2D sceneNormalVelocityTex;
+layout(set = 0, binding = 5) uniform sampler2D sceneDepthTex;
+layout(set = 0, binding = 6) uniform sampler2D directLightTex;
+layout(set = 0, binding = 7) uniform sampler2D reflectionsTex;
+layout(set = 0, binding = 8) uniform sampler2D reflectionDirectionTex;
+layout(set = 0, binding = 9) uniform sampler2D ambientOcclusionTex;
+
+#include <ddgi/probeSampling.glsl>
+layout(set = 1, binding = 0) uniform DDGIGridDataBlock { DDGIProbeGridData ddgiProbeGridData; };
+layout(set = 1, binding = 1) buffer ProbeOffsetBlock { vec3 probeOffsets[]; };
+layout(set = 1, binding = 2) uniform sampler2D ddgiIrradianceAtlas;
+layout(set = 1, binding = 3) uniform sampler2D ddgiVisibilityAtlas;
 
 NAMED_UNIFORMS(pushConstants,
     uvec2 targetSize;
-    bool includeSceneColor;
+    bool includeDirectLight;
     bool includeDiffuseGI;
     bool includeGlossyGI;
     bool withMaterialColor;
     bool withAmbientOcclusion;
 )
 
-layout(local_size_x = 32, local_size_y = 32) in;
+layout(local_size_x = 8, local_size_y = 8) in;
 void main()
 {
     ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
@@ -26,8 +40,9 @@ void main()
         return;
 
     vec4 sceneColor = vec4(0.0);
-    if (pushConstants.includeSceneColor) {
-        sceneColor = texelFetch(sceneColorBeforeGI, pixelCoord, 0);
+
+    if (pushConstants.includeDirectLight) {
+        sceneColor = texelFetch(directLightTex, pixelCoord, 0);
     }
 
     float ambientOcclusion = 1.0;
@@ -37,18 +52,59 @@ void main()
 
     vec3 materialBaseColor = vec3(1.0);
     if (pushConstants.withMaterialColor) {
-        materialBaseColor = texelFetch(baseColorTex, pixelCoord, 0).rgb;
+        materialBaseColor = texelFetch(sceneBaseColorTex, pixelCoord, 0).rgb;
     }
 
-    if (pushConstants.includeDiffuseGI) {
-        vec3 diffuseGI = texelFetch(diffuseGiTex, pixelCoord, 0).rgb;
-        sceneColor.rgb += diffuseGI * materialBaseColor * ambientOcclusion;
-    }
+    float nonLinearDepth = texelFetch(sceneDepthTex, pixelCoord, 0).x;
+    if (nonLinearDepth < 1.0 - 1e-6) { // TODO: Scalarize?
 
-    if (pushConstants.includeGlossyGI) {
-        // TODO: Do reflections properly! Multiply with base color only for metallic! Also, consider fresnel!
-        vec3 reflections = texelFetch(reflectionsTex, pixelCoord, 0).rgb;
-        sceneColor.rgb += materialBaseColor * reflections;
+        vec3 reflectionRadiance = texelFetch(reflectionsTex, pixelCoord, 0).rgb;
+        vec3 reflectionWorldDirection = texelFetch(reflectionDirectionTex, pixelCoord, 0).xyz;
+
+        // If the surface is rough enough we don't trace reflection rays and have no valid data for it.
+        // In these cases we want to pretend that the surface is fully diffuse for indirect light.
+        bool hasReflections = lengthSquared(reflectionWorldDirection) > 1e-4;
+
+        vec3 pixelViewSpacePosition = unprojectPixelCoordAndDepthToViewSpace(pixelCoord, nonLinearDepth, camera);
+
+        // All in view space
+        vec3 V = -normalize(pixelViewSpacePosition);
+        vec3 N = decodeNormal(texelFetch(sceneNormalVelocityTex, pixelCoord, 0).rg);
+        vec3 L = mat3(camera.viewFromWorld) * reflectionWorldDirection;
+
+        vec2 materialProps = texelFetch(sceneMaterialTex, pixelCoord, 0).rg;
+        float roughness = materialProps.r;
+        float metallic = materialProps.g;
+
+        vec3 F;
+        vec3 brdfSpecular = specularBRDF(L, V, N, materialBaseColor, roughness, metallic, F);
+
+        if (hasReflections && pushConstants.includeGlossyGI) {
+            // TODO: This is *not* yet correct! We need to factor in the BRDF correctly, but also divide by the PDF due to the importance sampling!
+            sceneColor.rgb += materialBaseColor * reflectionRadiance;
+            //sceneColor.rgb += brdfSpecular * reflectionRadiance / PDF;
+        }
+
+        if (pushConstants.includeDiffuseGI) {
+
+            vec3 worldSpacePos = vec3(camera.worldFromView * vec4(pixelViewSpacePosition, 1.0));
+            vec3 worldSpaceNormal = normalize(mat3(camera.worldFromView) * N);
+            vec3 worldSpaceView = normalize(mat3(camera.worldFromView) * V);
+
+            vec3 indirectIrradiance = sampleDynamicDiffuseGlobalIllumination(worldSpacePos, worldSpaceNormal, worldSpaceView, ddgiProbeGridData, ddgiIrradianceAtlas, ddgiVisibilityAtlas);
+
+            // If the surface is rough enough we don't trace reflection rays and have no valid data for it.
+            // (Since L is invalid (zero) we will also get an invalid F value, which we need to zero out.)
+            // In these cases we want to pretend that the surface is fully diffuse for indirect light, and
+            // also that it's not metallic. In other words, if we can't get reflections where we usually
+            // would get it if not for the ray tracing optimization, fill in the remaining data with diffuse.
+            // This little hack actually seems to work pretty well, let's see how it holds up.
+            float fudgeFactor = hasReflections ? 1.0 : 0.0;
+
+            vec3 colorForDiffuse = materialBaseColor * vec3(1.0 - metallic * fudgeFactor) * vec3(1.0 - F * fudgeFactor);
+
+            sceneColor.rgb += colorForDiffuse * indirectIrradiance * ambientOcclusion;
+        }
     }
 
     imageStore(sceneColorWithGI, pixelCoord, sceneColor);
