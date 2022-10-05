@@ -17,11 +17,13 @@ layout(set = 0, binding = 7) uniform sampler2D reflectionsTex;
 layout(set = 0, binding = 8) uniform sampler2D reflectionDirectionTex;
 layout(set = 0, binding = 9) uniform sampler2D ambientOcclusionTex;
 
+#if WITH_DDGI
 #include <ddgi/probeSampling.glsl>
 layout(set = 1, binding = 0) uniform DDGIGridDataBlock { DDGIProbeGridData ddgiProbeGridData; };
 layout(set = 1, binding = 1) buffer ProbeOffsetBlock { vec3 probeOffsets[]; };
 layout(set = 1, binding = 2) uniform sampler2D ddgiIrradianceAtlas;
 layout(set = 1, binding = 3) uniform sampler2D ddgiVisibilityAtlas;
+#endif
 
 NAMED_UNIFORMS(pushConstants,
     uvec2 targetSize;
@@ -85,6 +87,7 @@ void main()
             //sceneColor.rgb += brdfSpecular * reflectionRadiance / PDF;
         }
 
+        #if WITH_DDGI
         if (pushConstants.includeDiffuseGI) {
 
             vec3 worldSpacePos = vec3(camera.worldFromView * vec4(pixelViewSpacePosition, 1.0));
@@ -105,6 +108,7 @@ void main()
 
             sceneColor.rgb += colorForDiffuse * indirectIrradiance * ambientOcclusion;
         }
+        #endif
     }
 
     imageStore(sceneColorWithGI, pixelCoord, sceneColor);

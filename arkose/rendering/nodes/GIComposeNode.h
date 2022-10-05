@@ -17,4 +17,6 @@ private:
 
     bool m_withMaterialColor { true };
     bool m_withAmbientOcclusion { true };
+
+    BindingSet* m_ddgiBindingSet { nullptr };
 };

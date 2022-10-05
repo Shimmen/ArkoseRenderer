@@ -21,19 +21,19 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Re
     Texture& sceneColor = *reg.getTexture("SceneColor");
     
     Texture* ambientOcclusionTex = reg.getTexture("AmbientOcclusion");
-    if (!ambientOcclusionTex)
+    if (!ambientOcclusionTex) {
         ambientOcclusionTex = &reg.createPixelTexture(vec4(1.0f), false);
-
-    // TODO: Make it optional!
-    BindingSet& ddgiSamplingBindingSet = *reg.getBindingSet("DDGISamplingSet");
+    }
 
     Texture* reflectionsTex = reg.getTexture("DenoisedReflections");
-    if (!reflectionsTex)
-        reflectionsTex = &reg.createPixelTexture(vec4(0.0f), true);
-
-    // TODO: Make it optional
     Texture* reflectionDirectionTex = reg.getTexture("ReflectionDirection");
-    ARKOSE_ASSERT(reflectionDirectionTex);
+    if (!reflectionsTex || !reflectionDirectionTex) {
+        Texture& blackTex = reg.createPixelTexture(vec4(0.0f), true);
+        reflectionsTex = &blackTex;
+        reflectionDirectionTex = &blackTex;
+    }
+
+    m_ddgiBindingSet = reg.getBindingSet("DDGISamplingSet");
 
     Texture& sceneColorWithGI = reg.createTexture2D(reg.windowRenderTarget().extent(), sceneColor.format(), Texture::Filters::nearest());
 
@@ -47,13 +47,26 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Re
                                                            ShaderBinding::sampledTexture(*reflectionsTex, ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(*reflectionDirectionTex, ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(*ambientOcclusionTex, ShaderStage::Compute) });
-    ComputeState& giComposeState = reg.createComputeState(Shader::createCompute("compose/compose-gi.comp"), { &composeBindingSet, &ddgiSamplingBindingSet });
+
+    std::vector<BindingSet*> bindingSets {};
+    bindingSets.push_back(&composeBindingSet);
+    if (m_ddgiBindingSet != nullptr) {
+        bindingSets.push_back(m_ddgiBindingSet);
+    }
+
+    std::vector<ShaderDefine> shaderDefines {};
+    shaderDefines.push_back(ShaderDefine::makeBool("WITH_DDGI", m_ddgiBindingSet != nullptr));
+
+    Shader composeShader = Shader::createCompute("compose/compose-gi.comp", shaderDefines);
+    ComputeState& giComposeState = reg.createComputeState(composeShader, bindingSets);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         cmdList.setComputeState(giComposeState);
         cmdList.bindSet(composeBindingSet, 0);
-        cmdList.bindSet(ddgiSamplingBindingSet, 1);
+        if (m_ddgiBindingSet) {
+            cmdList.bindSet(*m_ddgiBindingSet, 1);
+        }
 
         cmdList.setNamedUniform("targetSize", sceneColorWithGI.extent());
         cmdList.setNamedUniform("includeDirectLight", m_includeDirectLight);
