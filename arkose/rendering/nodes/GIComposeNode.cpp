@@ -6,25 +6,14 @@
 
 void GIComposeNode::drawGui()
 {
-    if (ImGui::RadioButton("Full compose", m_composeMode == ComposeMode::FullCompose)) {
-        m_composeMode = ComposeMode::FullCompose;
-    }
-    if (ImGui::RadioButton("Direct light only", m_composeMode == ComposeMode::DirectOnly)) {
-        m_composeMode = ComposeMode::DirectOnly;
-    }
-    if (ImGui::RadioButton("Diffuse indirect only", m_composeMode == ComposeMode::DiffuseIndirectOnly)) {
-        m_composeMode = ComposeMode::DiffuseIndirectOnly;
-    }
-    if (ImGui::RadioButton("Diffuse indirect only (ignore material color)", m_composeMode == ComposeMode::DiffuseIndirectOnlyNoBaseColor)) {
-        m_composeMode = ComposeMode::DiffuseIndirectOnlyNoBaseColor;
-    }
-    if (ImGui::RadioButton("Glossy indirect only", m_composeMode == ComposeMode::GlossyIndirectOnly)) {
-        m_composeMode = ComposeMode::GlossyIndirectOnly;
-    }
+    ImGui::Checkbox("Direct light", &m_includeDirectLight);
+    ImGui::Checkbox("Glossy indirect (reflections)", &m_includeGlossyGI);
+    ImGui::Checkbox("Diffuse indirect (DDGI)", &m_includeDiffuseGI);
 
     ImGui::Separator();
 
-    ImGui::Checkbox("Include ambient occlusion (for diffuse indirect)", &m_includeAmbientOcclusion);
+    ImGui::Checkbox("Include material colors (for indirect)", &m_withMaterialColor);
+    ImGui::Checkbox("Include ambient occlusion (for diffuse indirect)", &m_withAmbientOcclusion);
 }
 
 RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Registry& reg)
@@ -62,54 +51,16 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Re
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        bool includeDirectLight = true;
-        bool includeDiffuseGI = true;
-        bool includeGlossyGI = true;
-        bool withMaterialColor = true;
-
-        switch (m_composeMode) {
-        case ComposeMode::FullCompose:
-            includeDirectLight = true;
-            includeDiffuseGI = true;
-            includeGlossyGI = true;
-            withMaterialColor = true;
-            break;
-        case ComposeMode::DirectOnly:
-            includeDirectLight = true;
-            includeDiffuseGI = false;
-            includeGlossyGI = false;
-            withMaterialColor = true;
-            break;
-        case ComposeMode::DiffuseIndirectOnly:
-            includeDirectLight = false;
-            includeDiffuseGI = true;
-            includeGlossyGI = false;
-            withMaterialColor = true;
-            break;
-        case ComposeMode::DiffuseIndirectOnlyNoBaseColor:
-            includeDirectLight = false;
-            includeDiffuseGI = true;
-            includeGlossyGI = false;
-            withMaterialColor = false;
-            break;
-        case ComposeMode::GlossyIndirectOnly:
-            includeDirectLight = false;
-            includeDiffuseGI = false;
-            includeGlossyGI = true;
-            withMaterialColor = true;
-            break;
-        }
-
         cmdList.setComputeState(giComposeState);
         cmdList.bindSet(composeBindingSet, 0);
         cmdList.bindSet(ddgiSamplingBindingSet, 1);
 
         cmdList.setNamedUniform("targetSize", sceneColorWithGI.extent());
-        cmdList.setNamedUniform("includeDirectLight", includeDirectLight);
-        cmdList.setNamedUniform("includeDiffuseGI", includeDiffuseGI);
-        cmdList.setNamedUniform("includeGlossyGI", includeGlossyGI);
-        cmdList.setNamedUniform("withMaterialColor", withMaterialColor);
-        cmdList.setNamedUniform("withAmbientOcclusion", m_includeAmbientOcclusion);
+        cmdList.setNamedUniform("includeDirectLight", m_includeDirectLight);
+        cmdList.setNamedUniform("includeDiffuseGI", m_includeDiffuseGI);
+        cmdList.setNamedUniform("includeGlossyGI", m_includeGlossyGI);
+        cmdList.setNamedUniform("withMaterialColor", m_withMaterialColor);
+        cmdList.setNamedUniform("withAmbientOcclusion", m_withAmbientOcclusion);
 
         cmdList.dispatch({ sceneColorWithGI.extent(), 1 }, { 8, 8, 1 });
 

@@ -10,18 +10,11 @@ public:
 
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
-    enum class ComposeMode {
-        FullCompose,
-        DirectOnly,
-        DiffuseIndirectOnly,
-        DiffuseIndirectOnlyNoBaseColor,
-        GlossyIndirectOnly,
-    };
-
-    ComposeMode composeMode() const { return m_composeMode; }
-    void setComposeMode(ComposeMode mode) { m_composeMode = mode; }
-
 private:
-    ComposeMode m_composeMode { ComposeMode::FullCompose };
-    bool m_includeAmbientOcclusion { true };
+    bool m_includeDirectLight { true };
+    bool m_includeGlossyGI { true };
+    bool m_includeDiffuseGI { true };
+
+    bool m_withMaterialColor { true };
+    bool m_withAmbientOcclusion { true };
 };
