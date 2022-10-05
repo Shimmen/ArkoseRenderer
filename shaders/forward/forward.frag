@@ -33,18 +33,8 @@ layout(set = 4, binding = 0) uniform sampler2D directionalLightProjectedShadowTe
 layout(set = 4, binding = 1) uniform sampler2D localLightShadowMapAtlasTex;
 layout(set = 4, binding = 2) buffer readonly ShadowMapViewportBlock { vec4 localLightShadowMapViewports[]; };
 
-#if FORWARD_INCLUDE_DDGI
-#include <shared/DDGIData.h>
-#include <ddgi/probeSampling.glsl>
-layout(set = 5, binding = 0) uniform DDGIGridDataBlock { DDGIProbeGridData ddgiProbeGridData; };
-layout(set = 5, binding = 1) buffer ProbeOffsetBlock { vec3 probeOffsets[]; };
-layout(set = 5, binding = 2) uniform sampler2D ddgiIrradianceAtlas;
-layout(set = 5, binding = 3) uniform sampler2D ddgiVisibilityAtlas;
-#endif
-
 NAMED_UNIFORMS(pushConstants,
     float ambientAmount;
-    float indirectExposure;
     vec2 frustumJitterCorrection;
     vec2 invTargetSize;
 )
@@ -109,29 +99,6 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3
     return brdf * LdotN * directLight;
 }
 
-#if FORWARD_INCLUDE_DDGI
-vec3 evaluateDDGIIndirectLight(vec3 P, vec3 V, vec3 N, vec3 baseColor, float metallic, float roughness)
-{
-    vec3 worldSpacePos = vec3(camera.worldFromView * vec4(P, 1.0));
-    vec3 worldSpaceNormal = normalize(mat3(camera.worldFromView) * N);
-    vec3 worldSpaceView = normalize(mat3(camera.worldFromView) * V);
-
-    // For diffuse, simply pretend half vector is normal
-    vec3 H = N;
-
-    vec3 F0 = mix(vec3(DIELECTRIC_REFLECTANCE), baseColor, metallic);
-    vec3 F = F_Schlick(max(0.0, dot(V, H)), F0);
-
-    //float a = square(roughness);
-    //float fakeF = pow(a, 5.0);
-
-    vec3 irradiance = sampleDynamicDiffuseGlobalIllumination(worldSpacePos, worldSpaceNormal, worldSpaceView, ddgiProbeGridData, ddgiIrradianceAtlas, ddgiVisibilityAtlas);
-    vec3 indirectDiffuse = vec3(1.0 - metallic) * vec3(1.0 - F) * irradiance;
-
-    return indirectDiffuse;
-}
-#endif
-
 void main()
 {
     ShaderMaterial material = materials[vMaterialIndex];
@@ -187,11 +154,6 @@ void main()
             color += evaluateSpotLight(spotLights[i], shadowIdx++, V, N, baseColor, roughness, metallic);
         }
     }
-
-#if FORWARD_INCLUDE_DDGI
-    vec3 ddgi = evaluateDDGIIndirectLight(vPosition, V, N, baseColor, metallic, roughness);
-    oDiffuseGI = vec4(ddgi, 0.0);
-#endif
 
     vec2 velocity;
     {

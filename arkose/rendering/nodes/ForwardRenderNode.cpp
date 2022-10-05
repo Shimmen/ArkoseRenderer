@@ -29,7 +29,6 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
 
         auto setCommonNamedUniforms = [&](const RenderState& renderState) {
             cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
-            cmdList.setNamedUniform("indirectExposure", scene.lightPreExposure());
             cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
             cmdList.setNamedUniform("invTargetSize", renderState.renderTarget().extent().inverse());
         };
@@ -103,10 +102,6 @@ RenderState& ForwardRenderNode::makeRenderState(Registry& reg, const GpuScene& s
     ARKOSE_ASSERT(blendModeInt != 0);
     shaderDefines.push_back(ShaderDefine::makeInt("FORWARD_BLEND_MODE", blendModeInt));
 
-    BindingSet* ddgiSamplingBindingSet = reg.getBindingSet("DDGISamplingSet");
-    bool usingDDGI = ddgiSamplingBindingSet != nullptr;
-    shaderDefines.push_back(ShaderDefine::makeBool("FORWARD_INCLUDE_DDGI", usingDDGI));
-
     Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", shaderDefines);
 
     RenderStateBuilder renderStateBuilder { makeRenderTarget(reg, loadOp), shader, m_vertexLayout };
@@ -140,9 +135,6 @@ RenderState& ForwardRenderNode::makeRenderState(Registry& reg, const GpuScene& s
     bindings.at(2, *reg.getBindingSet("SceneLightSet"));
     bindings.at(3, *drawablesBindingSet);
     bindings.at(4, shadowBindingSet);
-    if (usingDDGI) {
-        renderStateBuilder.stateBindings().at(5, *ddgiSamplingBindingSet);
-    }
 
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
     renderState.setName(stateName);
