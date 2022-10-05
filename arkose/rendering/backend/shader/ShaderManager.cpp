@@ -364,7 +364,7 @@ uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree(boo
 {
     SCOPED_PROFILE_ZONE();
 
-    bool anyMissingFiles = false;
+    std::vector<std::string> missingFiles {};
     uint64_t latestTimestamp = 0;
 
     auto checkFile = [&](const std::string& file) {
@@ -373,7 +373,7 @@ uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree(boo
             uint64_t timestamp = statResult.st_mtime;
             latestTimestamp = std::max(timestamp, latestTimestamp);
         } else {
-            anyMissingFiles = true;
+            missingFiles.push_back(file);
         }
     };
 
@@ -386,8 +386,13 @@ uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree(boo
         checkFile(file);
     }
 
-    // TODO: Implement better error reporting
-    ARKOSE_ASSERT(anyMissingFiles == false);
+    if (missingFiles.size() > 0) {
+        ARKOSE_LOG(Error, "Shader file '{}' has {} non-existant file(s) in its include tree:", resolvedFilePath, missingFiles.size());
+        for (std::string const& missingFile : missingFiles) {
+            ARKOSE_LOG(Error, "  {}", missingFile);
+        }
+        ARKOSE_LOG_FATAL("Can't resolve edit timestamps, exiting");
+    }
 
     lastEditTimestamp = latestTimestamp;
     return latestTimestamp;
@@ -408,26 +413,22 @@ std::vector<std::string> ShaderManager::CompiledShader::findAllIncludedFiles() c
         std::string fileToTest = filesToTest.back();
         filesToTest.pop_back();
 
-        FileIO::readFileLineByLine(fileToTest, [&files, &filesToTest, this](const std::string& line) {
+        FileIO::readFileLineByLine(fileToTest, [&files, &fileToTest, & filesToTest, this](const std::string& line) {
 
-            size_t includeIdx = line.find("#include");
-            if (includeIdx == std::string::npos)
+            bool relativePath;
+            std::string_view specifiedPath = findIncludedPathFromShaderCodeLine(line, relativePath);
+
+            if (specifiedPath == "") {
                 return FileIO::NextAction::Continue;
+            }
 
-            // TODO: Add support for relative includes as well!
+            std::string includePath = (relativePath)
+                ? fmt::format("{}{}", FileIO::extractDirectoryFromPath(fileToTest), specifiedPath)
+                : shaderManager.resolveGlslPath(std::string(specifiedPath));
 
-            size_t fileStartIdx = line.find('<', includeIdx);
-            size_t fileEndIdx = line.find('>', fileStartIdx);
-
-            if (fileStartIdx == std::string::npos && fileEndIdx == std::string::npos)
-                return FileIO::NextAction::Continue;
-
-            std::string newFile = line.substr(fileStartIdx + 1, fileEndIdx - fileStartIdx - 1);
-            std::string newFilePath = shaderManager.resolveGlslPath(newFile);
-
-            if (std::find(files.begin(), files.end(), newFilePath) == files.end()) {
-                files.push_back(newFilePath);
-                filesToTest.push_back(newFilePath);
+            if (std::find(files.begin(), files.end(), includePath) == files.end()) {
+                files.push_back(includePath);
+                filesToTest.push_back(includePath);
             }
 
             return FileIO::NextAction::Continue;
@@ -435,4 +436,32 @@ std::vector<std::string> ShaderManager::CompiledShader::findAllIncludedFiles() c
     }
 
     return files;
+}
+
+std::string_view ShaderManager::CompiledShader::findIncludedPathFromShaderCodeLine(std::string_view line, bool& outIsRelative) const
+{
+    size_t includeIdx = line.find("#include");
+    if (includeIdx == std::string::npos) {
+        return "";
+    }
+
+    size_t commentStartIdx = line.find("//");
+
+    size_t fileStartIdx = line.find('<', includeIdx);
+    size_t fileEndIdx = line.find('>', fileStartIdx + 1);
+
+    if (fileStartIdx != std::string::npos && fileEndIdx != std::string::npos && (commentStartIdx == std::string::npos || commentStartIdx > fileEndIdx)) {
+        outIsRelative = false;
+        return line.substr(fileStartIdx + 1, fileEndIdx - fileStartIdx - 1);
+    }
+
+    fileStartIdx = line.find('"', includeIdx);
+    fileEndIdx = line.find('"', fileStartIdx + 1);
+
+    if (fileStartIdx != std::string::npos && fileEndIdx != std::string::npos && (commentStartIdx == std::string::npos || commentStartIdx > fileEndIdx)) {
+        outIsRelative = true;
+        return line.substr(fileStartIdx + 1, fileEndIdx - fileStartIdx - 1);
+    }
+
+    return "";
 }

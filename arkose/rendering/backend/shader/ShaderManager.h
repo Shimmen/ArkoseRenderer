@@ -6,6 +6,7 @@
 #include <mutex>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
@@ -53,6 +54,8 @@ private:
 
         uint64_t findLatestEditTimestampInIncludeTree(bool scanForNewIncludes = false);
         std::vector<std::string> findAllIncludedFiles() const;
+
+        std::string_view findIncludedPathFromShaderCodeLine(std::string_view line, bool& outIsRelative) const;
 
         const ShaderManager& shaderManager;
 
