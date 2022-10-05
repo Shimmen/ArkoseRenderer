@@ -70,4 +70,5 @@ Here are some basic steps to get it compiling & running for you:
 You should now be able to compile and run!
 
 ## License
-This project is licenced under the [MIT License](https://choosealicense.com/licenses/mit/). See the file `LICENSE` for more information. Third-party dependencies (in `deps/`) and third-party assets (in `assets/`) are potentially licensed under other terms. See their respective directories & files for additional information.
+
+This project is licenced under the [MIT License](https://choosealicense.com/licenses/mit/). See the file `LICENSE` for more information. Third-party dependencies (in `deps/`) and third-party assets (in `assets/`) are potentially licensed under other terms. See their respective directories & files for additional information. Some individual files and functions may also be licensed separately and are marked as such in or near the relevant files.
