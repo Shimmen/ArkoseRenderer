@@ -6,7 +6,6 @@
 #include "rendering/backend/Resource.h"
 #include "utility/Extent.h"
 #include "utility/Hash.h"
-#include "utility/Image.h"
 #include <memory>
 
 class Texture : public Resource {
@@ -184,10 +183,8 @@ public:
     Texture() = default;
     Texture(Backend&, Description);
 
-    static void pixelFormatAndTypeForImageInfo(const Image::Info& info, bool sRGB, Texture::Format& format, Image::PixelType& pixelTypeToUse);
     static Texture::Format convertImageFormatToTextureFormat(ImageFormat, ColorSpace);
 
-    static std::unique_ptr<Texture> createFromImage(Backend&, const Image&, bool sRGB, bool generateMipmaps, Texture::WrapModes);
     static std::unique_ptr<Texture> createFromPixel(Backend&, vec4 pixelColor, bool sRGB);
 
     static std::unique_ptr<Texture> createFromImagePath(Backend&, const std::string& imagePath, bool sRGB, bool generateMipmaps, Texture::WrapModes);

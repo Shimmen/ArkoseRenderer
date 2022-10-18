@@ -7,7 +7,6 @@
 #include "rendering/backend/base/Backend.h"
 #include "rendering/backend/Resources.h"
 #include "rendering/backend/util/UploadBuffer.h"
-#include "utility/Image.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include <unordered_map>

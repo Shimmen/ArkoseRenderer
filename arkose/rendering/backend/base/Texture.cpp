@@ -136,86 +136,6 @@ Texture::Multisampling Texture::multisampling() const
     return m_description.multisampling;
 }
 
-void Texture::pixelFormatAndTypeForImageInfo(const Image::Info& info, bool sRGB, Texture::Format& format, Image::PixelType& pixelTypeToUse)
-{
-    switch (info.pixelType) {
-    case Image::PixelType::RGB:
-    case Image::PixelType::RGBA:
-        // Honestly, this is easier to read than the if-based equivalent..
-        format = (info.isHdr())
-            ? Texture::Format::RGBA32F
-            : (sRGB)
-                ? Texture::Format::sRGBA8
-                : Texture::Format::RGBA8;
-        // RGB formats aren't always supported, so always use RGBA for 3-component data
-        pixelTypeToUse = Image::PixelType::RGBA;
-        break;
-    default:
-        ARKOSE_LOG(Fatal, "Texture: currently no support for other than (s)RGB(F) and (s)RGBA(F) texture loading!");
-    }
-}
-
-std::unique_ptr<Texture> Texture::createFromImage(Backend& backend, const Image& image, bool sRGB, bool generateMipmaps, Texture::WrapModes wrapMode)
-{
-    SCOPED_PROFILE_ZONE()
-
-    auto mipmapMode = (generateMipmaps && image.info().width > 1 && image.info().height > 1)
-        ? Texture::Mipmap::Linear
-        : Texture::Mipmap::None;
-
-    Texture::Format format {};
-    int numDesiredComponents {};
-    int pixelSizeBytes {};
-
-    switch (image.info().pixelType) {
-    case Image::PixelType::Grayscale:
-        numDesiredComponents = 1;
-        if (!sRGB && image.info().isHdr()) {
-            format = Texture::Format::R32F;
-            pixelSizeBytes = sizeof(float);
-        } else {
-            ARKOSE_LOG(Fatal, "Registry: no support for grayscale non-HDR or sRGB texture loading (from image)!");
-        }
-        break;
-    case Image::PixelType::RGB:
-    case Image::PixelType::RGBA:
-        numDesiredComponents = 4;
-        if (image.info().isHdr()) {
-            format = Texture::Format::RGBA32F;
-            pixelSizeBytes = 4 * sizeof(float);
-        } else {
-            format = (sRGB)
-                ? Texture::Format::sRGBA8
-                : Texture::Format::RGBA8;
-            pixelSizeBytes = 4 * sizeof(uint8_t);
-        }
-        break;
-    default:
-        ARKOSE_LOG(Fatal, "Registry: currently no support for other than R32F, (s)RGB(F), and (s)RGBA(F) texture loading (from image)!");
-    }
-
-    Texture::Description desc {
-        .type = Texture::Type::Texture2D,
-        .arrayCount = 1u,
-        .extent = { (uint32_t)image.info().width, (uint32_t)image.info().height, 1 },
-        .format = format,
-        .filter = Texture::Filters::linear(),
-        .wrapMode = wrapMode,
-        .mipmap = mipmapMode,
-        .multisampling = Texture::Multisampling::None
-    };
-
-    //validateTextureDescription(desc);
-    auto texture = backend.createTexture(desc);
-
-    // TODO: Also handle compressed data! requiredStorageSize() should do most heavy lifting,
-    // but we do have to create the correct image format up above too.
-    ARKOSE_ASSERT(image.info().compressionType == Image::CompressionType::Uncompressed);
-    texture->setData(image.data(), image.dataSize());
-
-    return texture;
-}
-
 std::unique_ptr<Texture> Texture::createFromPixel(Backend& backend, vec4 pixelColor, bool sRGB)
 {
     SCOPED_PROFILE_ZONE()
@@ -289,43 +209,42 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     //       such as OpenEXR.
 
     size_t totalRequiredSize = 0;
-    std::vector<std::string> imagePaths;
-    std::vector<Image::Info*> imageInfos;
+    std::vector<ImageAsset*> imageAssets;
     for (size_t idx = 0;; ++idx) {
         std::string imagePath = fmt::format(fmt::runtime(imagePathSequencePattern), idx);
-        Image::Info* imageInfo = Image::getInfo(imagePath, true);
-        if (!imageInfo)
+        ImageAsset* imageAsset = ImageAsset::loadOrCreate(imagePath);
+        if (!imageAsset)
             break;
-        totalRequiredSize += imageInfo->requiredStorageSize();
-        imageInfos.push_back(std::move(imageInfo));
-        imagePaths.push_back(std::move(imagePath));
+        totalRequiredSize += imageAsset->pixel_data.size();
+        imageAssets.push_back(imageAsset);
     }
 
-    if (imageInfos.size() == 0)
+    if (imageAssets.size() == 0) {
         ARKOSE_LOG(Fatal, "Registry: could not find any images in image array pattern <{}>, exiting", imagePathSequencePattern);
-
-    // Use the first one as "prototype" image info
-    Image::Info& info = *imageInfos.front();
-    uint32_t arrayCount = static_cast<uint32_t>(imageInfos.size());
-
-    // Ensure all are similar
-    for (uint32_t idx = 1; idx < arrayCount; ++idx) {
-        Image::Info& otherInfo = *imageInfos[idx];
-        ARKOSE_ASSERT(info == otherInfo);
     }
 
-    Texture::Format format;
-    Image::PixelType pixelTypeToUse;
-    Texture::pixelFormatAndTypeForImageInfo(info, sRGB, format, pixelTypeToUse);
+    // Use the first one as "prototype" image asset
+    ImageAsset const& asset0 = *imageAssets.front();
+    uint32_t arrayCount = static_cast<uint32_t>(imageAssets.size());
 
-    auto mipmapMode = (generateMipmaps && info.width > 1 && info.height > 1)
+    // Ensure all are similar (doesn't cover all cases, but it's something)
+    for (uint32_t idx = 1; idx < arrayCount; ++idx) {
+        ImageAsset const& otherAsset = *imageAssets[idx];
+        ARKOSE_ASSERT(asset0.width == otherAsset.width && asset0.height == otherAsset.height);
+    }
+
+    ColorSpace colorSpace = sRGB ? ColorSpace::sRGB_encoded : ColorSpace::sRGB_linear;
+    Texture::Format format = Texture::convertImageFormatToTextureFormat(asset0.format, colorSpace);
+
+    auto mipmapMode = (generateMipmaps && asset0.width > 1 && asset0.height > 1)
         ? Texture::Mipmap::Linear
         : Texture::Mipmap::None;
 
+    // TODO: Handle other than Texture2D arrays
     Texture::Description desc {
         .type = Texture::Type::Texture2D,
         .arrayCount = arrayCount,
-        .extent = { (uint32_t)info.width, (uint32_t)info.height, 1 },
+        .extent = { asset0.width, asset0.height, 1 },
         .format = format,
         .filter = Texture::Filters::linear(),
         .wrapMode = Texture::WrapModes::repeatAll(),
@@ -344,13 +263,13 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     // Load images and set texture data
     // TODO: Ensure this is not completely starved by async material texture loading!
     constexpr bool UseSingleThreadedLoading = true;
-    ParallelFor(imagePaths.size(), [&](size_t idx) {
+    ParallelFor(imageAssets.size(), [&](size_t idx) {
 
-        const std::string& imagePath = imagePaths[idx];
-        Image* image = Image::load(imagePath, pixelTypeToUse, true);
+        ImageAsset const& imageAsset = *imageAssets[idx];
+        auto const& data = imageAsset.pixel_data;
 
-        size_t offset = idx * image->dataSize();
-        std::memcpy(textureArrayMemory + offset, image->data(), image->dataSize());
+        size_t offset = idx * data.size();
+        std::memcpy(textureArrayMemory + offset, data.data(), data.size());
 
     }, UseSingleThreadedLoading);
     texture->setData(textureArrayMemory, totalRequiredSize);

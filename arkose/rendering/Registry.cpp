@@ -1,7 +1,6 @@
 #include "Registry.h"
 
 #include "utility/FileIO.h"
-#include "utility/Image.h"
 #include "core/Logging.h"
 #include "core/Assert.h"
 #include <fmt/format.h>
