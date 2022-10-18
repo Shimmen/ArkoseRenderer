@@ -48,7 +48,6 @@ public:
     StaticMesh* staticMeshForHandle(StaticMeshHandle handle);
     const StaticMesh* staticMeshForHandle(StaticMeshHandle handle) const;
     const ShaderMaterial* materialForHandle(MaterialHandle handle) const;
-    ShaderMaterial* mutableMaterialForHandle(MaterialHandle handle);
 
     // TODO: This is a temporary helper, remove me eventually!
     void ensureDrawCallIsAvailableForAll(VertexLayout);

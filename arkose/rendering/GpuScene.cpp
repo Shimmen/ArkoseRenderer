@@ -67,11 +67,6 @@ const ShaderMaterial* GpuScene::materialForHandle(MaterialHandle handle) const
     return &m_managedMaterials.get(handle);
 }
 
-ShaderMaterial* GpuScene::mutableMaterialForHandle(MaterialHandle handle)
-{
-    return &m_managedMaterials.get(handle);
-}
-
 size_t GpuScene::lightCount() const
 {
     return m_managedDirectionalLights.size() + m_managedSpotLights.size();
