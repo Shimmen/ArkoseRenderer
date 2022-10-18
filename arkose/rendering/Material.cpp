@@ -2,6 +2,7 @@
 
 #include "rendering/Registry.h"
 
+/*
 bool Material::TextureDescription::operator==(const TextureDescription& other) const
 {
     if (hasPath() && path != other.path)
@@ -79,3 +80,4 @@ std::string Material::TextureDescription::toString() const
 
     return result;
 }
+*/

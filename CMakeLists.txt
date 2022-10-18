@@ -77,7 +77,6 @@ set(ARKOSE_SOURCES
     arkose/physics/backend/jolt/JoltPhysicsBackend.cpp
     arkose/physics/backend/jolt/JoltVisualiser.cpp
     arkose/rendering/GpuScene.cpp
-    arkose/rendering/Material.cpp
     arkose/rendering/Registry.cpp
     arkose/rendering/RenderPipeline.cpp
     arkose/rendering/RenderPipelineNode.cpp

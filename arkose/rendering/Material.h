@@ -17,6 +17,7 @@ class Registry;
 
 DEFINE_HANDLE_TYPE(MaterialHandle)
 
+/*
 class Material {
 public:
     struct TextureDescription {
@@ -93,3 +94,4 @@ struct hash<Material::TextureDescription> {
     }
 };
 }
+*/
