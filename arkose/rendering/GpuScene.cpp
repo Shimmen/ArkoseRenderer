@@ -37,14 +37,14 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
     m_magentaTexture = Texture::createFromPixel(backend(), vec4(1.0f, 0.0f, 1.0f, 1.0f), true);
     m_normalMapBlueTexture = Texture::createFromPixel(backend(), vec4(0.5f, 0.5f, 1.0f, 1.0f), false);
 
-    size_t materialBufferSize = MaxSupportedSceneMaterials * sizeof(ShaderMaterial);
+    size_t materialBufferSize = m_managedMaterials.capacity() * sizeof(ShaderMaterial);
     m_materialDataBuffer = backend().createBuffer(materialBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
     m_materialDataBuffer->setName("SceneMaterialData");
 
     // TODO: Get rid of this placeholder that we use to write into all texture slots (i.e. support partially bound etc.)
     std::vector<Texture*> placeholderTexture = { m_magentaTexture.get() };
     m_materialBindingSet = backend().createBindingSet({ ShaderBinding::storageBuffer(*m_materialDataBuffer.get()),
-                                                        ShaderBinding::sampledTextureBindlessArray(MaxSupportedSceneTextures, placeholderTexture) });
+                                                        ShaderBinding::sampledTextureBindlessArray(static_cast<uint32_t>(m_managedMaterials.capacity()), placeholderTexture) });
     m_materialBindingSet->setName("SceneMaterialSet");
 
     if (m_maintainRayTracingScene) {
@@ -52,43 +52,24 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
     }
 }
 
-size_t GpuScene::forEachStaticMesh(std::function<void(size_t, StaticMesh&)> callback)
-{
-    size_t nextIndex = 0;
-    for (auto& managedStaticMesh : m_managedStaticMeshes) {
-        callback(nextIndex++, *managedStaticMesh.staticMesh);
-    }
-    return nextIndex;
-}
-
 StaticMesh* GpuScene::staticMeshForHandle(StaticMeshHandle handle)
 {
-    if (handle.valid()) {
-        ARKOSE_ASSERT(handle.index() < m_managedStaticMeshes.size());
-        return m_managedStaticMeshes[handle.index()].staticMesh.get();
-    }
-
-    return nullptr;
+    return m_managedStaticMeshes.get(handle).staticMesh.get();
 }
 
 const StaticMesh* GpuScene::staticMeshForHandle(StaticMeshHandle handle) const
 {
-    if (handle.valid()) {
-        ARKOSE_ASSERT(handle.index() < m_managedStaticMeshes.size());
-        return m_managedStaticMeshes[handle.index()].staticMesh.get();
-    }
-
-    return nullptr;
+    return m_managedStaticMeshes.get(handle).staticMesh.get();
 }
 
 const ShaderMaterial* GpuScene::materialForHandle(MaterialHandle handle) const
 {
-    if (handle.valid()) {
-        ARKOSE_ASSERT(handle.index() < m_managedMaterials.size());
-        return &m_managedMaterials[handle.index()].shaderMaterial;
-    }
+    return &m_managedMaterials.get(handle);
+}
 
-    return nullptr;
+ShaderMaterial* GpuScene::mutableMaterialForHandle(MaterialHandle handle)
+{
+    return &m_managedMaterials.get(handle);
 }
 
 size_t GpuScene::lightCount() const
@@ -234,7 +215,10 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
     return [&, rtTriangleMeshBufferPtr](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        SCOPED_PROFILE_ZONE_NAMED("GpuScene update")
+        SCOPED_PROFILE_ZONE_NAMED("GpuScene update");
+
+        m_currentFrameIdx = appState.frameIndex();
+        processDeferredDeletions();
 
         // If we're using async texture updates, create textures for the images we've now loaded in
         // TODO: Also create the texture and set the data asynchronously so we avoid practically all stalls
@@ -266,9 +250,11 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         if (m_pendingMaterialUpdates.size() > 0)
         {
             // TODO: Probably batch all neighbouring indices into a single upload? (Or can we let the UploadBuffer do that optimization for us?)
-            for (uint32_t materialIdx : m_pendingMaterialUpdates) {
-                const ShaderMaterial& shaderMaterial = m_managedMaterials[materialIdx].shaderMaterial;
-                size_t bufferOffset = materialIdx * sizeof(ShaderMaterial);
+            for (MaterialHandle handle : m_pendingMaterialUpdates) {
+                ShaderMaterial shaderMaterial = m_managedMaterials.isValidHandle(handle)
+                    ? m_managedMaterials.get(handle)
+                    : ShaderMaterial(); // if deleted
+                size_t bufferOffset = handle.index() * sizeof(ShaderMaterial);
                 uploadBuffer.upload(shaderMaterial, *m_materialDataBuffer, bufferOffset);
             }
             m_pendingMaterialUpdates.clear();
@@ -581,22 +567,8 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
         }
     }
 
-    auto managedStaticMesh = ManagedStaticMesh { .staticMesh = std::move(staticMesh),
-                                                 .referenceCount = 1 };
-
-    StaticMeshHandle handle;
-    if (m_managedStaticMeshFreeList.size() > 0) {
-
-        handle = StaticMeshHandle(m_managedStaticMeshFreeList.back());
-        m_managedStaticMeshFreeList.pop_back();
-
-        m_managedStaticMeshes[handle.index()] = std::move(managedStaticMesh);
-
-    } else {
-
-        handle = StaticMeshHandle(m_managedStaticMeshes.size());
-        m_managedStaticMeshes.emplace_back(std::move(managedStaticMesh));
-    }
+    StaticMeshHandle handle = m_managedStaticMeshes.add(ManagedStaticMesh { .staticMeshAsset = staticMeshAsset,
+                                                                            .staticMesh = std::move(staticMesh) });
 
     return handle;
 }
@@ -607,19 +579,13 @@ void GpuScene::unregisterStaticMesh(StaticMeshHandle handle)
     // This way it would be easy to add some function `registerExistingStaticMesh` or so which just increments
     // the reference count and returns the same handle? Not sure if that's a good use case, but this will work
     // for now and allows us to delete unused meshes...
-    
-    ManagedStaticMesh& managedStaticMesh = m_managedStaticMeshes[handle.index()];
-    managedStaticMesh.referenceCount -= 1;
-
-    if (managedStaticMesh.referenceCount == 0) {
-        managedStaticMesh.staticMesh.reset();
-        m_managedStaticMeshFreeList.push_back(handle.index());
-    }
+    m_managedStaticMeshes.removeReference(handle, m_currentFrameIdx);
 }
 
 void GpuScene::ensureDrawCallIsAvailableForAll(VertexLayout vertexLayout)
 {
-    for (const ManagedStaticMesh& managedStaticMesh : m_managedStaticMeshes) {
+    // TODO: Implement iterator for ResourceList!
+    m_managedStaticMeshes.forEachResource([&](ManagedStaticMesh const& managedStaticMesh) {
         if (auto& staticMesh = managedStaticMesh.staticMesh) {
             for (StaticMeshLOD& staticMeshLOD : staticMesh->LODs()) {
                 for (StaticMeshSegment& meshSegment : staticMeshLOD.meshSegments) {
@@ -627,7 +593,7 @@ void GpuScene::ensureDrawCallIsAvailableForAll(VertexLayout vertexLayout)
                 }
             }
         }
-    }
+    });
 }
 
 std::unique_ptr<BottomLevelAS> GpuScene::createBottomLevelAccelerationStructure(StaticMeshSegment& meshSegment, uint32_t meshIdx)
@@ -696,17 +662,8 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset* materialAsset)
 
     shaderMaterial.colorTint = AssetTypes::convertColorRGBA(materialAsset->color_tint);
 
-    uint64_t materialIdx = m_managedMaterials.size();
-    if (materialIdx >= MaxSupportedSceneMaterials) {
-        ARKOSE_LOG(Fatal, "Ran out of managed scene materials, exiting.");
-    }
-
-    auto handle = MaterialHandle(materialIdx);
-
-    m_managedMaterials.push_back(ManagedMaterial { .shaderMaterial = shaderMaterial,
-                                                   .referenceCount = 1 });
-
-    m_pendingMaterialUpdates.push_back(handle.indexOfType<uint32_t>());
+    MaterialHandle handle = m_managedMaterials.add(std::move(shaderMaterial));
+    m_pendingMaterialUpdates.push_back(handle);
 
     return handle;
 }
@@ -721,21 +678,8 @@ void GpuScene::unregisterMaterial(MaterialHandle handle)
 {
     SCOPED_PROFILE_ZONE();
 
-    ARKOSE_ASSERT(handle.valid());
-    ARKOSE_ASSERT(handle.index() < m_managedMaterials.size());
-
-    ManagedMaterial& managedMaterial = m_managedMaterials[handle.index()];
-    ARKOSE_ASSERT(managedMaterial.referenceCount == 1); // (for now, only a single ref.)
-    managedMaterial.referenceCount -= 1;
-
-    // TODO: Manage a free-list of indices to reuse!
-
-    m_pendingMaterialUpdates.push_back(handle.indexOfType<uint32_t>());
-
-    if (managedMaterial.referenceCount == 0) {
-        // TODO: Put this handle in some handle free list for index reuse so we don't leave gaps
-        managedMaterial = ManagedMaterial();
-    }
+    ARKOSE_ASSERT(m_managedMaterials.isValidHandle(handle));
+    m_managedMaterials.removeReference(handle, m_currentFrameIdx);
 }
 
 TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, bool sRGB, Texture* fallback)
@@ -751,7 +695,8 @@ TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, bool sRGB,
     ARKOSE_ASSERT(input->image.type == Arkose::Asset::ImageIndirection::path);
     std::string const& imageAssetPath = input->image.Aspath()->path;
 
-    // TODO: Cache on material inputs, beyond just the key
+    // TODO: Cache on material inputs, beyond just the path! If we don't handle this we can't update materials in runtime like we want as the path won't change.
+    // Also, ensure that even if ref-count is zero it should be here in the map, and we remove from the deferred-delete list when we increment the count again
     auto entry = m_materialTextureCache.find(imageAssetPath);
     if (entry == m_materialTextureCache.end()) {
 
@@ -814,11 +759,7 @@ TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, bool sRGB,
     }
 
     TextureHandle handle = entry->second;
-    ARKOSE_ASSERT(handle.valid());
-
-    ARKOSE_ASSERT(handle.index() < m_managedTextures.size());
-    ManagedTexture& managedTexture = m_managedTextures[handle.index()];
-    managedTexture.referenceCount += 1;
+    m_managedTextures.addReference(handle);
 
     return handle;
 }
@@ -843,16 +784,7 @@ TextureHandle GpuScene::registerTexture(std::unique_ptr<Texture>&& texture)
 
 TextureHandle GpuScene::registerTextureSlot()
 {
-    uint64_t textureIdx = m_managedTextures.size();
-    if (textureIdx >= MaxSupportedSceneTextures) {
-        ARKOSE_LOG(Fatal, "Ran out of bindless scene texture slots, exiting.");
-    }
-
-    auto handle = TextureHandle(textureIdx);
-
-    m_managedTextures.push_back(ManagedTexture { .texture = nullptr,
-                                                 .referenceCount = 1 });
-
+    TextureHandle handle = m_managedTextures.add(nullptr);
     return handle;
 }
 
@@ -860,11 +792,7 @@ void GpuScene::updateTexture(TextureHandle handle, std::unique_ptr<Texture>&& te
 {
     SCOPED_PROFILE_ZONE();
 
-    ARKOSE_ASSERT(handle.valid());
-    ARKOSE_ASSERT(handle.index() < m_managedTextures.size());
-
-    auto index = handle.indexOfType<uint32_t>();
-    ManagedTexture& managedTexture = m_managedTextures[index];
+    auto const& setTexture = m_managedTextures.set(handle, std::move(texture));
 
     // TODO: What if the managed texture is deleted between now and the pending update? We need to protect against that!
     // One way would be to just put in the index in here and then when it's time to actually update, put in the texture pointer.
@@ -873,15 +801,13 @@ void GpuScene::updateTexture(TextureHandle handle, std::unique_ptr<Texture>&& te
     // why not just keep a single index to update here and we'll always use the managedTexture's texture for that index. The only
     // problem is that our current API doesn't know about managedTextures, so would need to convert to what the API accepts.
 
-    managedTexture.texture = std::move(texture);
-    m_pendingTextureUpdates.push_back({ .texture = managedTexture.texture.get(),
-                                        .index = index });
+    m_pendingTextureUpdates.push_back({ .texture = setTexture.get(),
+                                        .index = handle.indexOfType<uint32_t>() });
 }
 
 void GpuScene::updateTextureUnowned(TextureHandle handle, Texture* texture)
 {
-    ARKOSE_ASSERT(handle.valid());
-    ARKOSE_ASSERT(handle.index() < m_managedTextures.size());
+    ARKOSE_ASSERT(m_managedTextures.isValidHandle(handle));
 
     // TODO: If we have the same handle twice, probably remove/overwrite the first one! We don't want to send more updates than needed.
     // We could use a set (hashed on index) and always overwrite? Or eliminate duplicates at final step (see updateTexture comment above).
@@ -895,27 +821,59 @@ void GpuScene::unregisterTexture(TextureHandle handle)
 {
     SCOPED_PROFILE_ZONE();
 
-    ARKOSE_ASSERT(handle.valid());
-    ARKOSE_ASSERT(handle.index() < m_managedTextures.size());
+    if (m_managedTextures.removeReference(handle, m_currentFrameIdx)) {
 
-    ManagedTexture& managedTexture = m_managedTextures[handle.index()];
-    ARKOSE_ASSERT(managedTexture.referenceCount > 0);
-    managedTexture.referenceCount -= 1;
+        // If pending deletion, write symbolic blank texture to the index so nothing references the texture when time comes to remove it
+        m_pendingTextureUpdates.push_back({ .texture = m_magentaTexture.get(),
+                                            .index = handle.indexOfType<uint32_t>() });
 
-    // TODO: Manage a free-list of indices to reuse!
-
-    // Write symbolic blank texture to the index
-    m_pendingTextureUpdates.push_back({ .texture = m_magentaTexture.get(),
-                                        .index = handle.indexOfType<uint32_t>() });
-
-    if (managedTexture.referenceCount == 0) {
-
-        ARKOSE_ASSERT(m_managedTexturesVramUsage > managedTexture.texture->sizeInMemory());
-        m_managedTexturesVramUsage -= managedTexture.texture->sizeInMemory();
-
-        // TODO: Put this handle in some handle free list for index reuse so we don't leave gaps
-        managedTexture = ManagedTexture();
     }
+}
+
+void GpuScene::processDeferredDeletions()
+{
+    // NOTE: In theory we can have this lower, but a higher value this will mean we keep a small window of time where the resources can be used again and thus not deleted.
+    static constexpr size_t DeferredFrames = 10;
+    static_assert(DeferredFrames >= 3, "To ensure correctness in all cases we must at least cover for tripple buffering");
+
+    m_managedStaticMeshes.processDeferredDeletes(m_currentFrameIdx, DeferredFrames, [this](StaticMeshHandle handle, ManagedStaticMesh& managedStaticMesh) {
+        // Unregister dependencies (materials)
+        for (StaticMeshLOD const& lod : managedStaticMesh.staticMesh->LODs()) {
+            for (StaticMeshSegment const& segment : lod.meshSegments) {
+                unregisterMaterial(segment.material);
+            }
+        }
+
+        managedStaticMesh.staticMeshAsset = nullptr;
+        managedStaticMesh.staticMesh.reset();
+    });
+
+    m_managedMaterials.processDeferredDeletes(m_currentFrameIdx, DeferredFrames, [this](MaterialHandle handle, ShaderMaterial& shaderMaterial) {
+        // Unregister dependencies (textures)
+        unregisterTexture(TextureHandle(shaderMaterial.baseColor));
+        unregisterTexture(TextureHandle(shaderMaterial.emissive));
+        unregisterTexture(TextureHandle(shaderMaterial.normalMap));
+        unregisterTexture(TextureHandle(shaderMaterial.metallicRoughness));
+
+        shaderMaterial = ShaderMaterial();
+        m_pendingMaterialUpdates.push_back(handle);
+    });
+
+    m_managedTextures.processDeferredDeletes(m_currentFrameIdx, DeferredFrames, [this](TextureHandle handle, std::unique_ptr<Texture>& texture) {
+        // NOTE: Currently we can put null textures in the list if there is no texture, meaning we still reserve a texture slot and we have to handle that here.
+        // TODO: Perhaps this isn't ideal? Consider if we can avoid reserving one altogether..
+        if (texture != nullptr) {
+            ARKOSE_ASSERT(m_managedTexturesVramUsage >= texture->sizeInMemory());
+            m_managedTexturesVramUsage -= texture->sizeInMemory();
+
+            // TODO: Intelligently remove from cache when we remove it from the resource list, don't just clear all!
+            //m_materialTextureCache.erase ..
+            m_materialTextureCache.clear();
+
+            // Delete & clear from GPU memory immediately
+            texture.reset();
+        }
+    });
 }
 
 DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<StaticMeshSegment>, const StaticMeshSegment& meshSegment, const VertexLayout& layout, std::optional<DrawCallDescription> alignWith)

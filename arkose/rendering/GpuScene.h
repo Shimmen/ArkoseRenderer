@@ -5,6 +5,7 @@
 #include "core/Handle.h"
 #include "core/parallel/TaskGraph.h"
 #include "rendering/RenderPipelineNode.h"
+#include "rendering/ResourceList.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
 #include <memory>
@@ -43,11 +44,11 @@ public:
     const Camera& camera() const { return scene().camera(); }
 
     size_t meshCount() const { return m_managedStaticMeshes.size(); }
-    size_t forEachStaticMesh(std::function<void(size_t, StaticMesh&)> callback);
 
     StaticMesh* staticMeshForHandle(StaticMeshHandle handle);
     const StaticMesh* staticMeshForHandle(StaticMeshHandle handle) const;
     const ShaderMaterial* materialForHandle(MaterialHandle handle) const;
+    ShaderMaterial* mutableMaterialForHandle(MaterialHandle handle);
 
     // TODO: This is a temporary helper, remove me eventually!
     void ensureDrawCallIsAvailableForAll(VertexLayout);
@@ -96,6 +97,8 @@ public:
 
     // Managed GPU assets
 
+    void processDeferredDeletions();
+
     DrawCallDescription fitVertexAndIndexDataForMesh(Badge<StaticMeshSegment>, const StaticMeshSegment&, const VertexLayout&, std::optional<DrawCallDescription> alignWith = {});
 
     Buffer& globalVertexBufferForLayout(const VertexLayout&) const;
@@ -139,10 +142,8 @@ private:
     struct ManagedStaticMesh {
         StaticMeshAsset* staticMeshAsset {};
         std::unique_ptr<StaticMesh> staticMesh {};
-        uint64_t referenceCount { 0 };
     };
-    std::vector<ManagedStaticMesh> m_managedStaticMeshes {};
-    std::vector<size_t> m_managedStaticMeshFreeList {};
+    ResourceList<ManagedStaticMesh, StaticMeshHandle> m_managedStaticMeshes { "Static Meshes", 1024 };
 
     struct ManagedDirectionalLight {
         DirectionalLight* light {};
@@ -155,15 +156,10 @@ private:
     };
     std::vector<ManagedSpotLight> m_managedSpotLights {};
 
-    struct ManagedTexture {
-        std::unique_ptr<Texture> texture {};
-        uint64_t referenceCount { 0 };
-    };
-    std::vector<ManagedTexture> m_managedTextures {};
+    ResourceList<std::unique_ptr<Texture>, TextureHandle> m_managedTextures { "Textures", 4096 };
     // TODO: This key should probably be not just the path but also some meta-info, e.g. what wrap modes we want!
     std::unordered_map<std::string, TextureHandle> m_materialTextureCache {};
     std::vector<BindingSet::TextureBindingUpdate> m_pendingTextureUpdates {};
-    static constexpr int MaxSupportedSceneTextures = 4096;
 
     static constexpr bool UseAsyncTextureLoads = true;
     static constexpr size_t MaxNumAsyncTextureLoadsToFinalizePerFrame = 4;
@@ -174,16 +170,10 @@ private:
     };
     std::mutex m_asyncLoadedImagesMutex {};
     std::vector<LoadedImageForTextureCreation> m_asyncLoadedImages {};
-    
 
-    struct ManagedMaterial {
-        ShaderMaterial shaderMaterial {};
-        uint64_t referenceCount { 0 };
-    };
-    std::vector<ManagedMaterial> m_managedMaterials {};
-    static constexpr int MaxSupportedSceneMaterials = 1'000;
+    ResourceList<ShaderMaterial, MaterialHandle> m_managedMaterials { "Materials", 1024 };
     std::unique_ptr<Buffer> m_materialDataBuffer { nullptr };
-    std::vector<uint32_t> m_pendingMaterialUpdates {};
+    std::vector<MaterialHandle> m_pendingMaterialUpdates {};
 
     // NOTE: Currently this contains both textures and material data
     static constexpr int MaterialBindingSetBindingIndexMaterials = 0;
@@ -210,6 +200,8 @@ private:
     std::unique_ptr<Texture> m_normalMapBlueTexture {};
 
     // GPU management
+
+    uint32_t m_currentFrameIdx { 0 };
 
     using VramUsageAvgAccumulatorType = AvgAccumulator<float, 20>;
     std::vector<VramUsageAvgAccumulatorType> m_vramUsageHistoryPerHeap {};
