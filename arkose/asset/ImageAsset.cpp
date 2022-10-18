@@ -25,6 +25,28 @@ ImageAsset::ImageAsset(Arkose::Asset::ImageAsset const* flatbuffersImageAsset, s
     ARKOSE_ASSERT(m_assetFilePath.length() > 0);
 }
 
+std::unique_ptr<ImageAsset> ImageAsset::createCopyWithReplacedFormat(ImageAsset const& inputImage, ImageFormat newFormat, uint8_t const* newData, size_t newSize)
+{
+    auto newImage = std::make_unique<ImageAsset>();
+
+    newImage->width = inputImage.width;
+    newImage->height = inputImage.height;
+    newImage->depth = inputImage.depth;
+    newImage->color_space = inputImage.color_space;
+    newImage->source_asset_path = inputImage.source_asset_path;
+    newImage->user_data = inputImage.user_data;
+
+    newImage->format = newFormat;
+    newImage->pixel_data.assign(newData, newData + newSize);
+
+    // Passed in data must be in an uncompressed state (compressed data formats are okay but not lossless compression on pixel_data!)
+    newImage->is_compressed = false;
+    newImage->compressed_size = static_cast<uint32_t>(newSize);
+    newImage->uncompressed_size = static_cast<uint32_t>(newSize);
+
+    return newImage;
+}
+
 std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(std::string const& sourceAssetFilePath)
 {
     SCOPED_PROFILE_ZONE();

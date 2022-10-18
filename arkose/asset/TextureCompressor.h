@@ -1,6 +1,6 @@
 #pragma once
 
-class Image;
+class ImageAsset;
 
 #include <memory>
 
@@ -11,6 +11,6 @@ public:
     ~TextureCompressor() = default;
 
     // For most 8-bit RGB(A) textures
-    std::unique_ptr<Image> compressBC7(Image const&);
+    std::unique_ptr<ImageAsset> compressBC7(ImageAsset const&);
 
 };

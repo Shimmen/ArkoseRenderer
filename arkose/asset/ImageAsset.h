@@ -17,6 +17,9 @@ public:
     ImageAsset();
     ~ImageAsset();
 
+    // Create a new ImageAsset that is a copy of the passed in image asset but with replaced image format. The data of the new format is passed in at constuction time.
+    static std::unique_ptr<ImageAsset> createCopyWithReplacedFormat(ImageAsset const&, ImageFormat, uint8_t const* data, size_t size);
+
     // Create a new ImageAsset from an image on disk, e.g. png or jpg. This can then be modified in place and finally be written to disk (as an .argimg)
     static std::unique_ptr<ImageAsset> createFromSourceAsset(std::string const& sourceAssetFilePath);
     static std::unique_ptr<ImageAsset> createFromSourceAsset(uint8_t const* data, size_t size);

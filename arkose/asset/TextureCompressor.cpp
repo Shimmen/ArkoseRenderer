@@ -1,24 +1,23 @@
 #include "TextureCompressor.h"
 
+#include "asset/ImageAsset.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
-#include "utility/Image.h"
 #include "utility/Profiling.h"
 #include <rdo_bc_encoder.h>
 #include <thread>
 
-std::unique_ptr<Image> TextureCompressor::compressBC7(Image const& inputImage)
+std::unique_ptr<ImageAsset> TextureCompressor::compressBC7(ImageAsset const& inputImage)
 {
     SCOPED_PROFILE_ZONE();
 
-    const Image::Info& sourceInfo = inputImage.info();
-    ARKOSE_ASSERT(sourceInfo.width > 0 && sourceInfo.height > 0);
-    ARKOSE_ASSERT(sourceInfo.pixelType == Image::PixelType::RGBA); // TODO: Also add support for RGB, which will require some manual padding
-    ARKOSE_ASSERT(sourceInfo.componentType == Image::ComponentType::UInt8);
+    ARKOSE_ASSERT(not inputImage.is_compressed);
+    ARKOSE_ASSERT(inputImage.width > 0 && inputImage.height > 0);
+    ARKOSE_ASSERT(inputImage.format == ImageFormat::RGBA8); // TODO: Also add support for RGB, which will require some manual padding
 
     // Create an image that can be used by the encoder
-    utils::image_u8 sourceImage { static_cast<uint32_t>(sourceInfo.width), static_cast<uint32_t>(sourceInfo.height) };
-    std::memcpy(sourceImage.get_pixels().data(), inputImage.data(), inputImage.dataSize());
+    utils::image_u8 sourceImage { inputImage.width, inputImage.height };
+    std::memcpy(sourceImage.get_pixels().data(), inputImage.pixel_data.data(), inputImage.pixel_data.size());
 
     rdo_bc::rdo_bc_params params {};
     params.m_status_output = false; // no debug printing
@@ -44,12 +43,7 @@ std::unique_ptr<Image> TextureCompressor::compressBC7(Image const& inputImage)
     }
 
     uint32_t compressedSize = encoder.get_total_blocks_size_in_bytes();
-    std::vector<uint8_t> compressedData {};
-    compressedData.resize(compressedSize);
-    std::memcpy(compressedData.data(), encoder.get_blocks(), compressedSize);
+    uint8_t const* compressedData = static_cast<uint8_t const*>(encoder.get_blocks());
 
-    Image::Info compressedImageInfo = sourceInfo;
-    compressedImageInfo.compressionType = Image::CompressionType::BC7;
-
-    return std::make_unique<Image>(compressedImageInfo, compressedData);
+    return ImageAsset::createCopyWithReplacedFormat(inputImage, ImageFormat::BC7, compressedData, compressedSize);
 }
