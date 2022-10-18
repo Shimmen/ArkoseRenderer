@@ -1,0 +1,237 @@
+#pragma once
+
+#include "core/Logging.h"
+#include "core/Handle.h"
+#include <algorithm>
+#include <vector>
+
+template<typename ResourceType, typename HandleType>
+class ResourceList final {
+
+public:
+
+    explicit ResourceList(const char* name, size_t capacity)
+        : m_name(name)
+        , m_capacity(capacity)
+    {
+        // This will potentially waste some memory but will also ensure zero allocations
+        m_resources.reserve(m_capacity);
+        m_freeList.reserve(m_capacity);
+        m_deferredDeleteList.reserve(m_capacity);
+    }
+
+    ~ResourceList()
+    {
+        // right now this only happens at shutdown, so we can ignore it
+        //ARKOSE_ASSERT(m_resources.size() == 0);
+    }
+
+    size_t capacity() const
+    {
+        return m_capacity;
+    }
+
+    size_t size() const
+    {
+        return m_actualSize;
+    }
+
+    bool isValidHandle(HandleType handle) const
+    {
+        if (not handle.valid()) {
+            return false;
+        }
+
+        if (handle.index() >= m_resources.size()) {
+            return false;
+        }
+
+        ResourceEntry const& resourceEntry = m_resources[handle.index()];
+        return resourceEntry.alive;
+    }
+
+    HandleType add(ResourceType&& resource)
+    {
+        HandleType handle;
+
+        if (m_freeList.size() > 0) {
+
+            handle = m_freeList.back();
+            m_freeList.pop_back();
+
+            m_resources[handle.index()] = ResourceEntry(std::move(resource));
+
+        } else {
+
+            uint64_t handleIdx = m_resources.size();
+            if (handleIdx >= m_capacity) {
+                ARKOSE_LOG_FATAL("Ran out of capacity for {}, exiting.", m_name);
+            }
+
+            handle = HandleType(handleIdx);
+            m_resources.emplace_back(ResourceEntry(std::move(resource)));
+        }
+
+        m_actualSize += 1;
+
+        return handle;
+    }
+
+    ResourceType& get(HandleType handle)
+    {
+        ResourceEntry& resourceEntry = getEntry(handle);
+        return resourceEntry.resource;
+    }
+
+    ResourceType const& get(HandleType handle) const
+    {
+        ResourceEntry const& resourceEntry = getEntry(handle);
+        return resourceEntry.resource;
+    }
+
+    ResourceType& set(HandleType handle, ResourceType&& resource)
+    {
+        ResourceEntry& resourceEntry = getEntry(handle);
+        resourceEntry.resource = std::move(resource);
+        return resourceEntry.resource;
+    }
+
+    void addReference(HandleType handle)
+    {
+        ResourceEntry& resourceEntry = getEntry(handle);
+        resourceEntry.referenceCount += 1;
+    }
+
+    bool removeReference(HandleType handle, size_t currentFrame)
+    {
+        ResourceEntry& resourceEntry = getEntry(handle);
+
+        ARKOSE_ASSERT(resourceEntry.referenceCount > 0);
+        resourceEntry.referenceCount -= 1;
+
+        bool noRemainingReferences = resourceEntry.referenceCount == 0;
+
+        if (noRemainingReferences) {
+            resourceEntry.zeroReferencesAtFrame = currentFrame;
+            m_deferredDeleteList.push_back(handle);
+        }
+
+        return noRemainingReferences;
+    }
+
+    template<typename DeleterFunction>
+    int processDeferredDeletes(size_t currentFrame, size_t deferFrames, DeleterFunction&& deleterFunction)
+    {
+        if (m_deferredDeleteList.empty()) {
+            return 0;
+        }
+
+        int numDeletes = 0;
+
+        for (int64_t idx = std::ssize(m_deferredDeleteList) - 1; idx >= 0; idx -= 1) {
+
+            HandleType handle = m_deferredDeleteList[idx];
+            ResourceEntry& resourceEntry = getEntry(handle);
+
+            bool removeFromList = false;
+            bool deleteResource = false;
+
+            // Since the delete was requested we have regained enough references to keep us alive, remove from this list
+            if (resourceEntry.referenceCount > 0) {
+                removeFromList = true;
+                resourceEntry.zeroReferencesAtFrame = SIZE_MAX;
+            }
+
+            ARKOSE_ASSERT(currentFrame >= resourceEntry.zeroReferencesAtFrame);
+            if (currentFrame - resourceEntry.zeroReferencesAtFrame > deferFrames) {
+                removeFromList = true;
+                deleteResource = true;
+            }
+
+            if (deleteResource) {
+
+                deleterFunction(handle, resourceEntry.resource);
+
+                resourceEntry.alive = false;
+                resourceEntry.referenceCount = 0;
+                //resourceEntry.zeroReferencesAtFrame = SIZE_MAX;
+
+                m_freeList.push_back(handle);
+
+                numDeletes += 1;
+            }
+
+            if (removeFromList) {
+                // Remove from the list, only pop from the back
+                if (idx < std::ssize(m_deferredDeleteList) - 1) {
+                    std::swap(m_deferredDeleteList[idx], m_deferredDeleteList.back());
+                }
+                m_deferredDeleteList.pop_back();
+            }
+        }
+
+        ARKOSE_ASSERT(numDeletes <= m_actualSize);
+        m_actualSize -= numDeletes;
+
+        return numDeletes;
+    }
+
+    // TODO: Implement iterator for ResourceList
+    template<typename CallbackFunction>
+    void forEachResource(CallbackFunction&& callback) const
+    {
+        for (size_t idx = 0; idx < m_resources.size(); ++idx) {
+            ResourceEntry const& resourceEntry = m_resources[idx];
+            if (resourceEntry.alive) {
+                callback(resourceEntry.resource);
+            }
+        }
+    }
+
+private:
+
+    struct ResourceEntry {
+        explicit ResourceEntry(ResourceType&& inResource)
+            : resource(std::move(inResource))
+        {
+        }
+
+        ResourceType resource;
+
+        bool alive { true };
+        size_t referenceCount { 1 };
+        size_t zeroReferencesAtFrame { SIZE_MAX };
+
+        // TODO: Add some kind of generation value to track use-after-free?
+    };
+
+    ResourceEntry& getEntry(HandleType handle)
+    {
+        ARKOSE_ASSERT(handle.valid());
+        ARKOSE_ASSERT(handle.index() < m_resources.size());
+
+        ResourceEntry& resourceEntry = m_resources[handle.index()];
+        ARKOSE_ASSERT(resourceEntry.alive);
+
+        return resourceEntry;
+    }
+
+    ResourceEntry const& getEntry(HandleType handle) const
+    {
+        ARKOSE_ASSERT(handle.valid());
+        ARKOSE_ASSERT(handle.index() < m_resources.size());
+
+        ResourceEntry const& resourceEntry = m_resources[handle.index()];
+        ARKOSE_ASSERT(resourceEntry.alive);
+
+        return resourceEntry;
+    }
+
+    std::vector<ResourceEntry> m_resources {};
+    std::vector<HandleType> m_freeList {};
+    std::vector<HandleType> m_deferredDeleteList {};
+    size_t m_actualSize { 0 };
+
+    const char* m_name = "ResourceList";
+    size_t m_capacity { 0 };
+};
