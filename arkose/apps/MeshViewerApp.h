@@ -18,22 +18,28 @@ private:
 
     // The mesh we're currently viewing & editing
     StaticMeshAsset* m_target {};
+    // The runtime version of the asset we're viewing & editing
+    StaticMeshInstance* m_targetInstance {};
 
     int m_selectedLodIdx { 0 };
     int m_selectedSegmentIdx { 0 };
 
-    StaticMeshAsset& target() { return *m_target; }
-    StaticMeshLODAsset* selectedLOD() { return m_target ? target().lods[m_selectedLodIdx].get() : nullptr; }
-    StaticMeshSegmentAsset* selectedSegment() { return selectedLOD() ? selectedLOD()->mesh_segments[m_selectedSegmentIdx].get() : nullptr; }
+    StaticMeshAsset& targetAsset() { return *m_target; }
+    StaticMeshLODAsset* selectedLodAsset() { return m_target ? targetAsset().lods[m_selectedLodIdx].get() : nullptr; }
+    StaticMeshSegmentAsset* selectedSegmentAsset() { return selectedLodAsset() ? selectedLodAsset()->mesh_segments[m_selectedSegmentIdx].get() : nullptr; }
+
+    StaticMeshInstance& target() { return *m_targetInstance; }
+    StaticMeshLOD* selectedLOD();
+    StaticMeshSegment* selectedSegment();
 
     void drawMenuBar();
 
     void drawMeshHierarchyPanel();
     
     void drawMeshMaterialPanel();
-    void drawWrapModeSelectorGui(const char* id, Arkose::Asset::WrapModes&);
-    void drawBlendModeSelectorGui(const char* id, Arkose::Asset::BlendMode&);
-    void drawImageFilterSelectorGui(const char* id, Arkose::Asset::ImageFilter&);
+    bool drawWrapModeSelectorGui(const char* id, Arkose::Asset::WrapModes&);
+    bool drawBlendModeSelectorGui(const char* id, Arkose::Asset::BlendMode&);
+    bool drawImageFilterSelectorGui(const char* id, Arkose::Asset::ImageFilter&);
     
     void drawMeshPhysicsPanel();
 
