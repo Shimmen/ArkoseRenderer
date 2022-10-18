@@ -182,6 +182,10 @@ ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
         }
 
         std::unique_ptr<ImageAsset> newImageAsset = createFromSourceAsset(filePath);
+        if (not newImageAsset) {
+            return nullptr;
+        }
+
         newImageAsset->m_assetFilePath = filePath;
 
         {
