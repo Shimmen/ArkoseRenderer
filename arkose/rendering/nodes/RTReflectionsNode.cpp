@@ -27,18 +27,15 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
     Extent2D tileExtent = { (extent.width() + 8 - 1) / 8,
                             (extent.height() + 8 - 1) / 8 };
 
-    Texture& reflectionsTex = reg.createTexture2D(extent, Texture::Format::RGBA16F);
-    reg.publish("Reflections", reflectionsTex);
+    m_radianceTex = &reg.createTexture2D(extent, Texture::Format::RGBA16F);
+    reg.publish("NoisyReflections", *m_radianceTex);
 
-    // TODO: Use octahedral encoding and RG16F!
+    // OPTIMIZATION: Use octahedral encoding and RG16F!
     Texture& reflectionDirectionTex = reg.createTexture2D(extent, Texture::Format::RGBA16F);
     reg.publish("ReflectionDirection", reflectionDirectionTex);
 
-    // TODO: Maybe just keep this name throughout?
-    m_radianceTex = &reflectionsTex;
-
     // Ray-traced reflections
-    RayTracingState& rtState = createRayTracingState(scene, reg, reflectionsTex, reflectionDirectionTex, blueNoiseTexture);
+    RayTracingState& rtState = createRayTracingState(scene, reg, *m_radianceTex, reflectionDirectionTex, blueNoiseTexture);
 
     // Denoising
 
@@ -66,10 +63,13 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
         // NOTE: Relative first frame includes first frame after e.g. screen resize and other pipline invalidating actions
         const bool firstFrame = appState.isRelativeFirstFrame();
 
+        Extent2D mainExtent = m_radianceTex->extent();
+        const Extent3D dispatchLocalSize = { 8, 8, 1 };
+
         {
             ScopedDebugZone zone { cmdList, "Ray Tracing" };
 
-            cmdList.clearTexture(reflectionsTex, ClearValue::blackAtMaxDepth());
+            cmdList.clearTexture(*m_radianceTex, ClearValue::blackAtMaxDepth());
             cmdList.setRayTracingState(rtState);
 
             cmdList.setNamedUniform("ambientAmount", m_injectedAmbient * scene.lightPreExposure());
@@ -78,12 +78,12 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
             cmdList.setNamedUniform<float>("parameter2", m_noTracingRoughnessThreshold);
             cmdList.setNamedUniform<float>("parameter3", static_cast<float>(appState.frameIndex() % blueNoiseTexture.arrayCount()));
 
-            cmdList.traceRays(appState.windowExtent());
+            cmdList.traceRays(mainExtent);
             cmdList.textureWriteBarrier(*m_radianceTex);
         }
 
-        if (m_denoiseEnabled)
-        {
+        if (m_denoiseEnabled) {
+
             ScopedDebugZone zone { cmdList, "Denoising" };
 
             if (firstFrame) {
@@ -91,7 +91,7 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
                 cmdList.setComputeState(historyCopyData.state);
                 cmdList.bindSet(historyCopyData.bindings, 0);
                 cmdList.setNamedUniform<bool>("firstCopy", true);
-                cmdList.dispatch(historyCopyData.globalSize, historyCopyData.localSize); // TODO: Maybe remove from DenoiserPassData type?
+                cmdList.dispatch(mainExtent, dispatchLocalSize);
 
                 // History textures needed for reprojection
                 cmdList.textureWriteBarrier(*m_radianceHistoryTex);
@@ -99,37 +99,42 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
                 cmdList.textureWriteBarrier(*m_depthRoughnessVarianceNumSamplesHistoryTex);
             }
 
+            auto setNoTracingRoughnessThreshold = [&] {
+                cmdList.setNamedUniform("noTracingRoughnessThreshold", m_noTracingRoughnessThreshold);
+            };
+            auto setTemporalStability = [&] {
+                cmdList.setNamedUniform("temporalStability", m_temporalStability);
+            };
+
             cmdList.setComputeState(reprojectData.state);
             cmdList.bindSet(reprojectData.bindings, 0);
-            cmdList.setNamedUniform("noTracingRoughnessThreshold", m_noTracingRoughnessThreshold);
-            cmdList.setNamedUniform("temporalStability", m_temporalStability);
-            cmdList.dispatch(reprojectData.globalSize, reprojectData.localSize); // TODO: Maybe remove from DenoiserPassData type?
+            setNoTracingRoughnessThreshold();
+            setTemporalStability();
+            cmdList.dispatch(mainExtent, dispatchLocalSize);
 
-            // TODO ...
             cmdList.textureWriteBarrier(*m_varianceTex);
             cmdList.textureWriteBarrier(*m_averageRadianceTex);
 
             cmdList.setComputeState(prefilterData.state);
             cmdList.bindSet(prefilterData.bindings, 0);
-            cmdList.setNamedUniform("noTracingRoughnessThreshold", m_noTracingRoughnessThreshold);
-            cmdList.dispatch(prefilterData.globalSize, prefilterData.localSize); // TODO: Maybe remove from DenoiserPassData type?
+            setNoTracingRoughnessThreshold();
+            cmdList.dispatch(mainExtent, dispatchLocalSize);
 
-            // TODO ...
-            //cmdList.textureWriteBarrier(*m_resolvedRadianceAndVarianceTex);
             cmdList.textureWriteBarrier(*m_numSamplesTex);
             cmdList.textureWriteBarrier(*m_reprojectedRadianceTex);
 
             cmdList.setComputeState(temporalResolveData.state);
             cmdList.bindSet(temporalResolveData.bindings, 0);
-            cmdList.setNamedUniform("noTracingRoughnessThreshold", m_noTracingRoughnessThreshold);
-            cmdList.setNamedUniform("temporalStability", m_temporalStability);
-            cmdList.dispatch(temporalResolveData.globalSize, temporalResolveData.localSize); // TODO: Maybe remove from DenoiserPassData type?
+            setNoTracingRoughnessThreshold();
+            setTemporalStability();
+            cmdList.dispatch(mainExtent, dispatchLocalSize);
 
             // Copy over to history textures
             cmdList.setComputeState(historyCopyData.state);
             cmdList.bindSet(historyCopyData.bindings, 0);
             cmdList.setNamedUniform<bool>("firstCopy", false);
-            cmdList.dispatch(historyCopyData.globalSize, historyCopyData.localSize); // TODO: Maybe remove from DenoiserPassData type?
+            cmdList.dispatch(mainExtent, dispatchLocalSize);
+
         } else {
 
             // Copy raw results over to the denoised result
@@ -179,8 +184,6 @@ RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserHistoryCop
 {
     Shader historyCopyShader = Shader::createCompute("rt-reflections/historyCopy.comp");
 
-    Extent2D extent = m_radianceTex->extent(); // todo..
-
     BindingSet& bindings = reg.createBindingSet({ ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData")),
                                                   ShaderBinding::storageTexture(*m_radianceHistoryTex),
                                                   ShaderBinding::storageTexture(*m_worldSpaceNormalHistoryTex),
@@ -195,16 +198,12 @@ RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserHistoryCop
     ComputeState& historyCopyState = reg.createComputeState(historyCopyShader, { &bindings });
     historyCopyState.setName("DenoiserHistoryCopy");
 
-    DenoiserPassData& data = reg.allocate<DenoiserPassData>(historyCopyState, bindings,
-                                                            Extent3D(extent, 1), Extent3D(8, 8, 1));
-    return data;
+    return reg.allocate<DenoiserPassData>(historyCopyState, bindings);
 }
 
 RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserReprojectState(Registry& reg)
 {
     Shader reprojectShader = Shader::createCompute("rt-reflections/reproject.comp");
-
-    Extent2D extent = m_radianceTex->extent();
 
     BindingSet& bindings = reg.createBindingSet({ ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData")),
                                                   ShaderBinding::storageTexture(*m_reprojectedRadianceTex),
@@ -222,16 +221,12 @@ RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserReprojectS
     ComputeState& reprojectState = reg.createComputeState(reprojectShader, { &bindings });
     reprojectState.setName("DenoiserReproject");
 
-    DenoiserPassData& data = reg.allocate<DenoiserPassData>(reprojectState, bindings,
-                                                            Extent3D(extent, 1), Extent3D(8, 8, 1));
-    return data;
+    return reg.allocate<DenoiserPassData>(reprojectState, bindings);
 }
 
 RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserPrefilterState(Registry& reg)
 {
     Shader prefilterShader = Shader::createCompute("rt-reflections/prefilter.comp");
-
-    Extent2D extent = m_radianceTex->extent();
 
     BindingSet& bindings = reg.createBindingSet({ ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData")),
                                                   ShaderBinding::storageTexture(*m_resolvedRadianceAndVarianceTex),
@@ -245,16 +240,12 @@ RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserPrefilterS
     ComputeState& prefilterState = reg.createComputeState(prefilterShader, { &bindings });
     prefilterState.setName("DenoiserPrefilter");
 
-    DenoiserPassData& data = reg.allocate<DenoiserPassData>(prefilterState, bindings,
-                                                            Extent3D(extent, 1), Extent3D(8, 8, 1));
-    return data;
+    return reg.allocate<DenoiserPassData>(prefilterState, bindings);
 }
 
 RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserTemporalResolveState(Registry& reg)
 {
     Shader temporalResolveShader = Shader::createCompute("rt-reflections/resolveTemporal.comp");
-
-    Extent2D extent = m_radianceTex->extent();
 
     BindingSet& bindings = reg.createBindingSet({ ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData")),
                                                   ShaderBinding::storageTexture(*m_temporalAccumulationTex),
@@ -268,7 +259,5 @@ RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserTemporalRe
     ComputeState& temporalResolveState = reg.createComputeState(temporalResolveShader, { &bindings });
     temporalResolveState.setName("DenoiserTemporalResolve");
 
-    DenoiserPassData& data = reg.allocate<DenoiserPassData>(temporalResolveState, bindings,
-                                                            Extent3D(extent, 1), Extent3D(8, 8, 1));
-    return data;
+    return reg.allocate<DenoiserPassData>(temporalResolveState, bindings);
 }

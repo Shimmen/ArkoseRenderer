@@ -41,13 +41,10 @@ private:
     RayTracingState& createRayTracingState(GpuScene&, Registry&, Texture& reflectionsTexture, Texture& reflectionDirectionTex, Texture& blueNoiseTexture) const;
 
     struct DenoiserPassData {
-        DenoiserPassData(ComputeState& inState, BindingSet& inBindings, Extent3D inGlobalSize, Extent3D inLocalSize)
-            : state(inState), bindings(inBindings), globalSize(inGlobalSize), localSize(inLocalSize) {}
-
+        DenoiserPassData(ComputeState& inState, BindingSet& inBindings)
+            : state(inState), bindings(inBindings) {}
         ComputeState& state;
         BindingSet& bindings;
-        Extent3D globalSize;
-        Extent3D localSize;
     };
 
     DenoiserPassData& createDenoiserHistoryCopyState(Registry&);
