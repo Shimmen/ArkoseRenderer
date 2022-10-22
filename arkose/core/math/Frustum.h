@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ark/aabb.h"
 #include "Plane.h"
 #include "Sphere.h"
 
@@ -10,7 +11,10 @@ public:
     Frustum() = default;
     static Frustum createFromProjectionMatrix(mat4);
 
-    bool includesSphere(const Sphere&);
+    bool isPointInside(vec3 point) const;
+
+    bool includesSphere(const Sphere&) const;
+    bool includesAABB(ark::aabb3 const&) const;
 
     const Plane* rawPlaneData(size_t* outByteSize) const;
 

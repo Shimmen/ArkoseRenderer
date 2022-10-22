@@ -79,15 +79,15 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
             cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
             cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
 
-            uint32_t drawIdx = 0;
+            uint32_t drawableIdx = 0;
             for (auto& instance : scene.scene().staticMeshInstances()) {
                 if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh)) {
 
                     // TODO: Pick LOD properly
                     const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
 
-                    geometry::Sphere sphere = lod.boundingSphere.transformed(instance->transform.worldMatrix());
-                    if (lightFrustum.includesSphere(sphere)) {
+                    ark::aabb3 aabb = lod.boundingBox.transformed(instance->transform.worldMatrix());
+                    if (lightFrustum.includesAABB(aabb)) {
 
                         for (const StaticMeshSegment& meshSegment : lod.meshSegments) {
 
@@ -95,15 +95,18 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
                             // in some cases but in general if the masked features are small enough it's not really noticable.
                             if (const ShaderMaterial* material = scene.materialForHandle(meshSegment.material)) {
                                 if (material->blendMode == BLEND_MODE_TRANSLUCENT) {
+                                    drawableIdx++;
                                     continue;
                                 }
                             }
 
                             DrawCallDescription drawCall = meshSegment.drawCallDescription(m_vertexLayout, scene);
-                            drawCall.firstInstance = drawIdx++; // TODO: Put this in some buffer instead!
+                            drawCall.firstInstance = drawableIdx++; // TODO: Put this in some buffer instead!
 
                             cmdList.issueDrawCall(drawCall);
                         }
+                    } else {
+                        drawableIdx += lod.meshSegments.size();
                     }
                 }
             }

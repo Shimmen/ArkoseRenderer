@@ -25,7 +25,18 @@ Frustum::Frustum(Plane planes[6])
     }
 }
 
-bool Frustum::includesSphere(const Sphere& sphere)
+bool Frustum::isPointInside(vec3 point) const
+{
+    for (Plane const& plane : m_planes) {
+        float distance = dot(plane.normal(), point) + plane.distance();
+        if (distance > 0.0f) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool Frustum::includesSphere(const Sphere& sphere) const
 {
     SCOPED_PROFILE_ZONE();
 
@@ -36,6 +47,28 @@ bool Frustum::includesSphere(const Sphere& sphere)
     }
 
     return true;
+}
+
+bool Frustum::includesAABB(ark::aabb3 const& aabb) const
+{
+    SCOPED_PROFILE_ZONE();
+
+    vec3 corners[8] = { /*vec3(aabb.min.x, aabb.min.y, aabb.min.z)*/ aabb.min,
+                        vec3(aabb.min.x, aabb.min.y, aabb.max.z),
+                        vec3(aabb.min.x, aabb.max.y, aabb.min.z),
+                        vec3(aabb.min.x, aabb.max.y, aabb.max.z),
+                        vec3(aabb.max.x, aabb.min.y, aabb.min.z),
+                        vec3(aabb.max.x, aabb.min.y, aabb.max.z),
+                        vec3(aabb.max.x, aabb.max.y, aabb.min.z),
+                        /*vec3(aabb.max.x, aabb.max.y, aabb.max.z)*/ aabb.max };
+
+    for (vec3 const& corner : corners) {
+        if (isPointInside(corner)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 const Plane* Frustum::rawPlaneData(size_t* outByteSize) const

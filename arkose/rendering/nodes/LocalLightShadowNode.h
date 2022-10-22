@@ -32,5 +32,5 @@ private:
     std::vector<vec4> collectAtlasViewportDataForAllocations(const GpuScene&, Extent2D atlasExtent, const std::vector<ShadowMapAtlasAllocation>&) const;
 
     void drawSpotLightShadowMap(CommandList&, GpuScene&, const ShadowMapAtlasAllocation&) const;
-    void drawShadowCasters(CommandList&, GpuScene&, geometry::Frustum& lightFrustum) const;
+    void drawShadowCasters(CommandList&, GpuScene&, geometry::Frustum const& lightFrustum) const;
 };
