@@ -1,5 +1,6 @@
 #include "GltfLoader.h"
 
+#include "ark/aabb.h"
 #include "asset/AssetTypes.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
@@ -230,12 +231,12 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
         ARKOSE_ASSERT(positionAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
         ARKOSE_ASSERT(positionAccessor.type == TINYGLTF_TYPE_VEC3);
 
-        vec3 posMin = meshMatrix * createVec3(positionAccessor.minValues);
-        vec3 posMax = meshMatrix * createVec3(positionAccessor.maxValues);
-        lod0.bounding_box = Arkose::Asset::AABB(AssetTypes::convert(posMin), AssetTypes::convert(posMax));
+        ark::aabb3 localAabb = ark::aabb3(createVec3(positionAccessor.minValues), createVec3(positionAccessor.maxValues));
+        ark::aabb3 aabb = localAabb.transformed(meshMatrix);
+        lod0.bounding_box = Arkose::Asset::AABB(AssetTypes::convert(aabb.min), AssetTypes::convert(aabb.max));
 
-        vec3 center = (posMax + posMin) / 2.0f;
-        float radius = length(posMax - posMin) / 2.0f;
+        vec3 center = (aabb.max + aabb.min) / 2.0f;
+        float radius = length(aabb.max - aabb.min) / 2.0f;
         lod0.bounding_sphere = Arkose::Asset::Sphere(AssetTypes::convert(center), radius);
 
         lod0.mesh_segments.emplace_back(std::make_unique<StaticMeshSegmentAsset>());
