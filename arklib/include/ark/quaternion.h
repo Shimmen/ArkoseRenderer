@@ -78,6 +78,13 @@ struct tquat<T, ENABLE_STRUCT_IF_FLOATING_POINT(T)> {
 };
 
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr tquat<T> inverse(const tquat<T>& q)
+{
+    T denominator = ark::length2(q.vec) + ark::square(q.w);
+    return tquat<T>(q.vec / denominator, q.w / denominator);
+}
+
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
 constexpr tquat<T> axisAngle(const tvec3<T>& axis, T angle)
 {
     T halfAngle = angle / static_cast<T>(2);
