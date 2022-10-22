@@ -25,6 +25,7 @@
 #pragma once
 
 #include "core.h"
+#include "matrix.h"
 #include "vector.h"
 
 #include <limits> // for std::numeric_limits etc.
@@ -46,6 +47,15 @@ struct aabb3 {
         min = ark::min(point, min);
         max = ark::max(point, max);
         return *this;
+    }
+
+    aabb3 transformed(mat4 transform)
+    {
+        vec3 a = transform * min;
+        vec3 b = transform * max;
+        vec3 transformedMin = ark::min(a, b);
+        vec3 transformedMax = ark::max(a, b);
+        return aabb3(transformedMin, transformedMax);
     }
 
     bool contains(const vec3& point) const
