@@ -140,6 +140,7 @@ set(ARKOSE_SOURCES
     arkose/rendering/nodes/TonemapNode.cpp
     arkose/scene/ProbeGrid.cpp
     arkose/scene/Scene.cpp
+    arkose/scene/Transform.cpp
     arkose/scene/Vertex.cpp
     arkose/scene/camera/Camera.cpp
     arkose/scene/camera/CameraController.cpp
