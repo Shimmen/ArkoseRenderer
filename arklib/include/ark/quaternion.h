@@ -59,10 +59,10 @@ struct tquat<T, ENABLE_STRUCT_IF_FLOATING_POINT(T)> {
         };
     }
 
-    constexpr tquat<T>& operator*=(const tquat<T>& q) const
+    constexpr tquat<T>& operator*=(const tquat<T>& q)
     {
         *this = *this * q;
-        return this;
+        return *this;
     }
 
     constexpr tvec3<T> operator*(const tvec3<T>& v) const
