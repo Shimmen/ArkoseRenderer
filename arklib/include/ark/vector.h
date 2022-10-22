@@ -188,6 +188,12 @@ constexpr tvec2<T> normalize(const tvec2<T>& v)
 }
 
 template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr tvec2<T> abs(const tvec2<T>& v)
+{
+    return { std::abs(v.x), std::abs(v.y) };
+}
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
 constexpr tvec2<T> min(const tvec2<T>& lhs, const tvec2<T>& rhs)
 {
     return { std::min(lhs.x, rhs.x), std::min(lhs.y, rhs.y) };
@@ -425,6 +431,12 @@ template<typename T, ENABLE_IF_FLOATING_POINT(T)>
 constexpr tvec3<T> normalize(const tvec3<T>& v)
 {
     return v / length(v);
+}
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr tvec3<T> abs(const tvec3<T>& v)
+{
+    return { std::abs(v.x), std::abs(v.y), std::abs(v.z) };
 }
 
 template<typename T, ENABLE_IF_ARITHMETIC(T)>
