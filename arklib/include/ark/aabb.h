@@ -49,7 +49,7 @@ struct aabb3 {
         return *this;
     }
 
-    aabb3 transformed(mat4 transform)
+    aabb3 transformed(mat4 transform) const
     {
         vec3 a = transform * min;
         vec3 b = transform * max;
