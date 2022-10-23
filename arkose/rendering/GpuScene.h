@@ -143,6 +143,7 @@ private:
         std::unique_ptr<StaticMesh> staticMesh {};
     };
     ResourceList<ManagedStaticMesh, StaticMeshHandle> m_managedStaticMeshes { "Static Meshes", 1024 };
+    std::unordered_map<StaticMeshAsset*, StaticMeshHandle> m_staticMeshAssetCache {};
 
     struct ManagedDirectionalLight {
         DirectionalLight* light {};

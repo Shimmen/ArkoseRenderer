@@ -506,6 +506,11 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
         return StaticMeshHandle();
     }
 
+    auto entry = m_staticMeshAssetCache.find(staticMeshAsset);
+    if (entry != m_staticMeshAssetCache.end()) {
+        return entry->second;
+    }
+
     // Make a runtime static mesh from the asset type
 
     auto staticMesh = std::make_unique<StaticMesh>(staticMeshAsset);
@@ -564,6 +569,8 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
 
     StaticMeshHandle handle = m_managedStaticMeshes.add(ManagedStaticMesh { .staticMeshAsset = staticMeshAsset,
                                                                             .staticMesh = std::move(staticMesh) });
+
+    m_staticMeshAssetCache[staticMeshAsset] = handle;
 
     return handle;
 }
