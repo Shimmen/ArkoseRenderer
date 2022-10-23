@@ -306,10 +306,6 @@ StaticMeshInstance& Scene::addMesh(StaticMeshAsset* staticMesh, Transform transf
     StaticMeshHandle staticMeshHandle = gpuScene().registerStaticMesh(staticMesh);
     StaticMeshInstance& instance = createStaticMeshInstance(staticMeshHandle, transform);
 
-    if (hasPhysicsScene()) {
-        // TODO!
-    }
-
     return instance;
 }
 
@@ -328,13 +324,7 @@ StaticMeshInstance& Scene::createStaticMeshInstance(StaticMeshHandle staticMeshH
     StaticMeshInstance& instance = *m_staticMeshInstances.back();
 
     if (hasPhysicsScene()) {
-        // TODO: What about the other LODs?
-        StaticMesh* staticMesh = gpuScene().staticMeshForHandle(staticMeshHandle);
-        if (staticMesh->numLODs() > 0 && staticMesh->lodAtIndex(0).physicsShape.valid()) {
-            PhysicsShapeHandle physicsShape = staticMesh->lodAtIndex(0).physicsShape;
-            PhysicsInstanceHandle physicsInstanceHandle = physicsScene().createInstance(physicsShape, MotionType::Static, Transform());
-            instance.physicsInstance = physicsInstanceHandle;
-        }
+        // TODO!
     }
 
     return instance;

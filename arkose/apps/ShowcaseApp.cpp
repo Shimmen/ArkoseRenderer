@@ -26,6 +26,10 @@
 #include "utility/Profiling.h"
 #include <imgui.h>
 
+// For physics experimenting, to be removed / moved into the scene!
+#include "physics/PhysicsScene.h"
+#include "physics/backend/base/PhysicsBackend.h"
+
 constexpr bool keepRenderDocCompatible = false;
 constexpr bool rtxOn = true && !keepRenderDocCompatible;
 
@@ -135,6 +139,32 @@ bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
 
     DirectionalLight& sun = *scene.firstDirectionalLight();
     sun.direction = ark::rotateVector(rotation, sun.direction);
+
+    // Physics experiment, to be removed!
+    if (input.wasKeyPressed(Key::T)) {
+
+        Camera const& camera = scene.camera();
+        vec3 spawnDirection = camera.forward();
+        vec3 spawnPosition = camera.position() + 1.5f * spawnDirection;
+
+        constexpr float scale = 0.25f;
+        Transform xform { spawnPosition, camera.orientation(), vec3(scale) };
+
+        static StaticMeshAsset* redCube = nullptr;
+        static PhysicsShapeHandle cubeShapeHandle {};
+        if (not redCube) {
+            redCube = StaticMeshAsset::loadFromArkmsh("assets/sample/models/Box/Box.arkmsh");
+
+            vec3 unscaledFullExtent = vec3(redCube->lods[0]->bounding_box.max().x(), redCube->lods[0]->bounding_box.max().y(), redCube->lods[0]->bounding_box.max().z())
+                - vec3(redCube->lods[0]->bounding_box.min().x(), redCube->lods[0]->bounding_box.min().y(), redCube->lods[0]->bounding_box.min().z());
+            vec3 scaledHalfExtent = 0.5f * unscaledFullExtent * scale;
+            cubeShapeHandle = scene.physicsScene().backend().createPhysicsShapeForBox(scaledHalfExtent);
+        }
+
+        StaticMeshInstance& staticMeshInstance = scene.addMesh(redCube, xform);
+        PhysicsInstanceHandle physicsInstanceHandle = scene.physicsScene().createDynamicInstance(cubeShapeHandle, staticMeshInstance.transform);
+        scene.physicsScene().backend().applyImpulse(physicsInstanceHandle, 175.0f * spawnDirection);
+    }
 
     return !exitRequested;
 }

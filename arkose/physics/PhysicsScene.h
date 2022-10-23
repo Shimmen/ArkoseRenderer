@@ -29,10 +29,9 @@ public:
     // For physics shapes that have a simpler version than the actual triangle mesh that info is kept inside the Model
     // and when we create an instance from a model we will register both shapes, one for simple and one for complex.
 
-    PhysicsInstanceHandle createInstance(PhysicsShapeHandle, MotionType, Transform initialTransform);
+    PhysicsInstanceHandle createStaticInstance(PhysicsShapeHandle, Transform staticTransform);
+    PhysicsInstanceHandle createDynamicInstance(PhysicsShapeHandle, Transform& renderTransform);
     void removeInstance(PhysicsInstanceHandle);
-
-    // TODO: Add interface for updating(?) physics objects
 
 private:
     Scene& m_scene;

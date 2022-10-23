@@ -211,8 +211,8 @@ void JoltPhysicsBackend::update(float elapsedTime, float deltaTime)
     m_fixedRateAccumulation += deltaTime;
 
     // If you take larger steps than 1 / 60th of a second you need to do multiple collision steps in order to keep the simulation stable.
-    // Do 1 collision step per 1 / 60th of a second (round up).
-    float numCollisionSteps = std::ceil(m_fixedRateAccumulation / FixedUpdateRate);
+    // Do 1 collision step per 1 / 60th of a second (round up). Also avoid taking too many steps, in case we get a lag spike.
+    float numCollisionSteps = std::min(std::ceil(m_fixedRateAccumulation / FixedUpdateRate), 25.0f);
 
     if (numCollisionSteps >= 1.0f) {
 
@@ -220,6 +220,7 @@ void JoltPhysicsBackend::update(float elapsedTime, float deltaTime)
         fixedRateUpdate(timeToStep, static_cast<int>(numCollisionSteps));
 
         m_fixedRateAccumulation -= timeToStep;
+
     } else {
         // We have some time now, why not do some optimization?
         //if (m_numIndividualBodiesAddedSinceLastOptimize > 0) {
@@ -228,6 +229,10 @@ void JoltPhysicsBackend::update(float elapsedTime, float deltaTime)
         //    m_physicsSystem->OptimizeBroadPhase();
         //}
     }
+
+    // See https://gafferongames.com/post/fix_your_timestep/
+    float alpha = m_fixedRateAccumulation / FixedUpdateRate;
+    updateRenderDataForNonStaticInstances(alpha);
 }
 
 void JoltPhysicsBackend::fixedRateUpdate(float fixedRate, int numCollisionSteps)
@@ -246,6 +251,13 @@ void JoltPhysicsBackend::setGravity(vec3 gravity)
 {
     auto joltGravity = JPH::Vec3(gravity.x, gravity.y, gravity.z);
     m_physicsSystem->SetGravity(joltGravity);
+}
+
+PhysicsShapeHandle JoltPhysicsBackend::createPhysicsShapeForBox(vec3 halfExtent)
+{
+    JPH::Vec3 joltHalfExtent = JPH::Vec3(halfExtent.x, halfExtent.y, halfExtent.z);
+    auto boxShape = JPH::ShapeRefC(new JPH::BoxShape(joltHalfExtent));
+    return registerShape(std::move(boxShape));
 }
 
 PhysicsShapeHandle JoltPhysicsBackend::createPhysicsShapeForTriangleMesh(PhysicsMesh const& mesh)
@@ -325,7 +337,7 @@ PhysicsInstanceHandle JoltPhysicsBackend::createInstance(PhysicsShapeHandle shap
     // Create the settings for the body itself. Note that here you can also set other properties like the restitution / friction.
 
     auto joltPosition = JPH::Vec3(position.x, position.y, position.z);
-    auto joltOrientation = JPH::Quat(orientation.vec.x, orientation.vec.y, orientation.vec.z, orientation.w);
+    auto joltOrientation = JPH::Quat(orientation.vec.x, orientation.vec.y, orientation.vec.z, orientation.w).Normalized();
     JPH::BodyCreationSettings bodyCreationSettings { shapeRef, joltPosition, joltOrientation, joltMotionType, objectLayer };
 
     JPH::BodyInterface& bodyInterface = m_physicsSystem->GetBodyInterface();
@@ -335,22 +347,22 @@ PhysicsInstanceHandle JoltPhysicsBackend::createInstance(PhysicsShapeHandle shap
         ARKOSE_LOG(Error, "JoltPhysics: failed to create body since we've run out.");
         return PhysicsInstanceHandle();
     } else {
-        uint64_t index = m_bodies.size();
-        m_bodies.push_back(body);
+        uint64_t index = m_bodyInstances.size();
+        m_bodyInstances.push_back(body->GetID());
         return PhysicsInstanceHandle(index);
     }
 }
 
+void JoltPhysicsBackend::attachRenderTransform(PhysicsInstanceHandle instanceHandle, Transform* renderTransform)
+{
+    m_bodyIdToRenderTransformMap[getBodyId(instanceHandle)] = renderTransform;
+}
+
 void JoltPhysicsBackend::addInstanceToWorld(PhysicsInstanceHandle instanceHandle, bool activate)
 {
-    ARKOSE_ASSERT(instanceHandle.valid());
-    JPH::Body* body = m_bodies[instanceHandle.index()];
-    ARKOSE_ASSERT(body != nullptr);
-
     JPH::BodyInterface& bodyInterface = m_physicsSystem->GetBodyInterface();
-
     JPH::EActivation activation = (activate) ? JPH::EActivation::Activate : JPH::EActivation::DontActivate;
-    bodyInterface.AddBody(body->GetID(), activation);
+    bodyInterface.AddBody(getBodyId(instanceHandle), activation);
 }
 
 void JoltPhysicsBackend::addInstanceBatchToWorld(const std::vector<PhysicsInstanceHandle>& instanceHandles, bool activate)
@@ -358,7 +370,7 @@ void JoltPhysicsBackend::addInstanceBatchToWorld(const std::vector<PhysicsInstan
     std::vector<JPH::BodyID> bodyIDs {};
     bodyIDs.reserve(instanceHandles.size());
     for (PhysicsInstanceHandle handle : instanceHandles) {
-        bodyIDs.push_back(getBody(handle)->GetID());
+        bodyIDs.push_back(getBodyId(handle));
     }
 
     JPH::BodyInterface& bodyInterface = m_physicsSystem->GetBodyInterface();
@@ -379,9 +391,7 @@ void JoltPhysicsBackend::addInstanceBatchToWorld(const std::vector<PhysicsInstan
 void JoltPhysicsBackend::removeInstanceFromWorld(PhysicsInstanceHandle instanceHandle)
 {
     JPH::BodyInterface& bodyInterface = m_physicsSystem->GetBodyInterface();
-
-    JPH::Body* body = getBody(instanceHandle);
-    bodyInterface.RemoveBody(body->GetID());
+    bodyInterface.RemoveBody(getBodyId(instanceHandle));
 }
 
 void JoltPhysicsBackend::removeInstanceBatchFromWorld(const std::vector<PhysicsInstanceHandle>& instanceHandles)
@@ -389,11 +399,17 @@ void JoltPhysicsBackend::removeInstanceBatchFromWorld(const std::vector<PhysicsI
     std::vector<JPH::BodyID> bodyIDs {};
     bodyIDs.reserve(instanceHandles.size());
     for (PhysicsInstanceHandle handle : instanceHandles) {
-        bodyIDs.push_back(getBody(handle)->GetID());
+        bodyIDs.push_back(getBodyId(handle));
     }
 
     JPH::BodyInterface& bodyInterface = m_physicsSystem->GetBodyInterface();
     bodyInterface.RemoveBodies(bodyIDs.data(), static_cast<int>(bodyIDs.size()));
+}
+
+void JoltPhysicsBackend::applyImpulse(PhysicsInstanceHandle instanceHandle, vec3 impulse)
+{
+    JPH::BodyInterface& bodyInterface = m_physicsSystem->GetBodyInterface();
+    bodyInterface.AddImpulse(getBodyId(instanceHandle), JPH::Vec3Arg(impulse.x, impulse.y, impulse.z));
 }
 
 JPH::ObjectLayer JoltPhysicsBackend::physicsLayerToJoltObjectLayer(PhysicsLayer physicsLayer) const
@@ -429,10 +445,26 @@ PhysicsShapeHandle JoltPhysicsBackend::registerShape(JPH::ShapeRefC&& shapeRef)
     }
 }
 
-JPH::Body* JoltPhysicsBackend::getBody(PhysicsInstanceHandle instanceHandle) const
+JPH::BodyID JoltPhysicsBackend::getBodyId(PhysicsInstanceHandle instanceHandle) const
 {
     ARKOSE_ASSERT(instanceHandle.valid());
-    JPH::Body* body = m_bodies[instanceHandle.index()];
-    ARKOSE_ASSERT(body != nullptr);
-    return body;
+    JPH::BodyID bodyId = m_bodyInstances[instanceHandle.index()];
+    ARKOSE_ASSERT(not bodyId.IsInvalid());
+    return bodyId;
+}
+
+void JoltPhysicsBackend::updateRenderDataForNonStaticInstances(float alpha)
+{
+    JPH::BodyInterface const& bodyInterface = m_physicsSystem->GetBodyInterface();
+
+    for (auto& [bodyId, renderTransform] : m_bodyIdToRenderTransformMap) {
+        ARKOSE_ASSERT(renderTransform);
+
+        JPH::Vec3 joltPosition;
+        JPH::Quat joltOrientation;
+        bodyInterface.GetPositionAndRotation(bodyId, joltPosition, joltOrientation);
+
+        renderTransform->setPositionInWorld({ joltPosition.GetX(), joltPosition.GetY(), joltPosition.GetZ() });
+        renderTransform->setOrientationInWorld({ { joltOrientation.GetX(), joltOrientation.GetY(), joltOrientation.GetZ() }, joltOrientation.GetW() });
+    }
 }

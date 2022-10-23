@@ -35,29 +35,31 @@ void PhysicsScene::commitInstancesAwaitingAdd()
     m_instancesAwaitingAdd.clear();
 }
 
-PhysicsInstanceHandle PhysicsScene::createInstance(PhysicsShapeHandle shapeHandle, MotionType motionType, Transform initialTransform)
+PhysicsInstanceHandle PhysicsScene::createStaticInstance(PhysicsShapeHandle shapeHandle, Transform staticTransform)
 {
     SCOPED_PROFILE_ZONE_PHYSICS();
 
-    vec3 worldPosition = initialTransform.positionInWorld();
-    quat worldOrientation = initialTransform.orientationInWorld();
+    vec3 worldPosition = staticTransform.positionInWorld();
+    quat worldOrientation = staticTransform.orientationInWorld();
 
-    PhysicsLayer physicsLayer {};
-    bool activate = true;
-
-    switch (motionType) {
-    case MotionType::Static:
-        physicsLayer = PhysicsLayer::Static;
-        break;
-    case MotionType::Dynamic:
-    case MotionType::Kinematic:
-        // TODO: Moving is not the same as movable, we could move thing between depending on the current state
-        physicsLayer = PhysicsLayer::Moving;
-        break;
-    }
-
-    PhysicsInstanceHandle instanceHandle = m_backend.createInstance(shapeHandle, worldPosition, worldOrientation, motionType, physicsLayer);
+    PhysicsInstanceHandle instanceHandle = m_backend.createInstance(shapeHandle, worldPosition, worldOrientation, MotionType::Static, PhysicsLayer::Static);
     m_instancesAwaitingAdd.push_back(instanceHandle);
+
+    return instanceHandle;
+}
+
+PhysicsInstanceHandle PhysicsScene::createDynamicInstance(PhysicsShapeHandle shapeHandle, Transform& renderTransform)
+{
+    SCOPED_PROFILE_ZONE_PHYSICS();
+
+    vec3 worldPosition = renderTransform.positionInWorld();
+    quat worldOrientation = renderTransform.orientationInWorld();
+
+    PhysicsInstanceHandle instanceHandle = m_backend.createInstance(shapeHandle, worldPosition, worldOrientation, MotionType::Dynamic, PhysicsLayer::Moving);
+
+    // NOTE: Deferred batch add doesn't work if we e.g. want to spawn and immediately apply forces to it, so let's not do it for dynamic instances.
+    m_backend.addInstanceToWorld(instanceHandle, true);
+    m_backend.attachRenderTransform(instanceHandle, &renderTransform);
 
     return instanceHandle;
 }

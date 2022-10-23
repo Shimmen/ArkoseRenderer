@@ -41,16 +41,20 @@ public:
 
     virtual void setGravity(vec3) override;
 
+    virtual PhysicsShapeHandle createPhysicsShapeForBox(vec3 halfExtent) override;
     virtual PhysicsShapeHandle createPhysicsShapeForTriangleMesh(PhysicsMesh const&) override;
     virtual PhysicsShapeHandle createPhysicsShapeForTriangleMeshes(std::vector<PhysicsMesh> const&) override;
 
     virtual PhysicsInstanceHandle createInstance(PhysicsShapeHandle, vec3 position, quat orientation, MotionType, PhysicsLayer) override;
+    virtual void attachRenderTransform(PhysicsInstanceHandle, Transform*) override;
 
     virtual void addInstanceToWorld(PhysicsInstanceHandle, bool activate) override;
     virtual void addInstanceBatchToWorld(const std::vector<PhysicsInstanceHandle>&, bool activate) override;
 
     virtual void removeInstanceFromWorld(PhysicsInstanceHandle) override;
     virtual void removeInstanceBatchFromWorld(const std::vector<PhysicsInstanceHandle>&) override;
+
+    virtual void applyImpulse(PhysicsInstanceHandle, vec3 impulse) override;
 
 private:
 
@@ -59,7 +63,9 @@ private:
 
     PhysicsShapeHandle registerShape(JPH::ShapeRefC&&);
 
-    JPH::Body* getBody(PhysicsInstanceHandle) const;
+    JPH::BodyID getBodyId(PhysicsInstanceHandle) const;
+
+    void updateRenderDataForNonStaticInstances(float alpha);
 
     std::unique_ptr<JPH::PhysicsSystem> m_physicsSystem {};
     std::unique_ptr<JPH::TempAllocator> m_tempAllocator {};
@@ -78,6 +84,9 @@ private:
     std::vector<JPH::ShapeRefC> m_shapes {};
     std::vector<size_t> m_shapesFreeList {};
 
-    std::vector<JPH::Body*> m_bodies {};
     // TODO: Keep a free list!
+    std::vector<JPH::BodyID> m_bodyInstances {};
+
+    // TODO: Maybe just make this a vector of bodyID-Transform* pairs?
+    std::unordered_map<JPH::BodyID, Transform*> m_bodyIdToRenderTransformMap {};
 };
