@@ -4,7 +4,7 @@
 #include <string>
 #include <string_view>
 
-class PhysicsMesh;
+struct PhysicsMesh;
 
 // Generated flatbuffer code
 #include "StaticMeshAsset_generated.h"
