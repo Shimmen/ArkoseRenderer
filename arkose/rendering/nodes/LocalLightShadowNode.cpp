@@ -267,7 +267,7 @@ void LocalLightShadowNode::drawShadowCasters(CommandList& cmdList, GpuScene& sce
                     cmdList.issueDrawCall(drawCall);
                 }
             } else {
-                drawableIdx += lod.meshSegments.size();
+                drawableIdx += static_cast<uint32_t>(lod.meshSegments.size());
             }
         }
     }

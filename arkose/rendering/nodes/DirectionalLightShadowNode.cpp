@@ -106,7 +106,7 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
                             cmdList.issueDrawCall(drawCall);
                         }
                     } else {
-                        drawableIdx += lod.meshSegments.size();
+                        drawableIdx += static_cast<uint32_t>(lod.meshSegments.size());
                     }
                 }
             }
