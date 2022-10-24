@@ -17,15 +17,15 @@ private:
     Scene* m_scene { nullptr };
 
     // The mesh we're currently viewing & editing
-    StaticMeshAsset* m_target {};
+    StaticMeshAsset* m_targetAsset {};
     // The runtime version of the asset we're viewing & editing
     StaticMeshInstance* m_targetInstance {};
 
     int m_selectedLodIdx { 0 };
     int m_selectedSegmentIdx { 0 };
 
-    StaticMeshAsset& targetAsset() { return *m_target; }
-    StaticMeshLODAsset* selectedLodAsset() { return m_target ? targetAsset().lods[m_selectedLodIdx].get() : nullptr; }
+    StaticMeshAsset& targetAsset() { return *m_targetAsset; }
+    StaticMeshLODAsset* selectedLodAsset() { return m_targetAsset ? targetAsset().lods[m_selectedLodIdx].get() : nullptr; }
     StaticMeshSegmentAsset* selectedSegmentAsset() { return selectedLodAsset() ? selectedLodAsset()->mesh_segments[m_selectedSegmentIdx].get() : nullptr; }
 
     StaticMeshInstance& target() { return *m_targetInstance; }

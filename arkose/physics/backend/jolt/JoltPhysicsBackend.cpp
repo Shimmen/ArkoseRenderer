@@ -299,8 +299,6 @@ PhysicsShapeHandle JoltPhysicsBackend::createPhysicsShapeForTriangleMeshes(std::
 
     JPH::MeshShapeSettings meshShapeSettings;
     {
-        // NOTE: This is where like 99% of all time is spent, but actually, the Santize call within it.
-        // Is there a reason our meshes take a long time to sanitize or is it just always slow?
         SCOPED_PROFILE_ZONE_PHYSICS_NAMED("Create mesh shape settings");
         meshShapeSettings = JPH::MeshShapeSettings(vertices, indexedTriangles, physicsMaterials);
     }

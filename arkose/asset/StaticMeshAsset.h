@@ -4,6 +4,8 @@
 #include <string>
 #include <string_view>
 
+class PhysicsMesh;
+
 // Generated flatbuffer code
 #include "StaticMeshAsset_generated.h"
 
@@ -23,6 +25,8 @@ public:
     bool writeToArkmsh(std::string_view filePath, AssetStorage);
 
     std::string_view assetFilePath() const { return m_assetFilePath; }
+
+    std::vector<PhysicsMesh> createPhysicsMeshes(size_t lodIdx) const;
 
 private:
     // Construct a static mesh asset from a loaded flatbuffer material asset file

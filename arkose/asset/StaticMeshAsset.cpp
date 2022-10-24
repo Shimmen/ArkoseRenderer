@@ -2,6 +2,7 @@
 
 #include "core/Assert.h"
 #include "core/Logging.h"
+#include "physics/PhysicsMesh.h"
 #include "utility/FileIO.h"
 #include "utility/Profiling.h"
 #include <mutex>
@@ -136,4 +137,28 @@ bool StaticMeshAsset::writeToArkmsh(std::string_view filePath, AssetStorage asse
     }
 
     return true;
+}
+
+std::vector<PhysicsMesh> StaticMeshAsset::createPhysicsMeshes(size_t lodIdx) const
+{
+    ARKOSE_ASSERT(lodIdx < lods.size());
+    auto const& lod = lods[lodIdx];
+
+    std::vector<PhysicsMesh> physicsMeshes {};
+    for (auto const& meshSegment : lod->mesh_segments) {
+
+        PhysicsMesh& physicsMesh = physicsMeshes.emplace_back();
+
+        physicsMesh.positions.reserve(meshSegment->positions.size());
+        for (Arkose::Asset::Vec3 pos : meshSegment->positions) {
+            physicsMesh.positions.emplace_back(pos.x(), pos.y(), pos.z());
+        }
+
+        physicsMesh.indices = meshSegment->indices;
+
+        // TODO: Not yet implemented!
+        // physicsMesh.material
+    }
+
+    return physicsMeshes;
 }

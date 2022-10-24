@@ -2,6 +2,8 @@
 
 #include "asset/MaterialAsset.h"
 #include "asset/import/AssetImporter.h"
+#include "physics/PhysicsScene.h"
+#include "physics/backend/base/PhysicsBackend.h"
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/FinalNode.h"
@@ -148,7 +150,7 @@ void MeshViewerApp::drawMenuBar()
 void MeshViewerApp::drawMeshHierarchyPanel()
 {
     ImGui::Begin("Hierarchy");
-    if (m_target != nullptr) {
+    if (m_targetAsset != nullptr) {
 
         ImGui::Text(!target().name.empty()
                         ? target().name.data()
@@ -437,8 +439,26 @@ bool MeshViewerApp::drawImageFilterSelectorGui(const char* id, Arkose::Asset::Im
 void MeshViewerApp::drawMeshPhysicsPanel()
 {
     ImGui::Begin("Physics");
-    if (m_target != nullptr) {
-        ImGui::Text("TODO!");
+    if (m_targetAsset != nullptr) {
+        if (ImGui::BeginTabBar("PhysicsTabBar")) {
+            
+            if (ImGui::BeginTabItem("Simple physics")) {
+                ImGui::EndTabItem();
+            }
+
+            if (ImGui::BeginTabItem("Complex physics")) {
+                if (ImGui::Button("Generate complex physics from mesh")) {
+
+                    constexpr int lodForPhysics = 0;
+                    std::vector<PhysicsMesh> physicsMeshes = m_targetAsset->createPhysicsMeshes(lodForPhysics);
+                    PhysicsShapeHandle shapeHandle = m_scene->physicsScene().backend().createPhysicsShapeForTriangleMeshes(physicsMeshes);
+
+                }
+                ImGui::EndTabItem();
+            }
+
+            ImGui::EndTabBar();
+        }
     }
     ImGui::End();
 }
@@ -470,13 +490,13 @@ void MeshViewerApp::loadMeshWithDialog()
         std::string openPath = maybePath.value();
         ARKOSE_LOG(Info, "Loading mesh from file '{}'", openPath);
 
-        StaticMeshAsset* staticMesh = StaticMeshAsset::loadFromArkmsh(openPath);
-        if (staticMesh != nullptr) {
+        StaticMeshAsset* staticMeshAsset = StaticMeshAsset::loadFromArkmsh(openPath);
+        if (staticMeshAsset != nullptr) {
 
             m_scene->unloadAllMeshes();
 
-            m_target = staticMesh;
-            m_targetInstance = &m_scene->addMesh(staticMesh);
+            m_targetAsset = staticMeshAsset;
+            m_targetInstance = &m_scene->addMesh(staticMeshAsset);
         }
     }
 }
