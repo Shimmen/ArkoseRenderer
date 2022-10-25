@@ -140,7 +140,17 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     vertInputState.pVertexAttributeDescriptions = attributeDescriptions.data();
 
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
-    inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    switch (rasterState.primitiveType) {
+    case PrimitiveType::Triangles:
+        inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+        break;
+    case PrimitiveType::LineSegments:
+        inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+        break;
+    case PrimitiveType::Points:
+        inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+        break;
+    }
     inputAssemblyState.primitiveRestartEnable = VK_FALSE;
 
     std::vector<VkDynamicState> activeDynamicStates {};
@@ -161,7 +171,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.depthBiasEnable = VK_FALSE;
-    rasterizer.lineWidth = 1.0f;
+    rasterizer.lineWidth = rasterState.lineWidth;
 
     switch (rasterState.polygonMode) {
     case PolygonMode::Filled:

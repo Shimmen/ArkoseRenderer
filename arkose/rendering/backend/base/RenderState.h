@@ -47,6 +47,12 @@ enum class TriangleWindingOrder {
     CounterClockwise
 };
 
+enum class PrimitiveType {
+    Triangles,
+    LineSegments,
+    Points,
+};
+
 enum class PolygonMode {
     Filled,
     Lines,
@@ -56,7 +62,9 @@ enum class PolygonMode {
 struct RasterState {
     bool backfaceCullingEnabled { true };
     TriangleWindingOrder frontFace { TriangleWindingOrder::CounterClockwise };
+    PrimitiveType primitiveType { PrimitiveType::Triangles };
     PolygonMode polygonMode { PolygonMode::Filled };
+    float lineWidth { 1.0f };
 };
 
 class RenderState : public Resource {
@@ -115,7 +123,9 @@ public:
     bool testDepth { true };
     DepthCompareOp depthCompare { DepthCompareOp::Less };
     StencilMode stencilMode { StencilMode::Disabled };
+    PrimitiveType primitiveType { PrimitiveType::Triangles };
     PolygonMode polygonMode { PolygonMode::Filled };
+    float lineWidth { 1.0f };
 
     bool cullBackfaces { true };
     TriangleWindingOrder frontFace { TriangleWindingOrder::CounterClockwise };

@@ -28,7 +28,9 @@ RasterState RenderStateBuilder::rasterState() const
     RasterState state {
         .backfaceCullingEnabled = cullBackfaces,
         .frontFace = frontFace,
-        .polygonMode = polygonMode
+        .primitiveType = primitiveType,
+        .polygonMode = polygonMode,
+        .lineWidth = lineWidth
     };
     return state;
 }
