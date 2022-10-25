@@ -4,8 +4,10 @@
 #include "asset/import/AssetImporter.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
+#include "rendering/debug/DebugDrawer.h"
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/CullingNode.h"
+#include "rendering/nodes/DebugDrawNode.h"
 #include "rendering/nodes/FinalNode.h"
 #include "rendering/nodes/ForwardRenderNode.h"
 #include "rendering/nodes/SSAONode.h"
@@ -67,6 +69,8 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<ForwardRenderNode>();
     // TODO: Maybe add some IBL for this?
     pipeline.addNode<SkyViewNode>();
+
+    pipeline.addNode<DebugDrawNode>();
 
     pipeline.addNode<TonemapNode>("SceneColor");
     pipeline.addNode<TAANode>(scene.camera());
@@ -152,9 +156,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
     ImGui::Begin("Hierarchy");
     if (m_targetAsset != nullptr) {
 
-        ImGui::Text(!target().name.empty()
-                        ? target().name.data()
-                        : "Mesh");
+        ImGui::Checkbox("Draw bounding box", &m_drawBoundingBox);
 
         if (ImGui::BeginTabBar("MeshViewerLODTabBar")) {
 
@@ -191,6 +193,13 @@ void MeshViewerApp::drawMeshHierarchyPanel()
 
                     if (didClickSegment) {
                         //ARKOSE_LOG(Info, "Clicked on segment '{}'", m_segmentNameCache[m_selectedSegmentIdx]);
+                    }
+
+                    if (m_drawBoundingBox) {
+                        Arkose::Asset::AABB aabb = lod.bounding_box;
+                        vec3 aabbMin = vec3(aabb.min().x(), aabb.min().y(), aabb.min().z());
+                        vec3 aabbMax = vec3(aabb.max().x(), aabb.max().y(), aabb.max().z());
+                        DebugDrawer::get().drawBox(aabbMin, aabbMax, vec3(1.0f, 1.0f, 1.0f));
                     }
 
                     ImGui::EndTabItem();

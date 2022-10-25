@@ -32,6 +32,8 @@ private:
     StaticMeshLOD* selectedLOD();
     StaticMeshSegment* selectedSegment();
 
+    bool m_drawBoundingBox { false };
+
     void drawMenuBar();
 
     void drawMeshHierarchyPanel();
