@@ -119,6 +119,7 @@ set(ARKOSE_SOURCES
     arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingNV.cpp
     arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanAccelerationStructureNV.cpp
     arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingStateNV.cpp
+    arkose/rendering/debug/DebugDrawer.cpp
     arkose/rendering/nodes/BloomNode.cpp
     arkose/rendering/nodes/CullingNode.cpp
     arkose/rendering/nodes/DDGINode.cpp
