@@ -47,6 +47,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
                 break;
             case VertexComponent::Position3F:
             case VertexComponent::Normal3F:
+            case VertexComponent::Color3F:
                 description.format = VK_FORMAT_R32G32B32_SFLOAT;
                 break;
             case VertexComponent::Tangent4F:
