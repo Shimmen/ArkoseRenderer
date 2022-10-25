@@ -358,7 +358,7 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
 
     bool allRequiredSupported = true;
 
-    if (!features.samplerAnisotropy || !features.fillModeNonSolid || !features.fragmentStoresAndAtomics || !features.vertexPipelineStoresAndAtomics) {
+    if (!features.samplerAnisotropy || !features.fillModeNonSolid || !features.wideLines || !features.fragmentStoresAndAtomics || !features.vertexPipelineStoresAndAtomics) {
         ARKOSE_LOG(Error, "VulkanBackend: no support for required common device feature");
         allRequiredSupported = false;
     }
@@ -721,6 +721,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     // Enable some very basic common features expected by everyone to exist
     features.samplerAnisotropy = VK_TRUE;
     features.fillModeNonSolid = VK_TRUE;
+    features.wideLines = VK_TRUE;
     features.fragmentStoresAndAtomics = VK_TRUE;
     features.vertexPipelineStoresAndAtomics = VK_TRUE;
     
