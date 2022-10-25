@@ -124,6 +124,7 @@ set(ARKOSE_SOURCES
     arkose/rendering/nodes/CullingNode.cpp
     arkose/rendering/nodes/DDGINode.cpp
     arkose/rendering/nodes/DDGIProbeDebug.cpp
+    arkose/rendering/nodes/DebugDrawNode.cpp
     arkose/rendering/nodes/DepthOfFieldNode.cpp
     arkose/rendering/nodes/DirectionalLightShadowNode.cpp
     arkose/rendering/nodes/ForwardRenderNode.cpp

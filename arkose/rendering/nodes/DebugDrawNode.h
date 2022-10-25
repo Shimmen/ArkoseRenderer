@@ -1,0 +1,43 @@
+#pragma once
+
+#include "rendering/RenderPipelineNode.h"
+#include "rendering/debug/DebugDrawer.h"
+
+class DebugDrawNode final : public RenderPipelineNode, public IDebugDrawer {
+public:
+    DebugDrawNode();
+    virtual ~DebugDrawNode();
+
+    std::string name() const override { return "Debug drawing"; }
+    void drawGui() override;
+
+    ExecuteCallback construct(GpuScene&, Registry&) override;
+
+    // IDebugDrawer implementation
+    virtual void drawLine(vec3 p0, vec3 p1, vec3 color) override;
+    virtual void drawBox(vec3 minPoint, vec3 maxPoint, vec3 color) override;
+
+private:
+
+    struct DebugDrawVertex {
+        DebugDrawVertex(vec3 inPosition, vec3 inColor)
+            : position(inPosition)
+            , color(inColor)
+        {
+        }
+
+        vec3 position;
+        vec3 color;
+    };
+
+    static constexpr size_t MaxNumLineSegments = 4096;
+    static constexpr size_t LineVertexBufferSize = MaxNumLineSegments * 2 * sizeof(DebugDrawVertex);
+    std::vector<DebugDrawVertex> m_lineVertices {};
+    Buffer* m_lineVertexBuffer { nullptr };
+
+    static constexpr size_t MaxNumTriangles = 40 * 1024;
+    static constexpr size_t TriangleVertexBufferSize = MaxNumTriangles * 3 * sizeof(DebugDrawVertex);
+    std::vector<DebugDrawVertex> m_triangleVertices {};
+    Buffer* m_triangleVertexBuffer { nullptr };
+
+};
