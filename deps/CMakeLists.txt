@@ -17,6 +17,13 @@ FetchContent_Declare(json
     GIT_REPOSITORY https://github.com/ArthurSonzogni/nlohmann_json_cmake_fetchcontent.git
     GIT_TAG        "v3.7.3")
 
+set(BUILD_DOC OFF)
+set(BUILD_SANDBOX OFF)
+set(SKIP_PERFORMANCE_COMPARISON ON)
+FetchContent_Declare(cereal
+    GIT_REPOSITORY https://github.com/USCiLab/cereal.git
+    GIT_TAG        "v1.3.2")
+
 FetchContent_Declare(fmt
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git
     GIT_TAG        "8.1.1")
@@ -172,4 +179,4 @@ add_subdirectory(half)
 ##################################
 # Finalize FetchContent dependencies
 
-FetchContent_MakeAvailable(spirv-cross json fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers jolt-physics flatbuffers zstd)
+FetchContent_MakeAvailable(spirv-cross json cereal fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers jolt-physics flatbuffers zstd)

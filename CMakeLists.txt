@@ -193,6 +193,7 @@ target_link_libraries(ArkoseRenderer PRIVATE
     spirv-cross-hlsl # for spirv->hlsl
 
     # Asset packing
+    cereal # serialisation
     flatbuffers # binary & json serialization
     libzstd_static # generic lossless compression
     bc7enc_lib # texture compression
