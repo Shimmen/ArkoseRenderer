@@ -168,7 +168,7 @@ std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const st
 
     if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(imagePath)) {
 
-        auto mipmapMode = (generateMipmaps && imageAsset->width > 1 && imageAsset->height > 1)
+        auto mipmapMode = (generateMipmaps && imageAsset->width() > 1 && imageAsset->height() > 1)
             ? Texture::Mipmap::Linear
             : Texture::Mipmap::None;
 
@@ -178,8 +178,8 @@ std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const st
             .type = Texture::Type::Texture2D,
             .arrayCount = 1u,
 
-            .extent = { imageAsset->width, imageAsset->height, imageAsset->depth },
-            .format = convertImageFormatToTextureFormat(imageAsset->format, imageAsset->color_space),
+            .extent = { imageAsset->width(), imageAsset->height(), imageAsset->depth() },
+            .format = convertImageFormatToTextureFormat(imageAsset->format(), imageAsset->colorSpace()),
             .filter = Texture::Filters::linear(),
             .wrapMode = wrapModes,
             .mipmap = mipmapMode,
@@ -190,7 +190,7 @@ std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const st
         auto texture = backend.createTexture(desc);
         texture->setName("Texture:" + imagePath);
 
-        texture->setData(imageAsset->pixel_data.data(), imageAsset->pixel_data.size());
+        texture->setData(imageAsset->pixelData().data(), imageAsset->pixelData().size());
 
         return texture;
 
@@ -215,7 +215,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
         ImageAsset* imageAsset = ImageAsset::loadOrCreate(imagePath);
         if (!imageAsset)
             break;
-        totalRequiredSize += imageAsset->pixel_data.size();
+        totalRequiredSize += imageAsset->pixelData().size();
         imageAssets.push_back(imageAsset);
     }
 
@@ -230,13 +230,13 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     // Ensure all are similar (doesn't cover all cases, but it's something)
     for (uint32_t idx = 1; idx < arrayCount; ++idx) {
         ImageAsset const& otherAsset = *imageAssets[idx];
-        ARKOSE_ASSERT(asset0.width == otherAsset.width && asset0.height == otherAsset.height);
+        ARKOSE_ASSERT(asset0.width() == otherAsset.width() && asset0.height() == otherAsset.height());
     }
 
     ColorSpace colorSpace = sRGB ? ColorSpace::sRGB_encoded : ColorSpace::sRGB_linear;
-    Texture::Format format = Texture::convertImageFormatToTextureFormat(asset0.format, colorSpace);
+    Texture::Format format = Texture::convertImageFormatToTextureFormat(asset0.format(), colorSpace);
 
-    auto mipmapMode = (generateMipmaps && asset0.width > 1 && asset0.height > 1)
+    auto mipmapMode = (generateMipmaps && asset0.width() > 1 && asset0.height() > 1)
         ? Texture::Mipmap::Linear
         : Texture::Mipmap::None;
 
@@ -244,7 +244,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     Texture::Description desc {
         .type = Texture::Type::Texture2D,
         .arrayCount = arrayCount,
-        .extent = { asset0.width, asset0.height, 1 },
+        .extent = { asset0.width(), asset0.height(), 1 },
         .format = format,
         .filter = Texture::Filters::linear(),
         .wrapMode = Texture::WrapModes::repeatAll(),
@@ -266,7 +266,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     ParallelFor(imageAssets.size(), [&](size_t idx) {
 
         ImageAsset const& imageAsset = *imageAssets[idx];
-        auto const& data = imageAsset.pixel_data;
+        auto const& data = imageAsset.pixelData();
 
         size_t offset = idx * data.size();
         std::memcpy(textureArrayMemory + offset, data.data(), data.size());

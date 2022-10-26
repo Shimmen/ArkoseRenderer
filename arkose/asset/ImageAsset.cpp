@@ -4,6 +4,11 @@
 #include "core/Logging.h"
 #include "utility/FileIO.h"
 #include "utility/Profiling.h"
+#include <cereal/cereal.hpp>
+#include <cereal/archives/binary.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/vector.hpp>
+#include <fstream>
 #include <mutex>
 #include <stb_image.h>
 #include <zstd/zstd.h>
@@ -16,33 +21,26 @@ namespace {
 ImageAsset::ImageAsset() = default;
 ImageAsset::~ImageAsset() = default;
 
-ImageAsset::ImageAsset(Arkose::Asset::ImageAsset const* flatbuffersImageAsset, std::string filePath)
-    : m_assetFilePath(std::move(filePath))
-{
-    ARKOSE_ASSERT(flatbuffersImageAsset != nullptr);
-    flatbuffersImageAsset->UnPackTo(this);
-
-    ARKOSE_ASSERT(m_assetFilePath.length() > 0);
-}
-
 std::unique_ptr<ImageAsset> ImageAsset::createCopyWithReplacedFormat(ImageAsset const& inputImage, ImageFormat newFormat, uint8_t const* newData, size_t newSize)
 {
     auto newImage = std::make_unique<ImageAsset>();
 
-    newImage->width = inputImage.width;
-    newImage->height = inputImage.height;
-    newImage->depth = inputImage.depth;
-    newImage->color_space = inputImage.color_space;
-    newImage->source_asset_path = inputImage.source_asset_path;
-    newImage->user_data = inputImage.user_data;
+    newImage->m_width = inputImage.m_width;
+    newImage->m_height = inputImage.m_height;
+    newImage->m_depth = inputImage.m_depth;
+    newImage->m_colorSpace = inputImage.m_colorSpace;
+    newImage->m_sourceAssetFilePath = inputImage.m_sourceAssetFilePath;
 
-    newImage->format = newFormat;
-    newImage->pixel_data.assign(newData, newData + newSize);
+    newImage->m_format = newFormat;
+    newImage->m_pixelData.assign(newData, newData + newSize);
 
     // Passed in data must be in an uncompressed state (compressed data formats are okay but not lossless compression on pixel_data!)
-    newImage->is_compressed = false;
-    newImage->compressed_size = static_cast<uint32_t>(newSize);
-    newImage->uncompressed_size = static_cast<uint32_t>(newSize);
+    newImage->m_compressed = false;
+    newImage->m_compressedSize = narrow_cast<u32>(newSize);
+    newImage->m_uncompressedSize = narrow_cast<u32>(newSize);
+
+    // TODO: Do we need to copy this over?
+    newImage->userData = inputImage.userData;
 
     return newImage;
 }
@@ -60,7 +58,7 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(std::string const&
     size_t size = maybeData.value().size();
 
     auto imageAsset = createFromSourceAsset(data, size);
-    imageAsset->source_asset_path = sourceAssetFilePath;
+    imageAsset->m_sourceAssetFilePath = sourceAssetFilePath;
 
     return imageAsset;
 }
@@ -97,8 +95,8 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
         size = width * height * desiredChannels * sizeof(stbi_uc);
     }
 
-    auto format { Arkose::Asset::ImageFormat::Unknown };
-    #define SelectFormat(intFormat, floatFormat) (isFloatType ? Arkose::Asset::ImageFormat::##floatFormat : Arkose::Asset::ImageFormat::##intFormat)
+    auto format { ImageFormat::Unknown };
+    #define SelectFormat(intFormat, floatFormat) (isFloatType ? ImageFormat::##floatFormat : ImageFormat::##intFormat)
 
     switch (desiredChannels) {
     case 1:
@@ -116,25 +114,25 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
     }
 
     #undef SelectFormat
-    ARKOSE_ASSERT(format != Arkose::Asset::ImageFormat::Unknown);
+    ARKOSE_ASSERT(format != ImageFormat::Unknown);
 
     auto imageAsset = std::make_unique<ImageAsset>();
     
-    imageAsset->width = width;
-    imageAsset->height = height;
-    imageAsset->depth = 1;
+    imageAsset->m_width = width;
+    imageAsset->m_height = height;
+    imageAsset->m_depth = 1;
 
-    imageAsset->format = format;
+    imageAsset->m_format = format;
 
     // Let's make a safe assumption, the user can change it later if needed
-    imageAsset->color_space = Arkose::Asset::ColorSpace::sRGB_encoded;
+    imageAsset->m_colorSpace = ColorSpace::sRGB_encoded;
 
     uint8_t* dataPtr = reinterpret_cast<uint8_t*>(data);
-    imageAsset->pixel_data = std::vector<uint8_t>(dataPtr, dataPtr + size);
+    imageAsset->m_pixelData = std::vector<uint8_t>(dataPtr, dataPtr + size);
 
     // No compression when creating here now, but we might want to apply it before writing to disk
-    imageAsset->is_compressed = false;
-    imageAsset->uncompressed_size = static_cast<uint32_t>(size);
+    imageAsset->m_compressed = false;
+    imageAsset->m_uncompressedSize = narrow_cast<u32>(size);
 
     if (data != nullptr) {
         stbi_image_free(data);
@@ -147,7 +145,7 @@ ImageAsset* ImageAsset::loadFromArkimg(std::string const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not AssetHelpers::isValidAssetPath(filePath, Arkose::Asset::ImageAssetExtension())) {
+    if (not AssetHelpers::isValidAssetPath(filePath, ImageAsset::AssetFileExtension)) {
         ARKOSE_LOG(Warning, "Trying to load image asset with invalid file extension: '{}'", filePath);
     }
 
@@ -161,21 +159,25 @@ ImageAsset* ImageAsset::loadFromArkimg(std::string const& filePath)
         }
     }
 
-    auto maybeBinaryData = FileIO::readBinaryDataFromFile<uint8_t>(filePath);
-    if (not maybeBinaryData.has_value()) {
+    std::ifstream fileStream(filePath, std::ios::binary);
+    if (not fileStream.is_open()) {
         return nullptr;
     }
 
-    void* binaryData = maybeBinaryData.value().data();
-    auto const* flatbuffersImageAsset = Arkose::Asset::GetImageAsset(binaryData);
+    cereal::BinaryInputArchive archive(fileStream);
 
-    if (!flatbuffersImageAsset) {
+    AssetHeader header;
+    archive(header);
+
+    if (header != AssetHeader { *AssetMagicValue }) {
+        ARKOSE_LOG(Warning, "Trying to load image asset with invalid file magic: '{}'", header.magicValue);
         return nullptr;
     }
 
-    auto newImageAsset = std::unique_ptr<ImageAsset>(new ImageAsset(flatbuffersImageAsset, filePath));
+    auto newImageAsset = std::make_unique<ImageAsset>();
+    archive(*newImageAsset);
 
-    if (newImageAsset->is_compressed) {
+    if (newImageAsset->isCompressed()) {
         newImageAsset->decompress();
     }
 
@@ -189,7 +191,7 @@ ImageAsset* ImageAsset::loadFromArkimg(std::string const& filePath)
 
 ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
 {
-    if (AssetHelpers::isValidAssetPath(filePath, Arkose::Asset::ImageAssetExtension())) {
+    if (AssetHelpers::isValidAssetPath(filePath, ImageAsset::AssetFileExtension)) {
         return loadFromArkimg(filePath);
     } else {
 
@@ -219,25 +221,9 @@ ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
     }
 }
 
-StreamedImageAsset ImageAsset::loadForStreaming(std::string const& filePath)
-{
-    if (not AssetHelpers::isValidAssetPath(filePath, Arkose::Asset::ImageAssetExtension())) {
-        ARKOSE_LOG(Error, "Trying to write image asset to file with invalid extension: '{}'", filePath);
-        return StreamedImageAsset();
-    }
-
-    // TODO: Could we maybe just mmap it? Would that be quicker?
-    size_t dataSize = 0;
-    uint8_t* binaryData = FileIO::readBinaryDataFromFileRawPtr(filePath, &dataSize);
-
-    auto const* imageAsset = Arkose::Asset::GetImageAsset(binaryData);
-
-    return StreamedImageAsset(binaryData, imageAsset);
-}
-
 bool ImageAsset::writeToArkimg(std::string_view filePath)
 {
-    if (not AssetHelpers::isValidAssetPath(filePath, Arkose::Asset::ImageAssetExtension())) {
+    if (not AssetHelpers::isValidAssetPath(filePath, ImageAsset::AssetFileExtension)) {
         ARKOSE_LOG(Error, "Trying to write image asset to file with invalid extension: '{}'", filePath);
         return false;
     }
@@ -245,24 +231,21 @@ bool ImageAsset::writeToArkimg(std::string_view filePath)
     ARKOSE_ASSERT(m_assetFilePath.empty() || m_assetFilePath == filePath);
     m_assetFilePath = filePath;
 
-    if (not is_compressed) {
+    if (not m_compressed) {
         compress();
     }
 
-    flatbuffers::FlatBufferBuilder builder {};
-    auto asset = Arkose::Asset::ImageAsset::Pack(builder, this);
-
-    if (asset.IsNull()) {
+    std::ofstream fileStream { m_assetFilePath, std::ios::binary | std::ios::trunc };
+    if (not fileStream.is_open()) {
         return false;
     }
 
-    builder.Finish(asset, Arkose::Asset::ImageAssetIdentifier());
+    cereal::BinaryOutputArchive archive(fileStream);
 
-    uint8_t* data = builder.GetBufferPointer();
-    size_t size = static_cast<size_t>(builder.GetSize());
+    archive(AssetHeader { *AssetMagicValue });
+    archive(*this);
 
-    FileIO::writeBinaryDataToFile(std::string(filePath), data, size);
-
+    fileStream.close();
     return true;
 }
 
@@ -270,15 +253,15 @@ bool ImageAsset::compress(int compressionLevel)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (is_compressed) {
+    if (m_compressed) {
         return true;
     }
 
-    size_t maxCompressedSize = ZSTD_compressBound(pixel_data.size());
+    size_t maxCompressedSize = ZSTD_compressBound(m_pixelData.size());
     std::vector<uint8_t> compressedBlob {};
     compressedBlob.resize(maxCompressedSize);
 
-    size_t compressedSizeOrErrorCode = ZSTD_compress(compressedBlob.data(), compressedBlob.size(), pixel_data.data(), pixel_data.size(), compressionLevel);
+    size_t compressedSizeOrErrorCode = ZSTD_compress(compressedBlob.data(), compressedBlob.size(), m_pixelData.data(), m_pixelData.size(), compressionLevel);
 
     if (ZSTD_isError(compressedSizeOrErrorCode)) {
         const char* errorName = ZSTD_getErrorName(compressedSizeOrErrorCode);
@@ -289,10 +272,10 @@ bool ImageAsset::compress(int compressionLevel)
     size_t compressedSize = compressedSizeOrErrorCode;
     compressedBlob.resize(compressedSize);
 
-    uncompressed_size = static_cast<uint32_t>(pixel_data.size());
-    compressed_size = static_cast<uint32_t>(compressedSize);
-    std::swap(pixel_data, compressedBlob);
-    is_compressed = true;
+    m_uncompressedSize =  narrow_cast<u32>(m_pixelData.size());
+    m_compressedSize = narrow_cast<u32>(compressedSize);
+    std::swap(m_pixelData, compressedBlob);
+    m_compressed = true;
 
     return true;
 }
@@ -301,16 +284,16 @@ bool ImageAsset::decompress()
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not is_compressed) {
+    if (not m_compressed) {
         return true;
     }
 
-    ARKOSE_ASSERT(uncompressed_size > 0);
+    ARKOSE_ASSERT(m_uncompressedSize > 0);
     std::vector<uint8_t> decompressedData {};
-    decompressedData.resize(uncompressed_size);
+    decompressedData.resize(m_uncompressedSize);
 
     size_t decompressedSizeOrErrorCode = ZSTD_decompress(decompressedData.data(), decompressedData.size(),
-                                                         pixel_data.data(), pixel_data.size());
+                                                         m_pixelData.data(), m_pixelData.size());
 
     if (ZSTD_isError(decompressedSizeOrErrorCode)) {
         const char* errorName = ZSTD_getErrorName(decompressedSizeOrErrorCode);
@@ -319,40 +302,15 @@ bool ImageAsset::decompress()
     }
 
     size_t decompressedSize = decompressedSizeOrErrorCode;
-    if (decompressedSize != uncompressed_size) {
-        ARKOSE_LOG(Error, "Decompressed size does not match uncompressed size in image asset: {} vs {}", decompressedSize, uncompressed_size);
+    if (decompressedSize != m_uncompressedSize) {
+        ARKOSE_LOG(Error, "Decompressed size does not match uncompressed size in image asset: {} vs {}", decompressedSize, m_uncompressedSize);
         return false;
     }
 
-    std::swap(pixel_data, decompressedData);
+    std::swap(m_pixelData, decompressedData);
 
-    is_compressed = false;
-    compressed_size = static_cast<uint32_t>(0);
+    m_compressed = false;
+    m_compressedSize = 0;
 
     return true;
-}
-
-StreamedImageAsset::StreamedImageAsset(uint8_t* memory, Arkose::Asset::ImageAsset const* asset)
-    : m_memory(memory)
-    , m_asset(asset)
-{
-}
-
-StreamedImageAsset::StreamedImageAsset(StreamedImageAsset&& other) noexcept
-    : m_memory(other.m_memory)
-    , m_asset(other.m_asset)
-{
-    other.m_memory = nullptr;
-    other.m_asset = nullptr;
-    ARKOSE_ASSERT(other.isNull());
-}
-
-void StreamedImageAsset::unload()
-{
-    if (not isNull()) {
-        m_asset = nullptr;
-
-        free(m_memory);
-        m_memory = nullptr;
-    }
 }

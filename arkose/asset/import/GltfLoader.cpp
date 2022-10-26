@@ -108,12 +108,12 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
         // Assign the best-guess color space for this image
         auto entry = imageColorSpaceBestGuess.find(static_cast<int>(idx));
         if (entry != imageColorSpaceBestGuess.end()) {
-            image->color_space = entry->second;
+            image->setColorSpace(entry->second);
         }
 
         // Write glTF image index to user data until we can resolve file paths
         int imageIdx = static_cast<int>(idx);
-        image->user_data = Arkose::Asset::UserData(imageIdx);
+        image->userData = imageIdx;
 
         result.images.push_back(std::move(image));
     }

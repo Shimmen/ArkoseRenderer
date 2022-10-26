@@ -226,7 +226,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 const LoadedImageForTextureCreation& loadedImageForTex = m_asyncLoadedImages[i];
 
                 auto texture = backend().createTexture(loadedImageForTex.textureDescription);
-                texture->setData(loadedImageForTex.imageAsset->pixel_data.data(), loadedImageForTex.imageAsset->pixel_data.size());
+                texture->setData(loadedImageForTex.imageAsset->pixelData().data(), loadedImageForTex.imageAsset->pixelData().size());
                 texture->setName("Texture:" + std::string(loadedImageForTex.imageAsset->assetFilePath()));
                 m_managedTexturesVramUsage += texture->sizeInMemory();
 
@@ -704,13 +704,13 @@ TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, bool sRGB,
 
         auto makeTextureDescription = [](ImageAsset const& imageAsset, MaterialInput const& input, bool sRGB) -> Texture::Description {
             // TODO: Handle 2D arrays & 3D textures here too
-            ARKOSE_ASSERT(imageAsset.depth == 1);
+            ARKOSE_ASSERT(imageAsset.depth() == 1);
 
             return Texture::Description {
                 .type = Texture::Type::Texture2D,
                 .arrayCount = 1,
-                .extent = { imageAsset.width, imageAsset.height, imageAsset.depth },
-                .format = AssetTypes::convertFormat(imageAsset.format, imageAsset.color_space, sRGB),
+                .extent = { imageAsset.width(), imageAsset.height(), imageAsset.depth() },
+                .format = AssetTypes::convertFormat(imageAsset.format(), imageAsset.colorSpace(), sRGB),
                 .filter = Texture::Filters(AssetTypes::convertMinFilter(input.min_filter),
                                            AssetTypes::convertMagFilter(input.mag_filter)),
                 .wrapMode = Texture::WrapModes(AssetTypes::convertWrapMode(input.wrap_modes.u()),
@@ -747,7 +747,7 @@ TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, bool sRGB,
         } else {
             if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(imageAssetPath)) {
                 std::unique_ptr<Texture> texture = m_backend.createTexture(makeTextureDescription(*imageAsset, *input, sRGB));
-                texture->setData(imageAsset->pixel_data.data(), imageAsset->pixel_data.size());
+                texture->setData(imageAsset->pixelData().data(), imageAsset->pixelData().size());
                 texture->setName("Texture:" + imageAssetPath);
 
                 m_managedTexturesVramUsage += texture->sizeInMemory();

@@ -46,7 +46,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         auto& image = result.images[idx];
 
         // Only compress if we're importing images in arkimg format
-        if (image->source_asset_path.empty() || options.alwaysMakeImageAsset) {
+        if (image->sourceAssetFilePath().empty() || options.alwaysMakeImageAsset) {
             image->compress();
         }
     });
@@ -54,11 +54,11 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
     int unnamedImageIdx = 0;
     for (auto& image : result.images) {
 
-        if (image->source_asset_path.empty() || options.alwaysMakeImageAsset) {
+        if (not image->hasSourceAsset() || options.alwaysMakeImageAsset) {
 
             std::string fileName;
-            if (not image->source_asset_path.empty()) {
-                fileName = std::string(FileIO::extractFileNameFromPath(image->source_asset_path));
+            if (image->hasSourceAsset()) {
+                fileName = std::string(FileIO::extractFileNameFromPath(image->sourceAssetFilePath()));
                 fileName = std::string(FileIO::removeExtensionFromPath(fileName));
             } else {
                 fileName = std::format("image{:04}", unnamedImageIdx++);
@@ -81,9 +81,9 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
                 int gltfIdx = materialInput->user_data.integer();
                 ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < result.images.size());
                 auto& image = result.images[gltfIdx];
-                std::string_view imagePath = (image->source_asset_path.empty() || options.alwaysMakeImageAsset)
+                std::string_view imagePath = (not image->hasSourceAsset() || options.alwaysMakeImageAsset)
                     ? image->assetFilePath()
-                    : image->source_asset_path;
+                    : image->sourceAssetFilePath();
                 materialInput->image.Set(createAssetPath(imagePath));
             }
         };

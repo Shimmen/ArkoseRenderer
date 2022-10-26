@@ -11,13 +11,13 @@ std::unique_ptr<ImageAsset> TextureCompressor::compressBC7(ImageAsset const& inp
 {
     SCOPED_PROFILE_ZONE();
 
-    ARKOSE_ASSERT(not inputImage.is_compressed);
-    ARKOSE_ASSERT(inputImage.width > 0 && inputImage.height > 0);
-    ARKOSE_ASSERT(inputImage.format == ImageFormat::RGBA8); // TODO: Also add support for RGB, which will require some manual padding
+    ARKOSE_ASSERT(inputImage.isUncompressed());
+    ARKOSE_ASSERT(inputImage.width() > 0 && inputImage.height() > 0 && inputImage.depth() == 1);
+    ARKOSE_ASSERT(inputImage.format() == ImageFormat::RGBA8); // TODO: Also add support for RGB, which will require some manual padding
 
     // Create an image that can be used by the encoder
-    utils::image_u8 sourceImage { inputImage.width, inputImage.height };
-    std::memcpy(sourceImage.get_pixels().data(), inputImage.pixel_data.data(), inputImage.pixel_data.size());
+    utils::image_u8 sourceImage { inputImage.width(), inputImage.height() };
+    std::memcpy(sourceImage.get_pixels().data(), inputImage.pixelData().data(), inputImage.pixelData().size());
 
     rdo_bc::rdo_bc_params params {};
     params.m_status_output = false; // no debug printing
