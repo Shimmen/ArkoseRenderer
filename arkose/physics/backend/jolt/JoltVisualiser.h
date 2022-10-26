@@ -1,25 +1,19 @@
 #pragma once
 
-#include "physics/backend/base/PhysicsVisualiser.h"
-
 #if JPH_DEBUG_RENDERER
 
+#include <ark/vector.h>
 #include <Jolt/Jolt.h>
 #include <Jolt/Renderer/DebugRenderer.h>
 
-class JoltVisualiser final : public JPH::DebugRenderer, PhysicsVisualiser {
+class JoltVisualiser final : public JPH::DebugRenderer {
 
 public:
 
     JoltVisualiser();
     virtual ~JoltVisualiser();
 
-    // PhysicsVisualiser interface
-
-    virtual void drawStuff(/* ... */) override;
-
     // JPH::DebugRenderer interface
-
     virtual void DrawLine(const JPH::Float3& from, const JPH::Float3& to, JPH::ColorArg color) override;
     virtual void DrawTriangle(JPH::Vec3Arg V1, JPH::Vec3Arg V2, JPH::Vec3Arg V3, JPH::ColorArg color) override;
     virtual JPH::DebugRenderer::Batch CreateTriangleBatch(const JPH::DebugRenderer::Triangle* triangles, int triangleCount) override;
@@ -28,6 +22,8 @@ public:
     virtual void DrawText3D(JPH::Vec3Arg position, const std::string_view& string, JPH::ColorArg color, float height) override;
 
 private:
+
+    vec3 joltColorToFloatColor(JPH::ColorArg) const;
 
     // Implementation specific batch object
     class ArkoseBatch : public JPH::RefTargetVirtual {

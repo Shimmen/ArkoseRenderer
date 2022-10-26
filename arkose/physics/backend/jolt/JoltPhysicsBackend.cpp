@@ -233,6 +233,16 @@ void JoltPhysicsBackend::update(float elapsedTime, float deltaTime)
     // See https://gafferongames.com/post/fix_your_timestep/
     float alpha = m_fixedRateAccumulation / FixedUpdateRate;
     updateRenderDataForNonStaticInstances(alpha);
+
+#if JPH_DEBUG_RENDERER
+    if (m_visualiser != nullptr) {
+        //JPH::BodyManager::DrawSettings drawSettings {};
+        //m_physicsSystem->DrawBodies(drawSettings, m_visualiser.get());
+        //m_physicsSystem->DrawConstraints(m_visualiser.get());
+        //m_physicsSystem->DrawConstraintLimits(m_visualiser.get());
+        //m_physicsSystem->DrawConstraintReferenceFrame(m_visualiser.get());
+    }
+#endif
 }
 
 void JoltPhysicsBackend::fixedRateUpdate(float fixedRate, int numCollisionSteps)
