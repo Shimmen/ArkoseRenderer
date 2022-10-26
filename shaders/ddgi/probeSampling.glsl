@@ -100,17 +100,18 @@ vec3 sampleDynamicDiffuseGlobalIllumination(vec3 wsPosition, vec3 wsNormal, vec3
         vec3 pointToProbe = probePos - biasedPosition;
         vec3 directionToProbe = normalize(pointToProbe);
 
-#if 0
+        vec3 unbiasedDirectionToProbe = normalize(probePos - wsPosition);
+#if 1
         // Smooth back-face test (from original paper)
         const float smoothFloor = 0.02;
         const float additionalSmoothening = 0.25;
-        weight *= smoothFloor + (1.0 - smoothFloor) * pow(saturate(dot(directionToProbe, wsNormal)), additionalSmoothening);
+        weight *= smoothFloor + (1.0 - smoothFloor) * pow(saturate(dot(unbiasedDirectionToProbe, wsNormal)), additionalSmoothening);
 #else
         // "The naive soft backface weight would ignore a probe when it is behind the surface. That's good for walls. But for small details inside of a
         //  room, the normals on the details might rule out all of the probes that have mutual visibility to the point. So, we instead use a "wrap shading"
         //  test below inspired by NPR work.".
         const vec3 sampleDirection = wsNormal;
-        weight *= square((dot(directionToProbe, sampleDirection) + 1.0) * 0.5) + 0.2;
+        weight *= square((dot(unbiasedDirectionToProbe, sampleDirection) + 1.0) * 0.5) + 0.2;
 #endif
 
         // Chebychev test (i.e. variance shadow test)

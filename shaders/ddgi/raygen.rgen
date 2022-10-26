@@ -34,7 +34,7 @@ struct HitResult {
 
 HitResult tracePrimaryRay(vec3 origin, vec3 direction)
 {
-    float tmin = camera.zNear;
+    float tmin = 0.0001;
     float tmax = camera.zFar;
 
     int numHits = 0;
@@ -129,8 +129,12 @@ void main()
             // Scaling Probe-Based Real-Time Dynamic Global Illumination for Production:
             // "probe-update rays that hit backfaces record a value of 0 for irradiance and shorten their depth values by 80%"
             color = vec3(0.0);
-            hit.dist *= 0.8;
+            hit.dist *= 0.2;
         }
+
+        float probeSpacing = max(max(probeGridData.probeSpacing.x, probeGridData.probeSpacing.y), probeGridData.probeSpacing.z);
+        float maxDistance = 2.5 * probeSpacing; // TODO: This number is quite arbitrary, needs testing
+        hit.dist = min(hit.dist, maxDistance);
     }
 
     // NOTE: hit.dist is <0 if it's a backface hit!

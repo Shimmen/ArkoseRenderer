@@ -26,8 +26,10 @@ private:
     float m_hysteresisIrradiance { 0.98f };
     float m_hysteresisVisibility { 0.98f };
 
-    // TODO: What's a good default?!
-    float m_visibilitySharpness { 5.0f };
+    float m_visibilitySharpness { 50.0f };
+
+    bool m_computeProbeOffsets { true };
+    bool m_applyProbeOffsets { true };
 
     bool m_useSceneAmbient { true };
     float m_injectedAmbientLx { 100.0f };

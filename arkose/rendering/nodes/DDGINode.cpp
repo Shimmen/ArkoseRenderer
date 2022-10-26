@@ -23,6 +23,9 @@ void DDGINode::drawGui()
 
     ImGui::SliderFloat("Visibility sharpness", &m_visibilitySharpness, 1.0f, 100.0f);
 
+    ImGui::Checkbox("Compute probe offsets", &m_computeProbeOffsets);
+    ImGui::Checkbox("Apply probe offsets", &m_applyProbeOffsets);
+
     ImGui::Checkbox("Use scene ambient light", &m_useSceneAmbient);
     if (!m_useSceneAmbient) {
         // todo: make inactive instead of disappear!
@@ -206,7 +209,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
         }
 
         // 6. Move probes away from (static) surfaces and out from backfacing meshes
-        {
+        if (m_computeProbeOffsets && m_applyProbeOffsets) {
             ScopedDebugZone traceRaysZone(cmdList, "Update probe positions");
 
             cmdList.setComputeState(probeMoveComputeState);
@@ -224,6 +227,8 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
             uint32_t probeCount = surfelImage.extent().width();
             uint32_t sampleCount = surfelImage.extent().height();
             cmdList.dispatch({ probeCount, 1, 1 }, { 1, sampleCount, 1 });
+        } else if (not m_applyProbeOffsets) {
+            // TODO: Clear out the offset buffer
         }
     };
 }
