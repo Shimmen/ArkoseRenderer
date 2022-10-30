@@ -113,7 +113,7 @@ public:
     ~MaterialAsset();
 
     static constexpr const char* AssetFileExtension = "arkmat";
-    static constexpr const char AssetMagicValue[4] = { 'a', 'm', 'a', 't' };
+    static constexpr std::array<char, 4> AssetMagicValue = { 'a', 'm', 'a', 't' };
 
     // Load a material asset (cached) from an .arkmat file
     // TODO: Figure out how we want to return this! Basic type, e.g. MaterialAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?

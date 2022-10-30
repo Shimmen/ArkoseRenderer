@@ -37,7 +37,7 @@ public:
     ~ImageAsset();
 
     static constexpr const char* AssetFileExtension = "arkimg";
-    static constexpr const char AssetMagicValue[4] = { 'a', 'i', 'm', 'g' };
+    static constexpr std::array<char, 4> AssetMagicValue = { 'a', 'i', 'm', 'g' };
 
     // Create a new ImageAsset that is a copy of the passed in image asset but with replaced image format. The data of the new format is passed in at constuction time.
     static std::unique_ptr<ImageAsset> createCopyWithReplacedFormat(ImageAsset const&, ImageFormat, uint8_t const* data, size_t size);

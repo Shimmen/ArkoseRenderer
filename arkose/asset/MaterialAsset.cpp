@@ -47,12 +47,11 @@ MaterialAsset* MaterialAsset::loadFromArkmat(std::string const& filePath)
     std::unique_ptr<MaterialAsset> newMaterialAsset {};
 
     cereal::BinaryInputArchive binaryArchive(fileStream);
-    binaryArchive(AssetHeader { *AssetMagicValue });
 
     AssetHeader header;
     binaryArchive(header);
 
-    if (header == AssetHeader { *AssetMagicValue }) {
+    if (header == AssetHeader(AssetMagicValue)) {
 
         newMaterialAsset = std::make_unique<MaterialAsset>();
         binaryArchive(*newMaterialAsset);
@@ -101,7 +100,7 @@ bool MaterialAsset::writeToArkmat(std::string_view filePath, AssetStorage assetS
     switch (assetStorage) {
     case AssetStorage::Binary: {
         cereal::BinaryOutputArchive archive(fileStream);
-        archive(AssetHeader { *AssetMagicValue });
+        archive(AssetHeader(AssetMagicValue));
         archive(*this);
     } break;
     case AssetStorage::Json: {

@@ -18,7 +18,7 @@ public:
     ~LevelAsset();
 
     static constexpr const char* AssetFileExtension = "arklvl";
-    static constexpr const char AssetMagicValue[4] = { 'a', 'l', 'v', 'l' };
+    static constexpr std::array<char, 4> AssetMagicValue = { 'a', 'l', 'v', 'l' };
 
     // Load a level asset (cached) from an .arklvl file
     // TODO: Figure out how we want to return this! Basic type, e.g. LevelAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?

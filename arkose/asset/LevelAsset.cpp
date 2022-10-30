@@ -41,12 +41,11 @@ LevelAsset* LevelAsset::loadFromArklvl(std::string const& filePath)
     std::unique_ptr<LevelAsset> newLevelAsset {};
 
     cereal::BinaryInputArchive binaryArchive(fileStream);
-    binaryArchive(AssetHeader { *AssetMagicValue });
 
     AssetHeader header;
     binaryArchive(header);
 
-    if (header == AssetHeader { *AssetMagicValue }) {
+    if (header == AssetHeader(AssetMagicValue)) {
 
         newLevelAsset = std::make_unique<LevelAsset>();
         binaryArchive(*newLevelAsset);
@@ -94,7 +93,7 @@ bool LevelAsset::writeToArklvl(std::string_view filePath, AssetStorage assetStor
     switch (assetStorage) {
     case AssetStorage::Binary: {
         cereal::BinaryOutputArchive archive(fileStream);
-        archive(AssetHeader { *AssetMagicValue });
+        archive(AssetHeader(AssetMagicValue));
         archive(*this);
     } break;
     case AssetStorage::Json: {

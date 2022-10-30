@@ -169,8 +169,8 @@ ImageAsset* ImageAsset::loadFromArkimg(std::string const& filePath)
     AssetHeader header;
     archive(header);
 
-    if (header != AssetHeader { *AssetMagicValue }) {
-        ARKOSE_LOG(Warning, "Trying to load image asset with invalid file magic: '{}'", header.magicValue);
+    if (header != AssetHeader(AssetMagicValue)) {
+        ARKOSE_LOG(Warning, "Trying to load image asset with invalid file magic: '{}'", fmt::join(header.magicValue, ""));
         return nullptr;
     }
 
@@ -242,7 +242,7 @@ bool ImageAsset::writeToArkimg(std::string_view filePath)
 
     cereal::BinaryOutputArchive archive(fileStream);
 
-    archive(AssetHeader { *AssetMagicValue });
+    archive(AssetHeader(AssetMagicValue));
     archive(*this);
 
     fileStream.close();
