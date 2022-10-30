@@ -3,6 +3,7 @@
 #include "asset/MaterialAsset.h"
 #include "asset/StaticMeshAsset.h"
 #include "core/Handle.h"
+#include "core/Types.h"
 #include "core/parallel/TaskGraph.h"
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/ResourceList.h"
@@ -14,7 +15,6 @@
 #include <unordered_map>
 
 // Shared shader data
-using uint = uint32_t;
 #include "LightData.h"
 #include "SceneData.h"
 #include "RTData.h"

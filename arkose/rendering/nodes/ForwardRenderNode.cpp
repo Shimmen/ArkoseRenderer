@@ -1,12 +1,12 @@
 #include "ForwardRenderNode.h"
 
+#include "core/Types.h"
 #include "rendering/GpuScene.h"
 #include "rendering/util/ScopedDebugZone.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 
 // Shared shader headers
-using uint = uint32_t;
 #include "IndirectData.h"
 #include "LightData.h"
 

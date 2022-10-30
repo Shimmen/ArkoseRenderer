@@ -7,6 +7,7 @@
 #include "rendering/backend/Resources.h"
 #include "core/Conversion.h"
 #include "core/Logging.h"
+#include "core/Types.h"
 #include "core/parallel/TaskGraph.h"
 #include "rendering/Registry.h"
 #include <imgui.h>
@@ -15,7 +16,6 @@
 #include <ark/transform.h>
 
 // Shared shader headers
-using uint = uint32_t;
 #include "CameraState.h"
 
 GpuScene::GpuScene(Scene& scene, Backend& backend, Extent2D initialMainViewportSize)

@@ -1,6 +1,7 @@
 #include "VulkanCommandList.h"
 
 #include "core/Logging.h"
+#include "core/Types.h"
 #include "VulkanBackend.h"
 #include "VulkanResources.h"
 #include "utility/Profiling.h"
@@ -8,7 +9,6 @@
 #include <fmt/format.h>
 
 // Shared shader headers
-using uint = uint32_t;
 #include "IndirectData.h"
 
 VulkanCommandList::VulkanCommandList(VulkanBackend& backend, VkCommandBuffer commandBuffer)

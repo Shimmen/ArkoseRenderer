@@ -16,6 +16,9 @@ using u64 = ark::u64;
 using f32 = float;
 using f64 = double;
 
+// Useful for GLSL interopt
+using uint = uint32_t;
+
 template<typename NarrowType, typename WideType>
 constexpr NarrowType narrow_cast(WideType);
 
