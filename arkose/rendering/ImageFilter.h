@@ -1,5 +1,7 @@
 #pragma once
 
+#include "core/Assert.h"
+
 enum class ImageFilter {
     Nearest,
     Linear,
@@ -33,5 +35,7 @@ void load_minimal(Archive const&, ImageFilter& imageFilter, std::string const& v
         imageFilter = ImageFilter::Nearest;
     } else if (value == ImageFilterName(ImageFilter::Linear)) {
         imageFilter = ImageFilter::Linear;
+    } else {
+        ASSERT_NOT_REACHED();
     }
 }
