@@ -6,6 +6,8 @@
 #include "rendering/backend/Resource.h"
 #include "utility/Extent.h"
 #include "utility/Hash.h"
+#include <array>
+#include <cereal/cereal.hpp>
 #include <memory>
 
 class Texture : public Resource {
@@ -35,16 +37,19 @@ public:
         R32Uint,
     };
 
+    // TODO: Move out of Texture to be shared between assets and textures
     enum class MinFilter {
         Linear,
         Nearest,
     };
 
+    // TODO: Move out of Texture to be shared between assets and textures
     enum class MagFilter {
         Linear,
         Nearest,
     };
 
+    // TODO: Move out of Texture to be shared between assets and textures
     struct Filters {
         MinFilter min;
         MagFilter mag;
@@ -79,18 +84,46 @@ public:
         }
     };
 
+    // TODO: Move out of Texture to be shared between assets and textures
     enum class WrapMode {
         Repeat,
         MirroredRepeat,
         ClampToEdge,
     };
+    static constexpr std::array<const char*, 3> WrapModeNames = { "Repeat", "MirroredRepeat", "ClampToEdge" };
+    static const char* WrapModeName(WrapMode wrapMode)
+    {
+        size_t idx = static_cast<size_t>(wrapMode);
+        return WrapModeNames[idx];
+    }
+    static constexpr u64 WrapMode_Min = 0;
+    static constexpr u64 WrapMode_Max = 2;
 
+    template<class Archive>
+    std::string save_minimal(Archive const&, WrapMode const& wrapMode)
+    {
+        return WrapModeName(wrapMode);
+    }
+
+    template<class Archive>
+    void load_minimal(Archive const&, WrapMode& wrapMode, std::string const& value)
+    {
+        if (value == WrapModeName(WrapMode::Repeat)) {
+            wrapMode = WrapMode::Repeat;
+        } else if (value == WrapModeName(WrapMode::MirroredRepeat)) {
+            wrapMode = WrapMode::MirroredRepeat;
+        } else if (value == WrapModeName(WrapMode::ClampToEdge)) {
+            wrapMode = WrapMode::ClampToEdge;
+        }
+    }
+
+    // TODO: Move out of Texture to be shared between assets and textures
     struct WrapModes {
-        WrapMode u;
-        WrapMode v;
-        WrapMode w;
+        WrapMode u { WrapMode::Repeat };
+        WrapMode v { WrapMode::Repeat };
+        WrapMode w { WrapMode::Repeat };
 
-        WrapModes() = delete;
+        WrapModes() = default;
         constexpr WrapModes(WrapMode u, WrapMode v)
             : u(u)
             , v(v)
@@ -139,6 +172,7 @@ public:
         }
     };
 
+    // TODO: Move out of Texture to be shared between assets and textures
     enum class Mipmap {
         None,
         Nearest,

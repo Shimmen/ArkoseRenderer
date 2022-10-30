@@ -16,7 +16,6 @@ inline Texture::Format convertFormat(ImageFormat, ColorSpace, bool sRGBoverride)
 inline Texture::MinFilter convertMinFilter(ImageFilter);
 inline Texture::MagFilter convertMagFilter(ImageFilter);
 inline Texture::Mipmap convertMipFilter(ImageFilter, bool useMipmap);
-inline Texture::WrapMode convertWrapMode(WrapMode);
 }
 
 #include "AssetTypes.inl"

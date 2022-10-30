@@ -74,11 +74,9 @@ public:
     void unregisterStaticMesh(StaticMeshHandle);
 
     [[nodiscard]] MaterialHandle registerMaterial(MaterialAsset*);
-    //[[nodiscard]] MaterialHandle registerMaterial(MaterialAssetRaw*); TODO!
     void unregisterMaterial(MaterialHandle);
 
-    [[nodiscard]] TextureHandle registerMaterialTexture(MaterialInput*, bool sRGB, Texture* fallback);
-    //[[nodiscard]] TextureHandle registerMaterialTexture(MaterialInputRaw*); TODO!
+    [[nodiscard]] TextureHandle registerMaterialTexture(std::optional<MaterialInput> const&, bool sRGB, Texture* fallback);
     [[nodiscard]] TextureHandle registerTexture(std::unique_ptr<Texture>&&);
     [[nodiscard]] TextureHandle registerTextureSlot();
     void updateTexture(TextureHandle, std::unique_ptr<Texture>&&);
@@ -174,6 +172,7 @@ private:
     ResourceList<ShaderMaterial, MaterialHandle> m_managedMaterials { "Materials", 1024 };
     std::unique_ptr<Buffer> m_materialDataBuffer { nullptr };
     std::vector<MaterialHandle> m_pendingMaterialUpdates {};
+    MaterialHandle m_defaultMaterialHandle {};
 
     // NOTE: Currently this contains both textures and material data
     static constexpr int MaterialBindingSetBindingIndexMaterials = 0;

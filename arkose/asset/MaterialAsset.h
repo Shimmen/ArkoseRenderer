@@ -1,25 +1,127 @@
 #pragma once
 
 #include "asset/AssetHelpers.h"
+#include "asset/ImageAsset.h"
+#include "asset/SerialisationHelpers.h"
+#include "rendering/backend/base/Texture.h"
+#include <cereal/cereal.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/optional.hpp>
+#include <cereal/types/variant.hpp>
+#include <cereal/types/vector.hpp>
 #include <string>
 #include <string_view>
+#include <variant>
 
 // Generated flatbuffer code
 #include "MaterialAsset_generated.h"
 
-using BlendMode = Arkose::Asset::BlendMode;
-using WrapMode = Arkose::Asset::WrapMode;
-using WrapModes = Arkose::Asset::WrapModes;
-using ImageFilter = Arkose::Asset::ImageFilter;
+enum class BlendMode {
+    Opaque,
+    Masked,
+    Translucent,
+};
 
-using MaterialInputRaw = Arkose::Asset::MaterialInput;
-using MaterialInput = Arkose::Asset::MaterialInputT;
+constexpr std::array<const char*, 3> BlendModeNames = { "Opaque", "Masked", "Translucent" };
+inline const char* BlendModeName(BlendMode blendMode)
+{
+    size_t idx = static_cast<size_t>(blendMode);
+    return BlendModeNames[idx];
+}
 
-using MaterialAssetRaw = Arkose::Asset::MaterialAsset;
-class MaterialAsset : public Arkose::Asset::MaterialAssetT {
+constexpr u64 BlendMode_Min = 0;
+constexpr u64 BlendMode_Max = 2;
+
+template<class Archive>
+std::string save_minimal(Archive const&, BlendMode const& blendMode)
+{
+    return BlendModeName(blendMode);
+}
+
+template<class Archive>
+void load_minimal(Archive const&, BlendMode& blendMode, std::string const& value)
+{
+    if (value == BlendModeName(BlendMode::Opaque)) {
+        blendMode = BlendMode::Opaque;
+    } else if (value == BlendModeName(BlendMode::Masked)) {
+        blendMode = BlendMode::Masked;
+    } else if (value == BlendModeName(BlendMode::Translucent)) {
+        blendMode = BlendMode::Translucent;
+    }
+}
+
+// TODO: Move to ImageAsset or integrate into Texture
+enum class ImageFilter {
+    Nearest,
+    Linear,
+};
+
+constexpr std::array<const char*, 2> ImageFilterNames = { "Nearest", "Linear" };
+inline const char* ImageFilterName(ImageFilter imageFilter)
+{
+    size_t idx = static_cast<size_t>(imageFilter);
+    return ImageFilterNames[idx];
+}
+
+constexpr u64 ImageFilter_Min = 0;
+constexpr u64 ImageFilter_Max = 1;
+
+template<class Archive>
+std::string save_minimal(Archive const&, ImageFilter const& imageFilter)
+{
+    return ImageFilterName(imageFilter);
+}
+
+template<class Archive>
+void load_minimal(Archive const&, ImageFilter& imageFilter, std::string const& value)
+{
+    if (value == ImageFilterName(ImageFilter::Nearest)) {
+        imageFilter = ImageFilter::Nearest;
+    } else if (value == ImageFilterName(ImageFilter::Linear)) {
+        imageFilter = ImageFilter::Linear;
+    }
+}
+
+
+class MaterialInput {
+public:
+    MaterialInput();
+    ~MaterialInput();
+
+    bool hasPathToImage() const { return std::holds_alternative<std::string>(image); }
+    void setPathToImage(std::string path) { image = std::move(path); }
+    std::string_view pathToImage() const
+    {
+        ARKOSE_ASSERT(hasPathToImage());
+        return std::get<std::string>(image);
+    }
+
+    // Path to an image or an image asset directly
+    std::variant<std::string, std::weak_ptr<ImageAsset>> image;
+
+    Texture::WrapModes wrapModes { Texture::WrapModes::repeatAll() };
+
+    ImageFilter minFilter { ImageFilter::Linear };
+    ImageFilter magFilter { ImageFilter::Linear };
+
+    bool useMipmapping { true };
+    bool generateMipmapsAtRuntime { true };
+    ImageFilter mipFilter { ImageFilter::Linear };
+
+    // Not serialized, can be used to store whatever intermediate you want
+    int userData { -1 };
+
+    template<class Archive>
+    void serialize(Archive&);
+};
+
+class MaterialAsset {
 public:
     MaterialAsset();
     ~MaterialAsset();
+
+    static constexpr const char* AssetFileExtension = "arkmat";
+    static constexpr const char AssetMagicValue[4] = { 'a', 'm', 'a', 't' };
 
     // Load a material asset (cached) from an .arkmat file
     // TODO: Figure out how we want to return this! Basic type, e.g. MaterialAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
@@ -27,11 +129,41 @@ public:
 
     bool writeToArkmat(std::string_view filePath, AssetStorage);
 
+    template<class Archive>
+    void serialize(Archive&);
+
+    std::optional<MaterialInput> baseColor {};
+    std::optional<MaterialInput> emissiveColor {};
+    std::optional<MaterialInput> normalMap {};
+    std::optional<MaterialInput> materialProperties {};
+
+    vec4 colorTint { vec4(1.0f, 1.0f, 1.0f, 1.0f) };
+
+    BlendMode blendMode { BlendMode::Opaque };
+    float maskCutoff { 1.0f };
+
     std::string_view assetFilePath() const { return m_assetFilePath; }
 
-private:
-    // Construct a material asset from a loaded flatbuffer material asset file
-    MaterialAsset(Arkose::Asset::MaterialAsset const*, std::string filePath);
+    // Not serialized, can be used to store whatever intermediate you want
+    int userData { -1 };
 
+private:
     std::string m_assetFilePath {};
 };
+
+template<class Archive>
+void MaterialInput::serialize(Archive& archive)
+{
+    archive(CEREAL_NVP(image));
+    archive(CEREAL_NVP(wrapModes));
+    archive(CEREAL_NVP(minFilter), CEREAL_NVP(magFilter));
+    archive(CEREAL_NVP(useMipmapping), CEREAL_NVP(generateMipmapsAtRuntime), CEREAL_NVP(mipFilter));
+}
+
+template<class Archive>
+void MaterialAsset::serialize(Archive& archive)
+{
+    archive(CEREAL_NVP(baseColor), CEREAL_NVP(emissiveColor), CEREAL_NVP(normalMap), CEREAL_NVP(materialProperties));
+    archive(CEREAL_NVP(colorTint));
+    archive(CEREAL_NVP(blendMode), CEREAL_NVP(maskCutoff));
+}

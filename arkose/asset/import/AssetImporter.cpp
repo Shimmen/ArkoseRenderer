@@ -76,22 +76,22 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         // Resolve references (paths) to image assets
         // (The glTF loader will use its local glTF indices while loading, since we don't yet know the file paths)
 
-        auto resolveImageFilePath = [&](Arkose::Asset::MaterialInputT* materialInput) {
-            if (materialInput) {
-                int gltfIdx = materialInput->user_data.integer();
+        auto resolveImageFilePath = [&](std::optional<MaterialInput>& materialInput) {
+            if (materialInput.has_value()) {
+                int gltfIdx = materialInput->userData;
                 ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < result.images.size());
                 auto& image = result.images[gltfIdx];
                 std::string_view imagePath = (not image->hasSourceAsset() || options.alwaysMakeImageAsset)
                     ? image->assetFilePath()
                     : image->sourceAssetFilePath();
-                materialInput->image.Set(createAssetPath(imagePath));
+                materialInput->setPathToImage(std::string(imagePath));
             }
         };
 
-        resolveImageFilePath(material->base_color.get());
-        resolveImageFilePath(material->emissive_color.get());
-        resolveImageFilePath(material->normal_map.get());
-        resolveImageFilePath(material->material_properties.get());
+        resolveImageFilePath(material->baseColor);
+        resolveImageFilePath(material->emissiveColor);
+        resolveImageFilePath(material->normalMap);
+        resolveImageFilePath(material->materialProperties);
 
         std::string fileName = std::format("material{:04}", unnamedMaterialIdx++);
         std::string targetFilePath = std::format("{}/{}.arkmat", targetDirectory, fileName);

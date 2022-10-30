@@ -95,18 +95,4 @@ Texture::Mipmap convertMipFilter(ImageFilter mipFilter, bool useMipmap)
     }
 }
 
-Texture::WrapMode convertWrapMode(WrapMode wrapMode)
-{
-    switch (wrapMode) {
-    case WrapMode::Repeat:
-        return Texture::WrapMode::Repeat;
-    case WrapMode::MirroredRepeat:
-        return Texture::WrapMode::MirroredRepeat;
-    case WrapMode::ClampToEdge:
-        return Texture::WrapMode::ClampToEdge;
-    default:
-        ASSERT_NOT_REACHED();
-    }
-}
-
 }

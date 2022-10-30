@@ -4,6 +4,9 @@
 #include "core/Logging.h"
 #include "utility/FileIO.h"
 #include "utility/Profiling.h"
+#include <cereal/cereal.hpp>
+#include <cereal/archives/binary.hpp>
+#include <cereal/archives/json.hpp>
 #include <mutex>
 
 namespace {
@@ -12,17 +15,11 @@ namespace {
     static std::unique_ptr<flatbuffers::Parser> s_materialAssetParser {};
 }
 
+MaterialInput::MaterialInput() = default;
+MaterialInput::~MaterialInput() = default;
+
 MaterialAsset::MaterialAsset() = default;
 MaterialAsset::~MaterialAsset() = default;
-
-MaterialAsset::MaterialAsset(Arkose::Asset::MaterialAsset const* flatbuffersMaterialAsset, std::string filePath)
-    : m_assetFilePath(std::move(filePath))
-{
-    ARKOSE_ASSERT(flatbuffersMaterialAsset != nullptr);
-    flatbuffersMaterialAsset->UnPackTo(this);
-
-    ARKOSE_ASSERT(m_assetFilePath.length() > 0);
-}
 
 MaterialAsset* MaterialAsset::loadFromArkmat(std::string const& filePath)
 {
@@ -42,45 +39,39 @@ MaterialAsset* MaterialAsset::loadFromArkmat(std::string const& filePath)
         }
     }
 
-    auto maybeBinaryData = FileIO::readBinaryDataFromFile<uint8_t>(filePath);
-    if (not maybeBinaryData.has_value()) {
+    std::ifstream fileStream(filePath, std::ios::binary);
+    if (not fileStream.is_open()) {
         return nullptr;
     }
 
-    void* binaryData = maybeBinaryData.value().data();
+    std::unique_ptr<MaterialAsset> newMaterialAsset {};
 
-    bool isValidBinaryBuffer = Arkose::Asset::MaterialAssetBufferHasIdentifier(binaryData);
-    if (not isValidBinaryBuffer) {
+    cereal::BinaryInputArchive binaryArchive(fileStream);
+    binaryArchive(AssetHeader { *AssetMagicValue });
 
-        // See if we can parse it as json
+    AssetHeader header;
+    binaryArchive(header);
 
-        // First check: do we at least start with a '{' character?
-        if (maybeBinaryData.value().size() == 0 || *reinterpret_cast<const char*>(binaryData) != '{') {
+    if (header == AssetHeader { *AssetMagicValue }) {
+
+        newMaterialAsset = std::make_unique<MaterialAsset>();
+        binaryArchive(*newMaterialAsset);
+
+    } else {
+    
+        fileStream.seekg(0); // seek back to the start
+
+        if (static_cast<char>(fileStream.peek()) != '{') {
+            ARKOSE_LOG(Error, "Failed to parse json text for material asset '{}'", filePath);
             return nullptr;
         }
 
-        std::string asciiData = FileIO::readEntireFile(filePath).value();
+        cereal::JSONInputArchive jsonArchive(fileStream);
 
-        if (not s_materialAssetParser) {
-            s_materialAssetParser = AssetHelpers::createAssetRuntimeParser("MaterialAsset.fbs");
-        }
+        newMaterialAsset = std::make_unique<MaterialAsset>();
+        jsonArchive(*newMaterialAsset);
 
-        if (not s_materialAssetParser->ParseJson(asciiData.c_str(), filePath.c_str())) {
-            ARKOSE_LOG(Error, "Failed to parse json text for material asset:\n\t{}", s_materialAssetParser->error_);
-            return nullptr;
-        }
-
-        // Use the now filled-in builder's buffer as the binary data input
-        binaryData = s_materialAssetParser->builder_.GetBufferPointer();
     }
-
-    auto const* flatbuffersMaterialAsset = Arkose::Asset::GetMaterialAsset(binaryData);
-
-    if (!flatbuffersMaterialAsset) {
-        return nullptr;
-    }
-
-    auto newMaterialAsset = std::unique_ptr<MaterialAsset>(new MaterialAsset(flatbuffersMaterialAsset, filePath));
 
     {
         SCOPED_PROFILE_ZONE_NAMED("Material cache - store");
@@ -102,38 +93,23 @@ bool MaterialAsset::writeToArkmat(std::string_view filePath, AssetStorage assetS
     ARKOSE_ASSERT(m_assetFilePath.empty() || m_assetFilePath == filePath);
     m_assetFilePath = filePath;
 
-    flatbuffers::FlatBufferBuilder builder {};
-    auto asset = Arkose::Asset::MaterialAsset::Pack(builder, this);
-
-    if (asset.IsNull()) {
+    std::ofstream fileStream { m_assetFilePath, std::ios::binary | std::ios::trunc };
+    if (not fileStream.is_open()) {
         return false;
     }
 
-    builder.Finish(asset, Arkose::Asset::MaterialAssetIdentifier());
-
-    uint8_t* data = builder.GetBufferPointer();
-    size_t size = static_cast<size_t>(builder.GetSize());
-
     switch (assetStorage) {
-    case AssetStorage::Binary: 
-        FileIO::writeBinaryDataToFile(std::string(filePath), data, size);
-        break;
+    case AssetStorage::Binary: {
+        cereal::BinaryOutputArchive archive(fileStream);
+        archive(AssetHeader { *AssetMagicValue });
+        archive(*this);
+    } break;
     case AssetStorage::Json: {
-
-        if (not s_materialAssetParser) {
-            s_materialAssetParser = AssetHelpers::createAssetRuntimeParser("MaterialAsset.fbs");
-        }
-
-        std::string jsonText;
-        if (not flatbuffers::GenerateText(*s_materialAssetParser, data, &jsonText)) {
-            ARKOSE_LOG(Error, "Failed to generate json text for material asset");
-            return false;
-        }
-
-        FileIO::writeTextDataToFile(std::string(filePath), jsonText);
-
+        cereal::JSONOutputArchive archive(fileStream);
+        archive(cereal::make_nvp("material", *this));
     } break;
     }
 
+    fileStream.close();
     return true;
 }

@@ -228,42 +228,41 @@ void MeshViewerApp::drawMeshMaterialPanel()
         // NOTE: We're not actually loading it from disk every time because it's cached, but this still seems a little silly to do.
         if (MaterialAsset* material = MaterialAsset::loadFromArkmat(materialPath)) {
 
-            auto drawMaterialInputGui = [&](const char* name, MaterialInput* materialInput) -> bool {
+            auto drawMaterialInputGui = [&](const char* name, std::optional<MaterialInput> materialInput) -> bool {
 
                 bool didChange = false;
 
                 ImGui::PushID(name);
 
                 ImGuiTreeNodeFlags flags = 0;
-                if (materialInput == nullptr) {
+                if (not materialInput.has_value()) {
                     //flags = ImGuiTreeNodeFlags_Leaf;
                     ImGui::BeginDisabled();
                 }
 
                 if (ImGui::CollapsingHeader(name, flags)) {
-                    if (materialInput) {
+                    if (materialInput.has_value()) {
 
                         // Only handle non-packaged up assets here, i.e. using a path, not a direct assets as it would be in a packed case
-                        ARKOSE_ASSERT(materialInput->image.type == Arkose::Asset::ImageIndirection::path);
-                        std::string& imagePath = materialInput->image.Aspath()->path;
+                        std::string imagePath = std::string(materialInput->pathToImage());
 
                         ImGui::BeginDisabled();
                         ImGui::InputText("Image asset", imagePath.data(), imagePath.length(), ImGuiInputTextFlags_ReadOnly);
                         ImGui::EndDisabled();
 
-                        didChange |= drawWrapModeSelectorGui("Wrap modes", materialInput->wrap_modes);
+                        didChange |= drawWrapModeSelectorGui("Wrap modes", materialInput->wrapModes);
 
-                        didChange |= drawImageFilterSelectorGui("Mag. filter", materialInput->mag_filter);
-                        didChange |= drawImageFilterSelectorGui("Min. filter", materialInput->min_filter);
+                        didChange |= drawImageFilterSelectorGui("Mag. filter", materialInput->magFilter);
+                        didChange |= drawImageFilterSelectorGui("Min. filter", materialInput->minFilter);
 
-                        didChange |= ImGui::Checkbox("Using mip mapping", &materialInput->use_mipmapping);
-                        if (materialInput->use_mipmapping) {
-                            didChange |= drawImageFilterSelectorGui("Mipmap filter", materialInput->mip_filter);
+                        didChange |= ImGui::Checkbox("Using mip mapping", &materialInput->useMipmapping);
+                        if (materialInput->useMipmapping) {
+                            didChange |= drawImageFilterSelectorGui("Mipmap filter", materialInput->mipFilter);
                         }
                     }
                 }
 
-                if (materialInput == nullptr) {
+                if (not materialInput.has_value()) {
                     ImGui::EndDisabled();
                 }
 
@@ -278,16 +277,16 @@ void MeshViewerApp::drawMeshMaterialPanel()
             int currentBrdfItem = 0;
             materialDidChange |= ImGui::Combo("BRDF", &currentBrdfItem, "GGX-based microfacet model");
 
-            materialDidChange |= drawMaterialInputGui("Base color", material->base_color.get());
-            materialDidChange |= drawMaterialInputGui("Emissive color", material->emissive_color.get());
-            materialDidChange |= drawMaterialInputGui("Normal map", material->normal_map.get());
-            materialDidChange |= drawMaterialInputGui("Properties map", material->material_properties.get());
+            materialDidChange |= drawMaterialInputGui("Base color", material->baseColor);
+            materialDidChange |= drawMaterialInputGui("Emissive color", material->emissiveColor);
+            materialDidChange |= drawMaterialInputGui("Normal map", material->normalMap);
+            materialDidChange |= drawMaterialInputGui("Properties map", material->materialProperties);
 
-            materialDidChange |= ImGui::ColorEdit4("Tint", reinterpret_cast<float*>(&material->color_tint));
+            materialDidChange |= ImGui::ColorEdit4("Tint", value_ptr(material->colorTint));
 
-            materialDidChange |= drawBlendModeSelectorGui("Blend mode", material->blend_mode);
-            if (material->blend_mode == Arkose::Asset::BlendMode::Masked) {
-                materialDidChange |= ImGui::SliderFloat("Mask cutoff", &material->mask_cutoff, 0.0f, 1.0f);
+            materialDidChange |= drawBlendModeSelectorGui("Blend mode", material->blendMode);
+            if (material->blendMode == BlendMode::Masked) {
+                materialDidChange |= ImGui::SliderFloat("Mask cutoff", &material->maskCutoff, 0.0f, 1.0f);
             }
 
             if (materialDidChange) {
@@ -302,14 +301,14 @@ void MeshViewerApp::drawMeshMaterialPanel()
     ImGui::End();
 }
 
-bool MeshViewerApp::drawWrapModeSelectorGui(const char* id, Arkose::Asset::WrapModes& wrapModes)
+bool MeshViewerApp::drawWrapModeSelectorGui(const char* id, Texture::WrapModes& wrapModes)
 {
     bool didChange = false;
 
-    auto drawWrapModeComboBox = [&](const char* innerId, Arkose::Asset::WrapMode& wrapMode) -> bool {
+    auto drawWrapModeComboBox = [&](const char* innerId, Texture::WrapMode& wrapMode) -> bool {
 
         int currentWrapModeIdx = static_cast<int>(wrapMode);
-        const char* currentWrapModeString = Arkose::Asset::EnumNameWrapMode(wrapMode);
+        const char* currentWrapModeString = Texture::WrapModeName(wrapMode);
 
         if (ImGui::BeginCombo(innerId, currentWrapModeString)) {
 
@@ -321,8 +320,8 @@ bool MeshViewerApp::drawWrapModeSelectorGui(const char* id, Arkose::Asset::WrapM
             for (int i = wrapModeMin; i <= wrapModeMax; i++) {
                 ImGui::PushID(i);
 
-                auto itemWrapMode = static_cast<Arkose::Asset::WrapMode>(i);
-                const char* itemText = Arkose::Asset::EnumNameWrapMode(itemWrapMode);
+                auto itemWrapMode = static_cast<Texture::WrapMode>(i);
+                const char* itemText = Texture::WrapModeName(itemWrapMode);
 
                 if (ImGui::Selectable(itemText, i == currentWrapModeIdx)) {
                     wrapMode = itemWrapMode;
@@ -343,21 +342,17 @@ bool MeshViewerApp::drawWrapModeSelectorGui(const char* id, Arkose::Asset::WrapM
         return false;
     };
 
-    Arkose::Asset::WrapMode u = wrapModes.u();
-    Arkose::Asset::WrapMode v = wrapModes.v();
-    Arkose::Asset::WrapMode w = wrapModes.w();
-
     // TODO: Fix layout!
     if (ImGui::BeginTable(id, 4, ImGuiTableFlags_NoBordersInBody)) {
 
         ImGui::TableNextColumn();
-        didChange |= drawWrapModeComboBox("##WrapModeComboBoxU", u);
+        didChange |= drawWrapModeComboBox("##WrapModeComboBoxU", wrapModes.u);
 
         ImGui::TableNextColumn();
-        didChange |= drawWrapModeComboBox("##WrapModeComboBoxV", v);
+        didChange |= drawWrapModeComboBox("##WrapModeComboBoxV", wrapModes.v);
 
         ImGui::TableNextColumn();
-        didChange |= drawWrapModeComboBox("##WrapModeComboBoxW", w);
+        didChange |= drawWrapModeComboBox("##WrapModeComboBoxW", wrapModes.w);
 
         ImGui::TableNextColumn();
         ImGui::Text("Wrap mode");
@@ -365,15 +360,13 @@ bool MeshViewerApp::drawWrapModeSelectorGui(const char* id, Arkose::Asset::WrapM
         ImGui::EndTable();
     }
 
-    wrapModes = Arkose::Asset::WrapModes(u, v, w);
-
     return didChange;
 }
 
-bool MeshViewerApp::drawBlendModeSelectorGui(const char* id, Arkose::Asset::BlendMode& blendMode)
+bool MeshViewerApp::drawBlendModeSelectorGui(const char* id, BlendMode& blendMode)
 {
     int currentBlendModeIdx = static_cast<int>(blendMode);
-    const char* currentBlendModeString = Arkose::Asset::EnumNameBlendMode(blendMode);
+    const char* currentBlendModeString = BlendModeName(blendMode);
 
     if (ImGui::BeginCombo(id, currentBlendModeString)) {
 
@@ -385,8 +378,8 @@ bool MeshViewerApp::drawBlendModeSelectorGui(const char* id, Arkose::Asset::Blen
         for (int i = blendModeMin; i <= blendModeMax; i++) {
             ImGui::PushID(i);
 
-            auto itemBlendMode = static_cast<Arkose::Asset::BlendMode>(i);
-            const char* itemText = Arkose::Asset::EnumNameBlendMode(itemBlendMode);
+            auto itemBlendMode = static_cast<BlendMode>(i);
+            const char* itemText = BlendModeName(itemBlendMode);
 
             if (ImGui::Selectable(itemText, i == currentBlendModeIdx)) {
                 blendMode = itemBlendMode;
@@ -407,25 +400,25 @@ bool MeshViewerApp::drawBlendModeSelectorGui(const char* id, Arkose::Asset::Blen
     return false;
 }
 
-bool MeshViewerApp::drawImageFilterSelectorGui(const char* id, Arkose::Asset::ImageFilter& imageFilter)
+bool MeshViewerApp::drawImageFilterSelectorGui(const char* id, ImageFilter& imageFilter)
 {
     bool didChange = false;
 
     int currentImageFilterIdx = static_cast<int>(imageFilter);
-    const char* currentImageFilterString = Arkose::Asset::EnumNameImageFilter(imageFilter);
+    const char* currentImageFilterString = ImageFilterName(imageFilter);
 
     if (ImGui::BeginCombo(id, currentImageFilterString)) {
 
         bool valueChanged = false;
 
-        int imageFilterMin = static_cast<int>(Arkose::Asset::ImageFilter::MIN);
-        int imageFilterMax = static_cast<int>(Arkose::Asset::ImageFilter::MAX);
+        int imageFilterMin = static_cast<int>(ImageFilter_Min);
+        int imageFilterMax = static_cast<int>(ImageFilter_Max);
 
         for (int i = imageFilterMin; i <= imageFilterMax; i++) {
             ImGui::PushID(i);
 
-            auto itemImageFilter = static_cast<Arkose::Asset::ImageFilter>(i);
-            const char* itemText = Arkose::Asset::EnumNameImageFilter(itemImageFilter);
+            auto itemImageFilter = static_cast<ImageFilter>(i);
+            const char* itemText = ImageFilterName(itemImageFilter);
 
             if (ImGui::Selectable(itemText, i == currentImageFilterIdx)) {
                 imageFilter = itemImageFilter;

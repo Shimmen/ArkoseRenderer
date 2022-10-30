@@ -125,7 +125,7 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
 
             // Write glTF material index to user data until we can resolve file paths
             int materialIdx = static_cast<int>(idx);
-            material->user_data = Arkose::Asset::UserData(materialIdx);
+            material->userData = materialIdx;
 
             result.materials.push_back(std::move(material));
         }
@@ -349,71 +349,71 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
 {
     SCOPED_PROFILE_ZONE();
 
-    auto toMaterialInput = [&](int texIndex) -> std::unique_ptr<MaterialInput> {
+    auto toMaterialInput = [&](int texIndex) -> std::optional<MaterialInput> {
 
         if (texIndex == -1) {
-            return nullptr;
+            return {};
         }
 
-        auto input = std::make_unique<MaterialInput>();
+        auto input = std::make_optional<MaterialInput>();
 
         auto& gltfTexture = gltfModel.textures[texIndex];
         auto& gltfSampler = gltfModel.samplers[gltfTexture.sampler];
 
         // Write glTF image index to user data until we can resolve file paths
-        input->user_data = Arkose::Asset::UserData(texIndex);
+        input->userData = texIndex;
 
-        auto wrapModeFromTinyGltf = [](int filterMode) -> Arkose::Asset::WrapMode {
+        auto wrapModeFromTinyGltf = [](int filterMode) -> Texture::WrapMode {
             switch (filterMode) {
             case TINYGLTF_TEXTURE_WRAP_REPEAT:
-                return Arkose::Asset::WrapMode::Repeat;
+                return Texture::WrapMode::Repeat;
             case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
-                return Arkose::Asset::WrapMode::ClampToEdge;
+                return Texture::WrapMode::ClampToEdge;
             case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
-                return Arkose::Asset::WrapMode::MirroredRepeat;
+                return Texture::WrapMode::MirroredRepeat;
             default:
                 ASSERT_NOT_REACHED();
             }
         };
 
-        input->wrap_modes = Arkose::Asset::WrapModes(wrapModeFromTinyGltf(gltfSampler.wrapS),
-                                                     wrapModeFromTinyGltf(gltfSampler.wrapT),
-                                                     wrapModeFromTinyGltf(gltfSampler.wrapR));
+        input->wrapModes = Texture::WrapModes(wrapModeFromTinyGltf(gltfSampler.wrapS),
+                                                wrapModeFromTinyGltf(gltfSampler.wrapT),
+                                                wrapModeFromTinyGltf(gltfSampler.wrapR));
 
         switch (gltfSampler.minFilter) {
         case TINYGLTF_TEXTURE_FILTER_NEAREST:
-            input->min_filter = Arkose::Asset::ImageFilter::Nearest;
-            input->use_mipmapping = false;
+            input->minFilter = ImageFilter::Nearest;
+            input->useMipmapping = false;
             break;
         case TINYGLTF_TEXTURE_FILTER_LINEAR:
-            input->min_filter = Arkose::Asset::ImageFilter::Linear;
-            input->use_mipmapping = false;
+            input->minFilter = ImageFilter::Linear;
+            input->useMipmapping = false;
             break;
         case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_NEAREST:
-            input->min_filter = Arkose::Asset::ImageFilter::Nearest;
-            input->mip_filter = Arkose::Asset::ImageFilter::Nearest;
-            input->use_mipmapping = true;
+            input->minFilter = ImageFilter::Nearest;
+            input->mipFilter = ImageFilter::Nearest;
+            input->useMipmapping = true;
             break;
         case TINYGLTF_TEXTURE_FILTER_NEAREST_MIPMAP_LINEAR:
-            input->min_filter = Arkose::Asset::ImageFilter::Nearest;
-            input->mip_filter = Arkose::Asset::ImageFilter::Linear;
-            input->use_mipmapping = true;
+            input->minFilter = ImageFilter::Nearest;
+            input->mipFilter = ImageFilter::Linear;
+            input->useMipmapping = true;
             break;
         case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_NEAREST:
-            input->min_filter = Arkose::Asset::ImageFilter::Linear;
-            input->mip_filter = Arkose::Asset::ImageFilter::Nearest;
-            input->use_mipmapping = true;
+            input->minFilter = ImageFilter::Linear;
+            input->mipFilter = ImageFilter::Nearest;
+            input->useMipmapping = true;
             break;
         case TINYGLTF_TEXTURE_FILTER_LINEAR_MIPMAP_LINEAR:
-            input->min_filter = Arkose::Asset::ImageFilter::Linear;
-            input->mip_filter = Arkose::Asset::ImageFilter::Linear;
-            input->use_mipmapping = true;
+            input->minFilter = ImageFilter::Linear;
+            input->mipFilter = ImageFilter::Linear;
+            input->useMipmapping = true;
             break;
         case -1:
             // "glTF 2.0 spec does not define default value for `minFilter` and `magFilter`. Set -1 in TinyGLTF(issue #186)"
-            input->min_filter = Arkose::Asset::ImageFilter::Linear;
-            input->mip_filter = Arkose::Asset::ImageFilter::Linear;
-            input->use_mipmapping = true;
+            input->minFilter = ImageFilter::Linear;
+            input->mipFilter = ImageFilter::Linear;
+            input->useMipmapping = true;
             break;
         default:
             ASSERT_NOT_REACHED();
@@ -421,22 +421,22 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
 
         switch (gltfSampler.magFilter) {
         case TINYGLTF_TEXTURE_FILTER_NEAREST:
-            input->mag_filter = Arkose::Asset::ImageFilter::Nearest;
+            input->magFilter = ImageFilter::Nearest;
             break;
         case TINYGLTF_TEXTURE_FILTER_LINEAR:
-            input->mag_filter = Arkose::Asset::ImageFilter::Linear;
+            input->magFilter = ImageFilter::Linear;
             break;
         case -1:
             // "glTF 2.0 spec does not define default value for `minFilter` and `magFilter`. Set -1 in TinyGLTF(issue #186)"
-            input->mag_filter = Arkose::Asset::ImageFilter::Linear;
+            input->magFilter = ImageFilter::Linear;
             break;
         default:
             ASSERT_NOT_REACHED();
         }
 
         // For now we only support on-line mip map generation
-        if (input->use_mipmapping) {
-            input->generate_mipmaps_in_runtime = true;
+        if (input->useMipmapping) {
+            input->generateMipmapsAtRuntime = true;
         }
 
         return input;
@@ -445,30 +445,30 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
     auto material = std::make_unique<MaterialAsset>();
 
     if (gltfMaterial.alphaMode == "OPAQUE") {
-        material->blend_mode = BlendMode::Opaque;
+        material->blendMode = BlendMode::Opaque;
     } else if (gltfMaterial.alphaMode == "BLEND") {
-        material->blend_mode = BlendMode::Translucent;
+        material->blendMode = BlendMode::Translucent;
     } else if (gltfMaterial.alphaMode == "MASK") {
-        material->blend_mode = BlendMode::Masked;
-        material->mask_cutoff = static_cast<float>(gltfMaterial.alphaCutoff);
+        material->blendMode = BlendMode::Masked;
+        material->maskCutoff = static_cast<float>(gltfMaterial.alphaCutoff);
     } else {
         ASSERT_NOT_REACHED();
     }
 
     std::vector<double> c = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
-    material->color_tint = Arkose::Asset::ColorRGBA((float)c[0], (float)c[1], (float)c[2], (float)c[3]);
+    material->colorTint = vec4((float)c[0], (float)c[1], (float)c[2], (float)c[3]);
 
     int baseColorIdx = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
-    material->base_color = toMaterialInput(baseColorIdx);
+    material->baseColor = toMaterialInput(baseColorIdx);
 
     int emissiveIdx = gltfMaterial.emissiveTexture.index;
-    material->emissive_color = toMaterialInput(emissiveIdx);
+    material->emissiveColor = toMaterialInput(emissiveIdx);
 
     int normalMapIdx = gltfMaterial.normalTexture.index;
-    material->normal_map = toMaterialInput(normalMapIdx);
+    material->normalMap = toMaterialInput(normalMapIdx);
 
     int metallicRoughnessIdx = gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
-    material->material_properties = toMaterialInput(metallicRoughnessIdx);
+    material->materialProperties = toMaterialInput(metallicRoughnessIdx);
 
     return material;
 }

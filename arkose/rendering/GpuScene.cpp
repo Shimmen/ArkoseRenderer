@@ -41,6 +41,10 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
     m_materialDataBuffer = backend().createBuffer(materialBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
     m_materialDataBuffer->setName("SceneMaterialData");
 
+    MaterialAsset defaultMaterialAsset {};
+    defaultMaterialAsset.colorTint = vec4(1.0f, 0.0f, 1.0f, 1.0f);
+    m_defaultMaterialHandle = registerMaterial(&defaultMaterialAsset);
+
     // TODO: Get rid of this placeholder that we use to write into all texture slots (i.e. support partially bound etc.)
     std::vector<Texture*> placeholderTexture = { m_magentaTexture.get() };
     m_materialBindingSet = backend().createBindingSet({ ShaderBinding::storageBuffer(*m_materialDataBuffer.get()),
@@ -559,8 +563,11 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
 
             ARKOSE_ASSERT(segmentAsset->material.type == Arkose::Asset::MaterialIndirection::path);
             std::string const& materialAssetPath = segmentAsset->material.Aspath()->path;
-            MaterialAsset* materialAsset = MaterialAsset::loadFromArkmat(materialAssetPath);
-            segment.material = registerMaterial(materialAsset);
+            if (MaterialAsset* materialAsset = MaterialAsset::loadFromArkmat(materialAssetPath)) {
+                segment.material = registerMaterial(materialAsset);
+            } else {
+                segment.material = m_defaultMaterialHandle;
+            }
 
             segment.blas = nullptr; // will be created on demand
 
@@ -634,10 +641,10 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset* materialAsset)
     // NOTE: A material in this context is very lightweight (for now) so we don't cache them
 
     // Register textures / material inputs
-    TextureHandle baseColor = registerMaterialTexture(materialAsset->base_color.get(), true, m_whiteTexture.get());
-    TextureHandle emissive = registerMaterialTexture(materialAsset->emissive_color.get(), true, m_blackTexture.get());
-    TextureHandle normalMap = registerMaterialTexture(materialAsset->normal_map.get(), false, m_normalMapBlueTexture.get());
-    TextureHandle metallicRoughness = registerMaterialTexture(materialAsset->material_properties.get(), false, m_blackTexture.get());
+    TextureHandle baseColor = registerMaterialTexture(materialAsset->baseColor, true, m_whiteTexture.get());
+    TextureHandle emissive = registerMaterialTexture(materialAsset->emissiveColor, true, m_blackTexture.get());
+    TextureHandle normalMap = registerMaterialTexture(materialAsset->normalMap, false, m_normalMapBlueTexture.get());
+    TextureHandle metallicRoughness = registerMaterialTexture(materialAsset->materialProperties, false, m_blackTexture.get());
 
     ShaderMaterial shaderMaterial {};
 
@@ -659,10 +666,10 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset* materialAsset)
         }
     };
 
-    shaderMaterial.blendMode = translateBlendModeToShaderMaterial(materialAsset->blend_mode);
-    shaderMaterial.maskCutoff = materialAsset->mask_cutoff;
+    shaderMaterial.blendMode = translateBlendModeToShaderMaterial(materialAsset->blendMode);
+    shaderMaterial.maskCutoff = materialAsset->maskCutoff;
 
-    shaderMaterial.colorTint = AssetTypes::convertColorRGBA(materialAsset->color_tint);
+    shaderMaterial.colorTint = materialAsset->colorTint;
 
     MaterialHandle handle = m_managedMaterials.add(std::move(shaderMaterial));
     m_pendingMaterialUpdates.push_back(handle);
@@ -684,18 +691,17 @@ void GpuScene::unregisterMaterial(MaterialHandle handle)
     m_managedMaterials.removeReference(handle, m_currentFrameIdx);
 }
 
-TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, bool sRGB, Texture* fallback)
+TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> const& input, bool sRGB, Texture* fallback)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (input == nullptr) {
+    if (not input.has_value()) {
         TextureHandle handle = registerTextureSlot();
         updateTextureUnowned(handle, fallback);
         return handle;
     }
 
-    ARKOSE_ASSERT(input->image.type == Arkose::Asset::ImageIndirection::path);
-    std::string const& imageAssetPath = input->image.Aspath()->path;
+    std::string const& imageAssetPath = std::string(input->pathToImage());
 
     // TODO: Cache on material inputs, beyond just the path! If we don't handle this we can't update materials in runtime like we want as the path won't change.
     // Also, ensure that even if ref-count is zero it should be here in the map, and we remove from the deferred-delete list when we increment the count again
@@ -711,12 +717,10 @@ TextureHandle GpuScene::registerMaterialTexture(MaterialInput* input, bool sRGB,
                 .arrayCount = 1,
                 .extent = { imageAsset.width(), imageAsset.height(), imageAsset.depth() },
                 .format = AssetTypes::convertFormat(imageAsset.format(), imageAsset.colorSpace(), sRGB),
-                .filter = Texture::Filters(AssetTypes::convertMinFilter(input.min_filter),
-                                           AssetTypes::convertMagFilter(input.mag_filter)),
-                .wrapMode = Texture::WrapModes(AssetTypes::convertWrapMode(input.wrap_modes.u()),
-                                               AssetTypes::convertWrapMode(input.wrap_modes.v()),
-                                               AssetTypes::convertWrapMode(input.wrap_modes.w())),
-                .mipmap = AssetTypes::convertMipFilter(input.mip_filter, input.use_mipmapping),
+                .filter = Texture::Filters(AssetTypes::convertMinFilter(input.minFilter),
+                                           AssetTypes::convertMagFilter(input.magFilter)),
+                .wrapMode = input.wrapModes,
+                .mipmap = AssetTypes::convertMipFilter(input.mipFilter, input.useMipmapping),
                 .multisampling = Texture::Multisampling::None
             };
         };

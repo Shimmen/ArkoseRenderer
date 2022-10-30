@@ -5,6 +5,9 @@
 #include "scene/camera/FpsCameraController.h"
 #include <memory>
 
+// TODO: Move BlendMode and ImageFilter out of the asset so we don't have to include this!
+#include "asset/MaterialAsset.h"
+
 class MeshViewerApp : public App {
 public:
     void setup(Scene&, RenderPipeline&) override;
@@ -39,9 +42,9 @@ private:
     void drawMeshHierarchyPanel();
     
     void drawMeshMaterialPanel();
-    bool drawWrapModeSelectorGui(const char* id, Arkose::Asset::WrapModes&);
-    bool drawBlendModeSelectorGui(const char* id, Arkose::Asset::BlendMode&);
-    bool drawImageFilterSelectorGui(const char* id, Arkose::Asset::ImageFilter&);
+    bool drawWrapModeSelectorGui(const char* id, Texture::WrapModes&);
+    bool drawBlendModeSelectorGui(const char* id, BlendMode&);
+    bool drawImageFilterSelectorGui(const char* id, ImageFilter&);
     
     void drawMeshPhysicsPanel();
 
