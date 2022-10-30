@@ -1,71 +1,88 @@
 {
-  base_color: {
-    image_type: "path",
-    image: {
-      path: "assets/sample/models/DamagedHelmet/Default_albedo.jpg"
-    },
-    wrap_modes: {
-      u: "Repeat",
-      v: "Repeat",
-      w: "Repeat"
-    },
-    generate_mipmaps_in_runtime: true,
-    user_data: {
-      integer: 0
+    "material": {
+        "baseColor": {
+            "nullopt": false,
+            "data": {
+                "image": {
+                    "index": 0,
+                    "data": "assets/sample/models/DamagedHelmet/Default_albedo.jpg"
+                },
+                "wrapModes": {
+                    "u": 0,
+                    "v": 0,
+                    "w": 0
+                },
+                "minFilter": "Linear",
+                "magFilter": "Linear",
+                "useMipmapping": true,
+                "generateMipmapsAtRuntime": true,
+                "mipFilter": "Linear"
+            }
+        },
+        "emissiveColor": {
+            "nullopt": false,
+            "data": {
+                "image": {
+                    "index": 0,
+                    "data": "assets/sample/models/DamagedHelmet/Default_emissive.jpg"
+                },
+                "wrapModes": {
+                    "u": 0,
+                    "v": 0,
+                    "w": 0
+                },
+                "minFilter": "Linear",
+                "magFilter": "Linear",
+                "useMipmapping": true,
+                "generateMipmapsAtRuntime": true,
+                "mipFilter": "Linear"
+            }
+        },
+        "normalMap": {
+            "nullopt": false,
+            "data": {
+                "image": {
+                    "index": 0,
+                    "data": "assets/sample/models/DamagedHelmet/Default_normal.jpg"
+                },
+                "wrapModes": {
+                    "u": 0,
+                    "v": 0,
+                    "w": 0
+                },
+                "minFilter": "Linear",
+                "magFilter": "Linear",
+                "useMipmapping": true,
+                "generateMipmapsAtRuntime": true,
+                "mipFilter": "Linear"
+            }
+        },
+        "materialProperties": {
+            "nullopt": false,
+            "data": {
+                "image": {
+                    "index": 0,
+                    "data": "assets/sample/models/DamagedHelmet/Default_metalRoughness.jpg"
+                },
+                "wrapModes": {
+                    "u": 0,
+                    "v": 0,
+                    "w": 0
+                },
+                "minFilter": "Linear",
+                "magFilter": "Linear",
+                "useMipmapping": true,
+                "generateMipmapsAtRuntime": true,
+                "mipFilter": "Linear"
+            }
+        },
+        "colorTint": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0,
+            "w": 1.0
+        },
+        "blendMode": "Opaque",
+        "maskCutoff": 1.0
     }
-  },
-  emissive_color: {
-    image_type: "path",
-    image: {
-      path: "assets/sample/models/DamagedHelmet/Default_emissive.jpg"
-    },
-    wrap_modes: {
-      u: "Repeat",
-      v: "Repeat",
-      w: "Repeat"
-    },
-    generate_mipmaps_in_runtime: true,
-    user_data: {
-      integer: 2
-    }
-  },
-  normal_map: {
-    image_type: "path",
-    image: {
-      path: "assets/sample/models/DamagedHelmet/Default_normal.jpg"
-    },
-    wrap_modes: {
-      u: "Repeat",
-      v: "Repeat",
-      w: "Repeat"
-    },
-    generate_mipmaps_in_runtime: true,
-    user_data: {
-      integer: 4
-    }
-  },
-  material_properties: {
-    image_type: "path",
-    image: {
-      path: "assets/sample/models/DamagedHelmet/Default_metalRoughness.jpg"
-    },
-    wrap_modes: {
-      u: "Repeat",
-      v: "Repeat",
-      w: "Repeat"
-    },
-    generate_mipmaps_in_runtime: true,
-    user_data: {
-      integer: 1
-    }
-  },
-  color_tint: {
-    r: 1.0,
-    g: 1.0,
-    b: 1.0,
-    a: 1.0
-  },
-  user_data: {
-    integer: 0
-  }
 }

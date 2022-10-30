@@ -1,11 +1,24 @@
 {
-  color_tint: {
-    r: 0.8,
-    g: 0.0,
-    b: 0.0,
-    a: 1.0
-  },
-  user_data: {
-    integer: 0
-  }
+    "material": {
+        "baseColor": {
+            "nullopt": true
+        },
+        "emissiveColor": {
+            "nullopt": true
+        },
+        "normalMap": {
+            "nullopt": true
+        },
+        "materialProperties": {
+            "nullopt": true
+        },
+        "colorTint": {
+            "x": 0.800000011920929,
+            "y": 0.0,
+            "z": 0.0,
+            "w": 1.0
+        },
+        "blendMode": "Opaque",
+        "maskCutoff": 1.0
+    }
 }

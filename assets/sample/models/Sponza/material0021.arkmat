@@ -1,56 +1,72 @@
 {
-  base_color: {
-    image_type: "path",
-    image: {
-      path: "assets/sample/models/Sponza/755318871556304029.jpg"
-    },
-    wrap_modes: {
-      u: "Repeat",
-      v: "Repeat",
-      w: "Repeat"
-    },
-    generate_mipmaps_in_runtime: true,
-    user_data: {
-      integer: 57
+    "material": {
+        "baseColor": {
+            "nullopt": false,
+            "data": {
+                "image": {
+                    "index": 0,
+                    "data": "assets/sample/models/Sponza/755318871556304029.jpg"
+                },
+                "wrapModes": {
+                    "u": 0,
+                    "v": 0,
+                    "w": 0
+                },
+                "minFilter": "Linear",
+                "magFilter": "Linear",
+                "useMipmapping": true,
+                "generateMipmapsAtRuntime": true,
+                "mipFilter": "Linear"
+            }
+        },
+        "emissiveColor": {
+            "nullopt": true
+        },
+        "normalMap": {
+            "nullopt": false,
+            "data": {
+                "image": {
+                    "index": 0,
+                    "data": "assets/sample/models/Sponza/3827035219084910048.jpg"
+                },
+                "wrapModes": {
+                    "u": 0,
+                    "v": 0,
+                    "w": 0
+                },
+                "minFilter": "Linear",
+                "magFilter": "Linear",
+                "useMipmapping": true,
+                "generateMipmapsAtRuntime": true,
+                "mipFilter": "Linear"
+            }
+        },
+        "materialProperties": {
+            "nullopt": false,
+            "data": {
+                "image": {
+                    "index": 0,
+                    "data": "assets/sample/models/Sponza/2411100444841994089.jpg"
+                },
+                "wrapModes": {
+                    "u": 0,
+                    "v": 0,
+                    "w": 0
+                },
+                "minFilter": "Linear",
+                "magFilter": "Linear",
+                "useMipmapping": true,
+                "generateMipmapsAtRuntime": true,
+                "mipFilter": "Linear"
+            }
+        },
+        "colorTint": {
+            "x": 0.5879999995231628,
+            "y": 0.5879999995231628,
+            "z": 0.5879999995231628,
+            "w": 1.0
+        },
+        "blendMode": "Opaque",
+        "maskCutoff": 1.0
     }
-  },
-  normal_map: {
-    image_type: "path",
-    image: {
-      path: "assets/sample/models/Sponza/3827035219084910048.jpg"
-    },
-    wrap_modes: {
-      u: "Repeat",
-      v: "Repeat",
-      w: "Repeat"
-    },
-    generate_mipmaps_in_runtime: true,
-    user_data: {
-      integer: 56
-    }
-  },
-  material_properties: {
-    image_type: "path",
-    image: {
-      path: "assets/sample/models/Sponza/2411100444841994089.jpg"
-    },
-    wrap_modes: {
-      u: "Repeat",
-      v: "Repeat",
-      w: "Repeat"
-    },
-    generate_mipmaps_in_runtime: true,
-    user_data: {
-      integer: 58
-    }
-  },
-  color_tint: {
-    r: 0.588,
-    g: 0.588,
-    b: 0.588,
-    a: 1.0
-  },
-  user_data: {
-    integer: 21
-  }
 }
