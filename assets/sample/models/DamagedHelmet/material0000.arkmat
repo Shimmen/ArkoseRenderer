@@ -8,9 +8,9 @@
                     "data": "assets/sample/models/DamagedHelmet/Default_albedo.jpg"
                 },
                 "wrapModes": {
-                    "u": 0,
-                    "v": 0,
-                    "w": 0
+                    "u": "Repeat",
+                    "v": "Repeat",
+                    "w": "Repeat"
                 },
                 "minFilter": "Linear",
                 "magFilter": "Linear",
@@ -27,9 +27,9 @@
                     "data": "assets/sample/models/DamagedHelmet/Default_emissive.jpg"
                 },
                 "wrapModes": {
-                    "u": 0,
-                    "v": 0,
-                    "w": 0
+                    "u": "Repeat",
+                    "v": "Repeat",
+                    "w": "Repeat"
                 },
                 "minFilter": "Linear",
                 "magFilter": "Linear",
@@ -46,9 +46,9 @@
                     "data": "assets/sample/models/DamagedHelmet/Default_normal.jpg"
                 },
                 "wrapModes": {
-                    "u": 0,
-                    "v": 0,
-                    "w": 0
+                    "u": "Repeat",
+                    "v": "Repeat",
+                    "w": "Repeat"
                 },
                 "minFilter": "Linear",
                 "magFilter": "Linear",
@@ -65,9 +65,9 @@
                     "data": "assets/sample/models/DamagedHelmet/Default_metalRoughness.jpg"
                 },
                 "wrapModes": {
-                    "u": 0,
-                    "v": 0,
-                    "w": 0
+                    "u": "Repeat",
+                    "v": "Repeat",
+                    "w": "Repeat"
                 },
                 "minFilter": "Linear",
                 "magFilter": "Linear",

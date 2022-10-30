@@ -8,9 +8,9 @@
                     "data": "assets/sample/models/Sponza/6151467286084645207.jpg"
                 },
                 "wrapModes": {
-                    "u": 0,
-                    "v": 0,
-                    "w": 0
+                    "u": "Repeat",
+                    "v": "Repeat",
+                    "w": "Repeat"
                 },
                 "minFilter": "Linear",
                 "magFilter": "Linear",
@@ -30,9 +30,9 @@
                     "data": "assets/sample/models/Sponza/7645212358685992005.jpg"
                 },
                 "wrapModes": {
-                    "u": 0,
-                    "v": 0,
-                    "w": 0
+                    "u": "Repeat",
+                    "v": "Repeat",
+                    "w": "Repeat"
                 },
                 "minFilter": "Linear",
                 "magFilter": "Linear",
@@ -49,9 +49,9 @@
                     "data": "assets/sample/models/Sponza/8783994986360286082.jpg"
                 },
                 "wrapModes": {
-                    "u": 0,
-                    "v": 0,
-                    "w": 0
+                    "u": "Repeat",
+                    "v": "Repeat",
+                    "w": "Repeat"
                 },
                 "minFilter": "Linear",
                 "magFilter": "Linear",
