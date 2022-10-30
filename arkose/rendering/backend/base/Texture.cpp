@@ -43,6 +43,46 @@ bool Texture::hasFloatingPointDataFormat() const
     }
 }
 
+Texture::MinFilter Texture::convertImageFilterToMinFilter(ImageFilter minFilter)
+{
+    switch (minFilter) {
+    case ImageFilter::Nearest:
+        return Texture::MinFilter::Nearest;
+    case ImageFilter::Linear:
+        return Texture::MinFilter::Linear;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+}
+
+Texture::MagFilter Texture::convertImageFilterToMagFilter(ImageFilter magFilter)
+{
+    switch (magFilter) {
+    case ImageFilter::Nearest:
+        return Texture::MagFilter::Nearest;
+    case ImageFilter::Linear:
+        return Texture::MagFilter::Linear;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+}
+
+Texture::Mipmap Texture::convertImageFilterToMipFilter(ImageFilter mipFilter, bool useMipmap)
+{
+    if (useMipmap) {
+        switch (mipFilter) {
+        case ImageFilter::Nearest:
+            return Texture::Mipmap::Nearest;
+        case ImageFilter::Linear:
+            return Texture::Mipmap::Linear;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+    } else {
+        return Texture::Mipmap::None;
+    }
+}
+
 Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageFormat, ColorSpace colorSpace)
 {
     if (colorSpace == ColorSpace::sRGB_encoded) {

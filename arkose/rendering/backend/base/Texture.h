@@ -1,6 +1,7 @@
 #pragma once
 
 #include "asset/ImageAsset.h"
+#include "rendering/ImageFilter.h"
 #include "rendering/backend/util/ClearValue.h"
 #include "rendering/backend/util/IndexType.h"
 #include "rendering/backend/Resource.h"
@@ -83,6 +84,9 @@ public:
                 && mag == rhs.mag;
         }
     };
+
+    static MinFilter convertImageFilterToMinFilter(ImageFilter);
+    static MagFilter convertImageFilterToMagFilter(ImageFilter);
 
     // TODO: Move out of Texture to be shared between assets and textures
     enum class WrapMode {
@@ -172,12 +176,13 @@ public:
         }
     };
 
-    // TODO: Move out of Texture to be shared between assets and textures
     enum class Mipmap {
         None,
         Nearest,
         Linear,
     };
+
+    static Mipmap convertImageFilterToMipFilter(ImageFilter, bool useMipmap);
 
     enum class Multisampling : uint32_t {
         None = 1,

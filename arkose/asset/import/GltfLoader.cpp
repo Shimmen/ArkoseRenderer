@@ -1,7 +1,6 @@
 #include "GltfLoader.h"
 
 #include "ark/aabb.h"
-#include "asset/AssetTypes.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "utility/Profiling.h"

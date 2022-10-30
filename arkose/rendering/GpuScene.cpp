@@ -1,6 +1,5 @@
 #include "GpuScene.h"
 
-#include "asset/AssetTypes.h"
 #include "asset/ImageAsset.h"
 #include "asset/MaterialAsset.h"
 #include "asset/StaticMeshAsset.h"
@@ -693,15 +692,18 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
             // TODO: Handle 2D arrays & 3D textures here too
             ARKOSE_ASSERT(imageAsset.depth() == 1);
 
+            // TODO: Also look at the color space specified for the material input?
+            ColorSpace colorSpace = sRGB ? ColorSpace::sRGB_encoded : ColorSpace::sRGB_linear;
+
             return Texture::Description {
                 .type = Texture::Type::Texture2D,
                 .arrayCount = 1,
                 .extent = { imageAsset.width(), imageAsset.height(), imageAsset.depth() },
-                .format = AssetTypes::convertFormat(imageAsset.format(), imageAsset.colorSpace(), sRGB),
-                .filter = Texture::Filters(AssetTypes::convertMinFilter(input.minFilter),
-                                           AssetTypes::convertMagFilter(input.magFilter)),
+                .format = Texture::convertImageFormatToTextureFormat(imageAsset.format(), colorSpace), // AssetTypes::convertFormat(imageAsset.format(), imageAsset.colorSpace(), sRGB),
+                .filter = Texture::Filters(Texture::convertImageFilterToMinFilter(input.minFilter),
+                                           Texture::convertImageFilterToMagFilter(input.magFilter)),
                 .wrapMode = input.wrapModes,
-                .mipmap = AssetTypes::convertMipFilter(input.mipFilter, input.useMipmapping),
+                .mipmap = Texture::convertImageFilterToMipFilter(input.mipFilter, input.useMipmapping),
                 .multisampling = Texture::Multisampling::None
             };
         };
