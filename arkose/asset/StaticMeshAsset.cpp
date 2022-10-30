@@ -12,7 +12,6 @@
 namespace {
     static std::mutex s_staticMeshAssetCacheMutex {};
     static std::unordered_map<std::string, std::unique_ptr<StaticMeshAsset>> s_staticMeshAssetCache {};
-    static std::unique_ptr<flatbuffers::Parser> s_staticMeshAssetParser {};
 }
 
 StaticMeshSegmentAsset::StaticMeshSegmentAsset() = default;

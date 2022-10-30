@@ -12,7 +12,6 @@
 namespace {
     static std::mutex s_materialAssetCacheMutex {};
     static std::unordered_map<std::string, std::unique_ptr<MaterialAsset>> s_materialAssetCache {};
-    static std::unique_ptr<flatbuffers::Parser> s_materialAssetParser {};
 }
 
 MaterialInput::MaterialInput() = default;

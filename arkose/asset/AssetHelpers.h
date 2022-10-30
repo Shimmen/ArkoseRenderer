@@ -3,7 +3,6 @@
 #include "core/Types.h"
 #include <array>
 #include <string_view>
-#include <flatbuffers/idl.h>
 
 enum class AssetStorage {
     Binary,
@@ -13,8 +12,6 @@ enum class AssetStorage {
 namespace AssetHelpers {
 
 bool isValidAssetPath(std::string_view assetPath, std::string_view extensionWithoutDot);
-
-std::unique_ptr<flatbuffers::Parser> createAssetRuntimeParser(std::string_view schemaFilename);
 
 }
 

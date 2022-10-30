@@ -9,7 +9,6 @@
 namespace {
 static std::mutex s_levelAssetCacheMutex {};
 static std::unordered_map<std::string, std::unique_ptr<LevelAsset>> s_levelAssetCache {};
-static std::unique_ptr<flatbuffers::Parser> s_levelAssetParser {};
 }
 
 LevelAsset::LevelAsset() = default;

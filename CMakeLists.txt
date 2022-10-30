@@ -25,27 +25,6 @@ add_subdirectory(deps)
 add_subdirectory(arklib)
 
 ##################################
-### Build flatbuffers schemas ####
-##################################
-
-function(build_flatbuffers_schema fbs_filename)
-  string(REPLACE ".fbs" "_generated.h" gen_filename ${fbs_filename})
-  get_filename_component(output_dir ${gen_filename} DIRECTORY)
-  add_custom_command(
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/${fbs_filename}"
-    OUTPUT  "${CMAKE_CURRENT_SOURCE_DIR}/${gen_filename}"
-    COMMAND flatc --cpp --scoped-enums --gen-object-api -o "${CMAKE_CURRENT_SOURCE_DIR}/${output_dir}" "${CMAKE_CURRENT_SOURCE_DIR}/${fbs_filename}"
-    COMMENT "Compiling flatbuffers schema file '${fbs_filename}'"
-    VERBATIM)
-endfunction()
-
-build_flatbuffers_schema("arkose/asset/CommonTypes.fbs")
-build_flatbuffers_schema("arkose/asset/ImageAsset.fbs")
-build_flatbuffers_schema("arkose/asset/LevelAsset.fbs")
-build_flatbuffers_schema("arkose/asset/MaterialAsset.fbs")
-build_flatbuffers_schema("arkose/asset/StaticMeshAsset.fbs")
-
-##################################
 ###### MAIN TARGET: ARKOSE #######
 ##################################
 
@@ -56,15 +35,10 @@ set(ARKOSE_SOURCES
     arkose/apps/MeshViewerApp.cpp
     arkose/apps/ShowcaseApp.cpp
     arkose/asset/AssetHelpers.cpp
-    arkose/asset/CommonTypes_generated.h
     arkose/asset/ImageAsset.cpp
-    arkose/asset/ImageAsset_generated.h
     arkose/asset/LevelAsset.cpp
-    arkose/asset/LevelAsset_generated.h
     arkose/asset/MaterialAsset.cpp
-    arkose/asset/MaterialAsset_generated.h
     arkose/asset/StaticMeshAsset.cpp
-    arkose/asset/StaticMeshAsset_generated.h
     arkose/asset/TextureCompressor.cpp
     arkose/asset/import/AssetImporter.cpp
     arkose/asset/import/GltfLoader.cpp
@@ -194,7 +168,6 @@ target_link_libraries(ArkoseRenderer PRIVATE
 
     # Asset packing
     cereal # serialisation
-    flatbuffers # binary & json serialization
     libzstd_static # generic lossless compression
     bc7enc_lib # texture compression
     )
@@ -235,20 +208,6 @@ endif()
 ##################################
 #### CUSTOM BUILD STEPS ETC. #####
 ##################################
-
-# Make flatbuffers schemas accessible in runtime relative to the exe-location
-
-set(ARKOSE_FLATBUFFERS_RUNTIME_DIR "${CMAKE_CURRENT_BINARY_DIR}/schema")
-
-add_custom_command(TARGET ArkoseRenderer PRE_BUILD
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${ARKOSE_FLATBUFFERS_RUNTIME_DIR})
-
-file(GLOB_RECURSE ARKOSE_FLATBUFFERS_SCHEMA_FILES "arkose/*.fbs")
-foreach(FLATBUFFERS_SCHEMA_FILE IN LISTS ARKOSE_FLATBUFFERS_SCHEMA_FILES)
-    add_custom_command(TARGET ArkoseRenderer PRE_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${FLATBUFFERS_SCHEMA_FILE} ${ARKOSE_FLATBUFFERS_RUNTIME_DIR}
-        COMMENT "Copying flatbuffers schema file '${CurrentHeaderFile}' at pre-build")
-endforeach()
 
 # Make assets & shaders accessible in runtime relative to the exe-location
 
