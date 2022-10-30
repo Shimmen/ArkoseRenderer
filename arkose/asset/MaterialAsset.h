@@ -13,9 +13,6 @@
 #include <string_view>
 #include <variant>
 
-// Generated flatbuffer code
-#include "MaterialAsset_generated.h"
-
 enum class BlendMode {
     Opaque,
     Masked,

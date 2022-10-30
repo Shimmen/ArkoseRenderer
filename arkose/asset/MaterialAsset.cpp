@@ -25,7 +25,7 @@ MaterialAsset* MaterialAsset::loadFromArkmat(std::string const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not AssetHelpers::isValidAssetPath(filePath, Arkose::Asset::MaterialAssetExtension())) {
+    if (not AssetHelpers::isValidAssetPath(filePath, MaterialAsset::AssetFileExtension)) {
         ARKOSE_LOG(Warning, "Trying to load material asset with invalid file extension: '{}'", filePath);
     }
 
@@ -85,7 +85,7 @@ bool MaterialAsset::writeToArkmat(std::string_view filePath, AssetStorage assetS
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not AssetHelpers::isValidAssetPath(filePath, Arkose::Asset::MaterialAssetExtension())) {
+    if (not AssetHelpers::isValidAssetPath(filePath, MaterialAsset::AssetFileExtension)) {
         ARKOSE_LOG(Error, "Trying to write material asset to file with invalid extension: '{}'", filePath);
         return false;
     }
