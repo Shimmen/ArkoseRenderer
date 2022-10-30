@@ -2,7 +2,6 @@
 
 #include "asset/AssetHelpers.h"
 #include "core/Types.h"
-#include <cereal/cereal.hpp>
 #include <string>
 #include <string_view>
 
@@ -105,6 +104,11 @@ private:
     std::string m_sourceAssetFilePath {};
     std::string m_assetFilePath {}; // (this file)
 };
+
+////////////////////////////////////////////////////////////////////////////////
+// Serialization
+
+#include <cereal/cereal.hpp>
 
 template<class Archive>
 void ImageAsset::serialize(Archive& archive)

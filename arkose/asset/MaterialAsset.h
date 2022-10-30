@@ -4,11 +4,6 @@
 #include "asset/ImageAsset.h"
 #include "asset/SerialisationHelpers.h"
 #include "rendering/backend/base/Texture.h"
-#include <cereal/cereal.hpp>
-#include <cereal/types/memory.hpp>
-#include <cereal/types/optional.hpp>
-#include <cereal/types/variant.hpp>
-#include <cereal/types/vector.hpp>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -147,6 +142,15 @@ public:
 private:
     std::string m_assetFilePath {};
 };
+
+////////////////////////////////////////////////////////////////////////////////
+// Serialization
+
+#include <cereal/cereal.hpp>
+#include <cereal/types/memory.hpp>
+#include <cereal/types/optional.hpp>
+#include <cereal/types/variant.hpp>
+#include <cereal/types/vector.hpp>
 
 template<class Archive>
 void MaterialInput::serialize(Archive& archive)
