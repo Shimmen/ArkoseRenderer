@@ -10,7 +10,7 @@
 #include <unordered_map>
 
 // Shared shader data
-#include "BlendMode.h"
+//#include "BlendMode.h"
 
 class Mesh;
 class Registry;

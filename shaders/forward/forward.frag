@@ -6,10 +6,10 @@
 #include <common/gBuffer.glsl>
 #include <common/iesProfile.glsl>
 #include <common/namedUniforms.glsl>
-#include <shared/BlendMode.h>
 #include <shared/CameraState.h>
-#include <shared/SceneData.h>
 #include <shared/LightData.h>
+#include <shared/SceneData.h>
+#include <shared/ShaderBlendMode.h>
 
 layout(location = 0) flat in int vMaterialIndex;
 layout(location = 1) in vec2 vTexCoord;
