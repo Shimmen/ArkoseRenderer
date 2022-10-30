@@ -43,7 +43,7 @@ static void validateTextureDescription(Texture::Description desc)
         ARKOSE_LOG(Fatal, "Registry: Texture array count must be >= 1 but is {}", desc.arrayCount);
 }
 
-Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
+Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, ImageWrapModes wrapMode)
 {
     Texture::Description desc {
         .type = Texture::Type::Texture2D,
@@ -64,7 +64,7 @@ Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Text
     return *m_textures.back();
 }
 
-Texture& Registry::createTextureArray(uint32_t itemCount, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
+Texture& Registry::createTextureArray(uint32_t itemCount, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, ImageWrapModes wrapMode)
 {
     Texture::Description desc {
         .type = Texture::Type::Texture2D,
@@ -93,7 +93,7 @@ Texture& Registry::createMultisampledTexture2D(Extent2D extent, Texture::Format 
         .extent = Extent3D(extent, 1),
         .format = format,
         .filter = Texture::Filters::linear(),
-        .wrapMode = Texture::WrapModes::repeatAll(),
+        .wrapMode = ImageWrapModes::repeatAll(),
         .mipmap = mipmap,
         .multisampling = multisampling
     };
@@ -114,7 +114,7 @@ Texture& Registry::createCubemapTexture(Extent2D extent, Texture::Format format)
         .extent = Extent3D(extent, 1),
         .format = format,
         .filter = Texture::Filters::linear(),
-        .wrapMode = Texture::WrapModes::clampAllToEdge(),
+        .wrapMode = ImageWrapModes::clampAllToEdge(),
         .mipmap = Texture::Mipmap::None,
         .multisampling = Texture::Multisampling::None
     };
@@ -126,7 +126,7 @@ Texture& Registry::createCubemapTexture(Extent2D extent, Texture::Format format)
     return *m_textures.back();
 }
 
-std::pair<Texture&, Registry::ReuseMode> Registry::createOrReuseTexture2D(const std::string& name, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
+std::pair<Texture&, Registry::ReuseMode> Registry::createOrReuseTexture2D(const std::string& name, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, ImageWrapModes wrapMode)
 {
     if (m_previousRegistry) {
         for (std::unique_ptr<Texture>& oldTexture : m_previousRegistry->m_textures) {
@@ -158,7 +158,7 @@ std::pair<Texture&, Registry::ReuseMode> Registry::createOrReuseTexture2D(const 
     return { texture, ReuseMode::Created };
 }
 
-Texture& Registry::createOrReuseTextureArray(const std::string& name, uint32_t itemCount, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, Texture::WrapModes wrapMode)
+Texture& Registry::createOrReuseTextureArray(const std::string& name, uint32_t itemCount, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, ImageWrapModes wrapMode)
 {
     if (m_previousRegistry) {
         for (std::unique_ptr<Texture>& oldTexture : m_previousRegistry->m_textures) {
@@ -232,7 +232,7 @@ Texture& Registry::loadTexture2D(const std::string& imagePath, bool srgb, bool g
 {
     SCOPED_PROFILE_ZONE()
 
-    auto texture = Texture::createFromImagePath(backend(), imagePath, srgb, generateMipmaps, Texture::WrapModes::clampAllToEdge());
+    auto texture = Texture::createFromImagePath(backend(), imagePath, srgb, generateMipmaps, ImageWrapModes::clampAllToEdge());
     texture->setOwningRegistry({}, this);
 
     m_textures.push_back(std::move(texture));
@@ -243,7 +243,7 @@ Texture& Registry::loadTextureArrayFromFileSequence(const std::string& imagePath
 {
     SCOPED_PROFILE_ZONE()
 
-    auto texture = Texture::createFromImagePathSequence(backend(), imagePathPattern, srgb, generateMipmaps, Texture::WrapModes::clampAllToEdge());
+    auto texture = Texture::createFromImagePathSequence(backend(), imagePathPattern, srgb, generateMipmaps, ImageWrapModes::clampAllToEdge());
     texture->setOwningRegistry({}, this);
 
     m_textures.push_back(std::move(texture));

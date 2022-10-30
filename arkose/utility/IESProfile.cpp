@@ -77,7 +77,7 @@ std::unique_ptr<Texture> IESProfile::createLookupTexture(Backend& backend, int s
         .extent = { static_cast<uint32_t>(size), static_cast<uint32_t>(size), 1 },
         .format = Texture::Format::R32F,
         .filter = Texture::Filters::linear(),
-        .wrapMode = Texture::WrapModes::clampAllToEdge(),
+        .wrapMode = ImageWrapModes::clampAllToEdge(),
         .mipmap = Texture::Mipmap::None,
         .multisampling = Texture::Multisampling::None
     };

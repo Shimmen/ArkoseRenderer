@@ -2,6 +2,7 @@
 
 #include "asset/ImageAsset.h"
 #include "rendering/ImageFilter.h"
+#include "rendering/ImageWrapMode.h"
 #include "rendering/backend/util/ClearValue.h"
 #include "rendering/backend/util/IndexType.h"
 #include "rendering/backend/Resource.h"
@@ -51,6 +52,7 @@ public:
     };
 
     // TODO: Move out of Texture to be shared between assets and textures
+    // TODO: Also add some option for trilinear here!
     struct Filters {
         MinFilter min;
         MagFilter mag;
@@ -88,94 +90,6 @@ public:
     static MinFilter convertImageFilterToMinFilter(ImageFilter);
     static MagFilter convertImageFilterToMagFilter(ImageFilter);
 
-    // TODO: Move out of Texture to be shared between assets and textures
-    enum class WrapMode {
-        Repeat,
-        MirroredRepeat,
-        ClampToEdge,
-    };
-    static constexpr std::array<const char*, 3> WrapModeNames = { "Repeat", "MirroredRepeat", "ClampToEdge" };
-    static const char* WrapModeName(WrapMode wrapMode)
-    {
-        size_t idx = static_cast<size_t>(wrapMode);
-        return WrapModeNames[idx];
-    }
-    static constexpr u64 WrapMode_Min = 0;
-    static constexpr u64 WrapMode_Max = 2;
-
-    template<class Archive>
-    std::string save_minimal(Archive const&, WrapMode const& wrapMode)
-    {
-        return WrapModeName(wrapMode);
-    }
-
-    template<class Archive>
-    void load_minimal(Archive const&, WrapMode& wrapMode, std::string const& value)
-    {
-        if (value == WrapModeName(WrapMode::Repeat)) {
-            wrapMode = WrapMode::Repeat;
-        } else if (value == WrapModeName(WrapMode::MirroredRepeat)) {
-            wrapMode = WrapMode::MirroredRepeat;
-        } else if (value == WrapModeName(WrapMode::ClampToEdge)) {
-            wrapMode = WrapMode::ClampToEdge;
-        }
-    }
-
-    // TODO: Move out of Texture to be shared between assets and textures
-    struct WrapModes {
-        WrapMode u { WrapMode::Repeat };
-        WrapMode v { WrapMode::Repeat };
-        WrapMode w { WrapMode::Repeat };
-
-        WrapModes() = default;
-        constexpr WrapModes(WrapMode u, WrapMode v)
-            : u(u)
-            , v(v)
-            , w(WrapMode::ClampToEdge)
-        {
-        }
-        constexpr WrapModes(WrapMode u, WrapMode v, WrapMode w)
-            : u(u)
-            , v(v)
-            , w(w)
-        {
-        }
-
-        static constexpr WrapModes repeatAll()
-        {
-            return {
-                WrapMode::Repeat,
-                WrapMode::Repeat,
-                WrapMode::Repeat
-            };
-        }
-
-        static constexpr WrapModes mirroredRepeatAll()
-        {
-            return {
-                WrapMode::MirroredRepeat,
-                WrapMode::MirroredRepeat,
-                WrapMode::MirroredRepeat
-            };
-        }
-
-        static constexpr WrapModes clampAllToEdge()
-        {
-            return {
-                WrapMode::ClampToEdge,
-                WrapMode::ClampToEdge,
-                WrapMode::ClampToEdge
-            };
-        }
-
-        bool operator==(const WrapModes& rhs) const
-        {
-            return u == rhs.u
-                && v == rhs.v
-                && w == rhs.w;
-        }
-    };
-
     enum class Mipmap {
         None,
         Nearest,
@@ -201,7 +115,7 @@ public:
         Format format { Format::RGBA8 };
 
         Filters filter { Filters::nearest() };
-        WrapModes wrapMode { WrapModes::clampAllToEdge() };
+        ImageWrapModes wrapMode { ImageWrapModes::clampAllToEdge() };
 
         Mipmap mipmap { Mipmap::None };
         Multisampling multisampling { Multisampling::None };
@@ -226,8 +140,8 @@ public:
 
     static std::unique_ptr<Texture> createFromPixel(Backend&, vec4 pixelColor, bool sRGB);
 
-    static std::unique_ptr<Texture> createFromImagePath(Backend&, const std::string& imagePath, bool sRGB, bool generateMipmaps, Texture::WrapModes);
-    static std::unique_ptr<Texture> createFromImagePathSequence(Backend&, const std::string& imagePathSequencePattern, bool sRGB, bool generateMipmaps, Texture::WrapModes);
+    static std::unique_ptr<Texture> createFromImagePath(Backend&, const std::string& imagePath, bool sRGB, bool generateMipmaps, ImageWrapModes);
+    static std::unique_ptr<Texture> createFromImagePathSequence(Backend&, const std::string& imagePathSequencePattern, bool sRGB, bool generateMipmaps, ImageWrapModes);
 
     bool hasFloatingPointDataFormat() const;
 
@@ -253,7 +167,7 @@ public:
     [[nodiscard]] MinFilter minFilter() const { return m_description.filter.min; }
     [[nodiscard]] MagFilter magFilter() const { return m_description.filter.mag; }
     [[nodiscard]] Filters filters() const { return m_description.filter; }
-    [[nodiscard]] WrapModes wrapMode() const { return m_description.wrapMode; }
+    [[nodiscard]] ImageWrapModes wrapMode() const { return m_description.wrapMode; }
 
     [[nodiscard]] Mipmap mipmap() const { return m_description.mipmap; }
     [[nodiscard]] bool hasMipmaps() const;
@@ -319,17 +233,6 @@ namespace std {
     };
 
     template<>
-    struct hash<Texture::WrapModes> {
-        std::size_t operator()(const Texture::WrapModes& wrapModes) const
-        {
-            auto uHash = std::hash<Texture::WrapMode>()(wrapModes.u);
-            auto vHash = std::hash<Texture::WrapMode>()(wrapModes.v);
-            auto wHash = std::hash<Texture::WrapMode>()(wrapModes.w);
-            return hashCombine(uHash, hashCombine(vHash, wHash));
-        }
-    };
-
-    template<>
     struct hash<Texture::Description> {
         std::size_t operator()(const Texture::Description& desc) const
         {
@@ -339,7 +242,7 @@ namespace std {
                                            hashCombine(std::hash<Extent3D>()(desc.extent),
                                                        hashCombine(std::hash<Texture::Format>()(desc.format),
                                                                    hashCombine(std::hash<Texture::Filters>()(desc.filter),
-                                                                               hashCombine(std::hash<Texture::WrapModes>()(desc.wrapMode),
+                                                                               hashCombine(std::hash<ImageWrapModes>()(desc.wrapMode),
                                                                                            hashCombine(std::hash<Texture::Mipmap>()(desc.mipmap),
                                                                                                        std::hash<Texture::Multisampling>()(desc.multisampling))))))));
         }

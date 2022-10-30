@@ -17,10 +17,10 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
 
     Texture& mainTexture = *reg.getTexture("SceneColor");
 
-    Texture& downsampleTex = reg.createTexture2D(mainTexture.extent(), Texture::Format::RGBA16F, Texture::Filters::linear(), Texture::Mipmap::Linear, Texture::WrapModes::clampAllToEdge());
+    Texture& downsampleTex = reg.createTexture2D(mainTexture.extent(), Texture::Format::RGBA16F, Texture::Filters::linear(), Texture::Mipmap::Linear, ImageWrapModes::clampAllToEdge());
     downsampleTex.setName("BloomDownsampleTexture");
 
-    Texture& upsampleTex = reg.createTexture2D(mainTexture.extent(), Texture::Format::RGBA16F, Texture::Filters::linear(), Texture::Mipmap::Linear, Texture::WrapModes::clampAllToEdge());
+    Texture& upsampleTex = reg.createTexture2D(mainTexture.extent(), Texture::Format::RGBA16F, Texture::Filters::linear(), Texture::Mipmap::Linear, ImageWrapModes::clampAllToEdge());
     upsampleTex.setName("BloomUpsampleTexture");
 
     for (uint32_t i = 1; i < NumMipLevels; ++i) {

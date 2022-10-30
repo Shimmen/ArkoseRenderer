@@ -42,7 +42,7 @@ public:
 
         bool sRGB { false }; // TODO: Replace with Texture::ColorMode or similar!
         bool mipmapped { true }; // TODO: Use more detailed description (how do we want to filter between mips?)
-        Texture::WrapModes wrapMode { Texture::WrapModes::repeatAll() };
+        ImageWrapModes wrapMode { ImageWrapModes::repeatAll() };
         Texture::Filters filters { Texture::Filters::linear() };
 
         bool hasPath() const { return !path.empty(); }
@@ -88,7 +88,7 @@ struct hash<Material::TextureDescription> {
         auto fallbackColorHash = std::hash<uint64_t>()(fallbackUniqueInt);
 
         auto settingsHash = hashCombine(hashCombine(std::hash<bool>()(desc.sRGB), std::hash<bool>()(desc.mipmapped)),
-                                        hashCombine(std::hash<Texture::WrapModes>()(desc.wrapMode), std::hash<Texture::Filters>()(desc.filters)));
+                                        hashCombine(std::hash<ImageWrapModes>()(desc.wrapMode), std::hash<Texture::Filters>()(desc.filters)));
 
         return hashCombine(hashCombine(dataHash, fallbackColorHash), settingsHash);
     }

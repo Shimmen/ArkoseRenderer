@@ -34,7 +34,7 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
                                              Texture::Format::Depth32F,
                                              Texture::Filters::linear(),
                                              Texture::Mipmap::None,
-                                             Texture::WrapModes::clampAllToEdge());
+                                             ImageWrapModes::clampAllToEdge());
     shadowMap.setName("DirectionalLightShadowMap");
     RenderTarget& shadowMapRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &shadowMap } });
 

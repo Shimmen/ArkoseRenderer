@@ -1037,7 +1037,7 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
             mockTexture->m_description.extent = m_swapchainExtent;
             mockTexture->m_description.format = Texture::Format::Unknown;
             mockTexture->m_description.filter = Texture::Filters::nearest();
-            mockTexture->m_description.wrapMode = Texture::WrapModes::repeatAll();
+            mockTexture->m_description.wrapMode = ImageWrapModes::repeatAll();
             mockTexture->m_description.mipmap = Texture::Mipmap::None;
             mockTexture->m_description.multisampling = Texture::Multisampling::None;
 
@@ -1057,7 +1057,7 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
                                              .extent = m_swapchainExtent,
                                              .format = Texture::Format::Depth32F,
                                              .filter = Texture::Filters::nearest(),
-                                             .wrapMode = Texture::WrapModes::repeatAll(),
+                                             .wrapMode = ImageWrapModes::repeatAll(),
                                              .mipmap = Texture::Mipmap::None,
                                              .multisampling = Texture::Multisampling::None };
             swapchainImageContext->depthTexture = std::make_unique<VulkanTexture>(*this, depthDesc);

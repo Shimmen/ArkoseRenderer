@@ -5,7 +5,9 @@
 #include "asset/SerialisationHelpers.h"
 #include "rendering/BlendMode.h"
 #include "rendering/ImageFilter.h"
+#include "rendering/ImageWrapMode.h"
 #include "rendering/backend/base/Texture.h"
+#include <optional>
 #include <string>
 #include <string_view>
 #include <variant>
@@ -26,7 +28,7 @@ public:
     // Path to an image or an image asset directly
     std::variant<std::string, std::weak_ptr<ImageAsset>> image;
 
-    Texture::WrapModes wrapModes { Texture::WrapModes::repeatAll() };
+    ImageWrapModes wrapModes { ImageWrapModes::repeatAll() };
 
     ImageFilter minFilter { ImageFilter::Linear };
     ImageFilter magFilter { ImageFilter::Linear };

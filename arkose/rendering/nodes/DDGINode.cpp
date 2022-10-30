@@ -245,7 +245,7 @@ Texture& DDGINode::createProbeAtlas(Registry& reg, const std::string& name, cons
                                 probeGrid.gridDimensions.depth() * sizePerTile };
     Extent2D atlasExtents { tileSheetExtents.width() * numTileSheets, tileSheetExtents.height() };
     
-    auto [atlasTexture, reuseMode] = reg.createOrReuseTexture2D(name, atlasExtents, format, Texture::Filters::linear(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
+    auto [atlasTexture, reuseMode] = reg.createOrReuseTexture2D(name, atlasExtents, format, Texture::Filters::linear(), Texture::Mipmap::None, ImageWrapModes::clampAllToEdge());
 
     if (reuseMode == Registry::ReuseMode::Created) {
         atlasTexture.clear(clearColor);

@@ -155,13 +155,13 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
         ASSERT_NOT_REACHED();
     }
 
-    auto wrapModeToAddressMode = [](WrapMode mode) -> VkSamplerAddressMode {
+    auto wrapModeToAddressMode = [](ImageWrapMode mode) -> VkSamplerAddressMode {
         switch (mode) {
-        case WrapMode::Repeat:
+        case ImageWrapMode::Repeat:
             return VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        case WrapMode::MirroredRepeat:
+        case ImageWrapMode::MirroredRepeat:
             return VK_SAMPLER_ADDRESS_MODE_MIRRORED_REPEAT;
-        case WrapMode::ClampToEdge:
+        case ImageWrapMode::ClampToEdge:
             return VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
         default:
             ASSERT_NOT_REACHED();

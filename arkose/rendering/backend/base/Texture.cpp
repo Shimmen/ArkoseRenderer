@@ -188,7 +188,7 @@ std::unique_ptr<Texture> Texture::createFromPixel(Backend& backend, vec4 pixelCo
             ? Texture::Format::sRGBA8
             : Texture::Format::RGBA8,
         .filter = Texture::Filters::nearest(),
-        .wrapMode = Texture::WrapModes::repeatAll(),
+        .wrapMode = ImageWrapModes::repeatAll(),
         .mipmap = Texture::Mipmap::None,
         .multisampling = Texture::Multisampling::None
     };
@@ -200,7 +200,7 @@ std::unique_ptr<Texture> Texture::createFromPixel(Backend& backend, vec4 pixelCo
 }
 
 
-std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const std::string& imagePath, bool sRGB, bool generateMipmaps, Texture::WrapModes wrapModes)
+std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const std::string& imagePath, bool sRGB, bool generateMipmaps, ImageWrapModes wrapModes)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -239,7 +239,7 @@ std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const st
     return nullptr;
 }
 
-std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, const std::string& imagePathSequencePattern, bool sRGB, bool generateMipmaps, Texture::WrapModes)
+std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, const std::string& imagePathSequencePattern, bool sRGB, bool generateMipmaps, ImageWrapModes)
 {
     SCOPED_PROFILE_ZONE()
 
@@ -287,7 +287,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
         .extent = { asset0.width(), asset0.height(), 1 },
         .format = format,
         .filter = Texture::Filters::linear(),
-        .wrapMode = Texture::WrapModes::repeatAll(),
+        .wrapMode = ImageWrapModes::repeatAll(),
         .mipmap = mipmapMode,
         .multisampling = Texture::Multisampling::None
     };

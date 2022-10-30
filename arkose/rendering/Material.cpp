@@ -38,13 +38,13 @@ std::string Material::TextureDescription::toString() const
         result += " with mipmaps";
     }
 
-    auto wrapModeToString = [](Texture::WrapMode wrapMode) -> const char* {
+    auto wrapModeToString = [](ImageWrapMode wrapMode) -> const char* {
         switch (wrapMode) {
-        case Texture::WrapMode::Repeat:
+        case ImageWrapMode::Repeat:
             return "Repeat";
-        case Texture::WrapMode::MirroredRepeat:
+        case ImageWrapMode::MirroredRepeat:
             return "MirroredRepeat";
-        case Texture::WrapMode::ClampToEdge:
+        case ImageWrapMode::ClampToEdge:
             return "ClampToEdge";
         default:
             ASSERT_NOT_REACHED();

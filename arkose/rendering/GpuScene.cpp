@@ -135,7 +135,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         auto nearestFilter = Texture::Filters::nearest();
         auto linerFilter = Texture::Filters::linear();
         auto mipMode = Texture::Mipmap::None;
-        auto wrapMode = Texture::WrapModes::clampAllToEdge();
+        auto wrapMode = ImageWrapModes::clampAllToEdge();
 
         Texture& depthTexture = reg.createTexture2D(windowExtent, Texture::Format::Depth24Stencil8, nearestFilter, mipMode, wrapMode);
         reg.publish("SceneDepth", depthTexture);
@@ -469,7 +469,7 @@ void GpuScene::updateEnvironmentMap(EnvironmentMap& environmentMap)
 
     m_environmentMapTexture = environmentMap.assetPath.empty()
         ? Texture::createFromPixel(backend(), vec4(1.0f), true)
-        : Texture::createFromImagePath(backend(), environmentMap.assetPath, true, false, Texture::WrapModes::repeatAll());
+        : Texture::createFromImagePath(backend(), environmentMap.assetPath, true, false, ImageWrapModes::repeatAll());
 }
 
 Texture& GpuScene::environmentMapTexture()

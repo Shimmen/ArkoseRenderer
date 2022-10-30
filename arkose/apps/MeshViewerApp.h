@@ -42,7 +42,7 @@ private:
     void drawMeshHierarchyPanel();
     
     void drawMeshMaterialPanel();
-    bool drawWrapModeSelectorGui(const char* id, Texture::WrapModes&);
+    bool drawWrapModeSelectorGui(const char* id, ImageWrapModes&);
     bool drawBlendModeSelectorGui(const char* id, BlendMode&);
     bool drawImageFilterSelectorGui(const char* id, ImageFilter&);
     

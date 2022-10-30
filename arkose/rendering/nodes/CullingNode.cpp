@@ -95,6 +95,8 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
                                                                    .previousFrameWorldFromLocal = instance->transform.previousFrameWorldMatrix(),
                                                                    .materialIndex = meshSegment.material.indexOfType<int>() },
                                                      .localBoundingSphere = vec4(lod.boundingSphere.center(), lod.boundingSphere.radius()),
+                                                     .aabbMin = vec4(lod.boundingBox.min, 0.0),
+                                                     .aabbMax = vec4(lod.boundingBox.max, 0.0),
                                                      .indexCount = drawCall.indexCount,
                                                      .firstIndex = drawCall.firstIndex,
                                                      .vertexOffset = drawCall.vertexOffset,

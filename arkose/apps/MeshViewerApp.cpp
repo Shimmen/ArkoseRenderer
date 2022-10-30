@@ -298,27 +298,27 @@ void MeshViewerApp::drawMeshMaterialPanel()
     ImGui::End();
 }
 
-bool MeshViewerApp::drawWrapModeSelectorGui(const char* id, Texture::WrapModes& wrapModes)
+bool MeshViewerApp::drawWrapModeSelectorGui(const char* id, ImageWrapModes& wrapModes)
 {
     bool didChange = false;
 
-    auto drawWrapModeComboBox = [&](const char* innerId, Texture::WrapMode& wrapMode) -> bool {
+    auto drawWrapModeComboBox = [&](const char* innerId, ImageWrapMode& wrapMode) -> bool {
 
         int currentWrapModeIdx = static_cast<int>(wrapMode);
-        const char* currentWrapModeString = Texture::WrapModeName(wrapMode);
+        const char* currentWrapModeString = ImageWrapModeName(wrapMode);
 
         if (ImGui::BeginCombo(innerId, currentWrapModeString)) {
 
             bool valueChanged = false;
 
-            int wrapModeMin = static_cast<int>(Texture::WrapMode_Min);
-            int wrapModeMax = static_cast<int>(Texture::WrapMode_Max);
+            int wrapModeMin = static_cast<int>(ImageWrapMode_Min);
+            int wrapModeMax = static_cast<int>(ImageWrapMode_Max);
 
             for (int i = wrapModeMin; i <= wrapModeMax; i++) {
                 ImGui::PushID(i);
 
-                auto itemWrapMode = static_cast<Texture::WrapMode>(i);
-                const char* itemText = Texture::WrapModeName(itemWrapMode);
+                auto itemWrapMode = static_cast<ImageWrapMode>(i);
+                const char* itemText = ImageWrapModeName(itemWrapMode);
 
                 if (ImGui::Selectable(itemText, i == currentWrapModeIdx)) {
                     wrapMode = itemWrapMode;

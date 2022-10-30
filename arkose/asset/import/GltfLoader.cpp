@@ -362,20 +362,20 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
         // Write glTF image index to user data until we can resolve file paths
         input->userData = texIndex;
 
-        auto wrapModeFromTinyGltf = [](int filterMode) -> Texture::WrapMode {
+        auto wrapModeFromTinyGltf = [](int filterMode) -> ImageWrapMode {
             switch (filterMode) {
             case TINYGLTF_TEXTURE_WRAP_REPEAT:
-                return Texture::WrapMode::Repeat;
+                return ImageWrapMode::Repeat;
             case TINYGLTF_TEXTURE_WRAP_CLAMP_TO_EDGE:
-                return Texture::WrapMode::ClampToEdge;
+                return ImageWrapMode::ClampToEdge;
             case TINYGLTF_TEXTURE_WRAP_MIRRORED_REPEAT:
-                return Texture::WrapMode::MirroredRepeat;
+                return ImageWrapMode::MirroredRepeat;
             default:
                 ASSERT_NOT_REACHED();
             }
         };
 
-        input->wrapModes = Texture::WrapModes(wrapModeFromTinyGltf(gltfSampler.wrapS),
+        input->wrapModes = ImageWrapModes(wrapModeFromTinyGltf(gltfSampler.wrapS),
                                                 wrapModeFromTinyGltf(gltfSampler.wrapT),
                                                 wrapModeFromTinyGltf(gltfSampler.wrapR));
 

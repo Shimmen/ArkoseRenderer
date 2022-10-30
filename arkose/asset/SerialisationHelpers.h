@@ -1,19 +1,9 @@
 #pragma once
 
-#include "core/math/Sphere.h"
-#include "rendering/backend/base/Texture.h"
 #include <ark/aabb.h>
 #include <ark/vector.h>
 #include <ark/quaternion.h>
 #include <cereal/cereal.hpp>
-
-template<class Archive>
-void serialize(Archive& archive, Texture::WrapModes& wrapModes)
-{
-    archive(cereal::make_nvp("u", wrapModes.u),
-            cereal::make_nvp("v", wrapModes.v),
-            cereal::make_nvp("w", wrapModes.w));
-}
 
 namespace ark {
 

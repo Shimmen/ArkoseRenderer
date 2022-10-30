@@ -20,7 +20,7 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
                                                   Texture::Format::Depth32F,
                                                   Texture::Filters::linear(),
                                                   Texture::Mipmap::None,
-                                                  Texture::WrapModes::clampAllToEdge());
+                                                  ImageWrapModes::clampAllToEdge());
     reg.publish("LocalLightShadowMapAtlas", shadowMapAtlas);
 
     // TODO: Handle many lights!

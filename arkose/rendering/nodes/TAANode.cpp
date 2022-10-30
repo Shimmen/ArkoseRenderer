@@ -32,7 +32,7 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(GpuScene& scene, Registry
     Texture& currentFrameVelocity = *reg.getTexture("SceneNormalVelocity");
 
     Texture& historyTexture = reg.createTexture2D(accumulationTexture.extent(), accumulationTexture.format(),
-                                                  Texture::Filters::linear(), Texture::Mipmap::None, Texture::WrapModes::clampAllToEdge());
+                                                  Texture::Filters::linear(), Texture::Mipmap::None, ImageWrapModes::clampAllToEdge());
 
     BindingSet& taaBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(accumulationTexture, ShaderStage::Compute),
                                                        ShaderBinding::sampledTexture(currentFrameTexture, ShaderStage::Compute),
