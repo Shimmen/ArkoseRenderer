@@ -157,24 +157,28 @@ void MeshViewerApp::drawMeshHierarchyPanel()
     if (m_targetAsset != nullptr) {
 
         ImGui::Checkbox("Draw bounding box", &m_drawBoundingBox);
+        if (m_drawBoundingBox) {
+            ark::aabb3 aabb = m_targetAsset->boundingBox;
+            DebugDrawer::get().drawBox(aabb.min, aabb.max, vec3(1.0f, 1.0f, 1.0f));
+        }
 
         if (ImGui::BeginTabBar("MeshViewerLODTabBar")) {
 
-            for (uint32_t lodIdx = 0; lodIdx < targetAsset().lods.size(); ++lodIdx) {
+            for (uint32_t lodIdx = 0; lodIdx < targetAsset().LODs.size(); ++lodIdx) {
                 std::string lodLabel = std::format("LOD{}", lodIdx);
                 if (ImGui::BeginTabItem(lodLabel.c_str())) {
 
                     m_selectedLodIdx = lodIdx;
-                    StaticMeshLODAsset& lod = *targetAsset().lods[lodIdx];
+                    StaticMeshLODAsset& lod = targetAsset().LODs[lodIdx];
 
-                    if (m_selectedSegmentIdx >= lod.mesh_segments.size()) {
+                    if (m_selectedSegmentIdx >= lod.meshSegments.size()) {
                         m_selectedSegmentIdx = 0;
                     }
 
                     // Preload the cache first time around (or if the segment count is massive)..
                     // We can never have this list grow during rendering of this ImGui frame.
-                    if (lod.mesh_segments.size() > m_segmentNameCache.size()) {
-                        size_t numSegmentNames = std::max(1'000ull, lod.mesh_segments.size());
+                    if (lod.meshSegments.size() > m_segmentNameCache.size()) {
+                        size_t numSegmentNames = std::max(1'000ull, lod.meshSegments.size());
                         for (int idx = 0; idx < numSegmentNames; ++idx) {
                             m_segmentNameCache.push_back(std::format("segment{:03}", idx));
                         }
@@ -187,19 +191,12 @@ void MeshViewerApp::drawMeshHierarchyPanel()
                         return true;
                     };
 
-                    int numSegments = static_cast<int>(lod.mesh_segments.size());
+                    int numSegments = static_cast<int>(lod.meshSegments.size());
                     int numToDisplay = std::min(numSegments, 15);
                     bool didClickSegment = ImGui::ListBox("Mesh segments", &m_selectedSegmentIdx, itemGetter, &m_segmentNameCache, numSegments, numToDisplay);
 
                     if (didClickSegment) {
                         //ARKOSE_LOG(Info, "Clicked on segment '{}'", m_segmentNameCache[m_selectedSegmentIdx]);
-                    }
-
-                    if (m_drawBoundingBox) {
-                        Arkose::Asset::AABB aabb = lod.bounding_box;
-                        vec3 aabbMin = vec3(aabb.min().x(), aabb.min().y(), aabb.min().z());
-                        vec3 aabbMax = vec3(aabb.max().x(), aabb.max().y(), aabb.max().z());
-                        DebugDrawer::get().drawBox(aabbMin, aabbMax, vec3(1.0f, 1.0f, 1.0f));
                     }
 
                     ImGui::EndTabItem();
@@ -218,8 +215,8 @@ void MeshViewerApp::drawMeshMaterialPanel()
     if (StaticMeshSegmentAsset* segmentAsset = selectedSegmentAsset()) {
 
         // Only handle non-packaged up assets here, i.e. using a path, not a direct assets as it would be in a packed case
-        ARKOSE_ASSERT(segmentAsset->material.type == Arkose::Asset::MaterialIndirection::path);
-        std::string& materialPath = segmentAsset->material.Aspath()->path;
+        ARKOSE_ASSERT(segmentAsset->hasPathToMaterial());
+        std::string materialPath = std::string(segmentAsset->pathToMaterial());
 
         ImGui::BeginDisabled();
         ImGui::InputText("Material asset", materialPath.data(), materialPath.length(), ImGuiInputTextFlags_ReadOnly);
@@ -314,8 +311,8 @@ bool MeshViewerApp::drawWrapModeSelectorGui(const char* id, Texture::WrapModes& 
 
             bool valueChanged = false;
 
-            int wrapModeMin = static_cast<int>(Arkose::Asset::WrapMode::MIN);
-            int wrapModeMax = static_cast<int>(Arkose::Asset::WrapMode::MAX);
+            int wrapModeMin = static_cast<int>(Texture::WrapMode_Min);
+            int wrapModeMax = static_cast<int>(Texture::WrapMode_Max);
 
             for (int i = wrapModeMin; i <= wrapModeMax; i++) {
                 ImGui::PushID(i);
@@ -372,8 +369,8 @@ bool MeshViewerApp::drawBlendModeSelectorGui(const char* id, BlendMode& blendMod
 
         bool valueChanged = false;
 
-        int blendModeMin = static_cast<int>(Arkose::Asset::BlendMode::MIN);
-        int blendModeMax = static_cast<int>(Arkose::Asset::BlendMode::MAX);
+        int blendModeMin = static_cast<int>(BlendMode_Min);
+        int blendModeMax = static_cast<int>(BlendMode_Max);
 
         for (int i = blendModeMin; i <= blendModeMax; i++) {
             ImGui::PushID(i);
@@ -487,7 +484,7 @@ void MeshViewerApp::openImportMeshDialog()
 
 void MeshViewerApp::loadMeshWithDialog()
 {
-    if (auto maybePath = FileDialog::open({ { "Arkose mesh", Arkose::Asset::StaticMeshAssetExtension() } })) {
+    if (auto maybePath = FileDialog::open({ { "Arkose mesh", StaticMeshAsset::AssetFileExtension } })) {
 
         std::string openPath = maybePath.value();
         ARKOSE_LOG(Info, "Loading mesh from file '{}'", openPath);
@@ -505,7 +502,7 @@ void MeshViewerApp::loadMeshWithDialog()
 
 void MeshViewerApp::saveMeshWithDialog()
 {
-    if (auto maybePath = FileDialog::save({ { "Arkose mesh", Arkose::Asset::StaticMeshAssetExtension() } })) {
+    if (auto maybePath = FileDialog::save({ { "Arkose mesh", StaticMeshAsset::AssetFileExtension } })) {
         
         std::string savePath = maybePath.value();
         ARKOSE_LOG(Info, "Saving mesh to file '{}'", savePath);

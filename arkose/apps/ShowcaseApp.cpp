@@ -155,9 +155,7 @@ bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
         if (not redCube) {
             redCube = StaticMeshAsset::loadFromArkmsh("assets/sample/models/Box/Box.arkmsh");
 
-            vec3 unscaledFullExtent = vec3(redCube->lods[0]->bounding_box.max().x(), redCube->lods[0]->bounding_box.max().y(), redCube->lods[0]->bounding_box.max().z())
-                - vec3(redCube->lods[0]->bounding_box.min().x(), redCube->lods[0]->bounding_box.min().y(), redCube->lods[0]->bounding_box.min().z());
-            vec3 scaledHalfExtent = 0.5f * unscaledFullExtent * scale;
+            vec3 scaledHalfExtent = 0.5f * (redCube->boundingBox.max - redCube->boundingBox.min) * scale;
             cubeShapeHandle = scene.physicsScene().backend().createPhysicsShapeForBox(scaledHalfExtent);
         }
 

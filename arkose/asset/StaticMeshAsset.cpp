@@ -5,6 +5,8 @@
 #include "physics/PhysicsMesh.h"
 #include "utility/FileIO.h"
 #include "utility/Profiling.h"
+#include <cereal/archives/binary.hpp>
+#include <cereal/archives/json.hpp>
 #include <mutex>
 
 namespace {
@@ -13,23 +15,20 @@ namespace {
     static std::unique_ptr<flatbuffers::Parser> s_staticMeshAssetParser {};
 }
 
+StaticMeshSegmentAsset::StaticMeshSegmentAsset() = default;
+StaticMeshSegmentAsset::~StaticMeshSegmentAsset() = default;
+
+StaticMeshLODAsset::StaticMeshLODAsset() = default;
+StaticMeshLODAsset::~StaticMeshLODAsset() = default;
+
 StaticMeshAsset::StaticMeshAsset() = default;
 StaticMeshAsset::~StaticMeshAsset() = default;
-
-StaticMeshAsset::StaticMeshAsset(Arkose::Asset::StaticMeshAsset const* flatbuffersStaticMeshAsset, std::string filePath)
-    : m_assetFilePath(std::move(filePath))
-{
-    ARKOSE_ASSERT(flatbuffersStaticMeshAsset != nullptr);
-    flatbuffersStaticMeshAsset->UnPackTo(this);
-
-    ARKOSE_ASSERT(m_assetFilePath.length() > 0);
-}
 
 StaticMeshAsset* StaticMeshAsset::loadFromArkmsh(std::string const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not AssetHelpers::isValidAssetPath(filePath, Arkose::Asset::StaticMeshAssetExtension())) {
+    if (not AssetHelpers::isValidAssetPath(filePath, StaticMeshAsset::AssetFileExtension)) {
         ARKOSE_LOG(Warning, "Trying to load material asset with invalid file extension: '{}'", filePath);
     }
 
@@ -43,50 +42,42 @@ StaticMeshAsset* StaticMeshAsset::loadFromArkmsh(std::string const& filePath)
         }
     }
 
-    auto maybeBinaryData = FileIO::readBinaryDataFromFile<uint8_t>(filePath);
-    if (not maybeBinaryData.has_value()) {
+    std::ifstream fileStream(filePath, std::ios::binary);
+    if (not fileStream.is_open()) {
         return nullptr;
     }
 
-    void* binaryData = maybeBinaryData.value().data();
+    std::unique_ptr<StaticMeshAsset> newStaticMeshAsset {};
 
-    bool isValidBinaryBuffer = Arkose::Asset::StaticMeshAssetBufferHasIdentifier(binaryData);
-    if (not isValidBinaryBuffer) {
+    cereal::BinaryInputArchive binaryArchive(fileStream);
 
-        // See if we can parse it as json
+    AssetHeader header;
+    binaryArchive(header);
 
-        // First check: do we at least start with a '{' character?
-        if (maybeBinaryData.value().size() == 0 || *reinterpret_cast<const char*>(binaryData) != '{') {
+    if (header == AssetHeader(AssetMagicValue)) {
+
+        newStaticMeshAsset = std::make_unique<StaticMeshAsset>();
+        binaryArchive(*newStaticMeshAsset);
+
+    } else {
+
+        fileStream.seekg(0); // seek back to the start
+
+        if (static_cast<char>(fileStream.peek()) != '{') {
+            ARKOSE_LOG(Error, "Failed to parse json text for static mesh asset '{}'", filePath);
             return nullptr;
         }
 
-        std::string asciiData = FileIO::readEntireFile(filePath).value();
+        cereal::JSONInputArchive jsonArchive(fileStream);
 
-        if (not s_staticMeshAssetParser) {
-            s_staticMeshAssetParser = AssetHelpers::createAssetRuntimeParser("StaticMeshAsset.fbs");
-        }
-
-        if (not s_staticMeshAssetParser->ParseJson(asciiData.c_str(), filePath.c_str())) {
-            ARKOSE_LOG(Error, "Failed to parse json text for static mesh asset:\n\t{}", s_staticMeshAssetParser->error_);
-            return nullptr;
-        }
-
-        // Use the now filled-in builder's buffer as the binary data input
-        binaryData = s_staticMeshAssetParser->builder_.GetBufferPointer();
+        newStaticMeshAsset = std::make_unique<StaticMeshAsset>();
+        jsonArchive(*newStaticMeshAsset);
     }
-
-    auto const* flatbuffersStaticMeshAsset = Arkose::Asset::GetStaticMeshAsset(binaryData);
-
-    if (!flatbuffersStaticMeshAsset) {
-        return nullptr;
-    }
-
-    auto newMaterialAsset = std::unique_ptr<StaticMeshAsset>(new StaticMeshAsset(flatbuffersStaticMeshAsset, filePath));
 
     {
         SCOPED_PROFILE_ZONE_NAMED("Static mesh cache - store");
         std::scoped_lock<std::mutex> lock { s_staticMeshAssetCacheMutex };
-        s_staticMeshAssetCache[filePath] = std::move(newMaterialAsset);
+        s_staticMeshAssetCache[filePath] = std::move(newStaticMeshAsset);
         return s_staticMeshAssetCache[filePath].get();
     }
 }
@@ -95,7 +86,7 @@ bool StaticMeshAsset::writeToArkmsh(std::string_view filePath, AssetStorage asse
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not AssetHelpers::isValidAssetPath(filePath, Arkose::Asset::StaticMeshAssetExtension())) {
+    if (not AssetHelpers::isValidAssetPath(filePath, StaticMeshAsset::AssetFileExtension)) {
         ARKOSE_LOG(Error, "Trying to write static mesh asset to file with invalid extension: '{}'", filePath);
         return false;
     }
@@ -103,58 +94,38 @@ bool StaticMeshAsset::writeToArkmsh(std::string_view filePath, AssetStorage asse
     ARKOSE_ASSERT(m_assetFilePath.empty() || m_assetFilePath == filePath);
     m_assetFilePath = filePath;
 
-    flatbuffers::FlatBufferBuilder builder {};
-    auto asset = Arkose::Asset::StaticMeshAsset::Pack(builder, this);
-
-    if (asset.IsNull()) {
+    std::ofstream fileStream { m_assetFilePath, std::ios::binary | std::ios::trunc };
+    if (not fileStream.is_open()) {
         return false;
     }
 
-    builder.Finish(asset, Arkose::Asset::StaticMeshAssetIdentifier());
-
-    uint8_t* data = builder.GetBufferPointer();
-    size_t size = static_cast<size_t>(builder.GetSize());
-
     switch (assetStorage) {
-    case AssetStorage::Binary:
-        FileIO::writeBinaryDataToFile(std::string(filePath), data, size);
-        break;
+    case AssetStorage::Binary: {
+        cereal::BinaryOutputArchive archive(fileStream);
+        archive(AssetHeader(AssetMagicValue));
+        archive(*this);
+    } break;
     case AssetStorage::Json: {
-
-        if (not s_staticMeshAssetParser) {
-            s_staticMeshAssetParser = AssetHelpers::createAssetRuntimeParser("StaticMeshAsset.fbs");
-        }
-
-        std::string jsonText;
-        if (not flatbuffers::GenerateText(*s_staticMeshAssetParser, data, &jsonText)) {
-            ARKOSE_LOG(Error, "Failed to generate json text for static mesh asset");
-            return false;
-        }
-
-        FileIO::writeTextDataToFile(std::string(filePath), jsonText);
-
+        cereal::JSONOutputArchive archive(fileStream);
+        archive(cereal::make_nvp("static_mesh", *this));
     } break;
     }
 
+    fileStream.close();
     return true;
 }
 
 std::vector<PhysicsMesh> StaticMeshAsset::createPhysicsMeshes(size_t lodIdx) const
 {
-    ARKOSE_ASSERT(lodIdx < lods.size());
-    auto const& lod = lods[lodIdx];
+    ARKOSE_ASSERT(lodIdx < LODs.size());
+    StaticMeshLODAsset const& lod = LODs[lodIdx];
 
     std::vector<PhysicsMesh> physicsMeshes {};
-    for (auto const& meshSegment : lod->mesh_segments) {
+    for (StaticMeshSegmentAsset const& meshSegment : lod.meshSegments) {
 
         PhysicsMesh& physicsMesh = physicsMeshes.emplace_back();
-
-        physicsMesh.positions.reserve(meshSegment->positions.size());
-        for (Arkose::Asset::Vec3 pos : meshSegment->positions) {
-            physicsMesh.positions.emplace_back(pos.x(), pos.y(), pos.z());
-        }
-
-        physicsMesh.indices = meshSegment->indices;
+        physicsMesh.positions = meshSegment.positions;
+        physicsMesh.indices = meshSegment.indices;
 
         // TODO: Not yet implemented!
         // physicsMesh.material

@@ -3,6 +3,7 @@
 #include "utility/Profiling.h"
 #include <ark/matrix.h>
 #include <ark/vector.h>
+#include <cereal/cereal.hpp>
 
 namespace geometry {
 
@@ -37,6 +38,13 @@ struct Sphere {
     bool isDegenerate() const
     {
         return std::abs(m_radius) < 1e-6f;
+    }
+
+    template<class Archive>
+    void serialize(Archive& archive)
+    {
+        archive(cereal::make_nvp("center", m_center),
+                cereal::make_nvp("radius", m_radius));
     }
 
 private:

@@ -518,19 +518,18 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
     // Make a runtime static mesh from the asset type
 
     auto staticMesh = std::make_unique<StaticMesh>(staticMeshAsset);
-    for (auto& lodAsset : staticMeshAsset->lods) {
+    for (StaticMeshLODAsset const& lodAsset : staticMeshAsset->LODs) {
 
         staticMesh->m_lods.push_back(StaticMeshLOD());
         StaticMeshLOD& lod = staticMesh->m_lods.back();
 
-        lod.boundingBox = ark::aabb3(vec3(lodAsset->bounding_box.min().x(), lodAsset->bounding_box.min().y(), lodAsset->bounding_box.min().z()),
-                                     vec3(lodAsset->bounding_box.max().x(), lodAsset->bounding_box.max().y(), lodAsset->bounding_box.max().z()));
-        lod.boundingSphere = geometry::Sphere(vec3(lodAsset->bounding_sphere.center().x(), lodAsset->bounding_sphere.center().y(), lodAsset->bounding_sphere.center().z()),
-                                              lodAsset->bounding_sphere.radius());
+        // TODO: Move bounding box and sphere out from the LOD, it should be on the static mesh!
+        lod.boundingBox = staticMeshAsset->boundingBox;
+        lod.boundingSphere = staticMeshAsset->boundingSphere;
 
         lod.physicsShape = PhysicsShapeHandle();
 
-        for (auto& segmentAsset : lodAsset->mesh_segments) {
+        for (auto& segmentAsset : lodAsset.meshSegments) {
 
             lod.meshSegments.push_back(StaticMeshSegment());
             StaticMeshSegment& segment = lod.meshSegments.back();
@@ -538,31 +537,13 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
             // TODO: We don't want to copy over all this data, instead we want to not keep any bulk data in the runtime version
             // TODO: As step one, we can at least avoid copying here and just do it from the source asset on demand for GPU upload
 
-            segment.positions.reserve(segmentAsset->positions.size());
-            for (Arkose::Asset::Vec3 pos : segmentAsset->positions) {
-                segment.positions.emplace_back(pos.x(), pos.y(), pos.z());
-            }
+            segment.positions = segmentAsset.positions;
+            segment.texcoord0s = segmentAsset.texcoord0s;
+            segment.normals = segmentAsset.normals;
+            segment.tangents = segmentAsset.tangents;
+            segment.indices = segmentAsset.indices;
 
-            segment.texcoord0s.reserve(segmentAsset->texcoord0s.size());
-            for (Arkose::Asset::Vec2 texcoord0 : segmentAsset->texcoord0s) {
-                segment.texcoord0s.emplace_back(texcoord0.x(), texcoord0.y());
-            }
-
-            segment.normals.reserve(segmentAsset->normals.size());
-            for (Arkose::Asset::Vec3 norm : segmentAsset->normals) {
-                segment.normals.emplace_back(norm.x(), norm.y(), norm.z());
-            }
-
-            segment.tangents.reserve(segmentAsset->tangents.size());
-            for (Arkose::Asset::Vec4 tang : segmentAsset->tangents) {
-                segment.tangents.emplace_back(tang.x(), tang.y(), tang.z(), tang.w());
-            }
-
-            // We always use 32-bit indices so it's safe to copy over directly
-            segment.indices = segmentAsset->indices;
-
-            ARKOSE_ASSERT(segmentAsset->material.type == Arkose::Asset::MaterialIndirection::path);
-            std::string const& materialAssetPath = segmentAsset->material.Aspath()->path;
+            std::string const& materialAssetPath = std::string(segmentAsset.pathToMaterial());
             if (MaterialAsset* materialAsset = MaterialAsset::loadFromArkmat(materialAssetPath)) {
                 segment.material = registerMaterial(materialAsset);
             } else {

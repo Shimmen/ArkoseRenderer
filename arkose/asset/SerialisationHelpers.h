@@ -1,6 +1,8 @@
 #pragma once
 
+#include "core/math/Sphere.h"
 #include "rendering/backend/base/Texture.h"
+#include <ark/aabb.h>
 #include <ark/vector.h>
 #include <ark/quaternion.h>
 #include <cereal/cereal.hpp>
@@ -46,6 +48,13 @@ namespace ark {
                 cereal::make_nvp("y", q.vec.y),
                 cereal::make_nvp("z", q.vec.z),
                 cereal::make_nvp("w", q.w));
+    }
+
+    template<class Archive>
+    void serialize(Archive& archive, aabb3& aabb)
+    {
+        archive(cereal::make_nvp("min", aabb.min),
+                cereal::make_nvp("max", aabb.max));
     }
 
 }

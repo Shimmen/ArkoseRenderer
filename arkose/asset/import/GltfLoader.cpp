@@ -210,11 +210,12 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
     staticMesh->name = gltfMesh.name;
 
     // Only a sinle LOD used for glTF (without extensions)
-    staticMesh->lods.emplace_back(std::make_unique<StaticMeshLODAsset>());
-    StaticMeshLODAsset& lod0 = *staticMesh->lods.back();
+    StaticMeshLODAsset& lod0 = staticMesh->LODs.emplace_back();
+    staticMesh->minLOD = 0;
+    staticMesh->maxLOD = 0;
 
     // NOTE: Using reserve is important to maintain the mesh segment addresses for the segment material map!
-    lod0.mesh_segments.reserve(gltfMesh.primitives.size());
+    lod0.meshSegments.reserve(gltfMesh.primitives.size());
 
     for (size_t primIdx = 0; primIdx < gltfMesh.primitives.size(); ++primIdx) {
 
@@ -233,18 +234,17 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
 
         ark::aabb3 localAabb = ark::aabb3(createVec3(positionAccessor.minValues), createVec3(positionAccessor.maxValues));
         ark::aabb3 aabb = localAabb.transformed(meshMatrix);
-        lod0.bounding_box = Arkose::Asset::AABB(AssetTypes::convert(aabb.min), AssetTypes::convert(aabb.max));
+        staticMesh->boundingBox = ark::aabb3(aabb.min, aabb.max);
 
         vec3 center = (aabb.max + aabb.min) / 2.0f;
         float radius = length(aabb.max - aabb.min) / 2.0f;
-        lod0.bounding_sphere = Arkose::Asset::Sphere(AssetTypes::convert(center), radius);
+        staticMesh->boundingSphere = geometry::Sphere(center, radius);
 
-        lod0.mesh_segments.emplace_back(std::make_unique<StaticMeshSegmentAsset>());
-        StaticMeshSegmentAsset& meshSegment = *lod0.mesh_segments.back();
+        StaticMeshSegmentAsset& meshSegment = lod0.meshSegments.emplace_back();
 
         // Write glTF material index to user data until we can resolve file paths
         const int materialIdx = gltfPrimitive.material;
-        meshSegment.user_data = Arkose::Asset::UserData(materialIdx);
+        meshSegment.userData = materialIdx;
 
         {
             SCOPED_PROFILE_ZONE_NAMED("Copy position data");
@@ -254,7 +254,7 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
             for (size_t i = 0; i < positionAccessor.count; ++i) {
                 vec3 sourceValue = *(firstPosition + i);
                 vec3 transformedValue = meshMatrix * sourceValue;
-                meshSegment.positions.push_back(AssetTypes::convert(transformedValue));
+                meshSegment.positions.push_back(transformedValue);
             }
         }
 
@@ -264,8 +264,8 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
             ARKOSE_ASSERT(accessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
             ARKOSE_ASSERT(accessor->type == TINYGLTF_TYPE_VEC2);
 
-            const Arkose::Asset::Vec2* firstTexcoord = getTypedMemoryBufferForAccessor<Arkose::Asset::Vec2>(gltfModel, *accessor);
-            meshSegment.texcoord0s = std::vector<Arkose::Asset::Vec2>(firstTexcoord, firstTexcoord + accessor->count);
+            const vec2* firstTexcoord = getTypedMemoryBufferForAccessor<vec2>(gltfModel, *accessor);
+            meshSegment.texcoord0s = std::vector<vec2>(firstTexcoord, firstTexcoord + accessor->count);
         }
 
         if (const tinygltf::Accessor* accessor = findAccessorForPrimitive(gltfModel, gltfPrimitive, "NORMAL")) {
@@ -279,7 +279,7 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
             for (size_t i = 0; i < accessor->count; ++i) {
                 vec3 sourceNormal = *(firstNormal + i);
                 vec3 transformedNormal = meshNormalMatrix * sourceNormal;
-                meshSegment.normals.push_back(AssetTypes::convert(transformedNormal));
+                meshSegment.normals.push_back(transformedNormal);
             }
         }
 
@@ -295,7 +295,7 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
                 vec4 sourceTangent = *(firstTangent + i);
                 vec3 transformedTangent = meshNormalMatrix * sourceTangent.xyz();
                 vec4 finalTangent = vec4(transformedTangent, sourceTangent.w);
-                meshSegment.tangents.push_back(AssetTypes::convert(finalTangent));
+                meshSegment.tangents.push_back(finalTangent);
             }
         }
 

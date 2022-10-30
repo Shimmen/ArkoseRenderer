@@ -23,14 +23,6 @@ ImportResult AssetImporter::importAsset(std::string_view assetFilePath, std::str
     return ImportResult();
 }
 
-static Arkose::Asset::PathT createAssetPath(std::string_view assetFilePath)
-{
-    Arkose::Asset::PathT path {};
-    path.path = std::string(assetFilePath);
-
-    return path;
-}
-
 ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::string_view targetDirectory, Options options)
 {
     FileIO::ensureDirectory(std::string(targetDirectory));
@@ -105,13 +97,13 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         // Resolve references (paths) to material assets
         // (The glTF loader will use its local glTF indices while loading, since we don't yet know the file paths)
 
-        for (auto& lod : staticMesh->lods) {
-            for (auto& meshSegment : lod->mesh_segments) {
-                if (meshSegment->user_data.integer() != -1) {
-                    int gltfIdx = meshSegment->user_data.integer();
+        for (StaticMeshLODAsset& lod : staticMesh->LODs) {
+            for (StaticMeshSegmentAsset& meshSegment : lod.meshSegments) {
+                if (meshSegment.userData != -1) {
+                    int gltfIdx = meshSegment.userData;
                     ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < result.materials.size());
                     auto& material = result.materials[gltfIdx];
-                    meshSegment->material.Set(createAssetPath(material->assetFilePath()));
+                    meshSegment.setPathToMaterial(std::string(material->assetFilePath()));
                 }
             }
         }
