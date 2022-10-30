@@ -1,29 +1,24 @@
 #pragma once
 
 #include "asset/AssetHelpers.h"
+#include "scene/ProbeGrid.h"
+#include "scene/EnvironmentMap.h"
+#include "scene/Scene.h"
+#include "scene/SceneObject.h"
+#include "scene/camera/Camera.h"
+#include "scene/lights/Light.h"
 #include <string>
 #include <string_view>
+#include <variant>
+#include <vector>
 
-// Generated flatbuffer code
-#include "LevelAsset_generated.h"
-
-using ProbeGridAsset = Arkose::Asset::ProbeGridT;
-
-using EnvironmentMapAsset = Arkose::Asset::EnvironmentMapT;
-
-using CameraAsset = Arkose::Asset::CameraT;
-
-using SceneObjectAsset = Arkose::Asset::SceneObjectT;
-
-using LightAsset = Arkose::Asset::LightUnion;
-using DirectionalLightAsset = Arkose::Asset::DirectionalLightT;
-using SpotLightAsset = Arkose::Asset::SpotLightT;
-
-using LevelAssetRaw = Arkose::Asset::LevelAsset;
-class LevelAsset : public Arkose::Asset::LevelAssetT {
+class LevelAsset {
 public:
     LevelAsset();
     ~LevelAsset();
+
+    static constexpr const char* AssetFileExtension = "arklvl";
+    static constexpr const char AssetMagicValue[4] = { 'a', 'l', 'v', 'l' };
 
     // Load a level asset (cached) from an .arklvl file
     // TODO: Figure out how we want to return this! Basic type, e.g. LevelAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
@@ -31,11 +26,47 @@ public:
 
     bool writeToArklvl(std::string_view filePath, AssetStorage);
 
+    template<class Archive>
+    void serialize(Archive&);
+
+    // Name of the level
+    std::string name;
+
+    // All objects in this level
+    std::vector<SceneObject> objects;
+
+    // All lights in this level
+    std::vector<std::unique_ptr<Light>> lights;
+
+    // List of predetermined cameras, of which the first one is the default
+    std::vector<Camera> cameras;
+
+    // Environment map, used for skybox etc.
+    std::optional<EnvironmentMap> environmentMap;
+
+    // For use with spatial probe grid based algorithms such as DDGI
+    std::optional<ProbeGrid> probeGrid;
+
     std::string_view assetFilePath() const { return m_assetFilePath; }
 
 private:
-    // Construct a material asset from a loaded flatbuffer material asset file
-    LevelAsset(Arkose::Asset::LevelAsset const*, std::string filePath);
-
     std::string m_assetFilePath {};
 };
+
+////////////////////////////////////////////////////////////////////////////////
+// Serialization
+
+#include <cereal/types/optional.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/string.hpp>
+
+template<class Archive>
+void LevelAsset::serialize(Archive& archive)
+{
+    archive(cereal::make_nvp("name", name));
+    archive(cereal::make_nvp("objects", objects));
+    archive(cereal::make_nvp("lights", lights));
+    archive(cereal::make_nvp("cameras", cameras));
+    archive(cereal::make_nvp("environmentMap", environmentMap));
+    archive(cereal::make_nvp("probeGrid", probeGrid));
+}

@@ -464,7 +464,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     };
 }
 
-void GpuScene::updateEnvironmentMap(Scene::EnvironmentMap& environmentMap)
+void GpuScene::updateEnvironmentMap(EnvironmentMap& environmentMap)
 {
     SCOPED_PROFILE_ZONE();
 

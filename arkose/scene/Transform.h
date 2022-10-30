@@ -28,6 +28,9 @@ public:
     {
     }
 
+    template<class Archive>
+    void serialize(Archive&);
+
     vec3 localTranslation() const { return m_translation; }
     quat localOrientation() const { return m_orientation; }
     vec3 localScale() const { return m_scale; }
@@ -145,3 +148,18 @@ private:
 
     std::optional<mat4> m_previousFrameWorldMatrix{ std::nullopt };
 };
+
+////////////////////////////////////////////////////////////////////////////////
+// Serialization
+
+#include "asset/SerialisationHelpers.h"
+#include <cereal/cereal.hpp>
+
+template<class Archive>
+void Transform::serialize(Archive& archive)
+{
+    // NOTE: Parent transform in the hierarchy is never serialized, will have to be reconstructed as load-time
+    archive(cereal::make_nvp("translation", m_translation));
+    archive(cereal::make_nvp("orientation", m_orientation));
+    archive(cereal::make_nvp("scale", m_scale));
+}

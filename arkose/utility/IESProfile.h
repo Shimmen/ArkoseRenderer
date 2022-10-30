@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <ark/vector.h>
+#include <cereal/cereal.hpp>
 
 class Backend;
 class Texture;
@@ -46,6 +47,19 @@ public:
     std::unique_ptr<Texture> createLookupTexture(Backend&, int size = 256) const;
 
     float lookupValue(float angleH, float angleV) const;
+
+    template<class Archive>
+    std::string save_minimal(Archive const&) const
+    {
+        return m_path;
+    }
+
+    template<class Archive>
+    void load_minimal(Archive const&, std::string const& value)
+    {
+        m_path = value;
+        parse(m_path);
+    }
 
 private:
 

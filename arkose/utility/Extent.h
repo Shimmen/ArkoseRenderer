@@ -54,6 +54,9 @@ struct Extent2D {
     ark::uvec2 asUIntVector() const { return ark::uvec2(m_width, m_height); }
     ark::ivec2 asIntVector() const { return ark::ivec2(m_width, m_height); }
 
+    template<class Archive>
+    void serialize(Archive&);
+
 private:
     uint32_t m_width {};
     uint32_t m_height {};
@@ -95,6 +98,9 @@ struct Extent3D {
     ark::uvec3 asUIntVector() const { return ark::uvec3(m_width, m_height, m_depth); }
     ark::ivec3 asIntVector() const { return ark::ivec3(m_width, m_height, m_depth); }
 
+    template<class Archive>
+    void serialize(Archive&);
+
 private:
     uint32_t m_width {};
     uint32_t m_height {};
@@ -125,3 +131,23 @@ namespace std {
     };
 
 } // namespace std
+
+////////////////////////////////////////////////////////////////////////////////
+// Serialization
+
+#include <cereal/cereal.hpp>
+
+template<class Archive>
+void Extent2D::serialize(Archive& archive)
+{
+    archive(cereal::make_nvp("width", m_width),
+            cereal::make_nvp("height", m_height));
+}
+
+template<class Archive>
+void Extent3D::serialize(Archive& archive)
+{
+    archive(cereal::make_nvp("width", m_width),
+            cereal::make_nvp("height", m_height),
+            cereal::make_nvp("depth", m_depth));
+}

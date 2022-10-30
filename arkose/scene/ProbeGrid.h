@@ -13,3 +13,14 @@ struct ProbeGrid {
     ark::ivec3 probeIndexFromLinear(int index) const;
     vec3 probePositionForIndex(ark::ivec3) const;
 };
+
+////////////////////////////////////////////////////////////////////////////////
+// Serialization
+
+template<class Archive>
+void serialize(Archive& archive, ProbeGrid& probeGrid)
+{
+    archive(cereal::make_nvp("gridDimensions", probeGrid.gridDimensions));
+    archive(cereal::make_nvp("probeSpacing", probeGrid.probeSpacing));
+    archive(cereal::make_nvp("offsetToFirst", probeGrid.offsetToFirst));
+}

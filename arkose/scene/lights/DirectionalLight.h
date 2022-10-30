@@ -5,9 +5,12 @@
 
 class DirectionalLight final : public Light {
 public:
-    DirectionalLight() = default;
+    DirectionalLight();
     DirectionalLight(vec3 color, float illuminance, vec3 direction);
     virtual ~DirectionalLight() { }
+
+    template<class Archive>
+    void serialize(Archive&);
 
     float intensityValue() const final
     {
@@ -40,8 +43,26 @@ public:
     vec3 direction { 1, 1, 1 };
 
     // When rendering a shadow map, from what point in the world should it be rendered from
-    vec3 shadowMapWorldOrigin { 0, 0, 0 };
+    static constexpr vec3 shadowMapWorldOrigin { 0, 0, 0 };
 
     // When rendering a shadow map, how much of the scene around it should it cover (area, relative to direction)
-    float shadowMapWorldExtent { 50.0f };
+    static constexpr float shadowMapWorldExtent { 50.0f };
 };
+
+////////////////////////////////////////////////////////////////////////////////
+// Serialization
+
+#include <cereal/archives/binary.hpp>
+#include <cereal/archives/json.hpp>
+#include <cereal/types/polymorphic.hpp>
+
+CEREAL_REGISTER_TYPE(DirectionalLight)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Light, DirectionalLight)
+
+template<class Archive>
+void DirectionalLight::serialize(Archive& archive)
+{
+    archive(cereal::base_class<Light>(this));
+    archive(cereal::make_nvp("illuminance", illuminance));
+    archive(cereal::make_nvp("direction", direction));
+}

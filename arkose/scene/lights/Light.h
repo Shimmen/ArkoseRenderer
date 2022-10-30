@@ -13,7 +13,8 @@ public:
         SpotLight,
     };
 
-    explicit Light(Type type, vec3 color)
+    Light() = default;
+    Light(Type type, vec3 color)
         : color(color)
         , m_type(type)
     {
@@ -47,8 +48,30 @@ public:
     void setName(std::string name) { m_name = std::move(name); }
     const std::string& name() const { return m_name; }
 
+    template<class Archive>
+    void serialize(Archive&);
+
 private:
-    Type m_type;
+    Type m_type { Type::DirectionalLight };
     bool m_castsShadows { true };
     std::string m_name {};
 };
+
+////////////////////////////////////////////////////////////////////////////////
+// Serialization
+
+#include "asset/SerialisationHelpers.h"
+#include <cereal/cereal.hpp>
+
+template<class Archive>
+void Light::serialize(Archive& archive)
+{
+    archive(cereal::make_nvp("type", m_type));
+    archive(cereal::make_nvp("name", m_name));
+
+    archive(cereal::make_nvp("color", color));
+
+    archive(cereal::make_nvp("castsShadows", m_castsShadows));
+    archive(cereal::make_nvp("customConstantBias", customConstantBias));
+    archive(cereal::make_nvp("customSlopeBias", customSlopeBias));
+}

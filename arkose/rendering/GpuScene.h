@@ -89,7 +89,7 @@ public:
     float preExposedAmbient() const { return scene().ambientIlluminance() * lightPreExposure(); }
     float preExposedEnvironmentBrightnessFactor() const { return scene().environmentMap().brightnessFactor * lightPreExposure(); }
 
-    void updateEnvironmentMap(Scene::EnvironmentMap&);
+    void updateEnvironmentMap(EnvironmentMap&);
     Texture& environmentMapTexture();
 
     // Managed GPU assets

@@ -71,6 +71,7 @@ void Scene::setupFromDescription(const Description& description)
     }
 }
 
+/*
 std::unique_ptr<LevelAsset> Scene::exportAsLevelAsset() const
 {
     auto levelAsset = std::make_unique<LevelAsset>();
@@ -187,104 +188,44 @@ std::unique_ptr<LevelAsset> Scene::exportAsLevelAsset() const
 
     return levelAsset;
 }
+*/
 
 void Scene::addLevel(LevelAsset* levelAsset)
 {
     SCOPED_PROFILE_ZONE();
 
-    auto translateTransform = [](Arkose::Asset::TransformT const& xform) -> Transform {
-        Transform result { vec3(xform.position.x(), xform.position.y(), xform.position.z()),
-                           quat(vec3(xform.orientation.x(), xform.orientation.y(), xform.orientation.z()), xform.orientation.w()),
-                           vec3(xform.scale.x(), xform.scale.y(), xform.scale.z()) };
-        return result;
-    };
-
-    auto translateVec3 = [](Arkose::Asset::Vec3 v) -> vec3 {
-        return vec3(v.x(), v.y(), v.z());
-    };
-
-    auto translateQuat = [](Arkose::Asset::Quat q) -> quat {
-        return quat(vec3(q.x(), q.y(), q.z()), q.w());
-    };
-
-    for (std::unique_ptr<SceneObjectAsset> const& sceneObjectAsset : levelAsset->objects) {
+    for (SceneObject const& sceneObject : levelAsset->objects) {
 
         // TODO: Handle non-path indirection
-        ARKOSE_ASSERT(sceneObjectAsset->mesh_asset.type == Arkose::Asset::MeshIndirection::path);
-        std::string const& staticMeshAssetPath = sceneObjectAsset->mesh_asset.Aspath()->path;
+        std::string const& staticMeshAssetPath = std::string(sceneObject.pathToMesh());
         StaticMeshAsset* staticMeshAsset = StaticMeshAsset::loadFromArkmsh(staticMeshAssetPath);
 
-        Transform transform = translateTransform(*sceneObjectAsset->transform);
-
-        StaticMeshInstance& instance = addMesh(staticMeshAsset, transform);
-        instance.name = sceneObjectAsset->name;
+        StaticMeshInstance& instance = addMesh(staticMeshAsset, sceneObject.transform);
+        instance.name = sceneObject.name;
 
     }
 
-    for (LightAsset const& lightAsset : levelAsset->lights) {
-        if (DirectionalLightAsset const* dirLightAsset = lightAsset.AsDirectionalLight()) {
-
-            Transform transform = translateTransform(*dirLightAsset->transform);
-            vec3 direction = ark::rotateVector(transform.orientationInWorld(), ark::globalForward);
-
-            auto dirLight = std::make_unique<DirectionalLight>(translateVec3(dirLightAsset->color), dirLightAsset->illuminance, direction);
-            
-            dirLight->setName(dirLightAsset->name);
-            dirLight->shadowMapWorldExtent = dirLightAsset->world_extent;
-
-            addLight(std::move(dirLight));
-
-        } else if (SpotLightAsset const* spotLightAsset = lightAsset.AsSpotLight()) {
-        
-            Transform transform = translateTransform(*spotLightAsset->transform);
-            vec3 direction = ark::rotateVector(transform.orientationInWorld(), ark::globalForward);
-
-            // TODO: Handle non-path indirection
-            ARKOSE_ASSERT(spotLightAsset->ies_profile.type == Arkose::Asset::ImageIndirection::path);
-            std::string const& iesProfileFilePath = spotLightAsset->ies_profile.Aspath()->path;
-
-            auto spotLight = std::make_unique<SpotLight>(translateVec3(spotLightAsset->color), spotLightAsset->luminous_intensity,
-                                                         iesProfileFilePath, transform.positionInWorld(), direction);
-
-            spotLight->setName(spotLightAsset->name);
-
-            addLight(std::move(spotLight));
-
-        }
+    for (std::unique_ptr<Light>& light : levelAsset->lights) {
+        // TODO: This will move the light out of the level asset, which we don't want. Probably make a copy of it as we're adding it?
+        addLight(std::move(light));
     }
 
-    for (std::unique_ptr<CameraAsset> const& cameraAsset : levelAsset->cameras) {
+    for (Camera const& camera : levelAsset->cameras) {
 
-        Camera& camera = addCamera(cameraAsset->name, false);
-        camera.setPosition(translateVec3(cameraAsset->transform->position));
-        camera.setOrientation(translateQuat(cameraAsset->transform->orientation));
+        // TODO: Add some nicer function for adding new cameras?
 
-        if (auto* manualExposure = cameraAsset->exposure.AsManualExposure()) {
-            camera.setManualExposureParameters(manualExposure->f_number, manualExposure->shutter_speed, manualExposure->iso);
-        } else if (auto* autoExposure = cameraAsset->exposure.AsAutoExposure()) {
-            ASSERT_NOT_REACHED();
-        }
-
+        Camera& sceneCamera = addCamera("CameraName", false);
+        sceneCamera = camera;
     }
 
-    if (EnvironmentMapAsset const* environmentMapAsset = levelAsset->environment_map.get()) {
-
-        // TODO: Handle non-path indirection
-        ARKOSE_ASSERT(environmentMapAsset->image.type == Arkose::Asset::ImageIndirection::path);
-        std::string const& imageAssetPath = environmentMapAsset->image.Aspath()->path;
-
-        setEnvironmentMap({ .assetPath = imageAssetPath,
-                            .brightnessFactor = environmentMapAsset->brightness_factor });
+    if (levelAsset->environmentMap.has_value()) {
+        EnvironmentMap const& environmentMap = levelAsset->environmentMap.value();
+        setEnvironmentMap({ .assetPath = environmentMap.assetPath,
+                            .brightnessFactor = environmentMap.brightnessFactor });
     }
 
-    if (ProbeGridAsset const* probeGrid = levelAsset->probe_grid.get()) {
-
-        setProbeGrid({ .gridDimensions = Extent3D(static_cast<uint32_t>(probeGrid->dimensions.x()),
-                                                  static_cast<uint32_t>(probeGrid->dimensions.y()),
-                                                  static_cast<uint32_t>(probeGrid->dimensions.z())),
-                       .probeSpacing = translateVec3(probeGrid->spacing),
-                       .offsetToFirst = translateVec3(probeGrid->offset) });
-
+    if (levelAsset->probeGrid.has_value()) {
+        setProbeGrid(levelAsset->probeGrid.value());
     }
 }
 
@@ -337,6 +278,32 @@ DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)
     DirectionalLight& addedLight = *m_directionalLights.back();
     gpuScene().registerLight(addedLight);
     return addedLight;
+}
+
+void Scene::addLight(std::unique_ptr<Light> light)
+{
+    ARKOSE_ASSERT(light);
+
+    switch (light->type()) {
+
+    case Light::Type::DirectionalLight: {
+        DirectionalLight* directionalLightPtr = static_cast<DirectionalLight*>(light.release());
+        addLight(std::unique_ptr<DirectionalLight>(directionalLightPtr));
+    } break;
+
+    case Light::Type::SpotLight: {
+        SpotLight* spotLightPtr = static_cast<SpotLight*>(light.release());
+        addLight(std::unique_ptr<SpotLight>(spotLightPtr));
+    } break;
+
+    case Light::Type::PointLight: {
+        NOT_YET_IMPLEMENTED();
+    } break;
+
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
 }
 
 SpotLight& Scene::addLight(std::unique_ptr<SpotLight> light)

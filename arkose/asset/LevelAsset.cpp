@@ -15,20 +15,11 @@ static std::unique_ptr<flatbuffers::Parser> s_levelAssetParser {};
 LevelAsset::LevelAsset() = default;
 LevelAsset::~LevelAsset() = default;
 
-LevelAsset::LevelAsset(Arkose::Asset::LevelAsset const* flatbuffersLevelAsset, std::string filePath)
-    : m_assetFilePath(std::move(filePath))
-{
-    ARKOSE_ASSERT(flatbuffersLevelAsset != nullptr);
-    flatbuffersLevelAsset->UnPackTo(this);
-
-    ARKOSE_ASSERT(m_assetFilePath.length() > 0);
-}
-
 LevelAsset* LevelAsset::loadFromArklvl(std::string const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not AssetHelpers::isValidAssetPath(filePath, Arkose::Asset::LevelAssetExtension())) {
+    if (not AssetHelpers::isValidAssetPath(filePath, LevelAsset::AssetFileExtension)) {
         ARKOSE_LOG(Warning, "Trying to load level asset with invalid file extension: '{}'", filePath);
     }
 
@@ -42,44 +33,38 @@ LevelAsset* LevelAsset::loadFromArklvl(std::string const& filePath)
         }
     }
 
-    auto maybeBinaryData = FileIO::readBinaryDataFromFile<uint8_t>(filePath);
-    if (not maybeBinaryData.has_value()) {
+    std::ifstream fileStream(filePath, std::ios::binary);
+    if (not fileStream.is_open()) {
         return nullptr;
     }
 
-    void* binaryData = maybeBinaryData.value().data();
+    std::unique_ptr<LevelAsset> newLevelAsset {};
 
-    bool isValidBinaryBuffer = Arkose::Asset::LevelAssetBufferHasIdentifier(binaryData);
-    if (not isValidBinaryBuffer) {
+    cereal::BinaryInputArchive binaryArchive(fileStream);
+    binaryArchive(AssetHeader { *AssetMagicValue });
 
-        // See if we can parse it as json
+    AssetHeader header;
+    binaryArchive(header);
 
-        // First check: do we at least start with a '{' character?
-        if (maybeBinaryData.value().size() == 0 || *reinterpret_cast<const char*>(binaryData) != '{') {
+    if (header == AssetHeader { *AssetMagicValue }) {
+
+        newLevelAsset = std::make_unique<LevelAsset>();
+        binaryArchive(*newLevelAsset);
+
+    } else {
+
+        fileStream.seekg(0); // seek back to the start
+
+        if (static_cast<char>(fileStream.peek()) != '{') {
+            ARKOSE_LOG(Error, "Failed to parse json text for level asset '{}'", filePath);
             return nullptr;
         }
 
-        std::string asciiData = FileIO::readEntireFile(filePath).value();
+        cereal::JSONInputArchive jsonArchive(fileStream);
 
-        if (not s_levelAssetParser) {
-            s_levelAssetParser = AssetHelpers::createAssetRuntimeParser("LevelAsset.fbs");
-        }
-
-        if (not s_levelAssetParser->ParseJson(asciiData.c_str(), filePath.c_str())) {
-            ARKOSE_LOG(Error, "Failed to parse json text for level asset:\n\t{}", s_levelAssetParser->error_);
-            return nullptr;
-        }
-
-        // Use the now filled-in builder's buffer as the binary data input
-        binaryData = s_levelAssetParser->builder_.GetBufferPointer();
+        newLevelAsset = std::make_unique<LevelAsset>();
+        jsonArchive(*newLevelAsset);
     }
-
-    auto const* flatbuffersLevelAsset = Arkose::Asset::GetLevelAsset(binaryData);
-    if (!flatbuffersLevelAsset) {
-        return nullptr;
-    }
-
-    auto newLevelAsset = std::unique_ptr<LevelAsset>(new LevelAsset(flatbuffersLevelAsset, filePath));
 
     {
         SCOPED_PROFILE_ZONE_NAMED("Level cache - store");
@@ -93,7 +78,7 @@ bool LevelAsset::writeToArklvl(std::string_view filePath, AssetStorage assetStor
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not AssetHelpers::isValidAssetPath(filePath, Arkose::Asset::LevelAssetExtension())) {
+    if (not AssetHelpers::isValidAssetPath(filePath, LevelAsset::AssetFileExtension)) {
         ARKOSE_LOG(Error, "Trying to write level asset to file with invalid extension: '{}'", filePath);
         return false;
     }
@@ -101,38 +86,23 @@ bool LevelAsset::writeToArklvl(std::string_view filePath, AssetStorage assetStor
     ARKOSE_ASSERT(m_assetFilePath.empty() || m_assetFilePath == filePath);
     m_assetFilePath = filePath;
 
-    flatbuffers::FlatBufferBuilder builder {};
-    auto asset = Arkose::Asset::LevelAsset::Pack(builder, this);
-
-    if (asset.IsNull()) {
+    std::ofstream fileStream { m_assetFilePath, std::ios::binary | std::ios::trunc };
+    if (not fileStream.is_open()) {
         return false;
     }
 
-    builder.Finish(asset, Arkose::Asset::LevelAssetIdentifier());
-
-    uint8_t* data = builder.GetBufferPointer();
-    size_t size = static_cast<size_t>(builder.GetSize());
-
     switch (assetStorage) {
-    case AssetStorage::Binary:
-        FileIO::writeBinaryDataToFile(std::string(filePath), data, size);
-        break;
+    case AssetStorage::Binary: {
+        cereal::BinaryOutputArchive archive(fileStream);
+        archive(AssetHeader { *AssetMagicValue });
+        archive(*this);
+    } break;
     case AssetStorage::Json: {
-
-        if (not s_levelAssetParser) {
-            s_levelAssetParser = AssetHelpers::createAssetRuntimeParser("LevelAsset.fbs");
-        }
-
-        std::string jsonText;
-        if (not flatbuffers::GenerateText(*s_levelAssetParser, data, &jsonText)) {
-            ARKOSE_LOG(Error, "Failed to generate json text for level asset");
-            return false;
-        }
-
-        FileIO::writeTextDataToFile(std::string(filePath), jsonText);
-
+        cereal::JSONOutputArchive archive(fileStream);
+        archive(cereal::make_nvp("level", *this));
     } break;
     }
 
+    fileStream.close();
     return true;
 }

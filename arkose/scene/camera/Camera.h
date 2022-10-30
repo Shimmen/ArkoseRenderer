@@ -110,6 +110,9 @@ public:
     void setController(Badge<CameraController>, CameraController* controller) { m_controller = controller; }
     CameraController* controller() { return m_controller; }
 
+    template<class Archive>
+    void serialize(Archive&);
+
 protected:
     void markAsModified() { m_modified = true; }
 
@@ -184,3 +187,33 @@ private:
 
     bool m_modified { true };
 };
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Serialization
+
+#include <cereal/cereal.hpp>
+#include <cereal/types/optional.hpp>
+#include <cereal/types/string.hpp>
+#include <cereal/types/vector.hpp>
+
+template<class Archive>
+void Camera::serialize(Archive& archive)
+{
+    archive(cereal::make_nvp("position", m_position));
+    archive(cereal::make_nvp("orientation", m_orientation));
+
+    archive(cereal::make_nvp("focusMode", m_focusMode));
+    archive(cereal::make_nvp("focalLength", m_focalLength));
+    archive(cereal::make_nvp("focusDepth", m_focusDepth));
+    archive(cereal::make_nvp("sensorSize", m_sensorSize));
+
+    archive(cereal::make_nvp("exposureMode", m_exposureMode));
+    
+    archive(cereal::make_nvp("fNumber", m_fNumber));
+    archive(cereal::make_nvp("iso", m_iso));
+    archive(cereal::make_nvp("shutterSpeed", m_shutterSpeed));
+
+    archive(cereal::make_nvp("exposureCompensation", m_exposureCompensation));
+    archive(cereal::make_nvp("adaptionRate", m_adaptionRate));
+}

@@ -7,9 +7,12 @@
 
 class SpotLight final : public Light {
 public:
-    SpotLight() = default;
+    SpotLight();
     SpotLight(vec3 color, float luminousIntensity, const std::string& iesProfilePath, vec3 position, vec3 direction);
     virtual ~SpotLight() { }
+
+    template<class Archive>
+    void serialize(Archive&);
 
     vec3 position() const final
     {
@@ -56,10 +59,34 @@ private:
     IESProfile m_iesProfile {};
     std::unique_ptr<Texture> m_iesLookupTexture {};
 
+    // TODO: Replace with Transform!
     vec3 m_position { 0, 0, 0 };
     vec3 m_direction { 1, 1, 1 };
 
-    float m_zNear { 0.1f };
-    float m_zFar { 1000.0f };
+    static constexpr float m_zNear { 0.1f };
+    static constexpr float m_zFar { 1000.0f };
 
 };
+
+////////////////////////////////////////////////////////////////////////////////
+// Serialization
+
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/archives/binary.hpp>
+#include <cereal/archives/json.hpp>
+
+CEREAL_REGISTER_TYPE(SpotLight)
+CEREAL_REGISTER_POLYMORPHIC_RELATION(Light, SpotLight)
+
+template<class Archive>
+void SpotLight::serialize(Archive& archive)
+{
+    archive(cereal::base_class<Light>(this));
+    archive(cereal::make_nvp("luminousIntensity", luminousIntensity));
+
+    archive(cereal::make_nvp("outerConeAngle", outerConeAngle));
+    archive(cereal::make_nvp("IESProfile", m_iesProfile));
+
+    archive(cereal::make_nvp("position", m_position));
+    archive(cereal::make_nvp("direction", m_direction));
+}

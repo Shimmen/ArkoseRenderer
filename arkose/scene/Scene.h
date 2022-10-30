@@ -4,6 +4,7 @@
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/StaticMesh.h"
 #include "scene/camera/Camera.h"
+#include "scene/EnvironmentMap.h"
 #include "scene/ProbeGrid.h"
 #include "scene/lights/DirectionalLight.h"
 #include "scene/lights/SpotLight.h"
@@ -15,10 +16,11 @@
 #include <unordered_map>
 
 class Backend;
-class SceneNode;
 class GpuScene;
+class LevelAsset;
 class PhysicsBackend;
 class PhysicsScene;
+class SceneNode;
 class StaticMeshAsset;
 
 class Scene final {
@@ -37,8 +39,6 @@ public:
     };
 
     void setupFromDescription(const Description&);
-
-    std::unique_ptr<LevelAsset> exportAsLevelAsset() const;
 
     // Scene variant accessors
 
@@ -78,6 +78,7 @@ public:
 
     // Lighting - direct & indirect
 
+    void addLight(std::unique_ptr<Light>);
     DirectionalLight& addLight(std::unique_ptr<DirectionalLight>);
     SpotLight& addLight(std::unique_ptr<SpotLight>);
 
@@ -98,11 +99,6 @@ public:
     const ProbeGrid& probeGrid() const { return m_probeGrid.value(); }
 
     float filmGrainGain() const { return m_fixedFilmGrainGain; }
-
-    struct EnvironmentMap {
-        std::string assetPath {};
-        float brightnessFactor { 1.0f };
-    };
 
     void setEnvironmentMap(EnvironmentMap);
     const EnvironmentMap& environmentMap() const { return m_environmentMap; }

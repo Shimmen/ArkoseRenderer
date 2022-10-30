@@ -1,11 +1,11 @@
 #include "DirectionalLight.h"
 
+DirectionalLight::DirectionalLight() = default;
+
 DirectionalLight::DirectionalLight(vec3 color, float illuminance, vec3 direction)
     : Light(Type::DirectionalLight, color)
     , illuminance(illuminance)
     , direction(normalize(direction))
-    , shadowMapWorldOrigin(0, 0, 0)
-    , shadowMapWorldExtent(50.0f)
 {
     // NOTE: Feel free to adjust these on a per-light/case basis, but probably in the scene.json
     customConstantBias = 3.5f;
