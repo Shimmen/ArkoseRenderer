@@ -1,235 +1,278 @@
 {
-  name: "Sponza Sample",
-  objects: [
-    {
-      name: "sponza",
-      transform: {
-        position: {
-          x: 0.0,
-          y: 0.0,
-          z: 0.0
+    "level": {
+        "name": "Sponza Sample",
+        "objects": [
+            {
+                "name": "sponza",
+                "transform": {
+                    "translation": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0
+                    },
+                    "orientation": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0,
+                        "w": 1.0
+                    },
+                    "scale": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    }
+                },
+                "mesh": {
+                    "index": 0,
+                    "data": "assets/sample/models/Sponza/Sponza.arkmsh"
+                }
+            },
+            {
+                "name": "helmet",
+                "transform": {
+                    "translation": {
+                        "x": 0.0,
+                        "y": 4.5,
+                        "z": 0.0
+                    },
+                    "orientation": {
+                        "x": 0.0,
+                        "y": 0.47942599654197695,
+                        "z": 0.0,
+                        "w": 0.8775830268859863
+                    },
+                    "scale": {
+                        "x": 1.2000000476837159,
+                        "y": 1.2000000476837159,
+                        "z": 1.2000000476837159
+                    }
+                },
+                "mesh": {
+                    "index": 0,
+                    "data": "assets/sample/models/DamagedHelmet/DamagedHelmet.arkmsh"
+                }
+            }
+        ],
+        "lights": [
+            {
+                "polymorphic_id": 2147483649,
+                "polymorphic_name": "DirectionalLight",
+                "ptr_wrapper": {
+                    "valid": 1,
+                    "data": {
+                        "Light": {
+                            "type": 0,
+                            "name": "sun",
+                            "color": {
+                                "x": 1.0,
+                                "y": 1.0,
+                                "z": 1.0
+                            },
+                            "transform": {
+                                "translation": {
+                                    "x": 0.0,
+                                    "y": 0.0,
+                                    "z": 0.0
+                                },
+                                "orientation": {
+                                    "x": -0.55061,
+                                    "y": -0.056491,
+                                    "z": 0.077118,
+                                    "w": 0.807984
+                                },
+                                "scale": {
+                                    "x": 1.0,
+                                    "y": 1.0,
+                                    "z": 1.0
+                                }
+                            },
+                            "castsShadows": true,
+                            "customConstantBias": 3.5,
+                            "customSlopeBias": 2.5
+                        },
+                        "illuminance": 90000.0
+                    }
+                }
+            },
+            {
+                "polymorphic_id": 2147483650,
+                "polymorphic_name": "SpotLight",
+                "ptr_wrapper": {
+                    "valid": 1,
+                    "data": {
+                        "Light": {
+                            "type": 2,
+                            "name": "green-spot",
+                            "color": {
+                                "x": 0.25,
+                                "y": 1.0,
+                                "z": 0.25
+                            },
+                            "transform": {
+                                "translation": {
+                                    "x": 3.0,
+                                    "y": 0.25,
+                                    "z": 0.0
+                                },
+                                "orientation": {
+                                    "x": 0.812348,
+                                    "y": 0.234261,
+                                    "z": -0.144187,
+                                    "w": -0.379902
+                                },
+                                "scale": {
+                                    "x": 1.0,
+                                    "y": 1.0,
+                                    "z": 1.0
+                                }
+                            },
+                            "castsShadows": true,
+                            "customConstantBias": 1.0,
+                            "customSlopeBias": 0.66
+                        },
+                        "luminousIntensity": 250.0,
+                        "outerConeAngle": 2.094395160675049,
+                        "IESProfile": "assets/sample/ies/three-lobe-umbrella.ies"
+                    }
+                }
+            },
+            {
+                "polymorphic_id": 2,
+                "ptr_wrapper": {
+                    "valid": 1,
+                    "data": {
+                        "Light": {
+                            "type": 2,
+                            "name": "red-spot",
+                            "color": {
+                                "x": 1.0,
+                                "y": 0.25,
+                                "z": 0.25
+                            },
+                            "transform": {
+                                "translation": {
+                                    "x": 0.0,
+                                    "y": 0.25,
+                                    "z": 0.0
+                                },
+                                "orientation": {
+                                    "x": 0.853553,
+                                    "y": 0.0,
+                                    "z": -0.0,
+                                    "w": -0.353553
+                                },
+                                "scale": {
+                                    "x": 1.0,
+                                    "y": 1.0,
+                                    "z": 1.0
+                                }
+                            },
+                            "castsShadows": true,
+                            "customConstantBias": 1.0,
+                            "customSlopeBias": 0.66
+                        },
+                        "luminousIntensity": 250.0,
+                        "outerConeAngle": 2.094395160675049,
+                        "IESProfile": "assets/sample/ies/three-lobe-umbrella.ies"
+                    }
+                }
+            },
+            {
+                "polymorphic_id": 2,
+                "ptr_wrapper": {
+                    "valid": 1,
+                    "data": {
+                        "Light": {
+                            "type": 2,
+                            "name": "blue-spot",
+                            "color": {
+                                "x": 0.25,
+                                "y": 0.25,
+                                "z": 1.0
+                            },
+                            "transform": {
+                                "translation": {
+                                    "x": -3.0,
+                                    "y": 0.25,
+                                    "z": 0.0
+                                },
+                                "orientation": {
+                                    "x": 0.812348,
+                                    "y": -0.234261,
+                                    "z": 0.144187,
+                                    "w": -0.379902
+                                },
+                                "scale": {
+                                    "x": 1.0,
+                                    "y": 1.0,
+                                    "z": 1.0
+                                }
+                            },
+                            "castsShadows": true,
+                            "customConstantBias": 1.0,
+                            "customSlopeBias": 0.66
+                        },
+                        "luminousIntensity": 250.0,
+                        "outerConeAngle": 2.094395160675049,
+                        "IESProfile": "assets/sample/ies/three-lobe-umbrella.ies"
+                    }
+                }
+            }
+        ],
+        "cameras": [
+            {
+                "position": {
+                    "x": 8.84,
+                    "y": 5.11,
+                    "z": -0.83
+                },
+                "orientation": {
+                    "x": -0.059595,
+                    "y": 0.696774,
+                    "z": 0.05789,
+                    "w": 0.707534
+                },
+                "focusMode": "Manual",
+                "focalLength": 30.0,
+                "focusDepth": 5.0,
+                "sensorSize": {
+                    "x": 36.0,
+                    "y": 24.0
+                },
+                "exposureMode": "Manual",
+                "fNumber": 11.0,
+                "iso": 400.0,
+                "shutterSpeed": 0.008,
+                "exposureCompensation": 0.0,
+                "adaptionRate": 0.0017999999690800906
+            }
+        ],
+        "environmentMap": {
+            "nullopt": false,
+            "data": {
+                "assetPath": "assets/sample/hdri/tiergarten_2k.hdr",
+                "brightnessFactor": 2000.0
+            }
         },
-        orientation: {
-          x: 0.0,
-          y: 0.0,
-          z: 0.0,
-          w: 1.0
-        },
-        scale: {
-          x: 1.0,
-          y: 1.0,
-          z: 1.0
+        "probeGrid": {
+            "nullopt": false,
+            "data": {
+                "gridDimensions": {
+                    "width": 16,
+                    "height": 16,
+                    "depth": 8
+                },
+                "probeSpacing": {
+                    "x": 1.375,
+                    "y": 0.7375,
+                    "z": 1.2875
+                },
+                "offsetToFirst": {
+                    "x": -10.0,
+                    "y": 0.6,
+                    "z": -4.8
+                }
+            }
         }
-      },
-      mesh_asset_type: "path",
-      mesh_asset: {
-        path: "assets/sample/models/Sponza/Sponza.arkmsh"
-      }
-    },
-    {
-      name: "helmet",
-      transform: {
-        position: {
-          x: 0.0,
-          y: 4.5,
-          z: 0.0
-        },
-        orientation: {
-          x: 0.0,
-          y: 0.479426,
-          z: 0.0,
-          w: 0.877583
-        },
-        scale: {
-          x: 1.2,
-          y: 1.2,
-          z: 1.2
-        }
-      },
-      mesh_asset_type: "path",
-      mesh_asset: {
-        path: "assets/sample/models/DamagedHelmet/DamagedHelmet.arkmsh"
-      }
     }
-  ],
-  lights_type: [
-    "DirectionalLight",
-    "SpotLight",
-    "SpotLight",
-    "SpotLight"
-  ],
-  lights: [
-    {
-      name: "sun",
-      transform: {
-        position: {
-          x: 0.0,
-          y: 0.0,
-          z: 0.0
-        },
-        orientation: {
-          x: -0.55061,
-          y: -0.056491,
-          z: 0.077118,
-          w: 0.807984
-        },
-        scale: {
-          x: 1.0,
-          y: 1.0,
-          z: 1.0
-        }
-      },
-      color: {
-        x: 1.0,
-        y: 1.0,
-        z: 1.0
-      },
-      illuminance: 90000.0
-    },
-    {
-      name: "green-spot",
-      transform: {
-        position: {
-          x: 3.0,
-          y: 1.0,
-          z: 0.0
-        },
-        orientation: {
-          x: 0.812348,
-          y: 0.234261,
-          z: -0.144187,
-          w: -0.379902
-        },
-        scale: {
-          x: 1.0,
-          y: 1.0,
-          z: 1.0
-        }
-      },
-      color: {
-        x: 0.25,
-        y: 1.0,
-        z: 0.25
-      },
-      luminous_intensity: 150.0,
-      ies_profile_type: "path",
-      ies_profile: {
-        path: "assets/sample/ies/three-lobe-umbrella.ies"
-      }
-    },
-    {
-      name: "red-spot",
-      transform: {
-        position: {
-          x: 0.0,
-          y: 1.0,
-          z: 0.0
-        },
-        orientation: {
-          x: 0.853553,
-          y: 0.0,
-          z: -0.0,
-          w: -0.353553
-        },
-        scale: {
-          x: 1.0,
-          y: 1.0,
-          z: 1.0
-        }
-      },
-      color: {
-        x: 1.0,
-        y: 0.25,
-        z: 0.25
-      },
-      luminous_intensity: 150.0,
-      ies_profile_type: "path",
-      ies_profile: {
-        path: "assets/sample/ies/three-lobe-umbrella.ies"
-      }
-    },
-    {
-      name: "blue-spot",
-      transform: {
-        position: {
-          x: -3.0,
-          y: 1.0,
-          z: 0.0
-        },
-        orientation: {
-          x: 0.812348,
-          y: -0.234261,
-          z: 0.144187,
-          w: -0.379902
-        },
-        scale: {
-          x: 1.0,
-          y: 1.0,
-          z: 1.0
-        }
-      },
-      color: {
-        x: 0.25,
-        y: 0.25,
-        z: 1.0
-      },
-      luminous_intensity: 150.0,
-      ies_profile_type: "path",
-      ies_profile: {
-        path: "assets/sample/ies/three-lobe-umbrella.ies"
-      }
-    }
-  ],
-  cameras: [
-    {
-      name: "main",
-      transform: {
-        position: {
-          x: 8.84,
-          y: 5.11,
-          z: -0.83
-        },
-        orientation: {
-          x: -0.059595,
-          y: 0.696774,
-          z: 0.05789,
-          w: 0.707534
-        },
-        scale: {
-          x: 1.0,
-          y: 1.0,
-          z: 1.0
-        }
-      },
-      exposure_type: "ManualExposure",
-      exposure: {
-        f_number: 11.0,
-        shutter_speed: 0.008
-      }
-    }
-  ],
-  environment_map: {
-    image_type: "path",
-    image: {
-      path: "assets/sample/hdri/tiergarten_2k.hdr"
-    },
-    brightness_factor: 2000.0
-  },
-  probe_grid: {
-    dimensions: {
-      x: 16.0,
-      y: 16.0,
-      z: 8.0
-    },
-    spacing: {
-      x: 1.375,
-      y: 0.7375,
-      z: 1.2875
-    },
-    offset: {
-      x: -10.0,
-      y: 0.6,
-      z: -4.8
-    }
-  }
 }
