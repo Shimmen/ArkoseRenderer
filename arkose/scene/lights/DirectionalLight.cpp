@@ -1,12 +1,20 @@
 #include "DirectionalLight.h"
 
-DirectionalLight::DirectionalLight() = default;
+#include <ark/quaternion.h>
+#include <ark/transform.h>
+
+DirectionalLight::DirectionalLight()
+    : Light(Type::DirectionalLight, vec3(1.0f))
+{
+}
 
 DirectionalLight::DirectionalLight(vec3 color, float illuminance, vec3 direction)
     : Light(Type::DirectionalLight, color)
     , illuminance(illuminance)
-    , direction(normalize(direction))
 {
+    quat orientation = ark::lookRotation(normalize(direction), ark::globalUp);
+    transform().setOrientationInWorld(orientation);
+
     // NOTE: Feel free to adjust these on a per-light/case basis, but probably in the scene.json
     customConstantBias = 3.5f;
     customSlopeBias = 2.5f;

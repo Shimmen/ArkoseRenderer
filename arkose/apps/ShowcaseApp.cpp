@@ -138,7 +138,7 @@ bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
     quat rotation = axisAngle(ark::globalRight, sunRotation * deltaTime * 0.2f);
 
     DirectionalLight& sun = *scene.firstDirectionalLight();
-    sun.direction = ark::rotateVector(rotation, sun.direction);
+    sun.transform().setOrientation(rotation * sun.transform().localOrientation());
 
     // Physics experiment, to be removed!
     if (input.wasKeyPressed(Key::T)) {

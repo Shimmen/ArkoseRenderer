@@ -29,12 +29,24 @@ public:
 
     Type type() const { return m_type; }
 
-    virtual vec3 position() const { return vec3(); };
-    virtual float intensityValue() const = 0;
-    virtual vec3 forwardDirection() const = 0;
+    Transform const& transform() const { return m_transform; }
+    Transform& transform() { return m_transform; }
 
-    virtual mat4 lightViewMatrix() const = 0;
+    // Direction of outgoing light, i.e. -L in a BRDF
+    virtual vec3 forwardDirection() const
+    {
+        return ark::rotateVector(transform().orientationInWorld(), ark::globalForward);
+    }
+
+    virtual mat4 lightViewMatrix() const
+    {
+        vec3 position = transform().positionInWorld();
+        return ark::lookAt(position, position + forwardDirection());
+    }
+
+    virtual float intensityValue() const = 0;
     virtual mat4 projectionMatrix() const = 0;
+
     mat4 viewProjection() const { return projectionMatrix() * lightViewMatrix(); };
 
     float customConstantBias = 0.0f;
@@ -55,6 +67,8 @@ private:
     Type m_type { Type::DirectionalLight };
     bool m_castsShadows { true };
     std::string m_name {};
+
+    Transform m_transform {};
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -70,6 +84,7 @@ void Light::serialize(Archive& archive)
     archive(cereal::make_nvp("name", m_name));
 
     archive(cereal::make_nvp("color", color));
+    archive(cereal::make_nvp("transform", m_transform));
 
     archive(cereal::make_nvp("castsShadows", m_castsShadows));
     archive(cereal::make_nvp("customConstantBias", customConstantBias));

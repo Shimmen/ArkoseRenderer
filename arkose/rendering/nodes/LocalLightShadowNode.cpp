@@ -104,7 +104,7 @@ std::vector<LocalLightShadowNode::ShadowMapAtlasAllocation> LocalLightShadowNode
     // Performance: consider memoizing/caching importance values for lights
     auto calculateLightImportance = [&](const Light& light) -> float {
 
-        float distance = ark::distance(scene.camera().position(), light.position());
+        float distance = ark::distance(scene.camera().position(), light.transform().positionInWorld());
 
         float coneAngle = ark::TWO_PI;
         if (light.type() == Light::Type::SpotLight) {

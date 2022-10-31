@@ -17,16 +17,6 @@ public:
         return illuminance;
     }
 
-    vec3 forwardDirection() const final
-    {
-        return direction;
-    }
-
-    mat4 lightViewMatrix() const final
-    {
-        return ark::lookAt(shadowMapWorldOrigin, shadowMapWorldOrigin + normalize(direction));
-    }
-
     mat4 projectionMatrix() const final
     {
         return ark::orthographicProjectionToVulkanClipSpace(shadowMapWorldExtent, -0.5f * shadowMapWorldExtent, 0.5f * shadowMapWorldExtent);
@@ -38,9 +28,6 @@ public:
     // Light illuminance (lux, lx = lm / m^2)
     // TODO: Actually use physically based units!
     float illuminance { 1.0f };
-
-    // Direction of outgoing light, i.e. -L in a BRDF
-    vec3 direction { 1, 1, 1 };
 
     // When rendering a shadow map, from what point in the world should it be rendered from
     static constexpr vec3 shadowMapWorldOrigin { 0, 0, 0 };
@@ -62,7 +49,7 @@ CEREAL_REGISTER_POLYMORPHIC_RELATION(Light, DirectionalLight)
 template<class Archive>
 void DirectionalLight::serialize(Archive& archive)
 {
-    archive(cereal::base_class<Light>(this));
+    archive(cereal::make_nvp("Light", cereal::base_class<Light>(this)));
+
     archive(cereal::make_nvp("illuminance", illuminance));
-    archive(cereal::make_nvp("direction", direction));
 }
