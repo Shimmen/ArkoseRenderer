@@ -198,6 +198,54 @@ private:
 #include <cereal/types/vector.hpp>
 
 template<class Archive>
+std::string save_minimal(Archive const&, Camera::FocusMode const& focusMode)
+{
+    if (focusMode == Camera::FocusMode::Auto) {
+        return "Auto";
+    } else if (focusMode == Camera::FocusMode::Manual) {
+        return "Manual";
+    } else {
+        ASSERT_NOT_REACHED();
+    }
+}
+
+template<class Archive>
+void load_minimal(Archive const&, Camera::FocusMode& focusMode, std::string const& value)
+{
+    if (value == "Auto") {
+        focusMode = Camera::FocusMode::Auto;
+    } else if (value == "Manual") {
+        focusMode = Camera::FocusMode::Manual;
+    } else {
+        ASSERT_NOT_REACHED();
+    }
+}
+
+template<class Archive>
+std::string save_minimal(Archive const&, Camera::ExposureMode const& exposureMode)
+{
+    if (exposureMode == Camera::ExposureMode::Auto) {
+        return "Auto";
+    } else if (exposureMode == Camera::ExposureMode::Manual) {
+        return "Manual";
+    } else {
+        ASSERT_NOT_REACHED();
+    }
+}
+
+template<class Archive>
+void load_minimal(Archive const&, Camera::ExposureMode& exposureMode, std::string const& value)
+{
+    if (value == "Auto") {
+        exposureMode = Camera::ExposureMode::Auto;
+    } else if (value == "Manual") {
+        exposureMode = Camera::ExposureMode::Manual;
+    } else {
+        ASSERT_NOT_REACHED();
+    }
+}
+
+template<class Archive>
 void Camera::serialize(Archive& archive)
 {
     archive(cereal::make_nvp("position", m_position));
