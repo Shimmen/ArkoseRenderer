@@ -40,4 +40,7 @@ private:
     std::vector<DebugDrawVertex> m_triangleVertices {};
     Buffer* m_triangleVertexBuffer { nullptr };
 
+    bool m_shouldDrawInstanceBoundingBoxes { false };
+    void drawInstanceBoundingBoxes(GpuScene&);
+
 };

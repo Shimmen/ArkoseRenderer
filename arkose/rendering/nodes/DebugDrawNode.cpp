@@ -1,7 +1,9 @@
 #include "DebugDrawNode.h"
 
 #include "core/Logging.h"
+#include "rendering/GpuScene.h"
 #include "rendering/debug/DebugDrawer.h"
+#include <imgui/imgui.h>
 
 DebugDrawNode::DebugDrawNode()
 {
@@ -15,6 +17,7 @@ DebugDrawNode::~DebugDrawNode()
 
 void DebugDrawNode::drawGui()
 {
+    ImGui::Checkbox("Draw mesh bounding boxes", &m_shouldDrawInstanceBoundingBoxes);
 }
 
 RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Registry& reg)
@@ -47,6 +50,10 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
     m_triangleVertexBuffer = &reg.createBuffer(TriangleVertexBufferSize, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOnly);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
+
+        if (m_shouldDrawInstanceBoundingBoxes) {
+            drawInstanceBoundingBoxes(scene);
+        }
 
         if (m_lineVertices.size() > 0) {
             uploadBuffer.upload(m_lineVertices, *m_lineVertexBuffer);
@@ -120,4 +127,14 @@ void DebugDrawNode::drawBox(vec3 minPoint, vec3 maxPoint, vec3 color)
     drawLine(p1, p3, color);
     drawLine(p4, p6, color);
     drawLine(p5, p7, color);
+}
+
+void DebugDrawNode::drawInstanceBoundingBoxes(GpuScene& scene)
+{
+    for (auto const& instance : scene.scene().staticMeshInstances()) {
+        if (StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh)) {
+            ark::aabb3 transformedAABB = staticMesh->boundingBox().transformed(instance->transform.worldMatrix());
+            drawBox(transformedAABB.min, transformedAABB.max, vec3(1.0f, 0.0f, 1.0f));
+        }
+    }
 }
