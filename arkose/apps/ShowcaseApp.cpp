@@ -4,6 +4,7 @@
 #include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/DDGINode.h"
 #include "rendering/nodes/DDGIProbeDebug.h"
+#include "rendering/nodes/DebugDrawNode.h"
 #include "rendering/nodes/DepthOfFieldNode.h"
 #include "rendering/nodes/DirectionalLightShadowNode.h"
 #include "rendering/nodes/ForwardRenderNode.h"
@@ -86,6 +87,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     if (rtxOn) {
         pipeline.addNode<DDGIProbeDebug>();
     }
+
+    pipeline.addNode<DebugDrawNode>();
 
     std::string sceneTexture = "SceneColor";
     const std::string finalTextureToScreen = "SceneColorLDR";
