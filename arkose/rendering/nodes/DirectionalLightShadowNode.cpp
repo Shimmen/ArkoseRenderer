@@ -86,7 +86,7 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
                     // TODO: Pick LOD properly
                     const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
 
-                    ark::aabb3 aabb = lod.boundingBox.transformed(instance->transform.worldMatrix());
+                    ark::aabb3 aabb = staticMesh->boundingBox().transformed(instance->transform.worldMatrix());
                     if (lightFrustum.includesAABB(aabb)) {
 
                         for (const StaticMeshSegment& meshSegment : lod.meshSegments) {

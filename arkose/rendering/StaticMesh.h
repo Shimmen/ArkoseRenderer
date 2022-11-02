@@ -59,16 +59,6 @@ struct StaticMeshLOD {
     // List of static mesh segments to be rendered (at least one needed)
     std::vector<StaticMeshSegment> meshSegments {};
 
-    // Immutable bounding box, pre object transform
-    ark::aabb3 boundingBox {};
-
-    // Immutable bounding sphere, pre object transform
-    geometry::Sphere boundingSphere {};
-
-    // Physics representation of this LOD of the static mesh (optional)
-    // This would usually be a triangle-mesh shape 1:1 with the static mesh LOD data
-    PhysicsShapeHandle physicsShape {};
-
 };
 
 class StaticMesh {
@@ -96,6 +86,9 @@ public:
     std::vector<StaticMeshLOD>& LODs(){ return m_lods; }
     const std::vector<StaticMeshLOD>& LODs() const { return m_lods; }
 
+    ark::aabb3 boundingBox() const { return m_boundingBox; }
+    geometry::Sphere boundingSphere() const { return m_boundingSphere; }
+
     StaticMeshAsset* asset() const { return m_asset; }
 
 private:
@@ -113,6 +106,16 @@ private:
     // TODO: Add these back!
     //uint32_t m_minLod { 0 };
     //uint32_t m_maxLod { UINT32_MAX };
+
+    // Immutable bounding box, pre object transform
+    ark::aabb3 m_boundingBox {};
+
+    // Immutable bounding sphere, pre object transform
+    geometry::Sphere m_boundingSphere {};
+
+    // Physics representation of this static mesh (optional)
+    // This would usually be a triangle-mesh shape 1:1 with the static mesh LOD data
+    PhysicsShapeHandle m_complexPhysicsShape {};
 
     // Simple physics representation of this static mesh (optional)
     // This would usually be a simplified representation of the mesh (e.g. convex hull or box)

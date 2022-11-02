@@ -363,8 +363,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                            .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0f),
                                                            .lightProjectionFromWorld = light.viewProjection(),
                                                            .lightProjectionFromView = light.viewProjection() * worldFromView,
-                                                           .worldSpacePosition = vec4(light.position(), 0.0f),
-                                                           .viewSpacePosition = viewFromWorld * vec4(light.position(), 1.0f),
+                                                           .worldSpacePosition = vec4(light.transform().positionInWorld(), 0.0f),
+                                                           .viewSpacePosition = viewFromWorld * vec4(light.transform().positionInWorld(), 1.0f),
                                                            .outerConeHalfAngle = light.outerConeAngle / 2.0f,
                                                            .iesProfileIndex = managedLight.iesLut.indexOfType<int>(),
                                                            ._pad0 = vec2() });
@@ -517,16 +517,17 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
     // Make a runtime static mesh from the asset type
 
     auto staticMesh = std::make_unique<StaticMesh>(staticMeshAsset);
+
+    staticMesh->m_boundingBox = staticMeshAsset->boundingBox;
+    staticMesh->m_boundingSphere = staticMeshAsset->boundingSphere;
+
+    staticMesh->m_complexPhysicsShape = PhysicsShapeHandle();
+    staticMesh->m_simplePhysicsShape = PhysicsShapeHandle();
+
     for (StaticMeshLODAsset const& lodAsset : staticMeshAsset->LODs) {
 
         staticMesh->m_lods.push_back(StaticMeshLOD());
         StaticMeshLOD& lod = staticMesh->m_lods.back();
-
-        // TODO: Move bounding box and sphere out from the LOD, it should be on the static mesh!
-        lod.boundingBox = staticMeshAsset->boundingBox;
-        lod.boundingSphere = staticMeshAsset->boundingSphere;
-
-        lod.physicsShape = PhysicsShapeHandle();
 
         for (auto& segmentAsset : lodAsset.meshSegments) {
 
