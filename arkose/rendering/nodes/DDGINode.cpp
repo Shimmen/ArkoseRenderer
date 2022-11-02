@@ -17,6 +17,7 @@ static_assert((DDGI_VISIBILITY_RES % DDGI_IRRADIANCE_RES) == 0 || (DDGI_IRRADIAN
 void DDGINode::drawGui()
 {
     ImGui::SliderInt("Rays per probe", &m_raysPerProbeInt, 128, MaxNumProbeSamples);
+    ImGui::SliderInt("Probe updates per frame", &m_probeUpdatesPerFrame, 1, MaxNumProbeUpdates);
 
     ImGui::SliderFloat("Hysteresis (irradiance)", &m_hysteresisIrradiance, 0.85f, 0.98f);
     ImGui::SliderFloat("Hysteresis (visibility)", &m_hysteresisVisibility, 0.85f, 0.98f);
@@ -62,8 +63,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
                                                                 ShaderBinding::sampledTexture(probeAtlasVisibility) });
     reg.publish("DDGISamplingSet", ddgiSamplingBindingSet);
 
-    const int probeCount = probeGrid.probeCount(); // TODO: maybe don't expect to be able to update all in one surfel image?
-    Texture& surfelImage = reg.createTexture2D({ probeCount, MaxNumProbeSamples }, Texture::Format::RGBA16F);
+    Texture& surfelImage = reg.createTexture2D({ MaxNumProbeUpdates, MaxNumProbeSamples }, Texture::Format::RGBA16F);
     //ARKOSE_LOG(Info, "DDGI surfel size in memory = {}", surfelImage.sizeInMemory());
 
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
@@ -111,11 +111,15 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
                                                                      ShaderBinding::storageBuffer(probeOffsetBuffer, ShaderStage::Compute) });
     ComputeState& probeMoveComputeState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateOffset.comp", { ShaderDefine::makeInt("SURFELS_PER_PROBE", MaxNumProbeSamples) }), { &probeUpdateOffsetBindingSet });
 
-    return [&, probeCount](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
+    return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         
         uint32_t frameIdx = appState.frameIndex();
         uint32_t raysPerProbe = static_cast<uint32_t>(m_raysPerProbeInt);
         float ambientLx = m_useSceneAmbient ? scene.scene().ambientIlluminance() : m_injectedAmbientLx;
+
+        uint32_t probeUpdatesThisFrame = std::min(m_probeUpdatesPerFrame, probeGrid.probeCount());
+        Extent2D surfelDispatchSize { probeUpdatesThisFrame, raysPerProbe };
+        uint32_t firstProbeIdx = m_probeUpdateIdx;
 
         ivec3 gridDimensions = ivec3(
             scene.scene().probeGrid().gridDimensions.width(),
@@ -132,8 +136,9 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
             cmdList.setNamedUniform("environmentMultiplier", scene.preExposedEnvironmentBrightnessFactor());
             cmdList.setNamedUniform<float>("parameter1", static_cast<float>(frameIdx));
             cmdList.setNamedUniform<float>("parameter2", static_cast<float>(raysPerProbe));
+            cmdList.setNamedUniform<float>("parameter3", static_cast<float>(firstProbeIdx));
 
-            cmdList.traceRays(surfelImage.extent());
+            cmdList.traceRays(surfelDispatchSize);
         }
 
         // 2. Ensure all surfel data has been written
@@ -150,10 +155,11 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
 
             cmdList.setNamedUniform("hysterisis", appState.isFirstFrame() ? 0.0f : m_hysteresisIrradiance);
             cmdList.setNamedUniform("gridDimensions", gridDimensions);
+            cmdList.setNamedUniform("firstProbeIdx", firstProbeIdx);
             cmdList.setNamedUniform("raysPerProbe", raysPerProbe);
             cmdList.setNamedUniform("frameIdx", frameIdx);
 
-            cmdList.dispatch(1, 1, probeCount);
+            cmdList.dispatch(1, 1, probeUpdatesThisFrame);
         }
 
         // 4. Update visibility probes with this frame's new surfel data
@@ -166,13 +172,15 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
             cmdList.setNamedUniform("hysterisis", appState.isFirstFrame() ? 0.0f : m_hysteresisVisibility);
             cmdList.setNamedUniform("visibilitySharpness", m_visibilitySharpness);
             cmdList.setNamedUniform("gridDimensions", gridDimensions);
+            cmdList.setNamedUniform("firstProbeIdx", firstProbeIdx);
             cmdList.setNamedUniform("raysPerProbe", raysPerProbe);
             cmdList.setNamedUniform("frameIdx", frameIdx);
 
-            cmdList.dispatch(1, 1, probeCount);
+            cmdList.dispatch(1, 1, probeUpdatesThisFrame);
         }
 
         // 5. Copy probe tile borders
+        // TODO: Only update the corners of updated probes!
         {
             ScopedDebugZone copyProbeBordersZone(cmdList, "Copy probe borders");
 
@@ -218,18 +226,20 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
             cmdList.setNamedUniform("raysPerProbe", raysPerProbe);
             cmdList.setNamedUniform("frameIdx", frameIdx);
             cmdList.setNamedUniform("deltaTime", appState.deltaTime());
+            cmdList.setNamedUniform("probeCount", probeGrid.probeCount());
+            cmdList.setNamedUniform("firstProbeIdx", firstProbeIdx);
 
             float minAxialSpacing = minComponent(probeGrid.probeSpacing);
             float maxProbeOffset = minAxialSpacing / 2.0f;
             cmdList.setNamedUniform("maxOffset", maxProbeOffset);
 
             // Use a subgroup per probe so we can count backfaces 
-            uint32_t probeCount = surfelImage.extent().width();
-            uint32_t sampleCount = surfelImage.extent().height();
-            cmdList.dispatch({ probeCount, 1, 1 }, { 1, sampleCount, 1 });
+            cmdList.dispatch({ probeUpdatesThisFrame, 1, 1 }, { 1, raysPerProbe, 1 });
         } else if (not m_applyProbeOffsets) {
             // TODO: Clear out the offset buffer
         }
+
+        m_probeUpdateIdx = (m_probeUpdateIdx + probeUpdatesThisFrame) % probeGrid.probeCount();
     };
 }
 

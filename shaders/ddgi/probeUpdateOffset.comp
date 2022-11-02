@@ -16,6 +16,8 @@ NAMED_UNIFORMS(constants,
     uint raysPerProbe;
     uint frameIdx;
     float deltaTime;
+    uint probeCount;
+    uint firstProbeIdx;
     float maxOffset;
 )
 
@@ -24,7 +26,8 @@ shared vec4 probeSurfelData[SURFELS_PER_PROBE];
 
 void main()
 {
-    uint probeIdx = gl_GlobalInvocationID.x;
+    uint surfelProbeIdx = gl_GlobalInvocationID.x;
+    uint probeIdx = (surfelProbeIdx + constants.firstProbeIdx) % constants.probeCount;
 
     uint sampleIdx = gl_GlobalInvocationID.y;
     if (sampleIdx >= constants.raysPerProbe) {
@@ -32,7 +35,7 @@ void main()
     }
 
     vec3 rayDirection = calculateRotatedSphericalFibonacciSample(probeIdx, sampleIdx, constants.raysPerProbe, constants.frameIdx);
-    float surfelRayDistance = imageLoad(surfelImage, ivec2(probeIdx, sampleIdx)).a;
+    float surfelRayDistance = imageLoad(surfelImage, ivec2(surfelProbeIdx, sampleIdx)).a;
     probeSurfelData[sampleIdx] = vec4(rayDirection, surfelRayDistance);
 
     groupMemoryBarrier();

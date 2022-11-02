@@ -4,9 +4,9 @@
 #include <utility/Extent.h>
 
 struct ProbeGrid {
-    Extent3D gridDimensions;
-    vec3 probeSpacing;
-    vec3 offsetToFirst;
+    Extent3D gridDimensions {};
+    vec3 probeSpacing {};
+    vec3 offsetToFirst {};
 
     int probeCount() const;
 

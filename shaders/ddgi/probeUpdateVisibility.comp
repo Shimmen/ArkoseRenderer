@@ -11,6 +11,7 @@ layout(set = 0, binding = 1, rgba16f) uniform          image2D probeVisibilityAt
 NAMED_UNIFORMS(pushConstants,
     float visibilitySharpness;
     ivec3 gridDimensions;
+    uint firstProbeIdx;
     uint raysPerProbe;
     float hysterisis;
     uint frameIdx;
@@ -21,7 +22,9 @@ layout(local_size_x = DDGI_VISIBILITY_RES,
        local_size_z = 1) in;
 void main()
 {
-    uint probeIdx = gl_GlobalInvocationID.z;
+    uint surfelProbeIdx = gl_GlobalInvocationID.z;
+    const uint probeCount = pushConstants.gridDimensions.x * pushConstants.gridDimensions.y * pushConstants.gridDimensions.z;
+    uint probeIdx = (surfelProbeIdx + pushConstants.firstProbeIdx) % probeCount;
     ivec2 tileTexelCoord = ivec2(gl_GlobalInvocationID.xy);
 
     // Compute the direction that this ocrahedral texel (coordinate) represents
@@ -41,7 +44,7 @@ void main()
         vec3 rayDirection = calculateRotatedSphericalFibonacciSample(probeIdx, sampleIdx, pushConstants.raysPerProbe, pushConstants.frameIdx);
         float weight = pow(max(0.0, dot(texelDirection, rayDirection)), pushConstants.visibilitySharpness);
 
-        float surfelRayDistance = imageLoad(surfelImage, ivec2(probeIdx, sampleIdx)).a;
+        float surfelRayDistance = imageLoad(surfelImage, ivec2(surfelProbeIdx, sampleIdx)).a;
 
         newVisibility += weight * vec2(surfelRayDistance, square(surfelRayDistance));
         totalWeight += weight;

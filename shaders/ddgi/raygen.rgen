@@ -109,7 +109,8 @@ void main()
 {
     ivec2 targetPixel = ivec2(rt_LaunchID.xy);
 
-    uint probeIdx = rt_LaunchID.x;
+    const uint probeCount = probeGridData.gridDimensions.x * probeGridData.gridDimensions.y * probeGridData.gridDimensions.z;
+    uint probeIdx = (rt_LaunchID.x + uint(constants.parameter3)) % probeCount; // i.e. firstProbeIdx
     uint sampleIdx = rt_LaunchID.y;
     uint sampleCount = uint(round(constants.parameter2)); // i.e. raysPerProbe;
 

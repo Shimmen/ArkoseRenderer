@@ -11,6 +11,7 @@ layout(set = 0, binding = 1, rgba16f) uniform          image2D probeIrradianceAt
 NAMED_UNIFORMS(pushConstants,
     ivec3 gridDimensions;
     uint raysPerProbe;
+    uint firstProbeIdx;
     float hysterisis;
     uint frameIdx;
 )
@@ -20,7 +21,9 @@ layout(local_size_x = DDGI_IRRADIANCE_RES,
        local_size_z = 1) in;
 void main()
 {
-    uint probeIdx = gl_GlobalInvocationID.z;
+    uint surfelProbeIdx = gl_GlobalInvocationID.z;
+    const uint probeCount = pushConstants.gridDimensions.x * pushConstants.gridDimensions.y * pushConstants.gridDimensions.z;
+    uint probeIdx = (surfelProbeIdx + pushConstants.firstProbeIdx) % probeCount;
     ivec2 tileTexelCoord = ivec2(gl_GlobalInvocationID.xy);
 
     // Compute the direction that this ocrahedral texel (coordinate) represents
@@ -40,7 +43,7 @@ void main()
         vec3 rayDirection = calculateRotatedSphericalFibonacciSample(probeIdx, sampleIdx, pushConstants.raysPerProbe, pushConstants.frameIdx);
         float weight = max(0.0, dot(texelDirection, rayDirection));
 
-        vec3 surfelRadiance = imageLoad(surfelImage, ivec2(probeIdx, sampleIdx)).rgb;
+        vec3 surfelRadiance = imageLoad(surfelImage, ivec2(surfelProbeIdx, sampleIdx)).rgb;
 
         newIrradiance += weight * surfelRadiance;
         totalWeight += weight;
