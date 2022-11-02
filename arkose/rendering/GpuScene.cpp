@@ -57,17 +57,17 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
 
 StaticMesh* GpuScene::staticMeshForHandle(StaticMeshHandle handle)
 {
-    return m_managedStaticMeshes.get(handle).staticMesh.get();
+    return handle.valid() ? m_managedStaticMeshes.get(handle).staticMesh.get() : nullptr;
 }
 
 const StaticMesh* GpuScene::staticMeshForHandle(StaticMeshHandle handle) const
 {
-    return m_managedStaticMeshes.get(handle).staticMesh.get();
+    return handle.valid() ? m_managedStaticMeshes.get(handle).staticMesh.get() : nullptr;
 }
 
 const ShaderMaterial* GpuScene::materialForHandle(MaterialHandle handle) const
 {
-    return &m_managedMaterials.get(handle);
+    return handle.valid() ? &m_managedMaterials.get(handle) : nullptr;
 }
 
 size_t GpuScene::lightCount() const
