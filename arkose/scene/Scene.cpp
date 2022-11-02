@@ -357,46 +357,38 @@ void Scene::setEnvironmentMap(EnvironmentMap environmentMap)
 
 void Scene::generateProbeGridFromBoundingBox()
 {
-    NOT_YET_IMPLEMENTED();
+    ark::aabb3 sceneAABB {};
 
-    /*
+    for (auto const& instance : staticMeshInstances()) {
+        if (StaticMesh* staticMesh = gpuScene().staticMeshForHandle(instance->mesh)) {
 
-    constexpr int maxGridSideSize = 16;
-    constexpr float boxPadding = 0.0f;
+            ark::aabb3 transformedAABB = staticMesh->boundingBox().transformed(instance->transform.worldMatrix());
+            sceneAABB.expandWithPoint(transformedAABB.min);
+            sceneAABB.expandWithPoint(transformedAABB.max);
 
-    ark::aabb3 sceneBox {};
-    scene().forEachMesh([&](size_t, Mesh& mesh) {
-        // TODO: Transform the bounding box first, obviously..
-        // But we aren't using this path right now so not going
-        // to spend time on it right now.
-        ark::aabb3 meshBox = mesh.boundingBox();
-        sceneBox.expandWithPoint(meshBox.min);
-        sceneBox.expandWithPoint(meshBox.max);
-    });
-    sceneBox.min -= vec3(boxPadding);
-    sceneBox.max += vec3(boxPadding);
-
-    vec3 dims = sceneBox.max - sceneBox.min;
-    int counts[3] = { maxGridSideSize, maxGridSideSize, maxGridSideSize };
-    int indexOfSmallest = 0;
-    if (dims.y < dims.x || dims.z < dims.x) {
-        if (dims.y < dims.z) {
-            indexOfSmallest = 1;
-        } else {
-            indexOfSmallest = 2;
         }
     }
-    counts[indexOfSmallest] /= 2;
 
-    vec3 spacing = dims / vec3((float)counts[0], (float)counts[1], (float)counts[2]);
+    vec3 bounds = sceneAABB.max - sceneAABB.min;
 
-    ProbeGrid grid;
-    grid.offsetToFirst = sceneBox.min;
-    grid.gridDimensions = Extent3D(counts[0], counts[1], counts[2]);
-    grid.probeSpacing = spacing;
-    setProbeGrid(grid);
+    int indexOfLargest = 0;
+    if (bounds.y > bounds.x || bounds.z > bounds.x) {
+        if (bounds.y > bounds.z) {
+            indexOfLargest = 1;
+        } else {
+            indexOfLargest = 2;
+        }
+    }
 
-    */
+    vec3 gridCounts = vec3(16, 16, 16);
+    gridCounts[indexOfLargest] = 32;
+
+    ProbeGrid generatedProbeGrid {};
+    generatedProbeGrid.gridDimensions = Extent3D(gridCounts.x, gridCounts.y, gridCounts.z);
+    generatedProbeGrid.probeSpacing = bounds / gridCounts;
+    generatedProbeGrid.offsetToFirst = sceneAABB.min;
+
+    setProbeGrid(generatedProbeGrid);
 }
 
 void Scene::drawSettingsGui(bool includeContainingWindow)

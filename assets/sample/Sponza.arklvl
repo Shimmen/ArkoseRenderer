@@ -255,24 +255,7 @@
             }
         },
         "probeGrid": {
-            "nullopt": false,
-            "data": {
-                "gridDimensions": {
-                    "width": 16,
-                    "height": 16,
-                    "depth": 8
-                },
-                "probeSpacing": {
-                    "x": 1.375,
-                    "y": 0.7375,
-                    "z": 1.2875
-                },
-                "offsetToFirst": {
-                    "x": -10.0,
-                    "y": 0.6,
-                    "z": -4.8
-                }
-            }
+            "nullopt": true
         }
     }
 }

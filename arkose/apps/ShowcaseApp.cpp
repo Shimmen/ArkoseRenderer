@@ -52,13 +52,10 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     Camera& camera = scene.camera();
     m_fpsCameraController.takeControlOfCamera(camera);
 
-    if (!scene.hasProbeGrid()) {
-        scene.generateProbeGridFromBoundingBox();
-    }
-
     pipeline.addNode<PickingNode>();
 
     if (rtxOn) {
+        scene.generateProbeGridFromBoundingBox();
         pipeline.addNode<DDGINode>();
     } else {
         scene.setAmbientIlluminance(250.0f);
