@@ -51,11 +51,23 @@ struct aabb3 {
 
     aabb3 transformed(mat4 transform) const
     {
-        vec3 a = transform * min;
-        vec3 b = transform * max;
-        vec3 transformedMin = ark::min(a, b);
-        vec3 transformedMax = ark::max(a, b);
-        return aabb3(transformedMin, transformedMax);
+        const vec3 transformedCorners[8] = { transform * vec3(min.x, min.y, min.z),
+                                             transform * vec3(min.x, min.y, max.z),
+                                             transform * vec3(min.x, max.y, min.z),
+                                             transform * vec3(min.x, max.y, max.z),
+                                             transform * vec3(max.x, min.y, min.z),
+                                             transform * vec3(max.x, min.y, max.z),
+                                             transform * vec3(max.x, max.y, min.z),
+                                             transform * vec3(max.x, max.y, max.z) };
+
+        aabb3 result {};
+
+        for (int i = 0; i < 8; ++i) {
+            result.min = ark::min(result.min, transformedCorners[i]);
+            result.max = ark::max(result.max, transformedCorners[i]);
+        }
+
+        return result;
     }
 
     bool contains(const vec3& point) const
