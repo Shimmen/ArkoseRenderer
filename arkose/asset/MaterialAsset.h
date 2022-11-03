@@ -73,9 +73,6 @@ public:
 
     std::string_view assetFilePath() const { return m_assetFilePath; }
 
-    // Not serialized, can be used to store whatever intermediate you want
-    int userData { -1 };
-
 private:
     std::string m_assetFilePath {};
 };

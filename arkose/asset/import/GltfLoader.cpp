@@ -121,11 +121,6 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
     for (size_t idx = 0; idx < gltfModel.materials.size(); ++idx) {
         tinygltf::Material const& gltfMaterial = gltfModel.materials[idx];
         if (std::unique_ptr<MaterialAsset> material = createMaterial(gltfModel, gltfMaterial)) {
-
-            // Write glTF material index to user data until we can resolve file paths
-            int materialIdx = static_cast<int>(idx);
-            material->userData = materialIdx;
-
             result.materials.push_back(std::move(material));
         }
     }
