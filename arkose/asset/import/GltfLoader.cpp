@@ -150,6 +150,8 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
             const tinygltf::Node& childNode = gltfModel.nodes[childNodeIdx];
             createMeshesRecursively(childNode, &transform);
         }
+
+        transformStack.pop_back();
     };
 
     const tinygltf::Scene& gltfScene = gltfModel.scenes[gltfModel.defaultScene];
