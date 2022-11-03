@@ -3,6 +3,7 @@
 #include "ark/aabb.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
+#include "core/parallel/ParallelFor.h"
 #include "utility/Profiling.h"
 #include "utility/FileIO.h"
 
@@ -79,7 +80,9 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
     }
 
     // Create all images defined in the glTF file (even potentially unused ones)
-    for (size_t idx = 0; idx < gltfModel.images.size(); ++idx) {
+    size_t imageCount = gltfModel.images.size();
+    result.images.resize(imageCount);
+    ParallelFor(imageCount, [&](size_t idx) {
 
         tinygltf::Texture& gltfTexture = gltfModel.textures[idx];
         tinygltf::Sampler& gltfSampler = gltfModel.samplers[gltfTexture.sampler];
@@ -114,8 +117,8 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
         int imageIdx = static_cast<int>(idx);
         image->userData = imageIdx;
 
-        result.images.push_back(std::move(image));
-    }
+        result.images[idx] = std::move(image);
+    });
 
     // Create all materials defined in the glTF file (even potentially unused ones)
     for (size_t idx = 0; idx < gltfModel.materials.size(); ++idx) {
