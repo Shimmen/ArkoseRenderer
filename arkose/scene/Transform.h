@@ -31,6 +31,8 @@ public:
     template<class Archive>
     void serialize(Archive&);
 
+    Transform flattened() const;
+
     vec3 localTranslation() const { return m_translation; }
     quat localOrientation() const { return m_orientation; }
     vec3 localScale() const { return m_scale; }
