@@ -384,7 +384,9 @@ void Scene::generateProbeGridFromBoundingBox()
     gridCounts[indexOfLargest] = 32;
 
     ProbeGrid generatedProbeGrid {};
-    generatedProbeGrid.gridDimensions = Extent3D(gridCounts.x, gridCounts.y, gridCounts.z);
+    generatedProbeGrid.gridDimensions = Extent3D(static_cast<u32>(gridCounts.x),
+                                                 static_cast<u32>(gridCounts.y),
+                                                 static_cast<u32>(gridCounts.z));
     generatedProbeGrid.probeSpacing = bounds / gridCounts;
     generatedProbeGrid.offsetToFirst = sceneAABB.min;
 
