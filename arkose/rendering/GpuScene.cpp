@@ -474,7 +474,10 @@ void GpuScene::updateEnvironmentMap(EnvironmentMap& environmentMap)
 
 Texture& GpuScene::environmentMapTexture()
 {
-    ARKOSE_ASSERT(m_environmentMapTexture);
+    if (not m_environmentMapTexture) {
+        m_environmentMapTexture = Texture::createFromPixel(backend(), vec4(1.0f, 1.0f, 1.0f, 1.0f), true);
+    }
+
     return *m_environmentMapTexture;
 }
 
