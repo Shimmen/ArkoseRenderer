@@ -120,8 +120,11 @@ void MeshViewerApp::drawMenuBar()
                 saveMeshWithDialog();
             }
             ImGui::Separator();
-            if (ImGui::MenuItem("Import...", "Ctrl+I")) {
-                openImportMeshDialog();
+            if (ImGui::MenuItem("Import meshes...")) {
+                importMeshWithDialog();
+            }
+            if (ImGui::MenuItem("Import level...")) {
+                importLevelWithDialog();
             }
             ImGui::EndMenu();
         }
@@ -462,7 +465,7 @@ void MeshViewerApp::drawMeshPhysicsPanel()
     ImGui::End();
 }
 
-void MeshViewerApp::openImportMeshDialog()
+void MeshViewerApp::importMeshWithDialog()
 {
     std::vector<FileDialog::FilterItem> filterItems = { { "glTF", "gltf,glb" } };
 
@@ -479,6 +482,27 @@ void MeshViewerApp::openImportMeshDialog()
 
         ARKOSE_LOG(Info, "Imported {} static meshes, {} materials, and {} images.",
                    assets.staticMeshes.size(), assets.materials.size(), assets.images.size());
+    }
+}
+
+
+void MeshViewerApp::importLevelWithDialog()
+{
+    std::vector<FileDialog::FilterItem> filterItems = { { "glTF", "gltf,glb" } };
+
+    if (auto maybePath = FileDialog::open(filterItems)) {
+
+        std::string importFilePath = maybePath.value();
+        ARKOSE_LOG(Info, "Importing level from file '{}'", importFilePath);
+
+        std::string_view importFileDir = FileIO::extractDirectoryFromPath(importFilePath);
+        std::string targetDirectory = FileIO::normalizePath(importFileDir);
+
+        AssetImporter importer {};
+        AssetImporter::Options options { .blockCompressImages = true };
+        std::unique_ptr<LevelAsset> levelAsset = importer.importAsLevel(importFilePath, targetDirectory, options);
+
+        ARKOSE_LOG(Info, "Imported level.");
     }
 }
 

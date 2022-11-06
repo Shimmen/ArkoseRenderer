@@ -48,7 +48,8 @@ private:
     
     void drawMeshPhysicsPanel();
 
-    void openImportMeshDialog();
+    void importMeshWithDialog();
+    void importLevelWithDialog();
     void loadMeshWithDialog();
     void saveMeshWithDialog();
 
