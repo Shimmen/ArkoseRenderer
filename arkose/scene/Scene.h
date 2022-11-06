@@ -58,8 +58,8 @@ public:
 
     Camera& addCamera(const std::string& name, bool makeDefault);
 
-    const Camera& camera() const { return *m_currentMainCamera; }
-    Camera& camera() { return *m_currentMainCamera; }
+    const Camera& camera() const { ARKOSE_ASSERT(m_currentMainCamera); return *m_currentMainCamera; }
+    Camera& camera() { ARKOSE_ASSERT(m_currentMainCamera); return *m_currentMainCamera; }
 
     // Meshes
 
