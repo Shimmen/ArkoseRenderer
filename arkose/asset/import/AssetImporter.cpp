@@ -117,3 +117,30 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
     return result;
 }
+
+std::unique_ptr<LevelAsset> AssetImporter::importAsLevel(std::string_view assetFilePath, std::string_view targetDirectory, Options options)
+{
+    ImportResult result = importAsset(assetFilePath, targetDirectory, options);
+
+    auto levelAsset = std::make_unique<LevelAsset>();
+
+    // TODO: Also add lights, cameras, etc.
+
+    for (MeshInstance const& meshInstance : result.meshInstances) {
+        SceneObject sceneObject {};
+        sceneObject.transform = meshInstance.transform;
+        sceneObject.mesh = std::string(meshInstance.staticMesh->assetFilePath());
+        levelAsset->objects.push_back(sceneObject);
+    }
+
+    std::string_view levelName = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(assetFilePath));
+    levelAsset->name = std::string(levelName);
+
+    std::string levelFilePath = fmt::format("{}{}.arklvl", targetDirectory, levelName);
+    if (not levelAsset->writeToArklvl(levelFilePath, AssetStorage::Json)) {
+        ARKOSE_LOG(Error, "Failed to write level asset '{}' to file.", levelAsset->name);
+        return nullptr;
+    }
+
+    return levelAsset;
+}

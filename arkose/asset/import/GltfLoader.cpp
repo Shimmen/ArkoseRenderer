@@ -128,6 +128,15 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
         }
     }
 
+    // Create all meshes definined in the glTF file (even potentially unused ones)
+    for (size_t idx = 0; idx < gltfModel.meshes.size(); ++idx) {
+        tinygltf::Mesh const& gltfMesh = gltfModel.meshes[idx];
+        // TODO: Ensure we're in fact loading in a *static* mesh
+        if (std::unique_ptr<StaticMeshAsset> staticMesh = createStaticMesh(gltfModel, gltfMesh)) {
+            result.staticMeshes.push_back(std::move(staticMesh));
+        }
+    }
+
     constexpr int TransformStackDepth = 16;
     std::vector<Transform> transformStack {};
     transformStack.reserve(TransformStackDepth);
@@ -141,12 +150,13 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
         createTransformForNode(transform, node);
 
         if (node.mesh != -1) {
-            const tinygltf::Mesh& gltfMesh = gltfModel.meshes[node.mesh];
 
-            // TODO: Ensure we're in fact loading in a *static* mesh
-            if (std::unique_ptr<StaticMeshAsset> staticMesh = createStaticMesh(gltfModel, gltfMesh, transform)) {
-                result.staticMeshes.push_back(std::move(staticMesh));
-            }
+            // TODO: Maybe allow exporting Transforms as is, without flattening first?
+            Transform flattenedTransform = transform.flattened();
+
+            StaticMeshAsset* staticMesh = result.staticMeshes[node.mesh].get();
+            result.meshInstances.push_back({ .staticMesh = staticMesh,
+                                             .transform = flattenedTransform });
         }
 
         for (int childNodeIdx : node.children) {
@@ -196,14 +206,9 @@ void GltfLoader::createTransformForNode(Transform& transform, const tinygltf::No
     }
 }
 
-std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Model& gltfModel, const tinygltf::Mesh& gltfMesh, Transform& transform)
+std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Model& gltfModel, const tinygltf::Mesh& gltfMesh)
 {
     SCOPED_PROFILE_ZONE();
-
-    // We pre-bake all mesh transforms if there are any. World matrix here essentially just means it contains the whole
-    // stack of matrices from the local one all the way up the node stack. We don't have any object-to-world transform.
-    mat4 meshMatrix = transform.worldMatrix();
-    mat3 meshNormalMatrix = transform.worldNormalMatrix();
 
     auto staticMesh = std::make_unique<StaticMeshAsset>();
     staticMesh->name = gltfMesh.name;
@@ -231,9 +236,8 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
         ARKOSE_ASSERT(positionAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
         ARKOSE_ASSERT(positionAccessor.type == TINYGLTF_TYPE_VEC3);
 
-        ark::aabb3 localAabb = ark::aabb3(createVec3(positionAccessor.minValues), createVec3(positionAccessor.maxValues));
-        ark::aabb3 aabb = localAabb.transformed(meshMatrix);
-        staticMesh->boundingBox = ark::aabb3(aabb.min, aabb.max);
+        ark::aabb3 aabb = ark::aabb3(createVec3(positionAccessor.minValues), createVec3(positionAccessor.maxValues));
+        staticMesh->boundingBox = aabb;
 
         vec3 center = (aabb.max + aabb.min) / 2.0f;
         float radius = length(aabb.max - aabb.min) / 2.0f;
@@ -250,11 +254,7 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
 
             meshSegment.positions.reserve(positionAccessor.count);
             const vec3* firstPosition = getTypedMemoryBufferForAccessor<vec3>(gltfModel, positionAccessor);
-            for (size_t i = 0; i < positionAccessor.count; ++i) {
-                vec3 sourceValue = *(firstPosition + i);
-                vec3 transformedValue = meshMatrix * sourceValue;
-                meshSegment.positions.push_back(transformedValue);
-            }
+            meshSegment.positions = std::vector<vec3>(firstPosition, firstPosition + positionAccessor.count);
         }
 
         if (const tinygltf::Accessor* accessor = findAccessorForPrimitive(gltfModel, gltfPrimitive, "TEXCOORD_0")) {
@@ -275,11 +275,7 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
 
             meshSegment.normals.reserve(accessor->count);
             const vec3* firstNormal = getTypedMemoryBufferForAccessor<vec3>(gltfModel, *accessor);
-            for (size_t i = 0; i < accessor->count; ++i) {
-                vec3 sourceNormal = *(firstNormal + i);
-                vec3 transformedNormal = meshNormalMatrix * sourceNormal;
-                meshSegment.normals.push_back(transformedNormal);
-            }
+            meshSegment.normals = std::vector<vec3>(firstNormal, firstNormal + accessor->count);
         }
 
         if (const tinygltf::Accessor* accessor = findAccessorForPrimitive(gltfModel, gltfPrimitive, "TANGENT")) {
@@ -290,12 +286,7 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
 
             meshSegment.tangents.reserve(accessor->count);
             const vec4* firstTangent = getTypedMemoryBufferForAccessor<vec4>(gltfModel, *accessor);
-            for (size_t i = 0; i < accessor->count; ++i) {
-                vec4 sourceTangent = *(firstTangent + i);
-                vec3 transformedTangent = meshNormalMatrix * sourceTangent.xyz();
-                vec4 finalTangent = vec4(transformedTangent, sourceTangent.w);
-                meshSegment.tangents.push_back(finalTangent);
-            }
+            meshSegment.tangents = std::vector<vec4>(firstTangent, firstTangent + accessor->count);
         }
 
         if (gltfPrimitive.indices != -1) {

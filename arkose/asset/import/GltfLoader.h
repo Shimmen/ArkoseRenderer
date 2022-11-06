@@ -24,7 +24,7 @@ private:
     std::string m_gltfFilePath {};
 
     std::unique_ptr<MaterialAsset> createMaterial(const tinygltf::Model&, const tinygltf::Material&);
-    std::unique_ptr<StaticMeshAsset> createStaticMesh(const tinygltf::Model&, const tinygltf::Mesh&, Transform&);
+    std::unique_ptr<StaticMeshAsset> createStaticMesh(const tinygltf::Model&, const tinygltf::Mesh&);
 
     vec3 createVec3(const std::vector<double>&) const;
     void createTransformForNode(Transform&, const tinygltf::Node&) const;
