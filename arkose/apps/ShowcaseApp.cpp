@@ -137,8 +137,9 @@ bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
     sunRotation += input.isKeyDown(Key::Right) ? 1.0f : 0.0f;
     quat rotation = axisAngle(ark::globalRight, sunRotation * deltaTime * 0.2f);
 
-    DirectionalLight& sun = *scene.firstDirectionalLight();
-    sun.transform().setOrientation(rotation * sun.transform().localOrientation());
+    if (DirectionalLight* sun = scene.firstDirectionalLight()) {
+        sun->transform().setOrientation(rotation * sun->transform().localOrientation());
+    }
 
     // Physics experiment, to be removed!
     if (input.wasKeyPressed(Key::T)) {
