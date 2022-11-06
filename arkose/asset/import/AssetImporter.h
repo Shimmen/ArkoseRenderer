@@ -26,6 +26,8 @@ public:
     struct Options {
         // By default we keep png/jpeg/etc. in their source formats. Set this to true to import all images as asset types.
         bool alwaysMakeImageAsset { false };
+        // Compress images in BC5 format for normal maps and BC7 for all other textures.
+        bool blockCompressImages { false };
     };
 
     ImportResult importAsset(std::string_view assetFilePath, std::string_view targetDirectory, Options = Options());

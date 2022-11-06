@@ -1,5 +1,6 @@
 #include "AssetImporter.h"
 
+#include "asset/TextureCompressor.h"
 #include "asset/import/GltfLoader.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
@@ -30,6 +31,10 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         targetDirectory.remove_suffix(1);
     }
 
+    if (options.blockCompressImages) {
+        options.alwaysMakeImageAsset = true;
+    }
+
     GltfLoader gltfLoader {};
     ImportResult result = gltfLoader.load(std::string(gltfFilePath));
 
@@ -39,6 +44,13 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         // Only compress if we're importing images in arkimg format
         if (image->sourceAssetFilePath().empty() || options.alwaysMakeImageAsset) {
+
+            if (options.blockCompressImages) {
+                TextureCompressor textureCompressor {};
+                // TODO: Use BC5 for normal maps!
+                image = textureCompressor.compressBC7(*image);
+            }
+
             image->compress();
         }
     });
