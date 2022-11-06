@@ -7,11 +7,14 @@
 #include "physics/HandleTypes.h"
 #include "rendering/Material.h"
 #include "rendering/backend/util/DrawCall.h" // remove me!
+#include "scene/Vertex.h"
 #include <ark/aabb.h>
 #include <ark/vector.h>
 #include <string>
 #include <vector>
 #include <memory>
+
+class BottomLevelAS;
 
 DEFINE_HANDLE_TYPE(StaticMeshHandle)
 

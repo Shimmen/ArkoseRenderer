@@ -1,6 +1,7 @@
 #include "StaticMesh.h"
 
 #include "asset/StaticMeshAsset.h"
+#include "rendering/backend/base/AccelerationStructure.h"
 #include "rendering/GpuScene.h"
 
 StaticMesh::StaticMesh(StaticMeshAsset* asset)
