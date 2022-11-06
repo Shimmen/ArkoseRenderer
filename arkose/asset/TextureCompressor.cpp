@@ -13,6 +13,7 @@ std::unique_ptr<ImageAsset> TextureCompressor::compressBC7(ImageAsset const& inp
 
     ARKOSE_ASSERT(inputImage.isUncompressed());
     ARKOSE_ASSERT(inputImage.width() > 0 && inputImage.height() > 0 && inputImage.depth() == 1);
+    ARKOSE_ASSERT(inputImage.width() % 4 == 0 && inputImage.height() % 4 == 0);
     ARKOSE_ASSERT(inputImage.format() == ImageFormat::RGBA8); // TODO: Also add support for RGB, which will require some manual padding
 
     // Create an image that can be used by the encoder
