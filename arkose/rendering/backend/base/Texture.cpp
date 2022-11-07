@@ -92,8 +92,7 @@ Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageForm
         case ImageFormat::RGBA32F:
             return Format::RGBA32F;
         case ImageFormat::BC7:
-            NOT_YET_IMPLEMENTED();
-            //return Format::BC7sRGB;
+            return Format::BC7sRGB;
         }
 
         // TODO: Add fmt support for flatbuffers enums!
@@ -120,7 +119,7 @@ Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageForm
     case ImageFormat::RGBA32F:
         return Format::RGBA32F;
     case ImageFormat::BC7:
-        NOT_YET_IMPLEMENTED();
+        return Format::BC7;
     }
 
     // TODO: Add fmt support for flatbuffers enums!

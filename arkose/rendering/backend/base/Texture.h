@@ -37,6 +37,8 @@ public:
         Depth32F,
         Depth24Stencil8,
         R32Uint,
+        BC7,
+        BC7sRGB,
     };
 
     // TODO: Move out of Texture to be shared between assets and textures
@@ -196,7 +198,8 @@ public:
 protected:
     size_t m_sizeInMemory { SIZE_MAX };
 
-private:
+    // HACK: Make this private again!
+//private:
     Description m_description;
 };
 

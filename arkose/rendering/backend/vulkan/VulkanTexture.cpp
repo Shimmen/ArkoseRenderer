@@ -11,10 +11,8 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
-    // HACK: Now we longer specify what usage we want for the texture, and instead always select all
-    //  possible capabilities. However, some texture formats (e.g. sRGB formats) do not support being
-    //  used as a storage image, so we need to explicitly disable it for those formats.
     bool storageCapable = true;
+    bool attachmentCapable = true;
 
     switch (format()) {
     case Texture::Format::R8:
@@ -56,6 +54,18 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
     case Texture::Format::R32Uint:
         vkFormat = VK_FORMAT_R32_UINT;
         break;
+    case Texture::Format::BC7:
+        vkFormat = VK_FORMAT_BC7_UNORM_BLOCK;
+        storageCapable = false;
+        attachmentCapable = false;
+        m_description.mipmap = Texture::Mipmap::None; // HACK!
+        break;
+    case Texture::Format::BC7sRGB:
+        vkFormat = VK_FORMAT_BC7_SRGB_BLOCK;
+        storageCapable = false;
+        attachmentCapable = false;
+        m_description.mipmap = Texture::Mipmap::None; // HACK!
+        break;
     case Texture::Format::Unknown:
         ARKOSE_LOG(Fatal, "Trying to create new texture with format Unknown, which is not allowed!");
     default:
@@ -68,11 +78,14 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
         storageCapable = false;
     }
 
-    // Since we don't specify usage we have to assume all of them may be used (at least the common operations)
-    const VkImageUsageFlags attachmentFlags = hasDepthFormat() ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-    VkImageUsageFlags usageFlags = attachmentFlags | VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    if (storageCapable)
+    VkImageUsageFlags usageFlags = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    if (storageCapable) {
         usageFlags |= VK_IMAGE_USAGE_STORAGE_BIT;
+    }
+
+    if (attachmentCapable) {
+        usageFlags |= hasDepthFormat() ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT : VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    }
 
     // (if we later want to generate mipmaps we need the ability to use each mip as a src & dst in blitting)
     if (hasMipmaps()) {

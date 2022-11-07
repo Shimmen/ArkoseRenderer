@@ -395,6 +395,11 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         allRequiredSupported = false;
     }
 
+    if (!features.textureCompressionBC) {
+        ARKOSE_LOG(Error, "VulkanBackend: no support for BC compressed textures which is required");
+        allRequiredSupported = false;
+    }
+
     if (vulkanDebugMode && !(vk12features.bufferDeviceAddress && vk12features.bufferDeviceAddressCaptureReplay)) {
         ARKOSE_LOG(Error, "VulkanBackend: no support for buffer device address & buffer device address capture replay, which is required by e.g. Nsight for debugging. "
                  "If this is a problem, try compiling and running with vulkanDebugMode set to false.");
@@ -749,6 +754,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 
     // Imageless framebuffers
     vk12features.imagelessFramebuffer = VK_TRUE;
+
+    // BC texture compression
+    features.textureCompressionBC = VK_TRUE;
 
     // GPU debugging & insight for e.g. Nsight
     if (vulkanDebugMode) {
