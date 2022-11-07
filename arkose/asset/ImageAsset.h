@@ -2,6 +2,7 @@
 
 #include "asset/AssetHelpers.h"
 #include "core/Types.h"
+#include <span>
 #include <string>
 #include <string_view>
 
@@ -68,7 +69,8 @@ public:
     ColorSpace colorSpace() const { return m_colorSpace; }
     void setColorSpace(ColorSpace colorSpace) { m_colorSpace = colorSpace; }
 
-    std::vector<u8> const& pixelData() const { return m_pixelData; }
+    size_t numMips() const { return m_mips.size(); }
+    std::span<u8 const> pixelDataForMip(size_t mip) const;
 
     // Apply lossless compression on the pixel data
     bool compress(int compressionLevel = 10);
@@ -96,6 +98,12 @@ private:
     // Pixel data binary blob
     std::vector<u8> m_pixelData {};
 
+    struct ImageMip {
+        size_t offset;
+        size_t size;
+    };
+    std::vector<ImageMip> m_mips {};
+
     // Optional lossless compression applied to `pixelData`
     bool m_compressed { false };
     u32 m_compressedSize { 0 };
@@ -111,11 +119,18 @@ private:
 #include <cereal/cereal.hpp>
 
 template<class Archive>
+void serialize(Archive& archive, ImageAsset::ImageMip& mip)
+{
+    archive(cereal::make_nvp("offset", mip.offset),
+            cereal::make_nvp("size", mip.size));
+}
+
+template<class Archive>
 void ImageAsset::serialize(Archive& archive)
 {
     archive(CEREAL_NVP(m_width), CEREAL_NVP(m_height), CEREAL_NVP(m_depth));
     archive(CEREAL_NVP(m_format), CEREAL_NVP(m_colorSpace));
-    archive(CEREAL_NVP(m_pixelData));
+    archive(CEREAL_NVP(m_pixelData), CEREAL_NVP(m_mips));
     archive(CEREAL_NVP(m_compressed), CEREAL_NVP(m_compressedSize), CEREAL_NVP(m_uncompressedSize));
     archive(CEREAL_NVP(m_sourceAssetFilePath));
 }

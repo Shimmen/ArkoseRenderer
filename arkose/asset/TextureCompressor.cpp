@@ -16,10 +16,6 @@ std::unique_ptr<ImageAsset> TextureCompressor::compressBC7(ImageAsset const& inp
     ARKOSE_ASSERT(inputImage.width() % 4 == 0 && inputImage.height() % 4 == 0);
     ARKOSE_ASSERT(inputImage.format() == ImageFormat::RGBA8); // TODO: Also add support for RGB, which will require some manual padding
 
-    // Create an image that can be used by the encoder
-    utils::image_u8 sourceImage { inputImage.width(), inputImage.height() };
-    std::memcpy(sourceImage.get_pixels().data(), inputImage.pixelData().data(), inputImage.pixelData().size());
-
     rdo_bc::rdo_bc_params params {};
     params.m_status_output = false; // no debug printing
     params.m_use_bc7e = false; // no ispc support yet (on our end)
@@ -30,6 +26,14 @@ std::unique_ptr<ImageAsset> TextureCompressor::compressBC7(ImageAsset const& inp
     //params.m_rdo_max_threads = std::max(1u, std::thread::hardware_concurrency());
     //params.m_bc7enc_reduce_entropy = true;
     //params.m_rdo_lambda = 100.0f;
+
+    // TODO: Actually handle multiple mips!
+    //for (size_t mipIdx = 0; mipIdx < inputImage.numMips(); ++mipIdx) {
+    auto pixelData = inputImage.pixelDataForMip(0);
+
+    // Create an image that can be used by the encoder
+    utils::image_u8 sourceImage { inputImage.width(), inputImage.height() };
+    std::memcpy(sourceImage.get_pixels().data(), pixelData.data(), pixelData.size());
 
     rdo_bc::rdo_bc_encoder encoder {};
 

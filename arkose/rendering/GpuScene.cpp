@@ -229,7 +229,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 const LoadedImageForTextureCreation& loadedImageForTex = m_asyncLoadedImages[i];
 
                 auto texture = backend().createTexture(loadedImageForTex.textureDescription);
-                texture->setData(loadedImageForTex.imageAsset->pixelData().data(), loadedImageForTex.imageAsset->pixelData().size());
+                // TODO: Support setting data for multiple mips!
+                texture->setData(loadedImageForTex.imageAsset->pixelDataForMip(0).data(), loadedImageForTex.imageAsset->pixelDataForMip(0).size());
                 texture->setName("Texture:" + std::string(loadedImageForTex.imageAsset->assetFilePath()));
                 m_managedTexturesVramUsage += texture->sizeInMemory();
 
@@ -738,7 +739,8 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
         } else {
             if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(imageAssetPath)) {
                 std::unique_ptr<Texture> texture = m_backend.createTexture(makeTextureDescription(*imageAsset, *input, sRGB));
-                texture->setData(imageAsset->pixelData().data(), imageAsset->pixelData().size());
+                // TODO: Support setting data for multiple mips!
+                texture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size());
                 texture->setName("Texture:" + imageAssetPath);
 
                 m_managedTexturesVramUsage += texture->sizeInMemory();

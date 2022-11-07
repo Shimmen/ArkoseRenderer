@@ -34,6 +34,9 @@ std::unique_ptr<ImageAsset> ImageAsset::createCopyWithReplacedFormat(ImageAsset 
     newImage->m_format = newFormat;
     newImage->m_pixelData.assign(newData, newData + newSize);
 
+    // TODO: Handle multiple mips in this function!
+    newImage->m_mips = std::vector<ImageMip> { ImageMip { .offset = 0, .size = newSize } };
+
     // Passed in data must be in an uncompressed state (compressed data formats are okay but not lossless compression on pixel_data!)
     newImage->m_compressed = false;
     newImage->m_compressedSize = narrow_cast<u32>(newSize);
@@ -129,6 +132,10 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
 
     uint8_t* dataPtr = reinterpret_cast<uint8_t*>(data);
     imageAsset->m_pixelData = std::vector<uint8_t>(dataPtr, dataPtr + size);
+
+    ImageMip mip0 { .offset = 0,
+                    .size = size };
+    imageAsset->m_mips.push_back(mip0);
 
     // No compression when creating here now, but we might want to apply it before writing to disk
     imageAsset->m_compressed = false;
@@ -247,6 +254,20 @@ bool ImageAsset::writeToArkimg(std::string_view filePath)
 
     fileStream.close();
     return true;
+}
+
+std::span<u8 const> ImageAsset::pixelDataForMip(size_t mipIdx) const
+{
+    if (mipIdx >= m_mips.size()) {
+        return {};
+    }
+
+    ImageMip const& mip = m_mips[mipIdx];
+    ARKOSE_ASSERT(mip.size > 0);
+    ARKOSE_ASSERT(mip.offset < m_pixelData.size());
+    ARKOSE_ASSERT(mip.offset + mip.size <= m_pixelData.size());
+
+    return std::span<u8 const> { m_pixelData.data() + mip.offset, mip.size };
 }
 
 bool ImageAsset::compress(int compressionLevel)

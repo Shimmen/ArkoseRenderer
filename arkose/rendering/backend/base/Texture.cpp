@@ -229,7 +229,8 @@ std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const st
         auto texture = backend.createTexture(desc);
         texture->setName("Texture:" + imagePath);
 
-        texture->setData(imageAsset->pixelData().data(), imageAsset->pixelData().size());
+        // TODO: Support setting data for multiple mips!
+        texture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size());
 
         return texture;
 
@@ -254,7 +255,8 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
         ImageAsset* imageAsset = ImageAsset::loadOrCreate(imagePath);
         if (!imageAsset)
             break;
-        totalRequiredSize += imageAsset->pixelData().size();
+        // TODO: Support multiple mips!
+        totalRequiredSize += imageAsset->pixelDataForMip(0).size();
         imageAssets.push_back(imageAsset);
     }
 
@@ -304,8 +306,9 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     constexpr bool UseSingleThreadedLoading = true;
     ParallelFor(imageAssets.size(), [&](size_t idx) {
 
+        // TODO: Support setting data for multiple mips!
         ImageAsset const& imageAsset = *imageAssets[idx];
-        auto const& data = imageAsset.pixelData();
+        auto const& data = imageAsset.pixelDataForMip(0);
 
         size_t offset = idx * data.size();
         std::memcpy(textureArrayMemory + offset, data.data(), data.size());
