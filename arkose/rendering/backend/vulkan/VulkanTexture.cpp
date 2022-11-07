@@ -96,7 +96,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
     if (vulkanDebugMode) {
         // for nsight debugging & similar stuff, which needs access to everything
         usageFlags |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
-        usageFlags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+        usageFlags |= VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
 
     // TODO: For now always keep images in device local memory.
