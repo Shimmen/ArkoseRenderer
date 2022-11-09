@@ -228,17 +228,6 @@ Texture& Registry::createPixelTexture(vec4 pixelValue, bool srgb)
     return *m_textures.back();
 }
 
-Texture& Registry::loadTexture2D(const std::string& imagePath, bool srgb, bool generateMipmaps)
-{
-    SCOPED_PROFILE_ZONE()
-
-    auto texture = Texture::createFromImagePath(backend(), imagePath, srgb, generateMipmaps, ImageWrapModes::clampAllToEdge());
-    texture->setOwningRegistry({}, this);
-
-    m_textures.push_back(std::move(texture));
-    return *m_textures.back();
-}
-
 Texture& Registry::loadTextureArrayFromFileSequence(const std::string& imagePathPattern, bool srgb, bool generateMipmaps)
 {
     SCOPED_PROFILE_ZONE()
