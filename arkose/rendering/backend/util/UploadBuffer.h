@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rendering/backend/base/Backend.h"
+#include <variant>
 
 struct BufferCopyOperation {
     size_t size;
@@ -8,8 +9,18 @@ struct BufferCopyOperation {
     Buffer* srcBuffer;
     size_t srcOffset;
 
-    Buffer* dstBuffer;
-    size_t dstOffset;
+    struct BufferDestination {
+        Buffer* buffer { nullptr };
+        size_t offset { 0 };
+    };
+
+    struct TextureDestination {
+        Texture* texture { nullptr };
+        size_t textureMip { 0 };
+        size_t textureArrayLayer { 0 };
+    };
+
+    std::variant<BufferDestination, TextureDestination> destination {};
 };
 
 class UploadBuffer final {
@@ -24,22 +35,26 @@ public:
 
     void reset();
 
-    BufferCopyOperation upload(const void* data, size_t size, Buffer& dstBuffer, size_t dstOffset = 0);
+    void upload(const void* data, size_t size, Buffer& dstBuffer, size_t dstOffset = 0);
+    void upload(const void* data, size_t size, Texture& dstTexture, size_t dstTextureMip, size_t dstTextureArrayLayer = 0);
 
     template<typename T>
-    BufferCopyOperation upload(const T& object, Buffer& dstBuffer, size_t dstOffset = 0)
+    void upload(const T& object, Buffer& dstBuffer, size_t dstOffset = 0)
     {
         const void* data = reinterpret_cast<const void*>(&object);
-        return upload(data, sizeof(T), dstBuffer, dstOffset);
+        upload(data, sizeof(T), dstBuffer, dstOffset);
     }
 
     template<typename T>
-    BufferCopyOperation upload(const std::vector<T>& data, Buffer& dstBuffer, size_t dstOffset = 0)
+    void upload(const std::vector<T>& data, Buffer& dstBuffer, size_t dstOffset = 0)
     {
-        return upload(data.data(), sizeof(T) * data.size(), dstBuffer, dstOffset);
+        upload(data.data(), sizeof(T) * data.size(), dstBuffer, dstOffset);
     }
 
 private:
+
+    void upload(const void* data, size_t size, std::variant<BufferCopyOperation::BufferDestination, BufferCopyOperation::TextureDestination>&& destination);
+
     size_t m_cursor { 0 };
     std::vector<BufferCopyOperation> m_pendingOperations;
     std::unique_ptr<Buffer> m_buffer;

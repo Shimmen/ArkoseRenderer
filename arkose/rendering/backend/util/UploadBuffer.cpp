@@ -22,7 +22,17 @@ void UploadBuffer::reset()
         ARKOSE_LOG(Fatal, "UploadBuffer: resetting although not all pending operations have been executed, exiting.");
 }
 
-BufferCopyOperation UploadBuffer::upload(const void* data, size_t size, Buffer& dstBuffer, size_t dstOffset)
+void UploadBuffer::upload(const void* data, size_t size, Buffer& dstBuffer, size_t dstOffset)
+{
+    upload(data, size, BufferCopyOperation::BufferDestination { .buffer = &dstBuffer, .offset = dstOffset });
+}
+
+void UploadBuffer::upload(const void* data, size_t size, Texture& dstTexture, size_t dstTextureMip, size_t dstTextureArrayLayer)
+{
+    upload(data, size, BufferCopyOperation::TextureDestination { .texture = &dstTexture, .textureMip = dstTextureMip, .textureArrayLayer = dstTextureArrayLayer });
+}
+
+void UploadBuffer::upload(const void* data, size_t size, std::variant<BufferCopyOperation::BufferDestination, BufferCopyOperation::TextureDestination>&& destination)
 {
     size_t requiredSize = m_cursor + size;
     if (requiredSize > m_buffer->size())
@@ -34,12 +44,10 @@ BufferCopyOperation UploadBuffer::upload(const void* data, size_t size, Buffer& 
     copyOperation.srcBuffer = m_buffer.get();
     copyOperation.srcOffset = m_cursor;
 
-    copyOperation.dstBuffer = &dstBuffer;
-    copyOperation.dstOffset = dstOffset;
+    copyOperation.destination = std::move(destination);
 
     m_buffer->updateDataAndGrowIfRequired(data, size, m_cursor);
     m_cursor += size;
 
     m_pendingOperations.push_back(copyOperation);
-    return copyOperation;
 }

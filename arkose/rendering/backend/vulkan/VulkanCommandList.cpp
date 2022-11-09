@@ -425,27 +425,38 @@ void VulkanCommandList::executeBufferCopyOperations(std::vector<BufferCopyOperat
         if (copyOperation.size == 0)
             continue;
 
-        VkBufferCopy bufferCopyRegion = {};
-        bufferCopyRegion.size = copyOperation.size;
-        bufferCopyRegion.srcOffset = copyOperation.srcOffset;
-        bufferCopyRegion.dstOffset = copyOperation.dstOffset;
+        if (std::holds_alternative<BufferCopyOperation::BufferDestination>(copyOperation.destination)) {
+            auto const& copyDestination = std::get<BufferCopyOperation::BufferDestination>(copyOperation.destination);
 
-        auto srcVkBuffer = static_cast<VulkanBuffer*>(copyOperation.srcBuffer)->buffer;
-        auto dstVkBuffer = static_cast<VulkanBuffer*>(copyOperation.dstBuffer)->buffer;
+            VkBufferCopy bufferCopyRegion = {};
+            bufferCopyRegion.size = copyOperation.size;
+            bufferCopyRegion.srcOffset = copyOperation.srcOffset;
+            bufferCopyRegion.dstOffset = copyDestination.offset;
 
-        vkCmdCopyBuffer(m_commandBuffer, srcVkBuffer, dstVkBuffer, 1, &bufferCopyRegion);
+            auto srcVkBuffer = static_cast<VulkanBuffer*>(copyOperation.srcBuffer)->buffer;
+            auto dstVkBuffer = static_cast<VulkanBuffer*>(copyDestination.buffer)->buffer;
 
-        VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-        barrier.buffer = dstVkBuffer;
-        barrier.size = copyOperation.size;
-        barrier.offset = copyOperation.dstOffset;
+            vkCmdCopyBuffer(m_commandBuffer, srcVkBuffer, dstVkBuffer, 1, &bufferCopyRegion);
 
-        barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
-        barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
+            barrier.buffer = dstVkBuffer;
+            barrier.size = copyOperation.size;
+            barrier.offset = copyDestination.offset;
 
-        bufferMemoryBarriers.push_back(barrier);
+            barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+            bufferMemoryBarriers.push_back(barrier);
+
+        } else if (std::holds_alternative<BufferCopyOperation::TextureDestination>(copyOperation.destination)) {
+
+            NOT_YET_IMPLEMENTED();
+
+        } else {
+            ASSERT_NOT_REACHED();
+        }
     }
 
     if (bufferMemoryBarriers.size() > 0) {
