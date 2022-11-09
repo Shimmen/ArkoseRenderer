@@ -15,7 +15,6 @@
                 "minFilter": "Linear",
                 "magFilter": "Linear",
                 "useMipmapping": true,
-                "generateMipmapsAtRuntime": true,
                 "mipFilter": "Linear"
             }
         },
