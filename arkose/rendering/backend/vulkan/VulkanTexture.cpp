@@ -497,6 +497,8 @@ void VulkanTexture::setData(const void* data, size_t size)
             ARKOSE_LOG(Error, "Could not transition the image to transfer optimal layout.");
             return;
         }
+
+        currentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     }
 
     std::vector<VkBufferImageCopy> copyRegions {};
@@ -534,39 +536,6 @@ void VulkanTexture::setData(const void* data, size_t size)
         ARKOSE_LOG(Error, "Could not copy the staging buffer to the image.");
         return;
     }
-
-    {
-        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-        {
-            imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-            imageBarrier.newLayout = VK_IMAGE_LAYOUT_GENERAL;
-            imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-            imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-            imageBarrier.image = image;
-            imageBarrier.subresourceRange.aspectMask = aspectMask();
-            imageBarrier.subresourceRange.baseMipLevel = 0;
-            imageBarrier.subresourceRange.levelCount = 1;
-            imageBarrier.subresourceRange.baseArrayLayer = 0;
-            imageBarrier.subresourceRange.layerCount = layerCount();
-
-            imageBarrier.srcAccessMask = 0;
-            imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-        }
-
-        bool success = static_cast<VulkanBackend&>(backend()).issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
-            vkCmdPipelineBarrier(commandBuffer,
-                                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 0,
-                                 0, nullptr,
-                                 0, nullptr,
-                                 1, &imageBarrier);
-        });
-
-        if (!success) {
-            ARKOSE_LOG(Error, "Error transitioning layout after setting texture data");
-        }
-    }
-    currentLayout = VK_IMAGE_LAYOUT_GENERAL;
 }
 
 void VulkanTexture::generateMipmaps()
