@@ -184,6 +184,8 @@ ImageAsset* ImageAsset::loadFromArkimg(std::string const& filePath)
     auto newImageAsset = std::make_unique<ImageAsset>();
     archive(*newImageAsset);
 
+    newImageAsset->m_assetFilePath = filePath;
+
     if (newImageAsset->isCompressed()) {
         newImageAsset->decompress();
     }

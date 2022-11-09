@@ -64,6 +64,8 @@ LevelAsset* LevelAsset::loadFromArklvl(std::string const& filePath)
         jsonArchive(*newLevelAsset);
     }
 
+    newLevelAsset->m_assetFilePath = filePath;
+
     {
         SCOPED_PROFILE_ZONE_NAMED("Level cache - store");
         std::scoped_lock<std::mutex> lock { s_levelAssetCacheMutex };

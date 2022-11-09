@@ -71,6 +71,8 @@ MaterialAsset* MaterialAsset::loadFromArkmat(std::string const& filePath)
 
     }
 
+    newMaterialAsset->m_assetFilePath = filePath;
+
     {
         SCOPED_PROFILE_ZONE_NAMED("Material cache - store");
         std::scoped_lock<std::mutex> lock { s_materialAssetCacheMutex };

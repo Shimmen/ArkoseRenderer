@@ -73,6 +73,8 @@ StaticMeshAsset* StaticMeshAsset::loadFromArkmsh(std::string const& filePath)
         jsonArchive(*newStaticMeshAsset);
     }
 
+    newStaticMeshAsset->m_assetFilePath = filePath;
+
     {
         SCOPED_PROFILE_ZONE_NAMED("Static mesh cache - store");
         std::scoped_lock<std::mutex> lock { s_staticMeshAssetCacheMutex };
