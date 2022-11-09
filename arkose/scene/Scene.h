@@ -129,7 +129,7 @@ private:
     std::vector<std::unique_ptr<DirectionalLight>> m_directionalLights {};
     std::vector<std::unique_ptr<SpotLight>> m_spotLights {};
 
-    EnvironmentMap m_environmentMap {};
+    EnvironmentMap m_environmentMap { .brightnessFactor = 2500.0f };
     float m_ambientIlluminance { 0.0f };
 
     std::optional<ProbeGrid> m_probeGrid {};

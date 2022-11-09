@@ -142,7 +142,7 @@ public:
 
     static std::unique_ptr<Texture> createFromPixel(Backend&, vec4 pixelColor, bool sRGB);
 
-    static std::unique_ptr<Texture> createFromImagePath(Backend&, const std::string& imagePath, bool sRGB, bool generateMipmaps, ImageWrapModes);
+    // TODO: Remove me, instead just load as an ImageAsset with multiple layers (i.e. depth > 1)
     static std::unique_ptr<Texture> createFromImagePathSequence(Backend&, const std::string& imagePathSequencePattern, bool sRGB, bool generateMipmaps, ImageWrapModes);
 
     bool hasFloatingPointDataFormat() const;

@@ -198,47 +198,6 @@ std::unique_ptr<Texture> Texture::createFromPixel(Backend& backend, vec4 pixelCo
     return texture;
 }
 
-
-std::unique_ptr<Texture> Texture::createFromImagePath(Backend& backend, const std::string& imagePath, bool sRGB, bool generateMipmaps, ImageWrapModes wrapModes)
-{
-    SCOPED_PROFILE_ZONE();
-
-    // FIXME (maybe): Add async loading?
-
-    if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(imagePath)) {
-
-        auto mipmapMode = (generateMipmaps && imageAsset->width() > 1 && imageAsset->height() > 1)
-            ? Texture::Mipmap::Linear
-            : Texture::Mipmap::None;
-
-        Texture::Description desc {
-
-            // TODO: Support other types than non-array texture 2D?
-            .type = Texture::Type::Texture2D,
-            .arrayCount = 1u,
-
-            .extent = { imageAsset->width(), imageAsset->height(), imageAsset->depth() },
-            .format = convertImageFormatToTextureFormat(imageAsset->format(), imageAsset->colorSpace()),
-            .filter = Texture::Filters::linear(),
-            .wrapMode = wrapModes,
-            .mipmap = mipmapMode,
-
-            .multisampling = Texture::Multisampling::None
-        };
-
-        auto texture = backend.createTexture(desc);
-        texture->setName("Texture:" + imagePath);
-
-        // TODO: Support setting data for multiple mips!
-        texture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size());
-
-        return texture;
-
-    }
-
-    return nullptr;
-}
-
 std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, const std::string& imagePathSequencePattern, bool sRGB, bool generateMipmaps, ImageWrapModes)
 {
     SCOPED_PROFILE_ZONE()

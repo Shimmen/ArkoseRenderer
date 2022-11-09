@@ -468,9 +468,26 @@ void GpuScene::updateEnvironmentMap(EnvironmentMap& environmentMap)
 {
     SCOPED_PROFILE_ZONE();
 
-    m_environmentMapTexture = environmentMap.assetPath.empty()
-        ? Texture::createFromPixel(backend(), vec4(1.0f), true)
-        : Texture::createFromImagePath(backend(), environmentMap.assetPath, true, false, ImageWrapModes::repeatAll());
+    if (environmentMap.assetPath.empty()) {
+        m_environmentMapTexture = Texture::createFromPixel(backend(), vec4(1.0f), true);
+    } else {
+        if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(environmentMap.assetPath)) {
+            ARKOSE_ASSERT(imageAsset->depth() == 1);
+
+            Texture::Description desc { .type = Texture::Type::Texture2D,
+                                        .arrayCount = 1u,
+                                        .extent = { imageAsset->width(), imageAsset->height(), 1 },
+                                        .format = Texture::convertImageFormatToTextureFormat(imageAsset->format(), imageAsset->colorSpace()),
+                                        .filter = Texture::Filters::linear(),
+                                        .wrapMode = ImageWrapModes::repeatAll(),
+                                        .mipmap = Texture::Mipmap::None,
+                                        .multisampling = Texture::Multisampling::None };
+
+            m_environmentMapTexture = backend().createTexture(desc);
+            m_environmentMapTexture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size());
+            m_environmentMapTexture->setName("EnvironmentMap<" + environmentMap.assetPath + ">");
+        }
+    }
 }
 
 Texture& GpuScene::environmentMapTexture()
