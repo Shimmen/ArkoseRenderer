@@ -270,6 +270,87 @@ std::span<u8 const> ImageAsset::pixelDataForMip(size_t mipIdx) const
     return std::span<u8 const> { m_pixelData.data() + mip.offset, mip.size };
 }
 
+bool ImageAsset::generateMipmaps()
+{
+    SCOPED_PROFILE_ZONE();
+
+    // TODO: Implement proper error handling!
+    ARKOSE_ASSERT(m_mips.size() == 1);
+    ARKOSE_ASSERT(width() == height());
+    ARKOSE_ASSERT(ark::isPowerOfTwo(width()));
+    ARKOSE_ASSERT(ark::isPowerOfTwo(height()));
+    ARKOSE_ASSERT(depth() == 1);
+
+    // TODO: Support more formats!
+    ARKOSE_ASSERT(m_format == ImageFormat::RGBA8);
+
+    u32 mipWidth = width(); // should be identical to height
+    u32 levels = static_cast<u32>(std::floor(std::log2(mipWidth)) + 1);
+
+    for (u32 level = 1; level < levels; ++level) {
+
+        std::string zoneName = fmt::format("Mip level {}", level);
+        SCOPED_PROFILE_ZONE_DYNAMIC(zoneName, 0xaa5577);
+
+        ImageMip previousMip = m_mips[level - 1];
+        std::vector<rgba8> previousMipPixels = pixelDataAsRGBA8(level - 1);
+
+        ImageMip& thisMip = m_mips.emplace_back();
+        thisMip.offset = previousMip.offset + previousMip.size;
+        thisMip.size = previousMip.size / 4; // half size per 2D side
+
+        m_pixelData.reserve(thisMip.offset + thisMip.size);
+
+        u32 thisMipWidth = mipWidth / 2;
+
+        // TODO: Parallelize!
+        for (u32 y = 0; y < thisMipWidth; ++y) {
+            for (u32 x = 0; x < thisMipWidth; ++x) {
+
+                rgba8 pix0 = previousMipPixels[(2 * x + 0) + (2 * y + 0) * mipWidth];
+                rgba8 pix1 = previousMipPixels[(2 * x + 0) + (2 * y + 1) * mipWidth];
+                rgba8 pix2 = previousMipPixels[(2 * x + 1) + (2 * y + 0) * mipWidth];
+                rgba8 pix3 = previousMipPixels[(2 * x + 1) + (2 * y + 1) * mipWidth];
+
+                // TODO: Would be nice to have some kind of vector constructor that can take a non-narrowing type an argument
+                float rAvg = (static_cast<float>(pix0.x) + static_cast<float>(pix1.x) + static_cast<float>(pix2.x) + static_cast<float>(pix3.x)) / 4.0f;
+                float gAvg = (static_cast<float>(pix0.y) + static_cast<float>(pix1.y) + static_cast<float>(pix2.y) + static_cast<float>(pix3.y)) / 4.0f;
+                float bAvg = (static_cast<float>(pix0.z) + static_cast<float>(pix1.z) + static_cast<float>(pix2.z) + static_cast<float>(pix3.z)) / 4.0f;
+                float aAvg = (static_cast<float>(pix0.w) + static_cast<float>(pix1.w) + static_cast<float>(pix2.w) + static_cast<float>(pix3.w)) / 4.0f;
+
+                u8 r = static_cast<u8>(std::round(rAvg));
+                u8 g = static_cast<u8>(std::round(gAvg));
+                u8 b = static_cast<u8>(std::round(bAvg));
+                u8 a = static_cast<u8>(std::round(aAvg));
+
+                // (This works nicely when we're in rgba8 and it's a u8 vector, but for all other cases it won't be this simple)
+                m_pixelData.emplace_back(r);
+                m_pixelData.emplace_back(g);
+                m_pixelData.emplace_back(b);
+                m_pixelData.emplace_back(a);
+
+            }
+        }
+
+        // Next mip..
+        mipWidth = thisMipWidth;
+
+    }
+
+    return true;
+}
+
+bool ImageAsset::hasCompressedFormat() const
+{
+    switch (format()) {
+    //case ImageFormat::BC5: TODO!
+    case ImageFormat::BC7:
+        return true;
+    default:
+        return false;
+    }
+}
+
 bool ImageAsset::compress(int compressionLevel)
 {
     SCOPED_PROFILE_ZONE();
@@ -334,4 +415,27 @@ bool ImageAsset::decompress()
     m_compressedSize = 0;
 
     return true;
+}
+
+std::vector<ImageAsset::rgba8> ImageAsset::pixelDataAsRGBA8(size_t mipIdx) const
+{
+    ARKOSE_ASSERT(depth() == 1);
+
+    // TODO: Support more formats! The function name only refers to the output format and should be able to convert
+    ARKOSE_ASSERT(format() == ImageFormat::RGBA8);
+
+    ImageMip const& mip = m_mips[mipIdx];
+    size_t numPixels = mip.size / (4 * sizeof(u8));
+
+    std::vector<rgba8> rgbaPixelData {};
+    rgbaPixelData.reserve(numPixels);
+
+    for (size_t offset = mip.offset; offset < mip.offset + mip.size; offset += 4) {
+        rgbaPixelData.emplace_back(m_pixelData[offset + 0],
+                                   m_pixelData[offset + 1],
+                                   m_pixelData[offset + 2],
+                                   m_pixelData[offset + 3]);
+    }
+
+    return rgbaPixelData;
 }

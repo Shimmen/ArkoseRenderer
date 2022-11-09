@@ -34,7 +34,6 @@ public:
     ImageFilter magFilter { ImageFilter::Linear };
 
     bool useMipmapping { true };
-    bool generateMipmapsAtRuntime { true };
     ImageFilter mipFilter { ImageFilter::Linear };
 
     // Not serialized, can be used to store whatever intermediate you want
@@ -92,7 +91,7 @@ void MaterialInput::serialize(Archive& archive)
     archive(CEREAL_NVP(image));
     archive(CEREAL_NVP(wrapModes));
     archive(CEREAL_NVP(minFilter), CEREAL_NVP(magFilter));
-    archive(CEREAL_NVP(useMipmapping), CEREAL_NVP(generateMipmapsAtRuntime), CEREAL_NVP(mipFilter));
+    archive(CEREAL_NVP(useMipmapping), CEREAL_NVP(mipFilter));
 }
 
 template<class Archive>

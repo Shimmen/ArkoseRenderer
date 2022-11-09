@@ -198,8 +198,7 @@ public:
 protected:
     size_t m_sizeInMemory { SIZE_MAX };
 
-    // HACK: Make this private again!
-//private:
+private:
     Description m_description;
 };
 

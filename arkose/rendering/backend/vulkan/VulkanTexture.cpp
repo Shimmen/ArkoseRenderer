@@ -58,13 +58,11 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
         vkFormat = VK_FORMAT_BC7_UNORM_BLOCK;
         storageCapable = false;
         attachmentCapable = false;
-        m_description.mipmap = Texture::Mipmap::None; // HACK!
         break;
     case Texture::Format::BC7sRGB:
         vkFormat = VK_FORMAT_BC7_SRGB_BLOCK;
         storageCapable = false;
         attachmentCapable = false;
-        m_description.mipmap = Texture::Mipmap::None; // HACK!
         break;
     case Texture::Format::Unknown:
         ARKOSE_LOG(Fatal, "Trying to create new texture with format Unknown, which is not allowed!");
@@ -537,10 +535,7 @@ void VulkanTexture::setData(const void* data, size_t size)
         return;
     }
 
-    currentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    if (mipmap() != Texture::Mipmap::None && extent().width() > 1 && extent().height() > 1) {
-        generateMipmaps();
-    } else {
+    {
         VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
         {
             imageBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;

@@ -31,7 +31,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         targetDirectory.remove_suffix(1);
     }
 
-    if (options.blockCompressImages) {
+    if (options.blockCompressImages || options.generateMipmaps) {
         options.alwaysMakeImageAsset = true;
     }
 
@@ -44,6 +44,10 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         // Only compress if we're importing images in arkimg format
         if (image->sourceAssetFilePath().empty() || options.alwaysMakeImageAsset) {
+
+            if (options.generateMipmaps) {
+                image->generateMipmaps();
+            }
 
             if (options.blockCompressImages) {
                 TextureCompressor textureCompressor {};

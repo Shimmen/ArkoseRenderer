@@ -2,6 +2,7 @@
 
 #include "asset/AssetHelpers.h"
 #include "core/Types.h"
+#include <ark/vector.h>
 #include <span>
 #include <string>
 #include <string_view>
@@ -65,12 +66,16 @@ public:
     u32 depth() const { return m_depth; }
 
     ImageFormat format() const { return m_format; }
+    bool hasCompressedFormat() const;
 
     ColorSpace colorSpace() const { return m_colorSpace; }
     void setColorSpace(ColorSpace colorSpace) { m_colorSpace = colorSpace; }
 
     size_t numMips() const { return m_mips.size(); }
     std::span<u8 const> pixelDataForMip(size_t mip) const;
+
+    // Generate mipmaps (slow)
+    bool generateMipmaps();
 
     // Apply lossless compression on the pixel data
     bool compress(int compressionLevel = 10);
@@ -103,6 +108,9 @@ private:
         size_t size;
     };
     std::vector<ImageMip> m_mips {};
+
+    using rgba8 = ark::tvec4<u8>;
+    std::vector<rgba8> pixelDataAsRGBA8(size_t mipIdx) const;
 
     // Optional lossless compression applied to `pixelData`
     bool m_compressed { false };

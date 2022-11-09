@@ -424,11 +424,6 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
             ASSERT_NOT_REACHED();
         }
 
-        // For now we only support on-line mip map generation
-        if (input->useMipmapping) {
-            input->generateMipmapsAtRuntime = true;
-        }
-
         return input;
     };
 

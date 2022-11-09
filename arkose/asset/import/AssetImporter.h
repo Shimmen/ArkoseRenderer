@@ -26,6 +26,8 @@ public:
     struct Options {
         // By default we keep png/jpeg/etc. in their source formats. Set this to true to import all images as asset types.
         bool alwaysMakeImageAsset { false };
+        // Generate mipmaps when importing image assets? Only supported when making image assets
+        bool generateMipmaps { false };
         // Compress images in BC5 format for normal maps and BC7 for all other textures.
         bool blockCompressImages { false };
     };

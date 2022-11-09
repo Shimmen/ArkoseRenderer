@@ -229,8 +229,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 const LoadedImageForTextureCreation& loadedImageForTex = m_asyncLoadedImages[i];
 
                 auto texture = backend().createTexture(loadedImageForTex.textureDescription);
-                // TODO: Support setting data for multiple mips!
-                texture->setData(loadedImageForTex.imageAsset->pixelDataForMip(0).data(), loadedImageForTex.imageAsset->pixelDataForMip(0).size());
+                setTexturePixelDataFromImageAsset(*texture, *loadedImageForTex.imageAsset);
                 texture->setName("Texture:" + std::string(loadedImageForTex.imageAsset->assetFilePath()));
                 m_managedTexturesVramUsage += texture->sizeInMemory();
 
@@ -636,6 +635,28 @@ std::unique_ptr<BottomLevelAS> GpuScene::createBottomLevelAccelerationStructure(
     return backend().createBottomLevelAccelerationStructure({ geometry });
 }
 
+void GpuScene::setTexturePixelDataFromImageAsset(Texture& texture, ImageAsset const& imageAsset)
+{
+    // TODO: Set this data with an upload/copy queue, or at least on the command list. In the very least, don't block any rendering!
+
+    ARKOSE_ASSERT(imageAsset.numMips() > 0);
+    bool assetHasMips = imageAsset.numMips() > 1;
+    bool textureWantMips = texture.mipmap() != Texture::Mipmap::None;
+
+    if (not assetHasMips || not textureWantMips) {
+        texture.setData(imageAsset.pixelDataForMip(0).data(), imageAsset.pixelDataForMip(0).size());
+    }
+
+    if (textureWantMips) {
+        if (assetHasMips) {
+            // TODO: Load all mips from the asset!
+            texture.setData(imageAsset.pixelDataForMip(0).data(), imageAsset.pixelDataForMip(0).size());
+        } else {
+            texture.generateMipmaps();
+        }
+    }
+}
+
 MaterialHandle GpuScene::registerMaterial(MaterialAsset* materialAsset)
 {
     SCOPED_PROFILE_ZONE();
@@ -717,6 +738,9 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
             // TODO: Also look at the color space specified for the material input?
             ColorSpace colorSpace = sRGB ? ColorSpace::sRGB_encoded : ColorSpace::sRGB_linear;
 
+            bool canGenerateMipmaps = not imageAsset.hasCompressedFormat();
+            bool shouldUseMipmaps = input.useMipmapping && (imageAsset.numMips() > 1 || canGenerateMipmaps);
+
             return Texture::Description {
                 .type = Texture::Type::Texture2D,
                 .arrayCount = 1,
@@ -725,7 +749,7 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
                 .filter = Texture::Filters(Texture::convertImageFilterToMinFilter(input.minFilter),
                                            Texture::convertImageFilterToMagFilter(input.magFilter)),
                 .wrapMode = input.wrapModes,
-                .mipmap = Texture::convertImageFilterToMipFilter(input.mipFilter, input.useMipmapping),
+                .mipmap = Texture::convertImageFilterToMipFilter(input.mipFilter, shouldUseMipmaps),
                 .multisampling = Texture::Multisampling::None
             };
         };
@@ -756,8 +780,7 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
         } else {
             if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(imageAssetPath)) {
                 std::unique_ptr<Texture> texture = m_backend.createTexture(makeTextureDescription(*imageAsset, *input, sRGB));
-                // TODO: Support setting data for multiple mips!
-                texture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size());
+                setTexturePixelDataFromImageAsset(*texture, *imageAsset);
                 texture->setName("Texture:" + imageAssetPath);
 
                 m_managedTexturesVramUsage += texture->sizeInMemory();
