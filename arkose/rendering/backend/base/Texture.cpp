@@ -129,20 +129,28 @@ Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageForm
 
 const Extent2D Texture::extentAtMip(uint32_t mip) const
 {
+    Extent3D mipExtent3D = extent3DAtMip(mip);
+    return { mipExtent3D.width(), mipExtent3D.height() };
+}
+
+const Extent3D Texture::extent3DAtMip(uint32_t mip) const
+{
     ARKOSE_ASSERT(mip < mipLevels());
 
     if (mip == 0) {
-        return extent();
+        return extent3D();
     }
 
     float p = std::pow(2.0f, static_cast<float>(mip));
-    u32 x = extent().width() / p;
-    u32 y = extent().height() / p;
+    u32 x = static_cast<u32>(std::floor(extent3D().width() / p));
+    u32 y = static_cast<u32>(std::floor(extent3D().height() / p));
+    u32 z = static_cast<u32>(std::floor(extent3D().depth() / p));
 
     x = x > 1 ? x : 1;
     y = y > 1 ? y : 1;
+    z = z > 1 ? z : 1;
 
-    return { x, y };
+    return { x, y, z };
 }
 
 bool Texture::hasMipmaps() const
