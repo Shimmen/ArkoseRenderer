@@ -119,12 +119,21 @@ void MeshViewerApp::drawMenuBar()
             if (ImGui::MenuItem("Save...", "Ctrl+S")) {
                 saveMeshWithDialog();
             }
-            ImGui::Separator();
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Import")) {
             if (ImGui::MenuItem("Import meshes...")) {
                 importMeshWithDialog();
             }
             if (ImGui::MenuItem("Import level...")) {
                 importLevelWithDialog();
+            }
+            ImGui::Separator();
+            if (ImGui::BeginMenu("Import options")) {
+                ImGui::MenuItem("Always make image assets", nullptr, &m_importOptions.alwaysMakeImageAsset);
+                ImGui::MenuItem("Compress images", nullptr, &m_importOptions.blockCompressImages);
+                ImGui::MenuItem("Generate mipmaps", nullptr, &m_importOptions.generateMipmaps);
+                ImGui::EndMenu();
             }
             ImGui::EndMenu();
         }
@@ -478,7 +487,7 @@ void MeshViewerApp::importMeshWithDialog()
         std::string targetDirectory = FileIO::normalizePath(importFileDir);
 
         AssetImporter importer {};
-        ImportResult assets = importer.importAsset(importFilePath, targetDirectory);
+        ImportResult assets = importer.importAsset(importFilePath, targetDirectory, m_importOptions);
 
         ARKOSE_LOG(Info, "Imported {} static meshes, {} materials, and {} images.",
                    assets.staticMeshes.size(), assets.materials.size(), assets.images.size());
@@ -499,8 +508,7 @@ void MeshViewerApp::importLevelWithDialog()
         std::string targetDirectory = FileIO::normalizePath(importFileDir);
 
         AssetImporter importer {};
-        AssetImporter::Options options { .blockCompressImages = true };
-        std::unique_ptr<LevelAsset> levelAsset = importer.importAsLevel(importFilePath, targetDirectory, options);
+        std::unique_ptr<LevelAsset> levelAsset = importer.importAsLevel(importFilePath, targetDirectory, m_importOptions);
 
         ARKOSE_LOG(Info, "Imported level.");
     }

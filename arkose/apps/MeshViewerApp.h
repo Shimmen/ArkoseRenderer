@@ -2,6 +2,7 @@
 
 #include "apps/App.h"
 #include "asset/StaticMeshAsset.h"
+#include "asset/import/AssetImporter.h"
 #include "scene/camera/FpsCameraController.h"
 #include <memory>
 
@@ -52,6 +53,8 @@ private:
     void importLevelWithDialog();
     void loadMeshWithDialog();
     void saveMeshWithDialog();
+
+    AssetImporter::Options m_importOptions {};
 
     // Since ImGui uses `const char*` for everything and we don't have a natural storage for these names we have to keep it in here...
     std::vector<std::string> m_segmentNameCache {};
