@@ -427,18 +427,18 @@ void VulkanTexture::setPixelData(vec4 pixel)
     ARKOSE_ASSERT(numChannels == 4);
 
     if (isHdr) {
-        setData(&pixel, sizeof(pixel));
+        setData(&pixel, sizeof(pixel), 0);
     } else {
         ark::u8 pixelUint8Data[4];
         pixelUint8Data[0] = (ark::u8)(ark::clamp(pixel.x, 0.0f, 1.0f) * 255.99f);
         pixelUint8Data[1] = (ark::u8)(ark::clamp(pixel.y, 0.0f, 1.0f) * 255.99f);
         pixelUint8Data[2] = (ark::u8)(ark::clamp(pixel.z, 0.0f, 1.0f) * 255.99f);
         pixelUint8Data[3] = (ark::u8)(ark::clamp(pixel.w, 0.0f, 1.0f) * 255.99f);
-        setData(pixelUint8Data, sizeof(pixelUint8Data));
+        setData(pixelUint8Data, sizeof(pixelUint8Data), 0);
     }
 }
 
-void VulkanTexture::setData(const void* data, size_t size)
+void VulkanTexture::setData(const void* data, size_t size, size_t mipIdx)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
@@ -477,7 +477,7 @@ void VulkanTexture::setData(const void* data, size_t size)
         imageBarrier.image = image;
         imageBarrier.subresourceRange.aspectMask = aspectMask();
         imageBarrier.subresourceRange.baseMipLevel = 0;
-        imageBarrier.subresourceRange.levelCount = 1; // only set data for mip0, rest will be generated
+        imageBarrier.subresourceRange.levelCount = mipLevels();
         imageBarrier.subresourceRange.baseArrayLayer = 0;
         imageBarrier.subresourceRange.layerCount = layerCount();
 
@@ -504,6 +504,8 @@ void VulkanTexture::setData(const void* data, size_t size)
     std::vector<VkBufferImageCopy> copyRegions {};
     copyRegions.reserve(layerCount());
 
+    Extent2D mipExtent = extentAtMip(narrow_cast<u32>(mipIdx));
+
     // TODO: We currently assume we're uploading the entire texture array
     const VkDeviceSize sizePerLayer = size / layerCount();
 
@@ -518,10 +520,10 @@ void VulkanTexture::setData(const void* data, size_t size)
         region.bufferImageHeight = 0;
 
         region.imageOffset = VkOffset3D { 0, 0, 0 };
-        region.imageExtent = VkExtent3D { extent().width(), extent().height(), 1 };
+        region.imageExtent = VkExtent3D { mipExtent.width(), mipExtent.height(), 1 };
 
         region.imageSubresource.aspectMask = aspectMask();
-        region.imageSubresource.mipLevel = 0; // only set data for mip0, rest will be generated
+        region.imageSubresource.mipLevel = mipIdx;
         region.imageSubresource.baseArrayLayer = layerIdx;
         region.imageSubresource.layerCount = 1;
 

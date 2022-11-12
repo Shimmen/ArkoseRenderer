@@ -41,7 +41,7 @@ void D3D12Texture::setPixelData(vec4 pixel)
     // TODO
 }
 
-void D3D12Texture::setData(const void* data, size_t size)
+void D3D12Texture::setData(const void* data, size_t size, size_t mipIdx)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 

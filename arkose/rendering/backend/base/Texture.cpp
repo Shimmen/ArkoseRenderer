@@ -273,7 +273,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
         std::memcpy(textureArrayMemory + offset, data.data(), data.size());
 
     }, UseSingleThreadedLoading);
-    texture->setData(textureArrayMemory, totalRequiredSize);
+    texture->setData(textureArrayMemory, totalRequiredSize, 0);
 
     return texture;
 }
