@@ -224,18 +224,45 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             SCOPED_PROFILE_ZONE_NAMED("Finalizing async-loaded images")
             std::scoped_lock<std::mutex> lock { m_asyncLoadedImagesMutex };
 
+            std::vector<Texture*> texturesNeedingGeneratedMips {};
+
             size_t numToFinalize = std::min(MaxNumAsyncTextureLoadsToFinalizePerFrame, m_asyncLoadedImages.size());
             for (size_t i = 0; i < numToFinalize; ++i) {
                 const LoadedImageForTextureCreation& loadedImageForTex = m_asyncLoadedImages[i];
 
                 auto texture = backend().createTexture(loadedImageForTex.textureDescription);
-                setTexturePixelDataFromImageAsset(*texture, *loadedImageForTex.imageAsset);
-                texture->setName("Texture:" + std::string(loadedImageForTex.imageAsset->assetFilePath()));
-                m_managedTexturesVramUsage += texture->sizeInMemory();
+                texture->setName("Texture<" + std::string(loadedImageForTex.imageAsset->assetFilePath()) + ">");
 
+                ARKOSE_ASSERT(loadedImageForTex.imageAsset->numMips() > 0);
+                bool assetHasMips = loadedImageForTex.imageAsset->numMips() > 1;
+                bool textureWantMips = texture->mipmap() != Texture::Mipmap::None;
+
+                if (not assetHasMips || not textureWantMips) {
+                    std::span<const u8> mip0PixelData = loadedImageForTex.imageAsset->pixelDataForMip(0);
+                    uploadBuffer.upload(mip0PixelData.data(), mip0PixelData.size(), *texture, 0);
+                }
+
+                if (textureWantMips) {
+                    if (assetHasMips) {
+                        for (size_t mipIdx = 0; mipIdx < loadedImageForTex.imageAsset->numMips(); ++mipIdx) {
+                            std::span<const u8> mipPixelData = loadedImageForTex.imageAsset->pixelDataForMip(mipIdx);
+                            uploadBuffer.upload(mipPixelData.data(), mipPixelData.size(), *texture, mipIdx);
+                        }
+                    } else {
+                        // Needs to be done after buffer upload copy operations are completed
+                        texturesNeedingGeneratedMips.push_back(texture.get());
+                    }
+                }
+
+                m_managedTexturesVramUsage += texture->sizeInMemory();
                 updateTexture(loadedImageForTex.textureHandle, std::move(texture));
             }
             m_asyncLoadedImages.erase(m_asyncLoadedImages.begin(), m_asyncLoadedImages.begin() + numToFinalize);
+
+            cmdList.executeBufferCopyOperations(uploadBuffer);
+            for (Texture* texture : texturesNeedingGeneratedMips) {
+                cmdList.generateMipmaps(*texture);
+            }
         }
 
         // Update bindless textures
@@ -483,7 +510,7 @@ void GpuScene::updateEnvironmentMap(EnvironmentMap& environmentMap)
                                         .multisampling = Texture::Multisampling::None };
 
             m_environmentMapTexture = backend().createTexture(desc);
-            m_environmentMapTexture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size());
+            m_environmentMapTexture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size(), 0);
             m_environmentMapTexture->setName("EnvironmentMap<" + environmentMap.assetPath + ">");
         }
     }
@@ -635,28 +662,6 @@ std::unique_ptr<BottomLevelAS> GpuScene::createBottomLevelAccelerationStructure(
     return backend().createBottomLevelAccelerationStructure({ geometry });
 }
 
-void GpuScene::setTexturePixelDataFromImageAsset(Texture& texture, ImageAsset const& imageAsset)
-{
-    // TODO: Set this data with an upload/copy queue, or at least on the command list. In the very least, don't block any rendering!
-
-    ARKOSE_ASSERT(imageAsset.numMips() > 0);
-    bool assetHasMips = imageAsset.numMips() > 1;
-    bool textureWantMips = texture.mipmap() != Texture::Mipmap::None;
-
-    if (not assetHasMips || not textureWantMips) {
-        texture.setData(imageAsset.pixelDataForMip(0).data(), imageAsset.pixelDataForMip(0).size());
-    }
-
-    if (textureWantMips) {
-        if (assetHasMips) {
-            // TODO: Load all mips from the asset!
-            texture.setData(imageAsset.pixelDataForMip(0).data(), imageAsset.pixelDataForMip(0).size());
-        } else {
-            texture.generateMipmaps();
-        }
-    }
-}
-
 MaterialHandle GpuScene::registerMaterial(MaterialAsset* materialAsset)
 {
     SCOPED_PROFILE_ZONE();
@@ -780,8 +785,26 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
         } else {
             if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(imageAssetPath)) {
                 std::unique_ptr<Texture> texture = m_backend.createTexture(makeTextureDescription(*imageAsset, *input, sRGB));
-                setTexturePixelDataFromImageAsset(*texture, *imageAsset);
-                texture->setName("Texture:" + imageAssetPath);
+                texture->setName("Texture<" + imageAssetPath + ">");
+
+                ARKOSE_ASSERT(imageAsset->numMips() > 0);
+                bool assetHasMips = imageAsset->numMips() > 1;
+                bool textureWantMips = texture->mipmap() != Texture::Mipmap::None;
+
+                if (not assetHasMips || not textureWantMips) {
+                    texture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size(), 0);
+                }
+
+                if (textureWantMips) {
+                    if (assetHasMips) {
+                        for (size_t mipIdx = 0; mipIdx < imageAsset->numMips(); ++mipIdx) {
+                            std::span<const u8> mipPixelData = imageAsset->pixelDataForMip(mipIdx);
+                            texture->setData(mipPixelData.data(), mipPixelData.size(), mipIdx);
+                        }
+                    } else {
+                        texture->generateMipmaps();
+                    }
+                }
 
                 m_managedTexturesVramUsage += texture->sizeInMemory();
                 updateTexture(handle, std::move(texture));

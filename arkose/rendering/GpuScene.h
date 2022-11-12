@@ -126,8 +126,6 @@ private:
     // For now we create one per segment so we can ensure one material per "draw"
     std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(StaticMeshSegment&, uint32_t meshIdx);
 
-    void setTexturePixelDataFromImageAsset(Texture&, ImageAsset const&);
-
     float m_lightPreExposure { 1.0f };
 
     // GPU data

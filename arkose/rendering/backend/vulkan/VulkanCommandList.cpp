@@ -454,6 +454,7 @@ void VulkanCommandList::executeBufferCopyOperations(std::vector<BufferCopyOperat
             auto const& copyDestination = std::get<BufferCopyOperation::TextureDestination>(copyOperation.destination);
             VulkanTexture& dstTexture = *static_cast<VulkanTexture*>(copyDestination.texture);
 
+            // Ensure that the *entire* texture is in the correct layout
             if (dstTexture.currentLayout != VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
                 VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
                 imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -463,12 +464,10 @@ void VulkanCommandList::executeBufferCopyOperations(std::vector<BufferCopyOperat
 
                 imageBarrier.image = dstTexture.image;
                 imageBarrier.subresourceRange.aspectMask = dstTexture.aspectMask();
-                imageBarrier.subresourceRange.baseMipLevel = narrow_cast<u32>(copyDestination.textureMip);
-                imageBarrier.subresourceRange.baseArrayLayer = narrow_cast<u32>(copyDestination.textureArrayLayer);
-
-                // TODO: For now, just one at a time
-                imageBarrier.subresourceRange.levelCount = 1;
-                imageBarrier.subresourceRange.layerCount = 1;
+                imageBarrier.subresourceRange.baseMipLevel = 0;
+                imageBarrier.subresourceRange.levelCount = dstTexture.mipLevels();
+                imageBarrier.subresourceRange.baseArrayLayer = 0;
+                imageBarrier.subresourceRange.layerCount = dstTexture.layerCount();
 
                 VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
                 imageBarrier.srcAccessMask = 0;
@@ -492,10 +491,12 @@ void VulkanCommandList::executeBufferCopyOperations(std::vector<BufferCopyOperat
             copyRegion.bufferRowLength = 0;
             copyRegion.bufferImageHeight = 0;
 
+            Extent3D mipExtent = dstTexture.extent3DAtMip(narrow_cast<u32>(copyDestination.textureMip));
+
             copyRegion.imageOffset = VkOffset3D { 0, 0, 0 };
-            copyRegion.imageExtent = VkExtent3D { dstTexture.extent3D().width(),
-                                                  dstTexture.extent3D().height(),
-                                                  dstTexture.extent3D().depth() };
+            copyRegion.imageExtent = VkExtent3D { mipExtent.width(),
+                                                  mipExtent.height(),
+                                                  mipExtent.depth() };
 
             copyRegion.imageSubresource.aspectMask = dstTexture.aspectMask();
             copyRegion.imageSubresource.mipLevel = narrow_cast<u32>(copyDestination.textureMip);
