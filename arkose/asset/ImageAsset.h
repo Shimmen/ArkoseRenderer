@@ -2,6 +2,7 @@
 
 #include "asset/AssetHelpers.h"
 #include "core/Types.h"
+#include "utility/Extent.h"
 #include <ark/vector.h>
 #include <span>
 #include <string>
@@ -33,6 +34,11 @@ enum class ImageFormat {
     BC7 = 300,
 };
 
+struct ImageMip {
+    size_t offset;
+    size_t size;
+};
+
 class ImageAsset {
 public:
     ImageAsset();
@@ -42,7 +48,7 @@ public:
     static constexpr std::array<char, 4> AssetMagicValue = { 'a', 'i', 'm', 'g' };
 
     // Create a new ImageAsset that is a copy of the passed in image asset but with replaced image format. The data of the new format is passed in at constuction time.
-    static std::unique_ptr<ImageAsset> createCopyWithReplacedFormat(ImageAsset const&, ImageFormat, uint8_t const* data, size_t size);
+    static std::unique_ptr<ImageAsset> createCopyWithReplacedFormat(ImageAsset const&, ImageFormat, std::vector<u8>&& pixelData, std::vector<ImageMip>);
 
     // Create a new ImageAsset from an image on disk, e.g. png or jpg. This can then be modified in place and finally be written to disk (as an .argimg)
     static std::unique_ptr<ImageAsset> createFromSourceAsset(std::string const& sourceAssetFilePath);
@@ -64,6 +70,8 @@ public:
     u32 width() const { return m_width; }
     u32 height() const { return m_height; }
     u32 depth() const { return m_depth; }
+
+    Extent3D extentAtMip(size_t mipIdx) const;
 
     ImageFormat format() const { return m_format; }
     bool hasCompressedFormat() const;
@@ -105,10 +113,6 @@ private:
     // Pixel data binary blob
     std::vector<u8> m_pixelData {};
 
-    struct ImageMip {
-        size_t offset;
-        size_t size;
-    };
     std::vector<ImageMip> m_mips {};
 
     using rgba8 = ark::tvec4<u8>;
@@ -129,7 +133,7 @@ private:
 #include <cereal/cereal.hpp>
 
 template<class Archive>
-void serialize(Archive& archive, ImageAsset::ImageMip& mip)
+void serialize(Archive& archive, ImageMip& mip)
 {
     archive(cereal::make_nvp("offset", mip.offset),
             cereal::make_nvp("size", mip.size));

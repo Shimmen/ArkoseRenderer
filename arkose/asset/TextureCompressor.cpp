@@ -4,6 +4,7 @@
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "utility/Profiling.h"
+#include <fmt/format.h>
 #include <rdo_bc_encoder.h>
 #include <thread>
 
@@ -27,28 +28,44 @@ std::unique_ptr<ImageAsset> TextureCompressor::compressBC7(ImageAsset const& inp
     //params.m_bc7enc_reduce_entropy = true;
     //params.m_rdo_lambda = 100.0f;
 
-    // TODO: Actually handle multiple mips!
-    //for (size_t mipIdx = 0; mipIdx < inputImage.numMips(); ++mipIdx) {
-    auto pixelData = inputImage.pixelDataForMip(0);
+    std::vector<u8> compressedPixelData {};
+    std::vector<ImageMip> compressedMips {};
 
-    // Create an image that can be used by the encoder
-    utils::image_u8 sourceImage { inputImage.width(), inputImage.height() };
-    std::memcpy(sourceImage.get_pixels().data(), pixelData.data(), pixelData.size());
+    for (size_t mipIdx = 0; mipIdx < inputImage.numMips(); ++mipIdx) {
 
-    rdo_bc::rdo_bc_encoder encoder {};
+        std::string zoneName = fmt::format("Mip level {}", mipIdx);
+        SCOPED_PROFILE_ZONE_DYNAMIC(zoneName, 0xaa5577);
 
-    if (!encoder.init(sourceImage, params)) {
-        ARKOSE_LOG(Error, "Failed to init BC7 encoder");
-        return nullptr;
+        auto pixelData = inputImage.pixelDataForMip(mipIdx);
+
+        // Create an image that can be used by the encoder
+        Extent3D mipExtent = inputImage.extentAtMip(mipIdx);
+        utils::image_u8 sourceImage { mipExtent.width(), mipExtent.height() };
+        std::memcpy(sourceImage.get_pixels().data(), pixelData.data(), pixelData.size());
+
+        rdo_bc::rdo_bc_encoder encoder {};
+
+        if (!encoder.init(sourceImage, params)) {
+            ARKOSE_LOG(Error, "Failed to init BC7 encoder");
+            return nullptr;
+        }
+
+        if (!encoder.encode()) {
+            ARKOSE_LOG(Error, "Failed to BC7 encode image");
+            return nullptr;
+        }
+
+        u32 compressedMipSize = encoder.get_total_blocks_size_in_bytes();
+        u8 const* compressedMipData = static_cast<u8 const*>(encoder.get_blocks());
+
+        size_t currentOffset = compressedMips.size() > 0 ? (compressedMips.back().offset + compressedMips.back().size) : 0;
+        compressedPixelData.resize(currentOffset + compressedMipSize);
+
+        std::memcpy(compressedPixelData.data() + currentOffset, compressedMipData, compressedMipSize);
+
+        compressedMips.push_back(ImageMip { .offset = currentOffset,
+                                            .size = compressedMipSize });
     }
 
-    if (!encoder.encode()) {
-        ARKOSE_LOG(Error, "Failed to BC7 encode image");
-        return nullptr;
-    }
-
-    uint32_t compressedSize = encoder.get_total_blocks_size_in_bytes();
-    uint8_t const* compressedData = static_cast<uint8_t const*>(encoder.get_blocks());
-
-    return ImageAsset::createCopyWithReplacedFormat(inputImage, ImageFormat::BC7, compressedData, compressedSize);
+    return ImageAsset::createCopyWithReplacedFormat(inputImage, ImageFormat::BC7, std::move(compressedPixelData), std::move(compressedMips));
 }

@@ -21,7 +21,7 @@ namespace {
 ImageAsset::ImageAsset() = default;
 ImageAsset::~ImageAsset() = default;
 
-std::unique_ptr<ImageAsset> ImageAsset::createCopyWithReplacedFormat(ImageAsset const& inputImage, ImageFormat newFormat, uint8_t const* newData, size_t newSize)
+std::unique_ptr<ImageAsset> ImageAsset::createCopyWithReplacedFormat(ImageAsset const& inputImage, ImageFormat newFormat, std::vector<u8>&& pixelData, std::vector<ImageMip> imageMips)
 {
     auto newImage = std::make_unique<ImageAsset>();
 
@@ -32,15 +32,13 @@ std::unique_ptr<ImageAsset> ImageAsset::createCopyWithReplacedFormat(ImageAsset 
     newImage->m_sourceAssetFilePath = inputImage.m_sourceAssetFilePath;
 
     newImage->m_format = newFormat;
-    newImage->m_pixelData.assign(newData, newData + newSize);
-
-    // TODO: Handle multiple mips in this function!
-    newImage->m_mips = std::vector<ImageMip> { ImageMip { .offset = 0, .size = newSize } };
+    newImage->m_pixelData = std::move(pixelData);
+    newImage->m_mips = std::move(imageMips);
 
     // Passed in data must be in an uncompressed state (compressed data formats are okay but not lossless compression on pixel_data!)
     newImage->m_compressed = false;
-    newImage->m_compressedSize = narrow_cast<u32>(newSize);
-    newImage->m_uncompressedSize = narrow_cast<u32>(newSize);
+    newImage->m_uncompressedSize = narrow_cast<u32>(newImage->m_pixelData.size());
+    newImage->m_compressedSize = newImage->m_compressedSize;
 
     // TODO: Do we need to copy this over?
     newImage->userData = inputImage.userData;
@@ -347,6 +345,26 @@ bool ImageAsset::generateMipmaps()
     }
 
     return true;
+}
+
+Extent3D ImageAsset::extentAtMip(size_t mipIdx) const
+{
+    ARKOSE_ASSERT(mipIdx < m_mips.size());
+
+    if (mipIdx == 0) {
+        return { width(), height(), depth() };
+    }
+
+    float p = std::pow(2.0f, static_cast<float>(mipIdx));
+    u32 x = static_cast<u32>(std::floor(width() / p));
+    u32 y = static_cast<u32>(std::floor(height() / p));
+    u32 z = static_cast<u32>(std::floor(depth() / p));
+
+    x = x > 1 ? x : 1;
+    y = y > 1 ? y : 1;
+    z = z > 1 ? z : 1;
+
+    return { x, y, z };
 }
 
 bool ImageAsset::hasCompressedFormat() const
