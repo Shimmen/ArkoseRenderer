@@ -523,7 +523,7 @@ void VulkanTexture::setData(const void* data, size_t size, size_t mipIdx)
         region.imageExtent = VkExtent3D { mipExtent.width(), mipExtent.height(), 1 };
 
         region.imageSubresource.aspectMask = aspectMask();
-        region.imageSubresource.mipLevel = mipIdx;
+        region.imageSubresource.mipLevel = narrow_cast<u32>(mipIdx);
         region.imageSubresource.baseArrayLayer = layerIdx;
         region.imageSubresource.layerCount = 1;
 
