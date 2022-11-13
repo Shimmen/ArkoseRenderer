@@ -33,27 +33,30 @@ public:
     std::vector<BufferCopyOperation> popPendingOperations();
     const std::vector<BufferCopyOperation>& peekPendingOperations() const { return m_pendingOperations; }
 
+    size_t size() const { return m_buffer->size(); }
+    size_t remainingSize() const { return size() - m_cursor; }
+
     void reset();
 
-    void upload(const void* data, size_t size, Buffer& dstBuffer, size_t dstOffset = 0);
-    void upload(const void* data, size_t size, Texture& dstTexture, size_t dstTextureMip, size_t dstTextureArrayLayer = 0);
+    bool upload(const void* data, size_t size, Buffer& dstBuffer, size_t dstOffset = 0);
+    bool upload(const void* data, size_t size, Texture& dstTexture, size_t dstTextureMip, size_t dstTextureArrayLayer = 0);
 
     template<typename T>
-    void upload(const T& object, Buffer& dstBuffer, size_t dstOffset = 0)
+    bool upload(const T& object, Buffer& dstBuffer, size_t dstOffset = 0)
     {
         const void* data = reinterpret_cast<const void*>(&object);
-        upload(data, sizeof(T), dstBuffer, dstOffset);
+        return upload(data, sizeof(T), dstBuffer, dstOffset);
     }
 
     template<typename T>
-    void upload(const std::vector<T>& data, Buffer& dstBuffer, size_t dstOffset = 0)
+    bool upload(const std::vector<T>& data, Buffer& dstBuffer, size_t dstOffset = 0)
     {
-        upload(data.data(), sizeof(T) * data.size(), dstBuffer, dstOffset);
+        return upload(data.data(), sizeof(T) * data.size(), dstBuffer, dstOffset);
     }
 
 private:
 
-    void upload(const void* data, size_t size, std::variant<BufferCopyOperation::BufferDestination, BufferCopyOperation::TextureDestination>&& destination);
+    bool upload(const void* data, size_t size, std::variant<BufferCopyOperation::BufferDestination, BufferCopyOperation::TextureDestination>&& destination);
 
     size_t m_cursor { 0 };
     std::vector<BufferCopyOperation> m_pendingOperations;

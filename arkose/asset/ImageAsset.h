@@ -74,6 +74,8 @@ public:
     size_t numMips() const { return m_mips.size(); }
     std::span<u8 const> pixelDataForMip(size_t mip) const;
 
+    size_t totalImageSizeIncludingMips() const;
+
     // Generate mipmaps (slow)
     bool generateMipmaps();
 

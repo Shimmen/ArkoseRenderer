@@ -224,18 +224,37 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             SCOPED_PROFILE_ZONE_NAMED("Finalizing async-loaded images")
             std::scoped_lock<std::mutex> lock { m_asyncLoadedImagesMutex };
 
+            // Use up to 75% of the upload buffer's total size for streaming texture uploads
+            const size_t textureUploadBudget = static_cast<size_t>(0.75f * uploadBuffer.size());
+            size_t remainingTextureUploadBudget = textureUploadBudget;
+
             std::vector<Texture*> texturesNeedingGeneratedMips {};
 
-            size_t numToFinalize = std::min(MaxNumAsyncTextureLoadsToFinalizePerFrame, m_asyncLoadedImages.size());
-            for (size_t i = 0; i < numToFinalize; ++i) {
-                const LoadedImageForTextureCreation& loadedImageForTex = m_asyncLoadedImages[i];
-
-                auto texture = backend().createTexture(loadedImageForTex.textureDescription);
-                texture->setName("Texture<" + std::string(loadedImageForTex.imageAsset->assetFilePath()) + ">");
+            size_t numUploadedTextures = 0;
+            while (numUploadedTextures < m_asyncLoadedImages.size()) {
+                const LoadedImageForTextureCreation& loadedImageForTex = m_asyncLoadedImages[numUploadedTextures];
 
                 ARKOSE_ASSERT(loadedImageForTex.imageAsset->numMips() > 0);
                 bool assetHasMips = loadedImageForTex.imageAsset->numMips() > 1;
-                bool textureWantMips = texture->mipmap() != Texture::Mipmap::None;
+                bool textureWantMips = loadedImageForTex.textureDescription.mipmap != Texture::Mipmap::None;
+
+                size_t sizeToUpload = (textureWantMips)
+                    ? loadedImageForTex.imageAsset->totalImageSizeIncludingMips()
+                    : loadedImageForTex.imageAsset->pixelDataForMip(0).size();
+
+                if (sizeToUpload > remainingTextureUploadBudget) {
+                    if (sizeToUpload > textureUploadBudget) {
+                        ARKOSE_LOG(Fatal, "Image asset is {:.2f} MB but the texture upload budget is only {:.2f} MB. "
+                                          "The budget must be increased if we want to be able to load this asset.",
+                                   conversion::to::MB(sizeToUpload), conversion::to::MB(textureUploadBudget));
+                    } else {
+                        // Stop uploading textures now, as we've hit the budget
+                        break;
+                    }
+                }
+
+                auto texture = backend().createTexture(loadedImageForTex.textureDescription);
+                texture->setName("Texture<" + std::string(loadedImageForTex.imageAsset->assetFilePath()) + ">");
 
                 if (not assetHasMips || not textureWantMips) {
                     std::span<const u8> mip0PixelData = loadedImageForTex.imageAsset->pixelDataForMip(0);
@@ -256,12 +275,19 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 m_managedTexturesVramUsage += texture->sizeInMemory();
                 updateTexture(loadedImageForTex.textureHandle, std::move(texture));
-            }
-            m_asyncLoadedImages.erase(m_asyncLoadedImages.begin(), m_asyncLoadedImages.begin() + numToFinalize);
 
-            cmdList.executeBufferCopyOperations(uploadBuffer);
-            for (Texture* texture : texturesNeedingGeneratedMips) {
-                cmdList.generateMipmaps(*texture);
+                numUploadedTextures += 1;
+                ARKOSE_ASSERT(sizeToUpload <= remainingTextureUploadBudget);
+                remainingTextureUploadBudget -= sizeToUpload;
+            }
+
+            if (numUploadedTextures > 0) {
+                m_asyncLoadedImages.erase(m_asyncLoadedImages.begin(), m_asyncLoadedImages.begin() + numUploadedTextures);
+
+                cmdList.executeBufferCopyOperations(uploadBuffer);
+                for (Texture* texture : texturesNeedingGeneratedMips) {
+                    cmdList.generateMipmaps(*texture);
+                }
             }
         }
 

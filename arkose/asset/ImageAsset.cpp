@@ -272,6 +272,13 @@ std::span<u8 const> ImageAsset::pixelDataForMip(size_t mipIdx) const
     return std::span<u8 const> { m_pixelData.data() + mip.offset, mip.size };
 }
 
+size_t ImageAsset::totalImageSizeIncludingMips() const
+{
+    ARKOSE_ASSERT(m_mips.size() > 0);
+    ImageMip const& lastMip = m_mips.back();
+    return lastMip.offset + lastMip.size;
+}
+
 bool ImageAsset::generateMipmaps()
 {
     SCOPED_PROFILE_ZONE();

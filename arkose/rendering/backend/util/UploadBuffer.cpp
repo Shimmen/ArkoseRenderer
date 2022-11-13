@@ -22,21 +22,23 @@ void UploadBuffer::reset()
         ARKOSE_LOG(Fatal, "UploadBuffer: resetting although not all pending operations have been executed, exiting.");
 }
 
-void UploadBuffer::upload(const void* data, size_t size, Buffer& dstBuffer, size_t dstOffset)
+bool UploadBuffer::upload(const void* data, size_t size, Buffer& dstBuffer, size_t dstOffset)
 {
-    upload(data, size, BufferCopyOperation::BufferDestination { .buffer = &dstBuffer, .offset = dstOffset });
+    return upload(data, size, BufferCopyOperation::BufferDestination { .buffer = &dstBuffer, .offset = dstOffset });
 }
 
-void UploadBuffer::upload(const void* data, size_t size, Texture& dstTexture, size_t dstTextureMip, size_t dstTextureArrayLayer)
+bool UploadBuffer::upload(const void* data, size_t size, Texture& dstTexture, size_t dstTextureMip, size_t dstTextureArrayLayer)
 {
-    upload(data, size, BufferCopyOperation::TextureDestination { .texture = &dstTexture, .textureMip = dstTextureMip, .textureArrayLayer = dstTextureArrayLayer });
+    return upload(data, size, BufferCopyOperation::TextureDestination { .texture = &dstTexture, .textureMip = dstTextureMip, .textureArrayLayer = dstTextureArrayLayer });
 }
 
-void UploadBuffer::upload(const void* data, size_t size, std::variant<BufferCopyOperation::BufferDestination, BufferCopyOperation::TextureDestination>&& destination)
+bool UploadBuffer::upload(const void* data, size_t size, std::variant<BufferCopyOperation::BufferDestination, BufferCopyOperation::TextureDestination>&& destination)
 {
     size_t requiredSize = m_cursor + size;
-    if (requiredSize > m_buffer->size())
-        ARKOSE_LOG(Warning, "UploadBuffer: needs to grow to fit all requested uploads! It might be good to increase the default size so we don't have to pay this runtime cost");
+    if (requiredSize > m_buffer->size()) {
+        ARKOSE_LOG(Error, "UploadBuffer: not enough space for all requested uploads");
+        return false;
+    }
 
     BufferCopyOperation copyOperation;
     copyOperation.size = size;
@@ -46,8 +48,9 @@ void UploadBuffer::upload(const void* data, size_t size, std::variant<BufferCopy
 
     copyOperation.destination = std::move(destination);
 
-    m_buffer->updateDataAndGrowIfRequired(data, size, m_cursor);
+    m_buffer->updateData(data, size, m_cursor);
     m_cursor += size;
 
     m_pendingOperations.push_back(copyOperation);
+    return true;
 }

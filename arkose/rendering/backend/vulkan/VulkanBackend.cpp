@@ -1137,8 +1137,7 @@ void VulkanBackend::createFrameContexts()
 
         // Create upload buffer
         {
-            // TODO: Reduce this size, instead be smarter about how much we want to push, e.g. budget texture uploads per frame
-            static constexpr size_t registryUploadBufferSize = 64 * 1024 * 1024;
+            static constexpr size_t registryUploadBufferSize = 32 * 1024 * 1024;
             frameContext.uploadBuffer = std::make_unique<UploadBuffer>(*this, registryUploadBufferSize);
         }
 

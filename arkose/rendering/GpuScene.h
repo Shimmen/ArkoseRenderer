@@ -160,7 +160,6 @@ private:
     std::vector<BindingSet::TextureBindingUpdate> m_pendingTextureUpdates {};
 
     static constexpr bool UseAsyncTextureLoads = true;
-    static constexpr size_t MaxNumAsyncTextureLoadsToFinalizePerFrame = 4;
     struct LoadedImageForTextureCreation {
         ImageAsset* imageAsset { nullptr };
         TextureHandle textureHandle {};
