@@ -4,6 +4,7 @@
 #include "asset/MaterialAsset.h"
 #include "core/Types.h"
 #include "core/math/Sphere.h"
+#include "scene/Vertex.h"
 #include <ark/aabb.h>
 #include <vector>
 #include <string>
@@ -27,6 +28,10 @@ public:
         ARKOSE_ASSERT(hasPathToMaterial());
         return std::get<std::string>(material);
     }
+
+    size_t vertexCount() const;
+
+    std::vector<u8> assembleVertexData(const VertexLayout&) const;
 
     // Position vertex data for mesh segment
     std::vector<vec3> positions {};

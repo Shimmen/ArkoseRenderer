@@ -15,28 +15,17 @@
 #include <memory>
 
 class BottomLevelAS;
+class GpuScene; // remove me!
 
 DEFINE_HANDLE_TYPE(StaticMeshHandle)
 
-class GpuScene; // remove me!
+using MeshMaterialResolver = std::function<MaterialHandle(MaterialAsset const*)>;
 
 struct StaticMeshSegment {
 
-    // Position vertex data for mesh segment
-    std::vector<vec3> positions {};
+    StaticMeshSegment(StaticMeshSegmentAsset const*, MaterialHandle);
 
-    // TexCoord[0] vertex data for mesh segment
-    std::vector<vec2> texcoord0s {};
-
-    // Normal vertex data for mesh segment
-    std::vector<vec3> normals {};
-
-    // Tangent vertex data for mesh segment
-    std::vector<vec4> tangents {};
-
-    // Indices used for indexed meshes (optional; only needed for indexed meshes)
-    // For all required vertex data the arrays must have at least as many entries as the largest index in this array
-    std::vector<uint32_t> indices {};
+    StaticMeshSegmentAsset const* asset { nullptr };
 
     // Material used for rendering this mesh segment
     MaterialHandle material {};
@@ -44,11 +33,7 @@ struct StaticMeshSegment {
     // Bottom level acceleration structure (optional; only needed for ray tracing)
     // TODO: Create a geometry per StaticMeshLOD and use the SBT to lookup materials for the segments.
     // For now we create one per segment so we can ensure one material per "draw" and keep it simple
-    //std::unique_ptr<BottomLevelAS> blas { nullptr };
-    BottomLevelAS* blas { nullptr };
-
-    size_t vertexCount() const;
-    std::vector<uint8_t> assembleVertexData(const VertexLayout&) const;
+    std::unique_ptr<BottomLevelAS> blas { nullptr };
 
     // TODO: Remove this, they are for the temporary transition period..
     void ensureDrawCallIsAvailable(const VertexLayout&, GpuScene&) const;
@@ -59,24 +44,21 @@ struct StaticMeshSegment {
 
 struct StaticMeshLOD {
 
+    explicit StaticMeshLOD(StaticMeshLODAsset const*);
+
+    StaticMeshLODAsset const* asset { nullptr };
+
     // List of static mesh segments to be rendered (at least one needed)
     std::vector<StaticMeshSegment> meshSegments {};
 
 };
 
 class StaticMesh {
-    
 public:
 
-    // TODO: This is only temporary while we're doing the big copy from asset to this..
-    friend class GpuScene;
-
-    StaticMesh(StaticMeshAsset*);
+    StaticMesh(StaticMeshAsset const*, MeshMaterialResolver&&);
     StaticMesh() = default;
     ~StaticMesh() = default;
-
-    // Just make the loaders access into the private bits so we can keep their interfaces nice and simple
-    friend class GltfLoader;
 
     void setName(std::string name) { m_name = std::move(name); }
     std::string_view name() const { return m_name; }
@@ -92,12 +74,12 @@ public:
     ark::aabb3 boundingBox() const { return m_boundingBox; }
     geometry::Sphere boundingSphere() const { return m_boundingSphere; }
 
-    StaticMeshAsset* asset() const { return m_asset; }
+    StaticMeshAsset const* asset() const { return m_asset; }
 
 private:
 
     // Optional asset that this is created from
-    StaticMeshAsset* m_asset { nullptr };
+    StaticMeshAsset const* m_asset { nullptr };
 
     // Optional name of the mesh, usually set when loaded from some source file
     std::string m_name {};
@@ -106,9 +88,8 @@ private:
     std::vector<StaticMeshLOD> m_lods {};
 
     // LOD settings for rendering
-    // TODO: Add these back!
-    //uint32_t m_minLod { 0 };
-    //uint32_t m_maxLod { UINT32_MAX };
+    u32 m_minLod { 0 };
+    u32 m_maxLod { UINT32_MAX };
 
     // Immutable bounding box, pre object transform
     ark::aabb3 m_boundingBox {};

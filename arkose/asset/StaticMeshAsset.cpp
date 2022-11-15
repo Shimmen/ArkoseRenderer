@@ -17,6 +17,76 @@ namespace {
 StaticMeshSegmentAsset::StaticMeshSegmentAsset() = default;
 StaticMeshSegmentAsset::~StaticMeshSegmentAsset() = default;
 
+size_t StaticMeshSegmentAsset::vertexCount() const
+{
+    size_t count = positions.size();
+
+    ARKOSE_ASSERT(normals.size() == count);
+    if (texcoord0s.size() > 0) {
+        ARKOSE_ASSERT(texcoord0s.size() == count);
+
+        // TODO: Ensure we have tangents whenever we have UVs!
+        //ARKOSE_ASSERT(tangents.size() == count);
+    }
+
+    return count;
+}
+
+std::vector<u8> StaticMeshSegmentAsset::assembleVertexData(const VertexLayout& layout) const
+{
+    SCOPED_PROFILE_ZONE();
+
+    size_t packedVertexSize = layout.packedVertexSize();
+    size_t bufferSize = vertexCount() * packedVertexSize;
+
+    std::vector<u8> dataVector {};
+    dataVector.resize(bufferSize);
+    u8* data = dataVector.data();
+
+    // FIXME: This only really works for float components. However, for now we only have floating point components.
+    constexpr std::array<float, 4> floatOnes { 1, 1, 1, 1 };
+
+    size_t offsetInFirstVertex = 0u;
+
+    auto copyComponentData = [&](u8 const* input, size_t inputCount, VertexComponent component) {
+        size_t componentSize = vertexComponentSize(component);
+        for (size_t vertexIdx = 0, count = vertexCount(); vertexIdx < count; ++vertexIdx) {
+            u8* destination = data + offsetInFirstVertex + vertexIdx * packedVertexSize;
+            const u8* source = (vertexIdx < inputCount)
+                ? &input[vertexIdx * componentSize]
+                : (u8*)floatOnes.data();
+            std::memcpy(destination, source, componentSize);
+        }
+        return componentSize;
+    };
+
+    for (VertexComponent component : layout.components()) {
+        switch (component) {
+        case VertexComponent::Position3F: {
+            auto* inputData = reinterpret_cast<u8 const*>(value_ptr(*positions.data()));
+            offsetInFirstVertex += copyComponentData(inputData, positions.size(), component);
+        } break;
+        case VertexComponent::Normal3F: {
+            auto* inputData = reinterpret_cast<u8 const*>(value_ptr(*normals.data()));
+            offsetInFirstVertex += copyComponentData(inputData, normals.size(), component);
+        } break;
+        case VertexComponent::TexCoord2F: {
+            auto* inputData = reinterpret_cast<u8 const*>(value_ptr(*texcoord0s.data()));
+            offsetInFirstVertex += copyComponentData(inputData, texcoord0s.size(), component);
+        } break;
+        case VertexComponent::Tangent4F: {
+            auto* inputData = reinterpret_cast<u8 const*>(value_ptr(*tangents.data()));
+            offsetInFirstVertex += copyComponentData(inputData, tangents.size(), component);
+        } break;
+        default: {
+            ARKOSE_LOG_FATAL("Unable to assemble vertex data for unknown VertexComponent: '{}'", vertexComponentToString(component));
+        } break;
+        }
+    }
+
+    return dataVector;
+}
+
 StaticMeshLODAsset::StaticMeshLODAsset() = default;
 StaticMeshLODAsset::~StaticMeshLODAsset() = default;
 

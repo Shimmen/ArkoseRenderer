@@ -70,10 +70,10 @@ public:
     void registerLight(DirectionalLight&);
     // TODO: Unregister light!
 
-    StaticMeshHandle registerStaticMesh(StaticMeshAsset*);
+    StaticMeshHandle registerStaticMesh(StaticMeshAsset const*);
     void unregisterStaticMesh(StaticMeshHandle);
 
-    [[nodiscard]] MaterialHandle registerMaterial(MaterialAsset*);
+    [[nodiscard]] MaterialHandle registerMaterial(MaterialAsset const*);
     void unregisterMaterial(MaterialHandle);
 
     [[nodiscard]] TextureHandle registerMaterialTexture(std::optional<MaterialInput> const&, bool sRGB, Texture* fallback);
@@ -137,11 +137,11 @@ private:
     uint32_t m_nextFreeVertexIndex { 0 };
 
     struct ManagedStaticMesh {
-        StaticMeshAsset* staticMeshAsset {};
+        StaticMeshAsset const* staticMeshAsset {};
         std::unique_ptr<StaticMesh> staticMesh {};
     };
     ResourceList<ManagedStaticMesh, StaticMeshHandle> m_managedStaticMeshes { "Static Meshes", 1024 };
-    std::unordered_map<StaticMeshAsset*, StaticMeshHandle> m_staticMeshAssetCache {};
+    std::unordered_map<StaticMeshAsset const*, StaticMeshHandle> m_staticMeshAssetCache {};
 
     struct ManagedDirectionalLight {
         DirectionalLight* light {};
@@ -177,8 +177,6 @@ private:
     static constexpr int MaterialBindingSetBindingIndexMaterials = 0;
     static constexpr int MaterialBindingSetBindingIndexTextures = 1;
     std::unique_ptr<BindingSet> m_materialBindingSet { nullptr };
-
-    std::vector<std::unique_ptr<BottomLevelAS>> m_allBottomLevelAccelerationStructures {};
 
     static constexpr uint32_t InitialMaxRayTracingGeometryInstanceCount { 1024 };
     std::unique_ptr<TopLevelAS> m_sceneTopLevelAccelerationStructure {};

@@ -454,10 +454,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                                           .materialIndex = meshSegment.material.indexOfType<int>() });
 
                             if (meshSegment.blas == nullptr) {
-
-                                // TODO: We should just store the unique_ptr in the mesh segment but due to compilers complaining I'm currently not..
-                                m_allBottomLevelAccelerationStructures.push_back(createBottomLevelAccelerationStructure(meshSegment, rtMeshIndex));
-                                meshSegment.blas = m_allBottomLevelAccelerationStructures.back().get();
+                                meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment, rtMeshIndex);
 
                                 m_totalNumBlas += 1;
                                 m_totalBlasVramUsage += meshSegment.blas->sizeInMemory();
@@ -572,7 +569,7 @@ void GpuScene::registerLight(DirectionalLight& light)
     m_managedDirectionalLights.push_back(managedLight);
 }
 
-StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
+StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset const* staticMeshAsset)
 {
     // TODO: Maybe do some kind of caching here, and if we're trying to add the same mesh twice just ignore it and reuse the exisiting
 
@@ -589,44 +586,13 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset* staticMeshAsset)
 
     // Make a runtime static mesh from the asset type
 
-    auto staticMesh = std::make_unique<StaticMesh>(staticMeshAsset);
-
-    staticMesh->m_boundingBox = staticMeshAsset->boundingBox;
-    staticMesh->m_boundingSphere = staticMeshAsset->boundingSphere;
-
-    staticMesh->m_complexPhysicsShape = PhysicsShapeHandle();
-    staticMesh->m_simplePhysicsShape = PhysicsShapeHandle();
-
-    for (StaticMeshLODAsset const& lodAsset : staticMeshAsset->LODs) {
-
-        staticMesh->m_lods.push_back(StaticMeshLOD());
-        StaticMeshLOD& lod = staticMesh->m_lods.back();
-
-        for (auto& segmentAsset : lodAsset.meshSegments) {
-
-            lod.meshSegments.push_back(StaticMeshSegment());
-            StaticMeshSegment& segment = lod.meshSegments.back();
-
-            // TODO: We don't want to copy over all this data, instead we want to not keep any bulk data in the runtime version
-            // TODO: As step one, we can at least avoid copying here and just do it from the source asset on demand for GPU upload
-
-            segment.positions = segmentAsset.positions;
-            segment.texcoord0s = segmentAsset.texcoord0s;
-            segment.normals = segmentAsset.normals;
-            segment.tangents = segmentAsset.tangents;
-            segment.indices = segmentAsset.indices;
-
-            std::string const& materialAssetPath = std::string(segmentAsset.pathToMaterial());
-            if (MaterialAsset* materialAsset = MaterialAsset::loadFromArkmat(materialAssetPath)) {
-                segment.material = registerMaterial(materialAsset);
-            } else {
-                segment.material = m_defaultMaterialHandle;
-            }
-
-            segment.blas = nullptr; // will be created on demand
-
+    auto staticMesh = std::make_unique<StaticMesh>(staticMeshAsset, [this](MaterialAsset const* materialAsset) -> MaterialHandle {
+        if (materialAsset) {
+            return registerMaterial(materialAsset);
+        } else {
+            return m_defaultMaterialHandle;
         }
-    }
+    });
 
     StaticMeshHandle handle = m_managedStaticMeshes.add(ManagedStaticMesh { .staticMeshAsset = staticMeshAsset,
                                                                             .staticMesh = std::move(staticMesh) });
@@ -688,7 +654,7 @@ std::unique_ptr<BottomLevelAS> GpuScene::createBottomLevelAccelerationStructure(
     return backend().createBottomLevelAccelerationStructure({ geometry });
 }
 
-MaterialHandle GpuScene::registerMaterial(MaterialAsset* materialAsset)
+MaterialHandle GpuScene::registerMaterial(MaterialAsset const* materialAsset)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -967,7 +933,8 @@ DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<StaticMeshSegme
 
     bool doAlign = alignWith.has_value();
 
-    std::vector<uint8_t> vertexData = meshSegment.assembleVertexData(layout);
+    ARKOSE_ASSERT(meshSegment.asset);
+    std::vector<u8> vertexData = meshSegment.asset->assembleVertexData(layout);
 
     auto entry = m_globalVertexBuffers.find(layout);
     if (entry == m_globalVertexBuffers.end()) {
@@ -993,7 +960,7 @@ DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<StaticMeshSegme
         return reusedDrawCall;
     }
 
-    uint32_t vertexCount = (uint32_t)meshSegment.vertexCount();
+    uint32_t vertexCount = narrow_cast<u32>(meshSegment.asset->vertexCount());
     uint32_t vertexOffset = m_nextFreeVertexIndex;
     m_nextFreeVertexIndex += vertexCount;
 
@@ -1005,7 +972,7 @@ DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<StaticMeshSegme
 
     // Fit index data
     {
-        std::vector<uint32_t> indexData = meshSegment.indices;
+        std::vector<uint32_t> indexData = meshSegment.asset->indices;
         size_t requiredAdditionalSize = indexData.size() * sizeof(uint32_t);
 
         if (m_global32BitIndexBuffer == nullptr) {
