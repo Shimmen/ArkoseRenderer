@@ -311,7 +311,7 @@ bool ShaderManager::CompiledShader::recompile()
     shaderc::Compiler compiler {};
     shaderc::SpvCompilationResult result;
     {
-        SCOPED_PROFILE_ZONE_NAMED("ShaderC work")
+        SCOPED_PROFILE_ZONE_NAMED("ShaderC work");
         result = compiler.CompileGlslToSpv(glslSource, shaderKind, resolvedFilePath.c_str(), options);
     }
 

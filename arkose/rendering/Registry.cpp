@@ -230,7 +230,7 @@ Texture& Registry::createPixelTexture(vec4 pixelValue, bool srgb)
 
 Texture& Registry::loadTextureArrayFromFileSequence(const std::string& imagePathPattern, bool srgb, bool generateMipmaps)
 {
-    SCOPED_PROFILE_ZONE()
+    SCOPED_PROFILE_ZONE();
 
     auto texture = Texture::createFromImagePathSequence(backend(), imagePathPattern, srgb, generateMipmaps, ImageWrapModes::clampAllToEdge());
     texture->setOwningRegistry({}, this);

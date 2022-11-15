@@ -181,7 +181,7 @@ Texture::Multisampling Texture::multisampling() const
 
 std::unique_ptr<Texture> Texture::createFromPixel(Backend& backend, vec4 pixelColor, bool sRGB)
 {
-    SCOPED_PROFILE_ZONE()
+    SCOPED_PROFILE_ZONE();
 
     Texture::Description desc {
         .type = Texture::Type::Texture2D,
@@ -204,7 +204,7 @@ std::unique_ptr<Texture> Texture::createFromPixel(Backend& backend, vec4 pixelCo
 
 std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, const std::string& imagePathSequencePattern, bool sRGB, bool generateMipmaps, ImageWrapModes)
 {
-    SCOPED_PROFILE_ZONE()
+    SCOPED_PROFILE_ZONE();
 
     // TODO: Make this be not incredibly slow.. e.g. don't load all of them individually like this
     //       We now support multithreaded loading, but the "right" solution is to store them all in

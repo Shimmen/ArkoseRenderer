@@ -1,7 +1,7 @@
 #include "AvgElapsedTimer.h"
 
 #include <fmt/format.h>
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 void AvgElapsedTimer::reportCpuTime(double time)
 {

@@ -41,7 +41,7 @@ void RenderPipeline::constructAll(Registry& registry)
     ARKOSE_LOG(Info, "Constructing node resources:");
     for (auto& node : m_allNodes) {
 
-        SCOPED_PROFILE_ZONE_DYNAMIC(node->name(), 0x252515)
+        SCOPED_PROFILE_ZONE_DYNAMIC(node->name(), 0x252515);
         ARKOSE_LOG(Info, " {}", node->name());
 
         registry.setCurrentNode({}, node->name());

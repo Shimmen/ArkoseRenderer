@@ -4,7 +4,7 @@
 #include "core/math/Halton.h"
 #include "scene/camera/CameraController.h"
 #include <ark/transform.h>
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 class Scene;
 

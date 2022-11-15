@@ -221,7 +221,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         // If we're using async texture updates, create textures for the images we've now loaded in
         // TODO: Also create the texture and set the data asynchronously so we avoid practically all stalls
         if (m_asyncLoadedImages.size() > 0) {
-            SCOPED_PROFILE_ZONE_NAMED("Finalizing async-loaded images")
+            SCOPED_PROFILE_ZONE_NAMED("Finalizing async-loaded images");
             std::scoped_lock<std::mutex> lock { m_asyncLoadedImagesMutex };
 
             // Use up to 75% of the upload buffer's total size for streaming texture uploads
@@ -799,7 +799,7 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
                 if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(path)) {
                     Texture::Description desc = makeTextureDescription(*imageAsset, input, sRGB);
                     {
-                        SCOPED_PROFILE_ZONE_NAMED("Pushing async-loaded image asset")
+                        SCOPED_PROFILE_ZONE_NAMED("Pushing async-loaded image asset");
                         std::scoped_lock<std::mutex> lock { m_asyncLoadedImagesMutex };
                         this->m_asyncLoadedImages.push_back(LoadedImageForTextureCreation { .imageAsset = imageAsset,
                                                                                             .textureHandle = handle,

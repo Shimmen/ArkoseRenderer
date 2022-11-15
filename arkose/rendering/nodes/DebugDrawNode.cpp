@@ -3,7 +3,7 @@
 #include "core/Logging.h"
 #include "rendering/GpuScene.h"
 #include "rendering/debug/DebugDrawer.h"
-#include <imgui/imgui.h>
+#include <imgui.h>
 
 DebugDrawNode::DebugDrawNode()
 {

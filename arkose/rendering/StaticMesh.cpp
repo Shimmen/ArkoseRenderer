@@ -22,7 +22,7 @@ size_t StaticMeshSegment::vertexCount() const
 
 std::vector<uint8_t> StaticMeshSegment::assembleVertexData(const VertexLayout& layout) const
 {
-    SCOPED_PROFILE_ZONE()
+    SCOPED_PROFILE_ZONE();
 
     size_t packedVertexSize = layout.packedVertexSize();
     size_t bufferSize = vertexCount() * packedVertexSize;

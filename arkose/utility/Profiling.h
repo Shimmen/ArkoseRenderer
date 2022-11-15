@@ -18,7 +18,7 @@ inline void setNameForActiveThread(const char* name);
 #define SCOPED_PROFILE_ZONE_NAME_AND_COLOR(name, color) ZoneScopedNC(name, color)
 
 #define SCOPED_PROFILE_ZONE_DYNAMIC(nameStr, color) \
-	ZoneScopedC(color)                              \
+	ZoneScopedC(color);                             \
 	ZoneName(nameStr.c_str(), nameStr.length())
 
 #define SCOPED_PROFILE_ZONE_BACKEND() ZoneScopedC(0x00ff00);
