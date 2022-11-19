@@ -141,7 +141,6 @@ target_include_directories(ArkoseRenderer PRIVATE shaders/shared)
 target_link_libraries(ArkoseRenderer PRIVATE
     arklib # core arkose library (math etc.)
 
-    nlohmann_json::nlohmann_json # json parsing
     fmt # string formatting (TODO: replace with stl fmt in C++20)
     half # 16-bit float
     tracy # real-time profiling
