@@ -51,8 +51,11 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
             if (options.blockCompressImages) {
                 TextureCompressor textureCompressor {};
-                // TODO: Use BC5 for normal maps!
-                image = textureCompressor.compressBC7(*image);
+                if (image->type() == ImageType::NormalMap) {
+                    image = textureCompressor.compressBC5(*image);
+                } else {
+                    image = textureCompressor.compressBC7(*image);
+                }
             }
 
             image->compress();
