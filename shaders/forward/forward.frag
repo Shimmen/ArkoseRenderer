@@ -122,9 +122,17 @@ void main()
 // NOTE: This is only really for debugging! In general we try to avoid permutations for very common cases (almost everything will be normal mapped in practice)
 // (If we want to make normal mapping a proper permutation we would also want to exclude interpolats vTangent and vBitangentSign)
 #define FORWARD_USE_NORMAL_MAPPING 1
+// NOTE: We have to use 2-component normals when using BC5 compressed normal maps, but we always *can* use it, which is nice since we avoid permutations.
+// In practice we will loose some level of precision by doing the reconstruction though, so the old path is left for A/B comparison purposes.
+#define FORWARD_USE_2COMPONENT_NORMALS 1
 #if FORWARD_USE_NORMAL_MAPPING
     vec3 packedNormal = texture(textures[nonuniformEXT(material.normalMap)], vTexCoord).rgb;
-    vec3 tangentNormal = normalize(packedNormal * 2.0 - 1.0);
+    #if FORWARD_USE_2COMPONENT_NORMALS
+        vec3 tangentNormal = vec3(packedNormal.rg * 2.0 - 1.0, 0.0);
+        tangentNormal.z = sqrt(clamp(1.0 - lengthSquared(tangentNormal.xy), 0.0, 1.0));
+    #else
+        vec3 tangentNormal = packedNormal * 2.0 - 1.0;
+    #endif
 
     // Using MikkT space (http://www.mikktspace.com/)
     vec3 bitangent = vBitangentSign * cross(vNormal, vTangent);
