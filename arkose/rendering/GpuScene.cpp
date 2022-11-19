@@ -526,7 +526,7 @@ void GpuScene::updateEnvironmentMap(EnvironmentMap& environmentMap)
             Texture::Description desc { .type = Texture::Type::Texture2D,
                                         .arrayCount = 1u,
                                         .extent = { imageAsset->width(), imageAsset->height(), 1 },
-                                        .format = Texture::convertImageFormatToTextureFormat(imageAsset->format(), imageAsset->colorSpace()),
+                                        .format = Texture::convertImageFormatToTextureFormat(imageAsset->format(), imageAsset->type()),
                                         .filter = Texture::Filters::linear(),
                                         .wrapMode = ImageWrapModes::repeatAll(),
                                         .mipmap = Texture::Mipmap::None,
@@ -661,10 +661,10 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset const* materialAsset)
     // NOTE: A material in this context is very lightweight (for now) so we don't cache them
 
     // Register textures / material inputs
-    TextureHandle baseColor = registerMaterialTexture(materialAsset->baseColor, true, m_whiteTexture.get());
-    TextureHandle emissive = registerMaterialTexture(materialAsset->emissiveColor, true, m_blackTexture.get());
-    TextureHandle normalMap = registerMaterialTexture(materialAsset->normalMap, false, m_normalMapBlueTexture.get());
-    TextureHandle metallicRoughness = registerMaterialTexture(materialAsset->materialProperties, false, m_blackTexture.get());
+    TextureHandle baseColor = registerMaterialTexture(materialAsset->baseColor, ImageType::sRGBColor, m_whiteTexture.get());
+    TextureHandle emissive = registerMaterialTexture(materialAsset->emissiveColor, ImageType::sRGBColor, m_blackTexture.get());
+    TextureHandle normalMap = registerMaterialTexture(materialAsset->normalMap, ImageType::NormalMap, m_normalMapBlueTexture.get());
+    TextureHandle metallicRoughness = registerMaterialTexture(materialAsset->materialProperties, ImageType::GenericData, m_blackTexture.get());
 
     ShaderMaterial shaderMaterial {};
 
@@ -711,7 +711,7 @@ void GpuScene::unregisterMaterial(MaterialHandle handle)
     m_managedMaterials.removeReference(handle, m_currentFrameIdx);
 }
 
-TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> const& input, bool sRGB, Texture* fallback)
+TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> const& input, ImageType imageType, Texture* fallback)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -728,12 +728,15 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
     auto entry = m_materialTextureCache.find(imageAssetPath);
     if (entry == m_materialTextureCache.end()) {
 
-        auto makeTextureDescription = [](ImageAsset const& imageAsset, MaterialInput const& input, bool sRGB) -> Texture::Description {
+        auto makeTextureDescription = [](ImageAsset const& imageAsset, MaterialInput const& input, ImageType providedImageType) -> Texture::Description {
             // TODO: Handle 2D arrays & 3D textures here too
             ARKOSE_ASSERT(imageAsset.depth() == 1);
 
-            // TODO: Also look at the color space specified for the material input?
-            ColorSpace colorSpace = sRGB ? ColorSpace::sRGB_encoded : ColorSpace::sRGB_linear;
+            ImageType imageType = imageAsset.type();
+            ARKOSE_ASSERT(imageType == ImageType::Unknown || imageType == providedImageType);
+            if (imageType == ImageType::Unknown) {
+                imageType = providedImageType;
+            }
 
             bool canGenerateMipmaps = not imageAsset.hasCompressedFormat();
             bool shouldUseMipmaps = input.useMipmapping && (imageAsset.numMips() > 1 || canGenerateMipmaps);
@@ -742,7 +745,7 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
                 .type = Texture::Type::Texture2D,
                 .arrayCount = 1,
                 .extent = { imageAsset.width(), imageAsset.height(), imageAsset.depth() },
-                .format = Texture::convertImageFormatToTextureFormat(imageAsset.format(), colorSpace), // AssetTypes::convertFormat(imageAsset.format(), imageAsset.colorSpace(), sRGB),
+                .format = Texture::convertImageFormatToTextureFormat(imageAsset.format(), imageType),
                 .filter = Texture::Filters(Texture::convertImageFilterToMinFilter(input.minFilter),
                                            Texture::convertImageFilterToMagFilter(input.magFilter)),
                 .wrapMode = input.wrapModes,
@@ -760,10 +763,10 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
             // Put some placeholder texture for this texture slot before the async has loaded in fully
             updateTextureUnowned(handle, fallback);
 
-            TaskGraph::get().enqueueTask([this, &makeTextureDescription, handle, sRGB, path = imageAssetPath, input = *input]() {
+            TaskGraph::get().enqueueTask([this, &makeTextureDescription, handle, imageType, path = imageAssetPath, input = *input]() {
 
                 if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(path)) {
-                    Texture::Description desc = makeTextureDescription(*imageAsset, input, sRGB);
+                    Texture::Description desc = makeTextureDescription(*imageAsset, input, imageType);
                     {
                         SCOPED_PROFILE_ZONE_NAMED("Pushing async-loaded image asset");
                         std::scoped_lock<std::mutex> lock { m_asyncLoadedImagesMutex };
@@ -776,7 +779,7 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
 
         } else {
             if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(imageAssetPath)) {
-                std::unique_ptr<Texture> texture = m_backend.createTexture(makeTextureDescription(*imageAsset, *input, sRGB));
+                std::unique_ptr<Texture> texture = m_backend.createTexture(makeTextureDescription(*imageAsset, *input, imageType));
                 texture->setName("Texture<" + imageAssetPath + ">");
 
                 ARKOSE_ASSERT(imageAsset->numMips() > 0);

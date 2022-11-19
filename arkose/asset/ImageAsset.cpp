@@ -28,7 +28,7 @@ std::unique_ptr<ImageAsset> ImageAsset::createCopyWithReplacedFormat(ImageAsset 
     newImage->m_width = inputImage.m_width;
     newImage->m_height = inputImage.m_height;
     newImage->m_depth = inputImage.m_depth;
-    newImage->m_colorSpace = inputImage.m_colorSpace;
+    newImage->m_type = inputImage.m_type;
     newImage->m_sourceAssetFilePath = inputImage.m_sourceAssetFilePath;
 
     newImage->m_format = newFormat;
@@ -124,9 +124,7 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
     imageAsset->m_depth = 1;
 
     imageAsset->m_format = format;
-
-    // Let's make a safe assumption, the user can change it later if needed
-    imageAsset->m_colorSpace = ColorSpace::sRGB_encoded;
+    imageAsset->m_type = ImageType::Unknown;
 
     uint8_t* dataPtr = reinterpret_cast<uint8_t*>(data);
     imageAsset->m_pixelData = std::vector<uint8_t>(dataPtr, dataPtr + size);

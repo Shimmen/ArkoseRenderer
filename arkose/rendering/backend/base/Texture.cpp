@@ -83,9 +83,9 @@ Texture::Mipmap Texture::convertImageFilterToMipFilter(ImageFilter mipFilter, bo
     }
 }
 
-Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageFormat, ColorSpace colorSpace)
+Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageFormat, ImageType imageType)
 {
-    if (colorSpace == ColorSpace::sRGB_encoded) {
+    if (imageType == ImageType::sRGBColor) {
         switch (imageFormat) {
         case ImageFormat::RGBA8:
             return Format::sRGBA8;
@@ -237,7 +237,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
         ARKOSE_ASSERT(asset0.width() == otherAsset.width() && asset0.height() == otherAsset.height());
     }
 
-    ColorSpace colorSpace = sRGB ? ColorSpace::sRGB_encoded : ColorSpace::sRGB_linear;
+    ImageType colorSpace = sRGB ? ImageType::sRGBColor : ImageType::GenericData;
     Texture::Format format = Texture::convertImageFormatToTextureFormat(asset0.format(), colorSpace);
 
     auto mipmapMode = (generateMipmaps && asset0.width() > 1 && asset0.height() > 1)

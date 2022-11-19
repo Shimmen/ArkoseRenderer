@@ -9,10 +9,11 @@
 #include <string_view>
 
 
-enum class ColorSpace {
-    Data = 0,
-    sRGB_linear,
-    sRGB_encoded,
+enum class ImageType {
+    Unknown = 0,
+    sRGBColor,
+    NormalMap,
+    GenericData,
 };
 
 enum class ImageFormat {
@@ -76,8 +77,8 @@ public:
     ImageFormat format() const { return m_format; }
     bool hasCompressedFormat() const;
 
-    ColorSpace colorSpace() const { return m_colorSpace; }
-    void setColorSpace(ColorSpace colorSpace) { m_colorSpace = colorSpace; }
+    ImageType type() const { return m_type; }
+    void setType(ImageType type) { m_type = type; }
 
     size_t numMips() const { return m_mips.size(); }
     std::span<u8 const> pixelDataForMip(size_t mip) const;
@@ -108,7 +109,7 @@ private:
     u32 m_depth { 1 };
 
     ImageFormat m_format { ImageFormat::RGBA8 };
-    ColorSpace m_colorSpace { ColorSpace::sRGB_encoded };
+    ImageType m_type { ImageType::Unknown };
 
     // Pixel data binary blob
     std::vector<u8> m_pixelData {};
@@ -143,7 +144,7 @@ template<class Archive>
 void ImageAsset::serialize(Archive& archive)
 {
     archive(CEREAL_NVP(m_width), CEREAL_NVP(m_height), CEREAL_NVP(m_depth));
-    archive(CEREAL_NVP(m_format), CEREAL_NVP(m_colorSpace));
+    archive(CEREAL_NVP(m_format), CEREAL_NVP(m_type));
     archive(CEREAL_NVP(m_pixelData), CEREAL_NVP(m_mips));
     archive(CEREAL_NVP(m_compressed), CEREAL_NVP(m_compressedSize), CEREAL_NVP(m_uncompressedSize));
     archive(CEREAL_NVP(m_sourceAssetFilePath));

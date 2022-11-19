@@ -76,7 +76,7 @@ public:
     [[nodiscard]] MaterialHandle registerMaterial(MaterialAsset const*);
     void unregisterMaterial(MaterialHandle);
 
-    [[nodiscard]] TextureHandle registerMaterialTexture(std::optional<MaterialInput> const&, bool sRGB, Texture* fallback);
+    [[nodiscard]] TextureHandle registerMaterialTexture(std::optional<MaterialInput> const&, ImageType, Texture* fallback);
     [[nodiscard]] TextureHandle registerTexture(std::unique_ptr<Texture>&&);
     [[nodiscard]] TextureHandle registerTextureSlot();
     void updateTexture(TextureHandle, std::unique_ptr<Texture>&&);

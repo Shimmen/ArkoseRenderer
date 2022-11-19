@@ -60,8 +60,8 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
 
     std::string gltfDirectory = std::string(FileIO::extractDirectoryFromPath(gltfFilePath));
 
-    // Make best guesses for images' color spaces
-    std::unordered_map<int, ColorSpace> imageColorSpaceBestGuess {};
+    // Make best guesses for images' types
+    std::unordered_map<int, ImageType> imageColorSpaceBestGuess {};
     for (tinygltf::Material const& gltfMaterial : gltfModel.materials) {
         auto imageIdxForTexture = [&](int gltfTextureIdx) {
             if (gltfTextureIdx == -1) {
@@ -73,10 +73,10 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
         };
 
         // Note that we're relying on all -1 i.e. invalid textures mapping to the same slot which will be unused anyway
-        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index)] = ColorSpace::sRGB_encoded;
-        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index)] = ColorSpace::Data;
-        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.emissiveTexture.index)] = ColorSpace::sRGB_encoded;
-        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.normalTexture.index)] = ColorSpace::Data;
+        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index)] = ImageType::sRGBColor;
+        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index)] = ImageType::GenericData;
+        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.emissiveTexture.index)] = ImageType::sRGBColor;
+        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.normalTexture.index)] = ImageType::NormalMap;
     }
 
     // Create all images defined in the glTF file (even potentially unused ones)
@@ -110,7 +110,7 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
         // Assign the best-guess color space for this image
         auto entry = imageColorSpaceBestGuess.find(static_cast<int>(idx));
         if (entry != imageColorSpaceBestGuess.end()) {
-            image->setColorSpace(entry->second);
+            image->setType(entry->second);
         }
 
         // Write glTF image index to user data until we can resolve file paths
