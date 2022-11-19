@@ -54,6 +54,11 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
     case Texture::Format::R32Uint:
         vkFormat = VK_FORMAT_R32_UINT;
         break;
+    case Texture::Format::BC5:
+        vkFormat = VK_FORMAT_BC5_UNORM_BLOCK;
+        storageCapable = false;
+        attachmentCapable = false;
+        break;
     case Texture::Format::BC7:
         vkFormat = VK_FORMAT_BC7_UNORM_BLOCK;
         storageCapable = false;

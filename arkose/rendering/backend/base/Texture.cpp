@@ -99,7 +99,9 @@ Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageForm
         ARKOSE_LOG_FATAL("Texture: using sRGB color space but no suitabe image format ({}), exiting.", static_cast<int>(imageFormat));
     }
 
-    // From now on, no sRGB ...
+    if (imageType == ImageType::NormalMap && imageFormat == ImageFormat::BC5) {
+        return Format::BC5;
+    }
 
     switch (imageFormat) {
     case ImageFormat::R8:
