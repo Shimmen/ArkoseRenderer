@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.15 FATAL_ERROR)
 
 # "MSVC runtime library flags are selected by an abstraction."
 # See https://cmake.org/cmake/help/latest/policy/CMP0091.html
