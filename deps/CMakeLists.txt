@@ -46,6 +46,10 @@ FetchContent_Declare(directx_headers
     GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
     GIT_TAG        "v1.602.0")
 
+FetchContent_Declare(meshoptimizer
+    GIT_REPOSITORY https://github.com/zeux/meshoptimizer.git
+    GIT_TAG        "v0.18")
+
 set(TARGET_UNIT_TESTS OFF)
 set(TARGET_HELLO_WORLD OFF)
 set(TARGET_PERFORMANCE_TEST OFF)
@@ -172,4 +176,4 @@ add_subdirectory(half)
 ##################################
 # Finalize FetchContent dependencies
 
-FetchContent_MakeAvailable(spirv-cross json cereal fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers jolt-physics zstd)
+FetchContent_MakeAvailable(spirv-cross json cereal fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers meshoptimizer jolt-physics zstd)

@@ -166,10 +166,11 @@ target_link_libraries(ArkoseRenderer PRIVATE
     DirectX-Headers # utility stuff, e.g. CD3DX12
     spirv-cross-hlsl # for spirv->hlsl
 
-    # Asset packing
+    # Asset related
     cereal # serialisation
     libzstd_static # generic lossless compression
     bc7enc_lib # texture compression
+    meshoptimizer # mesh optimization & meshlet generation
     )
 
 ##################################
