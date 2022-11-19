@@ -139,22 +139,25 @@ target_include_directories(ArkoseRenderer PRIVATE arkose/)
 target_include_directories(ArkoseRenderer PRIVATE shaders/shared)
 
 target_link_libraries(ArkoseRenderer PRIVATE
-    arklib
-    dear_imgui
-    fmt
-    glfw
-    nfd
-    half
-    imguizmo
-    nlohmann_json::nlohmann_json
-    Shaderc::Shaderc
-    spirv-cross-core
-    stb_image
-    tiny_gltf
-    tracy
+    arklib # core arkose library (math etc.)
+
+    nlohmann_json::nlohmann_json # json parsing
+    fmt # string formatting (TODO: replace with stl fmt in C++20)
+    half # 16-bit float
+    tracy # real-time profiling
+
+    glfw # window and event management
+    nfd # native file dialogs
+
+    dear_imgui # dear imgui - immediate mode gui
+    imguizmo # gizmo extension for dear imgui
 
     # Physics
     Jolt
+
+    # Shader backend
+    Shaderc::Shaderc # glsl shader compiler
+    spirv-cross-core # generic spir-v reflection
 
     # Vulkan backend
     Vulkan::Vulkan
@@ -164,9 +167,11 @@ target_link_libraries(ArkoseRenderer PRIVATE
     d3d12 dxgi dxguid  # core stuff
     dxcompiler # for HLSL shader compilation
     DirectX-Headers # utility stuff, e.g. CD3DX12
-    spirv-cross-hlsl # for spirv->hlsl
+    spirv-cross-hlsl # for spirv->hlsl transpiling
 
     # Asset related
+    stb_image # image loading
+    tiny_gltf # glTF 2.0 loading
     cereal # serialisation
     libzstd_static # generic lossless compression
     bc7enc_lib # texture compression
