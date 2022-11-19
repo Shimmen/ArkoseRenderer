@@ -13,6 +13,10 @@ FetchContent_Declare(spirv-cross
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
     GIT_TAG        "sdk-1.3.211.0")
 
+FetchContent_Declare(json
+    GIT_REPOSITORY https://github.com/nlohmann/json.git
+    GIT_TAG        "v3.11.2")
+
 set(BUILD_DOC OFF)
 set(BUILD_SANDBOX OFF)
 set(SKIP_PERFORMANCE_COMPARISON ON)
@@ -172,4 +176,4 @@ add_subdirectory(half)
 ##################################
 # Finalize FetchContent dependencies
 
-FetchContent_MakeAvailable(spirv-cross cereal fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers meshoptimizer jolt-physics zstd)
+FetchContent_MakeAvailable(spirv-cross json cereal fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers meshoptimizer jolt-physics zstd)
