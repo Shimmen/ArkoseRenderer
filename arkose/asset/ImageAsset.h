@@ -32,7 +32,8 @@ enum class ImageFormat {
     RGBA32F,
 
     // Block-compressed formats
-    BC7 = 300,
+    BC5 = 300,
+    BC7 = 301,
 };
 
 struct ImageMip {
