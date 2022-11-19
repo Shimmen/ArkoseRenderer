@@ -11,7 +11,6 @@
 #include "utility/FileIO.h"
 #include <imgui.h>
 #include <ImGuizmo.h>
-#include <nlohmann/json.hpp>
 #include <fstream>
 
 Scene::Scene(Backend& backend, PhysicsBackend* physicsBackend, Extent2D initialMainViewportSize)

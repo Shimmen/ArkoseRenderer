@@ -10,7 +10,6 @@
 #include "scene/lights/SpotLight.h"
 #include "scene/MeshInstance.h"
 #include <memory>
-#include <nlohmann/json_fwd.hpp>
 #include <optional>
 #include <string>
 #include <unordered_map>
