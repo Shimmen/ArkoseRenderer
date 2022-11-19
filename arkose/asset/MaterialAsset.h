@@ -70,6 +70,8 @@ public:
     BlendMode blendMode { BlendMode::Opaque };
     float maskCutoff { 1.0f };
 
+    bool doubleSided { false };
+
     std::string_view assetFilePath() const { return m_assetFilePath; }
 
 private:
@@ -100,4 +102,5 @@ void MaterialAsset::serialize(Archive& archive)
     archive(CEREAL_NVP(baseColor), CEREAL_NVP(emissiveColor), CEREAL_NVP(normalMap), CEREAL_NVP(materialProperties));
     archive(CEREAL_NVP(colorTint));
     archive(CEREAL_NVP(blendMode), CEREAL_NVP(maskCutoff));
+    archive(CEREAL_NVP(doubleSided));
 }
