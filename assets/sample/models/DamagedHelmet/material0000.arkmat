@@ -79,6 +79,7 @@
             "w": 1.0
         },
         "blendMode": "Opaque",
-        "maskCutoff": 1.0
+        "maskCutoff": 1.0,
+        "doubleSided": false
     }
 }

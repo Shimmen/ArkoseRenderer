@@ -64,6 +64,7 @@
             "w": 1.0
         },
         "blendMode": "Masked",
-        "maskCutoff": 0.5
+        "maskCutoff": 0.5,
+        "doubleSided": true
     }
 }
