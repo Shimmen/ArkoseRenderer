@@ -13,6 +13,20 @@
 
 struct PhysicsMesh;
 
+struct Meshlet {
+    std::span<u32> vertices {};
+    std::span<u8> triangles {};
+
+    vec3 center;
+    float radius;
+};
+
+struct MeshletData {
+    std::vector<u32> vertices {};
+    std::vector<u8> triangles {};
+    std::vector<Meshlet> meshlets {};
+};
+
 class StaticMeshSegmentAsset {
 public:
     StaticMeshSegmentAsset();
@@ -29,8 +43,9 @@ public:
         return std::get<std::string>(material);
     }
 
-    size_t vertexCount() const;
+    void generateMeshlets();
 
+    size_t vertexCount() const;
     std::vector<u8> assembleVertexData(const VertexLayout&) const;
 
     // Position vertex data for mesh segment
@@ -48,6 +63,9 @@ public:
     // Indices used for indexed meshes (only needed for indexed meshes). For all vertex data types
     // the arrays must either be empty or have as many entries as the largest index in this array.
     std::vector<u32> indices {};
+
+    // Meshlet data for this segment
+    std::optional<MeshletData> meshletData {};
 
     // Path to a material or a material asset directly, used for rendering this mesh segment
     std::variant<std::string, std::weak_ptr<MaterialAsset>> material;

@@ -7,6 +7,7 @@
 #include "utility/Profiling.h"
 #include <cereal/archives/binary.hpp>
 #include <cereal/archives/json.hpp>
+#include <meshoptimizer.h>
 #include <mutex>
 
 namespace {
@@ -16,6 +17,48 @@ namespace {
 
 StaticMeshSegmentAsset::StaticMeshSegmentAsset() = default;
 StaticMeshSegmentAsset::~StaticMeshSegmentAsset() = default;
+
+void StaticMeshSegmentAsset::generateMeshlets()
+{
+    SCOPED_PROFILE_ZONE();
+
+    constexpr size_t maxVertices = 64;
+    constexpr size_t maxTriangles = 124;
+    constexpr float coneWeight = 0.0f; // no cone culling
+
+    // Reset the meshlet data for this segment
+    meshletData = MeshletData();
+
+    size_t vertCount = vertexCount();
+    float const* vertexPositions = value_ptr(positions[0]);
+    constexpr size_t vertexPositionStride = sizeof(vec3);
+
+    size_t maxMeshlets = meshopt_buildMeshletsBound(indices.size(), maxVertices, maxTriangles);
+    std::vector<meshopt_Meshlet> meshlets(maxMeshlets);
+    meshletData->vertices.resize(maxMeshlets * maxVertices);
+    meshletData->triangles.resize(maxMeshlets * maxTriangles * 3);
+
+    size_t meshletCount = meshopt_buildMeshlets(meshlets.data(), meshletData->vertices.data(), meshletData->triangles.data(),
+                                                indices.data(), indices.size(), vertexPositions, vertCount, vertexPositionStride,
+                                                maxVertices, maxTriangles, coneWeight);
+
+    meshopt_Meshlet const& last = meshlets[meshletCount - 1];
+    meshletData->vertices.resize(last.vertex_offset + last.vertex_count);
+    meshletData->triangles.resize(last.triangle_offset + ((last.triangle_count * 3 + 3) & ~3));
+    meshlets.resize(meshletCount);
+
+    meshletData->meshlets.reserve(meshletCount);
+    for (meshopt_Meshlet const& meshlet : meshlets) {
+        meshopt_Bounds bounds = meshopt_computeMeshletBounds(&meshletData->vertices[meshlet.vertex_offset],
+                                                             &meshletData->triangles[meshlet.triangle_offset], meshlet.triangle_count,
+                                                             vertexPositions, vertCount, vertexPositionStride);
+
+        meshletData->meshlets.push_back(Meshlet { .vertices = std::span<u32>(meshletData->vertices.data() + meshlet.vertex_offset, meshlet.vertex_count),
+                                                  .triangles = std::span<u8>(meshletData->triangles.data() + meshlet.triangle_offset, meshlet.triangle_count),
+                                                  .center = vec3(bounds.center[0], bounds.center[1], bounds.center[2]),
+                                                  .radius = bounds.radius });
+    }
+}
 
 size_t StaticMeshSegmentAsset::vertexCount() const
 {
