@@ -53,6 +53,10 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
     if (m_maintainRayTracingScene) {
         m_sceneTopLevelAccelerationStructure = backend().createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, {});
     }
+
+    if constexpr (UseMeshletRendering) {
+        m_meshletManager = std::make_unique<MeshletManager>(m_backend);
+    }
 }
 
 StaticMesh* GpuScene::staticMeshForHandle(StaticMeshHandle handle)
@@ -309,6 +313,11 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 uploadBuffer.upload(shaderMaterial, *m_materialDataBuffer, bufferOffset);
             }
             m_pendingMaterialUpdates.clear();
+        }
+
+        // Update mesh streaming (well, it's not much streaming to speak of right now, but it's the basis of something like that)
+        if constexpr (UseMeshletRendering) {
+            m_meshletManager->processMeshStreaming(cmdList);
         }
 
         // Update camera data
@@ -584,8 +593,6 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset const* staticMeshA
         return entry->second;
     }
 
-    // Make a runtime static mesh from the asset type
-
     auto staticMesh = std::make_unique<StaticMesh>(staticMeshAsset, [this](MaterialAsset const* materialAsset) -> MaterialHandle {
         if (materialAsset) {
             return registerMaterial(materialAsset);
@@ -593,6 +600,10 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset const* staticMeshA
             return m_defaultMaterialHandle;
         }
     });
+
+    if constexpr (UseMeshletRendering) {
+        m_meshletManager->allocateMeshlets(*staticMesh);
+    }
 
     StaticMeshHandle handle = m_managedStaticMeshes.add(ManagedStaticMesh { .staticMeshAsset = staticMeshAsset,
                                                                             .staticMesh = std::move(staticMesh) });
@@ -895,6 +906,10 @@ void GpuScene::processDeferredDeletions()
             for (StaticMeshSegment const& segment : lod.meshSegments) {
                 unregisterMaterial(segment.material);
             }
+        }
+
+        if (UseMeshletRendering) {
+            m_meshletManager->freeMeshlets(*managedStaticMesh.staticMesh);
         }
 
         managedStaticMesh.staticMeshAsset = nullptr;

@@ -7,6 +7,7 @@
 #include "physics/HandleTypes.h"
 #include "rendering/Material.h"
 #include "rendering/backend/util/DrawCall.h" // remove me!
+#include "rendering/meshlet/MeshletView.h"
 #include "scene/Vertex.h"
 #include <ark/aabb.h>
 #include <ark/vector.h>
@@ -29,6 +30,9 @@ struct StaticMeshSegment {
 
     // Material used for rendering this mesh segment
     MaterialHandle material {};
+
+    // View into the meshlets that can be used to render this mesh
+    std::optional<MeshletView> meshletView {};
 
     // Bottom level acceleration structure (optional; only needed for ray tracing)
     // TODO: Create a geometry per StaticMeshLOD and use the SBT to lookup materials for the segments.

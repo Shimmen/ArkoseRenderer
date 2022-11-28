@@ -26,37 +26,58 @@ void StaticMeshSegmentAsset::generateMeshlets()
     constexpr size_t maxTriangles = 124;
     constexpr float coneWeight = 0.0f; // no cone culling
 
-    // Reset the meshlet data for this segment
-    meshletData = MeshletData();
-
     size_t vertCount = vertexCount();
     float const* vertexPositions = value_ptr(positions[0]);
     constexpr size_t vertexPositionStride = sizeof(vec3);
 
     size_t maxMeshlets = meshopt_buildMeshletsBound(indices.size(), maxVertices, maxTriangles);
-    std::vector<meshopt_Meshlet> meshlets(maxMeshlets);
-    meshletData->vertices.resize(maxMeshlets * maxVertices);
-    meshletData->triangles.resize(maxMeshlets * maxTriangles * 3);
+    std::vector<meshopt_Meshlet> meshoptMeshlets(maxMeshlets);
+    std::vector<u32> meshoptMeshletVertexIndirection(maxMeshlets * maxVertices);
+    std::vector<u8> meshoptMeshletTriangles(maxMeshlets * maxTriangles * 3);
 
-    size_t meshletCount = meshopt_buildMeshlets(meshlets.data(), meshletData->vertices.data(), meshletData->triangles.data(),
+    size_t meshletCount = meshopt_buildMeshlets(meshoptMeshlets.data(), meshoptMeshletVertexIndirection.data(), meshoptMeshletTriangles.data(),
                                                 indices.data(), indices.size(), vertexPositions, vertCount, vertexPositionStride,
                                                 maxVertices, maxTriangles, coneWeight);
 
-    meshopt_Meshlet const& last = meshlets[meshletCount - 1];
-    meshletData->vertices.resize(last.vertex_offset + last.vertex_count);
-    meshletData->triangles.resize(last.triangle_offset + ((last.triangle_count * 3 + 3) & ~3));
-    meshlets.resize(meshletCount);
+    meshopt_Meshlet const& last = meshoptMeshlets[meshletCount - 1];
+    meshoptMeshletVertexIndirection.resize(last.vertex_offset + last.vertex_count);
+    meshoptMeshletTriangles.resize(last.triangle_offset + ((last.triangle_count * 3 + 3) & ~3));
+    meshoptMeshlets.resize(meshletCount);
+
+    meshletData = MeshletDataAsset();
+    std::vector<vec3>& meshletVertexPositions = meshletData->meshletVertexPositions;
+    std::vector<u32>& meshletIndices = meshletData->meshletIndices;
 
     meshletData->meshlets.reserve(meshletCount);
-    for (meshopt_Meshlet const& meshlet : meshlets) {
-        meshopt_Bounds bounds = meshopt_computeMeshletBounds(&meshletData->vertices[meshlet.vertex_offset],
-                                                             &meshletData->triangles[meshlet.triangle_offset], meshlet.triangle_count,
+    for (meshopt_Meshlet const& meshlet : meshoptMeshlets) {
+
+        u32 baseVertexOffset = narrow_cast<u32>(meshletVertexPositions.size());
+        u32 baseIndexOffset = narrow_cast<u32>(meshletIndices.size());
+
+        // Remap vertices onto the segment-local buffer
+
+        for (u32 vertexIdx = meshlet.vertex_offset; vertexIdx < meshlet.vertex_offset + meshlet.vertex_count; ++vertexIdx) {
+            u32 indirectionIdx = meshoptMeshletVertexIndirection[vertexIdx];
+
+            // TODO: Also remap the other vertex buffers!
+            meshletVertexPositions.emplace_back(positions[indirectionIdx]);
+        }
+
+        // Remap meshlet indices onto the "global" index buffer
+        for (u32 index = 0; index < meshlet.triangle_count * 3; ++index) {
+            u8 triangleIndirection = meshoptMeshletTriangles[meshlet.triangle_offset + index];
+            meshletIndices.push_back(baseVertexOffset + triangleIndirection);
+        }
+
+        // Get bounds of meshlet for culling
+        meshopt_Bounds bounds = meshopt_computeMeshletBounds(&meshoptMeshletVertexIndirection[meshlet.vertex_offset],
+                                                             &meshoptMeshletTriangles[meshlet.triangle_offset], meshlet.triangle_count,
                                                              vertexPositions, vertCount, vertexPositionStride);
 
-        meshletData->meshlets.push_back(Meshlet { .vertices = std::span<u32>(meshletData->vertices.data() + meshlet.vertex_offset, meshlet.vertex_count),
-                                                  .triangles = std::span<u8>(meshletData->triangles.data() + meshlet.triangle_offset, meshlet.triangle_count),
-                                                  .center = vec3(bounds.center[0], bounds.center[1], bounds.center[2]),
-                                                  .radius = bounds.radius });
+        meshletData->meshlets.push_back(MeshletAsset { .firstIndex = baseIndexOffset,
+                                                       .triangleCount = meshlet.triangle_count,
+                                                       .center = vec3(bounds.center[0], bounds.center[1], bounds.center[2]),
+                                                       .radius = bounds.radius });
     }
 }
 

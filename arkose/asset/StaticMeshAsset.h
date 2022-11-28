@@ -6,25 +6,25 @@
 #include "core/math/Sphere.h"
 #include "scene/Vertex.h"
 #include <ark/aabb.h>
-#include <vector>
 #include <string>
 #include <string_view>
 #include <variant>
+#include <vector>
 
 struct PhysicsMesh;
 
-struct Meshlet {
-    std::span<u32> vertices {};
-    std::span<u8> triangles {};
+struct MeshletAsset {
+    u32 firstIndex {};
+    u32 triangleCount {};
 
-    vec3 center;
-    float radius;
+    vec3 center {};
+    float radius {};
 };
 
-struct MeshletData {
-    std::vector<u32> vertices {};
-    std::vector<u8> triangles {};
-    std::vector<Meshlet> meshlets {};
+struct MeshletDataAsset {
+    std::vector<MeshletAsset> meshlets {};
+    std::vector<vec3> meshletVertexPositions {};
+    std::vector<u32> meshletIndices {};
 };
 
 class StaticMeshSegmentAsset {
@@ -65,14 +65,13 @@ public:
     std::vector<u32> indices {};
 
     // Meshlet data for this segment
-    std::optional<MeshletData> meshletData {};
+    std::optional<MeshletDataAsset> meshletData {};
 
     // Path to a material or a material asset directly, used for rendering this mesh segment
     std::variant<std::string, std::weak_ptr<MaterialAsset>> material;
 
     // Not serialized, can be used to store whatever intermediate you want
     int userData { -1 };
-
 };
 
 class StaticMeshLODAsset {

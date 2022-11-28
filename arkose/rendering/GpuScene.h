@@ -5,6 +5,7 @@
 #include "core/Handle.h"
 #include "core/Types.h"
 #include "core/parallel/TaskGraph.h"
+#include "rendering/meshlet/MeshletManager.h"
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/ResourceList.h"
 #include "scene/Scene.h"
@@ -111,6 +112,13 @@ public:
     void drawStatsGui(bool includeContainingWindow = false);
     void drawVramUsageGui(bool includeContainingWindow = false);
 
+    static constexpr bool UseMeshletRendering = true;
+    MeshletManager const& meshletManager() const
+    {
+        ARKOSE_ASSERT(UseMeshletRendering);
+        return *m_meshletManager;
+    }
+
 private:
     Scene& m_scene;
     Backend& m_backend;
@@ -142,6 +150,8 @@ private:
     };
     ResourceList<ManagedStaticMesh, StaticMeshHandle> m_managedStaticMeshes { "Static Meshes", 1024 };
     std::unordered_map<StaticMeshAsset const*, StaticMeshHandle> m_staticMeshAssetCache {};
+
+    std::unique_ptr<MeshletManager> m_meshletManager {};
 
     struct ManagedDirectionalLight {
         DirectionalLight* light {};
