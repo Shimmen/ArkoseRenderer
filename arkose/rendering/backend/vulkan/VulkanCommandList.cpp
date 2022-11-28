@@ -1118,9 +1118,12 @@ void VulkanCommandList::issueDrawCall(const DrawCallDescription& drawCall)
 
     if (!activeRenderState)
         ARKOSE_LOG(Fatal, "issueDrawCall: no active render state!");
-    if (static_cast<const VulkanBuffer*>(drawCall.vertexBuffer)->buffer != m_boundVertexBuffer)
+
+    VulkanBuffer const* vertexBuffer = static_cast<const VulkanBuffer*>(drawCall.vertexBuffer);
+    if (vertexBuffer && vertexBuffer->buffer != m_boundVertexBuffer)
         ARKOSE_LOG(Fatal, "issueDrawCall: bind the correct vertex buffer before calling this!");
-    if (static_cast<const VulkanBuffer*>(drawCall.indexBuffer)->buffer != m_boundIndexBuffer)
+    VulkanBuffer const* indexBuffer = static_cast<const VulkanBuffer*>(drawCall.indexBuffer);
+    if (indexBuffer && indexBuffer->buffer != m_boundIndexBuffer)
         ARKOSE_LOG(Fatal, "issueDrawCall: bind the correct index buffer before calling this!");
 
     ARKOSE_ASSERT(drawCall.instanceCount > 0);
