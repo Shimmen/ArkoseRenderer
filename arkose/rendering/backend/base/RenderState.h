@@ -61,6 +61,7 @@ enum class PolygonMode {
 
 struct RasterState {
     bool backfaceCullingEnabled { true };
+    bool depthBiasEnabled { false };
     TriangleWindingOrder frontFace { TriangleWindingOrder::CounterClockwise };
     PrimitiveType primitiveType { PrimitiveType::Triangles };
     PolygonMode polygonMode { PolygonMode::Filled };
@@ -126,6 +127,8 @@ public:
     PrimitiveType primitiveType { PrimitiveType::Triangles };
     PolygonMode polygonMode { PolygonMode::Filled };
     float lineWidth { 1.0f };
+
+    bool enableDepthBias { false };
 
     bool cullBackfaces { true };
     TriangleWindingOrder frontFace { TriangleWindingOrder::CounterClockwise };

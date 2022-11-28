@@ -1061,6 +1061,14 @@ void VulkanCommandList::setViewport(ivec2 origin, ivec2 size)
     vkCmdSetScissor(m_commandBuffer, 0, 1, &scissorRect);
 }
 
+void VulkanCommandList::setDepthBias(float constantFactor, float slopeFactor)
+{
+    // If the depthBiasClamp feature is not enabled, depthBiasClamp must be 0.0
+    constexpr float depthBiasClamp = 0.0f;
+
+    vkCmdSetDepthBias(m_commandBuffer, constantFactor, depthBiasClamp, slopeFactor);
+}
+
 void VulkanCommandList::bindVertexBuffer(const Buffer& vertexBuffer)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();

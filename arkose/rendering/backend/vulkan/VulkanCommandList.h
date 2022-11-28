@@ -28,6 +28,7 @@ public:
     void drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer) override;
 
     void setViewport(ivec2 origin, ivec2 size) override;
+    void setDepthBias(float constantFactor, float slopeFactor) override;
 
     void bindVertexBuffer(const Buffer&) override;
     void bindIndexBuffer(const Buffer&, IndexType) override;

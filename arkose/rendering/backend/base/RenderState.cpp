@@ -27,6 +27,7 @@ RasterState RenderStateBuilder::rasterState() const
 
     RasterState state {
         .backfaceCullingEnabled = cullBackfaces,
+        .depthBiasEnabled = enableDepthBias,
         .frontFace = frontFace,
         .primitiveType = primitiveType,
         .polygonMode = polygonMode,

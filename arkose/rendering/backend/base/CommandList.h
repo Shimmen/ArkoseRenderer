@@ -36,6 +36,7 @@ public:
     virtual void drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer) = 0;
 
     virtual void setViewport(ivec2 origin, ivec2 size) = 0;
+    virtual void setDepthBias(float constantFactor, float slopeFactor) = 0;
 
     virtual void bindVertexBuffer(const Buffer&) = 0;
     virtual void bindIndexBuffer(const Buffer&, IndexType) = 0;
