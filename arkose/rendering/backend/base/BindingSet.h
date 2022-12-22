@@ -26,6 +26,7 @@ public:
 
     static ShaderBinding constantBuffer(Buffer&, ShaderStage = ShaderStage::Any);
     static ShaderBinding storageBuffer(Buffer&, ShaderStage = ShaderStage::Any);
+    static ShaderBinding storageBufferReadonly(Buffer const&, ShaderStage = ShaderStage::Any); // NOTE: The readonly property is not guaranteed by this function!
     static ShaderBinding storageBufferBindlessArray(const std::vector<Buffer*>&, ShaderStage = ShaderStage::Any);
 
     static ShaderBinding sampledTexture(Texture&, ShaderStage = ShaderStage::Any);

@@ -6,7 +6,7 @@
 #include <algorithm>
 
 
-static bool isBufferStorageCapable(Buffer& buffer)
+static bool isBufferStorageCapable(Buffer const& buffer)
 {
     switch (buffer.usage()) {
     case Buffer::Usage::Vertex: // includes storage buffer support
@@ -50,6 +50,16 @@ ShaderBinding ShaderBinding::storageBuffer(Buffer& buffer, ShaderStage shaderSta
 
     ARKOSE_ASSERT(isBufferStorageCapable(buffer));
     binding.m_buffers.push_back(&buffer);
+
+    return binding;
+}
+
+ShaderBinding ShaderBinding::storageBufferReadonly(Buffer const& buffer, ShaderStage shaderStage)
+{
+    ShaderBinding binding { ShaderBindingType::StorageBuffer, shaderStage };
+
+    ARKOSE_ASSERT(isBufferStorageCapable(buffer));
+    binding.m_buffers.push_back(const_cast<Buffer*>(&buffer));
 
     return binding;
 }
