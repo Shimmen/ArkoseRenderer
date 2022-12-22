@@ -13,7 +13,7 @@ MeshletManager::MeshletManager(Backend& backend)
     size_t positionDataBufferSize = m_positionVertexLayout.packedVertexSize() * MaxLoadedVertices;
     size_t nonPositionDataBufferSize = m_nonPositionVertexLayout.packedVertexSize() * MaxLoadedVertices;
     size_t loadedIndexBufferSize = sizeof(u32) * MaxLoadedIndices;
-    size_t meshletBufferSize = sizeof(Meshlet) * MaxLoadedMeshlets;
+    size_t meshletBufferSize = sizeof(ShaderMeshlet) * MaxLoadedMeshlets;
 
     float totalMemoryUseMb = conversion::to::MB(positionDataBufferSize + nonPositionDataBufferSize + loadedIndexBufferSize + meshletBufferSize);
     ARKOSE_LOG(Info, "MeshletManager: allocating a total of {:.1f} MB of VRAM for meshlet vertex and index data", totalMemoryUseMb);
@@ -71,7 +71,7 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList)
         u32 indexCount = narrow_cast<u32>(meshletDataAsset.meshletIndices.size());
         u32 meshletCount = narrow_cast<u32>(meshletDataAsset.meshlets.size());
 
-        size_t totalUploadSize = vertexCount * (sizeof(vec3) /* + sizeof(remaining vertex data)*/) + indexCount * sizeof(u32) + meshletCount * sizeof(Meshlet);
+        size_t totalUploadSize = vertexCount * (sizeof(vec3) /* + sizeof(remaining vertex data)*/) + indexCount * sizeof(u32) + meshletCount * sizeof(ShaderMeshlet);
         if (totalUploadSize > m_uploadBuffer->remainingSize()) {
             if (totalUploadSize > UploadBufferSize) {
                 ARKOSE_LOG(Fatal, "Static mesh segment is {:.2f} MB but the meshlet upload budget is only {:.2f} MB. "
@@ -95,16 +95,18 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList)
 
         for (MeshletAsset const& meshletAsset : meshletDataAsset.meshlets) {
 
-            Meshlet meshlet { .firstIndex = m_nextIndexIdx + meshletAsset.firstIndex,
-                              .triangleCount = meshletAsset.triangleCount,
-                              .center = meshletAsset.center,
-                              .radius = meshletAsset.radius };
+            ShaderMeshlet meshlet { .firstIndex = m_nextIndexIdx + meshletAsset.firstIndex,
+                                    .triangleCount = meshletAsset.triangleCount,
+                                    .materialIndex = meshSegment->material.indexOfType<uint>(),
+                                    .transformIndex = 0, // TODO!
+                                    .center = meshletAsset.center,
+                                    .radius = meshletAsset.radius };
 
             m_meshlets.push_back(meshlet);
         }
 
-        size_t meshletDataDstOffset = m_nextMeshletIdx * sizeof(Meshlet);
-        m_uploadBuffer->upload(m_meshlets.data() + m_nextMeshletIdx, meshletCount * sizeof(Meshlet), *m_meshletBuffer, meshletDataDstOffset);
+        size_t meshletDataDstOffset = m_nextMeshletIdx * sizeof(ShaderMeshlet);
+        m_uploadBuffer->upload(m_meshlets.data() + m_nextMeshletIdx, meshletCount * sizeof(ShaderMeshlet), *m_meshletBuffer, meshletDataDstOffset);
 
         // Setup the meshlet view for this segment
         meshSegment->meshletView = { .firstMeshlet = m_nextMeshletIdx,

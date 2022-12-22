@@ -93,7 +93,10 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
                     indirectDrawableData.push_back({ .drawable = { .worldFromLocal = instance->transform.worldMatrix(),
                                                                    .worldFromTangent = mat4(instance->transform.worldNormalMatrix()),
                                                                    .previousFrameWorldFromLocal = instance->transform.previousFrameWorldMatrix(),
-                                                                   .materialIndex = meshSegment.material.indexOfType<int>() },
+                                                                   .materialIndex = meshSegment.material.indexOfType<int>(),
+                                                                   // Don't need to care about meshlets here..
+                                                                   .firstMeshlet = 0,
+                                                                   .meshletCount = 0 },
                                                      .localBoundingSphere = vec4(staticMesh->boundingSphere().center(), staticMesh->boundingSphere().radius()),
                                                      .indexCount = drawCall.indexCount,
                                                      .firstIndex = drawCall.firstIndex,

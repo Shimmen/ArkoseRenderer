@@ -31,7 +31,7 @@ RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene,
         cmdList.bindIndexBuffer(meshletIndexBuffer, IndexType::UInt32);
 
         // NOTE: This is obviously not optimal... just for testing!
-        std::vector<Meshlet> const& meshlets = scene.meshletManager().meshlets();
+        std::vector<ShaderMeshlet> const& meshlets = scene.meshletManager().meshlets();
         for (auto const& instance : scene.scene().staticMeshInstances()) {
 
             cmdList.setNamedUniform("worldFromLocal", instance->transform.worldMatrix());
@@ -44,7 +44,7 @@ RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene,
                     MeshletView const& meshletView = segment.meshletView.value();
                     for (u32 meshletIdx = meshletView.firstMeshlet; meshletIdx < meshletView.firstMeshlet + meshletView.meshletCount; ++meshletIdx) {
 
-                        Meshlet const& meshlet = meshlets[meshletIdx];
+                        ShaderMeshlet const& meshlet = meshlets[meshletIdx];
 
                         // TODO: Maybe at least generate the color in the shader?
                         vec3 color { rng.randomFloatInRange(0.5f, 1.0f),

@@ -5,7 +5,6 @@
 #include "core/Types.h"
 #include "rendering/backend/base/Buffer.h"
 #include "rendering/backend/util/IndexType.h"
-#include "rendering/meshlet/Meshlet.h"
 #include "scene/Vertex.h"
 #include <memory>
 
@@ -14,6 +13,9 @@ class CommandList;
 class StaticMesh;
 class StaticMeshSegment;
 class UploadBuffer;
+
+// Shader headers
+#include "SceneData.h"
 
 class MeshletManager {
 public:
@@ -27,7 +29,7 @@ public:
 
     void processMeshStreaming(CommandList& cmdList);
 
-    std::vector<Meshlet> const& meshlets() const { return m_meshlets; }
+    std::vector<ShaderMeshlet> const& meshlets() const { return m_meshlets; }
     Buffer const& meshletBuffer() const { return *m_meshletBuffer; }
 
     Buffer const& meshletPositionDataVertexBuffer() const { return *m_positionDataVertexBuffer; }
@@ -56,7 +58,7 @@ private:
     std::unique_ptr<Buffer> m_nonPositionDataVertexBuffer { nullptr };
     std::unique_ptr<Buffer> m_indexBuffer { nullptr };
 
-    std::vector<Meshlet> m_meshlets {};
+    std::vector<ShaderMeshlet> m_meshlets {};
     std::unique_ptr<Buffer> m_meshletBuffer { nullptr };
 
     u32 m_nextVertexIdx { 0 };

@@ -6,7 +6,19 @@ struct ShaderDrawable {
     mat4 worldFromTangent;
     mat4 previousFrameWorldFromLocal;
     int materialIndex;
-    int _pad0, _pad1, _pad2;
+    uint materialSortKey; // TODO: Unused, for now!
+    uint firstMeshlet;
+    uint meshletCount;
+};
+
+struct ShaderMeshlet {
+    uint firstIndex;
+    uint triangleCount; // TODO: Make u8? Should never have more than 256 triangles! But we need the padding anyway..
+    uint materialIndex;
+    uint transformIndex;
+
+    vec3 center;
+    float radius;
 };
 
 struct ShaderMaterial {
