@@ -94,6 +94,7 @@ set(ARKOSE_SOURCES
     arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanAccelerationStructureNV.cpp
     arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingStateNV.cpp
     arkose/rendering/debug/DebugDrawer.cpp
+    arkose/rendering/meshlet/MeshletCuller.cpp
     arkose/rendering/meshlet/MeshletManager.cpp
     arkose/rendering/meshlet/MeshletDebugNode.cpp
     arkose/rendering/nodes/BloomNode.cpp

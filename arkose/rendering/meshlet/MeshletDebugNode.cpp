@@ -5,6 +5,8 @@
 
 RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene, Registry& reg)
 {
+    MeshletCuller::CullData const& cullData = m_meshletCuller.construct(scene, reg);
+
     Texture& debugTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA8);
     reg.publish("MeshletDebugVis", debugTexture);
 
@@ -23,6 +25,13 @@ RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene,
     Buffer const& meshletIndexBuffer = meshletManager.meshletIndexBuffer();
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
+
+        // TODO: Replace the naive code below with the culler + a single draw call!
+        //       Or, at least offer this as the non-naive solution. The big cpu-bound
+        //       draw call loop below can be very helpful for validating results, but
+        //       it's incredibly inefficient.
+        m_meshletCuller.execute(cmdList, scene, cullData);
+
         // Keep meshlet colors consistent
         ark::Random rng { 12345 };
 

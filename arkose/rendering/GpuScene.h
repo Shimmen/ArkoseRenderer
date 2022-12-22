@@ -119,6 +119,8 @@ public:
         return *m_meshletManager;
     }
 
+    size_t drawableCountForFrame() const { return m_drawableCountForFrame; }
+
 private:
     Scene& m_scene;
     Backend& m_backend;
@@ -211,6 +213,8 @@ private:
 
     using VramUsageAvgAccumulatorType = AvgAccumulator<float, 20>;
     std::vector<VramUsageAvgAccumulatorType> m_vramUsageHistoryPerHeap {};
+
+    size_t m_drawableCountForFrame { 0 };
 
     size_t m_managedTexturesVramUsage { 0 };
     size_t m_totalBlasVramUsage { 0 };

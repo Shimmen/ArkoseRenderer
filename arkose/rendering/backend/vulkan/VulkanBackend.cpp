@@ -400,6 +400,14 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         allRequiredSupported = false;
     }
 
+    if (!features.shaderInt64 ||
+        !vk12features.shaderBufferInt64Atomics ||
+        !vk12features.shaderSharedInt64Atomics) {
+        ARKOSE_LOG(Error, "VulkanBackend: no support for shader 64-bit atomics, which is required for our GPU work queue implementation. "
+                          "If this isn't supported on your machine there might possibly be a version which doesn't require that.");
+        allRequiredSupported = false;
+    }
+
     if (vulkanDebugMode && !(vk12features.bufferDeviceAddress && vk12features.bufferDeviceAddressCaptureReplay)) {
         ARKOSE_LOG(Error, "VulkanBackend: no support for buffer device address & buffer device address capture replay, which is required by e.g. Nsight for debugging. "
                  "If this is a problem, try compiling and running with vulkanDebugMode set to false.");
@@ -757,6 +765,11 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 
     // BC texture compression
     features.textureCompressionBC = VK_TRUE;
+
+    // 64-bit shader support including atomics
+    features.shaderInt64 = VK_TRUE;
+    vk12features.shaderBufferInt64Atomics = VK_TRUE;
+    vk12features.shaderSharedInt64Atomics = VK_TRUE;
 
     // GPU debugging & insight for e.g. Nsight
     if (vulkanDebugMode) {

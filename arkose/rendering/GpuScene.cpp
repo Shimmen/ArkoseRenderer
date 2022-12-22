@@ -175,7 +175,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     // TODO: Make a more reasonable default too... we need: #meshes * #LODs * #segments-per-lod
     size_t objectDataBufferSize = 10'000 * sizeof(ShaderDrawable);
     Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
-    objectDataBuffer.setName("SceneObjectData");
+    reg.publish("SceneObjectData", objectDataBuffer);
     BindingSet& objectBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(objectDataBuffer, ShaderStage::Vertex) });
     reg.publish("SceneObjectSet", objectBindingSet);
 
@@ -376,10 +376,16 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                     drawable.worldFromTangent = mat4(instance.transform.worldNormalMatrix());
                     drawable.previousFrameWorldFromLocal = instance.transform.previousFrameWorldMatrix();
 
+                    if (meshSegment.meshletView) {
+                        drawable.firstMeshlet = meshSegment.meshletView->firstMeshlet;
+                        drawable.meshletCount = meshSegment.meshletView->meshletCount;
+                    }
+
                     rasterizerMeshData.push_back(drawable);
                 }
             }
 
+            m_drawableCountForFrame = rasterizerMeshData.size();
             uploadBuffer.upload(rasterizerMeshData, objectDataBuffer);
         }
 

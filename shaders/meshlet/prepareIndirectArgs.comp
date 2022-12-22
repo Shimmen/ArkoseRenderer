@@ -1,0 +1,16 @@
+#version 460
+
+#include <shared/IndirectData.h>
+
+layout(set = 0, binding = 0) buffer IndirectDrawCmdBlock { IndexedDrawCmd drawCmd; };
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+    // Prepare for drawing meshlets. We're drawing a single indexed instance and adding to indexCount as we go.
+    drawCmd.indexCount = 0;
+    drawCmd.instanceCount = 1;
+    drawCmd.firstIndex = 0;
+    drawCmd.vertexOffset = 0;
+    drawCmd.firstInstance = 0;
+}
