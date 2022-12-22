@@ -7,6 +7,7 @@
 
 class CommandList {
 public:
+    virtual void fillBuffer(Buffer&, u32 fillValue) = 0;
     virtual void clearTexture(Texture&, ClearValue) = 0;
     virtual void copyTexture(Texture& src, Texture& dst, uint32_t srcMip = 0, uint32_t dstMip = 0) = 0;
     virtual void generateMipmaps(Texture&) = 0;

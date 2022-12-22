@@ -17,6 +17,14 @@ VulkanCommandList::VulkanCommandList(VulkanBackend& backend, VkCommandBuffer com
 {
 }
 
+void VulkanCommandList::fillBuffer(Buffer& genBuffer, u32 fillValue)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    auto& buffer = static_cast<VulkanBuffer&>(genBuffer);
+    vkCmdFillBuffer(m_commandBuffer, buffer.buffer, 0, VK_WHOLE_SIZE, fillValue);
+}
+
 void VulkanCommandList::clearTexture(Texture& genTexture, ClearValue clearValue)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
