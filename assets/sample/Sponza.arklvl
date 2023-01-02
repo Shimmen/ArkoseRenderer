@@ -111,7 +111,7 @@
                             "transform": {
                                 "translation": {
                                     "x": 3.0,
-                                    "y": 0.25,
+                                    "y": 0.5,
                                     "z": 0.0
                                 },
                                 "orientation": {
@@ -132,7 +132,7 @@
                         },
                         "luminousIntensity": 250.0,
                         "outerConeAngle": 2.094395160675049,
-                        "IESProfile": "assets/sample/ies/three-lobe-umbrella.ies"
+                        "IESProfile": "assets/sample/ies/multi-lobe.ies"
                     }
                 }
             },
@@ -152,7 +152,7 @@
                             "transform": {
                                 "translation": {
                                     "x": 0.0,
-                                    "y": 0.25,
+                                    "y": 0.5,
                                     "z": 0.0
                                 },
                                 "orientation": {
@@ -173,7 +173,7 @@
                         },
                         "luminousIntensity": 250.0,
                         "outerConeAngle": 2.094395160675049,
-                        "IESProfile": "assets/sample/ies/three-lobe-umbrella.ies"
+                        "IESProfile": "assets/sample/ies/multi-lobe.ies"
                     }
                 }
             },
@@ -193,7 +193,7 @@
                             "transform": {
                                 "translation": {
                                     "x": -3.0,
-                                    "y": 0.25,
+                                    "y": 0.5,
                                     "z": 0.0
                                 },
                                 "orientation": {
@@ -214,7 +214,7 @@
                         },
                         "luminousIntensity": 250.0,
                         "outerConeAngle": 2.094395160675049,
-                        "IESProfile": "assets/sample/ies/three-lobe-umbrella.ies"
+                        "IESProfile": "assets/sample/ies/multi-lobe.ies"
                     }
                 }
             }
