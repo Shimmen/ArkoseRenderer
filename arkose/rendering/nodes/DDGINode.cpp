@@ -5,7 +5,7 @@
 #include <imgui.h>
 
 // Shader headers
-#include "DDGIData.h"
+#include "shaders/shared/DDGIData.h"
 
 // Resolutions must be powers of two
 static_assert((DDGI_IRRADIANCE_RES & (DDGI_IRRADIANCE_RES - 1)) == 0);

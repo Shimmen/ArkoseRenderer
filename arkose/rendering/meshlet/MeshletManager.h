@@ -15,7 +15,7 @@ class StaticMeshSegment;
 class UploadBuffer;
 
 // Shader headers
-#include "SceneData.h"
+#include "shaders/shared/SceneData.h"
 
 class MeshletManager {
 public:

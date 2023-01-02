@@ -139,7 +139,6 @@ endif()
 
 add_executable(ArkoseRenderer ${ARKOSE_SOURCES})
 target_include_directories(ArkoseRenderer PRIVATE arkose/)
-target_include_directories(ArkoseRenderer PRIVATE arkose/shaders/shared)
 
 target_link_libraries(ArkoseRenderer PRIVATE
     arklib # core arkose library (math etc.)

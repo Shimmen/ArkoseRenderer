@@ -9,7 +9,7 @@
 #include <ark/vector.h>
 
 // Shader headers
-#include "PickingData.h"
+#include "shaders/shared/PickingData.h"
 
 RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Registry& reg)
 {

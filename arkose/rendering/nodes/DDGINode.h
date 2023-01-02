@@ -1,9 +1,11 @@
 #pragma once
 
 #include "rendering/RenderPipelineNode.h"
-#include "RTData.h"
 #include "rendering/GpuScene.h"
 #include "utility/Extent.h"
+
+// Shared shader headers
+#include "shaders/shared/RTData.h"
 
 class DDGINode final : public RenderPipelineNode {
 public:

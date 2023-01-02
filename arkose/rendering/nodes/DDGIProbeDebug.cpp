@@ -6,7 +6,7 @@
 #include <imgui.h>
 
 // Shared shader headers
-#include "DDGIData.h"
+#include "shaders/shared/DDGIData.h"
 
 void DDGIProbeDebug::drawGui()
 {

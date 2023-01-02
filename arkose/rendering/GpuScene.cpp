@@ -15,7 +15,7 @@
 #include <ark/transform.h>
 
 // Shared shader headers
-#include "CameraState.h"
+#include "shaders/shared/CameraState.h"
 
 GpuScene::GpuScene(Scene& scene, Backend& backend, Extent2D initialMainViewportSize)
     : m_scene(scene)

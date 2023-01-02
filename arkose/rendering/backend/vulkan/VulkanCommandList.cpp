@@ -9,7 +9,7 @@
 #include <fmt/format.h>
 
 // Shared shader headers
-#include "IndirectData.h"
+#include "shaders/shared/IndirectData.h"
 
 VulkanCommandList::VulkanCommandList(VulkanBackend& backend, VkCommandBuffer commandBuffer)
     : m_backend(backend)

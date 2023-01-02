@@ -1,7 +1,7 @@
 #include "MeshletCuller.h"
 
 // Shared shader headers
-#include "IndirectData.h"
+#include "shaders/shared/IndirectData.h"
 
 MeshletCuller::MeshletCuller() = default;
 MeshletCuller::~MeshletCuller() = default;

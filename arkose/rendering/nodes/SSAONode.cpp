@@ -4,7 +4,7 @@
 #include <ark/random.h>
 
 // Shader data
-#include "SSAOData.h"
+#include "shaders/shared/SSAOData.h"
 
 void SSAONode::drawGui()
 {

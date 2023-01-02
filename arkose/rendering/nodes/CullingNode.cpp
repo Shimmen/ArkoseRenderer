@@ -6,8 +6,8 @@
 #include <imgui.h>
 
 // Shared shader headers
-#include "IndirectData.h"
-#include "LightData.h"
+#include "shaders/shared/IndirectData.h"
+#include "shaders/shared/LightData.h"
 
 void CullingNode::drawGui()
 {

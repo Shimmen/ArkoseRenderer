@@ -16,9 +16,9 @@
 #include <unordered_map>
 
 // Shared shader data
-#include "LightData.h"
-#include "SceneData.h"
-#include "RTData.h"
+#include "shaders/shared/LightData.h"
+#include "shaders/shared/SceneData.h"
+#include "shaders/shared/RTData.h"
 
 class DirectionalLight;
 class Light;

@@ -1,7 +1,7 @@
 #pragma once
 
 // For shader #define values
-#include "ShaderBlendMode.h"
+#include "shaders/shared/ShaderBlendMode.h"
 
 enum class BlendMode {
     Opaque,
