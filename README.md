@@ -49,10 +49,10 @@ Arkose
 |   |-- rendering   # root for rendering code
 |   |   |-- backend # rendering backend code for interfacing with graphics APIs
 |   |   `-- nodes   # rendering techniques and features (API agnostic)
-|   `- scene        # scene representation, e.g. scene, camera, lights
+|   |-- scene       # scene representation, e.g. scene, camera, lights
+|   `-- shaders     # all shader code used by arkose in run-time
 |-- assets          # all assets used by the engine & apps
-|-- deps            # root for in-tree third-party dependencies
-`-- shaders         # all shader code used by arkose in run-time
+`-- deps            # root for in-tree third-party dependencies
 ```
 
 Note that some details are omitted for brevity.

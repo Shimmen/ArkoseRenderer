@@ -139,7 +139,7 @@ endif()
 
 add_executable(ArkoseRenderer ${ARKOSE_SOURCES})
 target_include_directories(ArkoseRenderer PRIVATE arkose/)
-target_include_directories(ArkoseRenderer PRIVATE shaders/shared)
+target_include_directories(ArkoseRenderer PRIVATE arkose/shaders/shared)
 
 target_link_libraries(ArkoseRenderer PRIVATE
     arklib # core arkose library (math etc.)
@@ -219,11 +219,8 @@ endif()
 
 # Make assets & shaders accessible in runtime relative to the exe-location
 
-set(ARKOSE_ASSET_DIR_NAME "assets")
-set(ARKOSE_SHADER_DIR_NAME "shaders")
-
 add_custom_command(TARGET ArkoseRenderer PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/${ARKOSE_ASSET_DIR_NAME}" "${CMAKE_BINARY_DIR}/${ARKOSE_ASSET_DIR_NAME}"
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/${ARKOSE_SHADER_DIR_NAME}" "${CMAKE_BINARY_DIR}/${ARKOSE_SHADER_DIR_NAME}"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/arkose/shaders" "${CMAKE_BINARY_DIR}/shaders"
     COMMENT "Create symlinks to the assets & shaders so they will be locatable relative to the executable"
     VERBATIM)
