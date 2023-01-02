@@ -2,9 +2,9 @@
 
 #include <common.glsl>
 #include <common/namedUniforms.glsl>
-#include <shared/BlendMode.h>
 #include <shared/IndirectData.h>
 #include <shared/SceneData.h>
+#include <shared/ShaderBlendMode.h>
 
 layout(set = 0, binding = 0) readonly buffer CameraFrustums { vec4 frustumPlanes[6]; };
 layout(set = 0, binding = 1) readonly buffer InObjectData   { IndirectShaderDrawable inputDrawables[]; };
