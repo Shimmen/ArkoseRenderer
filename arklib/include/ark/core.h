@@ -140,4 +140,10 @@ constexpr Float toDegrees(Float radians)
     return radians / PI * static_cast<Float>(180.0);
 }
 
+template<typename T, ENABLE_IF_INTEGRAL(T)>
+constexpr T divideAndRoundUp(T numerator, T denominator)
+{
+    return (numerator + denominator - 1) / denominator;
+}
+
 } // namespace ark
