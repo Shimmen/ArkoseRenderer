@@ -11,8 +11,8 @@
 class Backend;
 class CommandList;
 class StaticMesh;
-class StaticMeshSegment;
 class UploadBuffer;
+struct StaticMeshSegment;
 
 // Shader headers
 #include "shaders/shared/SceneData.h"
