@@ -70,6 +70,10 @@ FetchContent_Declare(zstd
     GIT_TAG        "v1.5.2"
     SOURCE_SUBDIR  "build/cmake")
 
+FetchContent_Declare(concurrentqueue
+    GIT_REPOSITORY https://github.com/cameron314/concurrentqueue.git
+    GIT_TAG        "v1.0.3")
+
 ##################################
 # FetchContent dependencies without cmake files
 
@@ -176,4 +180,4 @@ add_subdirectory(half)
 ##################################
 # Finalize FetchContent dependencies
 
-FetchContent_MakeAvailable(spirv-cross json cereal fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers meshoptimizer jolt-physics zstd)
+FetchContent_MakeAvailable(spirv-cross json cereal fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers meshoptimizer jolt-physics zstd concurrentqueue)

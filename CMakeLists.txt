@@ -146,6 +146,7 @@ target_link_libraries(ArkoseRenderer PRIVATE
     fmt # string formatting (TODO: replace with stl fmt in C++20)
     half # 16-bit float
     tracy # real-time profiling
+    concurrentqueue # lock-free concurrent queue
 
     glfw # window and event management
     nfd # native file dialogs
