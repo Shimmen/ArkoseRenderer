@@ -21,12 +21,12 @@ This list is not complete, it's just a showcase of various features that are imp
  - Custom task graph implementation (work/job system)
  - Shader hot-reloading with support for `#include`s
  - Tight integration with CPU & GPU profiling tools
- - Bindless texture support
- - Real-time ray tracing
- - Physics (WIP)
+ - Physics (work-in-progress)
 
 ### Rendering features & techniques
 
+ - Real-time ray tracing
+ - Bindless texture support
  - GPU driven rendering, with object-level culling
  - A realistic camera model, with focus and exposure controls familiar to photographers
  - Depth of field, respecting the realistic camera model paramer such as aperture size and focal length
