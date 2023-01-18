@@ -45,8 +45,8 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
         }
 
         auto& input = Input::instance();
-        bool meshSelectPick = input.didClickButton(Button::Left);
-        bool focusDepthPick = input.didClickButton(Button::Middle);
+        bool meshSelectPick = not input.isGuiUsingMouse() && input.didClickButton(Button::Left);
+        bool focusDepthPick = not input.isGuiUsingMouse() && input.didClickButton(Button::Middle);
 
         if (meshSelectPick || focusDepthPick) {
 

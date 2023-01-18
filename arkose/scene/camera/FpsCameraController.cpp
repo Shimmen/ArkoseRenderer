@@ -40,20 +40,22 @@ void FpsCameraController::update(const Input& input, float dt)
     acceleration += controllerMovement.x * ark::globalRight;
     acceleration += controllerMovement.y * ark::globalForward;
 
-    if (input.isKeyDown(Key::W))
-        acceleration += ark::globalForward;
-    if (input.isKeyDown(Key::S))
-        acceleration -= ark::globalForward;
+    if (input.isButtonDown(Button::Right)) {
+        if (input.isKeyDown(Key::W))
+            acceleration += ark::globalForward;
+        if (input.isKeyDown(Key::S))
+            acceleration -= ark::globalForward;
 
-    if (input.isKeyDown(Key::D))
-        acceleration += ark::globalRight;
-    if (input.isKeyDown(Key::A))
-        acceleration -= ark::globalRight;
+        if (input.isKeyDown(Key::D))
+            acceleration += ark::globalRight;
+        if (input.isKeyDown(Key::A))
+            acceleration -= ark::globalRight;
 
-    if (input.isKeyDown(Key::Space) || input.isKeyDown(Key::E))
-        acceleration += ark::globalUp;
-    if (input.isKeyDown(Key::LeftShift) || input.isKeyDown(Key::Q))
-        acceleration -= ark::globalUp;
+        if (input.isKeyDown(Key::Space) || input.isKeyDown(Key::E))
+            acceleration += ark::globalUp;
+        if (input.isKeyDown(Key::LeftShift) || input.isKeyDown(Key::Q))
+            acceleration -= ark::globalUp;
+    }
 
     if (usingController) {
         m_velocity += ark::rotateVector(camera.orientation(), acceleration);

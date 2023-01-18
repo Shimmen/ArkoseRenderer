@@ -456,24 +456,29 @@ void Scene::drawSettingsGui(bool includeContainingWindow)
 void Scene::drawSceneGizmos()
 {
     static ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
+    static ImGuizmo::MODE mode = ImGuizmo::LOCAL;
 
     auto& input = Input::instance();
-    if (input.wasKeyPressed(Key::T))
-        operation = ImGuizmo::TRANSLATE;
-    else if (input.wasKeyPressed(Key::R))
-        operation = ImGuizmo::ROTATE;
-    else if (input.wasKeyPressed(Key::Y))
-        operation = ImGuizmo::SCALE;
+    if (not input.isButtonDown(Button::Right) && not input.isGuiUsingKeyboard()) {
+        if (input.wasKeyPressed(Key::W))
+            operation = ImGuizmo::TRANSLATE;
+        else if (input.wasKeyPressed(Key::E))
+            operation = ImGuizmo::ROTATE;
+        else if (input.wasKeyPressed(Key::R))
+            operation = ImGuizmo::SCALE;
+    }
+
+    if (input.wasKeyPressed(Key::Y) && not input.isGuiUsingKeyboard()) {
+        if (mode == ImGuizmo::LOCAL)
+            mode = ImGuizmo::WORLD;
+        else if (mode == ImGuizmo::WORLD)
+            mode = ImGuizmo::LOCAL;
+    }
 
     if (selectedInstance()) {
 
         ImGuizmo::BeginFrame();
         ImGuizmo::SetRect(0, 0, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
-
-        // FIXME: Support world transforms! Well, we don't really have hierarchies right now, so it doesn't really matter.
-        //  What we do have is meshes with their own transform under a model, and we are modifying the model's transform here.
-        //  Maybe in the future we want to be able to modify meshes too?
-        ImGuizmo::MODE mode = ImGuizmo::LOCAL;
 
         mat4 viewMatrix = camera().viewMatrix();
         mat4 projMatrix = camera().projectionMatrix();
