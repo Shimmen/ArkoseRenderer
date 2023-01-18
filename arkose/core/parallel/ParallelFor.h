@@ -16,6 +16,10 @@ void ParallelFor(size_t count, Function&& body, bool singleThreaded = false)
         return;
     }
 
+    if (count > 1000) {
+        ARKOSE_LOG(Warning, "ParallelFor with large count ({}), consider using ParallelForBatched to reduce task enqueue overhead.", count);
+    }
+
     // (For debugging purposes)
     if (singleThreaded) {
         for (size_t i = 0; i < count; ++i) {
@@ -24,45 +28,51 @@ void ParallelFor(size_t count, Function&& body, bool singleThreaded = false)
         return;
     }
 
-    size_t workersToEmploy = TaskGraph::get().workerThreadCountExcludingSelf();
-    size_t threadsToEmploy = workersToEmploy + 1; // including this thread
+    TaskGraph& taskGraph = TaskGraph::get();
+    Task& rootTask = Task::createEmpty();
 
-    size_t numTasks = std::min(count, threadsToEmploy);
-    size_t numAsyncTasks = numTasks - 1;
+    // TODO: Perhaps use a divide-and-conquer strategy so the calling thread doesn't have to do all task setup
+    for (size_t idx = 0; idx < count; ++idx) {
 
-    std::vector<TaskHandle> tasks {};
-    tasks.reserve(numAsyncTasks);
+        Task& task = Task::createWithParent(rootTask, [&body, idx]() {
+            body(idx);
+        });
 
-    size_t startIdx = 0;
-    size_t stopIdx = -1;
+        task.autoReleaseOnCompletion();
+        taskGraph.scheduleTask(task);
+    }
 
-    const float tasksPerWorker = float(count) / float(numTasks);
-    float tasksPerWorkerError = 0.0f;
+    taskGraph.scheduleTask(rootTask);
+    taskGraph.waitForCompletion(rootTask);
+    rootTask.release();
+}
 
-    // Issue N-1 async tasks
-    for (size_t taskIdx = 0; taskIdx < numAsyncTasks; ++taskIdx) {
-        
-        size_t tasksForThisWorker = size_t(tasksPerWorker);
-        tasksPerWorkerError += (tasksPerWorker - tasksForThisWorker);
-        if (tasksPerWorkerError > 1.0f) {
-            tasksPerWorkerError -= 1.0f;
-            tasksForThisWorker += 1;
+template<typename Function>
+void ParallelForBatched(size_t count, size_t batchSize, Function&& body, bool singleThreaded = false)
+{
+    ARKOSE_ASSERT(batchSize > 0);
+
+    if (count == 0) {
+        return;
+    }
+
+    if (count <= batchSize) {
+        for (size_t idx = 0; idx < count; ++idx) {
+            body(idx);
+        }
+        return;
+    }
+
+    size_t batchCount = ark::divideAndRoundUp(count, batchSize);
+    ParallelFor(batchCount, [&](size_t batchIdx) {
+
+        size_t firstIdx = batchIdx * batchSize;
+        size_t lastIdx = std::min(firstIdx + batchSize, count);
+
+        for (size_t idx = firstIdx; idx < lastIdx; ++idx) {
+            body(idx);
         }
 
-        stopIdx = startIdx + tasksForThisWorker;
-        tasks.push_back(TaskGraph::get().enqueueTask([&, startIdx, stopIdx]() {
-            for (size_t i = startIdx; i < stopIdx; ++i) {
-                body(i);
-            }
-        }));
-
-        startIdx = stopIdx;
-    }
-
-    // Do the remainder of the work on this thread
-    for (size_t i = stopIdx; i < count; ++i) {
-        body(i);
-    }
-
-    TaskGraph::get().waitFor(tasks);
+    },
+    singleThreaded);
 }

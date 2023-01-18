@@ -2,37 +2,42 @@
 
 #include "core/Logging.h"
 #include "utility/Profiling.h"
+#include <ark/random.h>
+#include <atomic>
 #include <fmt/format.h>
 
 #define SCOPED_PROFILE_ZONE_TASKGRAPH() SCOPED_PROFILE_ZONE_COLOR(0xaa33aa)
 
-static TaskGraph* g_taskGraphInstance = nullptr;
+static std::unique_ptr<TaskGraph> g_taskGraphInstance { nullptr };
+
+std::mutex TaskGraph::s_taskQueueListMutex {};
+std::atomic_bool TaskGraph::s_validated { false };
+
+TaskGraph::PerThreadTaskList TaskGraph::s_taskQueueList {};
+TaskGraph::ThreadTaskQueueLookupMap TaskGraph::s_taskQueueLookup {};
 
 void TaskGraph::initialize()
 {
     SCOPED_PROFILE_ZONE_TASKGRAPH();
 
-    ARKOSE_ASSERT(g_taskGraphInstance == nullptr);
-
-    // For now only the "main thread" are dedicated and active most of the time
-    constexpr int numDedicatedThreads = 1;
+    Task::initializeTasks();
 
     unsigned int hardwareConcurrency = std::thread::hardware_concurrency();
-    if (hardwareConcurrency == 1)
+    if (hardwareConcurrency == 1) {
         ARKOSE_LOG(Fatal, "TaskGraph: this CPU only supports a single hardware thread, which is not compatible with this TaskGraph, exiting.");
+    }
     uint32_t numWorkerThreads = std::min(hardwareConcurrency - 1, 10u);
 
-    g_taskGraphInstance = new TaskGraph(numWorkerThreads);
+    ARKOSE_ASSERT(g_taskGraphInstance == nullptr);
+    g_taskGraphInstance = std::unique_ptr<TaskGraph>(new TaskGraph(numWorkerThreads));
 }
 
 void TaskGraph::shutdown()
 {
     SCOPED_PROFILE_ZONE_TASKGRAPH();
 
-    if (g_taskGraphInstance != nullptr) {
-        delete g_taskGraphInstance;
-        g_taskGraphInstance = nullptr;
-    }
+    g_taskGraphInstance.reset();
+    Task::shutdownTasks();
 }
 
 TaskGraph& TaskGraph::get()
@@ -43,11 +48,28 @@ TaskGraph& TaskGraph::get()
 
 TaskGraph::TaskGraph(uint32_t numWorkerThreads)
 {
+    const size_t numExpectedTaskQueues = numWorkerThreads + 1;
+
+    createTaskQueueForThisThread();
+
     for (size_t i = 0; i < numWorkerThreads; ++i) {
         uint64_t workerId = i + 1;
         std::string workerName = fmt::format("TaskGraphWorker{}", workerId);
-        m_workers.push_back(std::make_unique<Worker>(workerId, workerName));
+        m_workers.push_back(std::make_unique<Worker>(*this, workerId, workerName));
     }
+
+    // Ensure all workers have created their task queues before progressing!
+    while (true) {
+        {
+            std::scoped_lock<std::mutex> lock { s_taskQueueListMutex };
+            if (s_taskQueueList.size() == numExpectedTaskQueues) {
+                break;
+            }
+        }
+        std::this_thread::yield();
+    }
+
+    validateTaskQueueMap(numExpectedTaskQueues);
 }
 
 TaskGraph::~TaskGraph()
@@ -58,6 +80,11 @@ TaskGraph::~TaskGraph()
 
     for (auto& worker : m_workers) {
         worker->waitUntilShutdown();
+    }
+
+    {
+        std::scoped_lock<std::mutex> lock { s_taskQueueListMutex };
+        s_taskQueueList.clear();
     }
 }
 
@@ -85,44 +112,24 @@ bool TaskGraph::thisThreadIsWorker() const
     return false;
 }
 
-TaskStatus TaskGraph::checkStatus(TaskHandle task) const
+void TaskGraph::scheduleTask(Task& task)
 {
-    const Worker& worker = findWorkerForTaskHandle(task);
-    if (worker.lastCompletedSequentialTaskId() >= task.sequentialId) {
-        return TaskStatus::Completed;
-    } else if (worker.lastStartedSequentialTaskId() >= task.sequentialId) {
-        return TaskStatus::InProgress;
-    } else {
-        return TaskStatus::Waiting;
-    }
+    // Always enqueue on own queue, let other workers steal from this
+    TaskQueue& taskQueue = taskQueueForThisThread();
+    taskQueue.enqueue(&task);
 }
 
-bool TaskGraph::checkAllCompleted(std::vector<TaskHandle> tasks) const
+void TaskGraph::waitForCompletion(Task& task)
 {
-    for (const TaskHandle& task : tasks) {
-        if (checkStatus(task) != TaskStatus::Completed) {
-            return false;
+    SCOPED_PROFILE_ZONE_TASKGRAPH();
+
+    while (not task.isCompleted()) {
+        if (Task* task = getNextTask()) {
+            SCOPED_PROFILE_ZONE_NAME_AND_COLOR("Execute task", 0xaa33aa);
+            task->execute();
+        } else {
+            std::this_thread::yield();
         }
-    }
-    return true;
-}
-
-void TaskGraph::waitFor(TaskHandle task) const
-{
-    std::vector<TaskHandle> tasks { task };
-    TaskGraph::waitFor(tasks);
-}
-
-void TaskGraph::waitFor(std::vector<TaskHandle> tasks) const
-{
-    SCOPED_PROFILE_ZONE_COLOR(0xaa33aa);
-
-    if (tasks.empty()) {
-        return;
-    }
-
-    while (!checkAllCompleted(tasks)) {
-        std::this_thread::sleep_for(std::chrono::nanoseconds::min());
     }
 }
 
@@ -138,71 +145,81 @@ bool TaskGraph::isGraphIdle() const
 
 void TaskGraph::waitUntilGraphIsIdle() const
 {
-    SCOPED_PROFILE_ZONE_COLOR(0xaa33aa);
+    SCOPED_PROFILE_ZONE_TASKGRAPH();
 
     while (!isGraphIdle()) {
         std::this_thread::sleep_for(std::chrono::nanoseconds::min());
     }
 }
 
-TaskGraph::Task::Task(TaskFunction&& taskFunction)
-    : m_function(taskFunction)
+TaskGraph::TaskQueue& TaskGraph::createTaskQueueForThisThread()
 {
+    std::scoped_lock<std::mutex> lock { s_taskQueueListMutex };
+
+    auto& taskQueue = s_taskQueueList.emplace_back(std::make_unique<TaskQueue>(1024));
+
+    std::thread::id threadId = std::this_thread::get_id();
+    ARKOSE_ASSERT(not s_taskQueueLookup.contains(threadId));
+    s_taskQueueLookup[threadId] = taskQueue.get();
+
+    return *taskQueue;
 }
 
-TaskGraph::Task::~Task()
+TaskGraph::TaskQueue& TaskGraph::taskQueueForThisThread()
 {
-    //ARKOSE_ASSERT(no remaining dependent tasks)
+    // NOTE: All threads must register at startup, before ever calling this function!
+    // After that the task queue map is immutable so we make no attempt at guarding access to it
+
+    // TODO: Could use thread-local storage for this
+    std::thread::id threadId = std::this_thread::get_id();
+    auto entry = s_taskQueueLookup.find(threadId);
+
+    ARKOSE_ASSERT(entry != s_taskQueueLookup.end());
+    ARKOSE_ASSERT(entry->second != nullptr);
+
+    TaskQueue* taskQueue = entry->second;
+    return *taskQueue;
 }
 
-void TaskGraph::Task::execute() const
+TaskGraph::TaskQueue& TaskGraph::taskQueueForThreadWithIndex(size_t idx)
 {
-    if (m_function) {
-        m_function();
+    ARKOSE_ASSERT(idx < s_taskQueueList.size());
+    ARKOSE_ASSERT(s_taskQueueList[idx] != nullptr);
+    return *s_taskQueueList[idx];
+}
+
+void TaskGraph::validateTaskQueueMap(size_t expectedCount)
+{
+    std::scoped_lock<std::mutex> lock { s_taskQueueListMutex };
+    ARKOSE_ASSERT(s_taskQueueList.size() == expectedCount);
+
+    s_validated = true;
+}
+
+Task* TaskGraph::getNextTask(std::thread::id thisThreadId)
+{
+    Task* nextTask = nullptr;
+
+    // Try grabbing one from the local queue
+    TaskQueue& localTaskQueue = taskQueueForThisThread();
+    if (localTaskQueue.try_dequeue(nextTask)) {
+        return nextTask;
     }
-}
 
-TaskGraph::Worker* TaskGraph::findFirstFreeWorker()
-{
-    for (const auto& worker : m_workers) {
-        if (worker->numWaitingTasks() == 0) {
-            return worker.get();
+    // Try stealing one from another thread's queue
+    // NOTE: For now the queue is short enough that we can just try all.. (including our own queue again)
+    for (auto& stealTaskQueue : s_taskQueueList) {
+        if (stealTaskQueue->try_dequeue(nextTask)) {
+            return nextTask;
         }
     }
 
     return nullptr;
 }
 
-TaskGraph::Worker& TaskGraph::findLeastBusyWorker()
-{
-    uint64_t fewestWaitingTasks = std::numeric_limits<uint64_t>::max();
-    Worker* leastBusyWorker = nullptr;
-
-    for (size_t idx = 0; idx < m_workers.size(); ++idx) {
-        auto& worker = m_workers[idx];
-        uint64_t numWaitingTasks = worker->numWaitingTasks();
-        if (numWaitingTasks < fewestWaitingTasks) {
-            fewestWaitingTasks = numWaitingTasks;
-            leastBusyWorker = worker.get();
-        }
-    }
-
-    ARKOSE_ASSERT(leastBusyWorker != nullptr);
-    ARKOSE_ASSERT(fewestWaitingTasks != std::numeric_limits<uint64_t>::max());
-
-    return *leastBusyWorker;
-}
-
-TaskGraph::Worker& TaskGraph::findWorkerForTaskHandle(TaskHandle handle) const
-{
-    ARKOSE_ASSERT(handle.workerId >= 1);
-    uint64_t workerIdx = handle.workerId - 1;
-    ARKOSE_ASSERT(workerIdx < m_workers.size());
-    return *m_workers[workerIdx];
-}
-
-TaskGraph::Worker::Worker(uint64_t workerId, std::string name)
-    : m_name(std::move(name))
+TaskGraph::Worker::Worker(TaskGraph& owningTaskGraph, uint64_t workerId, std::string name)
+    : m_taskGraph(&owningTaskGraph)
+    , m_name(std::move(name))
     , m_workerId(workerId)
 {
     m_thread = std::thread([this]() {
@@ -212,48 +229,53 @@ TaskGraph::Worker::Worker(uint64_t workerId, std::string name)
             Profiling::setNameForActiveThread(m_name.c_str());
 
             m_threadId = std::this_thread::get_id();
+            m_taskQueue = &TaskGraph::createTaskQueueForThisThread();
+
+            while (not s_validated) {
+                std::this_thread::sleep_for(std::chrono::nanoseconds::min());
+            }
         }
 
         while (m_alive) {
 
+            if (Task* taskToExecute = m_taskGraph->getNextTask(m_threadId)) {
 
-            std::unique_ptr<Task> taskToExecute = nullptr;
-
-            if (m_numWaitingTasks > 0)
-            {
-                SCOPED_PROFILE_ZONE_NAME_AND_COLOR("Grab task", 0xaa33aa);
-                std::scoped_lock<std::mutex> mod_lock { m_modification_mutex };
-                
-                m_numWaitingTasks -= 1;
-                taskToExecute = std::move(m_waitingTasks.front());
-                m_waitingTasks.erase(m_waitingTasks.begin());
-
-                ARKOSE_ASSERT(taskToExecute != nullptr);
-                ARKOSE_ASSERT(m_numWaitingTasks == m_waitingTasks.size());
-            }
-
-            if (taskToExecute != nullptr)
-            {
                 SCOPED_PROFILE_ZONE_NAME_AND_COLOR("Execute task", 0xaa33aa);
 
-                uint64_t taskSequentialId = taskToExecute->sequentialId();
-                ARKOSE_ASSERT(taskSequentialId > m_lastStartedSequentialTaskId);
-                m_lastStartedSequentialTaskId = taskSequentialId;
-
+                m_idle = false;
                 taskToExecute->execute();
 
-                ARKOSE_ASSERT(taskSequentialId > m_lastCompletedSequentialTaskId);
-                m_lastCompletedSequentialTaskId = taskSequentialId;
-
             } else {
-                SCOPED_PROFILE_ZONE_NAME_AND_COLOR("Heartbeat", 0xaa33aa);
-            }
 
-            if (m_numWaitingTasks == 0) {
                 m_idle = true;
-                std::unique_lock<std::mutex> idle_lock { m_idleMutex };
-                m_idleCondition.wait(idle_lock, [&]() { return !(m_alive && m_numWaitingTasks == 0); });
+
+                constexpr auto shortSleepDuration = std::chrono::microseconds(1);
+                std::this_thread::sleep_for(shortSleepDuration);
+
+                // TODO: Implement proper idle mode when no task has been found for a while
+
+                /*
+                m_idle = true;
+
+                std::unique_lock<std::mutex> idleLock { m_idleMutex };
+                m_idleCondition.wait(idleLock, [&]() {
+
+                    if (not m_alive) {
+                        return true;
+                    }
+
+                    if (m_taskQueue->try_dequeue(taskToExecute)) {
+                        return true;
+                    }
+
+                    return false;
+
+                    // return !(m_alive && m_taskQueue->size_approx() == 0);
+                });
+
                 m_idle = false;
+                */
+
             }
         }
     });
@@ -287,26 +309,4 @@ void TaskGraph::Worker::waitUntilShutdown()
         m_thread->join();
         m_thread = {};
     }
-}
-
-TaskHandle TaskGraph::Worker::enqueTaskForWorker(std::unique_ptr<Task>&& task)
-{
-    // TODO: Considering putting a time limit on this and if it doesn't acquire the lock in time return false and try some other worker.
-    std::scoped_lock<std::mutex> lock(m_modification_mutex);
-
-    uint64_t taskSequentialId = m_nextSequentialTaskId++;
-    task->setSequentialId(taskSequentialId);
-
-    TaskHandle handle = { .workerId = m_workerId,
-                          .sequentialId = taskSequentialId++ };
-
-    m_waitingTasks.push_back(std::move(task));
-    uint64_t previousValue = m_numWaitingTasks.fetch_add(1);
-
-    // It's possible this worker is sleeping/idle, make sure we then also notify it of its new state
-    if (previousValue == 0) {
-        m_idleCondition.notify_all();
-    }
-
-    return handle;
 }

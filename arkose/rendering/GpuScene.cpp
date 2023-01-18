@@ -780,8 +780,7 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
             // Put some placeholder texture for this texture slot before the async has loaded in fully
             updateTextureUnowned(handle, fallback);
 
-            TaskGraph::get().enqueueTask([this, &makeTextureDescription, handle, imageType, path = imageAssetPath, input = *input]() {
-
+            Task& task = Task::create([this, &makeTextureDescription, handle, imageType, path = imageAssetPath, input = *input]() {
                 if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(path)) {
                     Texture::Description desc = makeTextureDescription(*imageAsset, input, imageType);
                     {
@@ -793,6 +792,9 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
                     }
                 }
             });
+
+            task.autoReleaseOnCompletion();
+            TaskGraph::get().scheduleTask(task);
 
         } else {
             if (ImageAsset* imageAsset = ImageAsset::loadOrCreate(imageAssetPath)) {

@@ -1,23 +1,16 @@
 #pragma once
 
 #include "core/Assert.h"
+#include "core/Types.h"
+#include "core/parallel/Task.h"
+#include <concurrentqueue.h>
 #include <condition_variable>
 #include <functional>
-#include <list>
-#include <stdint.h>
 #include <thread>
 #include <vector>
 
-struct TaskHandle {
-    uint64_t workerId;
-    uint64_t sequentialId;
-};
-
-enum class TaskStatus {
-    Waiting,
-    InProgress,
-    Completed,
-};
+// TaskGraph / job system implementation based on the one outline here:
+// https://blog.molecular-matters.com/tag/job-system/
 
 class TaskGraph final {
 public:
@@ -29,39 +22,18 @@ public:
 
     static TaskGraph& get();
 
-    //
+    void scheduleTask(Task&);
+    void waitForCompletion(Task&);
 
     size_t workerThreadCount() const;
     size_t workerThreadCountExcludingSelf() const;
 
     bool thisThreadIsWorker() const;
 
-    using TaskFunction = std::function<void()>;
-
-    template<typename TaskFunc>
-    TaskHandle enqueueTask(TaskFunc&& taskFunc)
-    {
-        Worker* workerToHandleTask = findFirstFreeWorker();
-        if (!workerToHandleTask)
-            workerToHandleTask = &findLeastBusyWorker();
-        ARKOSE_ASSERT(workerToHandleTask);
-
-        auto task = std::make_unique<Task>(taskFunc);
-        TaskHandle handle = workerToHandleTask->enqueTaskForWorker(std::move(task));
-        
-        return handle;
-    }
-
-    // TODO: Functions for enqueuing with dependencies. But I don't think I need that quite yet...
-
-    TaskStatus checkStatus(TaskHandle) const;
-    bool checkAllCompleted(std::vector<TaskHandle>) const;
-
-    void waitFor(TaskHandle) const;
-    void waitFor(std::vector<TaskHandle>) const;
-
     bool isGraphIdle() const;
     void waitUntilGraphIsIdle() const;
+
+    Task* getNextTask(std::thread::id thisThreadId = std::this_thread::get_id());
 
 private:
 
@@ -69,27 +41,26 @@ private:
     TaskGraph(TaskGraph&) = delete;
     TaskGraph& operator=(TaskGraph&) = delete;
 
-    class Task {
-    public:
+    using TaskQueue = moodycamel::ConcurrentQueue<Task*>;
+    using PerThreadTaskList = std::vector<std::unique_ptr<TaskQueue>>;
+    using ThreadTaskQueueLookupMap = std::unordered_map<std::thread::id, TaskQueue*>;
 
-        Task(TaskFunction&&);
-        ~Task();
+    static PerThreadTaskList s_taskQueueList;
+    static ThreadTaskQueueLookupMap s_taskQueueLookup;
+    static std::mutex s_taskQueueListMutex;
+    static std::atomic_bool s_validated;
 
-        void execute() const;
+    static TaskQueue& createTaskQueueForThisThread();
+    static TaskQueue& taskQueueForThisThread();
+    static TaskQueue& taskQueueForThreadWithIndex(size_t);
+    static void validateTaskQueueMap(size_t expectedCount);
 
-        void setSequentialId(uint64_t sequentialId) { m_sequentialId = sequentialId; }
-        uint64_t sequentialId() const { return m_sequentialId; }
-
-    private:
-        uint64_t m_sequentialId {};
-        TaskFunction m_function {};
-        //std::vector<std::unique_ptr<Task>> m_waitingTasks {}; // todo!
-    };
+    //
 
     class Worker {
     public:
 
-        Worker(uint64_t workerId, std::string name);
+        Worker(TaskGraph&, uint64_t workerId, std::string name);
         ~Worker();
 
         const std::string& name() const { return m_name; }
@@ -98,15 +69,12 @@ private:
         void triggerShutdown();
         void waitUntilShutdown();
 
-        TaskHandle enqueTaskForWorker(std::unique_ptr<Task>&&);
-
-        uint64_t numWaitingTasks() const { return m_numWaitingTasks.load(); }
+        uint64_t numWaitingTasks() const { return taskQueueForThisThread().size_approx(); }
         bool isIdle() const { return m_idle.load(); }
 
-        uint64_t lastStartedSequentialTaskId() const { return m_lastStartedSequentialTaskId; }
-        uint64_t lastCompletedSequentialTaskId() const { return m_lastCompletedSequentialTaskId; }
-
     private:
+
+        TaskGraph* m_taskGraph { nullptr };
 
         std::string m_name;
         uint64_t m_workerId;
@@ -117,23 +85,12 @@ private:
         std::optional<std::thread> m_thread {};
         std::atomic<bool> m_alive { true };
 
+        std::atomic<bool> m_idle { false };
         std::mutex m_idleMutex {};
         std::condition_variable m_idleCondition {};
 
-        std::mutex m_modification_mutex {};
-
-        std::atomic<bool> m_idle { true };
-        std::atomic<uint64_t> m_numWaitingTasks { 0 };
-        std::vector<std::unique_ptr<Task>> m_waitingTasks {};
-
-        std::atomic<uint64_t> m_lastStartedSequentialTaskId { 0 };
-        std::atomic<uint64_t> m_lastCompletedSequentialTaskId { 0 };
+        TaskGraph::TaskQueue* m_taskQueue {};
     };
-
-    Worker* findFirstFreeWorker();
-    Worker& findLeastBusyWorker();
-
-    Worker& findWorkerForTaskHandle(TaskHandle) const;
 
     std::vector<std::unique_ptr<Worker>> m_workers {};
 

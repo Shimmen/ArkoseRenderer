@@ -45,6 +45,7 @@ set(ARKOSE_SOURCES
     arkose/core/math/Fibonacci.cpp
     arkose/core/math/Frustum.cpp
     arkose/core/math/Halton.cpp
+    arkose/core/parallel/Task.cpp
     arkose/core/parallel/TaskGraph.cpp
     arkose/physics/PhysicsScene.cpp
     arkose/physics/backend/base/PhysicsBackend.cpp
