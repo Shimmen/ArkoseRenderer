@@ -89,8 +89,13 @@ struct tvec2<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
     {
     }
 
-    explicit constexpr tvec2(T e = static_cast<T>(0)) noexcept
+    explicit constexpr tvec2(T e) noexcept
         : tvec2(e, e)
+    {
+    }
+
+    constexpr tvec2() noexcept
+        : tvec2(static_cast<T>(0))
     {
     }
 
@@ -316,8 +321,13 @@ struct tvec3<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
     {
     }
 
-    explicit constexpr tvec3(T e = static_cast<T>(0)) noexcept
+    explicit constexpr tvec3(T e) noexcept
         : tvec3(e, e, e)
+    {
+    }
+
+    constexpr tvec3() noexcept
+        : tvec3(static_cast<T>(0))
     {
     }
 
