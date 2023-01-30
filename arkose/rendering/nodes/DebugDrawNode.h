@@ -16,6 +16,7 @@ public:
     // IDebugDrawer implementation
     virtual void drawLine(vec3 p0, vec3 p1, vec3 color) override;
     virtual void drawBox(vec3 minPoint, vec3 maxPoint, vec3 color) override;
+    virtual void drawSprite(Sprite sprite) override;
 
 private:
 

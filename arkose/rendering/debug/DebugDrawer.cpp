@@ -1,5 +1,7 @@
 #include "DebugDrawer.h"
 
+#include "rendering/Sprite.h"
+
 DebugDrawer& DebugDrawer::get()
 {
     static DebugDrawer dispatchDrawer {};
@@ -17,6 +19,13 @@ void DebugDrawer::drawBox(vec3 minPoint, vec3 maxPoint, vec3 color)
 {
     for (IDebugDrawer* debugDrawer : m_debugDrawers) {
         debugDrawer->drawBox(minPoint, maxPoint, color);
+    }
+}
+
+void DebugDrawer::drawSprite(Sprite sprite)
+{
+    for (IDebugDrawer* debugDrawer : m_debugDrawers) {
+        debugDrawer->drawSprite(sprite);
     }
 }
 

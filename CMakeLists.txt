@@ -55,6 +55,7 @@ set(ARKOSE_SOURCES
     arkose/rendering/Registry.cpp
     arkose/rendering/RenderPipeline.cpp
     arkose/rendering/RenderPipelineNode.cpp
+    arkose/rendering/Sprite.cpp
     arkose/rendering/StaticMesh.cpp
     arkose/rendering/backend/Resource.cpp
     arkose/rendering/backend/shader/Shader.cpp

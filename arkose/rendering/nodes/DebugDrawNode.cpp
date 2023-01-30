@@ -2,6 +2,7 @@
 
 #include "core/Logging.h"
 #include "rendering/GpuScene.h"
+#include "rendering/Sprite.h"
 #include "rendering/debug/DebugDrawer.h"
 #include <imgui.h>
 
@@ -33,7 +34,7 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
     RenderStateBuilder trianglesStateBuilder { renderTarget, debugDrawShader, debugDrawVertexLayout };
     trianglesStateBuilder.stateBindings().at(0, cameraBindingSet);
     trianglesStateBuilder.primitiveType = PrimitiveType::Triangles;
-    trianglesStateBuilder.cullBackfaces = false;
+    trianglesStateBuilder.cullBackfaces = true;
     trianglesStateBuilder.writeDepth = true;
     trianglesStateBuilder.testDepth = true;
 
@@ -127,6 +128,17 @@ void DebugDrawNode::drawBox(vec3 minPoint, vec3 maxPoint, vec3 color)
     drawLine(p1, p3, color);
     drawLine(p4, p6, color);
     drawLine(p5, p7, color);
+}
+
+void DebugDrawNode::drawSprite(Sprite sprite)
+{
+    m_triangleVertices.emplace_back(sprite.points[0], sprite.color);
+    m_triangleVertices.emplace_back(sprite.points[2], sprite.color);
+    m_triangleVertices.emplace_back(sprite.points[1], sprite.color);
+
+    m_triangleVertices.emplace_back(sprite.points[2], sprite.color);
+    m_triangleVertices.emplace_back(sprite.points[0], sprite.color);
+    m_triangleVertices.emplace_back(sprite.points[3], sprite.color);
 }
 
 void DebugDrawNode::drawInstanceBoundingBoxes(GpuScene& scene)

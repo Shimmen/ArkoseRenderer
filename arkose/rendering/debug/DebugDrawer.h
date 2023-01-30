@@ -3,11 +3,14 @@
 #include <ark/vector.h>
 #include <vector>
 
+struct Sprite;
+
 class IDebugDrawer {
 public:
 
     virtual void drawLine(vec3 p0, vec3 p1, vec3 color) = 0;
     virtual void drawBox(vec3 minPoint, vec3 maxPoint, vec3 color) = 0;
+    virtual void drawSprite(Sprite sprite) = 0;
 
 };
 
@@ -19,6 +22,7 @@ public:
 
     virtual void drawLine(vec3 p0, vec3 p1, vec3 color = vec3(1.0, 1.0, 1.0)) override;
     virtual void drawBox(vec3 minPoint, vec3 maxPoint, vec3 color = vec3(1.0, 1.0, 1.0)) override;
+    virtual void drawSprite(Sprite sprite) override;
 
     void registerDebugDrawer(IDebugDrawer&);
     void unregisterDebugDrawer(IDebugDrawer&);
