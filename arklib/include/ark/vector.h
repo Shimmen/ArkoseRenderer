@@ -134,6 +134,21 @@ struct tvec2<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
         return *this;
     }
 
+    constexpr tvec2<T> operator*(const tvec2<T>& v) const { return { x * v.x, y * v.y }; }
+    constexpr tvec2<T>& operator*=(const tvec2<T>& v)
+    {
+        x *= v.x;
+        y *= v.y;
+        return *this;
+    }
+
+    constexpr tvec2<T> operator/(const tvec2<T>& v) const { return { x / v.x, y / v.y }; }
+    constexpr tvec2<T>& operator/=(const tvec2<T>& v)
+    {
+        x /= v.x;
+        y /= v.y;
+        return *this;
+    }
     constexpr tvec2<T> operator*(T f) const { return { x * f, y * f }; }
     constexpr tvec2<T>& operator*=(T f)
     {
