@@ -4,6 +4,8 @@
 #include "asset/StaticMeshAsset.h"
 #include "core/Assert.h"
 #include "rendering/GpuScene.h"
+#include "rendering/Sprite.h"
+#include "rendering/debug/DebugDrawer.h"
 #include "scene/camera/Camera.h"
 #include "physics/PhysicsMesh.h"
 #include "physics/PhysicsScene.h"
@@ -31,7 +33,7 @@ void Scene::update(float elapsedTime, float deltaTime)
     SCOPED_PROFILE_ZONE();
 
     if (Input::instance().wasKeyReleased(Key::Escape)) {
-        setSelectedInstance(nullptr);
+        clearSelectedObject();
     }
 
     drawSceneGizmos();
@@ -54,7 +56,7 @@ void Scene::postRender()
     camera().postRender({});
 
     for (auto& instance : m_staticMeshInstances) {
-        instance->transform.postRender({});
+        instance->transform().postRender({});
     }
 }
 
@@ -252,7 +254,7 @@ StaticMeshInstance& Scene::addMesh(StaticMeshAsset* staticMesh, Transform transf
 void Scene::unloadAllMeshes()
 {
     for (auto& instance : m_staticMeshInstances) {
-        gpuScene().unregisterStaticMesh(instance->mesh);
+        gpuScene().unregisterStaticMesh(instance->mesh());
     }
 
     m_staticMeshInstances.clear();
@@ -359,9 +361,9 @@ void Scene::generateProbeGridFromBoundingBox()
     ark::aabb3 sceneAABB {};
 
     for (auto const& instance : staticMeshInstances()) {
-        if (StaticMesh* staticMesh = gpuScene().staticMeshForHandle(instance->mesh)) {
+        if (StaticMesh* staticMesh = gpuScene().staticMeshForHandle(instance->mesh())) {
 
-            ark::aabb3 transformedAABB = staticMesh->boundingBox().transformed(instance->transform.worldMatrix());
+            ark::aabb3 transformedAABB = staticMesh->boundingBox().transformed(instance->transform().worldMatrix());
             sceneAABB.expandWithPoint(transformedAABB.min);
             sceneAABB.expandWithPoint(transformedAABB.max);
 
@@ -390,6 +392,42 @@ void Scene::generateProbeGridFromBoundingBox()
     generatedProbeGrid.offsetToFirst = sceneAABB.min;
 
     setProbeGrid(generatedProbeGrid);
+}
+
+void Scene::clearSelectedObject()
+{
+    m_selectedObject = nullptr;
+}
+
+void Scene::setSelectedObject(ITransformable& transformable)
+{
+    m_selectedObject = &transformable;
+}
+
+void Scene::setSelectedObject(Light& light)
+{
+    // TODO: Also track type?
+    m_selectedObject = &light;
+}
+void Scene::setSelectedObject(StaticMeshInstance& meshInstance)
+{
+    // TODO: Also track type?
+    m_selectedObject = &meshInstance;
+}
+
+EditorGizmo* Scene::raycastScreenPointAgainstEditorGizmos(vec2 screenPoint)
+{
+    EditorGizmo* closestGizmo = nullptr;
+
+    for (EditorGizmo& gizmo : m_editorGizmos) {
+        if (gizmo.isScreenPointInside(screenPoint)) {
+            if (closestGizmo == nullptr || gizmo.distanceFromCamera() < closestGizmo->distanceFromCamera()) {
+                closestGizmo = &gizmo;
+            }
+        }
+    }
+
+    return closestGizmo;
 }
 
 void Scene::drawSettingsGui(bool includeContainingWindow)
@@ -455,8 +493,11 @@ void Scene::drawSettingsGui(bool includeContainingWindow)
 
 void Scene::drawSceneGizmos()
 {
+    // Reset "persistent" gizmos
+    m_editorGizmos.clear();
+
     static ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
-    static ImGuizmo::MODE mode = ImGuizmo::LOCAL;
+    static ImGuizmo::MODE mode = ImGuizmo::WORLD;
 
     auto& input = Input::instance();
     if (not input.isButtonDown(Button::Right) && not input.isGuiUsingKeyboard()) {
@@ -475,7 +516,27 @@ void Scene::drawSceneGizmos()
             mode = ImGuizmo::LOCAL;
     }
 
-    if (selectedInstance()) {
+    if (input.wasKeyPressed(Key::G)) {
+        m_shouldDrawLightBillboards = not m_shouldDrawLightBillboards;
+    }
+
+    if (m_shouldDrawLightBillboards) {
+        for (auto const& light : m_spotLights) {
+
+            Sprite billboardSprite = Sprite::createBillboard(camera(), light->transform().positionInWorld(), vec2(0.15f));
+            billboardSprite.color = light->color;
+
+            DebugDrawer::get().drawSprite(billboardSprite);
+
+            EditorGizmo gizmo { billboardSprite, *light };
+            gizmo.debugName = light->name();
+            m_editorGizmos.push_back(gizmo);
+        }
+    }
+
+    if (selectedObject()) {
+
+        Transform& selectedTransform = selectedObject()->transform();
 
         ImGuizmo::BeginFrame();
         ImGuizmo::SetRect(0, 0, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
@@ -486,8 +547,8 @@ void Scene::drawSceneGizmos()
         // Silly stuff, since ImGuizmo doesn't seem to like my projection matrix..
         projMatrix.y = -projMatrix.y;
 
-        mat4 matrix = selectedInstance()->transform.localMatrix();
+        mat4 matrix = selectedTransform.localMatrix();
         ImGuizmo::Manipulate(value_ptr(viewMatrix), value_ptr(projMatrix), operation, mode, value_ptr(matrix));
-        selectedInstance()->transform.setFromMatrix(matrix);
+        selectedTransform.setFromMatrix(matrix);
     }
 }

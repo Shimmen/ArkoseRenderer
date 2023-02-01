@@ -45,10 +45,20 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
         }
 
         auto& input = Input::instance();
+        vec2 pickLocation = input.mousePosition();
         bool meshSelectPick = not input.isGuiUsingMouse() && input.didClickButton(Button::Left);
         bool focusDepthPick = not input.isGuiUsingMouse() && input.didClickButton(Button::Middle);
 
         if (meshSelectPick || focusDepthPick) {
+
+            if (EditorGizmo* gizmo = scene.scene().raycastScreenPointAgainstEditorGizmos(pickLocation)) {
+                if (meshSelectPick) {
+                    scene.scene().setSelectedObject(gizmo->transformable());
+                } else if (focusDepthPick) {
+                    setFocusDepth(scene, gizmo->distanceFromCamera());
+                }
+                return;
+            }
 
             scene.ensureDrawCallIsAvailableForAll({ VertexComponent::Position3F });
 
@@ -63,7 +73,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 
             uint32_t drawIdx = 0;
             for (auto& instance : scene.scene().staticMeshInstances()) {
-                if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh)) {
+                if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
 
                     // TODO: Pick LOD properly (i.e. the same as drawn in the main passes)
                     const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
@@ -84,7 +94,6 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
             cmdList.setComputeState(collectState);
             cmdList.bindSet(collectIndexBindingSet, 0);
 
-            vec2 pickLocation = input.mousePosition();
             cmdList.setNamedUniform("mousePosition", pickLocation);
 
             cmdList.dispatch(indexTexture.extent(), { 16, 16, 1 });
@@ -109,7 +118,7 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
 
         uint32_t drawIdx = 0;
         for (auto& instance : scene.scene().staticMeshInstances()) {
-            if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh)) {
+            if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
 
                 // TODO: Pick LOD properly (i.e. the same as drawn in the main passes)
                 const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
@@ -118,7 +127,7 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
 
                     if (drawIdx == selectedIdx) {
                         // TODO: This will break if/when we resize the instance vector
-                        scene.scene().setSelectedInstance(instance.get());
+                        scene.scene().setSelectedObject(*instance);
                         return;
                     }
 
@@ -128,17 +137,21 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
         }
 
         // If no mesh was found, we must have clicked on the background so deselect current
-        scene.scene().setSelectedInstance(nullptr);
+        scene.scene().clearSelectedObject();
     }
 
     if (deferredResult.specifyFocusDepth) {
-        float focusDepth = pickingData.depth;
-        Camera& camera = scene.camera();
+        setFocusDepth(scene, pickingData.depth);
+    }
+}
 
-        if (CameraController* cameraController = camera.controller()) {
-            cameraController->setTargetFocusDepth(focusDepth);
-        } else {
-            camera.setFocusDepth(focusDepth);
-        }
+void PickingNode::setFocusDepth(GpuScene& scene, float focusDepth)
+{
+    Camera& camera = scene.camera();
+
+    if (CameraController* cameraController = camera.controller()) {
+        cameraController->setTargetFocusDepth(focusDepth);
+    } else {
+        camera.setFocusDepth(focusDepth);
     }
 }

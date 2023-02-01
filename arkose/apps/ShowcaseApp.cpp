@@ -161,7 +161,7 @@ bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
         }
 
         StaticMeshInstance& staticMeshInstance = scene.addMesh(redCube, xform);
-        PhysicsInstanceHandle physicsInstanceHandle = scene.physicsScene().createDynamicInstance(cubeShapeHandle, staticMeshInstance.transform);
+        PhysicsInstanceHandle physicsInstanceHandle = scene.physicsScene().createDynamicInstance(cubeShapeHandle, staticMeshInstance.transform());
         scene.physicsScene().backend().applyImpulse(physicsInstanceHandle, 175.0f * spawnDirection);
     }
 

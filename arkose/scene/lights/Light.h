@@ -4,7 +4,7 @@
 #include <ark/matrix.h>
 #include <fmt/format.h>
 
-class Light {
+class Light : public ITransformable {
 public:
 
     enum class Type {
@@ -29,8 +29,8 @@ public:
 
     Type type() const { return m_type; }
 
+    Transform& transform() override { return m_transform; }
     Transform const& transform() const { return m_transform; }
-    Transform& transform() { return m_transform; }
 
     // Direction of outgoing light, i.e. -L in a BRDF
     virtual vec3 forwardDirection() const

@@ -20,4 +20,5 @@ private:
     std::optional<DeferredResult> m_pendingDeferredResult {};
 
     void processDeferredResult(CommandList& cmdList, GpuScene&, const DeferredResult&);
+    void setFocusDepth(GpuScene&, float focusDepth);
 };

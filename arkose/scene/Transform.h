@@ -151,6 +151,12 @@ private:
     std::optional<mat4> m_previousFrameWorldMatrix{ std::nullopt };
 };
 
+class ITransformable {
+public:
+    virtual Transform& transform() = 0;
+    //virtual Transform const& transform() const = 0;
+};
+
 ////////////////////////////////////////////////////////////////////////////////
 // Serialization
 

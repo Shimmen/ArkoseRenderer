@@ -9,4 +9,7 @@ struct Sprite {
 
     vec3 points[4];
     vec3 color;
+
+    // Will be non-null if aligned as a billboard to the camer
+    Camera const* alignCamera { nullptr };
 };

@@ -79,7 +79,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
 
         size_t numInputDrawables = 0;
         for (auto& instance : scene.scene().staticMeshInstances()) {
-            if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh)) {
+            if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
 
                 // TODO: Pick LOD properly
                 const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
@@ -90,9 +90,9 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
                     const ShaderMaterial& material = *scene.materialForHandle(meshSegment.material);
 
                     DrawCallDescription drawCall = meshSegment.drawCallDescription({ VertexComponent::Position3F }, scene);
-                    indirectDrawableData.push_back({ .drawable = { .worldFromLocal = instance->transform.worldMatrix(),
-                                                                   .worldFromTangent = mat4(instance->transform.worldNormalMatrix()),
-                                                                   .previousFrameWorldFromLocal = instance->transform.previousFrameWorldMatrix(),
+                    indirectDrawableData.push_back({ .drawable = { .worldFromLocal = instance->transform().worldMatrix(),
+                                                                   .worldFromTangent = mat4(instance->transform().worldNormalMatrix()),
+                                                                   .previousFrameWorldFromLocal = instance->transform().previousFrameWorldMatrix(),
                                                                    .materialIndex = meshSegment.material.indexOfType<int>(),
                                                                    // Don't need to care about meshlets here..
                                                                    .firstMeshlet = 0,

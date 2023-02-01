@@ -362,7 +362,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             for (size_t i = 0, count = staticMeshInstances.size(); i < count; ++i) {
 
                 const StaticMeshInstance& instance = *staticMeshInstances[i];
-                const StaticMesh& staticMesh = *staticMeshForHandle(instance.mesh);
+                const StaticMesh& staticMesh = *staticMeshForHandle(instance.mesh());
 
                 // TODO: Make use of all LODs
                 ARKOSE_ASSERT(staticMesh.numLODs() >= 1);
@@ -372,9 +372,9 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                     ShaderDrawable drawable;
                     drawable.materialIndex = meshSegment.material.indexOfType<int>();
-                    drawable.worldFromLocal = instance.transform.worldMatrix();
-                    drawable.worldFromTangent = mat4(instance.transform.worldNormalMatrix());
-                    drawable.previousFrameWorldFromLocal = instance.transform.previousFrameWorldMatrix();
+                    drawable.worldFromLocal = instance.transform().worldMatrix();
+                    drawable.worldFromTangent = mat4(instance.transform().worldNormalMatrix());
+                    drawable.previousFrameWorldFromLocal = instance.transform().previousFrameWorldMatrix();
 
                     if (meshSegment.meshletView) {
                         drawable.firstMeshlet = meshSegment.meshletView->firstMeshlet;
@@ -457,7 +457,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             std::vector<RTGeometryInstance> rayTracingGeometryInstances {};
 
             for (auto& instance : scene().staticMeshInstances()) {
-                if (StaticMesh* staticMesh = staticMeshForHandle(instance->mesh)) {
+                if (StaticMesh* staticMesh = staticMeshForHandle(instance->mesh())) {
                     for (StaticMeshLOD& staticMeshLOD : staticMesh->LODs()) {
                         for (StaticMeshSegment& meshSegment : staticMeshLOD.meshSegments) {
 
@@ -498,7 +498,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                             // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
                             rayTracingGeometryInstances.push_back(RTGeometryInstance { .blas = *meshSegment.blas,
-                                                                                       .transform = instance->transform, // NOTE: This is a reference!
+                                                                                       .transform = instance->transform(), // NOTE: This is a reference!
                                                                                        .shaderBindingTableOffset = 0, // TODO: Generalize!
                                                                                        .customInstanceId = rtMeshIndex,
                                                                                        .hitMask = hitMask });

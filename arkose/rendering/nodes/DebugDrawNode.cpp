@@ -144,8 +144,8 @@ void DebugDrawNode::drawSprite(Sprite sprite)
 void DebugDrawNode::drawInstanceBoundingBoxes(GpuScene& scene)
 {
     for (auto const& instance : scene.scene().staticMeshInstances()) {
-        if (StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh)) {
-            ark::aabb3 transformedAABB = staticMesh->boundingBox().transformed(instance->transform.worldMatrix());
+        if (StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
+            ark::aabb3 transformedAABB = staticMesh->boundingBox().transformed(instance->transform().worldMatrix());
             drawBox(transformedAABB.min, transformedAABB.max, vec3(1.0f, 0.0f, 1.0f));
         }
     }

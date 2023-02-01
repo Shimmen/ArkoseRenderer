@@ -37,7 +37,7 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     StaticMeshAsset* boxMesh = StaticMeshAsset::loadFromArkmsh("assets/sample/models/Box/Box.arkmsh");
     StaticMeshInstance& boxInstance = scene.addMesh(boxMesh);
-    boxInstance.transform.setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(30.0f)));
+    boxInstance.transform().setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(30.0f)));
 
     /*
     // Spawn a grid of static mesh instances for a little stress test of instances
@@ -546,7 +546,7 @@ void MeshViewerApp::saveMeshWithDialog()
 StaticMeshLOD* MeshViewerApp::selectedLOD()
 {
     if (m_targetInstance) {
-        if (StaticMesh* staticMesh = m_scene->gpuScene().staticMeshForHandle(m_targetInstance->mesh)) {
+        if (StaticMesh* staticMesh = m_scene->gpuScene().staticMeshForHandle(m_targetInstance->mesh())) {
             return &staticMesh->LODs()[m_selectedLodIdx];
         }
     }

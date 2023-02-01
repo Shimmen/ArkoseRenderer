@@ -4,6 +4,7 @@
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/StaticMesh.h"
 #include "scene/camera/Camera.h"
+#include "scene/EditorGizmo.h"
 #include "scene/EnvironmentMap.h"
 #include "scene/ProbeGrid.h"
 #include "scene/lights/DirectionalLight.h"
@@ -104,8 +105,13 @@ public:
 
     // Meta
 
-    void setSelectedInstance(StaticMeshInstance* instance) { m_selectedInstance = instance; }
-    StaticMeshInstance* selectedInstance() { return m_selectedInstance; }
+    void clearSelectedObject();
+    void setSelectedObject(ITransformable&);
+    void setSelectedObject(Light& light);
+    void setSelectedObject(StaticMeshInstance& meshInstance);
+    ITransformable* selectedObject() { return m_selectedObject; }
+
+    EditorGizmo* raycastScreenPointAgainstEditorGizmos(vec2 screenPoint);
 
     // GUI
 
@@ -136,7 +142,9 @@ private:
     // TODO: Maybe move to the camera?
     float m_fixedFilmGrainGain { 0.040f };
 
-    // TODO: Generalize to all objects in the scene, not just static meshes
-    StaticMeshInstance* m_selectedInstance { nullptr };
+    ITransformable* m_selectedObject { nullptr };
+
+    bool m_shouldDrawLightBillboards { true };
+    std::vector<EditorGizmo> m_editorGizmos {};
 
 };
