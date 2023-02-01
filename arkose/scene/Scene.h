@@ -144,7 +144,7 @@ private:
 
     ITransformable* m_selectedObject { nullptr };
 
-    bool m_shouldDrawLightBillboards { true };
+    bool m_shouldDrawLightGizmos { false };
     std::vector<EditorGizmo> m_editorGizmos {};
 
 };

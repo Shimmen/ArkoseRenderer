@@ -517,10 +517,10 @@ void Scene::drawSceneGizmos()
     }
 
     if (input.wasKeyPressed(Key::G)) {
-        m_shouldDrawLightBillboards = not m_shouldDrawLightBillboards;
+        m_shouldDrawLightGizmos = not m_shouldDrawLightGizmos;
     }
 
-    if (m_shouldDrawLightBillboards) {
+    if (m_shouldDrawLightGizmos) {
         for (auto const& light : m_spotLights) {
 
             Sprite billboardSprite = Sprite::createBillboard(camera(), light->transform().positionInWorld(), vec2(0.15f));
