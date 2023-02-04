@@ -34,12 +34,12 @@ ShaderBinding::ShaderBinding(ShaderBindingType type, ShaderStage shaderStage)
 {
 }
 
-ShaderBinding ShaderBinding::constantBuffer(Buffer& buffer, ShaderStage shaderStage)
+ShaderBinding ShaderBinding::constantBuffer(Buffer const& buffer, ShaderStage shaderStage)
 {
     ShaderBinding binding { ShaderBindingType::ConstantBuffer, shaderStage };
 
     ARKOSE_ASSERT(buffer.usage() == Buffer::Usage::ConstantBuffer);
-    binding.m_buffers.push_back(&buffer);
+    binding.m_buffers.push_back(const_cast<Buffer*>(&buffer));
 
     return binding;
 }
