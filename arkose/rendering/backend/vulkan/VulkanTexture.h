@@ -34,5 +34,5 @@ public:
     VkImageView imageView { VK_NULL_HANDLE };
     VkSampler sampler { VK_NULL_HANDLE };
 
-    VkImageLayout currentLayout { VK_IMAGE_LAYOUT_UNDEFINED };
+    mutable VkImageLayout currentLayout { VK_IMAGE_LAYOUT_UNDEFINED };
 };

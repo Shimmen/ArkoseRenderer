@@ -29,8 +29,8 @@ public:
     static ShaderBinding storageBufferReadonly(Buffer const&, ShaderStage = ShaderStage::Any); // NOTE: The readonly property is not guaranteed by this function!
     static ShaderBinding storageBufferBindlessArray(const std::vector<Buffer*>&, ShaderStage = ShaderStage::Any);
 
-    static ShaderBinding sampledTexture(Texture&, ShaderStage = ShaderStage::Any);
-    static ShaderBinding sampledTextureBindlessArray(const std::vector<Texture*>&, ShaderStage = ShaderStage::Any);
+    static ShaderBinding sampledTexture(Texture const&, ShaderStage = ShaderStage::Any);
+    static ShaderBinding sampledTextureBindlessArray(const std::vector<Texture const*>&, ShaderStage = ShaderStage::Any);
     static ShaderBinding sampledTextureBindlessArray(uint32_t count, const std::vector<Texture*>&, ShaderStage = ShaderStage::Any);
     
     static ShaderBinding storageTexture(Texture&, ShaderStage = ShaderStage::Any);
@@ -76,7 +76,7 @@ public:
         return m_sampledTextures.front();
     }
 
-    const std::vector<Texture*>& getSampledTextures() const
+    const std::vector<Texture const*>& getSampledTextures() const
     {
         ARKOSE_ASSERT(type() == ShaderBindingType::SampledTexture);
         //ARKOSE_ASSERT(m_sampledTextures.size() >= 1);
@@ -107,7 +107,7 @@ private:
     uint32_t m_arrayCount { 1 };
 
     std::vector<Buffer*> m_buffers {};
-    std::vector<Texture*> m_sampledTextures {};
+    std::vector<Texture const*> m_sampledTextures {};
     std::vector<TextureMipView> m_storageTextures {};
     TopLevelAS* m_topLevelAS { nullptr };
 };

@@ -79,7 +79,7 @@ ShaderBinding ShaderBinding::storageBufferBindlessArray(const std::vector<Buffer
     return binding;
 }
 
-ShaderBinding ShaderBinding::sampledTexture(Texture& texture, ShaderStage shaderStage)
+ShaderBinding ShaderBinding::sampledTexture(Texture const& texture, ShaderStage shaderStage)
 {
     ShaderBinding binding { ShaderBindingType::SampledTexture, shaderStage };
 
@@ -88,13 +88,13 @@ ShaderBinding ShaderBinding::sampledTexture(Texture& texture, ShaderStage shader
     return binding;
 }
 
-ShaderBinding ShaderBinding::sampledTextureBindlessArray(const std::vector<Texture*>& textures, ShaderStage shaderStage)
+ShaderBinding ShaderBinding::sampledTextureBindlessArray(const std::vector<Texture const*>& textures, ShaderStage shaderStage)
 {
     ShaderBinding binding { ShaderBindingType::SampledTexture, shaderStage };
     binding.m_arrayCount = static_cast<uint32_t>(textures.size());
 
     binding.m_sampledTextures.reserve(textures.size());
-    for (Texture* texture : textures) {
+    for (Texture const* texture : textures) {
         ARKOSE_ASSERT(texture);
         binding.m_sampledTextures.push_back(texture);
     }

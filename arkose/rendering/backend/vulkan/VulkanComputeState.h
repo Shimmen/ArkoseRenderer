@@ -16,6 +16,6 @@ public:
     VkPipelineLayout pipelineLayout;
     VkPipeline pipeline;
 
-    std::vector<Texture*> sampledTextures;
+    std::vector<Texture const*> sampledTextures;
     std::vector<TextureMipView> storageImages;
 };

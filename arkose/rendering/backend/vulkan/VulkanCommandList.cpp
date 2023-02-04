@@ -620,8 +620,8 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearV
     std::vector<VkImageMemoryBarrier> imageMemoryBarriers {};
     renderState.stateBindings().forEachBinding([&](const ShaderBinding& bindingInfo) {
         if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
-            for (Texture* texture : bindingInfo.getSampledTextures()) {
-                auto& vulkanTexture = static_cast<VulkanTexture&>(*texture);
+            for (Texture const* texture : bindingInfo.getSampledTextures()) {
+                auto& vulkanTexture = static_cast<VulkanTexture const&>(*texture);
 
                 constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 if (vulkanTexture.currentLayout != targetLayout) {
@@ -751,8 +751,8 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
     std::vector<VkImageMemoryBarrier> imageMemoryBarriers {};
     rtState.stateBindings().forEachBinding([&](const ShaderBinding& bindingInfo) {
         if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
-            for (Texture* texture : bindingInfo.getSampledTextures()) {
-                auto& vulkanTexture = static_cast<VulkanTexture&>(*texture);
+            for (Texture const* texture : bindingInfo.getSampledTextures()) {
+                auto& vulkanTexture = static_cast<VulkanTexture const&>(*texture);
 
                 constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
                 if (vulkanTexture.currentLayout != targetLayout) {
@@ -853,8 +853,8 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
 
     // Explicitly transition the layouts of the referenced textures to an optimal layout (if it isn't already)
     {
-        for (Texture* genTexture : computeState.sampledTextures) {
-            auto& texture = static_cast<VulkanTexture&>(*genTexture);
+        for (Texture const* genTexture : computeState.sampledTextures) {
+            auto& texture = static_cast<VulkanTexture const&>(*genTexture);
 
             constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
             if (texture.currentLayout != targetLayout) {
