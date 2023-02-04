@@ -107,6 +107,12 @@ public:
 
     TopLevelAS& globalTopLevelAccelerationStructure() const;
 
+    Texture const& blackTexture() const { return *m_blackTexture; }
+    Texture const& whiteTexture() const { return *m_whiteTexture; }
+    Texture const& lightGrayTexture() const { return *m_lightGrayTexture; }
+    Texture const& magentaTexture() const { return *m_magentaTexture; }
+    Texture const& normalMapBlueTexture() const { return *m_normalMapBlueTexture; }
+
     // Misc.
 
     void drawStatsGui(bool includeContainingWindow = false);
