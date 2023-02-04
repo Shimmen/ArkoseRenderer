@@ -188,6 +188,7 @@ int main(int argc, char** argv)
 
     // Destroy the scene (ensure that all GPU stuff are completed first)
     graphicsBackend.completePendingOperations();
+    renderPipeline.reset();
     scene.reset();
 
     // Destroy backends
