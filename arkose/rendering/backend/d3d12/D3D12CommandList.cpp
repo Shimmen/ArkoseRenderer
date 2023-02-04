@@ -67,7 +67,7 @@ void D3D12CommandList::setNamedUniform(const std::string& name, void* data, size
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
-void D3D12CommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount)
+void D3D12CommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount, uint32_t firstVertex)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }

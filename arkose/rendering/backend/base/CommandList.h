@@ -32,7 +32,7 @@ public:
     template<typename T>
     void setNamedUniform(const std::string& name, T);
 
-    virtual void draw(Buffer& vertexBuffer, uint32_t vertexCount) = 0;
+    virtual void draw(Buffer& vertexBuffer, uint32_t vertexCount, uint32_t firstVertex = 0) = 0;
     virtual void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex = 0) = 0;
     virtual void drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer) = 0;
 

@@ -23,7 +23,7 @@ public:
     void pushConstants(ShaderStage, void*, size_t size, size_t byteOffset = 0u) override;
     void setNamedUniform(const std::string& name, void* data, size_t size) override;
 
-    void draw(Buffer& vertexBuffer, uint32_t vertexCount) override;
+    void draw(Buffer& vertexBuffer, uint32_t vertexCount, uint32_t firstVertex) override;
     void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex) override;
     void drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer) override;
 

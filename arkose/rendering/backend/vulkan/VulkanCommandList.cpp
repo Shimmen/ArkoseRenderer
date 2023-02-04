@@ -993,7 +993,7 @@ void VulkanCommandList::setNamedUniform(const std::string& name, void* data, siz
     }
 }
 
-void VulkanCommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount)
+void VulkanCommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount, uint32_t firstVertex)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
@@ -1002,7 +1002,7 @@ void VulkanCommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount)
     }
 
     bindVertexBuffer(vertexBuffer);
-    vkCmdDraw(m_commandBuffer, vertexCount, 1, 0, 0);
+    vkCmdDraw(m_commandBuffer, vertexCount, 1, firstVertex, 0);
 }
 
 void VulkanCommandList::drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType indexType, uint32_t instanceIndex)
