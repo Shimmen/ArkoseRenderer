@@ -620,7 +620,7 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearV
     std::vector<VkImageMemoryBarrier> imageMemoryBarriers {};
     renderState.stateBindings().forEachBinding([&](const ShaderBinding& bindingInfo) {
         if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
-            for (Texture* texture : bindingInfo.sampledTextures()) {
+            for (Texture* texture : bindingInfo.getSampledTextures()) {
                 auto& vulkanTexture = static_cast<VulkanTexture&>(*texture);
 
                 constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -648,7 +648,7 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearV
                 }
             }
         } else if (bindingInfo.type() == ShaderBindingType::StorageTexture) {
-            for (TextureMipView textureMip : bindingInfo.storageTextures()) {
+            for (TextureMipView textureMip : bindingInfo.getStorageTextures()) {
                 auto& vulkanTexture = static_cast<VulkanTexture&>(textureMip.texture());
 
                 constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -751,7 +751,7 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
     std::vector<VkImageMemoryBarrier> imageMemoryBarriers {};
     rtState.stateBindings().forEachBinding([&](const ShaderBinding& bindingInfo) {
         if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
-            for (Texture* texture : bindingInfo.sampledTextures()) {
+            for (Texture* texture : bindingInfo.getSampledTextures()) {
                 auto& vulkanTexture = static_cast<VulkanTexture&>(*texture);
 
                 constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -779,7 +779,7 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
                 }
             }
         } else if (bindingInfo.type() == ShaderBindingType::StorageTexture) {
-            for (TextureMipView textureMip : bindingInfo.storageTextures()) {
+            for (TextureMipView textureMip : bindingInfo.getStorageTextures()) {
                 auto& vulkanTexture = static_cast<VulkanTexture&>(textureMip.texture());
 
                 constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_GENERAL;

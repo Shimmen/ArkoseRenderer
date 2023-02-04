@@ -48,49 +48,49 @@ public:
     uint32_t bindingIndex() const { return m_bindingIndex; }
     void updateBindingIndex(Badge<class BindingSet>, uint32_t index) { m_bindingIndex = index; }
 
-    const Buffer& buffer() const
+    const Buffer& getBuffer() const
     {
         ARKOSE_ASSERT(type() == ShaderBindingType::ConstantBuffer || type() == ShaderBindingType::StorageBuffer);
         ARKOSE_ASSERT(m_buffers.size() == 1);
         return *m_buffers.front();
     }
 
-    const std::vector<Buffer*>& buffers() const
+    const std::vector<Buffer*>& getBuffers() const
     {
         ARKOSE_ASSERT(type() == ShaderBindingType::ConstantBuffer || type() == ShaderBindingType::StorageBuffer);
         ARKOSE_ASSERT(m_buffers.size() >= 1);
         return m_buffers;
     }
 
-    const TopLevelAS& topLevelAS() const
+    const TopLevelAS& getTopLevelAS() const
     {
         ARKOSE_ASSERT(type() == ShaderBindingType::RTAccelerationStructure);
         ARKOSE_ASSERT(m_topLevelAS != nullptr);
         return *m_topLevelAS;
     }
 
-    const Texture& sampledTexture() const
+    const Texture* getSampledTexture() const
     {
         ARKOSE_ASSERT(type() == ShaderBindingType::SampledTexture);
         ARKOSE_ASSERT(m_sampledTextures.size() == 1);
-        return *m_sampledTextures.front();
+        return m_sampledTextures.front();
     }
 
-    const std::vector<Texture*>& sampledTextures() const
+    const std::vector<Texture*>& getSampledTextures() const
     {
         ARKOSE_ASSERT(type() == ShaderBindingType::SampledTexture);
-        ARKOSE_ASSERT(m_sampledTextures.size() >= 1);
+        //ARKOSE_ASSERT(m_sampledTextures.size() >= 1);
         return m_sampledTextures;
     }
 
-    const TextureMipView& storageTexture() const
+    const TextureMipView& getStorageTexture() const
     {
         ARKOSE_ASSERT(type() == ShaderBindingType::StorageTexture);
         ARKOSE_ASSERT(m_storageTextures.size() == 1);
         return m_storageTextures.front();
     }
 
-    const std::vector<TextureMipView>& storageTextures() const
+    const std::vector<TextureMipView>& getStorageTextures() const
     {
         ARKOSE_ASSERT(type() == ShaderBindingType::StorageTexture);
         ARKOSE_ASSERT(m_storageTextures.size() >= 1);

@@ -84,11 +84,11 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
     for (auto& set : bindingSets) {
         for (auto& bindingInfo : set->shaderBindings()) {
             if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
-                for (auto& texture : bindingInfo.sampledTextures()) {
+                for (auto& texture : bindingInfo.getSampledTextures()) {
                     sampledTextures.push_back(texture);
                 }
             } else if (bindingInfo.type() == ShaderBindingType::StorageTexture) {
-                for (const TextureMipView& textureMip : bindingInfo.storageTextures()) {
+                for (const TextureMipView& textureMip : bindingInfo.getStorageTextures()) {
                     storageImages.push_back(textureMip);
                 }
             }

@@ -247,7 +247,7 @@ void VulkanBindingSet::updateBindings()
         switch (bindingInfo.type()) {
         case ShaderBindingType::ConstantBuffer: {
 
-            auto& buffer = static_cast<const VulkanBuffer&>(bindingInfo.buffer());
+            auto& buffer = static_cast<const VulkanBuffer&>(bindingInfo.getBuffer());
 
             VkDescriptorBufferInfo descBufferInfo {};
             descBufferInfo.offset = 0;
@@ -266,13 +266,13 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::StorageBuffer: {
 
-            ARKOSE_ASSERT(bindingInfo.arrayCount() == bindingInfo.buffers().size());
+            ARKOSE_ASSERT(bindingInfo.arrayCount() == bindingInfo.getBuffers().size());
 
             if (bindingInfo.arrayCount() == 0) {
                 continue;
             }
 
-            for (const Buffer* buffer : bindingInfo.buffers()) {
+            for (const Buffer* buffer : bindingInfo.getBuffers()) {
 
                 ARKOSE_ASSERT(buffer);
                 auto& vulkanBuffer = static_cast<const VulkanBuffer&>(*buffer);
@@ -296,8 +296,8 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::StorageTexture: {
 
-            auto& texture = static_cast<const VulkanTexture&>(bindingInfo.storageTexture().texture());
-            uint32_t mipLevel = bindingInfo.storageTexture().mipLevel();
+            auto& texture = static_cast<const VulkanTexture&>(bindingInfo.getStorageTexture().texture());
+            uint32_t mipLevel = bindingInfo.getStorageTexture().mipLevel();
 
             VkDescriptorImageInfo descImageInfo {};
             if (mipLevel == 0) {
@@ -323,7 +323,7 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::SampledTexture: {
 
-            const auto& sampledTextures = bindingInfo.sampledTextures();
+            const auto& sampledTextures = bindingInfo.getSampledTextures();
             size_t numTextures = sampledTextures.size();
             ARKOSE_ASSERT(numTextures > 0);
 
@@ -360,7 +360,7 @@ void VulkanBindingSet::updateBindings()
             case VulkanBackend::RayTracingBackend::NvExtension: {
 
                 VkWriteDescriptorSetAccelerationStructureNV descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV };
-                descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASNV&>(bindingInfo.topLevelAS()).accelerationStructure;
+                descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASNV&>(bindingInfo.getTopLevelAS()).accelerationStructure;
                 descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
 
                 rtxAccelStructWrites.push_back(descriptorAccelerationStructureInfo);
@@ -372,7 +372,7 @@ void VulkanBindingSet::updateBindings()
             case VulkanBackend::RayTracingBackend::KhrExtension: {
 
                 VkWriteDescriptorSetAccelerationStructureKHR descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR };
-                descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASKHR&>(bindingInfo.topLevelAS()).accelerationStructure;
+                descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASKHR&>(bindingInfo.getTopLevelAS()).accelerationStructure;
                 descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
 
                 khrAccelStructWrites.push_back(descriptorAccelerationStructureInfo);
