@@ -243,6 +243,12 @@ constexpr tvec2<T> lerp(const tvec2<T>& a, const tvec2<T>& b, T x)
     return (static_cast<T>(1) - x) * a + x * b;
 }
 
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr tvec2<T> inverseLerp(const tvec2<T>& x, const tvec2<T>& a, const tvec2<T>& b)
+{
+    return (x - a) / (b - a);
+}
+
 template<typename T, ENABLE_IF_ARITHMETIC(T)>
 constexpr tvec2<T> clamp(const tvec2<T>& x, const tvec2<T>& minEdge, const tvec2<T>& maxEdge)
 {
@@ -493,6 +499,13 @@ constexpr tvec3<T> lerp(const tvec3<T>& a, const tvec3<T>& b, T x)
 {
     return (static_cast<T>(1) - x) * a + x * b;
 }
+
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr tvec3<T> inverseLerp(const tvec3<T>& x, const tvec3<T>& a, const tvec3<T>& b)
+{
+    return (x - a) / (b - a);
+}
+
 
 template<typename T, ENABLE_IF_ARITHMETIC(T)>
 constexpr tvec3<T> clamp(const tvec3<T>& x, const tvec3<T>& minEdge, const tvec3<T>& maxEdge)
