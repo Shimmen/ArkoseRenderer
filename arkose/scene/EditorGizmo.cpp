@@ -22,10 +22,27 @@ bool EditorGizmo::isScreenPointInside(vec2 screenPoint) const
     }
 
     vec2 viewport = vec2(alignCamera().viewport().width(), alignCamera().viewport().height());
-    vec2 adjustedScreenPoint = (screenPoint / viewport) * vec2(2.0f) - vec2(1.0f);
+    vec2 ndcScreenPoint = (screenPoint / viewport) * vec2(2.0f) - vec2(1.0f);
 
-    return ark::all(ark::greaterThanEqual(adjustedScreenPoint, projectedMin))
-        && ark::all(ark::lessThanEqual(adjustedScreenPoint, projectedMax));
+    if (ark::all(ark::greaterThanEqual(ndcScreenPoint, projectedMin))
+        && ark::all(ark::lessThanEqual(ndcScreenPoint, projectedMax))) {
+
+        if (ImageAsset const* image = icon().icon().image()) {
+            vec2 imageUv = ark::inverseLerp(ndcScreenPoint, projectedMin, projectedMax);
+            vec2 imagePixel = imageUv * vec2(image->width() - 1, image->height() - 1);
+            u32 x = static_cast<u32>(std::round(imagePixel.x));
+            u32 y = static_cast<u32>(std::round(imagePixel.y));
+
+            ImageAsset::rgba8 pixel = image->getPixelAsRGBA8(x, y, 0, 0);
+            if (pixel.w < 0.2f) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    return false;
 }
 
 float EditorGizmo::distanceFromCamera() const

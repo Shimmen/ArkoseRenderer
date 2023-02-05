@@ -101,6 +101,9 @@ public:
     bool hasSourceAsset() const { return not m_sourceAssetFilePath.empty(); }
     std::string_view sourceAssetFilePath() const { return m_sourceAssetFilePath; }
 
+    using rgba8 = ark::tvec4<u8>;
+    rgba8 getPixelAsRGBA8(u32 x, u32 y, u32 z, u32 mipIdx) const;
+
     // Not serialized, can be used to store whatever intermediate you want
     int userData { -1 };
 
@@ -117,7 +120,6 @@ private:
 
     std::vector<ImageMip> m_mips {};
 
-    using rgba8 = ark::tvec4<u8>;
     std::vector<rgba8> pixelDataAsRGBA8(size_t mipIdx) const;
 
     // Optional lossless compression applied to `pixelData`

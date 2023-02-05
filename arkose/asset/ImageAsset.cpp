@@ -442,6 +442,27 @@ bool ImageAsset::decompress()
     return true;
 }
 
+ImageAsset::rgba8 ImageAsset::getPixelAsRGBA8(u32 x, u32 y, u32 z, u32 mipIdx) const
+{
+    SCOPED_PROFILE_ZONE();
+
+    // TODO: Support more formats! The function name only refers to the output format and should be able to convert
+    ARKOSE_ASSERT(format() == ImageFormat::RGBA8);
+
+    // TODO: Account for stride != width etc.?
+    u32 pixelIdx = x + (y * width()) + z * (width() * height());
+    u32 byteStartIdx = 4 * pixelIdx;
+
+    std::span<const u8> rawMipData = pixelDataForMip(mipIdx);
+
+    rgba8 pixel { rawMipData[byteStartIdx + 0],
+                  rawMipData[byteStartIdx + 1],
+                  rawMipData[byteStartIdx + 2],
+                  rawMipData[byteStartIdx + 3] };
+
+    return pixel;
+}
+
 std::vector<ImageAsset::rgba8> ImageAsset::pixelDataAsRGBA8(size_t mipIdx) const
 {
     ARKOSE_ASSERT(depth() == 1);
