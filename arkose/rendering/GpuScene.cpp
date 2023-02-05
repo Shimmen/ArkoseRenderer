@@ -36,6 +36,8 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
     m_magentaTexture = Texture::createFromPixel(backend(), vec4(1.0f, 0.0f, 1.0f, 1.0f), true);
     m_normalMapBlueTexture = Texture::createFromPixel(backend(), vec4(0.5f, 0.5f, 1.0f, 1.0f), false);
 
+    m_iconManager = std::make_unique<IconManager>(backend());
+
     size_t materialBufferSize = m_managedMaterials.capacity() * sizeof(ShaderMaterial);
     m_materialDataBuffer = backend().createBuffer(materialBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
     m_materialDataBuffer->setName("SceneMaterialData");

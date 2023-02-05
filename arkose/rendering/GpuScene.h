@@ -6,6 +6,7 @@
 #include "core/Types.h"
 #include "core/parallel/TaskGraph.h"
 #include "rendering/meshlet/MeshletManager.h"
+#include "rendering/IconManager.h"
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/ResourceList.h"
 #include "scene/Scene.h"
@@ -113,6 +114,8 @@ public:
     Texture const& magentaTexture() const { return *m_magentaTexture; }
     Texture const& normalMapBlueTexture() const { return *m_normalMapBlueTexture; }
 
+    IconManager const& iconManager() const { return *m_iconManager; }
+
     // Misc.
 
     void drawStatsGui(bool includeContainingWindow = false);
@@ -212,6 +215,8 @@ private:
     std::unique_ptr<Texture> m_lightGrayTexture {};
     std::unique_ptr<Texture> m_magentaTexture {};
     std::unique_ptr<Texture> m_normalMapBlueTexture {};
+
+    std::unique_ptr<IconManager> m_iconManager {};
 
     // GPU management
 
