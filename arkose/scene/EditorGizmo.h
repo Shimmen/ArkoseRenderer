@@ -2,19 +2,19 @@
 
 class Camera;
 
-#include "rendering/Sprite.h"
+#include "rendering/Icon.h"
 #include "scene/Transform.h"
 #include <ark/vector.h>
 #include <string>
 
 class EditorGizmo {
 public:
-    EditorGizmo(Sprite const&, ITransformable&);
+    EditorGizmo(IconBillboard, ITransformable&);
 
     bool isScreenPointInside(vec2 screenPoint) const;
     float distanceFromCamera() const;
 
-    Sprite const& sprite() const;
+    IconBillboard const& icon() const;
     Camera const& alignCamera() const;
 
     ITransformable& transformable() { return *m_transformable; }
@@ -23,6 +23,6 @@ public:
     std::string debugName {};
 
 private:
-    Sprite m_sprite {};
-    ITransformable* m_transformable {};
+    IconBillboard m_icon;
+    ITransformable* m_transformable;
 };

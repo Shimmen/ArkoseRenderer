@@ -2,7 +2,7 @@
 
 #include "core/Logging.h"
 #include "rendering/GpuScene.h"
-#include "rendering/Sprite.h"
+#include "rendering/Icon.h"
 #include "rendering/debug/DebugDrawer.h"
 #include <imgui.h>
 
@@ -23,26 +23,41 @@ void DebugDrawNode::drawGui()
 
 RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Registry& reg)
 {
-    VertexLayout debugDrawVertexLayout = { VertexComponent::Position3F, VertexComponent::Color3F };
-    Shader debugDrawShader = Shader::createBasicRasterize("debug/debugDraw.vert", "debug/debugDraw.frag");
+    m_backend = &scene.backend();
+
+    // Register default (white) texture for when no texture is requested for debug draw. The triangles will then simply take on the tint color.
+    ShaderBinding defaultTextureBinding = ShaderBinding::sampledTexture(scene.whiteTexture(), ShaderStage::Fragment);
+    m_whiteDebugDrawTexture = m_debugDrawTextures.add(scene.backend().createBindingSet({ defaultTextureBinding }));
+    BindingSet& defaultTextureBindingSet = *m_debugDrawTextures.get(m_whiteDebugDrawTexture);
+
+    VertexLayout vertexLayout = { VertexComponent::Position3F, VertexComponent::Color3F };
+    Shader debugDrawShader = Shader::createBasicRasterize("debug/debugDraw.vert", "debug/debugDraw.frag",
+                                                          { ShaderDefine::makeBool("WITH_TEXTURES", false) });
+
+    VertexLayout vertexLayoutTextured = { VertexComponent::Position3F, VertexComponent::Color3F, VertexComponent::TexCoord2F };
+    Shader debugDrawShaderTextured = Shader::createBasicRasterize("debug/debugDraw.vert", "debug/debugDraw.frag",
+                                                                  { ShaderDefine::makeBool("WITH_TEXTURES", true) });
 
     BindingSet& cameraBindingSet = *reg.getBindingSet("SceneCameraSet");
 
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, reg.getTexture("SceneColor"), LoadOp::Load, StoreOp::Store },
                                                           { RenderTarget::AttachmentType::Depth, reg.getTexture("SceneDepth"), LoadOp::Load, StoreOp::Store } });
 
-    RenderStateBuilder trianglesStateBuilder { renderTarget, debugDrawShader, debugDrawVertexLayout };
-    trianglesStateBuilder.stateBindings().at(0, cameraBindingSet);
-    trianglesStateBuilder.primitiveType = PrimitiveType::Triangles;
-    trianglesStateBuilder.cullBackfaces = true;
-    trianglesStateBuilder.writeDepth = true;
-    trianglesStateBuilder.testDepth = true;
 
-    RenderStateBuilder linesStateBuilder = trianglesStateBuilder;
+    RenderStateBuilder linesStateBuilder { renderTarget, debugDrawShader, vertexLayout };
+    linesStateBuilder.stateBindings().at(0, cameraBindingSet);
     linesStateBuilder.primitiveType = PrimitiveType::LineSegments;
     linesStateBuilder.lineWidth = 3.0f;
     linesStateBuilder.writeDepth = false;
     linesStateBuilder.testDepth = false;
+
+    RenderStateBuilder trianglesStateBuilder { renderTarget, debugDrawShaderTextured, vertexLayoutTextured };
+    trianglesStateBuilder.stateBindings().at(0, cameraBindingSet);
+    trianglesStateBuilder.stateBindings().at(1, defaultTextureBindingSet);
+    trianglesStateBuilder.primitiveType = PrimitiveType::Triangles;
+    trianglesStateBuilder.cullBackfaces = true;
+    trianglesStateBuilder.writeDepth = true;
+    trianglesStateBuilder.testDepth = true;
 
     RenderState& linesRenderState = reg.createRenderState(linesStateBuilder);
     RenderState& trianglesRenderState = reg.createRenderState(trianglesStateBuilder);
@@ -52,6 +67,7 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
+        // TODO: Move this out to the GpuScene!
         if (m_shouldDrawInstanceBoundingBoxes) {
             drawInstanceBoundingBoxes(scene);
         }
@@ -66,11 +82,11 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
 
         cmdList.executeBufferCopyOperations(uploadBuffer);
 
-        uint32_t numLineVertices = static_cast<uint32_t>(m_lineVertices.size());
+        uint32_t numLineVertices = narrow_cast<u32>(m_lineVertices.size());
         ARKOSE_ASSERT(numLineVertices % 2 == 0);
         m_lineVertices.clear();
 
-        uint32_t numTriangleVertices = static_cast<uint32_t>(m_triangleVertices.size());
+        uint32_t numTriangleVertices = narrow_cast<u32>(m_triangleVertices.size());
         ARKOSE_ASSERT(numTriangleVertices % 3 == 0);
         m_triangleVertices.clear();
 
@@ -82,16 +98,28 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
 
         if (numTriangleVertices > 0) {
             cmdList.beginRendering(trianglesRenderState);
-            cmdList.draw(*m_triangleVertexBuffer, numTriangleVertices);
+            for (DebugDrawMesh const& mesh : m_debugDrawMeshes) {
+                cmdList.bindSet(*m_debugDrawTextures.get(mesh.textureBindingSetHandle), 1);
+                cmdList.draw(*m_triangleVertexBuffer, mesh.numVertices, mesh.firstVertex);
+            }
             cmdList.endRendering();
         }
 
+        // Clear out all transient debug draw meshes
+        for (DebugDrawMesh const& mesh : m_debugDrawMeshes) {
+            m_debugDrawTextures.removeReference(mesh.textureBindingSetHandle, appState.frameIndex());
+        }
+        m_debugDrawMeshes.clear();
+
+        m_debugDrawTextures.processDeferredDeletes(appState.frameIndex(), 3, [](DebugTextureBindingSetHandle handle, std::unique_ptr<BindingSet>& textureBindingSet) {
+            textureBindingSet.reset();
+        });
     };
 }
 
 void DebugDrawNode::drawLine(vec3 p0, vec3 p1, vec3 color)
 {
-    if (m_lineVertices.size() == MaxNumLineSegments * 2) {
+    if (m_lineVertices.size() + 2 > MaxNumLineSegments * 2) {
         ARKOSE_LOG(Warning, "Debug draw: maximum number of line segments reached, will not draw all requested lines.");
         return;
     }
@@ -130,15 +158,47 @@ void DebugDrawNode::drawBox(vec3 minPoint, vec3 maxPoint, vec3 color)
     drawLine(p5, p7, color);
 }
 
-void DebugDrawNode::drawSprite(Sprite sprite)
+void DebugDrawNode::drawIcon(IconBillboard icon, vec3 tint)
 {
-    m_triangleVertices.emplace_back(sprite.points[0], sprite.color);
-    m_triangleVertices.emplace_back(sprite.points[2], sprite.color);
-    m_triangleVertices.emplace_back(sprite.points[1], sprite.color);
+    if (m_triangleVertices.size() + 6 > MaxNumTriangles * 3) {
+        ARKOSE_LOG(Warning, "Debug draw: maximum number of triangles reached, will not draw all requested icons.");
+        return;
+    }
 
-    m_triangleVertices.emplace_back(sprite.points[2], sprite.color);
-    m_triangleVertices.emplace_back(sprite.points[0], sprite.color);
-    m_triangleVertices.emplace_back(sprite.points[3], sprite.color);
+    m_debugDrawMeshes.push_back(DebugDrawMesh { .numVertices = 6,
+                                                .firstVertex = narrow_cast<u32>(m_triangleVertices.size()),
+                                                .textureBindingSetHandle = createIconTextureBindingSet(&icon.icon()) });
+
+    auto const& ps = icon.positions();
+    auto const& uvs = icon.texCoords();
+
+    m_triangleVertices.emplace_back(ps[0], tint, uvs[0]);
+    m_triangleVertices.emplace_back(ps[2], tint, uvs[2]);
+    m_triangleVertices.emplace_back(ps[1], tint, uvs[1]);
+
+    m_triangleVertices.emplace_back(ps[0], tint, uvs[0]);
+    m_triangleVertices.emplace_back(ps[3], tint, uvs[3]);
+    m_triangleVertices.emplace_back(ps[2], tint, uvs[2]);
+}
+
+DebugTextureBindingSetHandle DebugDrawNode::createIconTextureBindingSet(Icon const* icon)
+{
+    if (icon) {
+        return createDebugTextureBindingSet(icon->texture());
+    } else {
+        return createDebugTextureBindingSet(nullptr);
+    }
+}
+
+DebugTextureBindingSetHandle DebugDrawNode::createDebugTextureBindingSet(Texture const* texture)
+{
+    if (texture == nullptr) {
+        m_debugDrawTextures.addReference(m_whiteDebugDrawTexture);
+        return m_whiteDebugDrawTexture;
+    }
+
+    ShaderBinding textureBinding = ShaderBinding::sampledTexture(*texture, ShaderStage::Fragment);
+    return m_debugDrawTextures.add(m_backend->createBindingSet({ textureBinding }));
 }
 
 void DebugDrawNode::drawInstanceBoundingBoxes(GpuScene& scene)

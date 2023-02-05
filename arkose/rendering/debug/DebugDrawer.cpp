@@ -1,6 +1,6 @@
 #include "DebugDrawer.h"
 
-#include "rendering/Sprite.h"
+#include "rendering/Icon.h"
 
 DebugDrawer& DebugDrawer::get()
 {
@@ -22,10 +22,10 @@ void DebugDrawer::drawBox(vec3 minPoint, vec3 maxPoint, vec3 color)
     }
 }
 
-void DebugDrawer::drawSprite(Sprite sprite)
+void DebugDrawer::drawIcon(IconBillboard iconBillboard, vec3 tint)
 {
     for (IDebugDrawer* debugDrawer : m_debugDrawers) {
-        debugDrawer->drawSprite(sprite);
+        debugDrawer->drawIcon(iconBillboard, tint);
     }
 }
 

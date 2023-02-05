@@ -4,7 +4,6 @@
 #include "asset/StaticMeshAsset.h"
 #include "core/Assert.h"
 #include "rendering/GpuScene.h"
-#include "rendering/Sprite.h"
 #include "rendering/debug/DebugDrawer.h"
 #include "scene/camera/Camera.h"
 #include "physics/PhysicsMesh.h"
@@ -522,13 +521,11 @@ void Scene::drawSceneGizmos()
 
     if (m_shouldDrawLightGizmos) {
         for (auto const& light : m_spotLights) {
+            Icon const& lightbulbIcon = gpuScene().iconManager().lightbulb();
+            IconBillboard iconBillboard = lightbulbIcon.asBillboard(camera(), light->transform().positionInWorld(), vec2(0.25f));
+            DebugDrawer::get().drawIcon(iconBillboard, light->color);
 
-            Sprite billboardSprite = Sprite::createBillboard(camera(), light->transform().positionInWorld(), vec2(0.15f));
-            billboardSprite.color = light->color;
-
-            DebugDrawer::get().drawSprite(billboardSprite);
-
-            EditorGizmo gizmo { billboardSprite, *light };
+            EditorGizmo gizmo { iconBillboard, *light };
             gizmo.debugName = light->name();
             m_editorGizmos.push_back(gizmo);
         }

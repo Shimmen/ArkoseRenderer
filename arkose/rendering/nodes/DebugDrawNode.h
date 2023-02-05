@@ -1,7 +1,13 @@
 #pragma once
 
+class Icon;
+
+#include "core/Handle.h"
 #include "rendering/RenderPipelineNode.h"
+#include "rendering/ResourceList.h"
 #include "rendering/debug/DebugDrawer.h"
+
+DEFINE_HANDLE_TYPE(DebugTextureBindingSetHandle);
 
 class DebugDrawNode final : public RenderPipelineNode, public IDebugDrawer {
 public:
@@ -16,9 +22,10 @@ public:
     // IDebugDrawer implementation
     virtual void drawLine(vec3 p0, vec3 p1, vec3 color) override;
     virtual void drawBox(vec3 minPoint, vec3 maxPoint, vec3 color) override;
-    virtual void drawSprite(Sprite sprite) override;
+    virtual void drawIcon(IconBillboard, vec3 tint) override;
 
 private:
+    Backend* m_backend { nullptr };
 
     struct DebugDrawVertex {
         DebugDrawVertex(vec3 inPosition, vec3 inColor)
@@ -36,10 +43,37 @@ private:
     std::vector<DebugDrawVertex> m_lineVertices {};
     Buffer* m_lineVertexBuffer { nullptr };
 
+    struct DebugDrawTexturedVertex {
+        DebugDrawTexturedVertex(vec3 inPosition, vec3 inColor, vec2 inTexCoord)
+            : position(inPosition)
+            , color(inColor)
+            , texCoord(inTexCoord)
+        {
+        }
+
+        vec3 position;
+        vec3 color;
+        vec2 texCoord;
+    };
+
     static constexpr size_t MaxNumTriangles = 40 * 1024;
-    static constexpr size_t TriangleVertexBufferSize = MaxNumTriangles * 3 * sizeof(DebugDrawVertex);
-    std::vector<DebugDrawVertex> m_triangleVertices {};
+    static constexpr size_t TriangleVertexBufferSize = MaxNumTriangles * 3 * sizeof(DebugDrawTexturedVertex);
+    std::vector<DebugDrawTexturedVertex> m_triangleVertices {};
     Buffer* m_triangleVertexBuffer { nullptr };
+
+    struct DebugDrawMesh {
+        u32 numVertices { 0 };
+        u32 firstVertex { 0 };
+        DebugTextureBindingSetHandle textureBindingSetHandle {};
+    };
+
+    std::vector<DebugDrawMesh> m_debugDrawMeshes {};
+
+    ResourceList<std::unique_ptr<BindingSet>, DebugTextureBindingSetHandle> m_debugDrawTextures { "DebugTextures", 256 };
+    DebugTextureBindingSetHandle m_whiteDebugDrawTexture {};
+
+    DebugTextureBindingSetHandle createIconTextureBindingSet(Icon const*);
+    DebugTextureBindingSetHandle createDebugTextureBindingSet(Texture const*);
 
     bool m_shouldDrawInstanceBoundingBoxes { false };
     void drawInstanceBoundingBoxes(GpuScene&);
