@@ -98,8 +98,6 @@ public:
     void generateProbeGridFromBoundingBox();
     const ProbeGrid& probeGrid() const { return m_probeGrid.value(); }
 
-    float filmGrainGain() const { return m_fixedFilmGrainGain; }
-
     void setEnvironmentMap(EnvironmentMap);
     const EnvironmentMap& environmentMap() const { return m_environmentMap; }
 
@@ -139,9 +137,6 @@ private:
     float m_ambientIlluminance { 0.0f };
 
     std::optional<ProbeGrid> m_probeGrid {};
-
-    // TODO: Maybe move to the camera?
-    float m_fixedFilmGrainGain { 0.040f };
 
     ITransformable* m_selectedObject { nullptr };
 

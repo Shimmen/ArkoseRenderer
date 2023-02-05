@@ -435,12 +435,6 @@ void Scene::drawSettingsGui(bool includeContainingWindow)
         ImGui::Begin("Scene");
     }
 
-    if (ImGui::TreeNode("Film grain")) {
-        // TODO: I would love to estimate gain grain from ISO and scene light amount, but that's for later..
-        ImGui::SliderFloat("Fixed grain gain", &m_fixedFilmGrainGain, 0.0f, 0.25f);
-        ImGui::TreePop();
-    }
-
     if (ImGui::TreeNode("Environment")) {
         ImGui::SliderFloat("Ambient (lx)", &m_ambientIlluminance, 0.0f, 1'000.0f, "%.0f");
         // NOTE: Obviously the unit of this is dependent on the values in the texture.. we should probably unify this a bit.

@@ -43,7 +43,7 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Regist
 
         cmdList.beginRendering(renderState, ClearValue::blackAtMaxDepth());
         {
-            float filmGrainGain = m_addFilmGrain ? scene.scene().filmGrainGain() : 0.0f;
+            float filmGrainGain = m_addFilmGrain ? scene.camera().filmGrainGain() : 0.0f;
             cmdList.setNamedUniform("filmGrainGain", filmGrainGain);
             cmdList.setNamedUniform("filmGrainScale", m_filmGrainScale);
             cmdList.setNamedUniform("filmGrainArrayIdx", appState.frameIndex() % filmGrainTexture.arrayCount());

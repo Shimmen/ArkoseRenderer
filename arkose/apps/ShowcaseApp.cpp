@@ -110,7 +110,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         break;
     }
 
-    pipeline.addNode<FinalNode>(finalTextureToScreen);
+    FinalNode& finalNode = pipeline.addNode<FinalNode>(finalTextureToScreen);
+    finalNode.setRenderFilmGrain(true);
 
     // Save reference to the render pipeline for GUI purposes
     m_renderPipeline = &pipeline;

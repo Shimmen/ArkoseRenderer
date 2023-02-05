@@ -281,6 +281,17 @@ void Camera::setPosition(vec3 p)
     }
 }
 
+float Camera::filmGrainGain() const
+{
+    float dy = m_filmGrainAtISO3200 - m_filmGrainAtISO100;
+    constexpr float dx = 3200.0f - 100.0f;
+
+    float k = dy / dx;
+    float m = m_filmGrainAtISO100 - k * 100.0f;
+
+    return k * ISO() + m;
+}
+
 void Camera::moveBy(vec3 translation)
 {
     if (length2(translation) > 1e-6f) {
@@ -371,6 +382,12 @@ void Camera::drawGui(bool includeContainingWindow)
 
     if (ImGui::TreeNode("Exposure controls")) {
         drawExposureGui();
+        ImGui::TreePop();
+    }
+
+    if (ImGui::TreeNode("Film gain control")) {
+        ImGui::SliderFloat("Film grain at ISO100", &m_filmGrainAtISO100, 0.0f, m_filmGrainAtISO3200 - 1e-4f);
+        ImGui::SliderFloat("Film grain at ISO3200", &m_filmGrainAtISO3200, m_filmGrainAtISO100 + 1e-4f, 0.25f);
         ImGui::TreePop();
     }
 

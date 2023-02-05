@@ -74,6 +74,8 @@ public:
     float EV100() const { return calculateEV100(fNumber(), shutterSpeed(), ISO()); }
     float exposure() const;
 
+    float filmGrainGain() const;
+
     vec3 position() const { return m_position; }
     void setPosition(vec3);
     void moveBy(vec3);
@@ -167,6 +169,13 @@ private:
 
     vec3 m_position {};
     quat m_orientation {};
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Film grain control
+
+    // Not very physically based, but hopefully a bit plausible..
+    float m_filmGrainAtISO100 { 0.01f };
+    float m_filmGrainAtISO3200 { 0.15f };
 
     ////////////////////////////////////////////////////////////////////////////
     // Meta
