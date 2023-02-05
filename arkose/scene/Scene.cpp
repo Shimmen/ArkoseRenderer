@@ -450,6 +450,14 @@ void Scene::drawSettingsGui(bool includeContainingWindow)
 
     ImGui::Separator();
 
+    if (ImGui::TreeNode("Visualisations")) {
+        ImGui::Checkbox("Draw all mesh bounding boxes", &m_shouldDrawAllInstanceBoundingBoxes);
+        ImGui::Checkbox("Draw bounding box of the selected mesh instance", &m_shouldDrawSelectedInstanceBoundingBox);
+        ImGui::TreePop();
+    }
+
+    ImGui::Separator();
+
     {
         static Light* selectedLight = nullptr;
         if (ImGui::BeginCombo("Inspected light", selectedLight ? selectedLight->name().c_str() : "Select a light")) {
@@ -490,6 +498,14 @@ void Scene::drawSettingsGui(bool includeContainingWindow)
     }
 }
 
+void Scene::drawInstanceBoundingBox(StaticMeshInstance const& instance)
+{
+    if (StaticMesh* staticMesh = gpuScene().staticMeshForHandle(instance.mesh())) {
+        ark::aabb3 transformedAABB = staticMesh->boundingBox().transformed(instance.transform().worldMatrix());
+        DebugDrawer::get().drawBox(transformedAABB.min, transformedAABB.max, vec3(1.0f, 0.0f, 1.0f));
+    }
+}
+
 void Scene::drawSceneGizmos()
 {
     // Reset "persistent" gizmos
@@ -509,17 +525,19 @@ void Scene::drawSceneGizmos()
     }
 
     if (input.wasKeyPressed(Key::Y) && not input.isGuiUsingKeyboard()) {
-        if (mode == ImGuizmo::LOCAL)
+        if (mode == ImGuizmo::LOCAL) {
             mode = ImGuizmo::WORLD;
-        else if (mode == ImGuizmo::WORLD)
+        } else if (mode == ImGuizmo::WORLD) {
             mode = ImGuizmo::LOCAL;
+        }
     }
 
     if (input.wasKeyPressed(Key::G)) {
-        m_shouldDrawLightGizmos = not m_shouldDrawLightGizmos;
+        m_shouldDrawGizmos = not m_shouldDrawGizmos;
     }
 
-    if (m_shouldDrawLightGizmos) {
+    if (m_shouldDrawGizmos) {
+        // Light gizmos
         for (auto const& light : m_spotLights) {
             Icon const& lightbulbIcon = gpuScene().iconManager().lightbulb();
             IconBillboard iconBillboard = lightbulbIcon.asBillboard(camera(), light->transform().positionInWorld(), vec2(0.25f));
@@ -531,7 +549,19 @@ void Scene::drawSceneGizmos()
         }
     }
 
+    if (m_shouldDrawAllInstanceBoundingBoxes) {
+        for (auto const& instance : staticMeshInstances()) {
+            drawInstanceBoundingBox(*instance);
+        }
+    }
+
     if (selectedObject()) {
+
+        if (m_shouldDrawSelectedInstanceBoundingBox) {
+            if (auto* instance = dynamic_cast<StaticMeshInstance*>(selectedObject())) {
+                drawInstanceBoundingBox(*instance);
+            }
+        }
 
         Transform& selectedTransform = selectedObject()->transform();
 
@@ -545,7 +575,8 @@ void Scene::drawSceneGizmos()
         projMatrix.y = -projMatrix.y;
 
         mat4 matrix = selectedTransform.localMatrix();
-        ImGuizmo::Manipulate(value_ptr(viewMatrix), value_ptr(projMatrix), operation, mode, value_ptr(matrix));
-        selectedTransform.setFromMatrix(matrix);
+        if (ImGuizmo::Manipulate(value_ptr(viewMatrix), value_ptr(projMatrix), operation, mode, value_ptr(matrix))) {
+            selectedTransform.setFromMatrix(matrix);
+        }
     }
 }

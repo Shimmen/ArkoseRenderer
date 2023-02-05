@@ -18,7 +18,6 @@ DebugDrawNode::~DebugDrawNode()
 
 void DebugDrawNode::drawGui()
 {
-    ImGui::Checkbox("Draw mesh bounding boxes", &m_shouldDrawInstanceBoundingBoxes);
 }
 
 RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Registry& reg)
@@ -66,11 +65,6 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
     m_triangleVertexBuffer = &reg.createBuffer(TriangleVertexBufferSize, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOnly);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
-
-        // TODO: Move this out to the GpuScene!
-        if (m_shouldDrawInstanceBoundingBoxes) {
-            drawInstanceBoundingBoxes(scene);
-        }
 
         if (m_lineVertices.size() > 0) {
             uploadBuffer.upload(m_lineVertices, *m_lineVertexBuffer);
@@ -199,14 +193,4 @@ DebugTextureBindingSetHandle DebugDrawNode::createDebugTextureBindingSet(Texture
 
     ShaderBinding textureBinding = ShaderBinding::sampledTexture(*texture, ShaderStage::Fragment);
     return m_debugDrawTextures.add(m_backend->createBindingSet({ textureBinding }));
-}
-
-void DebugDrawNode::drawInstanceBoundingBoxes(GpuScene& scene)
-{
-    for (auto const& instance : scene.scene().staticMeshInstances()) {
-        if (StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
-            ark::aabb3 transformedAABB = staticMesh->boundingBox().transformed(instance->transform().worldMatrix());
-            drawBox(transformedAABB.min, transformedAABB.max, vec3(1.0f, 0.0f, 1.0f));
-        }
-    }
 }

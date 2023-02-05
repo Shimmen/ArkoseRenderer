@@ -74,8 +74,4 @@ private:
 
     DebugTextureBindingSetHandle createIconTextureBindingSet(Icon const*);
     DebugTextureBindingSetHandle createDebugTextureBindingSet(Texture const*);
-
-    bool m_shouldDrawInstanceBoundingBoxes { false };
-    void drawInstanceBoundingBoxes(GpuScene&);
-
 };
