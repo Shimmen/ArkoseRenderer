@@ -11,6 +11,9 @@ It can support multiple rendering backends and abstracts the specifics with a co
 
 Arkose Renderer is very much a rendering engine and *not* a game engine, but I have some ambition to over time make it into more of a general purpose system with physics, audio, and gameplay scripting.
 
+<img src="assets/demo/demo3.jpg" width="49%"></img>
+<img src="assets/demo/demo2.jpg" width="49%"></img>
+
 ## Incomplete list of features
 
 This list is not complete, it's just a showcase of various features that are implemented, presented in no significant order.
@@ -20,6 +23,7 @@ This list is not complete, it's just a showcase of various features that are imp
  - Async asset loading (for some resource types)
  - Custom task graph implementation (work/job system)
  - Shader hot-reloading with support for `#include`s
+ - Suite of editor tools, gizmos, and debug rendering
  - Tight integration with CPU & GPU profiling tools
  - Physics (work-in-progress)
 
@@ -32,8 +36,11 @@ This list is not complete, it's just a showcase of various features that are imp
  - Depth of field, respecting the realistic camera model paramer such as aperture size and focal length
  - Dynamic Diffuse Global Illumination (DDGI) – a probe based global illumination solution with infinite light bounces.
  - Ray traced reflections with denoising
+ - Temporal Anti-Aliasing (TAA)
 
  > **DISCLAIMER:** There is still a long list of features to add, many of them quite basic. The philosophy with this project has always been to work on whatever I feel like at that point in time, so there is no real concept of natural order here or minimum viable product. We're not in production after all :^) Some of these obvious basic features that I can think of right now are: skeletal meshes and animations, light culling to make the rendering tiled or clustered, and rendering of transparent objects.
+
+![GUI demo image](/assets/demo/demo-gui.jpg)
 
 ## Repository structure
 
