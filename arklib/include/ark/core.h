@@ -119,6 +119,12 @@ constexpr T lerp(T a, T b, T x)
 }
 
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr T inverseLerp(T x, T a, T b)
+{
+    return (x - a) / (b - a);
+}
+
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
 constexpr T fract(T x)
 {
     return x - std::floor(x);
