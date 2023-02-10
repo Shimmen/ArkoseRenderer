@@ -14,6 +14,7 @@
 #include "rendering/nodes/LocalLightShadowNode.h"
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/PrepassNode.h"
+#include "rendering/nodes/RTSphereLightShadowNode.h"
 #include "rendering/nodes/RTReflectionsNode.h"
 #include "rendering/nodes/RTVisualisationNode.h"
 #include "rendering/nodes/SSAONode.h"
@@ -50,6 +51,9 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     scene.setupFromDescription({ .path = "assets/sample/Sponza.arklvl",
                                  .maintainRayTracingScene = rtxOn });
 
+    auto sphereLight = std::make_unique<SphereLight>(vec3(1.0f, 0.0f, 1.0f), 50000.0f, vec3(0.0f, 5.0f, 3.0f), 0.25f);
+    scene.addLight(std::move(sphereLight));
+
     Camera& camera = scene.camera();
     m_fpsCameraController.takeControlOfCamera(camera);
 
@@ -65,6 +69,9 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<CullingNode>();
     pipeline.addNode<PrepassNode>(PrepassMode::AllOpaquePixels);
 
+    if (rtxOn) {
+        pipeline.addNode<RTSphereLightShadowNode>();
+    }
     pipeline.addNode<DirectionalLightShadowNode>();
     pipeline.addNode<LocalLightShadowNode>();
 

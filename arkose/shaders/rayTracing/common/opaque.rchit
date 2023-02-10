@@ -33,8 +33,8 @@ layout(set = 2, binding = 1) uniform sampler2D textures[];
 
 layout(set = 3, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
 layout(set = 3, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
-layout(set = 3, binding = 2) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
-layout(set = 3, binding = 3) uniform sampler2D shadowMaps[];
+layout(set = 3, binding = 2) buffer readonly SphereLightDataBlock { SphereLightData sphereLights[]; };
+layout(set = 3, binding = 3) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
 
 NAMED_UNIFORMS_STRUCT(RayTracingPushConstants, constants)
 
@@ -71,6 +71,29 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
 
         vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
         vec3 directLight = light.color * shadowFactor;
+
+        return brdf * LdotN * directLight;
+    }
+
+    return vec3(0.0);
+}
+
+vec3 evaluateSphereLight(SphereLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+{
+    vec3 hitPoint = rt_WorldRayOrigin + rt_RayHitT * rt_WorldRayDirection;
+    vec3 toLight = light.worldSpacePosition.xyz - hitPoint;
+    vec3 L = normalize(toLight);
+    float LdotN = dot(L, N);
+
+    if (LdotN > 0.0) {
+
+        float distanceToLight = length(toLight);
+        float shadowFactor = traceShadowRay(hitPoint, L, distanceToLight - 0.001);
+
+        float distanceAttenuation = 1.0 / square(distanceToLight); // epsilon term??
+
+        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+        vec3 directLight = light.color * shadowFactor * distanceAttenuation;
 
         return brdf * LdotN * directLight;
     }
@@ -148,6 +171,10 @@ void main()
 
         for (uint i = 0; i < lightMeta.numDirectionalLights; ++i) {
             color += evaluateDirectionalLight(directionalLights[i], V, N, baseColor, roughness, metallic);
+        }
+
+        for (uint i = 0; i < lightMeta.numSphereLights; ++i) {
+            color += evaluateSphereLight(sphereLights[i], V, N, baseColor, roughness, metallic);
         }
 
         for (uint i = 0; i < lightMeta.numSpotLights; ++i) {

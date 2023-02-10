@@ -113,19 +113,22 @@ RenderState& ForwardRenderNode::makeRenderState(Registry& reg, const GpuScene& s
     }
 
     Texture* dirLightProjectedShadow = reg.getTexture("DirectionalLightProjectedShadow");
+    Texture* sphereLightProjectedShadow = reg.getTexture("SphereLightProjectedShadow");
     Texture* localLightShadowMapAtlas = reg.getTexture("LocalLightShadowMapAtlas");
     Buffer* localLightShadowAllocations = reg.getBuffer("LocalLightShadowAllocations");
 
     // Allow running without shadows
-    if (!dirLightProjectedShadow || !localLightShadowMapAtlas || !localLightShadowAllocations) {
+    if (!dirLightProjectedShadow || !sphereLightProjectedShadow || !localLightShadowMapAtlas || !localLightShadowAllocations) {
         Texture& placeholderTex = reg.createPixelTexture(vec4(1.0f), false);
         Buffer& placeholderBuffer = reg.createBufferForData(std::vector<int>(0), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
         dirLightProjectedShadow = dirLightProjectedShadow ? dirLightProjectedShadow : &placeholderTex;
+        sphereLightProjectedShadow = sphereLightProjectedShadow ? sphereLightProjectedShadow : &placeholderTex;
         localLightShadowMapAtlas = localLightShadowMapAtlas ? localLightShadowMapAtlas : &placeholderTex;
         localLightShadowAllocations = localLightShadowAllocations ? localLightShadowAllocations : &placeholderBuffer;
     }
 
     BindingSet& shadowBindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(*dirLightProjectedShadow),
+                                                          ShaderBinding::sampledTexture(*sphereLightProjectedShadow),
                                                           ShaderBinding::sampledTexture(*localLightShadowMapAtlas),
                                                           ShaderBinding::storageBuffer(*localLightShadowAllocations) });
 

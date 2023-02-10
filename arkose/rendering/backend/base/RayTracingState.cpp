@@ -19,7 +19,6 @@ ShaderBindingTable::ShaderBindingTable(ShaderFile rayGen, std::vector<HitGroup> 
     , m_missShaders(std::move(missShaders))
 {
     ARKOSE_ASSERT(m_rayGen.type() == ShaderFileType::RTRaygen);
-    ARKOSE_ASSERT(!m_hitGroups.empty());
     for (const auto& miss : m_missShaders) {
         ARKOSE_ASSERT(miss.type() == ShaderFileType::RTMiss);
     }

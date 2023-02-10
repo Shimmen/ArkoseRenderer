@@ -2,8 +2,9 @@
 #define LIGHT_DATA_H
 
 struct LightMetaData {
-    int numDirectionalLights;
-    int numSpotLights;
+    uint numDirectionalLights;
+    uint numSphereLights;
+    uint numSpotLights;
 };
 
 struct DirectionalLightData {
@@ -15,6 +16,18 @@ struct DirectionalLightData {
     vec4 viewSpaceDirection;
     mat4 lightProjectionFromWorld;
     mat4 lightProjectionFromView;
+};
+
+struct SphereLightData {
+
+    vec3 color;
+    float exposure;
+
+    vec4 worldSpacePosition;
+    vec4 viewSpacePosition;
+
+    vec3 _pad0;
+    float lightSourceRadius;
 };
 
 struct SpotLightData {

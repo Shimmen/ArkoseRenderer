@@ -27,11 +27,13 @@ layout(set = 1, binding = 1) uniform sampler2D textures[];
 
 layout(set = 2, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
 layout(set = 2, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
-layout(set = 2, binding = 2) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
+layout(set = 2, binding = 2) buffer readonly SphereLightDataBlock { SphereLightData sphereLights[]; };
+layout(set = 2, binding = 3) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
 
 layout(set = 4, binding = 0) uniform sampler2D directionalLightProjectedShadowTex;
-layout(set = 4, binding = 1) uniform sampler2D localLightShadowMapAtlasTex;
-layout(set = 4, binding = 2) buffer readonly ShadowMapViewportBlock { vec4 localLightShadowMapViewports[]; };
+layout(set = 4, binding = 1) uniform sampler2D sphereLightProjectedShadowTex;
+layout(set = 4, binding = 2) uniform sampler2D localLightShadowMapAtlasTex;
+layout(set = 4, binding = 3) buffer readonly ShadowMapViewportBlock { vec4 localLightShadowMapViewports[]; };
 
 NAMED_UNIFORMS(pushConstants,
     float ambientAmount;
@@ -77,6 +79,31 @@ float evaluateLocalLightShadow(uint shadowIdx, mat4 lightProjectionFromView, vec
 
     float mapDepth = texture(localLightShadowMapAtlasTex, shadowMapUv).x;
     return (mapDepth < posInShadowMap.z) ? 0.0 : 1.0;
+}
+
+vec3 evaluateSphereLight(SphereLightData light, bool hasShadow, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+{
+    // TODO: Support multiple sphere lights with shadows!
+    vec2 sampleTexCoords = gl_FragCoord.xy * pushConstants.invTargetSize;
+    float shadowFactor = hasShadow ? texture(sphereLightProjectedShadowTex, sampleTexCoords).r : 1.0;
+
+    vec3 toLight = light.viewSpacePosition.xyz - vPosition;
+    vec3 L = normalize(toLight);
+
+    // If the light source is behind the geometric normal of the surface consider it in shadow,
+    // even if a normal map could make the surface seem to be able to pick up light from the light.
+    if (dot(normalize(vNormal), L) < 0.0) {
+        shadowFactor = 0.0;
+    }
+
+    float dist = length(toLight);
+    float distanceAttenuation = 1.0 / square(max(dist, light.lightSourceRadius));
+
+    vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+    vec3 directLight = light.color * shadowFactor * distanceAttenuation;
+
+    float LdotN = max(dot(L, N), 0.0);
+    return brdf * LdotN * directLight;
 }
 
 vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
@@ -157,6 +184,11 @@ void main()
 
     // TODO: Use tiles or clusters to minimize number of light evaluations!
     {
+        for (uint i = 0; i < lightMeta.numSphereLights; ++i) {
+            bool hasShadow = i == 0; // todo: support multple shadowed point lights!
+            color += evaluateSphereLight(sphereLights[i], hasShadow, V, N, baseColor, roughness, metallic);
+        }
+
         uint shadowIdx = 0;
         for (uint i = 0; i < lightMeta.numSpotLights; ++i) {
             color += evaluateSpotLight(spotLights[i], shadowIdx++, V, N, baseColor, roughness, metallic);

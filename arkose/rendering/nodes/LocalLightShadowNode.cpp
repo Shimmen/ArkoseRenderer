@@ -69,8 +69,8 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
             case Light::Type::SpotLight:
                 drawSpotLightShadowMap(cmdList, scene, shadowMapAllocation);
                 break;
-            case Light::Type::PointLight:
-                NOT_YET_IMPLEMENTED();
+            case Light::Type::SphereLight:
+                //NOT_YET_IMPLEMENTED();
                 break;
             }
         }

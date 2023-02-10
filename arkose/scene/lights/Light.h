@@ -9,7 +9,7 @@ public:
 
     enum class Type {
         DirectionalLight,
-        PointLight,
+        SphereLight,
         SpotLight,
     };
 

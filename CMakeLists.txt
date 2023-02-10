@@ -115,6 +115,7 @@ set(ARKOSE_SOURCES
     arkose/rendering/nodes/PickingNode.cpp
     arkose/rendering/nodes/PrepassNode.cpp
     arkose/rendering/nodes/RTVisualisationNode.cpp
+    arkose/rendering/nodes/RTSphereLightShadowNode.cpp
     arkose/rendering/nodes/RTReflectionsNode.cpp
     arkose/rendering/nodes/SkyViewNode.cpp
     arkose/rendering/nodes/SSAONode.cpp
@@ -129,6 +130,7 @@ set(ARKOSE_SOURCES
     arkose/scene/camera/CameraController.cpp
     arkose/scene/camera/FpsCameraController.cpp
     arkose/scene/lights/DirectionalLight.cpp
+    arkose/scene/lights/SphereLight.cpp
     arkose/scene/lights/SpotLight.cpp
     arkose/utility/AvgElapsedTimer.cpp
     arkose/utility/FileDialog.cpp

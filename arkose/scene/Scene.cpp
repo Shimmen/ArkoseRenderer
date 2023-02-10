@@ -271,15 +271,6 @@ StaticMeshInstance& Scene::createStaticMeshInstance(StaticMeshHandle staticMeshH
     return instance;
 }
 
-DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)
-{
-    ARKOSE_ASSERT(light);
-    m_directionalLights.push_back(std::move(light));
-    DirectionalLight& addedLight = *m_directionalLights.back();
-    gpuScene().registerLight(addedLight);
-    return addedLight;
-}
-
 void Scene::addLight(std::unique_ptr<Light> light)
 {
     ARKOSE_ASSERT(light);
@@ -296,14 +287,33 @@ void Scene::addLight(std::unique_ptr<Light> light)
         addLight(std::unique_ptr<SpotLight>(spotLightPtr));
     } break;
 
-    case Light::Type::PointLight: {
-        NOT_YET_IMPLEMENTED();
+    case Light::Type::SphereLight: {
+        SphereLight* sphereLightPtr = static_cast<SphereLight*>(light.release());
+        addLight(std::unique_ptr<SphereLight>(sphereLightPtr));
     } break;
 
     default:
         ASSERT_NOT_REACHED();
         break;
     }
+}
+
+DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)
+{
+    ARKOSE_ASSERT(light);
+    m_directionalLights.push_back(std::move(light));
+    DirectionalLight& addedLight = *m_directionalLights.back();
+    gpuScene().registerLight(addedLight);
+    return addedLight;
+}
+
+SphereLight& Scene::addLight(std::unique_ptr<SphereLight> light)
+{
+    ARKOSE_ASSERT(light);
+    m_sphereLights.push_back(std::move(light));
+    SphereLight& addedLight = *m_sphereLights.back();
+    gpuScene().registerLight(addedLight);
+    return addedLight;
 }
 
 SpotLight& Scene::addLight(std::unique_ptr<SpotLight> light)
@@ -328,6 +338,9 @@ size_t Scene::forEachLight(std::function<void(size_t, const Light&)> callback) c
     for (const auto& light : m_directionalLights) {
         callback(nextIndex++, *light);
     }
+    for (auto& light : m_sphereLights) {
+        callback(nextIndex++, *light);
+    }
     for (const auto& light : m_spotLights) {
         callback(nextIndex++, *light);
     }
@@ -338,6 +351,9 @@ size_t Scene::forEachLight(std::function<void(size_t, Light&)> callback)
 {
     size_t nextIndex = 0;
     for (auto& light : m_directionalLights) {
+        callback(nextIndex++, *light);
+    }
+    for (auto& light : m_sphereLights) {
         callback(nextIndex++, *light);
     }
     for (auto& light : m_spotLights) {
@@ -471,12 +487,13 @@ void Scene::drawSettingsGui(bool includeContainingWindow)
 
             switch (selectedLight->type()) {
             case Light::Type::DirectionalLight:
-                ImGui::SliderFloat("Illuminance (lx)", &static_cast<DirectionalLight*>(selectedLight)->illuminance, 1.0f, 150000.0f);
+                ImGui::SliderFloat("Illuminance (lx)", &static_cast<DirectionalLight*>(selectedLight)->illuminance, 0.0f, 150000.0f);
+                break;
+            case Light::Type::SphereLight:
+                ImGui::SliderFloat("Luminous power (lm)", &static_cast<SphereLight*>(selectedLight)->luminousPower, 0.0f, 1000.0f);
                 break;
             case Light::Type::SpotLight:
-                ImGui::SliderFloat("Luminous intensity (cd)", &static_cast<SpotLight*>(selectedLight)->luminousIntensity, 1.0f, 1000.0f);
-                break;
-            case Light::Type::PointLight:
+                ImGui::SliderFloat("Luminous intensity (cd)", &static_cast<SpotLight*>(selectedLight)->luminousIntensity, 0.0f, 1000.0f);
                 break;
             default:
                 ASSERT_NOT_REACHED();
@@ -532,15 +549,15 @@ void Scene::drawSceneGizmos()
 
     if (m_shouldDrawGizmos) {
         // Light gizmos
-        for (auto const& light : m_spotLights) {
+        forEachLight([this](size_t idx, Light& light) {
             Icon const& lightbulbIcon = gpuScene().iconManager().lightbulb();
-            IconBillboard iconBillboard = lightbulbIcon.asBillboard(camera(), light->transform().positionInWorld(), vec2(0.25f));
-            DebugDrawer::get().drawIcon(iconBillboard, light->color);
+            IconBillboard iconBillboard = lightbulbIcon.asBillboard(camera(), light.transform().positionInWorld(), vec2(0.25f));
+            DebugDrawer::get().drawIcon(iconBillboard, light.color);
 
-            EditorGizmo gizmo { iconBillboard, *light };
-            gizmo.debugName = light->name();
+            EditorGizmo gizmo { iconBillboard, light };
+            gizmo.debugName = light.name();
             m_editorGizmos.push_back(gizmo);
-        }
+        });
     }
 
     if (m_shouldDrawAllInstanceBoundingBoxes) {

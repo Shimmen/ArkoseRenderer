@@ -1,0 +1,56 @@
+#version 460
+
+#include <common/namedUniforms.glsl>
+#include <rayTracing/common/common.glsl>
+#include <shared/CameraState.h>
+
+layout(set = 0, binding = 0) uniform AccelerationStructure topLevelAS;
+layout(set = 0, binding = 1) uniform CameraStateBlock { CameraState camera; };
+layout(set = 0, binding = 2) uniform sampler2D sceneDepthTex;
+layout(set = 0, binding = 3, r8) uniform image2D shadowImg;
+
+NAMED_UNIFORMS_STRUCT(RayTracingPushConstants, constants)
+vec3 lightPosition() { return vec3(constants.parameter1, constants.parameter2, constants.parameter3); }
+float lightSourceRadius() { return constants.parameter4; }
+
+layout(location = 0) rayPayload RayPayloadShadow payload;
+
+void main()
+{
+    const ivec2 pixelCoord = ivec2(rt_LaunchID.xy);
+
+    float nonLinearDepth = texelFetch(sceneDepthTex, pixelCoord, 0).r;
+    if (nonLinearDepth >= 1.0 - 1e-6) {
+        return;
+    }
+
+    const vec2 pixelCenter = vec2(pixelCoord) + vec2(0.5);
+    const vec2 pixelUv = pixelCenter / vec2(rt_LaunchSize.xy);
+    vec4 shadingPoint = camera.worldFromView * camera.viewFromProjection * vec4(pixelUv * 2.0 - 1.0, nonLinearDepth, 1.0);
+    shadingPoint.xyz /= shadingPoint.w;
+
+    // TODO: Sample position on light disk/sphere
+    vec3 toLight = lightPosition() - shadingPoint.xyz;
+    float distToLight = length(toLight);
+    vec3 L = toLight / distToLight;
+
+    const float tmin = 0.025; // arbitrary small number
+    const float tmax = distToLight; // for the sake of shadow, treat as point light source
+
+    uint rayFlags = RayFlags_TerminateOnFirstHit | RayFlags_SkipClosestHitShader | RayFlags_Opaque;
+    uint cullMask = RT_HIT_MASK_OPAQUE;
+
+    // Assume we are in shadow, and if the shadow miss shader activates we are *not* in shadow
+    payload.inShadow = true;
+
+    traceRay(topLevelAS, rayFlags, cullMask,
+             0, // sbtRecordOffset
+             0, // sbtRecordStride
+             0, // missIndex
+             shadingPoint.xyz, tmin, L, tmax,
+             0 // payloadIndex
+             );
+
+    float shadowValue = payload.inShadow ? 0.0 : 1.0;
+    imageStore(shadowImg, pixelCoord, vec4(shadowValue, 0.0, 0.0, 0.0));
+}
