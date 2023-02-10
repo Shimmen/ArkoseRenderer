@@ -39,14 +39,20 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
 
     BindingSet& cameraBindingSet = *reg.getBindingSet("SceneCameraSet");
 
-    RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, reg.getTexture("SceneColor"), LoadOp::Load, StoreOp::Store },
+    // If placed after tonemapping, render to the post-tonemapped (LDR) target, otherwise fallback onto the HDR scene color
+    Texture* sceneColorTex = reg.getTexture("SceneColorLDR");
+    if (not sceneColorTex) {
+        sceneColorTex = reg.getTexture("SceneColor");
+    }
+
+    RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, sceneColorTex, LoadOp::Load, StoreOp::Store },
                                                           { RenderTarget::AttachmentType::Depth, reg.getTexture("SceneDepth"), LoadOp::Load, StoreOp::Store } });
 
 
     RenderStateBuilder linesStateBuilder { renderTarget, debugDrawShader, vertexLayout };
     linesStateBuilder.stateBindings().at(0, cameraBindingSet);
     linesStateBuilder.primitiveType = PrimitiveType::LineSegments;
-    linesStateBuilder.lineWidth = 3.0f;
+    linesStateBuilder.lineWidth = 1.0f;
     linesStateBuilder.writeDepth = false;
     linesStateBuilder.testDepth = false;
 

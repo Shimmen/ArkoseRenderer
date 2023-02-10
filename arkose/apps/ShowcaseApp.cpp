@@ -95,8 +95,6 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         pipeline.addNode<DDGIProbeDebug>();
     }
 
-    pipeline.addNode<DebugDrawNode>();
-
     std::string sceneTexture = "SceneColor";
     const std::string finalTextureToScreen = "SceneColorLDR";
     const AntiAliasing antiAliasingMode = AntiAliasing::TAA;
@@ -116,6 +114,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         pipeline.addNode<TAANode>(scene.camera());
         break;
     }
+
+    pipeline.addNode<DebugDrawNode>();
 
     FinalNode& finalNode = pipeline.addNode<FinalNode>(finalTextureToScreen);
     finalNode.setRenderFilmGrain(true);
