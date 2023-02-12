@@ -70,7 +70,7 @@ RenderPipelineNode::ExecuteCallback RTSphereLightShadowNode::construct(GpuScene&
             cmdList.setNamedUniform("parameter1", lightPosition.x);
             cmdList.setNamedUniform("parameter2", lightPosition.y);
             cmdList.setNamedUniform("parameter3", lightPosition.z);
-            cmdList.setNamedUniform("parameter4", sphereLight.lightSourceRadius);
+            cmdList.setNamedUniform("parameter4", sphereLight.lightSourceRadius());
 
             // TODO: Limit to the radius/influence of the light source onto the world
             cmdList.traceRays(appState.windowExtent());

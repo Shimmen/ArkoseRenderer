@@ -11,7 +11,7 @@ DirectionalLight::DirectionalLight()
 
 DirectionalLight::DirectionalLight(vec3 color, float illuminance, vec3 direction)
     : Light(Type::DirectionalLight, color)
-    , illuminance(illuminance)
+    , m_illuminance(illuminance)
 {
     quat orientation = ark::lookRotation(normalize(direction), ark::globalUp);
     transform().setOrientationInWorld(orientation);
@@ -27,7 +27,7 @@ void DirectionalLight::drawGui()
 
     ImGui::Separator();
 
-    ImGui::SliderFloat("Illuminance (lux)", &illuminance, 0.0f, 150'000.0f);
+    ImGui::SliderFloat("Illuminance (lux)", &m_illuminance, 0.0f, 150'000.0f);
 
     ImGui::Separator();
 
@@ -36,6 +36,11 @@ void DirectionalLight::drawGui()
         ImGui::SliderFloat("Slope bias", &customSlopeBias, 0.0f, 10.0f);
         ImGui::TreePop();
     }
+}
+
+mat4 DirectionalLight::projectionMatrix() const
+{
+    return ark::orthographicProjectionToVulkanClipSpace(shadowMapWorldExtent, -0.5f * shadowMapWorldExtent, 0.5f * shadowMapWorldExtent);
 }
 
 float DirectionalLight::constantBias(Extent2D shadowMapSize) const

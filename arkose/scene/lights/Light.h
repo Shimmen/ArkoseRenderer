@@ -16,7 +16,7 @@ public:
 
     Light() = default;
     Light(Type type, vec3 color)
-        : color(color)
+        : m_color(color)
         , m_type(type)
     {
         static int nextLightId = 0;
@@ -25,8 +25,8 @@ public:
 
     virtual ~Light() { }
 
-    // Linear sRGB color
-    vec3 color { 1.0f };
+    vec3 color() const { return m_color; }
+    vec3 setColor(vec3 color) { m_color = color; }
 
     Type type() const { return m_type; }
 
@@ -39,16 +39,9 @@ public:
     virtual void drawGui() override;
 
     // Direction of outgoing light, i.e. -L in a BRDF
-    virtual vec3 forwardDirection() const
-    {
-        return ark::rotateVector(transform().orientationInWorld(), ark::globalForward);
-    }
+    virtual vec3 forwardDirection() const;
 
-    virtual mat4 lightViewMatrix() const
-    {
-        vec3 position = transform().positionInWorld();
-        return ark::lookAt(position, position + forwardDirection());
-    }
+    virtual mat4 lightViewMatrix() const;
 
     virtual float intensityValue() const = 0;
     virtual mat4 projectionMatrix() const = 0;
@@ -74,6 +67,9 @@ private:
     bool m_castsShadows { true };
     std::string m_name {};
 
+    // Linear sRGB color
+    vec3 m_color { 1.0f };
+
     Transform m_transform {};
 };
 
@@ -89,7 +85,7 @@ void Light::serialize(Archive& archive)
     archive(cereal::make_nvp("type", m_type));
     archive(cereal::make_nvp("name", m_name));
 
-    archive(cereal::make_nvp("color", color));
+    archive(cereal::make_nvp("color", m_color));
     archive(cereal::make_nvp("transform", m_transform));
 
     archive(cereal::make_nvp("castsShadows", m_castsShadows));

@@ -16,20 +16,10 @@ public:
     // IEditorObject interface
     virtual void drawGui() override;
 
-    float intensityValue() const final
-    {
-        return luminousPower;
-    }
+    virtual float intensityValue() const final { return m_luminousPower; }
 
-    // Light luminous power/flux (lumen)
-    // TODO: Actually use physically based units!
-    float luminousPower { 1.0f };
-
-    // Radius of the lighting influence of this light (the radius of effect)
-    float lightRadius { 10.0f };
-
-    // Radius of the spherical light source
-    float lightSourceRadius { 0.05f };
+    float lightRadius() const { return m_lightRadius; }
+    float lightSourceRadius() const { return m_lightSourceRadius; }
 
     // No shadow mapping for sphere lights, only ray traced shadows
     virtual mat4 projectionMatrix() const override { return mat4(); }
@@ -38,6 +28,16 @@ public:
 
 private:
     void updateLightRadius();
+
+    // Light luminous power/flux (lumen)
+    // TODO: Actually use physically based units!
+    float m_luminousPower { 1.0f };
+
+    // Radius of the lighting influence of this light (the radius of effect)
+    float m_lightRadius { 10.0f };
+
+    // Radius of the spherical light source
+    float m_lightSourceRadius { 0.05f };
 
 };
 
@@ -56,6 +56,7 @@ void SphereLight::serialize(Archive& archive)
 {
     archive(cereal::make_nvp("Light", cereal::base_class<Light>(this)));
 
-    archive(cereal::make_nvp("luminousPower", luminousPower));
-    archive(cereal::make_nvp("lightSourceRadius", lightSourceRadius));
+    archive(cereal::make_nvp("luminousPower", m_luminousPower));
+    archive(cereal::make_nvp("lightRadius", m_lightRadius));
+    archive(cereal::make_nvp("lightSourceRadius", m_lightSourceRadius));
 }

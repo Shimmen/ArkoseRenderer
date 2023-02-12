@@ -10,7 +10,7 @@ SpotLight::SpotLight()
 
 SpotLight::SpotLight(vec3 color, float luminousIntensity, const std::string& iesProfilePath, vec3 position, vec3 direction)
     : Light(Type::SpotLight, color)
-    , luminousIntensity(luminousIntensity)
+    , m_luminousIntensity(luminousIntensity)
     , m_iesProfile(iesProfilePath)
 {
     quat orientation = ark::lookRotation(normalize(direction), ark::globalUp);
@@ -28,7 +28,7 @@ void SpotLight::drawGui()
 
     ImGui::Separator();
 
-    ImGui::SliderFloat("Luminous intensity (cd)", &luminousIntensity, 0.0f, 1'000.0f);
+    ImGui::SliderFloat("Luminous intensity (cd)", &m_luminousIntensity, 0.0f, 1'000.0f);
 
     ImGui::Separator();
 
@@ -37,6 +37,11 @@ void SpotLight::drawGui()
         ImGui::SliderFloat("Slope bias", &customSlopeBias, 0.0f, 10.0f);
         ImGui::TreePop();
     }
+}
+
+mat4 SpotLight::projectionMatrix() const
+{
+    return ark::perspectiveProjectionToVulkanClipSpace(m_outerConeAngle, 1.0f, m_zNear, m_zFar);
 }
 
 float SpotLight::constantBias(Extent2D shadowMapSize) const

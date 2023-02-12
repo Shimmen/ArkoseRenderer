@@ -423,7 +423,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 const DirectionalLight& light = *managedLight.light;
 
-                dirLightData.emplace_back(DirectionalLightData { .color = light.color * light.intensityValue() * lightPreExposure(),
+                dirLightData.emplace_back(DirectionalLightData { .color = light.color() * light.intensityValue() * lightPreExposure(),
                                                                  .exposure = lightPreExposure(),
                                                                  .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0),
                                                                  .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0),
@@ -439,12 +439,12 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 const SphereLight& light = *managedLight.light;
 
-                sphereLightData.emplace_back(SphereLightData { .color = light.color * light.intensityValue() * lightPreExposure(),
+                sphereLightData.emplace_back(SphereLightData { .color = light.color() * light.intensityValue() * lightPreExposure(),
                                                                .exposure = lightPreExposure(),
                                                                .worldSpacePosition = vec4(light.transform().positionInWorld(), 0.0f),
                                                                .viewSpacePosition = viewFromWorld * vec4(light.transform().positionInWorld(), 1.0f),
-                                                               .lightRadius = light.lightRadius,
-                                                               .lightSourceRadius = light.lightSourceRadius });
+                                                               .lightRadius = light.lightRadius(),
+                                                               .lightSourceRadius = light.lightSourceRadius() });
             }
 
             for (const ManagedSpotLight& managedLight : m_managedSpotLights) {
@@ -455,7 +455,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 const SpotLight& light = *managedLight.light;
 
-                spotLightData.emplace_back(SpotLightData { .color = light.color * light.intensityValue() * lightPreExposure(),
+                spotLightData.emplace_back(SpotLightData { .color = light.color() * light.intensityValue() * lightPreExposure(),
                                                            .exposure = lightPreExposure(),
                                                            .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0f),
                                                            .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0f),
@@ -463,7 +463,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                            .lightProjectionFromView = light.viewProjection() * worldFromView,
                                                            .worldSpacePosition = vec4(light.transform().positionInWorld(), 0.0f),
                                                            .viewSpacePosition = viewFromWorld * vec4(light.transform().positionInWorld(), 1.0f),
-                                                           .outerConeHalfAngle = light.outerConeAngle / 2.0f,
+                                                           .outerConeHalfAngle = light.outerConeAngle() / 2.0f,
                                                            .iesProfileIndex = managedLight.iesLut.indexOfType<int>(),
                                                            ._pad0 = vec2() });
             }

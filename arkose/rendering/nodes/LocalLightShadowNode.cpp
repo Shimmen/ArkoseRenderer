@@ -109,7 +109,7 @@ std::vector<LocalLightShadowNode::ShadowMapAtlasAllocation> LocalLightShadowNode
         float coneAngle = ark::TWO_PI;
         if (light.type() == Light::Type::SpotLight) {
             auto& spotLight = static_cast<const SpotLight&>(light);
-            coneAngle = spotLight.outerConeAngle;
+            coneAngle = spotLight.outerConeAngle();
         }
 
         return (1.0f / distance) * (coneAngle / ark::TWO_PI);

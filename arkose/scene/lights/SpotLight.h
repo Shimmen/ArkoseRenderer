@@ -17,16 +17,11 @@ public:
     // IEditorObject interface
     virtual void drawGui() override;
 
-    float intensityValue() const final
-    {
-        return luminousIntensity;
-    }
+    float intensityValue() const final { return m_luminousIntensity; }
 
-    mat4 projectionMatrix() const final
-    {
-        return ark::perspectiveProjectionToVulkanClipSpace(outerConeAngle, 1.0f, m_zNear, m_zFar);
-    }
+    float outerConeAngle() const { return m_outerConeAngle; }
 
+    mat4 projectionMatrix() const final;
     virtual float constantBias(Extent2D shadowMapSize) const override;
     virtual float slopeBias(Extent2D shadowMapSize) const override;
 
@@ -35,17 +30,17 @@ public:
 
     static constexpr int IESLookupTextureSize = 256;
 
-    // Light luminous intensity (candelas)
-    // TODO: Actually use physically based units!
-    float luminousIntensity { 1.0f };
-
-    // This will scale the IES profile so that it fits within the given angle
-    float outerConeAngle { ark::toRadians(120.0f) };
-
 private:
 
     IESProfile m_iesProfile {};
     std::unique_ptr<Texture> m_iesLookupTexture {};
+
+    // Light luminous intensity (candelas)
+    // TODO: Actually use physically based units!
+    float m_luminousIntensity { 1.0f };
+
+    // This will scale the IES profile so that it fits within the given angle
+    float m_outerConeAngle { ark::toRadians(120.0f) };
 
     static constexpr float m_zNear { 0.1f };
     static constexpr float m_zFar { 1000.0f };
@@ -67,8 +62,8 @@ void SpotLight::serialize(Archive& archive)
 {
     archive(cereal::make_nvp("Light", cereal::base_class<Light>(this)));
 
-    archive(cereal::make_nvp("luminousIntensity", luminousIntensity));
+    archive(cereal::make_nvp("luminousIntensity", m_luminousIntensity));
 
-    archive(cereal::make_nvp("outerConeAngle", outerConeAngle));
+    archive(cereal::make_nvp("outerConeAngle", m_outerConeAngle));
     archive(cereal::make_nvp("IESProfile", m_iesProfile));
 }
