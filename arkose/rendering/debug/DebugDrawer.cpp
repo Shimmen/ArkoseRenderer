@@ -22,6 +22,13 @@ void DebugDrawer::drawBox(vec3 minPoint, vec3 maxPoint, vec3 color)
     }
 }
 
+void DebugDrawer::drawSphere(vec3 center, float radius, vec3 color)
+{
+    for (IDebugDrawer* debugDrawer : m_debugDrawers) {
+        debugDrawer->drawSphere(center, radius, color);
+    }
+}
+
 void DebugDrawer::drawIcon(IconBillboard iconBillboard, vec3 tint)
 {
     for (IDebugDrawer* debugDrawer : m_debugDrawers) {

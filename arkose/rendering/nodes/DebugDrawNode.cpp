@@ -4,6 +4,7 @@
 #include "rendering/GpuScene.h"
 #include "rendering/Icon.h"
 #include "rendering/debug/DebugDrawer.h"
+#include <ark/core.h>
 #include <imgui.h>
 
 DebugDrawNode::DebugDrawNode()
@@ -156,6 +157,49 @@ void DebugDrawNode::drawBox(vec3 minPoint, vec3 maxPoint, vec3 color)
     drawLine(p1, p3, color);
     drawLine(p4, p6, color);
     drawLine(p5, p7, color);
+}
+
+void DebugDrawNode::drawSphere(vec3 center, float radius, vec3 color)
+{
+    using namespace ark;
+
+    constexpr i32 sectors = 9;
+    constexpr i32 rings = 9;
+
+    float const R = 1.0f / static_cast<float>(rings - 1);
+    float const S = 1.0f / static_cast<float>(sectors - 1);
+
+    std::vector<vec3> positions {};
+    positions.reserve(rings * sectors * 3);
+
+    for (int r = 0; r < rings; r++) {
+        for (int s = 0; s < sectors; s++) {
+            float y = std::sin(-HALF_PI + PI * r * R);
+            float x = std::cos(TWO_PI * s * S) * std::sin(PI * r * R);
+            float z = std::sin(TWO_PI * s * S) * std::sin(PI * r * R);
+            vec3 vertex = center + radius * vec3(x, y, z);
+            positions.push_back(vertex);
+        }
+    }
+
+    for (int r = 0; r < rings - 1; ++r) {
+        // NOTE: We only need to draw two of the four sides of each face, as the next face will cover those edges.
+
+        for (int s = 0; s < sectors - 1; ++s) {
+            int i0 = r * sectors + s;
+            int i1 = r * sectors + (s + 1);
+            int i2 = (r + 1) * sectors + (s + 1);
+            //int i3 = (r + 1) * sectors + s;
+
+            vec3 const& p0 = positions[i0];
+            vec3 const& p1 = positions[i1];
+            vec3 const& p2 = positions[i2];
+            //vec3 const& p3 = positions[i3];
+
+            drawLine(p0, p1, color);
+            drawLine(p1, p2, color);
+        }
+    }
 }
 
 void DebugDrawNode::drawIcon(IconBillboard icon, vec3 tint)
