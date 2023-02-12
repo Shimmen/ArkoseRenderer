@@ -3,8 +3,9 @@
 #include "core/NonCopyable.h"
 #include "rendering/StaticMesh.h"
 #include "scene/Transform.h"
+#include "scene/editor/EditorObject.h"
 
-struct StaticMeshInstance : public ITransformable {
+struct StaticMeshInstance : public IEditorObject {
     NON_COPYABLE(StaticMeshInstance)
 
     StaticMeshInstance(StaticMeshHandle inMesh, Transform inTransform)
@@ -16,6 +17,7 @@ struct StaticMeshInstance : public ITransformable {
     StaticMeshHandle mesh() const { return m_mesh; }
     PhysicsInstanceHandle physicsInstance() const { return m_physicsInstance; }
 
+    // ITransformable interface
     Transform& transform() override { return m_transform; }
     Transform const& transform() const { return m_transform; }
 

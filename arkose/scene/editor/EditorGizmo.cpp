@@ -3,9 +3,9 @@
 #include "core/Assert.h"
 #include "scene/camera/Camera.h"
 
-EditorGizmo::EditorGizmo(IconBillboard icon, ITransformable& transformable)
+EditorGizmo::EditorGizmo(IconBillboard icon, IEditorObject& editorObject)
     : m_icon(std::move(icon))
-    , m_transformable(&transformable)
+    , m_editorObject(&editorObject)
 {
 }
 

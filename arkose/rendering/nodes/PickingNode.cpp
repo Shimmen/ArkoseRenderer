@@ -53,7 +53,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 
             if (EditorGizmo* gizmo = scene.scene().raycastScreenPointAgainstEditorGizmos(pickLocation)) {
                 if (meshSelectPick) {
-                    scene.scene().setSelectedObject(gizmo->transformable());
+                    scene.scene().setSelectedObject(gizmo->editorObject());
                 } else if (focusDepthPick) {
                     setFocusDepth(scene, gizmo->distanceFromCamera());
                 }

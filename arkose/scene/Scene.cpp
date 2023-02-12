@@ -414,9 +414,9 @@ void Scene::clearSelectedObject()
     m_selectedObject = nullptr;
 }
 
-void Scene::setSelectedObject(ITransformable& transformable)
+void Scene::setSelectedObject(IEditorObject& editorObject)
 {
-    m_selectedObject = &transformable;
+    m_selectedObject = &editorObject;
 }
 
 void Scene::setSelectedObject(Light& light)

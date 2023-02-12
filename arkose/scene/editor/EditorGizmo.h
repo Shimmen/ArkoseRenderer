@@ -3,13 +3,13 @@
 class Camera;
 
 #include "rendering/Icon.h"
-#include "scene/Transform.h"
+#include "scene/editor/EditorObject.h"
 #include <ark/vector.h>
 #include <string>
 
 class EditorGizmo {
 public:
-    EditorGizmo(IconBillboard, ITransformable&);
+    EditorGizmo(IconBillboard, IEditorObject&);
 
     bool isScreenPointInside(vec2 screenPoint) const;
     float distanceFromCamera() const;
@@ -17,12 +17,12 @@ public:
     IconBillboard const& icon() const;
     Camera const& alignCamera() const;
 
-    ITransformable& transformable() { return *m_transformable; }
-    ITransformable const& transformable() const { return *m_transformable; }
+    IEditorObject& editorObject() { return *m_editorObject; }
+    IEditorObject const& editorObject() const { return *m_editorObject; }
 
     std::string debugName {};
 
 private:
     IconBillboard m_icon;
-    ITransformable* m_transformable;
+    IEditorObject* m_editorObject;
 };

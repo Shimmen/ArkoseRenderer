@@ -1,10 +1,11 @@
 #pragma once
 
 #include "rendering/backend/Resources.h"
+#include "scene/editor/EditorObject.h"
 #include <ark/matrix.h>
 #include <fmt/format.h>
 
-class Light : public ITransformable {
+class Light : public IEditorObject {
 public:
 
     enum class Type {
