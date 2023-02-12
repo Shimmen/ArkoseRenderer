@@ -5,6 +5,7 @@
 #include <common/brdf.glsl>
 #include <common/gBuffer.glsl>
 #include <common/iesProfile.glsl>
+#include <common/lighting.glsl>
 #include <common/namedUniforms.glsl>
 #include <shared/CameraState.h>
 #include <shared/LightData.h>
@@ -97,7 +98,7 @@ vec3 evaluateSphereLight(SphereLightData light, bool hasShadow, vec3 V, vec3 N, 
     }
 
     float dist = length(toLight);
-    float distanceAttenuation = 1.0 / square(max(dist, light.lightSourceRadius));
+    float distanceAttenuation = calculateLightDistanceAttenuation(dist, light.lightSourceRadius, light.lightRadius);
 
     vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
     vec3 directLight = light.color * shadowFactor * distanceAttenuation;

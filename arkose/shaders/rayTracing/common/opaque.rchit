@@ -10,6 +10,7 @@
 
 #include <common/brdf.glsl>
 #include <common/iesProfile.glsl>
+#include <common/lighting.glsl>
 #include <common/namedUniforms.glsl>
 #include <rayTracing/common/common.glsl>
 #include <shared/CameraState.h>
@@ -90,7 +91,7 @@ vec3 evaluateSphereLight(SphereLightData light, vec3 V, vec3 N, vec3 baseColor, 
         float distanceToLight = length(toLight);
         float shadowFactor = traceShadowRay(hitPoint, L, distanceToLight - 0.001);
 
-        float distanceAttenuation = 1.0 / square(distanceToLight); // epsilon term??
+        float distanceAttenuation = calculateLightDistanceAttenuation(distanceToLight, light.lightSourceRadius, light.lightRadius);
 
         vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
         vec3 directLight = light.color * shadowFactor * distanceAttenuation;

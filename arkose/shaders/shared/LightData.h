@@ -26,7 +26,8 @@ struct SphereLightData {
     vec4 worldSpacePosition;
     vec4 viewSpacePosition;
 
-    vec3 _pad0;
+    vec2 _pad0;
+    float lightRadius;
     float lightSourceRadius;
 };
 

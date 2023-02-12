@@ -443,6 +443,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                                .exposure = lightPreExposure(),
                                                                .worldSpacePosition = vec4(light.transform().positionInWorld(), 0.0f),
                                                                .viewSpacePosition = viewFromWorld * vec4(light.transform().positionInWorld(), 1.0f),
+                                                               .lightRadius = light.lightRadius,
                                                                .lightSourceRadius = light.lightSourceRadius });
             }
 

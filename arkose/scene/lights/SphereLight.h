@@ -2,7 +2,6 @@
 
 #include "scene/Transform.h"
 #include "scene/lights/Light.h"
-#include "utility/IESProfile.h"
 #include <ark/transform.h>
 
 class SphereLight final : public Light {
@@ -23,8 +22,11 @@ public:
     // TODO: Actually use physically based units!
     float luminousPower { 1.0f };
 
-    // Radius of the sphere light source (counted from the center of the sphere)
-    float lightSourceRadius { 0.1f };
+    // Radius of the lighting influence of this light (the radius of effect)
+    float lightRadius { 10.0f };
+
+    // Radius of the spherical light source
+    float lightSourceRadius { 0.05f };
 
     // No shadow mapping for sphere lights, only ray traced shadows
     virtual mat4 projectionMatrix() const override { return mat4(); }
