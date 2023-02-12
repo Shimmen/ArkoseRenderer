@@ -130,6 +130,7 @@ set(ARKOSE_SOURCES
     arkose/scene/camera/FpsCameraController.cpp
     arkose/scene/editor/EditorGizmo.cpp
     arkose/scene/lights/DirectionalLight.cpp
+    arkose/scene/lights/Light.cpp
     arkose/scene/lights/LightAttenuation.cpp
     arkose/scene/lights/SphereLight.cpp
     arkose/scene/lights/SpotLight.cpp

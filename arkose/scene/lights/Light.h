@@ -30,8 +30,13 @@ public:
 
     Type type() const { return m_type; }
 
+    // ITransformable interface
     Transform& transform() override { return m_transform; }
     Transform const& transform() const { return m_transform; }
+
+    // IEditorObject interface
+    virtual bool shouldDrawGui() const override;
+    virtual void drawGui() override;
 
     // Direction of outgoing light, i.e. -L in a BRDF
     virtual vec3 forwardDirection() const

@@ -1,6 +1,7 @@
 #include "SpotLight.h"
 
 #include "rendering/backend/base/Backend.h"
+#include <imgui.h>
 
 SpotLight::SpotLight()
     : Light(Type::SpotLight, vec3(1.0f))
@@ -19,6 +20,23 @@ SpotLight::SpotLight(vec3 color, float luminousIntensity, const std::string& ies
     // NOTE: Feel free to adjust these on a per-light/case basis, but probably in the scene.json
     customConstantBias = 1.0f;
     customSlopeBias = 0.66f;
+}
+
+void SpotLight::drawGui()
+{
+    Light::drawGui();
+
+    ImGui::Separator();
+
+    ImGui::SliderFloat("Luminous intensity (cd)", &luminousIntensity, 0.0f, 1'000.0f);
+
+    ImGui::Separator();
+
+    if (ImGui::TreeNode("Shadow mapping controls")) {
+        ImGui::SliderFloat("Constant bias", &customConstantBias, 0.0f, 20.0f);
+        ImGui::SliderFloat("Slope bias", &customSlopeBias, 0.0f, 10.0f);
+        ImGui::TreePop();
+    }
 }
 
 float SpotLight::constantBias(Extent2D shadowMapSize) const

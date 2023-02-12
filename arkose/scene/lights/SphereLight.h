@@ -13,6 +13,9 @@ public:
     template<class Archive>
     void serialize(Archive&);
 
+    // IEditorObject interface
+    virtual void drawGui() override;
+
     float intensityValue() const final
     {
         return luminousPower;
@@ -32,6 +35,10 @@ public:
     virtual mat4 projectionMatrix() const override { return mat4(); }
     virtual float constantBias(Extent2D shadowMapSize) const override { return 0.0f; }
     virtual float slopeBias(Extent2D shadowMapSize) const override { return 0.0f; }
+
+private:
+    void updateLightRadius();
+
 };
 
 ////////////////////////////////////////////////////////////////////////////////

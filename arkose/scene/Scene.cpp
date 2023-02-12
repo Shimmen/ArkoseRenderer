@@ -458,51 +458,12 @@ void Scene::drawSettingsGui(bool includeContainingWindow)
         ImGui::TreePop();
     }
 
-    ImGui::Separator();
-
     if (ImGui::TreeNode("Visualisations")) {
         ImGui::Checkbox("Draw all mesh bounding boxes", &m_shouldDrawAllInstanceBoundingBoxes);
         ImGui::Checkbox("Draw bounding box of the selected mesh instance", &m_shouldDrawSelectedInstanceBoundingBox);
         ImGui::TreePop();
     }
 
-    ImGui::Separator();
-
-    {
-        static Light* selectedLight = nullptr;
-        if (ImGui::BeginCombo("Inspected light", selectedLight ? selectedLight->name().c_str() : "Select a light")) {
-            forEachLight([&](size_t lightIndex, Light& light) {
-                bool selected = &light == selectedLight;
-                if (ImGui::Selectable(light.name().c_str(), &selected))
-                    selectedLight = &light;
-                if (selected)
-                    ImGui::SetItemDefaultFocus();
-            });
-            ImGui::EndCombo();
-        }
-
-        if (selectedLight != nullptr) {
-
-            ImGui::ColorEdit3("Color", value_ptr(selectedLight->color));
-
-            switch (selectedLight->type()) {
-            case Light::Type::DirectionalLight:
-                ImGui::SliderFloat("Illuminance (lx)", &static_cast<DirectionalLight*>(selectedLight)->illuminance, 0.0f, 150000.0f);
-                break;
-            case Light::Type::SphereLight:
-                ImGui::SliderFloat("Luminous power (lm)", &static_cast<SphereLight*>(selectedLight)->luminousPower, 0.0f, 1000.0f);
-                break;
-            case Light::Type::SpotLight:
-                ImGui::SliderFloat("Luminous intensity (cd)", &static_cast<SpotLight*>(selectedLight)->luminousIntensity, 0.0f, 1000.0f);
-                break;
-            default:
-                ASSERT_NOT_REACHED();
-            }
-
-            ImGui::SliderFloat("Constant bias", &selectedLight->customConstantBias, 0.0f, 20.0f);
-            ImGui::SliderFloat("Slope bias", &selectedLight->customSlopeBias, 0.0f, 10.0f);
-        }
-    }
 
     if (includeContainingWindow) {
         ImGui::End();
@@ -513,7 +474,7 @@ void Scene::drawInstanceBoundingBox(StaticMeshInstance const& instance)
 {
     if (StaticMesh* staticMesh = gpuScene().staticMeshForHandle(instance.mesh())) {
         ark::aabb3 transformedAABB = staticMesh->boundingBox().transformed(instance.transform().worldMatrix());
-        DebugDrawer::get().drawBox(transformedAABB.min, transformedAABB.max, vec3(1.0f, 0.0f, 1.0f));
+        DebugDrawer::get().drawBox(transformedAABB.min, transformedAABB.max, vec3(1.0f, 1.0f, 1.0f));
     }
 }
 
@@ -572,6 +533,22 @@ void Scene::drawSceneGizmos()
             if (auto* instance = dynamic_cast<StaticMeshInstance*>(selectedObject())) {
                 drawInstanceBoundingBox(*instance);
             }
+        }
+
+        if (selectedObject()->shouldDrawGui()) {
+
+            constexpr float defaultWindowWidth = 480.0f;
+            vec2 windowPosition = vec2(ImGui::GetIO().DisplaySize.x - defaultWindowWidth - 16.0f, 32.0f);
+            ImGui::SetNextWindowPos(ImVec2(windowPosition.x, windowPosition.y), ImGuiCond_Appearing);
+            ImGui::SetNextWindowSize(ImVec2(defaultWindowWidth, 600.0f), ImGuiCond_Appearing);
+
+            bool open = true;
+            constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
+
+            if (ImGui::Begin("##SelectedObjectWindow", &open, flags)) {
+                selectedObject()->drawGui();
+            }
+            ImGui::End();
         }
 
         Transform& selectedTransform = selectedObject()->transform();

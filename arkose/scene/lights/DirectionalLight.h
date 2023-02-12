@@ -12,6 +12,9 @@ public:
     template<class Archive>
     void serialize(Archive&);
 
+    // IEditorObject interface
+    virtual void drawGui() override;
+
     float intensityValue() const final
     {
         return illuminance;
