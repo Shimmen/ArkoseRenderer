@@ -53,6 +53,7 @@ struct Extent2D {
 
     ark::uvec2 asUIntVector() const { return ark::uvec2(m_width, m_height); }
     ark::ivec2 asIntVector() const { return ark::ivec2(m_width, m_height); }
+    ark::vec2 asFloatVector() const { return ark::vec2(m_width, m_height); }
 
     template<class Archive>
     void serialize(Archive&);
@@ -97,6 +98,7 @@ struct Extent3D {
 
     ark::uvec3 asUIntVector() const { return ark::uvec3(m_width, m_height, m_depth); }
     ark::ivec3 asIntVector() const { return ark::ivec3(m_width, m_height, m_depth); }
+    ark::vec3 asFloatVector() const { return ark::vec3(m_width, m_height, m_depth); }
 
     template<class Archive>
     void serialize(Archive&);
