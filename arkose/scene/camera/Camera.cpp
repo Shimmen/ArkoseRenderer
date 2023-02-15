@@ -2,6 +2,7 @@
 
 #include "core/Logging.h"
 #include "core/math/Halton.h"
+#include "rendering/debug/DebugDrawer.h"
 #include "scene/camera/CameraController.h"
 #include <ark/transform.h>
 #include <imgui.h>
@@ -306,6 +307,14 @@ void Camera::setProjectionFromView(mat4 projectionFromView)
     }
 }
 
+void Camera::finalizeModifications()
+{
+    if (m_modified && not m_debugFreezeCamera) {
+        m_cullingViewProjection = viewProjectionMatrix();
+        m_cullingFrustum = geometry::Frustum::createFromProjectionMatrix(m_cullingViewProjection);
+    }
+}
+
 vec2 Camera::frustumJitterUVCorrection() const
 {
     // Remove this frame's offset, we're now "neutral", then add previous frame's offset
@@ -371,6 +380,20 @@ void Camera::drawGui(bool includeContainingWindow)
         ImGui::SliderFloat("Film grain at ISO100", &m_filmGrainAtISO100, 0.0f, m_filmGrainAtISO3200 - 1e-4f);
         ImGui::SliderFloat("Film grain at ISO3200", &m_filmGrainAtISO3200, m_filmGrainAtISO100 + 1e-4f, 0.25f);
         ImGui::TreePop();
+    }
+
+    if (ImGui::TreeNode("Culling debug")) {
+        ImGui::Checkbox("Freeze camera", &m_debugFreezeCamera);
+
+        if (not m_debugFreezeCamera) { ImGui::BeginDisabled(); }
+        ImGui::Checkbox("Render frustum", &m_debugRenderCullingFrustum);
+        if (not m_debugFreezeCamera) { ImGui::EndDisabled(); }
+
+        ImGui::TreePop();
+    }
+
+    if (m_debugFreezeCamera && m_debugRenderCullingFrustum) {
+        debugRenderCullingFrustum();
     }
 
     if (includeContainingWindow) {
@@ -460,4 +483,50 @@ void Camera::drawAutomaticExposureGui()
 
     ImGui::Text("Exposure Compensation", &m_exposureCompensation);
     ImGui::SliderFloat("ECs", &m_exposureCompensation, -5.0f, +5.0f, "%.1f");
+}
+
+void Camera::debugRenderCullingFrustum() const
+{
+    const vec3 color = vec3(1.0f, 0.0f, 1.0f);
+    mat4 m = inverse(m_cullingViewProjection);
+
+    vec4 near[4];
+    near[0] = m * vec4(-1.0f, -1.0f, 0.01f, 1.0f);
+    near[1] = m * vec4(-1.0f, +1.0f, 0.01f, 1.0f);
+    near[2] = m * vec4(+1.0f, +1.0f, 0.01f, 1.0f);
+    near[3] = m * vec4(+1.0f, -1.0f, 0.01f, 1.0f);
+
+    for (int i = 0; i < 4; ++i) {
+        near[i] /= near[i].w;
+    }
+
+    vec4 far[4]; // note: very close, but just before the far plane
+    far[0] = m * vec4(-1.0f, -1.0f, 0.9999f, 1.0f);
+    far[1] = m * vec4(-1.0f, +1.0f, 0.9999f, 1.0f);
+    far[2] = m * vec4(+1.0f, +1.0f, 0.9999f, 1.0f);
+    far[3] = m * vec4(+1.0f, -1.0f, 0.9999f, 1.0f);
+
+    for (int i = 0; i < 4; ++i) {
+        far[i] /= far[i].w;
+    }
+
+    DebugDrawer& debugDrawer = DebugDrawer::get();
+
+    // Near quad
+    debugDrawer.drawLine(near[0].xyz(), near[1].xyz(), color);
+    debugDrawer.drawLine(near[1].xyz(), near[2].xyz(), color);
+    debugDrawer.drawLine(near[2].xyz(), near[3].xyz(), color);
+    debugDrawer.drawLine(near[3].xyz(), near[0].xyz(), color);
+
+    // Far quad
+    debugDrawer.drawLine(far[0].xyz(), far[1].xyz(), color);
+    debugDrawer.drawLine(far[1].xyz(), far[2].xyz(), color);
+    debugDrawer.drawLine(far[2].xyz(), far[3].xyz(), color);
+    debugDrawer.drawLine(far[3].xyz(), far[0].xyz(), color);
+
+    // Connecting lines
+    debugDrawer.drawLine(near[0].xyz(), far[0].xyz(), color);
+    debugDrawer.drawLine(near[1].xyz(), far[1].xyz(), color);
+    debugDrawer.drawLine(near[2].xyz(), far[2].xyz(), color);
+    debugDrawer.drawLine(near[3].xyz(), far[3].xyz(), color);
 }

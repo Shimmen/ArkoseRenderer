@@ -68,10 +68,8 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        mat4 cameraViewProjection = scene.camera().viewProjectionMatrix();
-        auto cameraFrustum = geometry::Frustum::createFromProjectionMatrix(cameraViewProjection);
         size_t planesByteSize;
-        const geometry::Plane* planesData = cameraFrustum.rawPlaneData(&planesByteSize);
+        const geometry::Plane* planesData = scene.camera().frustum().rawPlaneData(&planesByteSize);
         ARKOSE_ASSERT(planesByteSize == frustumPlaneBuffer.size());
         uploadBuffer.upload(planesData, planesByteSize, frustumPlaneBuffer);
 

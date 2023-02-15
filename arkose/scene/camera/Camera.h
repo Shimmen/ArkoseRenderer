@@ -3,6 +3,7 @@
 #pragma once
 
 #include "core/Badge.h"
+#include "core/math/Frustum.h"
 #include "utility/Extent.h"
 #include "utility/Input.h"
 #include <ark/matrix.h>
@@ -87,6 +88,8 @@ public:
     vec3 right() const { return ark::rotateVector(orientation(), ark::globalRight); }
     vec3 up() const { return ark::rotateVector(orientation(), ark::globalUp); }
 
+    [[nodiscard]] geometry::Frustum const& frustum() const { return m_cullingFrustum; }
+
     [[nodiscard]] mat4 viewMatrix() const { return m_viewFromWorld; }
     [[nodiscard]] mat4 projectionMatrix() const { return m_projectionFromView; }
     [[nodiscard]] mat4 viewProjectionMatrix() const { return projectionMatrix() * viewMatrix(); }
@@ -108,6 +111,8 @@ public:
 
     void setViewFromWorld(mat4);
     void setProjectionFromView(mat4);
+
+    void finalizeModifications();
 
     void setController(Badge<CameraController>, CameraController* controller) { m_controller = controller; }
     CameraController* controller() { return m_controller; }
@@ -133,6 +138,8 @@ protected:
     // I.e. the depth (m) that would be considered in focus about the focus depth
     static float calculateDepthOfField(float acceptibleCircleOfConfusionMM, float focalLengthMM, float fNumber, float focusDepthM);
     static vec2 calculateDepthOfFieldRange(float focusDepthM, float depthOfField);
+
+    void debugRenderCullingFrustum() const;
 
 private:
 
@@ -176,6 +183,15 @@ private:
     // Not very physically based, but hopefully a bit plausible..
     float m_filmGrainAtISO100 { 0.01f };
     float m_filmGrainAtISO3200 { 0.15f };
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Culling
+
+    mat4 m_cullingViewProjection {};
+    geometry::Frustum m_cullingFrustum {};
+
+    bool m_debugFreezeCamera { false };
+    bool m_debugRenderCullingFrustum { true };
 
     ////////////////////////////////////////////////////////////////////////////
     // Meta
