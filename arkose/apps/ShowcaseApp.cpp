@@ -51,7 +51,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     scene.setupFromDescription({ .path = "assets/sample/Sponza.arklvl",
                                  .maintainRayTracingScene = rtxOn });
 
-    auto sphereLight = std::make_unique<SphereLight>(vec3(1.0f, 0.0f, 1.0f), 8'000.0f, vec3(0.0f, 5.0f, 3.0f), 0.25f);
+    auto sphereLight = std::make_unique<SphereLight>(vec3(1.0f, 0.0f, 1.0f), 100'000.0f, vec3(0.0f, 5.0f, 3.0f), 0.25f);
     scene.addLight(std::move(sphereLight));
 
     Camera& camera = scene.camera();

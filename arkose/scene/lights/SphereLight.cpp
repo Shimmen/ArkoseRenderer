@@ -21,6 +21,12 @@ SphereLight::SphereLight(vec3 color, float luminousPower, vec3 position, float l
     updateLightRadius();
 }
 
+float SphereLight::intensityValue() const
+{
+    // Convert lumens to candelas. Assume uniform lighting in all directions (4pi sr).
+    return m_luminousPower / (4.0f * ark::PI);
+}
+
 void SphereLight::drawGui()
 {
     Light::drawGui();

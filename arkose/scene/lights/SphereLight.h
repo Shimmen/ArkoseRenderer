@@ -16,7 +16,7 @@ public:
     // IEditorObject interface
     virtual void drawGui() override;
 
-    virtual float intensityValue() const final { return m_luminousPower; }
+    virtual float intensityValue() const final;
 
     float lightRadius() const { return m_lightRadius; }
     float lightSourceRadius() const { return m_lightSourceRadius; }
