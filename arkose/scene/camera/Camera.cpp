@@ -255,27 +255,9 @@ vec2 Camera::calculateDepthOfFieldRange(float focusDepthM, float depthOfField)
     return vec2(rangeMin, rangeMax);
 }
 
-// TODO: Add to mooslib instead of here!
-bool operator==(const vec3& a, const vec3& b)
-{
-    return a.x == b.x && a.y == b.y && a.z == b.z;
-}
-bool operator==(const vec4& a, const vec4& b)
-{
-    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-bool operator==(const quat& a, const quat& b)
-{
-    return a.w == b.w && a.vec == b.vec;
-}
-bool operator==(const mat4& a, const mat4& b)
-{
-    return a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
-}
-
 void Camera::setPosition(vec3 p)
 {
-    if (p != m_position) {
+    if (ark::any(p != m_position)) {
         m_position = p;
         markAsModified();
     }
