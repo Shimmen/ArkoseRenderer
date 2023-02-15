@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2020-2022 Simon Moos
+ * Copyright (c) 2020-2023 Simon Moos
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -127,6 +127,16 @@ struct tmat3<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
     operator*(T f) const
     {
         return { f * x, f * y, f * z };
+    }
+
+    constexpr bool operator==(const tmat3<T>& m)
+    {
+        return all(x == m.x) && all(y == m.y) && all(z == m.z);
+    }
+
+    constexpr bool operator!=(const tmat3<T>& m)
+    {
+        return !all(x == m.x) || !all(y == m.y) || !all(z == m.z);
     }
 };
 
@@ -264,6 +274,16 @@ struct tmat4<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
     constexpr tmat4<T> operator*(T f) const
     {
         return { f * x, f * y, f * z, f * w };
+    }
+
+    constexpr bool operator==(const tmat4<T>& m)
+    {
+        return all(x == m.x) && all(y == m.y) && all(z == m.z) && all(w == m.w);
+    }
+
+    constexpr bool operator!=(const tmat4<T>& m)
+    {
+        return !all(x == m.x) || !all(y == m.y) || !all(z == m.z) || !all(w == m.w);
     }
 };
 

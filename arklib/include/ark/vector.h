@@ -1,7 +1,7 @@
 /*
  * MIT License
  *
- * Copyright (c) 2020-2022 Simon Moos
+ * Copyright (c) 2020-2023 Simon Moos
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -316,6 +316,61 @@ using uvec2 = tvec2<u32>;
 using ivec2 = tvec2<i32>;
 using bvec2 = tvec2<bool>;
 
+template<>
+struct tvec3<bool> {
+    bool x, y, z;
+
+    constexpr tvec3(bool x, bool y, bool z) noexcept
+        : x(x)
+        , y(y)
+        , z(z)
+    {
+    }
+
+    explicit constexpr tvec3(bool e = false) noexcept
+        : tvec3(e, e, e)
+    {
+    }
+
+    constexpr tvec3<bool> operator~() const { return { !x, !y, !z }; }
+    constexpr tvec3<bool> operator||(const tvec3<bool>& v) const { return { x || v.x, y || v.y, z || v.z }; }
+    constexpr tvec3<bool> operator&&(const tvec3<bool>& v) const { return { x && v.x, y && v.y, z && v.z }; }
+};
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr tvec3<bool> lessThan(const tvec3<T>& lhs, const tvec3<T>& rhs)
+{
+    return { lhs.x < rhs.x, lhs.y < rhs.y, lhs.z < rhs.z };
+}
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr tvec3<bool> lessThanEqual(const tvec3<T>& lhs, const tvec3<T>& rhs)
+{
+    return { lhs.x <= rhs.x, lhs.y <= rhs.y, lhs.z <= rhs.z };
+}
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr tvec3<bool> greaterThan(const tvec3<T>& lhs, const tvec3<T>& rhs)
+{
+    return { lhs.x > rhs.x, lhs.y > rhs.y, lhs.z > rhs.z };
+}
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr tvec3<bool> greaterThanEqual(const tvec3<T>& lhs, const tvec3<T>& rhs)
+{
+    return { lhs.x >= rhs.x, lhs.y >= rhs.y, lhs.z >= rhs.z };
+}
+
+constexpr bool any(const tvec3<bool>& v)
+{
+    return v.x || v.y || v.z;
+}
+
+constexpr bool all(const tvec3<bool>& v)
+{
+    return v.x && v.y && v.z;
+}
+
 template<typename T>
 struct tvec3<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
     T x, y, z;
@@ -416,6 +471,16 @@ struct tvec3<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
         z /= f;
         return *this;
     }
+
+    constexpr tvec3<bool> operator==(const tvec3<T>& v)
+    {
+        return tvec3<bool>(x == v.x, y == v.y, z == v.z);
+    }
+
+    constexpr tvec3<bool> operator!=(const tvec3<T>& v)
+    {
+        return tvec3<bool>(x != v.x, y != v.y, z != v.z);
+    }
 };
 
 template<typename T, ENABLE_IF_ARITHMETIC(T)>
@@ -513,67 +578,68 @@ constexpr tvec3<T> clamp(const tvec3<T>& x, const tvec3<T>& minEdge, const tvec3
     return max(minEdge, min(x, maxEdge));
 }
 
-template<>
-struct tvec3<bool> {
-    bool x, y, z;
-
-    constexpr tvec3(bool x, bool y, bool z) noexcept
-        : x(x)
-        , y(y)
-        , z(z)
-    {
-    }
-
-    explicit constexpr tvec3(bool e = false) noexcept
-        : tvec3(e, e, e)
-    {
-    }
-
-    constexpr tvec3<bool> operator~() const { return { !x, !y, !z }; }
-    constexpr tvec3<bool> operator||(const tvec3<bool>& v) const { return { x || v.x, y || v.y, z || v.z }; }
-    constexpr tvec3<bool> operator&&(const tvec3<bool>& v) const { return { x && v.x, y && v.y, z && v.z }; }
-};
-
-template<typename T, ENABLE_IF_ARITHMETIC(T)>
-constexpr tvec3<bool> lessThan(const tvec3<T>& lhs, const tvec3<T>& rhs)
-{
-    return { lhs.x < rhs.x, lhs.y < rhs.y, lhs.z < rhs.z };
-}
-
-template<typename T, ENABLE_IF_ARITHMETIC(T)>
-constexpr tvec3<bool> lessThanEqual(const tvec3<T>& lhs, const tvec3<T>& rhs)
-{
-    return { lhs.x <= rhs.x, lhs.y <= rhs.y, lhs.z <= rhs.z };
-}
-
-template<typename T, ENABLE_IF_ARITHMETIC(T)>
-constexpr tvec3<bool> greaterThan(const tvec3<T>& lhs, const tvec3<T>& rhs)
-{
-    return { lhs.x > rhs.x, lhs.y > rhs.y, lhs.z > rhs.z };
-}
-
-template<typename T, ENABLE_IF_ARITHMETIC(T)>
-constexpr tvec3<bool> greaterThanEqual(const tvec3<T>& lhs, const tvec3<T>& rhs)
-{
-    return { lhs.x >= rhs.x, lhs.y >= rhs.y, lhs.z >= rhs.z };
-}
-
-constexpr bool any(const tvec3<bool>& v)
-{
-    return v.x || v.y || v.z;
-}
-
-constexpr bool all(const tvec3<bool>& v)
-{
-    return v.x && v.y && v.z;
-}
-
 using vec3 = tvec3<Float>;
 using fvec3 = tvec3<f32>;
 using dvec3 = tvec3<f64>;
 using uvec3 = tvec3<u32>;
 using ivec3 = tvec3<i32>;
 using bvec3 = tvec3<bool>;
+
+template<>
+struct tvec4<bool> {
+    bool x, y, z, w;
+
+    constexpr tvec4(bool x, bool y, bool z, bool w) noexcept
+        : x(x)
+        , y(y)
+        , z(z)
+        , w(w)
+    {
+    }
+
+    explicit constexpr tvec4(bool e = false) noexcept
+        : tvec4(e, e, e, e)
+    {
+    }
+
+    constexpr tvec4<bool> operator~() const { return { !x, !y, !z, !w }; }
+    constexpr tvec4<bool> operator||(const tvec4<bool>& v) const { return { x || v.x, y || v.y, z || v.z, w || v.w }; }
+    constexpr tvec4<bool> operator&&(const tvec4<bool>& v) const { return { x && v.x, y && v.y, z && v.z, w && v.w }; }
+};
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr tvec4<bool> lessThan(const tvec4<T>& lhs, const tvec4<T>& rhs)
+{
+    return { lhs.x < rhs.x, lhs.y < rhs.y, lhs.z < rhs.z, lhs.w < rhs.w };
+}
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr tvec4<bool> lessThanEqual(const tvec4<T>& lhs, const tvec4<T>& rhs)
+{
+    return { lhs.x <= rhs.x, lhs.y <= rhs.y, lhs.z <= rhs.z, lhs.w <= rhs.w };
+}
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr tvec4<bool> greaterThan(const tvec4<T>& lhs, const tvec4<T>& rhs)
+{
+    return { lhs.x > rhs.x, lhs.y > rhs.y, lhs.z > rhs.z, lhs.w > rhs.w };
+}
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr tvec4<bool> greaterThanEqual(const tvec4<T>& lhs, const tvec4<T>& rhs)
+{
+    return { lhs.x >= rhs.x, lhs.y >= rhs.y, lhs.z >= rhs.z, lhs.w >= rhs.w };
+}
+
+constexpr bool any(const tvec4<bool>& v)
+{
+    return v.x || v.y || v.z || v.w;
+}
+
+constexpr bool all(const tvec4<bool>& v)
+{
+    return v.x && v.y && v.z && v.w;
+}
 
 template<typename T>
 struct tvec4<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
@@ -688,6 +754,16 @@ struct tvec4<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
         return *this;
     }
 
+    constexpr tvec4<bool> operator==(const tvec4<T>& v)
+    {
+        return tvec4<bool>(x == v.x, y == v.y, z == v.z, w == v.w);
+    }
+
+    constexpr tvec4<bool> operator!=(const tvec4<T>& v)
+    {
+        return tvec4<bool>(x != v.x, y != v.y, z != v.z, w != v.w);
+    }
+
     // (a rare member function to simulate swizzling)
     constexpr tvec3<T> xyz() const
     {
@@ -749,6 +825,7 @@ using fvec4 = tvec4<f32>;
 using dvec4 = tvec4<f64>;
 using uvec4 = tvec4<u32>;
 using ivec4 = tvec4<i32>;
+using bvec4 = tvec4<bool>;
 
 // Vector math constants
 
