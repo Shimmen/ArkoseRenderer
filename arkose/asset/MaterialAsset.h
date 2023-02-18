@@ -74,6 +74,8 @@ public:
 
     std::string_view assetFilePath() const { return m_assetFilePath; }
 
+    std::string name {};
+
 private:
     std::string m_assetFilePath {};
 };

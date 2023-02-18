@@ -382,8 +382,8 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
         };
 
         input->wrapModes = ImageWrapModes(wrapModeFromTinyGltf(gltfSampler.wrapS),
-                                                wrapModeFromTinyGltf(gltfSampler.wrapT),
-                                                wrapModeFromTinyGltf(gltfSampler.wrapR));
+                                          wrapModeFromTinyGltf(gltfSampler.wrapT),
+                                          wrapModeFromTinyGltf(gltfSampler.wrapR));
 
         switch (gltfSampler.minFilter) {
         case TINYGLTF_TEXTURE_FILTER_NEAREST:
@@ -443,6 +443,7 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
     };
 
     auto material = std::make_unique<MaterialAsset>();
+    material->name = gltfMaterial.name;
 
     if (gltfMaterial.alphaMode == "OPAQUE") {
         material->blendMode = BlendMode::Opaque;

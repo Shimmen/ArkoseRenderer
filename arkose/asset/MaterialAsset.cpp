@@ -72,6 +72,7 @@ MaterialAsset* MaterialAsset::loadFromArkmat(std::string const& filePath)
     }
 
     newMaterialAsset->m_assetFilePath = filePath;
+    newMaterialAsset->name = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(filePath));
 
     {
         SCOPED_PROFILE_ZONE_NAMED("Material cache - store");

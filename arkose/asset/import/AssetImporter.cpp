@@ -104,7 +104,10 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         resolveImageFilePath(material->normalMap);
         resolveImageFilePath(material->materialProperties);
 
-        std::string fileName = std::format("material{:04}", unnamedMaterialIdx++);
+        std::string fileName = material->name;
+        if (fileName.empty()) {
+            fileName = std::format("material{:04}", unnamedMaterialIdx++);
+        }
         std::string targetFilePath = std::format("{}/{}.arkmat", targetDirectory, fileName);
 
         material->writeToArkmat(targetFilePath, AssetStorage::Json);
@@ -127,7 +130,10 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
             }
         }
 
-        std::string fileName = std::format("staticmesh{:04}", unnamedMeshIdx++);
+        std::string fileName = staticMesh->name;
+        if (fileName.empty()) {
+            fileName = std::format("staticmesh{:04}", unnamedMeshIdx++);
+        }
         std::string targetFilePath = std::format("{}/{}.arkmsh", targetDirectory, fileName);
 
         // TODO: Write to json when importing! It's currently super slow with all the data we have, but if we separate out the core data it will be fine.
