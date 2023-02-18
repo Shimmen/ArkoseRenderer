@@ -51,7 +51,6 @@ TopLevelAS::TopLevelAS(Backend& backend, uint32_t maxInstanceCountIn)
 
 void TopLevelAS::updateCurrentInstanceCount(uint32_t newInstanceCount)
 {
-    ARKOSE_ASSERT(newInstanceCount > 0);
     ARKOSE_ASSERT(newInstanceCount <= maxInstanceCount());
 
     m_instanceCount = newInstanceCount;
