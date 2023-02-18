@@ -81,7 +81,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         }
     }
 
-    int unnamedMaterialIdx = 0;
+    std::unordered_map<std::string, int> materialNameMap {};
     for (auto& material : result.materials) {
 
         // Resolve references (paths) to image assets
@@ -106,14 +106,20 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         std::string fileName = material->name;
         if (fileName.empty()) {
-            fileName = std::format("material{:04}", unnamedMaterialIdx++);
+            fileName = "material";
         }
+
+        int count = materialNameMap[fileName]++;
+        if (count > 0 || fileName == "material") {
+            fileName = std::format("{}_{}", fileName, count);
+        }
+
         std::string targetFilePath = std::format("{}/{}.arkmat", targetDirectory, fileName);
 
         material->writeToArkmat(targetFilePath, AssetStorage::Json);
     }
 
-    int unnamedMeshIdx = 0;
+    std::unordered_map<std::string, int> staticMeshNameMap {};
     for (auto& staticMesh : result.staticMeshes) {
 
         // Resolve references (paths) to material assets
@@ -132,8 +138,14 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         std::string fileName = staticMesh->name;
         if (fileName.empty()) {
-            fileName = std::format("staticmesh{:04}", unnamedMeshIdx++);
+            fileName = "staticmesh";
         }
+
+        int count = staticMeshNameMap[fileName]++;
+        if (count > 0 || fileName == "staticmesh") {
+            fileName = std::format("{}_{}", fileName, count);
+        }
+
         std::string targetFilePath = std::format("{}/{}.arkmsh", targetDirectory, fileName);
 
         // TODO: Write to json when importing! It's currently super slow with all the data we have, but if we separate out the core data it will be fine.
