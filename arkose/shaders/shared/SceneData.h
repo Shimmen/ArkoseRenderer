@@ -29,7 +29,8 @@ struct ShaderMaterial {
 
     int blendMode;
     float maskCutoff;
-    float _pad0, _pad1;
+    float metallicFactor; // multiplied by value in texture
+    float roughnessFactor; // multiplied by value in texture
 
     vec4 colorTint;
 };

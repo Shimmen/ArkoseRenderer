@@ -160,8 +160,8 @@ void main()
     vec3 emissive = texture(textures[nonuniformEXT(material.emissive)], uv).rgb;
 
     vec4 metallicRoughness = texture(textures[nonuniformEXT(material.metallicRoughness)], uv);
-    float metallic = metallicRoughness.b;
-    float roughness = metallicRoughness.g;
+    float metallic = metallicRoughness.b * material.metallicFactor;
+    float roughness = metallicRoughness.g * material.roughnessFactor;
 
     vec3 V = -rt_WorldRayDirection;
 

@@ -458,6 +458,9 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
 
     material->doubleSided = gltfMaterial.doubleSided;
 
+    material->metallicFactor = gltfMaterial.pbrMetallicRoughness.metallicFactor;
+    material->roughnessFactor = gltfMaterial.pbrMetallicRoughness.roughnessFactor;
+
     std::vector<double> c = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
     material->colorTint = vec4((float)c[0], (float)c[1], (float)c[2], (float)c[3]);
 

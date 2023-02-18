@@ -719,7 +719,7 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset const* materialAsset)
     TextureHandle baseColor = registerMaterialTexture(materialAsset->baseColor, ImageType::sRGBColor, m_whiteTexture.get());
     TextureHandle emissive = registerMaterialTexture(materialAsset->emissiveColor, ImageType::sRGBColor, m_blackTexture.get());
     TextureHandle normalMap = registerMaterialTexture(materialAsset->normalMap, ImageType::NormalMap, m_normalMapBlueTexture.get());
-    TextureHandle metallicRoughness = registerMaterialTexture(materialAsset->materialProperties, ImageType::GenericData, m_blackTexture.get());
+    TextureHandle metallicRoughness = registerMaterialTexture(materialAsset->materialProperties, ImageType::GenericData, m_whiteTexture.get());
 
     ShaderMaterial shaderMaterial {};
 
@@ -743,6 +743,9 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset const* materialAsset)
 
     shaderMaterial.blendMode = translateBlendModeToShaderMaterial(materialAsset->blendMode);
     shaderMaterial.maskCutoff = materialAsset->maskCutoff;
+
+    shaderMaterial.metallicFactor = materialAsset->metallicFactor;
+    shaderMaterial.roughnessFactor = materialAsset->roughnessFactor;
 
     shaderMaterial.colorTint = materialAsset->colorTint;
 

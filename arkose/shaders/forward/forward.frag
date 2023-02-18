@@ -144,8 +144,8 @@ void main()
     vec3 emissive = texture(textures[nonuniformEXT(material.emissive)], vTexCoord).rgb;
 
     vec4 metallicRoughness = texture(textures[nonuniformEXT(material.metallicRoughness)], vTexCoord);
-    float metallic = metallicRoughness.b;
-    float roughness = metallicRoughness.g;
+    float metallic = metallicRoughness.b * material.metallicFactor;
+    float roughness = metallicRoughness.g * material.roughnessFactor;
 
 // NOTE: This is only really for debugging! In general we try to avoid permutations for very common cases (almost everything will be normal mapped in practice)
 // (If we want to make normal mapping a proper permutation we would also want to exclude interpolats vTangent and vBitangentSign)

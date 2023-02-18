@@ -67,6 +67,9 @@ public:
 
     vec4 colorTint { vec4(1.0f, 1.0f, 1.0f, 1.0f) };
 
+    float metallicFactor { 0.0f };
+    float roughnessFactor { 0.0f };
+
     BlendMode blendMode { BlendMode::Opaque };
     float maskCutoff { 1.0f };
 
@@ -103,6 +106,8 @@ void MaterialAsset::serialize(Archive& archive)
 {
     archive(CEREAL_NVP(baseColor), CEREAL_NVP(emissiveColor), CEREAL_NVP(normalMap), CEREAL_NVP(materialProperties));
     archive(CEREAL_NVP(colorTint));
+    archive(CEREAL_NVP(metallicFactor));
+    archive(CEREAL_NVP(roughnessFactor));
     archive(CEREAL_NVP(blendMode), CEREAL_NVP(maskCutoff));
     archive(CEREAL_NVP(doubleSided));
 }
