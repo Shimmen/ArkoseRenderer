@@ -63,6 +63,8 @@
             "z": 0.5879999995231628,
             "w": 1.0
         },
+        "metallicFactor": 1.0,
+        "roughnessFactor": 1.0,
         "blendMode": "Masked",
         "maskCutoff": 0.5,
         "doubleSided": true
