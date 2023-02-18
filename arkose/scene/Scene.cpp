@@ -69,6 +69,10 @@ void Scene::setupFromDescription(const Description& description)
             addLevel(levelAsset);
         }
     }
+
+    if (m_currentMainCamera == nullptr) {
+        addCamera("DefaultCamera", true);
+    }
 }
 
 /*
