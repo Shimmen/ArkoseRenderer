@@ -88,6 +88,10 @@ public:
     vec3 right() const { return ark::rotateVector(orientation(), ark::globalRight); }
     vec3 up() const { return ark::rotateVector(orientation(), ark::globalUp); }
 
+    void setNearAndFarPlanes(float zNear, float zFar);
+    [[nodiscard]] float zNear() const { return m_zNear; }
+    [[nodiscard]] float zFar() const { return m_zFar; }
+
     [[nodiscard]] geometry::Frustum const& frustum() const { return m_cullingFrustum; }
 
     [[nodiscard]] mat4 viewMatrix() const { return m_viewFromWorld; }
@@ -105,9 +109,6 @@ public:
     [[nodiscard]] vec2 frustumJitterPixelOffset() const { return m_frustumJitterPixelOffset; }
     [[nodiscard]] vec2 previousFrameFrustumJitterPixelOffset() const { return m_previousFrameFrustumJitterPixelOffset.value_or(vec2(0.0f, 0.0f)); }
     [[nodiscard]] vec2 frustumJitterUVCorrection() const;
-
-    static constexpr float zNear { 0.25f };
-    static constexpr float zFar { 10000.0f };
 
     void setViewFromWorld(mat4);
     void setProjectionFromView(mat4);
@@ -176,6 +177,9 @@ private:
 
     vec3 m_position {};
     quat m_orientation {};
+
+    float m_zNear { 0.25f };
+    float m_zFar { 10'000.0f };
 
     ////////////////////////////////////////////////////////////////////////////
     // Film grain control

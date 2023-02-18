@@ -291,6 +291,15 @@ void Camera::setOrientation(quat q)
     }
 }
 
+void Camera::setNearAndFarPlanes(float zNear, float zFar)
+{
+    if (m_zNear != zNear || m_zFar != zFar) {
+        m_zNear = zNear;
+        m_zFar = zFar;
+        markAsModified();
+    }
+}
+
 void Camera::setViewFromWorld(mat4 viewFromWorld)
 {
     if (viewFromWorld != m_viewFromWorld) {

@@ -152,6 +152,14 @@ std::unique_ptr<LevelAsset> AssetImporter::importAsLevel(std::string_view assetF
         levelAsset->objects.push_back(sceneObject);
     }
 
+    for (ImportedCamera const& importedCamera : result.cameras) {
+        Camera& camera = levelAsset->cameras.emplace_back();
+        camera.setPosition(importedCamera.transform.positionInWorld());
+        camera.setOrientation(importedCamera.transform.orientationInWorld());
+        camera.setNearAndFarPlanes(importedCamera.zNear, importedCamera.zFar);
+        camera.setFieldOfView(importedCamera.verticalFieldOfView);
+    }
+
     std::string_view levelName = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(assetFilePath));
     levelAsset->name = std::string(levelName);
 

@@ -141,7 +141,7 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
     std::vector<Transform> transformStack {};
     transformStack.reserve(TransformStackDepth);
 
-    std::function<void(const tinygltf::Node&, Transform*)> createMeshesRecursively = [&](const tinygltf::Node& node, Transform* parent) {
+    std::function<void(const tinygltf::Node&, Transform*)> createObjectsRecursively = [&](const tinygltf::Node& node, Transform* parent) {
 
         // If this triggers we need to keep a larger stack of transforms
         ARKOSE_ASSERT(transformStack.size() < TransformStackDepth);
@@ -159,9 +159,24 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
                                              .transform = flattenedTransform });
         }
 
+        if (node.camera != -1) {
+            tinygltf::Camera const& gltfCamera = gltfModel.cameras[node.camera];
+
+            ImportedCamera& camera = result.cameras.emplace_back();
+            camera.name = gltfCamera.name;
+            camera.transform = transform;
+
+            if (gltfCamera.type == "perspective") {
+                tinygltf::PerspectiveCamera const& gltfPerspectiveCamera = gltfCamera.perspective;
+                camera.verticalFieldOfView = gltfPerspectiveCamera.yfov;
+                camera.zNear = gltfPerspectiveCamera.znear;
+                camera.zFar = gltfPerspectiveCamera.zfar;
+            }
+        }
+
         for (int childNodeIdx : node.children) {
             const tinygltf::Node& childNode = gltfModel.nodes[childNodeIdx];
-            createMeshesRecursively(childNode, &transform);
+            createObjectsRecursively(childNode, &transform);
         }
 
         transformStack.pop_back();
@@ -170,7 +185,7 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
     const tinygltf::Scene& gltfScene = gltfModel.scenes[gltfModel.defaultScene];
     for (int nodeIdx : gltfScene.nodes) {
         const tinygltf::Node& node = gltfModel.nodes[nodeIdx];
-        createMeshesRecursively(node, nullptr);
+        createObjectsRecursively(node, nullptr);
     }
 
     return result;

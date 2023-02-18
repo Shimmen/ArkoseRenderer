@@ -50,7 +50,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
     auto irradianceClearColor = ClearColor::dataValues(0, 0, 0, 0);
     Texture& probeAtlasIrradiance = createProbeAtlas(reg, "ddgi-irradiance", probeGrid, irradianceClearColor, Texture::Format::RGBA16F, DDGI_IRRADIANCE_RES, DDGI_ATLAS_PADDING);
 
-    float cameraZFar = scene.camera().zFar;
+    float cameraZFar = scene.camera().zFar();
     auto visibilityClearColor = ClearColor::dataValues(cameraZFar, cameraZFar * cameraZFar, 0, 0);
     Texture& probeAtlasVisibility = createProbeAtlas(reg, "ddgi-visibility", probeGrid, visibilityClearColor, Texture::Format::RG16F, DDGI_VISIBILITY_RES, DDGI_ATLAS_PADDING);
 

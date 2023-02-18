@@ -157,7 +157,7 @@ void FpsCameraController::update(const Input& input, float dt)
 
     // Create the projection matrix
 
-    camera.setProjectionFromView(ark::perspectiveProjectionToVulkanClipSpace(camera.fieldOfView(), camera.aspectRatio(), camera.zNear, camera.zFar));
+    camera.setProjectionFromView(ark::perspectiveProjectionToVulkanClipSpace(camera.fieldOfView(), camera.aspectRatio(), camera.zNear(), camera.zFar()));
 
     // Finalize
 

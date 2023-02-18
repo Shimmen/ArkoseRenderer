@@ -12,10 +12,20 @@ struct MeshInstance {
     Transform transform {};
 };
 
+struct ImportedCamera {
+    std::string name {};
+    Transform transform {};
+    float verticalFieldOfView {};
+    float zNear {};
+    float zFar{};
+};
+
 struct ImportResult {
     std::vector<std::unique_ptr<ImageAsset>> images {};
     std::vector<std::unique_ptr<MaterialAsset>> materials {};
     std::vector<std::unique_ptr<StaticMeshAsset>> staticMeshes {};
+
+    std::vector<ImportedCamera> cameras {};
 
     std::vector<MeshInstance> meshInstances {};
 };
