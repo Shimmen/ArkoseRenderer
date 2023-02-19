@@ -281,7 +281,6 @@ bool ImageAsset::generateMipmaps()
 
     // TODO: Implement proper error handling!
     ARKOSE_ASSERT(m_mips.size() == 1);
-    ARKOSE_ASSERT(width() == height());
     ARKOSE_ASSERT(ark::isPowerOfTwo(width()));
     ARKOSE_ASSERT(ark::isPowerOfTwo(height()));
     ARKOSE_ASSERT(depth() == 1);
@@ -289,15 +288,17 @@ bool ImageAsset::generateMipmaps()
     // TODO: Support more formats!
     ARKOSE_ASSERT(m_format == ImageFormat::RGBA8);
 
-    u32 mipWidth = width(); // should be identical to height
-    u32 levels = static_cast<u32>(std::floor(std::log2(mipWidth)) + 1);
+    u32 mipHeight = height();
+    u32 mipWidth = width();
+    u32 levels = static_cast<u32>(std::floor(std::log2(std::max(mipHeight, mipWidth))) + 1);
 
     for (u32 level = 1; level < levels; ++level) {
 
         std::string zoneName = fmt::format("Mip level {}", level);
         SCOPED_PROFILE_ZONE_DYNAMIC(zoneName, 0xaa5577);
 
-        ImageMip previousMip = m_mips[level - 1];
+        u32 previousMipLevel = level - 1;
+        ImageMip previousMip = m_mips[previousMipLevel];
         std::vector<rgba8> previousMipPixels = pixelDataAsRGBA8(level - 1);
 
         ImageMip& thisMip = m_mips.emplace_back();
@@ -306,16 +307,21 @@ bool ImageAsset::generateMipmaps()
 
         m_pixelData.reserve(thisMip.offset + thisMip.size);
 
-        u32 thisMipWidth = mipWidth / 2;
+        u32 thisMipHeight = std::max(mipHeight / 2, 1u);
+        u32 thisMipWidth = std::max(mipWidth / 2, 1u);
 
-        // TODO: Parallelize!
-        for (u32 y = 0; y < thisMipWidth; ++y) {
+        for (u32 y = 0; y < thisMipHeight; ++y) {
             for (u32 x = 0; x < thisMipWidth; ++x) {
 
-                rgba8 pix0 = previousMipPixels[(2 * x + 0) + (2 * y + 0) * mipWidth];
-                rgba8 pix1 = previousMipPixels[(2 * x + 0) + (2 * y + 1) * mipWidth];
-                rgba8 pix2 = previousMipPixels[(2 * x + 1) + (2 * y + 0) * mipWidth];
-                rgba8 pix3 = previousMipPixels[(2 * x + 1) + (2 * y + 1) * mipWidth];
+                u32 x0 = 2 * x + 0;
+                u32 y0 = 2 * y + 0;
+                u32 x1 = std::min(2 * x + 1, mipWidth - 1);
+                u32 y1 = std::min(2 * y + 1, mipHeight - 1);
+
+                rgba8 pix0 = previousMipPixels[x0 + y0 * mipWidth];
+                rgba8 pix1 = previousMipPixels[x0 + y1 * mipWidth];
+                rgba8 pix2 = previousMipPixels[x1 + y0 * mipWidth];
+                rgba8 pix3 = previousMipPixels[x1 + y1 * mipWidth];
 
                 // TODO: Would be nice to have some kind of vector constructor that can take a non-narrowing type an argument
                 float rAvg = (static_cast<float>(pix0.x) + static_cast<float>(pix1.x) + static_cast<float>(pix2.x) + static_cast<float>(pix3.x)) / 4.0f;
@@ -338,6 +344,7 @@ bool ImageAsset::generateMipmaps()
         }
 
         // Next mip..
+        mipHeight = thisMipHeight;
         mipWidth = thisMipWidth;
 
     }
