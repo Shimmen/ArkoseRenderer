@@ -91,8 +91,8 @@ void main()
 	// Transform back to world space
 	vec3 rayDirection = inverseTBN * reflectedDirection;
 
-	float tmin = camera.zNear;
-	float tmax = camera.zFar;
+	float tmin = 0.01;
+	float tmax = 10000.0;
 
 	int numHits = 0;
 	vec3 reflectedRadiance = vec3(0.0);
