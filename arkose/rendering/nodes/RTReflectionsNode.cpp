@@ -72,7 +72,7 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
             cmdList.clearTexture(*m_radianceTex, ClearValue::blackAtMaxDepth());
             cmdList.setRayTracingState(rtState);
 
-            cmdList.setNamedUniform("ambientAmount", m_injectedAmbient * scene.lightPreExposure());
+            cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient() + m_injectedAmbient * scene.lightPreExposure());
             cmdList.setNamedUniform("environmentMultiplier", scene.preExposedEnvironmentBrightnessFactor());
             cmdList.setNamedUniform<float>("parameter1", m_mirrorRoughnessThreshold);
             cmdList.setNamedUniform<float>("parameter2", m_noTracingRoughnessThreshold);
