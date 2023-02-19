@@ -149,6 +149,7 @@ RayTracingState& RTReflectionsNode::createRayTracingState(GpuScene& scene, Regis
     BindingSet& rtMeshDataBindingSet = *reg.getBindingSet("SceneRTMeshDataSet");
     BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
     BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");
+    BindingSet* ddgiBindingSet = reg.getBindingSet("DDGISamplingSet");
 
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ ShaderBinding::topLevelAccelerationStructure(sceneTLAS, ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
@@ -161,18 +162,26 @@ RayTracingState& RTReflectionsNode::createRayTracingState(GpuScene& scene, Regis
                                                          ShaderBinding::sampledTexture(scene.environmentMapTexture(), ShaderStage::RTRayGen),
                                                          ShaderBinding::sampledTexture(blueNoiseTexture, ShaderStage::RTRayGen) });
 
-    ShaderFile raygen { "rt-reflections/raygen.rgen" };
-    ShaderFile defaultMissShader { "rayTracing/common/miss.rmiss" };
-    ShaderFile shadowMissShader { "rayTracing/common/shadow.rmiss" };
-    HitGroup mainHitGroup { ShaderFile("rayTracing/common/opaque.rchit"),
-                            ShaderFile("rayTracing/common/masked.rahit") };
-    ShaderBindingTable sbt { raygen, { mainHitGroup }, { defaultMissShader, shadowMissShader } };
+    std::vector<ShaderDefine> shaderDefines {};
 
     StateBindings stateDataBindings;
     stateDataBindings.at(0, frameBindingSet);
     stateDataBindings.at(1, rtMeshDataBindingSet);
     stateDataBindings.at(2, materialBindingSet);
     stateDataBindings.at(3, lightBindingSet);
+
+    if (ddgiBindingSet != nullptr) {
+        stateDataBindings.at(4, *ddgiBindingSet);
+        shaderDefines.push_back(ShaderDefine::makeBool("WITH_DDGI", true));
+        shaderDefines.push_back(ShaderDefine::makeBool("RT_USE_EXTENDED_RAY_PAYLOAD", true));
+    }
+
+    ShaderFile raygen { "rt-reflections/raygen.rgen", shaderDefines };
+    ShaderFile defaultMissShader { "rayTracing/common/miss.rmiss", shaderDefines };
+    ShaderFile shadowMissShader { "rayTracing/common/shadow.rmiss", shaderDefines };
+    HitGroup mainHitGroup { ShaderFile("rayTracing/common/opaque.rchit", shaderDefines),
+                            ShaderFile("rayTracing/common/masked.rahit", shaderDefines) };
+    ShaderBindingTable sbt { raygen, { mainHitGroup }, { defaultMissShader, shadowMissShader } };
 
     constexpr uint32_t maxRecursionDepth = 2; // raygen -> closest hit -> shadow ray
     RayTracingState& rtState = reg.createRayTracingState(sbt, stateDataBindings, maxRecursionDepth);

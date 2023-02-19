@@ -11,7 +11,7 @@ public:
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:
-    float m_injectedAmbient { 500.0f };
+    float m_injectedAmbient { 0.0f };
 
     float m_mirrorRoughnessThreshold { 0.001f };
     float m_noTracingRoughnessThreshold { 0.75f };
