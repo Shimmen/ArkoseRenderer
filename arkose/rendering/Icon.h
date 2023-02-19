@@ -24,7 +24,7 @@ public:
     ImageAsset const* image() const { return m_image; }
     Texture const* texture() const { return m_texture.get(); }
 
-    IconBillboard asBillboard(Camera const&, vec3 position, vec2 size) const;
+    IconBillboard asBillboard(Camera const&, vec3 position, vec2 size = vec2(0.25f)) const;
 
 private:
     ImageAsset* m_image { nullptr };
@@ -33,7 +33,7 @@ private:
 
 class IconBillboard {
 public:
-    static IconBillboard createFromIcon(Icon const&, Camera const&, vec3 position, vec2 size);
+    static IconBillboard createFromIcon(Icon const&, Camera const&, vec3 position, vec2 minSize = vec2(0.25f), float scaleDistance = 5.0f);
 
     Icon const& icon() const { return *m_icon; }
     Camera const& camera() const { return *m_camera; }

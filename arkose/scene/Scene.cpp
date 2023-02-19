@@ -516,7 +516,7 @@ void Scene::drawSceneGizmos()
         // Light gizmos
         forEachLight([this](size_t idx, Light& light) {
             Icon const& lightbulbIcon = gpuScene().iconManager().lightbulb();
-            IconBillboard iconBillboard = lightbulbIcon.asBillboard(camera(), light.transform().positionInWorld(), vec2(0.25f));
+            IconBillboard iconBillboard = lightbulbIcon.asBillboard(camera(), light.transform().positionInWorld());
             DebugDrawer::get().drawIcon(iconBillboard, light.color());
 
             EditorGizmo gizmo { iconBillboard, light };

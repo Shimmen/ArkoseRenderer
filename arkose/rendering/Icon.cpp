@@ -15,9 +15,11 @@ IconBillboard::IconBillboard(Icon const& icon, Camera const& camera, std::array<
 {
 }
 
-IconBillboard IconBillboard::createFromIcon(Icon const& icon, Camera const& camera, vec3 position, vec2 size)
+IconBillboard IconBillboard::createFromIcon(Icon const& icon, Camera const& camera, vec3 position, vec2 minSize, float scaleDistance)
 {
-    vec2 halfSize = size / 2.0f;
+    vec2 halfSize = minSize / 2.0f;
+    halfSize *= std::max(1.0f, distance(position, camera.position()) / scaleDistance);
+
     std::array<vec3, 4> positions { position - halfSize.x * camera.right() - halfSize.y * camera.up(),
                                     position - halfSize.x * camera.right() + halfSize.y * camera.up(),
                                     position + halfSize.x * camera.right() + halfSize.y * camera.up(),
