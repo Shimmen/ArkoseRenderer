@@ -24,12 +24,15 @@ using MeshMaterialResolver = std::function<MaterialHandle(MaterialAsset const*)>
 
 struct StaticMeshSegment {
 
-    StaticMeshSegment(StaticMeshSegmentAsset const*, MaterialHandle);
+    StaticMeshSegment(StaticMeshSegmentAsset const*, MaterialHandle, BlendMode blendMode);
 
     StaticMeshSegmentAsset const* asset { nullptr };
 
     // Material used for rendering this mesh segment
     MaterialHandle material {};
+
+    // Shortcut to avoid retrieving the material just to check blend mode
+    BlendMode blendMode { BlendMode::Opaque };
 
     // View into the meshlets that can be used to render this mesh
     std::optional<MeshletView> meshletView {};
@@ -68,10 +71,10 @@ public:
     std::string_view name() const { return m_name; }
 
     uint32_t numLODs() const { return static_cast<uint32_t>(m_lods.size()); }
-    
+
     StaticMeshLOD& lodAtIndex(uint32_t idx) { return m_lods[idx]; }
     const StaticMeshLOD& lodAtIndex(uint32_t idx) const { return m_lods[idx]; }
-    
+
     std::vector<StaticMeshLOD>& LODs(){ return m_lods; }
     const std::vector<StaticMeshLOD>& LODs() const { return m_lods; }
 
@@ -79,6 +82,9 @@ public:
     geometry::Sphere boundingSphere() const { return m_boundingSphere; }
 
     StaticMeshAsset const* asset() const { return m_asset; }
+
+    bool hasTranslucentSegments() const { return m_hasTranslucentSegments; }
+    bool hasNonTranslucentSegments() const { return m_hasNonTranslucentSegments; }
 
 private:
 
@@ -108,5 +114,8 @@ private:
     // Simple physics representation of this static mesh (optional)
     // This would usually be a simplified representation of the mesh (e.g. convex hull or box)
     PhysicsShapeHandle m_simplePhysicsShape {};
+
+    bool m_hasTranslucentSegments { false };
+    bool m_hasNonTranslucentSegments { true };
 
 };

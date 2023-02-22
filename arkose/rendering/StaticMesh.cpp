@@ -4,9 +4,10 @@
 #include "rendering/backend/base/AccelerationStructure.h"
 #include "rendering/GpuScene.h"
 
-StaticMeshSegment::StaticMeshSegment(StaticMeshSegmentAsset const* inAsset, MaterialHandle inMaterial)
+StaticMeshSegment::StaticMeshSegment(StaticMeshSegmentAsset const* inAsset, MaterialHandle inMaterial, BlendMode inBlendMode)
     : asset(inAsset)
     , material(inMaterial)
+    , blendMode(inBlendMode)
 {
 }
 
@@ -26,10 +27,18 @@ StaticMesh::StaticMesh(StaticMeshAsset const* asset, MeshMaterialResolver&& mate
     for (StaticMeshLODAsset const& lodAsset : asset->LODs) {
         StaticMeshLOD& lod = m_lods.emplace_back(&lodAsset);
         for (auto& segmentAsset : lodAsset.meshSegments) {
+
             std::string const& materialAssetPath = std::string(segmentAsset.pathToMaterial());
             MaterialAsset* materialAsset = MaterialAsset::loadFromArkmat(materialAssetPath);
+
+            if (materialAsset->blendMode == BlendMode::Translucent) {
+                m_hasTranslucentSegments |= true;
+            } else {
+                m_hasNonTranslucentSegments |= true;
+            }
+
             MaterialHandle materialHandle = materialResolver(materialAsset);
-            lod.meshSegments.emplace_back(&segmentAsset, materialHandle);
+            lod.meshSegments.emplace_back(&segmentAsset, materialHandle, materialAsset->blendMode);
         }
     }
 }
