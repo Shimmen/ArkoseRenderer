@@ -156,7 +156,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     std::vector<VkDynamicState> activeDynamicStates {};
     activeDynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);
     activeDynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
-    activeDynamicStates.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
+    //activeDynamicStates.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
 
     VkPipelineDynamicStateCreateInfo dynamicState = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
     dynamicState.dynamicStateCount = static_cast<uint32_t>(activeDynamicStates.size());
@@ -207,19 +207,38 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
 
     VkPipelineColorBlendStateCreateInfo colorBlending = { VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO };
     std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments {};
-    if (blendState.enabled) {
-        // TODO: Implement blending!
-        ASSERT_NOT_REACHED();
-    } else {
-        for (const auto& attachment : renderTarget.colorAttachments()) {
-            VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
-            colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT; // NOLINT(hicpp-signed-bitwise)
+    for (const auto& attachment : renderTarget.colorAttachments()) {
+        VkPipelineColorBlendAttachmentState colorBlendAttachment = {};
+        colorBlendAttachment.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT; // NOLINT(hicpp-signed-bitwise)
+        switch (attachment.blendMode) {
+        case RenderTargetBlendMode::None:
             colorBlendAttachment.blendEnable = VK_FALSE;
-            colorBlendAttachments.push_back(colorBlendAttachment);
+            break;
+        case RenderTargetBlendMode::Additive:
+            colorBlendAttachment.blendEnable = VK_TRUE;
+            colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+            colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+            colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // replace alpha with new value
+            colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+            break;
+        case RenderTargetBlendMode::AlphaBlending:
+            colorBlendAttachment.blendEnable = VK_TRUE;
+            colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+            colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+            colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+            break;
+        default:
+            ASSERT_NOT_REACHED();
         }
+        colorBlendAttachments.push_back(colorBlendAttachment);
     }
     colorBlending.logicOpEnable = VK_FALSE;
-    colorBlending.attachmentCount = (uint32_t)colorBlendAttachments.size();
+    colorBlending.attachmentCount = narrow_cast<u32>(colorBlendAttachments.size());
     colorBlending.pAttachments = colorBlendAttachments.data();
 
     VkCompareOp depthCompareOp;

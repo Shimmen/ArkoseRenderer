@@ -16,6 +16,12 @@ enum class StoreOp {
     Store,
 };
 
+enum class RenderTargetBlendMode {
+    None,
+    Additive,
+    AlphaBlending,
+};
+
 class RenderTarget : public Resource {
 public:
 
@@ -38,6 +44,7 @@ public:
         Texture* texture { nullptr };
         LoadOp loadOp { LoadOp::Clear };
         StoreOp storeOp { StoreOp::Store };
+        RenderTargetBlendMode blendMode { RenderTargetBlendMode::None };
         Texture* multisampleResolveTexture { nullptr };
     };
 

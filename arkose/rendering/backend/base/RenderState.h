@@ -133,7 +133,9 @@ public:
     bool cullBackfaces { true };
     TriangleWindingOrder frontFace { TriangleWindingOrder::CounterClockwise };
 
+    // TODO: Unused, remove me!?
     [[nodiscard]] BlendState blendState() const;
+
     [[nodiscard]] RasterState rasterState() const;
     [[nodiscard]] DepthState depthState() const;
     [[nodiscard]] StencilState stencilState() const;
