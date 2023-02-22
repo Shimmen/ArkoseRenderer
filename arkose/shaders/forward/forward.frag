@@ -43,10 +43,11 @@ NAMED_UNIFORMS(pushConstants,
 )
 
 layout(location = 0) out vec4 oColor;
+#if FORWARD_BLEND_MODE != BLEND_MODE_TRANSLUCENT
 layout(location = 1) out vec4 oNormalVelocity;
 layout(location = 2) out vec4 oMaterialProps;
 layout(location = 3) out vec4 oBaseColor;
-layout(location = 4) out vec4 oDiffuseGI;
+#endif
 
 vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
@@ -176,9 +177,15 @@ void main()
 
     for (uint i = 0; i < lightMeta.numDirectionalLights; ++i) {
 
+#if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
+        // NOTE: Since the shadow is pre-projected we can't use it for geometry that doesn't write to the depth buffer in the prepass
+        // TODO: Move to using only ray traced translucency, so we don't have to worry about these cases.
+        bool hasShadow = false;
+#else
         // We only have shadow for the 0th directional light as they are pre-projected. If needed we could quite easily support up to 4 shadowed directional light
         // by storing the projected shadow in an RGBA texture with a projected shadow per channel. However, a single dir. shadow should almost always be enough.
         bool hasShadow = i == 0;
+#endif
 
         color += evaluateDirectionalLight(directionalLights[i], hasShadow, V, N, baseColor, roughness, metallic);
     }
@@ -186,7 +193,13 @@ void main()
     // TODO: Use tiles or clusters to minimize number of light evaluations!
     {
         for (uint i = 0; i < lightMeta.numSphereLights; ++i) {
+#if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
+            // NOTE: Since the shadow is pre-projected we can't use it for geometry that doesn't write to the depth buffer in the prepass
+            // TODO: Move to using only ray traced translucency, so we don't have to worry about these cases.
+            bool hasShadow = false;
+#else
             bool hasShadow = i == 0; // todo: support multple shadowed point lights!
+#endif
             color += evaluateSphereLight(sphereLights[i], hasShadow, V, N, baseColor, roughness, metallic);
         }
 
@@ -207,8 +220,13 @@ void main()
         //velocity = abs(velocity) * 100.0; // debug code
     }
 
+#if FORWARD_BLEND_MODE != BLEND_MODE_TRANSLUCENT
     oColor = vec4(color, 1.0);
     oNormalVelocity = vec4(encodeNormal(N), velocity);
     oMaterialProps = vec4(roughness, metallic, 0.0, 0.0);
     oBaseColor = vec4(baseColor, 0.0);
+#else
+    float alpha = inputBaseColor.a * material.colorTint.a;
+    oColor = vec4(color, alpha);
+#endif
 }

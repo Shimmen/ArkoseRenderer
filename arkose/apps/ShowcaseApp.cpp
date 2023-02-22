@@ -21,6 +21,7 @@
 #include "rendering/nodes/SkyViewNode.h"
 #include "rendering/nodes/TAANode.h"
 #include "rendering/nodes/TonemapNode.h"
+#include "rendering/nodes/TranslucencyNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
 #include "scene/lights/DirectionalLight.h"
@@ -87,6 +88,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<GIComposeNode>();
     
     pipeline.addNode<SkyViewNode>();
+
+    pipeline.addNode<TranslucencyNode>();
 
     pipeline.addNode<BloomNode>();
 
