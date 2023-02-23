@@ -7,8 +7,8 @@
 
 VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& renderTarget, VertexLayout vertexLayout,
                                      Shader shader, const StateBindings& stateBindings,
-                                     BlendState blendState, RasterState rasterState, DepthState depthState, StencilState stencilState)
-    : RenderState(backend, renderTarget, vertexLayout, shader, stateBindings, blendState, rasterState, depthState, stencilState)
+                                     RasterState rasterState, DepthState depthState, StencilState stencilState)
+    : RenderState(backend, renderTarget, vertexLayout, shader, stateBindings, rasterState, depthState, stencilState)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 

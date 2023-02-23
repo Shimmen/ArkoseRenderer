@@ -8,10 +8,6 @@
 // TODO: Clean up: shouln't refer to frontend from backend!
 #include "scene/Vertex.h"
 
-struct BlendState {
-    bool enabled { false };
-};
-
 enum class DepthCompareOp {
     Less,
     LessThanEqual,
@@ -74,13 +70,12 @@ public:
     RenderState(Backend& backend,
                 const RenderTarget& renderTarget, VertexLayout vertexLayout,
                 Shader shader, const StateBindings& stateBindings,
-                BlendState blendState, RasterState rasterState, DepthState depthState, StencilState stencilState)
+                RasterState rasterState, DepthState depthState, StencilState stencilState)
         : Resource(backend)
         , m_renderTarget(&renderTarget)
         , m_vertexLayout(vertexLayout)
         , m_shader(shader)
         , m_stateBindings(stateBindings)
-        , m_blendState(blendState)
         , m_rasterState(rasterState)
         , m_depthState(depthState)
         , m_stencilState(stencilState)
@@ -94,7 +89,6 @@ public:
     const Shader& shader() const { return m_shader; }
     const StateBindings& stateBindings() const { return m_stateBindings; }
 
-    const BlendState& blendState() const { return m_blendState; }
     const RasterState& rasterState() const { return m_rasterState; }
     const DepthState& depthState() const { return m_depthState; }
     const StencilState& stencilState() const { return m_stencilState; }
@@ -106,7 +100,6 @@ private:
     Shader m_shader;
     StateBindings m_stateBindings;
 
-    BlendState m_blendState;
     RasterState m_rasterState;
     DepthState m_depthState;
     StencilState m_stencilState;
@@ -133,9 +126,6 @@ public:
     bool cullBackfaces { true };
     TriangleWindingOrder frontFace { TriangleWindingOrder::CounterClockwise };
 
-    // TODO: Unused, remove me!?
-    [[nodiscard]] BlendState blendState() const;
-
     [[nodiscard]] RasterState rasterState() const;
     [[nodiscard]] DepthState depthState() const;
     [[nodiscard]] StencilState stencilState() const;
@@ -144,7 +134,6 @@ public:
     StateBindings& stateBindings() { return m_stateBindings; }
 
 private:
-    std::optional<BlendState> m_blendState {};
     std::optional<RasterState> m_rasterState {};
     StateBindings m_stateBindings {};
 };

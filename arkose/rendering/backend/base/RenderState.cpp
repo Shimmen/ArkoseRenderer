@@ -7,18 +7,6 @@ RenderStateBuilder::RenderStateBuilder(const RenderTarget& renderTarget, const S
 {
 }
 
-BlendState RenderStateBuilder::blendState() const
-{
-    if (m_blendState.has_value()) {
-        return m_blendState.value();
-    }
-
-    BlendState state {
-        .enabled = false
-    };
-    return state;
-}
-
 RasterState RenderStateBuilder::rasterState() const
 {
     if (m_rasterState.has_value()) {
