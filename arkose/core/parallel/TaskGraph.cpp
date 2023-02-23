@@ -59,6 +59,8 @@ TaskGraph::TaskGraph(uint32_t numWorkerThreads)
     }
 
     // Ensure all workers have created their task queues before progressing!
+    // TODO: This is easy to implement with std::latch, but for some reason Tracy doesn't work nicely with it
+    // and the program will never exit, since some Tracy thread lives on. Very weird but the current method works.
     while (true) {
         {
             std::scoped_lock<std::mutex> lock { s_taskQueueListMutex };
