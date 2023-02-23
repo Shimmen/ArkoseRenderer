@@ -217,7 +217,7 @@ void LocalLightShadowNode::drawSpotLightShadowMap(CommandList& cmdList, GpuScene
     ARK_ASSERT(shadowMapAllocation.light->type() == Light::Type::SpotLight);
     const Light& light = *shadowMapAllocation.light;
 
-    std::string zoneName = fmt::format(FMT_STRING("Light [{}]"), light.name());
+    std::string zoneName = std::format("Light [{}]", light.name());
     ScopedDebugZone zone { cmdList, zoneName };
 
     mat4 lightProjectionFromWorld = light.viewProjection();

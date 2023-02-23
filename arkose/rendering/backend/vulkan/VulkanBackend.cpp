@@ -17,7 +17,6 @@
 #include "core/Assert.h"
 #include <algorithm>
 #include <cstring>
-#include <fmt/format.h>
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>

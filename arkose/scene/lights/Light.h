@@ -3,7 +3,6 @@
 #include "rendering/backend/Resources.h"
 #include "scene/editor/EditorObject.h"
 #include <ark/matrix.h>
-#include <fmt/format.h>
 
 class Light : public IEditorObject {
 public:
@@ -15,13 +14,7 @@ public:
     };
 
     Light() = default;
-    Light(Type type, vec3 color)
-        : m_color(color)
-        , m_type(type)
-    {
-        static int nextLightId = 0;
-        m_name = fmt::format("light-{}", nextLightId++);
-    }
+    Light(Type type, vec3 color);
 
     virtual ~Light() { }
 

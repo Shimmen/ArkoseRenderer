@@ -423,7 +423,7 @@ std::vector<std::string> ShaderManager::CompiledShader::findAllIncludedFiles() c
             }
 
             std::string includePath = (relativePath)
-                ? fmt::format("{}{}", FileIO::extractDirectoryFromPath(fileToTest), specifiedPath)
+                ? std::format("{}{}", FileIO::extractDirectoryFromPath(fileToTest), specifiedPath)
                 : shaderManager.resolveGlslPath(std::string(specifiedPath));
 
             if (std::find(files.begin(), files.end(), includePath) == files.end()) {

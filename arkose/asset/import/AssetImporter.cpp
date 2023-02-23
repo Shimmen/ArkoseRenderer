@@ -181,7 +181,7 @@ std::unique_ptr<LevelAsset> AssetImporter::importAsLevel(std::string_view assetF
     std::string_view levelName = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(assetFilePath));
     levelAsset->name = std::string(levelName);
 
-    std::string levelFilePath = fmt::format("{}{}.arklvl", targetDirectory, levelName);
+    std::string levelFilePath = std::format("{}{}.arklvl", targetDirectory, levelName);
     if (not levelAsset->writeToArklvl(levelFilePath, AssetStorage::Json)) {
         ARKOSE_LOG(Error, "Failed to write level asset '{}' to file.", levelAsset->name);
         return nullptr;

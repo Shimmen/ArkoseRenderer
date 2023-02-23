@@ -7,7 +7,6 @@
 #include "core/parallel/ParallelFor.h"
 #include "rendering/backend/base/Backend.h"
 #include <cmath>
-#include <fmt/format.h>
 
 Texture::Texture(Backend& backend, Description desc)
     : Resource(backend)
@@ -216,7 +215,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     size_t totalRequiredSize = 0;
     std::vector<ImageAsset*> imageAssets;
     for (size_t idx = 0;; ++idx) {
-        std::string imagePath = fmt::format(fmt::runtime(imagePathSequencePattern), idx);
+        std::string imagePath = std::vformat(imagePathSequencePattern, std::make_format_args(idx));
         ImageAsset* imageAsset = ImageAsset::loadOrCreate(imagePath);
         if (!imageAsset)
             break;

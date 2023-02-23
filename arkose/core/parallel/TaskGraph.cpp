@@ -4,7 +4,7 @@
 #include "utility/Profiling.h"
 #include <ark/random.h>
 #include <atomic>
-#include <fmt/format.h>
+#include <format>
 
 #define SCOPED_PROFILE_ZONE_TASKGRAPH() SCOPED_PROFILE_ZONE_COLOR(0xaa33aa)
 
@@ -54,7 +54,7 @@ TaskGraph::TaskGraph(uint32_t numWorkerThreads)
 
     for (size_t i = 0; i < numWorkerThreads; ++i) {
         uint64_t workerId = i + 1;
-        std::string workerName = fmt::format("TaskGraphWorker{}", workerId);
+        std::string workerName = std::format("TaskGraphWorker{}", workerId);
         m_workers.push_back(std::make_unique<Worker>(*this, workerId, workerName));
     }
 

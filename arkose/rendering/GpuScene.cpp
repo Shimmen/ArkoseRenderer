@@ -1171,7 +1171,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
                 ImGui::TableNextRow();
 
                 ImGui::TableSetColumnIndex(0);
-                heapNames.push_back(fmt::format("Heap{}", heapIdx));
+                heapNames.push_back(std::format("Heap{}", heapIdx));
                 ImGui::Text(heapNames.back().c_str());
 
                 ImGui::TableSetColumnIndex(1);

@@ -3,7 +3,6 @@
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "utility/FileIO.h"
-#include <fmt/format.h>
 
 bool AssetHelpers::isValidAssetPath(std::string_view assetPath, std::string_view extensionWithoutDot)
 {

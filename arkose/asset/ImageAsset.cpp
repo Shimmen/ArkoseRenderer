@@ -173,7 +173,8 @@ ImageAsset* ImageAsset::loadFromArkimg(std::string const& filePath)
     archive(header);
 
     if (header != AssetHeader(AssetMagicValue)) {
-        ARKOSE_LOG(Warning, "Trying to load image asset with invalid file magic: '{}'", fmt::join(header.magicValue, ""));
+        ARKOSE_LOG(Warning, "Trying to load image asset with invalid file magic: '{}{}{}{}'",
+                   header.magicValue[0], header.magicValue[1], header.magicValue[2], header.magicValue[3]);
         return nullptr;
     }
 
@@ -294,7 +295,7 @@ bool ImageAsset::generateMipmaps()
 
     for (u32 level = 1; level < levels; ++level) {
 
-        std::string zoneName = fmt::format("Mip level {}", level);
+        std::string zoneName = std::format("Mip level {}", level);
         SCOPED_PROFILE_ZONE_DYNAMIC(zoneName, 0xaa5577);
 
         u32 previousMipLevel = level - 1;

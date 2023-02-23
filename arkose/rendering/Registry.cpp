@@ -3,7 +3,6 @@
 #include "utility/FileIO.h"
 #include "core/Logging.h"
 #include "core/Assert.h"
-#include <fmt/format.h>
 #include <stb_image.h>
 
 Registry::Registry(Backend& backend, const RenderTarget& windowRenderTarget, Registry* previousRegistry)
