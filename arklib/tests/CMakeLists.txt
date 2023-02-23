@@ -9,5 +9,6 @@ if (NOT fmt_POPULATED)
 endif ()
 
 add_executable(ArklibTests basic_usage.cpp)
-target_link_libraries(BasicUsage PRIVATE arklib)
-target_link_libraries(BasicUsage PRIVATE fmt)
+set_property(TARGET ArklibTests PROPERTY CXX_STANDARD 20)
+target_link_libraries(ArklibTests PRIVATE arklib)
+target_link_libraries(ArklibTests PRIVATE fmt)
