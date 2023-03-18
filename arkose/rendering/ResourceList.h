@@ -16,6 +16,7 @@ public:
     {
         // This will potentially waste some memory but will also ensure zero allocations
         m_resources.reserve(m_capacity);
+        m_resourcesMetadata.reserve(m_capacity);
         m_freeList.reserve(m_capacity);
         m_deferredDeleteList.reserve(m_capacity);
     }
@@ -46,8 +47,8 @@ public:
             return false;
         }
 
-        ResourceEntry const& resourceEntry = m_resources[handle.index()];
-        return resourceEntry.alive;
+        ResourceMetadata const& resourceMetadata = m_resourcesMetadata[handle.index()];
+        return resourceMetadata.alive;
     }
 
     HandleType add(ResourceType&& resource)
@@ -59,7 +60,8 @@ public:
             handle = m_freeList.back();
             m_freeList.pop_back();
 
-            m_resources[handle.index()] = ResourceEntry(std::move(resource));
+            m_resources[handle.index()] = std::move(resource);
+            m_resourcesMetadata[handle.index()] = ResourceMetadata();
 
         } else {
 
@@ -69,7 +71,8 @@ public:
             }
 
             handle = HandleType(handleIdx);
-            m_resources.emplace_back(ResourceEntry(std::move(resource)));
+            m_resources.emplace_back(std::move(resource));
+            m_resourcesMetadata.emplace_back();
         }
 
         m_actualSize += 1;
@@ -79,40 +82,40 @@ public:
 
     ResourceType& get(HandleType handle)
     {
-        ResourceEntry& resourceEntry = getEntry(handle);
-        return resourceEntry.resource;
+        ARKOSE_ASSERT(isValidHandle(handle));
+        return m_resources[handle.index()];
     }
 
     ResourceType const& get(HandleType handle) const
     {
-        ResourceEntry const& resourceEntry = getEntry(handle);
-        return resourceEntry.resource;
+        ARKOSE_ASSERT(isValidHandle(handle));
+        return m_resources[handle.index()];
     }
 
     ResourceType& set(HandleType handle, ResourceType&& resource)
     {
-        ResourceEntry& resourceEntry = getEntry(handle);
-        resourceEntry.resource = std::move(resource);
-        return resourceEntry.resource;
+        ARKOSE_ASSERT(isValidHandle(handle));
+        m_resources[handle.index()] = std::move(resource);
+        return m_resources[handle.index()];
     }
 
     void addReference(HandleType handle)
     {
-        ResourceEntry& resourceEntry = getEntry(handle);
-        resourceEntry.referenceCount += 1;
+        ResourceMetadata& resourceMetadata = getMetadata(handle);
+        resourceMetadata.referenceCount += 1;
     }
 
     bool removeReference(HandleType handle, size_t currentFrame)
     {
-        ResourceEntry& resourceEntry = getEntry(handle);
+        ResourceMetadata& resourceMetadata = getMetadata(handle);
 
-        ARKOSE_ASSERT(resourceEntry.referenceCount > 0);
-        resourceEntry.referenceCount -= 1;
+        ARKOSE_ASSERT(resourceMetadata.referenceCount > 0);
+        resourceMetadata.referenceCount -= 1;
 
-        bool noRemainingReferences = resourceEntry.referenceCount == 0;
+        bool noRemainingReferences = resourceMetadata.referenceCount == 0;
 
         if (noRemainingReferences) {
-            resourceEntry.zeroReferencesAtFrame = currentFrame;
+            resourceMetadata.zeroReferencesAtFrame = currentFrame;
             m_deferredDeleteList.push_back(handle);
         }
 
@@ -131,30 +134,31 @@ public:
         for (int64_t idx = std::ssize(m_deferredDeleteList) - 1; idx >= 0; idx -= 1) {
 
             HandleType handle = m_deferredDeleteList[idx];
-            ResourceEntry& resourceEntry = getEntry(handle);
+            ResourceMetadata& resourceMetadata = getMetadata(handle);
 
             bool removeFromList = false;
             bool deleteResource = false;
 
             // Since the delete was requested we have regained enough references to keep us alive, remove from this list
-            if (resourceEntry.referenceCount > 0) {
+            if (resourceMetadata.referenceCount > 0) {
                 removeFromList = true;
-                resourceEntry.zeroReferencesAtFrame = SIZE_MAX;
+                resourceMetadata.zeroReferencesAtFrame = SIZE_MAX;
             }
 
-            ARKOSE_ASSERT(currentFrame >= resourceEntry.zeroReferencesAtFrame);
-            if (currentFrame - resourceEntry.zeroReferencesAtFrame > deferFrames) {
+            ARKOSE_ASSERT(currentFrame >= resourceMetadata.zeroReferencesAtFrame);
+            if (currentFrame - resourceMetadata.zeroReferencesAtFrame > deferFrames) {
                 removeFromList = true;
                 deleteResource = true;
             }
 
             if (deleteResource) {
 
-                deleterFunction(handle, resourceEntry.resource);
+                ResourceType& resource = m_resources[handle.index()];
+                deleterFunction(handle, resource);
 
-                resourceEntry.alive = false;
-                resourceEntry.referenceCount = 0;
-                //resourceEntry.zeroReferencesAtFrame = SIZE_MAX;
+                resourceMetadata.alive = false;
+                resourceMetadata.referenceCount = 0;
+                //resourceMetadata.zeroReferencesAtFrame = SIZE_MAX;
 
                 m_freeList.push_back(handle);
 
@@ -180,54 +184,35 @@ public:
     template<typename CallbackFunction>
     void forEachResource(CallbackFunction&& callback) const
     {
-        for (size_t idx = 0; idx < m_resources.size(); ++idx) {
-            ResourceEntry const& resourceEntry = m_resources[idx];
-            if (resourceEntry.alive) {
-                callback(resourceEntry.resource);
+        for (size_t idx = 0; idx < size(); ++idx) {
+            if (m_resourcesMetadata[idx].alive) {
+                callback(m_resources[idx]);
             }
         }
     }
 
 private:
-
-    struct ResourceEntry {
-        explicit ResourceEntry(ResourceType&& inResource)
-            : resource(std::move(inResource))
-        {
-        }
-
-        ResourceType resource;
-
+    struct ResourceMetadata {
         bool alive { true };
         size_t referenceCount { 1 };
         size_t zeroReferencesAtFrame { SIZE_MAX };
-
         // TODO: Add some kind of generation value to track use-after-free?
     };
 
-    ResourceEntry& getEntry(HandleType handle)
+    ResourceMetadata& getMetadata(HandleType handle)
     {
         ARKOSE_ASSERT(handle.valid());
-        ARKOSE_ASSERT(handle.index() < m_resources.size());
+        ARKOSE_ASSERT(handle.index() < m_resourcesMetadata.size());
 
-        ResourceEntry& resourceEntry = m_resources[handle.index()];
-        ARKOSE_ASSERT(resourceEntry.alive);
+        ResourceMetadata& resourceMetadata = m_resourcesMetadata[handle.index()];
+        ARKOSE_ASSERT(resourceMetadata.alive);
 
-        return resourceEntry;
+        return resourceMetadata;
     }
 
-    ResourceEntry const& getEntry(HandleType handle) const
-    {
-        ARKOSE_ASSERT(handle.valid());
-        ARKOSE_ASSERT(handle.index() < m_resources.size());
+    std::vector<ResourceType> m_resources {};
+    std::vector<ResourceMetadata> m_resourcesMetadata {};
 
-        ResourceEntry const& resourceEntry = m_resources[handle.index()];
-        ARKOSE_ASSERT(resourceEntry.alive);
-
-        return resourceEntry;
-    }
-
-    std::vector<ResourceEntry> m_resources {};
     std::vector<HandleType> m_freeList {};
     std::vector<HandleType> m_deferredDeleteList {};
     size_t m_actualSize { 0 };
