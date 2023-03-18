@@ -54,6 +54,12 @@ public:
         return upload(data.data(), sizeof(T) * data.size(), dstBuffer, dstOffset);
     }
 
+    template<typename T>
+    bool upload(const std::span<T>& span, Buffer& dstBuffer, size_t dstOffset = 0)
+    {
+        return upload(span.data(), sizeof(T) * span.size(), dstBuffer, dstOffset);
+    }
+
 private:
 
     bool upload(const void* data, size_t size, std::variant<BufferCopyOperation::BufferDestination, BufferCopyOperation::TextureDestination>&& destination);
