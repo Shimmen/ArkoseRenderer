@@ -53,7 +53,7 @@ void MeshletManager::freeMeshlets(StaticMesh&)
     // TODO: Free memory from the buffers! Implement a proper allocator to support this..
 }
 
-void MeshletManager::processMeshStreaming(CommandList& cmdList)
+void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_set<StaticMeshHandle>& updatedMeshes)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -111,6 +111,9 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList)
         // Setup the meshlet view for this segment
         meshSegment->meshletView = { .firstMeshlet = m_nextMeshletIdx,
                                      .meshletCount = meshletCount };
+
+        // Signal to the caller that the mesh has changed
+        updatedMeshes.insert(meshSegment->staticMeshHandle);
 
         numProcessedSegments += 1;
         m_nextVertexIdx += vertexCount;

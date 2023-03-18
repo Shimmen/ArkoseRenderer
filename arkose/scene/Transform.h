@@ -8,7 +8,7 @@
 #include <ark/transform.h>
 #include <optional>
 
-class Scene;
+class GpuScene;
 
 class Transform {
 public:
@@ -118,7 +118,7 @@ public:
         return normalMatrix;
     }
 
-    void postRender(Badge<Scene>)
+    void postRender(Badge<GpuScene>)
     {
         m_previousFrameWorldMatrix = worldMatrix();
     }

@@ -113,29 +113,26 @@ std::vector<TranslucencyNode::TranslucentMeshSegmentInstance> TranslucencyNode::
     geometry::Frustum const& cameraFrustum = scene.camera().frustum();
 
     // TODO: Consider keeping translucent segments in a separate list so we don't have to iterate all here
-    u32 drawableIdx = 0;
-    for (auto const& instance : scene.scene().staticMeshInstances()) {
-        if (StaticMesh const* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
+    for (auto const& instance : scene.staticMeshInstances()) {
+        if (StaticMesh const* staticMesh = scene.staticMeshForInstance(*instance)) {
 
             constexpr u32 lodIdx = 0;
+            StaticMeshLOD const& lod = staticMesh->lodAtIndex(lodIdx);
 
             if (not staticMesh->hasTranslucentSegments()) {
-                // TODO: Would it not be much easier if each StaticMeshInstance already had its index available to use..? Yes. Yes, it would.
-                drawableIdx += narrow_cast<u32>(staticMesh->lodAtIndex(lodIdx).meshSegments.size());
                 continue;
             }
 
             if (not cameraFrustum.includesSphere(staticMesh->boundingSphere())) {
-                // TODO: Would it not be much easier if each StaticMeshInstance already had its index available to use..? Yes. Yes, it would.
-                drawableIdx += narrow_cast<u32>(staticMesh->lodAtIndex(lodIdx).meshSegments.size());
                 continue;
             }
 
-            for (StaticMeshSegment const& meshSegment : staticMesh->lodAtIndex(lodIdx).meshSegments) {
+            for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
+                StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
                 if (meshSegment.blendMode == BlendMode::Translucent) {
+                    u32 drawableIdx = instance->drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>();
                     instances.emplace_back(meshSegment, instance->transform(), drawableIdx);
                 }
-                drawableIdx += 1;
             }
         }
     }

@@ -23,6 +23,7 @@ struct StaticMeshInstance : public IEditorObject {
     Transform& transform() override { return m_transform; }
     Transform const& transform() const { return m_transform; }
 
+    bool hasDrawableHandleForSegmentIndex(u32 segmentIdx) const;
     DrawableObjectHandle drawableHandleForSegmentIndex(u32 segmentIdx) const;
     std::vector<DrawableObjectHandle> const& drawableHandles() const { return m_drawableHandles; }
 

@@ -76,25 +76,22 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
         std::vector<IndirectShaderDrawable> indirectDrawableData {};
 
         size_t numInputDrawables = 0;
-        for (auto& instance : scene.scene().staticMeshInstances()) {
-            if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
+        for (auto& instance : scene.staticMeshInstances()) {
+            if (const StaticMesh* staticMesh = scene.staticMeshForInstance(*instance)) {
 
                 // TODO: Pick LOD properly
                 const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
 
                 // TODO: Culling (e.g. frustum) should be done on mesh/LOD level, not per segment, but this will work for now
-                for (const StaticMeshSegment& meshSegment : lod.meshSegments) {
+                for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
 
-                    const ShaderMaterial& material = *scene.materialForHandle(meshSegment.material);
+                    StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
+
+                    ShaderMaterial const& material = *scene.materialForHandle(meshSegment.material);
+                    ShaderDrawable const& drawable = *scene.drawableForHandle(instance->drawableHandleForSegmentIndex(segmentIdx));
 
                     DrawCallDescription drawCall = meshSegment.drawCallDescription({ VertexComponent::Position3F }, scene);
-                    indirectDrawableData.push_back({ .drawable = { .worldFromLocal = instance->transform().worldMatrix(),
-                                                                   .worldFromTangent = mat4(instance->transform().worldNormalMatrix()),
-                                                                   .previousFrameWorldFromLocal = instance->transform().previousFrameWorldMatrix(),
-                                                                   .materialIndex = meshSegment.material.indexOfType<int>(),
-                                                                   // Don't need to care about meshlets here..
-                                                                   .firstMeshlet = 0,
-                                                                   .meshletCount = 0 },
+                    indirectDrawableData.push_back({ .drawable = drawable,
                                                      .localBoundingSphere = vec4(staticMesh->boundingSphere().center(), staticMesh->boundingSphere().radius()),
                                                      .indexCount = drawCall.indexCount,
                                                      .firstIndex = drawCall.firstIndex,

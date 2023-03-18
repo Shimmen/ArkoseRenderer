@@ -152,7 +152,7 @@ void MeshViewerApp::drawMenuBar()
     if (ImGui::BeginPopupModal("Create a new scene")) {
         ImGui::Text("You are about to create a scene and potentially loose any unchanged settings. Are you sure you want to proceed?");
         if (ImGui::Button("Yes")) {
-            m_scene->unloadAllMeshes();
+            m_scene->clearAllMeshInstances();
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -524,7 +524,7 @@ void MeshViewerApp::loadMeshWithDialog()
         StaticMeshAsset* staticMeshAsset = StaticMeshAsset::loadFromArkmsh(openPath);
         if (staticMeshAsset != nullptr) {
 
-            m_scene->unloadAllMeshes();
+            m_scene->clearAllMeshInstances();
 
             m_targetAsset = staticMeshAsset;
             m_targetInstance = &m_scene->addMesh(staticMeshAsset);

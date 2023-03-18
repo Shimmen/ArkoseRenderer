@@ -191,6 +191,11 @@ public:
         }
     }
 
+    std::span<ResourceType const> resourceSpan() const
+    {
+        return std::span<ResourceType const> { m_resources.data(), size() };
+    }
+
 private:
     struct ResourceMetadata {
         bool alive { true };

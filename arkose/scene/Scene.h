@@ -65,17 +65,10 @@ public:
     // Meshes
 
     StaticMeshInstance& addMesh(StaticMeshAsset*, Transform = Transform());
-
-    // NOTE: This is more of a utility for now to clear out the current level
-    void unloadAllMeshes();
-
     StaticMeshInstance& createStaticMeshInstance(StaticMeshHandle, Transform);
 
-    std::vector<std::unique_ptr<StaticMeshInstance>>& staticMeshInstances() { return m_staticMeshInstances; }
-    const std::vector<std::unique_ptr<StaticMeshInstance>>& staticMeshInstances() const { return m_staticMeshInstances; }
-
-    // TODO: Later, also count skeletal meshes here
-    uint32_t meshInstanceCount() const { return static_cast<uint32_t>(m_staticMeshInstances.size()); }
+    // NOTE: This is more of a utility for now to clear out the current level
+    void clearAllMeshInstances();
 
     // Lighting - direct & indirect
 
@@ -130,8 +123,6 @@ private:
     Camera* m_currentMainCamera { nullptr };
     std::unordered_map<std::string, std::unique_ptr<Camera>> m_allCameras {};
 
-    std::vector<std::unique_ptr<StaticMeshInstance>> m_staticMeshInstances {};
-    
     std::vector<std::unique_ptr<DirectionalLight>> m_directionalLights {};
     std::vector<std::unique_ptr<SphereLight>> m_sphereLights {};
     std::vector<std::unique_ptr<SpotLight>> m_spotLights {};

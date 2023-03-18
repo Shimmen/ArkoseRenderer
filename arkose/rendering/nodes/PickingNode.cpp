@@ -72,7 +72,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
             cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
 
             uint32_t drawIdx = 0;
-            for (auto& instance : scene.scene().staticMeshInstances()) {
+            for (auto& instance : scene.staticMeshInstances()) {
                 if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
 
                     // TODO: Pick LOD properly (i.e. the same as drawn in the main passes)
@@ -117,7 +117,7 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
         int selectedIdx = pickingData.meshIdx;
 
         uint32_t drawIdx = 0;
-        for (auto& instance : scene.scene().staticMeshInstances()) {
+        for (auto& instance : scene.staticMeshInstances()) {
             if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
 
                 // TODO: Pick LOD properly (i.e. the same as drawn in the main passes)

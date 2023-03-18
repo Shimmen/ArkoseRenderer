@@ -6,6 +6,7 @@
 #include "core/Types.h"
 #include "core/parallel/TaskGraph.h"
 #include "rendering/meshlet/MeshletManager.h"
+#include "rendering/Drawable.h"
 #include "rendering/IconManager.h"
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/ResourceList.h"
@@ -34,6 +35,9 @@ public:
 
     void initialize(Badge<Scene>, bool rayTracingCapable);
 
+    void preRender();
+    void postRender();
+
     // Render asset accessors
 
     Backend& backend() { return m_backend; }
@@ -47,9 +51,12 @@ public:
 
     size_t meshCount() const { return m_managedStaticMeshes.size(); }
 
+    StaticMesh* staticMeshForInstance(StaticMeshInstance const&);
+    StaticMesh const* staticMeshForInstance(StaticMeshInstance const&) const;
     StaticMesh* staticMeshForHandle(StaticMeshHandle handle);
     const StaticMesh* staticMeshForHandle(StaticMeshHandle handle) const;
     const ShaderMaterial* materialForHandle(MaterialHandle handle) const;
+    ShaderDrawable const* drawableForHandle(DrawableObjectHandle handle) const;
 
     // TODO: This is a temporary helper, remove me eventually!
     void ensureDrawCallIsAvailableForAll(VertexLayout);
@@ -72,6 +79,18 @@ public:
     void registerLight(SphereLight&);
     void registerLight(SpotLight&);
     // TODO: Unregister light!
+
+    StaticMeshInstance& createStaticMeshInstance(StaticMeshHandle, Transform);
+    void initializeStaticMeshInstance(StaticMeshInstance&);
+
+    std::vector<std::unique_ptr<StaticMeshInstance>>& staticMeshInstances() { return m_staticMeshInstances; }
+    const std::vector<std::unique_ptr<StaticMeshInstance>>& staticMeshInstances() const { return m_staticMeshInstances; }
+
+    // NOTE: This is more of a utility for now to clear out the current level
+    void clearAllMeshInstances();
+
+    // TODO: Later, also count skeletal meshes here
+    uint32_t meshInstanceCount() const { return static_cast<uint32_t>(m_staticMeshInstances.size()); }
 
     StaticMeshHandle registerStaticMesh(StaticMeshAsset const*);
     void unregisterStaticMesh(StaticMeshHandle);
@@ -162,6 +181,9 @@ private:
     };
     ResourceList<ManagedStaticMesh, StaticMeshHandle> m_managedStaticMeshes { "Static Meshes", 1024 };
     std::unordered_map<StaticMeshAsset const*, StaticMeshHandle> m_staticMeshAssetCache {};
+
+    std::vector<std::unique_ptr<StaticMeshInstance>> m_staticMeshInstances {};
+    ResourceList<ShaderDrawable, DrawableObjectHandle> m_drawables { "Drawables", 10'000 };
 
     std::unique_ptr<MeshletManager> m_meshletManager {};
 

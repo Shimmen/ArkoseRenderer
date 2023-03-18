@@ -13,6 +13,7 @@
 #include <ImGuizmo.h>
 #include <ark/aabb.h>
 #include <ark/transform.h>
+#include <unordered_set>
 
 // Shared shader headers
 #include "shaders/shared/CameraState.h"
@@ -61,6 +62,27 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
     }
 }
 
+void GpuScene::preRender()
+{
+}
+
+void GpuScene::postRender()
+{
+    for (auto& instance : m_staticMeshInstances) {
+        instance->transform().postRender({});
+    }
+}
+
+StaticMesh* GpuScene::staticMeshForInstance(StaticMeshInstance const& staticMeshInstance)
+{
+    return staticMeshForHandle(staticMeshInstance.mesh());
+}
+
+StaticMesh const* GpuScene::staticMeshForInstance(StaticMeshInstance const& staticMeshInstance) const
+{
+    return staticMeshForHandle(staticMeshInstance.mesh());
+}
+
 StaticMesh* GpuScene::staticMeshForHandle(StaticMeshHandle handle)
 {
     return handle.valid() ? m_managedStaticMeshes.get(handle).staticMesh.get() : nullptr;
@@ -74,6 +96,11 @@ const StaticMesh* GpuScene::staticMeshForHandle(StaticMeshHandle handle) const
 const ShaderMaterial* GpuScene::materialForHandle(MaterialHandle handle) const
 {
     return handle.valid() ? &m_managedMaterials.get(handle) : nullptr;
+}
+
+ShaderDrawable const* GpuScene::drawableForHandle(DrawableObjectHandle handle) const
+{
+    return handle.valid() ? &m_drawables.get(handle) : nullptr;
 }
 
 size_t GpuScene::lightCount() const
@@ -183,7 +210,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     // Object data stuff
     // TODO: Resize the buffer if needed when more meshes are added, OR crash hard
     // TODO: Make a more reasonable default too... we need: #meshes * #LODs * #segments-per-lod
-    size_t objectDataBufferSize = 10'000 * sizeof(ShaderDrawable);
+    size_t objectDataBufferSize = m_drawables.capacity() * sizeof(ShaderDrawable);
     Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     reg.publish("SceneObjectData", objectDataBuffer);
     BindingSet& objectBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(objectDataBuffer, ShaderStage::Vertex) });
@@ -329,8 +356,9 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         }
 
         // Update mesh streaming (well, it's not much streaming to speak of right now, but it's the basis of something like that)
+        std::unordered_set<StaticMeshHandle> updatedStaticMeshes {};
         if constexpr (UseMeshletRendering) {
-            m_meshletManager->processMeshStreaming(cmdList);
+            m_meshletManager->processMeshStreaming(cmdList, updatedStaticMeshes);
         }
 
         // Update camera data
@@ -367,39 +395,33 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             uploadBuffer.upload(cameraState, cameraBuffer);
         }
 
-        // Update object data
+        // Update object data (drawables)
         {
-            std::vector<ShaderDrawable> rasterizerMeshData {};
+            size_t drawableCount = 0;
+            for (auto& instance : staticMeshInstances()) {
 
-            const auto& staticMeshInstances = scene().staticMeshInstances();
-            for (size_t i = 0, count = staticMeshInstances.size(); i < count; ++i) {
+                bool meshHasUpdated = updatedStaticMeshes.contains(instance->mesh());
 
-                const StaticMeshInstance& instance = *staticMeshInstances[i];
-                const StaticMesh& staticMesh = *staticMeshForHandle(instance.mesh());
+                // Update all current drawables for this instances
+                for (DrawableObjectHandle drawableHandle : instance->drawableHandles()) {
 
-                // TODO: Make use of all LODs
-                ARKOSE_ASSERT(staticMesh.numLODs() >= 1);
-                const StaticMeshLOD& lod = staticMesh.lodAtIndex(0);
+                    drawableCount += 1;
 
-                for (const StaticMeshSegment& meshSegment : lod.meshSegments) {
-
-                    ShaderDrawable drawable;
-                    drawable.materialIndex = meshSegment.material.indexOfType<int>();
-                    drawable.worldFromLocal = instance.transform().worldMatrix();
-                    drawable.worldFromTangent = mat4(instance.transform().worldNormalMatrix());
-                    drawable.previousFrameWorldFromLocal = instance.transform().previousFrameWorldMatrix();
-
-                    if (meshSegment.meshletView) {
-                        drawable.firstMeshlet = meshSegment.meshletView->firstMeshlet;
-                        drawable.meshletCount = meshSegment.meshletView->meshletCount;
+                    if (meshHasUpdated) {
+                        // Full update: reinit the mesh instance
+                        initializeStaticMeshInstance(*instance);
+                    } else {
+                        // Minimal update: only change transforms
+                        ShaderDrawable& drawable = m_drawables.get(drawableHandle);
+                        drawable.worldFromLocal = instance->transform().worldMatrix();
+                        drawable.worldFromTangent = mat4(instance->transform().worldNormalMatrix());
+                        drawable.previousFrameWorldFromLocal = instance->transform().previousFrameWorldMatrix();
                     }
-
-                    rasterizerMeshData.push_back(drawable);
                 }
             }
 
-            m_drawableCountForFrame = rasterizerMeshData.size();
-            uploadBuffer.upload(rasterizerMeshData, objectDataBuffer);
+            m_drawableCountForFrame = drawableCount;
+            uploadBuffer.upload(m_drawables.resourceSpan(), objectDataBuffer);
         }
 
         // Update exposure data
@@ -488,7 +510,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             std::vector<RTTriangleMesh> rayTracingMeshData {};
             std::vector<RTGeometryInstance> rayTracingGeometryInstances {};
 
-            for (auto& instance : scene().staticMeshInstances()) {
+            for (auto& instance : staticMeshInstances()) {
                 if (StaticMesh* staticMesh = staticMeshForHandle(instance->mesh())) {
                     for (StaticMeshLOD& staticMeshLOD : staticMesh->LODs()) {
                         for (StaticMeshSegment& meshSegment : staticMeshLOD.meshSegments) {
@@ -622,6 +644,63 @@ void GpuScene::registerLight(SpotLight& light)
     m_managedSpotLights.push_back(managedLight);
 }
 
+void GpuScene::clearAllMeshInstances()
+{
+    for (auto& instance : m_staticMeshInstances) {
+        unregisterStaticMesh(instance->mesh());
+    }
+
+    m_staticMeshInstances.clear();
+}
+
+StaticMeshInstance& GpuScene::createStaticMeshInstance(StaticMeshHandle staticMeshHandle, Transform transform)
+{
+    // TODO: Do we not need to add a reference here? I would think yes, but it seems to already be accounted for?
+    //m_managedStaticMeshes.addReference(staticMeshHandle);
+
+    m_staticMeshInstances.push_back(std::make_unique<StaticMeshInstance>(staticMeshHandle, transform));
+    StaticMeshInstance& instance = *m_staticMeshInstances.back();
+
+    initializeStaticMeshInstance(instance);
+
+    return instance;
+}
+
+void GpuScene::initializeStaticMeshInstance(StaticMeshInstance& instance)
+{
+    StaticMesh* staticMesh = staticMeshForHandle(instance.mesh());
+    ARKOSE_ASSERT(staticMesh != nullptr);
+
+    constexpr u32 lodIdx = 0;
+    StaticMeshLOD& lod = staticMesh->lodAtIndex(lodIdx);
+
+    // TODO: Handle LOD changes for this instance! If it changes we want to unregister our current ones and register the ones for the new LOD
+    //instance.resetDrawableHandles();
+
+    for (size_t segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
+        StaticMeshSegment& meshSegment = lod.meshSegments[segmentIdx];
+
+        ShaderDrawable drawable;
+        drawable.worldFromLocal = instance.transform().worldMatrix();
+        drawable.worldFromTangent = mat4(instance.transform().worldNormalMatrix());
+        drawable.previousFrameWorldFromLocal = instance.transform().previousFrameWorldMatrix();
+        drawable.materialIndex = meshSegment.material.indexOfType<int>();
+
+        if (meshSegment.meshletView) {
+            drawable.firstMeshlet = meshSegment.meshletView->firstMeshlet;
+            drawable.meshletCount = meshSegment.meshletView->meshletCount;
+        }
+
+        if (instance.hasDrawableHandleForSegmentIndex(segmentIdx)) {
+            DrawableObjectHandle handle = instance.drawableHandleForSegmentIndex(segmentIdx);
+            m_drawables.set(handle, std::move(drawable));
+        } else {
+            DrawableObjectHandle handle = m_drawables.add(std::move(drawable));
+            instance.setDrawableHandle(segmentIdx, handle);
+        }
+    }
+}
+
 StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset const* staticMeshAsset)
 {
     // TODO: Maybe do some kind of caching here, and if we're trying to add the same mesh twice just ignore it and reuse the exisiting
@@ -651,6 +730,9 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset const* staticMeshA
 
     StaticMeshHandle handle = m_managedStaticMeshes.add(ManagedStaticMesh { .staticMeshAsset = staticMeshAsset,
                                                                             .staticMesh = std::move(staticMesh) });
+
+    // The static mesh will in some cases want a handle back to itself
+    m_managedStaticMeshes.get(handle).staticMesh->setHandleToSelf(handle);
 
     m_staticMeshAssetCache[staticMeshAsset] = handle;
 

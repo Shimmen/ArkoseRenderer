@@ -43,6 +43,16 @@ StaticMesh::StaticMesh(StaticMeshAsset const* asset, MeshMaterialResolver&& mate
     }
 }
 
+void StaticMesh::setHandleToSelf(StaticMeshHandle handle)
+{
+    for (StaticMeshLOD& lod : m_lods) {
+        for (StaticMeshSegment& segment : lod.meshSegments) {
+            // For now, only the segments need the handle
+            segment.staticMeshHandle = handle;
+        }
+    }
+}
+
 void StaticMeshSegment::ensureDrawCallIsAvailable(const VertexLayout& layout, GpuScene& scene) const
 {
     SCOPED_PROFILE_ZONE();

@@ -41,11 +41,11 @@ RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene,
 
         // NOTE: This is obviously not optimal... just for testing!
         std::vector<ShaderMeshlet> const& meshlets = scene.meshletManager().meshlets();
-        for (auto const& instance : scene.scene().staticMeshInstances()) {
+        for (auto const& instance : scene.staticMeshInstances()) {
 
             cmdList.setNamedUniform("worldFromLocal", instance->transform().worldMatrix());
 
-            StaticMesh const& staticMesh = *scene.staticMeshForHandle(instance->mesh());
+            StaticMesh const& staticMesh = *scene.staticMeshForInstance(*instance);
             StaticMeshLOD const& staticMeshLod = staticMesh.lodAtIndex(0);
             for (StaticMeshSegment const& segment : staticMeshLod.meshSegments) {
                 if (segment.meshletView.has_value()) {

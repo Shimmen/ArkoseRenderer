@@ -45,6 +45,8 @@ void Scene::update(float elapsedTime, float deltaTime)
 void Scene::preRender()
 {
     SCOPED_PROFILE_ZONE();
+
+    gpuScene().preRender();
     camera().preRender({});
 }
 
@@ -52,11 +54,8 @@ void Scene::postRender()
 {
     SCOPED_PROFILE_ZONE();
 
+    gpuScene().postRender();
     camera().postRender({});
-
-    for (auto& instance : m_staticMeshInstances) {
-        instance->transform().postRender({});
-    }
 }
 
 void Scene::setupFromDescription(const Description& description)
@@ -254,25 +253,20 @@ StaticMeshInstance& Scene::addMesh(StaticMeshAsset* staticMesh, Transform transf
     return instance;
 }
 
-void Scene::unloadAllMeshes()
-{
-    for (auto& instance : m_staticMeshInstances) {
-        gpuScene().unregisterStaticMesh(instance->mesh());
-    }
-
-    m_staticMeshInstances.clear();
-}
-
 StaticMeshInstance& Scene::createStaticMeshInstance(StaticMeshHandle staticMeshHandle, Transform transform)
 {
-    m_staticMeshInstances.push_back(std::make_unique<StaticMeshInstance>(staticMeshHandle, transform));
-    StaticMeshInstance& instance = *m_staticMeshInstances.back();
+    StaticMeshInstance& instance = gpuScene().createStaticMeshInstance(staticMeshHandle, transform);
 
     if (hasPhysicsScene()) {
         // TODO!
     }
 
     return instance;
+}
+
+void Scene::clearAllMeshInstances()
+{
+    gpuScene().clearAllMeshInstances();
 }
 
 void Scene::addLight(std::unique_ptr<Light> light)
@@ -379,7 +373,7 @@ void Scene::generateProbeGridFromBoundingBox()
 {
     ark::aabb3 sceneAABB {};
 
-    for (auto const& instance : staticMeshInstances()) {
+    for (auto const& instance : gpuScene().staticMeshInstances()) {
         if (StaticMesh* staticMesh = gpuScene().staticMeshForHandle(instance->mesh())) {
 
             ark::aabb3 transformedAABB = staticMesh->boundingBox().transformed(instance->transform().worldMatrix());
@@ -526,7 +520,7 @@ void Scene::drawSceneGizmos()
     }
 
     if (m_shouldDrawAllInstanceBoundingBoxes) {
-        for (auto const& instance : staticMeshInstances()) {
+        for (auto const& instance : gpuScene().staticMeshInstances()) {
             drawInstanceBoundingBox(*instance);
         }
     }

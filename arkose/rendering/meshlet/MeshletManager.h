@@ -5,8 +5,10 @@
 #include "core/Types.h"
 #include "rendering/backend/base/Buffer.h"
 #include "rendering/backend/util/IndexType.h"
+#include "rendering/StaticMesh.h"
 #include "scene/Vertex.h"
 #include <memory>
+#include <unordered_set>
 
 class Backend;
 class CommandList;
@@ -27,7 +29,7 @@ public:
     void allocateMeshlets(StaticMesh&);
     void freeMeshlets(StaticMesh&);
 
-    void processMeshStreaming(CommandList& cmdList);
+    void processMeshStreaming(CommandList& cmdList, std::unordered_set<StaticMeshHandle>& updatedMeshes);
 
     std::vector<ShaderMeshlet> const& meshlets() const { return m_meshlets; }
     Buffer const& meshletBuffer() const { return *m_meshletBuffer; }

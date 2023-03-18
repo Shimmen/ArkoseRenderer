@@ -28,6 +28,9 @@ struct StaticMeshSegment {
 
     StaticMeshSegmentAsset const* asset { nullptr };
 
+    // Handle to the static mesh that this segment is part of
+    StaticMeshHandle staticMeshHandle {};
+
     // Material used for rendering this mesh segment
     MaterialHandle material {};
 
@@ -69,6 +72,8 @@ public:
 
     void setName(std::string name) { m_name = std::move(name); }
     std::string_view name() const { return m_name; }
+
+    void setHandleToSelf(StaticMeshHandle);
 
     uint32_t numLODs() const { return static_cast<uint32_t>(m_lods.size()); }
 
