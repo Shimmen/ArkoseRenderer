@@ -6,6 +6,7 @@
 #include "core/math/Sphere.h"
 #include "physics/HandleTypes.h"
 #include "rendering/Material.h"
+#include "rendering/backend/base/AccelerationStructure.h"
 #include "rendering/backend/util/DrawCall.h" // remove me!
 #include "rendering/meshlet/MeshletView.h"
 #include "scene/Vertex.h"
@@ -15,7 +16,6 @@
 #include <vector>
 #include <memory>
 
-class BottomLevelAS;
 class GpuScene; // remove me!
 
 DEFINE_HANDLE_TYPE(StaticMeshHandle)

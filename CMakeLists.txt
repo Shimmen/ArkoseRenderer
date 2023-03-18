@@ -122,6 +122,7 @@ set(ARKOSE_SOURCES
     arkose/rendering/nodes/TAANode.cpp
     arkose/rendering/nodes/TonemapNode.cpp
     arkose/rendering/nodes/TranslucencyNode.cpp
+    arkose/scene/MeshInstance.cpp
     arkose/scene/ProbeGrid.cpp
     arkose/scene/Scene.cpp
     arkose/scene/Transform.cpp
