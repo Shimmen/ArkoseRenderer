@@ -402,22 +402,24 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 bool meshHasUpdated = updatedStaticMeshes.contains(instance->mesh());
 
-                // Update all current drawables for this instances
-                for (DrawableObjectHandle drawableHandle : instance->drawableHandles()) {
+                if (meshHasUpdated) {
+                    // Full update: reinit the mesh instance
+                    initializeStaticMeshInstance(*instance);
+                } else {
+                    // Minimal update: only change transforms
 
-                    drawableCount += 1;
-
-                    if (meshHasUpdated) {
-                        // Full update: reinit the mesh instance
-                        initializeStaticMeshInstance(*instance);
-                    } else {
-                        // Minimal update: only change transforms
+                    // Consider moving transforms to a per mesh-instance basis and let the drawables only keep a mesh-instance index and a material-index.
+                    // This would mean another indirection on the GPU when looking up transforms, but significantly less updating and iterating on the CPU
+                    // to e.g. update transforms.
+                    for (DrawableObjectHandle drawableHandle : instance->drawableHandles()) {
                         ShaderDrawable& drawable = m_drawables.get(drawableHandle);
                         drawable.worldFromLocal = instance->transform().worldMatrix();
                         drawable.worldFromTangent = mat4(instance->transform().worldNormalMatrix());
                         drawable.previousFrameWorldFromLocal = instance->transform().previousFrameWorldMatrix();
                     }
                 }
+
+                drawableCount += instance->drawableHandles().size();
             }
 
             m_drawableCountForFrame = drawableCount;
