@@ -325,21 +325,12 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
                 && hasSupportForDeviceExtension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)
                 && vk12features.bufferDeviceAddress;
 
-#if 0
-            // Prefer KHR
+            // Prefer KHR as it's the more generic/agnostic implementation
             if (khrRayTracingSupport) {
                 m_rayTracingBackend = RayTracingBackend::KhrExtension;
             } else if (nvidiaRayTracingSupport) {
                 m_rayTracingBackend = RayTracingBackend::NvExtension;
             }
-#else
-            // Prefer NV (for now!)
-            if (nvidiaRayTracingSupport) {
-                m_rayTracingBackend = RayTracingBackend::NvExtension;
-            } else if (khrRayTracingSupport) {
-                m_rayTracingBackend = RayTracingBackend::KhrExtension;
-            }
-#endif
 
             return nvidiaRayTracingSupport || khrRayTracingSupport; 
         }
