@@ -295,8 +295,11 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
     VkPhysicalDeviceVulkan12Features vk12features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
     vk11features.pNext = &vk12features;
 
+    VkPhysicalDeviceVulkan13Features vk13features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+    vk12features.pNext = &vk13features;
+
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR khrRayTracingPipelineFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
-    vk12features.pNext = &khrRayTracingPipelineFeatures;
+    vk13features.pNext = &khrRayTracingPipelineFeatures;
 
     VkPhysicalDeviceAccelerationStructureFeaturesKHR khrAccelerationStructureFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
     khrRayTracingPipelineFeatures.pNext = &khrAccelerationStructureFeatures;
@@ -353,6 +356,11 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         allRequiredSupported = false;
     }
 
+    if (!vk11features.shaderDrawParameters) {
+        ARKOSE_LOG(Error, "VulkanBackend: no support for required feature shader draw parameters, which is required for 'gl_DrawID' among others.");
+        allRequiredSupported = false;
+    }
+
     if (!features.shaderUniformBufferArrayDynamicIndexing || !vk12features.shaderUniformBufferArrayNonUniformIndexing ||
         !features.shaderStorageBufferArrayDynamicIndexing || !vk12features.shaderStorageBufferArrayNonUniformIndexing ||
         !features.shaderStorageImageArrayDynamicIndexing || !vk12features.shaderStorageImageArrayNonUniformIndexing ||
@@ -395,6 +403,11 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         !vk12features.shaderSharedInt64Atomics) {
         ARKOSE_LOG(Error, "VulkanBackend: no support for shader 64-bit atomics, which is required for our GPU work queue implementation. "
                           "If this isn't supported on your machine there might possibly be a version which doesn't require that.");
+        allRequiredSupported = false;
+    }
+
+    if (!vk13features.maintenance4) {
+        ARKOSE_LOG(Error, "VulkanBackend: no support for 'maintenance4', which is required for for various maintenance features.");
         allRequiredSupported = false;
     }
 
@@ -716,6 +729,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     VkPhysicalDeviceFeatures& features = features2.features;
     VkPhysicalDeviceVulkan11Features vk11features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
     VkPhysicalDeviceVulkan12Features vk12features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
+    VkPhysicalDeviceVulkan13Features vk13features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
 
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR khrRayTracingPipelineFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
     VkPhysicalDeviceAccelerationStructureFeaturesKHR khrAccelerationStructureFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
@@ -727,6 +741,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     features.wideLines = VK_TRUE;
     features.fragmentStoresAndAtomics = VK_TRUE;
     features.vertexPipelineStoresAndAtomics = VK_TRUE;
+
+    // Common shader parameters, such as 'gl_DrawID'
+    vk11features.shaderDrawParameters = VK_TRUE;
     
     // Common dynamic & non-uniform indexing features that should be supported on a modern GPU
     features.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
@@ -760,6 +777,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     features.shaderInt64 = VK_TRUE;
     vk12features.shaderBufferInt64Atomics = VK_TRUE;
     vk12features.shaderSharedInt64Atomics = VK_TRUE;
+
+    // 'maintenance4' for various maintenance features
+    vk13features.maintenance4 = VK_TRUE;
 
     // GPU debugging & insight for e.g. Nsight
     if (vulkanDebugMode) {
@@ -824,7 +844,8 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     deviceCreateInfo.pNext = &features2;
     features2.pNext = &vk11features;
     vk11features.pNext = &vk12features;
-    vk12features.pNext = &khrRayTracingPipelineFeatures;
+    vk12features.pNext = &vk13features;
+    vk13features.pNext = &khrRayTracingPipelineFeatures;
     khrRayTracingPipelineFeatures.pNext = &khrAccelerationStructureFeatures;
     khrAccelerationStructureFeatures.pNext = &khrRayQueryFeatures;
 

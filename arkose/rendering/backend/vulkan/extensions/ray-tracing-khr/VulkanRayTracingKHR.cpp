@@ -66,7 +66,7 @@ std::pair<VkBuffer, VmaAllocation> VulkanRayTracingKHR::createAccelerationStruct
 
     VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
     bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    bufferCreateInfo.usage = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+    bufferCreateInfo.usage = VK_BUFFER_USAGE_STORAGE_BUFFER_BIT | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
     bufferCreateInfo.size = size;
 
     bufferCreateInfo.usage |= readOnlyMemory
