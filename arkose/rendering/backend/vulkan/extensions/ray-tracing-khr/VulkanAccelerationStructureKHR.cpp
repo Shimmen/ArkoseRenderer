@@ -195,19 +195,18 @@ std::vector<VkAccelerationStructureInstanceKHR> VulkanTopLevelASKHR::createInsta
     std::vector<VkAccelerationStructureInstanceKHR> instanceData {};
     instanceData.reserve(instances.size());
 
-    for (size_t instanceIdx = 0; instanceIdx < instances.size(); ++instanceIdx) {
-        const RTGeometryInstance& instance = instances[instanceIdx];
+    for (RTGeometryInstance const& instance : instances) {
 
         auto* blas = dynamic_cast<const VulkanBottomLevelASKHR*>(&instance.blas);
         ARKOSE_ASSERT(blas != nullptr); // ensure we do in face have a KHR version here
 
         VkAccelerationStructureInstanceKHR vkInstance {};
         vkInstance.transform = vulkanBackend.rayTracingKHR().toVkTransformMatrixKHR(instance.transform.worldMatrix());
-        vkInstance.instanceCustomIndex = instanceIdx; // NOTE: This is gl_InstanceCustomIndexEXT, we should be smarter about this..
+        vkInstance.instanceCustomIndex = instance.customInstanceId; // NOTE: This is gl_InstanceCustomIndexEXT, we should be smarter about this..
         vkInstance.accelerationStructureReference = blas->accelerationStructureDeviceAddress;
-        vkInstance.flags = VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
-        vkInstance.mask = 0xFF; //  Only be hit if rayMask & instance.mask != 0
-        vkInstance.instanceShaderBindingTableRecordOffset = 0; // We will use the same hit group for all objects
+        vkInstance.flags = 0; // VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
+        vkInstance.mask = instance.hitMask; // Only register hit if rayMask & instance.mask != 0
+        vkInstance.instanceShaderBindingTableRecordOffset = instance.shaderBindingTableOffset; // We will use the same hit group for all objects
 
         instanceData.push_back(vkInstance);
     }

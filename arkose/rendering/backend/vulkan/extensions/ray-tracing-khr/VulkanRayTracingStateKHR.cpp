@@ -331,15 +331,15 @@ void VulkanRayTracingStateKHR::traceRaysWithShaderOnlySBT(VkCommandBuffer comman
     raygenSbtRegion.stride = shaderGroupBaseAlignment;
     raygenSbtRegion.size = raygenSbtRegion.stride;
 
-    VkStridedDeviceAddressRegionKHR missSbtRegion;
-    missSbtRegion.deviceAddress = raygenSbtRegion.deviceAddress + raygenSbtRegion.size;
-    missSbtRegion.stride = shaderGroupBaseAlignment;
-    missSbtRegion.size = numMissShaders * missSbtRegion.stride;
-
     VkStridedDeviceAddressRegionKHR hitSbtRegion;
-    hitSbtRegion.deviceAddress = missSbtRegion.deviceAddress + missSbtRegion.size;
+    hitSbtRegion.deviceAddress = raygenSbtRegion.deviceAddress + raygenSbtRegion.size;
     hitSbtRegion.stride = shaderGroupBaseAlignment;
     hitSbtRegion.size = numHitGroups * hitSbtRegion.stride;
+
+    VkStridedDeviceAddressRegionKHR missSbtRegion;
+    missSbtRegion.deviceAddress = hitSbtRegion.deviceAddress + hitSbtRegion.size;
+    missSbtRegion.stride = shaderGroupBaseAlignment;
+    missSbtRegion.size = numMissShaders * missSbtRegion.stride;
 
     // NOTE: No support for callable shaders yet
     VkStridedDeviceAddressRegionKHR callableSbtRegion { 0, 0, 0 };
