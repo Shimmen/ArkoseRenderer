@@ -64,9 +64,12 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
         m_instance = createInstance(requestedLayers, &dbgMessengerCreateInfo);
 
         m_debugUtils = std::make_unique<VulkanDebugUtils>(*this, m_instance);
-        if (debugUtils().vkCreateDebugUtilsMessengerEXT(m_instance, &dbgMessengerCreateInfo, nullptr, &m_debugMessenger) != VK_SUCCESS) {
-            ARKOSE_LOG(Fatal, "VulkanBackend: could not create the debug messenger, exiting.");
-        }
+
+        // NOTE: We use the debug messenger for pre-instance issues, but rely on the debug report callback after that point,
+        // as it is more powerful than the messenger, but otherwise does more or less the exact same thing.
+        //if (debugUtils().vkCreateDebugUtilsMessengerEXT(m_instance, &dbgMessengerCreateInfo, nullptr, &m_debugMessenger) != VK_SUCCESS) {
+        //    ARKOSE_LOG(Fatal, "VulkanBackend: could not create the debug messenger, exiting.");
+        //}
 
         VkDebugReportCallbackCreateInfoEXT dbgReportCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT };
         dbgReportCreateInfo.pfnCallback = VulkanDebugUtils::debugReportCallback;
