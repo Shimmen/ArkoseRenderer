@@ -72,8 +72,8 @@ private:
 };
 
 struct RTGeometryInstance {
-    const BottomLevelAS& blas;
-    const Transform& transform;
+    BottomLevelAS const* blas;
+    Transform const* transform;
     uint32_t shaderBindingTableOffset;
     uint32_t customInstanceId;
     uint8_t hitMask;

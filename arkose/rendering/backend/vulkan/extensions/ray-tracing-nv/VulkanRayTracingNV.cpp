@@ -39,9 +39,9 @@ std::vector<VulkanRayTracingNV::GeometryInstance> VulkanRayTracingNV::createInst
         auto& instance = instances[instanceIdx];
         VulkanRayTracingNV::GeometryInstance data {};
 
-        data.transform = transpose(instance.transform.worldMatrix());
+        data.transform = transpose(instance.transform->worldMatrix());
 
-        auto& vulkanBlas = static_cast<const VulkanBottomLevelASNV&>(instance.blas);
+        auto& vulkanBlas = static_cast<VulkanBottomLevelASNV const&>(*instance.blas);
         data.accelerationStructureHandle = vulkanBlas.handle;
 
         // TODO: We already have gl_InstanceID for this running index, and this sets gl_InstanceCustomIndexNV.

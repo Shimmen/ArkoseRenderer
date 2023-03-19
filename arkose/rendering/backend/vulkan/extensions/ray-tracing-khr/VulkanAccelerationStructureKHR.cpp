@@ -197,11 +197,11 @@ std::vector<VkAccelerationStructureInstanceKHR> VulkanTopLevelASKHR::createInsta
 
     for (RTGeometryInstance const& instance : instances) {
 
-        auto* blas = dynamic_cast<const VulkanBottomLevelASKHR*>(&instance.blas);
+        auto* blas = dynamic_cast<VulkanBottomLevelASKHR const*>(instance.blas);
         ARKOSE_ASSERT(blas != nullptr); // ensure we do in face have a KHR version here
 
         VkAccelerationStructureInstanceKHR vkInstance {};
-        vkInstance.transform = vulkanBackend.rayTracingKHR().toVkTransformMatrixKHR(instance.transform.worldMatrix());
+        vkInstance.transform = vulkanBackend.rayTracingKHR().toVkTransformMatrixKHR(instance.transform->worldMatrix());
         vkInstance.instanceCustomIndex = instance.customInstanceId; // NOTE: This is gl_InstanceCustomIndexEXT, we should be smarter about this..
         vkInstance.accelerationStructureReference = blas->accelerationStructureDeviceAddress;
         vkInstance.flags = 0; // VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;

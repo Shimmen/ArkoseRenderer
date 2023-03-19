@@ -551,8 +551,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                             ARKOSE_ASSERT(hitMask != 0);
 
                             // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
-                            rayTracingGeometryInstances.push_back(RTGeometryInstance { .blas = *meshSegment.blas,
-                                                                                       .transform = instance->transform(), // NOTE: This is a reference!
+                            rayTracingGeometryInstances.push_back(RTGeometryInstance { .blas = meshSegment.blas.get(),
+                                                                                       .transform = &instance->transform(),
                                                                                        .shaderBindingTableOffset = 0, // TODO: Generalize!
                                                                                        .customInstanceId = rtMeshIndex,
                                                                                        .hitMask = hitMask });
