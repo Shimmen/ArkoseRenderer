@@ -83,7 +83,8 @@ vec3 sampleGGXVNDF(vec3 Ve, float alpha_x, float alpha_y, float U1, float U2)
 
 vec3 sampleSpecularBRDF(vec3 wo, float roughness, vec2 rand)
 {
-    return sampleGGXVNDF(wo, roughness, roughness, rand.x, rand.y);
+    float alpha = square(roughness);
+    return sampleGGXVNDF(wo, alpha, alpha, rand.x, rand.y);
 }
 
 vec3 diffuseBRDF()

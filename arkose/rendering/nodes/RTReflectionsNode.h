@@ -14,7 +14,7 @@ private:
     float m_injectedAmbient { 0.0f };
 
     float m_mirrorRoughnessThreshold { 0.001f };
-    float m_noTracingRoughnessThreshold { 0.75f };
+    float m_noTracingRoughnessThreshold { 0.6f };
 
     bool m_denoiseEnabled { true };
     
