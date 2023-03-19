@@ -50,17 +50,17 @@ VkBool32 VulkanDebugUtils::debugReportCallback(VkDebugReportFlagsEXT flags, VkDe
                                                int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
 {
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-        ARKOSE_LOG(Error, "Vulkan debug report; [{}] {}", pLayerPrefix, pMessage);
+        ARKOSE_LOG(Error, "Vulkan debug report; {}", pMessage);
 
     else if (flags & (VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT))
-        ARKOSE_LOG(Warning, "Vulkan debug report; [{}] {}", pLayerPrefix, pMessage);
+        ARKOSE_LOG(Warning, "Vulkan debug report; {}", pMessage);
 
     // NOTE: We treat information as verbose, as it's very spammy otherwise and the info is not very useful anyway
     if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-        ARKOSE_LOG(Verbose, "Vulkan debug report; [{}] {}", pLayerPrefix, pMessage);
+        ARKOSE_LOG(Verbose, "Vulkan debug report; {}", pMessage);
 
     if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
-        ARKOSE_LOG(Verbose, "Vulkan debug report; [{}] {}", pLayerPrefix, pMessage);
+        ARKOSE_LOG(Verbose, "Vulkan debug report; {}", pMessage);
 
     return VK_FALSE;
 }
