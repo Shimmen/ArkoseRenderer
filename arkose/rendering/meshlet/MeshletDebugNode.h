@@ -9,5 +9,5 @@ public:
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:
-    MeshletCuller m_meshletCuller {};
+    //MeshletCuller m_meshletCuller {};
 };

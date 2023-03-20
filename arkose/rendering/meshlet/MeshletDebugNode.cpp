@@ -5,7 +5,7 @@
 
 RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene, Registry& reg)
 {
-    MeshletCuller::CullData const& cullData = m_meshletCuller.construct(scene, reg);
+    //MeshletCuller::CullData const& cullData = m_meshletCuller.construct(scene, reg);
 
     Texture& debugTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA8);
     reg.publish("MeshletDebugVis", debugTexture);
@@ -26,11 +26,13 @@ RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene,
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
+        geometry::Frustum const& cameraFrustum = scene.camera().frustum();
+
         // TODO: Replace the naive code below with the culler + a single draw call!
         //       Or, at least offer this as the non-naive solution. The big cpu-bound
         //       draw call loop below can be very helpful for validating results, but
         //       it's incredibly inefficient.
-        m_meshletCuller.execute(cmdList, scene, cullData);
+        //m_meshletCuller.execute(cmdList, scene, cullData);
 
         // Keep meshlet colors consistent
         ark::Random rng { 12345 };
@@ -53,18 +55,22 @@ RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene,
                     MeshletView const& meshletView = segment.meshletView.value();
                     for (u32 meshletIdx = meshletView.firstMeshlet; meshletIdx < meshletView.firstMeshlet + meshletView.meshletCount; ++meshletIdx) {
 
-                        ShaderMeshlet const& meshlet = meshlets[meshletIdx];
-
-                        // TODO: Maybe at least generate the color in the shader?
+                        // Generate color before culling, so the colors stay constant as the camera moves
                         vec3 color { rng.randomFloatInRange(0.5f, 1.0f),
                                      rng.randomFloatInRange(0.5f, 1.0f),
                                      rng.randomFloatInRange(0.5f, 1.0f) };
-                        cmdList.setNamedUniform("meshletColor", color);
 
-                        cmdList.issueDrawCall(DrawCallDescription { .type = DrawCallDescription::Type::Indexed,
-                                                                    .firstIndex = meshlet.firstIndex,
-                                                                    .indexCount = 3 * meshlet.triangleCount,
-                                                                    .indexType = IndexType::UInt32 });
+                        ShaderMeshlet const& meshlet = meshlets[meshletIdx];
+
+                        auto meshletSphereBounds = geometry::Sphere(meshlet.center, meshlet.radius).transformed(instance->transform().worldMatrix());
+                        if (cameraFrustum.includesSphere(meshletSphereBounds)) {
+
+                            cmdList.setNamedUniform("meshletColor", color);
+                            cmdList.issueDrawCall(DrawCallDescription { .type = DrawCallDescription::Type::Indexed,
+                                                                        .firstIndex = meshlet.firstIndex,
+                                                                        .indexCount = 3 * meshlet.triangleCount,
+                                                                        .indexType = IndexType::UInt32 });
+                        }
                     }
                 }
             }
