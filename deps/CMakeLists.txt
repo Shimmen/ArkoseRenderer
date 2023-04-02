@@ -11,7 +11,7 @@ set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE INTERNAL "")
 set(SPIRV_CROSS_CLI OFF CACHE INTERNAL "")
 FetchContent_Declare(spirv-cross
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
-    GIT_TAG        "sdk-1.3.211.0")
+    GIT_TAG        "sdk-1.3.243.0")
 
 FetchContent_Declare(json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
