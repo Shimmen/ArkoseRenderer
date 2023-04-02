@@ -15,8 +15,6 @@ layout(set = 1, binding = 0) buffer restrict readonly DrawableLookupBlock { uint
 layout(set = 1, binding = 1) buffer restrict readonly InstanceBlock { ShaderDrawable instances[]; };
 layout(set = 1, binding = 2) buffer restrict readonly MeshletBlock { ShaderMeshlet meshlets[]; };
 
-#define INDIRECT 1
-
 #if !INDIRECT
 NAMED_UNIFORMS(constants,
     uint testDrawIdx;

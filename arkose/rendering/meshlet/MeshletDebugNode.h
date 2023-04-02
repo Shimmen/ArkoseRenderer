@@ -6,12 +6,20 @@
 class MeshletDebugNode final : public RenderPipelineNode {
 public:
     std::string name() const override { return "Meshlet Debug"; }
+    void drawGui() override;
+
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:
-    //MeshletCuller m_meshletCuller {};
+    enum class RenderPath {
+        VertexShader,
+        MeshShaderDirect,
+        MeshShaderIndirect,
+    };
 
-    struct MeshShaderPathParams {
+    RenderPath m_renderPath { RenderPath::MeshShaderIndirect };
+
+    struct PassParams {
         static constexpr u32 groupSize { 32 }; // TODO: Get this value from the driver preferences!
         
         BindingSet* cameraBindingSet { nullptr };
@@ -23,9 +31,14 @@ private:
         Buffer* drawableLookupBuffer { nullptr };
 
         ComputeState* meshletTaskSetupState { nullptr };
-        RenderState* meshShaderRenderState { nullptr };
+        RenderState* renderState { nullptr };
     };
 
-    MeshShaderPathParams const& createMeshShaderPath(GpuScene&, Registry&, RenderTarget&);
-    void executeMeshShaderPath(MeshShaderPathParams const&, GpuScene&, CommandList&, UploadBuffer&) const;
+    // NOTE: This path is only for debugging, as it's crushingly slow for anything other than very small scenes
+    PassParams const& createVertexShaderPath(GpuScene&, Registry&, RenderTarget&);
+    void executeVertexShaderPath(PassParams const&, GpuScene&, CommandList&, UploadBuffer&) const;
+
+    PassParams const& createMeshShaderPath(GpuScene&, Registry&, RenderTarget&, bool indirect);
+    void executeMeshShaderDirectPath(PassParams const&, GpuScene&, CommandList&, UploadBuffer&) const;
+    void executeMeshShaderIndirectPath(PassParams const&, GpuScene&, CommandList&, UploadBuffer&) const;
 };
