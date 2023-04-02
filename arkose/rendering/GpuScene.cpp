@@ -691,6 +691,9 @@ void GpuScene::initializeStaticMeshInstance(StaticMeshInstance& instance)
         if (meshSegment.meshletView) {
             drawable.firstMeshlet = meshSegment.meshletView->firstMeshlet;
             drawable.meshletCount = meshSegment.meshletView->meshletCount;
+        } else {
+            drawable.firstMeshlet = 0;
+            drawable.meshletCount = 0;
         }
 
         if (instance.hasDrawableHandleForSegmentIndex(segmentIdx)) {
