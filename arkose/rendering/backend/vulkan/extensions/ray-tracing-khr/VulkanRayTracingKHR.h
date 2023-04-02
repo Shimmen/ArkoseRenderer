@@ -44,7 +44,7 @@ public:
 
     // Helpers
 
-    static constexpr VkDeviceSize SharedScratchBufferSize = 10 * 1024 * 1024;
+    static constexpr VkDeviceSize SharedScratchBufferSize = 20 * 1024 * 1024;
     VkDeviceAddress sharedScratchBufferDeviceAddress() const { return m_sharedScratchBufferAddress; }
 
     std::pair<VkBuffer, VmaAllocation> createAccelerationStructureBuffer(VkDeviceSize size, bool deviceOnlyMemory, bool readOnlyMemory);
