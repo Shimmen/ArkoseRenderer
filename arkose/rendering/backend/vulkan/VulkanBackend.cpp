@@ -1564,14 +1564,14 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
                 uint32_t nodeEndTimestampIdx = nextTimestampQueryIdx++;
                 node.timer().reportGpuTime(elapsedSecondsBetweenTimestamps(nodeStartTimestampIdx, nodeEndTimestampIdx));
 
+                cmdList.beginDebugLabel(nodeName);
                 vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameContext.timestampQueryPool, nodeStartTimestampIdx);
 
-                cmdList.beginDebugLabel(nodeName);
                 nodeExecuteCallback(appState, cmdList, uploadBuffer);
                 cmdList.endNode({});
-                cmdList.endDebugLabel();
 
                 vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameContext.timestampQueryPool, nodeEndTimestampIdx);
+                cmdList.endDebugLabel();
 
                 double cpuElapsed = glfwGetTime() - cpuStartTime;
                 node.timer().reportCpuTime(cpuElapsed);
