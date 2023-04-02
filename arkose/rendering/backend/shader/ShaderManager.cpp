@@ -330,10 +330,9 @@ bool ShaderManager::CompiledShader::recompile()
         lastCompileError.clear();
 
         {
-            // NOTE: This causes a weird crash in ShaderC for some reason *for some shaders*
-            //SCOPED_PROFILE_ZONE_NAMED("SPIR-V binary to ASM");
-            //shaderc::AssemblyCompilationResult asmResult = compiler.CompileGlslToSpvAssembly(glslSource, shaderKind, resolvedFilePath.c_str(), options);
-            //FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvAssemblyPath(shaderFile), std::vector<char>(asmResult.cbegin(), asmResult.cend()));
+            SCOPED_PROFILE_ZONE_NAMED("SPIR-V binary to ASM");
+            shaderc::AssemblyCompilationResult asmResult = compiler.CompileGlslToSpvAssembly(glslSource, shaderKind, resolvedFilePath.c_str(), options);
+            FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvAssemblyPath(shaderFile), std::vector<char>(asmResult.cbegin(), asmResult.cend()));
         }
 
         {
