@@ -28,6 +28,10 @@ public:
     void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex) override;
     void drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer) override;
 
+    void drawMeshTasks(u32 groupCountX, u32 groupCountY, u32 groupCountZ) override;
+    void drawMeshTasksIndirect(Buffer const& indirectBuffer, u32 indirectDataStride, u32 indirectDataOffset,
+                               Buffer const& countBuffer, u32 countDataOffset) override;
+
     void setViewport(ivec2 origin, ivec2 size) override;
     void setDepthBias(float constantFactor, float slopeFactor) override;
 

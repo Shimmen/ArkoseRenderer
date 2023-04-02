@@ -31,6 +31,10 @@ static shaderc_shader_kind glslShaderKindForShaderFile(const ShaderFile& shaderF
         return shaderc_intersection_shader;
     case ShaderFileType::RTMiss:
         return shaderc_miss_shader;
+    case ShaderFileType::Task:
+        return shaderc_task_shader;
+    case ShaderFileType::Mesh:
+        return shaderc_mesh_shader;
     case ShaderFileType::Unknown:
         ARKOSE_LOG(Warning, "Can't find glsl shader kind for shader file of unknown type ('{}')", shaderFile.path());
         return shaderc_glsl_infer_from_source;

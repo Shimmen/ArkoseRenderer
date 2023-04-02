@@ -1043,6 +1043,53 @@ void VulkanCommandList::drawIndirect(const Buffer& indirectBuffer, const Buffer&
     vkCmdDrawIndexedIndirectCount(m_commandBuffer, vulkanIndirectBuffer, 0u, vulkanCountBuffer, 0u, maxDrawCount, indirectDataStride);
 }
 
+void VulkanCommandList::drawMeshTasks(u32 groupCountX, u32 groupCountY, u32 groupCountZ)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    if (!backend().hasMeshShadingSupport()) {
+        ARKOSE_LOG(Fatal, "Trying to draw mesh tasks but there is no mesh shading support!");
+    }
+
+    if (!activeRenderState) {
+        ARKOSE_LOG(Fatal, "drawMeshTasks: no active render state!");
+    }
+
+    backend().meshShaderEXT().vkCmdDrawMeshTasksEXT(m_commandBuffer, groupCountX, groupCountY, groupCountZ);
+}
+
+void VulkanCommandList::drawMeshTasksIndirect(Buffer const& indirectBuffer, u32 indirectDataStride, u32 indirectDataOffset,
+                                              Buffer const& countBuffer, u32 countDataOffset)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    if (!backend().hasMeshShadingSupport()) {
+        ARKOSE_LOG(Fatal, "Trying to draw mesh tasks but there is no mesh shading support!");
+    }
+
+    if (!activeRenderState) {
+        ARKOSE_LOG(Fatal, "drawMeshTasksIndirect: no active render state!");
+    }
+
+    if (indirectBuffer.usage() != Buffer::Usage::IndirectBuffer) {
+        ARKOSE_LOG(Fatal, "drawMeshTasksIndirect: supplied indirect buffer is not an indirect buffer!");
+    }
+    if (countBuffer.usage() != Buffer::Usage::IndirectBuffer) {
+        ARKOSE_LOG(Fatal, "drawMeshTasksIndirect: supplied count buffer is not an indirect buffer!");
+    }
+
+    VkBuffer vulkanIndirectBuffer = static_cast<const VulkanBuffer&>(indirectBuffer).buffer;
+    VkBuffer vulkanCountBuffer = static_cast<const VulkanBuffer&>(countBuffer).buffer;
+
+    ARKOSE_ASSERT(indirectDataStride >= 3 * sizeof(u32));
+    u32 maxDrawCount = narrow_cast<u32>(indirectBuffer.size() - indirectDataOffset) / indirectDataStride;
+
+    backend().meshShaderEXT().vkCmdDrawMeshTasksIndirectCountEXT(m_commandBuffer,
+                                                                 vulkanIndirectBuffer, indirectDataOffset,
+                                                                 vulkanCountBuffer, countDataOffset,
+                                                                 maxDrawCount, indirectDataStride);
+}
+
 void VulkanCommandList::setViewport(ivec2 origin, ivec2 size)
 {
     ARKOSE_ASSERT(origin.x >= 0);

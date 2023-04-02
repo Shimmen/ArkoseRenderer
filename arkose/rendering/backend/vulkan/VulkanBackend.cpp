@@ -159,6 +159,10 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
         ARKOSE_LOG(Info, "VulkanBackend: no ray tracing backend");
     }
 
+    if (hasActiveCapability(Backend::Capability::MeshShading)) {
+        m_meshShaderExt = std::make_unique<VulkanMeshShaderEXT>(*this, physicalDevice(), device());
+    }
+
     // Create empty stub descriptor set layout (useful for filling gaps as Vulkan doesn't allow having gaps)
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
     descriptorSetLayoutCreateInfo.bindingCount = 0;
@@ -310,6 +314,9 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
     VkPhysicalDeviceRayQueryFeaturesKHR khrRayQueryFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
     khrAccelerationStructureFeatures.pNext = &khrRayQueryFeatures;
 
+    VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT };
+    khrRayQueryFeatures.pNext = &meshShaderFeatures;
+
     vkGetPhysicalDeviceFeatures2(physicalDevice(), &features2);
 
     auto isSupported = [&](Capability capability) -> bool {
@@ -339,6 +346,17 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
             }
 
             return nvidiaRayTracingSupport || khrRayTracingSupport; 
+        }
+        case Capability::MeshShading: {
+            bool supportsExtExtension = hasSupportForDeviceExtension(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+            bool extMeshShaderSupport = supportsExtExtension && meshShaderFeatures.taskShader && meshShaderFeatures.meshShader;
+
+            if (!supportsExtExtension && hasSupportForDeviceExtension(VK_NV_MESH_SHADER_EXTENSION_NAME)) {
+                ARKOSE_LOG(Error, "VulkanBackend: no support for mesh shading, but the Nvidia-specific extension is supported!"
+                                  "If you update your drivers now it's possible that it will then be supported.");
+            }
+
+            return extMeshShaderSupport;
         }
         case Capability::Shader16BitFloat:
             return vk11features.storageBuffer16BitAccess
@@ -737,6 +755,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR khrRayTracingPipelineFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
     VkPhysicalDeviceAccelerationStructureFeaturesKHR khrAccelerationStructureFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
     VkPhysicalDeviceRayQueryFeaturesKHR khrRayQueryFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
+    VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT };
 
     // Enable some very basic common features expected by everyone to exist
     features.samplerAnisotropy = VK_TRUE;
@@ -816,6 +835,11 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
                 break;
             }
             break;
+        case Capability::MeshShading:
+            deviceExtensions.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+            meshShaderFeatures.taskShader = VK_TRUE;
+            meshShaderFeatures.meshShader = VK_TRUE;
+            break;
         case Capability::Shader16BitFloat:
             vk11features.storageBuffer16BitAccess = VK_TRUE;
             vk11features.uniformAndStorageBuffer16BitAccess = VK_TRUE;
@@ -851,6 +875,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     vk13features.pNext = &khrRayTracingPipelineFeatures;
     khrRayTracingPipelineFeatures.pNext = &khrAccelerationStructureFeatures;
     khrAccelerationStructureFeatures.pNext = &khrRayQueryFeatures;
+    khrRayQueryFeatures.pNext = &meshShaderFeatures;
 
     VkDevice device;
     if (vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device) != VK_SUCCESS)
@@ -1954,6 +1979,12 @@ std::optional<VkPushConstantRange> VulkanBackend::getPushConstantRangeForShader(
         case ShaderFileType::RTIntersection:
             stageFlag = VK_SHADER_STAGE_INTERSECTION_BIT_NV;
             break;
+        case ShaderFileType::Task:
+            stageFlag = VK_SHADER_STAGE_TASK_BIT_EXT;
+            break;
+        case ShaderFileType::Mesh:
+            stageFlag = VK_SHADER_STAGE_MESH_BIT_EXT;
+            break;
         default:
             ASSERT_NOT_REACHED();
         }
@@ -2147,6 +2178,10 @@ VkShaderStageFlags VulkanBackend::shaderStageToVulkanShaderStageFlags(ShaderStag
         stageFlags |= VK_SHADER_STAGE_ANY_HIT_BIT_NV;
     if (isSet(shaderStage & ShaderStage::RTIntersection))
         stageFlags |= VK_SHADER_STAGE_INTERSECTION_BIT_NV;
+    if (isSet(shaderStage & ShaderStage::Task))
+        stageFlags |= VK_SHADER_STAGE_TASK_BIT_EXT;
+    if (isSet(shaderStage & ShaderStage::Mesh))
+        stageFlags |= VK_SHADER_STAGE_MESH_BIT_EXT;
 
     ARKOSE_ASSERT(stageFlags != 0);
     return stageFlags;
@@ -2186,6 +2221,12 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
             break;
         case ShaderFileType::RTIntersection:
             stageFlag = ShaderStage::RTIntersection;
+            break;
+        case ShaderFileType::Task:
+            stageFlag = ShaderStage::Task;
+            break;
+        case ShaderFileType::Mesh:
+            stageFlag = ShaderStage::Mesh;
             break;
         default:
             ASSERT_NOT_REACHED();

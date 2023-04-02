@@ -34,6 +34,7 @@ public:
 
     enum class Capability {
         RayTracing,
+        MeshShading,
         Shader16BitFloat,
     };
 

@@ -47,6 +47,8 @@ enum class ShaderFileType {
     RTAnyHit,
     RTIntersection,
     RTMiss,
+    Task,
+    Mesh,
     Unknown,
 };
 

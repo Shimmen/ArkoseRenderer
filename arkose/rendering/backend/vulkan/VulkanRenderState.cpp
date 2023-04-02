@@ -88,8 +88,13 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
             case ShaderFileType::Fragment:
                 stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
                 break;
-            case ShaderFileType::Compute:
-                stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
+            case ShaderFileType::Task:
+                ARKOSE_ASSERT(vulkanBackend.hasMeshShadingSupport());
+                stageFlags = VK_SHADER_STAGE_TASK_BIT_EXT;
+                break;
+            case ShaderFileType::Mesh:
+                ARKOSE_ASSERT(vulkanBackend.hasMeshShadingSupport());
+                stageFlags = VK_SHADER_STAGE_MESH_BIT_EXT;
                 break;
             default:
                 ASSERT_NOT_REACHED();

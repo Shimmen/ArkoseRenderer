@@ -17,6 +17,14 @@ Shader Shader::createBasicRasterize(std::string vertexName, std::string fragment
     return Shader({ vertexFile, fragmentFile }, ShaderType::Raster);
 }
 
+Shader Shader::createMeshShading(std::string taskName, std::string meshName, std::string fragmentName, std::vector<ShaderDefine> defines)
+{
+    ShaderFile taskFile { std::move(taskName), ShaderFileType::Task, defines };
+    ShaderFile meshFile { std::move(meshName), ShaderFileType::Mesh, defines };
+    ShaderFile fragmentFile { std::move(fragmentName), ShaderFileType::Fragment, defines };
+    return Shader({ taskFile, meshFile, fragmentFile }, ShaderType::Raster);
+}
+
 Shader Shader::createCompute(std::string computeName, std::vector<ShaderDefine> defines)
 {
     ShaderFile computeFile { std::move(computeName), ShaderFileType::Compute, defines };

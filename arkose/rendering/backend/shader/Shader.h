@@ -16,8 +16,10 @@ enum class ShaderStage {
     RTClosestHit = 0x20,
     RTAnyHit = 0x40,
     RTIntersection = 0x80,
+    Task = 0x100,
+    Mesh = 0x200,
 
-    AnyRasterize = Vertex | Fragment,
+    AnyRasterize = Vertex | Fragment | Task | Mesh,
     AnyRayTrace = RTRayGen | RTMiss | RTClosestHit | RTAnyHit | RTIntersection,
     Any = AnyRasterize | AnyRayTrace | Compute
 };
@@ -41,6 +43,7 @@ struct Shader {
 
     static Shader createVertexOnly(std::string vertexName, std::vector<ShaderDefine> = {});
     static Shader createBasicRasterize(std::string vertexName, std::string fragmentName, std::vector<ShaderDefine> = {});
+    static Shader createMeshShading(std::string taskName, std::string meshName, std::string fragmentName, std::vector<ShaderDefine> = {});
     static Shader createCompute(std::string computeName, std::vector<ShaderDefine> = {});
 
     Shader() = default;

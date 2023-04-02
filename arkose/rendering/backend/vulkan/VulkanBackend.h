@@ -4,6 +4,7 @@
 #include "rendering/backend/Resources.h"
 #include "rendering/backend/vulkan/VulkanResources.h"
 #include "rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.h"
+#include "rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.h"
 #include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.h"
 #include "rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingNV.h"
 #include "utility/AvgElapsedTimer.h"
@@ -110,6 +111,13 @@ public:
     {
         ARKOSE_ASSERT(m_rayTracingBackend == RayTracingBackend::KhrExtension && m_rayTracingKhr);
         return *m_rayTracingKhr;
+    }
+
+    bool hasMeshShadingSupport() const { return m_meshShaderExt != nullptr; }
+    VulkanMeshShaderEXT& meshShaderEXT()
+    {
+        ARKOSE_ASSERT(hasMeshShadingSupport());
+        return *m_meshShaderExt;
     }
 
     bool hasDebugUtilsSupport() const { return m_debugUtils != nullptr; }
@@ -295,6 +303,8 @@ private:
     RayTracingBackend m_rayTracingBackend { RayTracingBackend::None };
     std::unique_ptr<VulkanRayTracingNV> m_rayTracingNv {};
     std::unique_ptr<VulkanRayTracingKHR> m_rayTracingKhr {};
+
+    std::unique_ptr<VulkanMeshShaderEXT> m_meshShaderExt {};
 
     std::unique_ptr<VulkanDebugUtils> m_debugUtils {};
 

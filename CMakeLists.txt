@@ -90,6 +90,7 @@ set(ARKOSE_SOURCES
     arkose/rendering/backend/vulkan/VulkanRenderTarget.cpp
     arkose/rendering/backend/vulkan/VulkanTexture.cpp
     arkose/rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.cpp
+    arkose/rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.cpp
     arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.cpp
     arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.cpp
     arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.cpp

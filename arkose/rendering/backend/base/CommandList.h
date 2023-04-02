@@ -36,6 +36,10 @@ public:
     virtual void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex = 0) = 0;
     virtual void drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer) = 0;
 
+    virtual void drawMeshTasks(u32 groupCountX, u32 groupCountY, u32 groupCountZ) = 0;
+    virtual void drawMeshTasksIndirect(Buffer const& indirectBuffer, u32 indirectDataStride, u32 indirectDataOffset,
+                                       Buffer const& countBuffer, u32 countDataOffset) = 0;
+
     virtual void setViewport(ivec2 origin, ivec2 size) = 0;
     virtual void setDepthBias(float constantFactor, float slopeFactor) = 0;
 
