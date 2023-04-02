@@ -22,8 +22,8 @@ void StaticMeshSegmentAsset::generateMeshlets()
 {
     SCOPED_PROFILE_ZONE();
 
-    constexpr size_t maxVertices = 64;
-    constexpr size_t maxTriangles = 124;
+    constexpr size_t maxVertices = 64; // good for nvidia
+    constexpr size_t maxTriangles = 124; // 126 is good for nvidia, but meshopt only supports multiples of 4
     constexpr float coneWeight = 0.0f; // no cone culling
 
     size_t vertCount = vertexCount();
@@ -76,6 +76,8 @@ void StaticMeshSegmentAsset::generateMeshlets()
 
         meshletData->meshlets.push_back(MeshletAsset { .firstIndex = baseIndexOffset,
                                                        .triangleCount = meshlet.triangle_count,
+                                                       .firstVertex = baseVertexOffset,
+                                                       .vertexCount = meshlet.vertex_count,
                                                        .center = vec3(bounds.center[0], bounds.center[1], bounds.center[2]),
                                                        .radius = bounds.radius });
     }

@@ -17,6 +17,9 @@ struct MeshletAsset {
     u32 firstIndex {};
     u32 triangleCount {};
 
+    u32 firstVertex {};
+    u32 vertexCount {};
+
     vec3 center {};
     float radius {};
 };

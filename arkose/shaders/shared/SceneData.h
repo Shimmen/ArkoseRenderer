@@ -14,8 +14,8 @@ struct ShaderDrawable {
 struct ShaderMeshlet {
     uint firstIndex;
     uint triangleCount; // TODO: Make u8? Should never have more than 256 triangles! But we need the padding anyway..
-    uint materialIndex;
-    uint transformIndex;
+    uint firstVertex;
+    uint vertexCount;
 
     vec3 center;
     float radius;

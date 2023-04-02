@@ -97,8 +97,8 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
 
             ShaderMeshlet meshlet { .firstIndex = m_nextIndexIdx + meshletAsset.firstIndex,
                                     .triangleCount = meshletAsset.triangleCount,
-                                    .materialIndex = meshSegment->material.indexOfType<uint>(),
-                                    .transformIndex = 0, // TODO!
+                                    .firstVertex = m_nextVertexIdx + meshletAsset.firstVertex,
+                                    .vertexCount = meshletAsset.vertexCount,
                                     .center = meshletAsset.center,
                                     .radius = meshletAsset.radius };
 
