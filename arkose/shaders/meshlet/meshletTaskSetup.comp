@@ -1,0 +1,57 @@
+#version 460
+
+#extension GL_KHR_shader_subgroup_ballot : require
+
+#include <common.glsl>
+#include <common/camera.glsl>
+#include <common/namedUniforms.glsl>
+#include <shared/SceneData.h>
+
+layout(local_size_x = GROUP_SIZE) in;
+
+layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
+
+layout(set = 1, binding = 0) buffer restrict InstanceBlock { ShaderDrawable drawables[]; };
+layout(set = 1, binding = 1) buffer restrict IndirectCmdBlock { uvec4 taskShaderCmds[]; };
+layout(set = 1, binding = 2) buffer restrict IndirectCountBlock { uint taskShaderCount; };
+layout(set = 1, binding = 3) buffer restrict DrawableLookupBlock { uint drawableLookup[]; };
+
+NAMED_UNIFORMS(constants,
+    uint drawableCount;
+)
+
+void main()
+{
+    uint drawableIdx = gl_GlobalInvocationID.x;
+    if (drawableIdx >= constants.drawableCount) {
+        return;
+    }
+
+    ShaderDrawable drawable = drawables[drawableIdx];
+    if (drawable.meshletCount == 0) {
+        return;
+    }
+
+    // TODO: Perform instance-level culling
+    bool shouldDraw = true;
+
+    // TODO: if (drawable.meshletCount % GROUP_SIZE) != 0, see if we can put the next instance in the same indirect cmd.
+    // If we make the drawable lookup more complex, e.g. make it possible to store up to x instances per cmd,
+    // then we could do some smart compactation like this. Otherwise, if we e.g. have 100 instances, each with
+    // just one meshlet, we will waste GROUP_SIZE-1 meshlets per task shader invocation, which is bad..
+
+    uvec4 ballot = subgroupBallot(shouldDraw);
+    uint numLocalInstances = subgroupBallotBitCount(ballot);
+    uint localInstanceOffset = subgroupBallotExclusiveBitCount(ballot);
+
+    uint lookupIdx;
+    if (subgroupElect()) {
+        lookupIdx = atomicAdd(taskShaderCount, numLocalInstances);
+        //lookupIdx = atomicAdd(taskShaderCmds[0].x, numLocalInstances);
+    }
+    lookupIdx = subgroupBroadcastFirst(lookupIdx) + localInstanceOffset;
+
+    drawableLookup[lookupIdx] = drawableIdx;
+    taskShaderCmds[lookupIdx] = uvec4((drawable.meshletCount + GROUP_SIZE - 1) / GROUP_SIZE, 1, 1, 0);
+    //taskShaderCmds[lookupIdx + 1] = uvec4((drawable.meshletCount + GROUP_SIZE - 1) / GROUP_SIZE, 1, 1, 0);
+}

@@ -1,0 +1,59 @@
+#version 460
+
+#extension GL_EXT_mesh_shader : require
+#extension GL_KHR_shader_subgroup_ballot : require
+
+#include <common.glsl>
+#include <common/camera.glsl>
+#include <common/namedUniforms.glsl>
+#include <meshlet/meshletCommon.glsl>
+#include <shared/SceneData.h>
+
+layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
+
+layout(set = 1, binding = 0) buffer restrict readonly DrawableLookupBlock { uint drawableLookup[]; };
+layout(set = 1, binding = 1) buffer restrict readonly InstanceBlock { ShaderDrawable instances[]; };
+layout(set = 1, binding = 2) buffer restrict readonly MeshletBlock { ShaderMeshlet meshlets[]; };
+
+#define INDIRECT 1
+
+#if !INDIRECT
+NAMED_UNIFORMS(constants,
+    uint testDrawIdx;
+)
+#endif
+
+layout(local_size_x = GROUP_SIZE) in;
+
+taskPayloadSharedEXT MeshShaderInterpolants toMeshShader;
+
+void main()
+{
+#if INDIRECT
+    uint drawableIdx = drawableLookup[gl_DrawID];
+#else
+    uint drawableIdx = constants.testDrawIdx;
+#endif
+    ShaderDrawable drawable = instances[drawableIdx];
+
+    uint meshletIdx = gl_GlobalInvocationID.x;
+    if (meshletIdx >= drawable.meshletCount) {
+        return;
+    }
+
+    ShaderMeshlet meshlet = meshlets[drawable.firstMeshlet + meshletIdx];
+
+    // TODO: Perform culling!
+    bool shouldDraw = true;
+
+    uvec4 ballot = subgroupBallot(shouldDraw);
+    uint numTasks = subgroupBallotBitCount(ballot);
+    uint taskOffset = subgroupBallotExclusiveBitCount(ballot);
+
+    if (shouldDraw) {
+        toMeshShader.drawableIdx = drawableIdx;
+        toMeshShader.meshletIndices[taskOffset] = drawable.firstMeshlet + meshletIdx;
+    }
+
+    EmitMeshTasksEXT(numTasks, 1, 1);
+}

@@ -1,5 +1,6 @@
 #include "ShowcaseApp.h"
 
+#include "rendering/meshlet/MeshletDebugNode.h"
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/DDGINode.h"
@@ -35,20 +36,30 @@
 
 constexpr bool keepRenderDocCompatible = false;
 constexpr bool rtxOn = true && !keepRenderDocCompatible;
+constexpr bool withMeshShading = true && !keepRenderDocCompatible;
 
 std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
 {
+    std::vector<Backend::Capability> capabilities {};
+
     if (rtxOn) {
-        return { Backend::Capability::RayTracing };
-    } else {
-        return {};
+        capabilities.push_back(Backend::Capability::RayTracing);
     }
+
+    if (withMeshShading) {
+        capabilities.push_back(Backend::Capability::MeshShading);
+    }
+
+    return capabilities;
 }
 
 void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 {
     SCOPED_PROFILE_ZONE();
 
+    // NOTE: Scene not under "assets/sample/" will not be available in the Git-repo, either due to file size or license or both!
+    //scene.setupFromDescription({ .path = "assets/IntelSponza/NewSponzaWithCurtains.arklvl",
+    //scene.setupFromDescription({ .path = "assets/PicaPica/PicaPicaMiniDiorama.arklvl",
     scene.setupFromDescription({ .path = "assets/sample/Sponza.arklvl",
                                  .maintainRayTracingScene = rtxOn });
 
@@ -103,6 +114,11 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     std::string sceneTexture = "SceneColor";
     const std::string finalTextureToScreen = "SceneColorLDR";
     const AntiAliasing antiAliasingMode = AntiAliasing::TAA;
+
+    if (withMeshShading) {
+        pipeline.addNode<MeshletDebugNode>();
+        sceneTexture = "MeshletDebugVis";
+    }
 
     if (rtxOn) {
         // Uncomment for ray tracing visualisations

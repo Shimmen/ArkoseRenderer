@@ -1,0 +1,71 @@
+#version 460
+
+#extension GL_EXT_mesh_shader : require
+#extension GL_EXT_scalar_block_layout : require
+
+#include <common.glsl>
+#include <common/camera.glsl>
+#include <common/random.glsl>
+#include <meshlet/meshletCommon.glsl>
+#include <shared/SceneData.h>
+
+layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
+
+layout(set = 1, binding = 1) buffer restrict readonly InstanceBlock { ShaderDrawable instances[]; };
+layout(set = 1, binding = 2) buffer restrict readonly MeshletBlock { ShaderMeshlet meshlets[]; };
+layout(set = 1, binding = 3, scalar) buffer restrict readonly PositionsBlock { vec3 meshletPositions[]; };
+layout(set = 1, binding = 4, scalar) buffer restrict readonly IndicesBlock { uint meshletIndices[]; };
+
+taskPayloadSharedEXT MeshShaderInterpolants fromTaskShader;
+layout(location = 0) /*perprimitiveEXT*/ out vec3 vColor[];
+
+layout(triangles) out;
+layout(max_vertices = MAX_VERTEX_COUNT) out;
+layout(max_primitives = MAX_PRIMITIVE_COUNT) out;
+layout(local_size_x = GROUP_SIZE) in;
+
+void main()
+{
+    uint meshletIdx = fromTaskShader.meshletIndices[gl_WorkGroupID.x];
+    ShaderMeshlet meshlet = meshlets[meshletIdx];
+
+    seedRandom(meshletIdx);
+    vec3 meshletColor = vec3(randomFloat(), randomFloat(), randomFloat());
+
+    SetMeshOutputsEXT(meshlet.vertexCount, meshlet.triangleCount);
+
+    ShaderDrawable drawable = instances[fromTaskShader.drawableIdx];
+    mat4 worldFromLocal = drawable.worldFromLocal;
+    uint materialIdx = drawable.materialIndex; // TODO: Make use of me!
+
+    mat4 projectionFromWorld = camera.projectionFromView * camera.viewFromWorld;
+
+    const uint vertexIterations = (MAX_VERTEX_COUNT + GROUP_SIZE - 1) / GROUP_SIZE;
+    const uint primitiveIterations = (MAX_PRIMITIVE_COUNT + GROUP_SIZE - 1) / GROUP_SIZE;
+
+    for (uint it = 0; it < vertexIterations; ++it) {
+        uint localVertexIdx = gl_LocalInvocationIndex + it * GROUP_SIZE;
+        localVertexIdx = min(localVertexIdx, meshlet.vertexCount - 1);
+
+        vec3 localPosition = meshletPositions[meshlet.firstVertex + localVertexIdx];
+        gl_MeshVerticesEXT[localVertexIdx].gl_Position = projectionFromWorld * worldFromLocal * vec4(localPosition, 1.0);
+
+        vColor[localVertexIdx] = meshletColor;
+    }
+
+    for (uint it = 0; it < primitiveIterations; ++it) {
+        uint primitiveIdx = gl_LocalInvocationIndex + it * GROUP_SIZE;
+        primitiveIdx = min(primitiveIdx, meshlet.triangleCount - 1);
+
+        uvec3 idx = uvec3(meshletIndices[meshlet.firstIndex + 3 * primitiveIdx + 0],
+                          meshletIndices[meshlet.firstIndex + 3 * primitiveIdx + 1],
+                          meshletIndices[meshlet.firstIndex + 3 * primitiveIdx + 2]);
+
+        // Subtract index of firstVertex, as we index directly into the gl_MeshVerticesEXT array but we store indices into the global meshlet vertex array
+        // TODO: Consider if this is the way we really want to store them.. We could probably just as easily flip it so we add firstVertex in other cases instead.
+        idx -= uvec3(meshlet.firstVertex);
+
+        gl_PrimitiveTriangleIndicesEXT[primitiveIdx] = idx;
+        //vColor[primitiveIdx] = meshletColor;
+    }
+}
