@@ -43,7 +43,7 @@ RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene,
 
 MeshletDebugNode::PassParams const& MeshletDebugNode::createVertexShaderPath(GpuScene& scene, Registry& reg, RenderTarget& renderTarget)
 {
-    Shader drawIndexShader = Shader::createBasicRasterize("meshlet/meshletVisualizeSimple.vert", "meshlet/meshletVisualizeSimple.frag");
+    Shader drawIndexShader = Shader::createBasicRasterize("meshlet/meshletVisualize.vert", "meshlet/meshletVisualize.frag");
     RenderStateBuilder renderStateBuilder(renderTarget, drawIndexShader, VertexLayout { VertexComponent::Position3F });
     renderStateBuilder.cullBackfaces = false;
     renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneCameraSet"));
