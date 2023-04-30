@@ -48,9 +48,13 @@ void main()
     uint numTasks = subgroupBallotBitCount(ballot);
     uint taskOffset = subgroupBallotExclusiveBitCount(ballot);
 
+    if (subgroupElect()) {
+        toMeshShader.meshletBaseIndex = drawable.firstMeshlet + (gl_WorkGroupID.x * GROUP_SIZE);
+    }
+
     if (shouldDraw) {
         toMeshShader.drawableIdx = drawableIdx;
-        toMeshShader.meshletIndices[taskOffset] = drawable.firstMeshlet + meshletIdx;
+        toMeshShader.meshletRelativeIndices[taskOffset] = uint8_t(gl_LocalInvocationID.x);
     }
 
     EmitMeshTasksEXT(numTasks, 1, 1);

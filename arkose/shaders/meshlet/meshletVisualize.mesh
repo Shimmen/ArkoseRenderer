@@ -26,17 +26,17 @@ layout(local_size_x = GROUP_SIZE) in;
 
 void main()
 {
-    uint meshletIdx = fromTaskShader.meshletIndices[gl_WorkGroupID.x];
+    ShaderDrawable drawable = instances[fromTaskShader.drawableIdx];
+    mat4 worldFromLocal = drawable.worldFromLocal;
+    uint materialIdx = drawable.materialIndex; // TODO: Make use of me!
+
+    uint meshletIdx = fromTaskShader.meshletBaseIndex + fromTaskShader.meshletRelativeIndices[gl_WorkGroupID.x];
     ShaderMeshlet meshlet = meshlets[meshletIdx];
 
     seedRandom(meshletIdx);
     vec3 meshletColor = vec3(randomFloat(), randomFloat(), randomFloat());
 
     SetMeshOutputsEXT(meshlet.vertexCount, meshlet.triangleCount);
-
-    ShaderDrawable drawable = instances[fromTaskShader.drawableIdx];
-    mat4 worldFromLocal = drawable.worldFromLocal;
-    uint materialIdx = drawable.materialIndex; // TODO: Make use of me!
 
     mat4 projectionFromWorld = camera.projectionFromView * camera.viewFromWorld;
 
