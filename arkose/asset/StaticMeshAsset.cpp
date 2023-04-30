@@ -45,29 +45,22 @@ void StaticMeshSegmentAsset::generateMeshlets()
     meshoptMeshlets.resize(meshletCount);
 
     meshletData = MeshletDataAsset();
-    std::vector<vec3>& meshletVertexPositions = meshletData->meshletVertexPositions;
-    std::vector<u32>& meshletIndices = meshletData->meshletIndices;
+    meshletData->meshletVertexIndirection = meshoptMeshletVertexIndirection; // NOTE: Copy over directly
+
+    u32 baseVertexOffset = 0;
 
     meshletData->meshlets.reserve(meshletCount);
     for (meshopt_Meshlet const& meshlet : meshoptMeshlets) {
 
-        u32 baseVertexOffset = narrow_cast<u32>(meshletVertexPositions.size());
-        u32 baseIndexOffset = narrow_cast<u32>(meshletIndices.size());
-
-        // Remap vertices onto the segment-local buffer
-
-        for (u32 vertexIdx = meshlet.vertex_offset; vertexIdx < meshlet.vertex_offset + meshlet.vertex_count; ++vertexIdx) {
-            u32 indirectionIdx = meshoptMeshletVertexIndirection[vertexIdx];
-
-            // TODO: Also remap the other vertex buffers!
-            meshletVertexPositions.emplace_back(positions[indirectionIdx]);
-        }
+        u32 baseIndexOffset = narrow_cast<u32>(meshletData->meshletIndices.size());
 
         // Remap meshlet indices onto the "global" index buffer
         for (u32 index = 0; index < meshlet.triangle_count * 3; ++index) {
             u8 triangleIndirection = meshoptMeshletTriangles[meshlet.triangle_offset + index];
-            meshletIndices.push_back(baseVertexOffset + triangleIndirection);
+            meshletData->meshletIndices.push_back(baseVertexOffset + triangleIndirection);
         }
+
+        baseVertexOffset += meshlet.vertex_count;
 
         // Get bounds of meshlet for culling
         meshopt_Bounds bounds = meshopt_computeMeshletBounds(&meshoptMeshletVertexIndirection[meshlet.vertex_offset],
@@ -76,7 +69,7 @@ void StaticMeshSegmentAsset::generateMeshlets()
 
         meshletData->meshlets.push_back(MeshletAsset { .firstIndex = baseIndexOffset,
                                                        .triangleCount = meshlet.triangle_count,
-                                                       .firstVertex = baseVertexOffset,
+                                                       .firstVertex = meshlet.vertex_offset,
                                                        .vertexCount = meshlet.vertex_count,
                                                        .center = vec3(bounds.center[0], bounds.center[1], bounds.center[2]),
                                                        .radius = bounds.radius });

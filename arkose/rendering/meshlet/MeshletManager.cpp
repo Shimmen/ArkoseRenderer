@@ -67,7 +67,7 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
         StaticMeshSegmentAsset const& meshSegmentAsset = *meshSegment->asset;
         MeshletDataAsset const& meshletDataAsset = meshSegmentAsset.meshletData.value();
 
-        u32 vertexCount = narrow_cast<u32>(meshletDataAsset.meshletVertexPositions.size());
+        u32 vertexCount = narrow_cast<u32>(meshletDataAsset.meshletVertexIndirection.size());
         u32 indexCount = narrow_cast<u32>(meshletDataAsset.meshletIndices.size());
         u32 meshletCount = narrow_cast<u32>(meshletDataAsset.meshlets.size());
 
@@ -81,9 +81,6 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
             break;
         }
 
-        size_t posDataOffset = m_nextVertexIdx * m_positionVertexLayout.packedVertexSize();
-        m_uploadBuffer->upload(meshletDataAsset.meshletVertexPositions, *m_positionDataVertexBuffer, posDataOffset);
-
         // Offset indices by current vertex count as we put all meshlets in a single buffer
         std::vector<u32> adjustedMeshletIndices = meshletDataAsset.meshletIndices;
         for (u32& index : adjustedMeshletIndices) {
@@ -93,17 +90,38 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
         size_t indexDataOffset = m_nextIndexIdx * sizeof(u32);
         m_uploadBuffer->upload(adjustedMeshletIndices, *m_indexBuffer, indexDataOffset);
 
+        u32 startVertexIdx = m_nextVertexIdx;
+        std::vector<vec3> positionsTempVector {};
+        positionsTempVector.reserve(vertexCount);
+
         for (MeshletAsset const& meshletAsset : meshletDataAsset.meshlets) {
 
             ShaderMeshlet meshlet { .firstIndex = m_nextIndexIdx + meshletAsset.firstIndex,
                                     .triangleCount = meshletAsset.triangleCount,
-                                    .firstVertex = m_nextVertexIdx + meshletAsset.firstVertex,
+                                    .firstVertex = m_nextVertexIdx,
                                     .vertexCount = meshletAsset.vertexCount,
                                     .center = meshletAsset.center,
                                     .radius = meshletAsset.radius };
 
             m_meshlets.push_back(meshlet);
+
+            // Remap vertices
+            for (u32 i = 0; i < meshletAsset.vertexCount; ++i) {
+                u32 vertexIdx = meshletDataAsset.meshletVertexIndirection[meshletAsset.firstVertex + i];
+
+                vec3 position = meshSegment->asset->positions[vertexIdx];
+                positionsTempVector.emplace_back(position);
+
+                // TODO: Also remap all other vertex buffers!
+            }
+
+            m_nextVertexIdx += meshletAsset.vertexCount;
         }
+
+        // TODO: This MAY is still too many buffer uploads.. we need to be more efficient.
+        // Additionally, keep in mind that some of these buffer copies are contiguous..?
+        size_t posDataOffset = startVertexIdx * m_positionVertexLayout.packedVertexSize();
+        m_uploadBuffer->upload(positionsTempVector, *m_positionDataVertexBuffer, posDataOffset);
 
         size_t meshletDataDstOffset = m_nextMeshletIdx * sizeof(ShaderMeshlet);
         m_uploadBuffer->upload(m_meshlets.data() + m_nextMeshletIdx, meshletCount * sizeof(ShaderMeshlet), *m_meshletBuffer, meshletDataDstOffset);
@@ -116,7 +134,6 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
         updatedMeshes.insert(meshSegment->staticMeshHandle);
 
         numProcessedSegments += 1;
-        m_nextVertexIdx += vertexCount;
         m_nextIndexIdx += indexCount;
         m_nextMeshletIdx += meshletCount;
     }

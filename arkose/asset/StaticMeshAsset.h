@@ -26,7 +26,7 @@ struct MeshletAsset {
 
 struct MeshletDataAsset {
     std::vector<MeshletAsset> meshlets {};
-    std::vector<vec3> meshletVertexPositions {};
+    std::vector<u32> meshletVertexIndirection {};
     std::vector<u32> meshletIndices {};
 };
 
