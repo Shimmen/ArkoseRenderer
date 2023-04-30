@@ -15,11 +15,13 @@ layout(set = 1, binding = 0) buffer restrict readonly DrawableLookupBlock { uint
 layout(set = 1, binding = 1) buffer restrict readonly InstanceBlock { ShaderDrawable instances[]; };
 layout(set = 1, binding = 2) buffer restrict readonly MeshletBlock { ShaderMeshlet meshlets[]; };
 
+struct ShaderConstants {
+    bool frustumCull;
 #if !INDIRECT
-NAMED_UNIFORMS(constants,
     uint testDrawIdx;
-)
 #endif
+};
+NAMED_UNIFORMS_STRUCT(ShaderConstants, constants)
 
 layout(local_size_x = GROUP_SIZE) in;
 
@@ -41,8 +43,12 @@ void main()
 
     ShaderMeshlet meshlet = meshlets[drawable.firstMeshlet + meshletIdx];
 
-    // TODO: Perform culling!
     bool shouldDraw = true;
+
+    if (constants.frustumCull) {
+        vec4 transformedMeshletSphere = transformSphere(vec4(meshlet.center, meshlet.radius), drawable.worldFromLocal);
+        shouldDraw = shouldDraw && isSphereInCameraFrustum(transformedMeshletSphere, camera);
+    }
 
     uvec4 ballot = subgroupBallot(shouldDraw);
     uint numTasks = subgroupBallotBitCount(ballot);

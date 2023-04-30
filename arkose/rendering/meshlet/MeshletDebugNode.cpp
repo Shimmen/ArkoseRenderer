@@ -11,6 +11,10 @@ void MeshletDebugNode::drawGui()
     if (ImGui::RadioButton("Vertex shader", m_renderPath == RenderPath::VertexShader)) m_renderPath = RenderPath::VertexShader;
     if (ImGui::RadioButton("Mesh shader (direct)", m_renderPath == RenderPath::MeshShaderDirect)) m_renderPath = RenderPath::MeshShaderDirect;
     if (ImGui::RadioButton("Mesh shader (indirect)", m_renderPath == RenderPath::MeshShaderIndirect)) m_renderPath = RenderPath::MeshShaderIndirect;
+
+    ImGui::Separator();
+
+    ImGui::Checkbox("Frustum cull", &m_frustumCull);
 }
 
 RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene, Registry& reg)
@@ -153,6 +157,8 @@ void MeshletDebugNode::executeMeshShaderDirectPath(PassParams const& params, Gpu
 {
     cmdList.beginRendering(*params.renderState, ClearValue::blackAtMaxDepth());
 
+    cmdList.setNamedUniform("frustumCull", m_frustumCull);
+
     for (auto const& instance : scene.staticMeshInstances()) {
 
         StaticMesh const& staticMesh = *scene.staticMeshForInstance(*instance);
@@ -196,6 +202,8 @@ void MeshletDebugNode::executeMeshShaderIndirectPath(PassParams const& params, G
         ScopedDebugZone zone { cmdList, "Mesh shader pipeline" };
 
         cmdList.beginRendering(*params.renderState, ClearValue::blackAtMaxDepth());
+
+        cmdList.setNamedUniform("frustumCull", m_frustumCull);
 
         constexpr u32 indirectDataStride = sizeof(ark::uvec4);
         constexpr u32 indirectDataOffset = 0; // sizeof(ark::uvec4);
