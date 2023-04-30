@@ -351,12 +351,16 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
             bool supportsExtExtension = hasSupportForDeviceExtension(VK_EXT_MESH_SHADER_EXTENSION_NAME);
             bool extMeshShaderSupport = supportsExtExtension && meshShaderFeatures.taskShader && meshShaderFeatures.meshShader;
 
+            // NOTE: For optimal data packing we really need to ensure we can pack indices with 8-bit integers, so we will require
+            // this feature to be available if you use mesh shading (in practice, it will almost certainly be if mesh shading is).
+            bool supportsShaderUint8 = vk12features.shaderInt8;
+
             if (!supportsExtExtension && hasSupportForDeviceExtension(VK_NV_MESH_SHADER_EXTENSION_NAME)) {
                 ARKOSE_LOG(Error, "VulkanBackend: no support for mesh shading, but the Nvidia-specific extension is supported!"
                                   "If you update your drivers now it's possible that it will then be supported.");
             }
 
-            return extMeshShaderSupport;
+            return extMeshShaderSupport && supportsShaderUint8;
         }
         case Capability::Shader16BitFloat:
             return vk11features.storageBuffer16BitAccess
@@ -839,6 +843,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
             deviceExtensions.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
             meshShaderFeatures.taskShader = VK_TRUE;
             meshShaderFeatures.meshShader = VK_TRUE;
+            vk12features.shaderInt8 = VK_TRUE;
             break;
         case Capability::Shader16BitFloat:
             vk11features.storageBuffer16BitAccess = VK_TRUE;
