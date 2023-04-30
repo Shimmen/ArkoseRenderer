@@ -381,6 +381,13 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 .pixelFromView = pixelFromView,
                 .viewFromPixel = inverse(pixelFromView),
 
+                .frustumPlanes = { camera.frustum().plane(0).asVec4(),
+                                   camera.frustum().plane(1).asVec4(),
+                                   camera.frustum().plane(2).asVec4(),
+                                   camera.frustum().plane(3).asVec4(),
+                                   camera.frustum().plane(4).asVec4(),
+                                   camera.frustum().plane(5).asVec4() },
+
                 .zNear = camera.zNear(),
                 .zFar = camera.zFar(),
 

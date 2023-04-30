@@ -1,13 +1,6 @@
 #ifndef CAMERA_STATE_H
 #define CAMERA_STATE_H
 
-struct CameraMatrices {
-    mat4 projectionFromView;
-    mat4 viewFromProjection;
-    mat4 viewFromWorld;
-    mat4 worldFromView;
-};
-
 struct CameraState {
     mat4 projectionFromView;
     mat4 viewFromProjection;
@@ -19,6 +12,8 @@ struct CameraState {
 
     mat4 pixelFromView;
     mat4 viewFromPixel;
+
+    vec4 frustumPlanes[6];
 
     float zNear;
     float zFar;

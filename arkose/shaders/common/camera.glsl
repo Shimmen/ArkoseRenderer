@@ -111,4 +111,16 @@ float calculateLinearDepth(float nonlinearDepth, CameraState camera)
     return camera.zNear * camera.zFar / ((nonlinearDepth * (camera.zFar - camera.zNear)) - camera.zFar);
 }
 
+bool isSphereInCameraFrustum(vec4 sphere, CameraState camera)
+{
+    bool fullyOutside = false;
+
+    for (int i = 0; i < 6; ++i) {
+        float signedDistance = dot(camera.frustumPlanes[i].xyz, sphere.xyz) + camera.frustumPlanes[i].w;
+        fullyOutside = fullyOutside || (signedDistance > sphere.w);
+    }
+
+    return !fullyOutside;
+}
+
 #endif // CAMERA_GLSL

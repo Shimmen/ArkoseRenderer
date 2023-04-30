@@ -71,6 +71,12 @@ bool Frustum::includesAABB(ark::aabb3 const& aabb) const
     return false;
 }
 
+Plane const& Frustum::plane(size_t idx) const
+{
+    ARKOSE_ASSERT(idx < 6);
+    return m_planes[idx];
+}
+
 const Plane* Frustum::rawPlaneData(size_t* outByteSize) const
 {
     if (outByteSize)

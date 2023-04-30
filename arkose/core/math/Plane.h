@@ -29,6 +29,11 @@ struct Plane {
         return length(m_normal) < 1e-6f;
     }
 
+    vec4 asVec4() const
+    {
+        return vec4(m_normal, m_distance);
+    }
+
     vec3 m_normal {};
     float m_distance {};
 };

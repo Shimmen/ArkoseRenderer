@@ -16,6 +16,8 @@ public:
     bool includesSphere(const Sphere&) const;
     bool includesAABB(ark::aabb3 const&) const;
 
+    Plane const& plane(size_t idx) const;
+
     const Plane* rawPlaneData(size_t* outByteSize) const;
 
 private:

@@ -152,4 +152,17 @@ vec3 hsv2rgb(vec3 c)
     return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 }
 
+vec4 transformSphere(in vec4 sphere, mat4 M)
+{
+    mat4 Mt = transpose(M);
+    float scaleX2 = lengthSquared(Mt[0].xyz);
+    float scaleY2 = lengthSquared(Mt[1].xyz);
+    float scaleZ2 = lengthSquared(Mt[2].xyz);
+
+    float newRadius = sphere.w * sqrt(max(scaleX2, max(scaleY2, scaleZ2)));
+    vec3 newCenter = vec3(M * vec4(sphere.xyz, 1.0));
+
+    return vec4(newCenter, newRadius);
+}
+
 #endif// COMMON_GLSL
