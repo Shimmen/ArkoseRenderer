@@ -18,6 +18,7 @@ layout(set = 1, binding = 3) buffer restrict DrawableLookupBlock { uint drawable
 
 NAMED_UNIFORMS(constants,
     uint drawableCount;
+    bool frustumCull;
 )
 
 void main()
@@ -32,8 +33,12 @@ void main()
         return;
     }
 
-    // TODO: Perform instance-level culling
     bool shouldDraw = true;
+
+    if (constants.frustumCull) {
+        vec4 transformedSphere = transformSphere(drawable.localBoundingSphere, drawable.worldFromLocal);
+        shouldDraw = shouldDraw && isSphereInCameraFrustum(transformedSphere, camera);
+    }
 
     // TODO: if (drawable.meshletCount % GROUP_SIZE) != 0, see if we can put the next instance in the same indirect cmd.
     // If we make the drawable lookup more complex, e.g. make it possible to store up to x instances per cmd,

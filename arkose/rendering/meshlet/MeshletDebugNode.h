@@ -18,7 +18,8 @@ private:
     };
 
     RenderPath m_renderPath { RenderPath::MeshShaderIndirect };
-    bool m_frustumCull { true };
+    bool m_frustumCullInstances { false }; // Keep default off (for now!)
+    bool m_frustumCullMeshlets { true };
 
     struct PassParams {
         static constexpr u32 groupSize { 32 }; // TODO: Get this value from the driver preferences!

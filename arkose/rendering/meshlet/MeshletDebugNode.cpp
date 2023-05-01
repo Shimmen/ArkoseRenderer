@@ -14,7 +14,8 @@ void MeshletDebugNode::drawGui()
 
     ImGui::Separator();
 
-    ImGui::Checkbox("Frustum cull", &m_frustumCull);
+    ImGui::Checkbox("Frustum cull instances", &m_frustumCullInstances);
+    ImGui::Checkbox("Frustum cull meshlets", &m_frustumCullMeshlets);
 }
 
 RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene, Registry& reg)
@@ -157,7 +158,7 @@ void MeshletDebugNode::executeMeshShaderDirectPath(PassParams const& params, Gpu
 {
     cmdList.beginRendering(*params.renderState, ClearValue::blackAtMaxDepth());
 
-    cmdList.setNamedUniform("frustumCull", m_frustumCull);
+    cmdList.setNamedUniform("frustumCull", m_frustumCullMeshlets);
 
     for (auto const& instance : scene.staticMeshInstances()) {
 
@@ -191,8 +192,11 @@ void MeshletDebugNode::executeMeshShaderIndirectPath(PassParams const& params, G
         cmdList.fillBuffer(*params.taskShaderCountBuffer, 0);
         cmdList.bufferWriteBarrier({ params.taskShaderCountBuffer });
 
+        cmdList.setNamedUniform("frustumCull", m_frustumCullInstances);
+
         u32 drawableCount = scene.drawableCountForFrame();
         cmdList.setNamedUniform("drawableCount", drawableCount);
+
         cmdList.dispatch({ drawableCount, 1, 1 }, { params.groupSize, 1, 1 });
     }
 
@@ -203,7 +207,7 @@ void MeshletDebugNode::executeMeshShaderIndirectPath(PassParams const& params, G
 
         cmdList.beginRendering(*params.renderState, ClearValue::blackAtMaxDepth());
 
-        cmdList.setNamedUniform("frustumCull", m_frustumCull);
+        cmdList.setNamedUniform("frustumCull", m_frustumCullMeshlets);
 
         constexpr u32 indirectDataStride = sizeof(ark::uvec4);
         constexpr u32 indirectDataOffset = 0; // sizeof(ark::uvec4);
