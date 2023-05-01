@@ -11,7 +11,7 @@
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 
-layout(set = 1, binding = 0) buffer restrict readonly DrawableLookupBlock { uint drawableLookup[]; };
+layout(set = 1, binding = 0) buffer restrict readonly IndirectDataBlock { uvec4 indirectData[]; };
 layout(set = 1, binding = 1) buffer restrict readonly InstanceBlock { ShaderDrawable instances[]; };
 layout(set = 1, binding = 2) buffer restrict readonly MeshletBlock { ShaderMeshlet meshlets[]; };
 
@@ -27,13 +27,18 @@ layout(local_size_x = GROUP_SIZE) in;
 
 taskPayloadSharedEXT MeshShaderInterpolants toMeshShader;
 
-void main()
+uint extractDrawableIdx()
 {
 #if INDIRECT
-    uint drawableIdx = drawableLookup[gl_DrawID];
+    return indirectData[gl_DrawID].w;
 #else
-    uint drawableIdx = constants.testDrawIdx;
+    return constants.testDrawIdx;
 #endif
+}
+
+void main()
+{
+    uint drawableIdx = extractDrawableIdx();
     ShaderDrawable drawable = instances[drawableIdx];
 
     uint meshletIdx = gl_GlobalInvocationID.x;

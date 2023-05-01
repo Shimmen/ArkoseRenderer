@@ -67,12 +67,10 @@ MeshletDebugNode::PassParams const& MeshletDebugNode::createMeshShaderPath(GpuSc
     constexpr u32 count = 14096;
 
     params.taskShaderCmdsBuffer = &reg.createBuffer(count * sizeof(vec4), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
-    params.taskShaderCountBuffer = &reg.createBuffer(count * sizeof(u32), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
-    params.drawableLookupBuffer = &reg.createBuffer(count * sizeof(u32), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
+    params.taskShaderCountBuffer = &reg.createBuffer(sizeof(u32), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
     params.meshletTaskSetupBindingSet = &reg.createBindingSet({ ShaderBinding::storageBuffer(*reg.getBuffer("SceneObjectData")),
                                                                 ShaderBinding::storageBuffer(*params.taskShaderCmdsBuffer),
-                                                                ShaderBinding::storageBuffer(*params.taskShaderCountBuffer),
-                                                                ShaderBinding::storageBuffer(*params.drawableLookupBuffer) });
+                                                                ShaderBinding::storageBuffer(*params.taskShaderCountBuffer) });
 
     auto meshletTaskSetupDefines = { ShaderDefine::makeInt("GROUP_SIZE", params.groupSize) };
     Shader meshletTaskSetupShader = Shader::createCompute("meshlet/meshletTaskSetup.comp", meshletTaskSetupDefines);
@@ -86,7 +84,7 @@ MeshletDebugNode::PassParams const& MeshletDebugNode::createMeshShaderPath(GpuSc
     Shader meshletShader = Shader::createMeshShading("meshlet/meshletVisualize.task", "meshlet/meshletVisualize.mesh", "meshlet/meshletVisualize.frag", meshletDefines);
 
     MeshletManager const& meshletManager = scene.meshletManager();
-    params.meshShaderBindingSet = &reg.createBindingSet({ ShaderBinding::storageBufferReadonly(*params.drawableLookupBuffer),
+    params.meshShaderBindingSet = &reg.createBindingSet({ ShaderBinding::storageBufferReadonly(*params.taskShaderCmdsBuffer),
                                                           ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
                                                           ShaderBinding::storageBufferReadonly(meshletManager.meshletBuffer()),
                                                           ShaderBinding::storageBufferReadonly(meshletManager.meshletPositionDataVertexBuffer()),
@@ -200,7 +198,7 @@ void MeshletDebugNode::executeMeshShaderIndirectPath(PassParams const& params, G
         cmdList.dispatch({ drawableCount, 1, 1 }, { params.groupSize, 1, 1 });
     }
 
-    cmdList.bufferWriteBarrier({ params.taskShaderCmdsBuffer, params.taskShaderCountBuffer, params.drawableLookupBuffer });
+    cmdList.bufferWriteBarrier({ params.taskShaderCmdsBuffer, params.taskShaderCountBuffer });
 
     {
         ScopedDebugZone zone { cmdList, "Mesh shader pipeline" };

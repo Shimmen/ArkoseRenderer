@@ -30,7 +30,6 @@ private:
 
         Buffer* taskShaderCmdsBuffer { nullptr };
         Buffer* taskShaderCountBuffer { nullptr };
-        Buffer* drawableLookupBuffer { nullptr };
 
         ComputeState* meshletTaskSetupState { nullptr };
         RenderState* renderState { nullptr };

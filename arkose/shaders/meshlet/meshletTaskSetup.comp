@@ -14,7 +14,6 @@ layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 layout(set = 1, binding = 0) buffer restrict InstanceBlock { ShaderDrawable drawables[]; };
 layout(set = 1, binding = 1) buffer restrict IndirectCmdBlock { uvec4 taskShaderCmds[]; };
 layout(set = 1, binding = 2) buffer restrict IndirectCountBlock { uint taskShaderCount; };
-layout(set = 1, binding = 3) buffer restrict DrawableLookupBlock { uint drawableLookup[]; };
 
 NAMED_UNIFORMS(constants,
     uint drawableCount;
@@ -56,7 +55,6 @@ void main()
     }
     lookupIdx = subgroupBroadcastFirst(lookupIdx) + localInstanceOffset;
 
-    drawableLookup[lookupIdx] = drawableIdx;
-    taskShaderCmds[lookupIdx] = uvec4((drawable.meshletCount + GROUP_SIZE - 1) / GROUP_SIZE, 1, 1, 0);
+    taskShaderCmds[lookupIdx] = uvec4((drawable.meshletCount + GROUP_SIZE - 1) / GROUP_SIZE, 1, 1, drawableIdx);
     //taskShaderCmds[lookupIdx + 1] = uvec4((drawable.meshletCount + GROUP_SIZE - 1) / GROUP_SIZE, 1, 1, 0);
 }
