@@ -66,11 +66,9 @@ MeshletDebugNode::PassParams const& MeshletDebugNode::createMeshShaderPath(GpuSc
 
     constexpr u32 count = 14096;
 
-    params.taskShaderCmdsBuffer = &reg.createBuffer(count * sizeof(vec4), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
-    params.taskShaderCountBuffer = &reg.createBuffer(sizeof(u32), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
+    params.indirectDataBuffer = &reg.createBuffer(count * sizeof(vec4), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
     params.meshletTaskSetupBindingSet = &reg.createBindingSet({ ShaderBinding::storageBuffer(*reg.getBuffer("SceneObjectData")),
-                                                                ShaderBinding::storageBuffer(*params.taskShaderCmdsBuffer),
-                                                                ShaderBinding::storageBuffer(*params.taskShaderCountBuffer) });
+                                                                ShaderBinding::storageBuffer(*params.indirectDataBuffer) });
 
     auto meshletTaskSetupDefines = { ShaderDefine::makeInt("GROUP_SIZE", params.groupSize) };
     Shader meshletTaskSetupShader = Shader::createCompute("meshlet/meshletTaskSetup.comp", meshletTaskSetupDefines);
@@ -84,7 +82,7 @@ MeshletDebugNode::PassParams const& MeshletDebugNode::createMeshShaderPath(GpuSc
     Shader meshletShader = Shader::createMeshShading("meshlet/meshletVisualize.task", "meshlet/meshletVisualize.mesh", "meshlet/meshletVisualize.frag", meshletDefines);
 
     MeshletManager const& meshletManager = scene.meshletManager();
-    params.meshShaderBindingSet = &reg.createBindingSet({ ShaderBinding::storageBufferReadonly(*params.taskShaderCmdsBuffer),
+    params.meshShaderBindingSet = &reg.createBindingSet({ ShaderBinding::storageBufferReadonly(*params.indirectDataBuffer),
                                                           ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
                                                           ShaderBinding::storageBufferReadonly(meshletManager.meshletBuffer()),
                                                           ShaderBinding::storageBufferReadonly(meshletManager.meshletPositionDataVertexBuffer()),
@@ -187,8 +185,9 @@ void MeshletDebugNode::executeMeshShaderIndirectPath(PassParams const& params, G
         cmdList.bindSet(*params.cameraBindingSet, 0);
         cmdList.bindSet(*params.meshletTaskSetupBindingSet, 1);
 
-        cmdList.fillBuffer(*params.taskShaderCountBuffer, 0);
-        cmdList.bufferWriteBarrier({ params.taskShaderCountBuffer });
+        // Set first u32 (i.e. indirect count) to 0 before using it for accumulation in the shader
+        uploadBuffer.upload(0u, *params.indirectDataBuffer, 0);
+        cmdList.executeBufferCopyOperations(uploadBuffer);
 
         cmdList.setNamedUniform("frustumCull", m_frustumCullInstances);
 
@@ -198,7 +197,7 @@ void MeshletDebugNode::executeMeshShaderIndirectPath(PassParams const& params, G
         cmdList.dispatch({ drawableCount, 1, 1 }, { params.groupSize, 1, 1 });
     }
 
-    cmdList.bufferWriteBarrier({ params.taskShaderCmdsBuffer, params.taskShaderCountBuffer });
+    cmdList.bufferWriteBarrier({ params.indirectDataBuffer });
 
     {
         ScopedDebugZone zone { cmdList, "Mesh shader pipeline" };
@@ -207,13 +206,15 @@ void MeshletDebugNode::executeMeshShaderIndirectPath(PassParams const& params, G
 
         cmdList.setNamedUniform("frustumCull", m_frustumCullMeshlets);
 
-        constexpr u32 indirectDataStride = sizeof(ark::uvec4);
-        constexpr u32 indirectDataOffset = 0; // sizeof(ark::uvec4);
+        // Indirect command data start at the next uvec4 after the count, with a stride of uvec4.
+        // The w-component of the uvec4 is the "drawable lookup" which is metadata.
+        constexpr u32 indirectDataStride = sizeof(ark::uvec4); 
+        constexpr u32 indirectDataOffset = sizeof(ark::uvec4);
+        // The indirect count is the first u32 in the indirect buffer, padded out to a whole uvec4.
         constexpr u32 indirectCountOffset = 0;
 
-        cmdList.drawMeshTasksIndirect(*params.taskShaderCmdsBuffer, indirectDataStride, indirectDataOffset,
-                                      *params.taskShaderCountBuffer, indirectCountOffset);
-                                    //*params.taskShaderCmdsBuffer, indirectCountOffset);
+        cmdList.drawMeshTasksIndirect(*params.indirectDataBuffer, indirectDataStride, indirectDataOffset,
+                                      *params.indirectDataBuffer, indirectCountOffset);
 
         cmdList.endRendering();
     }

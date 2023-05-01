@@ -28,8 +28,7 @@ private:
         BindingSet* meshletTaskSetupBindingSet { nullptr };
         BindingSet* meshShaderBindingSet { nullptr };
 
-        Buffer* taskShaderCmdsBuffer { nullptr };
-        Buffer* taskShaderCountBuffer { nullptr };
+        Buffer* indirectDataBuffer { nullptr };
 
         ComputeState* meshletTaskSetupState { nullptr };
         RenderState* renderState { nullptr };

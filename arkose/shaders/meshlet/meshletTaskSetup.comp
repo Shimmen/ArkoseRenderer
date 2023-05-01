@@ -12,8 +12,7 @@ layout(local_size_x = GROUP_SIZE) in;
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 
 layout(set = 1, binding = 0) buffer restrict InstanceBlock { ShaderDrawable drawables[]; };
-layout(set = 1, binding = 1) buffer restrict IndirectCmdBlock { uvec4 taskShaderCmds[]; };
-layout(set = 1, binding = 2) buffer restrict IndirectCountBlock { uint taskShaderCount; };
+layout(set = 1, binding = 1) buffer restrict IndirectCmdBlock { uvec4 indirectData[]; };
 
 NAMED_UNIFORMS(constants,
     uint drawableCount;
@@ -50,11 +49,11 @@ void main()
 
     uint lookupIdx;
     if (subgroupElect()) {
-        lookupIdx = atomicAdd(taskShaderCount, numLocalInstances);
-        //lookupIdx = atomicAdd(taskShaderCmds[0].x, numLocalInstances);
+        // indirectData[0]: used for the `count` part for `vkCmdDrawMeshTasksIndirectCountEXT`
+        lookupIdx = atomicAdd(indirectData[0].x, numLocalInstances);
     }
     lookupIdx = subgroupBroadcastFirst(lookupIdx) + localInstanceOffset;
 
-    taskShaderCmds[lookupIdx] = uvec4((drawable.meshletCount + GROUP_SIZE - 1) / GROUP_SIZE, 1, 1, drawableIdx);
-    //taskShaderCmds[lookupIdx + 1] = uvec4((drawable.meshletCount + GROUP_SIZE - 1) / GROUP_SIZE, 1, 1, 0);
+    // indirectData[1..]: (xyz) used for the indirect cmd, (w) used for the drawableIdx lookup per indirect dispatch
+    indirectData[lookupIdx + 1] = uvec4((drawable.meshletCount + GROUP_SIZE - 1) / GROUP_SIZE, 1, 1, drawableIdx);
 }

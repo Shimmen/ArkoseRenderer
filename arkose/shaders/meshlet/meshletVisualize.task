@@ -30,7 +30,8 @@ taskPayloadSharedEXT MeshShaderInterpolants toMeshShader;
 uint extractDrawableIdx()
 {
 #if INDIRECT
-    return indirectData[gl_DrawID].w;
+    // indirectData[0] used for indirect count, offset by one to get to drawable lookup data
+    return indirectData[gl_DrawID + 1].w;
 #else
     return constants.testDrawIdx;
 #endif
