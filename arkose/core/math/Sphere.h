@@ -40,6 +40,11 @@ struct Sphere {
         return std::abs(m_radius) < 1e-6f;
     }
 
+    vec4 asVec4() const
+    {
+        return vec4(m_center, m_radius);
+    }
+
     template<class Archive>
     void serialize(Archive& archive)
     {

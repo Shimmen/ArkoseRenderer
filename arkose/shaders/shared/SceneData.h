@@ -5,6 +5,7 @@ struct ShaderDrawable {
     mat4 worldFromLocal;
     mat4 worldFromTangent;
     mat4 previousFrameWorldFromLocal;
+    vec4 localBoundingSphere;
     int materialIndex;
     uint materialSortKey; // TODO: Unused, for now!
     uint firstMeshlet;

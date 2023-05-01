@@ -693,6 +693,9 @@ void GpuScene::initializeStaticMeshInstance(StaticMeshInstance& instance)
         drawable.worldFromLocal = instance.transform().worldMatrix();
         drawable.worldFromTangent = mat4(instance.transform().worldNormalMatrix());
         drawable.previousFrameWorldFromLocal = instance.transform().previousFrameWorldMatrix();
+
+        drawable.localBoundingSphere = staticMesh->boundingSphere().asVec4();
+
         drawable.materialIndex = meshSegment.material.indexOfType<int>();
 
         if (meshSegment.meshletView) {
