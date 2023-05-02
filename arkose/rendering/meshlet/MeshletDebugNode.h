@@ -2,6 +2,7 @@
 
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/meshlet/MeshletCuller.h"
+#include "rendering/meshlet/MeshletIndirectHelper.h"
 
 class MeshletDebugNode final : public RenderPipelineNode {
 public:
@@ -18,19 +19,13 @@ private:
     };
 
     RenderPath m_renderPath { RenderPath::MeshShaderIndirect };
+    MeshletIndirectHelper m_meshletIndirectHelper {};
     bool m_frustumCullInstances { false }; // Keep default off (for now!)
     bool m_frustumCullMeshlets { true };
 
     struct PassParams {
         static constexpr u32 groupSize { 32 }; // TODO: Get this value from the driver preferences!
-        
-        BindingSet* cameraBindingSet { nullptr };
-        BindingSet* meshletTaskSetupBindingSet { nullptr };
-        BindingSet* meshShaderBindingSet { nullptr };
-
-        Buffer* indirectDataBuffer { nullptr };
-
-        ComputeState* meshletTaskSetupState { nullptr };
+        MeshletIndirectSetupState const* meshletIndirectSetupState { nullptr };
         RenderState* renderState { nullptr };
     };
 
