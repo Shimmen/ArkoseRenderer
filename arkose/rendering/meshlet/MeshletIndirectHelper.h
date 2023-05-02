@@ -30,10 +30,10 @@ public:
     NON_COPYABLE(MeshletIndirectHelper)
 
     // Create a buffer used to store encoded indirect mesh task draw commands & required meta data
-    Buffer& createIndirectBuffer(Registry&, u32 maxMeshletCount);
+    Buffer& createIndirectBuffer(Registry&, u32 maxMeshletCount) const;
 
     // Create the state needed for meshlet task setup execution
-    MeshletIndirectSetupState const& createMeshletIndirectSetupState(Registry&, std::vector<Buffer*> const& indirectBuffers);
+    MeshletIndirectSetupState const& createMeshletIndirectSetupState(Registry&, std::vector<Buffer*> const& indirectBuffers) const;
 
     // Execute the meshlet task setup, from the given state
     void executeMeshletIndirectSetup(GpuScene&, CommandList&, UploadBuffer&, MeshletIndirectSetupState const&, MeshletIndirectSetupOptions const&) const;

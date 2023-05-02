@@ -7,14 +7,14 @@
 #include "rendering/backend/base/CommandList.h"
 #include "rendering/util/ScopedDebugZone.h"
 
-Buffer& MeshletIndirectHelper::createIndirectBuffer(Registry& reg, u32 maxMeshletCount)
+Buffer& MeshletIndirectHelper::createIndirectBuffer(Registry& reg, u32 maxMeshletCount) const
 {
     constexpr size_t countSizeWithPadding = sizeof(ark::uvec4);
     size_t bufferSize = maxMeshletCount * sizeof(ark::uvec4) + countSizeWithPadding;
     return reg.createBuffer(bufferSize, Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
 }
 
-MeshletIndirectSetupState const& MeshletIndirectHelper::createMeshletIndirectSetupState(Registry& reg, std::vector<Buffer*> const& indirectBuffers)
+MeshletIndirectSetupState const& MeshletIndirectHelper::createMeshletIndirectSetupState(Registry& reg, std::vector<Buffer*> const& indirectBuffers) const
 {
     // Construct the indirect buffers array from the passed in indirect buffers, and pad out remaining slots
     std::array<Buffer*, IndirectBufferCount> indirectBuffersArray {};
