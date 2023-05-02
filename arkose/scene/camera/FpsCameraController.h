@@ -39,7 +39,7 @@ private:
     static constexpr float RotationDampening { 0.000005f };
 
     static constexpr float ZoomSensitivity { 0.15f };
-    static constexpr float MinFieldOfView { ark::toRadians(15.0f) };
+    static constexpr float MinFieldOfView { ark::toRadians(5.0f) };
     static constexpr float MaxFieldOfView { ark::toRadians(60.0f) };
 
     static constexpr float BaselineBankAngle { ark::toRadians(30.0f) };
