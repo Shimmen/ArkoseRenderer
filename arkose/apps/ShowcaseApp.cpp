@@ -35,18 +35,18 @@
 #include "physics/backend/base/PhysicsBackend.h"
 
 constexpr bool keepRenderDocCompatible = false;
-constexpr bool rtxOn = true && !keepRenderDocCompatible;
+constexpr bool withRayTracing = true && !keepRenderDocCompatible;
 constexpr bool withMeshShading = true && !keepRenderDocCompatible;
 
 std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
 {
     std::vector<Backend::Capability> capabilities {};
 
-    if (rtxOn) {
+    if constexpr (withRayTracing) {
         capabilities.push_back(Backend::Capability::RayTracing);
     }
 
-    if (withMeshShading) {
+    if constexpr (withMeshShading) {
         capabilities.push_back(Backend::Capability::MeshShading);
     }
 
@@ -61,7 +61,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     //scene.setupFromDescription({ .path = "assets/IntelSponza/NewSponzaWithCurtains.arklvl",
     //scene.setupFromDescription({ .path = "assets/PicaPica/PicaPicaMiniDiorama.arklvl",
     scene.setupFromDescription({ .path = "assets/sample/Sponza.arklvl",
-                                 .maintainRayTracingScene = rtxOn });
+                                 .maintainRayTracingScene = withRayTracing });
 
     if (scene.directionalLightCount() == 0) {
         DirectionalLight& sun = scene.addLight(std::make_unique<DirectionalLight>(vec3(1.0f), 90'000.0f, normalize(vec3(0.5f, -1.0f, 0.2f))));
@@ -73,7 +73,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     pipeline.addNode<PickingNode>();
 
-    if (rtxOn) {
+    if constexpr (withRayTracing) {
         scene.generateProbeGridFromBoundingBox();
         pipeline.addNode<DDGINode>();
     } else {
@@ -83,7 +83,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<CullingNode>();
     pipeline.addNode<PrepassNode>(PrepassMode::AllOpaquePixels);
 
-    if (rtxOn) {
+    if constexpr (withRayTracing) {
         pipeline.addNode<RTSphereLightShadowNode>();
     }
     pipeline.addNode<DirectionalLightShadowNode>();
@@ -91,7 +91,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     pipeline.addNode<ForwardRenderNode>();
 
-    if (rtxOn) {
+    if constexpr (withRayTracing) {
         pipeline.addNode<RTReflectionsNode>();
     }
 
@@ -107,7 +107,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     auto& dofNode = pipeline.addNode<DepthOfFieldNode>();
     dofNode.setEnabled(false);
 
-    if (rtxOn) {
+    if constexpr (withRayTracing) {
         pipeline.addNode<DDGIProbeDebug>();
     }
 
@@ -120,7 +120,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         sceneTexture = "MeshletDebugVis";
     }
 
-    if (rtxOn) {
+    if constexpr (withRayTracing) {
         // Uncomment for ray tracing visualisations
         //pipeline.addNode<RTVisualisationNode>(RTVisualisationNode::Mode::DirectLight); sceneTexture = "RTVisualisation";
     }
