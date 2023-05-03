@@ -72,7 +72,7 @@ MeshletDebugNode::PassParams const& MeshletDebugNode::createMeshShaderPath(GpuSc
                             ShaderDefine::makeInt("MAX_VERTEX_COUNT", 64), // TODO: Get these values from the driver preferences!
                             ShaderDefine::makeInt("MAX_PRIMITIVE_COUNT", 126) }; // TODO: Get these values from the driver preferences!
                             
-    Shader meshletShader = Shader::createMeshShading("meshlet/meshletVisualize.task", "meshlet/meshletVisualize.mesh", "meshlet/meshletVisualize.frag", meshletDefines);
+    Shader meshletShader = Shader::createMeshShading("meshlet/meshletCommonTask.task", "meshlet/meshletVisualize.mesh", "meshlet/meshletVisualize.frag", meshletDefines);
 
     MeshletManager const& meshletManager = scene.meshletManager();
     BindingSet& meshShaderBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(indirectDataBuffer),
