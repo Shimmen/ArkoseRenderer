@@ -23,6 +23,9 @@ RenderPipelineNode::ExecuteCallback TranslucencyNode::construct(GpuScene& scene,
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         std::vector<TranslucentMeshSegmentInstance> translucentInstances = generateSortedDrawList(scene);
+        if (translucentInstances.empty()) {
+            return;
+        }
 
         for (auto const& instance : translucentInstances) {
             instance.meshSegment->ensureDrawCallIsAvailable(m_vertexLayout, scene);
@@ -30,7 +33,6 @@ RenderPipelineNode::ExecuteCallback TranslucencyNode::construct(GpuScene& scene,
 
         cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
         cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
-
 
         cmdList.beginRendering(renderState);
         cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
