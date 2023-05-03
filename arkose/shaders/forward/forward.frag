@@ -7,6 +7,7 @@
 #include <common/iesProfile.glsl>
 #include <common/lighting.glsl>
 #include <common/namedUniforms.glsl>
+#include <forward/forwardCommon.glsl>
 #include <shared/CameraState.h>
 #include <shared/LightData.h>
 #include <shared/SceneData.h>
@@ -36,11 +37,7 @@ layout(set = 5, binding = 1) uniform sampler2D sphereLightProjectedShadowTex;
 layout(set = 5, binding = 2) uniform sampler2D localLightShadowMapAtlasTex;
 layout(set = 5, binding = 3) buffer readonly ShadowMapViewportBlock { vec4 localLightShadowMapViewports[]; };
 
-NAMED_UNIFORMS(pushConstants,
-    float ambientAmount;
-    vec2 frustumJitterCorrection;
-    vec2 invTargetSize;
-)
+NAMED_UNIFORMS_STRUCT(ForwardPassConstants, constants)
 
 layout(location = 0) out vec4 oColor;
 #if FORWARD_BLEND_MODE != BLEND_MODE_TRANSLUCENT
@@ -53,7 +50,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, vec3 V
 {
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
-    vec2 sampleTexCoords = gl_FragCoord.xy * pushConstants.invTargetSize;
+    vec2 sampleTexCoords = gl_FragCoord.xy * constants.invTargetSize;
     float shadowFactor = hasShadow ? texture(directionalLightProjectedShadowTex, sampleTexCoords).r : 1.0;
 
     vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
@@ -86,7 +83,7 @@ float evaluateLocalLightShadow(uint shadowIdx, mat4 lightProjectionFromView, vec
 vec3 evaluateSphereLight(SphereLightData light, bool hasShadow, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
     // TODO: Support multiple sphere lights with shadows!
-    vec2 sampleTexCoords = gl_FragCoord.xy * pushConstants.invTargetSize;
+    vec2 sampleTexCoords = gl_FragCoord.xy * constants.invTargetSize;
     float shadowFactor = hasShadow ? texture(sphereLightProjectedShadowTex, sampleTexCoords).r : 1.0;
 
     vec3 toLight = light.viewSpacePosition.xyz - vPosition;
@@ -172,7 +169,7 @@ void main()
 
     vec3 V = -normalize(vPosition);
 
-    vec3 ambient = pushConstants.ambientAmount * baseColor;
+    vec3 ambient = constants.ambientAmount * baseColor;
     vec3 color = emissive + ambient;
 
     for (uint i = 0; i < lightMeta.numDirectionalLights; ++i) {
@@ -215,7 +212,7 @@ void main()
         vec2 previousPos = vPrevFrameProjectedPos.xy / vPrevFrameProjectedPos.w;
 
         velocity = (currentPos - previousPos) * vec2(0.5, 0.5); // in uv-space
-        velocity -= pushConstants.frustumJitterCorrection;
+        velocity -= constants.frustumJitterCorrection;
 
         //velocity = abs(velocity) * 100.0; // debug code
     }

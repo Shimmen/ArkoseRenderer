@@ -1,5 +1,6 @@
 #version 460
 
+#include <forward/forwardCommon.glsl>
 #include <shared/CameraState.h>
 #include <shared/SceneData.h>
 
