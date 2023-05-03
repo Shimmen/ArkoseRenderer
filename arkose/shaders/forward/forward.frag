@@ -23,18 +23,18 @@ layout(location = 7) in vec4 vPrevFrameProjectedPos;
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 
-layout(set = 1, binding = 0) buffer readonly MaterialBlock { ShaderMaterial materials[]; };
-layout(set = 1, binding = 1) uniform sampler2D textures[];
+layout(set = 3, binding = 0) buffer readonly MaterialBlock { ShaderMaterial materials[]; };
+layout(set = 3, binding = 1) uniform sampler2D textures[];
 
-layout(set = 2, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
-layout(set = 2, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
-layout(set = 2, binding = 2) buffer readonly SphereLightDataBlock { SphereLightData sphereLights[]; };
-layout(set = 2, binding = 3) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
+layout(set = 4, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
+layout(set = 4, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
+layout(set = 4, binding = 2) buffer readonly SphereLightDataBlock { SphereLightData sphereLights[]; };
+layout(set = 4, binding = 3) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
 
-layout(set = 4, binding = 0) uniform sampler2D directionalLightProjectedShadowTex;
-layout(set = 4, binding = 1) uniform sampler2D sphereLightProjectedShadowTex;
-layout(set = 4, binding = 2) uniform sampler2D localLightShadowMapAtlasTex;
-layout(set = 4, binding = 3) buffer readonly ShadowMapViewportBlock { vec4 localLightShadowMapViewports[]; };
+layout(set = 5, binding = 0) uniform sampler2D directionalLightProjectedShadowTex;
+layout(set = 5, binding = 1) uniform sampler2D sphereLightProjectedShadowTex;
+layout(set = 5, binding = 2) uniform sampler2D localLightShadowMapAtlasTex;
+layout(set = 5, binding = 3) buffer readonly ShadowMapViewportBlock { vec4 localLightShadowMapViewports[]; };
 
 NAMED_UNIFORMS(pushConstants,
     float ambientAmount;

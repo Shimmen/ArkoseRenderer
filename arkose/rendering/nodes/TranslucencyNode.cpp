@@ -84,10 +84,10 @@ RenderState& TranslucencyNode::makeRenderState(Registry& reg, GpuScene const& sc
 
     StateBindings& bindings = renderStateBuilder.stateBindings();
     bindings.at(0, *reg.getBindingSet("SceneCameraSet"));
-    bindings.at(1, scene.globalMaterialBindingSet());
-    bindings.at(2, *reg.getBindingSet("SceneLightSet"));
-    bindings.at(3, *reg.getBindingSet("SceneObjectSet"));
-    bindings.at(4, shadowBindingSet);
+    bindings.at(2, *reg.getBindingSet("SceneObjectSet"));
+    bindings.at(3, scene.globalMaterialBindingSet());
+    bindings.at(4, *reg.getBindingSet("SceneLightSet"));
+    bindings.at(5, shadowBindingSet);
 
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
     renderState.setName("Translucent");

@@ -132,10 +132,10 @@ RenderState& ForwardRenderNode::makeRenderState(Registry& reg, const GpuScene& s
 
     StateBindings& bindings = renderStateBuilder.stateBindings();
     bindings.at(0, *reg.getBindingSet("SceneCameraSet"));
-    bindings.at(1, scene.globalMaterialBindingSet());
-    bindings.at(2, *reg.getBindingSet("SceneLightSet"));
-    bindings.at(3, *drawablesBindingSet);
-    bindings.at(4, shadowBindingSet);
+    bindings.at(2, *drawablesBindingSet);
+    bindings.at(3, scene.globalMaterialBindingSet());
+    bindings.at(4, *reg.getBindingSet("SceneLightSet"));
+    bindings.at(5, shadowBindingSet);
 
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
     renderState.setName(stateName);
