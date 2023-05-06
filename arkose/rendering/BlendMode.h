@@ -1,5 +1,8 @@
 #pragma once
 
+#include "core/Types.h"
+#include <array>
+
 // For shader #define values
 #include "shaders/shared/ShaderBlendMode.h"
 
