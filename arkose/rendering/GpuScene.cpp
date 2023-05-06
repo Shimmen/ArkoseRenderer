@@ -3,6 +3,7 @@
 #include "asset/ImageAsset.h"
 #include "asset/MaterialAsset.h"
 #include "asset/StaticMeshAsset.h"
+#include "rendering/DrawKey.h"
 #include "rendering/backend/Resources.h"
 #include "core/Conversion.h"
 #include "core/Logging.h"
@@ -697,6 +698,8 @@ void GpuScene::initializeStaticMeshInstance(StaticMeshInstance& instance)
         drawable.localBoundingSphere = staticMesh->boundingSphere().asVec4();
 
         drawable.materialIndex = meshSegment.material.indexOfType<int>();
+
+        drawable.drawKey = meshSegment.drawKey.asUint32();
 
         if (meshSegment.meshletView) {
             drawable.firstMeshlet = meshSegment.meshletView->firstMeshlet;

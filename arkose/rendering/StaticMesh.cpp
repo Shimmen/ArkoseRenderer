@@ -4,10 +4,11 @@
 #include "rendering/backend/base/AccelerationStructure.h"
 #include "rendering/GpuScene.h"
 
-StaticMeshSegment::StaticMeshSegment(StaticMeshSegmentAsset const* inAsset, MaterialHandle inMaterial, BlendMode inBlendMode)
+StaticMeshSegment::StaticMeshSegment(StaticMeshSegmentAsset const* inAsset, MaterialHandle inMaterial, BlendMode inBlendMode, DrawKey inDrawKey)
     : asset(inAsset)
     , material(inMaterial)
     , blendMode(inBlendMode)
+    , drawKey(inDrawKey)
 {
 }
 
@@ -37,8 +38,10 @@ StaticMesh::StaticMesh(StaticMeshAsset const* asset, MeshMaterialResolver&& mate
                 m_hasNonTranslucentSegments |= true;
             }
 
+            DrawKey drawKey = DrawKey::generate(materialAsset);
+
             MaterialHandle materialHandle = materialResolver(materialAsset);
-            lod.meshSegments.emplace_back(&segmentAsset, materialHandle, materialAsset->blendMode);
+            lod.meshSegments.emplace_back(&segmentAsset, materialHandle, materialAsset->blendMode, drawKey);
         }
     }
 }

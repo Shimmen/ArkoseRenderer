@@ -51,6 +51,7 @@ set(ARKOSE_SOURCES
     arkose/physics/backend/base/PhysicsBackend.cpp
     arkose/physics/backend/jolt/JoltPhysicsBackend.cpp
     arkose/physics/backend/jolt/JoltVisualiser.cpp
+    arkose/rendering/DrawKey.cpp
     arkose/rendering/GpuScene.cpp
     arkose/rendering/Icon.cpp
     arkose/rendering/IconManager.cpp

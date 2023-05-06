@@ -5,6 +5,7 @@
 #include "core/Types.h"
 #include "core/math/Sphere.h"
 #include "physics/HandleTypes.h"
+#include "rendering/DrawKey.h"
 #include "rendering/Material.h"
 #include "rendering/backend/base/AccelerationStructure.h"
 #include "rendering/backend/util/DrawCall.h" // remove me!
@@ -24,7 +25,7 @@ using MeshMaterialResolver = std::function<MaterialHandle(MaterialAsset const*)>
 
 struct StaticMeshSegment {
 
-    StaticMeshSegment(StaticMeshSegmentAsset const*, MaterialHandle, BlendMode blendMode);
+    StaticMeshSegment(StaticMeshSegmentAsset const*, MaterialHandle, BlendMode, DrawKey);
 
     StaticMeshSegmentAsset const* asset { nullptr };
 
@@ -36,6 +37,9 @@ struct StaticMeshSegment {
 
     // Shortcut to avoid retrieving the material just to check blend mode
     BlendMode blendMode { BlendMode::Opaque };
+
+    // Draw key used to differentiate segments in terms of "draw calls"
+    DrawKey drawKey {};
 
     // View into the meshlets that can be used to render this mesh
     std::optional<MeshletView> meshletView {};
