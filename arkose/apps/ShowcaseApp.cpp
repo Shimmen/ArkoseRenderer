@@ -1,6 +1,7 @@
 #include "ShowcaseApp.h"
 
 #include "rendering/meshlet/MeshletDebugNode.h"
+#include "rendering/meshlet/MeshletForwardRenderNode.h"
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/DDGINode.h"
@@ -89,7 +90,11 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<DirectionalLightShadowNode>();
     pipeline.addNode<LocalLightShadowNode>();
 
-    pipeline.addNode<ForwardRenderNode>();
+    if constexpr (withMeshShading) {
+        pipeline.addNode<MeshletForwardRenderNode>();
+    } else {
+        pipeline.addNode<ForwardRenderNode>();
+    }
 
     if constexpr (withRayTracing) {
         pipeline.addNode<RTReflectionsNode>();
@@ -115,9 +120,9 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     const std::string finalTextureToScreen = "SceneColorLDR";
     const AntiAliasing antiAliasingMode = AntiAliasing::TAA;
 
-    if (withMeshShading) {
-        pipeline.addNode<MeshletDebugNode>();
-        sceneTexture = "MeshletDebugVis";
+    if constexpr (withMeshShading) {
+        // Uncomment for meshlet visualisation
+        //pipeline.addNode<MeshletDebugNode>(); sceneTexture = "MeshletDebugVis";
     }
 
     if constexpr (withRayTracing) {
