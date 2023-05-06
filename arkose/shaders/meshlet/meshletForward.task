@@ -1,0 +1,59 @@
+#version 460
+
+#extension GL_EXT_mesh_shader : require
+#extension GL_KHR_shader_subgroup_ballot : require
+
+#include <common.glsl>
+#include <common/camera.glsl>
+#include <common/namedUniforms.glsl>
+#include <forward/forwardCommon.glsl>
+#include <meshlet/meshletCommon.glsl>
+#include <shared/SceneData.h>
+
+layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
+
+layout(set = 1, binding = 0) buffer restrict readonly IndirectDataBlock { uvec4 indirectData[]; };
+layout(set = 1, binding = 1) buffer restrict readonly InstanceBlock { ShaderDrawable instances[]; };
+layout(set = 1, binding = 2) buffer restrict readonly MeshletBlock { ShaderMeshlet meshlets[]; };
+
+NAMED_UNIFORMS_STRUCT(ForwardPassConstants, constants)
+
+layout(local_size_x = GROUP_SIZE) in;
+
+taskPayloadSharedEXT MeshShaderInterpolants toMeshShader;
+
+void main()
+{
+    // indirectData[0] used for indirect count, offset by one to get to drawable lookup data
+    uint drawableIdx = indirectData[gl_DrawID + 1].w;
+    ShaderDrawable drawable = instances[drawableIdx];
+
+    uint meshletIdx = gl_GlobalInvocationID.x;
+    if (meshletIdx >= drawable.meshletCount) {
+        return;
+    }
+
+    ShaderMeshlet meshlet = meshlets[drawable.firstMeshlet + meshletIdx];
+
+    bool shouldDraw = true;
+
+    if (constants.frustumCullMeshlets) {
+        vec4 transformedMeshletSphere = transformSphere(vec4(meshlet.center, meshlet.radius), drawable.worldFromLocal);
+        shouldDraw = shouldDraw && isSphereInCameraFrustum(transformedMeshletSphere, camera);
+    }
+
+    uvec4 ballot = subgroupBallot(shouldDraw);
+    uint numTasks = subgroupBallotBitCount(ballot);
+    uint taskOffset = subgroupBallotExclusiveBitCount(ballot);
+
+    if (subgroupElect()) {
+        toMeshShader.meshletBaseIndex = drawable.firstMeshlet + (gl_WorkGroupID.x * GROUP_SIZE);
+    }
+
+    if (shouldDraw) {
+        toMeshShader.drawableIdx = drawableIdx;
+        toMeshShader.meshletRelativeIndices[taskOffset] = uint8_t(gl_LocalInvocationID.x);
+    }
+
+    EmitMeshTasksEXT(numTasks, 1, 1);
+}

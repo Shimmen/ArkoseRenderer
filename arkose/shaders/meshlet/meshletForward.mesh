@@ -1,0 +1,92 @@
+#version 460
+
+#extension GL_EXT_mesh_shader : require
+#extension GL_EXT_scalar_block_layout : require
+
+#include <common.glsl>
+#include <common/camera.glsl>
+#include <forward/forwardCommon.glsl>
+#include <meshlet/meshletCommon.glsl>
+#include <shared/MeshletVertex.h>
+#include <shared/SceneData.h>
+
+layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
+
+layout(set = 1, binding = 0) buffer restrict readonly IndirectDataBlock { uvec4 indirectData[]; };
+layout(set = 1, binding = 1) buffer restrict readonly InstanceBlock { ShaderDrawable instances[]; };
+layout(set = 1, binding = 2) buffer restrict readonly MeshletBlock { ShaderMeshlet meshlets[]; };
+
+layout(set = 2, binding = 0, scalar) buffer restrict readonly IndicesBlock { uint meshletIndices[]; };
+layout(set = 2, binding = 1, scalar) buffer restrict readonly PositionsBlock { vec3 meshletPositions[]; };
+layout(set = 2, binding = 2, scalar) buffer restrict readonly NonPositionsBlock { MeshletNonPositionVertex meshletVertices[]; };
+
+taskPayloadSharedEXT MeshShaderInterpolants fromTaskShader;
+
+layout(location = 0) perprimitiveEXT flat out int vMaterialIndex[];
+layout(location = 1) out vec2 vTexCoord[];
+layout(location = 2) out vec3 vPosition[];
+layout(location = 3) out vec3 vNormal[];
+layout(location = 4) out vec3 vTangent[];
+layout(location = 5) out flat float vBitangentSign[];
+layout(location = 6) out vec4 vCurrFrameProjectedPos[];
+layout(location = 7) out vec4 vPrevFrameProjectedPos[];
+
+layout(triangles) out;
+layout(max_vertices = MAX_VERTEX_COUNT) out;
+layout(max_primitives = MAX_PRIMITIVE_COUNT) out;
+layout(local_size_x = GROUP_SIZE) in;
+
+void main()
+{
+    ShaderDrawable drawable = instances[fromTaskShader.drawableIdx];
+    mat4 worldFromLocal = drawable.worldFromLocal;
+
+    uint meshletIdx = fromTaskShader.meshletBaseIndex + fromTaskShader.meshletRelativeIndices[gl_WorkGroupID.x];
+    ShaderMeshlet meshlet = meshlets[meshletIdx];
+
+    SetMeshOutputsEXT(meshlet.vertexCount, meshlet.triangleCount);
+
+    const uint vertexIterations = (MAX_VERTEX_COUNT + GROUP_SIZE - 1) / GROUP_SIZE;
+    const uint primitiveIterations = (MAX_PRIMITIVE_COUNT + GROUP_SIZE - 1) / GROUP_SIZE;
+
+    for (uint it = 0; it < vertexIterations; ++it) {
+        uint localVertexIdx = gl_LocalInvocationIndex + it * GROUP_SIZE;
+        localVertexIdx = min(localVertexIdx, meshlet.vertexCount - 1);
+
+        uint vertexIdx = meshlet.firstVertex + localVertexIdx;
+        vec3 localPosition = meshletPositions[vertexIdx];
+        MeshletNonPositionVertex vertexData = meshletVertices[vertexIdx];
+
+        vec4 viewSpacePos = camera.viewFromWorld * drawable.worldFromLocal * vec4(localPosition, 1.0);
+        vPosition[localVertexIdx] = viewSpacePos.xyz;
+
+        vCurrFrameProjectedPos[localVertexIdx] = camera.projectionFromView * viewSpacePos;
+        vPrevFrameProjectedPos[localVertexIdx] = camera.previousFrameProjectionFromView * camera.previousFrameViewFromWorld * drawable.previousFrameWorldFromLocal * vec4(localPosition, 1.0);
+
+        mat3 viewFromTangent = mat3(camera.viewFromWorld) * mat3(drawable.worldFromTangent);
+        vNormal[localVertexIdx] = normalize(viewFromTangent * vertexData.normal);
+        vTangent[localVertexIdx] = normalize(viewFromTangent * vertexData.tangent.xyz);
+        vBitangentSign[localVertexIdx] = vertexData.tangent.w;
+
+        vTexCoord[localVertexIdx] = vertexData.texcoord0;
+
+        gl_MeshVerticesEXT[localVertexIdx].gl_Position = vCurrFrameProjectedPos[localVertexIdx];
+    }
+
+    for (uint it = 0; it < primitiveIterations; ++it) {
+        uint primitiveIdx = gl_LocalInvocationIndex + it * GROUP_SIZE;
+        primitiveIdx = min(primitiveIdx, meshlet.triangleCount - 1);
+
+        uvec3 idx = uvec3(meshletIndices[meshlet.firstIndex + 3 * primitiveIdx + 0],
+                          meshletIndices[meshlet.firstIndex + 3 * primitiveIdx + 1],
+                          meshletIndices[meshlet.firstIndex + 3 * primitiveIdx + 2]);
+
+        // Subtract index of firstVertex, as we index directly into the gl_MeshVerticesEXT array but we store indices into the global meshlet vertex array
+        // TODO: Consider if this is the way we really want to store them.. We could probably just as easily flip it so we add firstVertex in other cases instead.
+        idx -= uvec3(meshlet.firstVertex);
+
+        gl_PrimitiveTriangleIndicesEXT[primitiveIdx] = idx;
+
+        vMaterialIndex[primitiveIdx] = drawable.materialIndex;
+    }
+}

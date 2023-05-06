@@ -101,6 +101,7 @@ set(ARKOSE_SOURCES
     arkose/rendering/meshlet/MeshletCuller.cpp
     arkose/rendering/meshlet/MeshletManager.cpp
     arkose/rendering/meshlet/MeshletDebugNode.cpp
+    arkose/rendering/meshlet/MeshletForwardRenderNode.cpp
     arkose/rendering/meshlet/MeshletIndirectHelper.cpp
     arkose/rendering/nodes/BloomNode.cpp
     arkose/rendering/nodes/CullingNode.cpp
