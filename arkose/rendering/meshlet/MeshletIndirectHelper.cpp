@@ -47,7 +47,7 @@ MeshletIndirectSetupState const& MeshletIndirectHelper::createMeshletIndirectSet
 }
 
 void MeshletIndirectHelper::executeMeshletIndirectSetup(GpuScene& scene, CommandList& cmdList, UploadBuffer& uploadBuffer,
-                                                       MeshletIndirectSetupState const& state, MeshletIndirectSetupOptions const& options) const
+                                                        MeshletIndirectSetupState const& state, MeshletIndirectSetupOptions const& options) const
 {
     ScopedDebugZone zone { cmdList, "Meshlet task setup" };
 
@@ -66,6 +66,7 @@ void MeshletIndirectHelper::executeMeshletIndirectSetup(GpuScene& scene, Command
 
     // Set options
     cmdList.setNamedUniform("frustumCull", options.frustumCullInstances);
+    cmdList.setNamedUniform("drawKeyMask", ~0x0); // include all (for now)
 
     cmdList.dispatch({ drawableCount, 1, 1 }, { GroupSize, 1, 1 });
     cmdList.bufferWriteBarrier(state.indirectBuffers);
