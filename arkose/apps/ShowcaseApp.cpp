@@ -107,7 +107,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     pipeline.addNode<TranslucencyNode>();
 
-    pipeline.addNode<BloomNode>();
+    //pipeline.addNode<BloomNode>();
 
     auto& dofNode = pipeline.addNode<DepthOfFieldNode>();
     dofNode.setEnabled(false);
