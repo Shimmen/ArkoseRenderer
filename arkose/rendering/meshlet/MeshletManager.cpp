@@ -8,8 +8,12 @@
 #include "rendering/backend/base/CommandList.h"
 #include "rendering/backend/util/UploadBuffer.h"
 
+// Shader headers
+#include "shaders/shared/MeshletVertex.h"
+
 MeshletManager::MeshletManager(Backend& backend)
 {
+    ARKOSE_ASSERT(m_nonPositionVertexLayout.packedVertexSize() == sizeof(MeshletNonPositionVertex));
     size_t positionDataBufferSize = m_positionVertexLayout.packedVertexSize() * MaxLoadedVertices;
     size_t nonPositionDataBufferSize = m_nonPositionVertexLayout.packedVertexSize() * MaxLoadedVertices;
     size_t loadedIndexBufferSize = sizeof(u32) * MaxLoadedIndices;
@@ -71,7 +75,11 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
         u32 indexCount = narrow_cast<u32>(meshletDataAsset.meshletIndices.size());
         u32 meshletCount = narrow_cast<u32>(meshletDataAsset.meshlets.size());
 
-        size_t totalUploadSize = vertexCount * (sizeof(vec3) /* + sizeof(remaining vertex data)*/) + indexCount * sizeof(u32) + meshletCount * sizeof(ShaderMeshlet);
+        size_t totalUploadSize =
+            vertexCount * (m_positionVertexLayout.packedVertexSize() + m_nonPositionVertexLayout.packedVertexSize())
+            + indexCount * sizeof(u32)
+            + meshletCount * sizeof(ShaderMeshlet);
+
         if (totalUploadSize > m_uploadBuffer->remainingSize()) {
             if (totalUploadSize > UploadBufferSize) {
                 ARKOSE_LOG(Fatal, "Static mesh segment is {:.2f} MB but the meshlet upload budget is only {:.2f} MB. "
@@ -91,8 +99,12 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
         m_uploadBuffer->upload(adjustedMeshletIndices, *m_indexBuffer, indexDataOffset);
 
         u32 startVertexIdx = m_nextVertexIdx;
+
         std::vector<vec3> positionsTempVector {};
         positionsTempVector.reserve(vertexCount);
+
+        std::vector<MeshletNonPositionVertex> nonPositionsTempVector {};
+        nonPositionsTempVector.reserve(vertexCount);
 
         for (MeshletAsset const& meshletAsset : meshletDataAsset.meshlets) {
 
@@ -110,9 +122,14 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
                 u32 vertexIdx = meshletDataAsset.meshletVertexIndirection[meshletAsset.firstVertex + i];
 
                 vec3 position = meshSegment->asset->positions[vertexIdx];
-                positionsTempVector.emplace_back(position);
+                vec2 texcoord0 = (vertexIdx < meshSegment->asset->texcoord0s.size()) ? meshSegment->asset->texcoord0s[vertexIdx] : vec2(0.0f, 0.0f);
+                vec3 normal = (vertexIdx < meshSegment->asset->normals.size()) ? meshSegment->asset->normals[vertexIdx] : vec3(0.0f, 0.0f, 1.0f);
+                vec4 tangent = (vertexIdx < meshSegment->asset->tangents.size()) ? meshSegment->asset->tangents[vertexIdx] : vec4(1.0f, 0.0f, 0.0f, 1.0f);
 
-                // TODO: Also remap all other vertex buffers!
+                positionsTempVector.emplace_back(position);
+                nonPositionsTempVector.emplace_back(MeshletNonPositionVertex { .texcoord0 = texcoord0,
+                                                                               .normal = normal,
+                                                                               .tangent = tangent });
             }
 
             m_nextVertexIdx += meshletAsset.vertexCount;
@@ -122,6 +139,9 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
         // Additionally, keep in mind that some of these buffer copies are contiguous..?
         size_t posDataOffset = startVertexIdx * m_positionVertexLayout.packedVertexSize();
         m_uploadBuffer->upload(positionsTempVector, *m_positionDataVertexBuffer, posDataOffset);
+
+        size_t nonPosDataOffset = startVertexIdx * m_nonPositionVertexLayout.packedVertexSize();
+        m_uploadBuffer->upload(nonPositionsTempVector, *m_nonPositionDataVertexBuffer, nonPosDataOffset);
 
         size_t meshletDataDstOffset = m_nextMeshletIdx * sizeof(ShaderMeshlet);
         m_uploadBuffer->upload(m_meshlets.data() + m_nextMeshletIdx, meshletCount * sizeof(ShaderMeshlet), *m_meshletBuffer, meshletDataDstOffset);

@@ -48,7 +48,7 @@ public:
     static constexpr size_t MaxLoadedIndices = 3 * MaxLoadedTriangles;
     static constexpr size_t MaxLoadedMeshlets = MaxLoadedTriangles / 124;
 
-    static constexpr size_t UploadBufferSize = 5 * 1024 * 1024;
+    static constexpr size_t UploadBufferSize = 10 * 1024 * 1024;
 
 private:
     const VertexLayout m_positionVertexLayout { VertexComponent::Position3F };
