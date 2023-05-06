@@ -89,12 +89,20 @@ void RenderPipeline::drawGui(bool includeContainingWindow) const
         ImGui::TreePop();
     }
 
+    int nodeIdx = 0;
     for (auto& [node, execCallback] : m_nodeContexts) {
         std::string nodeName = node->name();
         std::string nodeTimePerfString = node->timer().createFormattedString();
         std::string nodeTitle = std::format("{} | {}###{}", nodeName, nodeTimePerfString, nodeName);
         if (ImGui::CollapsingHeader(nodeTitle.c_str())) {
+
+            // NOTE: This isn't a perfect system, but it should ensure we can reuse label names within node GUIs
+            int nodeId = 1'000'000 + nodeIdx++;
+            ImGui::PushID(nodeId);
+
             node->drawGui();
+
+            ImGui::PopID();
         }
     }
 
