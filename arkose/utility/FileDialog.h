@@ -14,6 +14,8 @@ struct FilterItem {
 };
 
 std::optional<std::string> open(std::vector<FilterItem>, std::string_view defaultPath = {});
+std::vector<std::string> openMultiple(std::vector<FilterItem>, std::string_view defaultPath = {});
+
 std::optional<std::string> save(std::vector<FilterItem>, std::string_view defaultPath = {}, std::string_view defaultName = {});
 
 }
