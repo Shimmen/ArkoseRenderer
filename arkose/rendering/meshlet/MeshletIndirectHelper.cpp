@@ -7,41 +7,37 @@
 #include "rendering/backend/base/CommandList.h"
 #include "rendering/util/ScopedDebugZone.h"
 
-Buffer& MeshletIndirectHelper::createIndirectBuffer(Registry& reg, u32 maxMeshletCount) const
+MeshletIndirectBuffer& MeshletIndirectHelper::createIndirectBuffer(Registry& reg, DrawKey drawKeyMask, u32 maxMeshletCount) const
 {
     constexpr size_t countSizeWithPadding = sizeof(ark::uvec4);
     size_t bufferSize = maxMeshletCount * sizeof(ark::uvec4) + countSizeWithPadding;
-    return reg.createBuffer(bufferSize, Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
+
+    auto& indirectBuffer = reg.allocate<MeshletIndirectBuffer>();
+    indirectBuffer.buffer = &reg.createBuffer(bufferSize, Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
+    indirectBuffer.drawKeyMask = drawKeyMask;
+    return indirectBuffer;
 }
 
-MeshletIndirectSetupState const& MeshletIndirectHelper::createMeshletIndirectSetupState(Registry& reg, std::vector<Buffer*> const& indirectBuffers) const
+MeshletIndirectSetupState const& MeshletIndirectHelper::createMeshletIndirectSetupState(Registry& reg, std::vector<MeshletIndirectBuffer*> const& indirectBuffers) const
 {
-    // Construct the indirect buffers array from the passed in indirect buffers, and pad out remaining slots
-    std::array<Buffer*, IndirectBufferCount> indirectBuffersArray {};
-
-    u32 bufferIdx = 0;
-    ARKOSE_ASSERT(indirectBuffers.size() > 0);
-    for (; bufferIdx < indirectBuffers.size(); ++bufferIdx) {
-        ARKOSE_ASSERT(indirectBuffers[bufferIdx] != nullptr);
-        indirectBuffersArray[bufferIdx] = indirectBuffers[bufferIdx];
-    }
-    for (; bufferIdx < IndirectBufferCount; ++bufferIdx) {
-        indirectBuffersArray[bufferIdx] = indirectBuffersArray[0];
-    }
-
-    MeshletIndirectSetupState& state = reg.allocate<MeshletIndirectSetupState>();
-    state.indirectBuffers = indirectBuffers;
-
-    state.cameraBindingSet = reg.getBindingSet("SceneCameraSet");
-    state.indirectDataBindingSet = &reg.createBindingSet({ ShaderBinding::storageBuffer(*reg.getBuffer("SceneObjectData")),
-                                                           ShaderBinding::storageBuffer(*indirectBuffersArray[0]) /*,
-                                                           ShaderBinding::storageBuffer(*state.indirectBuffers[1]),
-                                                           ShaderBinding::storageBuffer(*state.indirectBuffers[2]),
-                                                           ShaderBinding::storageBuffer(*state.indirectBuffers[3])*/ });
-
     auto meshletTaskSetupDefines = { ShaderDefine::makeInt("GROUP_SIZE", GroupSize) };
     Shader meshletTaskSetupShader = Shader::createCompute("meshlet/meshletTaskSetup.comp", meshletTaskSetupDefines);
-    state.taskSetupComputeState = &reg.createComputeState(meshletTaskSetupShader, { state.cameraBindingSet, state.indirectDataBindingSet });
+
+    MeshletIndirectSetupState& state = reg.allocate<MeshletIndirectSetupState>();
+    state.cameraBindingSet = reg.getBindingSet("SceneCameraSet");
+
+    for (MeshletIndirectBuffer* indirectBuffer : indirectBuffers) {
+
+        ARKOSE_ASSERT(indirectBuffer != nullptr);
+        state.indirectBuffers.emplace_back(indirectBuffer);
+        state.rawIndirectBuffers.emplace_back(indirectBuffer->buffer);
+
+        MeshletIndirectSetupDispatch& dispatch = state.dispatches.emplace_back();
+        dispatch.drawKeyMask = indirectBuffer->drawKeyMask;
+        dispatch.indirectDataBindingSet = &reg.createBindingSet({ ShaderBinding::storageBuffer(*reg.getBuffer("SceneObjectData")),
+                                                                  ShaderBinding::storageBuffer(*indirectBuffer->buffer) });
+        dispatch.taskSetupComputeState = &reg.createComputeState(meshletTaskSetupShader, { state.cameraBindingSet, dispatch.indirectDataBindingSet });
+    }
 
     return state;
 }
@@ -52,27 +48,31 @@ void MeshletIndirectHelper::executeMeshletIndirectSetup(GpuScene& scene, Command
     ScopedDebugZone zone { cmdList, "Meshlet task setup" };
 
     // Set first u32 (i.e. indirect count) to 0 before using it for accumulation in the shader
-    for (Buffer* indirectBuffer : state.indirectBuffers) {
+    for (Buffer* indirectBuffer : state.rawIndirectBuffers) {
         uploadBuffer.upload(0u, *indirectBuffer, 0);
     }
     cmdList.executeBufferCopyOperations(uploadBuffer);
 
-    cmdList.setComputeState(*state.taskSetupComputeState);
-    cmdList.bindSet(*state.cameraBindingSet, 0);
-    cmdList.bindSet(*state.indirectDataBindingSet, 1);
+    const u32 drawableCount = scene.drawableCountForFrame();
 
-    u32 drawableCount = scene.drawableCountForFrame();
-    cmdList.setNamedUniform("drawableCount", drawableCount);
+    for (MeshletIndirectSetupDispatch const& dispatch : state.dispatches) {
+        cmdList.setComputeState(*dispatch.taskSetupComputeState);
+        cmdList.bindSet(*state.cameraBindingSet, 0);
+        cmdList.bindSet(*dispatch.indirectDataBindingSet, 1);
 
-    // Set options
-    cmdList.setNamedUniform("frustumCull", options.frustumCullInstances);
-    cmdList.setNamedUniform("drawKeyMask", ~0x0); // include all (for now)
+        cmdList.setNamedUniform("drawableCount", drawableCount);
+        cmdList.setNamedUniform("drawKeyMask", dispatch.drawKeyMask.asUint32());
 
-    cmdList.dispatch({ drawableCount, 1, 1 }, { GroupSize, 1, 1 });
-    cmdList.bufferWriteBarrier(state.indirectBuffers);
+        // Set options
+        cmdList.setNamedUniform("frustumCull", options.frustumCullInstances);
+
+        cmdList.dispatch({ drawableCount, 1, 1 }, { GroupSize, 1, 1 });
+    }
+
+    cmdList.bufferWriteBarrier(state.rawIndirectBuffers);
 }
 
-void MeshletIndirectHelper::drawMeshletsWithIndirectBuffer(CommandList& cmdList, Buffer const& indirectBuffer) const
+void MeshletIndirectHelper::drawMeshletsWithIndirectBuffer(CommandList& cmdList, MeshletIndirectBuffer const& indirectBuffer) const
 {
     // The indirect count is the first u32 in the indirect buffer, padded out to a whole uvec4.
     constexpr u32 countDataOffset = 0;
@@ -82,6 +82,6 @@ void MeshletIndirectHelper::drawMeshletsWithIndirectBuffer(CommandList& cmdList,
     constexpr u32 cmdDataStride = sizeof(ark::uvec4);
     constexpr u32 cmdDataOffset = sizeof(ark::uvec4);
 
-    cmdList.drawMeshTasksIndirect(indirectBuffer, cmdDataStride, cmdDataOffset,
-                                  indirectBuffer, countDataOffset);
+    cmdList.drawMeshTasksIndirect(*indirectBuffer.buffer, cmdDataStride, cmdDataOffset,
+                                  *indirectBuffer.buffer, countDataOffset);
 }

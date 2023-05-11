@@ -12,9 +12,8 @@ void MeshletForwardRenderNode::drawGui()
 RenderPipelineNode::ExecuteCallback MeshletForwardRenderNode::construct(GpuScene& scene, Registry& reg)
 {
     PassSettings opaqueSettings { .debugName = "MeshletForwardOpaque",
-                                  .maxMeshlets = 20'000,
-                                  .blendMode = PassBlendMode::Opaque,
-                                  .doubleSided = false /* TODO : We probably want to use dynamic state for double sided ! */ };
+                                  .maxMeshlets = 50'000,
+                                  .drawKeyMask = DrawKey(Brdf::GgxMicrofacet, BlendMode::Opaque, false) };
     RenderStateWithIndirectData& renderStateOpaque = makeRenderState(reg, scene, opaqueSettings);
 
     // TODO: Use more indirect buffers for the different passes (per BRDF * double sided * ..?)
@@ -23,7 +22,7 @@ RenderPipelineNode::ExecuteCallback MeshletForwardRenderNode::construct(GpuScene
     //  I.e., we specify what sort key each buffer is for, and each drawable has its own
     //  sort key part of its data, so we simply do the culling then put in respective buffer.
 
-    MeshletIndirectSetupState const& indirectSetupState = m_meshletIndirectHelper.createMeshletIndirectSetupState(reg, { renderStateOpaque.indirectDataBuffer });
+    MeshletIndirectSetupState const& indirectSetupState = m_meshletIndirectHelper.createMeshletIndirectSetupState(reg, { renderStateOpaque.indirectBuffer });
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
@@ -33,6 +32,7 @@ RenderPipelineNode::ExecuteCallback MeshletForwardRenderNode::construct(GpuScene
         std::vector<RenderStateWithIndirectData*> renderStates = { &renderStateOpaque };
         for (RenderStateWithIndirectData* renderState : renderStates) {
 
+            // TODO: We can't clear on every render state, only the first one!
             cmdList.beginRendering(*renderState->renderState, ClearValue::blackAtMaxDepth());
 
             cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
@@ -41,7 +41,7 @@ RenderPipelineNode::ExecuteCallback MeshletForwardRenderNode::construct(GpuScene
 
             cmdList.setNamedUniform("frustumCullMeshlets", m_frustumCullMeshlets);
 
-            Buffer& indirectBuffer = *renderState->indirectDataBuffer;
+            MeshletIndirectBuffer& indirectBuffer = *renderState->indirectBuffer;
             m_meshletIndirectHelper.drawMeshletsWithIndirectBuffer(cmdList, indirectBuffer);
 
             cmdList.endRendering();
@@ -72,12 +72,12 @@ MeshletForwardRenderNode::RenderStateWithIndirectData& MeshletForwardRenderNode:
 {
     int blendModeInt = 0;
     LoadOp loadOp;
-    switch (passSettings.blendMode) {
-    case PassBlendMode::Opaque:
+    switch (passSettings.drawKeyMask.blendMode().value()) {
+    case BlendMode::Opaque:
         blendModeInt = BLEND_MODE_OPAQUE;
         loadOp = LoadOp::Clear;
         break;
-    case PassBlendMode::Masked:
+    case BlendMode::Masked:
         blendModeInt = BLEND_MODE_MASKED;
         loadOp = LoadOp::Load;
         break;
@@ -86,7 +86,7 @@ MeshletForwardRenderNode::RenderStateWithIndirectData& MeshletForwardRenderNode:
     ARKOSE_ASSERT(blendModeInt != 0);
     auto shaderDefines = { // Forward rendering specific
                            ShaderDefine::makeInt("FORWARD_BLEND_MODE", blendModeInt),
-                           ShaderDefine::makeBool("FORWARD_DOUBLE_SIDED", passSettings.doubleSided),
+                           ShaderDefine::makeBool("FORWARD_DOUBLE_SIDED", passSettings.drawKeyMask.doubleSided().value()),
                            ShaderDefine::makeBool("FORWARD_MESH_SHADING", true),
 
                            // Mesh shading specific
@@ -99,12 +99,12 @@ MeshletForwardRenderNode::RenderStateWithIndirectData& MeshletForwardRenderNode:
                                               "forward/forward.frag",
                                               shaderDefines);
 
-    RenderStateBuilder renderStateBuilder { makeRenderTarget(reg, loadOp), shader, {} };
+    RenderStateBuilder renderStateBuilder { makeRenderTarget(reg, loadOp), shader, { VertexComponent::Position3F} };
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
-    renderStateBuilder.cullBackfaces = !passSettings.doubleSided;
+    renderStateBuilder.cullBackfaces = !passSettings.drawKeyMask.doubleSided().value(); // TODO: We probably want to use dynamic state for double sided!
 
     renderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
-    if (passSettings.blendMode == PassBlendMode::Opaque && reg.hasPreviousNode("Prepass")) {
+    if (passSettings.drawKeyMask.blendMode() == BlendMode::Opaque && reg.hasPreviousNode("Prepass")) {
         renderStateBuilder.stencilMode = StencilMode::PassIfNotZero;
     }
 
@@ -128,11 +128,11 @@ MeshletForwardRenderNode::RenderStateWithIndirectData& MeshletForwardRenderNode:
                                                           ShaderBinding::sampledTexture(*localLightShadowMapAtlas),
                                                           ShaderBinding::storageBuffer(*localLightShadowAllocations) });
 
-    Buffer& indirectDataBuffer = m_meshletIndirectHelper.createIndirectBuffer(reg, passSettings.maxMeshlets);
+    MeshletIndirectBuffer& indirectBuffer = m_meshletIndirectHelper.createIndirectBuffer(reg, passSettings.drawKeyMask, passSettings.maxMeshlets);
 
     MeshletManager const& meshletManager = scene.meshletManager();
 
-    BindingSet& taskShaderBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(indirectDataBuffer),
+    BindingSet& taskShaderBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(*indirectBuffer.buffer),
                                                               ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
                                                               ShaderBinding::storageBufferReadonly(meshletManager.meshletBuffer()) });
 
@@ -153,6 +153,6 @@ MeshletForwardRenderNode::RenderStateWithIndirectData& MeshletForwardRenderNode:
 
     auto& renderStateWithIndirectData = reg.allocate<RenderStateWithIndirectData>();
     renderStateWithIndirectData.renderState = &renderState;
-    renderStateWithIndirectData.indirectDataBuffer = &indirectDataBuffer;
+    renderStateWithIndirectData.indirectBuffer = &indirectBuffer;
     return renderStateWithIndirectData;
 }

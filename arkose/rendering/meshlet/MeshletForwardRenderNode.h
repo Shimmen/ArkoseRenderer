@@ -15,21 +15,15 @@ private:
     bool m_frustumCullInstances { false }; // Keep default off (for now!)
     bool m_frustumCullMeshlets { true };
 
-    enum class PassBlendMode {
-        Opaque,
-        Masked,
-    };
-
     struct PassSettings {
         std::string debugName {};
         u32 maxMeshlets { 10'000 };
-        PassBlendMode blendMode;
-        bool doubleSided;
+        DrawKey drawKeyMask {};
     };
 
     struct RenderStateWithIndirectData {
         RenderState* renderState { nullptr };
-        Buffer* indirectDataBuffer { nullptr };
+        MeshletIndirectBuffer* indirectBuffer { nullptr };
     };
 
     RenderTarget& makeRenderTarget(Registry&, LoadOp) const;

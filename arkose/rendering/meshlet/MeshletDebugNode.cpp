@@ -63,8 +63,9 @@ MeshletDebugNode::PassParams const& MeshletDebugNode::createMeshShaderPath(GpuSc
 {
     PassParams& params = reg.allocate<PassParams>();
 
-    constexpr u32 maxMeshletCount = 14096;
-    Buffer& indirectDataBuffer = m_meshletIndirectHelper.createIndirectBuffer(reg, maxMeshletCount);
+    DrawKey catchAllDrawKeyMask {};
+    constexpr u32 maxMeshletCount = 20'000;
+    MeshletIndirectBuffer& indirectDataBuffer = m_meshletIndirectHelper.createIndirectBuffer(reg, catchAllDrawKeyMask, maxMeshletCount);
     params.meshletIndirectSetupState = &m_meshletIndirectHelper.createMeshletIndirectSetupState(reg, { &indirectDataBuffer });
 
     auto meshletDefines = { ShaderDefine::makeInt("INDIRECT", indirect),
@@ -75,7 +76,7 @@ MeshletDebugNode::PassParams const& MeshletDebugNode::createMeshShaderPath(GpuSc
     Shader meshletShader = Shader::createMeshShading("meshlet/meshletVisualize.task", "meshlet/meshletVisualize.mesh", "meshlet/meshletVisualize.frag", meshletDefines);
 
     MeshletManager const& meshletManager = scene.meshletManager();
-    BindingSet& meshShaderBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(indirectDataBuffer),
+    BindingSet& meshShaderBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(*indirectDataBuffer.buffer),
                                                               ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
                                                               ShaderBinding::storageBufferReadonly(meshletManager.meshletBuffer()),
                                                               ShaderBinding::storageBufferReadonly(meshletManager.meshletPositionDataVertexBuffer()),
@@ -178,7 +179,9 @@ void MeshletDebugNode::executeMeshShaderIndirectPath(PassParams const& params, G
     cmdList.setNamedUniform("frustumCull", m_frustumCullMeshlets);
 
     // NOTE: We only use the first and only indirect buffer for this meshlet debug view
-    Buffer& indirectBuffer = *params.meshletIndirectSetupState->indirectBuffers[0];
+    ARKOSE_ASSERT(params.meshletIndirectSetupState->indirectBuffers.size() == 1);
+    MeshletIndirectBuffer const& indirectBuffer = *params.meshletIndirectSetupState->indirectBuffers[0];
+
     m_meshletIndirectHelper.drawMeshletsWithIndirectBuffer(cmdList, indirectBuffer);
 
     cmdList.endRendering();
