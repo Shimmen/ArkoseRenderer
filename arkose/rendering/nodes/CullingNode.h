@@ -11,5 +11,7 @@ public:
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:
-    bool m_frustumCull { true };
+    // TODO: We currently have some problems with this culling node, so I'm turning off culling for now.
+    // Soon enough we will deprecate and remove this culling node anyway.
+    bool m_frustumCull { false };
 };
