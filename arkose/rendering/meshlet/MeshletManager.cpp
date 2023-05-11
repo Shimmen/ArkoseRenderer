@@ -80,6 +80,7 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
             + indexCount * sizeof(u32)
             + meshletCount * sizeof(ShaderMeshlet);
 
+        // TODO: There are instances where segments are massive, so we need to allow uploading with a finer granularity.
         if (totalUploadSize > m_uploadBuffer->remainingSize()) {
             if (totalUploadSize > UploadBufferSize) {
                 ARKOSE_LOG(Fatal, "Static mesh segment is {:.2f} MB but the meshlet upload budget is only {:.2f} MB. "
