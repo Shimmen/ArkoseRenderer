@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rendering/BlendMode.h"
+#include <optional>
 
 class MaterialAsset;
 
@@ -11,16 +12,20 @@ enum class Brdf {
 
 class DrawKey {
 public:
-    DrawKey(Brdf, BlendMode, bool doubleSided);
+    DrawKey(std::optional<Brdf>, std::optional<BlendMode>, std::optional<bool> doubleSided);
     DrawKey() = default;
     ~DrawKey() = default;
 
     static DrawKey generate(MaterialAsset*);
 
+    std::optional<Brdf> brdf() const { return m_brdf; }
+    std::optional<BlendMode> blendMode() const { return m_blendMode; }
+    std::optional<bool> doubleSided() const { return m_doubleSided; }
+
     u32 asUint32() const;
 
 private:
-    Brdf m_brdf { Brdf::GgxMicrofacet };
-    BlendMode m_blendMode { BlendMode::Opaque };
-    bool m_doubleSided { false };
+    std::optional<Brdf> m_brdf {};
+    std::optional<BlendMode> m_blendMode {};
+    std::optional<bool> m_doubleSided {};
 };
