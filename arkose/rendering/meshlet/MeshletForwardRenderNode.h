@@ -16,9 +16,10 @@ private:
     bool m_frustumCullMeshlets { true };
 
     struct PassSettings {
-        std::string debugName {};
-        u32 maxMeshlets { 10'000 };
         DrawKey drawKeyMask {};
+        u32 maxMeshlets { 10'000 };
+        std::string debugName {};
+        bool firstPass { false };
     };
 
     struct RenderStateWithIndirectData {
@@ -27,5 +28,6 @@ private:
     };
 
     RenderTarget& makeRenderTarget(Registry&, LoadOp) const;
-    RenderStateWithIndirectData& makeRenderState(Registry&, const GpuScene&, PassSettings) const;
+    RenderStateWithIndirectData& makeRenderState(Registry&, GpuScene const&, PassSettings) const;
+    std::vector<RenderStateWithIndirectData*>& createRenderStates(Registry&, GpuScene const&);
 };

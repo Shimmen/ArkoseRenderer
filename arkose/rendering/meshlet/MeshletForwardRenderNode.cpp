@@ -11,28 +11,22 @@ void MeshletForwardRenderNode::drawGui()
 
 RenderPipelineNode::ExecuteCallback MeshletForwardRenderNode::construct(GpuScene& scene, Registry& reg)
 {
-    PassSettings opaqueSettings { .debugName = "MeshletForwardOpaque",
-                                  .maxMeshlets = 50'000,
-                                  .drawKeyMask = DrawKey(Brdf::GgxMicrofacet, BlendMode::Opaque, false) };
-    RenderStateWithIndirectData& renderStateOpaque = makeRenderState(reg, scene, opaqueSettings);
+    std::vector<RenderStateWithIndirectData*> const& renderStates = createRenderStates(reg, scene);
 
-    // TODO: Use more indirect buffers for the different passes (per BRDF * double sided * ..?)
-    //  The shader needs to know which instances to assign to which indirect data buffers.
-    //  One way is to associate a "sort key" for each indirect buffer and pass that along.
-    //  I.e., we specify what sort key each buffer is for, and each drawable has its own
-    //  sort key part of its data, so we simply do the culling then put in respective buffer.
-
-    MeshletIndirectSetupState const& indirectSetupState = m_meshletIndirectHelper.createMeshletIndirectSetupState(reg, { renderStateOpaque.indirectBuffer });
+    // TODO: If we collect render states and indirect buffers into separate arrays we won't have to do this...
+    // However, it potentially make other code more messy, so perhaps not worth doing.
+    std::vector<MeshletIndirectBuffer*> indirectBuffers {};
+    for (auto const& renderState : renderStates) { indirectBuffers.push_back(renderState->indirectBuffer); }
+    MeshletIndirectSetupState const& indirectSetupState = m_meshletIndirectHelper.createMeshletIndirectSetupState(reg, indirectBuffers);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         MeshletIndirectSetupOptions setupOptions { .frustumCullInstances = m_frustumCullInstances };
         m_meshletIndirectHelper.executeMeshletIndirectSetup(scene, cmdList, uploadBuffer, indirectSetupState, setupOptions);
 
-        std::vector<RenderStateWithIndirectData*> renderStates = { &renderStateOpaque };
         for (RenderStateWithIndirectData* renderState : renderStates) {
 
-            // TODO: We can't clear on every render state, only the first one!
+            // NOTE: If render target is not set up to clear then the clear value specified here is arbitrary
             cmdList.beginRendering(*renderState->renderState, ClearValue::blackAtMaxDepth());
 
             cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
@@ -68,19 +62,18 @@ RenderTarget& MeshletForwardRenderNode::makeRenderTarget(Registry& reg, LoadOp l
                                     { RenderTarget::AttachmentType::Depth, depthTexture, depthLoadOp, StoreOp::Store } });
 }
 
-MeshletForwardRenderNode::RenderStateWithIndirectData& MeshletForwardRenderNode::makeRenderState(Registry& reg, const GpuScene& scene, PassSettings passSettings) const
+MeshletForwardRenderNode::RenderStateWithIndirectData& MeshletForwardRenderNode::makeRenderState(Registry& reg, GpuScene const& scene, PassSettings passSettings) const
 {
     int blendModeInt = 0;
-    LoadOp loadOp;
     switch (passSettings.drawKeyMask.blendMode().value()) {
     case BlendMode::Opaque:
         blendModeInt = BLEND_MODE_OPAQUE;
-        loadOp = LoadOp::Clear;
         break;
     case BlendMode::Masked:
         blendModeInt = BLEND_MODE_MASKED;
-        loadOp = LoadOp::Load;
         break;
+    default:
+        ASSERT_NOT_REACHED();
     }
 
     ARKOSE_ASSERT(blendModeInt != 0);
@@ -99,6 +92,7 @@ MeshletForwardRenderNode::RenderStateWithIndirectData& MeshletForwardRenderNode:
                                               "forward/forward.frag",
                                               shaderDefines);
 
+    LoadOp loadOp = passSettings.firstPass ? LoadOp::Clear : LoadOp::Load;
     RenderStateBuilder renderStateBuilder { makeRenderTarget(reg, loadOp), shader, { VertexComponent::Position3F} };
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
     renderStateBuilder.cullBackfaces = !passSettings.drawKeyMask.doubleSided().value(); // TODO: We probably want to use dynamic state for double sided!
@@ -155,4 +149,45 @@ MeshletForwardRenderNode::RenderStateWithIndirectData& MeshletForwardRenderNode:
     renderStateWithIndirectData.renderState = &renderState;
     renderStateWithIndirectData.indirectBuffer = &indirectBuffer;
     return renderStateWithIndirectData;
+}
+
+std::vector<MeshletForwardRenderNode::RenderStateWithIndirectData*>& MeshletForwardRenderNode::createRenderStates(Registry& reg, GpuScene const& scene)
+{
+    std::vector<PassSettings> passes {};
+    std::string debugName = "Meshlet";
+
+    auto brdfs = { Brdf::GgxMicrofacet };
+    for (Brdf brdf : brdfs) {
+
+        // TODO: Use BRDF name!
+        debugName += "Default";
+
+        passes.push_back({ .drawKeyMask = DrawKey(brdf, BlendMode::Opaque, false),
+                           .maxMeshlets = 50'000,
+                           .debugName = debugName + "Opaque" });
+
+        passes.push_back({ .drawKeyMask = DrawKey(brdf, BlendMode::Opaque, true),
+                           .maxMeshlets = 50'000,
+                           .debugName = debugName + "OpaqueDoubleSided" });
+
+        passes.push_back({ .drawKeyMask = DrawKey(brdf, BlendMode::Masked, false),
+                           .maxMeshlets = 50'000,
+                           .debugName = debugName + "Masked" });
+
+        passes.push_back({ .drawKeyMask = DrawKey(brdf, BlendMode::Masked, true),
+                           .maxMeshlets = 50'000,
+                           .debugName = debugName + "MaskedDoubleSided" });
+    }
+
+    // Ensure that the first pass is marked as such, so we know to clear the render targets before starting the pass
+    if (passes.size() > 0) {
+        passes.front().firstPass = true;
+    }
+
+    auto& renderStates = reg.allocate<std::vector<RenderStateWithIndirectData*>>();
+    for (PassSettings const& pass : passes) {
+        renderStates.push_back(&makeRenderState(reg, scene, pass));
+    }
+
+    return renderStates;
 }
