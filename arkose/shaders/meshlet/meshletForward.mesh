@@ -39,7 +39,6 @@ layout(local_size_x = GROUP_SIZE) in;
 void main()
 {
     ShaderDrawable drawable = instances[fromTaskShader.drawableIdx];
-    mat4 worldFromLocal = drawable.worldFromLocal;
 
     uint meshletIdx = fromTaskShader.meshletBaseIndex + fromTaskShader.meshletRelativeIndices[gl_WorkGroupID.x];
     ShaderMeshlet meshlet = meshlets[meshletIdx];
