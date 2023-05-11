@@ -32,7 +32,7 @@ void main()
         return;
     }
 
-    bool shouldDraw = (drawable.drawKey & constants.drawKeyMask) > 0;
+    bool shouldDraw = (drawable.drawKey & constants.drawKeyMask) == drawable.drawKey;
 
     if (constants.frustumCull) {
         vec4 transformedSphere = transformSphere(drawable.localBoundingSphere, drawable.worldFromLocal);
@@ -55,6 +55,8 @@ void main()
     }
     lookupIdx = subgroupBroadcastFirst(lookupIdx) + localInstanceOffset;
 
-    // indirectData[1..]: (xyz) used for the indirect cmd, (w) used for the drawableIdx lookup per indirect dispatch
-    indirectData[lookupIdx + 1] = uvec4((drawable.meshletCount + GROUP_SIZE - 1) / GROUP_SIZE, 1, 1, drawableIdx);
+    if (shouldDraw) {
+        // indirectData[1..]: (xyz) used for the indirect cmd, (w) used for the drawableIdx lookup per indirect dispatch
+        indirectData[lookupIdx + 1] = uvec4((drawable.meshletCount + GROUP_SIZE - 1) / GROUP_SIZE, 1, 1, drawableIdx);
+    }
 }
