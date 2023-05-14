@@ -25,6 +25,7 @@ public:
 
     [[nodiscard]] Texture& createPixelTexture(vec4 pixelValue, bool srgb);
     [[nodiscard]] Texture& loadTextureArrayFromFileSequence(const std::string& imagePathPattern, bool srgb, bool generateMipmaps);
+    [[nodiscard]] Texture& createTexture(Texture::Description const&);
     [[nodiscard]] Texture& createTexture2D(Extent2D, Texture::Format, Texture::Filters = Texture::Filters::linear(), Texture::Mipmap = Texture::Mipmap::None, ImageWrapModes = ImageWrapModes::repeatAll());
     [[nodiscard]] Texture& createTextureArray(uint32_t itemCount, Extent2D, Texture::Format, Texture::Filters = Texture::Filters::linear(), Texture::Mipmap = Texture::Mipmap::None, ImageWrapModes = ImageWrapModes::repeatAll());
     [[nodiscard]] Texture& createMultisampledTexture2D(Extent2D, Texture::Format, Texture::Multisampling, Texture::Mipmap = Texture::Mipmap::None);

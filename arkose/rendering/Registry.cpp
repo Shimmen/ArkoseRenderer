@@ -42,6 +42,17 @@ static void validateTextureDescription(Texture::Description desc)
         ARKOSE_LOG(Fatal, "Registry: Texture array count must be >= 1 but is {}", desc.arrayCount);
 }
 
+Texture& Registry::createTexture(Texture::Description const& desc)
+{
+    validateTextureDescription(desc);
+
+    auto texture = backend().createTexture(desc);
+    texture->setOwningRegistry({}, this);
+
+    m_textures.push_back(std::move(texture));
+    return *m_textures.back();
+}
+
 Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, ImageWrapModes wrapMode)
 {
     Texture::Description desc {
@@ -55,12 +66,7 @@ Texture& Registry::createTexture2D(Extent2D extent, Texture::Format format, Text
         .multisampling = Texture::Multisampling::None
     };
 
-    validateTextureDescription(desc);
-    auto texture = backend().createTexture(desc);
-    texture->setOwningRegistry({}, this);
-
-    m_textures.push_back(std::move(texture));
-    return *m_textures.back();
+    return createTexture(desc);
 }
 
 Texture& Registry::createTextureArray(uint32_t itemCount, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, ImageWrapModes wrapMode)
@@ -76,12 +82,7 @@ Texture& Registry::createTextureArray(uint32_t itemCount, Extent2D extent, Textu
         .multisampling = Texture::Multisampling::None
     };
 
-    validateTextureDescription(desc);
-    auto texture = backend().createTexture(desc);
-    texture->setOwningRegistry({}, this);
-
-    m_textures.push_back(std::move(texture));
-    return *m_textures.back();
+    return createTexture(desc);
 }
 
 Texture& Registry::createMultisampledTexture2D(Extent2D extent, Texture::Format format, Texture::Multisampling multisampling, Texture::Mipmap mipmap)
@@ -97,12 +98,7 @@ Texture& Registry::createMultisampledTexture2D(Extent2D extent, Texture::Format 
         .multisampling = multisampling
     };
 
-    validateTextureDescription(desc);
-    auto texture = backend().createTexture(desc);
-    texture->setOwningRegistry({}, this);
-
-    m_textures.push_back(std::move(texture));
-    return *m_textures.back();
+    return createTexture(desc);
 }
 
 Texture& Registry::createCubemapTexture(Extent2D extent, Texture::Format format)
@@ -118,11 +114,7 @@ Texture& Registry::createCubemapTexture(Extent2D extent, Texture::Format format)
         .multisampling = Texture::Multisampling::None
     };
 
-    auto texture = backend().createTexture(desc);
-    texture->setOwningRegistry({}, this);
-
-    m_textures.push_back(std::move(texture));
-    return *m_textures.back();
+    return createTexture(desc);
 }
 
 std::pair<Texture&, Registry::ReuseMode> Registry::createOrReuseTexture2D(const std::string& name, Extent2D extent, Texture::Format format, Texture::Filters filters, Texture::Mipmap mipmap, ImageWrapModes wrapMode)
