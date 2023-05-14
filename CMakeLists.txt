@@ -104,6 +104,8 @@ set(ARKOSE_SOURCES
     arkose/rendering/meshlet/MeshletDebugNode.cpp
     arkose/rendering/meshlet/MeshletForwardRenderNode.cpp
     arkose/rendering/meshlet/MeshletIndirectHelper.cpp
+    arkose/rendering/meshlet/MeshletVisibilityBufferRenderNode.cpp
+    arkose/rendering/meshlet/VisibilityBufferDebugNode.cpp
     arkose/rendering/nodes/BloomNode.cpp
     arkose/rendering/nodes/CullingNode.cpp
     arkose/rendering/nodes/DDGINode.cpp

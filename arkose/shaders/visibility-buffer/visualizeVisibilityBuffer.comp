@@ -1,0 +1,39 @@
+#version 460
+
+#include <common.glsl>
+#include <common/namedUniforms.glsl>
+#include <common/random.glsl>
+
+layout(set = 0, binding = 0, rgba8) uniform restrict writeonly image2D visualizationImg;
+layout(set = 0, binding = 1)        uniform                  usampler2D drawableVisibilityTex;
+layout(set = 0, binding = 2)        uniform                  usampler2D triangleVisibilityTex;
+
+NAMED_UNIFORMS(constants,
+    int mode;
+)
+
+layout(local_size_x = 8, local_size_y = 8) in;
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imageSize = ivec2(imageSize(visualizationImg));
+
+    if (any(greaterThanEqual(pixelCoord, imageSize))) {
+        return;
+    }
+
+    uint drawableIdx = uint(texelFetch(drawableVisibilityTex, pixelCoord, 0).x);
+    uint triangleIdx = uint(texelFetch(triangleVisibilityTex, pixelCoord, 0).x);
+
+    uint visualizationIdx = (constants.mode == 0) ? drawableIdx : triangleIdx;
+
+    if (visualizationIdx == 0) {
+        imageStore(visualizationImg, pixelCoord, vec4(0.0, 0.0, 0.0, 1.0));
+        return;
+    }
+
+    seedRandom(visualizationIdx);
+    vec3 color = vec3(randomFloat(), randomFloat(), randomFloat());
+
+    imageStore(visualizationImg, pixelCoord, vec4(color, 1.0));
+}
