@@ -9,6 +9,8 @@ void VisibilityBufferDebugNode::drawGui()
     ImGui::Text("Visualisation mode:");
     if (ImGui::RadioButton("Drawables", m_mode == Mode::Drawables))
         m_mode = Mode::Drawables;
+    if (ImGui::RadioButton("Meshlets", m_mode == Mode::Meshlets))
+        m_mode = Mode::Meshlets;
     if (ImGui::RadioButton("Primitives", m_mode == Mode::Primitives))
         m_mode = Mode::Primitives;
 }

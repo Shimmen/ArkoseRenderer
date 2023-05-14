@@ -25,7 +25,19 @@ void main()
     uint drawableIdx = uint(texelFetch(drawableVisibilityTex, pixelCoord, 0).x);
     uint triangleIdx = uint(texelFetch(triangleVisibilityTex, pixelCoord, 0).x);
 
-    uint visualizationIdx = (constants.mode == 0) ? drawableIdx : triangleIdx;
+    uint visualizationIdx = 0;
+    switch (constants.mode) {
+    case 0: // drawables
+        visualizationIdx = drawableIdx;
+        break;
+    case 1: // meshlets
+        // Shift out the triangle bits; the remaining bits are for meshlet idx
+        visualizationIdx = triangleIdx >> 8;
+        break;
+    case 2: // triangles
+        visualizationIdx = triangleIdx;
+        break;
+    }
 
     if (visualizationIdx == 0) {
         imageStore(visualizationImg, pixelCoord, vec4(0.0, 0.0, 0.0, 1.0));

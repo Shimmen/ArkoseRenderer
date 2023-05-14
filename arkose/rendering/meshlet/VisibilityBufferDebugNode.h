@@ -12,6 +12,7 @@ public:
 private:
     enum class Mode {
         Drawables,
+        Meshlets,
         Primitives,
     };
 
