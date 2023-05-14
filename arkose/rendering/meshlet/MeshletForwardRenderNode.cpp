@@ -64,21 +64,8 @@ RenderTarget& MeshletForwardRenderNode::makeRenderTarget(Registry& reg, LoadOp l
 
 MeshletForwardRenderNode::RenderStateWithIndirectData& MeshletForwardRenderNode::makeRenderState(Registry& reg, GpuScene const& scene, PassSettings passSettings) const
 {
-    int blendModeInt = 0;
-    switch (passSettings.drawKeyMask.blendMode().value()) {
-    case BlendMode::Opaque:
-        blendModeInt = BLEND_MODE_OPAQUE;
-        break;
-    case BlendMode::Masked:
-        blendModeInt = BLEND_MODE_MASKED;
-        break;
-    default:
-        ASSERT_NOT_REACHED();
-    }
-
-    ARKOSE_ASSERT(blendModeInt != 0);
     auto shaderDefines = { // Forward rendering specific
-                           ShaderDefine::makeInt("FORWARD_BLEND_MODE", blendModeInt),
+                           ShaderDefine::makeInt("FORWARD_BLEND_MODE", blendModeToShaderBlendMode(passSettings.drawKeyMask.blendMode().value())),
                            ShaderDefine::makeBool("FORWARD_DOUBLE_SIDED", passSettings.drawKeyMask.doubleSided().value()),
                            ShaderDefine::makeBool("FORWARD_MESH_SHADING", true),
 
