@@ -80,7 +80,7 @@ MeshletForwardRenderNode::RenderStateWithIndirectData& MeshletForwardRenderNode:
                                               shaderDefines);
 
     LoadOp loadOp = passSettings.firstPass ? LoadOp::Clear : LoadOp::Load;
-    RenderStateBuilder renderStateBuilder { makeRenderTarget(reg, loadOp), shader, { VertexComponent::Position3F} };
+    RenderStateBuilder renderStateBuilder { makeRenderTarget(reg, loadOp), shader, {} };
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
     renderStateBuilder.cullBackfaces = !passSettings.drawKeyMask.doubleSided().value(); // TODO: We probably want to use dynamic state for double sided!
 
