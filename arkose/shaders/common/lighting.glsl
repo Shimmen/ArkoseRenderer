@@ -13,9 +13,9 @@
 //  2) 1/d^2 goes to zero as distance d approches infinity, but it will never actually arrive at zero. This makes it impossible to accurately cull lights
 //     with some kind of radius r. We modulate the function 1/d^2 with a cosine term which is 1 where d=s and 0 where d=r. The modulating factor is:
 //
-//               /   d - s  \
+//               /   d - s  \ 
 //       z = cos |π --------| * 0.5 + 0.5
-//               \   r - s  /
+//               \   r - s  / 
 //    
 //     While its 0 where d=r the same is not true for d>r, thus we also need to clamp d<=r.
 //
