@@ -73,8 +73,9 @@ std::pair<VkBuffer, VmaAllocation> VulkanRayTracingKHR::createAccelerationStruct
         ? VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR
         : VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR;
 
-    if (vulkanDebugMode) {
+    if constexpr (vulkanDebugMode) {
         // for nsight debugging & similar stuff)
+        bufferCreateInfo.usage |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
         bufferCreateInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     }
 

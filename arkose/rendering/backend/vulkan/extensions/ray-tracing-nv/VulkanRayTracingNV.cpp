@@ -77,7 +77,7 @@ VkBuffer VulkanRayTracingNV::createScratchBufferForAccelerationStructure(VkAccel
     scratchBufferCreateInfo.usage = VK_BUFFER_USAGE_RAY_TRACING_BIT_NV;
     scratchBufferCreateInfo.size = scratchMemRequirements2.memoryRequirements.size;
 
-    if (vulkanDebugMode) {
+    if constexpr (vulkanDebugMode) {
         // for nsight debugging & similar stuff)
         scratchBufferCreateInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     }

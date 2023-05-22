@@ -246,8 +246,9 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
         sbtBufferCreateInfo.usage = VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR | VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT_EXT;
         sbtBufferCreateInfo.size = sbtSize;
 
-        if (vulkanDebugMode) {
+        if constexpr (vulkanDebugMode) {
             // for nsight debugging & similar stuff)
+            sbtBufferCreateInfo.usage |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
             sbtBufferCreateInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
         }
 

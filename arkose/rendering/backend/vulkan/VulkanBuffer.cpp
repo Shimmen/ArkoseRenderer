@@ -140,6 +140,9 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
         case VulkanBackend::RayTracingBackend::KhrExtension:
             usageFlags |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
             usageFlags |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+            if constexpr (vulkanDebugMode) {
+                usageFlags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
+            }
             break;
         }
         break;
@@ -170,10 +173,13 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
         case VulkanBackend::RayTracingBackend::KhrExtension:
             usageFlags |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
             usageFlags |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+            if constexpr (vulkanDebugMode) {
+                usageFlags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
+            }
         }
     }
 
-    if (vulkanDebugMode) {
+    if constexpr (vulkanDebugMode) {
         // for nsight debugging & similar stuff)
         usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     }

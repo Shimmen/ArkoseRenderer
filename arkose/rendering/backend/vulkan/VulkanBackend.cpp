@@ -54,7 +54,7 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
 
     std::vector<const char*> requestedLayers;
 
-    if (vulkanDebugMode) {
+    if constexpr (vulkanDebugMode) {
         ARKOSE_LOG(Info, "VulkanBackend: debug mode enabled!");
 
         ARKOSE_ASSERT(hasSupportForLayer("VK_LAYER_KHRONOS_validation"));
@@ -232,7 +232,7 @@ VulkanBackend::~VulkanBackend()
     vkDestroyDevice(m_device, nullptr);
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
 
-    if (vulkanDebugMode) {
+    if constexpr (vulkanDebugMode) {
         debugUtils().vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
         debugUtils().vkDestroyDebugReportCallbackEXT(m_instance, m_debugReportCallback, nullptr);
         m_debugUtils.reset();
@@ -647,7 +647,7 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
         addInstanceExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
         // For debug messages etc.
-        if (vulkanDebugMode) {
+        if constexpr (vulkanDebugMode) {
             ARKOSE_ASSERT(hasSupportForInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME));
             addInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
@@ -742,7 +742,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     if (hasSupportForDeviceExtension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME))
         addDeviceExtension(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
 
-    if (vulkanDebugMode && hasSupportForDeviceExtension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME))
+    if (hasSupportForDeviceExtension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME))
         addDeviceExtension(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);
 
     #if defined(TRACY_ENABLE)
@@ -808,7 +808,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     vk13features.maintenance4 = VK_TRUE;
 
     // GPU debugging & insight for e.g. Nsight
-    if (vulkanDebugMode) {
+    if constexpr (vulkanDebugMode) {
         vk12features.bufferDeviceAddress = VK_TRUE;
         vk12features.bufferDeviceAddressCaptureReplay = VK_TRUE;
     }
@@ -1029,7 +1029,7 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
     createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_STORAGE_BIT; // TODO: What do we want here? Maybe this suffices?
     // TODO: Assure VK_IMAGE_USAGE_STORAGE_BIT is supported using vkGetPhysicalDeviceSurfaceCapabilitiesKHR & VK_FORMAT_FEATURE_STORAGE_IMAGE_BIT
 
-    if (vulkanDebugMode) {
+    if constexpr (vulkanDebugMode) {
         // (for nsight debugging & similar stuff)
         createInfo.imageUsage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     }
