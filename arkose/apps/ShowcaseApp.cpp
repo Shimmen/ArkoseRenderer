@@ -2,6 +2,8 @@
 
 #include "rendering/meshlet/MeshletDebugNode.h"
 #include "rendering/meshlet/MeshletForwardRenderNode.h"
+#include "rendering/meshlet/MeshletVisibilityBufferRenderNode.h"
+#include "rendering/meshlet/VisibilityBufferDebugNode.h"
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/DDGINode.h"
@@ -24,6 +26,7 @@
 #include "rendering/nodes/TAANode.h"
 #include "rendering/nodes/TonemapNode.h"
 #include "rendering/nodes/TranslucencyNode.h"
+#include "rendering/nodes/VisibilityBufferShadingNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
 #include "scene/lights/DirectionalLight.h"
@@ -38,6 +41,7 @@
 constexpr bool keepRenderDocCompatible = false;
 constexpr bool withRayTracing = true && !keepRenderDocCompatible;
 constexpr bool withMeshShading = true && !keepRenderDocCompatible;
+constexpr bool withVisibilityBuffer = true && withMeshShading;
 
 std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
 {
@@ -81,8 +85,12 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         scene.setAmbientIlluminance(250.0f);
     }
 
-    pipeline.addNode<CullingNode>();
-    pipeline.addNode<PrepassNode>(PrepassMode::AllOpaquePixels);
+    if constexpr (withVisibilityBuffer) {
+        pipeline.addNode<MeshletVisibilityBufferRenderNode>();
+    } else {
+        pipeline.addNode<CullingNode>();
+        pipeline.addNode<PrepassNode>(PrepassMode::AllOpaquePixels);
+    }
 
     if constexpr (withRayTracing) {
         pipeline.addNode<RTSphereLightShadowNode>();
@@ -90,7 +98,9 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<DirectionalLightShadowNode>();
     pipeline.addNode<LocalLightShadowNode>();
 
-    if constexpr (withMeshShading) {
+    if constexpr (withVisibilityBuffer) {
+        pipeline.addNode<VisibilityBufferShadingNode>();
+    } else if constexpr (withMeshShading) {
         pipeline.addNode<MeshletForwardRenderNode>();
     } else {
         pipeline.addNode<ForwardRenderNode>();
@@ -119,6 +129,11 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     std::string sceneTexture = "SceneColor";
     const std::string finalTextureToScreen = "SceneColorLDR";
     const AntiAliasing antiAliasingMode = AntiAliasing::TAA;
+
+    if constexpr (withVisibilityBuffer) {
+        // Uncomment for visibility buffer visualisation
+        //pipeline.addNode<VisibilityBufferDebugNode>(); sceneTexture = "VisibilityBufferDebugVis";
+    }
 
     if constexpr (withMeshShading) {
         // Uncomment for meshlet visualisation
