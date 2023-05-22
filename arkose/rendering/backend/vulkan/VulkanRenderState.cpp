@@ -15,12 +15,13 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     const auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
     const auto& device = vulkanBackend.device();
 
-    VkVertexInputBindingDescription bindingDescription = {};
+    std::vector<VkVertexInputBindingDescription> bindingDescriptions {};
     std::vector<VkVertexInputAttributeDescription> attributeDescriptions {};
-    {
+    if (vertexLayout.componentCount() > 0) {
         // TODO: What about multiple bindings? Just have multiple VertexLayout:s?
         uint32_t binding = 0;
 
+        VkVertexInputBindingDescription& bindingDescription = bindingDescriptions.emplace_back();
         bindingDescription.binding = binding;
         bindingDescription.stride = (uint32_t)vertexLayout.packedVertexSize();
         bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
@@ -139,9 +140,9 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
     // Create pipeline
     //
     VkPipelineVertexInputStateCreateInfo vertInputState = { VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO };
-    vertInputState.vertexBindingDescriptionCount = 1;
-    vertInputState.pVertexBindingDescriptions = &bindingDescription;
-    vertInputState.vertexAttributeDescriptionCount = (uint32_t)attributeDescriptions.size();
+    vertInputState.vertexBindingDescriptionCount = narrow_cast<u32>(bindingDescriptions.size());
+    vertInputState.pVertexBindingDescriptions = bindingDescriptions.data();
+    vertInputState.vertexAttributeDescriptionCount = narrow_cast<u32>(attributeDescriptions.size());
     vertInputState.pVertexAttributeDescriptions = attributeDescriptions.data();
 
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyState = { VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO };
