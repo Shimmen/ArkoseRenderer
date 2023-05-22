@@ -19,9 +19,10 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
     // We should ensure we denoise it before we pass it on, and let TAA just smooth out the last little bit.
     //
 
-    if (!(reg.hasPreviousNode("Prepass") || reg.hasPreviousNode("Forward"))) {
-        ARKOSE_LOG(Fatal, "Directional light shadow needs scene depth information, can't progress");
-    }
+    // TODO: Figure out a more robust way of figuring out if we have written depth as required
+    //if (!(reg.hasPreviousNode("Prepass") || reg.hasPreviousNode("Forward"))) {
+    //    ARKOSE_LOG(Fatal, "Directional light shadow needs scene depth information, can't progress");
+    //}
 
     Texture& sceneDepth = *reg.getTexture("SceneDepth");
     Buffer& cameraDataBuffer = *reg.getBuffer("SceneCameraData");
