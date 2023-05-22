@@ -183,6 +183,9 @@ void main()
     vec2 pixelNdc = ((vec2(pixelCoord) + vec2(0.5)) / windowSize) * 2.0 - 1.0;
     BarycentricDeriv barycentrics = CalcFullBary(projectedPos0, projectedPos1, projectedPos2, pixelNdc, windowSize);
 
+    vec3 viewSpacePos = InterpolateVec3(barycentrics, viewSpacePos0.xyz, viewSpacePos1.xyz, viewSpacePos2.xyz);
+    vec3 V = -normalize(viewSpacePos);
+
     vec2 velocity;
     {
         vec4 currentFrameProjectedPos = InterpolateVec4(barycentrics, projectedPos0, projectedPos1, projectedPos2);
@@ -218,6 +221,11 @@ void main()
         normalize(viewFromTangent * v2.tangent.xyz));
     float bitangentSign = v0.tangent.w;
 
+    // If we're seeing the backface of the visibility buffer triangle we're shading it must be double sided
+    if (dot(V, N) < 0.0) {
+        N = -N;
+    }
+
     #if USE_NORMAL_MAPPING
         vec3 packedNormal = textureGrad(textures[nonuniformEXT(material.normalMap)], texCoord, ddx, ddy).rgb;
         #if USE_2COMPONENT_NORMALS
@@ -244,9 +252,6 @@ void main()
     vec4 metallicRoughness = textureGrad(textures[nonuniformEXT(material.metallicRoughness)], texCoord, ddx, ddy);
     float metallic = metallicRoughness.b * material.metallicFactor;
     float roughness = metallicRoughness.g * material.roughnessFactor;
-
-    vec3 viewSpacePos = InterpolateVec3(barycentrics, viewSpacePos0.xyz, viewSpacePos1.xyz, viewSpacePos2.xyz);
-    vec3 V = -normalize(viewSpacePos);
 
     vec3 ambient = constants.ambientAmount * baseColor;
     vec3 sceneColor = emissive + ambient;

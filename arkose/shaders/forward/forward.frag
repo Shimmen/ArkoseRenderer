@@ -145,6 +145,15 @@ void main()
     float metallic = metallicRoughness.b * material.metallicFactor;
     float roughness = metallicRoughness.g * material.roughnessFactor;
 
+    vec3 V = -normalize(vPosition);
+
+    vec3 normal = vNormal;
+#if FORWARD_DOUBLE_SIDED
+    if (dot(V, normal) < 0.0) {
+        normal = -normal;
+    }
+#endif
+
 // NOTE: This is only really for debugging! In general we try to avoid permutations for very common cases (almost everything will be normal mapped in practice)
 // (If we want to make normal mapping a proper permutation we would also want to exclude interpolats vTangent and vBitangentSign)
 #define FORWARD_USE_NORMAL_MAPPING 1
@@ -161,13 +170,11 @@ void main()
     #endif
 
     // Using MikkT space (http://www.mikktspace.com/)
-    vec3 bitangent = vBitangentSign * cross(vNormal, vTangent);
-    vec3 N = normalize(tangentNormal.x * vTangent + tangentNormal.y * bitangent + tangentNormal.z * vNormal);
+    vec3 bitangent = vBitangentSign * cross(normal, vTangent);
+    vec3 N = normalize(tangentNormal.x * vTangent + tangentNormal.y * bitangent + tangentNormal.z * normal);
 #else
-    vec3 N = vNormal;
+    vec3 N = normal;
 #endif
-
-    vec3 V = -normalize(vPosition);
 
     vec3 ambient = constants.ambientAmount * baseColor;
     vec3 color = emissive + ambient;
