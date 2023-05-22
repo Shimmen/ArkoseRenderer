@@ -28,8 +28,13 @@
 
 struct GLFWwindow;
 
+#ifdef NDEBUG
+static constexpr bool vulkanDebugMode = false;
+static constexpr bool vulkanVerboseDebugMessages = false;
+#else
 static constexpr bool vulkanDebugMode = true;
 static constexpr bool vulkanVerboseDebugMessages = false;
+#endif
 
 class VulkanBackend final : public Backend {
 public:
