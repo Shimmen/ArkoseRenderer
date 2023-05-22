@@ -4,7 +4,6 @@
 
 #include <common/brdf.glsl>
 #include <common/gBuffer.glsl>
-#include <common/iesProfile.glsl>
 #include <common/lighting.glsl>
 #include <common/namedUniforms.glsl>
 #include <forward/forwardCommon.glsl>

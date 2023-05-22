@@ -5,7 +5,6 @@
 
 #include <common.glsl>
 #include <common/brdf.glsl>
-#include <common/iesProfile.glsl>
 #include <common/lighting.glsl>
 #include <common/namedUniforms.glsl>
 #include <common/octahedral.glsl>

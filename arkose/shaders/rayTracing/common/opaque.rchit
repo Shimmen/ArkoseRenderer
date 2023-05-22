@@ -9,7 +9,6 @@
 #endif
 
 #include <common/brdf.glsl>
-#include <common/iesProfile.glsl>
 #include <common/lighting.glsl>
 #include <common/namedUniforms.glsl>
 #include <rayTracing/common/common.glsl>
