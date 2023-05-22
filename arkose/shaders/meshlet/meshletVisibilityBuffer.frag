@@ -35,5 +35,5 @@ void main()
 #endif
 
     oInstanceVisibilityData = vDrawableIdx + 1;
-    oTriangleVisibilityData = ((vMeshletIdx + 1) << 24) | uint(vPrimitiveIdx);
+    oTriangleVisibilityData = ((vMeshletIdx + 1) << 8) | uint(vPrimitiveIdx);
 }
