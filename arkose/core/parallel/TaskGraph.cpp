@@ -250,9 +250,7 @@ TaskGraph::Worker::Worker(TaskGraph& owningTaskGraph, uint64_t workerId, std::st
             } else {
 
                 m_idle = true;
-
-                constexpr auto shortSleepDuration = std::chrono::microseconds(1);
-                std::this_thread::sleep_for(shortSleepDuration);
+                std::this_thread::yield();
 
                 // TODO: Implement proper idle mode when no task has been found for a while
 
