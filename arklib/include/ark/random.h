@@ -26,6 +26,7 @@
 
 #include "core.h"
 #include "vector.h"
+#include "quaternion.h"
 
 #include <random> // for random number generation
 
@@ -79,15 +80,30 @@ public:
         return position;
     }
 
+    vec3 randomInUnitCube()
+    {
+        return vec3(randomFloatInRange(static_cast<Float>(-1.0), static_cast<Float>(+1.0)),
+                    randomFloatInRange(static_cast<Float>(-1.0), static_cast<Float>(+1.0)),
+                    randomFloatInRange(static_cast<Float>(-1.0), static_cast<Float>(+1.0)));
+    }
+
     vec3 randomInUnitSphere()
     {
         vec3 position;
         do {
-            position = vec3(randomFloatInRange(static_cast<Float>(-1.0), static_cast<Float>(+1.0)),
-                            randomFloatInRange(static_cast<Float>(-1.0), static_cast<Float>(+1.0)),
-                            randomFloatInRange(static_cast<Float>(-1.0), static_cast<Float>(+1.0)));
-        } while (ark::length2(position) >= static_cast<Float>(1.0));
+            position = randomInUnitCube();
+        } while (length2(position) >= static_cast<Float>(1.0));
         return position;
+    }
+
+    vec3 randomDirection()
+    {
+        return normalize(vec3(randomFloat(), randomFloat(), randomFloat()));
+    }
+
+    quat randomRotation()
+    {
+        return axisAngle(randomDirection(), randomFloatInRange(static_cast<Float>(0.0), TWO_PI));
     }
 
 private:
