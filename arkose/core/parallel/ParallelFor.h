@@ -56,6 +56,10 @@ void ParallelForBatched(size_t count, size_t batchSize, Function&& body, bool si
         return;
     }
 
+    if (batchSize == 1) {
+        return ParallelFor(count, std::move(body), singleThreaded);
+    }
+
     if (count <= batchSize) {
         for (size_t idx = 0; idx < count; ++idx) {
             body(idx);
