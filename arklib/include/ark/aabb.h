@@ -42,6 +42,11 @@ struct aabb3 {
     {
     }
 
+    vec3 extents() const
+    {
+        return max - min;
+    }
+
     aabb3& expandWithPoint(const vec3& point)
     {
         min = ark::min(point, min);
