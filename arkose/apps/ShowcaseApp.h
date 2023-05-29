@@ -20,4 +20,13 @@ public:
     bool m_guiEnabled { true };
     RenderPipeline* m_renderPipeline { nullptr };
     FpsCameraController m_fpsCameraController {};
+
+    // Demo scene
+    void setupCullingShowcaseScene(Scene&);
+    struct AnimatingInstance {
+        StaticMeshInstance* staticMeshInstance {};
+        vec3 axisOfRotation {};
+        float rotationSpeed { 1.0f };
+    };
+    std::vector<AnimatingInstance> m_animatingInstances {};
 };

@@ -32,6 +32,7 @@
 #include "scene/lights/DirectionalLight.h"
 #include "utility/Input.h"
 #include "utility/Profiling.h"
+#include <ark/random.h>
 #include <imgui.h>
 
 // For physics experimenting, to be removed / moved into the scene!
@@ -62,11 +63,16 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 {
     SCOPED_PROFILE_ZONE();
 
+    Scene::Description description { .maintainRayTracingScene = withRayTracing };
     // NOTE: Scene not under "assets/sample/" will not be available in the Git-repo, either due to file size or license or both!
-    //scene.setupFromDescription({ .path = "assets/IntelSponza/NewSponzaWithCurtains.arklvl",
-    //scene.setupFromDescription({ .path = "assets/PicaPica/PicaPicaMiniDiorama.arklvl",
-    scene.setupFromDescription({ .path = "assets/sample/Sponza.arklvl",
-                                 .maintainRayTracingScene = withRayTracing });
+    //description.path = "assets/IntelSponza/NewSponzaWithCurtains.arklvl";
+    //description.path = "assets/PicaPica/PicaPicaMiniDiorama.arklvl";
+    description.path = "assets/sample/Sponza.arklvl";
+    scene.setupFromDescription(description);
+
+    if (description.path.empty()) {
+        setupCullingShowcaseScene(scene);
+    }
 
     if (scene.directionalLightCount() == 0) {
         DirectionalLight& sun = scene.addLight(std::make_unique<DirectionalLight>(vec3(1.0f), 90'000.0f, normalize(vec3(0.5f, -1.0f, 0.2f))));
@@ -190,6 +196,12 @@ bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
         sun->transform().setOrientation(rotation * sun->transform().localOrientation());
     }
 
+    for (AnimatingInstance animatingInstance : m_animatingInstances) {
+        quat rotation = axisAngle(animatingInstance.axisOfRotation, animatingInstance.rotationSpeed * deltaTime);
+        quat orientiation = animatingInstance.staticMeshInstance->transform().localOrientation();
+        animatingInstance.staticMeshInstance->transform().setOrientation(rotation * orientiation);
+    }
+
     // Physics experiment, to be removed!
     if (input.wasKeyPressed(Key::T)) {
 
@@ -297,4 +309,37 @@ bool ShowcaseApp::drawGui(Scene& scene)
     }
 
     return exitRequested;
+}
+
+void ShowcaseApp::setupCullingShowcaseScene(Scene& scene)
+{
+    constexpr int NumAnimatingInstances = 4096;
+
+    m_animatingInstances.clear();
+    m_animatingInstances.reserve(NumAnimatingInstances);
+
+    StaticMeshAsset* helmetAsset = StaticMeshAsset::loadFromArkmsh("assets/sample/models/DamagedHelmet/DamagedHelmet.arkmsh");
+    StaticMeshHandle helmet = scene.gpuScene().registerStaticMesh(helmetAsset);
+
+    m_fpsCameraController.setMaxSpeed(35.0f);
+    ark::aabb3 spawnBox { vec3(-50.0f, -50.0f, -50.0f), vec3(+50.0f, +50.0f, +50.0f) };
+
+    ark::Random rng { 12345 };
+
+    for (size_t idx = 0; idx < NumAnimatingInstances; ++idx) {
+
+        Transform transform {};
+        transform.setTranslation(spawnBox.min + (rng.randomInUnitCube() + vec3(1.0f)) * spawnBox.extents());
+        transform.setScale(vec3(rng.randomFloatInRange(1.0f, 10.0f)));
+        transform.setOrientation(rng.randomRotation());
+
+        StaticMeshInstance& instance = scene.createStaticMeshInstance(helmet, transform);
+
+        AnimatingInstance animatingInstance { .staticMeshInstance = &instance,
+                                              .axisOfRotation = rng.randomDirection(),
+                                              .rotationSpeed = rng.randomFloatInRange(-2.5f, 2.5f) };
+
+        m_animatingInstances.push_back(animatingInstance);
+
+    }
 }
