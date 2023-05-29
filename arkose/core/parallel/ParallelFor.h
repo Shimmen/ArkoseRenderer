@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/Logging.h"
 #include "TaskGraph.h"
 
 #include <vector>
