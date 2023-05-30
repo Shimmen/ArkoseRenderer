@@ -37,6 +37,7 @@ public:
     struct Description {
         std::string path {};
         bool maintainRayTracingScene { true };
+        bool meshShadingCapable { true };
     };
 
     void setupFromDescription(const Description&);

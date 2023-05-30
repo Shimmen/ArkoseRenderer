@@ -27,9 +27,10 @@ GpuScene::GpuScene(Scene& scene, Backend& backend, Extent2D initialMainViewportS
 {
 }
 
-void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
+void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable, bool meshShadingCapable)
 {
     m_maintainRayTracingScene = rayTracingCapable;
+    m_meshShadingCapable = meshShadingCapable;
 
     m_emptyVertexBuffer = backend().createBuffer(1, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
     m_emptyIndexBuffer = backend().createBuffer(1, Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
@@ -60,7 +61,7 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable)
         m_sceneTopLevelAccelerationStructure = backend().createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, {});
     }
 
-    if constexpr (UseMeshletRendering) {
+    if (m_meshShadingCapable) {
         m_meshletManager = std::make_unique<MeshletManager>(m_backend);
     }
 }
@@ -361,7 +362,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
         // Update mesh streaming (well, it's not much streaming to speak of right now, but it's the basis of something like that)
         std::unordered_set<StaticMeshHandle> updatedStaticMeshes {};
-        if constexpr (UseMeshletRendering) {
+        if (m_meshletManager != nullptr) {
             m_meshletManager->processMeshStreaming(cmdList, updatedStaticMeshes);
         }
 
@@ -756,7 +757,7 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset const* staticMeshA
         }
     });
 
-    if constexpr (UseMeshletRendering) {
+    if (m_meshletManager != nullptr) {
         m_meshletManager->allocateMeshlets(*staticMesh);
     }
 
@@ -1071,7 +1072,7 @@ void GpuScene::processDeferredDeletions()
             }
         }
 
-        if (UseMeshletRendering) {
+        if (m_meshletManager != nullptr) {
             m_meshletManager->freeMeshlets(*managedStaticMesh.staticMesh);
         }
 
@@ -1215,6 +1216,12 @@ TopLevelAS& GpuScene::globalTopLevelAccelerationStructure() const
     ARKOSE_ASSERT(m_maintainRayTracingScene);
     ARKOSE_ASSERT(m_sceneTopLevelAccelerationStructure);
     return *m_sceneTopLevelAccelerationStructure;
+}
+
+MeshletManager const& GpuScene::meshletManager() const
+{
+    ARKOSE_ASSERT(m_meshletManager != nullptr);
+    return *m_meshletManager;
 }
 
 void GpuScene::drawStatsGui(bool includeContainingWindow)

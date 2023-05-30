@@ -33,7 +33,7 @@ class GpuScene final : public RenderPipelineNode {
 public:
     GpuScene(Scene&, Backend&, Extent2D initialMainViewportSize);
 
-    void initialize(Badge<Scene>, bool rayTracingCapable);
+    void initialize(Badge<Scene>, bool rayTracingCapable, bool meshShadingCapable);
 
     void preRender();
     void postRender();
@@ -136,17 +136,14 @@ public:
 
     IconManager const& iconManager() const { return *m_iconManager; }
 
+    // Meshlet / mesh shading related
+
+    MeshletManager const& meshletManager() const;
+
     // Misc.
 
     void drawStatsGui(bool includeContainingWindow = false);
     void drawVramUsageGui(bool includeContainingWindow = false);
-
-    static constexpr bool UseMeshletRendering = true;
-    MeshletManager const& meshletManager() const
-    {
-        ARKOSE_ASSERT(UseMeshletRendering);
-        return *m_meshletManager;
-    }
 
     size_t drawableCountForFrame() const { return m_drawableCountForFrame; }
 
@@ -155,6 +152,8 @@ private:
     Backend& m_backend;
 
     bool m_maintainRayTracingScene { false };
+    bool m_meshShadingCapable { false };
+
     // NOTE: It's possible some RT pass would want more vertex info than this, but in all cases I can think of
     // we want either these and nothing more, or nothing at all (e.g. ray traced AO). Remember that vertex positions
     // are always available more directly, as we know our hit point.
