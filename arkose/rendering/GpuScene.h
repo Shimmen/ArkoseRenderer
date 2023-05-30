@@ -227,7 +227,7 @@ private:
     static constexpr int MaterialBindingSetBindingIndexTextures = 1;
     std::unique_ptr<BindingSet> m_materialBindingSet { nullptr };
 
-    static constexpr uint32_t InitialMaxRayTracingGeometryInstanceCount { 1024 };
+    static constexpr uint32_t InitialMaxRayTracingGeometryInstanceCount { 32'768 };
     std::unique_ptr<TopLevelAS> m_sceneTopLevelAccelerationStructure {};
     uint32_t m_framesUntilNextFullTlasBuild { 0u };
 

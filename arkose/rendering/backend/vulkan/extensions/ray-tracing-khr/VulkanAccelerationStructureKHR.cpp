@@ -1,5 +1,6 @@
 #include "VulkanAccelerationStructureKHR.h"
 
+#include "core/parallel/ParallelFor.h"
 #include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.h"
 #include "rendering/backend/shader/ShaderManager.h"
 #include "rendering/backend/vulkan/VulkanBackend.h"
@@ -190,26 +191,27 @@ void VulkanTopLevelASKHR::updateInstanceDataWithUploadBuffer(const std::vector<R
 
 std::vector<VkAccelerationStructureInstanceKHR> VulkanTopLevelASKHR::createInstanceData(const std::vector<RTGeometryInstance>& instances) const
 {
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
     auto& vulkanBackend = static_cast<const VulkanBackend&>(backend());
 
     std::vector<VkAccelerationStructureInstanceKHR> instanceData {};
-    instanceData.reserve(instances.size());
+    instanceData.resize(instances.size());
 
-    for (RTGeometryInstance const& instance : instances) {
+    ParallelForBatched(instances.size(), 128, [&](size_t idx) {
+        RTGeometryInstance const& instance = instances[idx];
+        VkAccelerationStructureInstanceKHR& vkInstance = instanceData[idx];
 
         auto* blas = dynamic_cast<VulkanBottomLevelASKHR const*>(instance.blas);
         ARKOSE_ASSERT(blas != nullptr); // ensure we do in face have a KHR version here
 
-        VkAccelerationStructureInstanceKHR vkInstance {};
         vkInstance.transform = vulkanBackend.rayTracingKHR().toVkTransformMatrixKHR(instance.transform->worldMatrix());
         vkInstance.instanceCustomIndex = instance.customInstanceId; // NOTE: This is gl_InstanceCustomIndexEXT, we should be smarter about this..
         vkInstance.accelerationStructureReference = blas->accelerationStructureDeviceAddress;
         vkInstance.flags = 0; // VK_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR;
         vkInstance.mask = instance.hitMask; // Only register hit if rayMask & instance.mask != 0
         vkInstance.instanceShaderBindingTableRecordOffset = instance.shaderBindingTableOffset; // We will use the same hit group for all objects
-
-        instanceData.push_back(vkInstance);
-    }
+    });
 
     return instanceData;
 }

@@ -1,6 +1,7 @@
 #include "LocalLightShadowNode.h"
 
 #include "core/math/Frustum.h"
+#include "core/parallel/ParallelFor.h"
 #include "rendering/GpuScene.h"
 #include "scene/lights/Light.h"
 #include "scene/lights/SpotLight.h"
@@ -240,8 +241,17 @@ void LocalLightShadowNode::drawShadowCasters(CommandList& cmdList, GpuScene& sce
 {
     // TODO: Use GPU based culling
 
-    for (auto& instance : scene.staticMeshInstances()) {
+    moodycamel::ConcurrentQueue<DrawCallDescription> drawCalls {};
+
+    auto& instances = scene.staticMeshInstances();
+    ParallelForBatched(instances.size(), 64, [&](size_t idx) {
+        auto& instance = instances[idx];
+
         if (StaticMesh const* staticMesh = scene.staticMeshForInstance(*instance)) {
+
+            if (!staticMesh->hasNonTranslucentSegments()) {
+                return;
+            }
 
             // TODO: Pick LOD properly
             const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
@@ -261,9 +271,14 @@ void LocalLightShadowNode::drawShadowCasters(CommandList& cmdList, GpuScene& sce
                     DrawCallDescription drawCall = meshSegment.drawCallDescription(m_vertexLayout, scene);
                     drawCall.firstInstance = instance->drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>(); // TODO: Put this in some buffer instead!
 
-                    cmdList.issueDrawCall(drawCall);
+                    drawCalls.enqueue(drawCall);
                 }
             }
         }
+    });
+
+    DrawCallDescription drawCall;
+    while (drawCalls.try_dequeue(drawCall)) {
+        cmdList.issueDrawCall(drawCall);
     }
 }

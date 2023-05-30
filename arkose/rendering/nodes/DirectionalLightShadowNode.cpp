@@ -1,6 +1,7 @@
 #include "DirectionalLightShadowNode.h"
 
 #include "core/math/Frustum.h"
+#include "core/parallel/ParallelFor.h"
 #include "rendering/GpuScene.h"
 #include "scene/lights/Light.h"
 #include "rendering/util/ScopedDebugZone.h"
@@ -80,8 +81,17 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
             cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
             cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
 
-            for (auto& instance : scene.staticMeshInstances()) {
+            moodycamel::ConcurrentQueue<DrawCallDescription> drawCalls {};
+
+            auto& instances = scene.staticMeshInstances();
+            ParallelForBatched(instances.size(), 64, [&](size_t idx) {
+                auto& instance = instances[idx];
+
                 if (const StaticMesh* staticMesh = scene.staticMeshForInstance(*instance)) {
+
+                    if (!staticMesh->hasNonTranslucentSegments()) {
+                        return;
+                    }
 
                     // TODO: Pick LOD properly
                     const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
@@ -101,10 +111,15 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
                             DrawCallDescription drawCall = meshSegment.drawCallDescription(m_vertexLayout, scene);
                             drawCall.firstInstance = instance->drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>(); // TODO: Put this in some buffer instead!
 
-                            cmdList.issueDrawCall(drawCall);
+                            drawCalls.enqueue(drawCall);
                         }
                     }
                 }
+            });
+
+            DrawCallDescription drawCall;
+            while (drawCalls.try_dequeue(drawCall)) {
+                cmdList.issueDrawCall(drawCall);
             }
 
             cmdList.endRendering();

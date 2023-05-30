@@ -9,11 +9,13 @@
 #include "core/Logging.h"
 #include "core/Types.h"
 #include "core/parallel/TaskGraph.h"
+#include "core/parallel/ParallelFor.h"
 #include "rendering/Registry.h"
 #include <imgui.h>
 #include <ImGuizmo.h>
 #include <ark/aabb.h>
 #include <ark/transform.h>
+#include <concurrentqueue.h>
 #include <unordered_set>
 
 // Shared shader headers
@@ -69,9 +71,10 @@ void GpuScene::preRender()
 
 void GpuScene::postRender()
 {
-    for (auto& instance : m_staticMeshInstances) {
+    ParallelForBatched(m_staticMeshInstances.size(), 128, [this](size_t idx) {
+        auto& instance = m_staticMeshInstances[idx];
         instance->transform().postRender({});
-    }
+    });
 }
 
 StaticMesh* GpuScene::staticMeshForInstance(StaticMeshInstance const& staticMeshInstance)
@@ -405,14 +408,17 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
         // Update object data (drawables)
         {
-            size_t drawableCount = 0;
-            for (auto& instance : staticMeshInstances()) {
+            moodycamel::ConcurrentQueue<StaticMeshInstance*> instancesNeedingReinit {};
+
+            std::atomic<size_t> drawableCount { 0 };
+            ParallelForBatched(staticMeshInstances().size(), 64, [this, &drawableCount, &updatedStaticMeshes, &instancesNeedingReinit](size_t idx) {
+                auto& instance = staticMeshInstances()[idx];
 
                 bool meshHasUpdated = updatedStaticMeshes.contains(instance->mesh());
 
                 if (meshHasUpdated) {
                     // Full update: reinit the mesh instance
-                    initializeStaticMeshInstance(*instance);
+                    instancesNeedingReinit.enqueue(instance.get());
                 } else {
                     // Minimal update: only change transforms
 
@@ -428,6 +434,12 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 }
 
                 drawableCount += instance->drawableHandles().size();
+            });
+
+            // NOTE: `try_dequeue` should be able to empty the entire queue as all producers are done at this point in time
+            StaticMeshInstance* instanceNeedingReinit;
+            while (instancesNeedingReinit.try_dequeue(instanceNeedingReinit)) {
+                initializeStaticMeshInstance(*instanceNeedingReinit);
             }
 
             m_drawableCountForFrame = drawableCount;
@@ -514,6 +526,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
         if (m_maintainRayTracingScene) {
 
+            SCOPED_PROFILE_ZONE_NAMED("Update TLAS");
+
             auto tlasBuildType = AccelerationStructureBuildType::Update;
 
             // TODO: Fill in both of these and upload to the GPU buffers. For now they will be 1:1
@@ -525,11 +539,11 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                     for (StaticMeshLOD& staticMeshLOD : staticMesh->LODs()) {
                         for (StaticMeshSegment& meshSegment : staticMeshLOD.meshSegments) {
 
-                            uint32_t rtMeshIndex = static_cast<uint32_t>(rayTracingMeshData.size());
+                            u32 rtMeshIndex = narrow_cast<u32>(rayTracingMeshData.size());
 
                             const DrawCallDescription& drawCallDesc = meshSegment.drawCallDescription(m_rayTracingVertexLayout, *this);
                             rayTracingMeshData.push_back(RTTriangleMesh { .firstVertex = drawCallDesc.vertexOffset,
-                                                                          .firstIndex = (int32_t)drawCallDesc.firstIndex,
+                                                                          .firstIndex = static_cast<int>(drawCallDesc.firstIndex),
                                                                           .materialIndex = meshSegment.material.indexOfType<int>() });
 
                             if (meshSegment.blas == nullptr) {
