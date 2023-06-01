@@ -216,7 +216,7 @@ bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
         static StaticMeshAsset* redCube = nullptr;
         static PhysicsShapeHandle cubeShapeHandle {};
         if (not redCube) {
-            redCube = StaticMeshAsset::loadFromArkmsh("assets/sample/models/Box/Box.arkmsh");
+            redCube = StaticMeshAsset::load("assets/sample/models/Box/Box.arkmsh");
 
             vec3 scaledHalfExtent = 0.5f * (redCube->boundingBox.max - redCube->boundingBox.min) * scale;
             cubeShapeHandle = scene.physicsScene().backend().createPhysicsShapeForBox(scaledHalfExtent);
@@ -319,7 +319,7 @@ void ShowcaseApp::setupCullingShowcaseScene(Scene& scene)
     m_animatingInstances.clear();
     m_animatingInstances.reserve(NumAnimatingInstances);
 
-    StaticMeshAsset* helmetAsset = StaticMeshAsset::loadFromArkmsh("assets/sample/models/DamagedHelmet/DamagedHelmet.arkmsh");
+    StaticMeshAsset* helmetAsset = StaticMeshAsset::load("assets/sample/models/DamagedHelmet/DamagedHelmet.arkmsh");
     StaticMeshHandle helmet = scene.gpuScene().registerStaticMesh(helmetAsset);
 
     m_fpsCameraController.setMaxSpeed(35.0f);

@@ -152,7 +152,7 @@ StaticMeshLODAsset::~StaticMeshLODAsset() = default;
 StaticMeshAsset::StaticMeshAsset() = default;
 StaticMeshAsset::~StaticMeshAsset() = default;
 
-StaticMeshAsset* StaticMeshAsset::loadFromArkmsh(std::string const& filePath)
+StaticMeshAsset* StaticMeshAsset::load(std::string const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 

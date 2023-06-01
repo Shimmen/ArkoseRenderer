@@ -35,7 +35,7 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     scene.setupFromDescription({ .maintainRayTracingScene = false });
 
-    StaticMeshAsset* boxMesh = StaticMeshAsset::loadFromArkmsh("assets/sample/models/Box/Box.arkmsh");
+    StaticMeshAsset* boxMesh = StaticMeshAsset::load("assets/sample/models/Box/Box.arkmsh");
     StaticMeshInstance& boxInstance = scene.addMesh(boxMesh);
     boxInstance.transform().setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(30.0f)));
 
@@ -235,7 +235,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
         ImGui::EndDisabled();
 
         // NOTE: We're not actually loading it from disk every time because it's cached, but this still seems a little silly to do.
-        if (MaterialAsset* material = MaterialAsset::loadFromArkmat(materialPath)) {
+        if (MaterialAsset* material = MaterialAsset::load(materialPath)) {
 
             auto drawMaterialInputGui = [&](const char* name, std::optional<MaterialInput> materialInput) -> bool {
 
@@ -521,7 +521,7 @@ void MeshViewerApp::loadMeshWithDialog()
         std::string openPath = maybePath.value();
         ARKOSE_LOG(Info, "Loading mesh from file '{}'", openPath);
 
-        StaticMeshAsset* staticMeshAsset = StaticMeshAsset::loadFromArkmsh(openPath);
+        StaticMeshAsset* staticMeshAsset = StaticMeshAsset::load(openPath);
         if (staticMeshAsset != nullptr) {
 
             m_scene->clearAllMeshInstances();

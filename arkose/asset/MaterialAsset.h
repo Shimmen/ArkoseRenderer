@@ -53,7 +53,7 @@ public:
 
     // Load a material asset (cached) from an .arkmat file
     // TODO: Figure out how we want to return this! Basic type, e.g. MaterialAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
-    static MaterialAsset* loadFromArkmat(std::string const& filePath);
+    static MaterialAsset* load(std::string const& filePath);
 
     virtual bool readFromFile(std::string_view filePath) override;
     virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) override;

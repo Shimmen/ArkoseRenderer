@@ -14,7 +14,7 @@ static std::unordered_map<std::string, std::unique_ptr<LevelAsset>> s_levelAsset
 LevelAsset::LevelAsset() = default;
 LevelAsset::~LevelAsset() = default;
 
-LevelAsset* LevelAsset::loadFromArklvl(std::string const& filePath)
+LevelAsset* LevelAsset::load(std::string const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 

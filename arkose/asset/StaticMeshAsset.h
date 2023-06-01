@@ -99,7 +99,7 @@ public:
 
     // Load a static mesh asset (cached) from an .arkmsh file
     // TODO: Figure out how we want to return this! Basic type, e.g. StaticMeshAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
-    static StaticMeshAsset* loadFromArkmsh(std::string const& filePath);
+    static StaticMeshAsset* load(std::string const& filePath);
 
     virtual bool readFromFile(std::string_view filePath) override;
     virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) override;

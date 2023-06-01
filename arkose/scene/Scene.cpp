@@ -64,7 +64,7 @@ void Scene::setupFromDescription(const Description& description)
     gpuScene().initialize({}, description.maintainRayTracingScene, description.meshShadingCapable);
 
     if (FileIO::isFileReadable(description.path)) {
-        if (LevelAsset* levelAsset = LevelAsset::loadFromArklvl(description.path)) {
+        if (LevelAsset* levelAsset = LevelAsset::load(description.path)) {
             addLevel(levelAsset);
         }
     }
@@ -201,7 +201,7 @@ void Scene::addLevel(LevelAsset* levelAsset)
 
         // TODO: Handle non-path indirection
         std::string const& staticMeshAssetPath = std::string(sceneObject.pathToMesh());
-        StaticMeshAsset* staticMeshAsset = StaticMeshAsset::loadFromArkmsh(staticMeshAssetPath);
+        StaticMeshAsset* staticMeshAsset = StaticMeshAsset::load(staticMeshAssetPath);
 
         StaticMeshInstance& instance = addMesh(staticMeshAsset, sceneObject.transform);
         instance.name = sceneObject.name;

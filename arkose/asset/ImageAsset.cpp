@@ -144,7 +144,7 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
     return imageAsset;
 }
 
-ImageAsset* ImageAsset::loadFromArkimg(std::string const& filePath)
+ImageAsset* ImageAsset::load(std::string const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -180,7 +180,7 @@ ImageAsset* ImageAsset::loadFromArkimg(std::string const& filePath)
 ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
 {
     if (isValidAssetPath(filePath)) {
-        return loadFromArkimg(filePath);
+        return load(filePath);
     } else {
 
         {

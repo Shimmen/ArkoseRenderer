@@ -30,7 +30,7 @@ StaticMesh::StaticMesh(StaticMeshAsset const* asset, MeshMaterialResolver&& mate
         for (auto& segmentAsset : lodAsset.meshSegments) {
 
             std::string const& materialAssetPath = std::string(segmentAsset.pathToMaterial());
-            MaterialAsset* materialAsset = MaterialAsset::loadFromArkmat(materialAssetPath);
+            MaterialAsset* materialAsset = MaterialAsset::load(materialAssetPath);
 
             if (materialAsset->blendMode == BlendMode::Translucent) {
                 m_hasTranslucentSegments |= true;

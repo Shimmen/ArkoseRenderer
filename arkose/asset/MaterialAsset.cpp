@@ -20,7 +20,7 @@ MaterialInput::~MaterialInput() = default;
 MaterialAsset::MaterialAsset() = default;
 MaterialAsset::~MaterialAsset() = default;
 
-MaterialAsset* MaterialAsset::loadFromArkmat(std::string const& filePath)
+MaterialAsset* MaterialAsset::load(std::string const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 

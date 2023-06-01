@@ -22,7 +22,7 @@ public:
 
     // Load a level asset (cached) from an .arklvl file
     // TODO: Figure out how we want to return this! Basic type, e.g. LevelAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
-    static LevelAsset* loadFromArklvl(std::string const& filePath);
+    static LevelAsset* load(std::string const& filePath);
 
     virtual bool readFromFile(std::string_view filePath) override;
     virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) override;
