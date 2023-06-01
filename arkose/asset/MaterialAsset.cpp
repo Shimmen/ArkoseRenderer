@@ -24,7 +24,7 @@ MaterialAsset* MaterialAsset::loadFromArkmat(std::string const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not AssetHelpers::isValidAssetPath(filePath, MaterialAsset::AssetFileExtension)) {
+    if (not isValidAssetPath(filePath)) {
         ARKOSE_LOG(Warning, "Trying to load material asset with invalid file extension: '{}'", filePath);
     }
 
@@ -38,41 +38,12 @@ MaterialAsset* MaterialAsset::loadFromArkmat(std::string const& filePath)
         }
     }
 
-    std::ifstream fileStream(filePath, std::ios::binary);
-    if (not fileStream.is_open()) {
+    auto newMaterialAsset = std::make_unique<MaterialAsset>();
+    bool success = newMaterialAsset->readFromFile(filePath);
+
+    if (!success) {
         return nullptr;
     }
-
-    std::unique_ptr<MaterialAsset> newMaterialAsset {};
-
-    cereal::BinaryInputArchive binaryArchive(fileStream);
-
-    AssetHeader header;
-    binaryArchive(header);
-
-    if (header == AssetHeader(AssetMagicValue)) {
-
-        newMaterialAsset = std::make_unique<MaterialAsset>();
-        binaryArchive(*newMaterialAsset);
-
-    } else {
-    
-        fileStream.seekg(0); // seek back to the start
-
-        if (static_cast<char>(fileStream.peek()) != '{') {
-            ARKOSE_LOG(Error, "Failed to parse json text for material asset '{}'", filePath);
-            return nullptr;
-        }
-
-        cereal::JSONInputArchive jsonArchive(fileStream);
-
-        newMaterialAsset = std::make_unique<MaterialAsset>();
-        jsonArchive(*newMaterialAsset);
-
-    }
-
-    newMaterialAsset->m_assetFilePath = filePath;
-    newMaterialAsset->name = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(filePath));
 
     {
         SCOPED_PROFILE_ZONE_NAMED("Material cache - store");
@@ -82,19 +53,55 @@ MaterialAsset* MaterialAsset::loadFromArkmat(std::string const& filePath)
     }
 }
 
-bool MaterialAsset::writeToArkmat(std::string_view filePath, AssetStorage assetStorage)
+bool MaterialAsset::readFromFile(std::string_view filePath)
 {
-    SCOPED_PROFILE_ZONE();
-
-    if (not AssetHelpers::isValidAssetPath(filePath, MaterialAsset::AssetFileExtension)) {
-        ARKOSE_LOG(Error, "Trying to write material asset to file with invalid extension: '{}'", filePath);
+    std::ifstream fileStream(std::string(filePath), std::ios::binary);
+    if (not fileStream.is_open()) {
         return false;
     }
 
-    ARKOSE_ASSERT(m_assetFilePath.empty() || m_assetFilePath == filePath);
-    m_assetFilePath = filePath;
+    cereal::BinaryInputArchive binaryArchive(fileStream);
 
-    std::ofstream fileStream { m_assetFilePath, std::ios::binary | std::ios::trunc };
+    AssetHeader header;
+    binaryArchive(header);
+
+    if (header == AssetHeader(AssetMagicValue)) {
+
+        binaryArchive(*this);
+
+    } else {
+
+        fileStream.seekg(0); // seek back to the start
+
+        if (static_cast<char>(fileStream.peek()) != '{') {
+            ARKOSE_LOG(Error, "Failed to parse json text for asset '{}'", filePath);
+            return false;
+        }
+
+        cereal::JSONInputArchive jsonArchive(fileStream);
+        jsonArchive(*this);
+    }
+
+    this->setAssetFilePath(filePath);
+
+    if (name.empty()) {
+        this->name = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(filePath));
+    }
+
+    return true;
+}
+
+bool MaterialAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage)
+{
+    if (not isValidAssetPath(filePath)) {
+        ARKOSE_LOG(Error, "Trying to write asset to file with invalid extension: '{}'", filePath);
+        return false;
+    }
+
+    ARKOSE_ASSERT(assetFilePath().empty() || assetFilePath() == filePath);
+    setAssetFilePath(filePath);
+
+    std::ofstream fileStream { std::string(assetFilePath()), std::ios::binary | std::ios::trunc };
     if (not fileStream.is_open()) {
         return false;
     }

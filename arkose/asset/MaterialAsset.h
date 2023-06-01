@@ -1,6 +1,6 @@
 #pragma once
 
-#include "asset/AssetHelpers.h"
+#include "asset/Asset.h"
 #include "asset/ImageAsset.h"
 #include "asset/SerialisationHelpers.h"
 #include "rendering/BlendMode.h"
@@ -43,7 +43,7 @@ public:
     void serialize(Archive&);
 };
 
-class MaterialAsset {
+class MaterialAsset final : public Asset<MaterialAsset> {
 public:
     MaterialAsset();
     ~MaterialAsset();
@@ -55,7 +55,8 @@ public:
     // TODO: Figure out how we want to return this! Basic type, e.g. MaterialAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
     static MaterialAsset* loadFromArkmat(std::string const& filePath);
 
-    bool writeToArkmat(std::string_view filePath, AssetStorage);
+    virtual bool readFromFile(std::string_view filePath) override;
+    virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) override;
 
     template<class Archive>
     void serialize(Archive&);
@@ -74,13 +75,6 @@ public:
     float maskCutoff { 1.0f };
 
     bool doubleSided { false };
-
-    std::string_view assetFilePath() const { return m_assetFilePath; }
-
-    std::string name {};
-
-private:
-    std::string m_assetFilePath {};
 };
 
 ////////////////////////////////////////////////////////////////////////////////

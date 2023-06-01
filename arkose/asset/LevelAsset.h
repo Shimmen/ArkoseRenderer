@@ -1,6 +1,6 @@
 #pragma once
 
-#include "asset/AssetHelpers.h"
+#include "asset/Asset.h"
 #include "scene/ProbeGrid.h"
 #include "scene/EnvironmentMap.h"
 #include "scene/Scene.h"
@@ -12,7 +12,7 @@
 #include <variant>
 #include <vector>
 
-class LevelAsset {
+class LevelAsset final : public Asset<LevelAsset> {
 public:
     LevelAsset();
     ~LevelAsset();
@@ -24,13 +24,11 @@ public:
     // TODO: Figure out how we want to return this! Basic type, e.g. LevelAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
     static LevelAsset* loadFromArklvl(std::string const& filePath);
 
-    bool writeToArklvl(std::string_view filePath, AssetStorage);
+    virtual bool readFromFile(std::string_view filePath) override;
+    virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) override;
 
     template<class Archive>
     void serialize(Archive&);
-
-    // Name of the level
-    std::string name;
 
     // All objects in this level
     std::vector<SceneObject> objects;
@@ -46,11 +44,6 @@ public:
 
     // For use with spatial probe grid based algorithms such as DDGI
     std::optional<ProbeGrid> probeGrid;
-
-    std::string_view assetFilePath() const { return m_assetFilePath; }
-
-private:
-    std::string m_assetFilePath {};
 };
 
 ////////////////////////////////////////////////////////////////////////////////

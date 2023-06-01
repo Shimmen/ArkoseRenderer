@@ -1,6 +1,6 @@
 #pragma once
 
-#include "asset/AssetHelpers.h"
+#include "asset/Asset.h"
 #include "asset/MaterialAsset.h"
 #include "core/Types.h"
 #include "core/math/Sphere.h"
@@ -89,7 +89,7 @@ public:
     std::vector<StaticMeshSegmentAsset> meshSegments {};
 };
 
-class StaticMeshAsset {
+class StaticMeshAsset final : public Asset<StaticMeshAsset> {
 public:
     StaticMeshAsset();
     ~StaticMeshAsset();
@@ -101,17 +101,13 @@ public:
     // TODO: Figure out how we want to return this! Basic type, e.g. StaticMeshAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
     static StaticMeshAsset* loadFromArkmsh(std::string const& filePath);
 
-    bool writeToArkmsh(std::string_view filePath, AssetStorage);
+    virtual bool readFromFile(std::string_view filePath) override;
+    virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) override;
 
     template<class Archive>
     void serialize(Archive&);
 
-    std::string_view assetFilePath() const { return m_assetFilePath; }
-
     std::vector<PhysicsMesh> createPhysicsMeshes(size_t lodIdx) const;
-
-    // Name of the mesh, usually set when loaded from some source file
-    std::string name {};
 
     // Static mesh render data for each LODs (at least LOD0 needed)
     std::vector<StaticMeshLODAsset> LODs {};
@@ -130,9 +126,6 @@ public:
 
     // Not serialized, can be used to store whatever intermediate you want
     int userData { -1 };
-
-private:
-    std::string m_assetFilePath {};
 };
 
 ////////////////////////////////////////////////////////////////////////////////

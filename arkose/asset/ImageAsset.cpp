@@ -148,7 +148,7 @@ ImageAsset* ImageAsset::loadFromArkimg(std::string const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not AssetHelpers::isValidAssetPath(filePath, ImageAsset::AssetFileExtension)) {
+    if (not isValidAssetPath(filePath)) {
         ARKOSE_LOG(Warning, "Trying to load image asset with invalid file extension: '{}'", filePath);
     }
 
@@ -162,29 +162,11 @@ ImageAsset* ImageAsset::loadFromArkimg(std::string const& filePath)
         }
     }
 
-    std::ifstream fileStream(filePath, std::ios::binary);
-    if (not fileStream.is_open()) {
-        return nullptr;
-    }
-
-    cereal::BinaryInputArchive archive(fileStream);
-
-    AssetHeader header;
-    archive(header);
-
-    if (header != AssetHeader(AssetMagicValue)) {
-        ARKOSE_LOG(Warning, "Trying to load image asset with invalid file magic: '{}{}{}{}'",
-                   header.magicValue[0], header.magicValue[1], header.magicValue[2], header.magicValue[3]);
-        return nullptr;
-    }
-
     auto newImageAsset = std::make_unique<ImageAsset>();
-    archive(*newImageAsset);
+    bool success = newImageAsset->readFromFile(filePath);
 
-    newImageAsset->m_assetFilePath = filePath;
-
-    if (newImageAsset->isCompressed()) {
-        newImageAsset->decompress();
+    if (!success) {
+        return nullptr;
     }
 
     {
@@ -197,7 +179,7 @@ ImageAsset* ImageAsset::loadFromArkimg(std::string const& filePath)
 
 ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
 {
-    if (AssetHelpers::isValidAssetPath(filePath, ImageAsset::AssetFileExtension)) {
+    if (isValidAssetPath(filePath)) {
         return loadFromArkimg(filePath);
     } else {
 
@@ -216,7 +198,7 @@ ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
             return nullptr;
         }
 
-        newImageAsset->m_assetFilePath = filePath;
+        newImageAsset->setAssetFilePath(filePath);
 
         {
             SCOPED_PROFILE_ZONE_NAMED("Image cache - store source asset");
@@ -227,21 +209,56 @@ ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
     }
 }
 
-bool ImageAsset::writeToArkimg(std::string_view filePath)
+bool ImageAsset::readFromFile(std::string_view filePath)
 {
-    if (not AssetHelpers::isValidAssetPath(filePath, ImageAsset::AssetFileExtension)) {
+    if (not isValidAssetPath(filePath)) {
+        ARKOSE_LOG(Warning, "Trying to load image asset with invalid file extension: '{}'", filePath);
+        return false;
+    }
+
+    std::ifstream fileStream(std::string(filePath), std::ios::binary);
+    if (not fileStream.is_open()) {
+        return false;
+    }
+
+    cereal::BinaryInputArchive archive(fileStream);
+
+    AssetHeader header;
+    archive(header);
+
+    if (header != AssetHeader(AssetMagicValue)) {
+        ARKOSE_LOG(Warning, "Trying to load image asset with invalid file magic: '{}{}{}{}'",
+                   header.magicValue[0], header.magicValue[1], header.magicValue[2], header.magicValue[3]);
+        return false;
+    }
+
+    archive(*this);
+    setAssetFilePath(filePath);
+
+    if (isCompressed()) {
+        decompress();
+    }
+}
+
+bool ImageAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage)
+{
+    if (assetStorage != AssetStorage::Binary) {
+        ARKOSE_LOG_FATAL("Image asset only supports binary serialization.");
+    }
+
+    if (not isValidAssetPath(filePath)) {
         ARKOSE_LOG(Error, "Trying to write image asset to file with invalid extension: '{}'", filePath);
         return false;
     }
 
-    ARKOSE_ASSERT(m_assetFilePath.empty() || m_assetFilePath == filePath);
-    m_assetFilePath = filePath;
+    ARKOSE_ASSERT(assetFilePath().empty() || assetFilePath() == filePath);
+    setAssetFilePath(filePath);
 
     if (not m_compressed) {
         compress();
     }
 
-    std::ofstream fileStream { m_assetFilePath, std::ios::binary | std::ios::trunc };
+    std::ofstream fileStream { std::string(assetFilePath()), std::ios::binary | std::ios::trunc };
     if (not fileStream.is_open()) {
         return false;
     }

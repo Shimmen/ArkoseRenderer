@@ -18,7 +18,7 @@ LevelAsset* LevelAsset::loadFromArklvl(std::string const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not AssetHelpers::isValidAssetPath(filePath, LevelAsset::AssetFileExtension)) {
+    if (not isValidAssetPath(filePath)) {
         ARKOSE_LOG(Warning, "Trying to load level asset with invalid file extension: '{}'", filePath);
     }
 
@@ -32,39 +32,12 @@ LevelAsset* LevelAsset::loadFromArklvl(std::string const& filePath)
         }
     }
 
-    std::ifstream fileStream(filePath, std::ios::binary);
-    if (not fileStream.is_open()) {
+    auto newLevelAsset = std::make_unique<LevelAsset>();
+    bool success = newLevelAsset->readFromFile(filePath);
+
+    if (!success) {
         return nullptr;
     }
-
-    std::unique_ptr<LevelAsset> newLevelAsset {};
-
-    cereal::BinaryInputArchive binaryArchive(fileStream);
-
-    AssetHeader header;
-    binaryArchive(header);
-
-    if (header == AssetHeader(AssetMagicValue)) {
-
-        newLevelAsset = std::make_unique<LevelAsset>();
-        binaryArchive(*newLevelAsset);
-
-    } else {
-
-        fileStream.seekg(0); // seek back to the start
-
-        if (static_cast<char>(fileStream.peek()) != '{') {
-            ARKOSE_LOG(Error, "Failed to parse json text for level asset '{}'", filePath);
-            return nullptr;
-        }
-
-        cereal::JSONInputArchive jsonArchive(fileStream);
-
-        newLevelAsset = std::make_unique<LevelAsset>();
-        jsonArchive(*newLevelAsset);
-    }
-
-    newLevelAsset->m_assetFilePath = filePath;
 
     {
         SCOPED_PROFILE_ZONE_NAMED("Level cache - store");
@@ -74,19 +47,55 @@ LevelAsset* LevelAsset::loadFromArklvl(std::string const& filePath)
     }
 }
 
-bool LevelAsset::writeToArklvl(std::string_view filePath, AssetStorage assetStorage)
+bool LevelAsset::readFromFile(std::string_view filePath)
 {
-    SCOPED_PROFILE_ZONE();
-
-    if (not AssetHelpers::isValidAssetPath(filePath, LevelAsset::AssetFileExtension)) {
-        ARKOSE_LOG(Error, "Trying to write level asset to file with invalid extension: '{}'", filePath);
+    std::ifstream fileStream(std::string(filePath), std::ios::binary);
+    if (not fileStream.is_open()) {
         return false;
     }
 
-    ARKOSE_ASSERT(m_assetFilePath.empty() || m_assetFilePath == filePath);
-    m_assetFilePath = filePath;
+    cereal::BinaryInputArchive binaryArchive(fileStream);
 
-    std::ofstream fileStream { m_assetFilePath, std::ios::binary | std::ios::trunc };
+    AssetHeader header;
+    binaryArchive(header);
+
+    if (header == AssetHeader(AssetMagicValue)) {
+
+        binaryArchive(*this);
+
+    } else {
+
+        fileStream.seekg(0); // seek back to the start
+
+        if (static_cast<char>(fileStream.peek()) != '{') {
+            ARKOSE_LOG(Error, "Failed to parse json text for asset '{}'", filePath);
+            return false;
+        }
+
+        cereal::JSONInputArchive jsonArchive(fileStream);
+        jsonArchive(*this);
+    }
+
+    this->setAssetFilePath(filePath);
+
+    if (name.empty()) {
+        this->name = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(filePath));
+    }
+
+    return true;
+}
+
+bool LevelAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage)
+{
+    if (not isValidAssetPath(filePath)) {
+        ARKOSE_LOG(Error, "Trying to write asset to file with invalid extension: '{}'", filePath);
+        return false;
+    }
+
+    ARKOSE_ASSERT(assetFilePath().empty() || assetFilePath() == filePath);
+    setAssetFilePath(filePath);
+
+    std::ofstream fileStream { std::string(assetFilePath()), std::ios::binary | std::ios::trunc };
     if (not fileStream.is_open()) {
         return false;
     }

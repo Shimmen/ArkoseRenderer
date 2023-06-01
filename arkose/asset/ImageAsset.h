@@ -1,6 +1,6 @@
 #pragma once
 
-#include "asset/AssetHelpers.h"
+#include "asset/Asset.h"
 #include "core/Types.h"
 #include "utility/Extent.h"
 #include <ark/vector.h>
@@ -41,7 +41,7 @@ struct ImageMip {
     size_t size;
 };
 
-class ImageAsset {
+class ImageAsset final : public Asset<ImageAsset> {
 public:
     ImageAsset();
     ~ImageAsset();
@@ -64,7 +64,8 @@ public:
     // TODO: Figure out how we want to return this! Basic type, e.g. ImageAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
     static ImageAsset* loadOrCreate(std::string const& filePath);
 
-    bool writeToArkimg(std::string_view filePath);
+    virtual bool readFromFile(std::string_view filePath) override;
+    virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) override;
 
     template<class Archive>
     void serialize(Archive& ar);
@@ -96,8 +97,6 @@ public:
     bool isCompressed() const { return m_compressed; }
     bool isUncompressed() const { return not m_compressed; }
 
-    std::string_view assetFilePath() const { return m_assetFilePath; }
-
     bool hasSourceAsset() const { return not m_sourceAssetFilePath.empty(); }
     std::string_view sourceAssetFilePath() const { return m_sourceAssetFilePath; }
 
@@ -128,7 +127,6 @@ private:
     u32 m_uncompressedSize { 0 };
 
     std::string m_sourceAssetFilePath {};
-    std::string m_assetFilePath {}; // (this file)
 };
 
 ////////////////////////////////////////////////////////////////////////////////

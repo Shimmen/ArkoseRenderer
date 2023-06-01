@@ -77,7 +77,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
             std::string targetFilePath = std::format("{}/{}.arkimg", targetDirectory, fileName);
 
-            image->writeToArkimg(targetFilePath);
+            image->writeToFile(targetFilePath, AssetStorage::Binary);
         }
     }
 
@@ -116,7 +116,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         std::string targetFilePath = std::format("{}/{}.arkmat", targetDirectory, fileName);
 
-        material->writeToArkmat(targetFilePath, AssetStorage::Json);
+        material->writeToFile(targetFilePath, AssetStorage::Json);
     }
 
     std::unordered_map<std::string, int> staticMeshNameMap {};
@@ -149,7 +149,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         std::string targetFilePath = std::format("{}/{}.arkmsh", targetDirectory, fileName);
 
         // TODO: Write to json when importing! It's currently super slow with all the data we have, but if we separate out the core data it will be fine.
-        staticMesh->writeToArkmsh(targetFilePath, AssetStorage::Binary);
+        staticMesh->writeToFile(targetFilePath, AssetStorage::Binary);
     }
 
     return result;
@@ -182,7 +182,7 @@ std::unique_ptr<LevelAsset> AssetImporter::importAsLevel(std::string_view assetF
     levelAsset->name = std::string(levelName);
 
     std::string levelFilePath = std::format("{}{}.arklvl", targetDirectory, levelName);
-    if (not levelAsset->writeToArklvl(levelFilePath, AssetStorage::Json)) {
+    if (not levelAsset->writeToFile(levelFilePath, AssetStorage::Json)) {
         ARKOSE_LOG(Error, "Failed to write level asset '{}' to file.", levelAsset->name);
         return nullptr;
     }

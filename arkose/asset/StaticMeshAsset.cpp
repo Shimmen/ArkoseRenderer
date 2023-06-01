@@ -156,7 +156,7 @@ StaticMeshAsset* StaticMeshAsset::loadFromArkmsh(std::string const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not AssetHelpers::isValidAssetPath(filePath, StaticMeshAsset::AssetFileExtension)) {
+    if (not isValidAssetPath(filePath)) {
         ARKOSE_LOG(Warning, "Trying to load material asset with invalid file extension: '{}'", filePath);
     }
 
@@ -170,39 +170,12 @@ StaticMeshAsset* StaticMeshAsset::loadFromArkmsh(std::string const& filePath)
         }
     }
 
-    std::ifstream fileStream(filePath, std::ios::binary);
-    if (not fileStream.is_open()) {
+    auto newStaticMeshAsset = std::make_unique<StaticMeshAsset>();
+    bool success = newStaticMeshAsset->readFromFile(filePath);
+
+    if (!success) {
         return nullptr;
     }
-
-    std::unique_ptr<StaticMeshAsset> newStaticMeshAsset {};
-
-    cereal::BinaryInputArchive binaryArchive(fileStream);
-
-    AssetHeader header;
-    binaryArchive(header);
-
-    if (header == AssetHeader(AssetMagicValue)) {
-
-        newStaticMeshAsset = std::make_unique<StaticMeshAsset>();
-        binaryArchive(*newStaticMeshAsset);
-
-    } else {
-
-        fileStream.seekg(0); // seek back to the start
-
-        if (static_cast<char>(fileStream.peek()) != '{') {
-            ARKOSE_LOG(Error, "Failed to parse json text for static mesh asset '{}'", filePath);
-            return nullptr;
-        }
-
-        cereal::JSONInputArchive jsonArchive(fileStream);
-
-        newStaticMeshAsset = std::make_unique<StaticMeshAsset>();
-        jsonArchive(*newStaticMeshAsset);
-    }
-
-    newStaticMeshAsset->m_assetFilePath = filePath;
 
     {
         SCOPED_PROFILE_ZONE_NAMED("Static mesh cache - store");
@@ -212,19 +185,56 @@ StaticMeshAsset* StaticMeshAsset::loadFromArkmsh(std::string const& filePath)
     }
 }
 
-bool StaticMeshAsset::writeToArkmsh(std::string_view filePath, AssetStorage assetStorage)
-{
-    SCOPED_PROFILE_ZONE();
 
-    if (not AssetHelpers::isValidAssetPath(filePath, StaticMeshAsset::AssetFileExtension)) {
-        ARKOSE_LOG(Error, "Trying to write static mesh asset to file with invalid extension: '{}'", filePath);
+bool StaticMeshAsset::readFromFile(std::string_view filePath)
+{
+    std::ifstream fileStream(std::string(filePath), std::ios::binary);
+    if (not fileStream.is_open()) {
         return false;
     }
 
-    ARKOSE_ASSERT(m_assetFilePath.empty() || m_assetFilePath == filePath);
-    m_assetFilePath = filePath;
+    cereal::BinaryInputArchive binaryArchive(fileStream);
 
-    std::ofstream fileStream { m_assetFilePath, std::ios::binary | std::ios::trunc };
+    AssetHeader header;
+    binaryArchive(header);
+
+    if (header == AssetHeader(AssetMagicValue)) {
+
+        binaryArchive(*this);
+
+    } else {
+
+        fileStream.seekg(0); // seek back to the start
+
+        if (static_cast<char>(fileStream.peek()) != '{') {
+            ARKOSE_LOG(Error, "Failed to parse json text for asset '{}'", filePath);
+            return false;
+        }
+
+        cereal::JSONInputArchive jsonArchive(fileStream);
+        jsonArchive(*this);
+    }
+
+    this->setAssetFilePath(filePath);
+
+    if (name.empty()) {
+        this->name = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(filePath));
+    }
+
+    return true;
+}
+
+bool StaticMeshAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage)
+{
+    if (not isValidAssetPath(filePath)) {
+        ARKOSE_LOG(Error, "Trying to write asset to file with invalid extension: '{}'", filePath);
+        return false;
+    }
+
+    ARKOSE_ASSERT(assetFilePath().empty() || assetFilePath() == filePath);
+    setAssetFilePath(filePath);
+
+    std::ofstream fileStream { std::string(assetFilePath()), std::ios::binary | std::ios::trunc };
     if (not fileStream.is_open()) {
         return false;
     }
