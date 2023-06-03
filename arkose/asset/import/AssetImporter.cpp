@@ -164,7 +164,7 @@ std::unique_ptr<LevelAsset> AssetImporter::importAsLevel(std::string_view assetF
     // TODO: Also add lights, cameras, etc.
 
     for (MeshInstance const& meshInstance : result.meshInstances) {
-        SceneObject sceneObject {};
+        SceneObjectAsset sceneObject {};
         sceneObject.transform = meshInstance.transform;
         sceneObject.mesh = std::string(meshInstance.staticMesh->assetFilePath());
         levelAsset->objects.push_back(sceneObject);

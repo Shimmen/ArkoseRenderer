@@ -197,14 +197,14 @@ void Scene::addLevel(LevelAsset* levelAsset)
 {
     SCOPED_PROFILE_ZONE();
 
-    for (SceneObject const& sceneObject : levelAsset->objects) {
+    for (SceneObjectAsset const& sceneObjectAsset : levelAsset->objects) {
 
         // TODO: Handle non-path indirection
-        std::string const& staticMeshAssetPath = std::string(sceneObject.pathToMesh());
+        std::string const& staticMeshAssetPath = std::string(sceneObjectAsset.pathToMesh());
         StaticMeshAsset* staticMeshAsset = StaticMeshAsset::load(staticMeshAssetPath);
 
-        StaticMeshInstance& instance = addMesh(staticMeshAsset, sceneObject.transform);
-        instance.name = sceneObject.name;
+        StaticMeshInstance& instance = addMesh(staticMeshAsset, sceneObjectAsset.transform);
+        instance.name = sceneObjectAsset.name;
 
     }
 
