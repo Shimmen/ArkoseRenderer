@@ -1,5 +1,6 @@
 #pragma once
 
+#include "asset/AnimationAsset.h"
 #include "asset/ImageAsset.h"
 #include "asset/LevelAsset.h"
 #include "asset/MaterialAsset.h"
@@ -24,6 +25,7 @@ struct ImportResult {
     std::vector<std::unique_ptr<ImageAsset>> images {};
     std::vector<std::unique_ptr<MaterialAsset>> materials {};
     std::vector<std::unique_ptr<StaticMeshAsset>> staticMeshes {};
+    std::vector<std::unique_ptr<AnimationAsset>> animations {};
 
     std::vector<ImportedCamera> cameras {};
 

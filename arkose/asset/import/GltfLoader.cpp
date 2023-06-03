@@ -137,6 +137,14 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
         }
     }
 
+    // Create all animations definined in the glTF file (even potentially unused ones)
+    for (size_t idx = 0; idx < gltfModel.animations.size(); ++idx) {
+        tinygltf::Animation const& gltfAnimation = gltfModel.animations[idx];
+        if (std::unique_ptr<AnimationAsset> animation = createAnimation(gltfModel, gltfAnimation)) {
+            result.animations.push_back(std::move(animation));
+        }
+    }
+
     constexpr int TransformStackDepth = 16;
     std::vector<Transform> transformStack {};
     transformStack.reserve(TransformStackDepth);
@@ -337,6 +345,102 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
     }
 
     return staticMesh;
+}
+
+std::unique_ptr<AnimationAsset> GltfLoader::createAnimation(tinygltf::Model const& gltfModel, tinygltf::Animation const& gltfAnimation)
+{
+    SCOPED_PROFILE_ZONE();
+
+    std::unordered_map<size_t, size_t> inputIndexLookup {};
+
+    auto animation = std::make_unique<AnimationAsset>();
+    animation->name = gltfAnimation.name;
+
+    for (size_t channelIdx = 0; channelIdx < gltfAnimation.channels.size(); ++channelIdx) {
+        tinygltf::AnimationChannel const& gltfAnimationChannel = gltfAnimation.channels[channelIdx];
+        tinygltf::AnimationSampler const& gltfAnimationSampler = gltfAnimation.samplers[gltfAnimationChannel.sampler];
+
+        // TODO: Handle different types of animations!
+        //  - For bones, we need a bone reference (e.g. name, index, some way to identify in the hierarchy)
+        //  - For rigidbody animations of meshes and nodes, we might need some other way to do it.
+        int targetNodeIdx = gltfAnimationChannel.target_node;
+        tinygltf::Node const& targetNode = gltfModel.nodes[targetNodeIdx];
+        std::string targetName = targetNode.name;
+        if (targetName.empty()) {
+            targetName = fmt::format(FMT_STRING("node{:04}"), targetNodeIdx);
+        }
+
+        AnimationTargetProperty targetProperty;
+        if (gltfAnimationChannel.target_path == "translation") {
+            targetProperty = AnimationTargetProperty::Translation;
+        } else if (gltfAnimationChannel.target_path == "rotation") {
+            targetProperty = AnimationTargetProperty::Rotation;
+        } else if (gltfAnimationChannel.target_path == "scale") {
+            targetProperty = AnimationTargetProperty::Scale;
+        } else if (gltfAnimationChannel.target_path == "weights") {
+            NOT_YET_IMPLEMENTED();
+        } else {
+            ASSERT_NOT_REACHED();
+        }
+
+        AnimationInterpolation interpolation;
+        if (gltfAnimationSampler.interpolation == "LINEAR") {
+            interpolation = AnimationInterpolation::Linear;
+        } else if (gltfAnimationSampler.interpolation == "STEP") {
+            interpolation = AnimationInterpolation::Step;
+        } else if (gltfAnimationSampler.interpolation == "CUBICSPLINE") {
+            interpolation = AnimationInterpolation::CubicSpline;
+        } else {
+            // glTF allows user specified interpolation.. treat it all like linear
+            interpolation = AnimationInterpolation::Linear;
+        }
+
+        tinygltf::Accessor const& inputAccessor = gltfModel.accessors[gltfAnimationSampler.input];
+        tinygltf::Accessor const& outputAccessor = gltfModel.accessors[gltfAnimationSampler.output];
+
+        // Time (input)
+        auto timeEntry = inputIndexLookup.find(gltfAnimationSampler.input);
+        if (timeEntry == inputIndexLookup.end()) {
+            inputIndexLookup[gltfAnimationSampler.input] = animation->inputValues.size();
+            float const* firstInputValue = getTypedMemoryBufferForAccessor<float>(gltfModel, inputAccessor);
+            animation->inputValues.emplace_back(std::vector<float>(firstInputValue, firstInputValue + inputAccessor.count));
+        }
+
+        auto createAnimationChannelAsset = [&]<typename T>(T proxyValue) -> AnimationChannelAsset<T> {
+            AnimationChannelAsset<T> channelAsset {};
+            channelAsset.targetProperty = targetProperty;
+            channelAsset.targetReference = targetName;
+
+            channelAsset.sampler.inputIdx = inputIndexLookup[gltfAnimationSampler.input];
+            channelAsset.sampler.interpolation = interpolation;
+
+            // Animated value (output)
+            ARKOSE_ASSERT(outputAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT); // TODO: Probably will need to relax this
+            T const* firstValue = getTypedMemoryBufferForAccessor<T>(gltfModel, outputAccessor);
+            channelAsset.sampler.outputValues = std::vector<T>(firstValue, firstValue + outputAccessor.count);
+
+            return channelAsset;
+        };
+
+        switch (outputAccessor.type) {
+        case TINYGLTF_TYPE_SCALAR:
+            animation->floatPropertyChannels.emplace_back(createAnimationChannelAsset(float()));
+            break;
+        case TINYGLTF_TYPE_VEC2:
+            animation->float2PropertyChannels.emplace_back(createAnimationChannelAsset(vec2()));
+            break;
+        case TINYGLTF_TYPE_VEC3:
+            animation->float3PropertyChannels.emplace_back(createAnimationChannelAsset(vec3()));
+            break;
+        case TINYGLTF_TYPE_VEC4:
+            animation->float4PropertyChannels.emplace_back(createAnimationChannelAsset(vec4()));
+            break;
+        default:
+            NOT_YET_IMPLEMENTED();
+        }
+    }
+
+    return animation;
 }
 
 const tinygltf::Accessor* GltfLoader::findAccessorForPrimitive(const tinygltf::Model& gltfModel, const tinygltf::Primitive& gltfPrimitive, const char* name) const

@@ -34,7 +34,7 @@ set(ARKOSE_SOURCES
     arkose/apps/BootstrappingApp.cpp
     arkose/apps/MeshViewerApp.cpp
     arkose/apps/ShowcaseApp.cpp
-    arkose/asset/AssetHelpers.cpp
+    arkose/asset/AnimationAsset.cpp
     arkose/asset/ImageAsset.cpp
     arkose/asset/LevelAsset.cpp
     arkose/asset/MaterialAsset.cpp

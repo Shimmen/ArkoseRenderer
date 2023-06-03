@@ -152,6 +152,25 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         staticMesh->writeToFile(targetFilePath, AssetStorage::Binary);
     }
 
+    std::unordered_map<std::string, int> animationNameMap {};
+    for (auto& animation : result.animations) {
+
+        std::string fileName = animation->name;
+        if (fileName.empty()) {
+            fileName = "animation";
+        }
+
+        int count = animationNameMap[fileName]++;
+        if (count > 0 || fileName == "animation") {
+            fileName = std::format("{}_{}", fileName, count);
+        }
+
+        std::string targetFilePath = std::format("{}/{}.arkanim", targetDirectory, fileName);
+
+        animation->writeToFile(targetFilePath, AssetStorage::Json);
+
+    }
+
     return result;
 }
 

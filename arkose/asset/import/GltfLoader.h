@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Assert.h"
+#include "asset/AnimationAsset.h"
 #include "asset/ImageAsset.h"
 #include "asset/MaterialAsset.h"
 #include "asset/StaticMeshAsset.h"
@@ -23,8 +24,9 @@ private:
 
     std::string m_gltfFilePath {};
 
-    std::unique_ptr<MaterialAsset> createMaterial(const tinygltf::Model&, const tinygltf::Material&);
-    std::unique_ptr<StaticMeshAsset> createStaticMesh(const tinygltf::Model&, const tinygltf::Mesh&);
+    std::unique_ptr<MaterialAsset> createMaterial(tinygltf::Model const&, tinygltf::Material const&);
+    std::unique_ptr<StaticMeshAsset> createStaticMesh(tinygltf::Model const&, tinygltf::Mesh const&);
+    std::unique_ptr<AnimationAsset> createAnimation(tinygltf::Model const&, tinygltf::Animation const&);
 
     vec3 createVec3(const std::vector<double>&) const;
     void createTransformForNode(Transform&, const tinygltf::Node&) const;
