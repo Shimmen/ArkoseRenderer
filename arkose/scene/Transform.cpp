@@ -1,5 +1,11 @@
 #include "Transform.h"
 
+void Transform::setParent(Transform const* parent)
+{
+    m_parent = parent;
+    m_matrix = {};
+}
+
 Transform Transform::flattened() const
 {
     vec3 globalTranslation = positionInWorld();

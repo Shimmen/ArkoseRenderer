@@ -31,6 +31,9 @@ public:
     template<class Archive>
     void serialize(Archive&);
 
+    Transform const* parent() const { return m_parent; }
+    void setParent(Transform const* parent);
+
     Transform flattened() const;
 
     vec3 localTranslation() const { return m_translation; }
