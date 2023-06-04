@@ -383,6 +383,9 @@ void Scene::generateProbeGridFromBoundingBox()
         }
     }
 
+    sceneAABB.max += vec3(1.0f);
+    sceneAABB.min -= vec3(1.0f);
+
     vec3 bounds = sceneAABB.max - sceneAABB.min;
 
     int indexOfLargest = 0;
