@@ -1,7 +1,7 @@
 #include "Scene.h"
 
 #include "asset/LevelAsset.h"
-#include "asset/StaticMeshAsset.h"
+#include "asset/MeshAsset.h"
 #include "core/Assert.h"
 #include "rendering/GpuScene.h"
 #include "rendering/debug/DebugDrawer.h"
@@ -99,13 +99,13 @@ std::unique_ptr<LevelAsset> Scene::exportAsLevelAsset() const
         Arkose::Asset::SceneObjectT& sceneObject = *levelAsset->objects.emplace_back(std::make_unique<Arkose::Asset::SceneObjectT>());
 
         StaticMesh const* staticMesh = gpuScene().staticMeshForHandle(staticMeshInstance->mesh);
-        StaticMeshAsset const* staticMeshAsset = staticMesh->asset();
+        MeshAsset const* meshAsset = staticMesh->asset();
 
         sceneObject.name = staticMeshInstance->name;
         sceneObject.transform = translateTransform(staticMeshInstance->transform);
 
         Arkose::Asset::PathT path;
-        path.path = "placeholder-path"; // staticMeshAsset->assetFilePath(); TODO!
+        path.path = "placeholder-path"; // meshAsset->assetFilePath(); TODO!
         sceneObject.mesh_asset.Set(path);
     }
 
@@ -200,10 +200,10 @@ void Scene::addLevel(LevelAsset* levelAsset)
     for (SceneObjectAsset const& sceneObjectAsset : levelAsset->objects) {
 
         // TODO: Handle non-path indirection
-        std::string const& staticMeshAssetPath = std::string(sceneObjectAsset.pathToMesh());
-        StaticMeshAsset* staticMeshAsset = StaticMeshAsset::load(staticMeshAssetPath);
+        std::string const& meshAssetPath = std::string(sceneObjectAsset.pathToMesh());
+        MeshAsset* meshAsset = MeshAsset::load(meshAssetPath);
 
-        StaticMeshInstance& instance = addMesh(staticMeshAsset, sceneObjectAsset.transform);
+        StaticMeshInstance& instance = addMesh(meshAsset, sceneObjectAsset.transform);
         instance.name = sceneObjectAsset.name;
 
     }
@@ -243,11 +243,11 @@ Camera& Scene::addCamera(const std::string& name, bool makeDefault)
     return *m_allCameras[name];
 }
 
-StaticMeshInstance& Scene::addMesh(StaticMeshAsset* staticMesh, Transform transform)
+StaticMeshInstance& Scene::addMesh(MeshAsset* mesh, Transform transform)
 {
-    ARKOSE_ASSERT(staticMesh != nullptr);
+    ARKOSE_ASSERT(mesh != nullptr);
 
-    StaticMeshHandle staticMeshHandle = gpuScene().registerStaticMesh(staticMesh);
+    StaticMeshHandle staticMeshHandle = gpuScene().registerStaticMesh(mesh);
     StaticMeshInstance& instance = createStaticMeshInstance(staticMeshHandle, transform);
 
     return instance;

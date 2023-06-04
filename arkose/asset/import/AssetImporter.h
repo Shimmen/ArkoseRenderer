@@ -4,13 +4,13 @@
 #include "asset/ImageAsset.h"
 #include "asset/LevelAsset.h"
 #include "asset/MaterialAsset.h"
-#include "asset/StaticMeshAsset.h"
+#include "asset/MeshAsset.h"
 #include "asset/SkeletonAsset.h"
 #include <string_view>
 #include <vector>
 
 struct MeshInstance {
-    StaticMeshAsset* staticMesh { nullptr };
+    MeshAsset* mesh { nullptr };
     Transform transform {};
 };
 
@@ -25,7 +25,7 @@ struct ImportedCamera {
 struct ImportResult {
     std::vector<std::unique_ptr<ImageAsset>> images {};
     std::vector<std::unique_ptr<MaterialAsset>> materials {};
-    std::vector<std::unique_ptr<StaticMeshAsset>> staticMeshes {};
+    std::vector<std::unique_ptr<MeshAsset>> meshes {};
     std::vector<std::unique_ptr<SkeletonAsset>> skeletons {};
     std::vector<std::unique_ptr<AnimationAsset>> animations {};
 

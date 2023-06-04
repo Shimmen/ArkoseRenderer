@@ -119,14 +119,14 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         material->writeToFile(targetFilePath, AssetStorage::Json);
     }
 
-    std::unordered_map<std::string, int> staticMeshNameMap {};
-    for (auto& staticMesh : result.staticMeshes) {
+    std::unordered_map<std::string, int> meshNameMap {};
+    for (auto& mesh : result.meshes) {
 
         // Resolve references (paths) to material assets
         // (The glTF loader will use its local glTF indices while loading, since we don't yet know the file paths)
 
-        for (StaticMeshLODAsset& lod : staticMesh->LODs) {
-            for (StaticMeshSegmentAsset& meshSegment : lod.meshSegments) {
+        for (MeshLODAsset& lod : mesh->LODs) {
+            for (MeshSegmentAsset& meshSegment : lod.meshSegments) {
                 if (meshSegment.userData != -1) {
                     int gltfIdx = meshSegment.userData;
                     ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < result.materials.size());
@@ -136,20 +136,20 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
             }
         }
 
-        std::string fileName = staticMesh->name;
+        std::string fileName = mesh->name;
         if (fileName.empty()) {
-            fileName = "staticmesh";
+            fileName = "mesh";
         }
 
-        int count = staticMeshNameMap[fileName]++;
-        if (count > 0 || fileName == "staticmesh") {
+        int count = meshNameMap[fileName]++;
+        if (count > 0 || fileName == "mesh") {
             fileName = std::format("{}_{}", fileName, count);
         }
 
         std::string targetFilePath = std::format("{}/{}.arkmsh", targetDirectory, fileName);
 
         // TODO: Write to json when importing! It's currently super slow with all the data we have, but if we separate out the core data it will be fine.
-        staticMesh->writeToFile(targetFilePath, AssetStorage::Binary);
+        mesh->writeToFile(targetFilePath, AssetStorage::Binary);
     }
 
     std::unordered_map<std::string, int> skeletonNameMap {};
@@ -203,7 +203,7 @@ std::unique_ptr<LevelAsset> AssetImporter::importAsLevel(std::string_view assetF
     for (MeshInstance const& meshInstance : result.meshInstances) {
         SceneObjectAsset sceneObject {};
         sceneObject.transform = meshInstance.transform;
-        sceneObject.mesh = std::string(meshInstance.staticMesh->assetFilePath());
+        sceneObject.mesh = std::string(meshInstance.mesh->assetFilePath());
         levelAsset->objects.push_back(sceneObject);
     }
 

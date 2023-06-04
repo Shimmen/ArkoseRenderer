@@ -1,6 +1,6 @@
 #include "MeshletManager.h"
 
-#include "asset/StaticMeshAsset.h"
+#include "asset/MeshAsset.h"
 #include "core/Conversion.h"
 #include "core/Logging.h"
 #include "rendering/StaticMesh.h"
@@ -45,7 +45,7 @@ void MeshletManager::allocateMeshlets(StaticMesh& staticMesh)
         for (StaticMeshSegment& meshSegment : lod.meshSegments) {
 
             // TODO: Do this at asset processing time, not in runtime!
-            const_cast<StaticMeshSegmentAsset*>(meshSegment.asset)->generateMeshlets();
+            const_cast<MeshSegmentAsset*>(meshSegment.asset)->generateMeshlets();
 
             m_segmentsAwaitingUpload.push_back(&meshSegment);
         }
@@ -68,7 +68,7 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
 
         SCOPED_PROFILE_ZONE_NAMED("Processing segment");
 
-        StaticMeshSegmentAsset const& meshSegmentAsset = *meshSegment->asset;
+        MeshSegmentAsset const& meshSegmentAsset = *meshSegment->asset;
         MeshletDataAsset const& meshletDataAsset = meshSegmentAsset.meshletData.value();
 
         u32 vertexCount = narrow_cast<u32>(meshletDataAsset.meshletVertexIndirection.size());

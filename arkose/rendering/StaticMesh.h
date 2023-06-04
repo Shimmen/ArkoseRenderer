@@ -1,6 +1,6 @@
 #pragma once
 
-#include "asset/StaticMeshAsset.h"
+#include "asset/MeshAsset.h"
 #include "core/Handle.h"
 #include "core/Types.h"
 #include "core/math/Sphere.h"
@@ -25,9 +25,9 @@ using MeshMaterialResolver = std::function<MaterialHandle(MaterialAsset const*)>
 
 struct StaticMeshSegment {
 
-    StaticMeshSegment(StaticMeshSegmentAsset const*, MaterialHandle, BlendMode, DrawKey);
+    StaticMeshSegment(MeshSegmentAsset const*, MaterialHandle, BlendMode, DrawKey);
 
-    StaticMeshSegmentAsset const* asset { nullptr };
+    MeshSegmentAsset const* asset { nullptr };
 
     // Handle to the static mesh that this segment is part of
     StaticMeshHandle staticMeshHandle {};
@@ -58,9 +58,9 @@ struct StaticMeshSegment {
 
 struct StaticMeshLOD {
 
-    explicit StaticMeshLOD(StaticMeshLODAsset const*);
+    explicit StaticMeshLOD(MeshLODAsset const*);
 
-    StaticMeshLODAsset const* asset { nullptr };
+    MeshLODAsset const* asset { nullptr };
 
     // List of static mesh segments to be rendered (at least one needed)
     std::vector<StaticMeshSegment> meshSegments {};
@@ -70,7 +70,7 @@ struct StaticMeshLOD {
 class StaticMesh {
 public:
 
-    StaticMesh(StaticMeshAsset const*, MeshMaterialResolver&&);
+    StaticMesh(MeshAsset const*, MeshMaterialResolver&&);
     StaticMesh() = default;
     ~StaticMesh() = default;
 
@@ -90,7 +90,7 @@ public:
     ark::aabb3 boundingBox() const { return m_boundingBox; }
     geometry::Sphere boundingSphere() const { return m_boundingSphere; }
 
-    StaticMeshAsset const* asset() const { return m_asset; }
+    MeshAsset const* asset() const { return m_asset; }
 
     bool hasTranslucentSegments() const { return m_hasTranslucentSegments; }
     bool hasNonTranslucentSegments() const { return m_hasNonTranslucentSegments; }
@@ -98,7 +98,7 @@ public:
 private:
 
     // Optional asset that this is created from
-    StaticMeshAsset const* m_asset { nullptr };
+    MeshAsset const* m_asset { nullptr };
 
     // Optional name of the mesh, usually set when loaded from some source file
     std::string m_name {};

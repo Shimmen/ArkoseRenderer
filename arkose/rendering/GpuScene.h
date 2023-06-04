@@ -1,7 +1,7 @@
 #pragma once
 
 #include "asset/MaterialAsset.h"
-#include "asset/StaticMeshAsset.h"
+#include "asset/MeshAsset.h"
 #include "core/Handle.h"
 #include "core/Types.h"
 #include "core/parallel/TaskGraph.h"
@@ -92,7 +92,7 @@ public:
     // TODO: Later, also count skeletal meshes here
     uint32_t meshInstanceCount() const { return static_cast<uint32_t>(m_staticMeshInstances.size()); }
 
-    StaticMeshHandle registerStaticMesh(StaticMeshAsset const*);
+    StaticMeshHandle registerStaticMesh(MeshAsset const*);
     void unregisterStaticMesh(StaticMeshHandle);
 
     [[nodiscard]] MaterialHandle registerMaterial(MaterialAsset const*);
@@ -175,11 +175,11 @@ private:
     uint32_t m_nextFreeVertexIndex { 0 };
 
     struct ManagedStaticMesh {
-        StaticMeshAsset const* staticMeshAsset {};
+        MeshAsset const* meshAsset {};
         std::unique_ptr<StaticMesh> staticMesh {};
     };
     ResourceList<ManagedStaticMesh, StaticMeshHandle> m_managedStaticMeshes { "Static Meshes", 1024 };
-    std::unordered_map<StaticMeshAsset const*, StaticMeshHandle> m_staticMeshAssetCache {};
+    std::unordered_map<MeshAsset const*, StaticMeshHandle> m_staticMeshAssetCache {};
 
     std::vector<std::unique_ptr<StaticMeshInstance>> m_staticMeshInstances {};
     ResourceList<ShaderDrawable, DrawableObjectHandle> m_drawables { "Drawables", 10'000 };

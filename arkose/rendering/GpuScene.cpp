@@ -2,7 +2,7 @@
 
 #include "asset/ImageAsset.h"
 #include "asset/MaterialAsset.h"
-#include "asset/StaticMeshAsset.h"
+#include "asset/MeshAsset.h"
 #include "rendering/DrawKey.h"
 #include "rendering/backend/Resources.h"
 #include "core/Conversion.h"
@@ -734,22 +734,22 @@ void GpuScene::initializeStaticMeshInstance(StaticMeshInstance& instance)
     }
 }
 
-StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset const* staticMeshAsset)
+StaticMeshHandle GpuScene::registerStaticMesh(MeshAsset const* meshAsset)
 {
     // TODO: Maybe do some kind of caching here, and if we're trying to add the same mesh twice just ignore it and reuse the exisiting
 
     SCOPED_PROFILE_ZONE();
 
-    if (staticMeshAsset == nullptr) {
+    if (meshAsset == nullptr) {
         return StaticMeshHandle();
     }
 
-    auto entry = m_staticMeshAssetCache.find(staticMeshAsset);
+    auto entry = m_staticMeshAssetCache.find(meshAsset);
     if (entry != m_staticMeshAssetCache.end()) {
         return entry->second;
     }
 
-    auto staticMesh = std::make_unique<StaticMesh>(staticMeshAsset, [this](MaterialAsset const* materialAsset) -> MaterialHandle {
+    auto staticMesh = std::make_unique<StaticMesh>(meshAsset, [this](MaterialAsset const* materialAsset) -> MaterialHandle {
         if (materialAsset) {
             return registerMaterial(materialAsset);
         } else {
@@ -761,13 +761,13 @@ StaticMeshHandle GpuScene::registerStaticMesh(StaticMeshAsset const* staticMeshA
         m_meshletManager->allocateMeshlets(*staticMesh);
     }
 
-    StaticMeshHandle handle = m_managedStaticMeshes.add(ManagedStaticMesh { .staticMeshAsset = staticMeshAsset,
+    StaticMeshHandle handle = m_managedStaticMeshes.add(ManagedStaticMesh { .meshAsset = meshAsset,
                                                                             .staticMesh = std::move(staticMesh) });
 
     // The static mesh will in some cases want a handle back to itself
     m_managedStaticMeshes.get(handle).staticMesh->setHandleToSelf(handle);
 
-    m_staticMeshAssetCache[staticMeshAsset] = handle;
+    m_staticMeshAssetCache[meshAsset] = handle;
 
     return handle;
 }
@@ -1076,7 +1076,7 @@ void GpuScene::processDeferredDeletions()
             m_meshletManager->freeMeshlets(*managedStaticMesh.staticMesh);
         }
 
-        managedStaticMesh.staticMeshAsset = nullptr;
+        managedStaticMesh.meshAsset = nullptr;
         managedStaticMesh.staticMesh.reset();
     });
 

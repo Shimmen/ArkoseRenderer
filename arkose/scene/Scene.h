@@ -19,10 +19,10 @@
 class Backend;
 class GpuScene;
 class LevelAsset;
+class MeshAsset;
 class PhysicsBackend;
 class PhysicsScene;
 class SceneNode;
-class StaticMeshAsset;
 
 class Scene final {
 public:
@@ -65,7 +65,7 @@ public:
 
     // Meshes
 
-    StaticMeshInstance& addMesh(StaticMeshAsset*, Transform = Transform());
+    StaticMeshInstance& addMesh(MeshAsset*, Transform = Transform());
     StaticMeshInstance& createStaticMeshInstance(StaticMeshHandle, Transform);
 
     // NOTE: This is more of a utility for now to clear out the current level

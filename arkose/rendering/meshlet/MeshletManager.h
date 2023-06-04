@@ -1,6 +1,5 @@
 #pragma once
 
-#include "asset/StaticMeshAsset.h"
 #include "core/NonCopyable.h"
 #include "core/Types.h"
 #include "rendering/backend/base/Buffer.h"

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "apps/App.h"
-#include "asset/StaticMeshAsset.h"
+#include "asset/MeshAsset.h"
 #include "asset/import/AssetImporter.h"
 #include "scene/camera/FpsCameraController.h"
 #include <memory>
@@ -21,16 +21,16 @@ private:
     Scene* m_scene { nullptr };
 
     // The mesh we're currently viewing & editing
-    StaticMeshAsset* m_targetAsset {};
+    MeshAsset* m_targetAsset {};
     // The runtime version of the asset we're viewing & editing
     StaticMeshInstance* m_targetInstance {};
 
     int m_selectedLodIdx { 0 };
     int m_selectedSegmentIdx { 0 };
 
-    StaticMeshAsset& targetAsset() { return *m_targetAsset; }
-    StaticMeshLODAsset* selectedLodAsset() { return m_targetAsset ? &targetAsset().LODs[m_selectedLodIdx] : nullptr; }
-    StaticMeshSegmentAsset* selectedSegmentAsset() { return selectedLodAsset() ? &selectedLodAsset()->meshSegments[m_selectedSegmentIdx] : nullptr; }
+    MeshAsset& targetAsset() { return *m_targetAsset; }
+    MeshLODAsset* selectedLodAsset() { return m_targetAsset ? &targetAsset().LODs[m_selectedLodIdx] : nullptr; }
+    MeshSegmentAsset* selectedSegmentAsset() { return selectedLodAsset() ? &selectedLodAsset()->meshSegments[m_selectedSegmentIdx] : nullptr; }
 
     StaticMeshInstance& target() { return *m_targetInstance; }
     StaticMeshLOD* selectedLOD();

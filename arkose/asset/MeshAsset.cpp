@@ -1,4 +1,4 @@
-#include "StaticMeshAsset.h"
+#include "MeshAsset.h"
 
 #include "asset/AssetCache.h"
 #include "core/Assert.h"
@@ -11,13 +11,13 @@
 #include <meshoptimizer.h>
 
 namespace {
-AssetCache<StaticMeshAsset> s_staticMeshAssetCache {};
+AssetCache<MeshAsset> s_meshAssetCache {};
 }
 
-StaticMeshSegmentAsset::StaticMeshSegmentAsset() = default;
-StaticMeshSegmentAsset::~StaticMeshSegmentAsset() = default;
+MeshSegmentAsset::MeshSegmentAsset() = default;
+MeshSegmentAsset::~MeshSegmentAsset() = default;
 
-void StaticMeshSegmentAsset::generateMeshlets()
+void MeshSegmentAsset::generateMeshlets()
 {
     SCOPED_PROFILE_ZONE();
 
@@ -75,7 +75,7 @@ void StaticMeshSegmentAsset::generateMeshlets()
     }
 }
 
-size_t StaticMeshSegmentAsset::vertexCount() const
+size_t MeshSegmentAsset::vertexCount() const
 {
     size_t count = positions.size();
 
@@ -90,7 +90,7 @@ size_t StaticMeshSegmentAsset::vertexCount() const
     return count;
 }
 
-std::vector<u8> StaticMeshSegmentAsset::assembleVertexData(const VertexLayout& layout) const
+std::vector<u8> MeshSegmentAsset::assembleVertexData(const VertexLayout& layout) const
 {
     SCOPED_PROFILE_ZONE();
 
@@ -145,13 +145,13 @@ std::vector<u8> StaticMeshSegmentAsset::assembleVertexData(const VertexLayout& l
     return dataVector;
 }
 
-StaticMeshLODAsset::StaticMeshLODAsset() = default;
-StaticMeshLODAsset::~StaticMeshLODAsset() = default;
+MeshLODAsset::MeshLODAsset() = default;
+MeshLODAsset::~MeshLODAsset() = default;
 
-StaticMeshAsset::StaticMeshAsset() = default;
-StaticMeshAsset::~StaticMeshAsset() = default;
+MeshAsset::MeshAsset() = default;
+MeshAsset::~MeshAsset() = default;
 
-StaticMeshAsset* StaticMeshAsset::load(std::string const& filePath)
+MeshAsset* MeshAsset::load(std::string const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -159,22 +159,22 @@ StaticMeshAsset* StaticMeshAsset::load(std::string const& filePath)
         ARKOSE_LOG(Warning, "Trying to load material asset with invalid file extension: '{}'", filePath);
     }
 
-    if (StaticMeshAsset* cachedAsset = s_staticMeshAssetCache.get(filePath)) {
+    if (MeshAsset* cachedAsset = s_meshAssetCache.get(filePath)) {
         return cachedAsset;
     }
 
-    auto newStaticMeshAsset = std::make_unique<StaticMeshAsset>();
-    bool success = newStaticMeshAsset->readFromFile(filePath);
+    auto newMeshAsset = std::make_unique<MeshAsset>();
+    bool success = newMeshAsset->readFromFile(filePath);
 
     if (!success) {
         return nullptr;
     }
 
-    return s_staticMeshAssetCache.put(filePath, std::move(newStaticMeshAsset));
+    return s_meshAssetCache.put(filePath, std::move(newMeshAsset));
 }
 
 
-bool StaticMeshAsset::readFromFile(std::string_view filePath)
+bool MeshAsset::readFromFile(std::string_view filePath)
 {
     std::ifstream fileStream(std::string(filePath), std::ios::binary);
     if (not fileStream.is_open()) {
@@ -212,7 +212,7 @@ bool StaticMeshAsset::readFromFile(std::string_view filePath)
     return true;
 }
 
-bool StaticMeshAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage)
+bool MeshAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage)
 {
     if (not isValidAssetPath(filePath)) {
         ARKOSE_LOG(Error, "Trying to write asset to file with invalid extension: '{}'", filePath);
@@ -235,7 +235,7 @@ bool StaticMeshAsset::writeToFile(std::string_view filePath, AssetStorage assetS
     } break;
     case AssetStorage::Json: {
         cereal::JSONOutputArchive archive(fileStream);
-        archive(cereal::make_nvp("static_mesh", *this));
+        archive(cereal::make_nvp("mesh", *this));
     } break;
     }
 
@@ -243,13 +243,13 @@ bool StaticMeshAsset::writeToFile(std::string_view filePath, AssetStorage assetS
     return true;
 }
 
-std::vector<PhysicsMesh> StaticMeshAsset::createPhysicsMeshes(size_t lodIdx) const
+std::vector<PhysicsMesh> MeshAsset::createPhysicsMeshes(size_t lodIdx) const
 {
     ARKOSE_ASSERT(lodIdx < LODs.size());
-    StaticMeshLODAsset const& lod = LODs[lodIdx];
+    MeshLODAsset const& lod = LODs[lodIdx];
 
     std::vector<PhysicsMesh> physicsMeshes {};
-    for (StaticMeshSegmentAsset const& meshSegment : lod.meshSegments) {
+    for (MeshSegmentAsset const& meshSegment : lod.meshSegments) {
 
         PhysicsMesh& physicsMesh = physicsMeshes.emplace_back();
         physicsMesh.positions = meshSegment.positions;

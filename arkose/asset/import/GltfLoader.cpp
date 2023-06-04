@@ -131,9 +131,8 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
     // Create all meshes definined in the glTF file (even potentially unused ones)
     for (size_t idx = 0; idx < gltfModel.meshes.size(); ++idx) {
         tinygltf::Mesh const& gltfMesh = gltfModel.meshes[idx];
-        // TODO: Ensure we're in fact loading in a *static* mesh
-        if (std::unique_ptr<StaticMeshAsset> staticMesh = createStaticMesh(gltfModel, gltfMesh)) {
-            result.staticMeshes.push_back(std::move(staticMesh));
+        if (std::unique_ptr<MeshAsset> staticMesh = createMesh(gltfModel, gltfMesh)) {
+            result.meshes.push_back(std::move(staticMesh));
         }
     }
 
@@ -170,8 +169,8 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
             // TODO: Maybe allow exporting Transforms as is, without flattening first?
             Transform flattenedTransform = transform.flattened();
 
-            StaticMeshAsset* staticMesh = result.staticMeshes[node.mesh].get();
-            result.meshInstances.push_back({ .staticMesh = staticMesh,
+            MeshAsset* mesh = result.meshes[node.mesh].get();
+            result.meshInstances.push_back({ .mesh = mesh,
                                              .transform = flattenedTransform });
         }
 
@@ -237,17 +236,17 @@ void GltfLoader::createTransformForNode(Transform& transform, const tinygltf::No
     }
 }
 
-std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Model& gltfModel, const tinygltf::Mesh& gltfMesh)
+std::unique_ptr<MeshAsset> GltfLoader::createMesh(const tinygltf::Model& gltfModel, const tinygltf::Mesh& gltfMesh)
 {
     SCOPED_PROFILE_ZONE();
 
-    auto staticMesh = std::make_unique<StaticMeshAsset>();
-    staticMesh->name = gltfMesh.name;
+    auto mesh = std::make_unique<MeshAsset>();
+    mesh->name = gltfMesh.name;
 
     // Only a sinle LOD used for glTF (without extensions)
-    StaticMeshLODAsset& lod0 = staticMesh->LODs.emplace_back();
-    staticMesh->minLOD = 0;
-    staticMesh->maxLOD = 0;
+    MeshLODAsset& lod0 = mesh->LODs.emplace_back();
+    mesh->minLOD = 0;
+    mesh->maxLOD = 0;
 
     // NOTE: Using reserve is important to maintain the mesh segment addresses for the segment material map!
     lod0.meshSegments.reserve(gltfMesh.primitives.size());
@@ -268,13 +267,13 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
         ARKOSE_ASSERT(positionAccessor.type == TINYGLTF_TYPE_VEC3);
 
         ark::aabb3 aabb = ark::aabb3(createVec3(positionAccessor.minValues), createVec3(positionAccessor.maxValues));
-        staticMesh->boundingBox = aabb;
+        mesh->boundingBox = aabb;
 
         vec3 center = (aabb.max + aabb.min) / 2.0f;
         float radius = length(aabb.max - aabb.min) / 2.0f;
-        staticMesh->boundingSphere = geometry::Sphere(center, radius);
+        mesh->boundingSphere = geometry::Sphere(center, radius);
 
-        StaticMeshSegmentAsset& meshSegment = lod0.meshSegments.emplace_back();
+        MeshSegmentAsset& meshSegment = lod0.meshSegments.emplace_back();
 
         // Write glTF material index to user data until we can resolve file paths
         const int materialIdx = gltfPrimitive.material;
@@ -352,7 +351,7 @@ std::unique_ptr<StaticMeshAsset> GltfLoader::createStaticMesh(const tinygltf::Mo
         }
     }
 
-    return staticMesh;
+    return mesh;
 }
 
 std::unique_ptr<AnimationAsset> GltfLoader::createAnimation(tinygltf::Model const& gltfModel, tinygltf::Animation const& gltfAnimation)

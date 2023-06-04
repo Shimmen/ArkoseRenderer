@@ -30,10 +30,10 @@ struct MeshletDataAsset {
     std::vector<u32> meshletIndices {};
 };
 
-class StaticMeshSegmentAsset {
+class MeshSegmentAsset {
 public:
-    StaticMeshSegmentAsset();
-    ~StaticMeshSegmentAsset();
+    MeshSegmentAsset();
+    ~MeshSegmentAsset();
 
     template<class Archive>
     void serialize(Archive&);
@@ -77,29 +77,29 @@ public:
     int userData { -1 };
 };
 
-class StaticMeshLODAsset {
+class MeshLODAsset {
 public:
-    StaticMeshLODAsset();
-    ~StaticMeshLODAsset();
+    MeshLODAsset();
+    ~MeshLODAsset();
 
     template<class Archive>
     void serialize(Archive&);
 
-    // List of static mesh segments to be rendered (at least one needed)
-    std::vector<StaticMeshSegmentAsset> meshSegments {};
+    // List of mesh segments to be rendered (at least one needed)
+    std::vector<MeshSegmentAsset> meshSegments {};
 };
 
-class StaticMeshAsset final : public Asset<StaticMeshAsset> {
+class MeshAsset final : public Asset<MeshAsset> {
 public:
-    StaticMeshAsset();
-    ~StaticMeshAsset();
+    MeshAsset();
+    ~MeshAsset();
 
     static constexpr const char* AssetFileExtension = "arkmsh";
     static constexpr std::array<char, 4> AssetMagicValue = { 'a', 'm', 's', 'h' };
 
-    // Load a static mesh asset (cached) from an .arkmsh file
-    // TODO: Figure out how we want to return this! Basic type, e.g. StaticMeshAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
-    static StaticMeshAsset* load(std::string const& filePath);
+    // Load a mesh asset (cached) from an .arkmsh file
+    // TODO: Figure out how we want to return this! Basic type, e.g. MeshAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
+    static MeshAsset* load(std::string const& filePath);
 
     virtual bool readFromFile(std::string_view filePath) override;
     virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) override;
@@ -109,8 +109,8 @@ public:
 
     std::vector<PhysicsMesh> createPhysicsMeshes(size_t lodIdx) const;
 
-    // Static mesh render data for each LODs (at least LOD0 needed)
-    std::vector<StaticMeshLODAsset> LODs {};
+    // Mesh render data for each LODs (at least LOD0 needed)
+    std::vector<MeshLODAsset> LODs {};
 
     // LOD settings for rendering
     u32 minLOD { 0 };
@@ -136,7 +136,7 @@ public:
 #include <cereal/types/vector.hpp>
 
 template<class Archive>
-void StaticMeshSegmentAsset::serialize(Archive& archive)
+void MeshSegmentAsset::serialize(Archive& archive)
 {
     archive(CEREAL_NVP(positions));
     archive(CEREAL_NVP(texcoord0s));
@@ -149,13 +149,13 @@ void StaticMeshSegmentAsset::serialize(Archive& archive)
 }
 
 template<class Archive>
-void StaticMeshLODAsset::serialize(Archive& archive)
+void MeshLODAsset::serialize(Archive& archive)
 {
     archive(CEREAL_NVP(meshSegments));
 }
 
 template<class Archive>
-void StaticMeshAsset::serialize(Archive& archive)
+void MeshAsset::serialize(Archive& archive)
 {
     archive(CEREAL_NVP(name));
 

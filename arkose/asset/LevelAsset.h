@@ -31,7 +31,7 @@ public:
 
     // Path to a mesh or an mesh asset directly
     // TODO: Convert static mesh asset!
-    // std::variant<std::string, std::weak_ptr<StaticMeshAsset>> mesh;
+    // std::variant<std::string, std::weak_ptr<MeshAsset>> mesh;
     std::variant<std::string, int> mesh;
 };
 

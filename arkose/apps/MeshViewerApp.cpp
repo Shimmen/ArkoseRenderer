@@ -35,7 +35,7 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     scene.setupFromDescription({ .maintainRayTracingScene = false });
 
-    StaticMeshAsset* boxMesh = StaticMeshAsset::load("assets/sample/models/Box/Box.arkmsh");
+    MeshAsset* boxMesh = MeshAsset::load("assets/sample/models/Box/Box.arkmsh");
     StaticMeshInstance& boxInstance = scene.addMesh(boxMesh);
     boxInstance.transform().setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(30.0f)));
 
@@ -181,7 +181,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
                 if (ImGui::BeginTabItem(lodLabel.c_str())) {
 
                     m_selectedLodIdx = lodIdx;
-                    StaticMeshLODAsset& lod = targetAsset().LODs[lodIdx];
+                    MeshLODAsset& lod = targetAsset().LODs[lodIdx];
 
                     if (m_selectedSegmentIdx >= lod.meshSegments.size()) {
                         m_selectedSegmentIdx = 0;
@@ -224,7 +224,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
 void MeshViewerApp::drawMeshMaterialPanel()
 {
     ImGui::Begin("Material");
-    if (StaticMeshSegmentAsset* segmentAsset = selectedSegmentAsset()) {
+    if (MeshSegmentAsset* segmentAsset = selectedSegmentAsset()) {
 
         // Only handle non-packaged up assets here, i.e. using a path, not a direct assets as it would be in a packed case
         ARKOSE_ASSERT(segmentAsset->hasPathToMaterial());
@@ -489,8 +489,8 @@ void MeshViewerApp::importMeshWithDialog()
         AssetImporter importer {};
         ImportResult assets = importer.importAsset(importFilePath, targetDirectory, m_importOptions);
 
-        ARKOSE_LOG(Info, "Imported {} static meshes, {} materials, and {} images.",
-                   assets.staticMeshes.size(), assets.materials.size(), assets.images.size());
+        ARKOSE_LOG(Info, "Imported {} meshes, {} materials, and {} images.",
+                   assets.meshes.size(), assets.materials.size(), assets.images.size());
     }
 }
 
@@ -516,25 +516,24 @@ void MeshViewerApp::importLevelWithDialog()
 
 void MeshViewerApp::loadMeshWithDialog()
 {
-    if (auto maybePath = FileDialog::open({ { "Arkose mesh", StaticMeshAsset::AssetFileExtension } })) {
+    if (auto maybePath = FileDialog::open({ { "Arkose mesh", MeshAsset::AssetFileExtension } })) {
 
         std::string openPath = maybePath.value();
         ARKOSE_LOG(Info, "Loading mesh from file '{}'", openPath);
 
-        StaticMeshAsset* staticMeshAsset = StaticMeshAsset::load(openPath);
-        if (staticMeshAsset != nullptr) {
+        if (MeshAsset* meshAsset = MeshAsset::load(openPath)) {
 
             m_scene->clearAllMeshInstances();
 
-            m_targetAsset = staticMeshAsset;
-            m_targetInstance = &m_scene->addMesh(staticMeshAsset);
+            m_targetAsset = meshAsset;
+            m_targetInstance = &m_scene->addMesh(meshAsset);
         }
     }
 }
 
 void MeshViewerApp::saveMeshWithDialog()
 {
-    if (auto maybePath = FileDialog::save({ { "Arkose mesh", StaticMeshAsset::AssetFileExtension } })) {
+    if (auto maybePath = FileDialog::save({ { "Arkose mesh", MeshAsset::AssetFileExtension } })) {
         
         std::string savePath = maybePath.value();
         ARKOSE_LOG(Info, "Saving mesh to file '{}'", savePath);

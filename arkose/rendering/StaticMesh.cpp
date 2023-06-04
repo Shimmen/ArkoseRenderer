@@ -1,10 +1,10 @@
 #include "StaticMesh.h"
 
-#include "asset/StaticMeshAsset.h"
+#include "asset/MeshAsset.h"
 #include "rendering/backend/base/AccelerationStructure.h"
 #include "rendering/GpuScene.h"
 
-StaticMeshSegment::StaticMeshSegment(StaticMeshSegmentAsset const* inAsset, MaterialHandle inMaterial, BlendMode inBlendMode, DrawKey inDrawKey)
+StaticMeshSegment::StaticMeshSegment(MeshSegmentAsset const* inAsset, MaterialHandle inMaterial, BlendMode inBlendMode, DrawKey inDrawKey)
     : asset(inAsset)
     , material(inMaterial)
     , blendMode(inBlendMode)
@@ -12,12 +12,12 @@ StaticMeshSegment::StaticMeshSegment(StaticMeshSegmentAsset const* inAsset, Mate
 {
 }
 
-StaticMeshLOD::StaticMeshLOD(StaticMeshLODAsset const* inAsset)
+StaticMeshLOD::StaticMeshLOD(MeshLODAsset const* inAsset)
     : asset(inAsset)
 {
 }
 
-StaticMesh::StaticMesh(StaticMeshAsset const* asset, MeshMaterialResolver&& materialResolver)
+StaticMesh::StaticMesh(MeshAsset const* asset, MeshMaterialResolver&& materialResolver)
     : m_asset(asset)
     , m_name(asset->name)
     , m_minLod(asset->minLOD)
@@ -25,7 +25,7 @@ StaticMesh::StaticMesh(StaticMeshAsset const* asset, MeshMaterialResolver&& mate
     , m_boundingBox(asset->boundingBox)
     , m_boundingSphere(asset->boundingSphere)
 {
-    for (StaticMeshLODAsset const& lodAsset : asset->LODs) {
+    for (MeshLODAsset const& lodAsset : asset->LODs) {
         StaticMeshLOD& lod = m_lods.emplace_back(&lodAsset);
         for (auto& segmentAsset : lodAsset.meshSegments) {
 
