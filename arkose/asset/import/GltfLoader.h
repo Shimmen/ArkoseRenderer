@@ -27,6 +27,7 @@ private:
     std::unique_ptr<MaterialAsset> createMaterial(tinygltf::Model const&, tinygltf::Material const&);
     std::unique_ptr<StaticMeshAsset> createStaticMesh(tinygltf::Model const&, tinygltf::Mesh const&);
     std::unique_ptr<AnimationAsset> createAnimation(tinygltf::Model const&, tinygltf::Animation const&);
+    std::unique_ptr<SkeletonAsset> createSkeleton(tinygltf::Model const&, tinygltf::Skin const&);
 
     vec3 createVec3(const std::vector<double>&) const;
     void createTransformForNode(Transform&, const tinygltf::Node&) const;

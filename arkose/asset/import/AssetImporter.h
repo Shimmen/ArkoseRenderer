@@ -5,6 +5,7 @@
 #include "asset/LevelAsset.h"
 #include "asset/MaterialAsset.h"
 #include "asset/StaticMeshAsset.h"
+#include "asset/SkeletonAsset.h"
 #include <string_view>
 #include <vector>
 
@@ -25,6 +26,7 @@ struct ImportResult {
     std::vector<std::unique_ptr<ImageAsset>> images {};
     std::vector<std::unique_ptr<MaterialAsset>> materials {};
     std::vector<std::unique_ptr<StaticMeshAsset>> staticMeshes {};
+    std::vector<std::unique_ptr<SkeletonAsset>> skeletons {};
     std::vector<std::unique_ptr<AnimationAsset>> animations {};
 
     std::vector<ImportedCamera> cameras {};

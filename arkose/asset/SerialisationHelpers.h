@@ -47,4 +47,13 @@ namespace ark {
                 cereal::make_nvp("max", aabb.max));
     }
 
+    template<class Archive>
+    void serialize(Archive& archive, mat4& m)
+    {
+        archive(cereal::make_nvp("x", m.x),
+                cereal::make_nvp("y", m.y),
+                cereal::make_nvp("z", m.z),
+                cereal::make_nvp("w", m.w));
+    }
+
 }

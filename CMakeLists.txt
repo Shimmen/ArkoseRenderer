@@ -38,6 +38,7 @@ set(ARKOSE_SOURCES
     arkose/asset/ImageAsset.cpp
     arkose/asset/LevelAsset.cpp
     arkose/asset/MaterialAsset.cpp
+    arkose/asset/SkeletonAsset.cpp
     arkose/asset/StaticMeshAsset.cpp
     arkose/asset/TextureCompressor.cpp
     arkose/asset/import/AssetImporter.cpp

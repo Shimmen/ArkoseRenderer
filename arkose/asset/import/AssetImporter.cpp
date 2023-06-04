@@ -152,6 +152,24 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         staticMesh->writeToFile(targetFilePath, AssetStorage::Binary);
     }
 
+    std::unordered_map<std::string, int> skeletonNameMap {};
+    for (auto& skeleton : result.skeletons) {
+
+        std::string fileName = skeleton->name;
+        if (fileName.empty()) {
+            fileName = "skeleton";
+        }
+
+        int count = skeletonNameMap[fileName]++;
+        if (count > 0 || fileName == "skeleton") {
+            fileName = std::format("{}_{}", fileName, count);
+        }
+
+        std::string targetFilePath = std::format("{}/{}.arkskel", targetDirectory, fileName);
+
+        skeleton->writeToFile(targetFilePath, AssetStorage::Json);
+    }
+
     std::unordered_map<std::string, int> animationNameMap {};
     for (auto& animation : result.animations) {
 

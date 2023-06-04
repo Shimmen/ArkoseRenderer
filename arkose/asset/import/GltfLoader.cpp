@@ -137,6 +137,14 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
         }
     }
 
+    // Create all skeletons definined in the glTF file (even potentially unused ones)
+    for (size_t idx = 0; idx < gltfModel.skins.size(); ++idx) {
+        tinygltf::Skin const& gltfSkin = gltfModel.skins[idx];
+        if (std::unique_ptr<SkeletonAsset> skeleton = createSkeleton(gltfModel, gltfSkin)) {
+            result.skeletons.push_back(std::move(skeleton));
+        }
+    }
+
     // Create all animations definined in the glTF file (even potentially unused ones)
     for (size_t idx = 0; idx < gltfModel.animations.size(); ++idx) {
         tinygltf::Animation const& gltfAnimation = gltfModel.animations[idx];
@@ -441,6 +449,66 @@ std::unique_ptr<AnimationAsset> GltfLoader::createAnimation(tinygltf::Model cons
     }
 
     return animation;
+}
+
+std::unique_ptr<SkeletonAsset> GltfLoader::createSkeleton(tinygltf::Model const& gltfModel, tinygltf::Skin const& gltfSkin)
+{
+    SCOPED_PROFILE_ZONE();
+
+    // NOTE: Here I'm mapping to a skeleton from a skin. In this context we can think of a skeleton being a general form
+    // of a skin, that can potentially be applied to any compatible skinned mesh. The way a skin is represented in glTF
+    // it's pretty much just a skeleton anyway, as the skin-parts (joint idx & weights) is part of the vertex data anyway.
+
+    auto skeleton = std::make_unique<SkeletonAsset>();
+    skeleton->name = gltfSkin.name;
+
+    tinygltf::Accessor const& invBindMatricesAccessor = gltfModel.accessors[gltfSkin.inverseBindMatrices];
+    ARKOSE_ASSERT(invBindMatricesAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+    ARKOSE_ASSERT(invBindMatricesAccessor.type == TINYGLTF_TYPE_MAT4);
+    mat4 const* firstInvBindMatrix = getTypedMemoryBufferForAccessor<mat4>(gltfModel, invBindMatricesAccessor);
+
+    std::unordered_map<int, int> jointIdxLookup {};
+    for (int idx = 0; idx < gltfSkin.joints.size(); ++idx) {
+        int nodeIdx = gltfSkin.joints[idx];
+        jointIdxLookup[nodeIdx] = idx;
+    }
+
+    // This max is not immediately obvious when in an hierarchy as it is in the asset...
+    skeleton->maxJointIdx = gltfSkin.joints.size() - 1;
+
+    // Traverse the children of the skeleton root node and keep track of the hierarchy, but only for nodes in gltfSkin.joints
+    // as there may be non-joint nodes part of the same hierarchy (may not be true but should work as an assumption I think).
+
+    std::function<void(int nodeIdx, SkeletonJointAsset&, SkeletonJointAsset*)> createSkeletonRecursively =
+        [&](int nodeIdx, SkeletonJointAsset& joint, SkeletonJointAsset* parentJoint) {
+            tinygltf::Node const& node = gltfModel.nodes[nodeIdx];
+
+            joint.name = node.name;
+            joint.index = jointIdxLookup[nodeIdx];
+            joint.invBindMatrix = *(firstInvBindMatrix + joint.index);
+
+            createTransformForNode(joint.transform, node);
+            if (parentJoint != nullptr) {
+                joint.transform.setParent(&parentJoint->transform);
+            }
+
+            // NOTE: This ensures we can safely pass around addresses of joints
+            joint.children.reserve(node.children.size());
+
+            for (int childNodeIdx : node.children) {
+                auto entry = jointIdxLookup.find(childNodeIdx);
+                if (entry != jointIdxLookup.end()) {
+                    SkeletonJointAsset& childJoint = joint.children.emplace_back();
+                    createSkeletonRecursively(childNodeIdx, childJoint, &joint);
+                }
+            }
+        };
+
+    // TODO: Do we need to start at the root of the node tree to resolve the transforms correctly?
+    // Now we start at the root joint node, but not the absolute bottom of the node tree.
+    createSkeletonRecursively(gltfSkin.skeleton, skeleton->rootJoint, nullptr);
+
+    return skeleton;
 }
 
 const tinygltf::Accessor* GltfLoader::findAccessorForPrimitive(const tinygltf::Model& gltfModel, const tinygltf::Primitive& gltfPrimitive, const char* name) const
