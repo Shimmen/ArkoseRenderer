@@ -43,11 +43,12 @@ void MeshletManager::allocateMeshlets(StaticMesh& staticMesh)
 {
     for (StaticMeshLOD& lod : staticMesh.LODs()) {
         for (StaticMeshSegment& meshSegment : lod.meshSegments) {
-
-            // TODO: Do this at asset processing time, not in runtime!
-            const_cast<MeshSegmentAsset*>(meshSegment.asset)->generateMeshlets();
-
-            m_segmentsAwaitingUpload.push_back(&meshSegment);
+            if (meshSegment.asset->meshletData.has_value()) {
+                m_segmentsAwaitingUpload.push_back(&meshSegment);
+            } else {
+                ARKOSE_LOG(Warning, "Meshlet manager: skipping mesh segment due to no meshlet data.");
+                //const_cast<MeshSegmentAsset*>(meshSegment.asset)->generateMeshlets();
+            }
         }
     }
 }

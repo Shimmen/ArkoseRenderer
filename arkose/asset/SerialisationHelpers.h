@@ -22,8 +22,8 @@ namespace ark {
                 cereal::make_nvp("z", v.z));
     }
 
-    template<class Archive>
-    void serialize(Archive& archive, vec4& v)
+    template<class Archive, typename T>
+    void serialize(Archive& archive, ark::tvec4<T>& v)
     {
         archive(cereal::make_nvp("x", v.x),
                 cereal::make_nvp("y", v.y),

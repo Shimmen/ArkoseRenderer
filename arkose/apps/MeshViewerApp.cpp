@@ -133,6 +133,7 @@ void MeshViewerApp::drawMenuBar()
                 ImGui::MenuItem("Always make image assets", nullptr, &m_importOptions.alwaysMakeImageAsset);
                 ImGui::MenuItem("Compress images", nullptr, &m_importOptions.blockCompressImages);
                 ImGui::MenuItem("Generate mipmaps", nullptr, &m_importOptions.generateMipmaps);
+                ImGui::MenuItem("Save meshes as json", nullptr, &m_importOptions.saveMeshesInTextualFormat);
                 ImGui::EndMenu();
             }
             ImGui::EndMenu();

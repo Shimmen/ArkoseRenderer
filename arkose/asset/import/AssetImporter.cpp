@@ -111,13 +111,23 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         int count = materialNameMap[fileName]++;
         if (count > 0 || fileName == "material") {
-            fileName = std::format("{}_{}", fileName, count);
+            fileName = std::format("{}{:04}", fileName, count);
         }
 
         std::string targetFilePath = std::format("{}/{}.arkmat", targetDirectory, fileName);
 
         material->writeToFile(targetFilePath, AssetStorage::Json);
     }
+
+    // Generate meshlets for all meshes in parallel
+    ParallelFor(result.meshes.size(), [&](size_t idx) {
+        auto& mesh = result.meshes[idx];
+        for (MeshLODAsset& lod : mesh->LODs) {
+            for (MeshSegmentAsset& meshSegment : lod.meshSegments) {
+                meshSegment.generateMeshlets();
+            }
+        }
+    });
 
     std::unordered_map<std::string, int> meshNameMap {};
     for (auto& mesh : result.meshes) {
@@ -143,13 +153,14 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         int count = meshNameMap[fileName]++;
         if (count > 0 || fileName == "mesh") {
-            fileName = std::format("{}_{}", fileName, count);
+            fileName = std::format("{}{:04}", fileName, count);
         }
 
         std::string targetFilePath = std::format("{}/{}.arkmsh", targetDirectory, fileName);
 
-        // TODO: Write to json when importing! It's currently super slow with all the data we have, but if we separate out the core data it will be fine.
-        mesh->writeToFile(targetFilePath, AssetStorage::Binary);
+        // TODO: Json is currently super slow with all the data we have, even for smaller meshes, but if we separate out the core data it will be fine.
+        AssetStorage assetStorage = options.saveMeshesInTextualFormat ? AssetStorage::Json : AssetStorage::Binary;
+        mesh->writeToFile(targetFilePath, assetStorage);
     }
 
     std::unordered_map<std::string, int> skeletonNameMap {};
@@ -162,7 +173,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         int count = skeletonNameMap[fileName]++;
         if (count > 0 || fileName == "skeleton") {
-            fileName = std::format("{}_{}", fileName, count);
+            fileName = std::format("{}{:04}", fileName, count);
         }
 
         std::string targetFilePath = std::format("{}/{}.arkskel", targetDirectory, fileName);
@@ -180,7 +191,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         int count = animationNameMap[fileName]++;
         if (count > 0 || fileName == "animation") {
-            fileName = std::format("{}_{}", fileName, count);
+            fileName = std::format("{}{:04}", fileName, count);
         }
 
         std::string targetFilePath = std::format("{}/{}.arkanim", targetDirectory, fileName);

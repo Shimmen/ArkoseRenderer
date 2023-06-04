@@ -319,6 +319,44 @@ std::unique_ptr<MeshAsset> GltfLoader::createMesh(const tinygltf::Model& gltfMod
             meshSegment.tangents = std::vector<vec4>(firstTangent, firstTangent + accessor->count);
         }
 
+        if (const tinygltf::Accessor* accessor = findAccessorForPrimitive(gltfModel, gltfPrimitive, "JOINTS_0")) {
+            SCOPED_PROFILE_ZONE_NAMED("Copy joint indices data");
+
+            ARKOSE_ASSERT(accessor->type == TINYGLTF_TYPE_VEC4);
+
+            meshSegment.jointIndices.reserve(accessor->count);
+
+            switch (accessor->componentType) {
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE: {
+                const ark::tvec4<u8>* firstJointIndices = getTypedMemoryBufferForAccessor<ark::tvec4<u8>>(gltfModel, *accessor);
+                for (size_t i = 0; i < accessor->count; ++i) {
+                    ark::tvec4<u8> const& valuesAsU8 = *(firstJointIndices + i);
+                    meshSegment.jointIndices.emplace_back(static_cast<u16>(valuesAsU8.x),
+                                                          static_cast<u16>(valuesAsU8.y),
+                                                          static_cast<u16>(valuesAsU8.z),
+                                                          static_cast<u16>(valuesAsU8.w));
+                }
+            } break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT: {
+                const ark::tvec4<u16>* firstJointIndices = getTypedMemoryBufferForAccessor<ark::tvec4<u16>>(gltfModel, *accessor);
+                meshSegment.jointIndices = std::vector<ark::tvec4<u16>>(firstJointIndices, firstJointIndices + accessor->count);
+            } break;
+            default:
+                NOT_YET_IMPLEMENTED();
+            }
+        }
+
+        if (const tinygltf::Accessor* accessor = findAccessorForPrimitive(gltfModel, gltfPrimitive, "WEIGHTS_0")) {
+            SCOPED_PROFILE_ZONE_NAMED("Copy joint weights data");
+
+            ARKOSE_ASSERT(accessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+            ARKOSE_ASSERT(accessor->type == TINYGLTF_TYPE_VEC4);
+
+            meshSegment.jointWeights.reserve(accessor->count);
+            const vec4* firstJointWeight = getTypedMemoryBufferForAccessor<vec4>(gltfModel, *accessor);
+            meshSegment.jointWeights = std::vector<vec4>(firstJointWeight, firstJointWeight + accessor->count);
+        }
+
         if (gltfPrimitive.indices != -1) {
 
             const tinygltf::Accessor& accessor = gltfModel.accessors[gltfPrimitive.indices];
@@ -514,7 +552,7 @@ const tinygltf::Accessor* GltfLoader::findAccessorForPrimitive(const tinygltf::M
 {
     auto entry = gltfPrimitive.attributes.find(name);
     if (entry == gltfPrimitive.attributes.end()) {
-        ARKOSE_LOG(Error, "glTF loader: primitive is missing attribute of name '{}'", name);
+        //ARKOSE_LOG(Error, "glTF loader: primitive is missing attribute of name '{}'", name);
         return nullptr;
     }
 
