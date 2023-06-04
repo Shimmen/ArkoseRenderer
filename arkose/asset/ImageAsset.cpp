@@ -1,5 +1,6 @@
 #include "ImageAsset.h"
 
+#include "asset/AssetCache.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "utility/FileIO.h"
@@ -9,13 +10,11 @@
 #include <cereal/types/string.hpp>
 #include <cereal/types/vector.hpp>
 #include <fstream>
-#include <mutex>
 #include <stb_image.h>
 #include <zstd/zstd.h>
 
 namespace {
-    static std::mutex s_imageAssetCacheMutex {};
-    static std::unordered_map<std::string, std::unique_ptr<ImageAsset>> s_imageAssetCache {};
+AssetCache<ImageAsset> s_imageAssetCache {};
 }
 
 ImageAsset::ImageAsset() = default;
@@ -152,14 +151,8 @@ ImageAsset* ImageAsset::load(std::string const& filePath)
         ARKOSE_LOG(Warning, "Trying to load image asset with invalid file extension: '{}'", filePath);
     }
 
-    {
-        SCOPED_PROFILE_ZONE_NAMED("Image cache - load");
-        std::scoped_lock<std::mutex> lock { s_imageAssetCacheMutex };
-
-        auto entry = s_imageAssetCache.find(filePath);
-        if (entry != s_imageAssetCache.end()) {
-            return entry->second.get();
-        }
+    if (ImageAsset* cachedAsset = s_imageAssetCache.get(filePath)) {
+        return cachedAsset;
     }
 
     auto newImageAsset = std::make_unique<ImageAsset>();
@@ -169,12 +162,7 @@ ImageAsset* ImageAsset::load(std::string const& filePath)
         return nullptr;
     }
 
-    {
-        SCOPED_PROFILE_ZONE_NAMED("Image cache - store");
-        std::scoped_lock<std::mutex> lock { s_imageAssetCacheMutex };
-        s_imageAssetCache[filePath] = std::move(newImageAsset);
-        return s_imageAssetCache[filePath].get();
-    }
+    return s_imageAssetCache.put(filePath, std::move(newImageAsset));
 }
 
 ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
@@ -183,14 +171,8 @@ ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
         return load(filePath);
     } else {
 
-        {
-            SCOPED_PROFILE_ZONE_NAMED("Image cache - load source asset");
-            std::scoped_lock<std::mutex> lock { s_imageAssetCacheMutex };
-
-            auto entry = s_imageAssetCache.find(filePath);
-            if (entry != s_imageAssetCache.end()) {
-                return entry->second.get();
-            }
+        if (ImageAsset* cachedAsset = s_imageAssetCache.get(filePath)) {
+            return cachedAsset;
         }
 
         std::unique_ptr<ImageAsset> newImageAsset = createFromSourceAsset(filePath);
@@ -200,12 +182,7 @@ ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
 
         newImageAsset->setAssetFilePath(filePath);
 
-        {
-            SCOPED_PROFILE_ZONE_NAMED("Image cache - store source asset");
-            std::scoped_lock<std::mutex> lock { s_imageAssetCacheMutex };
-            s_imageAssetCache[filePath] = std::move(newImageAsset);
-            return s_imageAssetCache[filePath].get();
-        }
+        return s_imageAssetCache.put(filePath, std::move(newImageAsset));
     }
 }
 
@@ -238,6 +215,8 @@ bool ImageAsset::readFromFile(std::string_view filePath)
     if (isCompressed()) {
         decompress();
     }
+
+    return true;
 }
 
 bool ImageAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage)

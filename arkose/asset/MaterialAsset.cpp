@@ -1,5 +1,6 @@
 #include "MaterialAsset.h"
 
+#include "asset/AssetCache.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "utility/FileIO.h"
@@ -7,11 +8,9 @@
 #include <cereal/cereal.hpp>
 #include <cereal/archives/binary.hpp>
 #include <cereal/archives/json.hpp>
-#include <mutex>
 
 namespace {
-    static std::mutex s_materialAssetCacheMutex {};
-    static std::unordered_map<std::string, std::unique_ptr<MaterialAsset>> s_materialAssetCache {};
+AssetCache<MaterialAsset> s_materialAssetCache {};
 }
 
 MaterialInput::MaterialInput() = default;
@@ -28,14 +27,8 @@ MaterialAsset* MaterialAsset::load(std::string const& filePath)
         ARKOSE_LOG(Warning, "Trying to load material asset with invalid file extension: '{}'", filePath);
     }
 
-    {
-        SCOPED_PROFILE_ZONE_NAMED("Material cache - load");
-        std::scoped_lock<std::mutex> lock { s_materialAssetCacheMutex };
-
-        auto entry = s_materialAssetCache.find(filePath);
-        if (entry != s_materialAssetCache.end()) {
-            return entry->second.get();
-        }
+    if (MaterialAsset* cachedAsset = s_materialAssetCache.get(filePath)) {
+        return cachedAsset;
     }
 
     auto newMaterialAsset = std::make_unique<MaterialAsset>();
@@ -45,12 +38,7 @@ MaterialAsset* MaterialAsset::load(std::string const& filePath)
         return nullptr;
     }
 
-    {
-        SCOPED_PROFILE_ZONE_NAMED("Material cache - store");
-        std::scoped_lock<std::mutex> lock { s_materialAssetCacheMutex };
-        s_materialAssetCache[filePath] = std::move(newMaterialAsset);
-        return s_materialAssetCache[filePath].get();
-    }
+    return s_materialAssetCache.put(filePath, std::move(newMaterialAsset));
 }
 
 bool MaterialAsset::readFromFile(std::string_view filePath)

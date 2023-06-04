@@ -1,14 +1,13 @@
 #include "LevelAsset.h"
 
+#include "asset/AssetCache.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "utility/FileIO.h"
 #include "utility/Profiling.h"
-#include <mutex>
 
 namespace {
-static std::mutex s_levelAssetCacheMutex {};
-static std::unordered_map<std::string, std::unique_ptr<LevelAsset>> s_levelAssetCache {};
+AssetCache<LevelAsset> s_levelAssetCache {};
 }
 
 LevelAsset::LevelAsset() = default;
@@ -22,14 +21,8 @@ LevelAsset* LevelAsset::load(std::string const& filePath)
         ARKOSE_LOG(Warning, "Trying to load level asset with invalid file extension: '{}'", filePath);
     }
 
-    {
-        SCOPED_PROFILE_ZONE_NAMED("Level cache - load");
-        std::scoped_lock<std::mutex> lock { s_levelAssetCacheMutex };
-
-        auto entry = s_levelAssetCache.find(filePath);
-        if (entry != s_levelAssetCache.end()) {
-            return entry->second.get();
-        }
+    if (LevelAsset* cachedAsset = s_levelAssetCache.get(filePath)) {
+        return cachedAsset;
     }
 
     auto newLevelAsset = std::make_unique<LevelAsset>();
@@ -39,12 +32,7 @@ LevelAsset* LevelAsset::load(std::string const& filePath)
         return nullptr;
     }
 
-    {
-        SCOPED_PROFILE_ZONE_NAMED("Level cache - store");
-        std::scoped_lock<std::mutex> lock { s_levelAssetCacheMutex };
-        s_levelAssetCache[filePath] = std::move(newLevelAsset);
-        return s_levelAssetCache[filePath].get();
-    }
+    return s_levelAssetCache.put(filePath, std::move(newLevelAsset));
 }
 
 bool LevelAsset::readFromFile(std::string_view filePath)

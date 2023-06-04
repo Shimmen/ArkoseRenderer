@@ -1,5 +1,6 @@
 #include "StaticMeshAsset.h"
 
+#include "asset/AssetCache.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "physics/PhysicsMesh.h"
@@ -8,11 +9,9 @@
 #include <cereal/archives/binary.hpp>
 #include <cereal/archives/json.hpp>
 #include <meshoptimizer.h>
-#include <mutex>
 
 namespace {
-    static std::mutex s_staticMeshAssetCacheMutex {};
-    static std::unordered_map<std::string, std::unique_ptr<StaticMeshAsset>> s_staticMeshAssetCache {};
+AssetCache<StaticMeshAsset> s_staticMeshAssetCache {};
 }
 
 StaticMeshSegmentAsset::StaticMeshSegmentAsset() = default;
@@ -160,14 +159,8 @@ StaticMeshAsset* StaticMeshAsset::load(std::string const& filePath)
         ARKOSE_LOG(Warning, "Trying to load material asset with invalid file extension: '{}'", filePath);
     }
 
-    {
-        SCOPED_PROFILE_ZONE_NAMED("Static mesh cache - load");
-        std::scoped_lock<std::mutex> lock { s_staticMeshAssetCacheMutex };
-
-        auto entry = s_staticMeshAssetCache.find(filePath);
-        if (entry != s_staticMeshAssetCache.end()) {
-            return entry->second.get();
-        }
+    if (StaticMeshAsset* cachedAsset = s_staticMeshAssetCache.get(filePath)) {
+        return cachedAsset;
     }
 
     auto newStaticMeshAsset = std::make_unique<StaticMeshAsset>();
@@ -177,12 +170,7 @@ StaticMeshAsset* StaticMeshAsset::load(std::string const& filePath)
         return nullptr;
     }
 
-    {
-        SCOPED_PROFILE_ZONE_NAMED("Static mesh cache - store");
-        std::scoped_lock<std::mutex> lock { s_staticMeshAssetCacheMutex };
-        s_staticMeshAssetCache[filePath] = std::move(newStaticMeshAsset);
-        return s_staticMeshAssetCache[filePath].get();
-    }
+    return s_staticMeshAssetCache.put(filePath, std::move(newStaticMeshAsset));
 }
 
 
