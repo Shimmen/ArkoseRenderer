@@ -7,4 +7,9 @@ struct MeshletNonPositionVertex {
     vec4 tangent;
 };
 
+struct MeshletSkinningVertex {
+    uvec4 jointIndices; // TODO: Pack to u16?!
+    vec4 jointWeights;
+};
+
 #endif // MESHLET_VERTEX_H

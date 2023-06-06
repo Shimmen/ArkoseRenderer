@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Assert.h"
+#include "core/Types.h"
 #include <string>
 #include <vector>
 
@@ -11,6 +12,8 @@ enum class VertexComponent : int {
     TexCoord2F,
     Tangent4F,
     Color3F,
+    JointIdx4U32,
+    JointWeight4F,
 };
 
 static constexpr size_t vertexComponentSize(VertexComponent component)
@@ -24,7 +27,10 @@ static constexpr size_t vertexComponentSize(VertexComponent component)
     case VertexComponent::TexCoord2F:
         return 2 * sizeof(float);
     case VertexComponent::Tangent4F:
+    case VertexComponent::JointWeight4F:
         return 4 * sizeof(float);
+    case VertexComponent::JointIdx4U32:
+        return 4 * sizeof(u32);
     default:
         ASSERT_NOT_REACHED();
     }
@@ -45,6 +51,10 @@ static constexpr const char* vertexComponentToString(VertexComponent component)
         return "Tangent4F";
     case VertexComponent::Color3F:
         return "Color3F";
+    case VertexComponent::JointIdx4U32:
+        return "JointIdx4U32";
+    case VertexComponent::JointWeight4F:
+        return "JointWeight4F";
     default:
         ASSERT_NOT_REACHED();
     }

@@ -75,6 +75,11 @@ void MeshSegmentAsset::generateMeshlets()
     }
 }
 
+bool MeshSegmentAsset::hasSkinningData() const
+{
+    return jointIndices.size() == jointWeights.size() && jointIndices.size() == vertexCount();
+}
+
 size_t MeshSegmentAsset::vertexCount() const
 {
     size_t count = positions.size();

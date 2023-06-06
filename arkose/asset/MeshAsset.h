@@ -48,6 +48,9 @@ public:
 
     void generateMeshlets();
 
+    // Returns true if this segment contains skinning data and thus can be used to create a skeletal mesh
+    bool hasSkinningData() const;
+
     size_t vertexCount() const;
     std::vector<u8> assembleVertexData(const VertexLayout&) const;
 
