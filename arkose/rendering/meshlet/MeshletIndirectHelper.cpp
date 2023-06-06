@@ -9,8 +9,8 @@
 
 MeshletIndirectBuffer& MeshletIndirectHelper::createIndirectBuffer(Registry& reg, DrawKey drawKeyMask, u32 maxMeshletCount) const
 {
-    constexpr size_t countSizeWithPadding = sizeof(ark::uvec4);
-    size_t bufferSize = maxMeshletCount * sizeof(ark::uvec4) + countSizeWithPadding;
+    constexpr size_t countSizeWithPadding = sizeof(uvec4);
+    size_t bufferSize = maxMeshletCount * sizeof(uvec4) + countSizeWithPadding;
 
     auto& indirectBuffer = reg.allocate<MeshletIndirectBuffer>();
     indirectBuffer.buffer = &reg.createBuffer(bufferSize, Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
@@ -79,8 +79,8 @@ void MeshletIndirectHelper::drawMeshletsWithIndirectBuffer(CommandList& cmdList,
 
     // Indirect command data start at the next uvec4 after the count, with a stride of uvec4.
     // The w-component of the uvec4 is the "drawable lookup" which is metadata.
-    constexpr u32 cmdDataStride = sizeof(ark::uvec4);
-    constexpr u32 cmdDataOffset = sizeof(ark::uvec4);
+    constexpr u32 cmdDataStride = sizeof(uvec4);
+    constexpr u32 cmdDataOffset = sizeof(uvec4);
 
     cmdList.drawMeshTasksIndirect(*indirectBuffer.buffer, cmdDataStride, cmdDataOffset,
                                   *indirectBuffer.buffer, countDataOffset);
