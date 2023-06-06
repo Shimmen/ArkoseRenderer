@@ -43,7 +43,10 @@ void main()
     uint meshletIdx = fromTaskShader.meshletBaseIndex + fromTaskShader.meshletRelativeIndices[gl_WorkGroupID.x];
     ShaderMeshlet meshlet = meshlets[meshletIdx];
 
-    SetMeshOutputsEXT(meshlet.vertexCount, meshlet.triangleCount);
+    uint meshletTriangleCount = meshlet.skinningFirstVertex_triangleCount & SHADER_MESHLET_TRIANGLE_COUNT_BIT_MASK;
+    uint skinningFirstVertex = meshlet.skinningFirstVertex_triangleCount >> SHADER_MESHLET_TRIANGLE_COUNT_BIT_COUNT;
+
+    SetMeshOutputsEXT(meshlet.vertexCount, meshletTriangleCount);
 
     const uint vertexIterations = (MAX_VERTEX_COUNT + GROUP_SIZE - 1) / GROUP_SIZE;
     const uint primitiveIterations = (MAX_PRIMITIVE_COUNT + GROUP_SIZE - 1) / GROUP_SIZE;
@@ -66,7 +69,7 @@ void main()
 
     for (uint it = 0; it < primitiveIterations; ++it) {
         uint primitiveIdx = gl_LocalInvocationIndex + it * GROUP_SIZE;
-        primitiveIdx = min(primitiveIdx, meshlet.triangleCount - 1);
+        primitiveIdx = min(primitiveIdx, meshletTriangleCount - 1);
 
         uvec3 idx = uvec3(meshletIndices[meshlet.firstIndex + 3 * primitiveIdx + 0],
                           meshletIndices[meshlet.firstIndex + 3 * primitiveIdx + 1],

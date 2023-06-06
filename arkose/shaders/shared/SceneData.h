@@ -12,9 +12,13 @@ struct ShaderDrawable {
     uint meshletCount;
 };
 
+// NOTE: For extracting `triangleCount` from `skinningFirstVertex_triangleCount`
+#define SHADER_MESHLET_TRIANGLE_COUNT_BIT_COUNT (8)
+#define SHADER_MESHLET_TRIANGLE_COUNT_BIT_MASK ((1 << SHADER_MESHLET_TRIANGLE_COUNT_BIT_COUNT) - 1)
+
 struct ShaderMeshlet {
     uint firstIndex;
-    uint triangleCount; // TODO: Make u8? Should never have more than 256 triangles! But we need the padding anyway..
+    uint skinningFirstVertex_triangleCount;
     uint firstVertex;
     uint vertexCount;
 

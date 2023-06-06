@@ -110,8 +110,10 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
 
         for (MeshletAsset const& meshletAsset : meshletDataAsset.meshlets) {
 
+            ARKOSE_ASSERT((meshletAsset.triangleCount & SHADER_MESHLET_TRIANGLE_COUNT_BIT_MASK) == meshletAsset.triangleCount);
+
             ShaderMeshlet meshlet { .firstIndex = m_nextIndexIdx + meshletAsset.firstIndex,
-                                    .triangleCount = meshletAsset.triangleCount,
+                                    .skinningFirstVertex_triangleCount = meshletAsset.triangleCount,
                                     .firstVertex = m_nextVertexIdx,
                                     .vertexCount = meshletAsset.vertexCount,
                                     .center = meshletAsset.center,
