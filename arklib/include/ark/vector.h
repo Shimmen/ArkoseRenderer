@@ -847,4 +847,7 @@ using vec4 = ark::vec4;
 using ivec2 = ark::ivec2;
 using ivec3 = ark::ivec3;
 using ivec4 = ark::ivec4;
+using uvec2 = ark::uvec2;
+using uvec3 = ark::uvec3;
+using uvec4 = ark::uvec4;
 #endif
