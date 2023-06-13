@@ -132,10 +132,6 @@ void main()
             color = vec3(0.0);
             hit.dist *= 0.2;
         }
-
-        float probeSpacing = max(max(probeGridData.probeSpacing.x, probeGridData.probeSpacing.y), probeGridData.probeSpacing.z);
-        float maxDistance = 2.5 * probeSpacing; // TODO: This number is quite arbitrary, needs testing
-        hit.dist = min(hit.dist, maxDistance);
     }
 
     // NOTE: hit.dist is <0 if it's a backface hit!

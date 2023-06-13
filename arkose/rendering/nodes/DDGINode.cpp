@@ -126,6 +126,9 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
             scene.scene().probeGrid().gridDimensions.height(),
             scene.scene().probeGrid().gridDimensions.depth());
 
+        vec3 probeSpacing = scene.scene().probeGrid().probeSpacing;
+        float gridMaxSpacing = std::max(probeSpacing.x, std::max(probeSpacing.y, probeSpacing.z));
+
         // 1. Ray trace to collect surfel data (including indirect light from last frame's probe data)
         {
             ScopedDebugZone traceRaysZone(cmdList, "Trace rays");
@@ -172,6 +175,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
             cmdList.setNamedUniform("hysterisis", appState.isFirstFrame() ? 0.0f : m_hysteresisVisibility);
             cmdList.setNamedUniform("visibilitySharpness", m_visibilitySharpness);
             cmdList.setNamedUniform("gridDimensions", gridDimensions);
+            cmdList.setNamedUniform("gridMaxSpacing", gridMaxSpacing);
             cmdList.setNamedUniform("firstProbeIdx", firstProbeIdx);
             cmdList.setNamedUniform("raysPerProbe", raysPerProbe);
             cmdList.setNamedUniform("frameIdx", frameIdx);

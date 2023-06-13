@@ -11,6 +11,7 @@ layout(set = 0, binding = 1, rgba16f) uniform          image2D probeVisibilityAt
 NAMED_UNIFORMS(pushConstants,
     float visibilitySharpness;
     ivec3 gridDimensions;
+    float gridMaxSpacing;
     uint firstProbeIdx;
     uint raysPerProbe;
     float hysterisis;
@@ -45,6 +46,9 @@ void main()
         float weight = pow(max(0.0, dot(texelDirection, rayDirection)), pushConstants.visibilitySharpness);
 
         float surfelRayDistance = imageLoad(surfelImage, ivec2(surfelProbeIdx, sampleIdx)).a;
+
+        float maxDistance = 1.5 * pushConstants.gridMaxSpacing; // TODO: This number is quite arbitrary, needs testing
+        surfelRayDistance = min(abs(surfelRayDistance), maxDistance);
 
         newVisibility += weight * vec2(surfelRayDistance, square(surfelRayDistance));
         totalWeight += weight;
