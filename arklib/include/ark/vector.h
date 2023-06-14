@@ -772,6 +772,12 @@ struct tvec4<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
 };
 
 template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr tvec4<T> operator*(T lhs, const tvec4<T>& rhs)
+{
+    return rhs * lhs;
+}
+
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
 constexpr T dot(const tvec4<T>& lhs, const tvec4<T>& rhs)
 {
     return lhs.x * rhs.x + lhs.y * rhs.y + lhs.z * rhs.z + lhs.w * rhs.w;
@@ -818,6 +824,12 @@ template<typename T, ENABLE_IF_FLOATING_POINT(T)>
 constexpr tvec4<T> normalize(const tvec4<T>& v)
 {
     return v / length(v);
+}
+
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr tvec4<T> lerp(const tvec4<T>& a, const tvec4<T>& b, T x)
+{
+    return (static_cast<T>(1) - x) * a + x * b;
 }
 
 using vec4 = tvec4<Float>;
