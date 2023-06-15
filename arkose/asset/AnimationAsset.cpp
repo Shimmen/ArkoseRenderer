@@ -25,7 +25,7 @@ AnimationAsset* AnimationAsset::load(std::string const& filePath)
     }
 
     {
-        SCOPED_PROFILE_ZONE_NAMED("Material cache - load");
+        SCOPED_PROFILE_ZONE_NAMED("Animation cache - load");
         std::scoped_lock<std::mutex> lock { s_animationAssetCacheMutex };
 
         auto entry = s_animationAssetCache.find(filePath);
@@ -38,7 +38,7 @@ AnimationAsset* AnimationAsset::load(std::string const& filePath)
     newAnimationAsset->readFromFile(filePath);
 
     {
-        SCOPED_PROFILE_ZONE_NAMED("Material cache - store");
+        SCOPED_PROFILE_ZONE_NAMED("Animation cache - store");
         std::scoped_lock<std::mutex> lock { s_animationAssetCacheMutex };
         s_animationAssetCache[filePath] = std::move(newAnimationAsset);
     }

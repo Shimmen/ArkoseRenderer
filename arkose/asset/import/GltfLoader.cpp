@@ -396,7 +396,7 @@ std::unique_ptr<AnimationAsset> GltfLoader::createAnimation(tinygltf::Model cons
 {
     SCOPED_PROFILE_ZONE();
 
-    std::unordered_map<size_t, size_t> inputIndexLookup {};
+    std::unordered_map<size_t, size_t> inputTrackIdxLookup {};
 
     auto animation = std::make_unique<AnimationAsset>();
     animation->name = gltfAnimation.name;
@@ -444,11 +444,11 @@ std::unique_ptr<AnimationAsset> GltfLoader::createAnimation(tinygltf::Model cons
         tinygltf::Accessor const& outputAccessor = gltfModel.accessors[gltfAnimationSampler.output];
 
         // Time (input)
-        auto timeEntry = inputIndexLookup.find(gltfAnimationSampler.input);
-        if (timeEntry == inputIndexLookup.end()) {
-            inputIndexLookup[gltfAnimationSampler.input] = animation->inputValues.size();
+        auto timeEntry = inputTrackIdxLookup.find(gltfAnimationSampler.input);
+        if (timeEntry == inputTrackIdxLookup.end()) {
+            inputTrackIdxLookup[gltfAnimationSampler.input] = animation->inputTracks.size();
             float const* firstInputValue = getTypedMemoryBufferForAccessor<float>(gltfModel, inputAccessor);
-            animation->inputValues.emplace_back(std::vector<float>(firstInputValue, firstInputValue + inputAccessor.count));
+            animation->inputTracks.emplace_back(std::vector<float>(firstInputValue, firstInputValue + inputAccessor.count));
         }
 
         auto createAnimationChannelAsset = [&]<typename T>(T proxyValue) -> AnimationChannelAsset<T> {
@@ -456,7 +456,7 @@ std::unique_ptr<AnimationAsset> GltfLoader::createAnimation(tinygltf::Model cons
             channelAsset.targetProperty = targetProperty;
             channelAsset.targetReference = targetName;
 
-            channelAsset.sampler.inputIdx = inputIndexLookup[gltfAnimationSampler.input];
+            channelAsset.sampler.inputTrackIdx = inputTrackIdxLookup[gltfAnimationSampler.input];
             channelAsset.sampler.interpolation = interpolation;
 
             // Animated value (output)

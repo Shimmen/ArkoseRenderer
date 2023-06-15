@@ -39,7 +39,7 @@ public:
     AnimationSamplerAsset() = default;
     ~AnimationSamplerAsset() = default;
 
-    u32 inputIdx {}; // Refers to an element in the parent animation asset array of `inputValues`
+    u32 inputTrackIdx {}; // Refers to an element in the parent animation asset array of `inputTracks`
     std::vector<PropertyType> outputValues {};
     AnimationInterpolation interpolation { AnimationInterpolation::Linear };
 };
@@ -73,8 +73,8 @@ public:
     template<class Archive>
     void serialize(Archive&, u32 version);
 
-    // List of time/input values for sampling
-    std::vector<std::vector<float>> inputValues {};
+    // List of time/input tracks for sampling
+    std::vector<std::vector<float>> inputTracks {};
 
     std::vector<AnimationChannelAsset<f32>> floatPropertyChannels {};
     std::vector<AnimationChannelAsset<vec2>> float2PropertyChannels {};
@@ -143,7 +143,7 @@ template<class Archive, typename PropertyType>
 void serialize(Archive& archive, AnimationSamplerAsset<PropertyType>& samplerAsset, u32 version)
 {
     //archive(cereal::make_nvp("times", samplerAsset.times));
-    archive(cereal::make_nvp("inputIdx", samplerAsset.inputIdx));
+    archive(cereal::make_nvp("inputTrackIdx", samplerAsset.inputTrackIdx));
     archive(cereal::make_nvp("outputValues", samplerAsset.outputValues));
     archive(cereal::make_nvp("interpolation", samplerAsset.interpolation));
 }
@@ -164,7 +164,7 @@ void AnimationAsset::serialize(Archive& archive, u32 versionInt)
     //if (version >= AnimationAssetVersion::SomethingWasAdded) { serializeSomething(); }
 
     archive(cereal::make_nvp("name", name));
-    archive(cereal::make_nvp("inputValues", inputValues));
+    archive(cereal::make_nvp("inputTracks", inputTracks));
     archive(cereal::make_nvp("floatPropertyChannels", floatPropertyChannels));
     archive(cereal::make_nvp("float2PropertyChannels", float2PropertyChannels));
     archive(cereal::make_nvp("float3PropertyChannels", float3PropertyChannels));
