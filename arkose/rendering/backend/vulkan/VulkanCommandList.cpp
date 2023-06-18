@@ -659,6 +659,7 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearV
                     imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
                     imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
+                    // NOTE: We always transition all mips so we can ensure our invariant of same layout accross mips holds.
                     imageBarrier.image = vulkanTexture.image;
                     imageBarrier.subresourceRange.aspectMask = vulkanTexture.aspectMask();
                     imageBarrier.subresourceRange.baseMipLevel = 0;
@@ -790,6 +791,7 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
                     imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
                     imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
+                    // NOTE: We always transition all mips so we can ensure our invariant of same layout accross mips holds.
                     imageBarrier.image = vulkanTexture.image;
                     imageBarrier.subresourceRange.aspectMask = vulkanTexture.aspectMask();
                     imageBarrier.subresourceRange.baseMipLevel = 0;
@@ -898,6 +900,7 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
                 imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
                 imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
+                // NOTE: We always transition all mips so we can ensure our invariant of same layout accross mips holds.
                 imageBarrier.image = texture.image;
                 imageBarrier.subresourceRange.aspectMask = texture.aspectMask();
                 imageBarrier.subresourceRange.baseMipLevel = 0;
