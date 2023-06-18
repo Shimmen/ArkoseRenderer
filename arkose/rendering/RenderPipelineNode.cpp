@@ -24,7 +24,7 @@ static bool drawTextureVisualizeButton(Texture& texture, bool& isHovered)
     if (!texture.name().empty()) {
         // Overlay texture name over image with some padding from top left corner
         ImGuiWindow* window = ImGui::GetCurrentContext()->CurrentWindow;
-        ImGui::SameLine(2.0f * window->WindowPadding.x);
+        ImGui::SameLine(window->DC.CursorPos.x + window->WindowPadding.x);
         window->DC.CursorPos.y += window->WindowPadding.y;
         ImGui::Text(texture.name().c_str());
     }
