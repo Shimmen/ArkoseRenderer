@@ -1411,6 +1411,46 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameCon
                              1, &imageBarrier);
     }
 
+    // Transition all textures that will be used for ImGui rendering to the required image layout
+    if (VulkanTexture::texturesForImGuiRendering.size() > 0) {
+        std::vector<VkImageMemoryBarrier> imageMemoryBarriers {};
+        for (VulkanTexture* texture : VulkanTexture::texturesForImGuiRendering) {
+            ARKOSE_ASSERT(texture->currentLayout != VK_IMAGE_LAYOUT_UNDEFINED);
+            if (texture->currentLayout != VulkanTexture::ImGuiRenderingTargetLayout) {
+
+                VkImageMemoryBarrier barrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+                barrier.oldLayout = texture->currentLayout;
+                barrier.newLayout = VulkanTexture::ImGuiRenderingTargetLayout;
+                barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+                barrier.image = texture->image;
+                barrier.subresourceRange.aspectMask = texture->aspectMask();
+
+                // Ensure all writing is done before it can be read in a shader (the ImGui shader)
+                barrier.srcAccessMask = VK_ACCESS_MEMORY_WRITE_BIT;
+                barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+                barrier.subresourceRange.baseArrayLayer = 0;
+                barrier.subresourceRange.layerCount = texture->layerCount();
+                barrier.subresourceRange.baseMipLevel = 0;
+                barrier.subresourceRange.levelCount = texture->mipLevels();
+
+                imageMemoryBarriers.push_back(barrier);
+                texture->currentLayout = VulkanTexture::ImGuiRenderingTargetLayout;
+            }
+        }
+        VulkanTexture::texturesForImGuiRendering.clear();
+
+        if (imageMemoryBarriers.size() > 0) {
+            vkCmdPipelineBarrier(commandBuffer,
+                                 VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 narrow_cast<u32>(imageMemoryBarriers.size()), imageMemoryBarriers.data());
+        }
+    }
+
     VkRenderPassBeginInfo passBeginInfo = {};
     passBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     passBeginInfo.renderPass = m_guiRenderTargetForPresenting->compatibleRenderPass;

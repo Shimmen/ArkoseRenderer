@@ -6,6 +6,8 @@
 #include "core/Logging.h"
 #include <stb_image.h>
 
+#include <backends/imgui_impl_vulkan.h>
+
 VulkanTexture::VulkanTexture(Backend& backend, Description desc)
     : Texture(backend, desc)
 {
@@ -226,6 +228,13 @@ VulkanTexture::~VulkanTexture()
     if (!hasBackend())
         return;
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+
+    if (descriptorSetForImgui) {
+        //ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
+        //ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
+        //vkFreeDescriptorSets(vulkanBackend.device(), v->DescriptorPool, 1, &descriptorSetForImgui);
+    }
+
     vkDestroySampler(vulkanBackend.device(), sampler, nullptr);
     vkDestroyImageView(vulkanBackend.device(), imageView, nullptr);
     vmaDestroyImage(vulkanBackend.globalAllocator(), image, allocation);
@@ -755,4 +764,17 @@ VkImageView VulkanTexture::createImageView(uint32_t baseMip, uint32_t numMips) c
     }
 
     return imageView;
+}
+
+std::vector<VulkanTexture*> VulkanTexture::texturesForImGuiRendering {};
+ImTextureID VulkanTexture::asImTextureID()
+{
+    if (descriptorSetForImgui == nullptr) {
+        descriptorSetForImgui = ImGui_ImplVulkan_AddTexture(sampler, imageView, ImGuiRenderingTargetLayout);
+    }
+
+    // Let the backend handle the potential image layout transision
+    texturesForImGuiRendering.push_back(this);
+
+    return static_cast<ImTextureID>(descriptorSetForImgui);
 }

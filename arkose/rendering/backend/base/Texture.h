@@ -10,6 +10,7 @@
 #include "utility/Hash.h"
 #include <array>
 #include <cereal/cereal.hpp>
+#include <imgui.h>
 #include <memory>
 
 class Texture : public Resource {
@@ -196,6 +197,9 @@ public:
     }
 
     size_t sizeInMemory() { return m_sizeInMemory; }
+
+    // For passing this texture to "Dear ImGui" for rendering
+    virtual ImTextureID asImTextureID() = 0;
 
 protected:
     size_t m_sizeInMemory { SIZE_MAX };

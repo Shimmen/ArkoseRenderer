@@ -59,3 +59,12 @@ void D3D12Texture::generateMipmaps()
     
     // TODO
 }
+
+ImTextureID D3D12Texture::asImTextureID()
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    //TODO
+
+    return ImTextureID();
+}

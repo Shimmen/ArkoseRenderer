@@ -35,4 +35,10 @@ public:
     VkSampler sampler { VK_NULL_HANDLE };
 
     mutable VkImageLayout currentLayout { VK_IMAGE_LAYOUT_UNDEFINED };
+
+    // For Dear ImGui display
+    static constexpr VkImageLayout ImGuiRenderingTargetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    static std::vector<VulkanTexture*> texturesForImGuiRendering;
+    VkDescriptorSet descriptorSetForImgui { VK_NULL_HANDLE };
+    virtual ImTextureID asImTextureID() override;
 };

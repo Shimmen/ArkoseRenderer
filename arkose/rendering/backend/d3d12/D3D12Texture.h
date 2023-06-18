@@ -15,4 +15,6 @@ public:
     void setData(const void* data, size_t size, size_t mipIdx) override;
 
     void generateMipmaps() override;
+
+    ImTextureID asImTextureID() override;
 };
