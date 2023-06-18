@@ -12,6 +12,7 @@
 
 class GpuScene;
 class RenderPipeline;
+class Texture;
 class UploadBuffer;
 
 class RenderPipelineNode {
@@ -33,12 +34,17 @@ public:
     // Draw GUI for this node
     virtual void drawGui() {};
 
+    void drawTextureVisualizeGui(Texture&);
+
     void setPipeline(Badge<RenderPipeline>, RenderPipeline& owningPipeline) { m_owningPipeline = &owningPipeline; }
     RenderPipeline& pipeline() const { return *m_owningPipeline; }
 
 private:
     AvgElapsedTimer m_timer;
     RenderPipeline* m_owningPipeline { nullptr };
+
+    // For tracking gui drawing state
+    std::unordered_map<Texture*, bool> m_textureVisualizers {};
 };
 
 class RenderPipelineLambdaNode final : public RenderPipelineNode {
