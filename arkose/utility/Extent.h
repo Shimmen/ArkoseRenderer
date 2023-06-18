@@ -30,6 +30,8 @@ struct Extent2D {
     [[nodiscard]] uint32_t width() const { return m_width; }
     [[nodiscard]] uint32_t height() const { return m_height; }
 
+    float aspectRatio() const { return static_cast<float>(m_width) / static_cast<float>(m_height); }
+
     bool operator!=(const Extent2D& other) const
     {
         return !(*this == other);
@@ -42,6 +44,13 @@ struct Extent2D {
     Extent2D operator/(int factor) const
     {
         return { m_width / factor, m_height / factor };
+    }
+
+    Extent2D& operator/=(int factor)
+    {
+        m_width /= factor;
+        m_height /= factor;
+        return *this;
     }
 
     Extent2D shrinkOnAllSidesBy(int x) const
