@@ -24,7 +24,7 @@ public:
 
     VkImageAspectFlags aspectMask() const;
 
-    VkImageView createImageView(uint32_t baseMip, uint32_t numMips) const;
+    VkImageView createImageView(uint32_t baseMip, uint32_t numMips, bool alphaAsOne) const;
 
     VkImage image { VK_NULL_HANDLE };
     VmaAllocation allocation { VK_NULL_HANDLE };
@@ -39,6 +39,7 @@ public:
     // For Dear ImGui display
     static constexpr VkImageLayout ImGuiRenderingTargetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     static std::vector<VulkanTexture*> texturesForImGuiRendering;
-    VkDescriptorSet descriptorSetForImgui { VK_NULL_HANDLE };
+    VkImageView imageViewNoAlphaForImGui { VK_NULL_HANDLE };
+    VkDescriptorSet descriptorSetForImGui { VK_NULL_HANDLE };
     virtual ImTextureID asImTextureID() override;
 };

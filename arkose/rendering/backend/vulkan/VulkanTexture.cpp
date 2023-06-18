@@ -145,7 +145,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
         m_sizeInMemory = allocationInfo.size;
     }
 
-    imageView = createImageView(0, mipLevels());
+    imageView = createImageView(0, mipLevels(), false);
 
     VkFilter vkMinFilter;
     switch (minFilter()) {
@@ -229,10 +229,11 @@ VulkanTexture::~VulkanTexture()
         return;
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
-    if (descriptorSetForImgui) {
-        //ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
-        //ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
-        //vkFreeDescriptorSets(vulkanBackend.device(), v->DescriptorPool, 1, &descriptorSetForImgui);
+    if (descriptorSetForImGui) {
+        vkDestroyImageView(vulkanBackend.device(), imageViewNoAlphaForImGui, nullptr);
+        // TODO: Call this, but it's not yet available in the current version of the API.
+        // However, it's a pooled resource anyway so we don't stricly need to remove this.
+        //ImGui_ImplVulkan_RemoveTexture(..)
     }
 
     vkDestroySampler(vulkanBackend.device(), sampler, nullptr);
@@ -711,7 +712,7 @@ VkImageAspectFlags VulkanTexture::aspectMask() const
     return mask;
 }
 
-VkImageView VulkanTexture::createImageView(uint32_t baseMip, uint32_t numMips) const
+VkImageView VulkanTexture::createImageView(uint32_t baseMip, uint32_t numMips, bool alphaAsOne) const
 {
     VkImageViewCreateInfo viewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
     viewCreateInfo.image = image;
@@ -722,6 +723,10 @@ VkImageView VulkanTexture::createImageView(uint32_t baseMip, uint32_t numMips) c
         VK_COMPONENT_SWIZZLE_IDENTITY,
         VK_COMPONENT_SWIZZLE_IDENTITY
     };
+
+    if (alphaAsOne) {
+        viewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_ONE;
+    }
 
     if (hasDepthFormat()) {
         // Create view for the depth aspect only
@@ -769,12 +774,13 @@ VkImageView VulkanTexture::createImageView(uint32_t baseMip, uint32_t numMips) c
 std::vector<VulkanTexture*> VulkanTexture::texturesForImGuiRendering {};
 ImTextureID VulkanTexture::asImTextureID()
 {
-    if (descriptorSetForImgui == nullptr) {
-        descriptorSetForImgui = ImGui_ImplVulkan_AddTexture(sampler, imageView, ImGuiRenderingTargetLayout);
+    if (descriptorSetForImGui == nullptr) {
+        imageViewNoAlphaForImGui = createImageView(0, 1, true);
+        descriptorSetForImGui = ImGui_ImplVulkan_AddTexture(sampler, imageViewNoAlphaForImGui, ImGuiRenderingTargetLayout);
     }
 
     // Let the backend handle the potential image layout transision
     texturesForImGuiRendering.push_back(this);
 
-    return static_cast<ImTextureID>(descriptorSetForImgui);
+    return static_cast<ImTextureID>(descriptorSetForImGui);
 }
