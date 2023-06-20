@@ -39,6 +39,9 @@
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
 
+// For animation & skinning tests
+#include "asset/import/AssetImporter.h"
+
 constexpr bool keepRenderDocCompatible = false;
 constexpr bool withRayTracing = true && !keepRenderDocCompatible;
 constexpr bool withMeshShading = true && !keepRenderDocCompatible;
@@ -72,7 +75,27 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     scene.setupFromDescription(description);
 
     if (description.path.empty()) {
-        setupCullingShowcaseScene(scene);
+        //setupCullingShowcaseScene(scene);
+
+        AssetImporter importer {};
+        importer.importAsLevel("assets/sample/models/RiggedSimple/RiggedSimple.gltf",
+                               "assets/sample/models/RiggedSimple/",
+                               AssetImporter::Options());
+
+
+        MeshAsset* cylinderMeshAsset = MeshAsset::load("assets/sample/models/RiggedSimple/Cylinder.arkmsh");
+        SkeletonAsset* cylinderSkeletonAsset = SkeletonAsset::load("assets/sample/models/RiggedSimple/Armature.arkskel");
+        AnimationAsset* cylinderBindAnimAsset = AnimationAsset::load("assets/sample/models/RiggedSimple/animation0000.arkanim");
+
+        Transform transform {};
+        transform.setOrientation(quat(vec3(0.5f, 0.5f, 0.5f), -0.5f));
+        //StaticMeshInstance& staticMeshInstance = scene.addMesh(cylinderMeshAsset, transform);
+        m_skeletalMeshInstance = &scene.addSkeletalMesh(cylinderMeshAsset, cylinderSkeletonAsset, transform);
+
+        m_testAnimation = Animation::bind(cylinderBindAnimAsset, *m_skeletalMeshInstance);
+
+        Camera& camera = scene.addCamera("LookatCam", true);
+        camera.lookAt(vec3(0.0f, 0.0f, 15.0f), vec3(0.0f, 0.0f, 0.0f));
     }
 
     if (scene.directionalLightCount() == 0) {
@@ -225,6 +248,16 @@ bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
         StaticMeshInstance& staticMeshInstance = scene.addMesh(redCube, xform);
         PhysicsInstanceHandle physicsInstanceHandle = scene.physicsScene().createDynamicInstance(cubeShapeHandle, staticMeshInstance.transform());
         scene.physicsScene().backend().applyImpulse(physicsInstanceHandle, 175.0f * spawnDirection);
+    }
+
+    if (m_testAnimation != nullptr) {
+        if (input.wasKeyPressed(Key::R)) {
+            fmt::print("\n\nReseting animation\n\n");
+            m_testAnimation->reset();
+        }
+
+        m_skeletalMeshInstance->skeleton().debugPrintState();
+        m_testAnimation->tick(deltaTime);
     }
 
     return !exitRequested;
