@@ -3,6 +3,8 @@
 #include "asset/ImageAsset.h"
 #include "asset/MaterialAsset.h"
 #include "asset/MeshAsset.h"
+#include "asset/SkeletonAsset.h"
+#include "rendering/Skeleton.h"
 #include "rendering/DrawKey.h"
 #include "rendering/backend/Resources.h"
 #include "core/Conversion.h"
@@ -76,6 +78,11 @@ void GpuScene::postRender()
         auto& instance = m_staticMeshInstances[idx];
         instance->transform().postRender({});
     });
+}
+
+SkeletalMesh* GpuScene::skeletalMeshForHandle(SkeletalMeshHandle handle)
+{
+    return handle.valid() ? m_managedSkeletalMeshes.get(handle).skeletalMesh.get() : nullptr;
 }
 
 StaticMesh* GpuScene::staticMeshForInstance(StaticMeshInstance const& staticMeshInstance)
@@ -443,6 +450,12 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 initializeStaticMeshInstance(*instanceNeedingReinit);
             }
 
+            for (auto& skeletalMeshInstance : m_skeletalMeshInstances) {
+                // TODO: Don't perform a full update/reinit every frame!
+                initializeSkeletalMeshInstance(*skeletalMeshInstance);
+                drawableCount += skeletalMeshInstance->drawableHandles().size();
+            }
+
             m_drawableCountForFrame = drawableCount;
             uploadBuffer.upload(m_drawables.resourceSpan(), objectDataBuffer);
         }
@@ -675,7 +688,73 @@ void GpuScene::clearAllMeshInstances()
         unregisterStaticMesh(instance->mesh());
     }
 
+    for (auto& instance : m_skeletalMeshInstances) {
+        unregisterSkeletalMesh(instance->mesh());
+    }
+
     m_staticMeshInstances.clear();
+    m_skeletalMeshInstances.clear();
+}
+
+SkeletalMeshInstance& GpuScene::createSkeletalMeshInstance(SkeletalMeshHandle skeletalMeshHandle, Transform transform)
+{
+    // TODO: Do we not need to add a reference here? Yes, but we'd over count by one as the managed mesh itself has the first ref.
+    // m_managedSkeletalMeshes.addReference(skeletalMeshHandle);
+
+    ManagedSkeletalMesh& skeletalMesh = m_managedSkeletalMeshes.get(skeletalMeshHandle);
+    auto skeleton = std::make_unique<Skeleton>(skeletalMesh.skeletonAsset);
+
+    m_skeletalMeshInstances.push_back(std::make_unique<SkeletalMeshInstance>(skeletalMeshHandle, std::move(skeleton), transform));
+    SkeletalMeshInstance& instance = *m_skeletalMeshInstances.back();
+
+    initializeSkeletalMeshInstance(instance);
+
+    return instance;
+}
+
+void GpuScene::initializeSkeletalMeshInstance(SkeletalMeshInstance& instance)
+{
+    SkeletalMesh* skeletalMesh = skeletalMeshForHandle(instance.mesh());
+    ARKOSE_ASSERT(skeletalMesh != nullptr);
+
+    StaticMesh& staticMeshIsh = skeletalMesh->staticMesh();
+
+    constexpr u32 lodIdx = 0;
+    StaticMeshLOD& lod = staticMeshIsh.lodAtIndex(lodIdx);
+
+    // TODO: Handle LOD changes for this instance! If it changes we want to unregister our current ones and register the ones for the new LOD
+    // instance.resetDrawableHandles();
+
+    for (size_t segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
+        StaticMeshSegment& meshSegment = lod.meshSegments[segmentIdx];
+
+        ShaderDrawable drawable;
+        drawable.worldFromLocal = instance.transform().worldMatrix();
+        drawable.worldFromTangent = mat4(instance.transform().worldNormalMatrix());
+        drawable.previousFrameWorldFromLocal = instance.transform().previousFrameWorldMatrix();
+
+        drawable.localBoundingSphere = staticMeshIsh.boundingSphere().asVec4();
+
+        drawable.materialIndex = meshSegment.material.indexOfType<int>();
+
+        drawable.drawKey = meshSegment.drawKey.asUint32();
+
+        if (meshSegment.meshletView) {
+            drawable.firstMeshlet = meshSegment.meshletView->firstMeshlet;
+            drawable.meshletCount = meshSegment.meshletView->meshletCount;
+        } else {
+            drawable.firstMeshlet = 0;
+            drawable.meshletCount = 0;
+        }
+
+        if (instance.hasDrawableHandleForSegmentIndex(segmentIdx)) {
+            DrawableObjectHandle handle = instance.drawableHandleForSegmentIndex(segmentIdx);
+            m_drawables.set(handle, std::move(drawable));
+        } else {
+            DrawableObjectHandle handle = m_drawables.add(std::move(drawable));
+            instance.setDrawableHandle(segmentIdx, handle);
+        }
+    }
 }
 
 StaticMeshInstance& GpuScene::createStaticMeshInstance(StaticMeshHandle staticMeshHandle, Transform transform)
@@ -732,6 +811,47 @@ void GpuScene::initializeStaticMeshInstance(StaticMeshInstance& instance)
             instance.setDrawableHandle(segmentIdx, handle);
         }
     }
+}
+
+SkeletalMeshHandle GpuScene::registerSkeletalMesh(MeshAsset const* meshAsset, SkeletonAsset const* skeletonAsset)
+{
+    SCOPED_PROFILE_ZONE();
+
+    if (meshAsset == nullptr || skeletonAsset == nullptr) {
+        return SkeletalMeshHandle();
+    }
+
+    // TODO: Maybe do some kind of caching here, similar to how we do it for static meshes?
+    //  Also, if this skeletal mesh has been registered as a static mesh it should also be valid..?
+
+    auto skeletalMesh = std::make_unique<SkeletalMesh>(meshAsset, skeletonAsset, [this](MaterialAsset const* materialAsset) -> MaterialHandle {
+        if (materialAsset) {
+            return registerMaterial(materialAsset);
+        } else {
+            return m_defaultMaterialHandle;
+        }
+    });
+
+    if (m_meshletManager != nullptr) {
+        m_meshletManager->allocateMeshlets(skeletalMesh->staticMesh());
+    }
+
+    SkeletalMeshHandle handle = m_managedSkeletalMeshes.add(ManagedSkeletalMesh { .meshAsset = meshAsset,
+                                                                                  .skeletonAsset = skeletonAsset,
+                                                                                  .skeletalMesh = std::move(skeletalMesh) });
+
+    // The skeletal mesh will in some cases want a handle back to itself
+    // NOTE: Needed for our meshlet streaming system. For now though we just
+    // reinit the skeletal instances every frame so we don't need to track this.
+    //m_managedSkeletalMeshes.get(handle).skeletalMesh->setHandleToSelf(handle);
+
+    return handle;
+}
+
+void GpuScene::unregisterSkeletalMesh(SkeletalMeshHandle handle)
+{
+    // Do we really want to reference count this..? See GpuScene::unregisterStaticMesh(..)
+    m_managedSkeletalMeshes.removeReference(handle, m_currentFrameIdx);
 }
 
 StaticMeshHandle GpuScene::registerStaticMesh(MeshAsset const* meshAsset)

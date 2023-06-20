@@ -65,6 +65,9 @@ public:
 
     // Meshes
 
+    SkeletalMeshInstance& addSkeletalMesh(MeshAsset*, SkeletonAsset*, Transform = Transform());
+    SkeletalMeshInstance& createSkeletalMeshInstance(SkeletalMeshHandle, Transform);
+
     StaticMeshInstance& addMesh(MeshAsset*, Transform = Transform());
     StaticMeshInstance& createStaticMeshInstance(StaticMeshHandle, Transform);
 

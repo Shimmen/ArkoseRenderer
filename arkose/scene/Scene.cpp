@@ -243,11 +243,33 @@ Camera& Scene::addCamera(const std::string& name, bool makeDefault)
     return *m_allCameras[name];
 }
 
-StaticMeshInstance& Scene::addMesh(MeshAsset* mesh, Transform transform)
+SkeletalMeshInstance& Scene::addSkeletalMesh(MeshAsset* meshAsset, SkeletonAsset* skeletonAsset, Transform transform)
 {
-    ARKOSE_ASSERT(mesh != nullptr);
+    ARKOSE_ASSERT(meshAsset != nullptr);
+    ARKOSE_ASSERT(skeletonAsset != nullptr);
 
-    StaticMeshHandle staticMeshHandle = gpuScene().registerStaticMesh(mesh);
+    SkeletalMeshHandle skeletalMeshHandle = gpuScene().registerSkeletalMesh(meshAsset, skeletonAsset);
+    SkeletalMeshInstance& instance = createSkeletalMeshInstance(skeletalMeshHandle, transform);
+
+    return instance;
+}
+
+SkeletalMeshInstance& Scene::createSkeletalMeshInstance(SkeletalMeshHandle skeletalMeshHandle, Transform transform)
+{
+    SkeletalMeshInstance& instance = gpuScene().createSkeletalMeshInstance(skeletalMeshHandle, transform);
+
+    if (hasPhysicsScene()) {
+        // TODO!
+    }
+
+    return instance;
+}
+
+StaticMeshInstance& Scene::addMesh(MeshAsset* meshAsset, Transform transform)
+{
+    ARKOSE_ASSERT(meshAsset != nullptr);
+
+    StaticMeshHandle staticMeshHandle = gpuScene().registerStaticMesh(meshAsset);
     StaticMeshInstance& instance = createStaticMeshInstance(staticMeshHandle, transform);
 
     return instance;
@@ -377,6 +399,16 @@ void Scene::generateProbeGridFromBoundingBox()
         if (StaticMesh* staticMesh = gpuScene().staticMeshForHandle(instance->mesh())) {
 
             ark::aabb3 transformedAABB = staticMesh->boundingBox().transformed(instance->transform().worldMatrix());
+            sceneAABB.expandWithPoint(transformedAABB.min);
+            sceneAABB.expandWithPoint(transformedAABB.max);
+
+        }
+    }
+
+    for (auto const& instance : gpuScene().skeletalMeshInstances()) {
+        if (SkeletalMesh* skeletalMesh = gpuScene().skeletalMeshForHandle(instance->mesh())) {
+
+            ark::aabb3 transformedAABB = skeletalMesh->staticMesh().boundingBox().transformed(instance->transform().worldMatrix());
             sceneAABB.expandWithPoint(transformedAABB.min);
             sceneAABB.expandWithPoint(transformedAABB.max);
 

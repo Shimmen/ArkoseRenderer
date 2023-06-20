@@ -1,7 +1,5 @@
 #pragma once
 
-#include "asset/MaterialAsset.h"
-#include "asset/MeshAsset.h"
 #include "core/Handle.h"
 #include "core/Types.h"
 #include "core/parallel/TaskGraph.h"
@@ -10,6 +8,8 @@
 #include "rendering/IconManager.h"
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/ResourceList.h"
+#include "rendering/SkeletalMesh.h"
+#include "rendering/StaticMesh.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
 #include <memory>
@@ -24,7 +24,10 @@
 
 class DirectionalLight;
 class Light;
+class MaterialAsset;
 class Mesh;
+class MeshAsset;
+class SkeletonAsset;
 class SpotLight;
 
 DEFINE_HANDLE_TYPE(TextureHandle);
@@ -51,6 +54,7 @@ public:
 
     size_t meshCount() const { return m_managedStaticMeshes.size(); }
 
+    SkeletalMesh* skeletalMeshForHandle(SkeletalMeshHandle);
     StaticMesh* staticMeshForInstance(StaticMeshInstance const&);
     StaticMesh const* staticMeshForInstance(StaticMeshInstance const&) const;
     StaticMesh* staticMeshForHandle(StaticMeshHandle handle);
@@ -80,17 +84,26 @@ public:
     void registerLight(SpotLight&);
     // TODO: Unregister light!
 
+    SkeletalMeshInstance& createSkeletalMeshInstance(SkeletalMeshHandle, Transform);
+    void initializeSkeletalMeshInstance(SkeletalMeshInstance&);
+
     StaticMeshInstance& createStaticMeshInstance(StaticMeshHandle, Transform);
     void initializeStaticMeshInstance(StaticMeshInstance&);
 
     std::vector<std::unique_ptr<StaticMeshInstance>>& staticMeshInstances() { return m_staticMeshInstances; }
     const std::vector<std::unique_ptr<StaticMeshInstance>>& staticMeshInstances() const { return m_staticMeshInstances; }
 
+    std::vector<std::unique_ptr<SkeletalMeshInstance>>& skeletalMeshInstances() { return m_skeletalMeshInstances; }
+    const std::vector<std::unique_ptr<SkeletalMeshInstance>>& skeletalMeshInstances() const { return m_skeletalMeshInstances; }
+
     // NOTE: This is more of a utility for now to clear out the current level
     void clearAllMeshInstances();
 
     // TODO: Later, also count skeletal meshes here
     uint32_t meshInstanceCount() const { return static_cast<uint32_t>(m_staticMeshInstances.size()); }
+
+    SkeletalMeshHandle registerSkeletalMesh(MeshAsset const*, SkeletonAsset const*);
+    void unregisterSkeletalMesh(SkeletalMeshHandle);
 
     StaticMeshHandle registerStaticMesh(MeshAsset const*);
     void unregisterStaticMesh(StaticMeshHandle);
@@ -174,6 +187,13 @@ private:
     std::unordered_map<VertexLayout, std::unique_ptr<Buffer>> m_globalVertexBuffers {};
     uint32_t m_nextFreeVertexIndex { 0 };
 
+    struct ManagedSkeletalMesh {
+        MeshAsset const* meshAsset {};
+        SkeletonAsset const* skeletonAsset {};
+        std::unique_ptr<SkeletalMesh> skeletalMesh {};
+    };
+    ResourceList<ManagedSkeletalMesh, SkeletalMeshHandle> m_managedSkeletalMeshes { "Skeletal Meshes", 128 };
+
     struct ManagedStaticMesh {
         MeshAsset const* meshAsset {};
         std::unique_ptr<StaticMesh> staticMesh {};
@@ -181,6 +201,7 @@ private:
     ResourceList<ManagedStaticMesh, StaticMeshHandle> m_managedStaticMeshes { "Static Meshes", 1024 };
     std::unordered_map<MeshAsset const*, StaticMeshHandle> m_staticMeshAssetCache {};
 
+    std::vector<std::unique_ptr<SkeletalMeshInstance>> m_skeletalMeshInstances {};
     std::vector<std::unique_ptr<StaticMeshInstance>> m_staticMeshInstances {};
     ResourceList<ShaderDrawable, DrawableObjectHandle> m_drawables { "Drawables", 10'000 };
 

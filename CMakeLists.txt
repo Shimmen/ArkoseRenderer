@@ -31,6 +31,7 @@ add_subdirectory(arklib)
 set(ARKOSE_SOURCES
     ${TRACY_CLIENT_SOURCE}
     arkose/main.cpp
+    arkose/animation/Animation.cpp
     arkose/apps/BootstrappingApp.cpp
     arkose/apps/MeshViewerApp.cpp
     arkose/apps/ShowcaseApp.cpp
@@ -59,6 +60,8 @@ set(ARKOSE_SOURCES
     arkose/rendering/Registry.cpp
     arkose/rendering/RenderPipeline.cpp
     arkose/rendering/RenderPipelineNode.cpp
+    arkose/rendering/SkeletalMesh.cpp
+    arkose/rendering/Skeleton.cpp
     arkose/rendering/StaticMesh.cpp
     arkose/rendering/backend/Resource.cpp
     arkose/rendering/backend/shader/Shader.cpp
