@@ -522,12 +522,17 @@ std::unique_ptr<SkeletonAsset> GltfLoader::createSkeleton(tinygltf::Model const&
 
             joint.name = node.name;
             joint.index = jointIdxLookup[nodeIdx];
-            joint.invBindMatrix = *(firstInvBindMatrix + joint.index);
 
             createTransformForNode(joint.transform, node);
             if (parentJoint != nullptr) {
                 joint.transform.setParent(&parentJoint->transform);
             }
+
+            // NOTE: The glTF-supplied inverse bind matrices may include some of the pre-skeleton-root transform things,
+            // which we don't care about, as we consider that to be the instance's transform in the scene instead. Therefore
+            // we can get the same matrix by just taking the inverse of the bind pose we've built up here.
+            //joint.invBindMatrix = *(firstInvBindMatrix + joint.index);
+            joint.invBindMatrix = ark::inverse(joint.transform.worldMatrix());
 
             // NOTE: This ensures we can safely pass around addresses of joints
             joint.children.reserve(node.children.size());
