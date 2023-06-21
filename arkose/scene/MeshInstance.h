@@ -68,6 +68,8 @@ struct SkeletalMeshInstance : public IEditorObject {
     Transform const& transform() const { return m_transform; }
 
     Skeleton const& skeleton() const { return *m_skeleton; }
+    Skeleton& skeleton() { return *m_skeleton; }
+
     Transform* findTransformForJoint(std::string_view jointName);
 
     bool hasDrawableHandleForSegmentIndex(u32 segmentIdx) const;

@@ -19,6 +19,7 @@ SkeletonJoint::~SkeletonJoint() = default;
 
 Skeleton::Skeleton(SkeletonAsset const* skeletonAsset)
     : m_rootJoint(skeletonAsset->rootJoint)
+    , m_maxJointIdx(skeletonAsset->maxJointIdx)
 {
     ARKOSE_ASSERT(m_rootJoint.transform().parent() == nullptr);
 }
@@ -46,6 +47,46 @@ Transform* Skeleton::findTransformForJoint(std::string_view jointName)
     }
 
     return nullptr;
+}
+
+void Skeleton::applyJointTransformations()
+{
+    SCOPED_PROFILE_ZONE();
+
+    const size_t jointMatrixCount = m_maxJointIdx + 1;
+    m_appliedJointMatrices.resize(jointMatrixCount);
+    m_appliedJointTangentMatrices.resize(jointMatrixCount);
+
+    // TODO: Make non-recursive implemementation
+    std::function<void(SkeletonJoint const&)> applyJointTransformationsRecursively = [&](SkeletonJoint const& joint) {
+
+        mat4 animatedPoseMatrix = joint.transform().worldMatrix();
+
+        mat4 jointMatrix = animatedPoseMatrix * joint.invBindMatrix();
+        mat3 jointTangentMatrix = transpose(inverse(mat3(jointMatrix)));
+
+        ARKOSE_ASSERT(joint.index() < jointMatrixCount);
+        m_appliedJointMatrices[joint.index()] = jointMatrix;
+        m_appliedJointTangentMatrices[joint.index()] = jointTangentMatrix;
+
+        for (SkeletonJoint const& childJoint : joint.childJoints()) {
+            applyJointTransformationsRecursively(childJoint);
+        }
+    };
+
+    applyJointTransformationsRecursively(m_rootJoint);
+}
+
+std::vector<mat4> const& Skeleton::appliedJointMatrices() const
+{
+    ARKOSE_ASSERT(m_appliedJointMatrices.size() == m_maxJointIdx + 1);
+    return m_appliedJointMatrices;
+}
+
+std::vector<mat3> const& Skeleton::appliedJointTangentMatrices() const
+{
+    ARKOSE_ASSERT(m_appliedJointTangentMatrices.size() == m_maxJointIdx + 1);
+    return m_appliedJointTangentMatrices;
 }
 
 void Skeleton::debugPrintState() const

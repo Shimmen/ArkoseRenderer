@@ -42,9 +42,18 @@ public:
     ~Skeleton();
 
     Transform* findTransformForJoint(std::string_view jointName);
+    void applyJointTransformations();
+
+    std::vector<mat4> const& appliedJointMatrices() const;
+    std::vector<mat3> const& appliedJointTangentMatrices() const;
 
     void debugPrintState() const;
 
 private:
     SkeletonJoint m_rootJoint;
+
+    size_t m_maxJointIdx { 0 };
+
+    std::vector<mat4> m_appliedJointMatrices {}; // for position transformation
+    std::vector<mat3> m_appliedJointTangentMatrices {}; // for tangent-space direction transformations (e.g. normals)
 };

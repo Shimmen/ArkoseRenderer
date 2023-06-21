@@ -31,6 +31,10 @@ void Scene::update(float elapsedTime, float deltaTime)
 {
     SCOPED_PROFILE_ZONE();
 
+    for (auto& skeletalMeshInstance : gpuScene().skeletalMeshInstances()) {
+        skeletalMeshInstance->skeleton().applyJointTransformations();
+    }
+
     if (Input::instance().wasKeyReleased(Key::Escape)) {
         clearSelectedObject();
     }
