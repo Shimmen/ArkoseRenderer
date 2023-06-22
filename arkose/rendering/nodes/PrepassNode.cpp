@@ -79,7 +79,7 @@ RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, 
         break;
     case PassType::Masked:
         shader = Shader::createBasicRasterize("forward/prepassMasked.vert", "forward/prepassMasked.frag");
-        vertexLayout = { VertexComponent::Position3F, VertexComponent::TexCoord2F };
+        vertexLayout = { VertexComponent::Position3F, VertexComponent::TexCoord2F, VertexComponent::Normal3F, VertexComponent::Tangent4F };
         drawablesBindingSet = reg.getBindingSet("MainViewCulledDrawablesMaskedSet");
         stateName = "PrepassMasked";
         loadOp = LoadOp::Load;

@@ -16,7 +16,9 @@ public:
 
 private:
     VertexLayout m_vertexLayout { VertexComponent::Position3F,
-                                  VertexComponent::Normal3F };
+                                  VertexComponent::TexCoord2F,
+                                  VertexComponent::Normal3F,
+                                  VertexComponent::Tangent4F };
 
     int m_maxNumShadowMaps { 16 };
 
