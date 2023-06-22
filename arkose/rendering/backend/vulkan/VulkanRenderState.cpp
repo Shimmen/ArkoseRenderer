@@ -5,10 +5,10 @@
 #include "core/Logging.h"
 #include "utility/Profiling.h"
 
-VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& renderTarget, VertexLayout vertexLayout,
-                                     Shader shader, const StateBindings& stateBindings,
+VulkanRenderState::VulkanRenderState(Backend& backend, RenderTarget const& renderTarget, std::vector<VertexLayout> const& vertexLayouts,
+                                     Shader shader, StateBindings const& stateBindings,
                                      RasterState rasterState, DepthState depthState, StencilState stencilState)
-    : RenderState(backend, renderTarget, vertexLayout, shader, stateBindings, rasterState, depthState, stencilState)
+    : RenderState(backend, renderTarget, vertexLayouts, shader, stateBindings, rasterState, depthState, stencilState)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
@@ -17,48 +17,51 @@ VulkanRenderState::VulkanRenderState(Backend& backend, const RenderTarget& rende
 
     std::vector<VkVertexInputBindingDescription> bindingDescriptions {};
     std::vector<VkVertexInputAttributeDescription> attributeDescriptions {};
-    if (vertexLayout.componentCount() > 0) {
-        // TODO: What about multiple bindings? Just have multiple VertexLayout:s?
-        uint32_t binding = 0;
+    for (VertexLayout const& vertexLayout : vertexLayouts) {
+
+        u32 bindingIdx = narrow_cast<u32>(bindingDescriptions.size());
+        u32 nextLocation = 0;
 
         VkVertexInputBindingDescription& bindingDescription = bindingDescriptions.emplace_back();
-        bindingDescription.binding = binding;
-        bindingDescription.stride = (uint32_t)vertexLayout.packedVertexSize();
+        bindingDescription.binding = bindingIdx;
+        bindingDescription.stride = narrow_cast<u32>(vertexLayout.packedVertexSize());
         bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-        attributeDescriptions.reserve(vertexLayout.components().size());
+        if (vertexLayout.componentCount() > 0) {
 
-        uint32_t nextLocation = 0;
-        uint32_t currentOffset = 0;
+            attributeDescriptions.reserve(vertexLayout.components().size());
 
-        for (const VertexComponent& component : vertexLayout.components()) {
+            u32 currentOffset = 0;
 
-            VkVertexInputAttributeDescription description = {};
-            description.binding = binding;
-            description.location = nextLocation;
-            description.offset = currentOffset;
+            for (const VertexComponent& component : vertexLayout.components()) {
 
-            nextLocation += 1;
-            currentOffset += (uint32_t)vertexComponentSize(component);
+                VkVertexInputAttributeDescription description = {};
+                description.binding = bindingIdx;
+                description.location = nextLocation;
+                description.offset = currentOffset;
 
-            switch (component) {
-            case VertexComponent::Position2F:
-            case VertexComponent::TexCoord2F:
-                description.format = VK_FORMAT_R32G32_SFLOAT;
-                break;
-            case VertexComponent::Position3F:
-            case VertexComponent::Normal3F:
-            case VertexComponent::Color3F:
-                description.format = VK_FORMAT_R32G32B32_SFLOAT;
-                break;
-            case VertexComponent::Tangent4F:
-                description.format = VK_FORMAT_R32G32B32A32_SFLOAT;
-                break;
-            default:
-                ASSERT_NOT_REACHED();
+                nextLocation += 1;
+                currentOffset += narrow_cast<u32>(vertexComponentSize(component));
+
+                switch (component) {
+                case VertexComponent::Position2F:
+                case VertexComponent::TexCoord2F:
+                    description.format = VK_FORMAT_R32G32_SFLOAT;
+                    break;
+                case VertexComponent::Position3F:
+                case VertexComponent::Normal3F:
+                case VertexComponent::Color3F:
+                    description.format = VK_FORMAT_R32G32B32_SFLOAT;
+                    break;
+                case VertexComponent::Tangent4F:
+                    description.format = VK_FORMAT_R32G32B32A32_SFLOAT;
+                    break;
+                default:
+                    ASSERT_NOT_REACHED();
+                }
+
+                attributeDescriptions.push_back(description);
             }
-
-            attributeDescriptions.push_back(description);
         }
     }
 

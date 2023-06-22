@@ -1,9 +1,14 @@
 #include "RenderState.h"
 
+RenderStateBuilder::RenderStateBuilder(const RenderTarget& inRenderTarget, const Shader& inShader, std::initializer_list<VertexLayout> inVertexLayouts)
+    : renderTarget(inRenderTarget)
+    , shader(inShader)
+    , vertexLayouts(inVertexLayouts)
+{
+}
+
 RenderStateBuilder::RenderStateBuilder(const RenderTarget& renderTarget, const Shader& shader, VertexLayout vertexLayout)
-    : renderTarget(renderTarget)
-    , shader(shader)
-    , vertexLayout(vertexLayout)
+    : RenderStateBuilder(renderTarget, shader, { vertexLayout })
 {
 }
 

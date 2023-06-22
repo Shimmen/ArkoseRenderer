@@ -7,7 +7,7 @@
 
 struct VulkanRenderState final : public RenderState {
 public:
-    VulkanRenderState(Backend&, const RenderTarget&, VertexLayout, Shader, const StateBindings& stateBindings,
+    VulkanRenderState(Backend&, RenderTarget const&, std::vector<VertexLayout> const&, Shader, StateBindings const&,
                       RasterState, DepthState, StencilState);
     virtual ~VulkanRenderState() override;
 

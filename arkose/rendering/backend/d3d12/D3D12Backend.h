@@ -37,8 +37,8 @@ public:
     std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) override;
     std::unique_ptr<Texture> createTexture(Texture::Description) override;
     std::unique_ptr<BindingSet> createBindingSet(std::vector<ShaderBinding>) override;
-    std::unique_ptr<RenderState> createRenderState(const RenderTarget&, const VertexLayout&, const Shader&, const StateBindings&,
-                                                   const RasterState&, const DepthState&, const StencilState&) override;
+    std::unique_ptr<RenderState> createRenderState(RenderTarget const&, std::vector<VertexLayout> const&, Shader const&, StateBindings const&,
+                                                   RasterState const&, DepthState const&, StencilState const&) override;
     std::unique_ptr<ComputeState> createComputeState(const Shader&, std::vector<BindingSet*>) override;
     std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(std::vector<RTGeometry>) override;
     std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance>) override;

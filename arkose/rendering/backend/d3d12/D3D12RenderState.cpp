@@ -2,10 +2,10 @@
 
 #include "utility/Profiling.h"
 
-D3D12RenderState::D3D12RenderState(Backend& backend, const RenderTarget& renderTarget, VertexLayout vertexLayout,
-                                   Shader shader, const StateBindings& stateBindings,
+D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderTarget, std::vector<VertexLayout> vertexLayouts,
+                                   Shader shader, StateBindings const& stateBindings,
                                    RasterState rasterState, DepthState depthState, StencilState stencilState)
-    : RenderState(backend, renderTarget, vertexLayout, shader, stateBindings, rasterState, depthState, stencilState)
+    : RenderState(backend, renderTarget, std::move(vertexLayouts), shader, stateBindings, rasterState, depthState, stencilState)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
     // TODO

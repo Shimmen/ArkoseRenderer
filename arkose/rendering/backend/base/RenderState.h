@@ -68,12 +68,12 @@ class RenderState : public Resource {
 public:
     RenderState() = default;
     RenderState(Backend& backend,
-                const RenderTarget& renderTarget, VertexLayout vertexLayout,
+                RenderTarget const& renderTarget, std::vector<VertexLayout> const& vertexLayouts,
                 Shader shader, const StateBindings& stateBindings,
                 RasterState rasterState, DepthState depthState, StencilState stencilState)
         : Resource(backend)
         , m_renderTarget(&renderTarget)
-        , m_vertexLayout(vertexLayout)
+        , m_vertexLayouts(vertexLayouts)
         , m_shader(shader)
         , m_stateBindings(stateBindings)
         , m_rasterState(rasterState)
@@ -84,7 +84,13 @@ public:
     }
 
     const RenderTarget& renderTarget() const { return *m_renderTarget; }
-    const VertexLayout& vertexLayout() const { return m_vertexLayout; }
+
+    std::vector<VertexLayout> const& vertexLayouts() const { return m_vertexLayouts; }
+    VertexLayout const& vertexLayout() const
+    {
+        ARKOSE_ASSERT(m_vertexLayouts.size() == 1);
+        return m_vertexLayouts[0];
+    }
 
     const Shader& shader() const { return m_shader; }
     const StateBindings& stateBindings() const { return m_stateBindings; }
@@ -95,7 +101,7 @@ public:
 
 private:
     const RenderTarget* m_renderTarget;
-    VertexLayout m_vertexLayout;
+    std::vector<VertexLayout> m_vertexLayouts;
 
     Shader m_shader;
     StateBindings m_stateBindings;
@@ -107,11 +113,13 @@ private:
 
 class RenderStateBuilder {
 public:
+    RenderStateBuilder(const RenderTarget&, const Shader&, std::initializer_list<VertexLayout>);
     RenderStateBuilder(const RenderTarget&, const Shader&, VertexLayout);
 
     const RenderTarget& renderTarget;
     const Shader& shader;
-    VertexLayout vertexLayout;
+    
+    std::vector<VertexLayout> vertexLayouts;
 
     bool writeDepth { true };
     bool testDepth { true };

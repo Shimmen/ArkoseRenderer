@@ -232,16 +232,16 @@ Texture& Registry::loadTextureArrayFromFileSequence(const std::string& imagePath
 
 RenderState& Registry::createRenderState(const RenderStateBuilder& builder)
 {
-    return createRenderState(builder.renderTarget, builder.vertexLayout, builder.shader,
+    return createRenderState(builder.renderTarget, builder.vertexLayouts, builder.shader,
                              builder.stateBindings(), builder.rasterState(), builder.depthState(), builder.stencilState());
 }
 
 RenderState& Registry::createRenderState(
-    const RenderTarget& renderTarget, const VertexLayout& vertexLayout,
+    const RenderTarget& renderTarget, const std::vector<VertexLayout>& vertexLayouts,
     const Shader& shader, const StateBindings& stateBindings,
     const RasterState& rasterState, const DepthState& depthState, const StencilState& stencilState)
 {
-    auto renderState = backend().createRenderState(renderTarget, vertexLayout, shader, stateBindings, rasterState, depthState, stencilState);
+    auto renderState = backend().createRenderState(renderTarget, vertexLayouts, shader, stateBindings, rasterState, depthState, stencilState);
     renderState->setOwningRegistry({}, this);
 
     m_renderStates.push_back(std::move(renderState));
