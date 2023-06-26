@@ -905,20 +905,6 @@ void GpuScene::unregisterStaticMesh(StaticMeshHandle handle)
     m_managedStaticMeshes.removeReference(handle, m_currentFrameIdx);
 }
 
-void GpuScene::ensureDrawCallIsAvailableForAll(VertexLayout vertexLayout)
-{
-    // TODO: Implement iterator for ResourceList!
-    m_managedStaticMeshes.forEachResource([&](ManagedStaticMesh const& managedStaticMesh) {
-        if (auto& staticMesh = managedStaticMesh.staticMesh) {
-            for (StaticMeshLOD& staticMeshLOD : staticMesh->LODs()) {
-                for (StaticMeshSegment& meshSegment : staticMeshLOD.meshSegments) {
-                    meshSegment.ensureDrawCallIsAvailable(vertexLayout, *this);
-                }
-            }
-        }
-    });
-}
-
 std::unique_ptr<BottomLevelAS> GpuScene::createBottomLevelAccelerationStructure(StaticMeshSegment& meshSegment, uint32_t meshIdx)
 {
     Buffer const& rayTracingVertexBuffer = vertexManager().positionVertexBuffer();
@@ -1235,103 +1221,6 @@ void GpuScene::processDeferredDeletions()
     });
 }
 
-DrawCallDescription GpuScene::fitVertexAndIndexDataForMesh(Badge<StaticMeshSegment>, const StaticMeshSegment& meshSegment, const VertexLayout& layout, std::optional<DrawCallDescription> alignWith)
-{
-    const size_t initialIndexBufferSize = 100'000 * sizeofIndexType(globalIndexBufferType());
-    const size_t initialVertexBufferSize = 50'000 * layout.packedVertexSize();
-
-    bool doAlign = alignWith.has_value();
-
-    ARKOSE_ASSERT(meshSegment.asset);
-    std::vector<u8> vertexData = meshSegment.asset->assembleVertexData(layout);
-
-    auto entry = m_globalVertexBuffers.find(layout);
-    if (entry == m_globalVertexBuffers.end()) {
-
-        size_t offset = doAlign ? (alignWith->vertexOffset * layout.packedVertexSize()) : 0;
-        size_t minRequiredBufferSize = offset + vertexData.size();
-
-        m_globalVertexBuffers[layout] = backend().createBuffer(std::max(initialVertexBufferSize, minRequiredBufferSize), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-        m_globalVertexBuffers[layout]->setName("SceneVertexBuffer");
-    }
-
-    Buffer& vertexBuffer = *m_globalVertexBuffers[layout];
-    size_t newDataStartOffset = doAlign
-        ? alignWith->vertexOffset * layout.packedVertexSize()
-        : m_nextFreeVertexIndex * layout.packedVertexSize();
-
-    vertexBuffer.updateDataAndGrowIfRequired(vertexData.data(), vertexData.size(), newDataStartOffset);
-
-    if (doAlign) {
-        // TODO: Maybe ensure we haven't already fitted this mesh+layout combo and is just overwriting at this point. Well, before doing it I guess..
-        DrawCallDescription reusedDrawCall = alignWith.value();
-        reusedDrawCall.vertexBuffer = m_globalVertexBuffers[layout].get();
-        return reusedDrawCall;
-    }
-
-    uint32_t vertexCount = narrow_cast<u32>(meshSegment.asset->vertexCount());
-    uint32_t vertexOffset = m_nextFreeVertexIndex;
-    m_nextFreeVertexIndex += vertexCount;
-
-    DrawCallDescription drawCall {};
-
-    drawCall.vertexBuffer = &vertexBuffer;
-    drawCall.vertexCount = vertexCount;
-    drawCall.vertexOffset = vertexOffset;
-
-    // Fit index data
-    {
-        std::vector<uint32_t> indexData = meshSegment.asset->indices;
-        size_t requiredAdditionalSize = indexData.size() * sizeof(uint32_t);
-
-        if (m_global32BitIndexBuffer == nullptr) {
-            m_global32BitIndexBuffer = backend().createBuffer(std::max(initialIndexBufferSize, requiredAdditionalSize), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
-            m_global32BitIndexBuffer->setName("SceneIndexBuffer");
-        }
-
-        uint32_t firstIndex = m_nextFreeIndex;
-        m_nextFreeIndex += (uint32_t)indexData.size();
-
-        m_global32BitIndexBuffer->updateDataAndGrowIfRequired(indexData.data(), requiredAdditionalSize, firstIndex * sizeof(uint32_t));
-
-        drawCall.indexBuffer = m_global32BitIndexBuffer.get();
-        drawCall.indexCount = (uint32_t)indexData.size();
-        drawCall.indexType = IndexType::UInt32;
-        drawCall.firstIndex = firstIndex;
-    }
-
-    return drawCall;
-}
-
-Buffer& GpuScene::globalVertexBufferForLayout(const VertexLayout& layout) const
-{
-    if (m_globalVertexBuffers.size() == 0) {
-        return *m_emptyVertexBuffer;
-    }
-
-    auto entry = m_globalVertexBuffers.find(layout);
-    if (entry == m_globalVertexBuffers.end()) {
-        ARKOSE_LOG(Fatal, "Can't get vertex buffer for layout since it has not been created! Please ensureDrawCallIsAvailable for at least one mesh before calling this.");
-    }
-
-    return *entry->second;
-}
-
-Buffer& GpuScene::globalIndexBuffer() const
-{
-    if (m_global32BitIndexBuffer == nullptr) {
-        return *m_emptyIndexBuffer;
-    }
-
-    return *m_global32BitIndexBuffer;
-}
-
-IndexType GpuScene::globalIndexBufferType() const
-{
-    // For simplicity we keep a single 32-bit index buffer, since every mesh should fit in there.
-    return IndexType::UInt32;
-}
-
 BindingSet& GpuScene::globalMaterialBindingSet() const
 {
     ARKOSE_ASSERT(m_materialBindingSet);
@@ -1487,11 +1376,12 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
         if (ImGui::BeginTabItem("Mesh index data")) {
 
-            ImGui::Text("Using global index type %s", indexTypeToString(globalIndexBufferType()));
+            ImGui::Text("Using global index type %s", indexTypeToString(vertexManager().indexType()));
 
-            float allocatedSizeMB = conversion::to::MB(globalIndexBuffer().sizeInMemory());
-            float usedSizeMB = conversion::to::MB(m_nextFreeIndex * sizeofIndexType(globalIndexBufferType()));
-            ImGui::Text("Using %.1f MB (%.1f MB allocated)", usedSizeMB, allocatedSizeMB);
+            // TODO: Port over to the vertex manager!
+            //float allocatedSizeMB = conversion::to::MB(indexBuffer().sizeInMemory());
+            //float usedSizeMB = conversion::to::MB(m_nextFreeIndex * sizeofIndexType(vertexManager().indexType()));
+            //ImGui::Text("Using %.1f MB (%.1f MB allocated)", usedSizeMB, allocatedSizeMB);
 
             ImGui::EndTabItem();
         }
@@ -1509,6 +1399,8 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
                 ImGui::TableHeadersRow();
 
+                // TODO: Port over to the vertex manager!
+                /*
                 for (auto& [vertexLayout, buffer] : m_globalVertexBuffers) {
 
                     ImGui::TableNextRow();
@@ -1528,6 +1420,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
                     totalAllocatedSizeMB += allocatedSizeMB;
                     totalUsedSizeMB += usedSizeMB;
                 }
+                */
 
                 ImGui::EndTable();
             }

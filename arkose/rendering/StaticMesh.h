@@ -9,7 +9,6 @@
 #include "rendering/Material.h"
 #include "rendering/VertexManager.h"
 #include "rendering/backend/base/AccelerationStructure.h"
-#include "rendering/backend/util/DrawCall.h" // remove me!
 #include "rendering/meshlet/MeshletView.h"
 #include "scene/Vertex.h"
 #include <ark/aabb.h>
@@ -17,8 +16,6 @@
 #include <string>
 #include <vector>
 #include <memory>
-
-class GpuScene; // remove me!
 
 DEFINE_HANDLE_TYPE(StaticMeshHandle)
 
@@ -52,12 +49,6 @@ struct StaticMeshSegment {
 
     // Vertex allocation into the buffer's from the vertex manager
     VertexAllocation vertexAllocation {};
-
-    // TODO: Remove this, they are for the temporary transition period..
-    void ensureDrawCallIsAvailable(const VertexLayout&, GpuScene&) const;
-    const DrawCallDescription& drawCallDescription(const VertexLayout&, GpuScene&) const;
-    mutable std::unordered_map<VertexLayout, DrawCallDescription> m_drawCallDescriptions;
-
 };
 
 struct StaticMeshLOD {

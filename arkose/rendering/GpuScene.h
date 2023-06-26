@@ -63,9 +63,6 @@ public:
     const ShaderMaterial* materialForHandle(MaterialHandle handle) const;
     ShaderDrawable const* drawableForHandle(DrawableObjectHandle handle) const;
 
-    // TODO: This is a temporary helper, remove me eventually!
-    void ensureDrawCallIsAvailableForAll(VertexLayout);
-
     size_t lightCount() const;
     size_t shadowCastingLightCount() const;
     size_t forEachShadowCastingLight(std::function<void(size_t, Light&)>);
@@ -132,12 +129,6 @@ public:
 
     void processDeferredDeletions();
 
-    DrawCallDescription fitVertexAndIndexDataForMesh(Badge<StaticMeshSegment>, const StaticMeshSegment&, const VertexLayout&, std::optional<DrawCallDescription> alignWith = {});
-
-    Buffer& globalVertexBufferForLayout(const VertexLayout&) const;
-    Buffer& globalIndexBuffer() const;
-    IndexType globalIndexBufferType() const;
-
     BindingSet& globalMaterialBindingSet() const;
 
     TopLevelAS& globalTopLevelAccelerationStructure() const;
@@ -179,12 +170,6 @@ private:
     float m_lightPreExposure { 1.0f };
 
     // GPU data
-
-    std::unique_ptr<Buffer> m_global32BitIndexBuffer { nullptr };
-    uint32_t m_nextFreeIndex { 0 };
-
-    std::unordered_map<VertexLayout, std::unique_ptr<Buffer>> m_globalVertexBuffers {};
-    uint32_t m_nextFreeVertexIndex { 0 };
 
     struct ManagedSkeletalMesh {
         MeshAsset const* meshAsset {};
