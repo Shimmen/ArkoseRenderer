@@ -5,6 +5,7 @@
 #include "rendering/backend/util/IndexType.h"
 #include "scene/Vertex.h"
 #include <memory>
+#include <optional>
 
 class Backend;
 class MeshSegmentAsset;
@@ -57,9 +58,10 @@ private:
 
     struct VertexUploadJob {
         MeshSegmentAsset const* asset { nullptr };
+        StaticMeshSegment* target { nullptr };
         VertexAllocation allocation {};
     };
 
-    bool allocateMeshDataForSegment(StaticMeshSegment&);
+    std::optional<VertexAllocation> allocateMeshDataForSegment(MeshSegmentAsset const&);
     void uploadMeshDataForAllocation(VertexUploadJob const&);
 };

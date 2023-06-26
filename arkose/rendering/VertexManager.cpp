@@ -32,9 +32,17 @@ bool VertexManager::allocateMeshData(StaticMesh& staticMesh)
 
     for (StaticMeshLOD& lod : staticMesh.LODs()) {
         for (StaticMeshSegment& meshSegment : lod.meshSegments) {
-            if (!allocateMeshDataForSegment(meshSegment)) {
+
+            if (meshSegment.vertexAllocation.isValid()) {
+                continue;
+            }
+
+            std::optional<VertexAllocation> allocation = allocateMeshDataForSegment(*meshSegment.asset);
+            if (!allocation.has_value()) {
                 return false;
             }
+
+            meshSegment.vertexAllocation = allocation.value();
         }
     }
 
@@ -47,45 +55,48 @@ bool VertexManager::uploadMeshData(StaticMesh& staticMesh)
 
     for (StaticMeshLOD& lod : staticMesh.LODs()) {
         for (StaticMeshSegment& meshSegment : lod.meshSegments) {
-            
-            if (!allocateMeshDataForSegment(meshSegment)) {
+
+            if (meshSegment.vertexAllocation.isValid()) {
+                continue;
+            }
+
+            std::optional<VertexAllocation> allocation = allocateMeshDataForSegment(*meshSegment.asset);
+            if (!allocation.has_value()) {
                 return false;
             }
 
             // TODO: Implement async uploading, i.e., push this vertex upload job to a queue!
             uploadMeshDataForAllocation(VertexUploadJob { .asset = meshSegment.asset,
-                                                          .allocation = meshSegment.vertexAllocation });
+                                                          .target = &meshSegment,
+                                                          .allocation = allocation.value() });
         }
     }
 
     return true;
 }
 
-bool VertexManager::allocateMeshDataForSegment(StaticMeshSegment& meshSegment)
+std::optional<VertexAllocation> VertexManager::allocateMeshDataForSegment(MeshSegmentAsset const& segmentAsset)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (meshSegment.vertexAllocation.isValid()) {
-        return true;
-    }
-
-    MeshSegmentAsset const& segmentAsset = *meshSegment.asset;
     u32 vertexCount = narrow_cast<u32>(segmentAsset.vertexCount());
     u32 indexCount = narrow_cast<u32>(segmentAsset.indices.size());
 
+    VertexAllocation allocation {};
+
     // TODO: Validate that it will fit!
-    meshSegment.vertexAllocation.firstVertex = m_nextFreeVertexIndex;
-    meshSegment.vertexAllocation.vertexCount = vertexCount;
+    allocation.firstVertex = m_nextFreeVertexIndex;
+    allocation.vertexCount = vertexCount;
     m_nextFreeVertexIndex += vertexCount;
 
     if (indexCount > 0) {
         // TODO: Validate that it will fit!
-        meshSegment.vertexAllocation.firstIndex = m_nextFreeIndex;
-        meshSegment.vertexAllocation.indexCount = indexCount;
+        allocation.firstIndex = m_nextFreeIndex;
+        allocation.indexCount = indexCount;
         m_nextFreeIndex += indexCount;
     }
 
-    return true;
+    return allocation;
 }
 
 void VertexManager::uploadMeshDataForAllocation(VertexUploadJob const& uploadJob)
@@ -127,8 +138,9 @@ void VertexManager::uploadMeshDataForAllocation(VertexUploadJob const& uploadJob
         m_indexBuffer->updateDataAndGrowIfRequired(segmentAsset.indices.data(), segmentAsset.indices.size(), indexOffset);
     }
 
-    // TODO: We need to communicate somehow once the upload is done and we can start rendering with it!
-    //allocation.uploaded = true;
+    // The data is now uploaded, indicate that it's ready to be used
+    // TODO: When we're async this will be a race condition! We might wanna do like the MeshletManager for signalling back.
+    uploadJob.target->vertexAllocation = allocation;
 }
 
 void VertexManager::skinSkeletalMeshInstance(SkeletalMeshInstance& instance)
