@@ -172,12 +172,6 @@ private:
     bool m_maintainRayTracingScene { false };
     bool m_meshShadingCapable { false };
 
-    // NOTE: It's possible some RT pass would want more vertex info than this, but in all cases I can think of
-    // we want either these and nothing more, or nothing at all (e.g. ray traced AO). Remember that vertex positions
-    // are always available more directly, as we know our hit point.
-    const VertexLayout m_rayTracingVertexLayout = { VertexComponent::Normal3F,
-                                                    VertexComponent::TexCoord2F };
-
     // TODO: Create a geometry per mesh (or rather, per LOD) and use the SBT to lookup material.
     // For now we create one per segment so we can ensure one material per "draw"
     std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(StaticMeshSegment&, uint32_t meshIdx);

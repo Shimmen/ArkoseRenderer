@@ -236,16 +236,14 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     //       for it and then explicitly capture that pointer for this to work.
     Buffer* rtTriangleMeshBufferPtr = nullptr;
     if (m_maintainRayTracingScene) {
-        ensureDrawCallIsAvailableForAll(m_rayTracingVertexLayout);
-
         // TODO: Resize the buffer if needed when more meshes are added, OR crash hard
         // TODO: Make a more reasonable default too... we need: #meshes * #LODs * #segments-per-lod
         Buffer& rtTriangleMeshBuffer = reg.createBuffer(10'000 * sizeof(RTTriangleMesh), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
         rtTriangleMeshBufferPtr = &rtTriangleMeshBuffer;
 
-        BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(rtTriangleMeshBuffer, ShaderStage::AnyRayTrace),
-                                                                  ShaderBinding::storageBuffer(globalIndexBuffer(), ShaderStage::AnyRayTrace),
-                                                                  ShaderBinding::storageBuffer(globalVertexBufferForLayout(m_rayTracingVertexLayout), ShaderStage::AnyRayTrace) });
+        BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(rtTriangleMeshBuffer, ShaderStage::AnyRayTrace),
+                                                                  ShaderBinding::storageBufferReadonly(vertexManager().indexBuffer(), ShaderStage::AnyRayTrace),
+                                                                  ShaderBinding::storageBufferReadonly(vertexManager().nonPositionVertexBuffer(), ShaderStage::AnyRayTrace) });
         reg.publish("SceneRTMeshDataSet", rtMeshDataBindingSet);
     }
 
@@ -260,9 +258,9 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     spotLightDataBuffer.setName("SceneSpotLightData");
 
     BindingSet& lightBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(lightMetaDataBuffer),
-                                                         ShaderBinding::storageBuffer(dirLightDataBuffer),
-                                                         ShaderBinding::storageBuffer(sphereLightDataBuffer),
-                                                         ShaderBinding::storageBuffer(spotLightDataBuffer) });
+                                                         ShaderBinding::storageBufferReadonly(dirLightDataBuffer),
+                                                         ShaderBinding::storageBufferReadonly(sphereLightDataBuffer),
+                                                         ShaderBinding::storageBufferReadonly(spotLightDataBuffer) });
     reg.publish("SceneLightSet", lightBindingSet);
 
     // Misc. data
@@ -557,7 +555,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                             u32 rtMeshIndex = narrow_cast<u32>(rayTracingMeshData.size());
 
-                            const DrawCallDescription& drawCallDesc = meshSegment.drawCallDescription(m_rayTracingVertexLayout, *this);
+                            DrawCallDescription drawCallDesc = meshSegment.vertexAllocation.asDrawCallDescription();
                             rayTracingMeshData.push_back(RTTriangleMesh { .firstVertex = drawCallDesc.vertexOffset,
                                                                           .firstIndex = static_cast<int>(drawCallDesc.firstIndex),
                                                                           .materialIndex = meshSegment.material.indexOfType<int>() });
@@ -1549,9 +1547,9 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
             ImGui::Separator();
 
-            std::string layoutDescription = m_rayTracingVertexLayout.toString(false);
-            ImGui::Text("Using vertex layout: [ %s ]", layoutDescription.c_str());
-            ImGui::TextColored(ImColor(0.75f, 0.75f, 0.75f), "(Note: This vertex data does not count to the BLAS size)");
+            //std::string layoutDescription = m_rayTracingVertexLayout.toString(false);
+            //ImGui::Text("Using vertex layout: [ %s ]", layoutDescription.c_str());
+            //ImGui::TextColored(ImColor(0.75f, 0.75f, 0.75f), "(Note: This vertex data does not count to the BLAS size)");
 
             ImGui::EndTabItem();
         }

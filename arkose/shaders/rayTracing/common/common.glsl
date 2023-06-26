@@ -8,9 +8,11 @@
 #define RT_USE_EXTENDED_RAY_PAYLOAD 0
 #endif
 
+// NOTE: Must match whatever vertex data layout we pass to the ray tracing shaders!
 struct Vertex {
-    vec3 normal;
     vec2 texCoord;
+    vec3 normal;
+    vec4 tangent;
 };
 
 struct RayPayloadMain {
