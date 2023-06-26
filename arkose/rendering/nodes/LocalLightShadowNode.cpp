@@ -34,7 +34,11 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
     BindingSet& sceneObjectBindingSet = *reg.getBindingSet("SceneObjectSet");
 
     Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
-    RenderStateBuilder renderStateBuilder { atlasRenderTarget, shadowMapShader, m_vertexLayout };
+
+    VertexLayout vertexLayoutPos = scene.vertexManager().positionVertexLayout();
+    VertexLayout vertexLayoutOther = scene.vertexManager().nonPositionVertexLayout();
+
+    RenderStateBuilder renderStateBuilder { atlasRenderTarget, shadowMapShader, { vertexLayoutPos, vertexLayoutOther } };
     renderStateBuilder.stateBindings().at(0, sceneObjectBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
@@ -57,13 +61,10 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
         uploadBuffer.upload(shadowMapViewports, shadowAllocationBuffer);
         cmdList.executeBufferCopyOperations(uploadBuffer);
 
-        // NOTE: We assume that all or most meshes will be drawn in a shadow map so we prepare all of them
-        scene.ensureDrawCallIsAvailableForAll(m_vertexLayout);
-
         cmdList.beginRendering(renderState, shadowMapClearValue);
-
-        cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
-        cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
+        cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), 0);
+        cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), 1);
+        cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
         for (ShadowMapAtlasAllocation& shadowMapAllocation : shadowMapAllocations) {
             Light::Type lightType = shadowMapAllocation.light->type();
@@ -269,7 +270,7 @@ void LocalLightShadowNode::drawShadowCasters(CommandList& cmdList, GpuScene& sce
                         continue;
                     }
 
-                    DrawCallDescription drawCall = meshSegment.drawCallDescription(m_vertexLayout, scene);
+                    DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
                     drawCall.firstInstance = instance->drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>(); // TODO: Put this in some buffer instead!
 
                     drawCalls.enqueue(drawCall);

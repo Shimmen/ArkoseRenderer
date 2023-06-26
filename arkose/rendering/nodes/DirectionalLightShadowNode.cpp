@@ -43,7 +43,11 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
     BindingSet& sceneObjectBindingSet = *reg.getBindingSet("SceneObjectSet");
 
     Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
-    RenderStateBuilder renderStateBuilder { shadowMapRenderTarget, shadowMapShader, m_vertexLayout };
+
+    VertexLayout vertexLayoutPos = scene.vertexManager().positionVertexLayout();
+    VertexLayout vertexLayoutOther = scene.vertexManager().nonPositionVertexLayout();
+
+    RenderStateBuilder renderStateBuilder { shadowMapRenderTarget, shadowMapShader, { vertexLayoutPos, vertexLayoutOther } };
     renderStateBuilder.stateBindings().at(0, sceneObjectBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
@@ -66,8 +70,6 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
         auto lightFrustum = geometry::Frustum::createFromProjectionMatrix(lightProjectionFromWorld);
         mat4 lightProjectionFromView = lightProjectionFromWorld * inverse(scene.camera().viewMatrix());
 
-        scene.ensureDrawCallIsAvailableForAll(m_vertexLayout);
-
         {
             ScopedDebugZone zone { cmdList, "Shadow Map Drawing" };
 
@@ -78,8 +80,9 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
             cmdList.setNamedUniform<float>("constantBias", light->constantBias(shadowMap.extent()));
             cmdList.setNamedUniform<float>("slopeBias", light->slopeBias(shadowMap.extent()));
 
-            cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
-            cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
+            cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), 0);
+            cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), 1);
+            cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
             moodycamel::ConcurrentQueue<DrawCallDescription> drawCalls {};
 
@@ -108,7 +111,7 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
                                 continue;
                             }
 
-                            DrawCallDescription drawCall = meshSegment.drawCallDescription(m_vertexLayout, scene);
+                            DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
                             drawCall.firstInstance = instance->drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>(); // TODO: Put this in some buffer instead!
 
                             drawCalls.enqueue(drawCall);

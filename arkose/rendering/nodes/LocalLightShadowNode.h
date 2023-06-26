@@ -15,11 +15,6 @@ public:
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:
-    VertexLayout m_vertexLayout { VertexComponent::Position3F,
-                                  VertexComponent::TexCoord2F,
-                                  VertexComponent::Normal3F,
-                                  VertexComponent::Tangent4F };
-
     Texture* m_shadowMapAtlas { nullptr };
 
     int m_maxNumShadowMaps { 16 };
