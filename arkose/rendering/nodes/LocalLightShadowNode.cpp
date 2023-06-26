@@ -13,22 +13,23 @@
 void LocalLightShadowNode::drawGui()
 {
     ImGui::SliderInt("Max number of shadow maps", &m_maxNumShadowMaps, 0, 32);
+    drawTextureVisualizeGui(*m_shadowMapAtlas);
 }
 
 RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& scene, Registry& reg)
 {
-    Texture& shadowMapAtlas = reg.createTexture2D({ 4096, 4096 },
-                                                  Texture::Format::Depth32F,
-                                                  Texture::Filters::linear(),
-                                                  Texture::Mipmap::None,
-                                                  ImageWrapModes::clampAllToEdge());
-    reg.publish("LocalLightShadowMapAtlas", shadowMapAtlas);
+    m_shadowMapAtlas = &reg.createTexture2D({ 4096, 4096 },
+                                            Texture::Format::Depth32F,
+                                            Texture::Filters::linear(),
+                                            Texture::Mipmap::None,
+                                            ImageWrapModes::clampAllToEdge());
+    reg.publish("LocalLightShadowMapAtlas", *m_shadowMapAtlas);
 
     // TODO: Handle many lights!
     Buffer& shadowAllocationBuffer = reg.createBuffer(sizeof(vec4) * 32, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     reg.publish("LocalLightShadowAllocations", shadowAllocationBuffer);
 
-    RenderTarget& atlasRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &shadowMapAtlas } });
+    RenderTarget& atlasRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, m_shadowMapAtlas } });
 
     BindingSet& sceneObjectBindingSet = *reg.getBindingSet("SceneObjectSet");
 
@@ -42,17 +43,17 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
         auto shadowMapClearValue = ClearValue::blackAtMaxDepth();
 
         if (m_maxNumShadowMaps == 0) {
-            cmdList.clearTexture(shadowMapAtlas, shadowMapClearValue);
+            cmdList.clearTexture(*m_shadowMapAtlas, shadowMapClearValue);
             return;
         }
 
-        std::vector<ShadowMapAtlasAllocation> shadowMapAllocations = allocateShadowMapsInAtlas(scene, shadowMapAtlas);
+        std::vector<ShadowMapAtlasAllocation> shadowMapAllocations = allocateShadowMapsInAtlas(scene, *m_shadowMapAtlas);
         if (shadowMapAllocations.empty()) {
-            cmdList.clearTexture(shadowMapAtlas, shadowMapClearValue);
+            cmdList.clearTexture(*m_shadowMapAtlas, shadowMapClearValue);
             return;
         }
 
-        std::vector<vec4> shadowMapViewports = collectAtlasViewportDataForAllocations(scene, shadowMapAtlas.extent(), shadowMapAllocations);
+        std::vector<vec4> shadowMapViewports = collectAtlasViewportDataForAllocations(scene, m_shadowMapAtlas->extent(), shadowMapAllocations);
         uploadBuffer.upload(shadowMapViewports, shadowAllocationBuffer);
         cmdList.executeBufferCopyOperations(uploadBuffer);
 

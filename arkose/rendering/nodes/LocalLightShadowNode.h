@@ -20,6 +20,8 @@ private:
                                   VertexComponent::Normal3F,
                                   VertexComponent::Tangent4F };
 
+    Texture* m_shadowMapAtlas { nullptr };
+
     int m_maxNumShadowMaps { 16 };
 
     // Any shadow map smaller than this is not worth rendering
