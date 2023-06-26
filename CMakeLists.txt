@@ -63,6 +63,7 @@ set(ARKOSE_SOURCES
     arkose/rendering/SkeletalMesh.cpp
     arkose/rendering/Skeleton.cpp
     arkose/rendering/StaticMesh.cpp
+    arkose/rendering/VertexManager.cpp
     arkose/rendering/backend/Resource.cpp
     arkose/rendering/backend/shader/Shader.cpp
     arkose/rendering/backend/shader/ShaderFile.cpp

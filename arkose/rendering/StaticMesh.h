@@ -7,6 +7,7 @@
 #include "physics/HandleTypes.h"
 #include "rendering/DrawKey.h"
 #include "rendering/Material.h"
+#include "rendering/VertexManager.h"
 #include "rendering/backend/base/AccelerationStructure.h"
 #include "rendering/backend/util/DrawCall.h" // remove me!
 #include "rendering/meshlet/MeshletView.h"
@@ -48,6 +49,9 @@ struct StaticMeshSegment {
     // TODO: Create a geometry per StaticMeshLOD and use the SBT to lookup materials for the segments.
     // For now we create one per segment so we can ensure one material per "draw" and keep it simple
     std::unique_ptr<BottomLevelAS> blas { nullptr };
+
+    // Vertex allocation into the buffer's from the vertex manager
+    VertexAllocation vertexAllocation {};
 
     // TODO: Remove this, they are for the temporary transition period..
     void ensureDrawCallIsAvailable(const VertexLayout&, GpuScene&) const;

@@ -59,6 +59,8 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable, bool meshShading
                                                         ShaderBinding::sampledTextureBindlessArray(static_cast<uint32_t>(m_managedMaterials.capacity()), placeholderTexture) });
     m_materialBindingSet->setName("SceneMaterialSet");
 
+    m_vertexManager = std::make_unique<VertexManager>(m_backend);
+
     if (m_maintainRayTracingScene) {
         m_sceneTopLevelAccelerationStructure = backend().createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, {});
     }
@@ -877,6 +879,10 @@ StaticMeshHandle GpuScene::registerStaticMesh(MeshAsset const* meshAsset)
         }
     });
 
+    if (m_vertexManager != nullptr) {
+        m_vertexManager->uploadMeshData(*staticMesh);
+    }
+
     if (m_meshletManager != nullptr) {
         m_meshletManager->allocateMeshlets(*staticMesh);
     }
@@ -1336,6 +1342,12 @@ TopLevelAS& GpuScene::globalTopLevelAccelerationStructure() const
     ARKOSE_ASSERT(m_maintainRayTracingScene);
     ARKOSE_ASSERT(m_sceneTopLevelAccelerationStructure);
     return *m_sceneTopLevelAccelerationStructure;
+}
+
+VertexManager const& GpuScene::vertexManager() const
+{
+    ARKOSE_ASSERT(m_vertexManager != nullptr);
+    return *m_vertexManager;
 }
 
 MeshletManager const& GpuScene::meshletManager() const

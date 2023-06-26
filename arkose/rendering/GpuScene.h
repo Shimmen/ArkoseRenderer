@@ -10,6 +10,7 @@
 #include "rendering/ResourceList.h"
 #include "rendering/SkeletalMesh.h"
 #include "rendering/StaticMesh.h"
+#include "rendering/VertexManager.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
 #include <memory>
@@ -149,6 +150,10 @@ public:
 
     IconManager const& iconManager() const { return *m_iconManager; }
 
+    // Mesh / vertex related
+
+    VertexManager const& vertexManager() const;
+
     // Meshlet / mesh shading related
 
     MeshletManager const& meshletManager() const;
@@ -205,6 +210,7 @@ private:
     std::vector<std::unique_ptr<StaticMeshInstance>> m_staticMeshInstances {};
     ResourceList<ShaderDrawable, DrawableObjectHandle> m_drawables { "Drawables", 10'000 };
 
+    std::unique_ptr<VertexManager> m_vertexManager {};
     std::unique_ptr<MeshletManager> m_meshletManager {};
 
     struct ManagedDirectionalLight {
