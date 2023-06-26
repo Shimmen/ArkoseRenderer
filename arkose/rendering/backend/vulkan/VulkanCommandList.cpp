@@ -1003,7 +1003,7 @@ void VulkanCommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount, uint32_
         ARKOSE_LOG(Fatal, "draw: no active render state!");
     }
 
-    bindVertexBuffer(vertexBuffer);
+    bindVertexBuffer(vertexBuffer, 0);
     vkCmdDraw(m_commandBuffer, vertexCount, 1, firstVertex, 0);
 }
 
@@ -1015,7 +1015,7 @@ void VulkanCommandList::drawIndexed(const Buffer& vertexBuffer, const Buffer& in
         ARKOSE_LOG(Fatal, "drawIndexed: no active render state!");
     }
 
-    bindVertexBuffer(vertexBuffer);
+    bindVertexBuffer(vertexBuffer, 0);
     bindIndexBuffer(indexBuffer, indexType);
     vkCmdDrawIndexed(m_commandBuffer, indexCount, 1, 0, 0, instanceIndex);
 }
@@ -1126,7 +1126,7 @@ void VulkanCommandList::setDepthBias(float constantFactor, float slopeFactor)
     vkCmdSetDepthBias(m_commandBuffer, constantFactor, depthBiasClamp, slopeFactor);
 }
 
-void VulkanCommandList::bindVertexBuffer(const Buffer& vertexBuffer)
+void VulkanCommandList::bindVertexBuffer(const Buffer& vertexBuffer, u32 bindingIdx)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
@@ -1140,7 +1140,7 @@ void VulkanCommandList::bindVertexBuffer(const Buffer& vertexBuffer)
     VkBuffer vertexBuffers[] = { vulkanBuffer };
     VkDeviceSize offsets[] = { 0 };
 
-    vkCmdBindVertexBuffers(m_commandBuffer, 0, 1, vertexBuffers, offsets);
+    vkCmdBindVertexBuffers(m_commandBuffer, bindingIdx, 1, vertexBuffers, offsets);
     m_boundVertexBuffer = vulkanBuffer;
 }
 

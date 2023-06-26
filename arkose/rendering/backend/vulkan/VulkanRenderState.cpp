@@ -17,10 +17,11 @@ VulkanRenderState::VulkanRenderState(Backend& backend, RenderTarget const& rende
 
     std::vector<VkVertexInputBindingDescription> bindingDescriptions {};
     std::vector<VkVertexInputAttributeDescription> attributeDescriptions {};
+
+    u32 nextLocation = 0;
     for (VertexLayout const& vertexLayout : vertexLayouts) {
 
         u32 bindingIdx = narrow_cast<u32>(bindingDescriptions.size());
-        u32 nextLocation = 0;
 
         VkVertexInputBindingDescription& bindingDescription = bindingDescriptions.emplace_back();
         bindingDescription.binding = bindingIdx;

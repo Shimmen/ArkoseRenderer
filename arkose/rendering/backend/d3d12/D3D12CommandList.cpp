@@ -82,7 +82,7 @@ void D3D12CommandList::drawIndirect(const Buffer& indirectBuffer, const Buffer& 
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
-void D3D12CommandList::bindVertexBuffer(const Buffer& vertexBuffer)
+void D3D12CommandList::bindVertexBuffer(const Buffer& vertexBuffer, u32 bindingIdx)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }

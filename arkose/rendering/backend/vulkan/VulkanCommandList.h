@@ -35,7 +35,7 @@ public:
     void setViewport(ivec2 origin, ivec2 size) override;
     void setDepthBias(float constantFactor, float slopeFactor) override;
 
-    void bindVertexBuffer(const Buffer&) override;
+    void bindVertexBuffer(const Buffer&, u32 bindingIdx) override;
     void bindIndexBuffer(const Buffer&, IndexType) override;
     void issueDrawCall(const DrawCallDescription&) override;
 
