@@ -30,7 +30,7 @@ public:
     Usage usage() const { return m_usage; }
     MemoryHint memoryHint() const { return m_memoryHint; }
 
-    size_t sizeInMemory() { return m_sizeInMemory; }
+    size_t sizeInMemory() const { return m_sizeInMemory; }
 
     virtual void updateData(const std::byte* data, size_t size, size_t offset = 0) = 0;
     virtual bool updateDataAndGrowIfRequired(const std::byte* data, size_t size, size_t offset);
