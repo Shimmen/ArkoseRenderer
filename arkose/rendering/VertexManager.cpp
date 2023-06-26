@@ -5,6 +5,25 @@
 #include "rendering/backend/base/Backend.h"
 #include "scene/MeshInstance.h"
 
+DrawCallDescription VertexAllocation::asDrawCallDescription() const
+{
+    DrawCallDescription drawCall {};
+
+    if (indexCount > 0) {
+        drawCall.type = DrawCallDescription::Type::Indexed;
+        drawCall.vertexOffset = firstVertex;
+        drawCall.vertexCount = vertexCount;
+        drawCall.firstIndex = firstIndex;
+        drawCall.indexCount = indexCount;
+    } else {
+        drawCall.type = DrawCallDescription::Type::NonIndexed;
+        drawCall.firstVertex = firstVertex;
+        drawCall.vertexCount = vertexCount;
+    }
+
+    return drawCall;
+}
+
 VertexManager::VertexManager(Backend& backend)
 {
     const size_t initialIndexBufferSize = 100'000 * sizeofIndexType(indexType());

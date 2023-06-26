@@ -2,6 +2,7 @@
 
 #include "core/Types.h"
 #include "rendering/backend/base/Buffer.h"
+#include "rendering/backend/util/DrawCall.h"
 #include "rendering/backend/util/IndexType.h"
 #include "scene/Vertex.h"
 #include <memory>
@@ -21,6 +22,8 @@ struct VertexAllocation {
 
     bool isValid() const { return vertexCount > 0; }
     bool hasIndices() const { return indexCount > 0; }
+
+    DrawCallDescription asDrawCallDescription() const;
 };
 
 class VertexManager {
