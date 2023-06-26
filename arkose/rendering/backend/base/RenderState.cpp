@@ -7,6 +7,13 @@ RenderStateBuilder::RenderStateBuilder(const RenderTarget& inRenderTarget, const
 {
 }
 
+RenderStateBuilder::RenderStateBuilder(const RenderTarget& inRenderTarget, const Shader& inShader, std::vector<VertexLayout>&& inVertexLayouts)
+    : renderTarget(inRenderTarget)
+    , shader(inShader)
+    , vertexLayouts(std::move(inVertexLayouts))
+{
+}
+
 RenderStateBuilder::RenderStateBuilder(const RenderTarget& renderTarget, const Shader& shader, VertexLayout vertexLayout)
     : RenderStateBuilder(renderTarget, shader, { vertexLayout })
 {

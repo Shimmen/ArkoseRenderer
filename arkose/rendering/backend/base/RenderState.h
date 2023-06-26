@@ -114,6 +114,7 @@ private:
 class RenderStateBuilder {
 public:
     RenderStateBuilder(const RenderTarget&, const Shader&, std::initializer_list<VertexLayout>);
+    RenderStateBuilder(const RenderTarget&, const Shader&, std::vector<VertexLayout>&&);
     RenderStateBuilder(const RenderTarget&, const Shader&, VertexLayout);
 
     const RenderTarget& renderTarget;
