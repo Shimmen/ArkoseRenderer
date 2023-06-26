@@ -60,27 +60,25 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
                 return;
             }
 
-            scene.ensureDrawCallIsAvailableForAll({ VertexComponent::Position3F });
-
             ClearValue clearValue { .color = ClearColor::srgbColor(1, 0, 1),
                                     .depth = 1.0f };
 
             cmdList.beginRendering(drawIndicesState, clearValue);
             cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
 
-            cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout({ VertexComponent::Position3F }));
-            cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
+            cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer());
+            cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
-            uint32_t drawIdx = 0;
+            u32 drawIdx = 0;
             for (auto& instance : scene.staticMeshInstances()) {
-                if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
+                if (StaticMesh const* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
 
                     // TODO: Pick LOD properly (i.e. the same as drawn in the main passes)
-                    const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
+                    StaticMeshLOD const& lod = staticMesh->lodAtIndex(0);
 
-                    for (const StaticMeshSegment& meshSegment : lod.meshSegments) {
-                        DrawCallDescription drawCall = meshSegment.drawCallDescription({ VertexComponent::Position3F }, scene);
-                        drawCall.firstInstance = static_cast<uint32_t>(drawIdx++);
+                    for (StaticMeshSegment const& meshSegment : lod.meshSegments) {
+                        DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
+                        drawCall.firstInstance = drawIdx++;
                         cmdList.issueDrawCall(drawCall);
                     }
                 }
