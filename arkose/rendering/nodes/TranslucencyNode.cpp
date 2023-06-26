@@ -27,12 +27,9 @@ RenderPipelineNode::ExecuteCallback TranslucencyNode::construct(GpuScene& scene,
             return;
         }
 
-        for (auto const& instance : translucentInstances) {
-            instance.meshSegment->ensureDrawCallIsAvailable(m_vertexLayout, scene);
-        }
-
-        cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
-        cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
+        cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), 0);
+        cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), 1);
+        cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
         cmdList.beginRendering(renderState);
         cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
@@ -40,7 +37,7 @@ RenderPipelineNode::ExecuteCallback TranslucencyNode::construct(GpuScene& scene,
         cmdList.setNamedUniform("invTargetSize", renderTarget.extent().inverse());
 
         for (TranslucentMeshSegmentInstance const& instance : translucentInstances) {
-            DrawCallDescription drawCall = instance.meshSegment->drawCallDescription(m_vertexLayout, scene);
+            DrawCallDescription drawCall = instance.meshSegment->vertexAllocation.asDrawCallDescription();
             drawCall.firstInstance = instance.drawableIdx;
             cmdList.issueDrawCall(drawCall);
         }
@@ -59,7 +56,10 @@ RenderState& TranslucencyNode::makeRenderState(Registry& reg, GpuScene const& sc
 
     Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", shaderDefines);
 
-    RenderStateBuilder renderStateBuilder { renderTarget, shader, m_vertexLayout };
+    VertexLayout vertexLayoutPos = scene.vertexManager().positionVertexLayout();
+    VertexLayout vertexLayoutOther = scene.vertexManager().nonPositionVertexLayout();
+
+    RenderStateBuilder renderStateBuilder { renderTarget, shader, { vertexLayoutPos, vertexLayoutOther } };
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
     renderStateBuilder.writeDepth = false;
     renderStateBuilder.cullBackfaces = true;
