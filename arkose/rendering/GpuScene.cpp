@@ -921,25 +921,28 @@ void GpuScene::ensureDrawCallIsAvailableForAll(VertexLayout vertexLayout)
 
 std::unique_ptr<BottomLevelAS> GpuScene::createBottomLevelAccelerationStructure(StaticMeshSegment& meshSegment, uint32_t meshIdx)
 {
-    VertexLayout vertexLayout = { VertexComponent::Position3F };
+    Buffer const& rayTracingVertexBuffer = vertexManager().positionVertexBuffer();
+    Buffer const& indexBuffer = vertexManager().indexBuffer();
+
+    VertexLayout vertexLayout = vertexManager().positionVertexLayout();
     size_t vertexStride = vertexLayout.packedVertexSize();
     RTVertexFormat vertexFormat = RTVertexFormat::XYZ32F;
 
-    const DrawCallDescription& drawCallDesc = meshSegment.drawCallDescription(vertexLayout, *this);
+    DrawCallDescription drawCallDesc = meshSegment.vertexAllocation.asDrawCallDescription();
     ARKOSE_ASSERT(drawCallDesc.type == DrawCallDescription::Type ::Indexed);
 
-    IndexType indexType = globalIndexBufferType();
+    IndexType indexType = vertexManager().indexType();
     size_t indexStride = sizeofIndexType(indexType);
 
     uint32_t indexOfFirstVertex = drawCallDesc.vertexOffset; // Yeah this is confusing naming for sure.. Offset should probably always be byte offset
     size_t vertexOffset = indexOfFirstVertex * vertexStride;
 
-    RTTriangleGeometry geometry { .vertexBuffer = *drawCallDesc.vertexBuffer,
+    RTTriangleGeometry geometry { .vertexBuffer = rayTracingVertexBuffer,
                                   .vertexCount = drawCallDesc.vertexCount,
                                   .vertexOffset = vertexOffset,
                                   .vertexStride = vertexStride,
                                   .vertexFormat = vertexFormat,
-                                  .indexBuffer = *drawCallDesc.indexBuffer,
+                                  .indexBuffer = indexBuffer,
                                   .indexCount = drawCallDesc.indexCount,
                                   .indexOffset = indexStride * drawCallDesc.firstIndex,
                                   .indexType = indexType,
