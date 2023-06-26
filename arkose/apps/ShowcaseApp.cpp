@@ -197,6 +197,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
 bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
 {
+    SCOPED_PROFILE_ZONE();
+
     const Input& input = Input::instance();
 
     // Toggle GUI with the ` key
