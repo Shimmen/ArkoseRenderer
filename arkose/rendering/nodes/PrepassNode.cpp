@@ -28,14 +28,11 @@ RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Regi
         if (m_mode == PrepassMode::OpaqueObjectsOnly || m_mode == PrepassMode::AllOpaquePixels) {
             ScopedDebugZone zone { cmdList, "Opaque" };
 
-            VertexLayout opaqueVertexLayout = prepassOpaqueRenderState.vertexLayout();
-            scene.ensureDrawCallIsAvailableForAll(opaqueVertexLayout);
-
             cmdList.beginRendering(prepassOpaqueRenderState, ClearValue::blackAtMaxDepth());
             setCommonConstants();
 
-            cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(opaqueVertexLayout));
-            cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
+            cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer());
+            cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
             cmdList.drawIndirect(opaqueIndirectDrawCmdsBuffer, opaqueIndirectDrawCountBuffer);
 
@@ -45,14 +42,12 @@ RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Regi
         if (m_mode == PrepassMode::AllOpaquePixels) {
             ScopedDebugZone zone { cmdList, "Masked" };
 
-            VertexLayout maskedVertexLayout = prepassMaskedRenderState.vertexLayout();
-            scene.ensureDrawCallIsAvailableForAll(maskedVertexLayout);
-
             cmdList.beginRendering(prepassMaskedRenderState);
             setCommonConstants();
 
-            cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(maskedVertexLayout));
-            cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
+            cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), 0);
+            cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), 1);
+            cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
             cmdList.drawIndirect(maskedIndirectDrawCmdsBuffer, maskedIndirectDrawCountBuffer);
 
@@ -64,7 +59,7 @@ RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Regi
 RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, PassType type) const
 {
     Shader shader {};
-    VertexLayout vertexLayout {};
+    std::vector<VertexLayout> vertexLayout {};
     BindingSet* drawablesBindingSet = nullptr;
     const char* stateName = "";
     LoadOp loadOp = LoadOp::Clear;
@@ -72,14 +67,14 @@ RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, 
     switch (type) {
     case PassType::Opaque:
         shader = Shader::createVertexOnly("forward/prepass.vert");
-        vertexLayout = { VertexComponent::Position3F };
+        vertexLayout = { scene.vertexManager().positionVertexLayout() };
         drawablesBindingSet = reg.getBindingSet("MainViewCulledDrawablesOpaqueSet");
         stateName = "PrepassOpaque";
         loadOp = LoadOp::Clear;
         break;
     case PassType::Masked:
         shader = Shader::createBasicRasterize("forward/prepassMasked.vert", "forward/prepassMasked.frag");
-        vertexLayout = { VertexComponent::Position3F, VertexComponent::TexCoord2F, VertexComponent::Normal3F, VertexComponent::Tangent4F };
+        vertexLayout = { scene.vertexManager().positionVertexLayout(), scene.vertexManager().nonPositionVertexLayout() };
         drawablesBindingSet = reg.getBindingSet("MainViewCulledDrawablesMaskedSet");
         stateName = "PrepassMasked";
         loadOp = LoadOp::Load;
@@ -89,7 +84,7 @@ RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, 
     Texture* sceneDepth = reg.getTexture("SceneDepth");
     RenderTarget& prepassRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, sceneDepth, loadOp, StoreOp::Store } });
     
-    RenderStateBuilder renderStateBuilder { prepassRenderTarget, shader, vertexLayout };
+    RenderStateBuilder renderStateBuilder { prepassRenderTarget, shader, std::move(vertexLayout) };
 
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
     renderStateBuilder.stencilMode = StencilMode::AlwaysWrite;

@@ -9,11 +9,6 @@ public:
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:
-    VertexLayout m_vertexLayout { VertexComponent::Position3F,
-                                  VertexComponent::TexCoord2F,
-                                  VertexComponent::Normal3F,
-                                  VertexComponent::Tangent4F };
-
     enum class ForwardPass {
         Opaque,
         Masked,

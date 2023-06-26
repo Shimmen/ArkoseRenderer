@@ -90,7 +90,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
                     ShaderMaterial const& material = *scene.materialForHandle(meshSegment.material);
                     ShaderDrawable const& drawable = *scene.drawableForHandle(instance->drawableHandleForSegmentIndex(segmentIdx));
 
-                    DrawCallDescription drawCall = meshSegment.drawCallDescription({ VertexComponent::Position3F }, scene);
+                    DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
                     indirectDrawableData.push_back({ .drawable = drawable,
                                                      .localBoundingSphere = vec4(staticMesh->boundingSphere().center(), staticMesh->boundingSphere().radius()),
                                                      .indexCount = drawCall.indexCount,

@@ -25,16 +25,15 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        scene.ensureDrawCallIsAvailableForAll(m_vertexLayout);
-
         auto setCommonNamedUniforms = [&](const RenderState& renderState) {
             cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
             cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
             cmdList.setNamedUniform("invTargetSize", renderState.renderTarget().extent().inverse());
         };
 
-        cmdList.bindVertexBuffer(scene.globalVertexBufferForLayout(m_vertexLayout));
-        cmdList.bindIndexBuffer(scene.globalIndexBuffer(), scene.globalIndexBufferType());
+        cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), 0);
+        cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), 1);
+        cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
         {
             ScopedDebugZone zone { cmdList, "Opaque" };
@@ -102,7 +101,10 @@ RenderState& ForwardRenderNode::makeRenderState(Registry& reg, const GpuScene& s
 
     Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", shaderDefines);
 
-    RenderStateBuilder renderStateBuilder { makeRenderTarget(reg, loadOp), shader, m_vertexLayout };
+    VertexLayout vertexLayoutPos = scene.vertexManager().positionVertexLayout();
+    VertexLayout vertexLayoutOther = scene.vertexManager().nonPositionVertexLayout();
+
+    RenderStateBuilder renderStateBuilder { makeRenderTarget(reg, loadOp), shader, { vertexLayoutPos, vertexLayoutOther } };
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
     
     renderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
