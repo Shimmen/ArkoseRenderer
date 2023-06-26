@@ -153,8 +153,9 @@ void VertexManager::uploadMeshDataForAllocation(VertexUploadJob const& uploadJob
 
     // Upload index data if relevant
     if (allocation.indexCount > 0) {
-        size_t indexOffset = allocation.firstIndex * sizeofIndexType(indexType());
-        m_indexBuffer->updateDataAndGrowIfRequired(segmentAsset.indices.data(), segmentAsset.indices.size(), indexOffset);
+        size_t indexSize = sizeofIndexType(indexType());
+        size_t indexOffset = allocation.firstIndex * indexSize;
+        m_indexBuffer->updateDataAndGrowIfRequired(segmentAsset.indices.data(), segmentAsset.indices.size() * indexSize, indexOffset);
     }
 
     // The data is now uploaded, indicate that it's ready to be used
