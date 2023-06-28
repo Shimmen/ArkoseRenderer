@@ -329,12 +329,14 @@ bool ShaderManager::CompiledShader::recompile()
         includedFilePaths = std::move(newIncludedFiles);
         lastCompileError.clear();
 
+        if constexpr (false)
         {
             SCOPED_PROFILE_ZONE_NAMED("SPIR-V binary to ASM");
             shaderc::AssemblyCompilationResult asmResult = compiler.CompileGlslToSpvAssembly(glslSource, shaderKind, resolvedFilePath.c_str(), options);
             FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvAssemblyPath(shaderFile), std::vector<char>(asmResult.cbegin(), asmResult.cend()));
         }
 
+        if constexpr (false)
         {
             SCOPED_PROFILE_ZONE_NAMED("SPIR-V to HLSL");
 
