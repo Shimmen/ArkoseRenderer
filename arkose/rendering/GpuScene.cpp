@@ -832,6 +832,11 @@ SkeletalMeshHandle GpuScene::registerSkeletalMesh(MeshAsset const* meshAsset, Sk
         }
     });
 
+    if (m_vertexManager != nullptr) {
+        constexpr bool includeSkinningData = true;
+        m_vertexManager->uploadMeshData(skeletalMesh->staticMesh(), includeSkinningData);
+    }
+
     if (m_meshletManager != nullptr) {
         m_meshletManager->allocateMeshlets(skeletalMesh->staticMesh());
     }
@@ -878,7 +883,8 @@ StaticMeshHandle GpuScene::registerStaticMesh(MeshAsset const* meshAsset)
     });
 
     if (m_vertexManager != nullptr) {
-        m_vertexManager->uploadMeshData(*staticMesh);
+        constexpr bool includeSkinningData = false;
+        m_vertexManager->uploadMeshData(*staticMesh, includeSkinningData);
     }
 
     if (m_meshletManager != nullptr) {

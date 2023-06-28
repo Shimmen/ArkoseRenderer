@@ -29,6 +29,7 @@ VertexManager::VertexManager(Backend& backend)
     const size_t initialIndexBufferSize = 100'000 * sizeofIndexType(indexType());
     const size_t initialPostionVertexBufferSize = 50'000 * positionVertexLayout().packedVertexSize();
     const size_t initialNonPostionVertexBufferSize = 50'000 * nonPositionVertexLayout().packedVertexSize();
+    const size_t initialSkinningDataVertexBufferSize = 10'000 * skinningDataVertexLayout().packedVertexSize();
     constexpr Buffer::MemoryHint memoryHint = Buffer::MemoryHint::GpuOptimal;
 
     m_indexBuffer = backend.createBuffer(initialIndexBufferSize, Buffer::Usage::Index, memoryHint);
@@ -39,13 +40,16 @@ VertexManager::VertexManager(Backend& backend)
 
     m_nonPositionVertexBuffer = backend.createBuffer(initialNonPostionVertexBufferSize, Buffer::Usage::Vertex, memoryHint);
     m_nonPositionVertexBuffer->setName("SceneNonPositionVertexBuffer");
+
+    m_skinningDataVertexBuffer = backend.createBuffer(initialSkinningDataVertexBufferSize, Buffer::Usage::Vertex, memoryHint);
+    m_skinningDataVertexBuffer->setName("SceneSkinningDataVertexBuffer");
 }
 
 VertexManager::~VertexManager()
 {
 }
 
-bool VertexManager::allocateMeshData(StaticMesh& staticMesh)
+bool VertexManager::allocateMeshData(StaticMesh& staticMesh, bool includeSkinningData)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -56,7 +60,7 @@ bool VertexManager::allocateMeshData(StaticMesh& staticMesh)
                 continue;
             }
 
-            std::optional<VertexAllocation> allocation = allocateMeshDataForSegment(*meshSegment.asset);
+            std::optional<VertexAllocation> allocation = allocateMeshDataForSegment(*meshSegment.asset, includeSkinningData);
             if (!allocation.has_value()) {
                 return false;
             }
@@ -68,7 +72,7 @@ bool VertexManager::allocateMeshData(StaticMesh& staticMesh)
     return true;
 }
 
-bool VertexManager::uploadMeshData(StaticMesh& staticMesh)
+bool VertexManager::uploadMeshData(StaticMesh& staticMesh, bool includeSkinningData)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -79,7 +83,7 @@ bool VertexManager::uploadMeshData(StaticMesh& staticMesh)
                 continue;
             }
 
-            std::optional<VertexAllocation> allocation = allocateMeshDataForSegment(*meshSegment.asset);
+            std::optional<VertexAllocation> allocation = allocateMeshDataForSegment(*meshSegment.asset, includeSkinningData);
             if (!allocation.has_value()) {
                 return false;
             }
@@ -94,7 +98,7 @@ bool VertexManager::uploadMeshData(StaticMesh& staticMesh)
     return true;
 }
 
-std::optional<VertexAllocation> VertexManager::allocateMeshDataForSegment(MeshSegmentAsset const& segmentAsset)
+std::optional<VertexAllocation> VertexManager::allocateMeshDataForSegment(MeshSegmentAsset const& segmentAsset, bool includeSkinningData)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -113,6 +117,12 @@ std::optional<VertexAllocation> VertexManager::allocateMeshDataForSegment(MeshSe
         allocation.firstIndex = m_nextFreeIndex;
         allocation.indexCount = indexCount;
         m_nextFreeIndex += indexCount;
+    }
+
+    if (segmentAsset.hasSkinningData() && includeSkinningData) {
+        // TODO: Validate that it will fit!
+        allocation.firstSkinningVertex = m_nextFreeSkinningVertexIndex;
+        m_nextFreeSkinningVertexIndex += vertexCount;
     }
 
     return allocation;
@@ -146,10 +156,13 @@ void VertexManager::uploadMeshDataForAllocation(VertexUploadJob const& uploadJob
     }
 
     // Upload skinning data if relevant
-    //if (segmentAsset.jointIndices.size() > 0 || segmentAsset.jointWeights.size() > 0) {
-    //    ARKOSE_ASSERT(segmentAsset.jointIndices.size() == segmentAsset.jointWeights.size());
-    //    NOT_YET_IMPLEMENTED();
-    //}
+    if (allocation.firstSkinningVertex >= 0) {
+        ARKOSE_ASSERT(segmentAsset.hasSkinningData());
+        ARKOSE_ASSERT(segmentAsset.jointIndices.size() == segmentAsset.jointWeights.size());
+        std::vector<u8> skinningVertexData = segmentAsset.assembleVertexData(m_skinningDataVertexLayout);
+        size_t skinningDataOffset = allocation.firstSkinningVertex * m_skinningDataVertexLayout.packedVertexSize();
+        m_skinningDataVertexBuffer->updateDataAndGrowIfRequired(skinningVertexData.data(), skinningVertexData.size(), skinningDataOffset);
+    }
 
     // Upload index data if relevant
     if (allocation.indexCount > 0) {

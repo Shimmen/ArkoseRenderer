@@ -20,6 +20,9 @@ struct VertexAllocation {
     u32 firstIndex { 0 };
     u32 indexCount { 0 };
 
+    i32 firstSkinningVertex { -1 };
+    bool hasSkinningData() const { return firstSkinningVertex >= 0; }
+
     bool isValid() const { return vertexCount > 0; }
     bool hasIndices() const { return indexCount > 0; }
 
@@ -31,8 +34,8 @@ public:
     explicit VertexManager(Backend&);
     ~VertexManager();
 
-    bool allocateMeshData(StaticMesh&);
-    bool uploadMeshData(StaticMesh&);
+    bool allocateMeshData(StaticMesh&, bool includeSkinningData);
+    bool uploadMeshData(StaticMesh&, bool includeSkinningData);
 
     // TODO: Maybe don't keep here?!
     void skinSkeletalMeshInstance(SkeletalMeshInstance&);
@@ -46,11 +49,16 @@ public:
     VertexLayout const& nonPositionVertexLayout() const { return m_nonPositionVertexLayout; }
     Buffer const& nonPositionVertexBuffer() const { return *m_nonPositionVertexBuffer; }
 
+    VertexLayout const& skinningDataVertexLayout() const { return m_skinningDataVertexLayout; }
+    Buffer const& skinningDataVertexBuffer() const { return *m_skinningDataVertexBuffer; }
+
 private:
-    VertexLayout m_positionOnlyVertexLayout { VertexComponent::Position3F };
-    VertexLayout m_nonPositionVertexLayout { VertexComponent::TexCoord2F,
-                                             VertexComponent::Normal3F,
-                                             VertexComponent::Tangent4F };
+    VertexLayout const m_positionOnlyVertexLayout { VertexComponent::Position3F };
+    VertexLayout const m_nonPositionVertexLayout { VertexComponent::TexCoord2F,
+                                                   VertexComponent::Normal3F,
+                                                   VertexComponent::Tangent4F };
+    VertexLayout const m_skinningDataVertexLayout { VertexComponent::JointIdx4U32,
+                                                    VertexComponent::JointWeight4F };
 
     std::unique_ptr<Buffer> m_indexBuffer { nullptr };
     u32 m_nextFreeIndex { 0 };
@@ -59,12 +67,15 @@ private:
     std::unique_ptr<Buffer> m_nonPositionVertexBuffer {};
     u32 m_nextFreeVertexIndex { 0 };
 
+    std::unique_ptr<Buffer> m_skinningDataVertexBuffer {};
+    u32 m_nextFreeSkinningVertexIndex { 0 };
+
     struct VertexUploadJob {
         MeshSegmentAsset const* asset { nullptr };
         StaticMeshSegment* target { nullptr };
         VertexAllocation allocation {};
     };
 
-    std::optional<VertexAllocation> allocateMeshDataForSegment(MeshSegmentAsset const&);
+    std::optional<VertexAllocation> allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeSkinningData);
     void uploadMeshDataForAllocation(VertexUploadJob const&);
 };

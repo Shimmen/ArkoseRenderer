@@ -106,6 +106,7 @@ std::vector<u8> MeshSegmentAsset::assembleVertexData(const VertexLayout& layout)
     dataVector.resize(bufferSize);
     u8* data = dataVector.data();
 
+    // TODO: We should really be more strict about mismatching vertex counts and instead handle it at asset-level!
     // FIXME: This only really works for float components. However, for now we only have floating point components.
     constexpr std::array<float, 4> floatOnes { 1, 1, 1, 1 };
 
@@ -140,6 +141,14 @@ std::vector<u8> MeshSegmentAsset::assembleVertexData(const VertexLayout& layout)
         case VertexComponent::Tangent4F: {
             auto* inputData = reinterpret_cast<u8 const*>(value_ptr(*tangents.data()));
             offsetInFirstVertex += copyComponentData(inputData, tangents.size(), component);
+        } break;
+        case VertexComponent::JointWeight4F: {
+            auto* inputData = reinterpret_cast<u8 const*>(value_ptr(*jointWeights.data()));
+            offsetInFirstVertex += copyComponentData(inputData, jointWeights.size(), component);
+        } break;
+        case VertexComponent::JointIdx4U32: {
+            auto* inputData = reinterpret_cast<u8 const*>(value_ptr(*jointIndices.data()));
+            offsetInFirstVertex += copyComponentData(inputData, jointWeights.size(), component);
         } break;
         default: {
             ARKOSE_LOG_FATAL("Unable to assemble vertex data for unknown VertexComponent: '{}'", vertexComponentToString(component));
