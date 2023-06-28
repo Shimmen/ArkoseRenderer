@@ -40,9 +40,6 @@ public:
 
     bool createBottomLevelAccelerationStructure(StaticMesh&);
 
-    // TODO: Maybe don't keep here?!
-    void skinSkeletalMeshInstance(SkeletalMeshInstance&);
-
     IndexType indexType() const { return IndexType::UInt32; }
     Buffer const& indexBuffer() const { return *m_indexBuffer; }
 

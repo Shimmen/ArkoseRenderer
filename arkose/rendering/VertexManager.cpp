@@ -171,15 +171,6 @@ void VertexManager::uploadMeshDataForAllocation(VertexUploadJob const& uploadJob
     uploadJob.target->vertexAllocation = allocation;
 }
 
-void VertexManager::skinSkeletalMeshInstance(SkeletalMeshInstance& instance)
-{
-    std::vector<mat4> const& jointMatrices = instance.skeleton().appliedJointMatrices();
-    std::vector<mat3> const& jointTangentMatrices = instance.skeleton().appliedJointTangentMatrices();
-
-    // TODO: Issue compute shader which applies the joint matrices to the instance's vertices
-    // NOT_YET_IMPLEMENTED();
-}
-
 std::unique_ptr<BottomLevelAS> VertexManager::createBottomLevelAccelerationStructure(StaticMeshSegment const& meshSegment)
 {
     // TODO: Create a geometry per mesh (or rather, per LOD) and use the SBT to lookup material.
