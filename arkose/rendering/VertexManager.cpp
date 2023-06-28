@@ -52,7 +52,7 @@ VertexManager::~VertexManager()
 {
 }
 
-bool VertexManager::allocateMeshData(StaticMesh& staticMesh, bool includeSkinningData)
+bool VertexManager::uploadMeshData(StaticMesh& staticMesh, bool includeIndices, bool includeSkinningData)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -63,38 +63,15 @@ bool VertexManager::allocateMeshData(StaticMesh& staticMesh, bool includeSkinnin
                 continue;
             }
 
-            std::optional<VertexAllocation> allocation = allocateMeshDataForSegment(*meshSegment.asset, includeSkinningData);
-            if (!allocation.has_value()) {
-                return false;
-            }
-
-            meshSegment.vertexAllocation = allocation.value();
-        }
-    }
-
-    return true;
-}
-
-bool VertexManager::uploadMeshData(StaticMesh& staticMesh, bool includeSkinningData)
-{
-    SCOPED_PROFILE_ZONE();
-
-    for (StaticMeshLOD& lod : staticMesh.LODs()) {
-        for (StaticMeshSegment& meshSegment : lod.meshSegments) {
-
-            if (meshSegment.vertexAllocation.isValid()) {
-                continue;
-            }
-
-            std::optional<VertexAllocation> allocation = allocateMeshDataForSegment(*meshSegment.asset, includeSkinningData);
-            if (!allocation.has_value()) {
+            VertexAllocation allocation = allocateMeshDataForSegment(*meshSegment.asset, includeIndices, includeSkinningData);
+            if (!allocation.isValid()) {
                 return false;
             }
 
             // TODO: Implement async uploading, i.e., push this vertex upload job to a queue!
             uploadMeshDataForAllocation(VertexUploadJob { .asset = meshSegment.asset,
                                                           .target = &meshSegment,
-                                                          .allocation = allocation.value() });
+                                                          .allocation = allocation });
         }
     }
 
@@ -115,7 +92,7 @@ bool VertexManager::createBottomLevelAccelerationStructure(StaticMesh& staticMes
     return true;
 }
 
-std::optional<VertexAllocation> VertexManager::allocateMeshDataForSegment(MeshSegmentAsset const& segmentAsset, bool includeSkinningData)
+VertexAllocation VertexManager::allocateMeshDataForSegment(MeshSegmentAsset const& segmentAsset, bool includeIndices, bool includeSkinningData)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -129,7 +106,7 @@ std::optional<VertexAllocation> VertexManager::allocateMeshDataForSegment(MeshSe
     allocation.vertexCount = vertexCount;
     m_nextFreeVertexIndex += vertexCount;
 
-    if (indexCount > 0) {
+    if (indexCount > 0 && includeIndices) {
         // TODO: Validate that it will fit!
         allocation.firstIndex = m_nextFreeIndex;
         allocation.indexCount = indexCount;
@@ -142,6 +119,7 @@ std::optional<VertexAllocation> VertexManager::allocateMeshDataForSegment(MeshSe
         m_nextFreeSkinningVertexIndex += vertexCount;
     }
 
+    ARKOSE_ASSERT(allocation.isValid());
     return allocation;
 }
 

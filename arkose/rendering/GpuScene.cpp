@@ -450,9 +450,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 initializeStaticMeshInstance(*instanceNeedingReinit);
             }
 
+            // TODO: Figure out how we want to re-initialize the skeletal mesh instance when the meshlets are loaded!
             for (auto& skeletalMeshInstance : m_skeletalMeshInstances) {
-                // TODO: Don't perform a full update/reinit every frame!
-                initializeSkeletalMeshInstance(*skeletalMeshInstance);
                 drawableCount += skeletalMeshInstance->drawableHandles().size();
             }
 
@@ -705,8 +704,8 @@ SkeletalMeshInstance& GpuScene::createSkeletalMeshInstance(SkeletalMeshHandle sk
     // TODO: Do we not need to add a reference here? Yes, but we'd over count by one as the managed mesh itself has the first ref.
     // m_managedSkeletalMeshes.addReference(skeletalMeshHandle);
 
-    ManagedSkeletalMesh& skeletalMesh = m_managedSkeletalMeshes.get(skeletalMeshHandle);
-    auto skeleton = std::make_unique<Skeleton>(skeletalMesh.skeletonAsset);
+    ManagedSkeletalMesh& managedSkeletalMesh = m_managedSkeletalMeshes.get(skeletalMeshHandle);
+    auto skeleton = std::make_unique<Skeleton>(managedSkeletalMesh.skeletonAsset);
 
     m_skeletalMeshInstances.push_back(std::make_unique<SkeletalMeshInstance>(skeletalMeshHandle, std::move(skeleton), transform));
     SkeletalMeshInstance& instance = *m_skeletalMeshInstances.back();
@@ -721,13 +720,14 @@ void GpuScene::initializeSkeletalMeshInstance(SkeletalMeshInstance& instance)
     SkeletalMesh* skeletalMesh = skeletalMeshForHandle(instance.mesh());
     ARKOSE_ASSERT(skeletalMesh != nullptr);
 
-    StaticMesh& staticMeshIsh = skeletalMesh->staticMesh();
+    StaticMesh& underlyingMesh = skeletalMesh->underlyingMesh();
 
     constexpr u32 lodIdx = 0;
-    StaticMeshLOD& lod = staticMeshIsh.lodAtIndex(lodIdx);
+    StaticMeshLOD& lod = underlyingMesh.lodAtIndex(lodIdx);
 
     // TODO: Handle LOD changes for this instance! If it changes we want to unregister our current ones and register the ones for the new LOD
     // instance.resetDrawableHandles();
+    // instance.resetSkinningVertexMappings();
 
     for (size_t segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
         StaticMeshSegment& meshSegment = lod.meshSegments[segmentIdx];
@@ -737,7 +737,7 @@ void GpuScene::initializeSkeletalMeshInstance(SkeletalMeshInstance& instance)
         drawable.worldFromTangent = mat4(instance.transform().worldNormalMatrix());
         drawable.previousFrameWorldFromLocal = instance.transform().previousFrameWorldMatrix();
 
-        drawable.localBoundingSphere = staticMeshIsh.boundingSphere().asVec4();
+        drawable.localBoundingSphere = underlyingMesh.boundingSphere().asVec4();
 
         drawable.materialIndex = meshSegment.material.indexOfType<int>();
 
@@ -757,6 +757,23 @@ void GpuScene::initializeSkeletalMeshInstance(SkeletalMeshInstance& instance)
         } else {
             DrawableObjectHandle handle = m_drawables.add(std::move(drawable));
             instance.setDrawableHandle(segmentIdx, handle);
+        }
+
+        if (!instance.hasSkinningVertexMappingForSegmentIndex(segmentIdx)) {
+            // We don't need to allocate indices or skinning for the target. The indices will duplicate the underlying mesh
+            // as it's never changed, and skinning data will never be needed for the *target*
+            constexpr bool includeIndices = false;
+            constexpr bool includeSkinningData = false;
+
+            VertexAllocation instanceVertexAllocation = m_vertexManager->allocateMeshDataForSegment(*meshSegment.asset, includeIndices, includeSkinningData);
+            ARKOSE_ASSERT(instanceVertexAllocation.isValid());
+
+            instanceVertexAllocation.firstIndex = meshSegment.vertexAllocation.firstIndex;
+            instanceVertexAllocation.indexCount = meshSegment.vertexAllocation.indexCount;
+
+            SkinningVertexMapping skinningVertexMapping { .underlyingMesh = meshSegment.vertexAllocation,
+                                                          .skinnedTarget = instanceVertexAllocation };
+            instance.setSkinningVertexMapping(segmentIdx, skinningVertexMapping);
         }
     }
 }
@@ -837,12 +854,9 @@ SkeletalMeshHandle GpuScene::registerSkeletalMesh(MeshAsset const* meshAsset, Sk
     });
 
     if (m_vertexManager != nullptr) {
+        constexpr bool includeIndices = true;
         constexpr bool includeSkinningData = true;
-        m_vertexManager->uploadMeshData(skeletalMesh->staticMesh(), includeSkinningData);
-    }
-
-    if (m_meshletManager != nullptr) {
-        m_meshletManager->allocateMeshlets(skeletalMesh->staticMesh());
+        m_vertexManager->uploadMeshData(skeletalMesh->underlyingMesh(), includeIndices, includeSkinningData);
     }
 
     SkeletalMeshHandle handle = m_managedSkeletalMeshes.add(ManagedSkeletalMesh { .meshAsset = meshAsset,
@@ -887,8 +901,9 @@ StaticMeshHandle GpuScene::registerStaticMesh(MeshAsset const* meshAsset)
     });
 
     if (m_vertexManager != nullptr) {
+        constexpr bool includeIndices = false;
         constexpr bool includeSkinningData = false;
-        m_vertexManager->uploadMeshData(*staticMesh, includeSkinningData);
+        m_vertexManager->uploadMeshData(*staticMesh, includeIndices, includeSkinningData);
 
         if (m_maintainRayTracingScene) {
             m_vertexManager->createBottomLevelAccelerationStructure(*staticMesh);

@@ -412,7 +412,7 @@ void Scene::generateProbeGridFromBoundingBox()
     for (auto const& instance : gpuScene().skeletalMeshInstances()) {
         if (SkeletalMesh* skeletalMesh = gpuScene().skeletalMeshForHandle(instance->mesh())) {
 
-            ark::aabb3 transformedAABB = skeletalMesh->staticMesh().boundingBox().transformed(instance->transform().worldMatrix());
+            ark::aabb3 transformedAABB = skeletalMesh->underlyingMesh().boundingBox().transformed(instance->transform().worldMatrix());
             sceneAABB.expandWithPoint(transformedAABB.min);
             sceneAABB.expandWithPoint(transformedAABB.max);
 

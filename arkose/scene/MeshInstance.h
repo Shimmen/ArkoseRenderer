@@ -50,6 +50,13 @@ private:
     Transform m_transform;
 };
 
+struct SkinningVertexMapping {
+    // Allocation for the underlying mesh (segment), with all vertex data including skinning data.
+    VertexAllocation underlyingMesh {};
+    // Allocation for the target instance (still segment), where skinned vertices will be placed.
+    VertexAllocation skinnedTarget {};
+};
+
 struct SkeletalMeshInstance : public IEditorObject {
     NON_COPYABLE(SkeletalMeshInstance)
 
@@ -79,6 +86,13 @@ struct SkeletalMeshInstance : public IEditorObject {
     void resetDrawableHandles();
     void setDrawableHandle(u32 segmentIndex, DrawableObjectHandle);
 
+    bool hasSkinningVertexMappingForSegmentIndex(u32 segmentIdx) const;
+    SkinningVertexMapping const& skinningVertexMappingForSegmentIndex(u32 segmentIdx) const;
+    std::vector<SkinningVertexMapping> const& skinningVertexMappings() const { return m_skinningVertexMappings; }
+
+    void resetSkinningVertexMappings();
+    void setSkinningVertexMapping(u32 segmentIdx, SkinningVertexMapping);
+
     std::string name;
 
 private:
@@ -93,6 +107,13 @@ private:
     // Handle for the drawables for the current underlying drawable object(s) (e.g. static mesh segments).
     // Can e.g. be used to get an index to the shader data for this segment.
     std::vector<DrawableObjectHandle> m_drawableHandles {};
+
+    // Skinning vertex mappings that map a vertex allocation in the underlying mesh to an allocation where
+    // the animated vertices will be stored (one per segment, just as for drawable handles).
+    std::vector<SkinningVertexMapping> m_skinningVertexMappings {};
+
+    // Bottom-level acceleration structure for this instance (one per segment) (optional; only needed for ray tracing)
+    //std::vector<std::unique_ptr<BottomLevelAS>> m_blases { nullptr };
 
     Transform m_transform;
 };

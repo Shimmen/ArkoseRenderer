@@ -35,8 +35,8 @@ public:
     explicit VertexManager(Backend&);
     ~VertexManager();
 
-    bool allocateMeshData(StaticMesh&, bool includeSkinningData);
-    bool uploadMeshData(StaticMesh&, bool includeSkinningData);
+    VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData);
+    bool uploadMeshData(StaticMesh&, bool includeIndices, bool includeSkinningData);
 
     bool createBottomLevelAccelerationStructure(StaticMesh&);
 
@@ -81,7 +81,6 @@ private:
         VertexAllocation allocation {};
     };
 
-    std::optional<VertexAllocation> allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeSkinningData);
     void uploadMeshDataForAllocation(VertexUploadJob const&);
 
     std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(StaticMeshSegment const&);

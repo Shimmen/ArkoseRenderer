@@ -16,11 +16,11 @@ public:
     SkeletalMesh() = default;
     ~SkeletalMesh() = default;
 
-    StaticMesh const& staticMesh() const { return m_staticMesh; }
-    StaticMesh& staticMesh() { return m_staticMesh; }
+    StaticMesh const& underlyingMesh() const { return m_underlyingMesh; }
+    StaticMesh& underlyingMesh() { return m_underlyingMesh; }
 
-    void setName(std::string name) { staticMesh().setName(std::move(name)); }
-    std::string_view name() const { return staticMesh().name(); }
+    void setName(std::string name) { underlyingMesh().setName(std::move(name)); }
+    std::string_view name() const { return underlyingMesh().name(); }
 
     MeshAsset const* meshAsset() const { return m_meshAsset; }
     SkeletonAsset const* skeletonAsset() const { return m_skeletonAsset; }
@@ -33,5 +33,5 @@ private:
     SkeletonAsset const* m_skeletonAsset { nullptr };
 
     // The static mesh that is compatible with the skeleton
-    StaticMesh m_staticMesh {};
+    StaticMesh m_underlyingMesh {};
 };
