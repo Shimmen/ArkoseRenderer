@@ -163,10 +163,6 @@ private:
     bool m_maintainRayTracingScene { false };
     bool m_meshShadingCapable { false };
 
-    // TODO: Create a geometry per mesh (or rather, per LOD) and use the SBT to lookup material.
-    // For now we create one per segment so we can ensure one material per "draw"
-    std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(StaticMeshSegment&, uint32_t meshIdx);
-
     float m_lightPreExposure { 1.0f };
 
     // GPU data
@@ -261,6 +257,6 @@ private:
     size_t m_drawableCountForFrame { 0 };
 
     size_t m_managedTexturesVramUsage { 0 };
-    size_t m_totalBlasVramUsage { 0 };
-    size_t m_totalNumBlas { 0 };
+    //size_t m_totalBlasVramUsage { 0 };
+    //size_t m_totalNumBlas { 0 };
 };

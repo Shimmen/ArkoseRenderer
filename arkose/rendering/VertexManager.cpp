@@ -2,7 +2,9 @@
 
 #include "asset/MeshAsset.h"
 #include "rendering/StaticMesh.h"
+#include "rendering/backend/base/AccelerationStructure.h"
 #include "rendering/backend/base/Backend.h"
+#include "rendering/backend/base/Buffer.h"
 #include "scene/MeshInstance.h"
 
 DrawCallDescription VertexAllocation::asDrawCallDescription() const
@@ -25,6 +27,7 @@ DrawCallDescription VertexAllocation::asDrawCallDescription() const
 }
 
 VertexManager::VertexManager(Backend& backend)
+    : m_backend(&backend)
 {
     const size_t initialIndexBufferSize = 100'000 * sizeofIndexType(indexType());
     const size_t initialPostionVertexBufferSize = 50'000 * positionVertexLayout().packedVertexSize();
@@ -92,6 +95,20 @@ bool VertexManager::uploadMeshData(StaticMesh& staticMesh, bool includeSkinningD
             uploadMeshDataForAllocation(VertexUploadJob { .asset = meshSegment.asset,
                                                           .target = &meshSegment,
                                                           .allocation = allocation.value() });
+        }
+    }
+
+    return true;
+}
+
+bool VertexManager::createBottomLevelAccelerationStructure(StaticMesh& staticMesh)
+{
+    SCOPED_PROFILE_ZONE();
+
+    for (StaticMeshLOD& lod : staticMesh.LODs()) {
+        for (StaticMeshSegment& meshSegment : lod.meshSegments) {
+            ARKOSE_ASSERT(meshSegment.vertexAllocation.isValid());
+            meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment);
         }
     }
 
@@ -183,4 +200,37 @@ void VertexManager::skinSkeletalMeshInstance(SkeletalMeshInstance& instance)
 
     // TODO: Issue compute shader which applies the joint matrices to the instance's vertices
     // NOT_YET_IMPLEMENTED();
+}
+
+std::unique_ptr<BottomLevelAS> VertexManager::createBottomLevelAccelerationStructure(StaticMeshSegment const& meshSegment)
+{
+    // TODO: Create a geometry per mesh (or rather, per LOD) and use the SBT to lookup material.
+    // For now we create one per segment so we can ensure one material per "draw"
+
+    ARKOSE_ASSERT(positionVertexLayout().components().at(0) == VertexComponent::Position3F);
+    constexpr RTVertexFormat vertexFormat = RTVertexFormat::XYZ32F;
+
+    size_t vertexStride = positionVertexLayout().packedVertexSize();
+
+    DrawCallDescription drawCallDesc = meshSegment.vertexAllocation.asDrawCallDescription();
+    ARKOSE_ASSERT(drawCallDesc.type == DrawCallDescription::Type ::Indexed);
+
+    i32 indexOfFirstVertex = drawCallDesc.vertexOffset;
+    size_t vertexOffset = indexOfFirstVertex * vertexStride;
+
+    u32 indexOfFirstIndex = drawCallDesc.firstIndex;
+    size_t indexOffset = indexOfFirstIndex * sizeofIndexType(indexType());
+
+    RTTriangleGeometry geometry { .vertexBuffer = positionVertexBuffer(),
+                                  .vertexCount = drawCallDesc.vertexCount,
+                                  .vertexOffset = vertexOffset,
+                                  .vertexStride = vertexStride,
+                                  .vertexFormat = vertexFormat,
+                                  .indexBuffer = indexBuffer(),
+                                  .indexCount = drawCallDesc.indexCount,
+                                  .indexOffset = indexOffset,
+                                  .indexType = indexType(),
+                                  .transform = mat4(1.0f) };
+
+    return m_backend->createBottomLevelAccelerationStructure({ geometry });
 }

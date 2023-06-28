@@ -560,8 +560,11 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                                           .firstIndex = static_cast<int>(drawCallDesc.firstIndex),
                                                                           .materialIndex = meshSegment.material.indexOfType<int>() });
 
+                            ARKOSE_ASSERT(meshSegment.blas != nullptr);
+                            tlasBuildType = AccelerationStructureBuildType::FullBuild; // TODO: Only do a full rebuild sometimes!
+                            /*
                             if (meshSegment.blas == nullptr) {
-                                meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment, rtMeshIndex);
+                                meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment);
 
                                 m_totalNumBlas += 1;
                                 m_totalBlasVramUsage += meshSegment.blas->sizeInMemory();
@@ -569,6 +572,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                 // We have new instances, a full build is needed
                                 tlasBuildType = AccelerationStructureBuildType::FullBuild;
                             }
+                            */
 
                             uint8_t hitMask = 0x00;
                             if (const ShaderMaterial* material = materialForHandle(meshSegment.material)) {
@@ -885,6 +889,10 @@ StaticMeshHandle GpuScene::registerStaticMesh(MeshAsset const* meshAsset)
     if (m_vertexManager != nullptr) {
         constexpr bool includeSkinningData = false;
         m_vertexManager->uploadMeshData(*staticMesh, includeSkinningData);
+
+        if (m_maintainRayTracingScene) {
+            m_vertexManager->createBottomLevelAccelerationStructure(*staticMesh);
+        }
     }
 
     if (m_meshletManager != nullptr) {
@@ -909,38 +917,6 @@ void GpuScene::unregisterStaticMesh(StaticMeshHandle handle)
     // the reference count and returns the same handle? Not sure if that's a good use case, but this will work
     // for now and allows us to delete unused meshes...
     m_managedStaticMeshes.removeReference(handle, m_currentFrameIdx);
-}
-
-std::unique_ptr<BottomLevelAS> GpuScene::createBottomLevelAccelerationStructure(StaticMeshSegment& meshSegment, uint32_t meshIdx)
-{
-    Buffer const& rayTracingVertexBuffer = vertexManager().positionVertexBuffer();
-    Buffer const& indexBuffer = vertexManager().indexBuffer();
-
-    VertexLayout vertexLayout = vertexManager().positionVertexLayout();
-    size_t vertexStride = vertexLayout.packedVertexSize();
-    RTVertexFormat vertexFormat = RTVertexFormat::XYZ32F;
-
-    DrawCallDescription drawCallDesc = meshSegment.vertexAllocation.asDrawCallDescription();
-    ARKOSE_ASSERT(drawCallDesc.type == DrawCallDescription::Type ::Indexed);
-
-    IndexType indexType = vertexManager().indexType();
-    size_t indexStride = sizeofIndexType(indexType);
-
-    uint32_t indexOfFirstVertex = drawCallDesc.vertexOffset; // Yeah this is confusing naming for sure.. Offset should probably always be byte offset
-    size_t vertexOffset = indexOfFirstVertex * vertexStride;
-
-    RTTriangleGeometry geometry { .vertexBuffer = rayTracingVertexBuffer,
-                                  .vertexCount = drawCallDesc.vertexCount,
-                                  .vertexOffset = vertexOffset,
-                                  .vertexStride = vertexStride,
-                                  .vertexFormat = vertexFormat,
-                                  .indexBuffer = indexBuffer,
-                                  .indexCount = drawCallDesc.indexCount,
-                                  .indexOffset = indexStride * drawCallDesc.firstIndex,
-                                  .indexType = indexType,
-                                  .transform = mat4(1.0f) };
-
-    return backend().createBottomLevelAccelerationStructure({ geometry });
 }
 
 MaterialHandle GpuScene::registerMaterial(MaterialAsset const* materialAsset)
@@ -1437,6 +1413,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
             ImGui::EndTabItem();
         }
 
+        /*
         if (m_maintainRayTracingScene && ImGui::BeginTabItem("Ray Tracing BLAS")) {
 
             ImGui::Text("Number of BLASs: %d", m_totalNumBlas);
@@ -1449,12 +1426,13 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
             ImGui::Separator();
 
-            //std::string layoutDescription = m_rayTracingVertexLayout.toString(false);
-            //ImGui::Text("Using vertex layout: [ %s ]", layoutDescription.c_str());
-            //ImGui::TextColored(ImColor(0.75f, 0.75f, 0.75f), "(Note: This vertex data does not count to the BLAS size)");
+            std::string layoutDescription = m_rayTracingVertexLayout.toString(false);
+            ImGui::Text("Using vertex layout: [ %s ]", layoutDescription.c_str());
+            ImGui::TextColored(ImColor(0.75f, 0.75f, 0.75f), "(Note: This vertex data does not count to the BLAS size)");
 
             ImGui::EndTabItem();
         }
+        */
 
         ImGui::EndTabBar();
     }

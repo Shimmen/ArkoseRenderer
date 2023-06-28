@@ -9,6 +9,7 @@
 #include <optional>
 
 class Backend;
+class BottomLevelAS;
 class MeshSegmentAsset;
 class SkeletalMeshInstance;
 class StaticMesh;
@@ -37,6 +38,8 @@ public:
     bool allocateMeshData(StaticMesh&, bool includeSkinningData);
     bool uploadMeshData(StaticMesh&, bool includeSkinningData);
 
+    bool createBottomLevelAccelerationStructure(StaticMesh&);
+
     // TODO: Maybe don't keep here?!
     void skinSkeletalMeshInstance(SkeletalMeshInstance&);
 
@@ -53,6 +56,8 @@ public:
     Buffer const& skinningDataVertexBuffer() const { return *m_skinningDataVertexBuffer; }
 
 private:
+    Backend* m_backend { nullptr };
+
     VertexLayout const m_positionOnlyVertexLayout { VertexComponent::Position3F };
     VertexLayout const m_nonPositionVertexLayout { VertexComponent::TexCoord2F,
                                                    VertexComponent::Normal3F,
@@ -78,4 +83,6 @@ private:
 
     std::optional<VertexAllocation> allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeSkinningData);
     void uploadMeshDataForAllocation(VertexUploadJob const&);
+
+    std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(StaticMeshSegment const&);
 };
