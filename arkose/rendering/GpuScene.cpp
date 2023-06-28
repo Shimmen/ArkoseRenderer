@@ -901,7 +901,7 @@ StaticMeshHandle GpuScene::registerStaticMesh(MeshAsset const* meshAsset)
     });
 
     if (m_vertexManager != nullptr) {
-        constexpr bool includeIndices = false;
+        constexpr bool includeIndices = true;
         constexpr bool includeSkinningData = false;
         m_vertexManager->uploadMeshData(*staticMesh, includeIndices, includeSkinningData);
 
