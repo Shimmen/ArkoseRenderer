@@ -12,13 +12,9 @@ struct ShaderDrawable {
     uint meshletCount;
 };
 
-// NOTE: For extracting `triangleCount` from `skinningFirstVertex_triangleCount`
-#define SHADER_MESHLET_TRIANGLE_COUNT_BIT_COUNT (8)
-#define SHADER_MESHLET_TRIANGLE_COUNT_BIT_MASK ((1 << SHADER_MESHLET_TRIANGLE_COUNT_BIT_COUNT) - 1)
-
 struct ShaderMeshlet {
     uint firstIndex;
-    uint skinningFirstVertex_triangleCount;
+    uint triangleCount; // NOTE: Only the bottom 8-bits are currently in use!
     uint firstVertex;
     uint vertexCount;
 

@@ -56,19 +56,15 @@ private:
     const VertexLayout m_nonPositionVertexLayout { VertexComponent::TexCoord2F,
                                                    VertexComponent::Normal3F,
                                                    VertexComponent::Tangent4F };
-    const VertexLayout m_skinningDataVertexLayout { VertexComponent::JointIdx4U32,
-                                                    VertexComponent::JointWeight4F };
 
     std::unique_ptr<Buffer> m_positionDataVertexBuffer { nullptr };
     std::unique_ptr<Buffer> m_nonPositionDataVertexBuffer { nullptr };
-    std::unique_ptr<Buffer> m_skinningDataVertexBuffer { nullptr };
     std::unique_ptr<Buffer> m_indexBuffer { nullptr };
 
     std::vector<ShaderMeshlet> m_meshlets {};
     std::unique_ptr<Buffer> m_meshletBuffer { nullptr };
 
     u32 m_nextVertexIdx { 0 };
-    u32 m_nextSkinningVertexIdx { 0 };
     u32 m_nextIndexIdx { 0 };
     u32 m_nextMeshletIdx { 0 };
 
