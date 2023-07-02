@@ -147,8 +147,16 @@ std::vector<u8> MeshSegmentAsset::assembleVertexData(const VertexLayout& layout)
             offsetInFirstVertex += copyComponentData(inputData, jointWeights.size(), component);
         } break;
         case VertexComponent::JointIdx4U32: {
-            auto* inputData = reinterpret_cast<u8 const*>(value_ptr(*jointIndices.data()));
-            offsetInFirstVertex += copyComponentData(inputData, jointWeights.size(), component);
+            std::vector<u32> jointIndicesU32;
+            jointIndicesU32.reserve(jointIndices.size() * 4);
+            for (ark::tvec4<u16> idxU16 : jointIndices) {
+                jointIndicesU32.emplace_back(static_cast<u32>(idxU16.x));
+                jointIndicesU32.emplace_back(static_cast<u32>(idxU16.y));
+                jointIndicesU32.emplace_back(static_cast<u32>(idxU16.z));
+                jointIndicesU32.emplace_back(static_cast<u32>(idxU16.w));
+            }
+            auto* inputData = reinterpret_cast<u8 const*>(jointIndicesU32.data());
+            offsetInFirstVertex += copyComponentData(inputData, jointIndicesU32.size(), component);
         } break;
         default: {
             ARKOSE_LOG_FATAL("Unable to assemble vertex data for unknown VertexComponent: '{}'", vertexComponentToString(component));

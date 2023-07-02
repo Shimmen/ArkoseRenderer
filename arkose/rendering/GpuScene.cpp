@@ -7,6 +7,7 @@
 #include "rendering/Skeleton.h"
 #include "rendering/DrawKey.h"
 #include "rendering/backend/Resources.h"
+#include "rendering/util/ScopedDebugZone.h"
 #include "core/Conversion.h"
 #include "core/Logging.h"
 #include "core/Types.h"
@@ -80,6 +81,11 @@ void GpuScene::postRender()
         auto& instance = m_staticMeshInstances[idx];
         instance->transform().postRender({});
     });
+}
+
+SkeletalMesh* GpuScene::skeletalMeshForInstance(SkeletalMeshInstance const& instance)
+{
+    return skeletalMeshForHandle(instance.mesh());
 }
 
 SkeletalMesh* GpuScene::skeletalMeshForHandle(SkeletalMeshHandle handle)
@@ -267,6 +273,15 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     Texture& blueNoiseTextureArray = reg.loadTextureArrayFromFileSequence("assets/blue-noise/64_64/HDR_RGBA_{}.png", false, false);
     reg.publish("BlueNoise", blueNoiseTextureArray);
 
+    // Skinning related
+    m_jointMatricesBuffer = backend().createBuffer(1024 * sizeof(mat4), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+    Shader skinningShader = Shader::createCompute("skinning/skinning.comp");
+    BindingSet& skinningBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(m_vertexManager->positionVertexBuffer()),
+                                                            ShaderBinding::storageBuffer(m_vertexManager->nonPositionVertexBuffer()),
+                                                            ShaderBinding::storageBufferReadonly(m_vertexManager->skinningDataVertexBuffer()),
+                                                            ShaderBinding::storageBufferReadonly(*m_jointMatricesBuffer) });
+    ComputeState& skinningComputeState = reg.createComputeState(skinningShader, { &skinningBindingSet });
+
     return [&, rtTriangleMeshBufferPtr](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         SCOPED_PROFILE_ZONE_NAMED("GpuScene update");
@@ -414,6 +429,45 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             uploadBuffer.upload(cameraState, cameraBuffer);
         }
 
+        // Perform skinning for skeletal meshes
+        if (m_skeletalMeshInstances.size() > 0) {
+            SCOPED_PROFILE_ZONE_NAMED("Skinning");
+            ScopedDebugZone skinningZone { cmdList, "Skinning" };
+
+            cmdList.setComputeState(skinningComputeState);
+            cmdList.bindSet(skinningBindingSet, 0);
+
+             for (auto const& skeletalMeshInstance : m_skeletalMeshInstances) {
+
+                std::vector<mat4> const& jointMatrices = skeletalMeshInstance->skeleton().appliedJointMatrices();
+                // std::vector<mat3> const& jointTangentMatrices = skeletalMeshInstance->skeleton().appliedJointTangentMatrices();
+
+                // TODO/OPTIMIZATION: Upload all instance's matrices in a single buffer once and simply offset into it!
+                uploadBuffer.upload(jointMatrices, *m_jointMatricesBuffer);
+                cmdList.executeBufferCopyOperations(uploadBuffer);
+
+                for (SkinningVertexMapping const& skinningVertexMapping : skeletalMeshInstance->skinningVertexMappings()) {
+
+                    ARKOSE_ASSERT(skinningVertexMapping.underlyingMesh.hasSkinningData());
+                    ARKOSE_ASSERT(skinningVertexMapping.underlyingMesh.vertexCount == skinningVertexMapping.skinnedTarget.vertexCount);
+                    u32 vertexCount = skinningVertexMapping.underlyingMesh.vertexCount;
+
+                    cmdList.setNamedUniform<u32>("firstSrcVertexIdx", skinningVertexMapping.underlyingMesh.firstVertex);
+                    cmdList.setNamedUniform<u32>("firstDstVertexIdx", skinningVertexMapping.skinnedTarget.firstVertex);
+                    cmdList.setNamedUniform<u32>("firstSkinningVertexIdx", static_cast<u32>(skinningVertexMapping.underlyingMesh.firstSkinningVertex));
+                    cmdList.setNamedUniform<u32>("vertexCount", skinningVertexMapping.underlyingMesh.vertexCount);
+
+                    constexpr u32 localSize = 32;
+                    cmdList.dispatch({ vertexCount, 1, 1 }, { localSize, 1, 1 });
+                }
+
+                if (m_maintainRayTracingScene) {
+                    // TODO: Rebuild the BLAS for the instance. If there is no BLAS, make a new one from the underlying mesh
+                    // which will act as the prototype/src and we'll never have to fully rebuild it after that one is done.
+                }
+            }
+        }
+
         // Update object data (drawables)
         {
             moodycamel::ConcurrentQueue<StaticMeshInstance*> instancesNeedingReinit {};
@@ -450,8 +504,19 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 initializeStaticMeshInstance(*instanceNeedingReinit);
             }
 
-            // TODO: Figure out how we want to re-initialize the skeletal mesh instance when the meshlets are loaded!
             for (auto& skeletalMeshInstance : m_skeletalMeshInstances) {
+
+                // TODO: Figure out how we want to re-initialize the skeletal mesh instance when the meshlets are loaded!
+                //  We probably want to be able to support the same path as static meshes where the meshlet manager tells
+                //  us that things have loaded in and that we can set up the meshlet view.
+
+                for (DrawableObjectHandle drawableHandle : skeletalMeshInstance->drawableHandles()) {
+                    ShaderDrawable& drawable = m_drawables.get(drawableHandle);
+                    drawable.worldFromLocal = skeletalMeshInstance->transform().worldMatrix();
+                    drawable.worldFromTangent = mat4(skeletalMeshInstance->transform().worldNormalMatrix());
+                    drawable.previousFrameWorldFromLocal = skeletalMeshInstance->transform().previousFrameWorldMatrix();
+                }
+
                 drawableCount += skeletalMeshInstance->drawableHandles().size();
             }
 

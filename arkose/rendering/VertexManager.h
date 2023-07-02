@@ -45,9 +45,11 @@ public:
 
     VertexLayout const& positionVertexLayout() const { return m_positionOnlyVertexLayout; }
     Buffer const& positionVertexBuffer() const { return *m_positionOnlyVertexBuffer; }
+    Buffer& positionVertexBuffer() { return *m_positionOnlyVertexBuffer; }
 
     VertexLayout const& nonPositionVertexLayout() const { return m_nonPositionVertexLayout; }
     Buffer const& nonPositionVertexBuffer() const { return *m_nonPositionVertexBuffer; }
+    Buffer& nonPositionVertexBuffer() { return *m_nonPositionVertexBuffer; }
 
     VertexLayout const& skinningDataVertexLayout() const { return m_skinningDataVertexLayout; }
     Buffer const& skinningDataVertexBuffer() const { return *m_skinningDataVertexBuffer; }

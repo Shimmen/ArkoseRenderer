@@ -76,6 +76,7 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
         std::vector<IndirectShaderDrawable> indirectDrawableData {};
 
         size_t numInputDrawables = 0;
+
         for (auto& instance : scene.staticMeshInstances()) {
             if (const StaticMesh* staticMesh = scene.staticMeshForInstance(*instance)) {
 
@@ -99,6 +100,35 @@ RenderPipelineNode::ExecuteCallback CullingNode::construct(GpuScene& scene, Regi
                                                      .materialBlendMode = material.blendMode });
 
                     numInputDrawables += 1;
+                }
+            }
+        }
+
+        for (auto& instance : scene.skeletalMeshInstances()) {
+            if (SkeletalMesh const* skeletalMesh = scene.skeletalMeshForInstance(*instance)) {
+                StaticMesh const& underlyingMesh = skeletalMesh->underlyingMesh();
+
+                // TODO: Pick LOD properly
+                const StaticMeshLOD& lod = underlyingMesh.lodAtIndex(0);
+
+                // TODO: Culling (e.g. frustum) should be done on mesh/LOD level, not per segment, but this will work for now
+                for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
+
+                    StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
+                    SkinningVertexMapping const& skinningVertexMapping = instance->skinningVertexMappingForSegmentIndex(segmentIdx);
+
+                    ShaderDrawable const& drawable = *scene.drawableForHandle(instance->drawableHandleForSegmentIndex(segmentIdx));
+
+                    // TODO: Make materialBlendMode into a u32 (because it really should be)!
+                    indirectDrawableData.push_back({ .drawable = drawable,
+                                                     .localBoundingSphere = vec4(underlyingMesh.boundingSphere().center(), underlyingMesh.boundingSphere().radius()),
+                                                     .indexCount = skinningVertexMapping.skinnedTarget.indexCount,
+                                                     .firstIndex = skinningVertexMapping.skinnedTarget.firstIndex,
+                                                     .vertexOffset = static_cast<i32>(skinningVertexMapping.skinnedTarget.firstVertex),
+                                                     .materialBlendMode = static_cast<i32>(blendModeToShaderBlendMode(meshSegment.blendMode)) });
+
+                    numInputDrawables += 1;
+
                 }
             }
         }

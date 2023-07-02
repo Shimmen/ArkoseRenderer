@@ -70,6 +70,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
             cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
             u32 drawIdx = 0;
+
             for (auto& instance : scene.staticMeshInstances()) {
                 if (StaticMesh const* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
 
@@ -81,6 +82,14 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
                         drawCall.firstInstance = drawIdx++;
                         cmdList.issueDrawCall(drawCall);
                     }
+                }
+            }
+
+            for (auto& instance : scene.skeletalMeshInstances()) {
+                for (SkinningVertexMapping const& skinningVertexMapping : instance->skinningVertexMappings()) {
+                    DrawCallDescription drawCall = skinningVertexMapping.skinnedTarget.asDrawCallDescription();
+                    drawCall.firstInstance = drawIdx++;
+                    cmdList.issueDrawCall(drawCall);
                 }
             }
 
@@ -115,6 +124,7 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
         int selectedIdx = pickingData.meshIdx;
 
         uint32_t drawIdx = 0;
+        
         for (auto& instance : scene.staticMeshInstances()) {
             if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
 
@@ -131,6 +141,18 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
 
                     drawIdx += 1;
                 }
+            }
+        }
+
+         for (auto& instance : scene.skeletalMeshInstances()) {
+            for (SkinningVertexMapping const& skinningVertexMapping : instance->skinningVertexMappings()) {
+                 if (drawIdx == selectedIdx) {
+                     // TODO: This will break if/when we resize the instance vector
+                     scene.scene().setSelectedObject(*instance);
+                     return;
+                 }
+
+                 drawIdx += 1;
             }
         }
 
