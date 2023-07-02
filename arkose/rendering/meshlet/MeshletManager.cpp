@@ -9,11 +9,11 @@
 #include "rendering/backend/util/UploadBuffer.h"
 
 // Shader headers
-#include "shaders/shared/MeshletVertex.h"
+#include "shaders/shared/SceneData.h"
 
 MeshletManager::MeshletManager(Backend& backend)
 {
-    ARKOSE_ASSERT(m_nonPositionVertexLayout.packedVertexSize() == sizeof(MeshletNonPositionVertex));
+    ARKOSE_ASSERT(m_nonPositionVertexLayout.packedVertexSize() == sizeof(NonPositionVertex));
     size_t positionDataBufferSize = m_positionVertexLayout.packedVertexSize() * MaxLoadedVertices;
     size_t nonPositionDataBufferSize = m_nonPositionVertexLayout.packedVertexSize() * MaxLoadedVertices;
     size_t loadedIndexBufferSize = sizeof(u32) * MaxLoadedIndices;
@@ -105,7 +105,7 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
         std::vector<vec3> positionsTempVector {};
         positionsTempVector.reserve(vertexCount);
 
-        std::vector<MeshletNonPositionVertex> nonPositionsTempVector {};
+        std::vector<NonPositionVertex> nonPositionsTempVector {};
         nonPositionsTempVector.reserve(vertexCount);
 
         for (MeshletAsset const& meshletAsset : meshletDataAsset.meshlets) {
@@ -129,9 +129,9 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
                 vec4 tangent = (vertexIdx < meshSegment->asset->tangents.size()) ? meshSegment->asset->tangents[vertexIdx] : vec4(1.0f, 0.0f, 0.0f, 1.0f);
 
                 positionsTempVector.emplace_back(position);
-                nonPositionsTempVector.emplace_back(MeshletNonPositionVertex { .texcoord0 = texcoord0,
-                                                                               .normal = normal,
-                                                                               .tangent = tangent });
+                nonPositionsTempVector.emplace_back(NonPositionVertex { .texcoord0 = texcoord0,
+                                                                        .normal = normal,
+                                                                        .tangent = tangent });
             }
 
             m_nextVertexIdx += meshletAsset.vertexCount;

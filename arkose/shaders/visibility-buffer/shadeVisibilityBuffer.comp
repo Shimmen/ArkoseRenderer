@@ -12,7 +12,6 @@
 #include <visibility-buffer/visibilityBufferCommon.glsl>
 #include <shared/CameraState.h>
 #include <shared/LightData.h>
-#include <shared/MeshletVertex.h>
 #include <shared/SceneData.h>
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
@@ -28,7 +27,7 @@ layout(set = 2, binding = 2) buffer restrict readonly InstanceBlock { ShaderDraw
 layout(set = 2, binding = 3) buffer restrict readonly MeshletBlock { ShaderMeshlet meshlets[]; };
 layout(set = 2, binding = 4, scalar) buffer restrict readonly IndicesBlock { uint meshletIndices[]; };
 layout(set = 2, binding = 5, scalar) buffer restrict readonly PositionsBlock { vec3 meshletPositions[]; };
-layout(set = 2, binding = 6, scalar) buffer restrict readonly NonPositionsBlock { MeshletNonPositionVertex meshletVertices[]; };
+layout(set = 2, binding = 6, scalar) buffer restrict readonly NonPositionsBlock { NonPositionVertex meshletVertices[]; };
 
 layout(set = 3, binding = 0) buffer readonly MaterialBlock { ShaderMaterial materials[]; };
 layout(set = 3, binding = 1) uniform sampler2D textures[];
@@ -174,9 +173,9 @@ void main()
     vec4 projectedPos1 = camera.projectionFromView * viewSpacePos1;
     vec4 projectedPos2 = camera.projectionFromView * viewSpacePos2;
 
-    MeshletNonPositionVertex v0 = meshletVertices[i0];
-    MeshletNonPositionVertex v1 = meshletVertices[i1];
-    MeshletNonPositionVertex v2 = meshletVertices[i2];
+    NonPositionVertex v0 = meshletVertices[i0];
+    NonPositionVertex v1 = meshletVertices[i1];
+    NonPositionVertex v2 = meshletVertices[i2];
 
     vec2 windowSize = vec2(imageSize);
     vec2 pixelNdc = ((vec2(pixelCoord) + vec2(0.5)) / windowSize) * 2.0 - 1.0;

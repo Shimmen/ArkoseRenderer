@@ -6,7 +6,6 @@
 #include <common.glsl>
 #include <common/camera.glsl>
 #include <meshlet/meshletCommon.glsl>
-#include <shared/MeshletVertex.h>
 #include <shared/SceneData.h>
 #include <shared/ShaderBlendMode.h>
 
@@ -18,7 +17,7 @@ layout(set = 1, binding = 2) buffer restrict readonly MeshletBlock { ShaderMeshl
 
 layout(set = 2, binding = 0, scalar) buffer restrict readonly IndicesBlock { uint meshletIndices[]; };
 layout(set = 2, binding = 1, scalar) buffer restrict readonly PositionsBlock { vec3 meshletPositions[]; };
-layout(set = 2, binding = 2, scalar) buffer restrict readonly NonPositionsBlock { MeshletNonPositionVertex meshletVertices[]; };
+layout(set = 2, binding = 2, scalar) buffer restrict readonly NonPositionsBlock { NonPositionVertex meshletVertices[]; };
 
 taskPayloadSharedEXT MeshShaderInterpolants fromTaskShader;
 
@@ -59,7 +58,7 @@ void main()
         gl_MeshVerticesEXT[localVertexIdx].gl_Position = camera.projectionFromView * viewSpacePos;
 
 #if VISBUF_BLEND_MODE == BLEND_MODE_MASKED
-        MeshletNonPositionVertex vertexData = meshletVertices[vertexIdx];
+        NonPositionVertex vertexData = meshletVertices[vertexIdx];
         vTexCoord[localVertexIdx] = vertexData.texcoord0;
 #endif
     }
