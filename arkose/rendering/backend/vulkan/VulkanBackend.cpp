@@ -551,8 +551,9 @@ VkSurfaceFormatKHR VulkanBackend::pickBestSurfaceFormat() const
     vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_surface, &formatCount, surfaceFormats.data());
 
     for (const auto& format : surfaceFormats) {
-        // We use the *_UNORM format since "working directly with SRGB colors is a little bit challenging"
-        // (https://vulkan-tutorial.com/Drawing_a_triangle/Presentation/Swap_chain). I don't really know what that's about..
+        // Note that we use the *_UNORM format here and thus require some pass to convert colors to sRGB-encoded before final output.
+        // Another option is to use e.g. VK_FORMAT_B8G8R8A8_SRGB and then let the drivers convert to sRGB-encoded automatically.
+        // See this stackoverflow answer for more information: https://stackoverflow.com/a/66401423.
         if (format.format == VK_FORMAT_B8G8R8A8_UNORM && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
             ARKOSE_LOG(Info, "VulkanBackend: picked optimal RGBA8 sRGB surface format.");
             return format;
