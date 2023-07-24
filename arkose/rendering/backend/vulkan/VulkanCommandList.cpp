@@ -1226,6 +1226,29 @@ void VulkanCommandList::buildTopLevelAcceratationStructure(TopLevelAS& tlas, Acc
     endDebugLabel();
 }
 
+void VulkanCommandList::buildBottomLevelAcceratationStructure(BottomLevelAS& blas, AccelerationStructureBuildType buildType)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    if (!backend().hasRayTracingSupport())
+        ARKOSE_LOG(Fatal, "Trying to rebuild a bottom level acceleration structure but there is no ray tracing support!");
+
+    beginDebugLabel("Rebuild BLAS");
+
+    switch (backend().rayTracingBackend()) {
+    case VulkanBackend::RayTracingBackend::KhrExtension: {
+        auto& khrBlas = static_cast<VulkanBottomLevelASKHR&>(blas);
+        khrBlas.build(m_commandBuffer, buildType);
+    } break;
+    case VulkanBackend::RayTracingBackend::NvExtension: {
+        auto& rtxBlas = static_cast<VulkanBottomLevelASNV&>(blas);
+        NOT_YET_IMPLEMENTED();
+    } break;
+    }
+
+    endDebugLabel();
+}
+
 void VulkanCommandList::traceRays(Extent2D extent)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();

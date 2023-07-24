@@ -35,8 +35,15 @@ public:
 
     virtual void setName(const std::string& name) override;
 
+    void build(VkCommandBuffer, AccelerationStructureBuildType);
+
     VkAccelerationStructureKHR accelerationStructure;
     VkDeviceAddress accelerationStructureDeviceAddress;
 
     std::vector<std::pair<VkBuffer, VmaAllocation>> associatedBuffers;
+
+    // Store for rebuilding purposes
+    std::vector<VkAccelerationStructureGeometryKHR> vkGeometries {};
+    VkAccelerationStructureBuildGeometryInfoKHR previewBuildInfo {};
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR> rangeInfos {};
 };

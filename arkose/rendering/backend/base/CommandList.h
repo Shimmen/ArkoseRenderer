@@ -48,6 +48,7 @@ public:
     virtual void issueDrawCall(const DrawCallDescription&) = 0;
 
     virtual void buildTopLevelAcceratationStructure(TopLevelAS&, AccelerationStructureBuildType) = 0;
+    virtual void buildBottomLevelAcceratationStructure(BottomLevelAS&, AccelerationStructureBuildType) = 0;
     virtual void traceRays(Extent2D) = 0;
 
     virtual void dispatch(Extent3D globalSize, Extent3D localSize) = 0;

@@ -437,7 +437,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             cmdList.setComputeState(skinningComputeState);
             cmdList.bindSet(skinningBindingSet, 0);
 
-             for (auto const& skeletalMeshInstance : m_skeletalMeshInstances) {
+            u32 numUpdatedBLASes = 0;
+            for (auto const& skeletalMeshInstance : m_skeletalMeshInstances) {
 
                 std::vector<mat4> const& jointMatrices = skeletalMeshInstance->skeleton().appliedJointMatrices();
                 // std::vector<mat3> const& jointTangentMatrices = skeletalMeshInstance->skeleton().appliedJointTangentMatrices();
@@ -462,10 +463,23 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 }
 
                 if (m_maintainRayTracingScene) {
-                    // TODO: Rebuild the BLAS for the instance. If there is no BLAS, make a new one from the underlying mesh
-                    // which will act as the prototype/src and we'll never have to fully rebuild it after that one is done.
+
+                    // TODO/OPTIMIZATION: We can do away with just one of these barriers if we process all skeletal mesh instances as one (see above)
+                    cmdList.bufferWriteBarrier({ &vertexManager().positionVertexBuffer(), &vertexManager().nonPositionVertexBuffer() });
+
+                    for (auto& blas : skeletalMeshInstance->BLASes()) {
+                        cmdList.buildBottomLevelAcceratationStructure(*blas, AccelerationStructureBuildType::Update);
+                        numUpdatedBLASes += 1;
+                    }
                 }
             }
+
+            if (numUpdatedBLASes > 1) {
+                ARKOSE_LOG(Warning, "Strictly speaking we can only update one BLAS per frame, as they use the same scratch buffer! "
+                                    "This may work, but I wouldn't trust it.. We need to keep multiple, separate scratch buffer regions!");
+            }
+
+            cmdList.bufferWriteBarrier({ &vertexManager().positionVertexBuffer(), &vertexManager().nonPositionVertexBuffer() });
         }
 
         // Update object data (drawables)

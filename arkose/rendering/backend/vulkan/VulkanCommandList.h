@@ -40,6 +40,7 @@ public:
     void issueDrawCall(const DrawCallDescription&) override;
 
     void buildTopLevelAcceratationStructure(TopLevelAS&, AccelerationStructureBuildType) override;
+    void buildBottomLevelAcceratationStructure(BottomLevelAS&, AccelerationStructureBuildType) override;
     void traceRays(Extent2D) override;
 
     void dispatch(Extent3D globalSize, Extent3D localSize) override;

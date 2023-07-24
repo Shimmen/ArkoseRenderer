@@ -16,8 +16,8 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
     ARKOSE_ASSERT(vulkanBackend.hasRayTracingSupport());
 
     accelerationStructureFlags = 0u;
-    accelerationStructureFlags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_NV;
-    accelerationStructureFlags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_NV;
+    accelerationStructureFlags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
+    accelerationStructureFlags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
 
     size_t instanceBufferSize = this->maxInstanceCount() * sizeof(VkAccelerationStructureInstanceKHR);
     instanceBuffer = vulkanBackend.createBuffer(instanceBufferSize, Buffer::Usage::RTInstanceBuffer, Buffer::MemoryHint::GpuOptimal);
@@ -177,7 +177,7 @@ void VulkanTopLevelASKHR::build(VkCommandBuffer commandBuffer, AccelerationStruc
     barrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
     vkCmdPipelineBarrier(commandBuffer,
                          VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
-                         VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_NV,
+                         VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
                          0, 1, &barrier, 0, nullptr, 0, nullptr);
 }
 
@@ -252,8 +252,6 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
         }
     }
 
-    std::vector<VkAccelerationStructureGeometryKHR> vkGeometries {};
-    std::vector<VkAccelerationStructureBuildRangeInfoKHR> rangeInfos {};
     std::vector<uint32_t> maxPrimitiveCounts {};
 
     for (size_t geoIdx = 0; geoIdx < geometries().size(); ++geoIdx) {
@@ -360,11 +358,19 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
         }
     }
 
-    VkAccelerationStructureBuildGeometryInfoKHR previewBuildInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR };
+    previewBuildInfo = { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR };
     previewBuildInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
-    previewBuildInfo.flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_NV; // (for now we're dealing with static geometry only so fast trace is ideal)
     previewBuildInfo.geometryCount = (uint32_t)vkGeometries.size();
     previewBuildInfo.pGeometries = vkGeometries.data();
+
+    // TODO/OPTIMIZATION: Don't set this for all! Pass in whether the mesh needs to be rebuilt ever (also needed for the source when we copy!)
+    constexpr bool allowUpdate = true;
+    if constexpr (allowUpdate) {
+        previewBuildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE_BIT_KHR;
+        previewBuildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD_BIT_KHR;
+    } else {
+        previewBuildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
+    }
 
     VkAccelerationStructureBuildSizesInfoKHR buildSizesInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
     vulkanBackend.rayTracingKHR().vkGetAccelerationStructureBuildSizesKHR(vulkanBackend.device(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &previewBuildInfo, maxPrimitiveCounts.data(), &buildSizesInfo);
@@ -457,4 +463,33 @@ void VulkanBottomLevelASKHR::setName(const std::string& name)
             ARKOSE_LOG(Warning, "Could not set debug name for vulkan bottom level acceleration structure resource.");
         }
     }
+}
+
+void VulkanBottomLevelASKHR::build(VkCommandBuffer commandBuffer, AccelerationStructureBuildType buildType)
+{
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+
+    VkAccelerationStructureBuildGeometryInfoKHR buildInfo = previewBuildInfo;
+
+    // TODO: We have to ensure that we never do more than one rebuild at a time with this setup!
+    // TODO: We have to ensure that we never do more than one rebuild at a time with this setup!
+    // TODO: We have to ensure that we never do more than one rebuild at a time with this setup!
+    // TODO: We have to ensure that we never do more than one rebuild at a time with this setup!
+    buildInfo.scratchData.deviceAddress = vulkanBackend.rayTracingKHR().sharedScratchBufferDeviceAddress();
+
+    switch (buildType) {
+    case AccelerationStructureBuildType::FullBuild:
+        buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+        buildInfo.srcAccelerationStructure = VK_NULL_HANDLE;
+        buildInfo.dstAccelerationStructure = accelerationStructure;
+        break;
+    case AccelerationStructureBuildType::Update:
+        buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR;
+        buildInfo.srcAccelerationStructure = accelerationStructure;
+        buildInfo.dstAccelerationStructure = accelerationStructure;
+        break;
+    }
+
+    VkAccelerationStructureBuildRangeInfoKHR* rangeInfosData = rangeInfos.data();
+    vulkanBackend.rayTracingKHR().vkCmdBuildAccelerationStructuresKHR(commandBuffer, 1, &buildInfo, &rangeInfosData);
 }
