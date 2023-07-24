@@ -3,6 +3,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 // StaticMeshInstance
 
+StaticMeshInstance::StaticMeshInstance(StaticMeshHandle inMesh, Transform inTransform)
+    : m_mesh(inMesh)
+    , m_transform(inTransform)
+{
+}
+
+StaticMeshInstance::~StaticMeshInstance() = default;
+
 bool StaticMeshInstance::hasDrawableHandleForSegmentIndex(u32 segmentIdx) const
 {
     return segmentIdx < m_drawableHandles.size();
@@ -29,6 +37,15 @@ void StaticMeshInstance::setDrawableHandle(u32 segmentIdx, DrawableObjectHandle 
 
 ////////////////////////////////////////////////////////////////////////////////
 // SkeletalMeshInstance
+
+SkeletalMeshInstance::SkeletalMeshInstance(SkeletalMeshHandle inMesh, std::unique_ptr<Skeleton> skeleton, Transform inTransform)
+    : m_mesh(inMesh)
+    , m_skeleton(std::move(skeleton))
+    , m_transform(inTransform)
+{
+}
+
+SkeletalMeshInstance::~SkeletalMeshInstance() = default;
 
 Transform* SkeletalMeshInstance::findTransformForJoint(std::string_view jointName)
 {
