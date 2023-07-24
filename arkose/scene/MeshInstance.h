@@ -88,7 +88,7 @@ struct SkeletalMeshInstance : public IEditorObject {
 
     bool hasBlasForSegmentIndex(u32 segmentIdx) const;
     std::unique_ptr<BottomLevelAS> const& blasForSegmentIndex(u32 segmentIdx) const;
-    std::vector<std::unique_ptr<BottomLevelAS>> const& BLASes() const { return m_blases; }
+    std::vector<std::unique_ptr<BottomLevelAS>>& BLASes() { return m_blases; }
 
     void resetBLASes();
     void setBLAS(u32 segmentIdx, std::unique_ptr<BottomLevelAS>&&);
