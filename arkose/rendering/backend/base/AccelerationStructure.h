@@ -60,6 +60,8 @@ public:
     BottomLevelAS() = default;
     BottomLevelAS(Backend&, std::vector<RTGeometry>);
 
+    virtual ~BottomLevelAS() { }
+
     [[nodiscard]] const std::vector<RTGeometry>& geometries() const;
 
     size_t sizeInMemory() { return m_sizeInMemory; }
@@ -83,6 +85,8 @@ class TopLevelAS : public Resource {
 public:
     TopLevelAS() = default;
     TopLevelAS(Backend&, uint32_t maxInstanceCount);
+
+    virtual ~TopLevelAS() { }
 
     virtual void updateInstanceDataWithUploadBuffer(const std::vector<RTGeometryInstance>&, UploadBuffer&) = 0;
 
