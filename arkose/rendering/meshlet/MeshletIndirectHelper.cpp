@@ -69,7 +69,8 @@ void MeshletIndirectHelper::executeMeshletIndirectSetup(GpuScene& scene, Command
         cmdList.dispatch({ drawableCount, 1, 1 }, { GroupSize, 1, 1 });
     }
 
-    cmdList.bufferWriteBarrier(state.rawIndirectBuffers);
+    std::vector<Buffer const*> constRawIndirectBuffers { state.rawIndirectBuffers.begin(), state.rawIndirectBuffers.end() };
+    cmdList.bufferWriteBarrier(constRawIndirectBuffers);
 }
 
 void MeshletIndirectHelper::drawMeshletsWithIndirectBuffer(CommandList& cmdList, MeshletIndirectBuffer const& indirectBuffer) const

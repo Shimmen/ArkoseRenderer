@@ -1541,7 +1541,7 @@ void VulkanCommandList::textureMipWriteBarrier(const Texture& genTexture, uint32
                          1, &barrier);
 }
 
-void VulkanCommandList::bufferWriteBarrier(std::vector<Buffer*> buffers)
+void VulkanCommandList::bufferWriteBarrier(std::vector<Buffer const*> buffers)
 {
     if (buffers.size() == 0)
         return;
@@ -1550,10 +1550,10 @@ void VulkanCommandList::bufferWriteBarrier(std::vector<Buffer*> buffers)
     barriers.resize(buffers.size());
 
     for (int i = 0; i < buffers.size(); ++i) {
-        Buffer& buffer = *buffers[i];
+        Buffer const& buffer = *buffers[i];
 
         VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-        barrier.buffer = static_cast<VulkanBuffer&>(buffer).buffer;
+        barrier.buffer = static_cast<VulkanBuffer const&>(buffer).buffer;
 
         // the whole range
         barrier.offset = 0;

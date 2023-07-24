@@ -62,7 +62,7 @@ public:
 
     virtual void textureWriteBarrier(const Texture&) = 0;
     virtual void textureMipWriteBarrier(const Texture&, uint32_t mip) = 0;
-    virtual void bufferWriteBarrier(std::vector<Buffer*>) = 0;
+    virtual void bufferWriteBarrier(std::vector<Buffer const*>) = 0;
 
     virtual void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) = 0;
 

@@ -147,6 +147,6 @@ void D3D12CommandList::textureMipWriteBarrier(const Texture& genTexture, uint32_
 {
 }
 
-void D3D12CommandList::bufferWriteBarrier(std::vector<Buffer*> buffers)
+void D3D12CommandList::bufferWriteBarrier(std::vector<Buffer const*> buffers)
 {
 }

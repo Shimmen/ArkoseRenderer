@@ -43,7 +43,7 @@ public:
 
     void textureWriteBarrier(const Texture&) override;
     void textureMipWriteBarrier(const Texture&, uint32_t mip) override;
-    void bufferWriteBarrier(std::vector<Buffer*>) override;
+    void bufferWriteBarrier(std::vector<Buffer const*>) override;
 
     void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) override;
 
