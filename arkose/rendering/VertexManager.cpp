@@ -85,7 +85,7 @@ bool VertexManager::createBottomLevelAccelerationStructure(StaticMesh& staticMes
     for (StaticMeshLOD& lod : staticMesh.LODs()) {
         for (StaticMeshSegment& meshSegment : lod.meshSegments) {
             ARKOSE_ASSERT(meshSegment.vertexAllocation.isValid());
-            meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment);
+            meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment.vertexAllocation, nullptr);
         }
     }
 
@@ -171,7 +171,7 @@ void VertexManager::uploadMeshDataForAllocation(VertexUploadJob const& uploadJob
     uploadJob.target->vertexAllocation = allocation;
 }
 
-std::unique_ptr<BottomLevelAS> VertexManager::createBottomLevelAccelerationStructure(StaticMeshSegment const& meshSegment)
+std::unique_ptr<BottomLevelAS> VertexManager::createBottomLevelAccelerationStructure(VertexAllocation const& vertexAllocation, BottomLevelAS const* copySource)
 {
     // TODO: Create a geometry per mesh (or rather, per LOD) and use the SBT to lookup material.
     // For now we create one per segment so we can ensure one material per "draw"
@@ -181,7 +181,7 @@ std::unique_ptr<BottomLevelAS> VertexManager::createBottomLevelAccelerationStruc
 
     size_t vertexStride = positionVertexLayout().packedVertexSize();
 
-    DrawCallDescription drawCallDesc = meshSegment.vertexAllocation.asDrawCallDescription();
+    DrawCallDescription drawCallDesc = vertexAllocation.asDrawCallDescription();
     ARKOSE_ASSERT(drawCallDesc.type == DrawCallDescription::Type ::Indexed);
 
     i32 indexOfFirstVertex = drawCallDesc.vertexOffset;
@@ -201,5 +201,5 @@ std::unique_ptr<BottomLevelAS> VertexManager::createBottomLevelAccelerationStruc
                                   .indexType = indexType(),
                                   .transform = mat4(1.0f) };
 
-    return m_backend->createBottomLevelAccelerationStructure({ geometry });
+    return m_backend->createBottomLevelAccelerationStructure({ geometry }, copySource);
 }

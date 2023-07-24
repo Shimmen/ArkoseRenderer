@@ -502,13 +502,13 @@ std::unique_ptr<RenderState> VulkanBackend::createRenderState(const RenderTarget
     return std::make_unique<VulkanRenderState>(*this, renderTarget, vertexLayouts, shader, stateBindings, rasterState, depthState, stencilState);
 }
 
-std::unique_ptr<BottomLevelAS> VulkanBackend::createBottomLevelAccelerationStructure(std::vector<RTGeometry> geometries)
+std::unique_ptr<BottomLevelAS> VulkanBackend::createBottomLevelAccelerationStructure(std::vector<RTGeometry> geometries, BottomLevelAS const* copySource)
 {
     switch (rayTracingBackend()) {
     case RayTracingBackend::KhrExtension:
-        return std::make_unique<VulkanBottomLevelASKHR>(*this, geometries);
+        return std::make_unique<VulkanBottomLevelASKHR>(*this, geometries, copySource);
     case RayTracingBackend::NvExtension:
-        return std::make_unique<VulkanBottomLevelASNV>(*this, geometries);
+        return std::make_unique<VulkanBottomLevelASNV>(*this, geometries, copySource);
     default:
         ASSERT_NOT_REACHED();
     }

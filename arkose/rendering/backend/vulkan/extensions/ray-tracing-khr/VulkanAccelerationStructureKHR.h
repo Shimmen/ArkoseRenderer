@@ -30,7 +30,7 @@ public:
 
 struct VulkanBottomLevelASKHR final : public BottomLevelAS {
 public:
-    VulkanBottomLevelASKHR(Backend&, std::vector<RTGeometry>);
+    VulkanBottomLevelASKHR(Backend&, std::vector<RTGeometry>, BottomLevelAS const* copySource = nullptr);
     virtual ~VulkanBottomLevelASKHR() override;
 
     virtual void setName(const std::string& name) override;

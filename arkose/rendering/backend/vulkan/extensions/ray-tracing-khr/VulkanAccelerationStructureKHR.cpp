@@ -216,7 +216,7 @@ std::vector<VkAccelerationStructureInstanceKHR> VulkanTopLevelASKHR::createInsta
     return instanceData;
 }
 
-VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTGeometry> geos)
+VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTGeometry> geos, BottomLevelAS const* copySource)
     : BottomLevelAS(backend, std::move(geos))
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
@@ -391,19 +391,33 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
     accelerationStructureDeviceAddressInfo.accelerationStructure = accelerationStructure;
     accelerationStructureDeviceAddress = vulkanBackend.rayTracingKHR().vkGetAccelerationStructureDeviceAddressKHR(vulkanBackend.device(), &accelerationStructureDeviceAddressInfo);
 
-    VkAccelerationStructureBuildGeometryInfoKHR buildInfo = previewBuildInfo;
-    buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
-    buildInfo.dstAccelerationStructure = accelerationStructure;
+    if (copySource == nullptr) {
+        VkAccelerationStructureBuildGeometryInfoKHR buildInfo = previewBuildInfo;
+        buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
+        buildInfo.dstAccelerationStructure = accelerationStructure;
 
-    ARKOSE_ASSERT(buildSizesInfo.buildScratchSize <= VulkanRayTracingKHR::SharedScratchBufferSize);
-    buildInfo.scratchData.deviceAddress = vulkanBackend.rayTracingKHR().sharedScratchBufferDeviceAddress();
+        ARKOSE_ASSERT(buildSizesInfo.buildScratchSize <= VulkanRayTracingKHR::SharedScratchBufferSize);
+        buildInfo.scratchData.deviceAddress = vulkanBackend.rayTracingKHR().sharedScratchBufferDeviceAddress();
 
-    VkAccelerationStructureBuildRangeInfoKHR* rangeInfosData = rangeInfos.data();
-    bool buildSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer cmdBuffer) {
-        vulkanBackend.rayTracingKHR().vkCmdBuildAccelerationStructuresKHR(cmdBuffer, 1, &buildInfo, &rangeInfosData);
-    });
-    if (!buildSuccess) {
-        ARKOSE_LOG(Fatal, "Error trying to build bottom level acceleration structure");
+        VkAccelerationStructureBuildRangeInfoKHR* rangeInfosData = rangeInfos.data();
+        bool buildSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer cmdBuffer) {
+            vulkanBackend.rayTracingKHR().vkCmdBuildAccelerationStructuresKHR(cmdBuffer, 1, &buildInfo, &rangeInfosData);
+        });
+        if (!buildSuccess) {
+            ARKOSE_LOG(Fatal, "Error trying to build bottom level acceleration structure");
+        }
+    } else {
+        VkCopyAccelerationStructureInfoKHR copyInfo { VK_STRUCTURE_TYPE_COPY_ACCELERATION_STRUCTURE_INFO_KHR };
+        copyInfo.mode = VK_COPY_ACCELERATION_STRUCTURE_MODE_CLONE_KHR;
+        copyInfo.src = static_cast<VulkanBottomLevelASKHR const&>(*copySource).accelerationStructure;
+        copyInfo.dst = accelerationStructure;
+    
+        bool buildSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer cmdBuffer) {
+            vulkanBackend.rayTracingKHR().vkCmdCopyAccelerationStructureKHR(cmdBuffer, &copyInfo);
+        });
+        if (!buildSuccess) {
+            ARKOSE_LOG(Fatal, "Error trying to copy bottom level acceleration structure");
+        }
     }
 
     associatedBuffers.push_back(accelerationStructureBufferAndAllocation);

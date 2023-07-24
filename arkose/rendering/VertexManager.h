@@ -39,6 +39,7 @@ public:
     bool uploadMeshData(StaticMesh&, bool includeIndices, bool includeSkinningData);
 
     bool createBottomLevelAccelerationStructure(StaticMesh&);
+    std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(VertexAllocation const&, BottomLevelAS const* copySource);
 
     IndexType indexType() const { return IndexType::UInt32; }
     Buffer const& indexBuffer() const { return *m_indexBuffer; }
@@ -81,6 +82,4 @@ private:
     };
 
     void uploadMeshDataForAllocation(VertexUploadJob const&);
-
-    std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(StaticMeshSegment const&);
 };

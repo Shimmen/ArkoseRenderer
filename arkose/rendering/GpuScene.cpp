@@ -667,6 +667,57 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 }
             }
 
+            for (auto& instance : skeletalMeshInstances()) {
+                if (SkeletalMesh* skeletalMesh = skeletalMeshForHandle(instance->mesh())) {
+                    StaticMesh const& staticMesh = skeletalMesh->underlyingMesh();
+                    for (StaticMeshLOD const& staticMeshLOD : staticMesh.LODs()) {
+                        for (u32 segmentIdx = 0; segmentIdx < staticMeshLOD.meshSegments.size(); ++segmentIdx) {
+                            StaticMeshSegment const& meshSegment = staticMeshLOD.meshSegments[segmentIdx];
+
+                            u32 rtMeshIndex = narrow_cast<u32>(rayTracingMeshData.size());
+
+                            DrawCallDescription drawCallDesc = meshSegment.vertexAllocation.asDrawCallDescription();
+                            rayTracingMeshData.push_back(RTTriangleMesh { .firstVertex = drawCallDesc.vertexOffset,
+                                                                            .firstIndex = static_cast<int>(drawCallDesc.firstIndex),
+                                                                            .materialIndex = meshSegment.material.indexOfType<int>() });
+
+                            BottomLevelAS const& blas = *instance->blasForSegmentIndex(segmentIdx);
+
+                            tlasBuildType = AccelerationStructureBuildType::FullBuild; // TODO: Only do a full rebuild sometimes!
+
+                            uint8_t hitMask = 0x00;
+                            if (const ShaderMaterial* material = materialForHandle(meshSegment.material)) {
+                                switch (material->blendMode) {
+                                case BLEND_MODE_OPAQUE:
+                                    hitMask = RT_HIT_MASK_OPAQUE;
+                                    break;
+                                case BLEND_MODE_MASKED:
+                                    hitMask = RT_HIT_MASK_MASKED;
+                                    break;
+                                case BLEND_MODE_TRANSLUCENT:
+                                    hitMask = RT_HIT_MASK_BLEND;
+                                    break;
+                                default:
+                                    ASSERT_NOT_REACHED();
+                                }
+                            }
+                            ARKOSE_ASSERT(hitMask != 0);
+
+                            // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
+                            rayTracingGeometryInstances.push_back(RTGeometryInstance { .blas = &blas,
+                                                                                       .transform = &instance->transform(),
+                                                                                       .shaderBindingTableOffset = 0, // TODO: Generalize!
+                                                                                       .customInstanceId = rtMeshIndex,
+                                                                                       .hitMask = hitMask });
+                        }
+                    }
+                }
+
+                // TODO: Ensure there is a BLAS, update it, and make an instance of it for the TLAS
+                // NOTE: We don't need to dig into the skeletal mesh underneath since the instance has its own
+                //       buffers which the skinning manager should keep up to date every frame!
+            }
+
             ARKOSE_ASSERT(rtTriangleMeshBufferPtr != nullptr);
             uploadBuffer.upload(rayTracingMeshData, *rtTriangleMeshBufferPtr);
 
@@ -840,6 +891,22 @@ void GpuScene::initializeSkeletalMeshInstance(SkeletalMeshInstance& instance)
                                                           .skinnedTarget = instanceVertexAllocation };
             instance.setSkinningVertexMapping(segmentIdx, skinningVertexMapping);
         }
+
+        if (m_maintainRayTracingScene) {
+            // For now at least, this is not reentrant.
+            ARKOSE_ASSERT(instance.BLASes().size() == 0);
+
+            SkinningVertexMapping const& skinningVertexMappings = instance.skinningVertexMappingForSegmentIndex(segmentIdx);
+            ARKOSE_ASSERT(skinningVertexMappings.skinnedTarget.isValid());
+
+            // NOTE: We construct the new BLAS into its own buffers but 1) we don't have any data in there yet to build from,
+            // and 2) we don't want to build redundantly, so we pass in the existing BLAS from the underlying mesh as a BLAS
+            // copy source, which means that we copy the built BLAS into place.
+            BottomLevelAS const* sourceBlas = meshSegment.blas.get();
+
+            auto blas = m_vertexManager->createBottomLevelAccelerationStructure(skinningVertexMappings.skinnedTarget, sourceBlas);
+            instance.setBLAS(segmentIdx, std::move(blas));
+        }
     }
 }
 
@@ -922,6 +989,13 @@ SkeletalMeshHandle GpuScene::registerSkeletalMesh(MeshAsset const* meshAsset, Sk
         constexpr bool includeIndices = true;
         constexpr bool includeSkinningData = true;
         m_vertexManager->uploadMeshData(skeletalMesh->underlyingMesh(), includeIndices, includeSkinningData);
+
+        if (m_maintainRayTracingScene) {
+            // NOTE: This isn't the most ideal memory usage as we're having this BLAS just sitting here and just being
+            // used as a copy source, but it makes things easy now. Later we can make it when the first instance is
+            // created and then let that first instance be the copy source for all other instances.
+            m_vertexManager->createBottomLevelAccelerationStructure(skeletalMesh->underlyingMesh());
+        }
     }
 
     SkeletalMeshHandle handle = m_managedSkeletalMeshes.add(ManagedSkeletalMesh { .meshAsset = meshAsset,

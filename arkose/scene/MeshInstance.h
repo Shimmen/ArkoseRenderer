@@ -86,6 +86,13 @@ struct SkeletalMeshInstance : public IEditorObject {
     void resetSkinningVertexMappings();
     void setSkinningVertexMapping(u32 segmentIdx, SkinningVertexMapping);
 
+    bool hasBlasForSegmentIndex(u32 segmentIdx) const;
+    std::unique_ptr<BottomLevelAS> const& blasForSegmentIndex(u32 segmentIdx) const;
+    std::vector<std::unique_ptr<BottomLevelAS>> const& BLASes() const { return m_blases; }
+
+    void resetBLASes();
+    void setBLAS(u32 segmentIdx, std::unique_ptr<BottomLevelAS>&&);
+
     std::string name;
 
 private:

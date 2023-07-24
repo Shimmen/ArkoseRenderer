@@ -99,3 +99,27 @@ void SkeletalMeshInstance::setSkinningVertexMapping(u32 segmentIdx, SkinningVert
 
     m_skinningVertexMappings[segmentIdx] = skinningVertexMapping;
 }
+
+bool SkeletalMeshInstance::hasBlasForSegmentIndex(u32 segmentIdx) const
+{
+    return segmentIdx < m_blases.size();
+}
+
+std::unique_ptr<BottomLevelAS> const& SkeletalMeshInstance::blasForSegmentIndex(u32 segmentIdx) const
+{
+    return m_blases[segmentIdx];
+}
+
+void SkeletalMeshInstance::resetBLASes()
+{
+    m_blases.clear();
+}
+
+void SkeletalMeshInstance::setBLAS(u32 segmentIdx, std::unique_ptr<BottomLevelAS>&& blas)
+{
+    if (not hasBlasForSegmentIndex(segmentIdx)) {
+        m_blases.resize(segmentIdx + 1);
+    }
+
+    m_blases[segmentIdx] = std::move(blas);
+}
