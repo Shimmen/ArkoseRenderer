@@ -7,14 +7,16 @@
 #include <shared/SceneData.h>
 
 layout(set = 0, binding = 0, scalar) buffer restrict PositionVertexBlock { vec3 positions[]; };
-layout(set = 0, binding = 1, scalar) buffer restrict NonPositionVertexBlock { NonPositionVertex nonPositionVertexData[]; };
-layout(set = 0, binding = 2, scalar) buffer restrict readonly SkinningVertexBlock { SkinningVertex skinningVertexData[]; };
-layout(set = 0, binding = 3) buffer restrict readonly JointMatricesBlock { mat4 jointMatrices[]; };
+layout(set = 0, binding = 1, scalar) buffer restrict VelocityVertexBlock { vec3 velocities[]; };
+layout(set = 0, binding = 2, scalar) buffer restrict NonPositionVertexBlock { NonPositionVertex nonPositionVertexData[]; };
+layout(set = 0, binding = 3, scalar) buffer restrict readonly SkinningVertexBlock { SkinningVertex skinningVertexData[]; };
+layout(set = 0, binding = 4) buffer restrict readonly JointMatricesBlock { mat4 jointMatrices[]; };
 
 NAMED_UNIFORMS(constants,
     uint firstSrcVertexIdx;
     uint firstDstVertexIdx;
     uint firstSkinningVertexIdx;
+    uint firstVelocityVertexIdx;
     uint vertexCount;
 )
 
@@ -35,8 +37,12 @@ void main()
 
     uint srcVertexIdx = constants.firstSrcVertexIdx + localVertexIdx;
     uint dstVertexIdx = constants.firstDstVertexIdx + localVertexIdx;
+    uint dstVelocityVertexIdx = constants.firstVelocityVertexIdx + localVertexIdx;
 
-    positions[dstVertexIdx] = vec3(animatedFromLocal * vec4(positions[srcVertexIdx], 1.0));
+    vec3 newPosition = vec3(animatedFromLocal * vec4(positions[srcVertexIdx], 1.0));
+    vec3 velocity = newPosition - positions[dstVertexIdx];
+    velocities[dstVelocityVertexIdx] = velocity;
+    positions[dstVertexIdx] = newPosition;
 
     // TODO: Upload instead of computing for every vertex!
     mat3 animatedFromTangent = transpose(inverse(mat3(animatedFromLocal)));

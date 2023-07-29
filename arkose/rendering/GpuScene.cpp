@@ -278,6 +278,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     m_jointMatricesBuffer = backend().createBuffer(1024 * sizeof(mat4), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
     Shader skinningShader = Shader::createCompute("skinning/skinning.comp");
     BindingSet& skinningBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(m_vertexManager->positionVertexBuffer()),
+                                                            ShaderBinding::storageBuffer(m_vertexManager->velocityDataVertexBuffer()),
                                                             ShaderBinding::storageBuffer(m_vertexManager->nonPositionVertexBuffer()),
                                                             ShaderBinding::storageBufferReadonly(m_vertexManager->skinningDataVertexBuffer()),
                                                             ShaderBinding::storageBufferReadonly(*m_jointMatricesBuffer) });
@@ -451,12 +452,14 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 for (SkinningVertexMapping const& skinningVertexMapping : skeletalMeshInstance->skinningVertexMappings()) {
 
                     ARKOSE_ASSERT(skinningVertexMapping.underlyingMesh.hasSkinningData());
+                    ARKOSE_ASSERT(skinningVertexMapping.skinnedTarget.hasVelocityData());
                     ARKOSE_ASSERT(skinningVertexMapping.underlyingMesh.vertexCount == skinningVertexMapping.skinnedTarget.vertexCount);
                     u32 vertexCount = skinningVertexMapping.underlyingMesh.vertexCount;
 
                     cmdList.setNamedUniform<u32>("firstSrcVertexIdx", skinningVertexMapping.underlyingMesh.firstVertex);
                     cmdList.setNamedUniform<u32>("firstDstVertexIdx", skinningVertexMapping.skinnedTarget.firstVertex);
                     cmdList.setNamedUniform<u32>("firstSkinningVertexIdx", static_cast<u32>(skinningVertexMapping.underlyingMesh.firstSkinningVertex));
+                    cmdList.setNamedUniform<u32>("firstVelocityVertexIdx", static_cast<u32>(skinningVertexMapping.skinnedTarget.firstVelocityVertex));
                     cmdList.setNamedUniform<u32>("vertexCount", skinningVertexMapping.underlyingMesh.vertexCount);
 
                     constexpr u32 localSize = 32;
@@ -892,11 +895,16 @@ void GpuScene::initializeSkeletalMeshInstance(SkeletalMeshInstance& instance)
 
         if (!instance.hasSkinningVertexMappingForSegmentIndex(segmentIdx)) {
             // We don't need to allocate indices or skinning for the target. The indices will duplicate the underlying mesh
-            // as it's never changed, and skinning data will never be needed for the *target*
+            // as it's never changed, and skinning data will never be needed for the *target*. We do have to allocate space
+            // for velocity data, however, as it's something that's specific for the animated target vertices.
             constexpr bool includeIndices = false;
             constexpr bool includeSkinningData = false;
+            constexpr bool includeVelocityData = true;
 
-            VertexAllocation instanceVertexAllocation = m_vertexManager->allocateMeshDataForSegment(*meshSegment.asset, includeIndices, includeSkinningData);
+            VertexAllocation instanceVertexAllocation = m_vertexManager->allocateMeshDataForSegment(*meshSegment.asset,
+                                                                                                    includeIndices,
+                                                                                                    includeSkinningData,
+                                                                                                    includeVelocityData);
             ARKOSE_ASSERT(instanceVertexAllocation.isValid());
 
             instanceVertexAllocation.firstIndex = meshSegment.vertexAllocation.firstIndex;

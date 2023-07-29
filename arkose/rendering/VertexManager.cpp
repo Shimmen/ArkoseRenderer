@@ -33,6 +33,7 @@ VertexManager::VertexManager(Backend& backend)
     const size_t initialPostionVertexBufferSize = 50'000 * positionVertexLayout().packedVertexSize();
     const size_t initialNonPostionVertexBufferSize = 50'000 * nonPositionVertexLayout().packedVertexSize();
     const size_t initialSkinningDataVertexBufferSize = 10'000 * skinningDataVertexLayout().packedVertexSize();
+    const size_t initialVelocityDataVertexBufferSize = 10'000 * velocityDataVertexLayout().packedVertexSize();
     constexpr Buffer::MemoryHint memoryHint = Buffer::MemoryHint::GpuOptimal;
 
     m_indexBuffer = backend.createBuffer(initialIndexBufferSize, Buffer::Usage::Index, memoryHint);
@@ -46,6 +47,9 @@ VertexManager::VertexManager(Backend& backend)
 
     m_skinningDataVertexBuffer = backend.createBuffer(initialSkinningDataVertexBufferSize, Buffer::Usage::Vertex, memoryHint);
     m_skinningDataVertexBuffer->setName("SceneSkinningDataVertexBuffer");
+
+    m_velocityDataVertexBuffer = backend.createBuffer(initialVelocityDataVertexBufferSize, Buffer::Usage::Vertex, memoryHint);
+    m_velocityDataVertexBuffer->setName("SceneVelocityDataVertexBuffer");
 }
 
 VertexManager::~VertexManager()
@@ -63,7 +67,10 @@ bool VertexManager::uploadMeshData(StaticMesh& staticMesh, bool includeIndices, 
                 continue;
             }
 
-            VertexAllocation allocation = allocateMeshDataForSegment(*meshSegment.asset, includeIndices, includeSkinningData);
+            // There are (currently) no cases where we have velocity data from an asset that we need to upload
+            constexpr bool includeVelocityData = false;
+
+            VertexAllocation allocation = allocateMeshDataForSegment(*meshSegment.asset, includeIndices, includeSkinningData, includeVelocityData);
             if (!allocation.isValid()) {
                 return false;
             }
@@ -92,7 +99,7 @@ bool VertexManager::createBottomLevelAccelerationStructure(StaticMesh& staticMes
     return true;
 }
 
-VertexAllocation VertexManager::allocateMeshDataForSegment(MeshSegmentAsset const& segmentAsset, bool includeIndices, bool includeSkinningData)
+VertexAllocation VertexManager::allocateMeshDataForSegment(MeshSegmentAsset const& segmentAsset, bool includeIndices, bool includeSkinningData, bool includeVelocityData)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -117,6 +124,12 @@ VertexAllocation VertexManager::allocateMeshDataForSegment(MeshSegmentAsset cons
         // TODO: Validate that it will fit!
         allocation.firstSkinningVertex = m_nextFreeSkinningVertexIndex;
         m_nextFreeSkinningVertexIndex += vertexCount;
+    }
+
+    if (includeVelocityData) {
+        // TODO: Validate that it will fit!
+        allocation.firstVelocityVertex = m_nextFreeVelocityIndex;
+        m_nextFreeVelocityIndex += vertexCount;
     }
 
     ARKOSE_ASSERT(allocation.isValid());
