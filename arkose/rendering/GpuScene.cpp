@@ -875,7 +875,10 @@ void GpuScene::initializeSkeletalMeshInstance(SkeletalMeshInstance& instance)
 
         drawable.materialIndex = meshSegment.material.indexOfType<int>();
 
-        drawable.drawKey = meshSegment.drawKey.asUint32();
+        DrawKey drawKey = meshSegment.drawKey;
+        ARKOSE_ASSERT(drawKey.hasExplicityVelocity() == false);
+        drawKey.setHasExplicityVelocity(true);
+        drawable.drawKey = drawKey.asUint32();
 
         if (meshSegment.meshletView) {
             drawable.firstMeshlet = meshSegment.meshletView->firstMeshlet;
