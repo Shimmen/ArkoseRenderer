@@ -19,12 +19,6 @@ struct Handle {
     {
     }
 
-    template<typename HandleT>
-    bool operator==(HandleT& other) const
-    {
-        return m_index == other.m_index;
-    }
-
     IndexType index() const
     {
         return m_index;
@@ -48,6 +42,12 @@ private:
     IndexType m_index { InvalidIndex };
 
 };
+
+template<typename TypeTag>
+bool operator==(Handle<TypeTag> const& lhs, Handle<TypeTag> const& rhs)
+{
+    return lhs.index() == rhs.index();
+}
 
 namespace std {
 template<typename>
