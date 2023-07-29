@@ -27,6 +27,16 @@ private:
     JPH::BroadPhaseLayer m_objectToBroadPhase[NumPhysicsLayers];
 };
 
+class ArkoseObjectLayerPairFilter : public JPH::ObjectLayerPairFilter {
+public:
+    virtual bool ShouldCollide(JPH::ObjectLayer objectA, JPH::ObjectLayer objectB) const override;
+};
+
+class ArkoseObjectVsBroadPhaseLayerFilter : public JPH::ObjectVsBroadPhaseLayerFilter {
+public:
+    virtual bool ShouldCollide(JPH::ObjectLayer objectLayer, JPH::BroadPhaseLayer broadPhaseLayer) const override;
+};
+
 class JoltPhysicsBackend : public PhysicsBackend {
 public:
 
@@ -76,6 +86,8 @@ private:
 #endif
 
     ArkoseBroadPhaseLayerInterface m_broadPhaseLayerInterface {};
+    ArkoseObjectLayerPairFilter m_objectLayerPairFilter {};
+    ArkoseObjectVsBroadPhaseLayerFilter m_objectVsBroadPhaseLayerFilter {};
 
     // We simulate the physics world in discrete time steps. 60 Hz is a good rate to update the physics system.
     static constexpr float FixedUpdateRate { 1.0f / 60.0f };
