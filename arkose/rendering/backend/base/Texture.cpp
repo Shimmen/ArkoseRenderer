@@ -7,6 +7,7 @@
 #include "core/parallel/ParallelFor.h"
 #include "rendering/backend/base/Backend.h"
 #include <cmath>
+#include <format>
 
 Texture::Texture(Backend& backend, Description desc)
     : Resource(backend)

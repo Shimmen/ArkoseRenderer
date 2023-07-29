@@ -6,6 +6,7 @@
 #include "core/Logging.h"
 #include "core/parallel/ParallelFor.h"
 #include "utility/FileIO.h"
+#include <format>
 
 ImportResult AssetImporter::importAsset(std::string_view assetFilePath, std::string_view targetDirectory, Options options)
 {

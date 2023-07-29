@@ -9,6 +9,7 @@
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/string.hpp>
 #include <cereal/types/vector.hpp>
+#include <format>
 #include <fstream>
 #include <stb_image.h>
 #include <zstd/zstd.h>

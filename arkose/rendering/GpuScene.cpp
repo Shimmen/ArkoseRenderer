@@ -19,6 +19,7 @@
 #include <ark/aabb.h>
 #include <ark/transform.h>
 #include <concurrentqueue.h>
+#include <format>
 #include <unordered_set>
 
 // Shared shader headers

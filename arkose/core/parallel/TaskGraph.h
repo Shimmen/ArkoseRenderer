@@ -6,6 +6,7 @@
 #include <concurrentqueue.h>
 #include <condition_variable>
 #include <functional>
+#include <optional>
 #include <thread>
 #include <vector>
 

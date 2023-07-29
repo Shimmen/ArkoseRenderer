@@ -8,6 +8,7 @@
 #include "rendering/util/ScopedDebugZone.h"
 #include "utility/Profiling.h"
 #include <ark/rect.h>
+#include <format>
 #include <imgui.h>
 
 void LocalLightShadowNode::drawGui()

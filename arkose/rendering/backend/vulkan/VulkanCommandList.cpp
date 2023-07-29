@@ -5,6 +5,7 @@
 #include "VulkanBackend.h"
 #include "VulkanResources.h"
 #include "utility/Profiling.h"
+#include <format>
 #include <stb_image_write.h>
 
 // Shared shader headers
