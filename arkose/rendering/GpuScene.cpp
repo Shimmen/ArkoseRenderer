@@ -8,7 +8,6 @@
 #include "rendering/DrawKey.h"
 #include "rendering/backend/Resources.h"
 #include "rendering/util/ScopedDebugZone.h"
-#include "core/Conversion.h"
 #include "core/Logging.h"
 #include "core/Types.h"
 #include "core/parallel/TaskGraph.h"
@@ -17,6 +16,7 @@
 #include <imgui.h>
 #include <ImGuizmo.h>
 #include <ark/aabb.h>
+#include <ark/conversion.h>
 #include <ark/transform.h>
 #include <concurrentqueue.h>
 #include <format>
@@ -319,7 +319,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                     if (sizeToUpload > textureUploadBudget) {
                         ARKOSE_LOG(Fatal, "Image asset is {:.2f} MB but the texture upload budget is only {:.2f} MB. "
                                           "The budget must be increased if we want to be able to load this asset.",
-                                   conversion::to::MB(sizeToUpload), conversion::to::MB(textureUploadBudget));
+                                   ark::conversion::to::MB(sizeToUpload), ark::conversion::to::MB(textureUploadBudget));
                     } else {
                         // Stop uploading textures now, as we've hit the budget
                         break;
@@ -1438,7 +1438,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
         VramStats stats = backend().vramStats().value();
 
-        float currentTotalUsedGB = conversion::to::GB(stats.totalUsed);
+        float currentTotalUsedGB = ark::conversion::to::GB(stats.totalUsed);
         ImGui::Text("Current VRAM usage: %.2f GB", currentTotalUsedGB);
 
         for (size_t heapIdx = 0, heapCount = stats.heaps.size(); heapIdx < heapCount; ++heapIdx) {
@@ -1446,7 +1446,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
                 m_vramUsageHistoryPerHeap.resize(heapIdx + 1);
             }
             if (ImGui::GetFrameCount() % backend().vramStatsReportRate() == 0) {
-                float heapUsedMB = conversion::to::MB(stats.heaps[heapIdx].used);
+                float heapUsedMB = ark::conversion::to::MB(stats.heaps[heapIdx].used);
                 m_vramUsageHistoryPerHeap[heapIdx].report(heapUsedMB);
             }
         }
@@ -1480,8 +1480,8 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
                 ImGui::Text(heapNames.back().c_str());
 
                 ImGui::TableSetColumnIndex(1);
-                float heapUsedMB = conversion::to::MB(heap.used);
-                float heapAvailableMB = conversion::to::MB(heap.available);
+                float heapUsedMB = ark::conversion::to::MB(heap.used);
+                float heapAvailableMB = ark::conversion::to::MB(heap.available);
                 ImGui::TextColored(textColor, "%.1f / %.1f", heapUsedMB, heapAvailableMB);
 
 
@@ -1508,7 +1508,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
                     };
 
                     int valuesCount = static_cast<int>(VramUsageAvgAccumulatorType::RunningAvgWindowSize);
-                    float heapAvailableMB = conversion::to::MB(stats.heaps[i].available);
+                    float heapAvailableMB = ark::conversion::to::MB(stats.heaps[i].available);
                     ImVec2 plotSize = ImVec2(ImGui::GetContentRegionAvail().x, 200.0f);
                     ImGui::PlotLines("##VramUsagePlotPerHeap", valuesGetter, (void*)&m_vramUsageHistoryPerHeap[i], valuesCount, 0, "VRAM (MB)", 0.0f, heapAvailableMB, plotSize);
 
@@ -1530,7 +1530,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
             ImGui::Text("Number of managed textures: %d", m_managedTextures.size());
 
-            float managedTexturesTotalGB = conversion::to::GB(m_managedTexturesVramUsage);
+            float managedTexturesTotalGB = ark::conversion::to::GB(m_managedTexturesVramUsage);
             ImGui::Text("Using %.2f GB", managedTexturesTotalGB);
 
             ImGui::EndTabItem();
