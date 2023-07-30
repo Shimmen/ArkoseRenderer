@@ -7,7 +7,7 @@ inline void setNameForActiveThread(const char* name);
 
 #if defined(TRACY_ENABLE)
 
-#include <Tracy.hpp>
+#include <tracy/Tracy.hpp>
 
 #define END_OF_FRAME_PROFILE_MARKER() FrameMark
 

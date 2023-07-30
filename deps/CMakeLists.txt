@@ -69,6 +69,12 @@ FetchContent_Declare(concurrentqueue
     GIT_REPOSITORY https://github.com/cameron314/concurrentqueue.git
     GIT_TAG        "v1.0.3")
 
+FetchContent_Declare(tracy
+    GIT_REPOSITORY https://github.com/wolfpld/tracy.git
+    GIT_TAG        "v0.9.1"
+    GIT_SHALLOW TRUE
+    GIT_PROGRESS TRUE)
+
 ##################################
 # FetchContent dependencies without cmake files
 
@@ -116,21 +122,6 @@ if(NOT imguizmo_fetch_POPULATED)
 
 endif()
 
-FetchContent_Declare(tracy_fetch
-    GIT_REPOSITORY https://github.com/wolfpld/tracy.git
-    GIT_TAG        "v0.8.2")
-FetchContent_GetProperties(tracy_fetch)
-if(NOT tracy_fetch_POPULATED)
-    FetchContent_Populate(tracy_fetch)
-
-    add_library(tracy INTERFACE)
-    target_include_directories(tracy INTERFACE ${tracy_fetch_SOURCE_DIR})
-
-    # TracyClient.cpp must be compiled as part of the main executable (can't be linked in) so we have to export its path
-    set(TRACY_CLIENT_SOURCE "${tracy_fetch_SOURCE_DIR}/TracyClient.cpp" PARENT_SCOPE)
-
-endif()
-
 FetchContent_Declare(bc7enc_rdo_fetch
     GIT_REPOSITORY https://github.com/richgel999/bc7enc_rdo.git
     GIT_TAG        "e6990bc11829c072d9f9e37296f3335072aab4e4")
@@ -175,4 +166,17 @@ add_subdirectory(half)
 ##################################
 # Finalize FetchContent dependencies
 
-FetchContent_MakeAvailable(spirv-cross json cereal fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers meshoptimizer jolt-physics lz4 concurrentqueue)
+FetchContent_MakeAvailable(
+    spirv-cross
+    json
+    cereal
+    fmt
+    glfw
+    nativefiledialog-extended
+    vulkan_memory_allocator
+    directx_headers
+    meshoptimizer
+    jolt-physics
+    lz4
+    concurrentqueue
+    tracy)
