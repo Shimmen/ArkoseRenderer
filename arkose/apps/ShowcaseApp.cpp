@@ -91,6 +91,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         m_skeletalMeshInstance = &scene.addSkeletalMesh(meshAsset, skeletonAsset, transform);
 
         m_testAnimation = Animation::bind(animationAsset, *m_skeletalMeshInstance);
+        m_testAnimation->setPlaybackMode(Animation::PlaybackMode::Looping);
 
         Camera& camera = scene.addCamera("LookatCam", true);
         camera.lookAt(vec3(0.0f, 0.0f, 15.0f), vec3(0.0f, 0.0f, 0.0f));
