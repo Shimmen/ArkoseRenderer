@@ -122,11 +122,6 @@ void D3D12CommandList::slowBlockingReadFromBuffer(const Buffer& buffer, size_t o
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
-void D3D12CommandList::saveTextureToFile(const Texture& texture, const std::string& filePath)
-{
-    SCOPED_PROFILE_ZONE_GPUCOMMAND();
-}
-
 void D3D12CommandList::debugBarrier()
 {
 }

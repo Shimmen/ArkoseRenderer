@@ -56,8 +56,6 @@ public:
 
     void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) override;
 
-    void saveTextureToFile(const Texture&, const std::string&) override;
-
     void endNode(Badge<VulkanBackend>);
 
 private:

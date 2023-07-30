@@ -66,8 +66,6 @@ public:
     virtual void bufferWriteBarrier(std::vector<Buffer const*>) = 0;
 
     virtual void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) = 0;
-
-    virtual void saveTextureToFile(const Texture&, const std::string&) = 0;
 };
 
 inline void CommandList::executeBufferCopyOperations(UploadBuffer& uploadBuffer)

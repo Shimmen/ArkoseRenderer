@@ -47,8 +47,6 @@ public:
 
     void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) override;
 
-    void saveTextureToFile(const Texture&, const std::string&) override;
-
 private:
     D3D12Backend& backend() { return m_backend; }
 
