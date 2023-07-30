@@ -197,7 +197,7 @@ target_link_libraries(ArkoseRenderer PRIVATE
     stb_image # image loading
     tiny_gltf # glTF 2.0 loading
     cereal # serialisation
-    libzstd_static # generic lossless compression
+    lz4_static # generic lossless compression
     bc7enc_lib # texture compression
     meshoptimizer # mesh optimization & meshlet generation
     )

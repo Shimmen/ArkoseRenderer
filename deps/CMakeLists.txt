@@ -60,14 +60,9 @@ FetchContent_Declare(jolt-physics
     GIT_TAG        "b1cd84951022a565a23f33ff77ffee9e71487bbc" # (latest release doesn't include https://github.com/jrouwe/JoltPhysics/pull/175 which we need)
     SOURCE_SUBDIR  "Build")
 
-set(ZSTD_LEGACY_SUPPORT OFF)
-set(ZSTD_USE_STATIC_RUNTIME OFF)
-set(ZSTD_BUILD_STATIC ON)
-set(ZSTD_BUILD_SHARED OFF)
-set(ZSTD_BUILD_PROGRAMS OFF)
-FetchContent_Declare(zstd
-    GIT_REPOSITORY https://github.com/facebook/zstd.git
-    GIT_TAG        "v1.5.2"
+FetchContent_Declare(lz4
+    GIT_REPOSITORY https://github.com/lz4/lz4.git
+    GIT_TAG        "v1.9.4"
     SOURCE_SUBDIR  "build/cmake")
 
 FetchContent_Declare(concurrentqueue
@@ -180,4 +175,4 @@ add_subdirectory(half)
 ##################################
 # Finalize FetchContent dependencies
 
-FetchContent_MakeAvailable(spirv-cross json cereal fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers meshoptimizer jolt-physics zstd concurrentqueue)
+FetchContent_MakeAvailable(spirv-cross json cereal fmt glfw nativefiledialog-extended vulkan_memory_allocator directx_headers meshoptimizer jolt-physics lz4 concurrentqueue)
