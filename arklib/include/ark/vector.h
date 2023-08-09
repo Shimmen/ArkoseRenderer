@@ -668,6 +668,11 @@ struct tvec4<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
     {
     }
 
+    constexpr tvec4(const tvec2<T>& v1, const tvec2<T>& v2) noexcept
+        : tvec4(v1.x, v1.y, v2.x, v2.y)
+    {
+    }
+
     constexpr tvec4(const tvec3<T>& v, T w) noexcept
         : tvec4(v.x, v.y, v.z, w)
     {
