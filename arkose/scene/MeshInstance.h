@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/Handle.h"
+#include <ark/handle.h>
 #include <ark/copying.h>
 #include "rendering/Drawable.h"
 #include "rendering/SkeletalMesh.h"

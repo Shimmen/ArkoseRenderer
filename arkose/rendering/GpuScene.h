@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/Handle.h"
+#include <ark/handle.h>
 #include "core/Types.h"
 #include "core/parallel/TaskGraph.h"
 #include "rendering/meshlet/MeshletManager.h"
@@ -31,7 +31,7 @@ class MeshAsset;
 class SkeletonAsset;
 class SpotLight;
 
-DEFINE_HANDLE_TYPE(TextureHandle);
+ARK_DEFINE_HANDLE_TYPE(TextureHandle);
 
 class GpuScene final : public RenderPipelineNode {
 public:

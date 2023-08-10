@@ -2,12 +2,12 @@
 
 class Icon;
 
-#include "core/Handle.h"
+#include <ark/handle.h>
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/ResourceList.h"
 #include "rendering/debug/DebugDrawer.h"
 
-DEFINE_HANDLE_TYPE(DebugTextureBindingSetHandle);
+ARK_DEFINE_HANDLE_TYPE(DebugTextureBindingSetHandle);
 
 class DebugDrawNode final : public RenderPipelineNode, public IDebugDrawer {
 public:

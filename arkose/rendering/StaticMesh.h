@@ -1,7 +1,7 @@
 #pragma once
 
 #include "asset/MeshAsset.h"
-#include "core/Handle.h"
+#include <ark/handle.h>
 #include "core/Types.h"
 #include "core/math/Sphere.h"
 #include "physics/HandleTypes.h"
@@ -17,7 +17,7 @@
 #include <vector>
 #include <memory>
 
-DEFINE_HANDLE_TYPE(StaticMeshHandle)
+ARK_DEFINE_HANDLE_TYPE(StaticMeshHandle)
 
 using MeshMaterialResolver = std::function<MaterialHandle(MaterialAsset const*)>;
 

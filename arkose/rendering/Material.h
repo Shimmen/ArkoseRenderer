@@ -1,5 +1,5 @@
 #pragma once
 
-#include "core/Handle.h"
+#include <ark/handle.h>
 
-DEFINE_HANDLE_TYPE(MaterialHandle)
+ARK_DEFINE_HANDLE_TYPE(MaterialHandle)

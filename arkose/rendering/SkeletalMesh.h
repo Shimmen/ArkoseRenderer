@@ -8,7 +8,7 @@
 
 class SkeletonAsset;
 
-DEFINE_HANDLE_TYPE(SkeletalMeshHandle)
+ARK_DEFINE_HANDLE_TYPE(SkeletalMeshHandle)
 
 class SkeletalMesh {
 public:

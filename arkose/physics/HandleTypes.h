@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/Handle.h"
+#include <ark/handle.h>
 
-DEFINE_HANDLE_TYPE(PhysicsShapeHandle)
-DEFINE_HANDLE_TYPE(PhysicsInstanceHandle)
+ARK_DEFINE_HANDLE_TYPE(PhysicsShapeHandle)
+ARK_DEFINE_HANDLE_TYPE(PhysicsInstanceHandle)
