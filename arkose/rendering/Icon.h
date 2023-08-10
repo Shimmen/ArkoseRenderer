@@ -4,7 +4,7 @@ class Camera;
 class ImageAsset;
 class Texture;
 
-#include "core/NonCopyable.h"
+#include <ark/copying.h>
 #include "rendering/backend/base/Texture.h"
 #include <ark/vector.h>
 #include <array>

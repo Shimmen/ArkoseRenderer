@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/Handle.h"
-#include "core/NonCopyable.h"
+#include <ark/copying.h>
 #include "rendering/Drawable.h"
 #include "rendering/SkeletalMesh.h"
 #include "rendering/Skeleton.h"
@@ -12,7 +12,7 @@
 // TODO: Remove these instance types and instead just make them into components of an ECS (and move ITransformable to a separate component)
 
 struct StaticMeshInstance : public IEditorObject {
-    NON_COPYABLE(StaticMeshInstance)
+    ARK_NON_COPYABLE(StaticMeshInstance)
 
     StaticMeshInstance(StaticMeshHandle inMesh, Transform inTransform)
         : m_mesh(inMesh)
@@ -58,7 +58,7 @@ struct SkinningVertexMapping {
 };
 
 struct SkeletalMeshInstance : public IEditorObject {
-    NON_COPYABLE(SkeletalMeshInstance)
+    ARK_NON_COPYABLE(SkeletalMeshInstance)
 
     SkeletalMeshInstance(SkeletalMeshHandle inMesh, std::unique_ptr<Skeleton> skeleton, Transform inTransform)
         : m_mesh(inMesh)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/NonCopyable.h"
+#include <ark/copying.h>
 #include "core/Types.h"
 #include "rendering/backend/base/Buffer.h"
 #include "rendering/backend/util/IndexType.h"
@@ -23,7 +23,7 @@ public:
     explicit MeshletManager(Backend&);
     ~MeshletManager();
 
-    NON_COPYABLE(MeshletManager);
+    ARK_NON_COPYABLE(MeshletManager);
 
     void allocateMeshlets(StaticMesh&);
     void freeMeshlets(StaticMesh&);

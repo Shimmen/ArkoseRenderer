@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/NonCopyable.h"
+#include <ark/copying.h>
 #include "core/Types.h"
 #include "rendering/DrawKey.h"
 #include <vector>
@@ -40,7 +40,7 @@ class MeshletIndirectHelper {
 public:
     MeshletIndirectHelper() = default;
     ~MeshletIndirectHelper() = default;
-    NON_COPYABLE(MeshletIndirectHelper)
+    ARK_NON_COPYABLE(MeshletIndirectHelper)
 
     // Create a buffer used to store encoded indirect mesh task draw commands & required meta data
     MeshletIndirectBuffer& createIndirectBuffer(Registry&, DrawKey drawKeyMask, u32 maxMeshletCount) const;

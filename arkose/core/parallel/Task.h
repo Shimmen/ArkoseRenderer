@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/NonCopyable.h"
+#include <ark/copying.h>
 #include "core/Types.h"
 #include <atomic>
 #include <functional>
@@ -13,7 +13,7 @@ public:
     static Task& createEmpty();
     static Task& createWithParent(Task& parentTask, TaskFunction&&);
 
-    NON_COPYABLE(Task)
+    ARK_NON_COPYABLE(Task)
     ~Task();
 
     bool isCompleted() const;
