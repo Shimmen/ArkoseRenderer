@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/Debugger.h"
+#include <ark/debugger.h>
 #include <fmt/format.h>
 #include <cstdlib> // for exit()
 
@@ -34,7 +34,7 @@ inline void _internal_vlog(fmt::string_view format, fmt::format_args args)
 
     // NOTE: If the noreturn behaviour is required to silence the compiler use ARKOSE_LOG_FATAL
     if (level == LogLevel::Fatal) {
-        DEBUG_BREAK();
+        ARK_DEBUG_BREAK();
         exit(Logging::FatalErrorExitCode);
     }
 }
