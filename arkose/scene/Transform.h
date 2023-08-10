@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/Badge.h"
+#include <ark/badge.h>
 #include "utility/Profiling.h"
 #include <ark/matrix.h>
 #include <ark/vector.h>

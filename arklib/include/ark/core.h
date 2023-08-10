@@ -58,6 +58,11 @@ using Float = float;
 #ifdef ARK_DONT_EXPOSE_COMMON_MATH_TYPES
 #endif
 
+// By default including e.g. badge.h will expose ark::badge into the global namespace, which is
+// be convenient, but is not always suitable. Define this to avoid polluting the global namespace.
+#ifdef ARK_DONT_EXPOSE_COMMON_CORE_TYPES
+#endif
+
 // When inverting a matrix we have to divide by the determinant, which may be zero. The
 // redefine this macro to specify some custom behaviour to handle this divide by zero case.
 #ifndef ARK_ON_BAD_DETERMINANT_IN_MATRIX_INVERSE

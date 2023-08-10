@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/Badge.h"
+#include <ark/badge.h>
 #include <string>
 
 class Backend;

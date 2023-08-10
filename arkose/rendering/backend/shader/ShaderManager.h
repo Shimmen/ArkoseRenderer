@@ -1,7 +1,7 @@
 #pragma once
 
 #include "rendering/backend/shader/Shader.h"
-#include "core/Badge.h"
+#include <ark/badge.h>
 #include <functional>
 #include <mutex>
 #include <optional>

@@ -2,7 +2,7 @@
 
 #include "rendering/backend/Resources.h"
 #include "rendering/backend/util/VramStats.h"
-#include "core/Badge.h"
+#include <ark/badge.h>
 #include <memory>
 #include <vector>
 

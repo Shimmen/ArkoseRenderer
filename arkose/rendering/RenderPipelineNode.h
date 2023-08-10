@@ -1,6 +1,6 @@
 #pragma once
 
-#include "core/Badge.h"
+#include <ark/badge.h>
 #include "rendering/AppState.h"
 #include "rendering/Registry.h"
 #include "rendering/backend/base/CommandList.h"
