@@ -1,7 +1,7 @@
 #include "VulkanTexture.h"
 
 #include "rendering/backend/vulkan/VulkanBackend.h"
-#include "core/Defer.h"
+#include <ark/defer.h>
 #include "utility/Profiling.h"
 #include "core/Logging.h"
 #include <stb_image.h>
@@ -478,7 +478,7 @@ void VulkanTexture::setData(const void* data, size_t size, size_t mipIdx)
         return;
     }
 
-    AtScopeExit cleanUpStagingBuffer([&]() {
+    ark::AtScopeExit cleanUpStagingBuffer([&]() {
         vmaDestroyBuffer(vulkanBackend.globalAllocator(), stagingBuffer, stagingAllocation);
     });
 

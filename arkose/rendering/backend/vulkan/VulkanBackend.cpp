@@ -8,7 +8,7 @@
 #include "rendering/backend/shader/Shader.h"
 #include "rendering/backend/shader/ShaderManager.h"
 #include "core/Conversion.h"
-#include "core/Defer.h"
+#include <ark/defer.h>
 #include "rendering/Registry.h"
 #include "rendering/RenderPipeline.h"
 #include "utility/FileIO.h"
@@ -1872,7 +1872,7 @@ bool VulkanBackend::issueSingleTimeCommand(const std::function<void(VkCommandBuf
 
     VkCommandBuffer oneTimeCommandBuffer;
     vkAllocateCommandBuffers(device(), &commandBufferAllocInfo, &oneTimeCommandBuffer);
-    AtScopeExit cleanUpOneTimeUseBuffer([&] {
+    ark::AtScopeExit cleanUpOneTimeUseBuffer([&] {
         vkFreeCommandBuffers(device(), m_transientCommandPool, 1, &oneTimeCommandBuffer);
     });
 
@@ -1973,7 +1973,7 @@ bool VulkanBackend::setBufferDataUsingStagingBuffer(VkBuffer buffer, const uint8
         ARKOSE_LOG(Error, "VulkanBackend: could not create staging buffer.");
     }
 
-    AtScopeExit cleanUpStagingBuffer([&] {
+    ark::AtScopeExit cleanUpStagingBuffer([&] {
         vmaDestroyBuffer(globalAllocator(), stagingBuffer, stagingAllocation);
     });
 

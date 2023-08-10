@@ -2,7 +2,7 @@
 
 #include "asset/ImageAsset.h"
 #include "core/Assert.h"
-#include "core/Defer.h"
+#include <ark/defer.h>
 #include "core/Logging.h"
 #include "core/parallel/ParallelFor.h"
 #include "rendering/backend/base/Backend.h"
@@ -263,7 +263,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     // Allocate temporary storage for pixel data ahead of upload to texture
     // TODO: Maybe we can just map the individual image into memory directly?
     uint8_t* textureArrayMemory = static_cast<uint8_t*>(malloc(totalRequiredSize));
-    AtScopeExit freeMemory { [&]() { free(textureArrayMemory); } };
+    ark::AtScopeExit freeMemory { [&]() { free(textureArrayMemory); } };
 
     // Load images and set texture data
     // TODO: Ensure this is not completely starved by async material texture loading!
