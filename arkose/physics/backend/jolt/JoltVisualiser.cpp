@@ -19,9 +19,9 @@ vec3 JoltVisualiser::joltColorToFloatColor(JPH::ColorArg color) const
     return vec3(color.r * 255.99f, color.g * 255.99f, color.b * 255.99f);
 }
 
-void JoltVisualiser::DrawLine(const JPH::Float3& inFrom, const JPH::Float3& inTo, JPH::ColorArg inColor)
+void JoltVisualiser::DrawLine(JPH::RVec3Arg inFrom, JPH::RVec3Arg inTo, JPH::ColorArg inColor)
 {
-    DebugDrawer::get().drawLine({ inFrom.x, inFrom.y, inFrom.z }, { inTo.x, inTo.y, inTo.z }, joltColorToFloatColor(inColor));
+    DebugDrawer::get().drawLine({ inFrom.GetX(), inFrom.GetY(), inFrom.GetZ() }, { inTo.GetX(), inTo.GetY(), inTo.GetZ() }, joltColorToFloatColor(inColor));
 }
 
 void JoltVisualiser::DrawTriangle(JPH::Vec3Arg inV1, JPH::Vec3Arg inV2, JPH::Vec3Arg inV3, JPH::ColorArg inColor)

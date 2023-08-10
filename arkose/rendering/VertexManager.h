@@ -24,6 +24,9 @@ struct VertexAllocation {
     i32 firstSkinningVertex { -1 };
     bool hasSkinningData() const { return firstSkinningVertex >= 0; }
 
+    i32 firstVelocityVertex { -1 };
+    bool hasVelocityData() const { return firstVelocityVertex >= 0; }
+
     bool isValid() const { return vertexCount > 0; }
     bool hasIndices() const { return indexCount > 0; }
 
@@ -35,22 +38,29 @@ public:
     explicit VertexManager(Backend&);
     ~VertexManager();
 
-    VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData);
+    VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
     bool uploadMeshData(StaticMesh&, bool includeIndices, bool includeSkinningData);
 
     bool createBottomLevelAccelerationStructure(StaticMesh&);
+    std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(VertexAllocation const&, BottomLevelAS const* copySource);
 
     IndexType indexType() const { return IndexType::UInt32; }
     Buffer const& indexBuffer() const { return *m_indexBuffer; }
 
     VertexLayout const& positionVertexLayout() const { return m_positionOnlyVertexLayout; }
     Buffer const& positionVertexBuffer() const { return *m_positionOnlyVertexBuffer; }
+    Buffer& positionVertexBuffer() { return *m_positionOnlyVertexBuffer; }
 
     VertexLayout const& nonPositionVertexLayout() const { return m_nonPositionVertexLayout; }
     Buffer const& nonPositionVertexBuffer() const { return *m_nonPositionVertexBuffer; }
+    Buffer& nonPositionVertexBuffer() { return *m_nonPositionVertexBuffer; }
 
     VertexLayout const& skinningDataVertexLayout() const { return m_skinningDataVertexLayout; }
     Buffer const& skinningDataVertexBuffer() const { return *m_skinningDataVertexBuffer; }
+
+    VertexLayout const& velocityDataVertexLayout() const { return m_velocityDataVertexLayout; }
+    Buffer const& velocityDataVertexBuffer() const { return *m_velocityDataVertexBuffer; }
+    Buffer& velocityDataVertexBuffer() { return *m_velocityDataVertexBuffer; }
 
 private:
     Backend* m_backend { nullptr };
@@ -61,6 +71,7 @@ private:
                                                    VertexComponent::Tangent4F };
     VertexLayout const m_skinningDataVertexLayout { VertexComponent::JointIdx4U32,
                                                     VertexComponent::JointWeight4F };
+    VertexLayout const m_velocityDataVertexLayout { VertexComponent::Velocity3F };
 
     std::unique_ptr<Buffer> m_indexBuffer { nullptr };
     u32 m_nextFreeIndex { 0 };
@@ -72,6 +83,9 @@ private:
     std::unique_ptr<Buffer> m_skinningDataVertexBuffer {};
     u32 m_nextFreeSkinningVertexIndex { 0 };
 
+    std::unique_ptr<Buffer> m_velocityDataVertexBuffer {};
+    u32 m_nextFreeVelocityIndex { 0 };
+
     struct VertexUploadJob {
         MeshSegmentAsset const* asset { nullptr };
         StaticMeshSegment* target { nullptr };
@@ -79,6 +93,4 @@ private:
     };
 
     void uploadMeshDataForAllocation(VertexUploadJob const&);
-
-    std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(StaticMeshSegment const&);
 };

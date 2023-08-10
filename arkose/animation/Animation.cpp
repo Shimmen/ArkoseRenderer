@@ -91,17 +91,20 @@ Animation::SampledInputTrack Animation::evaluateInputTrack(size_t inputTrackIdx,
     float inputTrackEnd = inputTrack.back();
     float inputTrackLength = inputTrackEnd - inputTrackStart;
 
-    // TODO: Implement looping!
-    ARKOSE_ASSERT(m_looping == false);
     float inputTrackTime = m_animationTime;
 
-    if (not m_looping) {
+    if (playbackMode() == PlaybackMode::OneShot) {
         if (inputTrackTime <= inputTrackStart) {
             return SampledInputTrack { .idx0 = 0 };
         } else if (inputTrackTime >= inputTrackEnd) {
             i32 lastIdx = static_cast<i32>(inputTrack.size()) - 1;
             return SampledInputTrack { .idx0 = lastIdx };
         }
+    } else if (playbackMode() == PlaybackMode::Looping) {
+        while (inputTrackTime < inputTrackStart) {
+            inputTrackTime += inputTrackLength;
+        }
+        inputTrackTime = inputTrackStart + std::fmodf(inputTrackTime - inputTrackStart, inputTrackLength);
     }
 
     // Find the first input track index

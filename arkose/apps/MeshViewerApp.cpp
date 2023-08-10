@@ -21,6 +21,7 @@
 #include "utility/FileIO.h"
 #include "utility/Input.h"
 #include "utility/Profiling.h"
+#include <format>
 #include <imgui.h>
 #include <imgui_internal.h>
 

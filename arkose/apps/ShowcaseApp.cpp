@@ -44,7 +44,7 @@
 
 constexpr bool keepRenderDocCompatible = false;
 constexpr bool withRayTracing = true && !keepRenderDocCompatible;
-constexpr bool withMeshShading = true && !keepRenderDocCompatible;
+constexpr bool withMeshShading = false && !keepRenderDocCompatible;
 constexpr bool withVisibilityBuffer = true && withMeshShading;
 
 std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
@@ -71,28 +71,27 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     // NOTE: Scene not under "assets/sample/" will not be available in the Git-repo, either due to file size or license or both!
     //description.path = "assets/IntelSponza/NewSponzaWithCurtains.arklvl";
     //description.path = "assets/PicaPica/PicaPicaMiniDiorama.arklvl";
-    description.path = "assets/sample/Sponza.arklvl";
+    //description.path = "assets/sample/Sponza.arklvl";
     scene.setupFromDescription(description);
 
     if (description.path.empty()) {
         //setupCullingShowcaseScene(scene);
 
         AssetImporter importer {};
-        importer.importAsLevel("assets/sample/models/RiggedSimple/RiggedSimple.gltf",
-                               "assets/sample/models/RiggedSimple/",
+        importer.importAsLevel("assets/sample/models/CesiumMan/CesiumMan.gltf",
+                               "assets/sample/models/CesiumMan/",
                                AssetImporter::Options());
 
-
-        MeshAsset* cylinderMeshAsset = MeshAsset::load("assets/sample/models/RiggedSimple/Cylinder.arkmsh");
-        SkeletonAsset* cylinderSkeletonAsset = SkeletonAsset::load("assets/sample/models/RiggedSimple/Armature.arkskel");
-        AnimationAsset* cylinderBindAnimAsset = AnimationAsset::load("assets/sample/models/RiggedSimple/animation0000.arkanim");
+        MeshAsset* meshAsset = MeshAsset::load("assets/sample/models/CesiumMan/Cesium_Man.arkmsh");
+        SkeletonAsset* skeletonAsset = SkeletonAsset::load("assets/sample/models/CesiumMan/Armature.arkskel");
+        AnimationAsset* animationAsset = AnimationAsset::load("assets/sample/models/CesiumMan/animation0000.arkanim");
 
         Transform transform {};
         transform.setOrientation(quat(vec3(0.5f, 0.5f, 0.5f), -0.5f));
-        //StaticMeshInstance& staticMeshInstance = scene.addMesh(cylinderMeshAsset, transform);
-        m_skeletalMeshInstance = &scene.addSkeletalMesh(cylinderMeshAsset, cylinderSkeletonAsset, transform);
+        m_skeletalMeshInstance = &scene.addSkeletalMesh(meshAsset, skeletonAsset, transform);
 
-        m_testAnimation = Animation::bind(cylinderBindAnimAsset, *m_skeletalMeshInstance);
+        m_testAnimation = Animation::bind(animationAsset, *m_skeletalMeshInstance);
+        m_testAnimation->setPlaybackMode(Animation::PlaybackMode::Looping);
 
         Camera& camera = scene.addCamera("LookatCam", true);
         camera.lookAt(vec3(0.0f, 0.0f, 15.0f), vec3(0.0f, 0.0f, 0.0f));
@@ -254,11 +253,10 @@ bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
 
     if (m_testAnimation != nullptr) {
         if (input.wasKeyPressed(Key::R)) {
-            fmt::print("\n\nReseting animation\n\n");
             m_testAnimation->reset();
         }
 
-        m_skeletalMeshInstance->skeleton().debugPrintState();
+        //m_skeletalMeshInstance->skeleton().debugPrintState();
         m_testAnimation->tick(deltaTime);
     }
 

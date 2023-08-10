@@ -14,11 +14,8 @@
 struct StaticMeshInstance : public IEditorObject {
     ARK_NON_COPYABLE(StaticMeshInstance)
 
-    StaticMeshInstance(StaticMeshHandle inMesh, Transform inTransform)
-        : m_mesh(inMesh)
-        , m_transform(inTransform)
-    {
-    }
+    StaticMeshInstance(StaticMeshHandle, Transform);
+    ~StaticMeshInstance();
 
     StaticMeshHandle mesh() const { return m_mesh; }
     PhysicsInstanceHandle physicsInstance() const { return m_physicsInstance; }
@@ -60,12 +57,8 @@ struct SkinningVertexMapping {
 struct SkeletalMeshInstance : public IEditorObject {
     ARK_NON_COPYABLE(SkeletalMeshInstance)
 
-    SkeletalMeshInstance(SkeletalMeshHandle inMesh, std::unique_ptr<Skeleton> skeleton, Transform inTransform)
-        : m_mesh(inMesh)
-        , m_skeleton(std::move(skeleton))
-        , m_transform(inTransform)
-    {
-    }
+    SkeletalMeshInstance(SkeletalMeshHandle, std::unique_ptr<Skeleton>, Transform);
+    ~SkeletalMeshInstance();
 
     SkeletalMeshHandle mesh() const { return m_mesh; }
     //PhysicsInstanceHandle physicsInstance() const { return m_physicsInstance; }
@@ -93,6 +86,13 @@ struct SkeletalMeshInstance : public IEditorObject {
     void resetSkinningVertexMappings();
     void setSkinningVertexMapping(u32 segmentIdx, SkinningVertexMapping);
 
+    bool hasBlasForSegmentIndex(u32 segmentIdx) const;
+    std::unique_ptr<BottomLevelAS> const& blasForSegmentIndex(u32 segmentIdx) const;
+    std::vector<std::unique_ptr<BottomLevelAS>>& BLASes() { return m_blases; }
+
+    void resetBLASes();
+    void setBLAS(u32 segmentIdx, std::unique_ptr<BottomLevelAS>&&);
+
     std::string name;
 
 private:
@@ -113,7 +113,7 @@ private:
     std::vector<SkinningVertexMapping> m_skinningVertexMappings {};
 
     // Bottom-level acceleration structure for this instance (one per segment) (optional; only needed for ray tracing)
-    //std::vector<std::unique_ptr<BottomLevelAS>> m_blases { nullptr };
+    std::vector<std::unique_ptr<BottomLevelAS>> m_blases {};
 
     Transform m_transform;
 };

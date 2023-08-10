@@ -75,6 +75,12 @@ private:
 
 };
 
+template<typename TypeTag>
+bool operator==(Handle<TypeTag> const& lhs, Handle<TypeTag> const& rhs)
+{
+    return lhs.index() == rhs.index();
+}
+
 } // namespace ark
 
 namespace std {

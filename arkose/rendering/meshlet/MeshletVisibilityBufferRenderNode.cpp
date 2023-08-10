@@ -126,21 +126,26 @@ std::vector<MeshletVisibilityBufferRenderNode::RenderStateWithIndirectData*>& Me
     // NOTE: We don't discriminate between BRDFs, include all in the same draw call
     auto brdfMask = std::optional<Brdf>();
 
-    passes.push_back({ .drawKeyMask = DrawKey(brdfMask, BlendMode::Opaque, false),
-                        .maxMeshlets = 50'000,
-                        .debugName = debugName + "Opaque" });
+    // TODO: Consider if we should e.g. enable stencil writing for pixels needing
+    // explicit velocity, or if we should just conditionally check the draw key bits
+    // when calculating velocity. Not sure yet, but for now just ignore the state.
+    auto explicitVelocityMask = std::optional<bool>();
 
-    passes.push_back({ .drawKeyMask = DrawKey(brdfMask, BlendMode::Opaque, true),
-                        .maxMeshlets = 50'000,
-                        .debugName = debugName + "OpaqueDoubleSided" });
+    passes.push_back({ .drawKeyMask = DrawKey(brdfMask, BlendMode::Opaque, false, explicitVelocityMask),
+                       .maxMeshlets = 50'000,
+                       .debugName = debugName + "Opaque" });
 
-    passes.push_back({ .drawKeyMask = DrawKey(brdfMask, BlendMode::Masked, false),
-                        .maxMeshlets = 50'000,
-                        .debugName = debugName + "Masked" });
+    passes.push_back({ .drawKeyMask = DrawKey(brdfMask, BlendMode::Opaque, true, explicitVelocityMask),
+                       .maxMeshlets = 50'000,
+                       .debugName = debugName + "OpaqueDoubleSided" });
 
-    passes.push_back({ .drawKeyMask = DrawKey(brdfMask, BlendMode::Masked, true),
-                        .maxMeshlets = 50'000,
-                        .debugName = debugName + "MaskedDoubleSided" });
+    passes.push_back({ .drawKeyMask = DrawKey(brdfMask, BlendMode::Masked, false, explicitVelocityMask),
+                       .maxMeshlets = 50'000,
+                       .debugName = debugName + "Masked" });
+
+    passes.push_back({ .drawKeyMask = DrawKey(brdfMask, BlendMode::Masked, true, explicitVelocityMask),
+                       .maxMeshlets = 50'000,
+                       .debugName = debugName + "MaskedDoubleSided" });
 
     // Ensure that the first pass is marked as such, so we know to clear the render targets before starting the pass
     if (passes.size() > 0) {

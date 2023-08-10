@@ -7,7 +7,7 @@
 #include "rendering/Skeleton.h"
 #include "rendering/DrawKey.h"
 #include "rendering/backend/Resources.h"
-#include "core/Conversion.h"
+#include "rendering/util/ScopedDebugZone.h"
 #include "core/Logging.h"
 #include "core/Types.h"
 #include "core/parallel/TaskGraph.h"
@@ -16,8 +16,10 @@
 #include <imgui.h>
 #include <ImGuizmo.h>
 #include <ark/aabb.h>
+#include <ark/conversion.h>
 #include <ark/transform.h>
 #include <concurrentqueue.h>
+#include <format>
 #include <unordered_set>
 
 // Shared shader headers
@@ -80,6 +82,11 @@ void GpuScene::postRender()
         auto& instance = m_staticMeshInstances[idx];
         instance->transform().postRender({});
     });
+}
+
+SkeletalMesh* GpuScene::skeletalMeshForInstance(SkeletalMeshInstance const& instance)
+{
+    return skeletalMeshForHandle(instance.mesh());
 }
 
 SkeletalMesh* GpuScene::skeletalMeshForHandle(SkeletalMeshHandle handle)
@@ -267,6 +274,16 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     Texture& blueNoiseTextureArray = reg.loadTextureArrayFromFileSequence("assets/blue-noise/64_64/HDR_RGBA_{}.png", false, false);
     reg.publish("BlueNoise", blueNoiseTextureArray);
 
+    // Skinning related
+    m_jointMatricesBuffer = backend().createBuffer(1024 * sizeof(mat4), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+    Shader skinningShader = Shader::createCompute("skinning/skinning.comp");
+    BindingSet& skinningBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(m_vertexManager->positionVertexBuffer()),
+                                                            ShaderBinding::storageBuffer(m_vertexManager->velocityDataVertexBuffer()),
+                                                            ShaderBinding::storageBuffer(m_vertexManager->nonPositionVertexBuffer()),
+                                                            ShaderBinding::storageBufferReadonly(m_vertexManager->skinningDataVertexBuffer()),
+                                                            ShaderBinding::storageBufferReadonly(*m_jointMatricesBuffer) });
+    ComputeState& skinningComputeState = reg.createComputeState(skinningShader, { &skinningBindingSet });
+
     return [&, rtTriangleMeshBufferPtr](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         SCOPED_PROFILE_ZONE_NAMED("GpuScene update");
@@ -302,7 +319,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                     if (sizeToUpload > textureUploadBudget) {
                         ARKOSE_LOG(Fatal, "Image asset is {:.2f} MB but the texture upload budget is only {:.2f} MB. "
                                           "The budget must be increased if we want to be able to load this asset.",
-                                   conversion::to::MB(sizeToUpload), conversion::to::MB(textureUploadBudget));
+                                   ark::conversion::to::MB(sizeToUpload), ark::conversion::to::MB(textureUploadBudget));
                     } else {
                         // Stop uploading textures now, as we've hit the budget
                         break;
@@ -414,6 +431,61 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             uploadBuffer.upload(cameraState, cameraBuffer);
         }
 
+        // Perform skinning for skeletal meshes
+        if (m_skeletalMeshInstances.size() > 0) {
+            SCOPED_PROFILE_ZONE_NAMED("Skinning");
+            ScopedDebugZone skinningZone { cmdList, "Skinning" };
+
+            cmdList.setComputeState(skinningComputeState);
+            cmdList.bindSet(skinningBindingSet, 0);
+
+            u32 numUpdatedBLASes = 0;
+            for (auto const& skeletalMeshInstance : m_skeletalMeshInstances) {
+
+                std::vector<mat4> const& jointMatrices = skeletalMeshInstance->skeleton().appliedJointMatrices();
+                // std::vector<mat3> const& jointTangentMatrices = skeletalMeshInstance->skeleton().appliedJointTangentMatrices();
+
+                // TODO/OPTIMIZATION: Upload all instance's matrices in a single buffer once and simply offset into it!
+                uploadBuffer.upload(jointMatrices, *m_jointMatricesBuffer);
+                cmdList.executeBufferCopyOperations(uploadBuffer);
+
+                for (SkinningVertexMapping const& skinningVertexMapping : skeletalMeshInstance->skinningVertexMappings()) {
+
+                    ARKOSE_ASSERT(skinningVertexMapping.underlyingMesh.hasSkinningData());
+                    ARKOSE_ASSERT(skinningVertexMapping.skinnedTarget.hasVelocityData());
+                    ARKOSE_ASSERT(skinningVertexMapping.underlyingMesh.vertexCount == skinningVertexMapping.skinnedTarget.vertexCount);
+                    u32 vertexCount = skinningVertexMapping.underlyingMesh.vertexCount;
+
+                    cmdList.setNamedUniform<u32>("firstSrcVertexIdx", skinningVertexMapping.underlyingMesh.firstVertex);
+                    cmdList.setNamedUniform<u32>("firstDstVertexIdx", skinningVertexMapping.skinnedTarget.firstVertex);
+                    cmdList.setNamedUniform<u32>("firstSkinningVertexIdx", static_cast<u32>(skinningVertexMapping.underlyingMesh.firstSkinningVertex));
+                    cmdList.setNamedUniform<u32>("firstVelocityVertexIdx", static_cast<u32>(skinningVertexMapping.skinnedTarget.firstVelocityVertex));
+                    cmdList.setNamedUniform<u32>("vertexCount", skinningVertexMapping.underlyingMesh.vertexCount);
+
+                    constexpr u32 localSize = 32;
+                    cmdList.dispatch({ vertexCount, 1, 1 }, { localSize, 1, 1 });
+                }
+
+                if (m_maintainRayTracingScene) {
+
+                    // TODO/OPTIMIZATION: We can do away with just one of these barriers if we process all skeletal mesh instances as one (see above)
+                    cmdList.bufferWriteBarrier({ &vertexManager().positionVertexBuffer(), &vertexManager().nonPositionVertexBuffer() });
+
+                    for (auto& blas : skeletalMeshInstance->BLASes()) {
+                        cmdList.buildBottomLevelAcceratationStructure(*blas, AccelerationStructureBuildType::Update);
+                        numUpdatedBLASes += 1;
+                    }
+                }
+            }
+
+            if (numUpdatedBLASes > 1) {
+                ARKOSE_LOG(Warning, "Strictly speaking we can only update one BLAS per frame, as they use the same scratch buffer! "
+                                    "This may work, but I wouldn't trust it.. We need to keep multiple, separate scratch buffer regions!");
+            }
+
+            cmdList.bufferWriteBarrier({ &vertexManager().positionVertexBuffer(), &vertexManager().nonPositionVertexBuffer() });
+        }
+
         // Update object data (drawables)
         {
             moodycamel::ConcurrentQueue<StaticMeshInstance*> instancesNeedingReinit {};
@@ -450,8 +522,19 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 initializeStaticMeshInstance(*instanceNeedingReinit);
             }
 
-            // TODO: Figure out how we want to re-initialize the skeletal mesh instance when the meshlets are loaded!
             for (auto& skeletalMeshInstance : m_skeletalMeshInstances) {
+
+                // TODO: Figure out how we want to re-initialize the skeletal mesh instance when the meshlets are loaded!
+                //  We probably want to be able to support the same path as static meshes where the meshlet manager tells
+                //  us that things have loaded in and that we can set up the meshlet view.
+
+                for (DrawableObjectHandle drawableHandle : skeletalMeshInstance->drawableHandles()) {
+                    ShaderDrawable& drawable = m_drawables.get(drawableHandle);
+                    drawable.worldFromLocal = skeletalMeshInstance->transform().worldMatrix();
+                    drawable.worldFromTangent = mat4(skeletalMeshInstance->transform().worldNormalMatrix());
+                    drawable.previousFrameWorldFromLocal = skeletalMeshInstance->transform().previousFrameWorldMatrix();
+                }
+
                 drawableCount += skeletalMeshInstance->drawableHandles().size();
             }
 
@@ -602,6 +685,57 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 }
             }
 
+            for (auto& instance : skeletalMeshInstances()) {
+                if (SkeletalMesh* skeletalMesh = skeletalMeshForHandle(instance->mesh())) {
+                    StaticMesh const& staticMesh = skeletalMesh->underlyingMesh();
+                    for (StaticMeshLOD const& staticMeshLOD : staticMesh.LODs()) {
+                        for (u32 segmentIdx = 0; segmentIdx < staticMeshLOD.meshSegments.size(); ++segmentIdx) {
+                            StaticMeshSegment const& meshSegment = staticMeshLOD.meshSegments[segmentIdx];
+
+                            u32 rtMeshIndex = narrow_cast<u32>(rayTracingMeshData.size());
+
+                            DrawCallDescription drawCallDesc = meshSegment.vertexAllocation.asDrawCallDescription();
+                            rayTracingMeshData.push_back(RTTriangleMesh { .firstVertex = drawCallDesc.vertexOffset,
+                                                                            .firstIndex = static_cast<int>(drawCallDesc.firstIndex),
+                                                                            .materialIndex = meshSegment.material.indexOfType<int>() });
+
+                            BottomLevelAS const& blas = *instance->blasForSegmentIndex(segmentIdx);
+
+                            tlasBuildType = AccelerationStructureBuildType::FullBuild; // TODO: Only do a full rebuild sometimes!
+
+                            uint8_t hitMask = 0x00;
+                            if (const ShaderMaterial* material = materialForHandle(meshSegment.material)) {
+                                switch (material->blendMode) {
+                                case BLEND_MODE_OPAQUE:
+                                    hitMask = RT_HIT_MASK_OPAQUE;
+                                    break;
+                                case BLEND_MODE_MASKED:
+                                    hitMask = RT_HIT_MASK_MASKED;
+                                    break;
+                                case BLEND_MODE_TRANSLUCENT:
+                                    hitMask = RT_HIT_MASK_BLEND;
+                                    break;
+                                default:
+                                    ASSERT_NOT_REACHED();
+                                }
+                            }
+                            ARKOSE_ASSERT(hitMask != 0);
+
+                            // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
+                            rayTracingGeometryInstances.push_back(RTGeometryInstance { .blas = &blas,
+                                                                                       .transform = &instance->transform(),
+                                                                                       .shaderBindingTableOffset = 0, // TODO: Generalize!
+                                                                                       .customInstanceId = rtMeshIndex,
+                                                                                       .hitMask = hitMask });
+                        }
+                    }
+                }
+
+                // TODO: Ensure there is a BLAS, update it, and make an instance of it for the TLAS
+                // NOTE: We don't need to dig into the skeletal mesh underneath since the instance has its own
+                //       buffers which the skinning manager should keep up to date every frame!
+            }
+
             ARKOSE_ASSERT(rtTriangleMeshBufferPtr != nullptr);
             uploadBuffer.upload(rayTracingMeshData, *rtTriangleMeshBufferPtr);
 
@@ -741,7 +875,10 @@ void GpuScene::initializeSkeletalMeshInstance(SkeletalMeshInstance& instance)
 
         drawable.materialIndex = meshSegment.material.indexOfType<int>();
 
-        drawable.drawKey = meshSegment.drawKey.asUint32();
+        DrawKey drawKey = meshSegment.drawKey;
+        ARKOSE_ASSERT(drawKey.hasExplicityVelocity() == false);
+        drawKey.setHasExplicityVelocity(true);
+        drawable.drawKey = drawKey.asUint32();
 
         if (meshSegment.meshletView) {
             drawable.firstMeshlet = meshSegment.meshletView->firstMeshlet;
@@ -761,11 +898,16 @@ void GpuScene::initializeSkeletalMeshInstance(SkeletalMeshInstance& instance)
 
         if (!instance.hasSkinningVertexMappingForSegmentIndex(segmentIdx)) {
             // We don't need to allocate indices or skinning for the target. The indices will duplicate the underlying mesh
-            // as it's never changed, and skinning data will never be needed for the *target*
+            // as it's never changed, and skinning data will never be needed for the *target*. We do have to allocate space
+            // for velocity data, however, as it's something that's specific for the animated target vertices.
             constexpr bool includeIndices = false;
             constexpr bool includeSkinningData = false;
+            constexpr bool includeVelocityData = true;
 
-            VertexAllocation instanceVertexAllocation = m_vertexManager->allocateMeshDataForSegment(*meshSegment.asset, includeIndices, includeSkinningData);
+            VertexAllocation instanceVertexAllocation = m_vertexManager->allocateMeshDataForSegment(*meshSegment.asset,
+                                                                                                    includeIndices,
+                                                                                                    includeSkinningData,
+                                                                                                    includeVelocityData);
             ARKOSE_ASSERT(instanceVertexAllocation.isValid());
 
             instanceVertexAllocation.firstIndex = meshSegment.vertexAllocation.firstIndex;
@@ -774,6 +916,22 @@ void GpuScene::initializeSkeletalMeshInstance(SkeletalMeshInstance& instance)
             SkinningVertexMapping skinningVertexMapping { .underlyingMesh = meshSegment.vertexAllocation,
                                                           .skinnedTarget = instanceVertexAllocation };
             instance.setSkinningVertexMapping(segmentIdx, skinningVertexMapping);
+        }
+
+        if (m_maintainRayTracingScene) {
+            // For now at least, this is not reentrant.
+            ARKOSE_ASSERT(instance.BLASes().size() == 0);
+
+            SkinningVertexMapping const& skinningVertexMappings = instance.skinningVertexMappingForSegmentIndex(segmentIdx);
+            ARKOSE_ASSERT(skinningVertexMappings.skinnedTarget.isValid());
+
+            // NOTE: We construct the new BLAS into its own buffers but 1) we don't have any data in there yet to build from,
+            // and 2) we don't want to build redundantly, so we pass in the existing BLAS from the underlying mesh as a BLAS
+            // copy source, which means that we copy the built BLAS into place.
+            BottomLevelAS const* sourceBlas = meshSegment.blas.get();
+
+            auto blas = m_vertexManager->createBottomLevelAccelerationStructure(skinningVertexMappings.skinnedTarget, sourceBlas);
+            instance.setBLAS(segmentIdx, std::move(blas));
         }
     }
 }
@@ -857,6 +1015,13 @@ SkeletalMeshHandle GpuScene::registerSkeletalMesh(MeshAsset const* meshAsset, Sk
         constexpr bool includeIndices = true;
         constexpr bool includeSkinningData = true;
         m_vertexManager->uploadMeshData(skeletalMesh->underlyingMesh(), includeIndices, includeSkinningData);
+
+        if (m_maintainRayTracingScene) {
+            // NOTE: This isn't the most ideal memory usage as we're having this BLAS just sitting here and just being
+            // used as a copy source, but it makes things easy now. Later we can make it when the first instance is
+            // created and then let that first instance be the copy source for all other instances.
+            m_vertexManager->createBottomLevelAccelerationStructure(skeletalMesh->underlyingMesh());
+        }
     }
 
     SkeletalMeshHandle handle = m_managedSkeletalMeshes.add(ManagedSkeletalMesh { .meshAsset = meshAsset,
@@ -1273,7 +1438,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
         VramStats stats = backend().vramStats().value();
 
-        float currentTotalUsedGB = conversion::to::GB(stats.totalUsed);
+        float currentTotalUsedGB = ark::conversion::to::GB(stats.totalUsed);
         ImGui::Text("Current VRAM usage: %.2f GB", currentTotalUsedGB);
 
         for (size_t heapIdx = 0, heapCount = stats.heaps.size(); heapIdx < heapCount; ++heapIdx) {
@@ -1281,7 +1446,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
                 m_vramUsageHistoryPerHeap.resize(heapIdx + 1);
             }
             if (ImGui::GetFrameCount() % backend().vramStatsReportRate() == 0) {
-                float heapUsedMB = conversion::to::MB(stats.heaps[heapIdx].used);
+                float heapUsedMB = ark::conversion::to::MB(stats.heaps[heapIdx].used);
                 m_vramUsageHistoryPerHeap[heapIdx].report(heapUsedMB);
             }
         }
@@ -1315,8 +1480,8 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
                 ImGui::Text(heapNames.back().c_str());
 
                 ImGui::TableSetColumnIndex(1);
-                float heapUsedMB = conversion::to::MB(heap.used);
-                float heapAvailableMB = conversion::to::MB(heap.available);
+                float heapUsedMB = ark::conversion::to::MB(heap.used);
+                float heapAvailableMB = ark::conversion::to::MB(heap.available);
                 ImGui::TextColored(textColor, "%.1f / %.1f", heapUsedMB, heapAvailableMB);
 
 
@@ -1343,7 +1508,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
                     };
 
                     int valuesCount = static_cast<int>(VramUsageAvgAccumulatorType::RunningAvgWindowSize);
-                    float heapAvailableMB = conversion::to::MB(stats.heaps[i].available);
+                    float heapAvailableMB = ark::conversion::to::MB(stats.heaps[i].available);
                     ImVec2 plotSize = ImVec2(ImGui::GetContentRegionAvail().x, 200.0f);
                     ImGui::PlotLines("##VramUsagePlotPerHeap", valuesGetter, (void*)&m_vramUsageHistoryPerHeap[i], valuesCount, 0, "VRAM (MB)", 0.0f, heapAvailableMB, plotSize);
 
@@ -1365,7 +1530,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
             ImGui::Text("Number of managed textures: %d", m_managedTextures.size());
 
-            float managedTexturesTotalGB = conversion::to::GB(m_managedTexturesVramUsage);
+            float managedTexturesTotalGB = ark::conversion::to::GB(m_managedTexturesVramUsage);
             ImGui::Text("Using %.2f GB", managedTexturesTotalGB);
 
             ImGui::EndTabItem();

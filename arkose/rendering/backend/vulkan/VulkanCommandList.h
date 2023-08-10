@@ -40,6 +40,7 @@ public:
     void issueDrawCall(const DrawCallDescription&) override;
 
     void buildTopLevelAcceratationStructure(TopLevelAS&, AccelerationStructureBuildType) override;
+    void buildBottomLevelAcceratationStructure(BottomLevelAS&, AccelerationStructureBuildType) override;
     void traceRays(Extent2D) override;
 
     void dispatch(Extent3D globalSize, Extent3D localSize) override;
@@ -51,11 +52,9 @@ public:
 
     void textureWriteBarrier(const Texture&) override;
     void textureMipWriteBarrier(const Texture&, uint32_t mip) override;
-    void bufferWriteBarrier(std::vector<Buffer*>) override;
+    void bufferWriteBarrier(std::vector<Buffer const*>) override;
 
     void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) override;
-
-    void saveTextureToFile(const Texture&, const std::string&) override;
 
     void endNode(Badge<VulkanBackend>);
 

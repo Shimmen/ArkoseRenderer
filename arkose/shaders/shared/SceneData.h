@@ -46,4 +46,15 @@ struct IndirectShaderDrawable {
     int materialBlendMode; // shortcut, useful for culling
 };
 
+struct NonPositionVertex {
+    vec2 texcoord0;
+    vec3 normal;
+    vec4 tangent;
+};
+
+struct SkinningVertex {
+    uvec4 jointIndices;
+    vec4 jointWeights;
+};
+
 #endif // SCENE_DATA_H

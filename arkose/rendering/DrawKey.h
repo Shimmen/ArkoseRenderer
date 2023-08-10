@@ -12,7 +12,7 @@ enum class Brdf {
 
 class DrawKey {
 public:
-    DrawKey(std::optional<Brdf>, std::optional<BlendMode>, std::optional<bool> doubleSided);
+    DrawKey(std::optional<Brdf>, std::optional<BlendMode>, std::optional<bool> doubleSided, std::optional<bool> hasExplicitVelocity);
     DrawKey() = default;
     ~DrawKey() = default;
 
@@ -22,10 +22,14 @@ public:
     std::optional<BlendMode> blendMode() const { return m_blendMode; }
     std::optional<bool> doubleSided() const { return m_doubleSided; }
 
+    std::optional<bool> hasExplicityVelocity() const { return m_hasExplicitVelocity; }
+    void setHasExplicityVelocity(bool value) { m_hasExplicitVelocity = value; }
+
     u32 asUint32() const;
 
 private:
     std::optional<Brdf> m_brdf {};
     std::optional<BlendMode> m_blendMode {};
     std::optional<bool> m_doubleSided {};
+    std::optional<bool> m_hasExplicitVelocity {};
 };

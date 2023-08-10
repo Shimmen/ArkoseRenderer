@@ -26,6 +26,14 @@ public:
     void tick(float deltaTime);
     void reset();
 
+    enum class PlaybackMode {
+        OneShot,
+        Looping,
+    };
+
+    PlaybackMode playbackMode() const { return m_playbackMode; }
+    void setPlaybackMode(PlaybackMode playbackMode) { m_playbackMode = playbackMode; }
+
 private:
     struct SampledInputTrack {
         i32 idx0 { -1 };
@@ -47,8 +55,8 @@ private:
     // The current animation time
     float m_animationTime { 0.0f };
 
-    // Should this animation loop or not?
-    bool m_looping { false };
+    // Should this animation loop or not, and more such modes
+    PlaybackMode m_playbackMode { PlaybackMode::OneShot };
 
     // The skeletal mesh instance that this animation will animate
     SkeletalMeshInstance* m_skeletalMeshInstance { nullptr };

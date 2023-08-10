@@ -28,7 +28,7 @@ public:
 
 struct VulkanBottomLevelASNV final : public BottomLevelAS {
 public:
-    VulkanBottomLevelASNV(Backend&, std::vector<RTGeometry>);
+    VulkanBottomLevelASNV(Backend&, std::vector<RTGeometry>, BottomLevelAS const* copySource = nullptr);
     virtual ~VulkanBottomLevelASNV() override;
 
     virtual void setName(const std::string& name) override;

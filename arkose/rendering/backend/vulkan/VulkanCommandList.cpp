@@ -5,6 +5,7 @@
 #include "VulkanBackend.h"
 #include "VulkanResources.h"
 #include "utility/Profiling.h"
+#include <format>
 #include <stb_image_write.h>
 
 // Shared shader headers
@@ -1226,6 +1227,29 @@ void VulkanCommandList::buildTopLevelAcceratationStructure(TopLevelAS& tlas, Acc
     endDebugLabel();
 }
 
+void VulkanCommandList::buildBottomLevelAcceratationStructure(BottomLevelAS& blas, AccelerationStructureBuildType buildType)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    if (!backend().hasRayTracingSupport())
+        ARKOSE_LOG(Fatal, "Trying to rebuild a bottom level acceleration structure but there is no ray tracing support!");
+
+    beginDebugLabel("Rebuild BLAS");
+
+    switch (backend().rayTracingBackend()) {
+    case VulkanBackend::RayTracingBackend::KhrExtension: {
+        auto& khrBlas = static_cast<VulkanBottomLevelASKHR&>(blas);
+        khrBlas.build(m_commandBuffer, buildType);
+    } break;
+    case VulkanBackend::RayTracingBackend::NvExtension: {
+        auto& rtxBlas = static_cast<VulkanBottomLevelASNV&>(blas);
+        NOT_YET_IMPLEMENTED();
+    } break;
+    }
+
+    endDebugLabel();
+}
+
 void VulkanCommandList::traceRays(Extent2D extent)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
@@ -1350,96 +1374,6 @@ void VulkanCommandList::slowBlockingReadFromBuffer(const Buffer& buffer, size_t 
     vmaUnmapMemory(allocator, allocation);
 }
 
-void VulkanCommandList::saveTextureToFile(const Texture& texture, const std::string& filePath)
-{
-    SCOPED_PROFILE_ZONE_GPUCOMMAND();
-
-    const VkFormat targetFormat = VK_FORMAT_R8G8B8A8_UNORM;
-
-    auto& srcTex = static_cast<const VulkanTexture&>(texture);
-    VkImageLayout prevSrcLayout = srcTex.currentLayout;
-    VkImage srcImage = srcTex.image;
-
-    VkImageCreateInfo imageCreateInfo { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-    imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageCreateInfo.format = targetFormat;
-    imageCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
-    imageCreateInfo.extent.width = texture.extent().width();
-    imageCreateInfo.extent.height = texture.extent().height();
-    imageCreateInfo.extent.depth = 1;
-    imageCreateInfo.arrayLayers = 1;
-    imageCreateInfo.mipLevels = 1;
-    imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    imageCreateInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-
-    VmaAllocationCreateInfo allocCreateInfo {};
-    allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU;
-
-    VkImage dstImage;
-    VmaAllocation dstAllocation;
-    VmaAllocationInfo dstAllocationInfo;
-    if (vmaCreateImage(m_backend.globalAllocator(), &imageCreateInfo, &allocCreateInfo, &dstImage, &dstAllocation, &dstAllocationInfo) != VK_SUCCESS) {
-        ARKOSE_LOG(Fatal, "Failed to create temp image for screenshot");
-    }
-
-    bool success = m_backend.issueSingleTimeCommand([&](VkCommandBuffer cmdBuffer) {
-        transitionImageLayoutDEBUG(dstImage, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, cmdBuffer);
-        transitionImageLayoutDEBUG(srcImage, prevSrcLayout, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_IMAGE_ASPECT_COLOR_BIT, cmdBuffer);
-
-        VkImageCopy imageCopyRegion {};
-        imageCopyRegion.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        imageCopyRegion.srcSubresource.layerCount = 1;
-        imageCopyRegion.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        imageCopyRegion.dstSubresource.layerCount = 1; // FIXME: Maybe assert that the texture is not an array?
-        imageCopyRegion.extent.width = texture.extent().width();
-        imageCopyRegion.extent.height = texture.extent().height();
-        imageCopyRegion.extent.depth = 1;
-
-        vkCmdCopyImage(cmdBuffer,
-                       srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-                       dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                       1, &imageCopyRegion);
-
-        // Transition destination image to general layout, which is the required layout for mapping the image memory
-        transitionImageLayoutDEBUG(dstImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_ASPECT_COLOR_BIT, cmdBuffer);
-        transitionImageLayoutDEBUG(srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, prevSrcLayout, VK_IMAGE_ASPECT_COLOR_BIT, cmdBuffer);
-    });
-
-    if (!success) {
-        ARKOSE_LOG(Error, "Failed to setup screenshot image & data...");
-    }
-
-    // Get layout of the image (including row pitch/stride)
-    VkImageSubresource subResource;
-    subResource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    subResource.mipLevel = 0;
-    subResource.arrayLayer = 0;
-    VkSubresourceLayout subResourceLayout;
-    vkGetImageSubresourceLayout(device(), dstImage, &subResource, &subResourceLayout);
-
-    char* data;
-    vkMapMemory(device(), dstAllocationInfo.deviceMemory, 0, VK_WHOLE_SIZE, 0, (void**)&data);
-    data += subResourceLayout.offset;
-
-    bool shouldSwizzleRedAndBlue = (srcTex.vkFormat == VK_FORMAT_B8G8R8A8_SRGB) || (srcTex.vkFormat == VK_FORMAT_B8G8R8A8_UNORM) || (srcTex.vkFormat == VK_FORMAT_B8G8R8A8_SNORM);
-    if (shouldSwizzleRedAndBlue) {
-        int numPixels = texture.extent().width() * texture.extent().height();
-        for (int i = 0; i < numPixels; ++i) {
-            char tmp = data[4 * i + 0];
-            data[4 * i + 0] = data[4 * i + 2];
-            data[4 * i + 2] = tmp;
-        }
-    }
-
-    if (!stbi_write_png(filePath.c_str(), texture.extent().width(), texture.extent().height(), 4, data, (int)subResourceLayout.rowPitch)) {
-        ARKOSE_LOG(Error, "Failed to write screenshot to file...");
-    }
-
-    vkUnmapMemory(device(), dstAllocationInfo.deviceMemory);
-    vmaDestroyImage(m_backend.globalAllocator(), dstImage, dstAllocation);
-}
-
 void VulkanCommandList::debugBarrier()
 {
     VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
@@ -1541,7 +1475,7 @@ void VulkanCommandList::textureMipWriteBarrier(const Texture& genTexture, uint32
                          1, &barrier);
 }
 
-void VulkanCommandList::bufferWriteBarrier(std::vector<Buffer*> buffers)
+void VulkanCommandList::bufferWriteBarrier(std::vector<Buffer const*> buffers)
 {
     if (buffers.size() == 0)
         return;
@@ -1550,10 +1484,10 @@ void VulkanCommandList::bufferWriteBarrier(std::vector<Buffer*> buffers)
     barriers.resize(buffers.size());
 
     for (int i = 0; i < buffers.size(); ++i) {
-        Buffer& buffer = *buffers[i];
+        Buffer const& buffer = *buffers[i];
 
         VkBufferMemoryBarrier barrier = { VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER };
-        barrier.buffer = static_cast<VulkanBuffer&>(buffer).buffer;
+        barrier.buffer = static_cast<VulkanBuffer const&>(buffer).buffer;
 
         // the whole range
         barrier.offset = 0;

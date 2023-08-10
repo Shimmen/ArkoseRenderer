@@ -95,7 +95,7 @@ const char* ArkoseBroadPhaseLayerInterface::GetBroadPhaseLayerName(JPH::BroadPha
 }
 #endif // JPH_EXTERNAL_PROFILE || JPH_PROFILE_ENABLED
 
-static bool arkoseObjectsCanCollide(JPH::ObjectLayer objectA, JPH::ObjectLayer objectB)
+bool ArkoseObjectLayerPairFilter::ShouldCollide(JPH::ObjectLayer objectA, JPH::ObjectLayer objectB) const
 {
     ARKOSE_ASSERT(objectA < NumPhysicsLayers);
     ARKOSE_ASSERT(objectB < NumPhysicsLayers);
@@ -104,9 +104,9 @@ static bool arkoseObjectsCanCollide(JPH::ObjectLayer objectA, JPH::ObjectLayer o
     PhysicsLayer layerB = static_cast<PhysicsLayer>(objectB);
 
     return physicsLayersCanCollide(layerA, layerB);
-};
+}
 
-static bool arkoseBroadPhaseCanCollide(JPH::ObjectLayer objectLayer, JPH::BroadPhaseLayer broadPhaseLayer)
+bool ArkoseObjectVsBroadPhaseLayerFilter::ShouldCollide(JPH::ObjectLayer objectLayer, JPH::BroadPhaseLayer broadPhaseLayer) const
 {
     ARKOSE_ASSERT(objectLayer < NumPhysicsLayers);
     PhysicsLayer objectPhysicsLayer = static_cast<PhysicsLayer>(objectLayer);
@@ -178,7 +178,7 @@ bool JoltPhysicsBackend::initialize()
 
     // Create the actual physics system.
     m_physicsSystem = std::make_unique<JPH::PhysicsSystem>();
-    m_physicsSystem->Init(cMaxBodies, cNumBodyMutexes, cMaxBodyPairs, cMaxContactConstraints, m_broadPhaseLayerInterface, arkoseBroadPhaseCanCollide, arkoseObjectsCanCollide);
+    m_physicsSystem->Init(cMaxBodies, cNumBodyMutexes, cMaxBodyPairs, cMaxContactConstraints, m_broadPhaseLayerInterface, m_objectVsBroadPhaseLayerFilter, m_objectLayerPairFilter);
 
     // A body activation listener gets notified when bodies activate and go to sleep. Registering one is entirely optional.
     // Note that this is called from a job so whatever you do here needs to be thread safe.
@@ -251,10 +251,7 @@ void JoltPhysicsBackend::fixedRateUpdate(float fixedRate, int numCollisionSteps)
 
     ARKOSE_ASSERT(numCollisionSteps >= 1);
 
-    // If you want more accurate step results you can do multiple sub steps within a collision step. Usually you would set this to 1.
-    constexpr int NumIntegrationSubSteps = 1;
-
-    m_physicsSystem->Update(fixedRate, numCollisionSteps, NumIntegrationSubSteps, m_tempAllocator.get(), m_jobSystem.get());
+    m_physicsSystem->Update(fixedRate, numCollisionSteps, m_tempAllocator.get(), m_jobSystem.get());
 }
 
 void JoltPhysicsBackend::setGravity(vec3 gravity)

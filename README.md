@@ -21,6 +21,9 @@ This list is not complete, it's just a showcase of various features that are imp
 ### Engine features
 
  - Async asset loading (for some resource types)
+ - Custom asset system for all common asset types
+ - Offline image block compression (BC5 & BC7)
+ - Simple animation engine for e.g. skeletal meshes
  - Custom task graph implementation (work/job system)
  - Shader hot-reloading with support for `#include`s
  - Suite of editor tools, gizmos, and debug rendering
@@ -31,14 +34,16 @@ This list is not complete, it's just a showcase of various features that are imp
 
  - Real-time ray tracing
  - Bindless texture support
- - GPU driven rendering, with object-level culling
+ - Skeletal mesh skinning and rendering
+ - Meshlet based visibility buffer rendering with meshlet culling
+ - GPU driven rendering, with object-level culling (still supported as part of the old path, but visibility buffer is now the main rendering path)
  - A realistic camera model, with focus and exposure controls familiar to photographers
  - Depth of field, respecting the realistic camera model paramer such as aperture size and focal length
  - Dynamic Diffuse Global Illumination (DDGI) – a probe based global illumination solution with infinite light bounces.
  - Ray traced reflections with denoising
  - Temporal Anti-Aliasing (TAA)
 
- > **DISCLAIMER:** There is still a long list of features to add, many of them quite basic. The philosophy with this project has always been to work on whatever I feel like at that point in time, so there is no real concept of natural order here or minimum viable product. We're not in production after all :^) Some of these obvious basic features that I can think of right now are: skeletal meshes and animations, light culling to make the rendering tiled or clustered, and rendering of transparent objects.
+ > **DISCLAIMER:** There is still a long list of features to add, many of them quite basic. The philosophy with this project has always been to work on whatever I feel like at that point in time, so there is no real concept of natural order here or minimum viable product. We're not in production after all :^) Some of these obvious basic features that I can think of right now are: light culling to make the rendering tiled or clustered and proper support for transparent objects.
 
 ![GUI demo image](/assets/demo/demo-gui.jpg)
 

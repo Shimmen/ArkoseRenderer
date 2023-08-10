@@ -166,10 +166,14 @@ void VulkanTopLevelASNV::updateInstanceDataWithUploadBuffer(const std::vector<RT
     uploadBuffer.upload(updatedInstanceData, *instanceBuffer);
 }
 
-VulkanBottomLevelASNV::VulkanBottomLevelASNV(Backend& backend, std::vector<RTGeometry> geos)
+VulkanBottomLevelASNV::VulkanBottomLevelASNV(Backend& backend, std::vector<RTGeometry> geos, BottomLevelAS const* copySource)
     : BottomLevelAS(backend, std::move(geos))
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    if (copySource != nullptr) {
+        ARKOSE_LOG_FATAL("Creating a BLAS from a copy source is currently only implemented for the KHR extention!");
+    }
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
     ARKOSE_ASSERT(vulkanBackend.hasRayTracingSupport());

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/Conversion.h"
 #include "core/memory/BumpAllocator.h"
 #include "rendering/AppState.h"
 #include "rendering/NodeDependency.h"
@@ -9,6 +8,7 @@
 #include "rendering/backend/util/UploadBuffer.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
+#include <ark/conversion.h>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -116,7 +116,7 @@ private:
     std::vector<std::unique_ptr<RayTracingState>> m_rayTracingStates;
     std::vector<std::unique_ptr<ComputeState>> m_computeStates;
 
-    static constexpr size_t PersistentBufferSize = 10 * conversion::constants::BytesToKilobytes;
+    static constexpr size_t PersistentBufferSize = 10 * ark::conversion::constants::BytesToKilobytes;
     BumpAllocator m_persistentBuffer { PersistentBufferSize };
 };
 

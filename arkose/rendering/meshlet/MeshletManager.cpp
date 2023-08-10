@@ -1,25 +1,25 @@
 #include "MeshletManager.h"
 
 #include "asset/MeshAsset.h"
-#include "core/Conversion.h"
 #include "core/Logging.h"
 #include "rendering/StaticMesh.h"
 #include "rendering/backend/base/Backend.h"
 #include "rendering/backend/base/CommandList.h"
 #include "rendering/backend/util/UploadBuffer.h"
+#include <ark/conversion.h>
 
 // Shader headers
-#include "shaders/shared/MeshletVertex.h"
+#include "shaders/shared/SceneData.h"
 
 MeshletManager::MeshletManager(Backend& backend)
 {
-    ARKOSE_ASSERT(m_nonPositionVertexLayout.packedVertexSize() == sizeof(MeshletNonPositionVertex));
+    ARKOSE_ASSERT(m_nonPositionVertexLayout.packedVertexSize() == sizeof(NonPositionVertex));
     size_t positionDataBufferSize = m_positionVertexLayout.packedVertexSize() * MaxLoadedVertices;
     size_t nonPositionDataBufferSize = m_nonPositionVertexLayout.packedVertexSize() * MaxLoadedVertices;
     size_t loadedIndexBufferSize = sizeof(u32) * MaxLoadedIndices;
     size_t meshletBufferSize = sizeof(ShaderMeshlet) * MaxLoadedMeshlets;
 
-    float totalMemoryUseMb = conversion::to::MB(positionDataBufferSize + nonPositionDataBufferSize + loadedIndexBufferSize + meshletBufferSize);
+    float totalMemoryUseMb = ark::conversion::to::MB(positionDataBufferSize + nonPositionDataBufferSize + loadedIndexBufferSize + meshletBufferSize);
     ARKOSE_LOG(Info, "MeshletManager: allocating a total of {:.1f} MB of VRAM for meshlet vertex and index data", totalMemoryUseMb);
 
     m_positionDataVertexBuffer = backend.createBuffer(positionDataBufferSize, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOnly);
@@ -86,7 +86,7 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
             if (totalUploadSize > UploadBufferSize) {
                 ARKOSE_LOG(Fatal, "Static mesh segment is {:.2f} MB but the meshlet upload budget is only {:.2f} MB. "
                                   "The budget must be increased if we want to be able to load this asset.",
-                           conversion::to::MB(totalUploadSize), conversion::to::MB(UploadBufferSize));
+                           ark::conversion::to::MB(totalUploadSize), ark::conversion::to::MB(UploadBufferSize));
             }
             break;
         }
@@ -105,7 +105,7 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
         std::vector<vec3> positionsTempVector {};
         positionsTempVector.reserve(vertexCount);
 
-        std::vector<MeshletNonPositionVertex> nonPositionsTempVector {};
+        std::vector<NonPositionVertex> nonPositionsTempVector {};
         nonPositionsTempVector.reserve(vertexCount);
 
         for (MeshletAsset const& meshletAsset : meshletDataAsset.meshlets) {
@@ -129,9 +129,9 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
                 vec4 tangent = (vertexIdx < meshSegment->asset->tangents.size()) ? meshSegment->asset->tangents[vertexIdx] : vec4(1.0f, 0.0f, 0.0f, 1.0f);
 
                 positionsTempVector.emplace_back(position);
-                nonPositionsTempVector.emplace_back(MeshletNonPositionVertex { .texcoord0 = texcoord0,
-                                                                               .normal = normal,
-                                                                               .tangent = tangent });
+                nonPositionsTempVector.emplace_back(NonPositionVertex { .texcoord0 = texcoord0,
+                                                                        .normal = normal,
+                                                                        .tangent = tangent });
             }
 
             m_nextVertexIdx += meshletAsset.vertexCount;

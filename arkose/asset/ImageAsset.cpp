@@ -9,9 +9,10 @@
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/string.hpp>
 #include <cereal/types/vector.hpp>
+#include <format>
 #include <fstream>
 #include <stb_image.h>
-#include <zstd/zstd.h>
+#include <lz4.h>
 
 namespace {
 AssetCache<ImageAsset> s_imageAssetCache {};
@@ -388,23 +389,23 @@ bool ImageAsset::compress(int compressionLevel)
         return true;
     }
 
-    size_t maxCompressedSize = ZSTD_compressBound(m_pixelData.size());
-    std::vector<uint8_t> compressedBlob {};
+    size_t maxCompressedSize = LZ4_compressBound(m_pixelData.size());
+    std::vector<u8> compressedBlob {};
     compressedBlob.resize(maxCompressedSize);
 
-    size_t compressedSizeOrErrorCode = ZSTD_compress(compressedBlob.data(), compressedBlob.size(), m_pixelData.data(), m_pixelData.size(), compressionLevel);
+    char const* src = reinterpret_cast<char const*>(m_pixelData.data());
+    char* dst = reinterpret_cast<char*>(compressedBlob.data());
+    int compressedSize = LZ4_compress_default(src, dst, m_pixelData.size(), maxCompressedSize);
 
-    if (ZSTD_isError(compressedSizeOrErrorCode)) {
-        const char* errorName = ZSTD_getErrorName(compressedSizeOrErrorCode);
-        ARKOSE_LOG(Error, "Failed to compress image. Reason: {}", errorName);
+    if (compressedSize <= 0) {
+        ARKOSE_LOG(Error, "Failed to compress image");
         return false;
     }
 
-    size_t compressedSize = compressedSizeOrErrorCode;
     compressedBlob.resize(compressedSize);
 
-    m_uncompressedSize =  narrow_cast<u32>(m_pixelData.size());
-    m_compressedSize = narrow_cast<u32>(compressedSize);
+    m_uncompressedSize = narrow_cast<u32>(m_pixelData.size());
+    m_compressedSize = static_cast<u32>(compressedSize);
     std::swap(m_pixelData, compressedBlob);
     m_compressed = true;
 
@@ -423,16 +424,15 @@ bool ImageAsset::decompress()
     std::vector<uint8_t> decompressedData {};
     decompressedData.resize(m_uncompressedSize);
 
-    size_t decompressedSizeOrErrorCode = ZSTD_decompress(decompressedData.data(), decompressedData.size(),
-                                                         m_pixelData.data(), m_pixelData.size());
+    char const* src = reinterpret_cast<char const*>(m_pixelData.data());
+    char* dst = reinterpret_cast<char*>(decompressedData.data());
+    size_t decompressedSize = LZ4_decompress_safe(src, dst, m_pixelData.size(), m_uncompressedSize);
 
-    if (ZSTD_isError(decompressedSizeOrErrorCode)) {
-        const char* errorName = ZSTD_getErrorName(decompressedSizeOrErrorCode);
-        ARKOSE_LOG(Error, "Failed to decompress image. Reason: {}", errorName);
+    if (decompressedSize <= 0) {
+        ARKOSE_LOG(Error, "Failed to decompress image");
         return false;
     }
 
-    size_t decompressedSize = decompressedSizeOrErrorCode;
     if (decompressedSize != m_uncompressedSize) {
         ARKOSE_LOG(Error, "Decompressed size does not match uncompressed size in image asset: {} vs {}", decompressedSize, m_uncompressedSize);
         return false;

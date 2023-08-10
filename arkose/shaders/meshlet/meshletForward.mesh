@@ -7,7 +7,6 @@
 #include <common/camera.glsl>
 #include <forward/forwardCommon.glsl>
 #include <meshlet/meshletCommon.glsl>
-#include <shared/MeshletVertex.h>
 #include <shared/SceneData.h>
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
@@ -18,7 +17,7 @@ layout(set = 1, binding = 2) buffer restrict readonly MeshletBlock { ShaderMeshl
 
 layout(set = 2, binding = 0, scalar) buffer restrict readonly IndicesBlock { uint meshletIndices[]; };
 layout(set = 2, binding = 1, scalar) buffer restrict readonly PositionsBlock { vec3 meshletPositions[]; };
-layout(set = 2, binding = 2, scalar) buffer restrict readonly NonPositionsBlock { MeshletNonPositionVertex meshletVertices[]; };
+layout(set = 2, binding = 2, scalar) buffer restrict readonly NonPositionsBlock { NonPositionVertex meshletVertices[]; };
 
 taskPayloadSharedEXT MeshShaderInterpolants fromTaskShader;
 
@@ -54,7 +53,7 @@ void main()
 
         uint vertexIdx = meshlet.firstVertex + localVertexIdx;
         vec3 localPosition = meshletPositions[vertexIdx];
-        MeshletNonPositionVertex vertexData = meshletVertices[vertexIdx];
+        NonPositionVertex vertexData = meshletVertices[vertexIdx];
 
         vec4 viewSpacePos = camera.viewFromWorld * drawable.worldFromLocal * vec4(localPosition, 1.0);
         vPosition[localVertexIdx] = viewSpacePos.xyz;

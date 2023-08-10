@@ -3,6 +3,14 @@
 ////////////////////////////////////////////////////////////////////////////////
 // StaticMeshInstance
 
+StaticMeshInstance::StaticMeshInstance(StaticMeshHandle inMesh, Transform inTransform)
+    : m_mesh(inMesh)
+    , m_transform(inTransform)
+{
+}
+
+StaticMeshInstance::~StaticMeshInstance() = default;
+
 bool StaticMeshInstance::hasDrawableHandleForSegmentIndex(u32 segmentIdx) const
 {
     return segmentIdx < m_drawableHandles.size();
@@ -29,6 +37,15 @@ void StaticMeshInstance::setDrawableHandle(u32 segmentIdx, DrawableObjectHandle 
 
 ////////////////////////////////////////////////////////////////////////////////
 // SkeletalMeshInstance
+
+SkeletalMeshInstance::SkeletalMeshInstance(SkeletalMeshHandle inMesh, std::unique_ptr<Skeleton> skeleton, Transform inTransform)
+    : m_mesh(inMesh)
+    , m_skeleton(std::move(skeleton))
+    , m_transform(inTransform)
+{
+}
+
+SkeletalMeshInstance::~SkeletalMeshInstance() = default;
 
 Transform* SkeletalMeshInstance::findTransformForJoint(std::string_view jointName)
 {
@@ -81,4 +98,28 @@ void SkeletalMeshInstance::setSkinningVertexMapping(u32 segmentIdx, SkinningVert
     }
 
     m_skinningVertexMappings[segmentIdx] = skinningVertexMapping;
+}
+
+bool SkeletalMeshInstance::hasBlasForSegmentIndex(u32 segmentIdx) const
+{
+    return segmentIdx < m_blases.size();
+}
+
+std::unique_ptr<BottomLevelAS> const& SkeletalMeshInstance::blasForSegmentIndex(u32 segmentIdx) const
+{
+    return m_blases[segmentIdx];
+}
+
+void SkeletalMeshInstance::resetBLASes()
+{
+    m_blases.clear();
+}
+
+void SkeletalMeshInstance::setBLAS(u32 segmentIdx, std::unique_ptr<BottomLevelAS>&& blas)
+{
+    if (not hasBlasForSegmentIndex(segmentIdx)) {
+        m_blases.resize(segmentIdx + 1);
+    }
+
+    m_blases[segmentIdx] = std::move(blas);
 }

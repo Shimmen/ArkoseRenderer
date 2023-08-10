@@ -29,7 +29,6 @@ add_subdirectory(arklib)
 ##################################
 
 set(ARKOSE_SOURCES
-    ${TRACY_CLIENT_SOURCE}
     arkose/main.cpp
     arkose/animation/Animation.cpp
     arkose/apps/BootstrappingApp.cpp
@@ -167,7 +166,7 @@ target_link_libraries(ArkoseRenderer PRIVATE
 
     fmt # string formatting (TODO: replace with stl fmt in C++20)
     half # 16-bit float
-    tracy # real-time profiling
+    TracyClient # real-time profiling
     concurrentqueue # lock-free concurrent queue
 
     glfw # window and event management
@@ -197,7 +196,7 @@ target_link_libraries(ArkoseRenderer PRIVATE
     stb_image # image loading
     tiny_gltf # glTF 2.0 loading
     cereal # serialisation
-    libzstd_static # generic lossless compression
+    lz4_static # generic lossless compression
     bc7enc_lib # texture compression
     meshoptimizer # mesh optimization & meshlet generation
     )
@@ -222,7 +221,8 @@ endif()
 # Keep tracy enabled at all time but with on-demand only, meaning we don't accumulate tracy data
 # in the Arkose process which can hog a lot of memory, which looks a lot like a memory leak.
 target_compile_definitions(ArkoseRenderer PUBLIC TRACY_ENABLE)
-target_compile_definitions(ArkoseRenderer PUBLIC TRACY_ON_DEMAND)
+# Disable on-demand for now as the latest version seems to not work correctly with it
+#target_compile_definitions(ArkoseRenderer PUBLIC TRACY_ON_DEMAND)
 
 if (MSVC)
     target_compile_options(ArkoseRenderer PUBLIC

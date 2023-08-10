@@ -143,25 +143,29 @@ std::vector<MeshletForwardRenderNode::RenderStateWithIndirectData*>& MeshletForw
     std::vector<PassSettings> passes {};
     std::string debugName = "Meshlet";
 
+    // TODO: It's not correct to ignore explicit velocity, but we're
+    // not ready to support this quite yet, so for now it will have to do.
+    auto explicitVelocityMask = std::optional<bool>();
+
     auto brdfs = { Brdf::GgxMicrofacet };
     for (Brdf brdf : brdfs) {
 
         // TODO: Use BRDF name!
         debugName += "Default";
 
-        passes.push_back({ .drawKeyMask = DrawKey(brdf, BlendMode::Opaque, false),
+        passes.push_back({ .drawKeyMask = DrawKey(brdf, BlendMode::Opaque, false, explicitVelocityMask),
                            .maxMeshlets = 50'000,
                            .debugName = debugName + "Opaque" });
 
-        passes.push_back({ .drawKeyMask = DrawKey(brdf, BlendMode::Opaque, true),
+        passes.push_back({ .drawKeyMask = DrawKey(brdf, BlendMode::Opaque, true, explicitVelocityMask),
                            .maxMeshlets = 50'000,
                            .debugName = debugName + "OpaqueDoubleSided" });
 
-        passes.push_back({ .drawKeyMask = DrawKey(brdf, BlendMode::Masked, false),
+        passes.push_back({ .drawKeyMask = DrawKey(brdf, BlendMode::Masked, false, explicitVelocityMask),
                            .maxMeshlets = 50'000,
                            .debugName = debugName + "Masked" });
 
-        passes.push_back({ .drawKeyMask = DrawKey(brdf, BlendMode::Masked, true),
+        passes.push_back({ .drawKeyMask = DrawKey(brdf, BlendMode::Masked, true, explicitVelocityMask),
                            .maxMeshlets = 50'000,
                            .debugName = debugName + "MaskedDoubleSided" });
     }

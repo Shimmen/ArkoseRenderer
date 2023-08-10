@@ -55,7 +55,9 @@ public:
 
     size_t meshCount() const { return m_managedStaticMeshes.size(); }
 
+    SkeletalMesh* skeletalMeshForInstance(SkeletalMeshInstance const&);
     SkeletalMesh* skeletalMeshForHandle(SkeletalMeshHandle);
+
     StaticMesh* staticMeshForInstance(StaticMeshInstance const&);
     StaticMesh const* staticMeshForInstance(StaticMeshInstance const&) const;
     StaticMesh* staticMeshForHandle(StaticMeshHandle handle);
@@ -233,6 +235,9 @@ private:
     uint32_t m_framesUntilNextFullTlasBuild { 0u };
 
     std::unique_ptr<Texture> m_environmentMapTexture {};
+
+    // Skinning related data
+    std::unique_ptr<Buffer> m_jointMatricesBuffer {};
 
     // Common buffers that can be used
     std::unique_ptr<Buffer> m_emptyVertexBuffer {};
