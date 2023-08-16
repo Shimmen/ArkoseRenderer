@@ -3,6 +3,7 @@
 #include "physics/HandleTypes.h"
 #include "physics/MotionType.h"
 #include <ark/vector.h>
+#include <vector>
 
 class Transform;
 class Scene;

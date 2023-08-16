@@ -168,8 +168,8 @@ void Registry::publishResource(const std::string& name, T& resource, std::unorde
                           "has already been published. This is not valid, all resource must have unique names.", name, nodeName);
     }
 
-    map[name] = PublishedResource { .resource = &resource,
-                                    .publisher = nodeName };
+    map[name] = PublishedResource<T> { .resource = &resource,
+                                       .publisher = nodeName };
 
     //if (!resource.name().empty())
     //    ARKOSE_LOG(Info, "Renaming during publishing: '{}' -> '{}'", resource.name(), name);

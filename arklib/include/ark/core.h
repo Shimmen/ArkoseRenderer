@@ -31,7 +31,11 @@
 #include <type_traits> // for std::enable_if etc.
 
 #ifndef ARK_NO_INTRINSICS
-#include <intrin.h>
+ #if defined(_MSC_VER)
+  #include <intrin.h>
+ #else
+  #include <immintrin.h>
+ #endif
 #endif
 
 namespace ark {

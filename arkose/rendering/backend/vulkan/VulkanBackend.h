@@ -1,7 +1,8 @@
 #pragma once
 
-#include "rendering/backend/base/Backend.h"
 #include "rendering/backend/Resources.h"
+#include "rendering/backend/base/Backend.h"
+#include "rendering/backend/util/UploadBuffer.h"
 #include "rendering/backend/vulkan/VulkanResources.h"
 #include "rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.h"
 #include "rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.h"

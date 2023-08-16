@@ -154,6 +154,8 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
             m_rayTracingKhr = std::make_unique<VulkanRayTracingKHR>(*this, physicalDevice(), device());
             ARKOSE_LOG(Info, "VulkanBackend: using KHR ray tracing backend");
             break;
+        default:
+            ASSERT_NOT_REACHED();
         }
     } else {
         ARKOSE_LOG(Info, "VulkanBackend: no ray tracing backend");

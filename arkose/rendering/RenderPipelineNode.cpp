@@ -5,7 +5,7 @@
 #include <imgui_internal.h>
 #include <utility>
 
-const RenderPipelineNode::ExecuteCallback RenderPipelineNode::NullExecuteCallback = [&](const AppState&, CommandList&, UploadBuffer&) {};
+const RenderPipelineNode::ExecuteCallback RenderPipelineNode::NullExecuteCallback = [](const AppState&, CommandList&, UploadBuffer&) {};
 
 RenderPipelineLambdaNode::RenderPipelineLambdaNode(std::string name, ConstructorFunction constructorFunction)
     : m_name(std::move(name))

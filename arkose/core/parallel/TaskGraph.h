@@ -8,6 +8,7 @@
 #include <functional>
 #include <optional>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 // TaskGraph / job system implementation based on the one outline here:

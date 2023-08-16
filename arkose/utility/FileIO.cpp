@@ -27,7 +27,7 @@ void FileIO::ensureDirectory(const std::string& directoryPath)
     }
     CreateDirectory(directoryPath.c_str(), NULL);
 #else
-#error Create a directory if it doesn't exist
+#warning Missing implementation for this platform!
 #endif
 }
 
