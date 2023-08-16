@@ -40,7 +40,7 @@ FetchContent_Declare(nativefiledialog-extended
 
 FetchContent_Declare(vulkan_memory_allocator
     GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-    GIT_TAG        "v3.0.0")
+    GIT_TAG        "v3.0.1")
 
 FetchContent_Declare(directx_headers
     GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
