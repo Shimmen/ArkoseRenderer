@@ -97,20 +97,20 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
     }
 
     auto format { ImageFormat::Unknown };
-    #define SelectFormat(intFormat, floatFormat) (isFloatType ? ImageFormat::##floatFormat : ImageFormat::##intFormat)
+    #define SelectFormat(intFormat, floatFormat) (isFloatType ? floatFormat : intFormat)
 
     switch (desiredChannels) {
     case 1:
-        format = SelectFormat(R8, R32F);
+        format = SelectFormat(ImageFormat::R8, ImageFormat::R32F);
         break;
     case 2:
-        format = SelectFormat(RG8, RG32F);
+        format = SelectFormat(ImageFormat::RG8, ImageFormat::RG32F);
         break;
     case 3:
-        format = SelectFormat(RGB8, RGB32F);
+        format = SelectFormat(ImageFormat::RGB8, ImageFormat::RGB32F);
         break;
     case 4:
-        format = SelectFormat(RGBA8, RGBA32F);
+        format = SelectFormat(ImageFormat::RGBA8, ImageFormat::RGBA32F);
         break;
     }
 
