@@ -9,7 +9,7 @@
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/string.hpp>
 #include <cereal/types/vector.hpp>
-#include <format>
+#include <fmt/format.h>
 #include <fstream>
 #include <stb_image.h>
 #include <lz4.h>
@@ -292,7 +292,7 @@ bool ImageAsset::generateMipmaps()
 
     for (u32 level = 1; level < levels; ++level) {
 
-        std::string zoneName = std::format("Mip level {}", level);
+        std::string zoneName = fmt::format("Mip level {}", level);
         SCOPED_PROFILE_ZONE_DYNAMIC(zoneName, 0xaa5577);
 
         u32 previousMipLevel = level - 1;

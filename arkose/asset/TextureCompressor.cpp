@@ -4,7 +4,7 @@
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "utility/Profiling.h"
-#include <format>
+#include <fmt/format.h>
 #include <rdo_bc_encoder.h>
 #include <thread>
 
@@ -15,7 +15,7 @@ static std::unique_ptr<ImageAsset> compressWithParams(ImageAsset const& inputIma
 
     for (size_t mipIdx = 0; mipIdx < inputImage.numMips(); ++mipIdx) {
 
-        std::string zoneName = std::format("Mip level {}", mipIdx);
+        std::string zoneName = fmt::format("Mip level {}", mipIdx);
         SCOPED_PROFILE_ZONE_DYNAMIC(zoneName, 0xaa5577);
 
         auto pixelData = inputImage.pixelDataForMip(mipIdx);

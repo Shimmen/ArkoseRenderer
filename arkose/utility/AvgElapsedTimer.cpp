@@ -1,6 +1,6 @@
 #include "AvgElapsedTimer.h"
 
-#include <format>
+#include <fmt/format.h>
 #include <imgui.h>
 
 void AvgElapsedTimer::reportCpuTime(double time)
@@ -27,9 +27,9 @@ std::string AvgElapsedTimer::createFormattedString() const
 {
     double cpu = averageCpuTime();
     double gpu = averageGpuTime();
-    std::string cpuString = isnan(cpu) ? "-" : std::format("{:.2f} ms", cpu * 1000.0);
-    std::string gpuString = isnan(gpu) ? "-" : std::format("{:.2f} ms", gpu * 1000.0);
-    return std::format("CPU: {} | GPU: {}", cpuString.c_str(), gpuString.c_str());
+    std::string cpuString = isnan(cpu) ? "-" : fmt::format("{:.2f} ms", cpu * 1000.0);
+    std::string gpuString = isnan(gpu) ? "-" : fmt::format("{:.2f} ms", gpu * 1000.0);
+    return fmt::format("CPU: {} | GPU: {}", cpuString.c_str(), gpuString.c_str());
 }
 
 void AvgElapsedTimer::plotTimes(float rangeMin, float rangeMax, float plotHeight) const

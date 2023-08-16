@@ -21,6 +21,7 @@
 #include "utility/FileIO.h"
 #include "utility/Input.h"
 #include "utility/Profiling.h"
+#include <fmt/format.h>
 #include <format>
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -179,7 +180,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
         if (ImGui::BeginTabBar("MeshViewerLODTabBar")) {
 
             for (uint32_t lodIdx = 0; lodIdx < targetAsset().LODs.size(); ++lodIdx) {
-                std::string lodLabel = std::format("LOD{}", lodIdx);
+                std::string lodLabel = fmt::format("LOD{}", lodIdx);
                 if (ImGui::BeginTabItem(lodLabel.c_str())) {
 
                     m_selectedLodIdx = lodIdx;
@@ -194,7 +195,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
                     if (lod.meshSegments.size() > m_segmentNameCache.size()) {
                         size_t numSegmentNames = std::max(1'000ull, lod.meshSegments.size());
                         for (int idx = 0; idx < numSegmentNames; ++idx) {
-                            m_segmentNameCache.push_back(std::format("segment{:03}", idx));
+                            m_segmentNameCache.push_back(fmt::format("segment{:03}", idx));
                         }
                     }
 

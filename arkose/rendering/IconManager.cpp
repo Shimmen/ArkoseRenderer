@@ -2,7 +2,7 @@
 
 #include "core/Logging.h"
 #include "rendering/backend/base/Backend.h"
-#include <format>
+#include <fmt/format.h>
 #include <string_view>
 
 IconManager::IconManager(Backend& backend)
@@ -16,7 +16,7 @@ IconManager::~IconManager() = default;
 
 Icon IconManager::loadIcon(Backend& backend, std::string_view iconName)
 {
-    std::string iconPath = std::format("assets/icons/{}.png", iconName);
+    std::string iconPath = fmt::format("assets/icons/{}.png", iconName);
     ImageAsset* imageAsset = ImageAsset::loadOrCreate(iconPath);
 
     if (imageAsset == nullptr) {
@@ -35,7 +35,7 @@ Icon IconManager::loadIcon(Backend& backend, std::string_view iconName)
     auto iconTexture = backend.createTexture(desc);
     iconTexture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size(), 0);
 
-    std::string textureName = std::format("Icon<{}>", iconName);
+    std::string textureName = fmt::format("Icon<{}>", iconName);
     iconTexture->setName(textureName);
 
     return Icon(imageAsset, std::move(iconTexture));

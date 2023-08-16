@@ -1,14 +1,14 @@
 #include "Light.h"
 
-#include <format>
+#include <fmt/format.h>
 #include <imgui.h>
 
 Light::Light(Type type, vec3 color)
-    : m_color(color)
-    , m_type(type)
+    : m_type(type)
+    , m_color(color)
 {
     static int nextLightId = 0;
-    m_name = std::format("light-{}", nextLightId++);
+    m_name = fmt::format("light-{}", nextLightId++);
 }
 
 bool Light::shouldDrawGui() const

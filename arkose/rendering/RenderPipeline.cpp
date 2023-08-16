@@ -3,7 +3,7 @@
 #include "core/Logging.h"
 #include "utility/Profiling.h"
 #include "rendering/GpuScene.h"
-#include <format>
+#include <fmt/format.h>
 #include <imgui.h>
 
 RenderPipeline::RenderPipeline(GpuScene* scene)
@@ -93,7 +93,7 @@ void RenderPipeline::drawGui(bool includeContainingWindow) const
     for (auto& [node, execCallback] : m_nodeContexts) {
         std::string nodeName = node->name();
         std::string nodeTimePerfString = node->timer().createFormattedString();
-        std::string nodeTitle = std::format("{} | {}###{}", nodeName, nodeTimePerfString, nodeName);
+        std::string nodeTitle = fmt::format("{} | {}###{}", nodeName, nodeTimePerfString, nodeName);
         if (ImGui::CollapsingHeader(nodeTitle.c_str())) {
 
             // NOTE: This isn't a perfect system, but it should ensure we can reuse label names within node GUIs

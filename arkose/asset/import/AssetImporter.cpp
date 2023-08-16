@@ -6,7 +6,7 @@
 #include "core/Logging.h"
 #include "core/parallel/ParallelFor.h"
 #include "utility/FileIO.h"
-#include <format>
+#include <fmt/format.h>
 
 ImportResult AssetImporter::importAsset(std::string_view assetFilePath, std::string_view targetDirectory, Options options)
 {
@@ -73,10 +73,10 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
                 fileName = std::string(FileIO::extractFileNameFromPath(image->sourceAssetFilePath()));
                 fileName = std::string(FileIO::removeExtensionFromPath(fileName));
             } else {
-                fileName = std::format("image{:04}", unnamedImageIdx++);
+                fileName = fmt::format("image{:04}", unnamedImageIdx++);
             }
 
-            std::string targetFilePath = std::format("{}/{}.arkimg", targetDirectory, fileName);
+            std::string targetFilePath = fmt::format("{}/{}.arkimg", targetDirectory, fileName);
 
             image->writeToFile(targetFilePath, AssetStorage::Binary);
         }
@@ -112,10 +112,10 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         int count = materialNameMap[fileName]++;
         if (count > 0 || fileName == "material") {
-            fileName = std::format("{}{:04}", fileName, count);
+            fileName = fmt::format("{}{:04}", fileName, count);
         }
 
-        std::string targetFilePath = std::format("{}/{}.arkmat", targetDirectory, fileName);
+        std::string targetFilePath = fmt::format("{}/{}.arkmat", targetDirectory, fileName);
 
         material->writeToFile(targetFilePath, AssetStorage::Json);
     }
@@ -154,10 +154,10 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         int count = meshNameMap[fileName]++;
         if (count > 0 || fileName == "mesh") {
-            fileName = std::format("{}{:04}", fileName, count);
+            fileName = fmt::format("{}{:04}", fileName, count);
         }
 
-        std::string targetFilePath = std::format("{}/{}.arkmsh", targetDirectory, fileName);
+        std::string targetFilePath = fmt::format("{}/{}.arkmsh", targetDirectory, fileName);
 
         // TODO: Json is currently super slow with all the data we have, even for smaller meshes, but if we separate out the core data it will be fine.
         AssetStorage assetStorage = options.saveMeshesInTextualFormat ? AssetStorage::Json : AssetStorage::Binary;
@@ -174,10 +174,10 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         int count = skeletonNameMap[fileName]++;
         if (count > 0 || fileName == "skeleton") {
-            fileName = std::format("{}{:04}", fileName, count);
+            fileName = fmt::format("{}{:04}", fileName, count);
         }
 
-        std::string targetFilePath = std::format("{}/{}.arkskel", targetDirectory, fileName);
+        std::string targetFilePath = fmt::format("{}/{}.arkskel", targetDirectory, fileName);
 
         skeleton->writeToFile(targetFilePath, AssetStorage::Json);
     }
@@ -192,10 +192,10 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         int count = animationNameMap[fileName]++;
         if (count > 0 || fileName == "animation") {
-            fileName = std::format("{}{:04}", fileName, count);
+            fileName = fmt::format("{}{:04}", fileName, count);
         }
 
-        std::string targetFilePath = std::format("{}/{}.arkanim", targetDirectory, fileName);
+        std::string targetFilePath = fmt::format("{}/{}.arkanim", targetDirectory, fileName);
 
         animation->writeToFile(targetFilePath, AssetStorage::Json);
 
@@ -230,7 +230,7 @@ std::unique_ptr<LevelAsset> AssetImporter::importAsLevel(std::string_view assetF
     std::string_view levelName = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(assetFilePath));
     levelAsset->name = std::string(levelName);
 
-    std::string levelFilePath = std::format("{}{}.arklvl", targetDirectory, levelName);
+    std::string levelFilePath = fmt::format("{}{}.arklvl", targetDirectory, levelName);
     if (not levelAsset->writeToFile(levelFilePath, AssetStorage::Json)) {
         ARKOSE_LOG(Error, "Failed to write level asset '{}' to file.", levelAsset->name);
         return nullptr;

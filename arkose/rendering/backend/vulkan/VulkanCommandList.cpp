@@ -5,7 +5,7 @@
 #include "VulkanBackend.h"
 #include "VulkanResources.h"
 #include "utility/Profiling.h"
-#include <format>
+#include <fmt/format.h>
 #include <stb_image_write.h>
 
 // Shared shader headers
@@ -264,7 +264,7 @@ void VulkanCommandList::generateMipmaps(Texture& genTexture)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    beginDebugLabel(std::format("Generate Mipmaps ({}x{})", genTexture.extent().width(), genTexture.extent().height()));
+    beginDebugLabel(fmt::format("Generate Mipmaps ({}x{})", genTexture.extent().width(), genTexture.extent().height()));
 
     auto& texture = static_cast<VulkanTexture&>(genTexture);
 
@@ -425,7 +425,7 @@ void VulkanCommandList::executeBufferCopyOperations(std::vector<BufferCopyOperat
     if (copyOperations.size() == 0)
         return;
 
-    beginDebugLabel(std::format("Execute buffer copy operations (x{})", copyOperations.size()));
+    beginDebugLabel(fmt::format("Execute buffer copy operations (x{})", copyOperations.size()));
 
     std::vector<VkBufferMemoryBarrier> bufferMemoryBarriers {};
     for (const BufferCopyOperation& copyOperation : copyOperations) {

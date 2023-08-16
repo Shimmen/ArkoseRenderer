@@ -8,7 +8,7 @@
 #include "rendering/util/ScopedDebugZone.h"
 #include "utility/Profiling.h"
 #include <ark/rect.h>
-#include <format>
+#include <fmt/format.h>
 #include <imgui.h>
 
 void LocalLightShadowNode::drawGui()
@@ -221,7 +221,7 @@ void LocalLightShadowNode::drawSpotLightShadowMap(CommandList& cmdList, GpuScene
     ARK_ASSERT(shadowMapAllocation.light->type() == Light::Type::SpotLight);
     const Light& light = *shadowMapAllocation.light;
 
-    std::string zoneName = std::format("Light [{}]", light.name());
+    std::string zoneName = fmt::format("Light [{}]", light.name());
     ScopedDebugZone zone { cmdList, zoneName };
 
     mat4 lightProjectionFromWorld = light.viewProjection();
