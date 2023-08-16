@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.27)
 
 project(tiny_gltf LANGUAGES CXX)
 add_library(tiny_gltf tiny_gltf.cpp)
