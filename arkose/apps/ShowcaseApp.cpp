@@ -80,7 +80,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         AssetImporter importer {};
         importer.importAsLevel("assets/sample/models/CesiumMan/CesiumMan.gltf",
                                "assets/sample/models/CesiumMan/",
-                               AssetImporter::Options());
+                               AssetImporterOptions());
 
         MeshAsset* meshAsset = MeshAsset::load("assets/sample/models/CesiumMan/Cesium_Man.arkmsh");
         SkeletonAsset* skeletonAsset = SkeletonAsset::load("assets/sample/models/CesiumMan/Armature.arkskel");

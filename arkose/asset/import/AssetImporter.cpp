@@ -8,7 +8,7 @@
 #include "utility/FileIO.h"
 #include <fmt/format.h>
 
-ImportResult AssetImporter::importAsset(std::string_view assetFilePath, std::string_view targetDirectory, Options options)
+ImportResult AssetImporter::importAsset(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions options)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -25,7 +25,7 @@ ImportResult AssetImporter::importAsset(std::string_view assetFilePath, std::str
     return ImportResult();
 }
 
-ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::string_view targetDirectory, Options options)
+ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::string_view targetDirectory, AssetImporterOptions options)
 {
     FileIO::ensureDirectory(std::string(targetDirectory));
     if (targetDirectory.ends_with('/')) {
@@ -204,7 +204,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
     return result;
 }
 
-std::unique_ptr<LevelAsset> AssetImporter::importAsLevel(std::string_view assetFilePath, std::string_view targetDirectory, Options options)
+std::unique_ptr<LevelAsset> AssetImporter::importAsLevel(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions options)
 {
     ImportResult result = importAsset(assetFilePath, targetDirectory, options);
 

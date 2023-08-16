@@ -54,10 +54,10 @@ private:
     void loadMeshWithDialog();
     void saveMeshWithDialog();
 
-    AssetImporter::Options m_importOptions { .alwaysMakeImageAsset = false,
-                                             .generateMipmaps = true,
-                                             .blockCompressImages = true,
-                                             .saveMeshesInTextualFormat = false };
+    AssetImporterOptions m_importOptions { .alwaysMakeImageAsset = false,
+                                           .generateMipmaps = true,
+                                           .blockCompressImages = true,
+                                           .saveMeshesInTextualFormat = false };
 
     // Since ImGui uses `const char*` for everything and we don't have a natural storage for these names we have to keep it in here...
     std::vector<std::string> m_segmentNameCache {};
