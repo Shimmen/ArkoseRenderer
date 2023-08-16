@@ -1,7 +1,12 @@
 #include "Backend.h"
 
-#include "rendering/backend/d3d12/D3D12Backend.h"
+#if WITH_VULKAN
 #include "rendering/backend/vulkan/VulkanBackend.h"
+#endif
+
+#if WITH_D3D12
+#include "rendering/backend/d3d12/D3D12Backend.h"
+#endif
 
 Backend* Backend::s_globalBackend { nullptr };
 
@@ -11,10 +16,18 @@ Backend& Backend::create(Backend::Type backendType, GLFWwindow* window, const Ba
 
     switch (backendType) {
     case Backend::Type::Vulkan:
+        #if WITH_VULKAN
         s_globalBackend = new VulkanBackend({}, window, appSpecification);
+        #else
+        ARKOSE_LOG_FATAL("Trying to create Vulkan backend which is not included in this build, exiting.");
+        #endif
         break;
     case Backend::Type::D3D12:
+        #if WITH_D3D12
         s_globalBackend = new D3D12Backend({}, window, appSpecification);
+        #else
+        ARKOSE_LOG_FATAL("Trying to create D3D12 backend which is not included in this build, exiting.");
+        #endif
         break;
     }
 

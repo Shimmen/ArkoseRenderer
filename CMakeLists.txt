@@ -8,6 +8,25 @@ project(ArkoseRenderer)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
+# Set default c++ version
+set(CMAKE_CXX_STANDARD 20)
+
+##################################
+######### PLATFORM SETUP #########
+##################################
+
+set(ARKOSE_BACKEND_VULKAN false)
+set(ARKOSE_BACKEND_D3D12  false)
+
+if (WIN32)
+    set(ARKOSE_BACKEND_VULKAN true)
+    set(ARKOSE_BACKEND_D3D12  true)
+elseif (APPLE)
+    set(ARKOSE_BACKEND_VULKAN true)
+else()
+    message(SEND_ERROR "Platform unsupported")
+endif()
+
 ##################################
 #### THIRD-PARTY DEPENDENCIES ####
 ##################################
@@ -15,8 +34,10 @@ set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 ##################################
 # VulkanSDK dependencies
 
-find_package(Vulkan REQUIRED)
-find_package(Shaderc REQUIRED)
+if (ARKOSE_BACKEND_VULKAN)
+    find_package(Vulkan REQUIRED)
+    find_package(Shaderc REQUIRED) # TODO: Provide alternate route for Shaderc? Or just require Vulkan backend..
+endif()
 
 ##################################
 # In-tree built dependencies
@@ -28,7 +49,7 @@ add_subdirectory(arklib)
 ###### MAIN TARGET: ARKOSE #######
 ##################################
 
-set(ARKOSE_SOURCES
+add_executable(ArkoseRenderer
     arkose/main.cpp
     arkose/animation/Animation.cpp
     arkose/apps/BootstrappingApp.cpp
@@ -78,30 +99,6 @@ set(ARKOSE_SOURCES
     arkose/rendering/backend/base/Texture.cpp
     arkose/rendering/backend/util/StateBindings.cpp
     arkose/rendering/backend/util/UploadBuffer.cpp
-    arkose/rendering/backend/d3d12/D3D12Backend.cpp
-    arkose/rendering/backend/d3d12/D3D12BindingSet.cpp
-    arkose/rendering/backend/d3d12/D3D12Buffer.cpp
-    arkose/rendering/backend/d3d12/D3D12CommandList.cpp
-    arkose/rendering/backend/d3d12/D3D12ComputeState.cpp
-    arkose/rendering/backend/d3d12/D3D12RenderState.cpp
-    arkose/rendering/backend/d3d12/D3D12RenderTarget.cpp
-    arkose/rendering/backend/d3d12/D3D12Texture.cpp
-    arkose/rendering/backend/vulkan/VulkanBackend.cpp
-    arkose/rendering/backend/vulkan/VulkanBindingSet.cpp
-    arkose/rendering/backend/vulkan/VulkanBuffer.cpp
-    arkose/rendering/backend/vulkan/VulkanCommandList.cpp
-    arkose/rendering/backend/vulkan/VulkanComputeState.cpp
-    arkose/rendering/backend/vulkan/VulkanRenderState.cpp
-    arkose/rendering/backend/vulkan/VulkanRenderTarget.cpp
-    arkose/rendering/backend/vulkan/VulkanTexture.cpp
-    arkose/rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.cpp
-    arkose/rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.cpp
-    arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.cpp
-    arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.cpp
-    arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.cpp
-    arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingNV.cpp
-    arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanAccelerationStructureNV.cpp
-    arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingStateNV.cpp
     arkose/rendering/debug/DebugDrawer.cpp
     arkose/rendering/meshlet/MeshletCuller.cpp
     arkose/rendering/meshlet/MeshletManager.cpp
@@ -154,11 +151,56 @@ set(ARKOSE_SOURCES
     arkose/utility/Input.cpp
     )
 
-if(MSVC)
-    list(APPEND ARKOSE_SOURCES "arkose/Arkose.natvis")
+if (ARKOSE_BACKEND_VULKAN)
+    target_compile_definitions(ArkoseRenderer PRIVATE WITH_VULKAN)
+    target_sources(ArkoseRenderer PRIVATE
+        arkose/rendering/backend/vulkan/VulkanBackend.cpp
+        arkose/rendering/backend/vulkan/VulkanBindingSet.cpp
+        arkose/rendering/backend/vulkan/VulkanBuffer.cpp
+        arkose/rendering/backend/vulkan/VulkanCommandList.cpp
+        arkose/rendering/backend/vulkan/VulkanComputeState.cpp
+        arkose/rendering/backend/vulkan/VulkanRenderState.cpp
+        arkose/rendering/backend/vulkan/VulkanRenderTarget.cpp
+        arkose/rendering/backend/vulkan/VulkanTexture.cpp
+        arkose/rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.cpp
+        arkose/rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.cpp
+        arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.cpp
+        arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.cpp
+        arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.cpp
+        arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingNV.cpp
+        arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanAccelerationStructureNV.cpp
+        arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingStateNV.cpp
+        )
+    target_link_libraries(ArkoseRenderer PRIVATE
+        Vulkan::Vulkan
+        VulkanMemoryAllocator
+        )
 endif()
 
-add_executable(ArkoseRenderer ${ARKOSE_SOURCES})
+if (ARKOSE_BACKEND_D3D12)
+    target_compile_definitions(ArkoseRenderer PRIVATE WITH_D3D12)
+    target_sources(ArkoseRenderer PRIVATE
+        arkose/rendering/backend/d3d12/D3D12Backend.cpp
+        arkose/rendering/backend/d3d12/D3D12BindingSet.cpp
+        arkose/rendering/backend/d3d12/D3D12Buffer.cpp
+        arkose/rendering/backend/d3d12/D3D12CommandList.cpp
+        arkose/rendering/backend/d3d12/D3D12ComputeState.cpp
+        arkose/rendering/backend/d3d12/D3D12RenderState.cpp
+        arkose/rendering/backend/d3d12/D3D12RenderTarget.cpp
+        arkose/rendering/backend/d3d12/D3D12Texture.cpp
+        )
+    target_link_libraries(ArkoseRenderer PRIVATE
+        d3d12 dxgi dxguid  # core stuff
+        dxcompiler # for HLSL shader compilation
+        DirectX-Headers # utility stuff, e.g. CD3DX12
+        spirv-cross-hlsl # for spirv->hlsl transpiling
+        )
+endif()
+
+if(MSVC)
+    target_sources(ArkoseRenderer "arkose/Arkose.natvis")
+endif()
+
 target_include_directories(ArkoseRenderer PRIVATE arkose/)
 
 target_link_libraries(ArkoseRenderer PRIVATE
@@ -181,16 +223,6 @@ target_link_libraries(ArkoseRenderer PRIVATE
     # Shader backend
     Shaderc::Shaderc # glsl shader compiler
     spirv-cross-core # generic spir-v reflection
-
-    # Vulkan backend
-    Vulkan::Vulkan
-    VulkanMemoryAllocator
-
-    # D3D12 backend
-    d3d12 dxgi dxguid  # core stuff
-    dxcompiler # for HLSL shader compilation
-    DirectX-Headers # utility stuff, e.g. CD3DX12
-    spirv-cross-hlsl # for spirv->hlsl transpiling
 
     # Asset related
     stb_image # image loading
