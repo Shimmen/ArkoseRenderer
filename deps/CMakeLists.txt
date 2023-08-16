@@ -36,7 +36,7 @@ FetchContent_Declare(glfw
 
 FetchContent_Declare(nativefiledialog-extended
     GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
-    GIT_TAG        "33115928184cc3cc1b945a0f94bbc574d137224c")
+    GIT_TAG        "v1.0.3")
 
 FetchContent_Declare(vulkan_memory_allocator
     GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
