@@ -34,7 +34,7 @@ namespace ark {
 template<typename TypeTag>
 struct Handle {
 
-    using IndexType = uint64_t;
+    using IndexType = u64;
 
     static constexpr IndexType InvalidIndex = std::numeric_limits<IndexType>::max();
 
@@ -83,20 +83,20 @@ bool operator==(Handle<TypeTag> const& lhs, Handle<TypeTag> const& rhs)
 
 } // namespace ark
 
-namespace std {
-template<typename>
-struct hash;
-}
+//namespace std {
+//template<typename>
+//struct hash;
+//}
 
 // Use this #define to define your own custom "strong typedef" handle
-#define ARK_DEFINE_HANDLE_TYPE(HandleType)                                                    \
-    struct HandleType : Handle<struct HandleType##TypeTag> { using ark::Handle::Handle; };    \
-    namespace std {                                                                           \
-        template<>                                                                            \
-        struct hash<HandleType> {                                                             \
-            std::size_t operator()(const HandleType& handle) const                            \
-            {                                                                                 \
-                return std::hash<HandleType::IndexType>()(handle.index());                    \
-            }                                                                                 \
-        };                                                                                    \
+#define ARK_DEFINE_HANDLE_TYPE(HandleType)                                                                                  \
+    struct HandleType : ark::Handle<struct HandleType##TypeTag> { using ark::Handle<struct HandleType##TypeTag>::Handle; }; \
+    namespace std {                                                                                                         \
+        template<>                                                                                                          \
+        struct hash<HandleType> {                                                                                           \
+            std::size_t operator()(const HandleType& handle) const                                                          \
+            {                                                                                                               \
+                return std::hash<HandleType::IndexType>()(handle.index());                                                  \
+            }                                                                                                               \
+        };                                                                                                                  \
     }
