@@ -4,6 +4,7 @@
 #include "core/Types.h"
 #include "utility/Hash.h"
 #include <ark/vector.h>
+#include <cstdint>
 
 struct Extent2D {
     constexpr Extent2D()
@@ -124,8 +125,8 @@ namespace std {
     struct hash<Extent2D> {
         std::size_t operator()(const Extent2D& extent) const
         {
-            auto widthHash = std::hash<uint32_t>()(extent.width());
-            auto heightHash = std::hash<uint32_t>()(extent.height());
+            auto widthHash = std::hash<std::uint32_t>()(extent.width());
+            auto heightHash = std::hash<std::uint32_t>()(extent.height());
             return hashCombine(widthHash, heightHash);
         }
     };
@@ -134,9 +135,9 @@ namespace std {
     struct hash<Extent3D> {
         std::size_t operator()(const Extent3D& extent) const
         {
-            auto widthHash = std::hash<uint32_t>()(extent.width());
-            auto heightHash = std::hash<uint32_t>()(extent.height());
-            auto depthHash = std::hash<uint32_t>()(extent.depth());
+            auto widthHash = std::hash<std::uint32_t>()(extent.width());
+            auto heightHash = std::hash<std::uint32_t>()(extent.height());
+            auto depthHash = std::hash<std::uint32_t>()(extent.depth());
             return hashCombine(widthHash, hashCombine(heightHash, depthHash));
         }
     };
