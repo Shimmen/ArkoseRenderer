@@ -41,6 +41,8 @@ VkBool32 VulkanDebugUtils::debugMessageCallback(VkDebugUtilsMessageSeverityFlagB
     case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
         ARKOSE_LOG(Verbose, "Vulkan debug message; {}", pCallbackData->pMessage);
         break;
+    default:
+        ASSERT_NOT_REACHED();
     }
 
     return VK_FALSE;
