@@ -147,7 +147,7 @@ if(NOT bc7enc_rdo_fetch_POPULATED)
         )
     target_include_directories(bc7enc_lib INTERFACE ${bc7enc_rdo_fetch_SOURCE_DIR})
 
-    find_package(OpenMP REQUIRED)
+    find_package(OpenMP)
     if(OPENMP_FOUND)
         target_link_libraries(bc7enc_lib PRIVATE OpenMP::OpenMP_CXX)
     endif()
