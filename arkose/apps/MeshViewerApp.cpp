@@ -192,7 +192,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
                     // Preload the cache first time around (or if the segment count is massive)..
                     // We can never have this list grow during rendering of this ImGui frame.
                     if (lod.meshSegments.size() > m_segmentNameCache.size()) {
-                        size_t numSegmentNames = std::max(1'000ull, lod.meshSegments.size());
+                        size_t numSegmentNames = std::max(static_cast<size_t>(1'000), lod.meshSegments.size());
                         for (int idx = 0; idx < numSegmentNames; ++idx) {
                             m_segmentNameCache.push_back(fmt::format("segment{:03}", idx));
                         }
