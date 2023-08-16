@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include <ark/badge.h>
+#include "core/Badge.h"
 #include "core/math/Frustum.h"
 #include "utility/Extent.h"
 #include "utility/Input.h"
