@@ -88,6 +88,44 @@ struct tquat<T, ENABLE_STRUCT_IF_FLOATING_POINT(T)> {
 };
 
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr tquat<T> quatFromMatrix(const tmat4<T>& m)
+{
+    // This function is a rewritten version of Mike Day's "Converting a Rotation Matrix to a Quaternion" code. Probably not official,
+    // but a copy of the document can be found at https://d3cw3dd2w32x2b.cloudfront.net/wp-content/uploads/2015/01/matrix-to-quat.pdf
+
+    const T& m00 = m.x.x;
+    const T& m11 = m.y.y;
+    const T& m22 = m.z.z;
+
+    tquat<T> q;
+    T t = static_cast<T>(1);
+
+    if (m22 < static_cast<T>(0)) {
+        if (m00 > m11) {
+            t += +m00 - m11 - m22;
+            q = { { t, m.x.y + m.y.x, m.z.x + m.x.z }, m.y.z - m.z.y };
+        } else {
+            t += -m00 + m11 - m22;
+            q = { { m.x.y + m.y.x, t, m.y.z + m.z.y }, m.z.x - m.x.z };
+        }
+    } else {
+        if (m00 < -m11) {
+            t += -m00 - m11 + m22;
+            q = { { m.z.x + m.x.z, m.y.z + m.z.y, t }, m.x.y - m.y.x };
+        } else {
+            t += +m00 + m11 + m22;
+            q = { { m.y.z - m.z.y, m.z.x - m.x.z, m.x.y - m.y.x }, t };
+        }
+    }
+
+    T scale = static_cast<T>(0.5) / std::sqrt(t);
+    q.vec *= scale;
+    q.w *= scale;
+
+    return q;
+}
+
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
 constexpr tquat<T> inverse(const tquat<T>& q)
 {
     T denominator = ark::length2(q.vec) + ark::square(q.w);
@@ -104,7 +142,7 @@ constexpr tquat<T> axisAngle(const tvec3<T>& axis, T angle)
 }
 
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
-constexpr tquat<T> lookRotation(const tvec3<T>& forward, const tvec3<T>& tempUp)
+tquat<T> lookRotation(const tvec3<T>& forward, const tvec3<T>& tempUp)
 {
     tvec3<T> right = cross(forward, tempUp);
     tvec3<T> up = cross(right, forward);
@@ -209,44 +247,6 @@ constexpr tmat4<T> quatToMatrix(const tquat<T>& q)
     res.w.w = static_cast<T>(1);
 
     return res;
-}
-
-template<typename T, ENABLE_IF_FLOATING_POINT(T)>
-constexpr tquat<T> quatFromMatrix(const tmat4<T>& m)
-{
-    // This function is a rewritten version of Mike Day's "Converting a Rotation Matrix to a Quaternion" code. Probably not official,
-    // but a copy of the document can be found at https://d3cw3dd2w32x2b.cloudfront.net/wp-content/uploads/2015/01/matrix-to-quat.pdf
-
-    const T& m00 = m.x.x;
-    const T& m11 = m.y.y;
-    const T& m22 = m.z.z;
-
-    tquat<T> q;
-    T t = static_cast<T>(1);
-
-    if (m22 < static_cast<T>(0)) {
-        if (m00 > m11) {
-            t += +m00 - m11 - m22;
-            q = { { t, m.x.y + m.y.x, m.z.x + m.x.z }, m.y.z - m.z.y };
-        } else {
-            t += -m00 + m11 - m22;
-            q = { { m.x.y + m.y.x, t, m.y.z + m.z.y }, m.z.x - m.x.z };
-        }
-    } else {
-        if (m00 < -m11) {
-            t += -m00 - m11 + m22;
-            q = { { m.z.x + m.x.z, m.y.z + m.z.y, t }, m.x.y - m.y.x };
-        } else {
-            t += +m00 + m11 + m22;
-            q = { { m.y.z - m.z.y, m.z.x - m.x.z, m.x.y - m.y.x }, t };
-        }
-    }
-
-    T scale = static_cast<T>(0.5) / std::sqrt(t);
-    q.vec *= scale;
-    q.w *= scale;
-
-    return q;
 }
 
 using quat = tquat<Float>;
