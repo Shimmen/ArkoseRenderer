@@ -23,6 +23,8 @@ public:
         Jolt,
     };
 
+    virtual ~PhysicsBackend() {}
+
     static PhysicsBackend* create(PhysicsBackend::Type);
     static void destroy();
 

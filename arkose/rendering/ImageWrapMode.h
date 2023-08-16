@@ -13,7 +13,7 @@ static constexpr std::array<const char*, 3> ImageWrapModeNames = { "Repeat",
                                                                    "MirroredRepeat",
                                                                    "ClampToEdge" };
 
-static const char* ImageWrapModeName(ImageWrapMode wrapMode)
+static inline const char* ImageWrapModeName(ImageWrapMode wrapMode)
 {
     size_t idx = static_cast<size_t>(wrapMode);
     return ImageWrapModeNames[idx];

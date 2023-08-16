@@ -471,9 +471,9 @@ ShaderDefine VulkanBackend::rayTracingShaderDefine() const
         return ShaderDefine::makeSymbol("RAY_TRACING_BACKEND_NV");
     case RayTracingBackend::KhrExtension:
         return ShaderDefine::makeSymbol("RAY_TRACING_BACKEND_KHR");
+    default:
+        return ShaderDefine();
     }
-
-    return ShaderDefine();
 }
 
 std::unique_ptr<Buffer> VulkanBackend::createBuffer(size_t size, Buffer::Usage usage, Buffer::MemoryHint memoryHint)

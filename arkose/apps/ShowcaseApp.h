@@ -8,7 +8,7 @@
 
 class ShowcaseApp : public App {
 public:
-    std::vector<Backend::Capability> requiredCapabilities();
+    std::vector<Backend::Capability> requiredCapabilities() override;
     void setup(Scene&, RenderPipeline&) override;
     bool update(Scene&, float elapsedTime, float deltaTime) override;
 

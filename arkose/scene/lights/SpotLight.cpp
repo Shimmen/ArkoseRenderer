@@ -10,8 +10,8 @@ SpotLight::SpotLight()
 
 SpotLight::SpotLight(vec3 color, float luminousIntensity, const std::string& iesProfilePath, vec3 position, vec3 direction)
     : Light(Type::SpotLight, color)
-    , m_luminousIntensity(luminousIntensity)
     , m_iesProfile(iesProfilePath)
+    , m_luminousIntensity(luminousIntensity)
 {
     quat orientation = ark::lookRotation(normalize(direction), ark::globalUp);
     transform().setOrientationInWorld(orientation);

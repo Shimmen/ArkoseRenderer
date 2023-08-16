@@ -11,9 +11,9 @@
 class Backend;
 class BottomLevelAS;
 class MeshSegmentAsset;
-class SkeletalMeshInstance;
 class StaticMesh;
-class StaticMeshSegment;
+struct SkeletalMeshInstance;
+struct StaticMeshSegment;
 
 struct VertexAllocation {
     u32 firstVertex { 0 };

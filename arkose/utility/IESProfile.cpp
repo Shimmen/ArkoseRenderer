@@ -175,7 +175,7 @@ void IESProfile::parse(const std::string& path)
     m_height = parseContext.nextAsFloat("height");
 
     m_ballastFactor = parseContext.nextAsFloat("ballast factor");
-    float futureUse = parseContext.nextAsFloat("future use");
+    [[maybe_unused]] float futureUse = parseContext.nextAsFloat("future use");
     m_inputWatts = parseContext.nextAsFloat("input watts");
 
     m_anglesV.reserve(numAnglesV);

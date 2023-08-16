@@ -118,9 +118,9 @@ bool ArkoseObjectVsBroadPhaseLayerFilter::ShouldCollide(JPH::ObjectLayer objectL
     case PhysicsLayer::Moving:
         // Moving objects can always collide with all the broad phases
         return true;
+    default:
+        ASSERT_NOT_REACHED();
     }
-
-    ASSERT_NOT_REACHED();
 }
 
 JoltPhysicsBackend::JoltPhysicsBackend()

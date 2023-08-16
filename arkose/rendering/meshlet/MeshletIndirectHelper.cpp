@@ -53,7 +53,7 @@ void MeshletIndirectHelper::executeMeshletIndirectSetup(GpuScene& scene, Command
     }
     cmdList.executeBufferCopyOperations(uploadBuffer);
 
-    const u32 drawableCount = scene.drawableCountForFrame();
+    const u32 drawableCount = narrow_cast<u32>(scene.drawableCountForFrame());
 
     for (MeshletIndirectSetupDispatch const& dispatch : state.dispatches) {
         cmdList.setComputeState(*dispatch.taskSetupComputeState);

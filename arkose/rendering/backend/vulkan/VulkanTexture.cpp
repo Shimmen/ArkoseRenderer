@@ -72,7 +72,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
         attachmentCapable = false;
         break;
     case Texture::Format::Unknown:
-        ARKOSE_LOG(Fatal, "Trying to create new texture with format Unknown, which is not allowed!");
+        ARKOSE_LOG_FATAL("Trying to create new texture with format Unknown, which is not allowed!");
     default:
         ASSERT_NOT_REACHED();
     }

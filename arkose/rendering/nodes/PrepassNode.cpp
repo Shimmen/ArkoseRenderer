@@ -60,7 +60,6 @@ RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, 
 {
     Shader shader {};
     std::vector<VertexLayout> vertexLayout {};
-    BindingSet* drawablesBindingSet = nullptr;
     const char* stateName = "";
     LoadOp loadOp = LoadOp::Clear;
 
@@ -68,14 +67,12 @@ RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, 
     case PassType::Opaque:
         shader = Shader::createVertexOnly("forward/prepass.vert");
         vertexLayout = { scene.vertexManager().positionVertexLayout() };
-        drawablesBindingSet = reg.getBindingSet("MainViewCulledDrawablesOpaqueSet");
         stateName = "PrepassOpaque";
         loadOp = LoadOp::Clear;
         break;
     case PassType::Masked:
         shader = Shader::createBasicRasterize("forward/prepassMasked.vert", "forward/prepassMasked.frag");
         vertexLayout = { scene.vertexManager().positionVertexLayout(), scene.vertexManager().nonPositionVertexLayout() };
-        drawablesBindingSet = reg.getBindingSet("MainViewCulledDrawablesMaskedSet");
         stateName = "PrepassMasked";
         loadOp = LoadOp::Load;
         break;

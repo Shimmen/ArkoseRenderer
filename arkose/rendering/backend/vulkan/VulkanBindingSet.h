@@ -14,7 +14,7 @@ public:
 
     void updateBindings();
 
-    virtual void updateTextures(uint32_t index, const std::vector<TextureBindingUpdate>&);
+    virtual void updateTextures(uint32_t index, const std::vector<TextureBindingUpdate>&) override;
 
     VkDescriptorPool descriptorPool;
     VkDescriptorSetLayout descriptorSetLayout;

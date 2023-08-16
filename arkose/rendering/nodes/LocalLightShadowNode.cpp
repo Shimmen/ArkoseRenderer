@@ -76,6 +76,8 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
             case Light::Type::SphereLight:
                 //NOT_YET_IMPLEMENTED();
                 break;
+            default:
+                ASSERT_NOT_REACHED();
             }
         }
 

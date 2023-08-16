@@ -19,7 +19,7 @@ public:
     virtual ~Light() { }
 
     vec3 color() const { return m_color; }
-    vec3 setColor(vec3 color) { m_color = color; }
+    void setColor(vec3 color) { m_color = color; }
 
     Type type() const { return m_type; }
 

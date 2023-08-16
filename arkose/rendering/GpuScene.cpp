@@ -1528,7 +1528,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
         if (ImGui::BeginTabItem("Managed textures")) {
 
-            ImGui::Text("Number of managed textures: %d", m_managedTextures.size());
+            ImGui::Text("Number of managed textures: %ul", m_managedTextures.size());
 
             float managedTexturesTotalGB = ark::conversion::to::GB(m_managedTexturesVramUsage);
             ImGui::Text("Using %.2f GB", managedTexturesTotalGB);

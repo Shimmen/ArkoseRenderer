@@ -47,7 +47,7 @@ private:
 
     struct CompiledShader {
         CompiledShader() = default;
-        explicit CompiledShader(ShaderManager&, const ShaderFile&, std::string resolvedPath);
+        CompiledShader(ShaderManager&, const ShaderFile&, std::string resolvedPath);
 
         bool tryLoadingFromBinaryCache();
         bool recompile();

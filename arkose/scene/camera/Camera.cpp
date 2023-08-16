@@ -487,10 +487,10 @@ void Camera::drawManualExposureGui()
 
 void Camera::drawAutomaticExposureGui()
 {
-    ImGui::Text("Adaption rate", &m_adaptionRate);
+    ImGui::Text("Adaption rate");
     ImGui::SliderFloat("", &m_adaptionRate, 0.0001f, 2.0f, "%.4f", ImGuiSliderFlags_Logarithmic);
 
-    ImGui::Text("Exposure Compensation", &m_exposureCompensation);
+    ImGui::Text("Exposure Compensation");
     ImGui::SliderFloat("ECs", &m_exposureCompensation, -5.0f, +5.0f, "%.1f");
 }
 

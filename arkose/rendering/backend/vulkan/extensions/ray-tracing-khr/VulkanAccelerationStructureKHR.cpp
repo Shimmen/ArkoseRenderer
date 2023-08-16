@@ -184,7 +184,6 @@ void VulkanTopLevelASKHR::build(VkCommandBuffer commandBuffer, AccelerationStruc
 void VulkanTopLevelASKHR::updateInstanceDataWithUploadBuffer(const std::vector<RTGeometryInstance>& newInstances, UploadBuffer& uploadBuffer)
 {
     updateCurrentInstanceCount(static_cast<uint32_t>(newInstances.size()));
-    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     auto updatedInstanceData = createInstanceData(newInstances);
     uploadBuffer.upload(updatedInstanceData, *instanceBuffer);
 }

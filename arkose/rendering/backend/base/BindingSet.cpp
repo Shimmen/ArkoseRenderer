@@ -14,9 +14,9 @@ static bool isBufferStorageCapable(Buffer const& buffer)
     case Buffer::Usage::StorageBuffer:
     case Buffer::Usage::IndirectBuffer:
         return true;
+    default:
+        return false;
     }
-
-    return false;
 }
 
 static bool isTextureStorageCapable(Texture& texture)

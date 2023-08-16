@@ -3,7 +3,11 @@
 #include "core/Assert.h"
 #include "core/Logging.h"
 
-#define WITH_LIFETIME_TRACKING not defined(NDEBUG)
+#if defined(NDEBUG)
+ #define WITH_LIFETIME_TRACKING 0
+#else
+ #define WITH_LIFETIME_TRACKING 1
+#endif
 
 namespace {
 #if WITH_LIFETIME_TRACKING

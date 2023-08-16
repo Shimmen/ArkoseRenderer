@@ -93,6 +93,8 @@ Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageForm
             return Format::RGBA32F;
         case ImageFormat::BC7:
             return Format::BC7sRGB;
+        default:
+            ASSERT_NOT_REACHED();
         }
 
         // TODO: Add fmt support for flatbuffers enums!
@@ -120,13 +122,14 @@ Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageForm
         NOT_YET_IMPLEMENTED();
     case ImageFormat::RGBA32F:
         return Format::RGBA32F;
+    case ImageFormat::BC5:
+        return Format::BC5;
     case ImageFormat::BC7:
         return Format::BC7;
+    default:
+        ARKOSE_LOG_FATAL("No good conversion from image format {}", static_cast<int>(imageFormat));
+        return Format::Unknown;
     }
-
-    // TODO: Add fmt support for flatbuffers enums!
-    ARKOSE_LOG_FATAL("No good conversion from image format {}", static_cast<int>(imageFormat));
-    return Format::Unknown;
 }
 
 const Extent2D Texture::extentAtMip(uint32_t mip) const

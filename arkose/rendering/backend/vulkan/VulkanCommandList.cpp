@@ -1242,7 +1242,7 @@ void VulkanCommandList::buildBottomLevelAcceratationStructure(BottomLevelAS& bla
         khrBlas.build(m_commandBuffer, buildType);
     } break;
     case VulkanBackend::RayTracingBackend::NvExtension: {
-        auto& rtxBlas = static_cast<VulkanBottomLevelASNV&>(blas);
+        [[maybe_unused]] auto& rtxBlas = static_cast<VulkanBottomLevelASNV&>(blas);
         NOT_YET_IMPLEMENTED();
     } break;
     }

@@ -102,8 +102,8 @@ private:
     std::vector<StaticMeshLOD> m_lods {};
 
     // LOD settings for rendering
-    u32 m_minLod { 0 };
-    u32 m_maxLod { UINT32_MAX };
+    [[maybe_unused]] u32 m_minLod { 0 };
+    [[maybe_unused]] u32 m_maxLod { UINT32_MAX };
 
     // Immutable bounding box, pre object transform
     ark::aabb3 m_boundingBox {};

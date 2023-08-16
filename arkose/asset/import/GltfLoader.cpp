@@ -85,7 +85,6 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
     ParallelFor(imageCount, [&](size_t idx) {
 
         tinygltf::Texture& gltfTexture = gltfModel.textures[idx];
-        tinygltf::Sampler& gltfSampler = gltfModel.samplers[gltfTexture.sampler];
         tinygltf::Image& gltfImage = gltfModel.images[gltfTexture.source];
 
         std::unique_ptr<ImageAsset> image {};
@@ -456,7 +455,7 @@ std::unique_ptr<AnimationAsset> GltfLoader::createAnimation(tinygltf::Model cons
             channelAsset.targetProperty = targetProperty;
             channelAsset.targetReference = targetName;
 
-            channelAsset.sampler.inputTrackIdx = inputTrackIdxLookup[gltfAnimationSampler.input];
+            channelAsset.sampler.inputTrackIdx = narrow_cast<u32>(inputTrackIdxLookup[gltfAnimationSampler.input]);
             channelAsset.sampler.interpolation = interpolation;
 
             // Animated value (output)
@@ -502,7 +501,7 @@ std::unique_ptr<SkeletonAsset> GltfLoader::createSkeleton(tinygltf::Model const&
     tinygltf::Accessor const& invBindMatricesAccessor = gltfModel.accessors[gltfSkin.inverseBindMatrices];
     ARKOSE_ASSERT(invBindMatricesAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
     ARKOSE_ASSERT(invBindMatricesAccessor.type == TINYGLTF_TYPE_MAT4);
-    mat4 const* firstInvBindMatrix = getTypedMemoryBufferForAccessor<mat4>(gltfModel, invBindMatricesAccessor);
+    [[maybe_unused]] mat4 const* firstInvBindMatrix = getTypedMemoryBufferForAccessor<mat4>(gltfModel, invBindMatricesAccessor);
 
     std::unordered_map<int, int> jointIdxLookup {};
     for (int idx = 0; idx < gltfSkin.joints.size(); ++idx) {
@@ -511,7 +510,7 @@ std::unique_ptr<SkeletonAsset> GltfLoader::createSkeleton(tinygltf::Model const&
     }
 
     // This max is not immediately obvious when in an hierarchy as it is in the asset...
-    skeleton->maxJointIdx = gltfSkin.joints.size() - 1;
+    skeleton->maxJointIdx = narrow_cast<u32>(gltfSkin.joints.size() - 1);
 
     // Traverse the children of the skeleton root node and keep track of the hierarchy, but only for nodes in gltfSkin.joints
     // as there may be non-joint nodes part of the same hierarchy (may not be true but should work as an assumption I think).
