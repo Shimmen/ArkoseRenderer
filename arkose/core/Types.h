@@ -28,3 +28,10 @@ constexpr u32 narrow_cast(u64 wideValue)
     ARKOSE_ASSERT(wideValue <= static_cast<u64>(UINT32_MAX));
     return static_cast<u32>(wideValue);
 }
+
+template<>
+constexpr u32 narrow_cast(size_t wideValue)
+{
+    ARKOSE_ASSERT(wideValue <= static_cast<size_t>(UINT32_MAX));
+    return static_cast<u32>(wideValue);
+}
