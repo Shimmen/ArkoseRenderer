@@ -27,6 +27,8 @@
 #if defined(_MSC_VER)
  #include <intrin.h>
  #define ARK_DEBUG_BREAK() __debugbreak()
+#elif __has_builtin(__builtin_debugtrap)
+ #define ARK_DEBUG_BREAK() __builtin_debugtrap()
 #else
  #warning "No implementation for ARK_DEBUG_BREAK() for this platform!"
  #define ARK_DEBUG_BREAK()
