@@ -51,7 +51,6 @@ This list is not complete, it's just a showcase of various features that are imp
 
 ```
 Arkose
-|-- arklib          # custom math & utility library (not arkose specific)
 |-- arkcore         # all reusable arkose code
 |   |-- asset       # asset types, serialization, and importing
 |   |-- core        # various core features: maths, task graph, etc.

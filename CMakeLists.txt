@@ -43,7 +43,7 @@ endif()
 # In-tree built dependencies
 
 add_subdirectory(deps)
-add_subdirectory(arklib)
+add_subdirectory(deps/arklib)
 
 ##################################
 ########## CORE LIBRARY ##########
