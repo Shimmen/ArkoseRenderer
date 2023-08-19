@@ -7,11 +7,9 @@
 class SphereLight final : public Light {
 public:
     SphereLight();
+    SphereLight(LightAsset const&);
     SphereLight(vec3 color, float luminousPower, vec3 position, float lightSourceRadius);
     virtual ~SphereLight() { }
-
-    template<class Archive>
-    void serialize(Archive&);
 
     // IEditorObject interface
     virtual void drawGui() override;
@@ -40,23 +38,3 @@ private:
     float m_lightSourceRadius { 0.05f };
 
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Serialization
-
-#include <cereal/archives/binary.hpp>
-#include <cereal/archives/json.hpp>
-#include <cereal/types/polymorphic.hpp>
-
-CEREAL_REGISTER_TYPE(SphereLight)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Light, SphereLight)
-
-template<class Archive>
-void SphereLight::serialize(Archive& archive)
-{
-    archive(cereal::make_nvp("Light", cereal::base_class<Light>(this)));
-
-    archive(cereal::make_nvp("luminousPower", m_luminousPower));
-    archive(cereal::make_nvp("lightRadius", m_lightRadius));
-    archive(cereal::make_nvp("lightSourceRadius", m_lightSourceRadius));
-}

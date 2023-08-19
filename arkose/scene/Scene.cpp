@@ -3,6 +3,7 @@
 #include "asset/LevelAsset.h"
 #include "asset/MeshAsset.h"
 #include "core/Assert.h"
+#include "input/Input.h"
 #include "rendering/GpuScene.h"
 #include "rendering/debug/DebugDrawer.h"
 #include "scene/camera/Camera.h"
@@ -212,17 +213,21 @@ void Scene::addLevel(LevelAsset* levelAsset)
 
     }
 
-    for (std::unique_ptr<Light>& light : levelAsset->lights) {
-        // TODO: This will move the light out of the level asset, which we don't want. Probably make a copy of it as we're adding it?
-        addLight(std::move(light));
+    for (LightAsset const& lightAsset : levelAsset->lights) {
+        if (lightAsset.type == "DirectionalLight") {
+            addLight(std::make_unique<DirectionalLight>(lightAsset));
+        } else if (lightAsset.type == "SphereLight") {
+            addLight(std::make_unique<SphereLight>(lightAsset));
+        } else if (lightAsset.type == "SpotLight") {
+            addLight(std::make_unique<SpotLight>(lightAsset));
+        } else {
+            ARKOSE_LOG(Error, "Unknown light type '{}', ignoring", lightAsset.type);
+        }
     }
 
-    for (Camera const& camera : levelAsset->cameras) {
-
-        // TODO: Add some nicer function for adding new cameras?
-
-        Camera& sceneCamera = addCamera("CameraName", false);
-        sceneCamera = camera;
+    for (CameraAsset const& cameraAsset : levelAsset->cameras) {
+        Camera& camera = addCamera("CameraName", false);
+        camera.setupFromCameraAsset(cameraAsset);
     }
 
     if (levelAsset->environmentMap.has_value()) {

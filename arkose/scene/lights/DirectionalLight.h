@@ -1,16 +1,15 @@
 #pragma once
 
 #include "Light.h"
+
 #include <ark/transform.h>
 
 class DirectionalLight final : public Light {
 public:
     DirectionalLight();
+    DirectionalLight(LightAsset const&);
     DirectionalLight(vec3 color, float illuminance, vec3 direction);
     virtual ~DirectionalLight() { }
-
-    template<class Archive>
-    void serialize(Archive&);
 
     // IEditorObject interface
     virtual void drawGui() override;
@@ -32,21 +31,3 @@ private:
     // TODO: Actually use physically based units!
     float m_illuminance { 1.0f };
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Serialization
-
-#include <cereal/archives/binary.hpp>
-#include <cereal/archives/json.hpp>
-#include <cereal/types/polymorphic.hpp>
-
-CEREAL_REGISTER_TYPE(DirectionalLight)
-CEREAL_REGISTER_POLYMORPHIC_RELATION(Light, DirectionalLight)
-
-template<class Archive>
-void DirectionalLight::serialize(Archive& archive)
-{
-    archive(cereal::make_nvp("Light", cereal::base_class<Light>(this)));
-
-    archive(cereal::make_nvp("illuminance", m_illuminance));
-}

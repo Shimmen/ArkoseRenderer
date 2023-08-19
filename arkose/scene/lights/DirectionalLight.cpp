@@ -1,5 +1,6 @@
 #include "DirectionalLight.h"
 
+#include "asset/LevelAsset.h"
 #include <ark/quaternion.h>
 #include <ark/transform.h>
 #include <imgui.h>
@@ -7,6 +8,16 @@
 DirectionalLight::DirectionalLight()
     : Light(Type::DirectionalLight, vec3(1.0f))
 {
+}
+
+DirectionalLight::DirectionalLight(LightAsset const& asset)
+    : Light(Type::DirectionalLight, asset)
+{
+    ARKOSE_ASSERT(asset.type == "DirectionalLight");
+    ARKOSE_ASSERT(std::holds_alternative<DirectionalLightAssetData>(asset.data));
+
+    auto const& data = std::get<DirectionalLightAssetData>(asset.data);
+    m_illuminance = data.illuminance;
 }
 
 DirectionalLight::DirectionalLight(vec3 color, float illuminance, vec3 direction)

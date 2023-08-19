@@ -1,16 +1,14 @@
 #pragma once
 
-#pragma once
-
 #include "core/Badge.h"
 #include "core/math/Frustum.h"
 #include "utility/Extent.h"
-#include "utility/Input.h"
 #include <ark/matrix.h>
 #include <ark/quaternion.h>
 #include <ark/vector.h>
 #include <optional>
 
+class CameraAsset;
 class CameraController;
 class Scene;
 
@@ -18,6 +16,8 @@ class Camera final {
 public:
     Camera() = default;
     ~Camera() = default;
+
+    void setupFromCameraAsset(CameraAsset const&);
 
     void preRender(Badge<Scene>);
     void postRender(Badge<Scene>);
@@ -118,9 +118,6 @@ public:
     void setController(Badge<CameraController>, CameraController* controller) { m_controller = controller; }
     CameraController* controller() { return m_controller; }
 
-    template<class Archive>
-    void serialize(Archive&);
-
 protected:
     void markAsModified() { m_modified = true; }
 
@@ -216,81 +213,3 @@ private:
 
     bool m_modified { true };
 };
-
-
-////////////////////////////////////////////////////////////////////////////////
-// Serialization
-
-#include <cereal/cereal.hpp>
-#include <cereal/types/optional.hpp>
-#include <cereal/types/string.hpp>
-#include <cereal/types/vector.hpp>
-
-template<class Archive>
-std::string save_minimal(Archive const&, Camera::FocusMode const& focusMode)
-{
-    if (focusMode == Camera::FocusMode::Auto) {
-        return "Auto";
-    } else if (focusMode == Camera::FocusMode::Manual) {
-        return "Manual";
-    } else {
-        ASSERT_NOT_REACHED();
-    }
-}
-
-template<class Archive>
-void load_minimal(Archive const&, Camera::FocusMode& focusMode, std::string const& value)
-{
-    if (value == "Auto") {
-        focusMode = Camera::FocusMode::Auto;
-    } else if (value == "Manual") {
-        focusMode = Camera::FocusMode::Manual;
-    } else {
-        ASSERT_NOT_REACHED();
-    }
-}
-
-template<class Archive>
-std::string save_minimal(Archive const&, Camera::ExposureMode const& exposureMode)
-{
-    if (exposureMode == Camera::ExposureMode::Auto) {
-        return "Auto";
-    } else if (exposureMode == Camera::ExposureMode::Manual) {
-        return "Manual";
-    } else {
-        ASSERT_NOT_REACHED();
-    }
-}
-
-template<class Archive>
-void load_minimal(Archive const&, Camera::ExposureMode& exposureMode, std::string const& value)
-{
-    if (value == "Auto") {
-        exposureMode = Camera::ExposureMode::Auto;
-    } else if (value == "Manual") {
-        exposureMode = Camera::ExposureMode::Manual;
-    } else {
-        ASSERT_NOT_REACHED();
-    }
-}
-
-template<class Archive>
-void Camera::serialize(Archive& archive)
-{
-    archive(cereal::make_nvp("position", m_position));
-    archive(cereal::make_nvp("orientation", m_orientation));
-
-    archive(cereal::make_nvp("focusMode", m_focusMode));
-    archive(cereal::make_nvp("focalLength", m_focalLength));
-    archive(cereal::make_nvp("focusDepth", m_focusDepth));
-    archive(cereal::make_nvp("sensorSize", m_sensorSize));
-
-    archive(cereal::make_nvp("exposureMode", m_exposureMode));
-    
-    archive(cereal::make_nvp("fNumber", m_fNumber));
-    archive(cereal::make_nvp("iso", m_iso));
-    archive(cereal::make_nvp("shutterSpeed", m_shutterSpeed));
-
-    archive(cereal::make_nvp("exposureCompensation", m_exposureCompensation));
-    archive(cereal::make_nvp("adaptionRate", m_adaptionRate));
-}

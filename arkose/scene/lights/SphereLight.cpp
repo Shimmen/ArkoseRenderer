@@ -1,5 +1,6 @@
 #include "SphereLight.h"
 
+#include "asset/LevelAsset.h"
 #include "core/Assert.h"
 #include "rendering/debug/DebugDrawer.h"
 #include "scene/lights/LightAttenuation.h"
@@ -8,6 +9,18 @@
 SphereLight::SphereLight()
     : Light(Type::SphereLight, vec3(1.0f))
 {
+}
+
+SphereLight::SphereLight(LightAsset const& asset)
+    : Light(Type::SphereLight, asset)
+{
+    ARKOSE_ASSERT(asset.type == "SphereLight");
+    ARKOSE_ASSERT(std::holds_alternative<SphereLightAssetData>(asset.data));
+
+    auto const& data = std::get<SphereLightAssetData>(asset.data);
+    m_luminousPower = data.luminousPower;
+    m_lightRadius = data.lightRadius;
+    m_lightSourceRadius = data.lightSourceRadius;
 }
 
 SphereLight::SphereLight(vec3 color, float luminousPower, vec3 position, float lightSourceRadius)

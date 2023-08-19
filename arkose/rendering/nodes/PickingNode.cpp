@@ -1,9 +1,9 @@
 #include "PickingNode.h"
 
+#include "input/Input.h"
 #include "rendering/GpuScene.h"
 #include "rendering/StaticMesh.h"
 #include "scene/camera/CameraController.h"
-#include "utility/Input.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 #include <ark/vector.h>

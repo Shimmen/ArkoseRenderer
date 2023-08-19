@@ -1,5 +1,6 @@
 #include "ShowcaseApp.h"
 
+#include "input/Input.h"
 #include "rendering/meshlet/MeshletDebugNode.h"
 #include "rendering/meshlet/MeshletForwardRenderNode.h"
 #include "rendering/meshlet/MeshletVisibilityBufferRenderNode.h"
@@ -30,7 +31,6 @@
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
 #include "scene/lights/DirectionalLight.h"
-#include "utility/Input.h"
 #include "utility/Profiling.h"
 #include <ark/random.h>
 #include <imgui.h>

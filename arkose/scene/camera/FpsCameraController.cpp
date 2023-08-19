@@ -1,8 +1,8 @@
 #include "FpsCameraController.h"
 
 #include "core/Assert.h"
+#include "input/Input.h"
 #include "scene/camera/Camera.h"
-#include "utility/Input.h"
 #include <ark/transform.h>
 
 void FpsCameraController::takeControlOfCamera(Camera& camera)

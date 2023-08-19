@@ -3,9 +3,6 @@
 #include "core/Types.h"
 #include <array>
 
-// For shader #define values
-#include "shaders/shared/ShaderBlendMode.h"
-
 enum class BlendMode {
     Opaque,
     Masked,
@@ -24,20 +21,6 @@ inline const char* BlendModeName(BlendMode blendMode)
 
 constexpr u64 BlendMode_Min = 0;
 constexpr u64 BlendMode_Max = 2;
-
-inline u32 blendModeToShaderBlendMode(BlendMode blendMode)
-{
-    switch (blendMode) {
-    case BlendMode::Opaque:
-        return BLEND_MODE_OPAQUE;
-    case BlendMode::Masked:
-        return BLEND_MODE_MASKED;
-    case BlendMode::Translucent:
-        return BLEND_MODE_TRANSLUCENT;
-    default:
-        ASSERT_NOT_REACHED();
-    }
-}
 
 ////////////////////////////////////////////////////////////////////////////////
 // Serialization

@@ -46,6 +46,55 @@ add_subdirectory(deps)
 add_subdirectory(arklib)
 
 ##################################
+########## CORE LIBRARY ##########
+##################################
+
+add_library(ArkoseCore STATIC
+    arkcore/asset/AnimationAsset.cpp
+    arkcore/asset/ImageAsset.cpp
+    arkcore/asset/LevelAsset.cpp
+    arkcore/asset/MaterialAsset.cpp
+    arkcore/asset/SkeletonAsset.cpp
+    arkcore/asset/MeshAsset.cpp
+    arkcore/asset/TextureCompressor.cpp
+    arkcore/asset/import/AssetImporter.cpp
+    arkcore/asset/import/GltfLoader.cpp
+    arkcore/core/math/Fibonacci.cpp
+    arkcore/core/math/Frustum.cpp
+    arkcore/core/math/Halton.cpp
+    arkcore/core/parallel/Task.cpp
+    arkcore/core/parallel/TaskGraph.cpp
+    arkcore/scene/ProbeGrid.cpp
+    arkcore/scene/Transform.cpp
+    arkcore/scene/Vertex.cpp
+    arkcore/utility/FileDialog.cpp
+    arkcore/utility/FileIO.cpp
+    )
+
+target_include_directories(ArkoseCore PUBLIC arkcore/)
+
+# todo: see if we can move some of the libraries to PRIVATE
+target_link_libraries(ArkoseCore PUBLIC
+    arklib # core arkose library (math etc.)
+
+    fmt # string formatting (TODO: replace with stl fmt in C++20)
+    half # 16-bit float
+    TracyClient # real-time profiling
+    concurrentqueue # lock-free concurrent queue
+
+    glfw # window and event management
+    nfd # native file dialogs
+
+    # Asset related
+    stb_image # image loading
+    tiny_gltf # glTF 2.0 loading
+    cereal # serialisation
+    lz4_static # generic lossless compression
+    bc7enc_lib # texture compression
+    meshoptimizer # mesh optimization & meshlet generation
+    )
+
+##################################
 ###### MAIN TARGET: ARKOSE #######
 ##################################
 
@@ -55,20 +104,7 @@ add_executable(ArkoseRenderer
     arkose/apps/BootstrappingApp.cpp
     arkose/apps/MeshViewerApp.cpp
     arkose/apps/ShowcaseApp.cpp
-    arkose/asset/AnimationAsset.cpp
-    arkose/asset/ImageAsset.cpp
-    arkose/asset/LevelAsset.cpp
-    arkose/asset/MaterialAsset.cpp
-    arkose/asset/SkeletonAsset.cpp
-    arkose/asset/MeshAsset.cpp
-    arkose/asset/TextureCompressor.cpp
-    arkose/asset/import/AssetImporter.cpp
-    arkose/asset/import/GltfLoader.cpp
-    arkose/core/math/Fibonacci.cpp
-    arkose/core/math/Frustum.cpp
-    arkose/core/math/Halton.cpp
-    arkose/core/parallel/Task.cpp
-    arkose/core/parallel/TaskGraph.cpp
+    arkose/input/Input.cpp
     arkose/physics/PhysicsScene.cpp
     arkose/physics/backend/base/PhysicsBackend.cpp
     arkose/physics/backend/jolt/JoltPhysicsBackend.cpp
@@ -131,24 +167,18 @@ add_executable(ArkoseRenderer
     arkose/rendering/nodes/TranslucencyNode.cpp
     arkose/rendering/nodes/VisibilityBufferShadingNode.cpp
     arkose/scene/MeshInstance.cpp
-    arkose/scene/ProbeGrid.cpp
     arkose/scene/Scene.cpp
-    arkose/scene/Transform.cpp
-    arkose/scene/Vertex.cpp
     arkose/scene/camera/Camera.cpp
     arkose/scene/camera/CameraController.cpp
     arkose/scene/camera/FpsCameraController.cpp
     arkose/scene/editor/EditorGizmo.cpp
     arkose/scene/lights/DirectionalLight.cpp
+    arkose/scene/lights/IESProfile.cpp
     arkose/scene/lights/Light.cpp
     arkose/scene/lights/LightAttenuation.cpp
     arkose/scene/lights/SphereLight.cpp
     arkose/scene/lights/SpotLight.cpp
     arkose/utility/AvgElapsedTimer.cpp
-    arkose/utility/FileDialog.cpp
-    arkose/utility/FileIO.cpp
-    arkose/utility/IESProfile.cpp
-    arkose/utility/Input.cpp
     )
 
 if (ARKOSE_BACKEND_VULKAN)
@@ -204,15 +234,7 @@ endif()
 target_include_directories(ArkoseRenderer PRIVATE arkose/)
 
 target_link_libraries(ArkoseRenderer PRIVATE
-    arklib # core arkose library (math etc.)
-
-    fmt # string formatting (TODO: replace with stl fmt in C++20)
-    half # 16-bit float
-    TracyClient # real-time profiling
-    concurrentqueue # lock-free concurrent queue
-
-    glfw # window and event management
-    nfd # native file dialogs
+    ArkoseCore # core arkose library
 
     dear_imgui # dear imgui - immediate mode gui
     imguizmo # gizmo extension for dear imgui
@@ -223,14 +245,6 @@ target_link_libraries(ArkoseRenderer PRIVATE
     # Shader backend
     Shaderc::Shaderc # glsl shader compiler
     spirv-cross-core # generic spir-v reflection
-
-    # Asset related
-    stb_image # image loading
-    tiny_gltf # glTF 2.0 loading
-    cereal # serialisation
-    lz4_static # generic lossless compression
-    bc7enc_lib # texture compression
-    meshoptimizer # mesh optimization & meshlet generation
     )
 
 ##################################

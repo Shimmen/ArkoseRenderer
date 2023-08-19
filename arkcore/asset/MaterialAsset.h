@@ -6,7 +6,6 @@
 #include "rendering/BlendMode.h"
 #include "rendering/ImageFilter.h"
 #include "rendering/ImageWrapMode.h"
-#include "rendering/backend/base/Texture.h"
 #include <optional>
 #include <string>
 #include <string_view>

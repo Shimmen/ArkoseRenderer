@@ -55,166 +55,155 @@
         ],
         "lights": [
             {
-                "polymorphic_id": 2147483649,
-                "polymorphic_name": "DirectionalLight",
-                "ptr_wrapper": {
-                    "valid": 1,
+                "type": "DirectionalLight",
+                "name": "sun",
+                "color": {
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                },
+                "transform": {
+                    "translation": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0
+                    },
+                    "orientation": {
+                        "x": -0.55061,
+                        "y": -0.056491,
+                        "z": 0.077118,
+                        "w": 0.807984
+                    },
+                    "scale": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    }
+                },
+                "castsShadows": true,
+                "customConstantBias": 3.5,
+                "customSlopeBias": 2.5,
+                "data": {
+                    "index": 0,
                     "data": {
-                        "Light": {
-                            "type": 0,
-                            "name": "sun",
-                            "color": {
-                                "x": 1.0,
-                                "y": 1.0,
-                                "z": 1.0
-                            },
-                            "transform": {
-                                "translation": {
-                                    "x": 0.0,
-                                    "y": 0.0,
-                                    "z": 0.0
-                                },
-                                "orientation": {
-                                    "x": -0.55061,
-                                    "y": -0.056491,
-                                    "z": 0.077118,
-                                    "w": 0.807984
-                                },
-                                "scale": {
-                                    "x": 1.0,
-                                    "y": 1.0,
-                                    "z": 1.0
-                                }
-                            },
-                            "castsShadows": true,
-                            "customConstantBias": 3.5,
-                            "customSlopeBias": 2.5
-                        },
                         "illuminance": 90000.0
                     }
                 }
             },
             {
-                "polymorphic_id": 2147483650,
-                "polymorphic_name": "SpotLight",
-                "ptr_wrapper": {
-                    "valid": 1,
+                "type": "SpotLight",
+                "name": "green-spot",
+                "color": {
+                    "x": 0.25,
+                    "y": 1.0,
+                    "z": 0.25
+                },
+                "transform": {
+                    "translation": {
+                        "x": 3.0,
+                        "y": 0.5,
+                        "z": 0.0
+                    },
+                    "orientation": {
+                        "x": 0.812348,
+                        "y": 0.234261,
+                        "z": -0.144187,
+                        "w": -0.379902
+                    },
+                    "scale": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    }
+                },
+                "castsShadows": true,
+                "customConstantBias": 1.0,
+                "customSlopeBias": 0.66,
+                "data": {
+                    "index": 2,
                     "data": {
-                        "Light": {
-                            "type": 2,
-                            "name": "green-spot",
-                            "color": {
-                                "x": 0.25,
-                                "y": 1.0,
-                                "z": 0.25
-                            },
-                            "transform": {
-                                "translation": {
-                                    "x": 3.0,
-                                    "y": 0.5,
-                                    "z": 0.0
-                                },
-                                "orientation": {
-                                    "x": 0.812348,
-                                    "y": 0.234261,
-                                    "z": -0.144187,
-                                    "w": -0.379902
-                                },
-                                "scale": {
-                                    "x": 1.0,
-                                    "y": 1.0,
-                                    "z": 1.0
-                                }
-                            },
-                            "castsShadows": true,
-                            "customConstantBias": 1.0,
-                            "customSlopeBias": 0.66
-                        },
+                        "iesProfilePath": "assets/sample/ies/multi-lobe.ies",
                         "luminousIntensity": 250.0,
-                        "outerConeAngle": 2.094395160675049,
-                        "IESProfile": "assets/sample/ies/multi-lobe.ies"
+                        "outerConeAngle": 2.094395160675049
+                        
                     }
                 }
             },
             {
-                "polymorphic_id": 2,
-                "ptr_wrapper": {
-                    "valid": 1,
+                "type": "SpotLight",
+                "name": "red-spot",
+                "color": {
+                    "x": 1.0,
+                    "y": 0.25,
+                    "z": 0.25
+                },
+                "transform": {
+                    "translation": {
+                        "x": 0.0,
+                        "y": 0.5,
+                        "z": 0.0
+                    },
+                    "orientation": {
+                        "x": 0.853553,
+                        "y": 0.0,
+                        "z": -0.0,
+                        "w": -0.353553
+                    },
+                    "scale": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    }
+                },
+                "castsShadows": true,
+                "customConstantBias": 1.0,
+                "customSlopeBias": 0.66,
+                "data": {
+                    "index": 2,
                     "data": {
-                        "Light": {
-                            "type": 2,
-                            "name": "red-spot",
-                            "color": {
-                                "x": 1.0,
-                                "y": 0.25,
-                                "z": 0.25
-                            },
-                            "transform": {
-                                "translation": {
-                                    "x": 0.0,
-                                    "y": 0.5,
-                                    "z": 0.0
-                                },
-                                "orientation": {
-                                    "x": 0.853553,
-                                    "y": 0.0,
-                                    "z": -0.0,
-                                    "w": -0.353553
-                                },
-                                "scale": {
-                                    "x": 1.0,
-                                    "y": 1.0,
-                                    "z": 1.0
-                                }
-                            },
-                            "castsShadows": true,
-                            "customConstantBias": 1.0,
-                            "customSlopeBias": 0.66
-                        },
+                        "iesProfilePath": "assets/sample/ies/multi-lobe.ies",
                         "luminousIntensity": 250.0,
-                        "outerConeAngle": 2.094395160675049,
-                        "IESProfile": "assets/sample/ies/multi-lobe.ies"
+                        "outerConeAngle": 2.094395160675049
+                        
                     }
                 }
             },
             {
-                "polymorphic_id": 2,
-                "ptr_wrapper": {
-                    "valid": 1,
+                "type": "SpotLight",
+                "name": "blue-spot",
+                "color": {
+                    "x": 0.25,
+                    "y": 0.25,
+                    "z": 1.0
+                },
+                "transform": {
+                    "translation": {
+                        "x": -3.0,
+                        "y": 0.5,
+                        "z": 0.0
+                    },
+                    "orientation": {
+                        "x": 0.812348,
+                        "y": -0.234261,
+                        "z": 0.144187,
+                        "w": -0.379902
+                    },
+                    "scale": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    }
+                },
+                "castsShadows": true,
+                "customConstantBias": 1.0,
+                "customSlopeBias": 0.66,
+                "data": {
+                    "index": 2,
                     "data": {
-                        "Light": {
-                            "type": 2,
-                            "name": "blue-spot",
-                            "color": {
-                                "x": 0.25,
-                                "y": 0.25,
-                                "z": 1.0
-                            },
-                            "transform": {
-                                "translation": {
-                                    "x": -3.0,
-                                    "y": 0.5,
-                                    "z": 0.0
-                                },
-                                "orientation": {
-                                    "x": 0.812348,
-                                    "y": -0.234261,
-                                    "z": 0.144187,
-                                    "w": -0.379902
-                                },
-                                "scale": {
-                                    "x": 1.0,
-                                    "y": 1.0,
-                                    "z": 1.0
-                                }
-                            },
-                            "castsShadows": true,
-                            "customConstantBias": 1.0,
-                            "customSlopeBias": 0.66
-                        },
+                        "iesProfilePath": "assets/sample/ies/multi-lobe.ies",
                         "luminousIntensity": 250.0,
-                        "outerConeAngle": 2.094395160675049,
-                        "IESProfile": "assets/sample/ies/multi-lobe.ies"
+                        "outerConeAngle": 2.094395160675049
+                        
                     }
                 }
             }

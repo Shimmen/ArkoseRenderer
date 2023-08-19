@@ -2,6 +2,7 @@
 
 #include "asset/MaterialAsset.h"
 #include "asset/import/AssetImporter.h"
+#include "input/Input.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
 #include "rendering/debug/DebugDrawer.h"
@@ -19,7 +20,6 @@
 #include "scene/lights/DirectionalLight.h"
 #include "utility/FileDialog.h"
 #include "utility/FileIO.h"
-#include "utility/Input.h"
 #include "utility/Profiling.h"
 #include <fmt/format.h>
 #include <imgui.h>

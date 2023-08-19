@@ -24,6 +24,7 @@
 
 // Shared shader headers
 #include "shaders/shared/CameraState.h"
+#include "shaders/shared/ShaderBlendMode.h"
 
 GpuScene::GpuScene(Scene& scene, Backend& backend, Extent2D initialMainViewportSize)
     : m_scene(scene)

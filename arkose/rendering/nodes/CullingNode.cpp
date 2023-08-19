@@ -2,6 +2,7 @@
 
 #include "core/Types.h"
 #include "core/math/Frustum.h"
+#include "rendering/util/BlendModeUtil.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 

@@ -9,6 +9,7 @@
 // Shared shader headers
 #include "shaders/shared/IndirectData.h"
 #include "shaders/shared/LightData.h"
+#include "shaders/shared/ShaderBlendMode.h"
 
 RenderPipelineNode::ExecuteCallback TranslucencyNode::construct(GpuScene& scene, Registry& reg)
 {

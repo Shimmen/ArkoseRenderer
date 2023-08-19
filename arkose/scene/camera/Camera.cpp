@@ -1,5 +1,6 @@
 #include "Camera.h"
 
+#include "asset/LevelAsset.h" // for CameraAsset
 #include "core/Logging.h"
 #include "core/math/Halton.h"
 #include "rendering/debug/DebugDrawer.h"
@@ -8,6 +9,40 @@
 #include <imgui.h>
 
 class Scene;
+
+void Camera::setupFromCameraAsset(CameraAsset const& asset)
+{
+    m_position = asset.position;
+    m_orientation = asset.orientation;
+
+    if (asset.focusMode == "Auto") {
+        m_focusMode = Camera::FocusMode::Auto;
+    } else if (asset.focusMode == "Manual") {
+        m_focusMode = Camera::FocusMode::Manual;
+    } else {
+        ARKOSE_LOG(Error, "Unknown camera focus mode '{}'", asset.focusMode);
+    }
+    m_focalLength = asset.focalLength;
+    m_focusDepth = asset.focusDepth;
+    m_sensorSize = asset.sensorSize;
+
+    if (asset.exposureMode == "Auto") {
+        m_exposureMode = Camera::ExposureMode::Auto;
+    } else if (asset.exposureMode == "Manual") {
+        m_exposureMode = Camera::ExposureMode::Manual;
+    } else {
+        ARKOSE_LOG(Error, "Unknown camera exposure mode '{}'", asset.exposureMode);
+    }
+    m_fNumber = asset.fNumber;
+    m_iso = asset.iso;
+    m_shutterSpeed = asset.shutterSpeed;
+
+    m_exposureCompensation = asset.exposureCompensation;
+    m_adaptionRate = asset.adaptionRate;
+
+    markAsModified();
+    finalizeModifications();
+}
 
 void Camera::preRender(Badge<Scene>)
 {

@@ -52,19 +52,23 @@ This list is not complete, it's just a showcase of various features that are imp
 ```
 Arkose
 |-- arklib          # custom math & utility library (not arkose specific)
-|-- arkose          # all arkose engine code
+|-- arkcore         # all reusable arkose code
+|   |-- asset       # asset types, serialization, and importing
+|   |-- core        # various core features: maths, task graph, etc.
+|   |-- physics     # physics definitions
+|   |-- rendering   # rendering definitions
+|   `-- scene       # scene definitions
+|-- arkose          # all arkose engine & runtime code
 |   | main.cpp      # application entry point
 |   |-- apps        # apps, e.g. a game or a graphics showcase
-|   |-- asset       # asset types & flatbuffers schemas for serialisation
-|   |-- core        # various core features: maths, task graph, etc.
 |   |-- physics     # root for physics code
 |   |-- rendering   # root for rendering code
-|   |   |-- backend # rendering backend code for interfacing with graphics APIs
+|   |   |-- backend # rendering backend code (RHI) for interfacing with graphics APIs
 |   |   `-- nodes   # rendering techniques and features (API agnostic)
 |   |-- scene       # scene representation, e.g. scene, camera, lights
 |   `-- shaders     # all shader code used by arkose in run-time
 |-- assets          # all assets used by the engine & apps
-`-- deps            # root for in-tree third-party dependencies
+`-- deps            # root for in-tree code dependencies
 ```
 
 Note that some details are omitted for brevity.

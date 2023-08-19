@@ -1,11 +1,24 @@
 #include "SpotLight.h"
 
+#include "asset/LevelAsset.h"
 #include "rendering/backend/base/Backend.h"
 #include <imgui.h>
 
 SpotLight::SpotLight()
     : Light(Type::SpotLight, vec3(1.0f))
 {
+}
+
+SpotLight::SpotLight(LightAsset const& asset)
+    : Light(Type::SphereLight, asset)
+{
+    ARKOSE_ASSERT(asset.type == "SpotLight");
+    ARKOSE_ASSERT(std::holds_alternative<SpotLightAssetData>(asset.data));
+
+    auto const& data = std::get<SpotLightAssetData>(asset.data);
+    m_iesProfile.load(data.iesProfilePath);
+    m_luminousIntensity = data.luminousIntensity;
+    m_outerConeAngle = data.outerConeAngle;
 }
 
 SpotLight::SpotLight(vec3 color, float luminousIntensity, const std::string& iesProfilePath, vec3 position, vec3 direction)

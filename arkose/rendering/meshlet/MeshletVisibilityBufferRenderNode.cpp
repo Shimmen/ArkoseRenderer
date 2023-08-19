@@ -1,6 +1,7 @@
 #include "MeshletVisibilityBufferRenderNode.h"
 
 #include "rendering/GpuScene.h"
+#include "rendering/util/BlendModeUtil.h"
 #include <imgui.h>
 
 void MeshletVisibilityBufferRenderNode::drawGui()

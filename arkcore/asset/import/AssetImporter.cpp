@@ -220,11 +220,13 @@ std::unique_ptr<LevelAsset> AssetImporter::importAsLevel(std::string_view assetF
     }
 
     for (ImportedCamera const& importedCamera : result.cameras) {
-        Camera& camera = levelAsset->cameras.emplace_back();
-        camera.setPosition(importedCamera.transform.positionInWorld());
-        camera.setOrientation(importedCamera.transform.orientationInWorld());
-        camera.setNearAndFarPlanes(importedCamera.zNear, importedCamera.zFar);
-        camera.setFieldOfView(importedCamera.verticalFieldOfView);
+        CameraAsset& camera = levelAsset->cameras.emplace_back();
+        camera.position = importedCamera.transform.positionInWorld();
+        camera.orientation = importedCamera.transform.orientationInWorld();
+        // TODO: Add zNear, zFar, and FOV to CameraAsset.
+        //camera.zNear = importedCamera.zNear;
+        //camera.zNear = importedCamera.zFar;
+        //camera.verticalFieldOfView = importedCamera.verticalFieldOfView;
     }
 
     std::string_view levelName = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(assetFilePath));

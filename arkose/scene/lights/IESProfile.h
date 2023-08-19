@@ -38,6 +38,12 @@ public:
     IESProfile(IESProfile&) = delete;
     IESProfile& operator=(IESProfile&) = delete;
 
+    void load(std::string const& path)
+    {
+        m_path = path;
+        parse(m_path);
+    }
+
     const std::string& path() const { return m_path; }
     UnitsType unitsType() const { return m_unitsType; }
     PhotometricType photometricType() const { return m_photometricType; }
