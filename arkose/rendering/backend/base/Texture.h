@@ -156,6 +156,8 @@ public:
 
     virtual void generateMipmaps() = 0;
 
+    Description const& description() const { return m_description; }
+
     [[nodiscard]] Type type() const { return m_description.type; }
 
     [[nodiscard]] bool isArray() const { return m_description.arrayCount > 1; };
