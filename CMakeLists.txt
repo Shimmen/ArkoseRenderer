@@ -228,7 +228,7 @@ if (ARKOSE_BACKEND_D3D12)
 endif()
 
 if(MSVC)
-    target_sources(ArkoseRenderer "arkose/Arkose.natvis")
+    target_sources(ArkoseRenderer PUBLIC "arkose/Arkose.natvis")
 endif()
 
 target_include_directories(ArkoseRenderer PRIVATE arkose/)
