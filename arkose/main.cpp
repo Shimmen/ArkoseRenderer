@@ -98,6 +98,7 @@ int main(int argc, char** argv)
 
     // Create window & input handling for that window
     GLFWwindow* window = createWindow(backendType, WindowType::Windowed, { 1920, 1080 });
+    Extent2D outputDisplayResolution = windowFramebufferSize(window);
     Input::registerWindow(window);
 
     // Create the app that will drive this "engine"
@@ -111,10 +112,12 @@ int main(int argc, char** argv)
     PhysicsBackend* physicsBackend = PhysicsBackend::create(physicsBackendType);
 
     // Create the scene
-    auto scene = std::make_unique<Scene>(graphicsBackend, physicsBackend, windowFramebufferSize(window));
+    auto scene = std::make_unique<Scene>(graphicsBackend, physicsBackend, outputDisplayResolution);
 
     // Let the app define the render pipeline and push it to the graphics backend
     auto renderPipeline = std::make_unique<RenderPipeline>(&scene->gpuScene());
+    renderPipeline->setOutputResolution(outputDisplayResolution);
+    renderPipeline->setRenderResolution(outputDisplayResolution);
     app->setup(*scene, *renderPipeline);
     graphicsBackend.renderPipelineDidChange(*renderPipeline);
 
@@ -151,7 +154,8 @@ int main(int argc, char** argv)
         Extent2D viewportSize = windowFramebufferSize(window);
         if (viewportSize != currentViewportSize) {
             currentViewportSize = viewportSize;
-            scene->camera().setViewport(viewportSize);
+            // NOTE: The render resolution and camera viewport will be setup in GpuScene after resolving potential upscaling!
+            renderPipeline->setOutputResolution(viewportSize);
         }
 
         float elapsedTime = static_cast<float>(glfwGetTime());

@@ -1,6 +1,7 @@
 #include "DepthOfFieldNode.h"
 
 #include "rendering/GpuScene.h"
+#include "rendering/RenderPipeline.h"
 #include <imgui.h>
 
 void DepthOfFieldNode::drawGui()
@@ -23,8 +24,8 @@ RenderPipelineNode::ExecuteCallback DepthOfFieldNode::construct(GpuScene& scene,
     Texture& sceneColor = *reg.getTexture("SceneColor");
     Texture& sceneDepth= *reg.getTexture("SceneDepth");
 
-    Texture& circleOfConfusionTex = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R16F);
-    Texture& depthOfFieldTex = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
+    Texture& circleOfConfusionTex = reg.createTexture2D(pipeline().renderResolution(), Texture::Format::R16F);
+    Texture& depthOfFieldTex = reg.createTexture2D(pipeline().renderResolution(), Texture::Format::RGBA16F);
 
     // CoC calculation step
     BindingSet& calculateCocBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(circleOfConfusionTex, ShaderStage::Compute),
@@ -47,7 +48,7 @@ RenderPipelineNode::ExecuteCallback DepthOfFieldNode::construct(GpuScene& scene,
             return;
         }
 
-        Extent2D targetSize = reg.windowRenderTarget().extent();
+        Extent2D targetSize = pipeline().renderResolution();
         Camera& camera = scene.scene().camera();
 
         // Calculate CoC at full resolution

@@ -2,6 +2,7 @@
 
 #include "input/Input.h"
 #include "rendering/GpuScene.h"
+#include "rendering/RenderPipeline.h"
 #include "rendering/StaticMesh.h"
 #include "scene/camera/CameraController.h"
 #include "utility/Profiling.h"
@@ -15,8 +16,8 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 {
     Buffer& resultBuffer = reg.createBuffer(sizeof(PickingData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::Readback);
 
-    Texture& indexTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R32Uint);
-    Texture& depthTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth32F);
+    Texture& indexTexture = reg.createTexture2D(pipeline().outputResolution(), Texture::Format::R32Uint);
+    Texture& depthTexture = reg.createTexture2D(pipeline().outputResolution(), Texture::Format::Depth32F);
     RenderTarget& indexMapRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &indexTexture },
                                                                   { RenderTarget::AttachmentType::Depth, &depthTexture } });
 

@@ -1,6 +1,7 @@
 #include "MeshletDebugNode.h"
 
 #include "rendering/GpuScene.h"
+#include "rendering/RenderPipeline.h"
 #include "rendering/util/ScopedDebugZone.h"
 #include <ark/random.h>
 #include <imgui.h>
@@ -20,10 +21,10 @@ void MeshletDebugNode::drawGui()
 
 RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene, Registry& reg)
 {
-    Texture& debugTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA8);
+    Texture& debugTexture = reg.createTexture2D(pipeline().renderResolution(), Texture::Format::RGBA8);
     reg.publish("MeshletDebugVis", debugTexture);
 
-    Texture& depthTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::Depth32F);
+    Texture& depthTexture = reg.createTexture2D(pipeline().renderResolution(), Texture::Format::Depth32F);
     RenderTarget& meshletDebugRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &debugTexture },
                                                                       { RenderTarget::AttachmentType::Depth, &depthTexture } });
 

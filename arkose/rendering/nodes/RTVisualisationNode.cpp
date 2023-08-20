@@ -1,6 +1,7 @@
 #include "RTVisualisationNode.h"
 
 #include "rendering/GpuScene.h"
+#include "rendering/RenderPipeline.h"
 
 RTVisualisationNode::RTVisualisationNode(Mode mode)
     : m_mode(mode)
@@ -9,7 +10,7 @@ RTVisualisationNode::RTVisualisationNode(Mode mode)
 
 RenderPipelineNode::ExecuteCallback RTVisualisationNode::construct(GpuScene& scene, Registry& reg)
 {
-    Texture& storageImage = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA16F);
+    Texture& storageImage = reg.createTexture2D(pipeline().renderResolution(), Texture::Format::RGBA16F);
     reg.publish("RTVisualisation", storageImage);
 
     BindingSet& rtMeshDataBindingSet = *reg.getBindingSet("SceneRTMeshDataSet");

@@ -2,6 +2,7 @@
 
 #include "core/math/Frustum.h"
 #include "rendering/GpuScene.h"
+#include "rendering/RenderPipeline.h"
 #include "rendering/util/ScopedDebugZone.h"
 #include "scene/lights/Light.h"
 #include "utility/Profiling.h"
@@ -22,7 +23,7 @@ RenderPipelineNode::ExecuteCallback RTSphereLightShadowNode::construct(GpuScene&
     Buffer& cameraDataBuffer = *reg.getBuffer("SceneCameraData");
     //Texture& blueNoiseTexArray = *reg.getTexture("BlueNoise");
 
-    Texture& projectedShadowTex = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::R8);
+    Texture& projectedShadowTex = reg.createTexture2D(pipeline().renderResolution(), Texture::Format::R8);
     reg.publish("SphereLightProjectedShadow", projectedShadowTex);
 
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();

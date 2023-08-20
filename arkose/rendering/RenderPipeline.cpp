@@ -10,6 +10,7 @@ RenderPipeline::RenderPipeline(GpuScene* scene)
     : m_scene(scene)
 {
     // Add "Scene" node which should always be included (unless it's some weird case that I can't think of now)
+    scene->setPipeline({}, *this);
     m_allNodes.push_back(scene);
 }
 

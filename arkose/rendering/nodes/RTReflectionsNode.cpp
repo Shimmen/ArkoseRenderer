@@ -1,6 +1,7 @@
 #include "RTReflectionsNode.h"
 
 #include "rendering/GpuScene.h"
+#include "rendering/RenderPipeline.h"
 #include "rendering/util/ScopedDebugZone.h"
 #include <imgui.h>
 
@@ -23,7 +24,7 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
 {
     Texture& blueNoiseTexture = *reg.getTexture("BlueNoise");
 
-    Extent2D extent = reg.windowRenderTarget().extent();
+    Extent2D extent = pipeline().renderResolution();
     Extent2D tileExtent = { (extent.width() + 8 - 1) / 8,
                             (extent.height() + 8 - 1) / 8 };
 

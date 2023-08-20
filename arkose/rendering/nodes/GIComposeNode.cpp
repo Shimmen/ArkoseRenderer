@@ -1,6 +1,7 @@
 #include "GIComposeNode.h"
 
 #include "core/Logging.h"
+#include "rendering/RenderPipeline.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 
@@ -35,7 +36,7 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Re
 
     m_ddgiBindingSet = reg.getBindingSet("DDGISamplingSet");
 
-    Texture& sceneColorWithGI = reg.createTexture2D(reg.windowRenderTarget().extent(), sceneColor.format(), Texture::Filters::nearest());
+    Texture& sceneColorWithGI = reg.createTexture2D(pipeline().renderResolution(), sceneColor.format(), Texture::Filters::nearest());
 
     BindingSet& composeBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::Compute),
                                                            ShaderBinding::storageTexture(sceneColorWithGI, ShaderStage::Compute),

@@ -43,8 +43,14 @@ public:
 
     ////////////////////////////////////////////////////////////////////////////
     // Data & functions for cross-node communication
-    
-    // ..
+
+    std::vector<RenderPipelineNode*> const& nodes() const { return m_allNodes; }
+
+    Extent2D outputResolution() const { return m_outputResolution; }
+    void setOutputResolution(Extent2D outputRes) { m_outputResolution = outputRes; }
+
+    Extent2D renderResolution() const { return m_renderResolution; }
+    void setRenderResolution(Extent2D renderRes) { m_renderResolution = renderRes; }
 
     // TODO: Now when nodes have access to the render pipeline we can use this to store various info about the current.. pipeline!
     // Any cross-node communication can be done through this. They can explicitly put data here, e.g. a list of lights that will get
@@ -64,6 +70,9 @@ private:
 
     std::vector<NodeContext> m_nodeContexts {};
     AvgElapsedTimer m_pipelineTimer {};
+
+    Extent2D m_outputResolution {};
+    Extent2D m_renderResolution {};
 
     GpuScene* m_scene {};
 };

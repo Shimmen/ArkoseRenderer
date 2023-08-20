@@ -1,5 +1,6 @@
 #include "TAANode.h"
 
+#include "rendering/RenderPipeline.h"
 #include "scene/camera/Camera.h"
 #include <imgui.h>
 
@@ -25,7 +26,7 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(GpuScene& scene, Registry
 {
     ///////////////////////
     // constructNode
-    Texture& accumulationTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA8);
+    Texture& accumulationTexture = reg.createTexture2D(pipeline().renderResolution(), Texture::Format::RGBA8);
     ///////////////////////
 
     Texture& currentFrameTexture = *reg.getTexture("SceneColorLDR");

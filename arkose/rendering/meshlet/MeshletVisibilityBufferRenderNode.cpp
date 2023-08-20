@@ -1,6 +1,7 @@
 #include "MeshletVisibilityBufferRenderNode.h"
 
 #include "rendering/GpuScene.h"
+#include "rendering/RenderPipeline.h"
 #include "rendering/util/BlendModeUtil.h"
 #include <imgui.h>
 
@@ -16,7 +17,7 @@ RenderPipelineNode::ExecuteCallback MeshletVisibilityBufferRenderNode::construct
         ARKOSE_LOG(Warning, "Using visibility buffer rendering when Prepass node is in the render pipeline, this is probably not intended!");
     }
 
-    Texture::Description visibilityDataTexDesc { .extent = reg.windowRenderTarget().extent(),
+    Texture::Description visibilityDataTexDesc { .extent = pipeline().renderResolution(),
                                                  .format = Texture::Format::R32Uint };
     
     m_instanceVisibilityTexture = &reg.createTexture(visibilityDataTexDesc);

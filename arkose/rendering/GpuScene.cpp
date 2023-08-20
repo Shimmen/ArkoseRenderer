@@ -6,6 +6,7 @@
 #include "asset/SkeletonAsset.h"
 #include "rendering/Skeleton.h"
 #include "rendering/DrawKey.h"
+#include "rendering/RenderPipeline.h"
 #include "rendering/backend/Resources.h"
 #include "rendering/util/ScopedDebugZone.h"
 #include "core/Logging.h"
@@ -191,36 +192,39 @@ size_t GpuScene::forEachLocalLight(std::function<void(size_t, const Light&)> cal
 
 RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg)
 {
+    Extent2D outputResolution = pipeline().outputResolution();
+    Extent2D renderResolution = outputResolution;
+    pipeline().setRenderResolution(renderResolution);
+    camera().setViewport(renderResolution);
+
     // G-Buffer textures
     {
-        Extent2D windowExtent = reg.windowRenderTarget().extent();
-
         auto nearestFilter = Texture::Filters::nearest();
-        auto linerFilter = Texture::Filters::linear();
+        auto linearFilter = Texture::Filters::linear();
         auto mipMode = Texture::Mipmap::None;
         auto wrapMode = ImageWrapModes::clampAllToEdge();
 
-        Texture& depthTexture = reg.createTexture2D(windowExtent, Texture::Format::Depth24Stencil8, nearestFilter, mipMode, wrapMode);
+        Texture& depthTexture = reg.createTexture2D(renderResolution, Texture::Format::Depth24Stencil8, nearestFilter, mipMode, wrapMode);
         reg.publish("SceneDepth", depthTexture);
 
         // rgb: scene color, a: unused
-        Texture& colorTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F, linerFilter, mipMode, wrapMode);
+        Texture& colorTexture = reg.createTexture2D(renderResolution, Texture::Format::RGBA16F, linearFilter, mipMode, wrapMode);
         reg.publish("SceneColor", colorTexture);
 
         // rg: encoded normal, ba: velocity in image plane (2D)
-        Texture& normalVelocityTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F, linerFilter, mipMode, wrapMode);
+        Texture& normalVelocityTexture = reg.createTexture2D(renderResolution, Texture::Format::RGBA16F, linearFilter, mipMode, wrapMode);
         reg.publish("SceneNormalVelocity", normalVelocityTexture);
 
         // r: roughness, g: metallic, b: unused, a: unused
-        Texture& materialTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F, linerFilter, mipMode, wrapMode);
+        Texture& materialTexture = reg.createTexture2D(renderResolution, Texture::Format::RGBA16F, linearFilter, mipMode, wrapMode);
         reg.publish("SceneMaterial", materialTexture);
 
         // rgb: base color, a: unused
-        Texture& baseColorTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA8, linerFilter, mipMode, wrapMode);
+        Texture& baseColorTexture = reg.createTexture2D(renderResolution, Texture::Format::RGBA8, linearFilter, mipMode, wrapMode);
         reg.publish("SceneBaseColor", baseColorTexture);
 
         // rgb: diffuse color, a: unused
-        Texture& diffueGiTexture = reg.createTexture2D(windowExtent, Texture::Format::RGBA16F, linerFilter, mipMode, wrapMode);
+        Texture& diffueGiTexture = reg.createTexture2D(renderResolution, Texture::Format::RGBA16F, linearFilter, mipMode, wrapMode);
         reg.publish("DiffuseGI", diffueGiTexture);
     }
 

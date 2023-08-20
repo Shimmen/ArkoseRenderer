@@ -1,6 +1,7 @@
 #include "VisibilityBufferDebugNode.h"
 
 #include "rendering/GpuScene.h"
+#include "rendering/RenderPipeline.h"
 #include <ark/random.h>
 #include <imgui.h>
 
@@ -19,7 +20,7 @@ RenderPipelineNode::ExecuteCallback VisibilityBufferDebugNode::construct(GpuScen
 {
     ARKOSE_ASSERT(reg.hasPreviousNode("Meshlet visibility buffer"));
 
-    Texture& visualizationTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA8);
+    Texture& visualizationTexture = reg.createTexture2D(pipeline().renderResolution(), Texture::Format::RGBA8);
     reg.publish("VisibilityBufferDebugVis", visualizationTexture);
 
     Texture& instanceVisibilityTexture = *reg.getTexture("InstanceVisibilityTexture");

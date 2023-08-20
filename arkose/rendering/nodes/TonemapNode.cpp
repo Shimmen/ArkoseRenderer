@@ -1,6 +1,7 @@
 #include "TonemapNode.h"
 
 #include "core/Logging.h"
+#include "rendering/RenderPipeline.h"
 #include <imgui.h>
 
 TonemapNode::TonemapNode(std::string sourceTextureName, Mode mode)
@@ -19,7 +20,7 @@ RenderPipelineNode::ExecuteCallback TonemapNode::construct(GpuScene& scene, Regi
     if (m_mode == Mode::RenderToWindow) {
         ldrTarget = &reg.windowRenderTarget();
     } else {
-        Texture& ldrTexture = reg.createTexture2D(reg.windowRenderTarget().extent(), Texture::Format::RGBA8);
+        Texture& ldrTexture = reg.createTexture2D(sourceTexture->extent(), Texture::Format::RGBA8);
         reg.publish("SceneColorLDR", ldrTexture);
         ldrTarget = &reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &ldrTexture, LoadOp::Discard } });
     }
