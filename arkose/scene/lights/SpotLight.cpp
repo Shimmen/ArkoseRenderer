@@ -10,7 +10,7 @@ SpotLight::SpotLight()
 }
 
 SpotLight::SpotLight(LightAsset const& asset)
-    : Light(Type::SphereLight, asset)
+    : Light(Type::SpotLight, asset)
 {
     ARKOSE_ASSERT(asset.type == "SpotLight");
     ARKOSE_ASSERT(std::holds_alternative<SpotLightAssetData>(asset.data));
