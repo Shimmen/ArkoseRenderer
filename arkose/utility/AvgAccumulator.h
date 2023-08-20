@@ -2,6 +2,7 @@
 
 #include "core/Assert.h"
 #include <array>
+#include <limits>
 
 template<typename T, size_t RunningAvgWindowSizeT>
 class AvgAccumulator {
