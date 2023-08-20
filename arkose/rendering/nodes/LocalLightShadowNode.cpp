@@ -261,8 +261,8 @@ void LocalLightShadowNode::drawShadowCasters(CommandList& cmdList, GpuScene& sce
             // TODO: Pick LOD properly
             const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
 
-            ark::aabb3 aabb = staticMesh->boundingBox().transformed(instance->transform().worldMatrix());
-            if (lightFrustum.includesAABB(aabb)) {
+            geometry::Sphere sphere = staticMesh->boundingSphere().transformed(instance->transform().worldMatrix());
+            if (lightFrustum.includesSphere(sphere)) {
 
                 for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
                     StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
