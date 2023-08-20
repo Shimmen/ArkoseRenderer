@@ -44,12 +44,6 @@ struct Handle {
     {
     }
 
-    template<typename HandleT>
-    bool operator==(HandleT& other) const
-    {
-        return m_index == other.m_index;
-    }
-
     IndexType index() const
     {
         return m_index;
