@@ -24,7 +24,7 @@ public:
 
     VkImageAspectFlags aspectMask() const;
 
-    VkImageView createImageView(uint32_t baseMip, uint32_t numMips, bool alphaAsOne) const;
+    VkImageView createImageView(uint32_t baseMip, uint32_t numMips, std::optional<VkComponentMapping>) const;
 
     VkImage image { VK_NULL_HANDLE };
     VmaAllocation allocation { VK_NULL_HANDLE };

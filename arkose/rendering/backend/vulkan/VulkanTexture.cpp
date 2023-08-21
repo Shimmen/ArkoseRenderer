@@ -145,7 +145,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
         m_sizeInMemory = allocationInfo.size;
     }
 
-    imageView = createImageView(0, mipLevels(), false);
+    imageView = createImageView(0, mipLevels(), {});
 
     VkFilter vkMinFilter;
     switch (minFilter()) {
@@ -712,21 +712,15 @@ VkImageAspectFlags VulkanTexture::aspectMask() const
     return mask;
 }
 
-VkImageView VulkanTexture::createImageView(uint32_t baseMip, uint32_t numMips, bool alphaAsOne) const
+VkImageView VulkanTexture::createImageView(uint32_t baseMip, uint32_t numMips, std::optional<VkComponentMapping> vkComponents) const
 {
     VkImageViewCreateInfo viewCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO };
     viewCreateInfo.image = image;
     viewCreateInfo.format = vkFormat;
-    viewCreateInfo.components = {
-        VK_COMPONENT_SWIZZLE_IDENTITY,
-        VK_COMPONENT_SWIZZLE_IDENTITY,
-        VK_COMPONENT_SWIZZLE_IDENTITY,
-        VK_COMPONENT_SWIZZLE_IDENTITY
-    };
-
-    if (alphaAsOne) {
-        viewCreateInfo.components.a = VK_COMPONENT_SWIZZLE_ONE;
-    }
+    viewCreateInfo.components = vkComponents.value_or(VkComponentMapping { VK_COMPONENT_SWIZZLE_IDENTITY,
+                                                                           VK_COMPONENT_SWIZZLE_IDENTITY,
+                                                                           VK_COMPONENT_SWIZZLE_IDENTITY,
+                                                                           VK_COMPONENT_SWIZZLE_IDENTITY });
 
     if (hasDepthFormat()) {
         // Create view for the depth aspect only
@@ -775,7 +769,11 @@ std::vector<VulkanTexture*> VulkanTexture::texturesForImGuiRendering {};
 ImTextureID VulkanTexture::asImTextureID()
 {
     if (descriptorSetForImGui == nullptr) {
-        imageViewNoAlphaForImGui = createImageView(0, 1, true);
+        constexpr VkComponentMapping componentMapping = { VK_COMPONENT_SWIZZLE_IDENTITY,
+                                                          VK_COMPONENT_SWIZZLE_IDENTITY,
+                                                          VK_COMPONENT_SWIZZLE_IDENTITY,
+                                                          VK_COMPONENT_SWIZZLE_ONE };
+        imageViewNoAlphaForImGui = createImageView(0, 1, componentMapping);
         descriptorSetForImGui = ImGui_ImplVulkan_AddTexture(sampler, imageViewNoAlphaForImGui, ImGuiRenderingTargetLayout);
     }
 

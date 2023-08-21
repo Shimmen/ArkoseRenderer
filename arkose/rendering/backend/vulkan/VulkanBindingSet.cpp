@@ -304,7 +304,7 @@ void VulkanBindingSet::updateBindings()
                 // All textures have an image view for mip0 already available
                 descImageInfo.imageView = texture.imageView;
             } else {
-                descImageInfo.imageView = texture.createImageView(mipLevel, 1, false);
+                descImageInfo.imageView = texture.createImageView(mipLevel, 1, {});
                 m_additionalImageViews.push_back(descImageInfo.imageView);
             }
 
