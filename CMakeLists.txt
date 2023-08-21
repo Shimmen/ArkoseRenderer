@@ -262,6 +262,10 @@ if (MSVC)
 
     # Avoid including too much noise from windows.h
     target_compile_definitions(ArkoseRenderer PUBLIC WIN32_LEAN_AND_MEAN)
+
+    # Explicitly set _ITERATOR_DEBUG_LEVEL to 2 for debug builds so it's clear what we're using.
+    # Level 2 is the default level for MSVC Debug builds and will be compatible with most prebuilt libraries.
+    add_compile_definitions($<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=2>)
 endif()
 
 # Keep tracy enabled at all time but with on-demand only, meaning we don't accumulate tracy data
