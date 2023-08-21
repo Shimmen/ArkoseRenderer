@@ -73,6 +73,9 @@ add_library(ArkoseCore STATIC
 
 target_include_directories(ArkoseCore PUBLIC arkcore/)
 
+get_target_property(ARKOCORE_SOURCES ArkoseCore SOURCES)
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/arkcore" FILES ${ARKOCORE_SOURCES})
+
 # todo: see if we can move some of the libraries to PRIVATE
 target_link_libraries(ArkoseCore PUBLIC
     arklib # core arkose library (math etc.)
@@ -232,6 +235,9 @@ if(MSVC)
 endif()
 
 target_include_directories(ArkoseRenderer PRIVATE arkose/)
+
+get_target_property(ARKOSE_SOURCES ArkoseRenderer SOURCES)
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/arkose" FILES ${ARKOSE_SOURCES})
 
 target_link_libraries(ArkoseRenderer PRIVATE
     ArkoseCore # core arkose library
