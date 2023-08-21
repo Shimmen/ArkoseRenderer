@@ -292,7 +292,7 @@ endif()
 # Make assets & shaders accessible in runtime relative to the exe-location
 
 add_custom_command(TARGET ArkoseRenderer PRE_BUILD
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/assets" "${CMAKE_BINARY_DIR}/assets"
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/arkose/shaders" "${CMAKE_BINARY_DIR}/shaders"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/assets" "$<TARGET_FILE_DIR:ArkoseRenderer>/assets"
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/arkose/shaders" "$<TARGET_FILE_DIR:ArkoseRenderer>/shaders"
     COMMENT "Create symlinks to the assets & shaders so they will be locatable relative to the executable"
     VERBATIM)
