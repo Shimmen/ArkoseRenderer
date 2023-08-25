@@ -84,6 +84,12 @@ Here are some basic steps to get it compiling & running for you:
 
 You should now be able to compile and run!
 
+### Tools setup
+
+The entire tools stack depends on [OpenUSD](https://github.com/PixarAnimationStudios/OpenUSD) and is needed for compilation. Note that this dependency only exists for the offline tooling so it's not needed for anything runtime, e.g. renderer/game.
+
+To be able to build any of the tools, first install OpenUSD. The best approach (especially if on Windows) is to [download the pre-built libraries and tools provided by Nvidia](https://developer.nvidia.com/usd#libraries-and-tools). For CMake to find it, ensure that `PXR_USD_LOCATION` is defined (either as a CMake variable or as an environment variable), and pointing at the root directory of where you installed it. If setup correctly, CMake should pick up on this and build tools accordingly.
+
 ## License
 
 This project is licenced under the [MIT License](https://choosealicense.com/licenses/mit/). See the file `LICENSE` for more information. Third-party dependencies (in `deps/`) and third-party assets (in `assets/`) are potentially licensed under other terms. See their respective directories & files for additional information. Some individual files and functions may also be licensed separately and are marked as such in or near the relevant files.

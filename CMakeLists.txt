@@ -302,3 +302,22 @@ add_custom_command(TARGET ArkoseRenderer PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/arkose/shaders" "$<TARGET_FILE_DIR:ArkoseRenderer>/shaders"
     COMMENT "Create symlinks to the assets & shaders so they will be locatable relative to the executable"
     VERBATIM)
+
+##################################
+######### ARKOSE TOOLING #########
+##################################
+
+set(ARKOSE_BUILD_TOOLS True)
+
+if((DEFINED {PXR_USD_LOCATION}) OR (DEFINED ENV{PXR_USD_LOCATION}))
+    message(STATUS "Will attempt to build tools")
+else()
+    message(STATUS "Will NOT attempt to build tools as PXR_USD_LOCATION is not set")
+    set(ARKOSE_BUILD_TOOLS False)
+endif()
+
+if(ARKOSE_BUILD_TOOLS)
+    add_subdirectory(tools)
+endif()
+
+##################################
