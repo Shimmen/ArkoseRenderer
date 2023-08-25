@@ -24,19 +24,6 @@ find_path(USD_INCLUDE_DIR
         "USD Include directory"
 )
 
-# This component is optional.
-find_file(USD_GENSCHEMA
-    NAMES
-        usdGenSchema
-    PATHS
-        ${PXR_USD_LOCATION}
-        $ENV{PXR_USD_LOCATION}
-    PATH_SUFFIXES
-        bin
-    DOC
-        "USD Gen schema application"
-)
-
 find_file(USD_CONFIG_FILE
     NAMES 
         pxrConfig.cmake
@@ -142,7 +129,6 @@ find_package_handle_standard_args(USD
         USD_LIBRARY_DIR
         USD_CONFIG_FILE
         USD_VERSION
-        ADSK_USD_VERSION
         PXR_VERSION
     VERSION_VAR
         USD_VERSION
@@ -152,11 +138,7 @@ if (USD_FOUND)
     # This will follow a message "-- Found USD: <path> ..."
     message(STATUS "   USD include dir: ${USD_INCLUDE_DIR}")
     message(STATUS "   USD library dir: ${USD_LIBRARY_DIR}")
-    if (USD_GENSCHEMA)
-        message(STATUS "   usdGenSchema: ${USD_GENSCHEMA}")
-    endif()
     message(STATUS "   USD version: ${USD_VERSION}")
-    message(STATUS "   Autodesk USD version: ${ADSK_USD_VERSION}")
     if(DEFINED USD_BOOST_VERSION)
         message(STATUS "   USD Boost::boost version: ${USD_BOOST_VERSION}")
     endif()
