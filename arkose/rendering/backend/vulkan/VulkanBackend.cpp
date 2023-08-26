@@ -645,6 +645,12 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
             addInstanceExtension(name);
         }
 
+#if __APPLE__
+        // Required when running Vulkan in portability mode, e.g., through MoltenVK on macOS
+        ARKOSE_ASSERT(hasSupportForInstanceExtension(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME));
+        addInstanceExtension(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+#endif
+
         // Required for checking support of complex features. It's probably fine to always require it. If it doesn't exist, we deal with it then..
         ARKOSE_ASSERT(hasSupportForInstanceExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME));
         addInstanceExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
@@ -692,6 +698,11 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
 
     instanceCreateInfo.enabledLayerCount = (uint32_t)requestedLayers.size();
     instanceCreateInfo.ppEnabledLayerNames = requestedLayers.data();
+
+    instanceCreateInfo.flags = 0;
+#if __APPLE__
+    instanceCreateInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+#endif
 
     if (debugMessengerCreateInfo) {
         instanceCreateInfo.pNext = debugMessengerCreateInfo;
