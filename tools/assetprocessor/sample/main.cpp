@@ -26,7 +26,7 @@ int main()
     for (const pxr::UsdPrim& prim : stage->Traverse()) {
         // Check if the prim is a point-based primitive
         if (prim.IsA<pxr::UsdGeomPointBased>()) {
-            ARKOSE_LOG("Found a point-based primitive: {}", prim.GetPath());
+            ARKOSE_LOG(Info, "Found a point-based primitive: {}", prim.GetPath().GetText());
 
             // Perform operations specific to USDGeomPointBased
 
@@ -37,14 +37,13 @@ int main()
             // Example: Getting the number of points
             pxr::VtArray<pxr::GfVec3f> points;
             pointsAttr.Get(&points);
-            ARKOSE_LOG("Number of points: {}", points.size());
+            ARKOSE_LOG(Info, "Number of points: {}", points.size());
 
             // Example: Accessing the position of the first point
-            //if (!points.empty()) {
-            //    pxr::GfVec3f firstPoint = points[0];
-            //    std::cout << "Position of the first point: (" << firstPoint[0] << ", "
-            //              << firstPoint[1] << ", " << firstPoint[2] << ")" << std::endl;
-            //}
+            if (!points.empty()) {
+                pxr::GfVec3f firstPoint = points[0];
+                ARKOSE_LOG(Info, "Position of the first point: ({:.3f}, {:.3f}, {:.3f})", firstPoint[0], firstPoint[1], firstPoint[2]);
+            }
         }
     }
 
