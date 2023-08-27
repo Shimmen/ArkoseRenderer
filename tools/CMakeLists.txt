@@ -16,6 +16,7 @@ target_include_directories(AssetProcessor PUBLIC
 target_link_libraries(AssetProcessor PUBLIC
     ArkoseCore
     ${PXR_LIBRARIES}
+    mikktspace # for MikkTSpace tangent generation
     )
 
 get_target_property(ASSETPROCESSOR_SOURCES AssetProcessor SOURCES)
