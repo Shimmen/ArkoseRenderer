@@ -1,10 +1,6 @@
 #include "AssetProcessor.h"
 
 #include <core/Logging.h>
-//#include <pxr/usd/sdf/path.h>
-//#include <pxr/usd/usd/prim.h>
-//#include <pxr/usd/usd/primRange.h>
-//#include <pxr/usd/usd/stage.h>
 
 std::unique_ptr<ImageAsset> AssetProcessor::processImage(ImageAssetIdentifier imageAssetId)
 {
@@ -14,24 +10,22 @@ std::unique_ptr<ImageAsset> AssetProcessor::processImage(ImageAssetIdentifier im
     // todo!
 }
 
-/*
-std::string AssetProcessor::processMaterial(AssetIdentifier assetId)
+std::unique_ptr<MaterialAsset> AssetProcessor::processMaterial(AssetIdentifier assetId)
 {
-
+    return {};
 }
 
-std::string AssetProcessor::processMesh(AssetIdentifier assetId)
+std::unique_ptr<MeshAsset> AssetProcessor::processMesh(AssetIdentifier assetId)
 {
-
+    return {};
 }
 
-std::string AssetProcessor::processSkeleton(AssetIdentifier assetId)
+std::unique_ptr<SkeletonAsset> AssetProcessor::processSkeleton(AssetIdentifier assetId)
 {
-
+    return {};
 }
 
-std::string AssetProcessor::processAnimation(AssetIdentifier assetId)
+std::unique_ptr<AnimationAsset> AssetProcessor::processAnimation(AssetIdentifier assetId)
 {
-	
+    return {};
 }
-*/
