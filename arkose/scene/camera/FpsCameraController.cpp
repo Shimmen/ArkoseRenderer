@@ -94,7 +94,8 @@ void FpsCameraController::update(const Input& input, float dt)
 
     if (input.isButtonDown(Button::Right) && !input.isGuiUsingMouse()) {
         // Screen size independent but also aspect ratio dependent!
-        vec2 mouseDelta = input.mouseDelta() / float(camera.viewport().width());
+        u32 sizeAdjust = camera.renderingToWindow() ? camera.targetWindowSize().width() : camera.viewport().width();
+        vec2 mouseDelta = input.mouseDelta() / static_cast<float>(sizeAdjust);
 
         m_pitchYawRoll.x += -mouseDelta.x * RotationMultiplier * fovMultiplier * dt;
         m_pitchYawRoll.y += -mouseDelta.y * RotationMultiplier * fovMultiplier * dt;

@@ -154,8 +154,11 @@ int main(int argc, char** argv)
         Extent2D viewportSize = windowFramebufferSize(window);
         if (viewportSize != currentViewportSize) {
             currentViewportSize = viewportSize;
-            // NOTE: The render resolution and camera viewport will be setup in GpuScene after resolving potential upscaling!
             renderPipeline->setOutputResolution(viewportSize);
+
+            int windowWidthPx, windowHeightPx;
+            glfwGetWindowSize(window, &windowWidthPx, &windowHeightPx);
+            scene->camera().setTargetWindowSize({ windowWidthPx, windowHeightPx });
         }
 
         float elapsedTime = static_cast<float>(glfwGetTime());

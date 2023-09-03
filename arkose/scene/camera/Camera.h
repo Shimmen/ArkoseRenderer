@@ -35,6 +35,10 @@ public:
     void setViewport(Extent2D viewportSize) { m_viewportSize = viewportSize; }
     float aspectRatio() const;
 
+    bool renderingToWindow() const { return m_targetWindowSize.has_value(); }
+    Extent2D targetWindowSize() const { return m_targetWindowSize.value(); }
+    void setTargetWindowSize(Extent2D size) { m_targetWindowSize = size; }
+
     float focalLengthMeters() const { return m_focalLength / 1000.0f; }
     float focalLengthMillimeters() const { return m_focalLength; }
     void setFocalLength(float);
@@ -102,7 +106,7 @@ public:
     [[nodiscard]] mat4 previousFrameProjectionMatrix() const { return m_previousFrameProjectionFromView.value_or(projectionMatrix()); }
     [[nodiscard]] mat4 previousFrameViewProjectionMatrix() const { return previousFrameProjectionMatrix() * previousFrameViewMatrix(); }
 
-    mat4 pixelProjectionMatrix() const;
+    mat4 pixelProjectionMatrix(u32 pixelWidth, u32 pixelHeight) const;
 
     bool isFrustumJitteringEnabled() const { return m_frustumJitteringEnabled; }
     void setFrustumJitteringEnabled(bool enabled) { m_frustumJitteringEnabled = enabled; }
@@ -209,6 +213,7 @@ private:
     std::optional<mat4> m_previousFrameProjectionFromView { std::nullopt };
     std::optional<vec2> m_previousFrameFrustumJitterPixelOffset { std::nullopt };
 
+    std::optional<Extent2D> m_targetWindowSize {};
     CameraController* m_controller { nullptr };
 
     bool m_modified { true };

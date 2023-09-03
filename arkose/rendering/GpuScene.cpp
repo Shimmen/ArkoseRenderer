@@ -397,9 +397,13 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
         // Update camera data
         {
-            const Camera& camera = this->camera();
+            Camera const& camera = this->camera();
+            Extent2D renderResolution = pipeline().renderResolution();
+            Extent2D outputResolution = pipeline().outputResolution();
 
-            mat4 pixelFromView = camera.pixelProjectionMatrix();
+            mat4 renderPixelFromView = camera.pixelProjectionMatrix(renderResolution.width(), renderResolution.height());
+            //mat4 outputPixelFromView = camera.pixelProjectionMatrix(outputResolution.width(), outputResolution.height());
+
             mat4 projectionFromView = camera.projectionMatrix();
             mat4 viewFromWorld = camera.viewMatrix();
 
@@ -412,8 +416,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 .previousFrameProjectionFromView = camera.previousFrameProjectionMatrix(),
                 .previousFrameViewFromWorld = camera.previousFrameViewMatrix(),
 
-                .pixelFromView = pixelFromView,
-                .viewFromPixel = inverse(pixelFromView),
+                .pixelFromView = renderPixelFromView,
+                .viewFromPixel = inverse(renderPixelFromView),
 
                 .frustumPlanes = { camera.frustum().plane(0).asVec4(),
                                    camera.frustum().plane(1).asVec4(),
@@ -421,6 +425,9 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                    camera.frustum().plane(3).asVec4(),
                                    camera.frustum().plane(4).asVec4(),
                                    camera.frustum().plane(5).asVec4() },
+
+                .renderResolution = vec4(renderResolution.asFloatVector(), renderResolution.inverse()),
+                .outputResolution = vec4(outputResolution.asFloatVector(), outputResolution.inverse()),
 
                 .zNear = camera.zNear(),
                 .zFar = camera.zFar(),

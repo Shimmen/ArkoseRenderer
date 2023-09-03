@@ -79,11 +79,11 @@ void Camera::postRender(Badge<Scene>)
     m_modified = false;
 }
 
-mat4 Camera::pixelProjectionMatrix() const
+mat4 Camera::pixelProjectionMatrix(u32 pixelWidth, u32 pixelHeight) const
 {
     // Ensures e.g. NDC (1,1) projects to (width-1,height-1)
-    float roundingPixelsX = (float)viewport().width() - 0.001f;
-    float roundingPixelsY = (float)viewport().height() - 0.001f;
+    float roundingPixelsX = static_cast<float>(pixelWidth) - 0.001f;
+    float roundingPixelsY = static_cast<float>(pixelHeight) - 0.001f;
 
     mat4 pixelFromNDC = ark::scale(vec3(roundingPixelsX, roundingPixelsY, 1.0f)) * ark::translate(vec3(0.5f, 0.5f, 0.0f)) * ark::scale(vec3(0.5f, 0.5f, 1.0f));
     return pixelFromNDC * projectionMatrix();
@@ -377,6 +377,7 @@ void Camera::drawGui(bool includeContainingWindow)
     ImGui::Text("Focal length (f):   %.1f mm", focalLengthMillimeters());
     ImGui::Text("Effective VFOV:     %.1f degrees", ark::toDegrees(fieldOfView()));
 
+    // TODO: If upscaling, should this be render resolution (viewport) or display resolution (targetWindowSize)?!
     vec2 sensorPixelSize = calculateSensorPixelSize(m_sensorSize, viewport());
     ImGui::Text("Sensor size:        %.1f x %.1f mm", m_sensorSize.x, m_sensorSize.y);
     ImGui::Text("Sensor pixel size:  %.4f x %.4f mm", sensorPixelSize.x, sensorPixelSize.y);
@@ -385,6 +386,7 @@ void Camera::drawGui(bool includeContainingWindow)
 
     ImGui::Text("Focus depth:        %.2f m", focusDepth());
 
+    // TODO: If upscaling, should this be render resolution (viewport) or display resolution (targetWindowSize)?!
     float acceptibleCocMm = calculateAcceptableCircleOfConfusion(m_sensorSize, viewport());
     float acceptibleCocPx = convertCircleOfConfusionToPixelUnits(acceptibleCocMm, m_sensorSize, viewport());
     float acceptibleDof = calculateDepthOfField(acceptibleCocMm, focalLengthMillimeters(), fNumber(), focusDepth());

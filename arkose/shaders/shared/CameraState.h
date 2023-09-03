@@ -15,6 +15,9 @@ struct CameraState {
 
     vec4 frustumPlanes[6];
 
+    vec4 renderResolution;
+    vec4 outputResolution;
+
     float zNear;
     float zFar;
     float focalLength;
