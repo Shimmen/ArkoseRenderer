@@ -253,6 +253,15 @@ target_link_libraries(ArkoseRenderer PRIVATE
     spirv-cross-core # generic spir-v reflection
     )
 
+if(DLSS_AVAILABLE)
+    message(STATUS "ArkoseRenderer: building with DLSS support")
+    target_link_libraries(ArkoseRenderer PRIVATE dlss)
+    target_compile_definitions(ArkoseRenderer PUBLIC WITH_DLSS=1)
+    target_sources(ArkoseRenderer PRIVATE arkose/rendering/backend/vulkan/features/dlss/VulkanDLSS.cpp)
+else()
+    message(STATUS "ArkoseRenderer: building without DLSS support")
+endif()
+
 add_custom_command(TARGET ArkoseRenderer POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:ArkoseRenderer> $<TARGET_RUNTIME_DLLS:ArkoseRenderer>
     COMMAND_EXPAND_LISTS

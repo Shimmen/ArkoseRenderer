@@ -179,6 +179,7 @@ endif()
 add_subdirectory(stb_image)
 add_subdirectory(tiny_gltf)
 add_subdirectory(half)
+add_subdirectory(dlss)
 
 ##################################
 # Finalize FetchContent dependencies
