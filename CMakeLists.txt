@@ -253,6 +253,11 @@ target_link_libraries(ArkoseRenderer PRIVATE
     spirv-cross-core # generic spir-v reflection
     )
 
+add_custom_command(TARGET ArkoseRenderer POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:ArkoseRenderer> $<TARGET_RUNTIME_DLLS:ArkoseRenderer>
+    COMMAND_EXPAND_LISTS
+)
+
 ##################################
 ######## BUILD SETTINGS  #########
 ##################################
