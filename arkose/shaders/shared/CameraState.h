@@ -7,6 +7,8 @@ struct CameraState {
     mat4 viewFromWorld;
     mat4 worldFromView;
 
+    mat4 unjitteredProjectionFromView;
+
     mat4 previousFrameProjectionFromView;
     mat4 previousFrameViewFromWorld;
 

@@ -438,6 +438,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 .viewFromWorld = viewFromWorld,
                 .worldFromView = inverse(viewFromWorld),
 
+                .unjitteredProjectionFromView = camera.unjitteredProjectionMatrix(),
+
                 .previousFrameProjectionFromView = camera.previousFrameProjectionMatrix(),
                 .previousFrameViewFromWorld = camera.previousFrameViewMatrix(),
 

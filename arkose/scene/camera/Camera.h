@@ -100,6 +100,7 @@ public:
 
     [[nodiscard]] mat4 viewMatrix() const { return m_viewFromWorld; }
     [[nodiscard]] mat4 projectionMatrix() const { return m_projectionFromView; }
+    [[nodiscard]] mat4 unjitteredProjectionMatrix() const { return m_unjitteredProjectionFromView; }
     [[nodiscard]] mat4 viewProjectionMatrix() const { return projectionMatrix() * viewMatrix(); }
 
     [[nodiscard]] mat4 previousFrameViewMatrix() const { return m_previousFrameViewFromWorld.value_or(viewMatrix()); }
@@ -203,6 +204,7 @@ private:
 
     mat4 m_viewFromWorld {};
     mat4 m_projectionFromView {};
+    mat4 m_unjitteredProjectionFromView {};
     Extent2D m_viewportSize {};
 
     bool m_frustumJitteringEnabled { false };

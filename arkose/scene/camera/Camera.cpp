@@ -347,6 +347,7 @@ void Camera::setProjectionFromView(mat4 projectionFromView)
 {
     if (projectionFromView != m_projectionFromView) {
         m_projectionFromView = projectionFromView;
+        m_unjitteredProjectionFromView = projectionFromView;
         markAsModified();
     }
 }
