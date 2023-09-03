@@ -60,6 +60,8 @@ FetchContent_Declare(jolt-physics
     GIT_TAG        "b1cd84951022a565a23f33ff77ffee9e71487bbc" # (latest release doesn't include https://github.com/jrouwe/JoltPhysics/pull/175 which we need)
     SOURCE_SUBDIR  "Build")
 
+set(LZ4_BUILD_CLI OFF)
+set(LZ4_BUILD_LEGACY_LZ4C OFF)
 FetchContent_Declare(lz4
     GIT_REPOSITORY https://github.com/lz4/lz4.git
     GIT_TAG        "v1.9.4"
