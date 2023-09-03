@@ -21,5 +21,7 @@ void main()
 #if WITH_TEXTURES
     vTexCoord = aTexCoord;
 #endif
-    gl_Position = camera.projectionFromView * camera.viewFromWorld * vec4(aPosition, 1.0);
+
+    // NOTE: Debug drawing should always happen after TAA, if present, so we don't want any frustum jitter
+    gl_Position = camera.unjitteredProjectionFromView * camera.viewFromWorld * vec4(aPosition, 1.0);
 }
