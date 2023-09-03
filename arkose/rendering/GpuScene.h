@@ -185,7 +185,7 @@ private:
 
     std::vector<std::unique_ptr<SkeletalMeshInstance>> m_skeletalMeshInstances {};
     std::vector<std::unique_ptr<StaticMeshInstance>> m_staticMeshInstances {};
-    ResourceList<ShaderDrawable, DrawableObjectHandle> m_drawables { "Drawables", 10'000 };
+    ResourceList<ShaderDrawable, DrawableObjectHandle> m_drawables { "Drawables", 65'536 };
 
     std::unique_ptr<VertexManager> m_vertexManager {};
     std::unique_ptr<MeshletManager> m_meshletManager {};

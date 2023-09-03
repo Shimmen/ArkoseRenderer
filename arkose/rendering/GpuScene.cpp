@@ -262,6 +262,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     // TODO: Resize the buffer if needed when more meshes are added, OR crash hard
     // TODO: Make a more reasonable default too... we need: #meshes * #LODs * #segments-per-lod
     size_t objectDataBufferSize = m_drawables.capacity() * sizeof(ShaderDrawable);
+    //ARKOSE_LOG(Info, "Allocating space for {} instances, requiring {:.1f} MB of VRAM", m_drawables.capacity(), ark::conversion::to::MB(objectDataBufferSize));
     Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
     reg.publish("SceneObjectData", objectDataBuffer);
     BindingSet& objectBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(objectDataBuffer, ShaderStage::Vertex) });
