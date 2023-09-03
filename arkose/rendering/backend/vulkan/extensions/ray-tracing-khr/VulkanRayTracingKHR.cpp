@@ -44,20 +44,10 @@ VulkanRayTracingKHR::VulkanRayTracingKHR(VulkanBackend& backend, VkPhysicalDevic
         // ... are all in-shader
     }
     #undef AssignProcAddr
-
-    // Create shared buffer
-    {
-        m_sharedScratchBuffer = createAccelerationStructureBuffer(VulkanRayTracingKHR::SharedScratchBufferSize, true, false);
-
-        VkBufferDeviceAddressInfo bufferDeviceAddressInfo { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
-        bufferDeviceAddressInfo.buffer = m_sharedScratchBuffer.first;
-        m_sharedScratchBufferAddress = vkGetBufferDeviceAddress(m_device, &bufferDeviceAddressInfo);
-    }
 }
 
 VulkanRayTracingKHR::~VulkanRayTracingKHR()
 {
-    vmaDestroyBuffer(m_backend.globalAllocator(), m_sharedScratchBuffer.first, m_sharedScratchBuffer.second);
 }
 
 std::pair<VkBuffer, VmaAllocation> VulkanRayTracingKHR::createAccelerationStructureBuffer(VkDeviceSize size, bool deviceOnlyMemory, bool readOnlyMemory)

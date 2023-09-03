@@ -478,7 +478,6 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             cmdList.setComputeState(skinningComputeState);
             cmdList.bindSet(skinningBindingSet, 0);
 
-            u32 numUpdatedBLASes = 0;
             for (auto const& skeletalMeshInstance : m_skeletalMeshInstances) {
 
                 std::vector<mat4> const& jointMatrices = skeletalMeshInstance->skeleton().appliedJointMatrices();
@@ -512,17 +511,13 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                     for (auto& blas : skeletalMeshInstance->BLASes()) {
                         cmdList.buildBottomLevelAcceratationStructure(*blas, AccelerationStructureBuildType::Update);
-                        numUpdatedBLASes += 1;
                     }
                 }
             }
 
-            if (numUpdatedBLASes > 1) {
-                ARKOSE_LOG(Warning, "Strictly speaking we can only update one BLAS per frame, as they use the same scratch buffer! "
-                                    "This may work, but I wouldn't trust it.. We need to keep multiple, separate scratch buffer regions!");
-            }
-
-            cmdList.bufferWriteBarrier({ &vertexManager().positionVertexBuffer(), &vertexManager().nonPositionVertexBuffer() });
+            cmdList.bufferWriteBarrier({ &vertexManager().positionVertexBuffer(),
+                                         &vertexManager().nonPositionVertexBuffer(),
+                                         &vertexManager().velocityDataVertexBuffer() });
         }
 
         // Update object data (drawables)
@@ -562,10 +557,6 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             }
 
             for (auto& skeletalMeshInstance : m_skeletalMeshInstances) {
-
-                // TODO: Figure out how we want to re-initialize the skeletal mesh instance when the meshlets are loaded!
-                //  We probably want to be able to support the same path as static meshes where the meshlet manager tells
-                //  us that things have loaded in and that we can set up the meshlet view.
 
                 for (DrawableObjectHandle drawableHandle : skeletalMeshInstance->drawableHandles()) {
                     ShaderDrawable& drawable = m_drawables.get(drawableHandle);
@@ -919,13 +910,10 @@ void GpuScene::initializeSkeletalMeshInstance(SkeletalMeshInstance& instance)
         drawKey.setHasExplicityVelocity(true);
         drawable.drawKey = drawKey.asUint32();
 
-        if (meshSegment.meshletView) {
-            drawable.firstMeshlet = meshSegment.meshletView->firstMeshlet;
-            drawable.meshletCount = meshSegment.meshletView->meshletCount;
-        } else {
-            drawable.firstMeshlet = 0;
-            drawable.meshletCount = 0;
-        }
+        // For now, don't use meshlets for skeletal meshes as we don't know how to map
+        // the animated vertices to the meshlets vertices easily. It's solvable, but not for now.
+        drawable.firstMeshlet = 0;
+        drawable.meshletCount = 0;
 
         if (instance.hasDrawableHandleForSegmentIndex(segmentIdx)) {
             DrawableObjectHandle handle = instance.drawableHandleForSegmentIndex(segmentIdx);
@@ -959,7 +947,8 @@ void GpuScene::initializeSkeletalMeshInstance(SkeletalMeshInstance& instance)
 
         if (m_maintainRayTracingScene) {
             // For now at least, this is not reentrant.
-            ARKOSE_ASSERT(instance.BLASes().size() == 0);
+            //  ... but we can have more than one segment instance per mesh..
+            //ARKOSE_ASSERT(instance.BLASes().size() == 0);
 
             SkinningVertexMapping const& skinningVertexMappings = instance.skinningVertexMappingForSegmentIndex(segmentIdx);
             ARKOSE_ASSERT(skinningVertexMappings.skinnedTarget.isValid());

@@ -22,7 +22,7 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
     size_t instanceBufferSize = this->maxInstanceCount() * sizeof(VkAccelerationStructureInstanceKHR);
     instanceBuffer = vulkanBackend.createBuffer(instanceBufferSize, Buffer::Usage::RTInstanceBuffer, Buffer::MemoryHint::GpuOptimal);
 
-    // Needed now or can we do this later??
+    // Not needed at this point, not until we actually build this
     //updateCurrentInstanceCount(static_cast<uint32_t>(initialInstances.size()));
     //auto initialInstanceData = createInstanceData(initialInstances);
     //instanceBuffer->updateData(initialInstanceData);
@@ -30,16 +30,6 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
     VkBufferDeviceAddressInfo instanceBufferDeviceAddressInfo { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
     instanceBufferDeviceAddressInfo.buffer = static_cast<VulkanBuffer&>(*instanceBuffer).buffer;
     VkDeviceAddress instanceBufferBaseAddress = vkGetBufferDeviceAddress(vulkanBackend.device(), &instanceBufferDeviceAddressInfo);
-
-    // TODO: What is the point of having the build info for this?? We just want to know the required size of the acceleration structure? Just the max count should suffice?
-    // TODO: What is the point of having the build info for this?? We just want to know the required size of the acceleration structure? Just the max count should suffice?
-    // TODO: What is the point of having the build info for this?? We just want to know the required size of the acceleration structure? Just the max count should suffice?
-    // TODO: What is the point of having the build info for this?? We just want to know the required size of the acceleration structure? Just the max count should suffice?
-
-    // TODO: And if we do need it, we probably also need to set valid data in it before we check sizes?? Right?! Otherwise this doesn't make much sense.
-    // TODO: And if we do need it, we probably also need to set valid data in it before we check sizes?? Right?! Otherwise this doesn't make much sense.
-    // TODO: And if we do need it, we probably also need to set valid data in it before we check sizes?? Right?! Otherwise this doesn't make much sense.
-    // TODO: And if we do need it, we probably also need to set valid data in it before we check sizes?? Right?! Otherwise this doesn't make much sense.
 
     VkAccelerationStructureGeometryInstancesDataKHR instances { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR };
     instances.arrayOfPointers = VK_FALSE;
@@ -59,8 +49,6 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
     uint32_t maxInstanceCnt = this->maxInstanceCount();
     VkAccelerationStructureBuildSizesInfoKHR buildSizesInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
     vulkanBackend.rayTracingKHR().vkGetAccelerationStructureBuildSizesKHR(vulkanBackend.device(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &initialBuildInfo, &maxInstanceCnt, &buildSizesInfo);
-    ARKOSE_ASSERT(buildSizesInfo.buildScratchSize <= VulkanRayTracingKHR::SharedScratchBufferSize);
-    ARKOSE_ASSERT(buildSizesInfo.updateScratchSize <= VulkanRayTracingKHR::SharedScratchBufferSize);
 
     VkDeviceSize accelerationStructureBufferSize = buildSizesInfo.accelerationStructureSize; // (use min required size)
     accelerationStructureBufferAndAllocation = vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(accelerationStructureBufferSize, true, false);
@@ -74,6 +62,18 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
 
     if (vulkanBackend.rayTracingKHR().vkCreateAccelerationStructureKHR(vulkanBackend.device(), &accelerationStructureCreateInfo, nullptr, &accelerationStructure) != VK_SUCCESS) {
         ARKOSE_LOG(Fatal, "Error trying to create top level acceleration structure");
+    }
+
+    // Create scratch buffer
+    // TODO: Don't create a scratch buffer per TLAS! If we can guarantee they don't build/update at the same time a single buffer can be reused.
+    {
+        // NOTE: The update scratch size will generally be much smaller than the build scratch size, so we're wasting a lot by this!
+        VkDeviceSize scratchBufferMinSize = std::max(buildSizesInfo.buildScratchSize, buildSizesInfo.updateScratchSize);
+        scratchBufferAndAllocation = vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(scratchBufferMinSize, true, false);
+
+        VkBufferDeviceAddressInfo bufferDeviceAddressInfo { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+        bufferDeviceAddressInfo.buffer = scratchBufferAndAllocation.first;
+        scratchBufferAddress = vkGetBufferDeviceAddress(vulkanBackend.device(), &bufferDeviceAddressInfo);
     }
 
     if (initialInstances.size() > 0) {
@@ -103,6 +103,7 @@ VulkanTopLevelASKHR::~VulkanTopLevelASKHR()
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vulkanBackend.rayTracingKHR().vkDestroyAccelerationStructureKHR(vulkanBackend.device(), accelerationStructure, nullptr);
 
+    vmaDestroyBuffer(vulkanBackend.globalAllocator(), scratchBufferAndAllocation.first, scratchBufferAndAllocation.second);
     vmaDestroyBuffer(vulkanBackend.globalAllocator(), accelerationStructureBufferAndAllocation.first, accelerationStructureBufferAndAllocation.second);
 }
 
@@ -160,11 +161,7 @@ void VulkanTopLevelASKHR::build(VkCommandBuffer commandBuffer, AccelerationStruc
         break;
     }
 
-    // TODO: Ensure we can safely use this scrash buffer! Maybe we need to use something like the UploadBuffer for this? As long as we only have a single TLAS this is fine though..
-    // TODO: Ensure we can safely use this scrash buffer! Maybe we need to use something like the UploadBuffer for this? As long as we only have a single TLAS this is fine though..
-    // TODO: Ensure we can safely use this scrash buffer! Maybe we need to use something like the UploadBuffer for this? As long as we only have a single TLAS this is fine though..
-    // TODO: Ensure we can safely use this scrash buffer! Maybe we need to use something like the UploadBuffer for this? As long as we only have a single TLAS this is fine though..
-    buildInfo.scratchData.deviceAddress = vulkanBackend.rayTracingKHR().sharedScratchBufferDeviceAddress();
+    buildInfo.scratchData.deviceAddress = scratchBufferAddress;
 
     VkAccelerationStructureBuildRangeInfoKHR rangeInfo { 0, 0, 0, 0 };
     rangeInfo.primitiveCount = instanceCount();
@@ -396,13 +393,24 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
     accelerationStructureDeviceAddressInfo.accelerationStructure = accelerationStructure;
     accelerationStructureDeviceAddress = vulkanBackend.rayTracingKHR().vkGetAccelerationStructureDeviceAddressKHR(vulkanBackend.device(), &accelerationStructureDeviceAddressInfo);
 
+    // Create scratch buffer
+    // TODO: Don't create a scratch buffer per BLAS! If we can guarantee they don't build/update at the same time a single buffer can be reused.
+    {
+        // NOTE: The update scratch size will generally be much smaller than the build scratch size, so we're wasting a lot by this!
+        VkDeviceSize scratchBufferMinSize = std::max(buildSizesInfo.buildScratchSize, buildSizesInfo.updateScratchSize);
+        associatedBuffers.push_back(vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(scratchBufferMinSize, true, false));
+
+        VkBufferDeviceAddressInfo bufferDeviceAddressInfo { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+        bufferDeviceAddressInfo.buffer = associatedBuffers.back().first;
+        scratchBufferAddress = vkGetBufferDeviceAddress(vulkanBackend.device(), &bufferDeviceAddressInfo);
+    }
+
     if (copySource == nullptr) {
         VkAccelerationStructureBuildGeometryInfoKHR buildInfo = previewBuildInfo;
         buildInfo.mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR;
         buildInfo.dstAccelerationStructure = accelerationStructure;
 
-        ARKOSE_ASSERT(buildSizesInfo.buildScratchSize <= VulkanRayTracingKHR::SharedScratchBufferSize);
-        buildInfo.scratchData.deviceAddress = vulkanBackend.rayTracingKHR().sharedScratchBufferDeviceAddress();
+        buildInfo.scratchData.deviceAddress = scratchBufferAddress;
 
         VkAccelerationStructureBuildRangeInfoKHR* rangeInfosData = rangeInfos.data();
         bool buildSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer cmdBuffer) {
@@ -469,12 +477,7 @@ void VulkanBottomLevelASKHR::build(VkCommandBuffer commandBuffer, AccelerationSt
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
     VkAccelerationStructureBuildGeometryInfoKHR buildInfo = previewBuildInfo;
-
-    // TODO: We have to ensure that we never do more than one rebuild at a time with this setup!
-    // TODO: We have to ensure that we never do more than one rebuild at a time with this setup!
-    // TODO: We have to ensure that we never do more than one rebuild at a time with this setup!
-    // TODO: We have to ensure that we never do more than one rebuild at a time with this setup!
-    buildInfo.scratchData.deviceAddress = vulkanBackend.rayTracingKHR().sharedScratchBufferDeviceAddress();
+    buildInfo.scratchData.deviceAddress = scratchBufferAddress;
 
     switch (buildType) {
     case AccelerationStructureBuildType::FullBuild:

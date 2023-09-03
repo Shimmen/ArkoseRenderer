@@ -21,10 +21,12 @@ public:
 
     VkAccelerationStructureKHR accelerationStructure;
     VkDeviceAddress accelerationStructureDeviceAddress;
+    VkDeviceAddress scratchBufferAddress;
 
     VkBuildAccelerationStructureFlagsKHR accelerationStructureFlags { 0u };
 
     std::pair<VkBuffer, VmaAllocation> accelerationStructureBufferAndAllocation {};
+    std::pair<VkBuffer, VmaAllocation> scratchBufferAndAllocation {};
     std::unique_ptr<Buffer> instanceBuffer {};
 };
 
@@ -39,6 +41,7 @@ public:
 
     VkAccelerationStructureKHR accelerationStructure;
     VkDeviceAddress accelerationStructureDeviceAddress;
+    VkDeviceAddress scratchBufferAddress;
 
     std::vector<std::pair<VkBuffer, VmaAllocation>> associatedBuffers;
 

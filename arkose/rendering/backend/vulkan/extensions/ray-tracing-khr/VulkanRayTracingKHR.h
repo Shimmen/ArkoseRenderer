@@ -44,9 +44,6 @@ public:
 
     // Helpers
 
-    static constexpr VkDeviceSize SharedScratchBufferSize = 20 * 1024 * 1024;
-    VkDeviceAddress sharedScratchBufferDeviceAddress() const { return m_sharedScratchBufferAddress; }
-
     std::pair<VkBuffer, VmaAllocation> createAccelerationStructureBuffer(VkDeviceSize size, bool deviceOnlyMemory, bool readOnlyMemory);
     VkTransformMatrixKHR toVkTransformMatrixKHR(mat4) const;
 
@@ -57,9 +54,6 @@ private:
     VulkanBackend& m_backend;
     VkPhysicalDevice m_physicalDevice;
     VkDevice m_device;
-
-    std::pair<VkBuffer, VmaAllocation> m_sharedScratchBuffer {};
-    VkDeviceAddress m_sharedScratchBufferAddress { 0u };
 
     VkPhysicalDeviceAccelerationStructurePropertiesKHR m_accelerationStructureProperties { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR };
     VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_rayTracingPipelineProperties { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR };
