@@ -30,6 +30,8 @@ public:
 
     void completePendingOperations() override;
 
+    virtual bool hasUpscalingSupport() const override { return false; }
+
     ///////////////////////////////////////////////////////////////////////////
     /// Backend-specific resource types
 
@@ -43,6 +45,7 @@ public:
     std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(std::vector<RTGeometry>, BottomLevelAS const* copySource = nullptr) override;
     std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance>) override;
     std::unique_ptr<RayTracingState> createRayTracingState(ShaderBindingTable& sbt, const StateBindings&, uint32_t maxRecursionDepth) override;
+    std::unique_ptr<UpscalingState> createUpscalingState(UpscalingTech, UpscalingQuality, Extent2D renderRes, Extent2D outputDisplayRes) override;
 
     ///////////////////////////////////////////////////////////////////////////
     /// Utilities

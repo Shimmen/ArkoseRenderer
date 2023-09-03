@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rendering/backend/Resources.h"
+#include "rendering/backend/base/UpscalingState.h"
 #include "rendering/backend/util/VramStats.h"
 #include "core/Badge.h"
 #include <memory>
@@ -66,6 +67,9 @@ public:
     virtual int vramStatsReportRate() const { return 0; }
     virtual std::optional<VramStats> vramStats() { return {}; }
 
+    virtual bool hasUpscalingSupport() const = 0;
+    virtual UpscalingPreferences queryUpscalingPreferences(UpscalingTech, UpscalingQuality, Extent2D outputRes) const { return UpscalingPreferences(); }
+
     virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) = 0;
     virtual std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) = 0;
     virtual std::unique_ptr<Texture> createTexture(Texture::Description) = 0;
@@ -76,6 +80,7 @@ public:
     virtual std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance>) = 0;
     virtual std::unique_ptr<RayTracingState> createRayTracingState(ShaderBindingTable& sbt, const StateBindings&, uint32_t maxRecursionDepth) = 0;
     virtual std::unique_ptr<ComputeState> createComputeState(const Shader&, std::vector<BindingSet*>) = 0;
+    virtual std::unique_ptr<UpscalingState> createUpscalingState(UpscalingTech, UpscalingQuality, Extent2D renderRes, Extent2D outputDisplayRes) = 0;
 
 protected:
     Badge<Backend> badge() const { return {}; }

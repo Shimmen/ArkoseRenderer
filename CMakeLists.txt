@@ -136,6 +136,7 @@ add_executable(ArkoseRenderer
     arkose/rendering/backend/base/RenderState.cpp
     arkose/rendering/backend/base/RenderTarget.cpp
     arkose/rendering/backend/base/Texture.cpp
+    arkose/rendering/backend/base/UpscalingState.cpp
     arkose/rendering/backend/util/StateBindings.cpp
     arkose/rendering/backend/util/UploadBuffer.cpp
     arkose/rendering/debug/DebugDrawer.cpp
@@ -169,6 +170,7 @@ add_executable(ArkoseRenderer
     arkose/rendering/nodes/TonemapNode.cpp
     arkose/rendering/nodes/TranslucencyNode.cpp
     arkose/rendering/nodes/VisibilityBufferShadingNode.cpp
+    arkose/rendering/upscaling/UpscalingNode.cpp
     arkose/scene/MeshInstance.cpp
     arkose/scene/Scene.cpp
     arkose/scene/camera/Camera.cpp
@@ -195,6 +197,7 @@ if (ARKOSE_BACKEND_VULKAN)
         arkose/rendering/backend/vulkan/VulkanRenderState.cpp
         arkose/rendering/backend/vulkan/VulkanRenderTarget.cpp
         arkose/rendering/backend/vulkan/VulkanTexture.cpp
+        arkose/rendering/backend/vulkan/VulkanUpscalingState.cpp
         arkose/rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.cpp
         arkose/rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.cpp
         arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.cpp

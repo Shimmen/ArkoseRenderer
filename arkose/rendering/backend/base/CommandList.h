@@ -22,6 +22,8 @@ public:
     virtual void setRayTracingState(const RayTracingState&) = 0;
     virtual void setComputeState(const ComputeState&) = 0;
 
+    virtual void evaluateUpscaling(UpscalingState const&, UpscalingParameters) = 0;
+
     virtual void bindSet(BindingSet&, uint32_t index) = 0;
     virtual void pushConstants(ShaderStage, void*, size_t size, size_t byteOffset = 0u) = 0;
     virtual void setNamedUniform(const std::string& name, void*, size_t size) = 0;

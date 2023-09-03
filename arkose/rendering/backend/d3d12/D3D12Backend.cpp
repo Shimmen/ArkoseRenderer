@@ -608,6 +608,11 @@ std::unique_ptr<RayTracingState> D3D12Backend::createRayTracingState(ShaderBindi
     return nullptr;
 }
 
+std::unique_ptr<UpscalingState> D3D12Backend::createUpscalingState(UpscalingTech, UpscalingQuality, Extent2D renderRes, Extent2D outputDisplayRes)
+{
+    return nullptr;
+}
+
 void D3D12Backend::setUpDemo()
 {
     // Create root signature

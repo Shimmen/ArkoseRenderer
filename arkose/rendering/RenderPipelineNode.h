@@ -29,6 +29,10 @@ public:
 
     [[nodiscard]] virtual std::string name() const = 0;
 
+    virtual UpscalingTech upscalingTech() const { return UpscalingTech::None; }
+    virtual UpscalingQuality upscalingQuality() const { return UpscalingQuality::Balanced; }
+    virtual bool isUpscalingNode() const final { return upscalingTech() != UpscalingTech::None; }
+
     virtual ExecuteCallback construct(GpuScene&, Registry&) = 0;
 
     // Draw GUI for this node

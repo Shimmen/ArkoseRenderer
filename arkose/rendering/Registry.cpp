@@ -284,6 +284,15 @@ ComputeState& Registry::createComputeState(const Shader& shader, std::vector<Bin
     return *m_computeStates.back();
 }
 
+UpscalingState& Registry::createUpscalingState(UpscalingTech tech, UpscalingQuality quality, Extent2D renderRes, Extent2D outputDisplayRes)
+{
+    auto upscalingState = backend().createUpscalingState(tech, quality, renderRes, outputDisplayRes);
+    upscalingState->setOwningRegistry({}, this);
+
+    m_upscalingStates.push_back(std::move(upscalingState));
+    return *m_upscalingStates.back();
+}
+
 bool Registry::hasPreviousNode(const std::string& name) const
 {
     auto entry = std::find(m_allNodeNames.begin(), m_allNodeNames.end(), name);

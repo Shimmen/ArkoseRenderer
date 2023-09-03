@@ -46,9 +46,19 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
         sceneColorTex = reg.getTexture("SceneColor");
     }
 
-    RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, sceneColorTex, LoadOp::Load, StoreOp::Store },
-                                                          { RenderTarget::AttachmentType::Depth, reg.getTexture("SceneDepth"), LoadOp::Load, StoreOp::Store } });
+    Texture* sceneDepthTex = reg.getTexture("SceneDepth");
 
+    std::vector<RenderTarget::Attachment> attachments;
+    attachments.push_back({ RenderTarget::AttachmentType::Color0, sceneColorTex, LoadOp::Load, StoreOp::Store });
+    if (sceneDepthTex->extent() == sceneColorTex->extent()) {
+        attachments.push_back({ RenderTarget::AttachmentType::Depth, sceneDepthTex, LoadOp::Load, StoreOp::Store });
+    } else {
+        ARKOSE_LOG(Error, "DEBUG DRAGING UPSCALING HACK: Since the debug drawing needs to depth write it can't use the non-upscaled "
+                          "depth texture. For now, when using upscaling, we will simply not do any depth testing. This can be fixed "
+                          "by copying the depth over to an upscaled texture (nearest sampling) and using that instead. Since it's just"
+                          "for debug drawing, nothing else will need this texture afterwards, so it makes sense to do it just here");
+    }
+    RenderTarget& renderTarget = reg.createRenderTarget(attachments);
 
     RenderStateBuilder linesStateBuilder { renderTarget, debugDrawShader, vertexLayout };
     linesStateBuilder.stateBindings().at(0, cameraBindingSet);

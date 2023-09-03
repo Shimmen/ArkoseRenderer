@@ -52,6 +52,11 @@ void D3D12CommandList::setComputeState(const ComputeState& genComputeState)
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
+void D3D12CommandList::evaluateUpscaling(UpscalingState const&, UpscalingParameters)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+}
+
 void D3D12CommandList::bindSet(BindingSet& bindingSet, uint32_t index)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();

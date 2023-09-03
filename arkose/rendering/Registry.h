@@ -57,6 +57,8 @@ public:
 
     [[nodiscard]] ComputeState& createComputeState(const Shader&, std::vector<BindingSet*>);
 
+    [[nodiscard]] UpscalingState& createUpscalingState(UpscalingTech, UpscalingQuality, Extent2D renderRes, Extent2D outputDisplayRes);
+
     template<typename T, typename... Args>
     [[nodiscard]] T& allocate(Args&&...);
 
@@ -115,6 +117,7 @@ private:
     std::vector<std::unique_ptr<TopLevelAS>> m_topLevelAS;
     std::vector<std::unique_ptr<RayTracingState>> m_rayTracingStates;
     std::vector<std::unique_ptr<ComputeState>> m_computeStates;
+    std::vector<std::unique_ptr<UpscalingState>> m_upscalingStates;
 
     static constexpr size_t PersistentBufferSize = 10 * ark::conversion::constants::BytesToKilobytes;
     BumpAllocator m_persistentBuffer { PersistentBufferSize };

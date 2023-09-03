@@ -5,6 +5,7 @@
 
 #include "VulkanCommandList.h"
 #include "rendering/backend/vulkan/VulkanResources.h"
+#include "rendering/backend/vulkan/VulkanUpscalingState.h"
 #include "rendering/backend/shader/Shader.h"
 #include "rendering/backend/shader/ShaderManager.h"
 #include <ark/defer.h>
@@ -165,6 +166,18 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
         m_meshShaderExt = std::make_unique<VulkanMeshShaderEXT>(*this, physicalDevice(), device());
     }
 
+#if WITH_DLSS
+    if (m_dlssHasAllRequiredExtensions) {
+        m_dlss = std::make_unique<VulkanDLSS>(*this, m_instance, physicalDevice(), device());
+        if (m_dlss->isReadyToUse()) {
+            ARKOSE_LOG(Info, "VulkanBackend: DLSS is ready to use!");
+        } else {
+            ARKOSE_LOG(Info, "VulkanBackend: DLSS is not supported, but all required extensions etc. "
+                             "should be enabled by now. Is the dll placed next to the exe by the build process?");
+        }
+    }
+#endif
+
     // Create empty stub descriptor set layout (useful for filling gaps as Vulkan doesn't allow having gaps)
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
     descriptorSetLayoutCreateInfo.bindingCount = 0;
@@ -202,6 +215,10 @@ VulkanBackend::~VulkanBackend()
 {
     // Before destroying stuff, make sure we're done with all scheduled work
     completePendingOperations();
+
+#if WITH_DLSS
+    m_dlss.reset();
+#endif
 
     m_rayTracingNv.reset();
     m_rayTracingKhr.reset();
@@ -545,6 +562,11 @@ std::unique_ptr<ComputeState> VulkanBackend::createComputeState(const Shader& sh
     return std::make_unique<VulkanComputeState>(*this, shader, bidningSets);
 }
 
+std::unique_ptr<UpscalingState> VulkanBackend::createUpscalingState(UpscalingTech tech, UpscalingQuality quality, Extent2D renderRes, Extent2D outputDisplayRes)
+{
+    return std::make_unique<VulkanUpscalingState>(*this, tech, quality, renderRes, outputDisplayRes);
+}
+
 VkSurfaceFormatKHR VulkanBackend::pickBestSurfaceFormat() const
 {
     uint32_t formatCount;
@@ -632,8 +654,10 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
     bool includeValidationFeatures = false;
     std::vector<const char*> instanceExtensions;
     auto addInstanceExtension = [&](const char* extension) {
-        instanceExtensions.emplace_back(extension);
-        m_enabledInstanceExtensions.insert(extension);
+        if (m_enabledInstanceExtensions.find(extension) == m_enabledInstanceExtensions.end()) {
+            instanceExtensions.emplace_back(extension);
+            m_enabledInstanceExtensions.insert(extension);
+        }
     };
 
     {
@@ -669,6 +693,16 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
                 includeValidationFeatures = true;
             }
         }
+
+#if WITH_DLSS
+        for (VkExtensionProperties const* extension : VulkanDLSS::requiredInstanceExtensions()) {
+            if (hasSupportForInstanceExtension(extension->extensionName)) {
+                addInstanceExtension(extension->extensionName);
+            } else {
+                m_dlssHasAllRequiredExtensions = false;
+            }
+        }
+#endif
     }
 
     VkValidationFeaturesEXT validationFeatures { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
@@ -740,8 +774,10 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 
     std::vector<const char*> deviceExtensions {};
     auto addDeviceExtension = [&](const char* extension) {
-        deviceExtensions.emplace_back(extension);
-        m_enabledDeviceExtensions.insert(extension);
+        if (m_enabledDeviceExtensions.find(extension) == m_enabledDeviceExtensions.end()) {
+            deviceExtensions.emplace_back(extension);
+            m_enabledDeviceExtensions.insert(extension);
+        }
     };
 
     ARKOSE_ASSERT(hasSupportForDeviceExtension(VK_KHR_SWAPCHAIN_EXTENSION_NAME));
@@ -763,6 +799,18 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
         ARKOSE_ASSERT(hasSupportForDeviceExtension(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME));
         addDeviceExtension(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
     #endif
+
+#if WITH_DLSS
+    if (m_dlssHasAllRequiredExtensions) {
+        for (VkExtensionProperties const* extension : VulkanDLSS::requiredDeviceExtensions(m_instance, physicalDevice)) {
+            if (hasSupportForDeviceExtension(extension->extensionName)) {
+                addDeviceExtension(extension->extensionName);
+            } else {
+                m_dlssHasAllRequiredExtensions = false;
+            }
+        }
+    }
+#endif
 
     VkPhysicalDeviceFeatures2 features2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
     VkPhysicalDeviceFeatures& features = features2.features;
@@ -2347,4 +2395,28 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
     }
 
     return infos;
+}
+
+bool VulkanBackend::hasUpscalingSupport() const
+{
+#if WITH_DLSS
+    return m_dlss != nullptr && m_dlss->isReadyToUse();
+#else
+    return false;
+#endif
+}
+
+UpscalingPreferences VulkanBackend::queryUpscalingPreferences(UpscalingTech tech, UpscalingQuality quality, Extent2D outputRes) const
+{
+    ARKOSE_ASSERT(hasUpscalingSupport());
+
+#if WITH_DLSS
+    if (tech == UpscalingTech::DLSS) {
+        ARKOSE_ASSERT(hasDlssFeature());
+        return m_dlss->queryOptimalSettings(outputRes, quality);
+    }
+#endif
+
+    ASSERT_NOT_REACHED();
+    return UpscalingPreferences();
 }

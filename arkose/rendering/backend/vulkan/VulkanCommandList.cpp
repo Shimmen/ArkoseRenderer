@@ -4,6 +4,7 @@
 #include "core/Types.h"
 #include "VulkanBackend.h"
 #include "VulkanResources.h"
+#include "rendering/backend/vulkan/VulkanUpscalingState.h"
 #include "utility/Profiling.h"
 #include <fmt/format.h>
 #include <stb_image_write.h>
@@ -926,6 +927,23 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
     }
 
     vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computeState.pipeline);
+}
+
+void VulkanCommandList::evaluateUpscaling(UpscalingState const& upscalingState, UpscalingParameters parameters)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    auto const& vulkanUpscalingState = static_cast<VulkanUpscalingState const&>(upscalingState);
+
+#if WITH_DLSS
+    if (upscalingState.upscalingTech() == UpscalingTech::DLSS) {
+        backend().dlssFeature().evaluate(m_commandBuffer, vulkanUpscalingState.dlssFeatureHandle, parameters);
+    } else {
+#else
+    {
+#endif
+        ASSERT_NOT_REACHED();
+    }
 }
 
 void VulkanCommandList::bindSet(BindingSet& bindingSet, uint32_t index)

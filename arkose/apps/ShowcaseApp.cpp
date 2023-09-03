@@ -28,6 +28,7 @@
 #include "rendering/nodes/TonemapNode.h"
 #include "rendering/nodes/TranslucencyNode.h"
 #include "rendering/nodes/VisibilityBufferShadingNode.h"
+#include "rendering/upscaling/UpscalingNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
 #include "scene/lights/DirectionalLight.h"
@@ -44,7 +45,7 @@
 
 constexpr bool keepRenderDocCompatible = false;
 constexpr bool withRayTracing = true && !keepRenderDocCompatible;
-constexpr bool withMeshShading = false && !keepRenderDocCompatible;
+constexpr bool withMeshShading = true && !keepRenderDocCompatible;
 constexpr bool withVisibilityBuffer = true && withMeshShading;
 
 std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
@@ -71,7 +72,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     // NOTE: Scene not under "assets/sample/" will not be available in the Git-repo, either due to file size or license or both!
     //description.path = "assets/IntelSponza/NewSponzaWithCurtains.arklvl";
     //description.path = "assets/PicaPica/PicaPicaMiniDiorama.arklvl";
-    //description.path = "assets/sample/Sponza.arklvl";
+    description.path = "assets/sample/Sponza.arklvl";
     scene.setupFromDescription(description);
 
     if (description.path.empty()) {
@@ -156,8 +157,15 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     }
 
     std::string sceneTexture = "SceneColor";
-    const std::string finalTextureToScreen = "SceneColorLDR";
-    const AntiAliasing antiAliasingMode = AntiAliasing::TAA;
+    std::string finalTextureToScreen = "SceneColorLDR";
+    AntiAliasing antiAliasingMode = AntiAliasing::TAA;
+
+#if WITH_DLSS
+    constexpr bool withUpscaling = false;
+    if constexpr (withUpscaling) {
+        antiAliasingMode = AntiAliasing::None;
+    }
+#endif
 
     if constexpr (withVisibilityBuffer) {
         // Uncomment for visibility buffer visualisation
@@ -173,6 +181,13 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         // Uncomment for ray tracing visualisations
         //pipeline.addNode<RTVisualisationNode>(RTVisualisationNode::Mode::DirectLight); sceneTexture = "RTVisualisation";
     }
+
+#if WITH_DLSS
+    if constexpr (withUpscaling) {
+        pipeline.addNode<UpscalingNode>(UpscalingTech::DLSS, UpscalingQuality::Balanced);
+        sceneTexture = "SceneColorUpscaled";
+    }
+#endif
 
     pipeline.addNode<TonemapNode>(sceneTexture);
 

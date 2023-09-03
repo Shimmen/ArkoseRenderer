@@ -192,8 +192,33 @@ size_t GpuScene::forEachLocalLight(std::function<void(size_t, const Light&)> cal
 
 RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg)
 {
+    // TODO: For now, let's just always create the textures in the output display resolution,
+    // and we use viewport command to draw within the viewport. Later we also want to save on
+    // VRAM by creating smaller textures, but that makes it harder to easily change quality
+    // or technique for upscaling, so this is the easier approach. It's also suitable for if
+    // we want to implement dynamic resolution scaling in the future.
     Extent2D outputResolution = pipeline().outputResolution();
     Extent2D renderResolution = outputResolution;
+
+    u32 numNodesAffectingRenderResolution = 0;
+    for (RenderPipelineNode const* node : pipeline().nodes()) {
+        if (node && node->isUpscalingNode()) {
+
+            numNodesAffectingRenderResolution += 1;
+            if (numNodesAffectingRenderResolution > 1) {
+                ARKOSE_LOG(Error, "More than one nodes affects render resolution (e.g. does upscaling) so there's resolution ambiguity.");
+                continue; // let's just listen to whatever the first node said
+            }
+
+            UpscalingTech tech = node->upscalingTech();
+            UpscalingQuality quality = node->upscalingQuality();
+            UpscalingPreferences preferences = backend().queryUpscalingPreferences(tech, quality, outputResolution);
+
+            renderResolution = preferences.preferredRenderResolution;
+            break;
+        }
+    }
+
     pipeline().setRenderResolution(renderResolution);
     camera().setViewport(renderResolution);
 

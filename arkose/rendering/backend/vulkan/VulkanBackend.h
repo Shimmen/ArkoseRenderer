@@ -3,6 +3,7 @@
 #include "rendering/backend/Resources.h"
 #include "rendering/backend/base/Backend.h"
 #include "rendering/backend/util/UploadBuffer.h"
+#include "rendering/backend/base/UpscalingState.h"
 #include "rendering/backend/vulkan/VulkanResources.h"
 #include "rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.h"
 #include "rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.h"
@@ -16,6 +17,10 @@
 
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
+
+#if WITH_DLSS
+#include "rendering/backend/vulkan/features/dlss/VulkanDLSS.h"
+#endif
 
 #if defined(TRACY_ENABLE)
 #include <tracy/TracyVulkan.hpp>
@@ -64,6 +69,9 @@ public:
     int vramStatsReportRate() const override { return VramStatsQueryRate; }
     std::optional<VramStats> vramStats() override;
 
+    bool hasUpscalingSupport() const override;
+    UpscalingPreferences queryUpscalingPreferences(UpscalingTech, UpscalingQuality, Extent2D outputRes) const override;
+
     ///////////////////////////////////////////////////////////////////////////
     /// Backend-specific resource types
 
@@ -77,6 +85,7 @@ public:
     std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance>) override;
     std::unique_ptr<RayTracingState> createRayTracingState(ShaderBindingTable& sbt, const StateBindings&, uint32_t maxRecursionDepth) override;
     std::unique_ptr<ComputeState> createComputeState(const Shader&, std::vector<BindingSet*>) override;
+    std::unique_ptr<UpscalingState> createUpscalingState(UpscalingTech, UpscalingQuality, Extent2D renderRes, Extent2D outputDisplayRes) override;
 
     ///////////////////////////////////////////////////////////////////////////
     /// Utilities
@@ -132,6 +141,18 @@ public:
         ARKOSE_ASSERT(hasDebugUtilsSupport());
         return *m_debugUtils;
     }
+
+#if WITH_DLSS
+    bool hasDlssFeature() const
+    {
+        return m_dlss != nullptr && m_dlss->isReadyToUse();
+    }
+    VulkanDLSS& dlssFeature()
+    {
+        ARKOSE_ASSERT(hasDlssFeature());
+        return *m_dlss;
+    }
+#endif
 
     ///////////////////////////////////////////////////////////////////////////
     /// Backend services
@@ -313,6 +334,11 @@ private:
     std::unique_ptr<VulkanMeshShaderEXT> m_meshShaderExt {};
 
     std::unique_ptr<VulkanDebugUtils> m_debugUtils {};
+
+#if WITH_DLSS
+    bool m_dlssHasAllRequiredExtensions { true };
+    std::unique_ptr<VulkanDLSS> m_dlss {};
+#endif
 
     ///////////////////////////////////////////////////////////////////////////
     /// Resource & resource management members
