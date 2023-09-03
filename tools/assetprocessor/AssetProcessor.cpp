@@ -8,6 +8,7 @@ std::unique_ptr<ImageAsset> AssetProcessor::processImage(ImageAssetIdentifier im
 	// ALSO, we need to know what kind of image we're dealing with, e.g. component count, sRGB, normal map.
 
     // todo!
+    return {};
 }
 
 std::unique_ptr<MaterialAsset> AssetProcessor::processMaterial(AssetIdentifier assetId)
