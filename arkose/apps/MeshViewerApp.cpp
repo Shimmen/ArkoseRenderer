@@ -42,11 +42,11 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     /*
     // Spawn a grid of static mesh instances for a little stress test of instances
-    Transform t2 = boxInstance.transform;
-    for (int z = 0; z < 50; z++) {
-        for (int x = 0; x < 50; x++) {
+    Transform t2 = boxInstance.transform();
+    for (int z = 0; z < 200; z++) {
+        for (int x = 0; x < 200; x++) {
             t2.setTranslation(vec3(1.5f + 1.5f * x, 0.0f, -1.5f - 1.5f * z));
-            scene.createStaticMeshInstance(boxInstance.mesh, t2);
+            scene.createStaticMeshInstance(boxInstance.mesh(), t2);
         }
     }
     */
@@ -71,10 +71,10 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     // TODO: Maybe add some IBL for this?
     pipeline.addNode<SkyViewNode>();
 
-    pipeline.addNode<DebugDrawNode>();
-
     pipeline.addNode<TonemapNode>("SceneColor");
     pipeline.addNode<TAANode>(scene.camera());
+
+    pipeline.addNode<DebugDrawNode>();
     
     FinalNode& finalNode = pipeline.addNode<FinalNode>("SceneColorLDR");
     finalNode.setRenderFilmGrain(false);
