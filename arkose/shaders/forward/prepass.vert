@@ -14,7 +14,7 @@ NAMED_UNIFORMS(pushConstants,
 
 void main()
 {
-    ShaderDrawable drawable = drawables[gl_DrawID];
+    ShaderDrawable drawable = drawables[gl_BaseInstance];
     gl_Position = pushConstants.projectionFromWorld * drawable.worldFromLocal * vec4(aPosition, 1.0);
     gl_Position.z += pushConstants.depthOffset;
 }

@@ -20,7 +20,7 @@ NAMED_UNIFORMS(pushConstants,
 
 void main()
 {
-    ShaderDrawable drawable = drawables[gl_DrawID];
+    ShaderDrawable drawable = drawables[gl_BaseInstance];
     vMaterialIndex = drawable.materialIndex;
 
     vTexCoord = aTexCoord;

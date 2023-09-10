@@ -11,12 +11,12 @@ PrepassNode::PrepassNode(PrepassMode mode)
 RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Registry& reg)
 {
     RenderState& prepassOpaqueRenderState = makeRenderState(reg, scene, PassType::Opaque);
-    Buffer& opaqueIndirectDrawCmdsBuffer = *reg.getBuffer("MainViewOpaqueDrawCmds");
-    Buffer& opaqueIndirectDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
+    //Buffer& opaqueIndirectDrawCmdsBuffer = *reg.getBuffer("MainViewOpaqueDrawCmds");
+    //Buffer& opaqueIndirectDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
 
     RenderState& prepassMaskedRenderState = makeRenderState(reg, scene, PassType::Masked);
-    Buffer& maskedIndirectDrawCmdsBuffer = *reg.getBuffer("MainViewMaskedDrawCmds");
-    Buffer& maskedIndirectDrawCountBuffer = *reg.getBuffer("MainViewMaskedDrawCount");
+    //Buffer& maskedIndirectDrawCmdsBuffer = *reg.getBuffer("MainViewMaskedDrawCmds");
+    //Buffer& maskedIndirectDrawCountBuffer = *reg.getBuffer("MainViewMaskedDrawCount");
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
@@ -34,7 +34,31 @@ RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Regi
             cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer());
             cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
-            cmdList.drawIndirect(opaqueIndirectDrawCmdsBuffer, opaqueIndirectDrawCountBuffer);
+            //cmdList.drawIndirect(opaqueIndirectDrawCmdsBuffer, opaqueIndirectDrawCountBuffer);
+            for (auto const& instance : scene.staticMeshInstances()) {
+                if (StaticMesh const* staticMesh = scene.staticMeshForInstance(*instance)) {
+
+                    constexpr u32 lodIdx = 0;
+                    StaticMeshLOD const& lod = staticMesh->lodAtIndex(lodIdx);
+
+                    if (!staticMesh->hasNonTranslucentSegments()) {
+                        continue;
+                    }
+
+                    //if (not cameraFrustum.includesSphere(staticMesh->boundingSphere())) {
+                    //    continue;
+                    //}
+
+                    for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
+                        StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
+                        if (meshSegment.blendMode == BlendMode::Opaque) {
+                            DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
+                            drawCall.firstInstance = instance->drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>();
+                            cmdList.issueDrawCall(drawCall);
+                        }
+                    }
+                }
+            }
 
             cmdList.endRendering();
         }
@@ -49,7 +73,31 @@ RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Regi
             cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), 1);
             cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
-            cmdList.drawIndirect(maskedIndirectDrawCmdsBuffer, maskedIndirectDrawCountBuffer);
+            //cmdList.drawIndirect(maskedIndirectDrawCmdsBuffer, maskedIndirectDrawCountBuffer);
+            for (auto const& instance : scene.staticMeshInstances()) {
+                if (StaticMesh const* staticMesh = scene.staticMeshForInstance(*instance)) {
+
+                    constexpr u32 lodIdx = 0;
+                    StaticMeshLOD const& lod = staticMesh->lodAtIndex(lodIdx);
+
+                    if (!staticMesh->hasNonTranslucentSegments()) {
+                        continue;
+                    }
+
+                    //if (not cameraFrustum.includesSphere(staticMesh->boundingSphere())) {
+                    //    continue;
+                    //}
+
+                    for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
+                        StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
+                        if (meshSegment.blendMode == BlendMode::Masked) {
+                            DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
+                            drawCall.firstInstance = instance->drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>();
+                            cmdList.issueDrawCall(drawCall);
+                        }
+                    }
+                }
+            }
 
             cmdList.endRendering();
         }
@@ -88,10 +136,10 @@ RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, 
 
     switch (type) {
     case PassType::Opaque:
-        renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("MainViewCulledDrawablesOpaqueSet"));
+        renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneObjectSet"));//reg.getBindingSet("MainViewCulledDrawablesOpaqueSet"));
         break;
     case PassType::Masked:
-        renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("MainViewCulledDrawablesMaskedSet"));
+        renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneObjectSet"));//reg.getBindingSet("MainViewCulledDrawablesMaskedSet"));
         renderStateBuilder.stateBindings().at(1, scene.globalMaterialBindingSet());
         break;
     }
