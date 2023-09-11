@@ -56,7 +56,9 @@ public:
     size_t meshCount() const { return m_managedStaticMeshes.size(); }
 
     SkeletalMesh* skeletalMeshForInstance(SkeletalMeshInstance const&);
+    SkeletalMesh const* skeletalMeshForInstance(SkeletalMeshInstance const&) const;
     SkeletalMesh* skeletalMeshForHandle(SkeletalMeshHandle);
+    SkeletalMesh const* skeletalMeshForHandle(SkeletalMeshHandle) const;
 
     StaticMesh* staticMeshForInstance(StaticMeshInstance const&);
     StaticMesh const* staticMeshForInstance(StaticMeshInstance const&) const;

@@ -91,7 +91,17 @@ SkeletalMesh* GpuScene::skeletalMeshForInstance(SkeletalMeshInstance const& inst
     return skeletalMeshForHandle(instance.mesh());
 }
 
+SkeletalMesh const* GpuScene::skeletalMeshForInstance(SkeletalMeshInstance const& instance) const
+{
+    return skeletalMeshForHandle(instance.mesh());
+}
+
 SkeletalMesh* GpuScene::skeletalMeshForHandle(SkeletalMeshHandle handle)
+{
+    return handle.valid() ? m_managedSkeletalMeshes.get(handle).skeletalMesh.get() : nullptr;
+}
+
+SkeletalMesh const* GpuScene::skeletalMeshForHandle(SkeletalMeshHandle handle) const
 {
     return handle.valid() ? m_managedSkeletalMeshes.get(handle).skeletalMesh.get() : nullptr;
 }

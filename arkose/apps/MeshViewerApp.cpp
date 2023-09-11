@@ -7,10 +7,10 @@
 #include "physics/backend/base/PhysicsBackend.h"
 #include "rendering/debug/DebugDrawer.h"
 #include "rendering/nodes/BloomNode.h"
-#include "rendering/nodes/CullingNode.h"
 #include "rendering/nodes/DebugDrawNode.h"
 #include "rendering/nodes/FinalNode.h"
 #include "rendering/nodes/ForwardRenderNode.h"
+#include "rendering/nodes/PrepassNode.h"
 #include "rendering/nodes/SSAONode.h"
 #include "rendering/nodes/SkyViewNode.h"
 #include "rendering/nodes/TAANode.h"
@@ -66,7 +66,7 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     ////////////////////////////////////////////////////////////////////////////
     // Render pipeline setup
 
-    pipeline.addNode<CullingNode>();
+    pipeline.addNode<PrepassNode>();
     pipeline.addNode<ForwardRenderNode>();
     // TODO: Maybe add some IBL for this?
     pipeline.addNode<SkyViewNode>();

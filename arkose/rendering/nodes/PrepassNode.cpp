@@ -3,149 +3,192 @@
 #include "rendering/util/ScopedDebugZone.h"
 #include <imgui.h>
 
-PrepassNode::PrepassNode(PrepassMode mode)
-    : m_mode(mode)
+PrepassNode::PrepassNode(ForwardMeshFilter meshFilter, ForwardClearMode clearMode)
+    : m_meshFilter(meshFilter)
+    , m_clearMode(clearMode)
 {
 }
 
 RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Registry& reg)
 {
-    RenderState& prepassOpaqueRenderState = makeRenderState(reg, scene, PassType::Opaque);
-    //Buffer& opaqueIndirectDrawCmdsBuffer = *reg.getBuffer("MainViewOpaqueDrawCmds");
-    //Buffer& opaqueIndirectDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
+    // Create render target
 
-    RenderState& prepassMaskedRenderState = makeRenderState(reg, scene, PassType::Masked);
-    //Buffer& maskedIndirectDrawCmdsBuffer = *reg.getBuffer("MainViewMaskedDrawCmds");
-    //Buffer& maskedIndirectDrawCountBuffer = *reg.getBuffer("MainViewMaskedDrawCount");
+    Texture& sceneDepth = *reg.getTexture("SceneDepth");
+    RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &sceneDepth, LoadOp::Load, StoreOp::Store } });
+
+    // Create all render states (PSOs) needed for rendering
+
+    auto& renderStateLookup = reg.allocate<std::unordered_map<u32, RenderState*>>();
+
+    auto stateDrawKeys = { DrawKey({}, BlendMode::Opaque, false, {}),
+                           DrawKey({}, BlendMode::Opaque, true, {}),
+                           DrawKey({}, BlendMode::Masked, false, {}),
+                           DrawKey({}, BlendMode::Masked, true, {}) };
+
+    for (DrawKey const& drawKey : stateDrawKeys) {
+        renderStateLookup[drawKey.asUint32()] = &makeRenderState(reg, scene, renderTarget, drawKey);
+    }
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        auto setCommonConstants = [&]() {
-            cmdList.setNamedUniform("depthOffset", 0.00005f);
-            cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
-        };
-
-        if (m_mode == PrepassMode::OpaqueObjectsOnly || m_mode == PrepassMode::AllOpaquePixels) {
-            ScopedDebugZone zone { cmdList, "Opaque" };
-
-            cmdList.beginRendering(prepassOpaqueRenderState, ClearValue::blackAtMaxDepth());
-            setCommonConstants();
-
-            cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer());
-            cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
-
-            //cmdList.drawIndirect(opaqueIndirectDrawCmdsBuffer, opaqueIndirectDrawCountBuffer);
-            for (auto const& instance : scene.staticMeshInstances()) {
-                if (StaticMesh const* staticMesh = scene.staticMeshForInstance(*instance)) {
-
-                    constexpr u32 lodIdx = 0;
-                    StaticMeshLOD const& lod = staticMesh->lodAtIndex(lodIdx);
-
-                    if (!staticMesh->hasNonTranslucentSegments()) {
-                        continue;
-                    }
-
-                    //if (not cameraFrustum.includesSphere(staticMesh->boundingSphere())) {
-                    //    continue;
-                    //}
-
-                    for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
-                        StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
-                        if (meshSegment.blendMode == BlendMode::Opaque) {
-                            DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
-                            drawCall.firstInstance = instance->drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>();
-                            cmdList.issueDrawCall(drawCall);
-                        }
-                    }
-                }
-            }
-
-            cmdList.endRendering();
+        if (m_clearMode == ForwardClearMode::ClearBeforeFirstDraw) {
+            cmdList.clearTexture(sceneDepth, ClearValue::blackAtMaxDepth());
         }
 
-        if (m_mode == PrepassMode::AllOpaquePixels) {
-            ScopedDebugZone zone { cmdList, "Masked" };
+        std::vector<MeshSegmentInstance> instances = generateDrawList(scene, m_meshFilter);
+        if (instances.empty()) {
+            return;
+        }
 
-            cmdList.beginRendering(prepassMaskedRenderState);
-            setCommonConstants();
+        cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), 0);
+        cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), 1);
+        cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
-            cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), 0);
-            cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), 1);
-            cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
+        bool firstDraw = true;
 
-            //cmdList.drawIndirect(maskedIndirectDrawCmdsBuffer, maskedIndirectDrawCountBuffer);
-            for (auto const& instance : scene.staticMeshInstances()) {
-                if (StaticMesh const* staticMesh = scene.staticMeshForInstance(*instance)) {
+        DrawKey const* currentStateDrawKey = nullptr;
+        for (MeshSegmentInstance const& instance : instances) {
 
-                    constexpr u32 lodIdx = 0;
-                    StaticMeshLOD const& lod = staticMesh->lodAtIndex(lodIdx);
+            if (currentStateDrawKey == nullptr || instance.drawKey != *currentStateDrawKey) {
+                RenderState* renderState = renderStateLookup[instance.drawKey.asUint32()];
+                ARKOSE_ASSERT(renderState != nullptr);
 
-                    if (!staticMesh->hasNonTranslucentSegments()) {
-                        continue;
-                    }
-
-                    //if (not cameraFrustum.includesSphere(staticMesh->boundingSphere())) {
-                    //    continue;
-                    //}
-
-                    for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
-                        StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
-                        if (meshSegment.blendMode == BlendMode::Masked) {
-                            DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
-                            drawCall.firstInstance = instance->drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>();
-                            cmdList.issueDrawCall(drawCall);
-                        }
-                    }
+                if (!firstDraw) {
+                    cmdList.endRendering();
+                    cmdList.endDebugLabel();
                 }
+
+                cmdList.beginDebugLabel(renderState->name());
+                cmdList.beginRendering(*renderState);
+
+                cmdList.setNamedUniform("depthOffset", 0.00005f);
+                cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
+
+                currentStateDrawKey = &instance.drawKey;
             }
 
-            cmdList.endRendering();
+            DrawCallDescription drawCall = instance.vertexAllocation.asDrawCallDescription();
+            drawCall.firstInstance = instance.drawableIdx;
+            cmdList.issueDrawCall(drawCall);
+
+            firstDraw = false;
         }
+
+        cmdList.endRendering();
+        cmdList.endDebugLabel();
     };
 }
 
-RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, PassType type) const
+PrepassNode::MeshSegmentInstance::MeshSegmentInstance(VertexAllocation inVertexAllocation, DrawKey inDrawKey, u32 inDrawableIdx)
+    : vertexAllocation(inVertexAllocation)
+    , drawKey(inDrawKey)
+    , drawableIdx(inDrawableIdx)
 {
+}
+
+RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, RenderTarget const& renderTarget, DrawKey const& drawKey) const
+{
+    bool doubleSided = drawKey.doubleSided().value();
+    BlendMode blendMode = drawKey.blendMode().value();
+
     Shader shader {};
     std::vector<VertexLayout> vertexLayout {};
-    const char* stateName = "";
-    LoadOp loadOp = LoadOp::Clear;
 
-    switch (type) {
-    case PassType::Opaque:
+    switch (blendMode) {
+    case BlendMode::Opaque:
         shader = Shader::createVertexOnly("forward/prepass.vert");
         vertexLayout = { scene.vertexManager().positionVertexLayout() };
-        stateName = "PrepassOpaque";
-        loadOp = LoadOp::Clear;
         break;
-    case PassType::Masked:
+    case BlendMode::Masked:
         shader = Shader::createBasicRasterize("forward/prepassMasked.vert", "forward/prepassMasked.frag");
         vertexLayout = { scene.vertexManager().positionVertexLayout(), scene.vertexManager().nonPositionVertexLayout() };
-        stateName = "PrepassMasked";
-        loadOp = LoadOp::Load;
         break;
+    default:
+        ASSERT_NOT_REACHED();
     }
 
-    Texture* sceneDepth = reg.getTexture("SceneDepth");
-    RenderTarget& prepassRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, sceneDepth, loadOp, StoreOp::Store } });
-    
-    RenderStateBuilder renderStateBuilder { prepassRenderTarget, shader, std::move(vertexLayout) };
-
+    RenderStateBuilder renderStateBuilder { renderTarget, shader, std::move(vertexLayout) };
+    renderStateBuilder.testDepth = true;
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
+    renderStateBuilder.cullBackfaces = !doubleSided;
     renderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
 
-    switch (type) {
-    case PassType::Opaque:
-        renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneObjectSet"));//reg.getBindingSet("MainViewCulledDrawablesOpaqueSet"));
-        break;
-    case PassType::Masked:
-        renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneObjectSet"));//reg.getBindingSet("MainViewCulledDrawablesMaskedSet"));
+    renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneObjectSet"));
+    if (blendMode == BlendMode::Masked) {
         renderStateBuilder.stateBindings().at(1, scene.globalMaterialBindingSet());
-        break;
     }
 
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
-    renderState.setName(stateName);
+    renderState.setName(fmt::format("Prepass{}[doublesided={}]", BlendModeName(blendMode), doubleSided));
 
     return renderState;
+}
+
+std::vector<PrepassNode::MeshSegmentInstance> PrepassNode::generateDrawList(GpuScene const& scene, ForwardMeshFilter meshFilter) const
+{
+    SCOPED_PROFILE_ZONE();
+
+    std::vector<MeshSegmentInstance> meshSegmentInstances {};
+
+    vec3 cameraPosition = scene.camera().position();
+    geometry::Frustum const& cameraFrustum = scene.camera().frustum();
+
+    auto conditionallyAppendInstance = [&]<typename InstanceType>(InstanceType const& instance, StaticMesh const& mesh) -> void {
+        constexpr u32 lodIdx = 0;
+        StaticMeshLOD const& lod = mesh.lodAtIndex(lodIdx);
+
+        // Early-out if we know there are no relevant segments
+        if (!mesh.hasNonTranslucentSegments()) {
+            return;
+        }
+
+        // TODO: Add me back! But probably AABB testing ...
+        // if (not cameraFrustum.includesSphere(mesh.boundingSphere())) {
+        //    return;
+        //}
+
+        for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
+            StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
+
+            if (meshSegment.blendMode != BlendMode::Translucent) {
+
+                // Construct suitable draw key
+                // This is a bit ugly, but it works for now..
+                BlendMode blendMode = meshSegment.drawKey.blendMode().value();
+                bool doubleSided = meshSegment.drawKey.doubleSided().value();
+                DrawKey prepassDrawKey = DrawKey({}, blendMode, doubleSided, {});
+
+                VertexAllocation vertexAllocation = meshSegment.vertexAllocation;
+                if constexpr (std::is_same_v<InstanceType, SkeletalMeshInstance>) {
+                    SkinningVertexMapping const& skinningVertexMapping = instance.skinningVertexMappingForSegmentIndex(segmentIdx);
+                    vertexAllocation = skinningVertexMapping.skinnedTarget;
+                }
+
+                u32 drawableIdx = instance.drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>();
+                meshSegmentInstances.emplace_back(vertexAllocation, prepassDrawKey, drawableIdx);
+            }
+        }
+    };
+
+    bool includeStaticMeshes = meshFilter != ForwardMeshFilter::OnlySkeletalMeshes;
+    bool includeSkeletalMeshes = meshFilter != ForwardMeshFilter::OnlyStaticMeshes;
+
+    if (includeStaticMeshes) {
+        for (auto const& instance : scene.staticMeshInstances()) {
+            if (StaticMesh const* staticMesh = scene.staticMeshForInstance(*instance)) {
+                conditionallyAppendInstance(*instance, *staticMesh);
+            }
+        }
+    }
+
+    if (includeSkeletalMeshes) {
+        for (auto const& instance : scene.skeletalMeshInstances()) {
+            if (SkeletalMesh const* skeletalMesh = scene.skeletalMeshForInstance(*instance)) {
+                StaticMesh const& underlyingMesh = skeletalMesh->underlyingMesh();
+                conditionallyAppendInstance(*instance, underlyingMesh);
+            }
+        }
+    }
+
+    return meshSegmentInstances;
 }

@@ -118,8 +118,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     if constexpr (withVisibilityBuffer) {
         pipeline.addNode<MeshletVisibilityBufferRenderNode>();
     } else {
-        pipeline.addNode<CullingNode>();
-        pipeline.addNode<PrepassNode>(PrepassMode::AllOpaquePixels);
+        pipeline.addNode<PrepassNode>();
     }
 
     if constexpr (withRayTracing) {
