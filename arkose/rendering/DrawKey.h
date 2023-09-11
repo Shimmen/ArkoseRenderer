@@ -27,6 +27,11 @@ public:
 
     u32 asUint32() const;
 
+    bool operator==(DrawKey const&) const;
+
+    static std::vector<DrawKey> createCompletePermutationSet();
+    static size_t calculateCompletePermutationSetCount();
+
 private:
     std::optional<Brdf> m_brdf {};
     std::optional<BlendMode> m_blendMode {};

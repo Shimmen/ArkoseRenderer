@@ -24,7 +24,7 @@ layout(location = 7) out vec4 vPrevFrameProjectedPos;
 
 void main()
 {
-    ShaderDrawable object = perObject[gl_DrawID];
+    ShaderDrawable object = perObject[gl_BaseInstance];
     vMaterialIndex = object.materialIndex;
 
     vTexCoord = aTexCoord;

@@ -52,3 +52,34 @@ u32 DrawKey::asUint32() const
 
     return drawKeyU32;
 }
+
+bool DrawKey::operator==(DrawKey const& other) const
+{
+    return m_brdf == other.m_brdf
+        && m_blendMode == other.m_blendMode
+        && m_doubleSided == other.m_doubleSided
+        && m_hasExplicitVelocity == other.m_hasExplicitVelocity;
+}
+
+size_t DrawKey::calculateCompletePermutationSetCount()
+{
+    // TODO / OPTIMIZE: Calculate without generating the full list
+    return createCompletePermutationSet().size();
+}
+
+std::vector<DrawKey> DrawKey::createCompletePermutationSet()
+{
+    std::vector<DrawKey> permutations;
+
+    for (Brdf brdf : { Brdf::GgxMicrofacet }) {
+        for (BlendMode blendMode : { BlendMode::Opaque, BlendMode::Masked, BlendMode::Translucent }) {
+            for (bool doubleSided : { false, true }) {
+                for (bool explicitVelocity : { false, true }) {
+                    permutations.push_back(DrawKey(brdf, blendMode, doubleSided, explicitVelocity));
+                }
+            }
+        }
+    }
+
+    return permutations;
+}

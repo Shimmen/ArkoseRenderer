@@ -2,115 +2,183 @@
 
 #include "core/Types.h"
 #include "rendering/GpuScene.h"
+#include "rendering/VertexManager.h"
+#include "rendering/util/BlendModeUtil.h"
 #include "rendering/util/ScopedDebugZone.h"
+#include "scene/MeshInstance.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-// Shared shader headers
-#include "shaders/shared/IndirectData.h"
-#include "shaders/shared/LightData.h"
-#include "shaders/shared/ShaderBlendMode.h"
+ForwardRenderNode::ForwardRenderNode(Mode mode, ForwardMeshFilter meshFilter, ForwardClearMode clearMode)
+    : m_mode(mode)
+    , m_meshFilter(meshFilter)
+    , m_clearMode(clearMode)
+{
+}
+
+std::string ForwardRenderNode::name() const
+{
+    switch (m_mode) {
+    case ForwardRenderNode::Mode::Opaque:
+        return "Forward opaque";
+    case ForwardRenderNode::Mode::Translucent:
+        return "Translucency";
+    }
+
+    ASSERT_NOT_REACHED();
+}
 
 RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene, Registry& reg)
 {
-    // TODO: Improve the way culling is handled so we don't have to special-case these so much.
-    // It's okay now, but when we have multiple materials/shaders doing this would be a big pain.
+    m_hasPreviousPrepass = reg.hasPreviousNode("Prepass");
 
-    RenderState& renderStateOpaque = makeRenderState(reg, scene, ForwardPass::Opaque);
-    Buffer& opaqueDrawCmdsBuffer = *reg.getBuffer("MainViewOpaqueDrawCmds");
-    Buffer& opaqueDrawCountBuffer = *reg.getBuffer("MainViewOpaqueDrawCount");
+    // Create render target
+    RenderTarget& renderTarget = makeRenderTarget(reg, m_mode);
 
-    RenderState& renderStateMasked = makeRenderState(reg, scene, ForwardPass::Masked);
-    Buffer& maskedDrawCmdsBuffer = *reg.getBuffer("MainViewMaskedDrawCmds");
-    Buffer& maskedDrawCountBuffer = *reg.getBuffer("MainViewMaskedDrawCount");
+    // Create all render states (PSOs) needed for rendering
+    auto& renderStateLookup = reg.allocate<std::unordered_map<u32, RenderState*>>();
+    for (DrawKey const& drawKey : DrawKey::createCompletePermutationSet()) {
+
+        // filter out some potential draw states which we don't need
+
+        bool stateForTranslucentMaterials = drawKey.blendMode().value() == BlendMode::Translucent;
+        if ((m_mode == Mode::Opaque && stateForTranslucentMaterials)
+            || (m_mode == Mode::Translucent && !stateForTranslucentMaterials)) {
+            continue;
+        }
+
+        // NOTE: Technically explicit velocity doesn't mean it's a skeletal mesh, but in practice it's that way now..
+        bool stateForSkeletalMeshes = drawKey.hasExplicityVelocity().value() == true;
+        if ((m_meshFilter == ForwardMeshFilter::OnlyStaticMeshes && stateForSkeletalMeshes) ||
+            (m_meshFilter == ForwardMeshFilter::OnlySkeletalMeshes && !stateForSkeletalMeshes)) {
+            continue;
+        }
+
+        renderStateLookup[drawKey.asUint32()] = &makeForwardRenderState(reg, scene, renderTarget, drawKey);
+    }
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
-
-        auto setCommonNamedUniforms = [&](const RenderState& renderState) {
-            cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
-            cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
-            cmdList.setNamedUniform("invTargetSize", renderState.renderTarget().extent().inverse());
-        };
 
         cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), 0);
         cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), 1);
         cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
-        {
-            ScopedDebugZone zone { cmdList, "Opaque" };
-            cmdList.beginRendering(renderStateOpaque, ClearValue::blackAtMaxDepth());
-            setCommonNamedUniforms(renderStateOpaque);
-            cmdList.drawIndirect(opaqueDrawCmdsBuffer, opaqueDrawCountBuffer);
-            cmdList.endRendering();
+        if (m_clearMode == ForwardClearMode::ClearBeforeFirstDraw) {
+            for (RenderTarget::Attachment const& attachment : renderTarget.colorAttachments()) {
+                cmdList.clearTexture(*attachment.texture, ClearValue::blackAtMaxDepth());
+            }
+            if (!m_hasPreviousPrepass) {
+                cmdList.clearTexture(*renderTarget.depthAttachment()->texture, ClearValue::blackAtMaxDepth());
+            }
         }
 
-        {
-            ScopedDebugZone zone { cmdList, "Masked" };
-            cmdList.beginRendering(renderStateMasked);
-            setCommonNamedUniforms(renderStateMasked);
-            cmdList.drawIndirect(maskedDrawCmdsBuffer, maskedDrawCountBuffer);
-            cmdList.endRendering();
+        std::vector<MeshSegmentInstance> instances = generateSortedDrawList(scene, m_mode, m_meshFilter);
+        if (instances.empty()) {
+            return;
         }
+
+        bool firstDraw = true;
+
+        DrawKey const* currentStateDrawKey = nullptr;
+        for (MeshSegmentInstance const& instance : instances) {
+
+            if (currentStateDrawKey == nullptr || instance.drawKey != *currentStateDrawKey) {
+                RenderState* renderState = renderStateLookup[instance.drawKey.asUint32()];
+                ARKOSE_ASSERT(renderState != nullptr);
+
+                if (!firstDraw) {
+                    cmdList.endRendering();
+                    cmdList.endDebugLabel();
+                }
+
+                cmdList.beginDebugLabel(renderState->name());
+                cmdList.beginRendering(*renderState);
+
+                cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
+                cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
+                cmdList.setNamedUniform("invTargetSize", renderTarget.extent().inverse());
+
+                currentStateDrawKey = &instance.drawKey;
+            }
+
+            DrawCallDescription drawCall = instance.vertexAllocation.asDrawCallDescription();
+            drawCall.firstInstance = instance.drawableIdx;
+            cmdList.issueDrawCall(drawCall);
+
+            firstDraw = false;
+        }
+
+        cmdList.endRendering();
+        cmdList.endDebugLabel();
     };
 }
 
-RenderTarget& ForwardRenderNode::makeRenderTarget(Registry& reg, LoadOp loadOp) const
+ForwardRenderNode::MeshSegmentInstance::MeshSegmentInstance(VertexAllocation inVertexAllocation, DrawKey inDrawKey, Transform const& inTransform, u32 inDrawableIdx)
+    : vertexAllocation(inVertexAllocation)
+    , drawKey(inDrawKey)
+    , transform(&inTransform)
+    , drawableIdx(inDrawableIdx)
 {
-    Texture* colorTexture = reg.getTexture("SceneColor");
-    Texture* normalVelocityTexture = reg.getTexture("SceneNormalVelocity");
-    Texture* materialTexture = reg.getTexture("SceneMaterial");
-    Texture* baseColorTexture = reg.getTexture("SceneBaseColor");
-    Texture* depthTexture = reg.getTexture("SceneDepth");
-        
-    // For depth, if we have prepass we should never do any other load op than to load
-    LoadOp depthLoadOp = reg.hasPreviousNode("Prepass") ? LoadOp::Load : loadOp;
-    
-    return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, colorTexture, loadOp, StoreOp::Store },
-                                    { RenderTarget::AttachmentType::Color1, normalVelocityTexture, loadOp, StoreOp::Store },
-                                    { RenderTarget::AttachmentType::Color2, materialTexture, loadOp, StoreOp::Store },
-                                    { RenderTarget::AttachmentType::Color3, baseColorTexture, loadOp, StoreOp::Store },
-                                    { RenderTarget::AttachmentType::Depth, depthTexture, depthLoadOp, StoreOp::Store } });
 }
 
-RenderState& ForwardRenderNode::makeRenderState(Registry& reg, const GpuScene& scene, ForwardPass forwardPass) const
+RenderTarget& ForwardRenderNode::makeRenderTarget(Registry& reg, Mode mode) const
 {
-    BindingSet* drawablesBindingSet = nullptr;
-    const char* stateName = nullptr;
-    int blendModeInt = 0;
-    LoadOp loadOp;
+    constexpr LoadOp loadOp = LoadOp::Load;
+    constexpr StoreOp storeOp = StoreOp::Store;
 
-    switch (forwardPass) {
-    case ForwardPass::Opaque:
-        drawablesBindingSet = reg.getBindingSet("MainViewCulledDrawablesOpaqueSet");
-        stateName = "ForwardOpaque";
-        blendModeInt = BLEND_MODE_OPAQUE;
-        loadOp = LoadOp::Clear;
-        
-        break;
-    case ForwardPass::Masked:
-        drawablesBindingSet = reg.getBindingSet("MainViewCulledDrawablesMaskedSet");
-        stateName = "ForwardMasked";
-        blendModeInt = BLEND_MODE_MASKED;
-        loadOp = LoadOp::Load;
-        break;
+    Texture* colorTexture = reg.getTexture("SceneColor");
+    Texture* depthTexture = reg.getTexture("SceneDepth");
+
+    if (mode == Mode::Translucent) {
+
+        return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, colorTexture, loadOp, storeOp, RenderTargetBlendMode::Additive },
+                                        { RenderTarget::AttachmentType::Depth, depthTexture, loadOp, storeOp } });
+
+    } else if (mode == Mode::Opaque) {
+
+        Texture* normalVelocityTexture = reg.getTexture("SceneNormalVelocity");
+        Texture* materialTexture = reg.getTexture("SceneMaterial");
+        Texture* baseColorTexture = reg.getTexture("SceneBaseColor");
+
+        return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, colorTexture, loadOp, storeOp },
+                                        { RenderTarget::AttachmentType::Color1, normalVelocityTexture, loadOp, storeOp },
+                                        { RenderTarget::AttachmentType::Color2, materialTexture, loadOp, storeOp },
+                                        { RenderTarget::AttachmentType::Color3, baseColorTexture, loadOp, storeOp },
+                                        { RenderTarget::AttachmentType::Depth, depthTexture, loadOp, storeOp } });
+    } else {
+        ASSERT_NOT_REACHED();
     }
+}
 
+RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene const& scene, RenderTarget const& renderTarget, DrawKey const& drawKey) const
+{
     std::vector<ShaderDefine> shaderDefines {};
 
-    ARKOSE_ASSERT(blendModeInt != 0);
-    shaderDefines.push_back(ShaderDefine::makeInt("FORWARD_BLEND_MODE", blendModeInt));
+    BlendMode blendMode = drawKey.blendMode().value();
+    shaderDefines.push_back(ShaderDefine::makeInt("FORWARD_BLEND_MODE", blendModeToShaderBlendMode(blendMode)));
+
+    bool doubleSided = drawKey.doubleSided().value();
+    shaderDefines.push_back(ShaderDefine::makeBool("FORWARD_DOUBLE_SIDED", doubleSided));
 
     Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", shaderDefines);
 
     VertexLayout vertexLayoutPos = scene.vertexManager().positionVertexLayout();
     VertexLayout vertexLayoutOther = scene.vertexManager().nonPositionVertexLayout();
 
-    RenderStateBuilder renderStateBuilder { makeRenderTarget(reg, loadOp), shader, { vertexLayoutPos, vertexLayoutOther } };
+    RenderStateBuilder renderStateBuilder { renderTarget, shader, { vertexLayoutPos, vertexLayoutOther } };
+
+    renderStateBuilder.testDepth = true;
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
-    
-    renderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
-    if (forwardPass == ForwardPass::Opaque && reg.hasPreviousNode("Prepass")) {
-        renderStateBuilder.stencilMode = StencilMode::PassIfNotZero;
+    renderStateBuilder.writeDepth = blendMode != BlendMode::Translucent;
+
+    renderStateBuilder.cullBackfaces = !doubleSided;
+
+    if (m_mode == Mode::Translucent) {
+        renderStateBuilder.stencilMode = StencilMode::Disabled;
+    } else {
+        // If we have a previous prepass ignore non-written stencil pixels. We always have to write something to the
+        // stencil buffer, however, as the sky view shader relies on this test when drawing.
+        renderStateBuilder.stencilMode = m_hasPreviousPrepass ? StencilMode::PassIfNotZero : StencilMode::AlwaysWrite;
     }
 
     Texture* dirLightProjectedShadow = reg.getTexture("DirectionalLightProjectedShadow");
@@ -118,7 +186,7 @@ RenderState& ForwardRenderNode::makeRenderState(Registry& reg, const GpuScene& s
     Texture* localLightShadowMapAtlas = reg.getTexture("LocalLightShadowMapAtlas");
     Buffer* localLightShadowAllocations = reg.getBuffer("LocalLightShadowAllocations");
 
-    // Allow running without shadows
+    // Allow rendering without shadows
     if (!dirLightProjectedShadow || !sphereLightProjectedShadow || !localLightShadowMapAtlas || !localLightShadowAllocations) {
         Texture& placeholderTex = reg.createPixelTexture(vec4(1.0f), false);
         Buffer& placeholderBuffer = reg.createBufferForData(std::vector<int>(0), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
@@ -135,13 +203,103 @@ RenderState& ForwardRenderNode::makeRenderState(Registry& reg, const GpuScene& s
 
     StateBindings& bindings = renderStateBuilder.stateBindings();
     bindings.at(0, *reg.getBindingSet("SceneCameraSet"));
-    bindings.at(2, *drawablesBindingSet);
+    bindings.at(2, *reg.getBindingSet("SceneObjectSet"));
     bindings.at(3, scene.globalMaterialBindingSet());
     bindings.at(4, *reg.getBindingSet("SceneLightSet"));
     bindings.at(5, shadowBindingSet);
 
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
-    renderState.setName(stateName);
+    renderState.setName(fmt::format("Forward{}{}[doublesided={}][explicitvelocity={}]",
+                                    BlendModeName(drawKey.blendMode().value()),
+                                    "GgxMicrofacet", // TODO!
+                                    drawKey.doubleSided().value(),
+                                    drawKey.hasExplicityVelocity().value()));
 
     return renderState;
+}
+
+std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateSortedDrawList(GpuScene const& scene, Mode mode, ForwardMeshFilter meshFilter) const
+{
+    SCOPED_PROFILE_ZONE();
+
+    std::vector<MeshSegmentInstance> meshSegmentInstances {};
+
+    vec3 cameraPosition = scene.camera().position();
+    geometry::Frustum const& cameraFrustum = scene.camera().frustum();
+    
+    auto conditionallyAppendInstance = [&]<typename InstanceType>(InstanceType const& instance, StaticMesh const& mesh) -> void {
+
+        constexpr u32 lodIdx = 0;
+        StaticMeshLOD const& lod = mesh.lodAtIndex(lodIdx);
+
+        // Early-out if we know there are no relevant segments
+        if (mode == Mode::Translucent && !mesh.hasTranslucentSegments()) {
+            return;
+        } else if (mode == Mode::Opaque && !mesh.hasNonTranslucentSegments()) {
+            return;
+        }
+
+        // TODO: Add me back! But probably AABB testing ...
+        //if (not cameraFrustum.includesSphere(mesh.boundingSphere())) {
+        //    return;
+        //}
+
+        for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
+            StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
+
+            if ((mode == Mode::Translucent && meshSegment.blendMode == BlendMode::Translucent)
+                || (mode == Mode::Opaque && meshSegment.blendMode != BlendMode::Translucent)) {
+
+                VertexAllocation vertexAllocation = meshSegment.vertexAllocation;
+                DrawKey drawKey = meshSegment.drawKey;
+
+                if constexpr (std::is_same_v<InstanceType, SkeletalMeshInstance>) {
+                    SkinningVertexMapping const& skinningVertexMapping = instance.skinningVertexMappingForSegmentIndex(segmentIdx);
+                    vertexAllocation = skinningVertexMapping.skinnedTarget;
+
+                    // TODO/HACK: Don't modify it on the fly like this..
+                    drawKey.setHasExplicityVelocity(true);
+                }
+
+                u32 drawableIdx = instance.drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>();
+                meshSegmentInstances.emplace_back(vertexAllocation, drawKey, instance.transform(), drawableIdx);
+            }
+        }
+    };
+
+    bool includeStaticMeshes = meshFilter != ForwardMeshFilter::OnlySkeletalMeshes;
+    bool includeSkeletalMeshes = meshFilter != ForwardMeshFilter::OnlyStaticMeshes;
+
+    if (includeStaticMeshes) {
+        for (auto const& instance : scene.staticMeshInstances()) {
+            if (StaticMesh const* staticMesh = scene.staticMeshForInstance(*instance)) {
+                conditionallyAppendInstance(*instance, *staticMesh);
+            }
+        }
+    }
+
+    if (includeSkeletalMeshes) {
+        for (auto const& instance : scene.skeletalMeshInstances()) {
+            if (SkeletalMesh const* skeletalMesh = scene.skeletalMeshForInstance(*instance)) {
+                StaticMesh const& underlyingMesh = skeletalMesh->underlyingMesh();
+                conditionallyAppendInstance(*instance, underlyingMesh);
+            }
+        }
+    }
+
+    if (mode == Mode::Translucent) {
+        // Sort back to front
+        std::sort(meshSegmentInstances.begin(), meshSegmentInstances.end(), [&](MeshSegmentInstance const& lhs, MeshSegmentInstance const& rhs) {
+            float lhsDistance = distance(cameraPosition, lhs.transform->positionInWorld());
+            float rhsDistance = distance(cameraPosition, rhs.transform->positionInWorld());
+            return lhsDistance > rhsDistance;
+        });
+    } else {
+        // Sort to minimize render state changes
+        std::sort(meshSegmentInstances.begin(), meshSegmentInstances.end(), [&](MeshSegmentInstance const& lhs, MeshSegmentInstance const& rhs) {
+            return lhs.drawKey.asUint32() < rhs.drawKey.asUint32();
+        });
+    }
+
+    return meshSegmentInstances;
 }

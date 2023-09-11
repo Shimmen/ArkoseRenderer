@@ -230,6 +230,7 @@ void main()
     oBaseColor = vec4(baseColor, 0.0);
 #else
     float alpha = inputBaseColor.a * material.colorTint.a;
+    color = max(color, vec3(0.01)); // HACK: Until we have a proper BxDF for glass
     oColor = vec4(color, alpha);
 #endif
 }

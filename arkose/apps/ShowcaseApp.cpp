@@ -117,6 +117,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     if constexpr (withVisibilityBuffer) {
         pipeline.addNode<MeshletVisibilityBufferRenderNode>();
+        pipeline.addNode<PrepassNode>(ForwardMeshFilter::OnlySkeletalMeshes,
+                                      ForwardClearMode::DontClear);
     } else {
         pipeline.addNode<PrepassNode>();
     }
@@ -129,10 +131,13 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     if constexpr (withVisibilityBuffer) {
         pipeline.addNode<VisibilityBufferShadingNode>();
-    } else if constexpr (withMeshShading) {
-        pipeline.addNode<MeshletForwardRenderNode>();
+        pipeline.addNode<ForwardRenderNode>(ForwardRenderNode::Mode::Opaque,
+                                            ForwardMeshFilter::OnlySkeletalMeshes,
+                                            ForwardClearMode::DontClear);
     } else {
-        pipeline.addNode<ForwardRenderNode>();
+        pipeline.addNode<ForwardRenderNode>(ForwardRenderNode::Mode::Opaque,
+                                            ForwardMeshFilter::AllMeshes,
+                                            ForwardClearMode::ClearBeforeFirstDraw);
     }
 
     if constexpr (withRayTracing) {
@@ -144,7 +149,9 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     
     pipeline.addNode<SkyViewNode>();
 
-    pipeline.addNode<TranslucencyNode>();
+    pipeline.addNode<ForwardRenderNode>(ForwardRenderNode::Mode::Translucent,
+                                        ForwardMeshFilter::AllMeshes,
+                                        ForwardClearMode::DontClear);
 
     //pipeline.addNode<BloomNode>();
 
