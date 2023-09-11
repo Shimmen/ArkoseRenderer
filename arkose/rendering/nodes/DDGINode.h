@@ -23,8 +23,8 @@ private:
     static constexpr int MaxNumProbeUpdates { 4096 };
 
     int m_raysPerProbeInt = 256;
-    float m_hysteresisIrradiance { 0.98f };
-    float m_hysteresisVisibility { 0.98f };
+    float m_hysteresisIrradiance { 0.93f };
+    float m_hysteresisVisibility { 0.93f };
 
     float m_visibilitySharpness { 50.0f };
 
