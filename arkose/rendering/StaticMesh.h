@@ -120,6 +120,6 @@ private:
     PhysicsShapeHandle m_simplePhysicsShape {};
 
     bool m_hasTranslucentSegments { false };
-    bool m_hasNonTranslucentSegments { true };
+    bool m_hasNonTranslucentSegments { false };
 
 };
