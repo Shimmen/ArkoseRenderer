@@ -35,7 +35,7 @@ RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Regi
             cmdList.clearTexture(sceneDepth, ClearValue::blackAtMaxDepth());
         }
 
-        std::vector<MeshSegmentInstance> instances = generateDrawList(scene, m_meshFilter);
+        std::vector<MeshSegmentInstance> instances = generateSortedDrawList(scene, m_meshFilter);
         if (instances.empty()) {
             return;
         }
@@ -124,7 +124,7 @@ RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, 
     return renderState;
 }
 
-std::vector<PrepassNode::MeshSegmentInstance> PrepassNode::generateDrawList(GpuScene const& scene, ForwardMeshFilter meshFilter) const
+std::vector<PrepassNode::MeshSegmentInstance> PrepassNode::generateSortedDrawList(GpuScene const& scene, ForwardMeshFilter meshFilter) const
 {
     SCOPED_PROFILE_ZONE();
 
@@ -189,6 +189,11 @@ std::vector<PrepassNode::MeshSegmentInstance> PrepassNode::generateDrawList(GpuS
             }
         }
     }
+
+    // Sort to minimize render state changes
+    std::sort(meshSegmentInstances.begin(), meshSegmentInstances.end(), [&](MeshSegmentInstance const& lhs, MeshSegmentInstance const& rhs) {
+        return lhs.drawKey.asUint32() < rhs.drawKey.asUint32();
+    });
 
     return meshSegmentInstances;
 }

@@ -26,5 +26,5 @@ private:
 
     RenderState& makeRenderState(Registry&, GpuScene const&, RenderTarget const&, DrawKey const&) const;
 
-    std::vector<MeshSegmentInstance> generateDrawList(GpuScene const&, ForwardMeshFilter) const;
+    std::vector<MeshSegmentInstance> generateSortedDrawList(GpuScene const&, ForwardMeshFilter) const;
 };
