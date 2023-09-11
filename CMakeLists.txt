@@ -140,6 +140,8 @@ add_executable(ArkoseRenderer
     arkose/rendering/backend/util/StateBindings.cpp
     arkose/rendering/backend/util/UploadBuffer.cpp
     arkose/rendering/debug/DebugDrawer.cpp
+    arkose/rendering/forward/ForwardRenderNode.cpp
+    arkose/rendering/forward/PrepassNode.cpp
     arkose/rendering/meshlet/MeshletCuller.cpp
     arkose/rendering/meshlet/MeshletManager.cpp
     arkose/rendering/meshlet/MeshletDebugNode.cpp
@@ -148,19 +150,16 @@ add_executable(ArkoseRenderer
     arkose/rendering/meshlet/MeshletVisibilityBufferRenderNode.cpp
     arkose/rendering/meshlet/VisibilityBufferDebugNode.cpp
     arkose/rendering/nodes/BloomNode.cpp
-    arkose/rendering/nodes/CullingNode.cpp
     arkose/rendering/nodes/DDGINode.cpp
     arkose/rendering/nodes/DDGIProbeDebug.cpp
     arkose/rendering/nodes/DebugDrawNode.cpp
     arkose/rendering/nodes/DepthOfFieldNode.cpp
     arkose/rendering/nodes/DirectionalLightShadowNode.cpp
-    arkose/rendering/nodes/ForwardRenderNode.cpp
     arkose/rendering/nodes/FinalNode.cpp
     arkose/rendering/nodes/FXAANode.cpp
     arkose/rendering/nodes/GIComposeNode.cpp
     arkose/rendering/nodes/LocalLightShadowNode.cpp
     arkose/rendering/nodes/PickingNode.cpp
-    arkose/rendering/nodes/PrepassNode.cpp
     arkose/rendering/nodes/RTVisualisationNode.cpp
     arkose/rendering/nodes/RTSphereLightShadowNode.cpp
     arkose/rendering/nodes/RTReflectionsNode.cpp
@@ -168,7 +167,6 @@ add_executable(ArkoseRenderer
     arkose/rendering/nodes/SSAONode.cpp
     arkose/rendering/nodes/TAANode.cpp
     arkose/rendering/nodes/TonemapNode.cpp
-    arkose/rendering/nodes/TranslucencyNode.cpp
     arkose/rendering/nodes/VisibilityBufferShadingNode.cpp
     arkose/rendering/upscaling/UpscalingNode.cpp
     arkose/scene/MeshInstance.cpp
