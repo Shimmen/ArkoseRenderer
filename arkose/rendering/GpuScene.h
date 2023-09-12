@@ -77,6 +77,8 @@ public:
     // RenderPipelineNode interface
 
     std::string name() const override { return "Scene"; }
+
+    void drawGui() override;
     RenderPipelineNode::ExecuteCallback construct(GpuScene&, Registry&) override;
 
     // GPU data registration
@@ -129,6 +131,8 @@ public:
     void updateEnvironmentMap(EnvironmentMap&);
     Texture& environmentMapTexture();
 
+    float globalMipBias() const { return m_globalMipBias; }
+
     // Managed GPU assets
 
     void processDeferredDeletions();
@@ -168,6 +172,8 @@ private:
     bool m_meshShadingCapable { false };
 
     float m_lightPreExposure { 1.0f };
+
+    float m_globalMipBias { 0.0f };
 
     // GPU data
 

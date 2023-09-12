@@ -128,7 +128,7 @@ void main()
 {
     ShaderMaterial material = materials[vMaterialIndex];
 
-    vec4 inputBaseColor = texture(textures[nonuniformEXT(material.baseColor)], vTexCoord).rgba;
+    vec4 inputBaseColor = texture(textures[nonuniformEXT(material.baseColor)], vTexCoord, constants.mipBias).rgba;
 
 #if FORWARD_BLEND_MODE == BLEND_MODE_MASKED
     float mask = inputBaseColor.a;
@@ -138,9 +138,9 @@ void main()
 #endif
 
     vec3 baseColor = inputBaseColor.rgb * material.colorTint.rgb;
-    vec3 emissive = texture(textures[nonuniformEXT(material.emissive)], vTexCoord).rgb;
+    vec3 emissive = texture(textures[nonuniformEXT(material.emissive)], vTexCoord, constants.mipBias).rgb;
 
-    vec4 metallicRoughness = texture(textures[nonuniformEXT(material.metallicRoughness)], vTexCoord);
+    vec4 metallicRoughness = texture(textures[nonuniformEXT(material.metallicRoughness)], vTexCoord, constants.mipBias);
     float metallic = metallicRoughness.b * material.metallicFactor;
     float roughness = metallicRoughness.g * material.roughnessFactor;
 
@@ -160,7 +160,7 @@ void main()
 // In practice we will loose some level of precision by doing the reconstruction though, so the old path is left for A/B comparison purposes.
 #define FORWARD_USE_2COMPONENT_NORMALS 1
 #if FORWARD_USE_NORMAL_MAPPING
-    vec3 packedNormal = texture(textures[nonuniformEXT(material.normalMap)], vTexCoord).rgb;
+    vec3 packedNormal = texture(textures[nonuniformEXT(material.normalMap)], vTexCoord, constants.mipBias).rgb;
     #if FORWARD_USE_2COMPONENT_NORMALS
         vec3 tangentNormal = vec3(packedNormal.rg * 2.0 - 1.0, 0.0);
         tangentNormal.z = sqrt(clamp(1.0 - lengthSquared(tangentNormal.xy), 0.0, 1.0));

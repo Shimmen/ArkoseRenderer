@@ -9,6 +9,7 @@ struct ForwardPassConstants {
     float ambientAmount;
     vec2 frustumJitterCorrection;
     vec2 invTargetSize;
+    float mipBias;
 
 #if FORWARD_MESH_SHADING
     bool frustumCullMeshlets;

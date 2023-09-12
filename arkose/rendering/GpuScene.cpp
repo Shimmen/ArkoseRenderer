@@ -200,6 +200,11 @@ size_t GpuScene::forEachLocalLight(std::function<void(size_t, const Light&)> cal
     return nextIndex;
 }
 
+void GpuScene::drawGui()
+{
+    ImGui::SliderFloat("Global mip bias", &m_globalMipBias, -10.0f, +10.0f);
+}
+
 RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg)
 {
     // TODO: For now, let's just always create the textures in the output display resolution,
