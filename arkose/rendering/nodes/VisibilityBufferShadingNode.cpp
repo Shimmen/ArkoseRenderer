@@ -70,6 +70,12 @@ RenderPipelineNode::ExecuteCallback VisibilityBufferShadingNode::construct(GpuSc
         cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
         cmdList.setNamedUniform("invTargetSize", colorTexture.extent().inverse());
 
+        // We're dealing with gradients directly in the shader so we actually need to express the mip bias
+        // as a factor -- multiplicative instead of additive. Mip levels are calculated from the log2 of the
+        // gradient so by applying exp2 to the additive bias we should get something multiplicative and matching!
+        float lodBiasGradientFactor = std::exp2f(scene.globalMipBias());
+        cmdList.setNamedUniform("mipBias", lodBiasGradientFactor);
+
         cmdList.dispatch({ appState.windowExtent(), 1 }, { 8, 8, 1 });
 
     };

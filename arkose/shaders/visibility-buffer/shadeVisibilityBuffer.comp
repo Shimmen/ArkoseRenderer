@@ -204,8 +204,8 @@ void main()
     vec3 texCoordX = InterpolateWithDerivatives(barycentrics, v0.texcoord0.x, v1.texcoord0.x, v2.texcoord0.x);
     vec3 texCoordY = InterpolateWithDerivatives(barycentrics, v0.texcoord0.y, v1.texcoord0.y, v2.texcoord0.y);
     vec2 texCoord = vec2(texCoordX.x, texCoordY.x);
-    vec2 ddx = vec2(texCoordX.y, texCoordY.y);
-    vec2 ddy = vec2(texCoordX.z, texCoordY.z);
+    vec2 ddx = vec2(texCoordX.y, texCoordY.y) * constants.mipBias; // NOTE: Ensure constants.mipBias is exp2(actual mip bias) as we're working
+    vec2 ddy = vec2(texCoordX.z, texCoordY.z) * constants.mipBias; // directly with gradients here (see cpp-file for additional details)
 
     // NOTE: Ensure we normalize before interpolating and not after, according to MikkT space (http://www.mikktspace.com/)
     mat3 viewFromTangent = mat3(camera.viewFromWorld) * mat3(drawable.worldFromTangent);
