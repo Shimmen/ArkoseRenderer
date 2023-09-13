@@ -36,16 +36,6 @@ struct ShaderMaterial {
     vec4 colorTint;
 };
 
-struct IndirectShaderDrawable {
-    ShaderDrawable drawable;
-    vec4 localBoundingSphere;
-
-    uint indexCount;
-    uint firstIndex;
-    int vertexOffset;
-    int materialBlendMode; // shortcut, useful for culling
-};
-
 struct NonPositionVertex {
     vec2 texcoord0;
     vec3 normal;
