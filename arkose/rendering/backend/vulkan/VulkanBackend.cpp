@@ -1662,7 +1662,6 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
 
                 std::string nodeName = node.name();
 
-                SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandBuffer, nodeName);
                 SCOPED_PROFILE_ZONE_DYNAMIC(nodeName, 0x00ffff);
                 double cpuStartTime = glfwGetTime();
 

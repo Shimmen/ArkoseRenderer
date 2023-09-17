@@ -1406,6 +1406,16 @@ void VulkanCommandList::debugBarrier()
 
 void VulkanCommandList::beginDebugLabel(const std::string& scopeName)
 {
+#if defined(TRACY_ENABLE)
+    auto tracyScope = std::make_unique<tracy::VkCtxScope>(backend().tracyVulkanContext(),
+                                                          TracyLine,
+                                                          TracyFile, strlen(TracyFile),
+                                                          TracyFunction, strlen(TracyFunction),
+                                                          scopeName.c_str(), scopeName.size(),
+                                                          m_commandBuffer, true);
+    m_tracyDebugLabelStack.push_back(std::move(tracyScope));
+#endif
+
     if (!backend().hasDebugUtilsSupport())
         return;
 
@@ -1417,6 +1427,11 @@ void VulkanCommandList::beginDebugLabel(const std::string& scopeName)
 
 void VulkanCommandList::endDebugLabel()
 {
+#if defined(TRACY_ENABLE)
+    ARKOSE_ASSERT(m_tracyDebugLabelStack.size() > 0);
+    m_tracyDebugLabelStack.pop_back();
+#endif
+
     if (!backend().hasDebugUtilsSupport())
         return;
 

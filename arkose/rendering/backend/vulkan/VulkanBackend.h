@@ -154,6 +154,13 @@ public:
     }
 #endif
 
+#if defined(TRACY_ENABLE)
+    tracy::VkCtx* tracyVulkanContext()
+    {
+        return m_tracyVulkanContext;
+    }
+#endif
+
     ///////////////////////////////////////////////////////////////////////////
     /// Backend services
 

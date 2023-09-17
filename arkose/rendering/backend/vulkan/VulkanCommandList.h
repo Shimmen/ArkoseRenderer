@@ -2,6 +2,10 @@
 
 #include "VulkanBackend.h"
 
+#if defined(TRACY_ENABLE)
+#include <tracy/TracyVulkan.hpp>
+#endif
+
 class VulkanCommandList final : public CommandList {
 public:
     explicit VulkanCommandList(VulkanBackend&, VkCommandBuffer);
@@ -86,4 +90,8 @@ private:
     const VulkanRenderState* activeRenderState = nullptr;
     const VulkanComputeState* activeComputeState = nullptr;
     const RayTracingState* activeRayTracingState = nullptr;
+
+#if defined(TRACY_ENABLE)
+    std::vector<std::unique_ptr<tracy::VkCtxScope>> m_tracyDebugLabelStack;
+#endif
 };
