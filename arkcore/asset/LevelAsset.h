@@ -67,6 +67,7 @@ public:
     void serialize(Archive&);
 
     float illuminance;
+    float shadowMapWorldExtent;
 };
 
 class SphereLightAssetData {
@@ -165,6 +166,7 @@ template<class Archive>
 void DirectionalLightAssetData::serialize(Archive& archive)
 {
     archive(cereal::make_nvp("illuminance", illuminance));
+    archive(cereal::make_nvp("shadowMapWorldExtent", shadowMapWorldExtent));
 }
 
 template<class Archive>

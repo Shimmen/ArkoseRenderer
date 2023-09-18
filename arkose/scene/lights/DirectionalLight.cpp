@@ -18,6 +18,8 @@ DirectionalLight::DirectionalLight(LightAsset const& asset)
 
     auto const& data = std::get<DirectionalLightAssetData>(asset.data);
     m_illuminance = data.illuminance;
+
+    shadowMapWorldExtent = data.shadowMapWorldExtent;
 }
 
 DirectionalLight::DirectionalLight(vec3 color, float illuminance, vec3 direction)

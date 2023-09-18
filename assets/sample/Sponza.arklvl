@@ -86,7 +86,8 @@
                 "data": {
                     "index": 0,
                     "data": {
-                        "illuminance": 90000.0
+                        "illuminance": 90000.0,
+                        "shadowMapWorldExtent": 80.0
                     }
                 }
             },
