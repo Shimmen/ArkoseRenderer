@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ark/vector.h>
+#include <string_view>
 #include <vector>
 
 class IconBillboard;
@@ -31,5 +32,8 @@ public:
 
 private:
     std::vector<IDebugDrawer*> m_debugDrawers {};
+
+    bool m_hasWarnedAboutNoDrawers { false };
+    void validateDebugDrawersAreSetup(std::string_view context);
 
 };
