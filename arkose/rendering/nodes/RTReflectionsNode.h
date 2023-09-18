@@ -10,6 +10,9 @@ public:
 
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
+    float noTracingRoughnessThreshold() const { return m_noTracingRoughnessThreshold; }
+    void setNoTracingRoughnessThreshold(float threshold) { m_noTracingRoughnessThreshold = threshold; }
+
 private:
     float m_injectedAmbient { 0.0f };
 
