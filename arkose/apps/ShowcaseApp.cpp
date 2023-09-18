@@ -65,8 +65,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 {
     SCOPED_PROFILE_ZONE();
 
-    Scene::Description description { .maintainRayTracingScene = withRayTracing,
-                                     .meshShadingCapable = withMeshShading };
+    Scene::Description description { .withRayTracing = withRayTracing,
+                                     .withMeshShading = withMeshShading };
     // NOTE: Scene not under "assets/sample/" will not be available in the Git-repo, either due to file size or license or both!
     //description.path = "assets/IntelSponza/NewSponzaWithCurtains.arklvl";
     //description.path = "assets/PicaPica/PicaPicaMiniDiorama.arklvl";

@@ -34,7 +34,8 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     
     m_scene = &scene;
 
-    scene.setupFromDescription({ .maintainRayTracingScene = false });
+    scene.setupFromDescription({ .withRayTracing = false,
+                                 .withMeshShading = false });
 
     MeshAsset* boxMesh = MeshAsset::load("assets/sample/models/Box/Box.arkmsh");
     StaticMeshInstance& boxInstance = scene.addMesh(boxMesh);

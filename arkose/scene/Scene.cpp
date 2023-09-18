@@ -66,7 +66,7 @@ void Scene::postRender()
 void Scene::setupFromDescription(const Description& description)
 {
     // NOTE: Must initialize GPU scene before we start registering meshes etc.
-    gpuScene().initialize({}, description.maintainRayTracingScene, description.meshShadingCapable);
+    gpuScene().initialize({}, description.withRayTracing, description.withMeshShading);
 
     if (FileIO::isFileReadable(description.path)) {
         if (LevelAsset* levelAsset = LevelAsset::load(description.path)) {
