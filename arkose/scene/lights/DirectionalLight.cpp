@@ -1,6 +1,7 @@
 #include "DirectionalLight.h"
 
 #include "asset/LevelAsset.h"
+#include "rendering/debug/DebugDrawer.h"
 #include <ark/quaternion.h>
 #include <ark/transform.h>
 #include <imgui.h>
@@ -49,6 +50,10 @@ void DirectionalLight::drawGui()
         ImGui::SliderFloat("Slope bias", &customSlopeBias, 0.0f, 10.0f);
         ImGui::TreePop();
     }
+
+    // TODO: Draw arrow!
+    vec3 lightPosition = transform().positionInWorld();
+    DebugDrawer::get().drawLine(lightPosition, lightPosition + forwardDirection() * 0.2f, color());
 }
 
 mat4 DirectionalLight::projectionMatrix() const
