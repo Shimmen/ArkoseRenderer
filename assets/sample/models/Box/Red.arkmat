@@ -1,5 +1,6 @@
 {
     "material": {
+        "brdf": "Default",
         "baseColor": {
             "nullopt": true
         },
