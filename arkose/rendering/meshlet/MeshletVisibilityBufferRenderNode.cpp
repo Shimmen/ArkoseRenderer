@@ -88,6 +88,7 @@ MeshletVisibilityBufferRenderNode::RenderStateWithIndirectData& MeshletVisibilit
     renderStateBuilder.cullBackfaces = !passSettings.drawKeyMask.doubleSided().value(); // TODO: We probably want to use dynamic state for double sided!
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
     renderStateBuilder.stencilMode = StencilMode::AlwaysWrite; // for sky view
+    renderStateBuilder.stencilValue = 0x01;
 
     MeshletIndirectBuffer& indirectBuffer = m_meshletIndirectHelper.createIndirectBuffer(reg, passSettings.drawKeyMask, passSettings.maxMeshlets);
 

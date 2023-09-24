@@ -112,6 +112,7 @@ RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, 
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
     renderStateBuilder.cullBackfaces = !doubleSided;
     renderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
+    renderStateBuilder.stencilValue = 0x01;
 
     renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneObjectSet"));
     if (blendMode == BlendMode::Masked) {

@@ -30,7 +30,8 @@ RenderPipelineNode::ExecuteCallback SkyViewNode::construct(GpuScene& scene, Regi
     RenderStateBuilder renderStateBuilder { renderTarget, rasterizeShader, { VertexComponent::Position2F } };
     renderStateBuilder.testDepth = false;
     renderStateBuilder.writeDepth = false;
-    renderStateBuilder.stencilMode = StencilMode::PassIfZero; // i.e. if no geometry is written to this pixel
+    renderStateBuilder.stencilMode = StencilMode::PassIfEqual;
+    renderStateBuilder.stencilValue = 0x00; // i.e. if no geometry is written to this pixel
     renderStateBuilder.stateBindings().at(0, skyViewRasterizeBindingSet);
     RenderState& skyViewRenderState = reg.createRenderState(renderStateBuilder);
 

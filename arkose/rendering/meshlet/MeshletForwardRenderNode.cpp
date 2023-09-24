@@ -85,9 +85,12 @@ MeshletForwardRenderNode::RenderStateWithIndirectData& MeshletForwardRenderNode:
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
     renderStateBuilder.cullBackfaces = !passSettings.drawKeyMask.doubleSided().value(); // TODO: We probably want to use dynamic state for double sided!
 
-    renderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
-    if (passSettings.drawKeyMask.blendMode() == BlendMode::Opaque && reg.hasPreviousNode("Prepass")) {
-        renderStateBuilder.stencilMode = StencilMode::PassIfNotZero;
+    // If we have a previous prepass ignore non-written stencil pixels. We always have to write something to the
+    // stencil buffer, however, as the sky view shader relies on this test when drawing. Write bit1 for skin BRDF.
+    renderStateBuilder.stencilMode = reg.hasPreviousNode("Prepass") ? StencilMode::ReplaceIfGreaterOrEqual : StencilMode::AlwaysWrite;
+    renderStateBuilder.stencilValue = 0x01;
+    if (passSettings.drawKeyMask.brdf().value() == Brdf::Skin) {
+        renderStateBuilder.stencilValue |= 0x03;
     }
 
     Texture* dirLightProjectedShadow = reg.getTexture("DirectionalLightProjectedShadow");

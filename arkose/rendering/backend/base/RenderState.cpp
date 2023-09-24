@@ -49,7 +49,8 @@ DepthState RenderStateBuilder::depthState() const
 StencilState RenderStateBuilder::stencilState() const
 {
     StencilState state {
-        .mode = stencilMode
+        .mode = stencilMode,
+        .value = stencilValue
     };
     return state;
 }

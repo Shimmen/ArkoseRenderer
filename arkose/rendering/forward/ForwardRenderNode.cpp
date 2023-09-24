@@ -178,8 +178,12 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
         renderStateBuilder.stencilMode = StencilMode::Disabled;
     } else {
         // If we have a previous prepass ignore non-written stencil pixels. We always have to write something to the
-        // stencil buffer, however, as the sky view shader relies on this test when drawing.
-        renderStateBuilder.stencilMode = m_hasPreviousPrepass ? StencilMode::PassIfNotZero : StencilMode::AlwaysWrite;
+        // stencil buffer, however, as the sky view shader relies on this test when drawing. Write bit1 for skin BRDF.
+        renderStateBuilder.stencilMode = m_hasPreviousPrepass ? StencilMode::ReplaceIfGreaterOrEqual : StencilMode::AlwaysWrite;
+        renderStateBuilder.stencilValue = 0x01;
+        if (drawKey.brdf().has_value() && drawKey.brdf().value() == Brdf::Skin) {
+            renderStateBuilder.stencilValue |= 0x03;
+        }
     }
 
     Texture* dirLightProjectedShadow = reg.getTexture("DirectionalLightProjectedShadow");
@@ -212,7 +216,7 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
     renderState.setName(fmt::format("Forward{}{}[doublesided={}][explicitvelocity={}]",
                                     BlendModeName(drawKey.blendMode().value()),
-                                    "GgxMicrofacet", // TODO!
+                                    BrdfName(drawKey.brdf().value()),
                                     drawKey.doubleSided().value(),
                                     drawKey.hasExplicityVelocity().value()));
 

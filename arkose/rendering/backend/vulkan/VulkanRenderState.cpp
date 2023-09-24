@@ -287,29 +287,29 @@ VulkanRenderState::VulkanRenderState(Backend& backend, RenderTarget const& rende
             // Test
             depthStencilState.front.compareOp = VK_COMPARE_OP_ALWAYS;
             depthStencilState.front.compareMask = 0x00;
-            // Writing (just set to 0xff)
+            // Writing
             depthStencilState.front.passOp = VK_STENCIL_OP_REPLACE;
-            depthStencilState.front.reference = 0xff;
+            depthStencilState.front.reference = stencilState.value;
             depthStencilState.front.writeMask = 0xff;
             break;
 
-        case StencilMode::PassIfZero:
+        case StencilMode::ReplaceIfGreaterOrEqual:
+            // Test
+            depthStencilState.front.compareOp = VK_COMPARE_OP_GREATER_OR_EQUAL;
+            depthStencilState.front.compareMask = 0xff;
+            // Writing
+            depthStencilState.front.passOp = VK_STENCIL_OP_REPLACE;
+            depthStencilState.front.failOp = VK_STENCIL_OP_KEEP;
+            depthStencilState.front.depthFailOp = VK_STENCIL_OP_KEEP;
+            depthStencilState.front.reference = stencilState.value;
+            depthStencilState.front.writeMask = 0xff;
+            break;
+
+        case StencilMode::PassIfEqual:
             // Test
             depthStencilState.front.compareOp = VK_COMPARE_OP_EQUAL;
             depthStencilState.front.compareMask = 0xff;
-            depthStencilState.front.reference = 0x00;
-            // Writing (in this case, no writing)
-            depthStencilState.front.passOp = VK_STENCIL_OP_KEEP;
-            depthStencilState.front.failOp = VK_STENCIL_OP_KEEP;
-            depthStencilState.front.depthFailOp = VK_STENCIL_OP_KEEP;
-            depthStencilState.front.writeMask = 0x00;
-            break;
-
-        case StencilMode::PassIfNotZero:
-            // Test
-            depthStencilState.front.compareOp = VK_COMPARE_OP_NOT_EQUAL;
-            depthStencilState.front.compareMask = 0xff;
-            depthStencilState.front.reference = 0x00;
+            depthStencilState.front.reference = stencilState.value;
             // Writing (in this case, no writing)
             depthStencilState.front.passOp = VK_STENCIL_OP_KEEP;
             depthStencilState.front.failOp = VK_STENCIL_OP_KEEP;

@@ -28,14 +28,15 @@ enum class StencilMode {
 
     // Writing modes
     AlwaysWrite,
+    ReplaceIfGreaterOrEqual,
 
     // Non-writing modes
-    PassIfZero,
-    PassIfNotZero,
+    PassIfEqual,
 };
 
 struct StencilState {
     StencilMode mode { StencilMode::Disabled };
+    u8 value { 0x00 };
 };
 
 enum class TriangleWindingOrder {
@@ -125,7 +126,10 @@ public:
     bool writeDepth { true };
     bool testDepth { true };
     DepthCompareOp depthCompare { DepthCompareOp::Less };
+
     StencilMode stencilMode { StencilMode::Disabled };
+    u8 stencilValue { 0x00 };
+
     PrimitiveType primitiveType { PrimitiveType::Triangles };
     PolygonMode polygonMode { PolygonMode::Filled };
     float lineWidth { 1.0f };
