@@ -1,14 +1,10 @@
 #pragma once
 
 #include "rendering/BlendMode.h"
+#include "rendering/Brdf.h"
 #include <optional>
 
 class MaterialAsset;
-
-// TODO: Remove me and define somewhere else.. like in the material asset, once we actually handle it.
-enum class Brdf {
-    GgxMicrofacet = 0,
-};
 
 class DrawKey {
 public:

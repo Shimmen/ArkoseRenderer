@@ -148,11 +148,10 @@ std::vector<MeshletForwardRenderNode::RenderStateWithIndirectData*>& MeshletForw
     // not ready to support this quite yet, so for now it will have to do.
     auto explicitVelocityMask = std::optional<bool>();
 
-    auto brdfs = { Brdf::GgxMicrofacet };
+    auto brdfs = { Brdf::Default, Brdf::Skin };
     for (Brdf brdf : brdfs) {
 
-        // TODO: Use BRDF name!
-        debugName += "Default";
+        debugName += BrdfName(brdf);
 
         passes.push_back({ .drawKeyMask = DrawKey(brdf, BlendMode::Opaque, false, explicitVelocityMask),
                            .maxMeshlets = 50'000,

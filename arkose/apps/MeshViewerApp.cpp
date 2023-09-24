@@ -287,7 +287,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
 
             // TODO: Add something for when we actually support multiple BRDFs..
             int currentBrdfItem = 0;
-            materialDidChange |= ImGui::Combo("BRDF", &currentBrdfItem, "GGX-based microfacet model");
+            materialDidChange |= ImGui::Combo("BRDF", &currentBrdfItem, "Default");
 
             materialDidChange |= drawMaterialInputGui("Base color", material->baseColor);
             materialDidChange |= drawMaterialInputGui("Emissive color", material->emissiveColor);

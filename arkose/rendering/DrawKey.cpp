@@ -13,7 +13,7 @@ DrawKey::DrawKey(std::optional<Brdf> brdf, std::optional<BlendMode> blendMode, s
 DrawKey DrawKey::generate(MaterialAsset* materialAsset)
 {
     ARKOSE_ASSERT(materialAsset != nullptr);
-    return DrawKey(Brdf::GgxMicrofacet, materialAsset->blendMode, materialAsset->doubleSided, false);
+    return DrawKey(materialAsset->brdf, materialAsset->blendMode, materialAsset->doubleSided, false);
 }
 
 u32 DrawKey::asUint32() const
@@ -71,7 +71,7 @@ std::vector<DrawKey> DrawKey::createCompletePermutationSet()
 {
     std::vector<DrawKey> permutations;
 
-    for (Brdf brdf : { Brdf::GgxMicrofacet }) {
+    for (Brdf brdf : { Brdf::Default, Brdf::Skin }) {
         for (BlendMode blendMode : { BlendMode::Opaque, BlendMode::Masked, BlendMode::Translucent }) {
             for (bool doubleSided : { false, true }) {
                 for (bool explicitVelocity : { false, true }) {

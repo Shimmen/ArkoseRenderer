@@ -4,6 +4,7 @@
 #include "asset/ImageAsset.h"
 #include "asset/SerialisationHelpers.h"
 #include "rendering/BlendMode.h"
+#include "rendering/Brdf.h"
 #include "rendering/ImageFilter.h"
 #include "rendering/ImageWrapMode.h"
 #include <optional>
@@ -60,6 +61,8 @@ public:
     template<class Archive>
     void serialize(Archive&);
 
+    Brdf brdf { Brdf::Default };
+
     std::optional<MaterialInput> baseColor {};
     std::optional<MaterialInput> emissiveColor {};
     std::optional<MaterialInput> normalMap {};
@@ -85,6 +88,13 @@ public:
 #include <cereal/types/variant.hpp>
 #include <cereal/types/vector.hpp>
 
+enum class MaterialAssetVersion {
+    Initial = 0,
+    ////////////////////////////////////////////////////////////////////////////
+    // Add new versions above this delimiter
+    LatestVersion
+};
+
 template<class Archive>
 void MaterialInput::serialize(Archive& archive)
 {
@@ -97,6 +107,7 @@ void MaterialInput::serialize(Archive& archive)
 template<class Archive>
 void MaterialAsset::serialize(Archive& archive)
 {
+    archive(CEREAL_NVP(brdf));
     archive(CEREAL_NVP(baseColor), CEREAL_NVP(emissiveColor), CEREAL_NVP(normalMap), CEREAL_NVP(materialProperties));
     archive(CEREAL_NVP(colorTint));
     archive(CEREAL_NVP(metallicFactor));
