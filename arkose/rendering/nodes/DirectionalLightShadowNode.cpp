@@ -12,6 +12,8 @@
 void DirectionalLightShadowNode::drawGui()
 {
     ImGui::SliderFloat("Light disc radius", &m_lightDiscRadius, 0.0f, 5.0f);
+    drawTextureVisualizeGui(*m_shadowMap);
+    drawTextureVisualizeGui(*m_projectedShadow);
 }
 
 RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuScene& scene, Registry& reg)
@@ -30,16 +32,16 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
     Buffer& cameraDataBuffer = *reg.getBuffer("SceneCameraData");
     Texture& blueNoiseTexArray = *reg.getTexture("BlueNoise");
 
-    Texture& projectedShadowTex = reg.createTexture2D(pipeline().renderResolution(), Texture::Format::R8);
-    reg.publish("DirectionalLightProjectedShadow", projectedShadowTex);
+    m_projectedShadow = &reg.createTexture2D(pipeline().renderResolution(), Texture::Format::R8);
+    reg.publish("DirectionalLightProjectedShadow", *m_projectedShadow);
 
-    Texture& shadowMap = reg.createTexture2D({ 4096, 4096 },
-                                             Texture::Format::Depth32F,
-                                             Texture::Filters::linear(),
-                                             Texture::Mipmap::None,
-                                             ImageWrapModes::clampAllToEdge());
-    shadowMap.setName("DirectionalLightShadowMap");
-    RenderTarget& shadowMapRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, &shadowMap } });
+    m_shadowMap = &reg.createTexture2D({ 4096, 4096 },
+                                       Texture::Format::Depth32F,
+                                       Texture::Filters::linear(),
+                                       Texture::Mipmap::None,
+                                       ImageWrapModes::clampAllToEdge());
+    m_shadowMap->setName("DirectionalLightShadowMap");
+    RenderTarget& shadowMapRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, m_shadowMap } });
 
     BindingSet& sceneObjectBindingSet = *reg.getBindingSet("SceneObjectSet");
 
@@ -53,8 +55,8 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
     Shader shadowProjectionShader = Shader::createCompute("shadow/projectShadow.comp");
-    BindingSet& shadowProjectionBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(projectedShadowTex, ShaderStage::Compute),
-                                                                    ShaderBinding::sampledTexture(shadowMap, ShaderStage::Compute),
+    BindingSet& shadowProjectionBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(*m_projectedShadow, ShaderStage::Compute),
+                                                                    ShaderBinding::sampledTexture(*m_shadowMap, ShaderStage::Compute),
                                                                     ShaderBinding::sampledTexture(sceneDepth, ShaderStage::Compute),
                                                                     ShaderBinding::constantBuffer(cameraDataBuffer, ShaderStage::Compute),
                                                                     ShaderBinding::sampledTexture(blueNoiseTexArray, ShaderStage::Compute) });
@@ -78,8 +80,8 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
 
             cmdList.setNamedUniform<mat4>("lightProjectionFromWorld", lightProjectionFromWorld);
             cmdList.setNamedUniform<vec3>("worldLightDirection", light->forwardDirection());
-            cmdList.setNamedUniform<float>("constantBias", light->constantBias(shadowMap.extent()));
-            cmdList.setNamedUniform<float>("slopeBias", light->slopeBias(shadowMap.extent()));
+            cmdList.setNamedUniform<float>("constantBias", light->constantBias(m_shadowMap->extent()));
+            cmdList.setNamedUniform<float>("slopeBias", light->slopeBias(m_shadowMap->extent()));
 
             cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), 0);
             cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), 1);
@@ -132,14 +134,14 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
         {
             ScopedDebugZone zone { cmdList, "Shadow Map Projection" };
 
-            vec2 radiusInShadowMapUVs = m_lightDiscRadius * shadowMap.extent().inverse();
+            vec2 radiusInShadowMapUVs = m_lightDiscRadius * m_shadowMap->extent().inverse();
 
             cmdList.setComputeState(shadowProjectionState);
             cmdList.bindSet(shadowProjectionBindingSet, 0);
             cmdList.setNamedUniform<mat4>("lightProjectionFromView", lightProjectionFromView);
             cmdList.setNamedUniform<vec2>("lightDiscRadiusInShadowMapUVs", radiusInShadowMapUVs);
             cmdList.setNamedUniform<int>("frameIndexMod8", appState.frameIndex() % 8);
-            cmdList.dispatch(projectedShadowTex.extent3D(), { 16, 16, 1 });
+            cmdList.dispatch(m_projectedShadow->extent3D(), { 16, 16, 1 });
         }
     };
 }
