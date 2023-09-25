@@ -222,6 +222,8 @@
                     "z": 0.05789,
                     "w": 0.707534
                 },
+                "nearClipPlane": 0.25,
+                "farClipPlane": 10000.0,
                 "focusMode": "Manual",
                 "focalLength": 30.0,
                 "focusDepth": 5.0,

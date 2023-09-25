@@ -15,6 +15,9 @@ void Camera::setupFromCameraAsset(CameraAsset const& asset)
     m_position = asset.position;
     m_orientation = asset.orientation;
 
+    m_nearClipPlane = asset.nearClipPlane;
+    m_farClipPlane = asset.farClipPlane;
+
     if (asset.focusMode == "Auto") {
         m_focusMode = Camera::FocusMode::Auto;
     } else if (asset.focusMode == "Manual") {
@@ -326,11 +329,11 @@ void Camera::setOrientation(quat q)
     }
 }
 
-void Camera::setNearAndFarPlanes(float zNear, float zFar)
+void Camera::setNearAndFarClipPlanes(float nearClipPlane, float farClipPlane)
 {
-    if (m_zNear != zNear || m_zFar != zFar) {
-        m_zNear = zNear;
-        m_zFar = zFar;
+    if (m_nearClipPlane != nearClipPlane || m_farClipPlane != farClipPlane) {
+        m_nearClipPlane = nearClipPlane;
+        m_farClipPlane = farClipPlane;
         markAsModified();
     }
 }

@@ -44,6 +44,9 @@ public:
     vec3 position;
     quat orientation;
 
+    float nearClipPlane;
+    float farClipPlane;
+
     std::string focusMode;
     float focalLength;
     float focusDepth;
@@ -206,6 +209,9 @@ void CameraAsset::serialize(Archive& archive)
 {
     archive(cereal::make_nvp("position", position));
     archive(cereal::make_nvp("orientation", orientation));
+
+    archive(cereal::make_nvp("nearClipPlane", nearClipPlane));
+    archive(cereal::make_nvp("farClipPlane", farClipPlane));
 
     archive(cereal::make_nvp("focusMode", focusMode));
     archive(cereal::make_nvp("focalLength", focalLength));

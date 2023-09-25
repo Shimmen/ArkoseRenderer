@@ -472,8 +472,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 .renderResolution = vec4(renderResolution.asFloatVector(), renderResolution.inverse()),
                 .outputResolution = vec4(outputResolution.asFloatVector(), outputResolution.inverse()),
 
-                .zNear = camera.zNear(),
-                .zFar = camera.zFar(),
+                .zNear = camera.nearClipPlane(),
+                .zFar = camera.farClipPlane(),
 
                 .focalLength = camera.focalLengthMeters(),
 

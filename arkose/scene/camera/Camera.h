@@ -92,9 +92,9 @@ public:
     vec3 right() const { return ark::rotateVector(orientation(), ark::globalRight); }
     vec3 up() const { return ark::rotateVector(orientation(), ark::globalUp); }
 
-    void setNearAndFarPlanes(float zNear, float zFar);
-    [[nodiscard]] float zNear() const { return m_zNear; }
-    [[nodiscard]] float zFar() const { return m_zFar; }
+    void setNearAndFarClipPlanes(float nearClipPlane, float farClipPlane);
+    [[nodiscard]] float nearClipPlane() const { return m_nearClipPlane; }
+    [[nodiscard]] float farClipPlane() const { return m_farClipPlane; }
 
     [[nodiscard]] geometry::Frustum const& frustum() const { return m_cullingFrustum; }
 
@@ -180,8 +180,8 @@ private:
     vec3 m_position {};
     quat m_orientation {};
 
-    float m_zNear { 0.25f };
-    float m_zFar { 10'000.0f };
+    float m_nearClipPlane { 0.25f };
+    float m_farClipPlane { 10'000.0f };
 
     ////////////////////////////////////////////////////////////////////////////
     // Film grain control
