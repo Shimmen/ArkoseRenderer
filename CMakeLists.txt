@@ -245,6 +245,7 @@ target_link_libraries(ArkoseRenderer PRIVATE
 
     dear_imgui # dear imgui - immediate mode gui
     imguizmo # gizmo extension for dear imgui
+    implot # plot extension for dear imgui
 
     # Physics
     Jolt

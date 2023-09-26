@@ -124,6 +124,25 @@ if(NOT imguizmo_fetch_POPULATED)
 
 endif()
 
+FetchContent_Declare(implot_fetch
+    GIT_REPOSITORY https://github.com/epezent/implot.git
+    GIT_TAG        "v0.16")
+FetchContent_GetProperties(implot_fetch)
+if(NOT implot_fetch_POPULATED)
+    FetchContent_Populate(implot_fetch)
+
+    add_library(implot
+        "${implot_fetch_SOURCE_DIR}/implot.cpp"
+        "${implot_fetch_SOURCE_DIR}/implot_demo.cpp"
+        "${implot_fetch_SOURCE_DIR}/implot_items.cpp"
+        )
+
+    target_compile_features(implot PRIVATE cxx_std_20)
+    target_include_directories(implot PUBLIC ${implot_fetch_SOURCE_DIR})
+    target_link_libraries(implot PRIVATE dear_imgui)
+
+endif()
+
 FetchContent_Declare(bc7enc_rdo_fetch
     GIT_REPOSITORY https://github.com/richgel999/bc7enc_rdo.git
     GIT_TAG        "e6990bc11829c072d9f9e37296f3335072aab4e4")

@@ -18,6 +18,7 @@
 #include <algorithm>
 #include <cstring>
 #include <imgui.h>
+#include <implot.h>
 #include <ark/conversion.h>
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_vulkan.h>
@@ -1356,6 +1357,7 @@ void VulkanBackend::setupDearImgui()
 
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
 
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
@@ -1434,6 +1436,7 @@ void VulkanBackend::destroyDearImgui()
 
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
+    ImPlot::DestroyContext();
     ImGui::DestroyContext();
 
     m_guiIsSetup = false;
