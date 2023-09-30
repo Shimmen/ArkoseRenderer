@@ -72,6 +72,16 @@ void reortogonalize(in vec3 v0, inout vec3 v1)
     v1 = normalize(v1 - dot(v1, v0) * v0);
 }
 
+// Tom Duff et al. 2017, "Building an Orthonormal Basis, Revisited" https://jcgt.org/published/0006/01/01/
+void createOrthonormalBasis(in vec3 n, out vec3 b1, out vec3 b2)
+{
+    float zSign = sign(n.z);
+    const float a = -1.0 / (zSign + n.z);
+    const float b = n.x * n.y * a;
+    b1 = vec3(1.0 + zSign * n.x * n.x * a, zSign * b, -zSign * n.x);
+    b2 = vec3(b, zSign + n.y * n.y * a, -n.y);
+}
+
 mat3 createTbnMatrix(vec3 tangent, vec3 bitangent, vec3 normal)
 {
     reortogonalize(normal, tangent);
