@@ -26,6 +26,16 @@ RenderPipelineNode::ExecuteCallback MeshletVisibilityBufferRenderNode::construct
     m_triangleVisibilityTexture = &reg.createTexture(visibilityDataTexDesc);
     reg.publish("TriangleVisibilityTexture", *m_triangleVisibilityTexture);
 
+    // Binding set for all data required to interpret the visibility buffer - just get this binding set when you need to read it!
+    BindingSet& visBufferDataBindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(*m_instanceVisibilityTexture),
+                                                                 ShaderBinding::sampledTexture(*m_triangleVisibilityTexture),
+                                                                 ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
+                                                                 ShaderBinding::storageBufferReadonly(scene.meshletManager().meshletBuffer()),
+                                                                 ShaderBinding::storageBufferReadonly(scene.meshletManager().meshletIndexBuffer()),
+                                                                 ShaderBinding::storageBufferReadonly(scene.meshletManager().meshletPositionDataVertexBuffer()),
+                                                                 ShaderBinding::storageBufferReadonly(scene.meshletManager().meshletNonPositionDataVertexBuffer()) });
+    reg.publish("VisibilityBufferData", visBufferDataBindingSet);
+
     std::vector<RenderStateWithIndirectData*> const& renderStates = createRenderStates(reg, scene);
 
     // TODO: If we collect render states and indirect buffers into separate arrays we won't have to do this...

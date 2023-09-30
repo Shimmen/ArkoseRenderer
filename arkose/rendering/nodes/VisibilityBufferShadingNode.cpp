@@ -25,13 +25,7 @@ RenderPipelineNode::ExecuteCallback VisibilityBufferShadingNode::construct(GpuSc
                                                           ShaderBinding::storageTexture(baseColorTexture) });
 
     MeshletManager const& meshletManager = scene.meshletManager();
-    BindingSet& geometryDataBindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(*instanceVisibilityTexture),
-                                                                ShaderBinding::sampledTexture(*triangleVisibilityTexture),
-                                                                ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
-                                                                ShaderBinding::storageBufferReadonly(meshletManager.meshletBuffer()),
-                                                                ShaderBinding::storageBufferReadonly(meshletManager.meshletIndexBuffer()),
-                                                                ShaderBinding::storageBufferReadonly(meshletManager.meshletPositionDataVertexBuffer()),
-                                                                ShaderBinding::storageBufferReadonly(meshletManager.meshletNonPositionDataVertexBuffer()) });
+    BindingSet& geometryDataBindingSet = *reg.getBindingSet("VisibilityBufferData");
 
     BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
     BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");
