@@ -51,7 +51,7 @@ void main()
     mat2 sampleRot = mat2(cosAngle, sinAngle, -sinAngle, cosAngle);
 
     float shadowAccumulation = 0.0;
-    for (int i = 0; i < numFibShadowSamples; ++i)
+    for (int i = 1; i < numFibShadowSamples; ++i)
     {
         vec2 sampleOffset = constants.lightDiscRadiusInShadowMapUVs * (sampleRot * fibShadowSamples[i]);
         vec2 shadowMapUv = (posInShadowMap.xy * 0.5 + 0.5) + sampleOffset;
@@ -61,7 +61,7 @@ void main()
 
         shadowAccumulation += shadowValue;
     }
-    float shadowFactor = shadowAccumulation / numFibShadowSamples;
+    float shadowFactor = shadowAccumulation / (numFibShadowSamples - 1.0);
 
     imageStore(projectedShadowImg, pixelCoord, vec4(shadowFactor, 0.0, 0.0, 0.0));
 }
