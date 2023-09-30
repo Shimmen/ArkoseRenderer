@@ -134,7 +134,7 @@ void FpsCameraController::update(const Input& input, float dt)
 
     // Apply zoom
 
-    if (!input.isGuiUsingMouse()) {
+    if (!input.isGuiUsingMouse() && !input.isKeyDown(Key::LeftShift)) {
         m_targetFieldOfView += -input.scrollDelta() * ZoomSensitivity;
         m_targetFieldOfView = ark::clamp(m_targetFieldOfView, MinFieldOfView, MaxFieldOfView);
     }
@@ -144,6 +144,9 @@ void FpsCameraController::update(const Input& input, float dt)
     // Apply focus adjustments
 
     if (m_targetFocusDepth.has_value()) {
+        if (!input.isGuiUsingMouse() && input.isKeyDown(Key::LeftShift)) {
+            m_targetFocusDepth.value() += 0.008f * input.scrollDelta();
+        }
         float focusDepth = ark::lerp(camera.focusDepth(), m_targetFocusDepth.value(), 1.0f - std::exp2(-m_focusDepthLerpSpeed * dt));
         camera.setFocusDepth(focusDepth);
     }
