@@ -1,0 +1,107 @@
+{
+    "level": {
+        "name": "LPS head",
+        "objects": [
+            {
+                "name": "head",
+                "transform": {
+                    "translation": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0
+                    },
+                    "orientation": {
+                        "x": 0.7071068286895752,
+                        "y": 0.0,
+                        "z": 0.0,
+                        "w": 0.7071067094802856
+                    },
+                    "scale": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    }
+                },
+                "mesh": {
+                    "index": 0,
+                    "data": "assets/sample/models/Head/head.arkmsh"
+                }
+            }
+        ],
+        "lights": [
+            {
+                "type": "DirectionalLight",
+                "name": "dir-light",
+                "color": {
+                    "x": 1.0,
+                    "y": 1.0,
+                    "z": 1.0
+                },
+                "transform": {
+                    "translation": {
+                        "x": 0.0,
+                        "y": 0.35,
+                        "z": 0.0
+                    },
+                    "orientation": {
+                        "x": -0.55061,
+                        "y": -0.056491,
+                        "z": 0.077118,
+                        "w": 0.807984
+                    },
+                    "scale": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    }
+                },
+                "castsShadows": true,
+                "customConstantBias": 3.5,
+                "customSlopeBias": 2.5,
+                "data": {
+                    "index": 0,
+                    "data": {
+                        "illuminance": 90000.0,
+                        "shadowMapWorldExtent": 4.0
+                    }
+                }
+            }
+        ],
+        "cameras": [
+            {
+                "position": {
+                    "x": 0.103650287,
+                    "y": -0.02344744,
+                    "z": 0.446931601
+                },
+                "orientation": {
+                    "x": -0.0100740418,
+                    "y": 0.11197000000,
+                    "z": 0.00113525637,
+                    "w": 0.99366205900
+                },
+                "nearClipPlane": 0.01,
+                "farClipPlane": 10000.0,
+                "focusMode": "Manual",
+                "focalLength": 38.9849625,
+                "focusDepth": 0.421268404,
+                "sensorSize": {
+                    "x": 36.0,
+                    "y": 24.0
+                },
+                "exposureMode": "Manual",
+                "fNumber": 16.0,
+                "iso": 300.0,
+                "shutterSpeed": 0.0025,
+                "exposureCompensation": 0.0,
+                "adaptionRate": 0.0018
+            }
+        ],
+        "environmentMap": {
+            "nullopt": true
+        },
+        "probeGrid": {
+            "nullopt": true
+        }
+    }
+}

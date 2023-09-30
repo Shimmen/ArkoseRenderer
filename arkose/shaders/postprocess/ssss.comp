@@ -1,0 +1,140 @@
+#version 460
+
+// i.e., screen-space subsurface scattering
+
+// Needed for visibility buffer data
+#extension GL_EXT_scalar_block_layout : require
+
+#include <common.glsl>
+#include <common/camera.glsl>
+#include <common/namedUniforms.glsl>
+#include <shared/SceneData.h>
+
+layout(set = 0, binding = 0, rgba16f) uniform writeonly image2D resultImg;
+layout(set = 0, binding = 1) uniform sampler2D sceneColorTex;
+layout(set = 0, binding = 2) uniform sampler2D sceneDepthTex;
+layout(set = 0, binding = 3) uniform SamplesBlock { vec4 samples[MAX_SAMPLE_COUNT]; };
+layout(set = 0, binding = 4) uniform CameraStateBlock { CameraState camera; };
+
+// TODO: Group all of this in a single reusable #define and an API to access the data within
+layout(set = 1, binding = 0) uniform usampler2D drawableVisibilityTex;
+layout(set = 1, binding = 1) uniform usampler2D triangleVisibilityTex;
+layout(set = 1, binding = 2) buffer restrict readonly InstanceBlock { ShaderDrawable instances[]; };
+layout(set = 1, binding = 3) buffer restrict readonly MeshletBlock { ShaderMeshlet meshlets[]; };
+layout(set = 1, binding = 4, scalar) buffer restrict readonly IndicesBlock { uint meshletIndices[]; };
+layout(set = 1, binding = 5, scalar) buffer restrict readonly PositionsBlock { vec3 meshletPositions[]; };
+layout(set = 1, binding = 6, scalar) buffer restrict readonly NonPositionsBlock { NonPositionVertex meshletVertices[]; };
+
+// TODO: Group all of this in a single reusable #define and an API to access the data within. Apply the same to other shaders who use these
+layout(set = 2, binding = 0) buffer readonly MaterialBlock { ShaderMaterial materials[]; };
+layout(set = 2, binding = 1) uniform sampler2D textures[];
+
+
+NAMED_UNIFORMS(constants,
+    uvec2 targetSize;
+    uint sampleCount;
+)
+
+vec3 burleyNormalizedDiffusion(vec3 volumeAlbedo, vec3 shape, float radius)
+{
+    vec3 A = volumeAlbedo;
+    vec3 s = shape;
+    float r = radius;
+
+    return A * s * ((exp(-s * r) + exp(-s * r / 3.0)) / (8.0 * PI * r));
+}
+
+layout(local_size_x = 8, local_size_y = 8) in;
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(pixelCoord, constants.targetSize))) {
+        return;
+    }
+
+    vec4 sceneColor = texelFetch(sceneColorTex, pixelCoord, 0);
+
+    uint drawableIdx = uint(texelFetch(drawableVisibilityTex, pixelCoord, 0).x);
+    if (drawableIdx == 0) {
+        imageStore(resultImg, pixelCoord, sceneColor);
+        return;
+    }
+
+    ShaderDrawable drawable = instances[drawableIdx - 1];
+    // TODO: Make a better way to check for this bit! Some kind of DrawKey shared header & API?
+    if (((drawable.drawKey >> 12) & 0xf) != 0x2) {
+        imageStore(resultImg, pixelCoord, sceneColor);
+        return;
+    }
+
+    uint triangleId = uint(texelFetch(triangleVisibilityTex, pixelCoord, 0).x);
+    uint meshletTriangleIdx = triangleId & 0xff;
+    uint meshletIdx = (triangleId >> 8) - 1;
+
+    ShaderMeshlet meshlet = meshlets[meshletIdx];
+    uint meshletBaseIdxLookup = meshlet.firstIndex + (3 * meshletTriangleIdx);
+    uint i0 = meshletIndices[meshletBaseIdxLookup + 0];
+    uint i1 = meshletIndices[meshletBaseIdxLookup + 1];
+    uint i2 = meshletIndices[meshletBaseIdxLookup + 2];
+
+    vec3 p0 = meshletPositions[i0];
+    vec3 p1 = meshletPositions[i1];
+    vec3 p2 = meshletPositions[i2];
+
+    // NOTE: We do want the geometric normal for aligning the SSSS sample disc with
+    vec3 localNormal = normalize(cross(p1 - p0, p2 - p0));
+    vec3 worldNormal = mat3(drawable.worldFromTangent) * localNormal;
+
+    vec3 B1, B2;
+    createOrthonormalBasis(worldNormal, B1, B2);
+    mat3 tangentBasisMatrix = mat3(B1, B2, worldNormal);
+
+    // TODO: OR we calculate it from the visibility buffer? We just need to get the barycords & multiply with the world matrix.. so which is quicker..?
+    float sceneDepthNonLinear = texelFetch(sceneDepthTex, pixelCoord, 0).r;
+    vec3 pixelViewPos = unprojectPixelCoordAndDepthToViewSpace(pixelCoord, sceneDepthNonLinear, camera);
+    vec3 pixelWorldPos = (camera.worldFromView * vec4(pixelViewPos, 1.0)).xyz;
+
+    // TODO: Precalculate anD put in CameraState?!
+    mat4 projectionFromWorld = camera.projectionFromView * camera.viewFromWorld;
+
+    // Sample idx0 is always zero, but we do care about its weight still, sort of
+    vec3 blurredSceneColor = sceneColor.rgb;
+    float totalWeight = 0.0;
+
+    for (uint idx = 1; idx < constants.sampleCount; ++idx) {
+
+        // TODO: Kernel should be specified in world units (e.g. 0.02 m) and we should handle the scale correctly
+        // and convert it to pixel units so we know how wide the kernel will be in pixel space here. Now, with a
+        // hardcoded scale we will effectively be correct at a specific distance but not at other distances.
+        float kernelScale = 0.02;
+
+        // TODO: Rotate kernel over time!
+        vec3 sampleWorldPos = pixelWorldPos + kernelScale * (tangentBasisMatrix * vec3(samples[idx].xy, 0.001)); // offset world pos out ~1mm
+
+        float radius = distance(pixelWorldPos, sampleWorldPos);
+        vec3 diffusion = vec3(1.0, 0.90, 0.90);//burleyNormalizedDiffusion(vec3(0.3), vec3(0.57), radius); // TODO: Actually sample the diffusion profile!
+                                                                                                           // but we need the correct kernel scale for that!
+
+        vec4 sampleProjPos = projectionFromWorld * vec4(sampleWorldPos, 1.0);
+        vec2 sampleUv = (sampleProjPos.xy / sampleProjPos.w).xy * vec2(0.5) + vec2(0.5);
+
+        // Check if it's the same mesh (only blend within the same mesh)
+        // TODO: I don't think we're correctly sampling the pixel center?!
+        ivec2 samplePixelCoord = ivec2(clamp(sampleUv, 0.0, 0.9999) * vec2(constants.targetSize));
+        uint sampleDrawableIdx = uint(texelFetch(drawableVisibilityTex, samplePixelCoord, 0).x);
+
+        if (sampleDrawableIdx == drawableIdx) {
+            vec3 sampleSceneColor = texture(sceneColorTex, sampleUv).rgb;
+            blurredSceneColor += sampleSceneColor * diffusion;//samples[idx].z; // divide by weight!
+            totalWeight += diffusion.r; // hack!
+        } else {
+            // TODO: Should we compensate with the weight??! Hm, gonna have to think about that.. I guess no, since the sample points would be things
+            //       we don't see, e.g. around the corner, and we're neglecting those, but that doesn't mean that the samples we do have get more important?
+            //       I guess we could do it though, if we notice it's darker around edges of objects with SSSS where this would be noticable.
+        }
+    }
+
+    blurredSceneColor /= totalWeight;
+
+    imageStore(resultImg, pixelCoord, vec4(blurredSceneColor, sceneColor.a));
+}

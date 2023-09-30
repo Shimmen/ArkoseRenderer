@@ -107,6 +107,7 @@ add_executable(ArkoseRenderer
     arkose/apps/BootstrappingApp.cpp
     arkose/apps/MeshViewerApp.cpp
     arkose/apps/ShowcaseApp.cpp
+    arkose/apps/SSSDemo.cpp
     arkose/input/Input.cpp
     arkose/physics/PhysicsScene.cpp
     arkose/physics/backend/base/PhysicsBackend.cpp
@@ -168,6 +169,7 @@ add_executable(ArkoseRenderer
     arkose/rendering/nodes/TAANode.cpp
     arkose/rendering/nodes/TonemapNode.cpp
     arkose/rendering/nodes/VisibilityBufferShadingNode.cpp
+    arkose/rendering/postprocess/SSSSNode.cpp
     arkose/rendering/upscaling/UpscalingNode.cpp
     arkose/scene/MeshInstance.cpp
     arkose/scene/Scene.cpp

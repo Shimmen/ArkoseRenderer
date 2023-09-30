@@ -1,0 +1,43 @@
+{
+    "material": {
+        "brdf": "Default",
+        "baseColor": {
+            "nullopt": true
+        },
+        "emissiveColor": {
+            "nullopt": false,
+            "data": {
+                "image": {
+                    "index": 0,
+                    "data": "assets/sample/models/Head/light-panel-emissive.png"
+                },
+                "wrapModes": {
+                    "u": "Repeat",
+                    "v": "Repeat",
+                    "w": "Repeat"
+                },
+                "minFilter": "Linear",
+                "magFilter": "Linear",
+                "useMipmapping": true,
+                "mipFilter": "Linear"
+            }
+        },
+        "normalMap": {
+            "nullopt": true
+        },
+        "materialProperties": {
+            "nullopt": true
+        },
+        "colorTint": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0,
+            "w": 1.0
+        },
+        "metallicFactor": 0.0,
+        "roughnessFactor": 1.0,
+        "blendMode": "Opaque",
+        "maskCutoff": 1.0,
+        "doubleSided": false
+    }
+}

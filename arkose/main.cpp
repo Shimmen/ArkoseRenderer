@@ -1,6 +1,7 @@
 #include "apps/App.h"
 #include "apps/MeshViewerApp.h"
 #include "apps/ShowcaseApp.h"
+#include "apps/SSSDemo.h"
 #include "core/Logging.h"
 #include "core/parallel/TaskGraph.h"
 #include "input/Input.h"
@@ -77,6 +78,8 @@ std::unique_ptr<App> createApp(const std::vector<std::string> arguments)
 {
     if (std::find(arguments.begin(), arguments.end(), "-meshviewer") != arguments.end()) {
         return std::make_unique<MeshViewerApp>();
+    } else if (std::find(arguments.begin(), arguments.end(), "-sssdemo") != arguments.end()) {
+        return std::make_unique<SSSDemo>();
     }
 
     return std::make_unique<ShowcaseApp>();

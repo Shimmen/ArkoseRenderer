@@ -1,0 +1,58 @@
+{
+    "material": {
+        "brdf": "Skin",
+        "baseColor": {
+            "nullopt": false,
+            "data": {
+                "image": {
+                    "index": 0,
+                    "data": "assets/sample/models/Head/lambertian.jpg"
+                },
+                "wrapModes": {
+                    "u": "Repeat",
+                    "v": "Repeat",
+                    "w": "Repeat"
+                },
+                "minFilter": "Linear",
+                "magFilter": "Linear",
+                "useMipmapping": true,
+                "mipFilter": "Linear"
+            }
+        },
+        "emissiveColor": {
+            "nullopt": true
+        },
+        "normalMap": {
+            "nullopt": false,
+            "data": {
+                "image": {
+                    "index": 0,
+                    "data": "assets/sample/models/Head/normal.png"
+                },
+                "wrapModes": {
+                    "u": "Repeat",
+                    "v": "Repeat",
+                    "w": "Repeat"
+                },
+                "minFilter": "Linear",
+                "magFilter": "Linear",
+                "useMipmapping": true,
+                "mipFilter": "Linear"
+            }
+        },
+        "materialProperties": {
+            "nullopt": true
+        },
+        "colorTint": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0,
+            "w": 1.0
+        },
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.9292893409729004,
+        "blendMode": "Opaque",
+        "maskCutoff": 1.0,
+        "doubleSided": true
+    }
+}
