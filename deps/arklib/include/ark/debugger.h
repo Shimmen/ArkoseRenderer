@@ -33,3 +33,6 @@
  #warning "No implementation for ARK_DEBUG_BREAK() for this platform!"
  #define ARK_DEBUG_BREAK()
 #endif
+
+#define ARK_DISABLE_OPTIMIZATIONS _Pragma("optimize(\"\", off)")
+#define ARK_ENABLE_OPTIMIZATIONS _Pragma("optimize(\"\", on)")
