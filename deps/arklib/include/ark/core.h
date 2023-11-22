@@ -112,6 +112,12 @@ constexpr T square(T x)
     return x * x;
 }
 
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr T rcp(T x)
+{
+    return static_cast<T>(1.0) / x;
+}
+
 template<typename T, ENABLE_IF_INTEGRAL(T)>
 constexpr bool isPowerOfTwo(T x)
 {
