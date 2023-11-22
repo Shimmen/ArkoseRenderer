@@ -57,7 +57,7 @@ set(TARGET_SAMPLES OFF)
 set(TARGET_VIEWER OFF)
 FetchContent_Declare(jolt-physics
     GIT_REPOSITORY https://github.com/jrouwe/JoltPhysics.git
-    GIT_TAG        "b1cd84951022a565a23f33ff77ffee9e71487bbc" # (latest release doesn't include https://github.com/jrouwe/JoltPhysics/pull/175 which we need)
+    GIT_TAG        "v4.0.1"
     SOURCE_SUBDIR  "Build")
 
 set(LZ4_BUILD_CLI OFF)

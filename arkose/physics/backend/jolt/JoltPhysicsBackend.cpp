@@ -304,11 +304,7 @@ PhysicsShapeHandle JoltPhysicsBackend::createPhysicsShapeForTriangleMeshes(std::
         indexOffset = static_cast<uint32_t>(vertices.size());
     }
 
-    JPH::MeshShapeSettings meshShapeSettings;
-    {
-        SCOPED_PROFILE_ZONE_PHYSICS_NAMED("Create mesh shape settings");
-        meshShapeSettings = JPH::MeshShapeSettings(vertices, indexedTriangles, physicsMaterials);
-    }
+    JPH::MeshShapeSettings meshShapeSettings { vertices, indexedTriangles, physicsMaterials };
 
     JPH::ShapeSettings::ShapeResult meshShapeResult;
     {
