@@ -15,7 +15,7 @@ public:
 
     // JPH::DebugRenderer interface
     virtual void DrawLine(JPH::RVec3Arg from, JPH::RVec3Arg to, JPH::ColorArg color) override;
-    virtual void DrawTriangle(JPH::Vec3Arg V1, JPH::Vec3Arg V2, JPH::Vec3Arg V3, JPH::ColorArg color) override;
+    virtual void DrawTriangle(JPH::Vec3Arg V1, JPH::Vec3Arg V2, JPH::Vec3Arg V3, JPH::ColorArg color, ECastShadow) override;
     virtual JPH::DebugRenderer::Batch CreateTriangleBatch(const JPH::DebugRenderer::Triangle* triangles, int triangleCount) override;
     virtual JPH::DebugRenderer::Batch CreateTriangleBatch(const JPH::DebugRenderer::Vertex* vertices, int vertexCount, const uint32_t* indices, int indexCount) override;
     virtual void DrawGeometry(JPH::Mat44Arg modelMatrix, const JPH::AABox& worldSpaceBounds, float lodScale2, JPH::ColorArg, const GeometryRef&, ECullMode, ECastShadow, EDrawMode) override;

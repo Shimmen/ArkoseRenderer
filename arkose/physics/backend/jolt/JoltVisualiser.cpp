@@ -24,7 +24,7 @@ void JoltVisualiser::DrawLine(JPH::RVec3Arg inFrom, JPH::RVec3Arg inTo, JPH::Col
     DebugDrawer::get().drawLine({ inFrom.GetX(), inFrom.GetY(), inFrom.GetZ() }, { inTo.GetX(), inTo.GetY(), inTo.GetZ() }, joltColorToFloatColor(inColor));
 }
 
-void JoltVisualiser::DrawTriangle(JPH::Vec3Arg inV1, JPH::Vec3Arg inV2, JPH::Vec3Arg inV3, JPH::ColorArg inColor)
+void JoltVisualiser::DrawTriangle(JPH::Vec3Arg inV1, JPH::Vec3Arg inV2, JPH::Vec3Arg inV3, JPH::ColorArg inColor, ECastShadow)
 {
     // TODO: Maybe make a more streamlined path for this?
     DebugDrawer::get().drawLine({ inV1.GetX(), inV1.GetY(), inV1.GetZ() }, { inV2.GetX(), inV2.GetY(), inV2.GetZ() }, joltColorToFloatColor(inColor));
