@@ -39,10 +39,10 @@ inline void _internal_vlog(fmt::string_view format, fmt::format_args args)
     }
 }
 
-template<LogLevel level, typename StringType, typename... Args>
-inline void _internal_log(const StringType& format, Args&&... args)
+template<LogLevel level, typename... Args>
+inline void _internal_log(fmt::format_string<Args...> format, Args&&... args)
 {
-    _internal_vlog<level>(format, fmt::make_args_checked<Args...>(format, args...));
+    _internal_vlog<level>(format, fmt::make_format_args(args...));
 }
 
 } // namespace Logging
