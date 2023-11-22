@@ -101,6 +101,7 @@ using size_t = std::size_t;
 // Math constants & basic math functions
 
 constexpr Float E = static_cast<Float>(2.718281828459);
+constexpr Float LOG2_E = static_cast<Float>(1.442695040889);
 constexpr Float PI = static_cast<Float>(3.141592653590);
 constexpr Float HALF_PI = PI / static_cast<Float>(2.0);
 constexpr Float TWO_PI = static_cast<Float>(2.0) * PI;
