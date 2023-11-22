@@ -175,7 +175,19 @@ void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t s
         barriers[1].oldLayout = dst.currentLayout;
         barriers[1].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         barriers[1].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barriers[1].subresourceRange.baseMipLevel = dstMip;
+
+        // If the initial is undefined we first transition *all* layers and mips to VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+        // so that we can then at the end copy all of them back to `finalDstLayout` and have no inconsistensies in that
+        // final transition (i.e., all are the same).
+        // TODO: Maybe also ensure we copy black/magenta/? pixels into the undefined layers & mips?
+        if (dstWasUndefined) {
+            barriers[1].subresourceRange.baseMipLevel = 0;
+            barriers[1].subresourceRange.levelCount = dst.mipLevels();
+            barriers[1].subresourceRange.baseArrayLayer = 0;
+            barriers[1].subresourceRange.layerCount = dst.layerCount();
+        } else {
+            barriers[1].subresourceRange.baseMipLevel = dstMip;
+        }
 
         vkCmdPipelineBarrier(m_commandBuffer,
                              VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0,
