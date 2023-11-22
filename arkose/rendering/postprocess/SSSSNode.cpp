@@ -3,8 +3,11 @@
 #include "core/math/Fibonacci.h"
 #include "rendering/GpuScene.h"
 #include "rendering/RenderPipeline.h"
+#include <ark/random.h>
 #include <imgui.h>
 #include <implot.h>
+
+#define SSSS_USE_RNG_SAMPLES() (0)
 
 void SSSSNode::drawGui()
 {
@@ -14,7 +17,8 @@ void SSSSNode::drawGui()
         float plotWidth = ImGui::GetContentRegionAvail().x;
         float plotHeight = plotWidth;
 
-        ImPlot::SetNextAxesLimits(-1.1, +1.1, -1.1, +1.1, ImPlotCond_Always);
+        // NOTE: Samples are in millimeters!
+        ImPlot::SetNextAxesLimits(-10.0, +10.0, -10.0, +10.0, ImPlotCond_Always);
 
         if (ImPlot::BeginPlot("Sample visualization", ImVec2(plotWidth, plotHeight), ImPlotFlags_Crosshairs | ImPlotFlags_Equal | ImPlotFlags_NoLegend)) {
             ImPlot::PlotScatter<float>("Samples",
@@ -26,16 +30,25 @@ void SSSSNode::drawGui()
         }
     }
 
+#if SSSS_USE_RNG_SAMPLES()
     if (ImGui::Button("Regenerate samples")) {
         m_samples = generateDiffusionProfileSamples(m_sampleCount);
         m_samplesNeedUpload = true;
     }
 
     ImGui::SameLine();
-
     bool sampleSliderDidChange = ImGui::SliderScalar("##SampleCountLabel", ImGuiDataType_U32, &m_sampleCount, &MinSampleCount, &MaxSampleCount, "%d samples");
+#else
+    bool sampleSliderDidChange = ImGui::SliderScalar("Sample count", ImGuiDataType_U32, &m_sampleCount, &MinSampleCount, &MaxSampleCount, "%d samples");
+#endif
 
-    if (sampleSliderDidChange && m_sampleCount != m_samples.size()) {
+    bool albedoSliderDidChange = false; 
+    if (ImGui::TreeNode("Advanced")) {
+        albedoSliderDidChange = ImGui::SliderFloat("Albedo ref.", &m_volumeAlbedoForImportanceSampling, 0.01f, 1.0f);
+        ImGui::TreePop();
+    }
+
+    if (albedoSliderDidChange || (sampleSliderDidChange && m_sampleCount != m_samples.size())) {
         m_samples = generateDiffusionProfileSamples(m_sampleCount);
         m_samplesNeedUpload = true;
     }
@@ -48,6 +61,7 @@ RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registr
 
     Texture& sceneColor = *reg.getTexture("SceneColor");
     Texture& sceneDepth = *reg.getTexture("SceneDepth");
+    Texture& sceneBaseColor = *reg.getTexture("SceneBaseColor");
     Buffer& sceneCameraBuffer = *reg.getBuffer("SceneCameraData");
 
     BindingSet& visibilityBufferSampleSet = *reg.getBindingSet("VisibilityBufferData");
@@ -58,6 +72,7 @@ RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registr
     BindingSet& ssssBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(ssssTex, ShaderStage::Compute),
                                                         ShaderBinding::sampledTexture(sceneColor, ShaderStage::Compute),
                                                         ShaderBinding::sampledTexture(sceneDepth, ShaderStage::Compute),
+                                                        ShaderBinding::sampledTexture(sceneBaseColor, ShaderStage::Compute),
                                                         ShaderBinding::constantBuffer(samplesBuffer, ShaderStage::Compute),
                                                         ShaderBinding::constantBuffer(sceneCameraBuffer, ShaderStage::Compute) });
     Shader ssssShader = Shader::createCompute("postprocess/ssss.comp", { ShaderDefine::makeInt("MAX_SAMPLE_COUNT", MaxSampleCount) });
@@ -91,13 +106,31 @@ RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registr
     };
 }
 
-float SSSSNode::burleyNormalizedDiffusion(float volumeAlbedo, float shape, float radius) const
+float SSSSNode::burleyDiffusion(float volumeAlbedo, float shape, float radius) const
 {
     float const& A = volumeAlbedo;
     float const& s = shape;
     float const& r = radius;
 
     return A * s * ((std::exp(-s * r) + std::exp(-s * r / 3.0f)) / (8.0f * ark::PI * r));
+}
+
+float SSSSNode::calculateShapeValueForVolumeAlbedo(float volumeAlbedo) const
+{
+    // Based on https://graphics.pixar.com/library/ApproxBSSRDF/approxbssrdfslides.pdf
+    // Calculate the "shape" variable for the diffusion profile, using the "searchlight configuration" (see page 42)
+
+    float const& A = volumeAlbedo;
+
+    return 1.85f - A + 7.0f * std::pow(std::abs(A - 0.8f), 3.0f);
+}
+
+float SSSSNode::burleyNormalizedDiffusion(float shape, float radius) const
+{
+    float const& s = shape;
+    float const& r = radius;
+
+    return s * ((std::exp(-s * r) + std::exp(-s * r / 3.0f)) / (8.0f * ark::PI));
 }
 
 float SSSSNode::burleyNormalizedDiffusionPDF(float shape, float radius) const
@@ -116,6 +149,33 @@ float SSSSNode::burleyNormalizedDiffusionCDF(float shape, float radius) const
     return 1.0f - 0.25f * std::exp(-s * r) - 0.75f * std::exp(-s * r / 3.0f);
 }
 
+// From https://zero-radiance.github.io/post/sampling-diffusion/:
+// Performs sampling of a Normalized Burley diffusion profile in polar coordinates.
+// 'u' is the random number (the value of the CDF): [0, 1).
+// rcp(s) = 1 / ShapeParam = ScatteringDistance.
+// 'r' is the sampled radial distance, s.t. (u = 0 -> r = 0) and (u = 1 -> r = Inf).
+// rcp(Pdf) is the reciprocal of the corresponding PDF value.
+void SSSSNode::sampleBurleyDiffusionProfile(float u, float rcpS, float& outR, float& outRcpPdf)
+{
+    u = 1 - u; // Convert CDF to CCDF; the resulting value of (u != 0)
+
+    float g = 1.0f + (4.0f * u) * (2.0f * u + std::sqrt(1.0f + (4.0f * u) * u));
+    float n = std::exp2(std::log2(g) * (-1.0f / 3.0f));                 // g^(-1/3)
+    float p = (g * n) * n;                                              // g^(+1/3)
+    float c = 1.0f + p + n;                                             // 1 + g^(+1/3) + g^(-1/3)
+    float x = (3.0f / ark::LOG2_E) * std::log2(c * ark::rcp(4.0f * u)); // 3 * Log[c / (4 * u)]
+
+    // x      = s * r
+    // exp_13 = Exp[-x/3] = Exp[-1/3 * 3 * Log[c / (4 * u)]]
+    // exp_13 = Exp[-Log[c / (4 * u)]] = (4 * u) / c
+    // exp_1  = Exp[-x] = exp_13 * exp_13 * exp_13
+    // expSum = exp_1 + exp_13 = exp_13 * (1 + exp_13 * exp_13)
+    // rcpExp = rcp(expSum) = c^3 / ((4 * u) * (c^2 + 16 * u^2))
+    float rcpExp = ((c * c) * c) * ark::rcp((4.0f * u) * ((c * c) + (4.0f * u) * (4.0f * u)));
+
+    outR      = x * rcpS;
+    outRcpPdf = (8.0f * ark::PI * rcpS) * rcpExp; // (8 * Pi) / s / (Exp[-s * r / 3] + Exp[-s * r])
+}
 
 std::vector<SSSSNode::Sample> SSSSNode::generateDiffusionProfileSamples(u32 numSamples) const
 {
@@ -124,36 +184,42 @@ std::vector<SSSSNode::Sample> SSSSNode::generateDiffusionProfileSamples(u32 numS
     // https://advances.realtimerendering.com/s2018/Efficient%20screen%20space%20subsurface%20scattering%20Siggraph%202018.pdf
     //
 
-    // Importance sample based on the red component, as it's the most significant for skin
-    constexpr float shapeRed = 0.3f;
+    float shapeRed = calculateShapeValueForVolumeAlbedo(m_volumeAlbedoForImportanceSampling);
 
     std::vector<Sample> samples {};
     samples.reserve(numSamples);
 
-    float totalPdf = 0.0f;
+#if SSSS_USE_RNG_SAMPLES()
+    ark::Random rng {};
+#endif
 
     for (u32 sampleIdx = 0; sampleIdx < numSamples; ++sampleIdx) {
 
-        vec2 angleRadius = geometry::fibonacciSpiral(sampleIdx, numSamples);
-        float angle = angleRadius.x;
-        float radius = angleRadius.y;
+        vec2 latticePoint = geometry::fibonacciLattice(sampleIdx, numSamples);
+        float angle = ark::TWO_PI * latticePoint.x;
 
-        // TODO: Importance sample radius! We want really tight around the origin! But also, accurate according to the distribution!
-        radius = std::pow(radius, 17.0f);
+        // NOTE: We can use either a rng or we just hardcode a nice fibonacci spiral
+        // with constant steps. Hardcoding seems to be what most other solutions are
+        // doing and it does produce a more reliably good result in the end..
+#if SSSS_USE_RNG_SAMPLES()
+        float u = rng.randomFloat();
+#else
+        float u = float(sampleIdx) / float(numSamples) + (0.5f / float(numSamples));
+#endif
 
-        vec2 cartesianPoint = vec2(std::cos(angle), std::sin(angle)) * radius;
+        float sampledRadius;
+        float sampledRcpPdf;
+        sampleBurleyDiffusionProfile(u, 1.0f / shapeRed, sampledRadius, sampledRcpPdf);
 
-        // TODO: Sample a gausian matching the diffusion profile we're interested in!
-        float pdf = burleyNormalizedDiffusionPDF(shapeRed, radius);
-        totalPdf += pdf;
+        vec2 cartesianPoint = vec2(std::cos(angle), std::sin(angle)) * sampledRadius;
+
+        // Verify that the sampled PDF matches up with what we'd expect (just as a sanity check)
+        float analyticalPdf = burleyNormalizedDiffusionPDF(shapeRed, sampledRadius);
+        ARKOSE_ASSERT(std::abs((1.0f / analyticalPdf) - sampledRcpPdf) < 1e-2f);
 
         samples.push_back(Sample { .point = cartesianPoint,
-                                   .pdf = pdf });
-    }
-
-    // Normalize PDFs so the sum is 1
-    for (Sample& sample : samples) {
-        sample.pdf /= totalPdf;
+                                   .radius = sampledRadius,
+                                   .rcpPdf = sampledRcpPdf });
     }
 
     return samples;

@@ -13,8 +13,9 @@
 layout(set = 0, binding = 0, rgba16f) uniform writeonly image2D resultImg;
 layout(set = 0, binding = 1) uniform sampler2D sceneColorTex;
 layout(set = 0, binding = 2) uniform sampler2D sceneDepthTex;
-layout(set = 0, binding = 3) uniform SamplesBlock { vec4 samples[MAX_SAMPLE_COUNT]; };
-layout(set = 0, binding = 4) uniform CameraStateBlock { CameraState camera; };
+layout(set = 0, binding = 3) uniform sampler2D sceneBaseColorTex;
+layout(set = 0, binding = 4) uniform SamplesBlock { vec4 samples[MAX_SAMPLE_COUNT]; };
+layout(set = 0, binding = 5) uniform CameraStateBlock { CameraState camera; };
 
 // TODO: Group all of this in a single reusable #define and an API to access the data within
 layout(set = 1, binding = 0) uniform usampler2D drawableVisibilityTex;
@@ -35,13 +36,22 @@ NAMED_UNIFORMS(constants,
     uint sampleCount;
 )
 
-vec3 burleyNormalizedDiffusion(vec3 volumeAlbedo, vec3 shape, float radius)
+vec3 calculateShapeValueForVolumeAlbedo(vec3 volumeAlbedo)
 {
+    // Based on https://graphics.pixar.com/library/ApproxBSSRDF/approxbssrdfslides.pdf
+    // Calculate the "shape" variable for the diffusion profile, using the "searchlight configuration" (see page 42)
+
     vec3 A = volumeAlbedo;
+
+    return 1.85 - A + 7.0 * pow(abs(A - 0.8), vec3(3.0));
+}
+
+vec3 burleyNormalizedDiffusion(vec3 shape, float radius)
+{
     vec3 s = shape;
     float r = radius;
 
-    return A * s * ((exp(-s * r) + exp(-s * r / 3.0)) / (8.0 * PI * r));
+    return s * ((exp(-s * r) + exp(-s * r / 3.0)) / (8.0 * PI));
 }
 
 layout(local_size_x = 8, local_size_y = 8) in;
@@ -94,47 +104,53 @@ void main()
     vec3 pixelViewPos = unprojectPixelCoordAndDepthToViewSpace(pixelCoord, sceneDepthNonLinear, camera);
     vec3 pixelWorldPos = (camera.worldFromView * vec4(pixelViewPos, 1.0)).xyz;
 
-    // TODO: Precalculate anD put in CameraState?!
+    // TODO: Precalculate and put in CameraState?!
     mat4 projectionFromWorld = camera.projectionFromView * camera.viewFromWorld;
 
-    // Sample idx0 is always zero, but we do care about its weight still, sort of
-    vec3 blurredSceneColor = sceneColor.rgb;
-    float totalWeight = 0.0;
+    // For all materials with subsurface scattering base color is albedo (at least for common materials)
+    // Let's use the surface albedo as the volume albedo, i.e. inside skin color is the same as surface.
+    vec3 volumeAlbedo = texelFetch(sceneBaseColorTex, pixelCoord, 0).rgb;
+    vec3 shapeParam = calculateShapeValueForVolumeAlbedo(volumeAlbedo);
 
-    for (uint idx = 1; idx < constants.sampleCount; ++idx) {
+    vec3 totalIrradiance = vec3(0.0);
+    vec3 totalWeight = vec3(0.0);
 
-        // TODO: Kernel should be specified in world units (e.g. 0.02 m) and we should handle the scale correctly
-        // and convert it to pixel units so we know how wide the kernel will be in pixel space here. Now, with a
-        // hardcoded scale we will effectively be correct at a specific distance but not at other distances.
-        float kernelScale = 0.02;
+    for (uint idx = 0; idx < constants.sampleCount; ++idx) {
 
-        // TODO: Rotate kernel over time!
-        vec3 sampleWorldPos = pixelWorldPos + kernelScale * (tangentBasisMatrix * vec3(samples[idx].xy, 0.001)); // offset world pos out ~1mm
+        vec4 pixelSample = samples[idx];
+        const vec2 sampleCoord = pixelSample.xy;
+        const float radius = pixelSample.z; // could also be calculated but easier to just pack here
+        const float rcpPdf = pixelSample.w;
 
-        float radius = distance(pixelWorldPos, sampleWorldPos);
-        vec3 diffusion = vec3(1.0, 0.90, 0.90);//burleyNormalizedDiffusion(vec3(0.3), vec3(0.57), radius); // TODO: Actually sample the diffusion profile!
-                                                                                                           // but we need the correct kernel scale for that!
+        // TODO: Rotate kernel over time / per frame! Important if we want to get lower sample counts.
+        // NOTE: Converting sample coords from mm to m as our world space position is needed in m.
+        vec3 sampleWorldPos = pixelWorldPos + (tangentBasisMatrix * vec3(sampleCoord * 0.001, 0.0));
 
         vec4 sampleProjPos = projectionFromWorld * vec4(sampleWorldPos, 1.0);
-        vec2 sampleUv = (sampleProjPos.xy / sampleProjPos.w).xy * vec2(0.5) + vec2(0.5);
+        vec2 sampleUv = clamp((sampleProjPos.xy / sampleProjPos.w).xy * vec2(0.5) + vec2(0.5), vec2(0.0), vec2(1.0));
 
         // Check if it's the same mesh (only blend within the same mesh)
-        // TODO: I don't think we're correctly sampling the pixel center?!
         ivec2 samplePixelCoord = ivec2(clamp(sampleUv, 0.0, 0.9999) * vec2(constants.targetSize));
         uint sampleDrawableIdx = uint(texelFetch(drawableVisibilityTex, samplePixelCoord, 0).x);
 
         if (sampleDrawableIdx == drawableIdx) {
-            vec3 sampleSceneColor = texture(sceneColorTex, sampleUv).rgb;
-            blurredSceneColor += sampleSceneColor * diffusion;//samples[idx].z; // divide by weight!
-            totalWeight += diffusion.r; // hack!
-        } else {
-            // TODO: Should we compensate with the weight??! Hm, gonna have to think about that.. I guess no, since the sample points would be things
-            //       we don't see, e.g. around the corner, and we're neglecting those, but that doesn't mean that the samples we do have get more important?
-            //       I guess we could do it though, if we notice it's darker around edges of objects with SSSS where this would be noticable.
+            // TODO: This really should be the actual irradiance, but we're giving it
+            // the full scene color, meaning it's combined with specular which we will
+            // also effectively blur here. If we render irradiance separately we can
+            // easily do this, but now in our forward render pass we just apply it all
+            // in one go. Also remember to multiply albedo with the totalIrradiance in
+            // the end if we use actual irradiance (which wouldn't include albedo).
+            vec3 sampleIrradiance = texture(sceneColorTex, sampleUv).rgb;
+            vec3 weight = burleyNormalizedDiffusion(shapeParam, radius) * rcpPdf;
+
+            totalIrradiance += sampleIrradiance * weight;
+            totalWeight += weight;
         }
     }
 
-    blurredSceneColor /= totalWeight;
+    totalIrradiance /= max(totalWeight, 1e-4);
+    totalIrradiance = max(totalIrradiance, vec3(0.0));
 
-    imageStore(resultImg, pixelCoord, vec4(blurredSceneColor, sceneColor.a));
+    vec4 resultPixel = vec4(totalIrradiance, sceneColor.a);
+    imageStore(resultImg, pixelCoord, resultPixel);
 }
