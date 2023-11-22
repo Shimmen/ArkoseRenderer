@@ -151,7 +151,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
                                         ForwardMeshFilter::AllMeshes,
                                         ForwardClearMode::DontClear);
 
-    //pipeline.addNode<BloomNode>();
+    pipeline.addNode<BloomNode>();
 
     auto& dofNode = pipeline.addNode<DepthOfFieldNode>();
     dofNode.setEnabled(false);
