@@ -20,6 +20,7 @@
 #include "rendering/nodes/TAANode.h"
 #include "rendering/nodes/TonemapNode.h"
 #include "rendering/nodes/VisibilityBufferShadingNode.h"
+#include "rendering/postprocess/CASNode.h"
 #include "rendering/postprocess/SSSSNode.h"
 #include "rendering/upscaling/UpscalingNode.h"
 #include "scene/Scene.h"
@@ -132,6 +133,9 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<TAANode>(scene.camera());
 
     pipeline.addNode<DebugDrawNode>();
+
+    auto& casNode = pipeline.addNode<CASNode>(finalTextureToScreen);
+    casNode.setSharpness(1.0f); // maximum sharpness - looks good on the soft skin closeup
 
     FinalNode& finalNode = pipeline.addNode<FinalNode>(finalTextureToScreen);
     finalNode.setRenderFilmGrain(false);
