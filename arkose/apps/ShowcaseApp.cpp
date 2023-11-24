@@ -26,6 +26,7 @@
 #include "rendering/nodes/TAANode.h"
 #include "rendering/nodes/TonemapNode.h"
 #include "rendering/nodes/VisibilityBufferShadingNode.h"
+#include "rendering/postprocess/CASNode.h"
 #include "rendering/upscaling/UpscalingNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
@@ -205,6 +206,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     }
 
     pipeline.addNode<DebugDrawNode>();
+
+    pipeline.addNode<CASNode>(finalTextureToScreen);
 
     FinalNode& finalNode = pipeline.addNode<FinalNode>(finalTextureToScreen);
     finalNode.setRenderFilmGrain(true);
