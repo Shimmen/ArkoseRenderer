@@ -151,10 +151,10 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
                                         ForwardMeshFilter::AllMeshes,
                                         ForwardClearMode::DontClear);
 
-    pipeline.addNode<BloomNode>();
-
     auto& dofNode = pipeline.addNode<DepthOfFieldNode>();
     dofNode.setEnabled(false);
+
+    pipeline.addNode<BloomNode>();
 
     if constexpr (withRayTracing) {
         pipeline.addNode<DDGIProbeDebug>();

@@ -117,10 +117,11 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
     scene.setEnvironmentMap({ .assetPath = "", .brightnessFactor = 500.0f });
 
     pipeline.addNode<SSSSNode>();
-    pipeline.addNode<BloomNode>();
 
     auto& dofNode = pipeline.addNode<DepthOfFieldNode>();
     dofNode.setEnabled(true);
+
+    pipeline.addNode<BloomNode>();
 
     pipeline.addNode<DDGIProbeDebug>();
 
