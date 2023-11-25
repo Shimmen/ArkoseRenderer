@@ -133,6 +133,9 @@ public:
 
     float globalMipBias() const { return m_globalMipBias; }
 
+    bool shouldIncludeMaterialColor() const { return m_includeMaterialColor; }
+    bool& shouldIncludeMaterialColorMutable() { return m_includeMaterialColor; }
+
     // Managed GPU assets
 
     void processDeferredDeletions();
@@ -174,6 +177,8 @@ private:
     float m_lightPreExposure { 1.0f };
 
     float m_globalMipBias { 0.0f };
+
+    bool m_includeMaterialColor { true };
 
     // GPU data
 

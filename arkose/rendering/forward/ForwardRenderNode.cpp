@@ -98,6 +98,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
                 cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
                 cmdList.setNamedUniform("invTargetSize", renderTarget.extent().inverse());
                 cmdList.setNamedUniform("mipBias", scene.globalMipBias());
+                cmdList.setNamedUniform("withMaterialColor", scene.shouldIncludeMaterialColor());
 
                 currentStateDrawKey = &instance.drawKey;
             }

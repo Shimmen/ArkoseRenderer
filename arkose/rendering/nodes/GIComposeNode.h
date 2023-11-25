@@ -11,11 +11,12 @@ public:
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:
+    GpuScene* m_scene { nullptr };
+
     bool m_includeDirectLight { true };
     bool m_includeGlossyGI { true };
     bool m_includeDiffuseGI { true };
 
-    bool m_withMaterialColor { true };
     bool m_withAmbientOcclusion { true };
 
     BindingSet* m_ddgiBindingSet { nullptr };

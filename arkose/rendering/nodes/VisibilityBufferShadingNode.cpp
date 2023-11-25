@@ -63,6 +63,7 @@ RenderPipelineNode::ExecuteCallback VisibilityBufferShadingNode::construct(GpuSc
         cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
         cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
         cmdList.setNamedUniform("invTargetSize", colorTexture.extent().inverse());
+        cmdList.setNamedUniform("withMaterialColor", scene.shouldIncludeMaterialColor());
 
         // We're dealing with gradients directly in the shader so we actually need to express the mip bias
         // as a factor -- multiplicative instead of additive. Mip levels are calculated from the log2 of the

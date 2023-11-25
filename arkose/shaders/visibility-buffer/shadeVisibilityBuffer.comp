@@ -245,6 +245,10 @@ void main()
     #endif
 
     vec3 baseColor = material.colorTint.rgb * textureGrad(textures[nonuniformEXT(material.baseColor)], texCoord, ddx, ddy).rgb;
+    if (!constants.withMaterialColor) {
+        baseColor = vec3(1.0);
+    }
+
     vec3 emissive = textureGrad(textures[nonuniformEXT(material.emissive)], texCoord, ddx, ddy).rgb;
 
     vec4 metallicRoughness = textureGrad(textures[nonuniformEXT(material.metallicRoughness)], texCoord, ddx, ddy);

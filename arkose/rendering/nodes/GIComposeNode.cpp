@@ -13,12 +13,14 @@ void GIComposeNode::drawGui()
 
     ImGui::Separator();
 
-    ImGui::Checkbox("Include material colors (for indirect)", &m_withMaterialColor);
+    ImGui::Checkbox("Include material colors", &m_scene->shouldIncludeMaterialColorMutable());
     ImGui::Checkbox("Include ambient occlusion (for diffuse indirect)", &m_withAmbientOcclusion);
 }
 
 RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Registry& reg)
 {
+    m_scene = &scene;
+
     Texture& sceneColor = *reg.getTexture("SceneColor");
     
     Texture* ambientOcclusionTex = reg.getTexture("AmbientOcclusion");
@@ -73,7 +75,7 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Re
         cmdList.setNamedUniform("includeDirectLight", m_includeDirectLight);
         cmdList.setNamedUniform("includeDiffuseGI", m_includeDiffuseGI);
         cmdList.setNamedUniform("includeGlossyGI", m_includeGlossyGI);
-        cmdList.setNamedUniform("withMaterialColor", m_withMaterialColor);
+        cmdList.setNamedUniform("withMaterialColor", scene.shouldIncludeMaterialColor());
         cmdList.setNamedUniform("withAmbientOcclusion", m_withAmbientOcclusion);
 
         cmdList.dispatch({ sceneColorWithGI.extent(), 1 }, { 8, 8, 1 });
