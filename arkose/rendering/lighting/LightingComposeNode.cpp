@@ -1,11 +1,11 @@
-#include "GIComposeNode.h"
+#include "LightingComposeNode.h"
 
 #include "core/Logging.h"
 #include "rendering/RenderPipeline.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
 
-void GIComposeNode::drawGui()
+void LightingComposeNode::drawGui()
 {
     ImGui::Checkbox("Direct light", &m_includeDirectLight);
     ImGui::Checkbox("Glossy indirect (reflections)", &m_includeGlossyGI);
@@ -17,7 +17,7 @@ void GIComposeNode::drawGui()
     ImGui::Checkbox("Include ambient occlusion (for diffuse indirect)", &m_withAmbientOcclusion);
 }
 
-RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback LightingComposeNode::construct(GpuScene& scene, Registry& reg)
 {
     m_scene = &scene;
 
@@ -60,7 +60,7 @@ RenderPipelineNode::ExecuteCallback GIComposeNode::construct(GpuScene& scene, Re
     std::vector<ShaderDefine> shaderDefines {};
     shaderDefines.push_back(ShaderDefine::makeBool("WITH_DDGI", m_ddgiBindingSet != nullptr));
 
-    Shader composeShader = Shader::createCompute("compose/compose-gi.comp", shaderDefines);
+    Shader composeShader = Shader::createCompute("lighting/lightingCompose.comp", shaderDefines);
     ComputeState& giComposeState = reg.createComputeState(composeShader, bindingSets);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {

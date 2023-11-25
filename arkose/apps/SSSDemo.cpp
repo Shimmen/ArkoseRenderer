@@ -3,6 +3,7 @@
 #include "input/Input.h"
 #include "rendering/forward/ForwardRenderNode.h"
 #include "rendering/forward/PrepassNode.h"
+#include "rendering/lighting/LightingComposeNode.h"
 #include "rendering/meshlet/MeshletVisibilityBufferRenderNode.h"
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/DDGINode.h"
@@ -11,7 +12,6 @@
 #include "rendering/nodes/DepthOfFieldNode.h"
 #include "rendering/nodes/DirectionalLightShadowNode.h"
 #include "rendering/nodes/FinalNode.h"
-#include "rendering/nodes/GIComposeNode.h"
 #include "rendering/nodes/LocalLightShadowNode.h"
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/RTReflectionsNode.h"
@@ -112,7 +112,7 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
     rtReflectionsNode.setNoTracingRoughnessThreshold(1.0f);
 
     pipeline.addNode<SSAONode>();
-    pipeline.addNode<GIComposeNode>();
+    pipeline.addNode<LightingComposeNode>();
 
     pipeline.addNode<SkyViewNode>();
     scene.setEnvironmentMap({ .assetPath = "", .brightnessFactor = 500.0f });

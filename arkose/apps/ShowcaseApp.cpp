@@ -3,6 +3,7 @@
 #include "input/Input.h"
 #include "rendering/forward/ForwardRenderNode.h"
 #include "rendering/forward/PrepassNode.h"
+#include "rendering/lighting/LightingComposeNode.h"
 #include "rendering/meshlet/MeshletDebugNode.h"
 #include "rendering/meshlet/MeshletForwardRenderNode.h"
 #include "rendering/meshlet/MeshletVisibilityBufferRenderNode.h"
@@ -15,7 +16,6 @@
 #include "rendering/nodes/DirectionalLightShadowNode.h"
 #include "rendering/nodes/FXAANode.h"
 #include "rendering/nodes/FinalNode.h"
-#include "rendering/nodes/GIComposeNode.h"
 #include "rendering/nodes/LocalLightShadowNode.h"
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/RTSphereLightShadowNode.h"
@@ -144,7 +144,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     }
 
     pipeline.addNode<SSAONode>();
-    pipeline.addNode<GIComposeNode>();
+    pipeline.addNode<LightingComposeNode>();
     
     pipeline.addNode<SkyViewNode>();
 

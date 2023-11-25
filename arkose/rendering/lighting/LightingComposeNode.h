@@ -3,9 +3,9 @@
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/GpuScene.h"
 
-class GIComposeNode final : public RenderPipelineNode {
+class LightingComposeNode final : public RenderPipelineNode {
 public:
-    std::string name() const override { return "GI Compose"; }
+    std::string name() const override { return "Lighting compose"; }
     void drawGui() override;
 
     ExecuteCallback construct(GpuScene&, Registry&) override;

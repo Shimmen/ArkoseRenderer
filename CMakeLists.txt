@@ -143,6 +143,7 @@ add_executable(ArkoseRenderer
     arkose/rendering/debug/DebugDrawer.cpp
     arkose/rendering/forward/ForwardRenderNode.cpp
     arkose/rendering/forward/PrepassNode.cpp
+    arkose/rendering/lighting/LightingComposeNode.cpp
     arkose/rendering/meshlet/MeshletCuller.cpp
     arkose/rendering/meshlet/MeshletManager.cpp
     arkose/rendering/meshlet/MeshletDebugNode.cpp
@@ -158,7 +159,6 @@ add_executable(ArkoseRenderer
     arkose/rendering/nodes/DirectionalLightShadowNode.cpp
     arkose/rendering/nodes/FinalNode.cpp
     arkose/rendering/nodes/FXAANode.cpp
-    arkose/rendering/nodes/GIComposeNode.cpp
     arkose/rendering/nodes/LocalLightShadowNode.cpp
     arkose/rendering/nodes/PickingNode.cpp
     arkose/rendering/nodes/RTVisualisationNode.cpp
