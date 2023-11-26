@@ -251,6 +251,10 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         Texture& colorTexture = reg.createTexture2D(renderResolution, Texture::Format::RGBA16F, linearFilter, mipMode, wrapMode);
         reg.publish("SceneColor", colorTexture);
 
+        // rgb: scene diffuse irradiance, a: unused
+        Texture& diffuseIrradianceTexture = reg.createTexture2D(renderResolution, Texture::Format::RGBA16F, linearFilter, mipMode, wrapMode);
+        reg.publish("DiffuseIrradiance", diffuseIrradianceTexture);
+
         // rg: encoded normal, ba: velocity in image plane (2D)
         Texture& normalVelocityTexture = reg.createTexture2D(renderResolution, Texture::Format::RGBA16F, linearFilter, mipMode, wrapMode);
         reg.publish("SceneNormalVelocity", normalVelocityTexture);

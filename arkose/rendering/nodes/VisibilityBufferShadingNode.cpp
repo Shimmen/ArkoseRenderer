@@ -16,10 +16,12 @@ RenderPipelineNode::ExecuteCallback VisibilityBufferShadingNode::construct(GpuSc
     BindingSet& cameraBindingSet = *reg.getBindingSet("SceneCameraSet");
 
     Texture& colorTexture = *reg.getTexture("SceneColor");
+    Texture& diffuseIrradianceTexture = *reg.getTexture("DiffuseIrradiance");
     Texture& normalVelocityTexture = *reg.getTexture("SceneNormalVelocity");
     Texture& materialPropertyTexture = *reg.getTexture("SceneMaterial");
     Texture& baseColorTexture = *reg.getTexture("SceneBaseColor");
     BindingSet& targetBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(colorTexture),
+                                                          ShaderBinding::storageTexture(diffuseIrradianceTexture),
                                                           ShaderBinding::storageTexture(normalVelocityTexture),
                                                           ShaderBinding::storageTexture(materialPropertyTexture),
                                                           ShaderBinding::storageTexture(baseColorTexture) });
