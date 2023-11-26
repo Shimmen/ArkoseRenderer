@@ -111,13 +111,12 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
     auto& rtReflectionsNode = pipeline.addNode<RTReflectionsNode>();
     rtReflectionsNode.setNoTracingRoughnessThreshold(1.0f);
 
+    pipeline.addNode<SSSSNode>();
     pipeline.addNode<SSAONode>();
     pipeline.addNode<LightingComposeNode>();
 
     pipeline.addNode<SkyViewNode>();
     scene.setEnvironmentMap({ .assetPath = "", .brightnessFactor = 500.0f });
-
-    pipeline.addNode<SSSSNode>();
 
     auto& dofNode = pipeline.addNode<DepthOfFieldNode>();
     dofNode.setEnabled(true);
