@@ -133,8 +133,7 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
 
     pipeline.addNode<DebugDrawNode>();
 
-    auto& casNode = pipeline.addNode<CASNode>(finalTextureToScreen);
-    casNode.setSharpness(1.0f); // maximum sharpness - looks good on the soft skin closeup
+    pipeline.addNode<CASNode>(finalTextureToScreen);
 
     FinalNode& finalNode = pipeline.addNode<FinalNode>(finalTextureToScreen);
     finalNode.setRenderFilmGrain(false);
