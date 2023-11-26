@@ -40,6 +40,7 @@ This list is not complete, it's just a showcase of various features that are imp
  - A realistic camera model, with focus and exposure controls familiar to photographers
  - Depth of field, respecting the realistic camera model paramer such as aperture size and focal length
  - Dynamic Diffuse Global Illumination (DDGI) – a probe based global illumination solution with infinite light bounces.
+ - Physically based subsurface scattering
  - Ray traced reflections with denoising
  - Temporal Anti-Aliasing (TAA)
 
