@@ -13,7 +13,9 @@ public:
 private:
     GpuScene* m_scene { nullptr };
 
-    bool m_includeDirectLight { true };
+    bool m_includeSpecularDirectLight { true };
+    bool m_includeDiffuseDirectLight { true };
+
     bool m_includeGlossyGI { true };
     bool m_includeDiffuseGI { true };
 

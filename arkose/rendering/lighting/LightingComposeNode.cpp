@@ -7,7 +7,13 @@
 
 void LightingComposeNode::drawGui()
 {
-    ImGui::Checkbox("Direct light", &m_includeDirectLight);
+    // TODO: This could be a really nice 2-column-checkbox layout where you select specular/diffuse for direct/indirect!
+
+    ImGui::Checkbox("Specular direct light", &m_includeSpecularDirectLight);
+    ImGui::Checkbox("Diffuse direct light", &m_includeDiffuseDirectLight);
+
+    ImGui::Separator();
+
     ImGui::Checkbox("Glossy indirect (reflections)", &m_includeGlossyGI);
     ImGui::Checkbox("Diffuse indirect (DDGI)", &m_includeDiffuseGI);
 
@@ -22,6 +28,7 @@ RenderPipelineNode::ExecuteCallback LightingComposeNode::construct(GpuScene& sce
     m_scene = &scene;
 
     Texture& sceneColor = *reg.getTexture("SceneColor");
+    Texture& sceneDiffuseIrradiance = *reg.getTexture("SceneDiffuseIrradiance");
     
     Texture* ambientOcclusionTex = reg.getTexture("AmbientOcclusion");
     if (!ambientOcclusionTex) {
@@ -47,6 +54,7 @@ RenderPipelineNode::ExecuteCallback LightingComposeNode::construct(GpuScene& sce
                                                            ShaderBinding::sampledTexture(*reg.getTexture("SceneNormalVelocity"), ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(*reg.getTexture("SceneDepth"), ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(sceneColor, ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(sceneDiffuseIrradiance, ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(*reflectionsTex, ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(*reflectionDirectionTex, ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(*ambientOcclusionTex, ShaderStage::Compute) });
@@ -72,7 +80,8 @@ RenderPipelineNode::ExecuteCallback LightingComposeNode::construct(GpuScene& sce
         }
 
         cmdList.setNamedUniform("targetSize", sceneColorWithGI.extent());
-        cmdList.setNamedUniform("includeDirectLight", m_includeDirectLight);
+        cmdList.setNamedUniform("includeSpecularDirectLight", m_includeSpecularDirectLight);
+        cmdList.setNamedUniform("includeDiffuseDirectLight", m_includeDiffuseDirectLight);
         cmdList.setNamedUniform("includeDiffuseGI", m_includeDiffuseGI);
         cmdList.setNamedUniform("includeGlossyGI", m_includeGlossyGI);
         cmdList.setNamedUniform("withMaterialColor", scene.shouldIncludeMaterialColor());

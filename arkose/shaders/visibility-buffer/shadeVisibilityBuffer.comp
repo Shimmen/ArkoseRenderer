@@ -54,7 +54,7 @@ NAMED_UNIFORMS_STRUCT(ForwardPassConstants, constants)
 
 // If we have subsurface scattering in the pipeline we need to keep diffuse irradiance separate so we can "blur" that for those pixels before we apply
 // it to the scene color. Use the diffuse irradiance (i.e. the irradiance that enters the surface) for that.
-#define INCLUDE_DIFFUSE_IN_SCENE_COLOR() (1)
+#define INCLUDE_DIFFUSE_IN_SCENE_COLOR() (0)
 
 vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, uvec2 pixelCoord, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, inout vec3 outDiffuseIrradiance)
 {

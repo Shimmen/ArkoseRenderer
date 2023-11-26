@@ -13,9 +13,10 @@ layout(set = 0, binding = 3) uniform sampler2D sceneMaterialTex;
 layout(set = 0, binding = 4) uniform sampler2D sceneNormalVelocityTex;
 layout(set = 0, binding = 5) uniform sampler2D sceneDepthTex;
 layout(set = 0, binding = 6) uniform sampler2D directLightTex;
-layout(set = 0, binding = 7) uniform sampler2D reflectionsTex;
-layout(set = 0, binding = 8) uniform sampler2D reflectionDirectionTex;
-layout(set = 0, binding = 9) uniform sampler2D ambientOcclusionTex;
+layout(set = 0, binding = 7) uniform sampler2D directDiffuseIrradianceTex;
+layout(set = 0, binding = 8) uniform sampler2D reflectionsTex;
+layout(set = 0, binding = 9) uniform sampler2D reflectionDirectionTex;
+layout(set = 0, binding =10) uniform sampler2D ambientOcclusionTex;
 
 #if WITH_DDGI
 #include <ddgi/probeSampling.glsl>
@@ -27,7 +28,8 @@ layout(set = 1, binding = 3) uniform sampler2D ddgiVisibilityAtlas;
 
 NAMED_UNIFORMS(pushConstants,
     uvec2 targetSize;
-    bool includeDirectLight;
+    bool includeSpecularDirectLight;
+    bool includeDiffuseDirectLight;
     bool includeDiffuseGI;
     bool includeGlossyGI;
     bool withMaterialColor;
@@ -41,20 +43,25 @@ void main()
     if (any(greaterThanEqual(pixelCoord, pushConstants.targetSize)))
         return;
 
+    vec3 materialBaseColor = vec3(1.0);
+    if (pushConstants.withMaterialColor) {
+        materialBaseColor = texelFetch(sceneBaseColorTex, pixelCoord, 0).rgb;
+    }
+
     vec4 sceneColor = vec4(0.0);
 
-    if (pushConstants.includeDirectLight) {
-        sceneColor = texelFetch(directLightTex, pixelCoord, 0);
+    if (pushConstants.includeSpecularDirectLight) {
+        sceneColor += texelFetch(directLightTex, pixelCoord, 0);
+    }
+
+    if (pushConstants.includeDiffuseDirectLight) {
+        vec3 diffuseIrradiance = texelFetch(directDiffuseIrradianceTex, pixelCoord, 0).rgb;
+        sceneColor.rgb += diffuseIrradiance * materialBaseColor * diffuseBRDF();
     }
 
     float ambientOcclusion = 1.0;
     if (pushConstants.withAmbientOcclusion) {
         ambientOcclusion = texelFetch(ambientOcclusionTex, pixelCoord, 0).r;
-    }
-
-    vec3 materialBaseColor = vec3(1.0);
-    if (pushConstants.withMaterialColor) {
-        materialBaseColor = texelFetch(sceneBaseColorTex, pixelCoord, 0).rgb;
     }
 
     float nonLinearDepth = texelFetch(sceneDepthTex, pixelCoord, 0).x;
