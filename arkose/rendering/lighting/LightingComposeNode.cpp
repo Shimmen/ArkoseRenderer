@@ -9,7 +9,7 @@ void LightingComposeNode::drawGui()
 {
     // TODO: This could be a really nice 2-column-checkbox layout where you select specular/diffuse for direct/indirect!
 
-    ImGui::Checkbox("Specular direct light", &m_includeSpecularDirectLight);
+    ImGui::Checkbox("Specular direct light (+emissive)", &m_includeSpecularDirectLight);
     ImGui::Checkbox("Diffuse direct light", &m_includeDiffuseDirectLight);
 
     ImGui::Separator();
