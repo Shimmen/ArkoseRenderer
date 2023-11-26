@@ -59,7 +59,7 @@ RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registr
     Buffer& samplesBuffer = reg.createBuffer(MaxSampleCount * sizeof(Sample), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::GpuOptimal);
     m_samples = generateDiffusionProfileSamples(m_sampleCount);
 
-    Texture& sceneColor = *reg.getTexture("SceneColor");
+    Texture& diffuseIrradiance = *reg.getTexture("SceneDiffuseIrradiance");
     Texture& sceneDepth = *reg.getTexture("SceneDepth");
     Texture& sceneBaseColor = *reg.getTexture("SceneBaseColor");
     Buffer& sceneCameraBuffer = *reg.getBuffer("SceneCameraData");
@@ -67,10 +67,10 @@ RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registr
     BindingSet& visibilityBufferSampleSet = *reg.getBindingSet("VisibilityBufferData");
     BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
 
-    Texture& ssssTex = reg.createTexture2D(pipeline().renderResolution(), sceneColor.format());
+    Texture& ssssTex = reg.createTexture2D(pipeline().renderResolution(), diffuseIrradiance.format());
 
     BindingSet& ssssBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(ssssTex, ShaderStage::Compute),
-                                                        ShaderBinding::sampledTexture(sceneColor, ShaderStage::Compute),
+                                                        ShaderBinding::sampledTexture(diffuseIrradiance, ShaderStage::Compute),
                                                         ShaderBinding::sampledTexture(sceneDepth, ShaderStage::Compute),
                                                         ShaderBinding::sampledTexture(sceneBaseColor, ShaderStage::Compute),
                                                         ShaderBinding::constantBuffer(samplesBuffer, ShaderStage::Compute),
@@ -100,9 +100,9 @@ RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registr
 
         cmdList.dispatch(targetSize, { 8, 8, 1 });
 
-        // TODO: Don't copy, instead use some smart system to point the next "SceneColor" to this
+        // TODO: Don't copy, instead use some smart system to point the next "SceneDiffuseIrradiance" to this
         cmdList.textureWriteBarrier(ssssTex);
-        cmdList.copyTexture(ssssTex, sceneColor);
+        cmdList.copyTexture(ssssTex, diffuseIrradiance);
     };
 }
 

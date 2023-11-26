@@ -11,7 +11,7 @@
 #include <shared/SceneData.h>
 
 layout(set = 0, binding = 0, rgba16f) uniform writeonly image2D resultImg;
-layout(set = 0, binding = 1) uniform sampler2D sceneColorTex;
+layout(set = 0, binding = 1) uniform sampler2D diffuseIrradianceTex;
 layout(set = 0, binding = 2) uniform sampler2D sceneDepthTex;
 layout(set = 0, binding = 3) uniform sampler2D sceneBaseColorTex;
 layout(set = 0, binding = 4) uniform SamplesBlock { vec4 samples[MAX_SAMPLE_COUNT]; };
@@ -62,18 +62,18 @@ void main()
         return;
     }
 
-    vec4 sceneColor = texelFetch(sceneColorTex, pixelCoord, 0);
+    vec4 diffuseIrradiance = texelFetch(diffuseIrradianceTex, pixelCoord, 0);
 
     uint drawableIdx = uint(texelFetch(drawableVisibilityTex, pixelCoord, 0).x);
     if (drawableIdx == 0) {
-        imageStore(resultImg, pixelCoord, sceneColor);
+        imageStore(resultImg, pixelCoord, diffuseIrradiance);
         return;
     }
 
     ShaderDrawable drawable = instances[drawableIdx - 1];
     // TODO: Make a better way to check for this bit! Some kind of DrawKey shared header & API?
     if (((drawable.drawKey >> 12) & 0xf) != 0x2) {
-        imageStore(resultImg, pixelCoord, sceneColor);
+        imageStore(resultImg, pixelCoord, diffuseIrradiance);
         return;
     }
 
@@ -134,16 +134,10 @@ void main()
         uint sampleDrawableIdx = uint(texelFetch(drawableVisibilityTex, samplePixelCoord, 0).x);
 
         if (sampleDrawableIdx == drawableIdx) {
-            // TODO: This really should be the actual irradiance, but we're giving it
-            // the full scene color, meaning it's combined with specular which we will
-            // also effectively blur here. If we render irradiance separately we can
-            // easily do this, but now in our forward render pass we just apply it all
-            // in one go. Also remember to multiply albedo with the totalIrradiance in
-            // the end if we use actual irradiance (which wouldn't include albedo).
-            vec3 sampleIrradiance = texture(sceneColorTex, sampleUv).rgb;
+            vec3 sampleDiffuseIrradiance = texture(diffuseIrradianceTex, sampleUv).rgb;
             vec3 weight = burleyNormalizedDiffusion(shapeParam, radius) * rcpPdf;
 
-            totalIrradiance += sampleIrradiance * weight;
+            totalIrradiance += sampleDiffuseIrradiance * weight;
             totalWeight += weight;
         }
     }
@@ -151,6 +145,6 @@ void main()
     totalIrradiance /= max(totalWeight, 1e-4);
     totalIrradiance = max(totalIrradiance, vec3(0.0));
 
-    vec4 resultPixel = vec4(totalIrradiance, sceneColor.a);
+    vec4 resultPixel = vec4(totalIrradiance, 1.0);
     imageStore(resultImg, pixelCoord, resultPixel);
 }
