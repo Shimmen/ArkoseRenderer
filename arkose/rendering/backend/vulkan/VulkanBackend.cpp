@@ -1009,17 +1009,37 @@ VkPhysicalDevice VulkanBackend::pickBestPhysicalDevice() const
         ARKOSE_LOG(Fatal, "VulkanBackend: could not find any physical devices with Vulkan support, exiting.");
     }
 
-    std::vector<VkPhysicalDevice> devices(count);
-    vkEnumeratePhysicalDevices(m_instance, &count, devices.data());
+    std::vector<VkPhysicalDevice> physicalDevices(count);
+    vkEnumeratePhysicalDevices(m_instance, &count, physicalDevices.data());
 
-    if (count > 1) {
-        ARKOSE_LOG(Warning, "VulkanBackend: more than one physical device available, one will be chosen arbitrarily (FIXME!)");
+    if (count == 1) {
+        return physicalDevices[0];
     }
 
-    // FIXME: Don't just pick the first one if there are more than one!
-    VkPhysicalDevice physicalDevice = devices[0];
+    std::vector<VkPhysicalDevice> discretePhysicalDevices;
+    std::vector<VkPhysicalDevice> otherPhysicalDevices;
 
-    return physicalDevice;
+    for (VkPhysicalDevice physicalDevice : physicalDevices) {
+        VkPhysicalDeviceProperties properties;
+        vkGetPhysicalDeviceProperties(physicalDevice, &properties);
+
+        if ( properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ) {
+            discretePhysicalDevices.push_back(physicalDevice);
+        } else {
+            otherPhysicalDevices.push_back(physicalDevice);
+        }
+    }
+
+    if (discretePhysicalDevices.size() >= 1) {
+        if (discretePhysicalDevices.size() > 1) {
+            ARKOSE_LOG(Warning, "VulkanBackend: more than one discrete physical device with Vulkan support, picking one arbitrarily.");
+        }
+        return discretePhysicalDevices[0];
+    }
+
+    ARKOSE_LOG(Warning, "VulkanBackend: could not find any discrete physical devices with Vulkan support, picking an arbitrary one.");
+    ARKOSE_ASSERT(otherPhysicalDevices.size() > 0);
+    return otherPhysicalDevices[0];
 }
 
 VkPipelineCache VulkanBackend::createAndLoadPipelineCacheFromDisk() const
