@@ -72,6 +72,12 @@ public:
         m_matrix = {};
     }
 
+    void setScale(float scale)
+    {
+        m_scale = vec3(scale);
+        m_matrix = {};
+    }
+
     void setFromMatrix(mat4 matrix)
     {
         ark::decomposeMatrixToTranslationRotationScale(matrix, m_translation, m_orientation, m_scale);
