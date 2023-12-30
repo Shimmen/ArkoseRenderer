@@ -7,6 +7,7 @@
 #include <cereal/cereal.hpp>
 #include <cereal/archives/binary.hpp>
 #include <cereal/archives/json.hpp>
+#include <array>
 #include <memory>
 #include <string>
 #include <string_view>
