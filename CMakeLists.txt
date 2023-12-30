@@ -97,6 +97,38 @@ target_link_libraries(ArkoseCore PUBLIC
     meshoptimizer # mesh optimization & meshlet generation
     )
 
+if (MSVC)
+    # Ensure we're using the dynamically linked runtime library for MSVC.
+    # When linking with Tracy this is required, as it will dynamically load dlls.
+    set(MSVC_RUNTIME_LIBRARY_STRING "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
+    set_property(TARGET ArkoseCore PROPERTY MSVC_RUNTIME_LIBRARY ${MSVC_RUNTIME_LIBRARY_STRING})
+    set_property(TARGET Jolt PROPERTY MSVC_RUNTIME_LIBRARY ${MSVC_RUNTIME_LIBRARY_STRING})
+
+    # Avoid including too much noise from windows.h
+    target_compile_definitions(ArkoseCore PUBLIC
+        WIN32_LEAN_AND_MEAN NOMINMAX
+        _CRT_SECURE_NO_WARNINGS)
+
+    # Explicitly set _ITERATOR_DEBUG_LEVEL to 2 for debug builds so it's clear what we're using.
+    # Level 2 is the default level for MSVC Debug builds and will be compatible with most prebuilt libraries.
+    add_compile_definitions($<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=2>)
+
+    target_compile_options(ArkoseCore PUBLIC
+        /wd26812 # prefer scoped enum class
+        )
+
+else()
+    target_compile_options(ArkoseCore PUBLIC
+        -Wall
+        -Wimplicit-fallthrough)
+endif()
+
+# Keep tracy enabled at all time but with on-demand only, meaning we don't accumulate tracy data
+# in the Arkose process which can hog a lot of memory, which looks a lot like a memory leak.
+target_compile_definitions(ArkoseCore PUBLIC TRACY_ENABLE)
+# Disable on-demand for now as the latest version seems to not work correctly with it
+#target_compile_definitions(ArkoseCore PUBLIC TRACY_ON_DEMAND)
+
 ##################################
 ######## ARKOSE RENDERER #########
 ##################################
@@ -272,43 +304,7 @@ add_custom_command(TARGET ArkoseRenderer POST_BUILD
     COMMAND_EXPAND_LISTS
 )
 
-##################################
-######## BUILD SETTINGS  #########
-##################################
-
 set_property(TARGET ArkoseRenderer PROPERTY CXX_STANDARD 20)
-
-if (MSVC)
-    # Ensure we're using the dynamically linked runtime library for MSVC.
-    # When linking with Tracy this is required, as it will dynamically load dlls.
-    set(MSVC_RUNTIME_LIBRARY_STRING "MultiThreaded$<$<CONFIG:Debug>:Debug>DLL")
-    set_property(TARGET ArkoseRenderer PROPERTY MSVC_RUNTIME_LIBRARY ${MSVC_RUNTIME_LIBRARY_STRING})
-    set_property(TARGET Jolt PROPERTY MSVC_RUNTIME_LIBRARY ${MSVC_RUNTIME_LIBRARY_STRING})
-
-    # Avoid including too much noise from windows.h
-    target_compile_definitions(ArkoseRenderer PUBLIC WIN32_LEAN_AND_MEAN)
-
-    # Explicitly set _ITERATOR_DEBUG_LEVEL to 2 for debug builds so it's clear what we're using.
-    # Level 2 is the default level for MSVC Debug builds and will be compatible with most prebuilt libraries.
-    add_compile_definitions($<$<CONFIG:Debug>:_ITERATOR_DEBUG_LEVEL=2>)
-endif()
-
-# Keep tracy enabled at all time but with on-demand only, meaning we don't accumulate tracy data
-# in the Arkose process which can hog a lot of memory, which looks a lot like a memory leak.
-target_compile_definitions(ArkoseRenderer PUBLIC TRACY_ENABLE)
-# Disable on-demand for now as the latest version seems to not work correctly with it
-#target_compile_definitions(ArkoseRenderer PUBLIC TRACY_ON_DEMAND)
-
-if (MSVC)
-    target_compile_options(ArkoseRenderer PUBLIC
-        /wd26812 # prefer scoped enum class
-        )
-    target_compile_definitions(ArkoseRenderer PRIVATE
-        NOMINMAX _CRT_SECURE_NO_WARNINGS)
-else()
-    target_compile_options(ArkoseRenderer PRIVATE -Wall)
-    target_compile_options(ArkoseRenderer PRIVATE -Wimplicit-fallthrough)
-endif()
 
 ##################################
 #### CUSTOM BUILD STEPS ETC. #####
