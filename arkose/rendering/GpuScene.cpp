@@ -60,7 +60,7 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable, bool meshShading
     // TODO: Get rid of this placeholder that we use to write into all texture slots (i.e. support partially bound etc.)
     std::vector<Texture*> placeholderTexture = { m_magentaTexture.get() };
     m_materialBindingSet = backend().createBindingSet({ ShaderBinding::storageBuffer(*m_materialDataBuffer.get()),
-                                                        ShaderBinding::sampledTextureBindlessArray(static_cast<uint32_t>(m_managedMaterials.capacity()), placeholderTexture) });
+                                                        ShaderBinding::sampledTextureBindlessArray(static_cast<uint32_t>(m_managedTextures.capacity()), placeholderTexture) });
     m_materialBindingSet->setName("SceneMaterialSet");
 
     m_vertexManager = std::make_unique<VertexManager>(m_backend);
