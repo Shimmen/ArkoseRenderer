@@ -233,7 +233,7 @@ private:
     std::mutex m_asyncLoadedImagesMutex {};
     std::vector<LoadedImageForTextureCreation> m_asyncLoadedImages {};
 
-    ResourceList<ShaderMaterial, MaterialHandle> m_managedMaterials { "Materials", 1024 };
+    ResourceList<ShaderMaterial, MaterialHandle> m_managedMaterials { "Materials", 10'000 };
     std::unique_ptr<Buffer> m_materialDataBuffer { nullptr };
     std::vector<MaterialHandle> m_pendingMaterialUpdates {};
     MaterialHandle m_defaultMaterialHandle {};
