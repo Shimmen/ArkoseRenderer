@@ -9,6 +9,8 @@ void FpsCameraController::takeControlOfCamera(Camera& camera)
 {
     CameraController::takeControlOfCamera(camera);
     m_targetFieldOfView = camera.fieldOfView();
+    m_targetFocusDepth = camera.focusDepth();
+    m_velocity = vec3(0.0f);
 }
 
 Camera* FpsCameraController::relinquishControl()
