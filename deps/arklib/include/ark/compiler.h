@@ -25,11 +25,13 @@
 #pragma once
 
 #if defined(_MSC_VER)
- #include <intrin.h>
- #define ARK_DEBUG_BREAK() __debugbreak()
-#elif __has_builtin(__builtin_debugtrap)
- #define ARK_DEBUG_BREAK() __builtin_debugtrap()
+#define ARK_FORCE_INLINE __forceinline
+#elif __has_attribute(always_inline)
+#define ARK_FORCE_INLINE __attribute__((always_inline))
 #else
- #warning "No implementation for ARK_DEBUG_BREAK() for this platform!"
- #define ARK_DEBUG_BREAK()
+#warning "No implementation for ARK_FORCE_INLINE for this platform!"
+#define ARK_FORCE_INLINE inline
 #endif
+
+#define ARK_DISABLE_OPTIMIZATIONS _Pragma("optimize(\"\", off)")
+#define ARK_ENABLE_OPTIMIZATIONS _Pragma("optimize(\"\", on)")
