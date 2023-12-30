@@ -209,6 +209,7 @@ add_executable(ArkoseRenderer
     arkose/scene/camera/Camera.cpp
     arkose/scene/camera/CameraController.cpp
     arkose/scene/camera/FpsCameraController.cpp
+    arkose/scene/camera/MapCameraController.cpp
     arkose/scene/editor/EditorGizmo.cpp
     arkose/scene/lights/DirectionalLight.cpp
     arkose/scene/lights/IESProfile.cpp
