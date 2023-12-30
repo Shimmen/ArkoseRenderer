@@ -84,6 +84,7 @@ target_link_libraries(ArkoseCore PUBLIC
     half # 16-bit float
     TracyClient # real-time profiling
     concurrentqueue # lock-free concurrent queue
+    nlohmann_json::nlohmann_json # json reading & writing
 
     glfw # window and event management
     nfd # native file dialogs
