@@ -545,7 +545,10 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             moodycamel::ConcurrentQueue<StaticMeshInstance*> instancesNeedingReinit {};
 
             std::atomic<size_t> drawableCount { 0 };
-            ParallelForBatched(staticMeshInstances().size(), 64, [this, &drawableCount, &updatedStaticMeshes, &instancesNeedingReinit](size_t idx) {
+
+            size_t itemCount = staticMeshInstances().size();
+            size_t batchSize = itemCount >= 512 ? 512 : 64; // if instance count is small don't go crazy with batch size
+            ParallelForBatched(itemCount, batchSize, [this, &drawableCount, &updatedStaticMeshes, &instancesNeedingReinit](size_t idx) {
                 auto& instance = staticMeshInstances()[idx];
 
                 bool meshHasUpdated = updatedStaticMeshes.contains(instance->mesh());
