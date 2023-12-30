@@ -63,6 +63,11 @@ struct Handle {
         return m_index != InvalidIndex;
     }
 
+    void invalidate()
+    {
+        m_index = InvalidIndex;
+    }
+
 private:
 
     IndexType m_index { InvalidIndex };
