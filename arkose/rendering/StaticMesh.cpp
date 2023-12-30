@@ -28,8 +28,16 @@ StaticMesh::StaticMesh(MeshAsset const* asset, MeshMaterialResolver&& materialRe
         StaticMeshLOD& lod = m_lods.emplace_back(&lodAsset);
         for (auto& segmentAsset : lodAsset.meshSegments) {
 
-            std::string const& materialAssetPath = std::string(segmentAsset.pathToMaterial());
-            MaterialAsset* materialAsset = MaterialAsset::load(materialAssetPath);
+            MaterialAsset* materialAsset = nullptr;
+            if (segmentAsset.hasPathToMaterial()) {
+                std::string const& materialAssetPath = std::string(segmentAsset.pathToMaterial());
+                materialAsset = MaterialAsset::load(materialAssetPath);
+            } else {
+                // TODO: Don't use a std::variant like this, just always serialize a path but allow assigning
+                // a dynamic material in runtime. When we save and there's a dynamic one set, write that to
+                // file and then serialize the path to that file. Will make this whole thing more explicit.
+                materialAsset = segmentAsset.dynamicMaterialAsset().lock().get();
+            }
 
             if (materialAsset->blendMode == BlendMode::Translucent) {
                 m_hasTranslucentSegments |= true;

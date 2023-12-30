@@ -45,6 +45,11 @@ public:
         ARKOSE_ASSERT(hasPathToMaterial());
         return std::get<std::string>(material);
     }
+    std::weak_ptr<MaterialAsset> dynamicMaterialAsset() const
+    {
+        ARKOSE_ASSERT(!hasPathToMaterial());
+        return std::get<std::weak_ptr<MaterialAsset>>(material);
+    }
 
     void generateMeshlets();
 
