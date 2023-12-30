@@ -540,43 +540,43 @@ void Camera::debugRenderCullingFrustum() const
     const vec3 color = vec3(1.0f, 0.0f, 1.0f);
     mat4 m = inverse(m_cullingViewProjection);
 
-    vec4 near[4];
-    near[0] = m * vec4(-1.0f, -1.0f, 0.01f, 1.0f);
-    near[1] = m * vec4(-1.0f, +1.0f, 0.01f, 1.0f);
-    near[2] = m * vec4(+1.0f, +1.0f, 0.01f, 1.0f);
-    near[3] = m * vec4(+1.0f, -1.0f, 0.01f, 1.0f);
+    vec4 zNear[4];
+    zNear[0] = m * vec4(-1.0f, -1.0f, 0.01f, 1.0f);
+    zNear[1] = m * vec4(-1.0f, +1.0f, 0.01f, 1.0f);
+    zNear[2] = m * vec4(+1.0f, +1.0f, 0.01f, 1.0f);
+    zNear[3] = m * vec4(+1.0f, -1.0f, 0.01f, 1.0f);
 
     for (int i = 0; i < 4; ++i) {
-        near[i] /= near[i].w;
+        zNear[i] /= zNear[i].w;
     }
 
-    vec4 far[4]; // note: very close, but just before the far plane
-    far[0] = m * vec4(-1.0f, -1.0f, 0.9999f, 1.0f);
-    far[1] = m * vec4(-1.0f, +1.0f, 0.9999f, 1.0f);
-    far[2] = m * vec4(+1.0f, +1.0f, 0.9999f, 1.0f);
-    far[3] = m * vec4(+1.0f, -1.0f, 0.9999f, 1.0f);
+    vec4 zFar[4]; // note: very close, but just before the far plane
+    zFar[0] = m * vec4(-1.0f, -1.0f, 0.9999f, 1.0f);
+    zFar[1] = m * vec4(-1.0f, +1.0f, 0.9999f, 1.0f);
+    zFar[2] = m * vec4(+1.0f, +1.0f, 0.9999f, 1.0f);
+    zFar[3] = m * vec4(+1.0f, -1.0f, 0.9999f, 1.0f);
 
     for (int i = 0; i < 4; ++i) {
-        far[i] /= far[i].w;
+        zFar[i] /= zFar[i].w;
     }
 
     DebugDrawer& debugDrawer = DebugDrawer::get();
 
     // Near quad
-    debugDrawer.drawLine(near[0].xyz(), near[1].xyz(), color);
-    debugDrawer.drawLine(near[1].xyz(), near[2].xyz(), color);
-    debugDrawer.drawLine(near[2].xyz(), near[3].xyz(), color);
-    debugDrawer.drawLine(near[3].xyz(), near[0].xyz(), color);
+    debugDrawer.drawLine(zNear[0].xyz(), zNear[1].xyz(), color);
+    debugDrawer.drawLine(zNear[1].xyz(), zNear[2].xyz(), color);
+    debugDrawer.drawLine(zNear[2].xyz(), zNear[3].xyz(), color);
+    debugDrawer.drawLine(zNear[3].xyz(), zNear[0].xyz(), color);
 
     // Far quad
-    debugDrawer.drawLine(far[0].xyz(), far[1].xyz(), color);
-    debugDrawer.drawLine(far[1].xyz(), far[2].xyz(), color);
-    debugDrawer.drawLine(far[2].xyz(), far[3].xyz(), color);
-    debugDrawer.drawLine(far[3].xyz(), far[0].xyz(), color);
+    debugDrawer.drawLine(zFar[0].xyz(), zFar[1].xyz(), color);
+    debugDrawer.drawLine(zFar[1].xyz(), zFar[2].xyz(), color);
+    debugDrawer.drawLine(zFar[2].xyz(), zFar[3].xyz(), color);
+    debugDrawer.drawLine(zFar[3].xyz(), zFar[0].xyz(), color);
 
     // Connecting lines
-    debugDrawer.drawLine(near[0].xyz(), far[0].xyz(), color);
-    debugDrawer.drawLine(near[1].xyz(), far[1].xyz(), color);
-    debugDrawer.drawLine(near[2].xyz(), far[2].xyz(), color);
-    debugDrawer.drawLine(near[3].xyz(), far[3].xyz(), color);
+    debugDrawer.drawLine(zNear[0].xyz(), zFar[0].xyz(), color);
+    debugDrawer.drawLine(zNear[1].xyz(), zFar[1].xyz(), color);
+    debugDrawer.drawLine(zNear[2].xyz(), zFar[2].xyz(), color);
+    debugDrawer.drawLine(zNear[3].xyz(), zFar[3].xyz(), color);
 }
