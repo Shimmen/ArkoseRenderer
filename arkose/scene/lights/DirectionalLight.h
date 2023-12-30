@@ -11,10 +11,13 @@ public:
     DirectionalLight(vec3 color, float illuminance, vec3 direction);
     virtual ~DirectionalLight() { }
 
+    float illuminance() const { return m_illuminance; }
+    void setIlluminance(float illuminance) { m_illuminance = illuminance; }
+
     // IEditorObject interface
     virtual void drawGui() override;
 
-    float intensityValue() const final { return m_illuminance; }
+    float intensityValue() const final { return illuminance(); }
 
     mat4 projectionMatrix() const final;
     virtual float constantBias(Extent2D shadowMapSize) const override;
