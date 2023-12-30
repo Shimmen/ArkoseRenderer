@@ -77,6 +77,10 @@ FetchContent_Declare(tracy
     GIT_SHALLOW TRUE
     GIT_PROGRESS TRUE)
 
+FetchContent_Declare(libigl
+    GIT_REPOSITORY https://github.com/libigl/libigl.git
+    GIT_TAG        "v2.5.0")
+
 ##################################
 # FetchContent dependencies without cmake files
 
@@ -228,4 +232,5 @@ FetchContent_MakeAvailable(
     jolt-physics
     lz4
     concurrentqueue
-    tracy)
+    tracy
+    libigl)
