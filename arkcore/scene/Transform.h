@@ -109,7 +109,7 @@ public:
 
     mat4 worldMatrix() const
     {
-        SCOPED_PROFILE_ZONE();
+        //SCOPED_PROFILE_ZONE();
 
         if (!m_parent) {
             return localMatrix();
@@ -120,7 +120,7 @@ public:
 
     mat3 worldNormalMatrix() const
     {
-        SCOPED_PROFILE_ZONE();
+        //SCOPED_PROFILE_ZONE();
 
         mat3 world3x3 = mat3(worldMatrix());
         mat3 normalMatrix = transpose(inverse(world3x3));
