@@ -1211,10 +1211,18 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not input.has_value()) {
-        TextureHandle handle = registerTextureSlot();
-        updateTextureUnowned(handle, fallback);
-        return handle;
+    if (!input.has_value()) {
+        ARKOSE_ASSERT(fallback != nullptr);
+        auto fallbackEntry = m_materialFallbackTextureCache.find(fallback);
+        if (fallbackEntry == m_materialFallbackTextureCache.end()) {
+            TextureHandle handle = registerTextureSlot();
+            updateTextureUnowned(handle, fallback);
+            m_materialFallbackTextureCache[fallback] = handle;
+            return handle;
+        } else {
+            TextureHandle handle = fallbackEntry->second;
+            return handle;
+        }
     }
 
     std::string const& imageAssetPath = std::string(input->pathToImage());
