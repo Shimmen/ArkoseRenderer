@@ -9,15 +9,20 @@ public:
     explicit SystemGlfw();
     ~SystemGlfw() override;
 
+    ARK_NON_COPYABLE(SystemGlfw)
+
     bool createWindow(WindowType, Extent2D const& windowSize) override;
 
     Extent2D windowSize() const override;
     Extent2D windowFramebufferSize() const override;
     bool windowIsFullscreen() override;
 
+    void newFrame() override;
     bool exitRequested() override;
-    void pollEvents() override;
     void waitEvents() override;
+
+    bool canProvideMousePosition() const override { return true; }
+    vec2 currentMousePosition() const override;
 
     double timeSinceStartup() override;
 
@@ -32,6 +37,13 @@ public:
 
     // ugly hack.. needed for the Vulkan backend, for now.
     GLFWwindow* glfwWindowHack() const { return m_glfwWindow; }
+
+private:
+    // glfw event callbacks
+    static void keyEventCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+    static void mouseButtonEventCallback(GLFWwindow* window, int button, int action, int mods);
+    static void mouseMovementEventCallback(GLFWwindow* window, double xPos, double yPos);
+    static void mouseScrollEventCallback(GLFWwindow* window, double xOffset, double yOffset);
 
 private:
     GLFWwindow* m_glfwWindow { nullptr };

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "utility/EnumHelpers.h"
 #include <ark/vector.h>
 #include <optional>
 
@@ -148,8 +149,25 @@ enum class Button : int {
     __Count = __Max + 1,
 };
 
-// (forward declare for GLFW.h)
-typedef struct GLFWwindow GLFWwindow;
+// Values map directly to GLFW's action defines
+enum class InputAction {
+    Release = 0,
+    Press = 1,
+    Repeat = 2,
+};
+
+// Values map directly to GLFW's modifier defines
+enum class InputModifier {
+    Shift = 1,
+    Control = 2,
+    Alt = 4,
+    Super = 8,
+    CapsLock = 16,
+    NumLock = 32,
+};
+
+ARKOSE_ENUM_CLASS_BIT_FLAGS(InputModifier)
+using InputModifiers = InputModifier;
 
 class Input final {
 public:
@@ -157,14 +175,8 @@ public:
     Input(Input&& other) = delete;
     Input& operator=(Input& other) = delete;
 
-    static const Input& instance();
-    static void registerWindow(GLFWwindow*);
-    static void preEventPoll();
-
-    static void keyEventCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
-    static void mouseButtonEventCallback(GLFWwindow* window, int button, int action, int mods);
-    static void mouseMovementEventCallback(GLFWwindow* window, double xPos, double yPos);
-    static void mouseScrollEventCallback(GLFWwindow* window, double xOffset, double yOffset);
+    static Input const& instance();
+    static Input& mutableInstance(); // TODO: Make sure only System classes touch this!
 
     [[nodiscard]] bool isKeyDown(Key) const;
     [[nodiscard]] bool wasKeyPressed(Key) const;
@@ -185,6 +197,12 @@ public:
     [[nodiscard]] vec2 leftStick() const;
     [[nodiscard]] vec2 rightStick() const;
 
+    void preEventPoll();
+    void keyEventCallback(int key, int scancode, InputAction, InputModifiers);
+    void mouseButtonEventCallback(int button, InputAction, InputModifiers);
+    void mouseMovementEventCallback(double xPosition, double yPosition);
+    void mouseScrollEventCallback(double xOffset, double yOffset);
+
 private:
     Input() = default;
     ~Input() = default;
@@ -194,10 +212,8 @@ private:
     static constexpr int KeyboardKeyCount { static_cast<int>(Key::__Count) };
     static constexpr int MouseButtonCount { static_cast<int>(Button::__Count) };
 
-    static constexpr float GamepadDeadzone { 0.25f };
+    //static constexpr float GamepadDeadzone { 0.25f };
     static constexpr float MouseClickMaxAllowedDelta { 4.0f };
-
-    GLFWwindow* m_associatedWindow { nullptr };
 
     bool m_isKeyDown[KeyboardKeyCount] {};
     bool m_wasKeyPressed[KeyboardKeyCount] {};

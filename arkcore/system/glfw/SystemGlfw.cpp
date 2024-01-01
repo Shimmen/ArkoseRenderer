@@ -60,7 +60,12 @@ bool SystemGlfw::createWindow(WindowType windowType, Extent2D const& windowSize)
         ARKOSE_LOG(Fatal, "SystemGlfw: could not create window with specified settings, exiting.");
     }
 
-    Input::registerWindow(m_glfwWindow);
+    // Set up input for the window
+    glfwSetWindowUserPointer(m_glfwWindow, this);
+    glfwSetKeyCallback(m_glfwWindow, SystemGlfw::keyEventCallback);
+    glfwSetMouseButtonCallback(m_glfwWindow, SystemGlfw::mouseButtonEventCallback);
+    glfwSetCursorPosCallback(m_glfwWindow, SystemGlfw::mouseMovementEventCallback);
+    glfwSetScrollCallback(m_glfwWindow, SystemGlfw::mouseScrollEventCallback);
 
     return true;
 }
@@ -85,22 +90,46 @@ bool SystemGlfw::windowIsFullscreen()
     return glfwMonitor != nullptr;
 }
 
+void SystemGlfw::newFrame()
+{
+    Input::mutableInstance().preEventPoll();
+    glfwPollEvents(); // will trigger calls to the event callbacks immediately
+
+    // glfw doesn't use callbacks for joysticks / gamepads, needs to be polled manually
+    for (int joystick = GLFW_JOYSTICK_1; joystick < GLFW_JOYSTICK_LAST; ++joystick) {
+        if (!glfwJoystickPresent(joystick)) {
+            continue;
+        }
+
+        if (!glfwJoystickIsGamepad(joystick)) { 
+            continue;
+        }
+
+        GLFWgamepadstate glfwGamepadState;
+        if (glfwGetGamepadState(GLFW_JOYSTICK_1, &glfwGamepadState) != GLFW_FALSE) {
+            // TODO: Add support for gamepads!
+            //  1. remap the state to something non-glfw specific
+            //  2. pass it to the Input object
+            //  3. done?
+        }
+    }
+}
+
 bool SystemGlfw::exitRequested()
 {
     return static_cast<bool>(glfwWindowShouldClose(m_glfwWindow));
 }
 
-void SystemGlfw::pollEvents()
-{
-    // NOTE: This can only be called once a frame - should be done from the main loop!
-
-    Input::preEventPoll();
-    glfwPollEvents();
-}
-
 void SystemGlfw::waitEvents()
 {
     glfwWaitEvents();
+}
+
+vec2 SystemGlfw::currentMousePosition() const
+{
+    double x, y;
+    glfwGetCursorPos(m_glfwWindow, &x, &y);
+    return vec2(static_cast<float>(x), static_cast<float>(y));
 }
 
 double SystemGlfw::timeSinceStartup()
@@ -139,3 +168,72 @@ void* SystemGlfw::createVulkanSurface(void* vulkanInstanceUntyped)
     return vulkanSurface;
 }
 #endif
+
+static InputAction glfwActionToInputAction(int glfwAction)
+{
+    switch (glfwAction) {
+    case GLFW_RELEASE:
+        return InputAction::Release;
+    case GLFW_PRESS:
+        return InputAction::Press;
+    case GLFW_REPEAT:
+        return InputAction::Repeat;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+}
+
+static InputModifiers glfwModsToInputModifiers(int glfwMods)
+{
+    InputModifiers mods { 0 };
+
+    if (glfwMods & GLFW_MOD_SHIFT) { 
+        mods = mods | InputModifier::Shift;
+    }
+
+    if (glfwMods & GLFW_MOD_CONTROL) {
+        mods = mods | InputModifier::Control;
+    }
+
+    if (glfwMods & GLFW_MOD_ALT) {
+        mods = mods | InputModifier::Alt;
+    }
+
+    if (glfwMods & GLFW_MOD_SUPER) {
+        mods = mods | InputModifier::Super;
+    }
+
+    if (glfwMods & GLFW_MOD_CAPS_LOCK) {
+        mods = mods | InputModifier::CapsLock;
+    }
+
+    if (glfwMods & GLFW_MOD_NUM_LOCK) {
+        mods = mods | InputModifier::NumLock;
+    }
+
+    return mods;
+}
+
+void SystemGlfw::keyEventCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
+{
+    Input::mutableInstance().keyEventCallback(key, scancode, glfwActionToInputAction(action), glfwModsToInputModifiers(mods));
+}
+
+void SystemGlfw::mouseButtonEventCallback(GLFWwindow* window, int button, int action, int mods)
+{
+    Input::mutableInstance().mouseButtonEventCallback(button, glfwActionToInputAction(action), glfwModsToInputModifiers(mods));
+
+    // HACK: This is a very application-specific hack.. remove from here!
+    auto& system = *static_cast<SystemGlfw*>(glfwGetWindowUserPointer(window));
+    glfwSetInputMode(system.m_glfwWindow, GLFW_CURSOR, Input::instance().isButtonDown(Button::Right) ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+}
+
+void SystemGlfw::mouseMovementEventCallback(GLFWwindow* window, double xPosition, double yPosition)
+{
+    Input::mutableInstance().mouseMovementEventCallback(xPosition, yPosition);
+}
+
+void SystemGlfw::mouseScrollEventCallback(GLFWwindow* window, double xOffset, double yOffset)
+{
+    Input::mutableInstance().mouseScrollEventCallback(xOffset, yOffset);
+}

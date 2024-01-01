@@ -1,6 +1,7 @@
 #pragma once
 
 #include "utility/Extent.h"
+#include <ark/copying.h>
 
 class System {
 public:
@@ -8,6 +9,8 @@ public:
     static void shutdown();
 
     static System& get();
+
+    ARK_NON_COPYABLE(System)
 
     ////////////////////////////////////////////////////////////////////////////
     // Generic system API
@@ -23,12 +26,16 @@ public:
     virtual Extent2D windowFramebufferSize() const = 0;
     virtual bool windowIsFullscreen() = 0;
 
+    virtual void newFrame() = 0;
     virtual bool exitRequested() = 0;
-    virtual void pollEvents() = 0;
     virtual void waitEvents() = 0;
+
+    virtual bool canProvideMousePosition() const { return false; }
+    virtual vec2 currentMousePosition() const { return vec2(0.0f); }
 
     virtual double timeSinceStartup() = 0;
 
+    System() = default;
     virtual ~System() { }
 
     ////////////////////////////////////////////////////////////////////////////

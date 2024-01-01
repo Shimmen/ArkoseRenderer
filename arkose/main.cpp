@@ -95,8 +95,7 @@ int main(int argc, char** argv)
             shaderFileWatchMutex.unlock();
         }
 
-        system.pollEvents();
-
+        system.newFrame();
         graphicsBackend.newFrame();
 
         Extent2D viewportSize = system.windowFramebufferSize();
