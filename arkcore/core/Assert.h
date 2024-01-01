@@ -12,8 +12,7 @@
 
 ARK_FORCE_INLINE void ArkoseAssertHandler(char const* assertion, char const* filename, int line)
 {
-    std::string assertionMessage = fmt::format("Assertion failed: '{}' ({} line {})", assertion, filename, line);
-    ARKOSE_LOG(Error, "{}", assertionMessage);
+    ARKOSE_LOG(Error, "Assertion failed: '{}' ({} line {})\n", assertion, filename, line);
 
 #if defined(_MSC_VER)
     if (IsDebuggerPresent()) {
