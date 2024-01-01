@@ -89,6 +89,11 @@ target_link_libraries(ArkoseCore PUBLIC
     glfw # window and event management
     nfd # native file dialogs
 
+    # Geometry processing related
+    eigen # linear algebra library (needed for for libigl)
+    igl::core # libigl - geometry processing library
+    igl_restricted::triangle # libigl triangulation
+
     # Asset related
     stb_image # image loading
     tiny_gltf # glTF 2.0 loading
@@ -137,6 +142,7 @@ target_compile_definitions(ArkoseCore PUBLIC TRACY_ENABLE)
 add_executable(ArkoseRenderer
     arkose/main.cpp
     arkose/animation/Animation.cpp
+    arkose/apps/geodata/GeodataApp.cpp
     arkose/apps/BootstrappingApp.cpp
     arkose/apps/MeshViewerApp.cpp
     arkose/apps/ShowcaseApp.cpp

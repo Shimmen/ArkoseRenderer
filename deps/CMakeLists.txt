@@ -234,3 +234,6 @@ FetchContent_MakeAvailable(
     concurrentqueue
     tracy
     libigl)
+
+# Final dependency build setup
+igl_include(restricted triangle)
