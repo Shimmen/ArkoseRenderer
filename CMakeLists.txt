@@ -67,8 +67,6 @@ add_library(ArkoseCore STATIC
     arkcore/scene/ProbeGrid.cpp
     arkcore/scene/Transform.cpp
     arkcore/scene/Vertex.cpp
-    arkcore/system/Input.cpp
-    arkcore/system/System.cpp
     arkcore/utility/FileDialog.cpp
     arkcore/utility/FileIO.cpp
     )
@@ -146,13 +144,6 @@ elseif (APPLE)
     target_compile_definitions(ArkoseCore PUBLIC PLATFORM_MACOS=1)
     set(ARKOSE_SYSTEM_GLFW True)
 endif ()
-
-if (ARKOSE_SYSTEM_GLFW)
-    target_compile_definitions(ArkoseCore PUBLIC WITH_GLFW=1)
-    target_sources(ArkoseCore PRIVATE "arkcore/system/glfw/SystemGlfw.cpp")
-else()
-    message(SEND_ERROR "No system specified!")
-endif()
 
 # Keep tracy enabled at all time but with on-demand only, meaning we don't accumulate tracy data
 # in the Arkose process which can hog a lot of memory, which looks a lot like a memory leak.
@@ -248,6 +239,8 @@ add_executable(ArkoseRenderer
     arkose/scene/lights/LightAttenuation.cpp
     arkose/scene/lights/SphereLight.cpp
     arkose/scene/lights/SpotLight.cpp
+    arkose/system/Input.cpp
+    arkose/system/System.cpp
     arkose/utility/AvgElapsedTimer.cpp
     )
 
@@ -296,6 +289,15 @@ if (ARKOSE_BACKEND_D3D12)
         DirectX-Headers # utility stuff, e.g. CD3DX12
         spirv-cross-hlsl # for spirv->hlsl transpiling
         )
+endif()
+
+if (ARKOSE_SYSTEM_GLFW)
+    target_compile_definitions(ArkoseCore PUBLIC WITH_GLFW)
+    target_sources(ArkoseRenderer PRIVATE
+        arkose/system/glfw/SystemGlfw.cpp
+        )
+else()
+    message(SEND_ERROR "No system specified!")
 endif()
 
 if(MSVC)

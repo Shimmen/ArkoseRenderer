@@ -66,7 +66,8 @@ Arkose
 |   |   |-- backend # rendering backend code (RHI) for interfacing with graphics APIs
 |   |   `-- nodes   # rendering techniques and features (API agnostic)
 |   |-- scene       # scene representation, e.g. scene, camera, lights
-|   `-- shaders     # all shader code used by arkose in run-time
+|   |-- shaders     # all shader code used by arkose in run-time
+|   `-- system      # system (platform) specifics
 |-- assets          # all assets used by the engine & apps
 `-- deps            # root for in-tree code dependencies
 ```
