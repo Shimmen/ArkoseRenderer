@@ -9,8 +9,6 @@
 
 class RenderPipeline;
 
-struct GLFWwindow;
-
 class Backend {
 private:
 
@@ -45,7 +43,7 @@ public:
     };
 
     // Creating and destroying the global backend object
-    static Backend& create(Backend::Type, GLFWwindow*, const Backend::AppSpecification&);
+    static Backend& create(Backend::Type, const Backend::AppSpecification&);
     static void destroy();
 
     // Get a reference to the global backend

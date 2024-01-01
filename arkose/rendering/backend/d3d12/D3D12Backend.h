@@ -8,7 +8,7 @@ static constexpr bool d3d12debugMode = true;
 
 class D3D12Backend final : public Backend {
 public:
-    D3D12Backend(Badge<Backend>, GLFWwindow*, const AppSpecification& appSpecification);
+    D3D12Backend(Badge<Backend>, const AppSpecification& appSpecification);
     ~D3D12Backend() final;
 
     D3D12Backend(D3D12Backend&&) = delete;
@@ -70,14 +70,13 @@ private:
 
     ComPtr<ID3D12Device> createDeviceAtMaxSupportedFeatureLevel() const;
     ComPtr<ID3D12CommandQueue> createDefaultCommandQueue() const;
-    ComPtr<IDXGISwapChain> createSwapChain(GLFWwindow*, ID3D12CommandQueue*) const;
+    ComPtr<IDXGISwapChain> createSwapChain(ID3D12CommandQueue*) const;
 
     void recreateSwapChain();
 
     ///////////////////////////////////////////////////////////////////////////
     /// Window and swapchain related members
 
-    GLFWwindow* m_window;
     Extent2D m_windowFramebufferExtent { 0, 0 };
 
     ComPtr<ID3D12Device> m_device {};

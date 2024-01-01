@@ -1,4 +1,6 @@
 #include "apps/App.h"
+#include "apps/geodata/GeodataApp.h"
+#include "apps/BootstrappingApp.h"
 #include "apps/MeshViewerApp.h"
 #include "apps/ShowcaseApp.h"
 #include "apps/SSSDemo.h"
@@ -9,73 +11,16 @@
 #include "physics/backend/base/PhysicsBackend.h"
 #include "rendering/backend/base/Backend.h"
 #include "rendering/backend/shader/ShaderManager.h"
+#include "system/System.h"
 #include "utility/Profiling.h"
-
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
 
 #include "settings.h"
 
-enum class WindowType {
-    Windowed,
-    Fullscreen
-};
-
-GLFWwindow* createWindow(Backend::Type backendType, WindowType windowType, const Extent2D& windowSize)
-{
-    SCOPED_PROFILE_ZONE();
-
-    if (!glfwInit()) {
-        ARKOSE_LOG(Fatal, "could not initialize windowing system, exiting.");
-    }
-
-    std::string windowTitle = "Arkose Renderer";
-
-    switch (backendType) {
-    case Backend::Type::Vulkan:
-        if (!glfwVulkanSupported()) {
-            ARKOSE_LOG(Fatal, "Vulkan is not supported but the Vulkan backend is requested, exiting.");
-        }
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        windowTitle += " [Vulkan]";
-        break;
-    case Backend::Type::D3D12:
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        windowTitle += " [D3D12]";
-        break;
-    }
-
-    GLFWwindow* window = nullptr;
-
-    switch (windowType) {
-    case WindowType::Fullscreen: {
-        GLFWmonitor* defaultMonitor = glfwGetPrimaryMonitor();
-        const GLFWvidmode* defaultVideoMode = glfwGetVideoMode(defaultMonitor);
-        window = glfwCreateWindow(defaultVideoMode->width, defaultVideoMode->height, windowTitle.c_str(), defaultMonitor, nullptr);
-        break;
-    }
-    case WindowType::Windowed: {
-        window = glfwCreateWindow(windowSize.width(), windowSize.height(), windowTitle.c_str(), nullptr, nullptr);
-        break;
-    }
-    }
-
-    if (!window) {
-        ARKOSE_LOG(Fatal, "could not create window with specified settings, exiting.");
-    }
-
-    return window;
-}
-
-Extent2D windowFramebufferSize(GLFWwindow* window)
-{
-    int width, height;
-    glfwGetFramebufferSize(window, &width, &height);
-    return Extent2D(width, height);
-}
-
 std::unique_ptr<App> createApp(const std::vector<std::string> arguments)
 {
+    //return std::make_unique<GeodataApp>();
+    return std::make_unique<SSSDemo>();
+
     if (std::find(arguments.begin(), arguments.end(), "-meshviewer") != arguments.end()) {
         return std::make_unique<MeshViewerApp>();
     } else if (std::find(arguments.begin(), arguments.end(), "-sssdemo") != arguments.end()) {
@@ -98,11 +43,13 @@ int main(int argc, char** argv)
 
     // Initialize core systems
     TaskGraph::initialize();
+    System::initialize();
+
+    System& system = System::get();
 
     // Create window & input handling for that window
-    GLFWwindow* window = createWindow(backendType, WindowType::Windowed, { 1920, 1080 });
-    Extent2D outputDisplayResolution = windowFramebufferSize(window);
-    Input::registerWindow(window);
+    system.createWindow(System::WindowType::Windowed, { 1920, 1080 });
+    Extent2D outputDisplayResolution = system.windowFramebufferSize();
 
     // Create the app that will drive this "engine"
     auto app = createApp(arguments);
@@ -111,7 +58,7 @@ int main(int argc, char** argv)
     appSpec.optionalCapabilities = app->optionalCapabilities();
 
     // Create backends
-    Backend& graphicsBackend = Backend::create(backendType, window, appSpec);
+    Backend& graphicsBackend = Backend::create(backendType, appSpec);
     PhysicsBackend* physicsBackend = PhysicsBackend::create(physicsBackendType);
 
     // Create the scene
@@ -134,7 +81,6 @@ int main(int argc, char** argv)
         shaderFileWatchMutex.unlock();
     });
 
-    glfwSetTime(0.0);
     float lastTime = 0.0f;
     Extent2D currentViewportSize { 0, 0 };
 
@@ -149,27 +95,25 @@ int main(int argc, char** argv)
             shaderFileWatchMutex.unlock();
         }
 
-        Input::preEventPoll();
-        glfwPollEvents();
+        system.pollEvents();
 
         graphicsBackend.newFrame();
 
-        Extent2D viewportSize = windowFramebufferSize(window);
+        Extent2D viewportSize = system.windowFramebufferSize();
         if (viewportSize != currentViewportSize) {
             currentViewportSize = viewportSize;
             renderPipeline->setOutputResolution(viewportSize);
 
-            int windowWidthPx, windowHeightPx;
-            glfwGetWindowSize(window, &windowWidthPx, &windowHeightPx);
-            scene->camera().setTargetWindowSize({ windowWidthPx, windowHeightPx });
+            Extent2D windowSize = system.windowSize();
+            scene->camera().setTargetWindowSize(windowSize);
         }
 
-        float elapsedTime = static_cast<float>(glfwGetTime());
+        float elapsedTime = static_cast<float>(system.timeSinceStartup());
         float deltaTime = elapsedTime - lastTime;
         lastTime = elapsedTime;
 
         bool keepRunning = app->update(*scene, elapsedTime, deltaTime);
-        exitRequested = !keepRunning || static_cast<bool>(glfwWindowShouldClose(window));
+        exitRequested = !keepRunning || system.exitRequested();
 
         scene->update(elapsedTime, deltaTime);
 
@@ -201,12 +145,9 @@ int main(int argc, char** argv)
     Backend::destroy();
     PhysicsBackend::destroy();
 
-    // Destroy window & windowing system
-    glfwDestroyWindow(window);
-    glfwTerminate();
-
     // Shutdown core systems
     TaskGraph::shutdown();
+    System::shutdown();
 
     return 0;
 }

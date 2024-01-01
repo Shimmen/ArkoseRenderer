@@ -1,13 +1,12 @@
 #include "VulkanBackend.h"
 
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-
 #include "VulkanCommandList.h"
 #include "rendering/backend/vulkan/VulkanResources.h"
 #include "rendering/backend/vulkan/VulkanUpscalingState.h"
 #include "rendering/backend/shader/Shader.h"
 #include "rendering/backend/shader/ShaderManager.h"
+#include "system/System.h"
+#include "system/glfw/SystemGlfw.h" // TODO: Make the VulkanBackend not GLFW dependent (the only reason now is the default dear imgui backend)!
 #include <ark/defer.h>
 #include "rendering/Registry.h"
 #include "rendering/RenderPipeline.h"
@@ -20,22 +19,14 @@
 #include <imgui.h>
 #include <implot.h>
 #include <ark/conversion.h>
-#include <backends/imgui_impl_glfw.h>
+#include <backends/imgui_impl_glfw.h> // TODO: Get rid of this glfw-specific backend (see above comment about SystemGlfw)
 #include <backends/imgui_impl_vulkan.h>
 #include <spirv_cross.hpp>
 #include <unordered_map>
 #include <unordered_set>
 
-static bool s_unhandledWindowResize = false;
-
-VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecification& appSpecification)
-    : m_window(window)
+VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecification)
 {
-    glfwSetFramebufferSizeCallback(window, static_cast<GLFWframebuffersizefun>([](GLFWwindow* window, int width, int height) {
-                                       // Is this even needed? Doesn't seem to be on Windows at least.
-                                       s_unhandledWindowResize = true;
-                                   }));
-
     {
         uint32_t availableLayerCount;
         vkEnumerateInstanceLayerProperties(&availableLayerCount, nullptr);
@@ -86,8 +77,8 @@ VulkanBackend::VulkanBackend(Badge<Backend>, GLFWwindow* window, const AppSpecif
         m_instance = createInstance(requestedLayers, nullptr);
     }
 
-    if (glfwCreateWindowSurface(m_instance, window, nullptr, &m_surface) != VK_SUCCESS)
-        ARKOSE_LOG(Fatal, "VulkanBackend: can't create window surface, exiting.");
+    void* vulkanSufaceUntyped = System::get().createVulkanSurface(m_instance);
+    m_surface = static_cast<VkSurfaceKHR>(vulkanSufaceUntyped);
 
     m_physicalDevice = pickBestPhysicalDevice();
     vkGetPhysicalDeviceProperties(physicalDevice(), &m_physicalDeviceProperties);
@@ -633,11 +624,10 @@ VkExtent2D VulkanBackend::pickBestSwapchainExtent() const
     // The drivers are flexible, so let's choose something good that is within the the legal extents
     VkExtent2D extent = {};
 
-    int framebufferWidth, framebufferHeight;
-    glfwGetFramebufferSize(m_window, &framebufferWidth, &framebufferHeight);
+    Extent2D framebufferSize = System::get().windowFramebufferSize();
 
-    extent.width = std::clamp(static_cast<uint32_t>(framebufferWidth), surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
-    extent.height = std::clamp(static_cast<uint32_t>(framebufferHeight), surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
+    extent.width = std::clamp(static_cast<uint32_t>(framebufferSize.width()), surfaceCapabilities.minImageExtent.width, surfaceCapabilities.maxImageExtent.width);
+    extent.height = std::clamp(static_cast<uint32_t>(framebufferSize.height()), surfaceCapabilities.minImageExtent.height, surfaceCapabilities.maxImageExtent.height);
     ARKOSE_LOG(Info, "VulkanBackend: using specified extents ({} x {}) for swap chain.", extent.width, extent.height);
 
     return extent;
@@ -663,7 +653,7 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
 
     {
         uint32_t requiredCount;
-        const char** requiredExtensions = glfwGetRequiredInstanceExtensions(&requiredCount);
+        char const** requiredExtensions = System::get().requiredInstanceExtensions(&requiredCount);
         for (uint32_t i = 0; i < requiredCount; ++i) {
             const char* name = requiredExtensions[i];
             ARKOSE_ASSERT(hasSupportForInstanceExtension(name));
@@ -1238,11 +1228,10 @@ Extent2D VulkanBackend::recreateSwapchain()
 
     while (true) {
         // As long as we are minimized, don't do anything
-        int windowFramebufferWidth, windowFramebufferHeight;
-        glfwGetFramebufferSize(m_window, &windowFramebufferWidth, &windowFramebufferHeight);
-        if (windowFramebufferWidth == 0 || windowFramebufferHeight == 0) {
+        Extent2D framebufferExtent = System::get().windowFramebufferSize();
+        if (framebufferExtent.hasZeroArea()) {
             ARKOSE_LOG(Info, "VulkanBackend: rendering paused since there are no pixels to draw to.");
-            glfwWaitEvents();
+            System::get().waitEvents();
         } else {
             ARKOSE_LOG(Info, "VulkanBackend: rendering resumed.");
             break;
@@ -1258,7 +1247,6 @@ Extent2D VulkanBackend::recreateSwapchain()
     createFrameRenderTargets(referenceImageContext);
 
     m_relativeFrameIndex = 0;
-    s_unhandledWindowResize = false;
 
     return m_swapchainExtent;
 }
@@ -1375,6 +1363,10 @@ void VulkanBackend::setupDearImgui()
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
+    // HACK! We should make our own dear imgui backend which doesn't depend on glfw (would also fix a lot of other input issues we have now)
+    SystemGlfw& glfwSystem = static_cast<SystemGlfw&>(System::get());
+    GLFWwindow* glfwWindow = glfwSystem.glfwWindowHack();
+
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImPlot::CreateContext();
@@ -1393,7 +1385,7 @@ void VulkanBackend::setupDearImgui()
 
     style.Colors[ImGuiCol_MenuBarBg] = ImColor(255, 255, 255, 1);
 
-    ImGui_ImplGlfw_InitForVulkan(m_window, true);
+    ImGui_ImplGlfw_InitForVulkan(glfwWindow, true);
 
     VkDescriptorPoolSize poolSizes[] = {
         { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
@@ -1591,7 +1583,7 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
     }
 
     // NOTE: We're ignoring any time spent waiting for the fence, as that would factor e.g. GPU time & sync into the CPU time
-    double cpuFrameStartTime = glfwGetTime();
+    double cpuFrameStartTime = System::get().timeSinceStartup();
 
     uint32_t swapchainImageIndex;
     VkResult acquireResult;
@@ -1686,7 +1678,7 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
                 std::string nodeName = node.name();
 
                 SCOPED_PROFILE_ZONE_DYNAMIC(nodeName, 0x00ffff);
-                double cpuStartTime = glfwGetTime();
+                double cpuStartTime = System::get().timeSinceStartup();
 
                 // NOTE: This works assuming we never modify the list of nodes (add/remove/reorder)
                 uint32_t nodeStartTimestampIdx = nextTimestampQueryIdx++;
@@ -1702,7 +1694,7 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
                 vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameContext.timestampQueryPool, nodeEndTimestampIdx);
                 cmdList.endDebugLabel();
 
-                double cpuElapsed = glfwGetTime() - cpuStartTime;
+                double cpuElapsed = System::get().timeSinceStartup() - cpuStartTime;
                 node.timer().reportCpuTime(cpuElapsed);
             });
         }
@@ -1766,7 +1758,7 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
     }
 
     // NOTE: We're ignoring any time relatig to TracyVk and also submitting & presenting, as that would factor e.g. GPU time & sync into the CPU time
-    double cpuFrameElapsedTime = glfwGetTime() - cpuFrameStartTime;
+    double cpuFrameElapsedTime = System::get().timeSinceStartup() - cpuFrameStartTime;
     renderPipeline.timer().reportCpuTime(cpuFrameElapsedTime);
 
     #if defined(TRACY_ENABLE)
@@ -1890,7 +1882,7 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
 
         VkResult presentResult = vkQueuePresentKHR(m_presentQueue.queue, &presentInfo);
 
-        if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR || s_unhandledWindowResize) {
+        if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR) {
             recreateSwapchain();
             reconstructRenderPipelineResources(renderPipeline);
         } else if (presentResult != VK_SUCCESS) {

@@ -10,21 +10,21 @@
 
 Backend* Backend::s_globalBackend { nullptr };
 
-Backend& Backend::create(Backend::Type backendType, GLFWwindow* window, const Backend::AppSpecification& appSpecification)
+Backend& Backend::create(Backend::Type backendType, const Backend::AppSpecification& appSpecification)
 {
     SCOPED_PROFILE_ZONE();
 
     switch (backendType) {
     case Backend::Type::Vulkan:
         #if WITH_VULKAN
-        s_globalBackend = new VulkanBackend({}, window, appSpecification);
+        s_globalBackend = new VulkanBackend({}, appSpecification);
         #else
         ARKOSE_LOG_FATAL("Trying to create Vulkan backend which is not included in this build, exiting.");
         #endif
         break;
     case Backend::Type::D3D12:
         #if WITH_D3D12
-        s_globalBackend = new D3D12Backend({}, window, appSpecification);
+        s_globalBackend = new D3D12Backend({}, appSpecification);
         #else
         ARKOSE_LOG_FATAL("Trying to create D3D12 backend which is not included in this build, exiting.");
         #endif

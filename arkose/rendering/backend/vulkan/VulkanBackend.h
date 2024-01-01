@@ -32,8 +32,6 @@
 #define SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandBuffer, nameString)
 #endif
 
-struct GLFWwindow;
-
 #ifdef NDEBUG
 static constexpr bool vulkanDebugMode = false;
 static constexpr bool vulkanVerboseDebugMessages = false;
@@ -44,7 +42,7 @@ static constexpr bool vulkanVerboseDebugMessages = false;
 
 class VulkanBackend final : public Backend {
 public:
-    VulkanBackend(Badge<Backend>, GLFWwindow*, const AppSpecification& appSpecification);
+    VulkanBackend(Badge<Backend>, const AppSpecification& appSpecification);
     ~VulkanBackend() final;
 
     VulkanBackend(VulkanBackend&&) = delete;
@@ -284,7 +282,6 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     /// Window and swapchain related members
 
-    GLFWwindow* m_window;
     VkSurfaceKHR m_surface {};
 
     VkSwapchainKHR m_swapchain {};

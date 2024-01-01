@@ -8,6 +8,7 @@
 #include "rendering/backend/d3d12/D3D12Texture.h"
 #include "core/Logging.h"
 #include "rendering/AppState.h"
+#include "system/System.h"
 #include "utility/FileIO.h"
 
 // The DirectX Compiler API
@@ -16,25 +17,16 @@
 // Surface setup
 #include <dxgi1_4.h>
 
-#define GLFW_INCLUDE_NONE
-#include <GLFW/glfw3.h>
-
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3native.h>
-
+// TODO: Set this to true when we detect window resize! From main.cpp or so perhaps?
 static bool s_unhandledWindowResize = false;
 
-D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecification& appSpecification)
-    : m_window(window)
+D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecification)
 {
     //
     // The basis of this implementation comes from here: https://gpuopen.com/learn/hellod3d12-directx-12-sdk-sample/
     //
 
-    int windowFramebufferWidth, windowFramebufferHeight;
-    glfwGetFramebufferSize(window, &windowFramebufferWidth, &windowFramebufferHeight);
-    m_windowFramebufferExtent = { windowFramebufferWidth, windowFramebufferHeight };
-    glfwSetFramebufferSizeCallback(window, static_cast<GLFWframebuffersizefun>([](GLFWwindow* window, int width, int height) { s_unhandledWindowResize = true; }));
+    m_windowFramebufferExtent = System::get().windowFramebufferSize();
 
     if constexpr (d3d12debugMode) {
         ComPtr<ID3D12Debug1> debugController;
@@ -57,7 +49,7 @@ D3D12Backend::D3D12Backend(Badge<Backend>, GLFWwindow* window, const AppSpecific
     }
 
     m_commandQueue = createDefaultCommandQueue();
-    m_swapChain = createSwapChain(m_window, m_commandQueue.Get());
+    m_swapChain = createSwapChain(m_commandQueue.Get());
 
     /////////////////////////////////
 
@@ -453,7 +445,7 @@ ComPtr<ID3D12CommandQueue> D3D12Backend::createDefaultCommandQueue() const
     return commandQueue;
 }
 
-ComPtr<IDXGISwapChain> D3D12Backend::createSwapChain(GLFWwindow* window, ID3D12CommandQueue* commandQueue) const
+ComPtr<IDXGISwapChain> D3D12Backend::createSwapChain(ID3D12CommandQueue* commandQueue) const
 {
     UINT dxgiFactoryFlags = 0;
     if constexpr (d3d12debugMode) {
@@ -467,8 +459,8 @@ ComPtr<IDXGISwapChain> D3D12Backend::createSwapChain(GLFWwindow* window, ID3D12C
 
     DXGI_SWAP_CHAIN_DESC swapChainDesc {};
 
-    swapChainDesc.OutputWindow = glfwGetWin32Window(window);
-    swapChainDesc.Windowed = glfwGetWindowMonitor(window) == nullptr;
+    swapChainDesc.OutputWindow = System::get().win32WindowHandle();
+    swapChainDesc.Windowed = !System::get().windowIsFullscreen();
 
     swapChainDesc.BufferDesc.Width = UINT(m_windowFramebufferExtent.width());
     swapChainDesc.BufferDesc.Height = UINT(m_windowFramebufferExtent.width());
@@ -492,22 +484,17 @@ ComPtr<IDXGISwapChain> D3D12Backend::createSwapChain(GLFWwindow* window, ID3D12C
 
 void D3D12Backend::recreateSwapChain()
 {
-    int windowFramebufferWidth;
-    int windowFramebufferHeight;
     while (true) {
-        glfwGetFramebufferSize(m_window, &windowFramebufferWidth, &windowFramebufferHeight);
+        m_windowFramebufferExtent = System::get().windowFramebufferSize();
 
         // Don't render while minimized
-        if (windowFramebufferWidth == 0 || windowFramebufferHeight == 0) {
+        if (m_windowFramebufferExtent.hasZeroArea()) {
             ARKOSE_LOG(Info, "D3D12Backend: rendering paused since there are no pixels to draw to.");
-            glfwWaitEvents();
+            System::get().waitEvents();
         } else {
             break;
         }
     }
-
-    // Update the extent with the latest info from the window
-    m_windowFramebufferExtent = { windowFramebufferWidth, windowFramebufferHeight };
 
     // Tear down all resources referencing the swap chain
 
@@ -522,7 +509,7 @@ void D3D12Backend::recreateSwapChain()
 
     waitForDeviceIdle();
 
-    m_swapChain->ResizeBuffers(QueueSlotCount, UINT(windowFramebufferWidth), UINT(windowFramebufferHeight), DXGI_FORMAT_UNKNOWN, 0u);
+    m_swapChain->ResizeBuffers(QueueSlotCount, m_windowFramebufferExtent.width(), m_windowFramebufferExtent.height(), DXGI_FORMAT_UNKNOWN, 0u);
 
     waitForDeviceIdle();
 

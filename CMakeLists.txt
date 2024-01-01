@@ -68,6 +68,7 @@ add_library(ArkoseCore STATIC
     arkcore/scene/Transform.cpp
     arkcore/scene/Vertex.cpp
     arkcore/system/Input.cpp
+    arkcore/system/System.cpp
     arkcore/utility/FileDialog.cpp
     arkcore/utility/FileIO.cpp
     )
@@ -132,6 +133,25 @@ else()
     target_compile_options(ArkoseCore PUBLIC
         -Wall
         -Wimplicit-fallthrough)
+endif()
+
+set(ARKOSE_SYSTEM_GLFW False) # default off
+
+# Set up platform-specific defines
+if (WIN32)
+    target_compile_definitions(ArkoseCore PUBLIC PLATFORM_WINDOWS=1)
+    set(ARKOSE_SYSTEM_GLFW True)
+elseif (APPLE)
+    # TODO: Make sure it's not iOS or similar
+    target_compile_definitions(ArkoseCore PUBLIC PLATFORM_MACOS=1)
+    set(ARKOSE_SYSTEM_GLFW True)
+endif ()
+
+if (ARKOSE_SYSTEM_GLFW)
+    target_compile_definitions(ArkoseCore PUBLIC WITH_GLFW=1)
+    target_sources(ArkoseCore PRIVATE "arkcore/system/glfw/SystemGlfw.cpp")
+else()
+    message(SEND_ERROR "No system specified!")
 endif()
 
 # Keep tracy enabled at all time but with on-demand only, meaning we don't accumulate tracy data
@@ -232,7 +252,7 @@ add_executable(ArkoseRenderer
     )
 
 if (ARKOSE_BACKEND_VULKAN)
-    target_compile_definitions(ArkoseRenderer PRIVATE WITH_VULKAN)
+    target_compile_definitions(ArkoseCore PUBLIC WITH_VULKAN)
     target_sources(ArkoseRenderer PRIVATE
         arkose/rendering/backend/vulkan/VulkanBackend.cpp
         arkose/rendering/backend/vulkan/VulkanBindingSet.cpp
@@ -259,7 +279,7 @@ if (ARKOSE_BACKEND_VULKAN)
 endif()
 
 if (ARKOSE_BACKEND_D3D12)
-    target_compile_definitions(ArkoseRenderer PRIVATE WITH_D3D12)
+    target_compile_definitions(ArkoseCore PUBLIC WITH_D3D12)
     target_sources(ArkoseRenderer PRIVATE
         arkose/rendering/backend/d3d12/D3D12Backend.cpp
         arkose/rendering/backend/d3d12/D3D12BindingSet.cpp
@@ -289,7 +309,6 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/arkose" FILES ${ARKOSE_SOURCES})
 
 target_link_libraries(ArkoseRenderer PRIVATE
     ArkoseCore # core arkose library
-
 
     # Physics
     Jolt
