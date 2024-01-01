@@ -38,7 +38,7 @@ bool Frustum::isPointInside(vec3 point) const
 
 bool Frustum::includesSphere(const Sphere& sphere) const
 {
-    SCOPED_PROFILE_ZONE();
+    //SCOPED_PROFILE_ZONE();
 
     for (const Plane& plane : m_planes) {
         float distance = dot(plane.normal(), sphere.center()) + plane.distance();
@@ -51,7 +51,7 @@ bool Frustum::includesSphere(const Sphere& sphere) const
 
 bool Frustum::includesAABB(ark::aabb3 const& aabb) const
 {
-    SCOPED_PROFILE_ZONE();
+    //SCOPED_PROFILE_ZONE();
 
     vec3 corners[8] = { /*vec3(aabb.min.x, aabb.min.y, aabb.min.z)*/ aabb.min,
                         vec3(aabb.min.x, aabb.min.y, aabb.max.z),

@@ -1210,7 +1210,7 @@ void VulkanCommandList::bindIndexBuffer(const Buffer& indexBuffer, IndexType ind
 
 void VulkanCommandList::issueDrawCall(const DrawCallDescription& drawCall)
 {
-    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+    //SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (!activeRenderState)
         ARKOSE_LOG(Fatal, "issueDrawCall: no active render state!");
