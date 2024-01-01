@@ -2,7 +2,7 @@
 
 #include "asset/MaterialAsset.h"
 #include "asset/import/AssetImporter.h"
-#include "input/Input.h"
+#include "system/Input.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
 #include "rendering/debug/DebugDrawer.h"

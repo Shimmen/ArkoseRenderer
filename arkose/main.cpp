@@ -4,7 +4,7 @@
 #include "apps/SSSDemo.h"
 #include "core/Logging.h"
 #include "core/parallel/TaskGraph.h"
-#include "input/Input.h"
+#include "system/Input.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
 #include "rendering/backend/base/Backend.h"

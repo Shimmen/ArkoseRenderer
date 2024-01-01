@@ -1,7 +1,7 @@
 #include "MapCameraController.h"
 
 #include "core/Assert.h"
-#include "input/Input.h"
+#include "system/Input.h"
 #include "scene/camera/Camera.h"
 #include <ark/transform.h>
 

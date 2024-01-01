@@ -3,7 +3,7 @@
 #include "asset/LevelAsset.h"
 #include "asset/MeshAsset.h"
 #include "core/Assert.h"
-#include "input/Input.h"
+#include "system/Input.h"
 #include "rendering/GpuScene.h"
 #include "rendering/debug/DebugDrawer.h"
 #include "scene/camera/Camera.h"

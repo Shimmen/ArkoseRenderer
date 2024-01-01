@@ -67,6 +67,7 @@ add_library(ArkoseCore STATIC
     arkcore/scene/ProbeGrid.cpp
     arkcore/scene/Transform.cpp
     arkcore/scene/Vertex.cpp
+    arkcore/system/Input.cpp
     arkcore/utility/FileDialog.cpp
     arkcore/utility/FileIO.cpp
     )
@@ -88,6 +89,10 @@ target_link_libraries(ArkoseCore PUBLIC
 
     glfw # window and event management
     nfd # native file dialogs
+
+    dear_imgui # dear imgui - immediate mode gui
+    imguizmo # gizmo extension for dear imgui
+    implot # plot extension for dear imgui
 
     # Geometry processing related
     eigen # linear algebra library (needed for for libigl)
@@ -147,7 +152,6 @@ add_executable(ArkoseRenderer
     arkose/apps/MeshViewerApp.cpp
     arkose/apps/ShowcaseApp.cpp
     arkose/apps/SSSDemo.cpp
-    arkose/input/Input.cpp
     arkose/physics/PhysicsScene.cpp
     arkose/physics/backend/base/PhysicsBackend.cpp
     arkose/physics/backend/jolt/JoltPhysicsBackend.cpp
@@ -286,9 +290,6 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/arkose" FILES ${ARKOSE_SOURCES})
 target_link_libraries(ArkoseRenderer PRIVATE
     ArkoseCore # core arkose library
 
-    dear_imgui # dear imgui - immediate mode gui
-    imguizmo # gizmo extension for dear imgui
-    implot # plot extension for dear imgui
 
     # Physics
     Jolt

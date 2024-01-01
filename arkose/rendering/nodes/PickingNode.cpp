@@ -1,6 +1,6 @@
 #include "PickingNode.h"
 
-#include "input/Input.h"
+#include "system/Input.h"
 #include "rendering/GpuScene.h"
 #include "rendering/RenderPipeline.h"
 #include "rendering/StaticMesh.h"

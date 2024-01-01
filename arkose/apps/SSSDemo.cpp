@@ -1,6 +1,6 @@
 #include "SSSDemo.h"
 
-#include "input/Input.h"
+#include "system/Input.h"
 #include "rendering/forward/ForwardRenderNode.h"
 #include "rendering/forward/PrepassNode.h"
 #include "rendering/lighting/LightingComposeNode.h"
