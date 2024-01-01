@@ -90,7 +90,7 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
             moodycamel::ConcurrentQueue<DrawCallDescription> drawCalls {};
 
             auto& instances = scene.staticMeshInstances();
-            ParallelForBatched(instances.size(), 64, [&](size_t idx) {
+            ParallelForBatched(instances.size(), 256, [&](size_t idx) {
                 auto& instance = instances[idx];
 
                 if (const StaticMesh* staticMesh = scene.staticMeshForInstance(*instance)) {

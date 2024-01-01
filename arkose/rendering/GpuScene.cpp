@@ -80,7 +80,7 @@ void GpuScene::preRender()
 
 void GpuScene::postRender()
 {
-    ParallelForBatched(m_staticMeshInstances.size(), 128, [this](size_t idx) {
+    ParallelForBatched(m_staticMeshInstances.size(), 256, [this](size_t idx) {
         auto& instance = m_staticMeshInstances[idx];
         instance->transform().postRender({});
     });
