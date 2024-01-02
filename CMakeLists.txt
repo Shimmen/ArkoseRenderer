@@ -158,13 +158,13 @@ target_compile_definitions(ArkoseCore PUBLIC TRACY_ENABLE)
 
 add_executable(ArkoseRenderer
     arkose/main.cpp
-    arkose/application/Arkose.cpp
     arkose/animation/Animation.cpp
-    arkose/apps/geodata/GeodataApp.cpp
-    arkose/apps/BootstrappingApp.cpp
-    arkose/apps/MeshViewerApp.cpp
-    arkose/apps/ShowcaseApp.cpp
-    arkose/apps/SSSDemo.cpp
+    arkose/application/Arkose.cpp
+    arkose/application/apps/geodata/GeodataApp.cpp
+    arkose/application/apps/BootstrappingApp.cpp
+    arkose/application/apps/MeshViewerApp.cpp
+    arkose/application/apps/ShowcaseApp.cpp
+    arkose/application/apps/SSSDemo.cpp
     arkose/physics/PhysicsScene.cpp
     arkose/physics/backend/base/PhysicsBackend.cpp
     arkose/physics/backend/jolt/JoltPhysicsBackend.cpp

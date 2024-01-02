@@ -1,6 +1,6 @@
 #pragma once
 
-#include "apps/App.h"
+#include "application/apps/App.h"
 #include "asset/MeshAsset.h"
 #include "asset/import/AssetImporter.h"
 #include "scene/camera/FpsCameraController.h"

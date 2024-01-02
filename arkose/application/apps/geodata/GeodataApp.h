@@ -1,6 +1,6 @@
 #pragma once
 
-#include "apps/App.h"
+#include "application/apps/App.h"
 #include "scene/camera/FpsCameraController.h"
 #include "scene/camera/MapCameraController.h"
 

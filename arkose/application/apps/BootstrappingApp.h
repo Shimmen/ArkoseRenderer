@@ -1,6 +1,6 @@
 #pragma once
 
-#include "apps/App.h"
+#include "application/apps/App.h"
 
 class BootstrappingApp : public App {
 public:

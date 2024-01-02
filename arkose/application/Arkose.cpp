@@ -10,12 +10,17 @@
 #include "utility/CommandLine.h"
 #include "utility/Profiling.h"
 
-// Apps
-#include "apps/geodata/GeodataApp.h"
-#include "apps/BootstrappingApp.h"
-#include "apps/MeshViewerApp.h"
-#include "apps/ShowcaseApp.h"
-#include "apps/SSSDemo.h"
+// Apps - kind of like demos / applets(?) that can run within Arkose.
+// The idea is that all of them are compiled in by default, and you
+// can run the engine in different modes by launching these apps.
+// Eventually I want to be able to launch & switch between these
+// in runtime, so we have a nice and usable environment, both for
+// editor purposes but potentially also for different game "views".
+#include "application/apps/geodata/GeodataApp.h"
+#include "application/apps/BootstrappingApp.h"
+#include "application/apps/MeshViewerApp.h"
+#include "application/apps/ShowcaseApp.h"
+#include "application/apps/SSSDemo.h"
 
 static std::unique_ptr<App> createApp()
 {
