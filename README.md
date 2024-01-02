@@ -59,7 +59,8 @@ Arkose
 |   |-- rendering   # rendering definitions
 |   `-- scene       # scene definitions
 |-- arkose          # all arkose engine & runtime code
-|   | main.cpp      # application entry point
+|   | main.cpp      # application entry point (for most platforms)
+|   |-- application # everything related to application startup, main loop, and shutdown
 |   |-- apps        # apps, e.g. a game or a graphics showcase
 |   |-- physics     # root for physics code
 |   |-- rendering   # root for rendering code

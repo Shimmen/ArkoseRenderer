@@ -158,6 +158,7 @@ target_compile_definitions(ArkoseCore PUBLIC TRACY_ENABLE)
 
 add_executable(ArkoseRenderer
     arkose/main.cpp
+    arkose/application/Arkose.cpp
     arkose/animation/Animation.cpp
     arkose/apps/geodata/GeodataApp.cpp
     arkose/apps/BootstrappingApp.cpp
@@ -294,6 +295,7 @@ endif()
 
 if (ARKOSE_SYSTEM_GLFW)
     target_compile_definitions(ArkoseCore PUBLIC WITH_GLFW)
+    target_compile_definitions(ArkoseCore PUBLIC ARKOSE_USE_DEFAULT_MAIN)
     target_sources(ArkoseRenderer PRIVATE
         arkose/system/glfw/SystemGlfw.cpp
         )
