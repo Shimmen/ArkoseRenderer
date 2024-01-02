@@ -1,9 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
-	<Type Name="ark::Handle&lt;*&gt;">
-		<DisplayString Condition="m_index == ((uint64_t)-1)">Invalid handle</DisplayString>
-		<DisplayString>Handle [idx={m_index}]</DisplayString>
-	</Type>
+    <Type Name="StaticMeshHandle">
+        <DisplayString Condition="m_index == ((uint64_t)-1)">Invalid StaticMeshHandle</DisplayString>
+        <DisplayString Condition="natvis_managedStaticMeshes->m_resources[m_index].meshAsset->name._Mypair._Myval2._Mysize > 0">
+            {natvis_managedStaticMeshes->m_resources[m_index].meshAsset->name} (asset file: {natvis_managedStaticMeshes->m_resources[m_index].meshAsset->m_assetFilePath})
+        </DisplayString>
+        <DisplayString>StaticMeshHandle [idx={m_index}]</DisplayString>
+        <Expand>
+            <Item Name="Mesh">*natvis_managedStaticMeshes->m_resources[m_index].staticMesh</Item>
+            <Item Name="Asset">*natvis_managedStaticMeshes->m_resources[m_index].meshAsset</Item>
+            <Item Name="Metadata">natvis_managedStaticMeshes->m_resourcesMetadata[m_index]</Item>
+        </Expand>
+    </Type>
+
+    <Type Name="TextureHandle">
+        <DisplayString Condition="m_index == ((uint64_t)-1)">Invalid TextureHandle</DisplayString>
+        <DisplayString Condition="natvis_managedTextures->m_resources[m_index]->m_name._Mypair._Myval2._Mysize > 0">
+            {natvis_managedTextures->m_resources[m_index]->m_name}
+        </DisplayString>
+        <DisplayString>TextureHandle [idx={m_index}]</DisplayString>
+        <Expand>
+            <Item Name="Texture">*natvis_managedTextures->m_resources[m_index]</Item>
+            <Item Name="Metadata">natvis_managedTextures->m_resourcesMetadata[m_index]</Item>
+        </Expand>
+    </Type>
+
+    <!-- Generic ark::Handle<T> -->
+    <Type Name="ark::Handle&lt;*&gt;">
+        <DisplayString Condition="m_index == ((uint64_t)-1)">Invalid handle</DisplayString>
+        <DisplayString>Handle [idx={m_index}]</DisplayString>
+    </Type>
 
 </AutoVisualizer>

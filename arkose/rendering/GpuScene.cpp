@@ -31,6 +31,10 @@ GpuScene::GpuScene(Scene& scene, Backend& backend)
     : m_scene(scene)
     , m_backend(backend)
 {
+#if defined(PLATFORM_WINDOWS)
+    natvis_managedStaticMeshes = &m_managedStaticMeshes;
+    natvis_managedTextures = &m_managedTextures;
+#endif // defined(PLATFORM_WINDOWS)
 }
 
 void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable, bool meshShadingCapable)

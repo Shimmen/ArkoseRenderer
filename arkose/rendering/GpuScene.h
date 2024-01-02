@@ -167,6 +167,20 @@ public:
 
     size_t drawableCountForFrame() const { return m_drawableCountForFrame; }
 
+public:
+    // (public visibility needed for natvis inspection)
+
+    struct ManagedStaticMesh {
+        MeshAsset const* meshAsset {};
+        std::unique_ptr<StaticMesh> staticMesh {};
+    };
+
+    struct ManagedSkeletalMesh {
+        MeshAsset const* meshAsset {};
+        SkeletonAsset const* skeletonAsset {};
+        std::unique_ptr<SkeletalMesh> skeletalMesh {};
+    };
+
 private:
     Scene& m_scene;
     Backend& m_backend;
@@ -182,17 +196,8 @@ private:
 
     // GPU data
 
-    struct ManagedSkeletalMesh {
-        MeshAsset const* meshAsset {};
-        SkeletonAsset const* skeletonAsset {};
-        std::unique_ptr<SkeletalMesh> skeletalMesh {};
-    };
     ResourceList<ManagedSkeletalMesh, SkeletalMeshHandle> m_managedSkeletalMeshes { "Skeletal Meshes", 128 };
 
-    struct ManagedStaticMesh {
-        MeshAsset const* meshAsset {};
-        std::unique_ptr<StaticMesh> staticMesh {};
-    };
     ResourceList<ManagedStaticMesh, StaticMeshHandle> m_managedStaticMeshes { "Static Meshes", 1024 };
     std::unordered_map<MeshAsset const*, StaticMeshHandle> m_staticMeshAssetCache {};
 
@@ -279,3 +284,9 @@ private:
     //size_t m_totalBlasVramUsage { 0 };
     //size_t m_totalNumBlas { 0 };
 };
+
+#if defined(PLATFORM_WINDOWS)
+// For use by natvis - please don't access these for anything else :^)
+static ResourceList<GpuScene::ManagedStaticMesh, StaticMeshHandle>* natvis_managedStaticMeshes { nullptr };
+static ResourceList<std::unique_ptr<Texture>, TextureHandle>* natvis_managedTextures { nullptr };
+#endif // defined(PLATFORM_WINDOWS)
