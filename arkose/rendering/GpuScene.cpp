@@ -27,7 +27,7 @@
 #include "shaders/shared/CameraState.h"
 #include "shaders/shared/ShaderBlendMode.h"
 
-GpuScene::GpuScene(Scene& scene, Backend& backend, Extent2D initialMainViewportSize)
+GpuScene::GpuScene(Scene& scene, Backend& backend)
     : m_scene(scene)
     , m_backend(backend)
 {

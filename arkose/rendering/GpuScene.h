@@ -35,7 +35,7 @@ ARK_DEFINE_HANDLE_TYPE(TextureHandle);
 
 class GpuScene final : public RenderPipelineNode {
 public:
-    GpuScene(Scene&, Backend&, Extent2D initialMainViewportSize);
+    GpuScene(Scene&, Backend&);
 
     void initialize(Badge<Scene>, bool rayTracingCapable, bool meshShadingCapable);
 

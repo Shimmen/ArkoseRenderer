@@ -15,9 +15,9 @@
 #include <ImGuizmo.h>
 #include <fstream>
 
-Scene::Scene(Backend& backend, PhysicsBackend* physicsBackend, Extent2D initialMainViewportSize)
+Scene::Scene(Backend& backend, PhysicsBackend* physicsBackend)
 {
-    m_gpuScene = std::make_unique<GpuScene>(*this, backend, initialMainViewportSize);
+    m_gpuScene = std::make_unique<GpuScene>(*this, backend);
 
     if (physicsBackend != nullptr) {
         m_physicsScene = std::make_unique<PhysicsScene>(*this, *physicsBackend);

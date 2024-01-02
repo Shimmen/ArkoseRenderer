@@ -48,7 +48,6 @@ int Arkose::runArkoseApplication(int argc, char** argv)
 
     // Create window & input handling for that window
     system.createWindow(System::WindowType::Windowed, { 1920, 1080 });
-    Extent2D outputDisplayResolution = system.windowFramebufferSize();
 
     // Create the app that will drive this "engine"
     auto app = createApp();
@@ -61,12 +60,12 @@ int Arkose::runArkoseApplication(int argc, char** argv)
     PhysicsBackend* physicsBackend = PhysicsBackend::create();
 
     // Create the scene
-    auto scene = std::make_unique<Scene>(graphicsBackend, physicsBackend, outputDisplayResolution);
+    auto scene = std::make_unique<Scene>(graphicsBackend, physicsBackend);
 
     // Let the app define the render pipeline and push it to the graphics backend
     auto renderPipeline = std::make_unique<RenderPipeline>(&scene->gpuScene());
-    renderPipeline->setOutputResolution(outputDisplayResolution);
-    renderPipeline->setRenderResolution(outputDisplayResolution);
+    renderPipeline->setOutputResolution(system.windowFramebufferSize());
+    renderPipeline->setRenderResolution(system.windowFramebufferSize());
     app->setup(*scene, *renderPipeline);
     graphicsBackend.renderPipelineDidChange(*renderPipeline);
 

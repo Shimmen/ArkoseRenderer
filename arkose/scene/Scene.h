@@ -26,7 +26,7 @@ class SceneNode;
 
 class Scene final {
 public:
-    Scene(Backend&, PhysicsBackend*, Extent2D initialMainViewportSize);
+    Scene(Backend&, PhysicsBackend*);
     ~Scene();
 
     void update(float elapsedTime, float deltaTime);
