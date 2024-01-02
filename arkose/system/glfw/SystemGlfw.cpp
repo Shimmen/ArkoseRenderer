@@ -34,7 +34,7 @@ SystemGlfw::~SystemGlfw()
     glfwTerminate();
 }
 
-bool SystemGlfw::createWindow(WindowType windowType, Extent2D const& windowSize)
+bool SystemGlfw::createWindow(WindowType windowType, Extent2D const& requestedWindowSize)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -51,7 +51,7 @@ bool SystemGlfw::createWindow(WindowType windowType, Extent2D const& windowSize)
         break;
     }
     case WindowType::Windowed: {
-        m_glfwWindow = glfwCreateWindow(windowSize.width(), windowSize.height(), windowTitle.c_str(), nullptr, nullptr);
+        m_glfwWindow = glfwCreateWindow(requestedWindowSize.width(), requestedWindowSize.height(), windowTitle.c_str(), nullptr, nullptr);
         break;
     }
     }
@@ -59,6 +59,8 @@ bool SystemGlfw::createWindow(WindowType windowType, Extent2D const& windowSize)
     if (!m_glfwWindow) {
         ARKOSE_LOG(Fatal, "SystemGlfw: could not create window with specified settings, exiting.");
     }
+
+    m_lastWindowSize = windowSize();
 
     // Set up input for the window
     glfwSetWindowUserPointer(m_glfwWindow, this);
@@ -90,10 +92,14 @@ bool SystemGlfw::windowIsFullscreen()
     return glfwMonitor != nullptr;
 }
 
-void SystemGlfw::newFrame()
+bool SystemGlfw::newFrame()
 {
     Input::mutableInstance().preEventPoll();
     glfwPollEvents(); // will trigger calls to the event callbacks immediately
+
+    Extent2D currentWindowSize = windowSize();
+    bool windowSizeDidChange = currentWindowSize != m_lastWindowSize;
+    m_lastWindowSize = currentWindowSize;
 
     // glfw doesn't use callbacks for joysticks / gamepads, needs to be polled manually
     for (int joystick = GLFW_JOYSTICK_1; joystick < GLFW_JOYSTICK_LAST; ++joystick) {
@@ -113,6 +119,8 @@ void SystemGlfw::newFrame()
             //  3. done?
         }
     }
+
+    return windowSizeDidChange;
 }
 
 bool SystemGlfw::exitRequested()

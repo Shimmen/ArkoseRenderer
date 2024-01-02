@@ -17,7 +17,7 @@ public:
     Extent2D windowFramebufferSize() const override;
     bool windowIsFullscreen() override;
 
-    void newFrame() override;
+    bool newFrame() override;
     bool exitRequested() override;
     void waitEvents() override;
 
@@ -47,4 +47,5 @@ private:
 
 private:
     GLFWwindow* m_glfwWindow { nullptr };
+    Extent2D m_lastWindowSize { 0, 0 };
 };

@@ -26,7 +26,7 @@ public:
     virtual Extent2D windowFramebufferSize() const = 0;
     virtual bool windowIsFullscreen() = 0;
 
-    virtual void newFrame() = 0;
+    virtual bool newFrame() = 0;
     virtual bool exitRequested() = 0;
     virtual void waitEvents() = 0;
 
