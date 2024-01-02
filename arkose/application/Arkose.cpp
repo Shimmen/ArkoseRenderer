@@ -37,6 +37,34 @@ static std::unique_ptr<App> createApp()
     return std::make_unique<ShowcaseApp>();
 }
 
+static std::mutex shaderFileWatchMutex {};
+static std::vector<std::string> changedShaderFiles {};
+static void initializeShaderFileWatching()
+{
+    ShaderManager::instance().startFileWatching(1'000, [&](const std::vector<std::string>& changedFiles) {
+        shaderFileWatchMutex.lock();
+        changedShaderFiles = changedFiles;
+        shaderFileWatchMutex.unlock();
+    });
+}
+
+static void stopShaderFileWatching()
+{
+    ShaderManager::instance().stopFileWatching();
+}
+
+template<typename Callback>
+static void checkOnShaderFileWatching(Callback&& callback)
+{
+    if (shaderFileWatchMutex.try_lock()) {
+        if (changedShaderFiles.size() > 0) {
+            callback(changedShaderFiles);
+            changedShaderFiles.clear();
+        }
+        shaderFileWatchMutex.unlock();
+    }
+}
+
 int Arkose::runArkoseApplication(int argc, char** argv)
 {
     // Initialize core systems
@@ -69,41 +97,32 @@ int Arkose::runArkoseApplication(int argc, char** argv)
     app->setup(*scene, *renderPipeline);
     graphicsBackend.renderPipelineDidChange(*renderPipeline);
 
+    initializeShaderFileWatching();
+
     ARKOSE_LOG(Info, "main loop begin.");
 
-    std::mutex shaderFileWatchMutex {};
-    std::vector<std::string> changedShaderFiles {};
-    ShaderManager::instance().startFileWatching(1'000, [&](const std::vector<std::string>& changedFiles) {
-        shaderFileWatchMutex.lock();
-        changedShaderFiles = changedFiles;
-        shaderFileWatchMutex.unlock();
-    });
-
     float lastTime = 0.0f;
-    Extent2D currentViewportSize { 0, 0 };
 
     bool exitRequested = false;
     while (!exitRequested) {
 
-        if (shaderFileWatchMutex.try_lock()) {
-            if (changedShaderFiles.size() > 0) {
-                graphicsBackend.shadersDidRecompile(changedShaderFiles, *renderPipeline);
-                changedShaderFiles.clear();
-            }
-            shaderFileWatchMutex.unlock();
-        }
+        checkOnShaderFileWatching([&](std::vector<std::string> const& changedShaderFiles) {
+            graphicsBackend.shadersDidRecompile(changedShaderFiles, *renderPipeline);
+        });
 
-        system.newFrame();
-        graphicsBackend.newFrame();
+        bool windowSizeDidChange = system.newFrame();
 
-        Extent2D viewportSize = system.windowFramebufferSize();
-        if (viewportSize != currentViewportSize) {
-            currentViewportSize = viewportSize;
+        if (windowSizeDidChange) {
+            Extent2D viewportSize = system.windowFramebufferSize();
             renderPipeline->setOutputResolution(viewportSize);
 
             Extent2D windowSize = system.windowSize();
             scene->camera().setTargetWindowSize(windowSize);
         }
+
+        // Update & render the frame
+
+        graphicsBackend.newFrame();
 
         float elapsedTime = static_cast<float>(system.timeSinceStartup());
         float deltaTime = elapsedTime - lastTime;
@@ -130,8 +149,9 @@ int Arkose::runArkoseApplication(int argc, char** argv)
         END_OF_FRAME_PROFILE_MARKER();
     }
 
-    ShaderManager::instance().stopFileWatching();
     ARKOSE_LOG(Info, "main loop end.");
+
+    stopShaderFileWatching();
 
     // Destroy the scene (ensure that all GPU stuff are completed first)
     graphicsBackend.completePendingOperations();
