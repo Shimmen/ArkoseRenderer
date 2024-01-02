@@ -67,6 +67,7 @@ add_library(ArkoseCore STATIC
     arkcore/scene/ProbeGrid.cpp
     arkcore/scene/Transform.cpp
     arkcore/scene/Vertex.cpp
+    arkcore/utility/CommandLine.cpp
     arkcore/utility/FileDialog.cpp
     arkcore/utility/FileIO.cpp
     )
