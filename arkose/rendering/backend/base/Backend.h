@@ -43,7 +43,7 @@ public:
     };
 
     // Creating and destroying the global backend object
-    static Backend& create(Backend::Type, const Backend::AppSpecification&);
+    static Backend& create(Backend::AppSpecification const&);
     static void destroy();
 
     // Get a reference to the global backend

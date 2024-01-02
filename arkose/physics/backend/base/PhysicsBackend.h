@@ -17,15 +17,9 @@ private:
     static PhysicsBackend* s_globalPhysicsBackend;
 
 public:
-
-    enum class Type {
-        None,
-        Jolt,
-    };
-
     virtual ~PhysicsBackend() {}
 
-    static PhysicsBackend* create(PhysicsBackend::Type);
+    static PhysicsBackend* create();
     static void destroy();
 
     virtual void update(float elapsedTime, float deltaTime) = 0;

@@ -1,29 +1,29 @@
 #include "PhysicsBackend.h"
 
 #include "core/Logging.h"
+#include "utility/CommandLine.h"
 #include "utility/Profiling.h"
 #include "physics/backend/jolt/JoltPhysicsBackend.h"
 
 PhysicsBackend* PhysicsBackend::s_globalPhysicsBackend { nullptr };
 
-PhysicsBackend* PhysicsBackend::create(PhysicsBackend::Type physicsBackendType)
+PhysicsBackend* PhysicsBackend::create()
 {
     SCOPED_PROFILE_ZONE();
 
     ARKOSE_ASSERT(s_globalPhysicsBackend == nullptr);
 
-    switch (physicsBackendType) {
-    case PhysicsBackend::Type::None:
+    if (CommandLine::hasArgument("-nophysics")) {
+        ARKOSE_LOG(Info, "PhysicsBackend: none (due to '-nophysics')");
         return nullptr;
-    case PhysicsBackend::Type::Jolt:
-        s_globalPhysicsBackend = new JoltPhysicsBackend();
-        break;
-    default:
-        ASSERT_NOT_REACHED();
     }
 
-    if (!s_globalPhysicsBackend->initialize()) {
-        ARKOSE_LOG(Fatal, "could not initialize physics backend, exiting.");
+    s_globalPhysicsBackend = new JoltPhysicsBackend();
+
+    if (s_globalPhysicsBackend->initialize()) {
+        ARKOSE_LOG(Info, "PhysicsBackend: Jolt physics backend initialized");
+    } else {
+        ARKOSE_LOG(Fatal, "PhysicsBackend: could not initialize physics backend, exiting.");
     }
 
     return s_globalPhysicsBackend;

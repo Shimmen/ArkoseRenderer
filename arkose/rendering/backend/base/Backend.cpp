@@ -1,5 +1,7 @@
 #include "Backend.h"
 
+#include "utility/CommandLine.h"
+
 #if WITH_VULKAN
 #include "rendering/backend/vulkan/VulkanBackend.h"
 #endif
@@ -10,9 +12,25 @@
 
 Backend* Backend::s_globalBackend { nullptr };
 
-Backend& Backend::create(Backend::Type backendType, const Backend::AppSpecification& appSpecification)
+Backend& Backend::create(Backend::AppSpecification const& appSpecification)
 {
     SCOPED_PROFILE_ZONE();
+
+    // Prefer vulkan if it's available
+    // TODO: How do we want to handle other platforms here? Maybe leave this backend creation to the system?
+    Backend::Type backendType = Backend::Type::Vulkan;
+
+#if WITH_VULKAN
+    if (CommandLine::hasArgument("-vulkan")) {
+        backendType = Backend::Type::Vulkan;
+    }
+#endif
+
+#if WITH_D3D12
+    if (CommandLine::hasArgument("-d3d12")) {
+        backendType = Backend::Type::D3D12;
+    }
+#endif
 
     switch (backendType) {
     case Backend::Type::Vulkan:

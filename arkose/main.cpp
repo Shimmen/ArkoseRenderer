@@ -1,47 +1,39 @@
-#include "apps/App.h"
-#include "apps/geodata/GeodataApp.h"
-#include "apps/BootstrappingApp.h"
-#include "apps/MeshViewerApp.h"
-#include "apps/ShowcaseApp.h"
-#include "apps/SSSDemo.h"
 #include "core/Logging.h"
 #include "core/parallel/TaskGraph.h"
-#include "system/Input.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
 #include "rendering/backend/base/Backend.h"
 #include "rendering/backend/shader/ShaderManager.h"
 #include "system/System.h"
+#include "utility/CommandLine.h"
 #include "utility/Profiling.h"
 
-#include "settings.h"
+// Apps
+#include "apps/geodata/GeodataApp.h"
+#include "apps/BootstrappingApp.h"
+#include "apps/MeshViewerApp.h"
+#include "apps/ShowcaseApp.h"
+#include "apps/SSSDemo.h"
 
-std::unique_ptr<App> createApp(const std::vector<std::string> arguments)
+std::unique_ptr<App> createApp()
 {
-    //return std::make_unique<GeodataApp>();
-    return std::make_unique<SSSDemo>();
-
-    if (std::find(arguments.begin(), arguments.end(), "-meshviewer") != arguments.end()) {
+    if (CommandLine::hasArgument("-meshviewer")) { 
         return std::make_unique<MeshViewerApp>();
-    } else if (std::find(arguments.begin(), arguments.end(), "-sssdemo") != arguments.end()) {
+    }
+    if (CommandLine::hasArgument("-sssdemo")) {
         return std::make_unique<SSSDemo>();
+    }
+    if (CommandLine::hasArgument("-geodata")) {
+        return std::make_unique<GeodataApp>();
     }
 
     return std::make_unique<ShowcaseApp>();
 }
 
-int main(int argc, char** argv)
+int runArkose(int argc, char** argv)
 {
-    std::vector<std::string> arguments;
-    for (int idx = 1; idx < argc; ++idx) {
-        arguments.emplace_back(argv[idx]);
-    }
-
-    // Grab relevant info from settings.h
-    auto backendType = SelectedBackendType;
-    auto physicsBackendType = SelectedPhysicsBackendType;
-
     // Initialize core systems
+    CommandLine::initialize(argc, argv);
     TaskGraph::initialize();
     System::initialize();
 
@@ -52,14 +44,14 @@ int main(int argc, char** argv)
     Extent2D outputDisplayResolution = system.windowFramebufferSize();
 
     // Create the app that will drive this "engine"
-    auto app = createApp(arguments);
+    auto app = createApp();
     Backend::AppSpecification appSpec;
     appSpec.requiredCapabilities = app->requiredCapabilities();
     appSpec.optionalCapabilities = app->optionalCapabilities();
 
     // Create backends
-    Backend& graphicsBackend = Backend::create(backendType, appSpec);
-    PhysicsBackend* physicsBackend = PhysicsBackend::create(physicsBackendType);
+    Backend& graphicsBackend = Backend::create(appSpec);
+    PhysicsBackend* physicsBackend = PhysicsBackend::create();
 
     // Create the scene
     auto scene = std::make_unique<Scene>(graphicsBackend, physicsBackend, outputDisplayResolution);
@@ -147,6 +139,12 @@ int main(int argc, char** argv)
     // Shutdown core systems
     TaskGraph::shutdown();
     System::shutdown();
+    CommandLine::shutdown();
 
     return 0;
+}
+
+int main(int argc, char** argv)
+{
+    return runArkose(argc, argv);
 }
