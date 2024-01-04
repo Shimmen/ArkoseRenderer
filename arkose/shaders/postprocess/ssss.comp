@@ -26,10 +26,6 @@ layout(set = 1, binding = 4, scalar) buffer restrict readonly IndicesBlock { uin
 layout(set = 1, binding = 5, scalar) buffer restrict readonly PositionsBlock { vec3 meshletPositions[]; };
 layout(set = 1, binding = 6, scalar) buffer restrict readonly NonPositionsBlock { NonPositionVertex meshletVertices[]; };
 
-// TODO: Group all of this in a single reusable #define and an API to access the data within. Apply the same to other shaders who use these
-layout(set = 2, binding = 0) buffer readonly MaterialBlock { ShaderMaterial materials[]; };
-layout(set = 2, binding = 1) uniform sampler2D textures[];
-
 
 NAMED_UNIFORMS(constants,
     uvec2 targetSize;
