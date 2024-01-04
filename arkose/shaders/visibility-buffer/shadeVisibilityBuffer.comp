@@ -32,11 +32,7 @@ layout(set = 2, binding = 5, scalar) buffer restrict readonly PositionsBlock { v
 layout(set = 2, binding = 6, scalar) buffer restrict readonly NonPositionsBlock { NonPositionVertex meshletVertices[]; };
 
 DeclareCommonBindingSet_Material(3)
-
-layout(set = 4, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
-layout(set = 4, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
-layout(set = 4, binding = 2) buffer readonly SphereLightDataBlock { SphereLightData sphereLights[]; };
-layout(set = 4, binding = 3) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
+DeclareCommonBindingSet_Light(4)
 
 layout(set = 5, binding = 0) uniform sampler2D directionalLightProjectedShadowTex;
 layout(set = 5, binding = 1) uniform sampler2D sphereLightProjectedShadowTex;
@@ -291,24 +287,24 @@ void main()
     vec3 sceneColor = emissive + ambient;
     vec3 diffuseIrradiance = vec3(0.0);
 
-    for (uint i = 0; i < lightMeta.numDirectionalLights; ++i) {
+    for (uint i = 0; i < light_getDirectionalLightCount(); ++i) {
         // We only have shadow for the 0th directional light as they are pre-projected. If needed we could quite easily support up to 4 shadowed directional light
         // by storing the projected shadow in an RGBA texture with a projected shadow per channel. However, a single dir. shadow should almost always be enough.
         bool hasShadow = i == 0;
 
-        sceneColor += evaluateDirectionalLight(directionalLights[i], hasShadow, pixelCoord, V, N, baseColor, roughness, metallic, diffuseIrradiance);
+        sceneColor += evaluateDirectionalLight(light_getDirectionalLight(i), hasShadow, pixelCoord, V, N, baseColor, roughness, metallic, diffuseIrradiance);
     }
 
     // TODO: Use tiles or clusters to minimize number of light evaluations!
     {
-        for (uint i = 0; i < lightMeta.numSphereLights; ++i) {
+        for (uint i = 0; i < light_getSphereLightCount(); ++i) {
             bool hasShadow = i == 0; // todo: support multiple shadowed point lights!
-            sceneColor += evaluateSphereLight(sphereLights[i], hasShadow, pixelCoord, viewSpacePos, V, N, geometricNormal, baseColor, roughness, metallic, diffuseIrradiance);
+            sceneColor += evaluateSphereLight(light_getSphereLight(i), hasShadow, pixelCoord, viewSpacePos, V, N, geometricNormal, baseColor, roughness, metallic, diffuseIrradiance);
         }
 
         uint shadowIdx = 0;
-        for (uint i = 0; i < lightMeta.numSpotLights; ++i) {
-            sceneColor += evaluateSpotLight(spotLights[i], shadowIdx++, viewSpacePos, V, N, baseColor, roughness, metallic, diffuseIrradiance);
+        for (uint i = 0; i < light_getSpotLightCount(); ++i) {
+            sceneColor += evaluateSpotLight(light_getSpotLight(i), shadowIdx++, viewSpacePos, V, N, baseColor, roughness, metallic, diffuseIrradiance);
         }
     }
 

@@ -3,6 +3,22 @@
 
 #include <common.glsl>
 
+// Corresponding to published binding set "SceneLightSet"
+#define DeclareCommonBindingSet_Light(index)                                                                              \
+    layout(set = index, binding = 0) uniform         LightMetaDataBlock   { LightMetaData        _lightMeta; };           \
+    layout(set = index, binding = 1) buffer readonly DirLightDataBlock    { DirectionalLightData _directionalLights[]; };  \
+    layout(set = index, binding = 2) buffer readonly SphereLightDataBlock { SphereLightData      _sphereLights[]; };       \
+    layout(set = index, binding = 3) buffer readonly SpotLightDataBlock   { SpotLightData        _spotLights[]; };
+
+#define light_getDirectionalLightCount() _lightMeta.numDirectionalLights
+#define light_getSphereLightCount() _lightMeta.numSphereLights
+#define light_getSpotLightCount() _lightMeta.numSpotLights
+
+#define light_getDirectionalLight(index) _directionalLights[index]
+#define light_getSphereLight(index) _sphereLights[index]
+#define light_getSpotLight(index) _spotLights[index]
+
+
 float evaluateIESLookupTable(sampler2D iesLUT, float outerConeHalfAngle, float cosAngle/*, theOtherAngle*/)
 {
     if (cosAngle <= 0.0) {

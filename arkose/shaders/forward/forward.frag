@@ -25,11 +25,7 @@ layout(location = 7) in vec4 vPrevFrameProjectedPos;
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 
 DeclareCommonBindingSet_Material(3)
-
-layout(set = 4, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
-layout(set = 4, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
-layout(set = 4, binding = 2) buffer readonly SphereLightDataBlock { SphereLightData sphereLights[]; };
-layout(set = 4, binding = 3) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
+DeclareCommonBindingSet_Light(4)
 
 layout(set = 5, binding = 0) uniform sampler2D directionalLightProjectedShadowTex;
 layout(set = 5, binding = 1) uniform sampler2D sphereLightProjectedShadowTex;
@@ -182,7 +178,7 @@ void main()
     vec3 ambient = constants.ambientAmount * baseColor;
     vec3 color = emissive + ambient;
 
-    for (uint i = 0; i < lightMeta.numDirectionalLights; ++i) {
+    for (uint i = 0; i < light_getDirectionalLightCount(); ++i) {
 
 #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
         // NOTE: Since the shadow is pre-projected we can't use it for geometry that doesn't write to the depth buffer in the prepass
@@ -194,12 +190,12 @@ void main()
         bool hasShadow = i == 0;
 #endif
 
-        color += evaluateDirectionalLight(directionalLights[i], hasShadow, V, N, baseColor, roughness, metallic);
+        color += evaluateDirectionalLight(light_getDirectionalLight(i), hasShadow, V, N, baseColor, roughness, metallic);
     }
 
     // TODO: Use tiles or clusters to minimize number of light evaluations!
     {
-        for (uint i = 0; i < lightMeta.numSphereLights; ++i) {
+        for (uint i = 0; i < light_getSphereLightCount(); ++i) {
 #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
             // NOTE: Since the shadow is pre-projected we can't use it for geometry that doesn't write to the depth buffer in the prepass
             // TODO: Move to using only ray traced translucency, so we don't have to worry about these cases.
@@ -207,12 +203,12 @@ void main()
 #else
             bool hasShadow = i == 0; // todo: support multple shadowed point lights!
 #endif
-            color += evaluateSphereLight(sphereLights[i], hasShadow, V, N, baseColor, roughness, metallic);
+            color += evaluateSphereLight(light_getSphereLight(i), hasShadow, V, N, baseColor, roughness, metallic);
         }
 
         uint shadowIdx = 0;
-        for (uint i = 0; i < lightMeta.numSpotLights; ++i) {
-            color += evaluateSpotLight(spotLights[i], shadowIdx++, V, N, baseColor, roughness, metallic);
+        for (uint i = 0; i < light_getSpotLightCount(); ++i) {
+            color += evaluateSpotLight(light_getSpotLight(i), shadowIdx++, V, N, baseColor, roughness, metallic);
         }
     }
 

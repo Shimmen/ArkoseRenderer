@@ -30,11 +30,7 @@ layout(set = 1, binding = 1, scalar) buffer readonly Indices        { uint indic
 layout(set = 1, binding = 2, scalar) buffer readonly Vertices       { Vertex vertices[]; };
 
 DeclareCommonBindingSet_Material(2)
-
-layout(set = 3, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
-layout(set = 3, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
-layout(set = 3, binding = 2) buffer readonly SphereLightDataBlock { SphereLightData sphereLights[]; };
-layout(set = 3, binding = 3) buffer readonly SpotLightDataBlock { SpotLightData spotLights[]; };
+DeclareCommonBindingSet_Light(3)
 
 NAMED_UNIFORMS_STRUCT(RayTracingPushConstants, constants)
 
@@ -169,16 +165,16 @@ void main()
         vec3 ambient = constants.ambientAmount * baseColor;
         vec3 color = emissive + ambient;
 
-        for (uint i = 0; i < lightMeta.numDirectionalLights; ++i) {
-            color += evaluateDirectionalLight(directionalLights[i], V, N, baseColor, roughness, metallic);
+        for (uint i = 0; i < light_getDirectionalLightCount(); ++i) {
+            color += evaluateDirectionalLight(light_getDirectionalLight(i), V, N, baseColor, roughness, metallic);
         }
 
-        for (uint i = 0; i < lightMeta.numSphereLights; ++i) {
-            color += evaluateSphereLight(sphereLights[i], V, N, baseColor, roughness, metallic);
+        for (uint i = 0; i < light_getSphereLightCount(); ++i) {
+            color += evaluateSphereLight(light_getSphereLight(i), V, N, baseColor, roughness, metallic);
         }
 
-        for (uint i = 0; i < lightMeta.numSpotLights; ++i) {
-            color += evaluateSpotLight(spotLights[i], V, N, baseColor, roughness, metallic);
+        for (uint i = 0; i < light_getSpotLightCount(); ++i) {
+            color += evaluateSpotLight(light_getSpotLight(i), V, N, baseColor, roughness, metallic);
         }
 
         payload.color = color;
