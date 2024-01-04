@@ -20,6 +20,7 @@
 
 // Shared shader data
 #include "shaders/shared/LightData.h"
+#include "shaders/shared/MaterialData.h"
 #include "shaders/shared/SceneData.h"
 #include "shaders/shared/RTData.h"
 

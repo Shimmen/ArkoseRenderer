@@ -3,7 +3,7 @@
 
 #extension GL_EXT_nonuniform_qualifier : require
 
-#include <shared/SceneData.h>
+#include <shared/MaterialData.h>
 
 // Corresponding to `GpuScene::globalMaterialBindingSet()`
 #define DeclareCommonBindingSet_Material(index)                                                            \

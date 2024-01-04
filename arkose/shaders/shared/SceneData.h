@@ -22,20 +22,6 @@ struct ShaderMeshlet {
     float radius;
 };
 
-struct ShaderMaterial {
-    int baseColor;
-    int normalMap;
-    int metallicRoughness;
-    int emissive;
-
-    int blendMode;
-    float maskCutoff;
-    float metallicFactor; // multiplied by value in texture
-    float roughnessFactor; // multiplied by value in texture
-
-    vec4 colorTint;
-};
-
 struct NonPositionVertex {
     vec2 texcoord0;
     vec3 normal;
