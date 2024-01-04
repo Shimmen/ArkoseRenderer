@@ -6,6 +6,7 @@
 #include <common.glsl>
 #include <common/brdf.glsl>
 #include <common/lighting.glsl>
+#include <common/material.glsl>
 #include <common/namedUniforms.glsl>
 #include <common/octahedral.glsl>
 #include <forward/forwardCommon.glsl>
@@ -30,8 +31,7 @@ layout(set = 2, binding = 4, scalar) buffer restrict readonly IndicesBlock { uin
 layout(set = 2, binding = 5, scalar) buffer restrict readonly PositionsBlock { vec3 meshletPositions[]; };
 layout(set = 2, binding = 6, scalar) buffer restrict readonly NonPositionsBlock { NonPositionVertex meshletVertices[]; };
 
-layout(set = 3, binding = 0) buffer readonly MaterialBlock { ShaderMaterial materials[]; };
-layout(set = 3, binding = 1) uniform sampler2D textures[];
+DeclareCommonBindingSet_Material(3)
 
 layout(set = 4, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
 layout(set = 4, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
@@ -144,7 +144,7 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 viewSpacePos, v
     float distanceAttenuation = 1.0 / square(dist);
 
     float cosConeAngle = dot(L, toLight / dist);
-    float iesValue = evaluateIESLookupTable(textures[nonuniformEXT(light.iesProfileIndex)], light.outerConeHalfAngle, cosConeAngle);
+    float iesValue = evaluateIESLookupTable(material_getTexture(light.iesProfileIndex), light.outerConeHalfAngle, cosConeAngle);
 
     vec3 F;
     vec3 specular = specularBRDF(L, V, N, baseColor, roughness, metallic, F);
@@ -180,7 +180,7 @@ void main()
     }
 
     ShaderDrawable drawable = instances[drawableIdx - 1];
-    ShaderMaterial material = materials[drawable.materialIndex];
+    ShaderMaterial material = material_getMaterial(drawable.materialIndex);
 
     uint triangleId = uint(texelFetch(triangleVisibilityTex, pixelCoord, 0).x);
     uint meshletTriangleIdx = triangleId & 0xff;
@@ -257,7 +257,7 @@ void main()
     }
 
     #if USE_NORMAL_MAPPING
-        vec3 packedNormal = textureGrad(textures[nonuniformEXT(material.normalMap)], texCoord, ddx, ddy).rgb;
+        vec3 packedNormal = textureGrad(material_getTexture(material.normalMap), texCoord, ddx, ddy).rgb;
         #if USE_2COMPONENT_NORMALS
             vec3 tangentNormal = vec3(packedNormal.rg * 2.0 - 1.0, 0.0);
             tangentNormal.z = sqrt(clamp(1.0 - lengthSquared(tangentNormal.xy), 0.0, 1.0));
@@ -276,14 +276,14 @@ void main()
         vec3 geometricNormal = N;
     #endif
 
-    vec3 baseColor = material.colorTint.rgb * textureGrad(textures[nonuniformEXT(material.baseColor)], texCoord, ddx, ddy).rgb;
+    vec3 baseColor = material.colorTint.rgb * textureGrad(material_getTexture(material.baseColor), texCoord, ddx, ddy).rgb;
     if (!constants.withMaterialColor) {
         baseColor = vec3(1.0);
     }
 
-    vec3 emissive = textureGrad(textures[nonuniformEXT(material.emissive)], texCoord, ddx, ddy).rgb;
+    vec3 emissive = textureGrad(material_getTexture(material.emissive), texCoord, ddx, ddy).rgb;
 
-    vec4 metallicRoughness = textureGrad(textures[nonuniformEXT(material.metallicRoughness)], texCoord, ddx, ddy);
+    vec4 metallicRoughness = textureGrad(material_getTexture(material.metallicRoughness), texCoord, ddx, ddy);
     float metallic = metallicRoughness.b * material.metallicFactor;
     float roughness = metallicRoughness.g * material.roughnessFactor;
 

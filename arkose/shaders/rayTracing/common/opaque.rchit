@@ -10,6 +10,7 @@
 
 #include <common/brdf.glsl>
 #include <common/lighting.glsl>
+#include <common/material.glsl>
 #include <common/namedUniforms.glsl>
 #include <rayTracing/common/common.glsl>
 #include <shared/CameraState.h>
@@ -28,8 +29,7 @@ layout(set = 1, binding = 0, scalar) buffer readonly TriangleMeshes { RTTriangle
 layout(set = 1, binding = 1, scalar) buffer readonly Indices        { uint indices[]; };
 layout(set = 1, binding = 2, scalar) buffer readonly Vertices       { Vertex vertices[]; };
 
-layout(set = 2, binding = 0) buffer readonly MaterialBlock { ShaderMaterial materials[]; };
-layout(set = 2, binding = 1) uniform sampler2D textures[];
+DeclareCommonBindingSet_Material(2)
 
 layout(set = 3, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
 layout(set = 3, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
@@ -118,7 +118,7 @@ vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, floa
         float distanceAttenuation = 1.0 / square(distanceToLight); // epsilon term??
 
         float cosConeAngle = dot(L, normalizedToLight);
-        float iesValue = evaluateIESLookupTable(textures[nonuniformEXT(light.iesProfileIndex)], light.outerConeHalfAngle, cosConeAngle);
+        float iesValue = evaluateIESLookupTable(material_getTexture(light.iesProfileIndex), light.outerConeHalfAngle, cosConeAngle);
 
         vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
         vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;
@@ -132,7 +132,7 @@ vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, floa
 void main()
 {
     RTTriangleMesh mesh = meshes[rt_InstanceCustomIndex];
-    ShaderMaterial material = materials[mesh.materialIndex];
+    ShaderMaterial material = material_getMaterial(mesh.materialIndex);
 
     ivec3 idx = ivec3(indices[mesh.firstIndex + 3 * gl_PrimitiveID + 0],
                       indices[mesh.firstIndex + 3 * gl_PrimitiveID + 1],
@@ -155,10 +155,10 @@ void main()
 
     vec2 uv = v0.texCoord.xy * b.x + v1.texCoord.xy * b.y + v2.texCoord.xy * b.z;
 
-    vec3 baseColor = texture(textures[nonuniformEXT(material.baseColor)], uv).rgb * material.colorTint.rgb;
-    vec3 emissive = texture(textures[nonuniformEXT(material.emissive)], uv).rgb;
+    vec3 baseColor = texture(material_getTexture(material.baseColor), uv).rgb * material.colorTint.rgb;
+    vec3 emissive = texture(material_getTexture(material.emissive), uv).rgb;
 
-    vec4 metallicRoughness = texture(textures[nonuniformEXT(material.metallicRoughness)], uv);
+    vec4 metallicRoughness = texture(material_getTexture(material.metallicRoughness), uv);
     float metallic = metallicRoughness.b * material.metallicFactor;
     float roughness = metallicRoughness.g * material.roughnessFactor;
 

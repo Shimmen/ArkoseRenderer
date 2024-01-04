@@ -3,6 +3,7 @@
 #extension GL_EXT_scalar_block_layout : require
 
 #include <rayTracing/common/common.glsl>
+#include <common/material.glsl>
 #include <shared/SceneData.h>
 
 layout(location = 0) rayPayload RayPayloadMain payload;
@@ -12,13 +13,12 @@ layout(set = 1, binding = 0, scalar) buffer readonly TriangleMeshes { RTTriangle
 layout(set = 1, binding = 1, scalar) buffer readonly Indices        { uint indices[]; };
 layout(set = 1, binding = 2, scalar) buffer readonly Vertices       { Vertex vertices[]; };
 
-layout(set = 2, binding = 0) buffer readonly MaterialBlock { ShaderMaterial materials[]; };
-layout(set = 2, binding = 1) uniform sampler2D textures[];
+DeclareCommonBindingSet_Material(2)
 
 void main()
 {
     RTTriangleMesh mesh = meshes[rt_InstanceCustomIndex];
-    ShaderMaterial material = materials[mesh.materialIndex];
+    ShaderMaterial material = material_getMaterial(mesh.materialIndex);
 
     ivec3 idx = ivec3(indices[mesh.firstIndex + 3 * gl_PrimitiveID + 0],
                       indices[mesh.firstIndex + 3 * gl_PrimitiveID + 1],
@@ -31,7 +31,7 @@ void main()
     const vec3 b = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
     vec2 uv = v0.texCoord.xy * b.x + v1.texCoord.xy * b.y + v2.texCoord.xy * b.z;
-    float mask = texture(textures[nonuniformEXT(material.baseColor)], uv).a;
+    float mask = texture(material_getTexture(material.baseColor), uv).a;
 
     if (mask < material.maskCutoff) {
         ignoreIntersection();

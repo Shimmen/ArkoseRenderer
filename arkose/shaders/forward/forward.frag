@@ -5,6 +5,7 @@
 #include <common/brdf.glsl>
 #include <common/gBuffer.glsl>
 #include <common/lighting.glsl>
+#include <common/material.glsl>
 #include <common/namedUniforms.glsl>
 #include <forward/forwardCommon.glsl>
 #include <shared/CameraState.h>
@@ -23,8 +24,7 @@ layout(location = 7) in vec4 vPrevFrameProjectedPos;
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 
-layout(set = 3, binding = 0) buffer readonly MaterialBlock { ShaderMaterial materials[]; };
-layout(set = 3, binding = 1) uniform sampler2D textures[];
+DeclareCommonBindingSet_Material(3)
 
 layout(set = 4, binding = 0) uniform LightMetaDataBlock { LightMetaData lightMeta; };
 layout(set = 4, binding = 1) buffer readonly DirLightDataBlock { DirectionalLightData directionalLights[]; };
@@ -115,7 +115,7 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3
     float distanceAttenuation = 1.0 / square(dist);
 
     float cosConeAngle = dot(L, toLight / dist);
-    float iesValue = evaluateIESLookupTable(textures[nonuniformEXT(light.iesProfileIndex)], light.outerConeHalfAngle, cosConeAngle);
+    float iesValue = evaluateIESLookupTable(material_getTexture(light.iesProfileIndex), light.outerConeHalfAngle, cosConeAngle);
 
     vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
     vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;
@@ -126,9 +126,9 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3
 
 void main()
 {
-    ShaderMaterial material = materials[vMaterialIndex];
+    ShaderMaterial material = material_getMaterial(vMaterialIndex);
 
-    vec4 inputBaseColor = texture(textures[nonuniformEXT(material.baseColor)], vTexCoord, constants.mipBias).rgba;
+    vec4 inputBaseColor = texture(material_getTexture(material.baseColor), vTexCoord, constants.mipBias).rgba;
 
 #if FORWARD_BLEND_MODE == BLEND_MODE_MASKED
     float mask = inputBaseColor.a;
@@ -142,9 +142,9 @@ void main()
         baseColor = vec3(1.0);
     }
 
-    vec3 emissive = texture(textures[nonuniformEXT(material.emissive)], vTexCoord, constants.mipBias).rgb;
+    vec3 emissive = texture(material_getTexture(material.emissive), vTexCoord, constants.mipBias).rgb;
 
-    vec4 metallicRoughness = texture(textures[nonuniformEXT(material.metallicRoughness)], vTexCoord, constants.mipBias);
+    vec4 metallicRoughness = texture(material_getTexture(material.metallicRoughness), vTexCoord, constants.mipBias);
     float metallic = metallicRoughness.b * material.metallicFactor;
     float roughness = metallicRoughness.g * material.roughnessFactor;
 
@@ -164,7 +164,7 @@ void main()
 // In practice we will loose some level of precision by doing the reconstruction though, so the old path is left for A/B comparison purposes.
 #define FORWARD_USE_2COMPONENT_NORMALS 1
 #if FORWARD_USE_NORMAL_MAPPING
-    vec3 packedNormal = texture(textures[nonuniformEXT(material.normalMap)], vTexCoord, constants.mipBias).rgb;
+    vec3 packedNormal = texture(material_getTexture(material.normalMap), vTexCoord, constants.mipBias).rgb;
     #if FORWARD_USE_2COMPONENT_NORMALS
         vec3 tangentNormal = vec3(packedNormal.rg * 2.0 - 1.0, 0.0);
         tangentNormal.z = sqrt(clamp(1.0 - lengthSquared(tangentNormal.xy), 0.0, 1.0));
