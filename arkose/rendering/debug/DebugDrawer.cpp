@@ -55,8 +55,10 @@ void DebugDrawer::unregisterDebugDrawer(IDebugDrawer& debugDrawer)
 
 void DebugDrawer::validateDebugDrawersAreSetup(std::string_view context)
 {
-    if (!m_hasWarnedAboutNoDrawers) {
-        ARKOSE_LOG(Warning, "Attempting to draw {} but no debug drawers are hooked up so nothing will render!", context);
-        m_hasWarnedAboutNoDrawers = true;
+    if (m_debugDrawers.size() == 0) {
+        if (!m_hasWarnedAboutNoDrawers) {
+            ARKOSE_LOG(Warning, "Attempting to draw {} but no debug drawers are hooked up so nothing will render!", context);
+            m_hasWarnedAboutNoDrawers = true;
+        }
     }
 }
