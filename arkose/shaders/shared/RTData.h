@@ -5,6 +5,13 @@
 #define RT_HIT_MASK_MASKED 0x02
 #define RT_HIT_MASK_BLEND  0x04
 
+// NOTE: Must match whatever vertex data layout we pass to the ray tracing shaders!
+struct RTVertex {
+    vec2 texCoord;
+    vec3 normal;
+    vec4 tangent;
+};
+
 struct RTTriangleMesh {
     int firstVertex;
     int firstIndex;

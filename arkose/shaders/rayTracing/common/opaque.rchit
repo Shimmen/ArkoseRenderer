@@ -12,6 +12,7 @@
 #include <common/lighting.glsl>
 #include <common/material.glsl>
 #include <common/namedUniforms.glsl>
+#include <common/rayTracing.glsl>
 #include <rayTracing/common/common.glsl>
 #include <shared/CameraState.h>
 #include <shared/SceneData.h>
@@ -25,10 +26,7 @@ layout(location = 1) rayPayload RayPayloadShadow shadowPayload;
 layout(set = 0, binding = 0) uniform AccelerationStructure topLevelAS;
 layout(set = 0, binding = 1) uniform CameraStateBlock { CameraState camera; };
 
-layout(set = 1, binding = 0, scalar) buffer readonly TriangleMeshes { RTTriangleMesh meshes[]; };
-layout(set = 1, binding = 1, scalar) buffer readonly Indices        { uint indices[]; };
-layout(set = 1, binding = 2, scalar) buffer readonly Vertices       { Vertex vertices[]; };
-
+DeclareCommonBindingSet_RTMesh(1)
 DeclareCommonBindingSet_Material(2)
 DeclareCommonBindingSet_Light(3)
 
@@ -127,16 +125,16 @@ vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, floa
 
 void main()
 {
-    RTTriangleMesh mesh = meshes[rt_InstanceCustomIndex];
+    RTTriangleMesh mesh = rtmesh_getMesh(rt_InstanceCustomIndex);
     ShaderMaterial material = material_getMaterial(mesh.materialIndex);
 
-    ivec3 idx = ivec3(indices[mesh.firstIndex + 3 * gl_PrimitiveID + 0],
-                      indices[mesh.firstIndex + 3 * gl_PrimitiveID + 1],
-                      indices[mesh.firstIndex + 3 * gl_PrimitiveID + 2]);
+    ivec3 idx = ivec3(rtmesh_getIndex(mesh.firstIndex + 3 * gl_PrimitiveID + 0),
+                      rtmesh_getIndex(mesh.firstIndex + 3 * gl_PrimitiveID + 1),
+                      rtmesh_getIndex(mesh.firstIndex + 3 * gl_PrimitiveID + 2));
 
-    Vertex v0 = vertices[mesh.firstVertex + idx.x];
-    Vertex v1 = vertices[mesh.firstVertex + idx.y];
-    Vertex v2 = vertices[mesh.firstVertex + idx.z];
+    RTVertex v0 = rtmesh_getVertex(mesh.firstVertex + idx.x);
+    RTVertex v1 = rtmesh_getVertex(mesh.firstVertex + idx.y);
+    RTVertex v2 = rtmesh_getVertex(mesh.firstVertex + idx.z);
 
     const vec3 b = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
