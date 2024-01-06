@@ -7,7 +7,7 @@
 struct MapCity {
     std::string name {};
     u32 population { 0 };
-    vec2 location { 0.0f, 0.0f };
+    vec3 location { 0.0f, 0.0f, 0.0f };
 };
 
 struct MapRegion {
@@ -24,6 +24,9 @@ public:
     void setup(Scene&, RenderPipeline&) override;
     bool update(Scene&, float elapsedTime, float deltaTime) override;
 
+    void loadHeightmap();
+    float sampleHeightmap(vec2 latlong) const;
+
     void createMapRegions();
     void createCities();
 
@@ -37,6 +40,8 @@ public:
     float m_timeOfDay = 16.00f; // as a 24-hour clock in hours then decial hours (not actual 0-60 minutes..)
     void controlSunOrientation(Scene&, Input const&, float deltaTime);
 
+    ImageAsset* m_worldHeightMap { nullptr };
+    static constexpr float m_heightScale { 8.0f };
     std::unordered_map<std::string, std::unique_ptr<MapRegion>> m_mapRegions;
     std::vector<std::shared_ptr<MaterialAsset>> m_mapRegionMaterials;
 };

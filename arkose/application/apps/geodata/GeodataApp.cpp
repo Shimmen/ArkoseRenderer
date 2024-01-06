@@ -5,6 +5,7 @@
 #include "rendering/forward/PrepassNode.h"
 #include "rendering/lighting/LightingComposeNode.h"
 #include "rendering/meshlet/MeshletVisibilityBufferRenderNode.h"
+#include "rendering/meshlet/VisibilityBufferDebugNode.h"
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/DebugDrawNode.h"
 #include "rendering/nodes/DirectionalLightShadowNode.h"
@@ -40,13 +41,14 @@ void GeodataApp::setup(Scene& scene, RenderPipeline& pipeline)
     SCOPED_PROFILE_ZONE();
 
     // Bootstrap: load geodata here - later, make it a proper asset type that is generated beforehand
+    loadHeightmap();
     createMapRegions();
     createCities();
 
     DirectionalLight& sun = scene.addLight(std::make_unique<DirectionalLight>());
     sun.shadowMapWorldExtent = 360.0f + 10.0f; // map is 360 units wide, i.e. longitude degrees [-180, +180], then add some margins
     sun.customConstantBias = 3.5f;
-    sun.customSlopeBias = 2.5f;
+    sun.customSlopeBias = 0.5f;
     sun.setIlluminance(90'000.0f);
 
     scene.setupFromDescription({ .path = "",
@@ -63,7 +65,7 @@ void GeodataApp::setup(Scene& scene, RenderPipeline& pipeline)
 
         for (MapCity const& mapCity : mapRegion.cities) {
             StaticMeshInstance& cityInstance = scene.addMesh(boxMesh);
-            cityInstance.transform().setPositionInWorld(vec3(mapCity.location.x, mapCity.location.y, 0.0f));
+            cityInstance.transform().setPositionInWorld(mapCity.location);
             cityInstance.transform().setScale(std::max(0.06f, mapCity.population / 10e6f));
         }
     }
@@ -101,8 +103,10 @@ void GeodataApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     pipeline.addNode<BloomNode>();
 
-    const std::string sceneTexture = "SceneColor";
+    std::string sceneTexture = "SceneColor";
     const std::string finalTextureToScreen = "SceneColorLDR";
+
+    //pipeline.addNode<VisibilityBufferDebugNode>(); sceneTexture = "VisibilityBufferDebugVis";
 
     pipeline.addNode<TonemapNode>(sceneTexture);
     pipeline.addNode<TAANode>(scene.camera());
@@ -153,6 +157,27 @@ bool GeodataApp::update(Scene& scene, float elapsedTime, float deltaTime)
     controlSunOrientation(scene, input, deltaTime);
 
     return true;
+}
+
+void GeodataApp::loadHeightmap()
+{
+    m_worldHeightMap = ImageAsset::loadOrCreate("assets/geodata/world_elevation_map.png");
+    ARKOSE_ASSERT(m_worldHeightMap != nullptr);
+}
+
+float GeodataApp::sampleHeightmap(vec2 latlong) const
+{
+    ARKOSE_ASSERT(latlong.x >= -90.0f && latlong.x <= +90.0f);
+    ARKOSE_ASSERT(latlong.y >= -180.0f && latlong.y <= +180.0f);
+
+    vec2 normalizedLatlong = ark::clamp((latlong + vec2(90.0f, 180.0f)) / vec2(180.0f, 360.0f), vec2(0.0f), vec2(1.0f));
+    vec2 textureSpaceLongLat = vec2(normalizedLatlong.y, normalizedLatlong.x) * (m_worldHeightMap->extentAtMip(0).asExtent2D().asFloatVector() - vec2(0.01f, 0.01f));
+    ivec2 pixelCoord = ivec2(textureSpaceLongLat.x, m_worldHeightMap->extentAtMip(0).height() - 1 - textureSpaceLongLat.y);
+
+    // TODO: Do bilinear filtering!
+    ImageAsset::rgba8 heightmapValue = m_worldHeightMap->getPixelAsRGBA8(pixelCoord.x, pixelCoord.y, 0, 0);
+
+    return static_cast<float>(heightmapValue.x - 127) / 255.0f;
 }
 
 void GeodataApp::createMapRegions()
@@ -237,12 +262,12 @@ void GeodataApp::createMapRegions()
             }
 
             // see https://www.cs.cmu.edu/~quake/triangle.switch.html
-            std::string const argumentsHighPoly = "a0.005qQ";
+            std::string const argumentsHighPoly = "a0.004qQ";
             std::string const argumentsLowPoly = "qQ"; // (borders will be accurate but interiors will be as low-poly as possible)
 
             Eigen::MatrixXd V2;
             Eigen::MatrixXi F2;
-            igl::triangle::triangulate(V, E, H, argumentsLowPoly, V2, F2);
+            igl::triangle::triangulate(V, E, H, argumentsHighPoly, V2, F2);
             ARKOSE_LOG(Info, "    after triangulation, {} faces with {} vertices", F2.rows(), V2.rows());
 
             MeshSegmentAsset& segment = lod0.meshSegments.emplace_back();
@@ -250,9 +275,12 @@ void GeodataApp::createMapRegions()
 
             size_t vertexCount = V2.rows();
             for (size_t vertexIdx = 0; vertexIdx < vertexCount; ++vertexIdx) {
-                segment.positions.emplace_back(static_cast<float>(V2(vertexIdx, 0)),
-                                               static_cast<float>(V2(vertexIdx, 1)),
-                                               0.0f);
+
+                vec2 latlong = vec2(static_cast<float>(V2(vertexIdx, 1 /* latitude */)),
+                                    static_cast<float>(V2(vertexIdx, 0 /* longitude */)));
+                float height = m_heightScale * sampleHeightmap(latlong);
+
+                segment.positions.emplace_back(latlong.y, latlong.x, -height);
                 segment.texcoord0s.emplace_back(0.0f, 0.0f); // no tex-coords, for now
                 segment.normals.emplace_back(0.0f, 0.0f, 1.0f);
             }
@@ -372,8 +400,10 @@ void GeodataApp::createCities()
         ARKOSE_ASSERT(geoGeometryType == "Point");
 
         auto const& geoGeometryCoordinates = geoFeatureGeometry["coordinates"];
-        vec2 cityCoords = vec2(geoGeometryCoordinates[0], geoGeometryCoordinates[1]);
-        ARKOSE_LOG(Info, "  location: {},{}", cityCoords.x, cityCoords.y);
+        vec2 latlong = vec2(geoGeometryCoordinates[1], geoGeometryCoordinates[0]);
+        ARKOSE_LOG(Info, "  latlong: {},{}", latlong.x, latlong.y);
+
+        float elevation = m_heightScale * sampleHeightmap(latlong);
 
         // Put the city into the correct map region
         auto entry = m_mapRegions.find(countryCodeMaybeISO);
@@ -385,7 +415,7 @@ void GeodataApp::createCities()
 
             mapCity.name = cityName;
             mapCity.population = cityPopulation;
-            mapCity.location = cityCoords;
+            mapCity.location = vec3(latlong.y, latlong.x, -elevation);
 
             cityCount += 1;
         }
