@@ -40,7 +40,8 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
                                        Texture::Filters::linear(),
                                        Texture::Mipmap::None,
                                        ImageWrapModes::clampAllToEdge());
-    m_shadowMap->setName("DirectionalLightShadowMap");
+    reg.publish("DirectionalLightShadowMap", *m_shadowMap);
+
     RenderTarget& shadowMapRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, m_shadowMap } });
 
     BindingSet& sceneObjectBindingSet = *reg.getBindingSet("SceneObjectSet");

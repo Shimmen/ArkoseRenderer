@@ -1,0 +1,46 @@
+#version 460
+
+// i.e., screen-space subsurface scattering
+
+#include <common.glsl>
+#include <common/camera.glsl>
+#include <common/lighting.glsl>
+#include <common/namedUniforms.glsl>
+
+layout(set = 0, binding = 0, rgba16f) uniform image2D sceneColorImg;
+layout(set = 0, binding = 1) uniform sampler2D sceneDepthTex;
+layout(set = 0, binding = 2) uniform CameraStateBlock { CameraState camera; };
+layout(set = 0, binding = 3) uniform sampler2D directionalLightShadowMapTex;
+
+DeclareCommonBindingSet_Light(1)
+
+NAMED_UNIFORMS(constants,
+    uvec2 targetSize;
+    float fogDensity;
+    vec3 fogColor;
+)
+
+layout(local_size_x = 8, local_size_y = 8) in;
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(pixelCoord, constants.targetSize))) {
+        return;
+    }
+
+    vec4 sceneColor = imageLoad(sceneColorImg, pixelCoord);
+    float nonLinearDepth = texelFetch(sceneDepthTex, pixelCoord, 0).x;
+
+    // Skip non-geometry pixels, e.g. skybox
+    if (nonLinearDepth == 1.0) {
+       return;
+    }
+
+    float pixelDistance = -calculateLinearDepth(nonLinearDepth, camera);
+
+    // Calculate fog
+    float fogAmount = 1.0 - exp(-pixelDistance * constants.fogDensity);
+    sceneColor.rgb = mix(sceneColor.rgb, constants.fogColor, fogAmount);
+
+    imageStore(sceneColorImg, pixelCoord, sceneColor);
+}

@@ -225,6 +225,7 @@ add_executable(ArkoseRenderer
     arkose/rendering/nodes/TAANode.cpp
     arkose/rendering/nodes/TonemapNode.cpp
     arkose/rendering/nodes/VisibilityBufferShadingNode.cpp
+    arkose/rendering/postprocess/FogNode.cpp
     arkose/rendering/postprocess/CASNode.cpp
     arkose/rendering/postprocess/SSSSNode.cpp
     arkose/rendering/upscaling/UpscalingNode.cpp

@@ -26,6 +26,7 @@
 #include "rendering/nodes/TAANode.h"
 #include "rendering/nodes/TonemapNode.h"
 #include "rendering/nodes/VisibilityBufferShadingNode.h"
+#include "rendering/postprocess/FogNode.h"
 #include "rendering/postprocess/CASNode.h"
 #include "rendering/upscaling/UpscalingNode.h"
 #include "scene/Scene.h"
@@ -151,6 +152,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<ForwardRenderNode>(ForwardRenderNode::Mode::Translucent,
                                         ForwardMeshFilter::AllMeshes,
                                         ForwardClearMode::DontClear);
+
+    pipeline.addNode<FogNode>();
 
     auto& dofNode = pipeline.addNode<DepthOfFieldNode>();
     dofNode.setEnabled(false);
