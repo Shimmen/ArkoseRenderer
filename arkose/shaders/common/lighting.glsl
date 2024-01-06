@@ -2,6 +2,7 @@
 #define LIGHTING_GLSL
 
 #include <common.glsl>
+#include <shared/LightData.h>
 
 // Corresponding to published binding set "SceneLightSet"
 #define DeclareCommonBindingSet_Light(index)                                                                              \
