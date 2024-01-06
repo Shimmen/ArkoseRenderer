@@ -110,6 +110,8 @@ struct Extent3D {
         return m_width == other.m_width && m_height == other.m_height && m_depth == other.m_depth;
     }
 
+    Extent2D asExtent2D() const { return Extent2D(m_width, m_height); }
+
     ark::uvec3 asUIntVector() const { return ark::uvec3(m_width, m_height, m_depth); }
     ark::ivec3 asIntVector() const { return ark::ivec3(m_width, m_height, m_depth); }
     ark::vec3 asFloatVector() const {return ark::vec3(static_cast<float>(m_width), static_cast<float>(m_height), static_cast<float>(m_depth)); }
