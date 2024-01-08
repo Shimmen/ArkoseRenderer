@@ -356,10 +356,9 @@ add_custom_command(TARGET ArkoseRenderer PRE_BUILD
 ######### ARKOSE TOOLING #########
 ##################################
 
-set(ARKOSE_BUILD_TOOLS True)
-
 if((DEFINED {PXR_USD_LOCATION}) OR (DEFINED ENV{PXR_USD_LOCATION}))
     message(STATUS "Will attempt to build tools")
+    set(ARKOSE_BUILD_TOOLS True)
 else()
     message(STATUS "Will NOT attempt to build tools as PXR_USD_LOCATION is not set")
     set(ARKOSE_BUILD_TOOLS False)

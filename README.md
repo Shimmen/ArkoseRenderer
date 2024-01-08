@@ -91,7 +91,9 @@ You should now be able to compile and run!
 
 The entire tools stack depends on [OpenUSD](https://github.com/PixarAnimationStudios/OpenUSD) and is needed for compilation. Note that this dependency only exists for the offline tooling so it's not needed for anything runtime, e.g. renderer/game.
 
-To be able to build any of the tools, first install OpenUSD. The best approach (especially if on Windows) is to [download the pre-built libraries and tools provided by Nvidia](https://developer.nvidia.com/usd#libraries-and-tools). For CMake to find it, ensure that `PXR_USD_LOCATION` is defined (either as a CMake variable or as an environment variable), and pointing at the root directory of where you installed it. If setup correctly, CMake should pick up on this and build tools accordingly.
+To be able to build any of the tools, first install OpenUSD. Nowadays it's not too difficult to build USD yourself, so I'd recommend that. There is also the option to [download the pre-built libraries and tools provided by Nvidia](https://developer.nvidia.com/usd#libraries-and-tools), but I've never had any success with it for Windows.
+
+For CMake to find USD, ensure that `PXR_USD_LOCATION` is defined (either as a CMake variable or as an environment variable), and pointing at the root directory of where you installed it. If setup correctly, CMake should pick up on this and build tools accordingly.
 
 ## License
 
