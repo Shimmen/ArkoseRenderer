@@ -19,6 +19,9 @@
 #include <pxr/usd/usdGeom/bboxCache.h>
 #include <pxr/usd/usdGeom/xform.h>
 
+// usd camera stuff
+#include <pxr/usd/usdGeom/camera.h>
+
 // triangulation stuff
 #include <pxr/imaging/hd/meshUtil.h>
 #include <pxr/imaging/hd/vtBufferSource.h>
@@ -29,6 +32,8 @@
 
 // tangent space generation
 #include <mikktspace.h>
+
+ARK_DISABLE_OPTIMIZATIONS
 
 struct UnindexedTriangleMesh {
     std::vector<vec3> positions;
@@ -597,13 +602,112 @@ void generateTangents(UnindexedTriangleMesh& triangleMesh)
     }
 }
 
-void defineMeshAssetAndDependencies(pxr::UsdPrim const& componentPrim, pxr::UsdGeomBBoxCache& bboxCache)
+std::shared_ptr<MaterialAsset> defineDisplayColorMaterial(pxr::UsdPrim const& meshPrim,
+                                                          pxr::UsdGeomMesh const& usdGeomMesh)
 {
+    auto materialAsset = std::make_shared<MaterialAsset>();
+    materialAsset->name = fmt::format("{}_displaycolor", meshPrim.GetName().GetString());
+
+    pxr::UsdAttribute displayColorAttr = usdGeomMesh.GetDisplayColorAttr();
+    if (displayColorAttr.HasValue()) {
+        pxr::VtArray<pxr::GfVec3f> displayColor;
+        displayColorAttr.Get(&displayColor);
+
+        if (displayColor.size() > 0) {
+            pxr::GfVec3f color = displayColor[0]; // TODO: Handle this more correctly!
+            materialAsset->colorTint = vec4(color[0], color[1], color[2], 1.0f);
+            materialAsset->blendMode = BlendMode::Opaque;
+        }
+    }
+
+    pxr::UsdAttribute displayOpacityAttr = usdGeomMesh.GetDisplayOpacityAttr();
+    if (displayOpacityAttr.HasValue()) {
+        float displayOpacity;
+        displayOpacityAttr.Get<float>(&displayOpacity);
+
+        materialAsset->colorTint.w = displayOpacity;
+        if (displayOpacity < 1.0f) {
+            materialAsset->blendMode = BlendMode::Translucent;
+        }
+    }
+
+    pxr::UsdAttribute doubleSidedAttr = usdGeomMesh.GetDoubleSidedAttr();
+    if (doubleSidedAttr.HasValue()) {
+        doubleSidedAttr.Get<bool>(&materialAsset->doubleSided);
+    }
+
+    return materialAsset;
+}
+
+void defineMaterialFromUsdPreviewSurface(MaterialAsset& materialAsset,
+                                         pxr::UsdPrim const& shaderPrim)
+{
+    ARKOSE_LOG(Info, "TODO: Implement UsdPreviewSurface material conversion!");
+    //NOT_YET_IMPLEMENTED();
+}
+
+std::shared_ptr<MaterialAsset> defineMaterial(pxr::UsdShadeMaterialBindingAPI const& materialBinding)
+{
+    // NOTE: Compare to this python example in reverse:
+    // https://github.com/PixarAnimationStudios/OpenUSD/blob/release/extras/usd/tutorials/simpleShading/generate_simpleShading.py
+
+    pxr::UsdShadeMaterial usdShadeMaterial = materialBinding.GetDirectBinding().GetMaterial();
+    //ARKOSE_LOG(Info, "UsdShadeMaterialBindingAPI: {}", usdShadeMaterial.GetPath().GetString());
+
+    auto materialAsset = std::make_shared<MaterialAsset>();
+    materialAsset->name = usdShadeMaterial.GetPrim().GetName().GetString();
+
+    ARKOSE_LOG(Info, "Material named '{}':", materialAsset->name);
+
+    for (pxr::UsdShadeOutput const& displacementOutput : usdShadeMaterial.GetDisplacementOutputs()) {
+        if (displacementOutput.HasConnectedSource()) {
+            ARKOSE_LOG(Warning, "We can't yet handle displacement, ignoring displacement output");
+        }
+    }
+
+    std::vector<pxr::UsdShadeOutput> surfaceOutputs = usdShadeMaterial.GetSurfaceOutputs();
+    ARKOSE_ASSERT(surfaceOutputs.size() == 1); // Handle multiple outputs!
+    pxr::UsdShadeOutput& surfaceOutput = surfaceOutputs.front();
+
+    // Surely it needs something connected to be valid?
+    ARKOSE_ASSERT(surfaceOutput.HasConnectedSource());
+    ARKOSE_ASSERT(surfaceOutput.GetConnectedSources().size() == 1);
+    pxr::UsdShadeConnectionSourceInfo& sourceInfo = surfaceOutput.GetConnectedSources().front();
+    pxr::UsdShadeConnectableAPI shadeConnectableAPI = sourceInfo.source;
+
+    ARKOSE_LOG(Info, " material is bound to shader '{}'", shadeConnectableAPI.GetPath().GetString());
+    pxr::UsdAttribute shaderInfoIdAttr = shadeConnectableAPI.GetPrim().GetAttribute(pxr::TfToken("info:id"));
+    pxr::TfToken shaderInfoIdToken;
+    if (shaderInfoIdAttr.Get<pxr::TfToken>(&shaderInfoIdToken)) {
+        ARKOSE_LOG(Info, "  shader is of type '{}'", shaderInfoIdToken.GetString());
+    }
+
+    if (shaderInfoIdToken == pxr::TfToken("UsdPreviewSurface")) {
+        defineMaterialFromUsdPreviewSurface(*materialAsset, shadeConnectableAPI.GetPrim());
+    }
+
+    //NOT_YET_IMPLEMENTED();
+    return materialAsset;
+}
+
+void defineMeshSegmentAssetAndDependencies(MeshSegmentAsset& meshSegment,
+                                           pxr::UsdPrim const& meshPrim,
+                                           pxr::UsdGeomMesh const& usdGeomMesh,
+                                           pxr::UsdGeomSubset const& usdGeomSubset)
+{
+    NOT_YET_IMPLEMENTED();
+}
+
+void defineMeshAssetAndDependencies(pxr::UsdPrim const& meshPrim,
+                                    pxr::UsdGeomBBoxCache& bboxCache)
+{
+    pxr::UsdGeomMesh usdGeomMesh { meshPrim };
+
     auto meshAsset = std::make_unique<MeshAsset>();
-    meshAsset->name = componentPrim.GetName().GetText();
+    meshAsset->name = meshPrim.GetName().GetText();
 
     //pxr::GfBBox3d aabb = usdGeomMesh.ComputeLocalBound(pxr::UsdTimeCode(0.0f));
-    pxr::GfBBox3d aabb = bboxCache.ComputeLocalBound(componentPrim);
+    pxr::GfBBox3d aabb = bboxCache.ComputeLocalBound(meshPrim);
     pxr::GfVec3d aabbMin = aabb.GetRange().GetMin();
     pxr::GfVec3d aabbMax = aabb.GetRange().GetMax();
     meshAsset->boundingBox.min = vec3(aabbMin[0], aabbMin[1], aabbMin[2]);
@@ -611,88 +715,82 @@ void defineMeshAssetAndDependencies(pxr::UsdPrim const& componentPrim, pxr::UsdG
 
     MeshLODAsset& lod0 = meshAsset->LODs.emplace_back();
 
-    for (auto const& childPrim : componentPrim.GetDescendants()) {
-        ARKOSE_LOG(Info, " descendant: {}", childPrim.GetPath().GetText());
-
-        if (childPrim.IsA<pxr::UsdGeomMesh>()) {
-            pxr::UsdGeomMesh usdGeomMesh{ childPrim };
-
-            ARKOSE_LOG(Info, "  making mesh segment!");
-
-            MeshSegmentAsset& meshSegment = lod0.meshSegments.emplace_back();
-            //segment.name = childPrim.GetName().GetText(); // TODO!
-
-            auto materialAsset = std::make_unique<MaterialAsset>();
-            materialAsset->name = fmt::format("{}_DisplayMat", childPrim.GetName().GetString());
-
-            // TODO: Is this not working..? Seems to always return an identity matrix. OTOH, I'm not sure
-            // how it would know what I want, as it depends on what I consider the "root" for the mesh.
-            // Will probably have to use the static variant of the function where I supply the xform ops
-            // to it and it bakes it down to a single 4x4 matrix.
-            pxr::GfMatrix4d packedXform;
-            bool resetsXformStack;
-            bool xformSuccess = usdGeomMesh.GetLocalTransformation(&packedXform, &resetsXformStack);
-            ARKOSE_ASSERT(xformSuccess && !resetsXformStack);
-
-            UnindexedTriangleMesh triangleMesh;
-            if (isSingleIndexedTriangleMesh(usdGeomMesh)) {
-                populateUnindexedTriangleMesh(usdGeomMesh, triangleMesh);
-            } else {
-                triangulateMesh(usdGeomMesh, triangleMesh);
-            }
-
-            generateTangents(triangleMesh);
-            indexifyMesh(triangleMesh, meshSegment);
-
-            //generateLODs(meshSegment);
-            //optimizeMesh(meshSegment);
-
-            // Set up the material for this mesh
-
-            pxr::UsdAttribute doubleSidedAttr = usdGeomMesh.GetDoubleSidedAttr();
-            if (doubleSidedAttr.HasValue()) {
-                doubleSidedAttr.Get<bool>(&materialAsset->doubleSided);
-            }
-
-            pxr::UsdAttribute displayColorAttr = usdGeomMesh.GetDisplayColorAttr();
-            if (displayColorAttr.HasValue()) {
-                pxr::VtArray<pxr::GfVec3f> displayColor;
-                displayColorAttr.Get(&displayColor);
-
-                if (displayColor.size() > 0) {
-                    pxr::GfVec3f color = displayColor[0]; // TODO: Handle this more correctly!
-                    materialAsset->colorTint = vec4(color[0], color[1], color[2], 1.0f);
-                    materialAsset->blendMode = BlendMode::Opaque;
-                }
-            }
-
-            pxr::UsdAttribute displayOpacityAttr = usdGeomMesh.GetDisplayOpacityAttr();
-            if (displayOpacityAttr.HasValue()) {
-                float displayOpacity;
-                displayOpacityAttr.Get<float>(&displayOpacity);
-
-                materialAsset->colorTint.w = displayOpacity;
-                if (displayOpacity < 1.0f) {
-                    materialAsset->blendMode = BlendMode::Translucent;
-                }
-            }
-
-            // ..
-
-            materialAsset->writeToFile(materialAsset->name + ".arkmat", AssetStorage::Json);
-            meshSegment.setPathToMaterial(std::string(materialAsset->assetFilePath()));
+    bool hasAnySubsets = false;
+    for (auto const& childPrim : meshPrim.GetDescendants()) {
+        if (childPrim.IsA<pxr::UsdGeomSubset>()) {
+            hasAnySubsets = true;
+            break;
         }
+    }
+
+    if (hasAnySubsets) {
+
+        // Define the mesh asset in terms of the UsdGeomSubset's under the UsdGeomMesh
+        for (auto const& childPrim : meshPrim.GetDescendants()) {
+            if (childPrim.IsA<pxr::UsdGeomSubset>()) {
+                pxr::UsdGeomSubset usdGeomSubset { childPrim };
+                MeshSegmentAsset& meshSegment = lod0.meshSegments.emplace_back();
+                defineMeshSegmentAssetAndDependencies(meshSegment, meshPrim, usdGeomMesh, usdGeomSubset);
+            }
+        }
+
+    } else {
+
+        // Define the mesh asset directly from the UsdGeomMesh
+
+        MeshSegmentAsset& meshSegment = lod0.meshSegments.emplace_back();
+
+        // TODO: Is this not working..? Seems to always return an identity matrix. OTOH, I'm not sure
+        // how it would know what I want, as it depends on what I consider the "root" for the mesh.
+        // Will probably have to use the static variant of the function where I supply the xform ops
+        // to it and it bakes it down to a single 4x4 matrix.
+        pxr::GfMatrix4d localTransform;
+        bool resetsXformStack;
+        bool xformSuccess = usdGeomMesh.GetLocalTransformation(&localTransform, &resetsXformStack);
+        ARKOSE_ASSERT(xformSuccess && !resetsXformStack);
+
+        pxr::GfMatrix4d worldTransform = usdGeomMesh.ComputeLocalToWorldTransform(pxr::UsdTimeCode());
+
+        UnindexedTriangleMesh triangleMesh;
+        if (isSingleIndexedTriangleMesh(usdGeomMesh)) {
+            populateUnindexedTriangleMesh(usdGeomMesh, triangleMesh);
+        } else {
+            triangulateMesh(usdGeomMesh, triangleMesh);
+        }
+
+        generateTangents(triangleMesh);
+        indexifyMesh(triangleMesh, meshSegment);
+
+        //generateLODs(meshSegment);
+        //optimizeMesh(meshSegment);
+
+        // Set up the material for this mesh
+
+        std::shared_ptr<MaterialAsset> material = nullptr;
+        if (meshPrim.HasAPI<pxr::UsdShadeMaterialBindingAPI>()) {
+            pxr::UsdShadeMaterialBindingAPI materialBindingAPI { meshPrim };
+            material = defineMaterial(materialBindingAPI);
+        } else if (usdGeomMesh.GetDisplayColorPrimvar().IsDefined()) {
+            material = defineDisplayColorMaterial(meshPrim, usdGeomMesh);
+        }
+
+        // TODO: Don't do this..
+        material->writeToFile(material->name + ".arkmat", AssetStorage::Json);
+        meshSegment.setPathToMaterial(std::string(material->assetFilePath()));
     }
 
     meshAsset->writeToFile(meshAsset->name + ".arkmsh", AssetStorage::Json);
 }
 
+void defineCamera(pxr::UsdPrim const& cameraPrim)
+{
+    ARKOSE_LOG(Error, "TODO: Implement defineCamera!");
+}
+
 int main()
 {
-    //std::string filePath = "Kitchen_set/Kitchen_set.usd";
-    //std::string filePath = "Kitchen_set/assets/Toaster/Toaster.usd";
-    //std::string filePath = "NewSponza_IvyGrowth_USD_YUp.usda";
-    std::string filePath = "Ehrengrab_Johannes_Benk.usdz";
+    //std::string filePath = "../assets/usd/usd-assets/cornell-box/display-color/cornell-box.usda";
+    std::string filePath = "../assets/usd/usd-assets/cornell-box/usdpreviewsurface/cornell-box.usda";
 
     if (!pxr::UsdStage::IsSupportedFile(filePath)) {
         ARKOSE_LOG_FATAL("USD can't open file '{}'.", filePath);
@@ -706,31 +804,30 @@ int main()
 
     pxr::UsdGeomBBoxCache bboxCache{ pxr::UsdTimeCode(0.0f), pxr::UsdGeomImageable::GetOrderedPurposeTokens() };
 
-    pxr::SdfLayerHandle rootLayer = stage->GetRootLayer();
+    //pxr::SdfLayerHandle rootLayer = stage->GetRootLayer();
 
     for (const pxr::UsdPrim& prim : stage->Traverse()) {
 
-        if (prim.IsGroup()) {
-            //ARKOSE_LOG(Info, "Found a model '{}'", prim.GetPath().GetText());
-            continue;
-        }
+        //if (prim.IsGroup()) {
+        //    //ARKOSE_LOG(Info, "Found a model '{}'", prim.GetPath().GetText());
+        //    continue;
+        //}
 
-        bool isComponent = pxr::UsdModelAPI(prim).IsKind(pxr::KindTokens->component);
-        bool isSubcomponent = pxr::UsdModelAPI(prim).IsKind(pxr::KindTokens->subcomponent);
+        //bool isComponent = pxr::UsdModelAPI(prim).IsKind(pxr::KindTokens->component);
+        //bool isSubcomponent = pxr::UsdModelAPI(prim).IsKind(pxr::KindTokens->subcomponent);
 
-        if (isComponent) {
-            ARKOSE_LOG(Info, "Found a component: {}", prim.GetPath().GetText());
+        if (prim.IsA<pxr::UsdGeomMesh>()) {
+            ARKOSE_LOG(Info, "              MESH {}", prim.GetPath().GetText());
             defineMeshAssetAndDependencies(prim, bboxCache);
+        } else if (prim.IsA<pxr::UsdGeomXform>()) {
+            ARKOSE_LOG(Info, "             XFORM {}", prim.GetPath().GetText());
+        } else if (prim.IsA<pxr::UsdGeomCamera>()) {
+            ARKOSE_LOG(Info, "            CAMERA {}", prim.GetPath().GetText());
+            defineCamera(prim);
+        } else if (prim.IsA<pxr::UsdShadeMaterial>()) {
+            ARKOSE_LOG(Info, "          MATERIAL {}", prim.GetPath().GetText());
         } else {
-            /*
-            if (prim.IsA<pxr::UsdGeomMesh>()) {
-                ARKOSE_LOG(Info, "              MESH {}", prim.GetPath().GetText());
-            } else if (prim.IsA<pxr::UsdGeomXform>()) {
-                ARKOSE_LOG(Info, "             XFORM {}", prim.GetPath().GetText());
-            } else {
-                ARKOSE_LOG(Info, "                   {}", prim.GetPath().GetText());
-            }
-            */
+            ARKOSE_LOG(Info, "                   {}", prim.GetPath().GetText());
         }
     }
 
