@@ -3,11 +3,11 @@
 #include "AssetIdentifier.h"
 #include <memory>
 
-#include <asset/ImageAsset.h>
-#include <asset/MaterialAsset.h>
-#include <asset/MeshAsset.h>
-#include <asset/SkeletonAsset.h>
-#include <asset/AnimationAsset.h>
+class ImageAsset;
+class MaterialAsset;
+class MeshAsset;
+class SkeletonAsset;
+class AnimationAsset;
 
 namespace AssetProcessor {
 

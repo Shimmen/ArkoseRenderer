@@ -1,5 +1,10 @@
 #include "AssetProcessor.h"
 
+#include <asset/ImageAsset.h>
+#include <asset/MaterialAsset.h>
+#include <asset/MeshAsset.h>
+#include <asset/SkeletonAsset.h>
+#include <asset/AnimationAsset.h>
 #include <core/Logging.h>
 
 std::unique_ptr<ImageAsset> AssetProcessor::processImage(ImageAssetIdentifier imageAssetId)
