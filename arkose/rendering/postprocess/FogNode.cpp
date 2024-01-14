@@ -30,7 +30,7 @@ RenderPipelineNode::ExecuteCallback FogNode::construct(GpuScene& scene, Registry
                                                        ShaderBinding::sampledTexture(directionalLightShadowMap, ShaderStage::Compute) });
 
     Shader fogShader = Shader::createCompute("postprocess/fog.comp");
-    ComputeState& fogState = reg.createComputeState(fogShader, { &fogBindingSet });
+    ComputeState& fogState = reg.createComputeState(fogShader, { &fogBindingSet, &sceneLightSet });
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         if (!m_enabled || m_fogDensity < 1e-6f) {
