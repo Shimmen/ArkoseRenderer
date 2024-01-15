@@ -33,6 +33,9 @@ static std::unique_ptr<App> createApp()
     if (CommandLine::hasArgument("-geodata")) {
         return std::make_unique<GeodataApp>();
     }
+    if (CommandLine::hasArgument("-bootstrap")) {
+        return std::make_unique<BootstrappingApp>();
+    }
 
     return std::make_unique<ShowcaseApp>();
 }

@@ -1,11 +1,13 @@
 #include "rendering/backend/base/CommandList.h"
 
 class D3D12Backend;
+class ID3D12GraphicsCommandList;
 
 class D3D12CommandList final : public CommandList {
 public:
-    explicit D3D12CommandList(D3D12Backend&);
+    D3D12CommandList(D3D12Backend&, ID3D12GraphicsCommandList*);
 
+    void fillBuffer(Buffer&, u32 fillValue) override;
     void clearTexture(Texture&, ClearValue) override;
     void copyTexture(Texture& src, Texture& dst, uint32_t srcMip, uint32_t dstMip) override;
     void generateMipmaps(Texture&) override;
@@ -29,11 +31,19 @@ public:
     void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex) override;
     void drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer) override;
 
+    void drawMeshTasks(u32 groupCountX, u32 groupCountY, u32 groupCountZ) override;
+    void drawMeshTasksIndirect(Buffer const& indirectBuffer, u32 indirectDataStride, u32 indirectDataOffset,
+                               Buffer const& countBuffer, u32 countDataOffset) override;
+
+    void setViewport(ivec2 origin, ivec2 size) override;
+    void setDepthBias(float constantFactor, float slopeFactor) override;
+
     void bindVertexBuffer(const Buffer&, u32 bindingIdx) override;
     void bindIndexBuffer(const Buffer&, IndexType) override;
     void issueDrawCall(const DrawCallDescription&) override;
 
     void buildTopLevelAcceratationStructure(TopLevelAS&, AccelerationStructureBuildType) override;
+    void buildBottomLevelAcceratationStructure(BottomLevelAS&, AccelerationStructureBuildType) override;
     void traceRays(Extent2D) override;
 
     void dispatch(Extent3D globalSize, Extent3D localSize) override;
@@ -54,5 +64,6 @@ private:
 
 private:
     D3D12Backend& m_backend;
+    ID3D12GraphicsCommandList* m_commandList;
 
 };

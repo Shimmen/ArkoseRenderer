@@ -83,7 +83,33 @@ void D3D12Buffer::updateData(const std::byte* data, size_t updateSize, size_t of
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
-    ASSERT_NOT_REACHED();
+    if (updateSize == 0) {
+        return;
+    }
+    if (offset + updateSize > size()) {
+        ARKOSE_LOG(Fatal, "Attempt at updating buffer outside of bounds!");
+    }
+
+    auto& d3d12Backend = static_cast<D3D12Backend&>(backend());
+
+    switch (memoryHint()) {
+    case Buffer::MemoryHint::GpuOptimal:
+        if (!d3d12Backend.setBufferDataUsingStagingBuffer(*this, (uint8_t*)data, updateSize, offset)) {
+            ARKOSE_LOG(Error, "Could not update the data of GPU-optimal buffer");
+        }
+        break;
+    case Buffer::MemoryHint::TransferOptimal:
+        if (!d3d12Backend.setBufferDataUsingMapping(*bufferResource.Get(), (uint8_t*)data, updateSize, offset)) {
+            ARKOSE_LOG(Error, "Could not update the data of transfer-optimal buffer");
+        }
+        break;
+    case Buffer::MemoryHint::GpuOnly:
+        ARKOSE_LOG(Error, "Can't update buffer with GpuOnly memory hint, ignoring");
+        break;
+    case Buffer::MemoryHint::Readback:
+        ARKOSE_LOG(Error, "Can't update buffer with Readback memory hint, ignoring");
+        break;
+    }
 }
 
 void D3D12Buffer::reallocateWithSize(size_t newSize, ReallocateStrategy strategy)

@@ -1,10 +1,19 @@
 #include "D3D12CommandList.h"
 
 #include "utility/Profiling.h"
+#include "rendering/backend/d3d12/D3D12Backend.h"
+#include "rendering/backend/d3d12/D3D12Buffer.h"
+#include <d3d12.h>
 
-D3D12CommandList::D3D12CommandList(D3D12Backend& backend)
+D3D12CommandList::D3D12CommandList(D3D12Backend& backend, ID3D12GraphicsCommandList* d3d12CommandList)
     : m_backend(backend)
+    , m_commandList(d3d12CommandList)
 {
+}
+
+void D3D12CommandList::fillBuffer(Buffer&, u32 fillValue)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
 void D3D12CommandList::clearTexture(Texture& genColorTexture, ClearValue clearValue)
@@ -80,6 +89,10 @@ void D3D12CommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount, uint32_t
 void D3D12CommandList::drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType indexType, uint32_t instanceIndex)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    bindVertexBuffer(vertexBuffer, 0);
+    bindIndexBuffer(indexBuffer, indexType);
+    m_commandList->DrawIndexedInstanced(indexCount, 1, 0, 0, instanceIndex);
 }
 
 void D3D12CommandList::drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer)
@@ -87,22 +100,88 @@ void D3D12CommandList::drawIndirect(const Buffer& indirectBuffer, const Buffer& 
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
-void D3D12CommandList::bindVertexBuffer(const Buffer& vertexBuffer, u32 bindingIdx)
+void D3D12CommandList::drawMeshTasks(u32 groupCountX, u32 groupCountY, u32 groupCountZ)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
-void D3D12CommandList::bindIndexBuffer(const Buffer& indexBuffer, IndexType indexType)
+void D3D12CommandList::drawMeshTasksIndirect(Buffer const& indirectBuffer, u32 indirectDataStride, u32 indirectDataOffset,
+                                             Buffer const& countBuffer, u32 countDataOffset)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
-void D3D12CommandList::issueDrawCall(const DrawCallDescription& drawCall)
+void D3D12CommandList::setViewport(ivec2 origin, ivec2 size)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+}
+
+void D3D12CommandList::setDepthBias(float constantFactor, float slopeFactor)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+}
+
+void D3D12CommandList::bindVertexBuffer(Buffer const& vertexBuffer, u32 bindingIdx)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    if (vertexBuffer.usage() != Buffer::Usage::Vertex) {
+        ARKOSE_LOG(Fatal, "bindVertexBuffer: not a vertex buffer!");
+    }
+
+    ID3D12Resource* d3d12BufferResource = static_cast<D3D12Buffer const&>(vertexBuffer).bufferResource.Get();
+
+    // TODO: We probably need to move this buffer view to the PSO as we don't know the stride here?
+    UINT stride = 20; // ??
+
+    D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
+    vertexBufferView.BufferLocation = d3d12BufferResource->GetGPUVirtualAddress();
+    vertexBufferView.SizeInBytes = static_cast<UINT>(vertexBuffer.size());
+    vertexBufferView.StrideInBytes = stride;
+
+    m_commandList->IASetVertexBuffers(bindingIdx, 1, &vertexBufferView);
+}
+
+void D3D12CommandList::bindIndexBuffer(Buffer const& indexBuffer, IndexType indexType)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    if (indexBuffer.usage() != Buffer::Usage::Index) {
+        ARKOSE_LOG(Fatal, "bindIndexBuffer: not an index buffer!");
+    }
+
+    ID3D12Resource* d3d12BufferResource = static_cast<D3D12Buffer const&>(indexBuffer).bufferResource.Get();
+
+    D3D12_INDEX_BUFFER_VIEW indexBufferView;
+    indexBufferView.BufferLocation = d3d12BufferResource->GetGPUVirtualAddress();
+    indexBufferView.SizeInBytes = static_cast<UINT>(indexBuffer.size());
+
+    switch (indexType) {
+    case IndexType::UInt16:
+        indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+        break;
+    case IndexType::UInt32:
+        indexBufferView.Format = DXGI_FORMAT_R32_UINT;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        break;
+    }
+
+    m_commandList->IASetIndexBuffer(&indexBufferView);
+}
+
+void D3D12CommandList::issueDrawCall(DrawCallDescription const& drawCall)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
 void D3D12CommandList::buildTopLevelAcceratationStructure(TopLevelAS& tlas, AccelerationStructureBuildType buildType)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+}
+
+void D3D12CommandList::buildBottomLevelAcceratationStructure(BottomLevelAS& blas, AccelerationStructureBuildType buildType)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }

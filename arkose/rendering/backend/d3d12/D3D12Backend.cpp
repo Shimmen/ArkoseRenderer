@@ -2,12 +2,15 @@
 
 #include "rendering/backend/d3d12/D3D12BindingSet.h"
 #include "rendering/backend/d3d12/D3D12Buffer.h"
+#include "rendering/backend/d3d12/D3D12CommandList.h"
 #include "rendering/backend/d3d12/D3D12ComputeState.h"
 #include "rendering/backend/d3d12/D3D12RenderState.h"
 #include "rendering/backend/d3d12/D3D12RenderTarget.h"
 #include "rendering/backend/d3d12/D3D12Texture.h"
 #include "core/Logging.h"
 #include "rendering/AppState.h"
+#include "rendering/Registry.h"
+#include "rendering/RenderPipeline.h"
 #include "system/System.h"
 #include "utility/FileIO.h"
 
@@ -124,11 +127,34 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
 
 D3D12Backend::~D3D12Backend()
 {
+    m_pipelineRegistry.reset();
+
     // TODO!
 }
 
-void D3D12Backend::renderPipelineDidChange(RenderPipeline& pipeline)
+void D3D12Backend::renderPipelineDidChange(RenderPipeline& renderPipeline)
 {
+    // TODO: Probably move this function out of the backend specific stuf
+    //reconstructRenderPipelineResources(renderPipeline);
+
+    SCOPED_PROFILE_ZONE_BACKEND();
+
+    size_t numFrameManagers = m_frameContexts.size();
+    ARKOSE_ASSERT(numFrameManagers == QueueSlotCount);
+
+/*
+    // We use imageless framebuffers for this one so it doesn't matter that we don't construct the render pipeline knowing the exact images.
+    const RenderTarget& templateWindowRenderTarget = *m_clearingRenderTarget;
+
+    Registry* previousRegistry = m_pipelineRegistry.get();
+    Registry* registry = new Registry(*this, templateWindowRenderTarget, previousRegistry);
+
+    renderPipeline.constructAll(*registry);
+
+    m_pipelineRegistry.reset(registry);
+*/
+
+    m_relativeFrameIndex = 0;
 }
 
 void D3D12Backend::shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline& pipeline)
@@ -763,14 +789,11 @@ void D3D12Backend::setUpDemo()
             0, 1, 2, 2, 3, 0
         };
 
-        static const int uploadBufferSize = sizeof(vertices) + sizeof(indices);
-        auto uploadBuffer = std::make_unique<D3D12Buffer>(*this, uploadBufferSize, Buffer::Usage::Transfer, Buffer::MemoryHint::TransferOptimal);
+        m_demo.vertexBuffer = std::make_unique<D3D12Buffer>(*this, sizeof(vertices), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+        m_demo.indexBuffer = std::make_unique<D3D12Buffer>(*this, sizeof(indices), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
 
-        m_demo.vertexBuffer = std::make_unique<D3D12Buffer>(*this, sizeof(vertices), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOnly);
-        m_demo.indexBuffer = std::make_unique<D3D12Buffer>(*this, sizeof(indices), Buffer::Usage::Index, Buffer::MemoryHint::GpuOnly);
-
-        setBufferDataUsingStagingBuffer(*m_demo.vertexBuffer, reinterpret_cast<const uint8_t*>(vertices), sizeof(vertices));
-        setBufferDataUsingStagingBuffer(*m_demo.indexBuffer, reinterpret_cast<const uint8_t*>(indices), sizeof(indices));
+        m_demo.vertexBuffer->updateData(reinterpret_cast<std::byte const*>(vertices), sizeof(vertices), 0);
+        m_demo.indexBuffer->updateData(reinterpret_cast<std::byte const*>(indices), sizeof(indices), 0);
 
         // Create buffer views
         m_demo.vertexBufferView.BufferLocation = m_demo.vertexBuffer->bufferResource->GetGPUVirtualAddress();
@@ -783,29 +806,33 @@ void D3D12Backend::setUpDemo()
     }
 }
 
-void D3D12Backend::renderDemo(D3D12_CPU_DESCRIPTOR_HANDLE renderTargetHandle, ID3D12GraphicsCommandList* commandList)
+void D3D12Backend::renderDemo(D3D12_CPU_DESCRIPTOR_HANDLE renderTargetHandle, ID3D12GraphicsCommandList* d3d12CommandList)
 {
+    // TODO: This command list is just temp - make it just like for vulkan
+    D3D12CommandList commandList { *this, d3d12CommandList }; 
+
     D3D12_VIEWPORT viewport = { 0.0f, 0.0f,
                                 static_cast<float>(m_windowFramebufferExtent.width()),
                                 static_cast<float>(m_windowFramebufferExtent.height()),
                                 0.0f, 1.0f };
     D3D12_RECT scissorRect = { 0, 0, LONG(m_windowFramebufferExtent.width()), LONG(m_windowFramebufferExtent.height()) };
 
-    commandList->OMSetRenderTargets(1, &renderTargetHandle, true, nullptr);
-    commandList->RSSetViewports(1, &viewport);
-    commandList->RSSetScissorRects(1, &scissorRect);
+    d3d12CommandList->OMSetRenderTargets(1, &renderTargetHandle, true, nullptr);
+    d3d12CommandList->RSSetViewports(1, &viewport);
+    d3d12CommandList->RSSetScissorRects(1, &scissorRect);
 
     static const float clearColor[] = { 0.042f, 0.042f, 0.042f, 1.0f };
-    commandList->ClearRenderTargetView(renderTargetHandle, clearColor, 0, nullptr);
+    d3d12CommandList->ClearRenderTargetView(renderTargetHandle, clearColor, 0, nullptr);
 
     // Set our state (shaders, etc.)
-    commandList->SetPipelineState(m_demo.pso.Get());
+    d3d12CommandList->SetPipelineState(m_demo.pso.Get());
 
     // Set our root signature
-    commandList->SetGraphicsRootSignature(m_demo.rootSignature.Get());
+    d3d12CommandList->SetGraphicsRootSignature(m_demo.rootSignature.Get());
 
-    commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    commandList->IASetVertexBuffers(0, 1, &m_demo.vertexBufferView);
-    commandList->IASetIndexBuffer(&m_demo.indexBufferView);
-    commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+    d3d12CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // part of render state
+
+    commandList.bindVertexBuffer(*m_demo.vertexBuffer, 0);
+    commandList.bindIndexBuffer(*m_demo.indexBuffer, IndexType::UInt32);
+    commandList.drawIndexed(*m_demo.vertexBuffer, *m_demo.indexBuffer, 6, IndexType::UInt32, 0); // todo: remove buffer bindings from this function..
 }

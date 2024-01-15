@@ -91,7 +91,7 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     /// Frame management related members
 
-    static constexpr int QueueSlotCount = 3;
+    static constexpr int QueueSlotCount = 2;
 
     uint32_t m_currentFrameIndex { 0 };
     uint32_t m_relativeFrameIndex { 0 };
@@ -113,6 +113,11 @@ private:
 
     ComPtr<ID3D12DescriptorHeap> m_renderTargetDescriptorHeap;
     int32_t m_renderTargetViewDescriptorSize {};
+
+    ///////////////////////////////////////////////////////////////////////////
+    /// Resource & resource management members
+
+    std::unique_ptr<Registry> m_pipelineRegistry {};
 
     ///////////////////////////////////////////////////////////////////////////
     /// Demo stuff
