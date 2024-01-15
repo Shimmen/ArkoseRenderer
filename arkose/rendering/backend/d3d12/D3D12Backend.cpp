@@ -769,12 +769,7 @@ void D3D12Backend::setUpDemo()
 
     // Create mesh buffers
     {
-        struct Vertex {
-            float position[3];
-            float uv[2];
-        };
-
-        const Vertex vertices[4] = {
+        const Demo::Vertex vertices[4] = {
             // Upper Left
             { { -0.5f, 0.5f, 0 }, { 0, 0 } },
             // Upper Right
@@ -798,7 +793,7 @@ void D3D12Backend::setUpDemo()
         // Create buffer views
         m_demo.vertexBufferView.BufferLocation = m_demo.vertexBuffer->bufferResource->GetGPUVirtualAddress();
         m_demo.vertexBufferView.SizeInBytes = UINT(m_demo.vertexBuffer->size());
-        m_demo.vertexBufferView.StrideInBytes = sizeof(Vertex);
+        m_demo.vertexBufferView.StrideInBytes = sizeof(Demo::Vertex);
 
         m_demo.indexBufferView.BufferLocation = m_demo.indexBuffer->bufferResource->GetGPUVirtualAddress();
         m_demo.indexBufferView.SizeInBytes = UINT(m_demo.indexBuffer->size());
@@ -832,7 +827,7 @@ void D3D12Backend::renderDemo(D3D12_CPU_DESCRIPTOR_HANDLE renderTargetHandle, ID
 
     d3d12CommandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST); // part of render state
 
-    commandList.bindVertexBuffer(*m_demo.vertexBuffer, 0);
+    commandList.bindVertexBuffer(*m_demo.vertexBuffer, sizeof(Demo::Vertex), 0);
     commandList.bindIndexBuffer(*m_demo.indexBuffer, IndexType::UInt32);
     commandList.drawIndexed(6, 0);
 }

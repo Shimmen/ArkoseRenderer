@@ -124,6 +124,11 @@ private:
 
     struct Demo {
 
+        struct Vertex {
+            float position[3];
+            float uv[2];
+        };
+
         ComPtr<ID3D12RootSignature> rootSignature;
         ComPtr<ID3D12PipelineState> pso;
     

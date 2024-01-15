@@ -138,7 +138,7 @@ void D3D12CommandList::setDepthBias(float constantFactor, float slopeFactor)
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
-void D3D12CommandList::bindVertexBuffer(Buffer const& vertexBuffer, u32 bindingIdx)
+void D3D12CommandList::bindVertexBuffer(Buffer const& vertexBuffer, u32 stride, u32 bindingIdx)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
@@ -147,9 +147,6 @@ void D3D12CommandList::bindVertexBuffer(Buffer const& vertexBuffer, u32 bindingI
     }
 
     ID3D12Resource* d3d12BufferResource = static_cast<D3D12Buffer const&>(vertexBuffer).bufferResource.Get();
-
-    // TODO: We probably need to move this buffer view to the PSO as we don't know the stride here?
-    UINT stride = 20; // ??
 
     D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
     vertexBufferView.BufferLocation = d3d12BufferResource->GetGPUVirtualAddress();

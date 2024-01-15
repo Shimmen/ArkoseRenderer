@@ -53,7 +53,7 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Regist
             cmdList.setNamedUniform("aspectRatio", scene.camera().aspectRatio());
         }
 
-        cmdList.bindVertexBuffer(vertexBuffer);
+        cmdList.bindVertexBuffer(vertexBuffer, renderState.vertexLayout().packedVertexSize());
         cmdList.draw(3);
 
         cmdList.endRendering();

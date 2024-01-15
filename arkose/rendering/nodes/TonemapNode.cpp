@@ -45,7 +45,7 @@ RenderPipelineNode::ExecuteCallback TonemapNode::construct(GpuScene& scene, Regi
         else
             cmdList.beginRendering(tonemapRenderState);
 
-        cmdList.bindVertexBuffer(vertexBuffer);
+        cmdList.bindVertexBuffer(vertexBuffer, tonemapRenderState.vertexLayout().packedVertexSize());
         cmdList.draw(3);
 
         cmdList.endRendering();

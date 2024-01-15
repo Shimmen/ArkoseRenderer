@@ -46,7 +46,7 @@ RenderPipelineNode::ExecuteCallback SkyViewNode::construct(GpuScene& scene, Regi
         cmdList.setNamedUniform("environmentMultiplier", envMultiplier);
         cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
 
-        cmdList.bindVertexBuffer(fullscreenTriangleVertexBuffer);
+        cmdList.bindVertexBuffer(fullscreenTriangleVertexBuffer, skyViewRenderState.vertexLayout().packedVertexSize());
         cmdList.draw(3);
 
         cmdList.endRendering();

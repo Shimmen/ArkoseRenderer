@@ -104,7 +104,7 @@ void MeshletDebugNode::executeVertexShaderPath(PassParams const& params, GpuScen
     ark::Random rng { 12345 };
 
     cmdList.beginRendering(*params.renderState, ClearValue::blackAtMaxDepth());
-    cmdList.bindVertexBuffer(meshletPositionsBuffer);
+    cmdList.bindVertexBuffer(meshletPositionsBuffer, params.renderState->vertexLayout().packedVertexSize());
     cmdList.bindIndexBuffer(meshletIndexBuffer, IndexType::UInt32);
 
     // NOTE: This is obviously not optimal... just for testing!

@@ -62,7 +62,7 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(GpuScene& scene, R
         DrawCallDescription probesDrawCall = m_sphereDrawCall;
         probesDrawCall.instanceCount = scene.scene().probeGrid().probeCount();
 
-        cmdList.bindVertexBuffer(*probesDrawCall.vertexBuffer);
+        cmdList.bindVertexBuffer(*probesDrawCall.vertexBuffer, renderState.vertexLayout().packedVertexSize());
         cmdList.bindIndexBuffer(*probesDrawCall.indexBuffer, probesDrawCall.indexType);
         cmdList.issueDrawCall(probesDrawCall);
 

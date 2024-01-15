@@ -67,7 +67,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
             cmdList.beginRendering(drawIndicesState, clearValue);
             cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
 
-            cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer());
+            cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), drawIndicesState.vertexLayout().packedVertexSize());
             cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
             u32 drawIdx = 0;
