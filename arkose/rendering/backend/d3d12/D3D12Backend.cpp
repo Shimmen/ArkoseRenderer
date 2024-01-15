@@ -834,5 +834,5 @@ void D3D12Backend::renderDemo(D3D12_CPU_DESCRIPTOR_HANDLE renderTargetHandle, ID
 
     commandList.bindVertexBuffer(*m_demo.vertexBuffer, 0);
     commandList.bindIndexBuffer(*m_demo.indexBuffer, IndexType::UInt32);
-    commandList.drawIndexed(*m_demo.vertexBuffer, *m_demo.indexBuffer, 6, IndexType::UInt32, 0); // todo: remove buffer bindings from this function..
+    commandList.drawIndexed(6, 0);
 }

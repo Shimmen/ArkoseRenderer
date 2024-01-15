@@ -1026,28 +1026,34 @@ void VulkanCommandList::setNamedUniform(const std::string& name, void* data, siz
     }
 }
 
-void VulkanCommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount, uint32_t firstVertex)
+void VulkanCommandList::draw(u32 vertexCount, u32 firstVertex)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (!activeRenderState) {
         ARKOSE_LOG(Fatal, "draw: no active render state!");
     }
+    if (m_boundVertexBuffer == VK_NULL_HANDLE) {
+        ARKOSE_LOG(Fatal, "draw: no bound vertex buffer!");
+    }
 
-    bindVertexBuffer(vertexBuffer, 0);
     vkCmdDraw(m_commandBuffer, vertexCount, 1, firstVertex, 0);
 }
 
-void VulkanCommandList::drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType indexType, uint32_t instanceIndex)
+void VulkanCommandList::drawIndexed(u32 indexCount, u32 instanceIndex)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     if (!activeRenderState) {
         ARKOSE_LOG(Fatal, "drawIndexed: no active render state!");
     }
+    if (m_boundVertexBuffer == VK_NULL_HANDLE) {
+        ARKOSE_LOG(Fatal, "drawIndexed: no bound vertex buffer!");
+    }
+    if (m_boundIndexBuffer == VK_NULL_HANDLE) {
+        ARKOSE_LOG(Fatal, "drawIndexed: no bound index buffer!");
+    }
 
-    bindVertexBuffer(vertexBuffer, 0);
-    bindIndexBuffer(indexBuffer, indexType);
     vkCmdDrawIndexed(m_commandBuffer, indexCount, 1, 0, 0, instanceIndex);
 }
 
@@ -1055,17 +1061,22 @@ void VulkanCommandList::drawIndirect(const Buffer& indirectBuffer, const Buffer&
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    if (!activeRenderState)
+    if (!activeRenderState) {
         ARKOSE_LOG(Fatal, "drawIndirect: no active render state!");
-    if (!m_boundVertexBuffer)
+    }
+    if (!m_boundVertexBuffer) {
         ARKOSE_LOG(Fatal, "drawIndirect: no bound vertex buffer!");
-    if (!m_boundIndexBuffer)
+    }
+    if (!m_boundIndexBuffer) {
         ARKOSE_LOG(Fatal, "drawIndirect: no bound index buffer!");
+    }
 
-    if (indirectBuffer.usage() != Buffer::Usage::IndirectBuffer)
+    if (indirectBuffer.usage() != Buffer::Usage::IndirectBuffer) {
         ARKOSE_LOG(Fatal, "drawIndirect: supplied indirect buffer is not an indirect buffer!");
-    if (countBuffer.usage() != Buffer::Usage::IndirectBuffer)
+    }
+    if (countBuffer.usage() != Buffer::Usage::IndirectBuffer) {
         ARKOSE_LOG(Fatal, "drawIndirect: supplied count buffer is not an indirect buffer!");
+    }
 
     VkBuffer vulkanIndirectBuffer = static_cast<const VulkanBuffer&>(indirectBuffer).buffer;
     VkBuffer vulkanCountBuffer = static_cast<const VulkanBuffer&>(countBuffer).buffer;
@@ -1184,7 +1195,6 @@ void VulkanCommandList::bindIndexBuffer(const Buffer& indexBuffer, IndexType ind
 
     VkBuffer vulkanBuffer = static_cast<const VulkanBuffer&>(indexBuffer).buffer;
     if (m_boundIndexBuffer == vulkanBuffer) {
-        ARKOSE_ASSERT(m_boundIndexBufferType == indexType);
         return;
     }
 
@@ -1205,7 +1215,6 @@ void VulkanCommandList::bindIndexBuffer(const Buffer& indexBuffer, IndexType ind
     vkCmdBindIndexBuffer(m_commandBuffer, vulkanBuffer, 0, vulkanIndexType);
 
     m_boundIndexBuffer = vulkanBuffer;
-    m_boundIndexBufferType = indexType;
 }
 
 void VulkanCommandList::issueDrawCall(const DrawCallDescription& drawCall)

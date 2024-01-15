@@ -81,17 +81,34 @@ void D3D12CommandList::setNamedUniform(const std::string& name, void* data, size
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
-void D3D12CommandList::draw(Buffer& vertexBuffer, uint32_t vertexCount, uint32_t firstVertex)
+void D3D12CommandList::draw(u32 vertexCount, u32 firstVertex)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    //if (!activeRenderState) {
+    //    ARKOSE_LOG(Fatal, "draw: no active render state!");
+    //}
+    if (m_boundVertexBuffer == nullptr) {
+        ARKOSE_LOG(Fatal, "draw: no bound vertex buffer!");
+    }
+
+    m_commandList->DrawInstanced(vertexCount, 1, firstVertex, 0);
 }
 
-void D3D12CommandList::drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType indexType, uint32_t instanceIndex)
+void D3D12CommandList::drawIndexed(u32 indexCount, u32 instanceIndex)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    bindVertexBuffer(vertexBuffer, 0);
-    bindIndexBuffer(indexBuffer, indexType);
+    // if (!activeRenderState) {
+    //     ARKOSE_LOG(Fatal, "draw: no active render state!");
+    // }
+    if (m_boundVertexBuffer == nullptr) {
+        ARKOSE_LOG(Fatal, "draw: no bound vertex buffer!");
+    }
+    if (m_boundIndexBuffer == nullptr) {
+        ARKOSE_LOG(Fatal, "draw: no bound index buffer!");
+    }
+
     m_commandList->DrawIndexedInstanced(indexCount, 1, 0, 0, instanceIndex);
 }
 
@@ -140,6 +157,8 @@ void D3D12CommandList::bindVertexBuffer(Buffer const& vertexBuffer, u32 bindingI
     vertexBufferView.StrideInBytes = stride;
 
     m_commandList->IASetVertexBuffers(bindingIdx, 1, &vertexBufferView);
+
+    m_boundVertexBuffer = d3d12BufferResource;
 }
 
 void D3D12CommandList::bindIndexBuffer(Buffer const& indexBuffer, IndexType indexType)
@@ -169,6 +188,8 @@ void D3D12CommandList::bindIndexBuffer(Buffer const& indexBuffer, IndexType inde
     }
 
     m_commandList->IASetIndexBuffer(&indexBufferView);
+
+    m_boundIndexBuffer = d3d12BufferResource;
 }
 
 void D3D12CommandList::issueDrawCall(DrawCallDescription const& drawCall)

@@ -52,7 +52,10 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Regist
             cmdList.setNamedUniform("vignetteIntensity", vignetteIntensity);
             cmdList.setNamedUniform("aspectRatio", scene.camera().aspectRatio());
         }
-        cmdList.draw(vertexBuffer, 3);
+
+        cmdList.bindVertexBuffer(vertexBuffer);
+        cmdList.draw(3);
+
         cmdList.endRendering();
     };
 }

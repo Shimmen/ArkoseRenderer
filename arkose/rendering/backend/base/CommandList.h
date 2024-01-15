@@ -34,8 +34,8 @@ public:
     template<typename T>
     void setNamedUniform(const std::string& name, T);
 
-    virtual void draw(Buffer& vertexBuffer, uint32_t vertexCount, uint32_t firstVertex = 0) = 0;
-    virtual void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex = 0) = 0;
+    virtual void draw(u32 vertexCount, u32 firstVertex = 0) = 0;
+    virtual void drawIndexed(u32 indexCount, u32 instanceIndex = 0) = 0;
     virtual void drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer) = 0;
 
     virtual void drawMeshTasks(u32 groupCountX, u32 groupCountY, u32 groupCountZ) = 0;

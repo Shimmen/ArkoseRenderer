@@ -103,7 +103,8 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
 
         if (numLineVertices > 0) {
             cmdList.beginRendering(linesRenderState);
-            cmdList.draw(*m_lineVertexBuffer, numLineVertices);
+            cmdList.bindVertexBuffer(*m_lineVertexBuffer);
+            cmdList.draw(numLineVertices);
             cmdList.endRendering();
         }
 
@@ -111,7 +112,8 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
             cmdList.beginRendering(trianglesRenderState);
             for (DebugDrawMesh const& mesh : m_debugDrawMeshes) {
                 cmdList.bindSet(*m_debugDrawTextures.get(mesh.textureBindingSetHandle), 1);
-                cmdList.draw(*m_triangleVertexBuffer, mesh.numVertices, mesh.firstVertex);
+                cmdList.bindVertexBuffer(*m_triangleVertexBuffer);
+                cmdList.draw(mesh.numVertices, mesh.firstVertex);
             }
             cmdList.endRendering();
         }

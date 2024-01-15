@@ -30,8 +30,8 @@ public:
     void pushConstants(ShaderStage, void*, size_t size, size_t byteOffset = 0u) override;
     void setNamedUniform(const std::string& name, void* data, size_t size) override;
 
-    void draw(Buffer& vertexBuffer, uint32_t vertexCount, uint32_t firstVertex) override;
-    void drawIndexed(const Buffer& vertexBuffer, const Buffer& indexBuffer, uint32_t indexCount, IndexType, uint32_t instanceIndex) override;
+    void draw(u32 vertexCount, u32 firstVertex) override;
+    void drawIndexed(u32 indexCount, u32 instanceIndex) override;
     void drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer) override;
 
     void drawMeshTasks(u32 groupCountX, u32 groupCountY, u32 groupCountZ) override;
@@ -85,7 +85,6 @@ private:
 
     VkBuffer m_boundVertexBuffer { VK_NULL_HANDLE };
     VkBuffer m_boundIndexBuffer { VK_NULL_HANDLE };
-    IndexType m_boundIndexBufferType {};
 
     const VulkanRenderState* activeRenderState = nullptr;
     const VulkanComputeState* activeComputeState = nullptr;
