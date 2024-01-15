@@ -789,15 +789,6 @@ void D3D12Backend::setUpDemo()
 
         m_demo.vertexBuffer->updateData(reinterpret_cast<std::byte const*>(vertices), sizeof(vertices), 0);
         m_demo.indexBuffer->updateData(reinterpret_cast<std::byte const*>(indices), sizeof(indices), 0);
-
-        // Create buffer views
-        m_demo.vertexBufferView.BufferLocation = m_demo.vertexBuffer->bufferResource->GetGPUVirtualAddress();
-        m_demo.vertexBufferView.SizeInBytes = UINT(m_demo.vertexBuffer->size());
-        m_demo.vertexBufferView.StrideInBytes = sizeof(Demo::Vertex);
-
-        m_demo.indexBufferView.BufferLocation = m_demo.indexBuffer->bufferResource->GetGPUVirtualAddress();
-        m_demo.indexBufferView.SizeInBytes = UINT(m_demo.indexBuffer->size());
-        m_demo.indexBufferView.Format = DXGI_FORMAT_R32_UINT;
     }
 }
 

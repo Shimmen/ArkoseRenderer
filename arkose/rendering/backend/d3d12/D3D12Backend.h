@@ -133,10 +133,7 @@ private:
         ComPtr<ID3D12PipelineState> pso;
     
         std::unique_ptr<D3D12Buffer> vertexBuffer;
-        D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
-
         std::unique_ptr<D3D12Buffer> indexBuffer;
-        D3D12_INDEX_BUFFER_VIEW indexBufferView;
 
     } m_demo;
 
