@@ -45,7 +45,7 @@ public:
     virtual void setViewport(ivec2 origin, ivec2 size) = 0;
     virtual void setDepthBias(float constantFactor, float slopeFactor) = 0;
 
-    virtual void bindVertexBuffer(Buffer const&, u32 stride, u32 bindingIdx = 0) = 0;
+    virtual void bindVertexBuffer(Buffer const&, u32 stride, u32 bindingIdx) = 0;
     virtual void bindIndexBuffer(Buffer const&, IndexType) = 0;
     virtual void issueDrawCall(const DrawCallDescription&) = 0;
 
