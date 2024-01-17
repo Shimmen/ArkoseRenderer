@@ -33,7 +33,9 @@
 #endif
 
 #ifdef NDEBUG
-static constexpr bool vulkanDebugMode = false;
+// We probably want yet another mode beyond relese, like "final" which doesn't include this,
+// because I'm now developing more and more in release and I need validation for that.
+static constexpr bool vulkanDebugMode = true;
 static constexpr bool vulkanVerboseDebugMessages = false;
 #else
 static constexpr bool vulkanDebugMode = true;
