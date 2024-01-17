@@ -2,6 +2,7 @@
 
 #include "core/Assert.h"
 #include "core/Logging.h"
+#include "rendering/backend/shader/shaderc/ShadercInterface.h"
 #include "utility/FileIO.h"
 #include "utility/Profiling.h"
 #include <algorithm>
@@ -9,108 +10,7 @@
 #include <cstddef>
 #include <thread>
 #include <sys/stat.h>
-#include <shaderc/shaderc.hpp>
 #include <spirv_hlsl.hpp>
-
-static shaderc_shader_kind glslShaderKindForShaderFile(const ShaderFile& shaderFile)
-{
-    switch (shaderFile.type()) {
-    case ShaderFileType::Vertex:
-        return shaderc_vertex_shader;
-    case ShaderFileType::Fragment:
-        return shaderc_fragment_shader;
-    case ShaderFileType::Compute:
-        return shaderc_compute_shader;
-    case ShaderFileType::RTRaygen:
-        return shaderc_raygen_shader;
-    case ShaderFileType::RTClosestHit:
-        return shaderc_closesthit_shader;
-    case ShaderFileType::RTAnyHit:
-        return shaderc_anyhit_shader;
-    case ShaderFileType::RTIntersection:
-        return shaderc_intersection_shader;
-    case ShaderFileType::RTMiss:
-        return shaderc_miss_shader;
-    case ShaderFileType::Task:
-        return shaderc_task_shader;
-    case ShaderFileType::Mesh:
-        return shaderc_mesh_shader;
-    case ShaderFileType::Unknown:
-        ARKOSE_LOG(Warning, "Can't find glsl shader kind for shader file of unknown type ('{}')", shaderFile.path());
-        return shaderc_glsl_infer_from_source;
-    default:
-        ASSERT_NOT_REACHED();
-        return shaderc_glsl_infer_from_source;
-    }
-}
-
-class GlslIncluder : public shaderc::CompileOptions::IncluderInterface {
-public:
-
-    using OnIncludeFileCallback = std::function<void(const std::string& filePath)>;
-
-    explicit GlslIncluder(const ShaderManager& shaderManager, OnIncludeFileCallback callback)
-        : m_shaderManager(shaderManager)
-        , m_onIncludeFileCallback(move(callback))
-    {
-    }
-
-    struct FileData {
-        std::string path;
-        std::string content;
-    };
-
-    shaderc_include_result* GetInclude(const char* requested_source, shaderc_include_type include_type, const char* requesting_source, size_t include_depth) override
-    {
-        SCOPED_PROFILE_ZONE();
-
-        std::string path;
-        switch (include_type) {
-        case shaderc_include_type_standard:
-            path = m_shaderManager.resolveGlslPath(requested_source);
-            break;
-        case shaderc_include_type_relative:
-            std::string_view dirOfRequesting = FileIO::extractDirectoryFromPath(requesting_source);
-            path = std::string(dirOfRequesting) + requested_source;
-            break;
-        }
-
-        auto* data = new shaderc_include_result();
-        auto* dataOwner = new FileData();
-        data->user_data = dataOwner;
-
-        dataOwner->path = path;
-        data->source_name = dataOwner->path.c_str();
-        data->source_name_length = dataOwner->path.size();
-
-        auto maybeFileContent = FileIO::readEntireFile(path);
-        if (maybeFileContent.has_value()) {
-
-            m_onIncludeFileCallback(path);
-
-            dataOwner->content = std::move(maybeFileContent.value());
-            data->content = dataOwner->content.c_str();
-            data->content_length = dataOwner->content.size();
-
-        } else {
-            // TODO: Handle include errors slightly more gracefully
-            ARKOSE_LOG(Error, "ShaderManager: could not find file '{}' included by '{}', exiting", requested_source, requesting_source);
-        }
-
-        return data;
-    }
-
-    void ReleaseInclude(shaderc_include_result* data) override
-    {
-        delete (FileData*)data->user_data;
-        delete data;
-    }
-
-private:
-    const ShaderManager& m_shaderManager;
-    OnIncludeFileCallback m_onIncludeFileCallback;
-};
-
 
 ShaderManager& ShaderManager::instance()
 {
@@ -170,7 +70,7 @@ void ShaderManager::stopFileWatching()
     m_fileWatcherThread->join();
 }
 
-std::string ShaderManager::resolveGlslPath(const std::string& name) const
+std::string ShaderManager::resolveSourceFilePath(std::string const& name) const
 {
     std::string resolvedPath = m_shaderBasePath + "/" + name;
     return resolvedPath;
@@ -218,7 +118,7 @@ std::optional<std::string> ShaderManager::loadAndCompileImmediately(const Shader
     if (entry == m_compiledShaders.end() || entry->second->lastCompileError.length() > 0) {
 
         const std::string& shaderName = shaderFile.path();
-        std::string resolvedPath = resolveGlslPath(shaderName);
+        std::string resolvedPath = resolveSourceFilePath(shaderName);
 
         if (!FileIO::isFileReadable(resolvedPath))
             return "file '" + shaderName + "' not found";
@@ -288,52 +188,23 @@ bool ShaderManager::CompiledShader::recompile()
 {
     SCOPED_PROFILE_ZONE();
 
-    std::vector<std::string> newIncludedFiles {};
-    auto includer = std::make_unique<GlslIncluder>(ShaderManager::instance(), [&newIncludedFiles](std::string includedFile) {
-        newIncludedFiles.push_back(std::move(includedFile));
-    });
-
-    shaderc::CompileOptions options;
-
-    options.SetIncluder(std::move(includer));
-    for (const ShaderDefine& define : shaderFile.defines()) {
-        if (define.value.has_value())
-            options.AddMacroDefinition(define.symbol, define.value.value());
-        else
-            options.AddMacroDefinition(define.symbol);
-    }
-
-    options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
-    options.SetTargetSpirv(shaderc_spirv_version_1_6);
-    options.SetSourceLanguage(shaderc_source_language_glsl);
-    options.SetForcedVersionProfile(460, shaderc_profile_none);
-    options.SetGenerateDebugInfo(); // always generate debug info
-
-    shaderc_shader_kind shaderKind = glslShaderKindForShaderFile(shaderFile);
-    std::string glslSource = FileIO::readEntireFile(resolvedFilePath).value();
-
-    shaderc::Compiler compiler {};
-    shaderc::SpvCompilationResult result;
-    {
-        SCOPED_PROFILE_ZONE_NAMED("ShaderC work");
-        result = compiler.CompileGlslToSpv(glslSource, shaderKind, resolvedFilePath.c_str(), options);
-    }
-
-    bool compilationSuccess = result.GetCompilationStatus() == shaderc_compilation_status_success;
+    std::unique_ptr<CompilationResult<u32>> result = ShadercInterface::compileShader(shaderFile, resolvedFilePath);
+    bool compilationSuccess = result->success();
 
     if (compilationSuccess) {
 
-        currentSpirvBinary = std::vector<uint32_t>(result.cbegin(), result.cend());
+        currentSpirvBinary = std::vector<u32>(result->begin(), result->end());
         FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvPath(shaderFile), currentSpirvBinary);
 
-        includedFilePaths = std::move(newIncludedFiles);
+        includedFilePaths = result->includedFiles();
         lastCompileError.clear();
 
         if constexpr (false)
         {
-            SCOPED_PROFILE_ZONE_NAMED("SPIR-V binary to ASM");
-            shaderc::AssemblyCompilationResult asmResult = compiler.CompileGlslToSpvAssembly(glslSource, shaderKind, resolvedFilePath.c_str(), options);
-            FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvAssemblyPath(shaderFile), std::vector<char>(asmResult.cbegin(), asmResult.cend()));
+            // TODO: Add back through ShadercInterface
+            //SCOPED_PROFILE_ZONE_NAMED("SPIR-V binary to ASM");
+            //shaderc::AssemblyCompilationResult asmResult = compiler.CompileGlslToSpvAssembly(glslSource, shaderKind, resolvedFilePath.c_str(), options);
+            //FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvAssemblyPath(shaderFile), std::vector<char>(asmResult.cbegin(), asmResult.cend()));
         }
 
         if constexpr (false)
@@ -355,11 +226,12 @@ bool ShaderManager::CompiledShader::recompile()
         }
 
     } else {
-        lastCompileError = result.GetErrorMessage();
+        lastCompileError = result->errorMessage();
     }
 
-    if (lastEditTimestamp == 0)
+    if (lastEditTimestamp == 0) {
         lastEditTimestamp = findLatestEditTimestampInIncludeTree();
+    }
     compiledTimestamp = lastEditTimestamp;
 
     return compilationSuccess;
@@ -429,7 +301,7 @@ std::vector<std::string> ShaderManager::CompiledShader::findAllIncludedFiles() c
 
             std::string includePath = (relativePath)
                 ? fmt::format("{}{}", FileIO::extractDirectoryFromPath(fileToTest), specifiedPath)
-                : shaderManager.resolveGlslPath(std::string(specifiedPath));
+                : shaderManager.resolveSourceFilePath(std::string(specifiedPath));
 
             if (std::find(files.begin(), files.end(), includePath) == files.end()) {
                 files.push_back(includePath);

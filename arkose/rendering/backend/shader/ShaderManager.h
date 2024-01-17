@@ -2,6 +2,7 @@
 
 #include "rendering/backend/shader/Shader.h"
 #include "core/Badge.h"
+#include "core/Types.h"
 #include <functional>
 #include <mutex>
 #include <optional>
@@ -19,9 +20,9 @@ class ShaderManager {
 public:
     static ShaderManager& instance();
 
-    using SpirvData = std::vector<uint32_t>;
+    using SpirvData = std::vector<u32>;
 
-    std::string resolveGlslPath(const std::string& name) const;
+    std::string resolveSourceFilePath(std::string const& name) const;
 
     std::string createShaderIdentifier(const ShaderFile&) const;
 

@@ -184,6 +184,7 @@ add_executable(ArkoseRenderer
     arkose/rendering/backend/shader/Shader.cpp
     arkose/rendering/backend/shader/ShaderFile.cpp
     arkose/rendering/backend/shader/ShaderManager.cpp
+    arkose/rendering/backend/shader/shaderc/ShadercInterface.cpp
     arkose/rendering/backend/base/AccelerationStructure.cpp
     arkose/rendering/backend/base/Backend.cpp
     arkose/rendering/backend/base/BindingSet.cpp
