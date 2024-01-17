@@ -63,8 +63,8 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
         cmdList.executeBufferCopyOperations(uploadBuffer);
 
         cmdList.beginRendering(renderState, shadowMapClearValue);
-        cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), 0);
-        cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), 1);
+        cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), scene.vertexManager().positionVertexLayout().packedVertexSize(), 0);
+        cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), scene.vertexManager().nonPositionVertexLayout().packedVertexSize(), 1);
         cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
         for (ShadowMapAtlasAllocation& shadowMapAllocation : shadowMapAllocations) {

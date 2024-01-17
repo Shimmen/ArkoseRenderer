@@ -84,8 +84,8 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
             cmdList.setNamedUniform<float>("constantBias", light->constantBias(m_shadowMap->extent()));
             cmdList.setNamedUniform<float>("slopeBias", light->slopeBias(m_shadowMap->extent()));
 
-            cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), 0);
-            cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), 1);
+            cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), scene.vertexManager().positionVertexLayout().packedVertexSize(), 0);
+            cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), scene.vertexManager().nonPositionVertexLayout().packedVertexSize(), 1);
             cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
             moodycamel::ConcurrentQueue<DrawCallDescription> drawCalls {};
