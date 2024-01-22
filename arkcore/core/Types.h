@@ -29,6 +29,13 @@ constexpr u32 narrow_cast(u64 wideValue)
     return static_cast<u32>(wideValue);
 }
 
+template<>
+constexpr u16 narrow_cast(u32 wideValue)
+{
+    ARKOSE_ASSERT(wideValue <= static_cast<u32>(UINT16_MAX));
+    return static_cast<u16>(wideValue);
+}
+
 #if defined(__clang__)
 template<>
 constexpr u32 narrow_cast(size_t wideValue)
