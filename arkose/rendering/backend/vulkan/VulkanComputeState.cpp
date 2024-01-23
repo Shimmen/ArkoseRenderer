@@ -5,8 +5,8 @@
 #include "core/Logging.h"
 #include "utility/Profiling.h"
 
-VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vector<BindingSet*> bindingSets)
-    : ComputeState(backend, shader, bindingSets)
+VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, StateBindings const& stateBindings)
+    : ComputeState(backend, shader, stateBindings)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
@@ -43,9 +43,12 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 
     std::vector<VkDescriptorSetLayout> descriptorSetLayouts {};
-    for (BindingSet* bindingSet : bindingSets) {
-        auto* vulkanBindingSet = static_cast<VulkanBindingSet*>(bindingSet);
-        descriptorSetLayouts.push_back(vulkanBindingSet->descriptorSetLayout);
+    for (BindingSet const* bindingSet : stateBindings.orderedBindingSets()) {
+        if (auto* vulkanBindingSet = static_cast<const VulkanBindingSet*>(bindingSet)) {
+            descriptorSetLayouts.push_back(vulkanBindingSet->descriptorSetLayout);
+        } else {
+            descriptorSetLayouts.push_back(vulkanBackend.emptyDescriptorSetLayout());
+        }
     }
 
     pipelineLayoutCreateInfo.setLayoutCount = (uint32_t)descriptorSetLayouts.size();
@@ -81,8 +84,8 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, std::vec
     // Remove shader modules, they are no longer needed after creating the pipeline
     vkDestroyShaderModule(vulkanBackend.device(), computeShaderStage.module, nullptr);
 
-    for (auto& set : bindingSets) {
-        for (auto& bindingInfo : set->shaderBindings()) {
+    for (BindingSet const* bindingSet : stateBindings.orderedBindingSets()) {
+        for (auto& bindingInfo : bindingSet->shaderBindings()) {
             if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
                 for (auto& texture : bindingInfo.getSampledTextures()) {
                     sampledTextures.push_back(texture);

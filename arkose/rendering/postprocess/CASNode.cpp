@@ -22,8 +22,11 @@ RenderPipelineNode::ExecuteCallback CASNode::construct(GpuScene& scene, Registry
     BindingSet& casBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(sharpenedTex, ShaderStage::Compute),
                                                        ShaderBinding::sampledTexture(inputColorTex, ShaderStage::Compute) });
 
+    StateBindings casStateBindings;
+    casStateBindings.at(0, casBindingSet);
+
     Shader casShader = Shader::createCompute("cas/cas.comp");
-    ComputeState& casState = reg.createComputeState(casShader, { &casBindingSet });
+    ComputeState& casState = reg.createComputeState(casShader, casStateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         if (!m_enabled) {
@@ -31,7 +34,6 @@ RenderPipelineNode::ExecuteCallback CASNode::construct(GpuScene& scene, Registry
         }
 
         cmdList.setComputeState(casState);
-        cmdList.bindSet(casBindingSet, 0);
 
         Extent2D targetSize = pipeline().renderResolution();
         cmdList.setNamedUniform("sharpness", m_sharpness);

@@ -49,18 +49,20 @@ RenderPipelineNode::ExecuteCallback VisibilityBufferShadingNode::construct(GpuSc
                                                           ShaderBinding::sampledTexture(*localLightShadowMapAtlas),
                                                           ShaderBinding::storageBuffer(*localLightShadowAllocations) });
 
+    StateBindings stateBindings;
+    stateBindings.at(0, cameraBindingSet);
+    stateBindings.at(1, targetBindingSet);
+    stateBindings.at(2, geometryDataBindingSet);
+    stateBindings.at(3, materialBindingSet);
+    stateBindings.at(4, lightBindingSet);
+    stateBindings.at(5, shadowBindingSet);
+
     Shader shader = Shader::createCompute("visibility-buffer/shadeVisibilityBuffer.comp");
-    ComputeState& computeState = reg.createComputeState(shader, { &cameraBindingSet, &targetBindingSet, &geometryDataBindingSet, &materialBindingSet, &lightBindingSet, &shadowBindingSet });
+    ComputeState& computeState = reg.createComputeState(shader, stateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         cmdList.setComputeState(computeState);
-        cmdList.bindSet(cameraBindingSet, 0);
-        cmdList.bindSet(targetBindingSet, 1);
-        cmdList.bindSet(geometryDataBindingSet, 2);
-        cmdList.bindSet(materialBindingSet, 3);
-        cmdList.bindSet(lightBindingSet, 4);
-        cmdList.bindSet(shadowBindingSet, 5);
 
         cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
         cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());

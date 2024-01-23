@@ -77,7 +77,7 @@ public:
     virtual std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(std::vector<RTGeometry>, BottomLevelAS const* copySource = nullptr) = 0;
     virtual std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance>) = 0;
     virtual std::unique_ptr<RayTracingState> createRayTracingState(ShaderBindingTable& sbt, const StateBindings&, uint32_t maxRecursionDepth) = 0;
-    virtual std::unique_ptr<ComputeState> createComputeState(const Shader&, std::vector<BindingSet*>) = 0;
+    virtual std::unique_ptr<ComputeState> createComputeState(Shader const&, StateBindings const&) = 0;
     virtual std::unique_ptr<UpscalingState> createUpscalingState(UpscalingTech, UpscalingQuality, Extent2D renderRes, Extent2D outputDisplayRes) = 0;
 
 protected:

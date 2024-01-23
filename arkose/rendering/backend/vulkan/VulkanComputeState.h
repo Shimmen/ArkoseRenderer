@@ -8,7 +8,7 @@
 
 struct VulkanComputeState final : public ComputeState {
 public:
-    VulkanComputeState(Backend&, Shader, std::vector<BindingSet*>);
+    VulkanComputeState(Backend&, Shader, StateBindings const&);
     virtual ~VulkanComputeState() override;
 
     virtual void setName(const std::string& name) override;

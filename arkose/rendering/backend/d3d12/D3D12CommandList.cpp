@@ -66,7 +66,7 @@ void D3D12CommandList::evaluateUpscaling(UpscalingState const&, UpscalingParamet
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
-void D3D12CommandList::bindSet(BindingSet& bindingSet, uint32_t index)
+void D3D12CommandList::bindTextureSet(BindingSet&, u32 index)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }

@@ -863,78 +863,85 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
     activeRayTracingState = nullptr;
 
     // Explicitly transition the layouts of the referenced textures to an optimal layout (if it isn't already)
-    {
-        for (Texture const* genTexture : computeState.sampledTextures) {
-            auto& texture = static_cast<VulkanTexture const&>(*genTexture);
+    std::vector<VkImageMemoryBarrier> imageMemoryBarriers {};
+    computeState.stateBindings().forEachBinding([&](ShaderBinding const& bindingInfo) {
+        if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
+            for (Texture const* texture : bindingInfo.getSampledTextures()) {
+                auto& vulkanTexture = static_cast<VulkanTexture const&>(*texture);
 
-            constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-            if (texture.currentLayout != targetLayout) {
+                constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+                if (vulkanTexture.currentLayout != targetLayout) {
 
-                VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-                imageBarrier.oldLayout = texture.currentLayout;
-                imageBarrier.newLayout = targetLayout;
-                imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+                    imageBarrier.oldLayout = vulkanTexture.currentLayout;
+                    imageBarrier.newLayout = targetLayout;
+                    imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-                imageBarrier.image = texture.image;
-                imageBarrier.subresourceRange.aspectMask = texture.aspectMask();
-                imageBarrier.subresourceRange.baseMipLevel = 0;
-                imageBarrier.subresourceRange.levelCount = texture.mipLevels();
-                imageBarrier.subresourceRange.baseArrayLayer = 0;
-                imageBarrier.subresourceRange.layerCount = texture.layerCount();
+                    imageBarrier.image = vulkanTexture.image;
+                    imageBarrier.subresourceRange.aspectMask = vulkanTexture.aspectMask();
+                    imageBarrier.subresourceRange.baseMipLevel = 0;
+                    imageBarrier.subresourceRange.levelCount = vulkanTexture.mipLevels();
+                    imageBarrier.subresourceRange.baseArrayLayer = 0;
+                    imageBarrier.subresourceRange.layerCount = vulkanTexture.layerCount();
 
-                VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-                imageBarrier.srcAccessMask = 0;
+                    VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                    imageBarrier.srcAccessMask = 0;
 
-                VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-                imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+                    VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+                    imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-                vkCmdPipelineBarrier(m_commandBuffer,
-                                     sourceStage, destinationStage, 0,
-                                     0, nullptr,
-                                     0, nullptr,
-                                     1, &imageBarrier);
-                texture.currentLayout = targetLayout;
+                    imageMemoryBarriers.push_back(imageBarrier);
+                    vulkanTexture.currentLayout = targetLayout;
+                }
+            }
+        } else if (bindingInfo.type() == ShaderBindingType::StorageTexture) {
+            for (TextureMipView textureMip : bindingInfo.getStorageTextures()) {
+                auto& vulkanTexture = static_cast<VulkanTexture&>(textureMip.texture());
+
+                constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_GENERAL;
+                if (vulkanTexture.currentLayout != targetLayout) {
+
+                    VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+                    imageBarrier.oldLayout = vulkanTexture.currentLayout;
+                    imageBarrier.newLayout = targetLayout;
+                    imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+                    imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+                    // NOTE: We always transition all mips so we can ensure our invariant of same layout accross mips holds.
+                    imageBarrier.image = vulkanTexture.image;
+                    imageBarrier.subresourceRange.aspectMask = vulkanTexture.aspectMask();
+                    imageBarrier.subresourceRange.baseMipLevel = 0;
+                    imageBarrier.subresourceRange.levelCount = vulkanTexture.mipLevels();
+                    imageBarrier.subresourceRange.baseArrayLayer = 0;
+                    imageBarrier.subresourceRange.layerCount = vulkanTexture.layerCount();
+
+                    VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+                    imageBarrier.srcAccessMask = 0;
+
+                    VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
+                    imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT; // FIXME: Maybe memory read & write?
+
+                    imageMemoryBarriers.push_back(imageBarrier);
+                    vulkanTexture.currentLayout = targetLayout;
+                }
             }
         }
+    });
 
-        for (TextureMipView textureMip : computeState.storageImages) {
-            auto& texture = static_cast<VulkanTexture&>(textureMip.texture());
-
-            constexpr VkImageLayout targetLayout = VK_IMAGE_LAYOUT_GENERAL;
-            if (texture.currentLayout != targetLayout) {
-
-                VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-                imageBarrier.oldLayout = texture.currentLayout;
-                imageBarrier.newLayout = targetLayout;
-                imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-                imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-                // NOTE: We always transition all mips so we can ensure our invariant of same layout accross mips holds.
-                imageBarrier.image = texture.image;
-                imageBarrier.subresourceRange.aspectMask = texture.aspectMask();
-                imageBarrier.subresourceRange.baseMipLevel = 0;
-                imageBarrier.subresourceRange.levelCount = texture.mipLevels();
-                imageBarrier.subresourceRange.baseArrayLayer = 0;
-                imageBarrier.subresourceRange.layerCount = texture.layerCount();
-
-                VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-                imageBarrier.srcAccessMask = 0;
-
-                VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
-                imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT; // FIXME: Maybe memory read & write?
-
-                vkCmdPipelineBarrier(m_commandBuffer,
-                                     sourceStage, destinationStage, 0,
-                                     0, nullptr,
-                                     0, nullptr,
-                                     1, &imageBarrier);
-                texture.currentLayout = targetLayout;
-            }
-        }
+    if (imageMemoryBarriers.size() > 0) {
+        vkCmdPipelineBarrier(m_commandBuffer,
+                             VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0,
+                             0, nullptr,
+                             0, nullptr,
+                             narrow_cast<u32>(imageMemoryBarriers.size()), imageMemoryBarriers.data());
     }
 
     vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_COMPUTE, computeState.pipeline);
+
+    computeState.stateBindings().forEachBindingSet([this](u32 setIndex, BindingSet& bindingSet) {
+        bindSet(bindingSet, setIndex);
+    });
 }
 
 void VulkanCommandList::evaluateUpscaling(UpscalingState const& upscalingState, UpscalingParameters parameters)
@@ -954,7 +961,7 @@ void VulkanCommandList::evaluateUpscaling(UpscalingState const& upscalingState, 
     }
 }
 
-void VulkanCommandList::bindSet(BindingSet& bindingSet, uint32_t index)
+void VulkanCommandList::bindSet(BindingSet& bindingSet, u32 index)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
@@ -970,6 +977,27 @@ void VulkanCommandList::bindSet(BindingSet& bindingSet, uint32_t index)
 
     auto& vulkanBindingSet = static_cast<VulkanBindingSet&>(bindingSet);
     vkCmdBindDescriptorSets(m_commandBuffer, bindPoint, pipelineLayout, index, 1, &vulkanBindingSet.descriptorSet, 0, nullptr);
+}
+
+void VulkanCommandList::bindTextureSet(BindingSet& bindingSet, u32 index)
+{
+    // Ensure we only have sampled textures in the set, and that they are all available to be read from
+    for (ShaderBinding const& shaderBinding : bindingSet.shaderBindings()) {
+        ARKOSE_ASSERT(shaderBinding.type() == ShaderBindingType::SampledTexture);
+
+        // NOTE: I don't think this is strictly needed, as all layouts are technically valid to sample from(?)
+        // However, it might be good to ensure that they are in a GOOD layout to be sampled as well..
+        // auto const* vulkanTexture = static_cast<VulkanTexture const*>(shaderBinding.getSampledTexture());
+        // ARKOSE_ASSERT(vulkanTexture->currentLayout == VK_IMAGE_LAYOUT_GENERAL
+        //              || vulkanTexture->currentLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
+        //              || vulkanTexture->currentLayout == VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL
+        //              || vulkanTexture->currentLayout == VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_OPTIMAL
+        //              || vulkanTexture->currentLayout == VK_IMAGE_LAYOUT_STENCIL_READ_ONLY_OPTIMAL
+        //              || vulkanTexture->currentLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL
+        //              || vulkanTexture->currentLayout == VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL);
+    }
+
+    bindSet(bindingSet, index);
 }
 
 void VulkanCommandList::setNamedUniform(const std::string& name, void* data, size_t size)

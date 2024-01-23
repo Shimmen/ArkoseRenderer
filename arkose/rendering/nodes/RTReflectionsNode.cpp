@@ -54,10 +54,10 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
     m_radianceHistoryTex = &reg.createTexture2D(extent, Texture::Format::RGBA16F); // TODO: alpha not used
     m_depthRoughnessVarianceNumSamplesHistoryTex = &reg.createTexture2D(extent, Texture::Format::RGBA16F); // TODO: Some of these could be stuffed in the other two history textures!
 
-    DenoiserPassData& historyCopyData = createDenoiserHistoryCopyState(reg);
-    DenoiserPassData& reprojectData = createDenoiserReprojectState(reg);
-    DenoiserPassData& prefilterData = createDenoiserPrefilterState(reg);
-    DenoiserPassData& temporalResolveData = createDenoiserTemporalResolveState(reg);
+    ComputeState& historyCopyState = createDenoiserHistoryCopyState(reg);
+    ComputeState& reprojectState = createDenoiserReprojectState(reg);
+    ComputeState& prefilterState = createDenoiserPrefilterState(reg);
+    ComputeState& temporalResolveState = createDenoiserTemporalResolveState(reg);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
@@ -89,8 +89,7 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
 
             if (firstFrame) {
                 // Perform initial copy over to history textures
-                cmdList.setComputeState(historyCopyData.state);
-                cmdList.bindSet(historyCopyData.bindings, 0);
+                cmdList.setComputeState(historyCopyState);
                 cmdList.setNamedUniform<bool>("firstCopy", true);
                 cmdList.dispatch(mainExtent, dispatchLocalSize);
 
@@ -107,8 +106,7 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
                 cmdList.setNamedUniform("temporalStability", m_temporalStability);
             };
 
-            cmdList.setComputeState(reprojectData.state);
-            cmdList.bindSet(reprojectData.bindings, 0);
+            cmdList.setComputeState(reprojectState);
             setNoTracingRoughnessThreshold();
             setTemporalStability();
             cmdList.dispatch(mainExtent, dispatchLocalSize);
@@ -116,23 +114,20 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
             cmdList.textureWriteBarrier(*m_varianceTex);
             cmdList.textureWriteBarrier(*m_averageRadianceTex);
 
-            cmdList.setComputeState(prefilterData.state);
-            cmdList.bindSet(prefilterData.bindings, 0);
+            cmdList.setComputeState(prefilterState);
             setNoTracingRoughnessThreshold();
             cmdList.dispatch(mainExtent, dispatchLocalSize);
 
             cmdList.textureWriteBarrier(*m_numSamplesTex);
             cmdList.textureWriteBarrier(*m_reprojectedRadianceTex);
 
-            cmdList.setComputeState(temporalResolveData.state);
-            cmdList.bindSet(temporalResolveData.bindings, 0);
+            cmdList.setComputeState(temporalResolveState);
             setNoTracingRoughnessThreshold();
             setTemporalStability();
             cmdList.dispatch(mainExtent, dispatchLocalSize);
 
             // Copy over to history textures
-            cmdList.setComputeState(historyCopyData.state);
-            cmdList.bindSet(historyCopyData.bindings, 0);
+            cmdList.setComputeState(historyCopyState);
             cmdList.setNamedUniform<bool>("firstCopy", false);
             cmdList.dispatch(mainExtent, dispatchLocalSize);
 
@@ -190,7 +185,7 @@ RayTracingState& RTReflectionsNode::createRayTracingState(GpuScene& scene, Regis
     return rtState;
 }
 
-RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserHistoryCopyState(Registry& reg)
+ComputeState& RTReflectionsNode::createDenoiserHistoryCopyState(Registry& reg)
 {
     Shader historyCopyShader = Shader::createCompute("rt-reflections/historyCopy.comp");
 
@@ -205,13 +200,16 @@ RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserHistoryCop
                                                   ShaderBinding::sampledTexture(*reg.getTexture("SceneMaterial")),
                                                   ShaderBinding::sampledTexture(*reg.getTexture("SceneNormalVelocity")) });
 
-    ComputeState& historyCopyState = reg.createComputeState(historyCopyShader, { &bindings });
+    StateBindings stateBindings;
+    stateBindings.at(0, bindings);
+
+    ComputeState& historyCopyState = reg.createComputeState(historyCopyShader, stateBindings);
     historyCopyState.setName("DenoiserHistoryCopy");
 
-    return reg.allocate<DenoiserPassData>(historyCopyState, bindings);
+    return historyCopyState;
 }
 
-RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserReprojectState(Registry& reg)
+ComputeState& RTReflectionsNode::createDenoiserReprojectState(Registry& reg)
 {
     Shader reprojectShader = Shader::createCompute("rt-reflections/reproject.comp");
 
@@ -228,13 +226,16 @@ RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserReprojectS
                                                   ShaderBinding::sampledTexture(*reg.getTexture("SceneMaterial")),
                                                   ShaderBinding::sampledTexture(*reg.getTexture("SceneNormalVelocity")) });
 
-    ComputeState& reprojectState = reg.createComputeState(reprojectShader, { &bindings });
+    StateBindings stateBindings;
+    stateBindings.at(0, bindings);
+
+    ComputeState& reprojectState = reg.createComputeState(reprojectShader, stateBindings);
     reprojectState.setName("DenoiserReproject");
 
-    return reg.allocate<DenoiserPassData>(reprojectState, bindings);
+    return reprojectState;
 }
 
-RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserPrefilterState(Registry& reg)
+ComputeState& RTReflectionsNode::createDenoiserPrefilterState(Registry& reg)
 {
     Shader prefilterShader = Shader::createCompute("rt-reflections/prefilter.comp");
 
@@ -247,13 +248,16 @@ RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserPrefilterS
                                                   ShaderBinding::sampledTexture(*reg.getTexture("SceneMaterial")),
                                                   ShaderBinding::sampledTexture(*reg.getTexture("SceneNormalVelocity")) });
 
-    ComputeState& prefilterState = reg.createComputeState(prefilterShader, { &bindings });
+    StateBindings stateBindings;
+    stateBindings.at(0, bindings);
+
+    ComputeState& prefilterState = reg.createComputeState(prefilterShader, stateBindings);
     prefilterState.setName("DenoiserPrefilter");
 
-    return reg.allocate<DenoiserPassData>(prefilterState, bindings);
+    return prefilterState;
 }
 
-RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserTemporalResolveState(Registry& reg)
+ComputeState& RTReflectionsNode::createDenoiserTemporalResolveState(Registry& reg)
 {
     Shader temporalResolveShader = Shader::createCompute("rt-reflections/resolveTemporal.comp");
 
@@ -266,8 +270,11 @@ RTReflectionsNode::DenoiserPassData& RTReflectionsNode::createDenoiserTemporalRe
                                                   ShaderBinding::sampledTexture(*m_reprojectedRadianceTex),
                                                   ShaderBinding::sampledTexture(*reg.getTexture("SceneMaterial")) });
 
-    ComputeState& temporalResolveState = reg.createComputeState(temporalResolveShader, { &bindings });
+    StateBindings stateBindings;
+    stateBindings.at(0, bindings);
+
+    ComputeState& temporalResolveState = reg.createComputeState(temporalResolveShader, stateBindings);
     temporalResolveState.setName("DenoiserTemporalResolve");
 
-    return reg.allocate<DenoiserPassData>(temporalResolveState, bindings);
+    return temporalResolveState;
 }

@@ -29,8 +29,12 @@ RenderPipelineNode::ExecuteCallback FogNode::construct(GpuScene& scene, Registry
                                                        ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::Compute),
                                                        ShaderBinding::sampledTexture(directionalLightShadowMap, ShaderStage::Compute) });
 
+    StateBindings fogStateBindings;
+    fogStateBindings.at(0, fogBindingSet);
+    fogStateBindings.at(1, sceneLightSet);
+
     Shader fogShader = Shader::createCompute("postprocess/fog.comp");
-    ComputeState& fogState = reg.createComputeState(fogShader, { &fogBindingSet, &sceneLightSet });
+    ComputeState& fogState = reg.createComputeState(fogShader, fogStateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         if (!m_enabled || m_fogDensity < 1e-6f) {
@@ -38,8 +42,6 @@ RenderPipelineNode::ExecuteCallback FogNode::construct(GpuScene& scene, Registry
         }
 
         cmdList.setComputeState(fogState);
-        cmdList.bindSet(fogBindingSet, 0);
-        cmdList.bindSet(sceneLightSet, 1);
 
         Extent2D targetSize = pipeline().renderResolution();
         cmdList.setNamedUniform("targetSize", targetSize);

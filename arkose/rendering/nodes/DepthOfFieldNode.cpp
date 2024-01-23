@@ -31,16 +31,20 @@ RenderPipelineNode::ExecuteCallback DepthOfFieldNode::construct(GpuScene& scene,
     BindingSet& calculateCocBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(circleOfConfusionTex, ShaderStage::Compute),
                                                                 ShaderBinding::sampledTexture(sceneDepth, ShaderStage::Compute),
                                                                 ShaderBinding::constantBuffer(sceneCameraBuffer, ShaderStage::Compute) });
+    StateBindings calculateCocStateBindings;
+    calculateCocStateBindings.at(0, calculateCocBindingSet);
     Shader calculateCocShader = Shader::createCompute("depth-of-field/calculateCoc.comp");
-    ComputeState& calculateCocState = reg.createComputeState(calculateCocShader, { &calculateCocBindingSet });
+    ComputeState& calculateCocState = reg.createComputeState(calculateCocShader, calculateCocStateBindings);
 
     // Blur step
     BindingSet& blurBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(depthOfFieldTex, ShaderStage::Compute),
                                                         ShaderBinding::sampledTexture(circleOfConfusionTex, ShaderStage::Compute),
                                                         ShaderBinding::sampledTexture(sceneColor, ShaderStage::Compute),
                                                         ShaderBinding::constantBuffer(sceneCameraBuffer, ShaderStage::Compute) });
+    StateBindings blurStateBindings;
+    blurStateBindings.at(0, blurBindingSet);
     Shader blurShader = Shader::createCompute("depth-of-field/bokehBlur.comp");
-    ComputeState& blurState = reg.createComputeState(blurShader, { &blurBindingSet });
+    ComputeState& blurState = reg.createComputeState(blurShader, blurStateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
@@ -53,7 +57,6 @@ RenderPipelineNode::ExecuteCallback DepthOfFieldNode::construct(GpuScene& scene,
 
         // Calculate CoC at full resolution
         cmdList.setComputeState(calculateCocState);
-        cmdList.bindSet(calculateCocBindingSet, 0);
         cmdList.setNamedUniform("targetSize", targetSize);
         cmdList.setNamedUniform("focusDepth", camera.focusDepth());
         cmdList.dispatch(targetSize, { 8, 8, 1 });
@@ -65,7 +68,6 @@ RenderPipelineNode::ExecuteCallback DepthOfFieldNode::construct(GpuScene& scene,
 
         // Perform blur
         cmdList.setComputeState(blurState);
-        cmdList.bindSet(blurBindingSet, 0);
         cmdList.setNamedUniform("targetSize", targetSize);
         cmdList.setNamedUniform("circleOfConfusionMmToPx", cocMmToPx);
         cmdList.setNamedUniform("maxBlurSize", m_maxBlurSize);

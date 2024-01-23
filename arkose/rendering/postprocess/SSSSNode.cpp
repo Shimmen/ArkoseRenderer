@@ -74,8 +74,13 @@ RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registr
                                                         ShaderBinding::sampledTexture(sceneBaseColor, ShaderStage::Compute),
                                                         ShaderBinding::constantBuffer(samplesBuffer, ShaderStage::Compute),
                                                         ShaderBinding::constantBuffer(sceneCameraBuffer, ShaderStage::Compute) });
+
+    StateBindings ssssStateBindings;
+    ssssStateBindings.at(0, ssssBindingSet);
+    ssssStateBindings.at(1, visibilityBufferSampleSet);
+
     Shader ssssShader = Shader::createCompute("postprocess/ssss.comp", { ShaderDefine::makeInt("MAX_SAMPLE_COUNT", MaxSampleCount) });
-    ComputeState& ssssState = reg.createComputeState(ssssShader, { &ssssBindingSet, &visibilityBufferSampleSet });
+    ComputeState& ssssState = reg.createComputeState(ssssShader, ssssStateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         if (!m_enabled) {
@@ -89,8 +94,6 @@ RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registr
         }
 
         cmdList.setComputeState(ssssState);
-        cmdList.bindSet(ssssBindingSet, 0);
-        cmdList.bindSet(visibilityBufferSampleSet, 1);
 
         Extent2D targetSize = pipeline().renderResolution();
         cmdList.setNamedUniform("targetSize", targetSize);

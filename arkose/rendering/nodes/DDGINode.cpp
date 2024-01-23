@@ -94,22 +94,30 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
 
     BindingSet& irradianceUpdateBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(surfelImage, ShaderStage::Compute),
                                                                     ShaderBinding::storageTexture(probeAtlasIrradiance, ShaderStage::Compute) });
-    ComputeState& irradianceProbeUpdateState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateIrradiance.comp"), { &irradianceUpdateBindingSet });
+    StateBindings irradianceUpdateStateBindings;
+    irradianceUpdateStateBindings.at(0, irradianceUpdateBindingSet);
+    ComputeState& irradianceProbeUpdateState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateIrradiance.comp"), irradianceUpdateStateBindings);
 
 
     BindingSet& visibilityUpdateBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(surfelImage, ShaderStage::Compute),
                                                                     ShaderBinding::storageTexture(probeAtlasVisibility, ShaderStage::Compute) });
-    ComputeState& visibilityProbeUpdateState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateVisibility.comp"), { &visibilityUpdateBindingSet });
+    StateBindings visibilityUpdateStateBindings;
+    visibilityUpdateStateBindings.at(0, visibilityUpdateBindingSet);
+    ComputeState& visibilityProbeUpdateState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateVisibility.comp"), visibilityUpdateStateBindings);
 
     BindingSet& probeBorderCopyBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(probeAtlasIrradiance, ShaderStage::Compute),
                                                                    ShaderBinding::storageTexture(probeAtlasVisibility, ShaderStage::Compute) });
-    ComputeState& probeBorderCopyCornersState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyCorners.comp"), { &probeBorderCopyBindingSet });
-    ComputeState& probeBorderCopyIrradianceEdgesState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyEdges.comp", { ShaderDefine::makeInt("TILE_SIZE", DDGI_IRRADIANCE_RES) }), { &probeBorderCopyBindingSet });
-    ComputeState& probeBorderCopyVisibilityEdgesState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyEdges.comp", { ShaderDefine::makeInt("TILE_SIZE", DDGI_VISIBILITY_RES) }), { &probeBorderCopyBindingSet });
+    StateBindings probeBorderCopyStateBindings;
+    probeBorderCopyStateBindings.at(0, probeBorderCopyBindingSet);
+    ComputeState& probeBorderCopyCornersState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyCorners.comp"), probeBorderCopyStateBindings);
+    ComputeState& probeBorderCopyIrradianceEdgesState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyEdges.comp", { ShaderDefine::makeInt("TILE_SIZE", DDGI_IRRADIANCE_RES) }), probeBorderCopyStateBindings);
+    ComputeState& probeBorderCopyVisibilityEdgesState = reg.createComputeState(Shader::createCompute("ddgi/probeBorderCopyEdges.comp", { ShaderDefine::makeInt("TILE_SIZE", DDGI_VISIBILITY_RES) }), probeBorderCopyStateBindings);
 
     BindingSet& probeUpdateOffsetBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(surfelImage, ShaderStage::Compute),
                                                                      ShaderBinding::storageBuffer(probeOffsetBuffer, ShaderStage::Compute) });
-    ComputeState& probeMoveComputeState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateOffset.comp", { ShaderDefine::makeInt("SURFELS_PER_PROBE", MaxNumProbeSamples) }), { &probeUpdateOffsetBindingSet });
+    StateBindings probeUpdateOffsetStateBindings;
+    probeUpdateOffsetStateBindings.at(0, probeUpdateOffsetBindingSet);
+    ComputeState& probeMoveComputeState = reg.createComputeState(Shader::createCompute("ddgi/probeUpdateOffset.comp", { ShaderDefine::makeInt("SURFELS_PER_PROBE", MaxNumProbeSamples) }), probeUpdateOffsetStateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         
@@ -154,7 +162,6 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
             ScopedDebugZone updateIrradianceProbesZone(cmdList, "Update irradiance probes");
 
             cmdList.setComputeState(irradianceProbeUpdateState);
-            cmdList.bindSet(irradianceUpdateBindingSet, 0);
 
             cmdList.setNamedUniform("hysterisis", appState.isFirstFrame() ? 0.0f : m_hysteresisIrradiance);
             cmdList.setNamedUniform("gridDimensions", gridDimensions);
@@ -170,7 +177,6 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
             ScopedDebugZone updateVisibilityProbesZone(cmdList, "Update visibility probes");
 
             cmdList.setComputeState(visibilityProbeUpdateState);
-            cmdList.bindSet(visibilityUpdateBindingSet, 0);
 
             cmdList.setNamedUniform("hysterisis", appState.isFirstFrame() ? 0.0f : m_hysteresisVisibility);
             cmdList.setNamedUniform("visibilitySharpness", m_visibilitySharpness);
@@ -199,7 +205,6 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
                 ScopedDebugZone copyProbeBordersZone(cmdList, "Copy probe corners");
 
                 cmdList.setComputeState(probeBorderCopyCornersState);
-                cmdList.bindSet(probeBorderCopyBindingSet, 0);
                 cmdList.dispatch(probeCountX, probeCountY, 2);
             }
 
@@ -207,7 +212,6 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
                 ScopedDebugZone copyProbeEdgesZone(cmdList, "Copy probe edges (irradiance)");
 
                 cmdList.setComputeState(probeBorderCopyIrradianceEdgesState);
-                cmdList.bindSet(probeBorderCopyBindingSet, 0);
                 cmdList.dispatch(probeCountX, probeCountY, 1);
             }
 
@@ -215,7 +219,6 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
                 ScopedDebugZone copyProbeEdgesZone(cmdList, "Copy probe edges (visibility)");
 
                 cmdList.setComputeState(probeBorderCopyVisibilityEdgesState);
-                cmdList.bindSet(probeBorderCopyBindingSet, 0);
                 cmdList.dispatch(probeCountX, probeCountY, 1);
             }
         }
@@ -225,7 +228,6 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
             ScopedDebugZone traceRaysZone(cmdList, "Update probe positions");
 
             cmdList.setComputeState(probeMoveComputeState);
-            cmdList.bindSet(probeUpdateOffsetBindingSet, 0);
 
             cmdList.setNamedUniform("raysPerProbe", raysPerProbe);
             cmdList.setNamedUniform("frameIdx", frameIdx);

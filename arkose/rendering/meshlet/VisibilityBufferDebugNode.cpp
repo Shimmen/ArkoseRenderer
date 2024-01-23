@@ -30,13 +30,15 @@ RenderPipelineNode::ExecuteCallback VisibilityBufferDebugNode::construct(GpuScen
                                                     ShaderBinding::sampledTexture(instanceVisibilityTexture),
                                                     ShaderBinding::sampledTexture(triangleVisibilityTexture) });
 
+    StateBindings stateBindings;
+    stateBindings.at(0, bindingSet);
+
     Shader shader = Shader::createCompute("visibility-buffer/visualizeVisibilityBuffer.comp");
-    ComputeState& computeState = reg.createComputeState(shader, { &bindingSet });
+    ComputeState& computeState = reg.createComputeState(shader, stateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         cmdList.setComputeState(computeState);
-        cmdList.bindSet(bindingSet, 0);
         cmdList.setNamedUniform("mode", static_cast<i32>(m_mode));
         cmdList.dispatch(visualizationTexture.extent3D(), { 8, 8, 1 });
 

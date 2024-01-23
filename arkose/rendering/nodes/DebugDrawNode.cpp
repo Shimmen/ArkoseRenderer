@@ -111,7 +111,7 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
         if (numTriangleVertices > 0) {
             cmdList.beginRendering(trianglesRenderState);
             for (DebugDrawMesh const& mesh : m_debugDrawMeshes) {
-                cmdList.bindSet(*m_debugDrawTextures.get(mesh.textureBindingSetHandle), 1);
+                cmdList.bindTextureSet(*m_debugDrawTextures.get(mesh.textureBindingSetHandle), 1);
                 cmdList.bindVertexBuffer(*m_triangleVertexBuffer, trianglesRenderState.vertexLayout().packedVertexSize(), 0);
                 cmdList.draw(mesh.numVertices, mesh.firstVertex);
             }

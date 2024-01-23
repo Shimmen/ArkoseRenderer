@@ -601,9 +601,9 @@ std::unique_ptr<RenderState> D3D12Backend::createRenderState(RenderTarget const&
     return std::make_unique<D3D12RenderState>(*this, renderTarget, vertexLayouts, shader, stateBindings, rasterState, depthState, stencilState);
 }
 
-std::unique_ptr<ComputeState> D3D12Backend::createComputeState(const Shader& shader, std::vector<BindingSet*> bindingSets)
+std::unique_ptr<ComputeState> D3D12Backend::createComputeState(Shader const& shader, StateBindings const& stateBindings)
 {
-    return std::make_unique<D3D12ComputeState>(*this, shader, bindingSets);
+    return std::make_unique<D3D12ComputeState>(*this, shader, stateBindings);
 }
 
 std::unique_ptr<BottomLevelAS> D3D12Backend::createBottomLevelAccelerationStructure(std::vector<RTGeometry> geometries, BottomLevelAS const* copySource)

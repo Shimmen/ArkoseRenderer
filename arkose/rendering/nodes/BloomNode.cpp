@@ -12,9 +12,6 @@ void BloomNode::drawGui()
 
 RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Registry& reg)
 {
-    m_downsampleSets.clear(); // remove me!
-    m_upsampleSets.clear(); // remove me!
-
     m_downsampleStates.clear();
     m_upsampleStates.clear();
 
@@ -40,17 +37,21 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
                                                          ShaderBinding::storageTextureAtMip(upsampleTex, i, ShaderStage::Compute),
                                                          ShaderBinding::storageTextureAtMip(downsampleTex, i - 1, ShaderStage::Compute) });
 
-        m_downsampleSets.push_back(&downsampleSet); // remove me!
-        m_upsampleSets.push_back(&upsampleSet); // remove me!
+        StateBindings downsampleStateBindings;
+        downsampleStateBindings.at(0, downsampleSet);
+        m_downsampleStates.push_back(&reg.createComputeState(downsampleShader, downsampleStateBindings));
 
-        m_downsampleStates.push_back(&reg.createComputeState(downsampleShader, { &downsampleSet }));
-        m_upsampleStates.push_back(&reg.createComputeState(upsampleShader, { &upsampleSet }));
+        StateBindings upsampleStateBindings;
+        upsampleStateBindings.at(0, upsampleSet);
+        m_upsampleStates.push_back(&reg.createComputeState(upsampleShader, upsampleStateBindings));
     }
 
     BindingSet& blendBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(mainTexture, ShaderStage::Compute),
                                                          ShaderBinding::sampledTexture(upsampleTex, ShaderStage::Compute) });
     Shader bloomBlendShader = Shader::createCompute("bloom/blend.comp");
-    ComputeState& bloomBlendComputeState = reg.createComputeState(bloomBlendShader, { &blendBindingSet });
+    StateBindings bloomBlendStateBindings;
+    bloomBlendStateBindings.at(0, blendBindingSet);
+    ComputeState& bloomBlendComputeState = reg.createComputeState(bloomBlendShader, bloomBlendStateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
@@ -68,7 +69,6 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
 
             size_t stateIdx = targetMip - 1;
             cmdList.setComputeState(*m_downsampleStates[stateIdx]);
-            cmdList.bindSet(*m_downsampleSets[stateIdx], 0); // remove me!
 
             // Only for mip0 -> mip1, apply brightness normalization to prevent fireflies.
             bool applyNormalization = targetMip == 1;
@@ -86,7 +86,6 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
 
             size_t stateIdx = targetMip;
             cmdList.setComputeState(*m_upsampleStates[stateIdx]);
-            cmdList.bindSet(*m_upsampleSets[stateIdx], 0); // remove me!
 
             cmdList.setNamedUniform("blurRadius", m_upsampleBlurRadius);
 
@@ -97,7 +96,6 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
         // Blend the bloom contribution back into the target texture
         {
             cmdList.setComputeState(bloomBlendComputeState);
-            cmdList.bindSet(blendBindingSet, 0);
             cmdList.setNamedUniform("bloomBlend", m_bloomBlend);
             cmdList.dispatch(mainTexture.extent(), localSizeForComp);
         }

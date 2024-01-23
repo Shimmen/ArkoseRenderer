@@ -549,9 +549,9 @@ std::unique_ptr<RayTracingState> VulkanBackend::createRayTracingState(ShaderBind
     }
 }
 
-std::unique_ptr<ComputeState> VulkanBackend::createComputeState(const Shader& shader, std::vector<BindingSet*> bidningSets)
+std::unique_ptr<ComputeState> VulkanBackend::createComputeState(Shader const& shader, StateBindings const& stateBindings)
 {
-    return std::make_unique<VulkanComputeState>(*this, shader, bidningSets);
+    return std::make_unique<VulkanComputeState>(*this, shader, stateBindings);
 }
 
 std::unique_ptr<UpscalingState> VulkanBackend::createUpscalingState(UpscalingTech tech, UpscalingQuality quality, Extent2D renderRes, Extent2D outputDisplayRes)

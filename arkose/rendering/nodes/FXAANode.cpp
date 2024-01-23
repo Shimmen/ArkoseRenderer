@@ -11,8 +11,11 @@ RenderPipelineNode::ExecuteCallback FXAANode::construct(GpuScene& scene, Registr
     BindingSet& fxaaBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(replaceTex, ShaderStage::Compute),
                                                         ShaderBinding::sampledTexture(ldrTexture, ShaderStage::Compute) });
 
+    StateBindings stateBindings;
+    stateBindings.at(0, fxaaBindingSet);
+
     Shader computeShader = Shader::createCompute("fxaa/anti-alias.comp");
-    ComputeState& fxaaComputeState = reg.createComputeState(computeShader, { &fxaaBindingSet });
+    ComputeState& fxaaComputeState = reg.createComputeState(computeShader, stateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
@@ -31,7 +34,6 @@ RenderPipelineNode::ExecuteCallback FXAANode::construct(GpuScene& scene, Registr
 
         if (enabled) {
             cmdList.setComputeState(fxaaComputeState);
-            cmdList.bindSet(fxaaBindingSet, 0);
 
             vec2 pixelSize = vec2(1.0f / ldrTexture.extent().width(), 1.0f / ldrTexture.extent().height());
             cmdList.setNamedUniform("fxaaQualityRcpFrame", pixelSize);

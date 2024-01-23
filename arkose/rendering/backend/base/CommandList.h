@@ -24,7 +24,13 @@ public:
 
     virtual void evaluateUpscaling(UpscalingState const&, UpscalingParameters) = 0;
 
-    virtual void bindSet(BindingSet&, uint32_t index) = 0;
+    // In general we don't want to be rebinding a bunch of textures while rendering, as we support bindless
+    // throughout, but there are some cases where being able to just bind a texture directly is very useful.
+    // This function allows you to bind a binding set consisting of only sampled textures, with a layout
+    // matching your shader. Note that it's your own responsibility to ensure that the textures are in a
+    // suitable state for being sampled, as this function will NOT transition any textures.
+    virtual void bindTextureSet(BindingSet&, u32 index) = 0;
+
     virtual void setNamedUniform(const std::string& name, void*, size_t size) = 0;
 
     template<typename T>

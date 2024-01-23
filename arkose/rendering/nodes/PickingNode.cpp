@@ -32,7 +32,10 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
                                                                 ShaderBinding::storageTexture(indexTexture, ShaderStage::Compute),
                                                                 ShaderBinding::sampledTexture(depthTexture, ShaderStage::Compute),
                                                                 ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::Compute) });
-    ComputeState& collectState = reg.createComputeState(collectorShader, { &collectIndexBindingSet });
+    StateBindings collectIndexStateBindings;
+    collectIndexStateBindings.at(0, collectIndexBindingSet);
+
+    ComputeState& collectState = reg.createComputeState(collectorShader, collectIndexStateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
@@ -100,10 +103,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
             cmdList.textureWriteBarrier(depthTexture);
 
             cmdList.setComputeState(collectState);
-            cmdList.bindSet(collectIndexBindingSet, 0);
-
             cmdList.setNamedUniform("mousePosition", pickLocation);
-
             cmdList.dispatch(indexTexture.extent(), { 16, 16, 1 });
 
             m_pendingDeferredResult = DeferredResult { .resultBuffer = &resultBuffer,

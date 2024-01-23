@@ -336,7 +336,9 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                             ShaderBinding::storageBuffer(m_vertexManager->nonPositionVertexBuffer()),
                                                             ShaderBinding::storageBufferReadonly(m_vertexManager->skinningDataVertexBuffer()),
                                                             ShaderBinding::storageBufferReadonly(*m_jointMatricesBuffer) });
-    ComputeState& skinningComputeState = reg.createComputeState(skinningShader, { &skinningBindingSet });
+    StateBindings skinningStateBindings;
+    skinningStateBindings.at(0, skinningBindingSet);
+    ComputeState& skinningComputeState = reg.createComputeState(skinningShader, skinningStateBindings);
 
     return [&, rtTriangleMeshBufferPtr](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
@@ -500,7 +502,6 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             ScopedDebugZone skinningZone { cmdList, "Skinning" };
 
             cmdList.setComputeState(skinningComputeState);
-            cmdList.bindSet(skinningBindingSet, 0);
 
             for (auto const& skeletalMeshInstance : m_skeletalMeshInstances) {
 

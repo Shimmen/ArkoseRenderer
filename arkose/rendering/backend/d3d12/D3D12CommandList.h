@@ -24,7 +24,8 @@ public:
 
     void evaluateUpscaling(UpscalingState const&, UpscalingParameters) override;
 
-    void bindSet(BindingSet&, uint32_t index) override;
+    void bindTextureSet(BindingSet&, u32 index) override;
+
     void setNamedUniform(const std::string& name, void* data, size_t size) override;
 
     void draw(u32 vertexCount, u32 firstVertex) override;

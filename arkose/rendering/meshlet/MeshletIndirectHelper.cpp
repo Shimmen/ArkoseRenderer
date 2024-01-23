@@ -36,7 +36,12 @@ MeshletIndirectSetupState const& MeshletIndirectHelper::createMeshletIndirectSet
         dispatch.drawKeyMask = indirectBuffer->drawKeyMask;
         dispatch.indirectDataBindingSet = &reg.createBindingSet({ ShaderBinding::storageBuffer(*reg.getBuffer("SceneObjectData")),
                                                                   ShaderBinding::storageBuffer(*indirectBuffer->buffer) });
-        dispatch.taskSetupComputeState = &reg.createComputeState(meshletTaskSetupShader, { state.cameraBindingSet, dispatch.indirectDataBindingSet });
+
+        StateBindings stateBindings;
+        stateBindings.at(0, *state.cameraBindingSet);
+        stateBindings.at(1, *dispatch.indirectDataBindingSet);
+
+        dispatch.taskSetupComputeState = &reg.createComputeState(meshletTaskSetupShader, stateBindings);
     }
 
     return state;
@@ -57,8 +62,6 @@ void MeshletIndirectHelper::executeMeshletIndirectSetup(GpuScene& scene, Command
 
     for (MeshletIndirectSetupDispatch const& dispatch : state.dispatches) {
         cmdList.setComputeState(*dispatch.taskSetupComputeState);
-        cmdList.bindSet(*state.cameraBindingSet, 0);
-        cmdList.bindSet(*dispatch.indirectDataBindingSet, 1);
 
         cmdList.setNamedUniform("drawableCount", drawableCount);
         cmdList.setNamedUniform("drawKeyMask", dispatch.drawKeyMask.asUint32());

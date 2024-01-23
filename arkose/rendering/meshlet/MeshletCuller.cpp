@@ -38,11 +38,15 @@ MeshletCuller::CullData& MeshletCuller::construct(GpuScene& scene, Registry& reg
                                                     ShaderBinding::storageBuffer(indirectDrawCmdBuffer, ShaderStage::Compute),
                                                     ShaderBinding::storageBuffer(miscDataBuffer, ShaderStage::Compute) });
 
-    ComputeState& computeState = reg.createComputeState(shader, { &bindingSet });
+    StateBindings meshletCullStateBindings;
+    meshletCullStateBindings.at(0, bindingSet);
+    ComputeState& computeState = reg.createComputeState(shader, meshletCullStateBindings);
     computeState.setName("MeshletCullState");
 
     BindingSet& prepareIndirectDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(indirectDrawCmdBuffer, ShaderStage::Compute) });
-    ComputeState& prepareIndirectDataState = reg.createComputeState(Shader::createCompute("meshlet/prepareIndirectArgs.comp"), { &prepareIndirectDataBindingSet });
+    StateBindings prepareArgsStateBindings;
+    prepareArgsStateBindings.at(0, prepareIndirectDataBindingSet);
+    ComputeState& prepareIndirectDataState = reg.createComputeState(Shader::createCompute("meshlet/prepareIndirectArgs.comp"), prepareArgsStateBindings);
 
     CullData& cullData = reg.allocate<CullData>();
     cullData.indirectDrawCmd = &indirectDrawCmdBuffer;
@@ -69,7 +73,6 @@ void MeshletCuller::execute(CommandList& cmdList, GpuScene& scene, CullData cons
     initializeBrokerQueue(cmdList, *cullData.triangleRangeQueueBuffer);
 
     cmdList.setComputeState(*cullData.prepareIndirectDataState);
-    cmdList.bindSet(*cullData.prepareIndirectDataBindingSet, 0);
     cmdList.dispatch(1, 1, 1);
 
     cmdList.bufferWriteBarrier({ cullData.indirectDrawCmdBuffer });
@@ -81,7 +84,6 @@ void MeshletCuller::execute(CommandList& cmdList, GpuScene& scene, CullData cons
     u32 instanceCount = narrow_cast<u32>(scene.drawableCountForFrame());
 
     cmdList.setComputeState(*cullData.cullComputeState);
-    cmdList.bindSet(*cullData.cullBindingSet, 0);
     cmdList.setNamedUniform<u32>("instanceCount", instanceCount);
     cmdList.setNamedUniform<u32>("maxTriangleCount", PostCullingMaxTriangleCount); // NOTE: We can dynamically reduce this for testing!
 

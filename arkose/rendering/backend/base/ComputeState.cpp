@@ -1,8 +1,8 @@
 #include "ComputeState.h"
 
-ComputeState::ComputeState(Backend& backend, Shader shader, std::vector<BindingSet*> bindingSets)
+ComputeState::ComputeState(Backend& backend, Shader shader, StateBindings const& stateBindings)
     : Resource(backend)
     , m_shader(shader)
-    , m_bindingSets(bindingSets)
+    , m_stateBindings(stateBindings)
 {
 }

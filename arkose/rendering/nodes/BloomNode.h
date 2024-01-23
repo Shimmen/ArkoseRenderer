@@ -15,10 +15,6 @@ public:
     static constexpr size_t BottomMipLevel = NumMipLevels - 1;
 
 private:
-    // TEMP: Remove these!
-    std::vector<BindingSet*> m_downsampleSets {};
-    std::vector<BindingSet*> m_upsampleSets {};
-
     std::vector<ComputeState*> m_downsampleStates {};
     std::vector<ComputeState*> m_upsampleStates {};
 

@@ -61,7 +61,9 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
                                                                     ShaderBinding::sampledTexture(sceneDepth, ShaderStage::Compute),
                                                                     ShaderBinding::constantBuffer(cameraDataBuffer, ShaderStage::Compute),
                                                                     ShaderBinding::sampledTexture(blueNoiseTexArray, ShaderStage::Compute) });
-    ComputeState& shadowProjectionState = reg.createComputeState(shadowProjectionShader, { &shadowProjectionBindingSet });
+    StateBindings projectionStateBindings;
+    projectionStateBindings.at(0, shadowProjectionBindingSet);
+    ComputeState& shadowProjectionState = reg.createComputeState(shadowProjectionShader, projectionStateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
@@ -138,7 +140,6 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
             vec2 radiusInShadowMapUVs = m_lightDiscRadius * m_shadowMap->extent().inverse();
 
             cmdList.setComputeState(shadowProjectionState);
-            cmdList.bindSet(shadowProjectionBindingSet, 0);
             cmdList.setNamedUniform<mat4>("lightProjectionFromView", lightProjectionFromView);
             cmdList.setNamedUniform<vec2>("lightDiscRadiusInShadowMapUVs", radiusInShadowMapUVs);
             cmdList.setNamedUniform<int>("frameIndexMod8", appState.frameIndex() % 8);

@@ -2,17 +2,18 @@
 
 #include "rendering/backend/Resource.h"
 #include "rendering/backend/base/BindingSet.h"
+#include "rendering/backend/util/StateBindings.h"
 #include "rendering/backend/shader/Shader.h"
 
 class ComputeState : public Resource {
 public:
     ComputeState() = default;
-    ComputeState(Backend&, Shader, std::vector<BindingSet*>);
+    ComputeState(Backend&, Shader, StateBindings const&);
 
-    const Shader& shader() const { return m_shader; }
-    [[nodiscard]] const std::vector<BindingSet*>& bindingSets() const { return m_bindingSets; }
+    Shader const& shader() const { return m_shader; }
+    StateBindings const& stateBindings() const { return m_stateBindings; }
 
 private:
     Shader m_shader;
-    std::vector<BindingSet*> m_bindingSets;
+    StateBindings m_stateBindings;
 };

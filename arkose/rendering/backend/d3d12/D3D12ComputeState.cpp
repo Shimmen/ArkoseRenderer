@@ -2,8 +2,8 @@
 
 #include "utility/Profiling.h"
 
-D3D12ComputeState::D3D12ComputeState(Backend& backend, Shader shader, std::vector<BindingSet*> bindingSets)
-    : ComputeState(backend, shader, bindingSets)
+D3D12ComputeState::D3D12ComputeState(Backend& backend, Shader shader, StateBindings const& stateBindings)
+    : ComputeState(backend, shader, stateBindings)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 }

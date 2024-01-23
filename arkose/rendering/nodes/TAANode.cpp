@@ -40,8 +40,11 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(GpuScene& scene, Registry
                                                        ShaderBinding::sampledTexture(currentFrameVelocity, ShaderStage::Compute),
                                                        ShaderBinding::sampledTexture(historyTexture, ShaderStage::Compute) });
 
+    StateBindings taaStateBindings;
+    taaStateBindings.at(0, taaBindingSet);
+
     Shader taaComputeShader = Shader::createCompute("taa/taa.comp");
-    ComputeState& taaComputeState = reg.createComputeState(taaComputeShader, { &taaBindingSet });
+    ComputeState& taaComputeState = reg.createComputeState(taaComputeShader, taaStateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
@@ -66,7 +69,6 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(GpuScene& scene, Registry
         cmdList.copyTexture(accumulationTexture, historyTexture);
 
         cmdList.setComputeState(taaComputeState);
-        cmdList.bindSet(taaBindingSet, 0);
 
         cmdList.setNamedUniform("hysteresis", m_hysteresis);
         cmdList.setNamedUniform("useCatmullRom", m_useCatmullRom);

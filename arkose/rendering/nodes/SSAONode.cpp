@@ -42,12 +42,14 @@ RenderPipelineNode::ExecuteCallback SSAONode::construct(GpuScene& scene, Registr
                                                         ShaderBinding::sampledTexture(*sceneOpaqueNormals, ShaderStage::Compute),
                                                         ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::Compute),
                                                         ShaderBinding::constantBuffer(kernelSampleBuffer, ShaderStage::Compute) });
-    ComputeState& ssaoComputeState = reg.createComputeState(Shader::createCompute("ssao/ssao.comp"), { &ssaoBindingSet });
+    StateBindings ssaoStateBindings;
+    ssaoStateBindings.at(0, ssaoBindingSet);
+
+    ComputeState& ssaoComputeState = reg.createComputeState(Shader::createCompute("ssao/ssao.comp"), ssaoStateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         cmdList.setComputeState(ssaoComputeState);
-        cmdList.bindSet(ssaoBindingSet, 0);
 
         cmdList.setNamedUniform("targetSize", appState.windowExtent());
         cmdList.setNamedUniform("kernelRadius", m_kernelRadius);

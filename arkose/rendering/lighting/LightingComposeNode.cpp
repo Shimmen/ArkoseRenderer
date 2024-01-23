@@ -59,25 +59,21 @@ RenderPipelineNode::ExecuteCallback LightingComposeNode::construct(GpuScene& sce
                                                            ShaderBinding::sampledTexture(*reflectionDirectionTex, ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(*ambientOcclusionTex, ShaderStage::Compute) });
 
-    std::vector<BindingSet*> bindingSets {};
-    bindingSets.push_back(&composeBindingSet);
+    StateBindings stateBindings;
+    stateBindings.at(0, composeBindingSet);
     if (m_ddgiBindingSet != nullptr) {
-        bindingSets.push_back(m_ddgiBindingSet);
+        stateBindings.at(1, *m_ddgiBindingSet);
     }
 
     std::vector<ShaderDefine> shaderDefines {};
     shaderDefines.push_back(ShaderDefine::makeBool("WITH_DDGI", m_ddgiBindingSet != nullptr));
 
     Shader composeShader = Shader::createCompute("lighting/lightingCompose.comp", shaderDefines);
-    ComputeState& giComposeState = reg.createComputeState(composeShader, bindingSets);
+    ComputeState& giComposeState = reg.createComputeState(composeShader, stateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         cmdList.setComputeState(giComposeState);
-        cmdList.bindSet(composeBindingSet, 0);
-        if (m_ddgiBindingSet) {
-            cmdList.bindSet(*m_ddgiBindingSet, 1);
-        }
 
         cmdList.setNamedUniform("targetSize", sceneColorWithGI.extent());
         cmdList.setNamedUniform("includeSpecularDirectLight", m_includeSpecularDirectLight);

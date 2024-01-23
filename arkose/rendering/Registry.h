@@ -55,7 +55,7 @@ public:
     [[nodiscard]] TopLevelAS& createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance> initialInstances);
     [[nodiscard]] RayTracingState& createRayTracingState(ShaderBindingTable&, const StateBindings&, uint32_t maxRecursionDepth);
 
-    [[nodiscard]] ComputeState& createComputeState(const Shader&, std::vector<BindingSet*>);
+    [[nodiscard]] ComputeState& createComputeState(Shader const&, StateBindings const&);
 
     [[nodiscard]] UpscalingState& createUpscalingState(UpscalingTech, UpscalingQuality, Extent2D renderRes, Extent2D outputDisplayRes);
 
