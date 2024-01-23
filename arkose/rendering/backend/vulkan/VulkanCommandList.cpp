@@ -726,11 +726,9 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearV
     vkCmdBeginRenderPass(m_commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderState.pipeline);
 
-    if (renderState.stateBindings().shouldAutoBind()) {
-        renderState.stateBindings().forEachBindingSet([this](uint32_t setIndex, BindingSet& bindingSet) {
-            bindSet(bindingSet, setIndex);
-        });
-    }
+    renderState.stateBindings().forEachBindingSet([this](u32 setIndex, BindingSet& bindingSet) {
+        bindSet(bindingSet, setIndex);
+    });
 
     if (autoSetViewport) {
         setViewport({ 0, 0 }, renderTarget.extent().asIntVector());
@@ -846,11 +844,9 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
     } break;
     }
 
-    if (rtState.stateBindings().shouldAutoBind()) {
-        rtState.stateBindings().forEachBindingSet([this](uint32_t setIndex, BindingSet& bindingSet) {
-            bindSet(bindingSet, setIndex);
-        });
-    }
+    rtState.stateBindings().forEachBindingSet([this](u32 setIndex, BindingSet& bindingSet) {
+        bindSet(bindingSet, setIndex);
+    });
 }
 
 void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
