@@ -98,7 +98,7 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
         {
             cmdList.setComputeState(bloomBlendComputeState);
             cmdList.bindSet(blendBindingSet, 0);
-            cmdList.pushConstant(ShaderStage::Compute, m_bloomBlend, 0);
+            cmdList.setNamedUniform("bloomBlend", m_bloomBlend);
             cmdList.dispatch(mainTexture.extent(), localSizeForComp);
         }
     };

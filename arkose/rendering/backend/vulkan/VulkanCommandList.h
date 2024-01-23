@@ -27,7 +27,6 @@ public:
     void evaluateUpscaling(UpscalingState const&, UpscalingParameters) override;
 
     void bindSet(BindingSet&, uint32_t index) override;
-    void pushConstants(ShaderStage, void*, size_t size, size_t byteOffset = 0u) override;
     void setNamedUniform(const std::string& name, void* data, size_t size) override;
 
     void draw(u32 vertexCount, u32 firstVertex) override;

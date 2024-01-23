@@ -71,11 +71,6 @@ void D3D12CommandList::bindSet(BindingSet& bindingSet, uint32_t index)
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 }
 
-void D3D12CommandList::pushConstants(ShaderStage shaderStage, void* data, size_t size, size_t byteOffset)
-{
-    SCOPED_PROFILE_ZONE_GPUCOMMAND();
-}
-
 void D3D12CommandList::setNamedUniform(const std::string& name, void* data, size_t size)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();

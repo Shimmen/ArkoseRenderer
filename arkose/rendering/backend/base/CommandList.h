@@ -25,11 +25,7 @@ public:
     virtual void evaluateUpscaling(UpscalingState const&, UpscalingParameters) = 0;
 
     virtual void bindSet(BindingSet&, uint32_t index) = 0;
-    virtual void pushConstants(ShaderStage, void*, size_t size, size_t byteOffset = 0u) = 0;
     virtual void setNamedUniform(const std::string& name, void*, size_t size) = 0;
-
-    template<typename T>
-    void pushConstant(ShaderStage, T, size_t byteOffset = 0u);
 
     template<typename T>
     void setNamedUniform(const std::string& name, T);
@@ -73,19 +69,6 @@ public:
 inline void CommandList::executeBufferCopyOperations(UploadBuffer& uploadBuffer)
 {
     executeBufferCopyOperations(uploadBuffer.popPendingOperations());
-}
-
-template<typename T>
-inline void CommandList::pushConstant(ShaderStage shaderStage, T value, size_t byteOffset)
-{
-    pushConstants(shaderStage, &value, sizeof(T), byteOffset);
-}
-
-template<>
-inline void CommandList::pushConstant(ShaderStage shaderStage, bool value, size_t byteOffset)
-{
-    uint32_t intValue = (value) ? 1 : 0;
-    pushConstant(shaderStage, intValue, byteOffset);
 }
 
 template<typename T>

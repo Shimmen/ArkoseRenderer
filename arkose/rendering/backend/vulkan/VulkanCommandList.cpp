@@ -972,25 +972,13 @@ void VulkanCommandList::bindSet(BindingSet& bindingSet, uint32_t index)
     vkCmdBindDescriptorSets(m_commandBuffer, bindPoint, pipelineLayout, index, 1, &vulkanBindingSet.descriptorSet, 0, nullptr);
 }
 
-void VulkanCommandList::pushConstants(ShaderStage shaderStage, void* data, size_t size, size_t byteOffset)
-{
-    SCOPED_PROFILE_ZONE_GPUCOMMAND();
-
-    requireExactlyOneStateToBeSet("pushConstants");
-    VkPipelineLayout pipelineLayout = getCurrentlyBoundPipelineLayout().first;
-
-    VkShaderStageFlags stageFlags = static_cast<VulkanBackend&>(backend()).shaderStageToVulkanShaderStageFlags(shaderStage);
-
-    vkCmdPushConstants(m_commandBuffer, pipelineLayout, stageFlags, (uint32_t)byteOffset, (uint32_t)size, data);
-}
-
 void VulkanCommandList::setNamedUniform(const std::string& name, void* data, size_t size)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     requireExactlyOneStateToBeSet("setNamedUniform");
 
-    const Shader& shader = getCurrentlyBoundShader();
+    Shader const& shader = getCurrentlyBoundShader();
 
     // TODO: Don't do it lazily like this
     if (!shader.hasUniformBindingsSetup()) {
@@ -1016,7 +1004,11 @@ void VulkanCommandList::setNamedUniform(const std::string& name, void* data, siz
         if (size != binding->size) {
             ARKOSE_LOG(Fatal, "setNamedUniform: size mismatch for uniform named '{}' (provided={}, actual={}).", name, size, binding->size);
         }
-        pushConstants(binding->stages, data, binding->size, binding->offset);
+
+        VkPipelineLayout pipelineLayout = getCurrentlyBoundPipelineLayout().first;
+        VkShaderStageFlags stageFlags = backend().shaderStageToVulkanShaderStageFlags(binding->stages);
+        vkCmdPushConstants(m_commandBuffer, pipelineLayout, stageFlags, binding->offset, binding->size, data);
+
     } else {
         ARKOSE_LOG(Error, "setNamedUniform: no corresponding uniform for name '{}', ignoring.", name);
     }
