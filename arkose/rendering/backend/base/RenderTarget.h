@@ -25,7 +25,7 @@ enum class RenderTargetBlendMode {
 class RenderTarget : public Resource {
 public:
 
-    enum class AttachmentType : unsigned {
+    enum class AttachmentType : u32 {
         Color0 = 0,
         Color1 = 1,
         Color2 = 2,
