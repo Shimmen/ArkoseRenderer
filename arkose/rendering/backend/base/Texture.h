@@ -18,6 +18,7 @@ public:
 
     // (required for now, so we can create the mockup Texture objects)
     friend class VulkanBackend;
+    friend class D3D12Backend;
 
     enum class Type {
         Texture2D,

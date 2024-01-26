@@ -6,6 +6,7 @@
 
 struct D3D12Texture final : public Texture {
 public:
+    D3D12Texture() = default;
     D3D12Texture(Backend&, Description);
     virtual ~D3D12Texture() override;
 
