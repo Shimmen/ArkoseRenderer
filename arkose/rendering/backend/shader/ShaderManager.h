@@ -21,18 +21,21 @@ public:
     static ShaderManager& instance();
 
     using SpirvData = std::vector<u32>;
+    using DXILData = std::vector<u8>;
 
     std::string resolveSourceFilePath(std::string const& name) const;
 
     std::string createShaderIdentifier(const ShaderFile&) const;
 
-    std::string resolveSpirvPath(const ShaderFile&) const;
-    std::string resolveSpirvAssemblyPath(const ShaderFile&) const;
-    std::string resolveHlslPath(const ShaderFile&) const;
+    std::string resolveDxilPath(ShaderFile const&) const;
+    std::string resolveSpirvPath(ShaderFile const&) const;
+    std::string resolveSpirvAssemblyPath(ShaderFile const&) const;
+    std::string resolveHlslPath(ShaderFile const&) const;
 
     std::optional<std::string> loadAndCompileImmediately(const ShaderFile&);
 
-    const SpirvData& spirv(const ShaderFile&) const;
+    SpirvData const& spirv(ShaderFile const&) const;
+    DXILData const& dxil(ShaderFile const&) const;
 
     using FilesChangedCallback = std::function<void(const std::vector<std::string>&)>;
     void startFileWatching(unsigned msBetweenPolls, FilesChangedCallback filesChangedCallback = {});
@@ -67,7 +70,15 @@ private:
         uint64_t lastEditTimestamp { 0 };
         uint64_t compiledTimestamp { 0 };
 
+        enum class BinaryType {
+            Unknown,
+            SpirV,
+            DXIL,
+        } binaryType { BinaryType::Unknown };
+
         SpirvData currentSpirvBinary {};
+        DXILData currentDxilBinary {};
+
         std::string lastCompileError {};
     };
 
