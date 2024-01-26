@@ -6,7 +6,6 @@
 #include "rendering/backend/shader/Shader.h"
 #include "rendering/backend/shader/ShaderManager.h"
 #include "system/System.h"
-#include "system/glfw/SystemGlfw.h" // TODO: Make the VulkanBackend not GLFW dependent (the only reason now is the default dear imgui backend)!
 #include <ark/defer.h>
 #include "rendering/Registry.h"
 #include "rendering/RenderPipeline.h"
@@ -19,7 +18,6 @@
 #include <imgui.h>
 #include <implot.h>
 #include <ark/conversion.h>
-#include <backends/imgui_impl_glfw.h> // TODO: Get rid of this glfw-specific backend (see above comment about SystemGlfw)
 #include <backends/imgui_impl_vulkan.h>
 #include <spirv_cross.hpp>
 #include <unordered_map>
@@ -1371,30 +1369,6 @@ void VulkanBackend::setupDearImgui()
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
-    // HACK! We should make our own dear imgui backend which doesn't depend on glfw (would also fix a lot of other input issues we have now)
-    SystemGlfw& glfwSystem = static_cast<SystemGlfw&>(System::get());
-    GLFWwindow* glfwWindow = glfwSystem.glfwWindowHack();
-
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImPlot::CreateContext();
-
-    ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable; // Do I want this really? Not convinced
-
-    ImGui::StyleColorsDark();
-    ImGuiStyle& style = ImGui::GetStyle();
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
-        style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-    }
-
-    style.Colors[ImGuiCol_MenuBarBg] = ImColor(255, 255, 255, 1);
-
-    ImGui_ImplGlfw_InitForVulkan(glfwWindow, true);
-
     VkDescriptorPoolSize poolSizes[] = {
         { VK_DESCRIPTOR_TYPE_SAMPLER, 1000 },
         { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
@@ -1453,12 +1427,7 @@ void VulkanBackend::setupDearImgui()
 void VulkanBackend::destroyDearImgui()
 {
     vkDestroyDescriptorPool(device(), m_guiDescriptorPool, nullptr);
-
     ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImPlot::DestroyContext();
-    ImGui::DestroyContext();
-
     m_guiIsSetup = false;
 }
 
@@ -1563,8 +1532,6 @@ void VulkanBackend::newFrame()
     SCOPED_PROFILE_ZONE_BACKEND();
 
     ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplGlfw_NewFrame();
-    ImGui::NewFrame();
 }
 
 bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTime, float deltaTime)

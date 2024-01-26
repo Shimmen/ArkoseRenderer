@@ -35,9 +35,6 @@ public:
     virtual void* createVulkanSurface(void*) override;
 #endif
 
-    // ugly hack.. needed for the Vulkan backend, for now.
-    GLFWwindow* glfwWindowHack() const { return m_glfwWindow; }
-
 private:
     // glfw event callbacks
     static void keyEventCallback(GLFWwindow* window, int key, int scancode, int action, int mods);

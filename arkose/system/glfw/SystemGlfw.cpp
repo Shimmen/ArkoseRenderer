@@ -4,6 +4,11 @@
 #include "utility/Profiling.h"
 #include "system/Input.h"
 
+// Dear ImGui & related
+#include <imgui.h>
+#include <implot.h>
+#include <backends/imgui_impl_glfw.h>
+
 #if defined(WITH_VULKAN)
 #include <vulkan/vulkan.h>
 #endif
@@ -27,6 +32,10 @@ SystemGlfw::SystemGlfw()
 
 SystemGlfw::~SystemGlfw()
 {
+    ImGui_ImplGlfw_Shutdown();
+    ImPlot::DestroyContext();
+    ImGui::DestroyContext();
+
     if (m_glfwWindow != nullptr) {
         glfwDestroyWindow(m_glfwWindow);
     }
@@ -68,6 +77,34 @@ bool SystemGlfw::createWindow(WindowType windowType, Extent2D const& requestedWi
     glfwSetMouseButtonCallback(m_glfwWindow, SystemGlfw::mouseButtonEventCallback);
     glfwSetCursorPosCallback(m_glfwWindow, SystemGlfw::mouseMovementEventCallback);
     glfwSetScrollCallback(m_glfwWindow, SystemGlfw::mouseScrollEventCallback);
+
+    // Set up Dear ImGui
+    {
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImPlot::CreateContext();
+
+        ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+        ImGui::StyleColorsDark();
+        ImGuiStyle& style = ImGui::GetStyle();
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+            style.WindowRounding = 0.0f;
+            style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+        }
+
+        style.Colors[ImGuiCol_MenuBarBg] = ImColor(255, 255, 255, 1);
+
+        // NOTE: I think it should be fine to call this one, even if we're running on Vulkan,
+        // but it would certainly feel better do actually call the correct one. It does mean
+        // we can't use the ImGuiConfigFlags_ViewportsEnable feature, but I don't want it.
+        // Anyway, be warned, this might blow up in my face :^)
+        ImGui_ImplGlfw_InitForOther(m_glfwWindow, true);
+        //ImGui_ImplGlfw_InitForVulkan(m_glfwWindow, true);
+    }
 
     return true;
 }
@@ -119,6 +156,9 @@ bool SystemGlfw::newFrame()
             //  3. done?
         }
     }
+
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
 
     return windowSizeDidChange;
 }
