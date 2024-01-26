@@ -118,11 +118,38 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
             
             frameContext.commandList->Close();
         }
+
+        // Create upload buffer
+        {
+            static constexpr size_t registryUploadBufferSize = 32 * 1024 * 1024;
+            frameContext.uploadBuffer = std::make_unique<UploadBuffer>(*this, registryUploadBufferSize);
+        }
     }
 
-    /////////////////////////////////
+    // Create depth texture for rendering to the swapchain texture
+    {
+        Texture::Description depthTextureDesc;
+        depthTextureDesc.extent = m_windowFramebufferExtent;
+        depthTextureDesc.format = Texture::Format::Depth24Stencil8;
+        m_swapchainDepthTexture = std::make_unique<D3D12Texture>(*this, depthTextureDesc);
+    }
 
-    setUpDemo();
+    // Create the "mock" texture and render target for rendering to this
+    {
+        m_mockSwapchainTexture = std::make_unique<D3D12Texture>();
+
+        m_mockSwapchainTexture->m_description.extent = m_windowFramebufferExtent;
+        m_mockSwapchainTexture->m_description.format = Texture::Format::Unknown;
+
+        m_mockSwapchainTexture->textureResource = nullptr;
+        m_mockSwapchainTexture->resourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        m_mockSwapchainTexture->dxgiFormat = SwapChainFormat;
+
+        //auto& referenceFrameContext = *m_frameContexts[0]; // doesn't matter for now, just grab any.
+        auto attachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, m_mockSwapchainTexture.get(), LoadOp::Clear, StoreOp::Store },
+                                                                   { RenderTarget::AttachmentType::Depth, m_swapchainDepthTexture.get(), LoadOp::Clear, StoreOp::Store } });
+        m_mockWindowRenderTarget = std::make_unique<D3D12RenderTarget>(*this, attachments);
+    }
 }
 
 D3D12Backend::~D3D12Backend()
@@ -142,17 +169,12 @@ void D3D12Backend::renderPipelineDidChange(RenderPipeline& renderPipeline)
     size_t numFrameManagers = m_frameContexts.size();
     ARKOSE_ASSERT(numFrameManagers == QueueSlotCount);
 
-/*
-    // We use imageless framebuffers for this one so it doesn't matter that we don't construct the render pipeline knowing the exact images.
-    const RenderTarget& templateWindowRenderTarget = *m_clearingRenderTarget;
-
     Registry* previousRegistry = m_pipelineRegistry.get();
-    Registry* registry = new Registry(*this, templateWindowRenderTarget, previousRegistry);
+    Registry* registry = new Registry(*this, *m_mockWindowRenderTarget, previousRegistry);
 
     renderPipeline.constructAll(*registry);
 
     m_pipelineRegistry.reset(registry);
-*/
 
     m_relativeFrameIndex = 0;
 }
@@ -165,7 +187,7 @@ void D3D12Backend::newFrame()
 {
 }
 
-bool D3D12Backend::executeFrame(RenderPipeline& pipeline, float elapsedTime, float deltaTime)
+bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTime, float deltaTime)
 {
     if (s_unhandledWindowResize) {
         recreateSwapChain();
@@ -208,8 +230,41 @@ bool D3D12Backend::executeFrame(RenderPipeline& pipeline, float elapsedTime, flo
         CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(renderTargetHandle, m_renderTargetDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
                                                      backBufferIndex, m_renderTargetViewDescriptorSize);
 
-        // TODO: Replace with real drawing!
-        renderDemo(renderTargetHandle, commandList);
+        // Assign the render target handle of the current swapchain image to the mock window render target
+        m_mockWindowRenderTarget->colorRenderTargetHandles[0] = renderTargetHandle;
+
+        UploadBuffer& uploadBuffer = *frameContext.uploadBuffer;
+        uploadBuffer.reset();
+
+        Registry& registry = *m_pipelineRegistry;
+        D3D12CommandList cmdList { *this, commandList };
+
+        {
+            //SCOPED_PROFILE_ZONE_GPU(commandBuffer, "Render Pipeline");
+            renderPipeline.forEachNodeInResolvedOrder(registry, [&](RenderPipelineNode& node, const RenderPipelineNode::ExecuteCallback& nodeExecuteCallback) {
+                std::string nodeName = node.name();
+
+                SCOPED_PROFILE_ZONE_DYNAMIC(nodeName, 0x00ffff);
+                double cpuStartTime = System::get().timeSinceStartup();
+
+                // NOTE: This works assuming we never modify the list of nodes (add/remove/reorder)
+                //uint32_t nodeStartTimestampIdx = nextTimestampQueryIdx++;
+                //uint32_t nodeEndTimestampIdx = nextTimestampQueryIdx++;
+                //node.timer().reportGpuTime(elapsedSecondsBetweenTimestamps(nodeStartTimestampIdx, nodeEndTimestampIdx));
+
+                cmdList.beginDebugLabel(nodeName);
+                //vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameContext.timestampQueryPool, nodeStartTimestampIdx);
+
+                nodeExecuteCallback(appState, cmdList, uploadBuffer);
+                //cmdList.endNode({}); // ??
+
+                //vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, frameContext.timestampQueryPool, nodeEndTimestampIdx);
+                cmdList.endDebugLabel();
+
+                double cpuElapsed = System::get().timeSinceStartup() - cpuStartTime;
+                node.timer().reportCpuTime(cpuElapsed);
+            });
+        }
 
         // Transition the swap chain back to present
         D3D12_RESOURCE_BARRIER renderTargetToPresentBarrier;
@@ -525,13 +580,10 @@ void D3D12Backend::recreateSwapChain()
     // Tear down all resources referencing the swap chain
 
     waitForDeviceIdle();
-    m_demo = {};
-    waitForDeviceIdle();
 
     for (auto& frameContext : m_frameContexts) {
         frameContext->renderTarget.Reset();
     }
-
 
     waitForDeviceIdle();
 
@@ -564,12 +616,6 @@ void D3D12Backend::recreateSwapChain()
             device().CreateRenderTargetView(frameContext.renderTarget.Get(), &viewDesc, rtvHandle);
         }
     }
-
-    waitForDeviceIdle();
-
-    // Recreate all resources that need to reference the swap chain
-    // TODO: What about the render target buffer and descriptors?
-    setUpDemo();
 
     waitForDeviceIdle();
 }
@@ -624,81 +670,4 @@ std::unique_ptr<RayTracingState> D3D12Backend::createRayTracingState(ShaderBindi
 std::unique_ptr<UpscalingState> D3D12Backend::createUpscalingState(UpscalingTech, UpscalingQuality, Extent2D renderRes, Extent2D outputDisplayRes)
 {
     return nullptr;
-}
-
-void D3D12Backend::setUpDemo()
-{
-
-    // TODO: This is just a placeholder for the demo!
-    {
-        Texture::Description textureDesc;
-        textureDesc.extent = m_windowFramebufferExtent;
-        textureDesc.format = Texture::Format::sRGBA8;
-        m_demo.hackTexture = createTexture(textureDesc);
-    }
-
-    // Create depth texture
-    {
-        Texture::Description textureDesc;
-        textureDesc.extent = m_windowFramebufferExtent;
-        textureDesc.format = Texture::Format::Depth24Stencil8;
-        m_demo.depthTexture = createTexture(textureDesc);
-    }
-
-    // Create swapchain render target
-    m_demo.renderTarget = createRenderTarget({ { RenderTarget::AttachmentType::Color0, m_demo.hackTexture.get(), LoadOp::Load, StoreOp::Store },
-                                               { RenderTarget::AttachmentType::Depth, m_demo.depthTexture.get(), LoadOp::Load, StoreOp::Store } });
-
-    // Create render state
-    Shader bootstrapShader = Shader::createBasicRasterize("d3d12-bootstrap/demo.hlsl",
-                                                          "d3d12-bootstrap/demo.hlsl",
-                                                          { ShaderDefine::makeBool("D3D12_SAMPLE_BASIC", true) });
-    auto vertexLayout = { VertexLayout { VertexComponent::Position3F, VertexComponent::TexCoord2F } };
-    StateBindings stateBindings; // empty, for now
-    RasterState rasterState;
-    DepthState depthState;
-    StencilState stencilState;
-    m_demo.renderState = createRenderState(*m_demo.renderTarget,
-                                           vertexLayout, bootstrapShader, stateBindings,
-                                           rasterState, depthState, stencilState);
-
-    // Create mesh buffers
-
-    const Demo::Vertex vertices[4] = {
-        // Upper left
-        { { -0.5f, 0.5f, 0 }, { 0, 0 } },
-        // Upper right
-        { { 0.5f, 0.5f, 0 }, { 1, 0 } },
-        // Bottom right
-        { { 0.5f, -0.5f, 0 }, { 1, 1 } },
-        // Bottom left
-        { { -0.5f, -0.5f, 0 }, { 0, 1 } }
-    };
-
-    const int indices[6] = {
-        0, 2, 1, 2, 0, 3
-    };
-
-    m_demo.vertexBuffer = std::make_unique<D3D12Buffer>(*this, sizeof(vertices), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-    m_demo.indexBuffer = std::make_unique<D3D12Buffer>(*this, sizeof(indices), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
-
-    m_demo.vertexBuffer->updateData(reinterpret_cast<std::byte const*>(vertices), sizeof(vertices), 0);
-    m_demo.indexBuffer->updateData(reinterpret_cast<std::byte const*>(indices), sizeof(indices), 0);
-}
-
-void D3D12Backend::renderDemo(D3D12_CPU_DESCRIPTOR_HANDLE renderTargetHandle, ID3D12GraphicsCommandList* d3d12CommandList)
-{
-    // HACK but maybe also a good way to do this? :^)
-    static_cast<D3D12RenderTarget&>(*m_demo.renderTarget).colorRenderTargetHandles[0] = renderTargetHandle;
-
-    // TODO: This command list is just temp - make it just like for vulkan
-    D3D12CommandList commandList { *this, d3d12CommandList }; 
-
-    ClearValue clearValue;
-    clearValue.color = ClearColor::srgbColor(0.2f, 0.2f, 0.2f, 1.0f);
-    commandList.beginRendering(*m_demo.renderState, clearValue, true);
-
-    commandList.bindVertexBuffer(*m_demo.vertexBuffer, sizeof(Demo::Vertex), 0);
-    commandList.bindIndexBuffer(*m_demo.indexBuffer, IndexType::UInt32);
-    commandList.drawIndexed(6, 0);
 }

@@ -1,7 +1,9 @@
 #include "rendering/backend/base/Backend.h"
 
 #include "rendering/backend/d3d12/D3D12Common.h"
+#include "rendering/backend/d3d12/D3D12Texture.h"
 struct IDXGISwapChain;
+struct D3D12RenderTarget;
 
 
 static constexpr bool d3d12debugMode = true;
@@ -107,6 +109,8 @@ private:
         ComPtr<ID3D12GraphicsCommandList> commandList;
 
         ComPtr<ID3D12Resource> renderTarget;
+
+        std::unique_ptr<UploadBuffer> uploadBuffer {};
     };
 
     std::array<std::unique_ptr<FrameContext>, QueueSlotCount> m_frameContexts {};
@@ -114,34 +118,13 @@ private:
     ComPtr<ID3D12DescriptorHeap> m_renderTargetDescriptorHeap;
     int32_t m_renderTargetViewDescriptorSize {};
 
+    std::unique_ptr<D3D12Texture> m_swapchainDepthTexture {};
+    std::unique_ptr<D3D12Texture> m_mockSwapchainTexture {};
+    std::unique_ptr<D3D12RenderTarget> m_mockWindowRenderTarget {};
+
     ///////////////////////////////////////////////////////////////////////////
     /// Resource & resource management members
 
     std::unique_ptr<Registry> m_pipelineRegistry {};
-
-    ///////////////////////////////////////////////////////////////////////////
-    /// Demo stuff
-
-    struct Demo {
-
-        struct Vertex {
-            vec3 position;
-            vec2 uv;
-        };
-    
-        std::unique_ptr<D3D12Buffer> vertexBuffer;
-        std::unique_ptr<D3D12Buffer> indexBuffer;
-
-        // actually just needed as a stand-in for the swapchain texture..
-        std::unique_ptr<Texture> hackTexture;
-
-        std::unique_ptr<Texture> depthTexture;
-        std::unique_ptr<RenderTarget> renderTarget;
-        std::unique_ptr<RenderState> renderState;
-
-    } m_demo;
-
-    void setUpDemo();
-    void renderDemo(D3D12_CPU_DESCRIPTOR_HANDLE renderTargetHandle, ID3D12GraphicsCommandList*);
 
 };

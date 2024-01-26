@@ -4,17 +4,26 @@ class DrawTriangleNode final : public RenderPipelineNode {
     virtual std::string name() const override { return "Draw Triangle"; }
     virtual ExecuteCallback construct(GpuScene& scene, Registry& reg) override
     {
-        // TODO: Hook up all the backend stuff so that this is actually called!
+        Shader bootstrapShader = Shader::createBasicRasterize("d3d12-bootstrap/demo.hlsl",
+                                                              "d3d12-bootstrap/demo.hlsl",
+                                                              { ShaderDefine::makeBool("D3D12_SAMPLE_BASIC", true) });
+
+        VertexLayout vertexLayout = { VertexComponent::Position3F, VertexComponent::TexCoord2F };
+        RenderStateBuilder renderStateBuilder { reg.windowRenderTarget(), bootstrapShader, vertexLayout };
+        RenderState& renderState = reg.createRenderState(renderStateBuilder);
+
 
         struct Vertex {
-            float position[3];
-            float uv[2];
+            vec3 position;
+            vec2 uv;
         };
 
+        // Create mesh buffers
+
         const Vertex vertices[4] = {
-            // Upper Left
+            // Upper left
             { { -0.5f, 0.5f, 0 }, { 0, 0 } },
-            // Upper Right
+            // Upper right
             { { 0.5f, 0.5f, 0 }, { 1, 0 } },
             // Bottom right
             { { 0.5f, -0.5f, 0 }, { 1, 1 } },
@@ -23,17 +32,21 @@ class DrawTriangleNode final : public RenderPipelineNode {
         };
 
         const int indices[6] = {
-            0, 1, 2, 2, 3, 0
+            0, 2, 1, 2, 0, 3
         };
 
         Buffer& vertexBuffer = reg.createBufferForData(vertices, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-        Buffer& indexBuffer = reg.createBufferForData(vertices, Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+        Buffer& indexBuffer = reg.createBufferForData(indices, Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
 
         return [&](AppState const& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-            //cmdList.beginRendering()
-            //cmdList.drawIndexed(vertexBuffer, indexBuffer, 6, IndexType::UInt32);
-            //cmdList.endRendering();
+            ClearValue clearValue;
+            clearValue.color = ClearColor::srgbColor(0.2f, 0.2f, 0.2f, 1.0f);
+            cmdList.beginRendering(renderState, clearValue, true);
+
+            cmdList.bindVertexBuffer(vertexBuffer, sizeof(Vertex), 0);
+            cmdList.bindIndexBuffer(indexBuffer, IndexType::UInt32);
+            cmdList.drawIndexed(6, 0);
 
         };
     }
