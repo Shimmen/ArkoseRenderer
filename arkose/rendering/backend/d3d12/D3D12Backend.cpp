@@ -143,7 +143,7 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
 
         m_mockSwapchainTexture->textureResource = nullptr;
         m_mockSwapchainTexture->resourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        m_mockSwapchainTexture->dxgiFormat = SwapChainFormat;
+        m_mockSwapchainTexture->dxgiFormat = SwapChainRenderTargetViewFormat;
 
         //auto& referenceFrameContext = *m_frameContexts[0]; // doesn't matter for now, just grab any.
         auto attachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, m_mockSwapchainTexture.get(), LoadOp::Clear, StoreOp::Store },

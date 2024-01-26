@@ -60,35 +60,76 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearVa
 
     auto& renderTarget = static_cast<const D3D12RenderTarget&>(renderState.renderTarget());
 
+    // Ensure all attached textures are in a suitable state for being rendered to!
+    {
+        std::vector<D3D12_RESOURCE_BARRIER> resourceBarriers {};
+
+        for (RenderTarget::Attachment const& attachment : renderTarget.colorAttachments()) {
+            auto& attachedTexture = static_cast<D3D12Texture&>(*attachment.texture);
+
+            constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+            if (attachedTexture.resourceState != targetResourceState) {
+
+                D3D12_RESOURCE_BARRIER resourceBarrier {};
+                resourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+                resourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+                resourceBarrier.Transition.pResource = attachedTexture.textureResource.Get();
+                resourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+                resourceBarrier.Transition.StateBefore = attachedTexture.resourceState;
+                resourceBarrier.Transition.StateAfter = targetResourceState;
+
+                resourceBarriers.push_back(resourceBarrier);
+                attachedTexture.resourceState = targetResourceState;
+            }
+        }
+
+        if (renderTarget.hasDepthAttachment()) {
+            auto& attachedDepthTexture = static_cast<D3D12Texture&>(*renderTarget.depthAttachment()->texture);
+
+            D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_DEPTH_READ;
+            if (renderTarget.depthAttachment()->loadOp == LoadOp::Clear || renderState.depthState().writeDepth) {
+                targetResourceState = D3D12_RESOURCE_STATE_DEPTH_WRITE;
+            }
+
+            if (attachedDepthTexture.resourceState != targetResourceState) {
+
+                D3D12_RESOURCE_BARRIER resourceBarrier {};
+                resourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+                resourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+                resourceBarrier.Transition.pResource = attachedDepthTexture.textureResource.Get();
+                resourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+                resourceBarrier.Transition.StateBefore = attachedDepthTexture.resourceState;
+                resourceBarrier.Transition.StateAfter = targetResourceState;
+
+                resourceBarriers.push_back(resourceBarrier);
+                attachedDepthTexture.resourceState = targetResourceState;
+            }
+        }
+
+        if (resourceBarriers.size() > 0) {
+            m_commandList->ResourceBarrier(narrow_cast<u32>(resourceBarriers.size()), resourceBarriers.data());
+        }
+    }
+
     renderTarget.forEachAttachmentInOrder([&](const RenderTarget::Attachment& attachment) {
-        if (attachment.type == RenderTarget::AttachmentType::Depth) {
-            m_commandList->ClearDepthStencilView(renderTarget.depthStencilRenderTargetHandle,
-                                                 D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
-                                                 clearValue.depth, narrow_cast<u8>(clearValue.stencil),
-                                                 0, nullptr);
-        } else {
-            u32 attachmentIdx = toUnderlying(attachment.type);
-            m_commandList->ClearRenderTargetView(renderTarget.colorRenderTargetHandles[attachmentIdx],
-                                                 &clearValue.color.r,
-                                                 0, nullptr);
+        if (attachment.loadOp == LoadOp::Clear) {
+            if (attachment.type == RenderTarget::AttachmentType::Depth) {
+                m_commandList->ClearDepthStencilView(renderTarget.depthStencilRenderTargetHandle,
+                                                     D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
+                                                     clearValue.depth, narrow_cast<u8>(clearValue.stencil),
+                                                     0, nullptr);
+            } else {
+                u32 attachmentIdx = toUnderlying(attachment.type);
+                m_commandList->ClearRenderTargetView(renderTarget.colorRenderTargetHandles[attachmentIdx],
+                                                     &clearValue.color.r,
+                                                     0, nullptr);
+            }
         }
     });
 
     constexpr bool singleHandleToDescriptorRange = false; // TODO: Can we set this to true? Not sure..
     m_commandList->OMSetRenderTargets(renderTarget.colorAttachmentCount(), renderTarget.colorRenderTargetHandles, singleHandleToDescriptorRange,
                                       renderTarget.hasDepthAttachment() ? &renderTarget.depthStencilRenderTargetHandle : nullptr);
-
-    // TODO: Ensure all attached textures are in a suitable state for being rendered to!
-    //for (auto& [genAttachedTexture, targetResourceState] : renderTarget.attachedTextures) {
-    //    auto& attachedTexture = static_cast<D3D12Texture&>(*genAttachedTexture);
-    //
-    //    // We require textures that we render to to always have the optimal layout both as initial and final, so that we can
-    //    // do things like LoadOp::Load and then just always assume that we have e.g. color target optimal.
-    //    if (attachedTexture.resourceState != targetResourceState) {
-    //        // ..
-    //        attachedTexture.resourceState = targetResourceState;
-    //    }
-    //}
 
     // TODO: Explicitly transition the layouts of the referenced textures to an optimal layout (if it isn't already)
     //renderState.stateBindings().forEachBinding([&](ShaderBinding const& bindingInfo) {

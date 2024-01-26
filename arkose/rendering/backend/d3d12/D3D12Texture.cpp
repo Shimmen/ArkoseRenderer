@@ -121,12 +121,25 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
         bufferDescription.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
 
+    D3D12_CLEAR_VALUE optimizedClearValue;
+    optimizedClearValue.Format = dxgiFormat;
+    if (hasDepthFormat()) {
+        optimizedClearValue.DepthStencil.Depth = 1.0f;
+        optimizedClearValue.DepthStencil.Stencil = 0u;
+    } else {
+        optimizedClearValue.Color[0] = 0.0f;
+        optimizedClearValue.Color[1] = 0.0f;
+        optimizedClearValue.Color[2] = 0.0f;
+        optimizedClearValue.Color[3] = 0.0f;
+    }
+
     CD3DX12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
-    D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_COMMON;
+    D3D12_RESOURCE_STATES initialResourceState = resourceState;
 
     // TODO: Don't use commited resource! Sub-allocate instead
     auto hr = d3d12Backend.device().CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE,
-                                                            &bufferDescription, initialResourceState, nullptr,
+                                                            &bufferDescription, initialResourceState,
+                                                            &optimizedClearValue,
                                                             IID_PPV_ARGS(&textureResource));
     if (FAILED(hr)) {
         ARKOSE_LOG(Fatal, "D3D12Texture: could not create committed resource for texture, exiting.");
