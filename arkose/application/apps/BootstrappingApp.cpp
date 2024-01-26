@@ -11,7 +11,7 @@ class DrawTriangleNode final : public RenderPipelineNode {
         VertexLayout vertexLayout = { VertexComponent::Position3F, VertexComponent::TexCoord2F };
         RenderStateBuilder renderStateBuilder { reg.windowRenderTarget(), bootstrapShader, vertexLayout };
         RenderState& renderState = reg.createRenderState(renderStateBuilder);
-
+        renderState.setName("DemoRenderState");
 
         struct Vertex {
             vec3 position;
@@ -36,7 +36,10 @@ class DrawTriangleNode final : public RenderPipelineNode {
         };
 
         Buffer& vertexBuffer = reg.createBufferForData(vertices, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+        vertexBuffer.setName("DemoVertexBuffer");
+
         Buffer& indexBuffer = reg.createBufferForData(indices, Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+        indexBuffer.setName("DemoIndexBuffer");
 
         return [&](AppState const& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 

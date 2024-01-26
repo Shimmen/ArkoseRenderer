@@ -214,9 +214,9 @@ void D3D12CommandList::draw(u32 vertexCount, u32 firstVertex)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    //if (!activeRenderState) {
-    //    ARKOSE_LOG(Fatal, "draw: no active render state!");
-    //}
+    if (!m_activeRenderState) {
+        ARKOSE_LOG(Fatal, "draw: no active render state!");
+    }
     if (m_boundVertexBuffer == nullptr) {
         ARKOSE_LOG(Fatal, "draw: no bound vertex buffer!");
     }
@@ -228,9 +228,9 @@ void D3D12CommandList::drawIndexed(u32 indexCount, u32 instanceIndex)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    // if (!activeRenderState) {
-    //     ARKOSE_LOG(Fatal, "draw: no active render state!");
-    // }
+    if (!m_activeRenderState) {
+        ARKOSE_LOG(Fatal, "draw: no active render state!");
+    }
     if (m_boundVertexBuffer == nullptr) {
         ARKOSE_LOG(Fatal, "draw: no bound vertex buffer!");
     }
@@ -380,12 +380,16 @@ void D3D12CommandList::debugBarrier()
 {
 }
 
-void D3D12CommandList::beginDebugLabel(const std::string& scopeName)
+void D3D12CommandList::beginDebugLabel(std::string const& scopeName)
 {
+    // From the RenderDoc documentation (https://renderdoc.org/docs/how/how_annotate_capture.html):
+    //   1 for the first parameter means the data is an ANSI string. Pass 0 for a wchar string. the length should include the NULL terminator
+    m_commandList->BeginEvent(1u, scopeName.c_str(), scopeName.size());
 }
 
 void D3D12CommandList::endDebugLabel()
 {
+    m_commandList->EndEvent();
 }
 
 void D3D12CommandList::textureWriteBarrier(const Texture& genTexture)

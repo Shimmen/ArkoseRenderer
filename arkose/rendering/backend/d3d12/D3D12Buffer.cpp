@@ -75,8 +75,7 @@ void D3D12Buffer::setName(const std::string& name)
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     Resource::setName(name);
-
-    // TODO
+    bufferResource->SetName(convertToWideString(name).c_str());
 }
 
 void D3D12Buffer::updateData(const std::byte* data, size_t updateSize, size_t offset)

@@ -295,6 +295,6 @@ void D3D12RenderState::setName(const std::string& name)
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     Resource::setName(name);
-
-    // TODO
+    pso->SetName(convertToWideString(name).c_str());
+    rootSignature->SetName(convertToWideString(name + "_rootsig").c_str());
 }
