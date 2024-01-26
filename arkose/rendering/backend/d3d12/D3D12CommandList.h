@@ -5,6 +5,11 @@ class D3D12RenderState;
 class ID3D12GraphicsCommandList;
 class ID3D12Resource;
 
+#if defined(TRACY_ENABLE)
+#include <directx/d3d12.h>
+#include <tracy/TracyD3D12.hpp>
+#endif
+
 class D3D12CommandList final : public CommandList {
 public:
     D3D12CommandList(D3D12Backend&, ID3D12GraphicsCommandList*);
@@ -71,5 +76,9 @@ private:
     ID3D12Resource* m_boundIndexBuffer { nullptr };
 
     D3D12RenderState const* m_activeRenderState { nullptr };
+
+#if defined(TRACY_ENABLE)
+    std::vector<std::unique_ptr<tracy::D3D12ZoneScope>> m_tracyDebugLabelStack;
+#endif
 
 };

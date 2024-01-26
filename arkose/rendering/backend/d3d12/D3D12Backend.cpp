@@ -20,6 +20,14 @@
 // Surface setup
 #include <dxgi1_4.h>
 
+#if defined(TRACY_ENABLE)
+#define SCOPED_PROFILE_ZONE_GPU(commandList, nameLiteral) TracyD3D12Zone(m_tracyD3D12Context, commandList, nameLiteral);
+#define SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandList, nameString) TracyD3D12ZoneTransient(m_tracyD3D12Context, TracyConcat(ScopedProfileZone, nameString), commandList, nameString.c_str(), nameString.size());
+#else
+#define SCOPED_PROFILE_ZONE_GPU(commandList, nameLiteral)
+#define SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandList, nameString)
+#endif
+
 // TODO: Set this to true when we detect window resize! From main.cpp or so perhaps?
 static bool s_unhandledWindowResize = false;
 
@@ -49,6 +57,9 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
         if (auto hr = m_device->QueryInterface(IID_PPV_ARGS(&m_debugDevice)); FAILED(hr)) {
             ARKOSE_LOG(Warning, "D3D12Backend: failed to create debug device.");
         }
+
+        // Can reduce overall performance, but it will give us a stable clock & consistent measurements
+        device().SetStablePowerState(true);
     }
 
     m_commandQueue = createDefaultCommandQueue();
@@ -150,11 +161,19 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
                                                                    { RenderTarget::AttachmentType::Depth, m_swapchainDepthTexture.get(), LoadOp::Clear, StoreOp::Store } });
         m_mockWindowRenderTarget = std::make_unique<D3D12RenderTarget>(*this, attachments);
     }
+
+    #if defined(TRACY_ENABLE)
+    m_tracyD3D12Context = TracyD3D12Context(&device(), m_commandQueue.Get());
+    #endif
 }
 
 D3D12Backend::~D3D12Backend()
 {
     m_pipelineRegistry.reset();
+
+    #if defined(TRACY_ENABLE)
+    TracyD3D12Destroy(m_tracyD3D12Context);
+    #endif
 
     // TODO!
 }
@@ -240,7 +259,7 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
         D3D12CommandList cmdList { *this, commandList };
 
         {
-            //SCOPED_PROFILE_ZONE_GPU(commandBuffer, "Render Pipeline");
+            SCOPED_PROFILE_ZONE_GPU(commandList, "Render Pipeline");
             renderPipeline.forEachNodeInResolvedOrder(registry, [&](RenderPipelineNode& node, const RenderPipelineNode::ExecuteCallback& nodeExecuteCallback) {
                 std::string nodeName = node.name();
 
@@ -282,6 +301,9 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
         ID3D12CommandList* commandLists[] = { commandList };
         commandQueue().ExecuteCommandLists(std::extent<decltype(commandLists)>::value, commandLists);
     }
+
+    TracyD3D12Collect(m_tracyD3D12Context);
+    TracyD3D12NewFrame(m_tracyD3D12Context);
 
     // Present
     {

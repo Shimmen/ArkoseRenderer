@@ -6,6 +6,10 @@ struct IDXGISwapChain;
 struct D3D12RenderTarget;
 
 
+#if defined(TRACY_ENABLE)
+#include <tracy/TracyD3D12.hpp>
+#endif
+
 static constexpr bool d3d12debugMode = true;
 
 class D3D12Backend final : public Backend {
@@ -65,6 +69,10 @@ public:
     bool setBufferDataUsingStagingBuffer(struct D3D12Buffer&, const uint8_t* data, size_t size, size_t offset = 0);
 
     void issueUploadCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const;
+
+    #if defined(TRACY_ENABLE)
+    tracy::D3D12QueueCtx* tracyD3D12Context() { return m_tracyD3D12Context; }
+    #endif
 
 private:
     ///////////////////////////////////////////////////////////////////////////
@@ -126,5 +134,9 @@ private:
     /// Resource & resource management members
 
     std::unique_ptr<Registry> m_pipelineRegistry {};
+
+    #if defined(TRACY_ENABLE)
+    tracy::D3D12QueueCtx* m_tracyD3D12Context {};
+    #endif
 
 };

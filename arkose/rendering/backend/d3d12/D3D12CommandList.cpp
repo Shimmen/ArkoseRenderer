@@ -428,6 +428,16 @@ void D3D12CommandList::beginDebugLabel(std::string const& scopeName)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
+#if defined(TRACY_ENABLE)
+    auto tracyScope = std::make_unique<tracy::D3D12ZoneScope>(backend().tracyD3D12Context(),
+                                                              TracyLine,
+                                                              TracyFile, strlen(TracyFile),
+                                                              TracyFunction, strlen(TracyFunction),
+                                                              scopeName.c_str(), scopeName.size(),
+                                                              m_commandList, true);
+    m_tracyDebugLabelStack.push_back(std::move(tracyScope));
+#endif
+
     // From the RenderDoc documentation (https://renderdoc.org/docs/how/how_annotate_capture.html):
     //   1 for the first parameter means the data is an ANSI string. Pass 0 for a wchar string. the length should include the NULL terminator
     //m_commandList->BeginEvent(1u, scopeName.c_str(), scopeName.size());
@@ -441,6 +451,11 @@ void D3D12CommandList::beginDebugLabel(std::string const& scopeName)
 void D3D12CommandList::endDebugLabel()
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+#if defined(TRACY_ENABLE)
+    ARKOSE_ASSERT(m_tracyDebugLabelStack.size() > 0);
+    m_tracyDebugLabelStack.pop_back();
+#endif
 
     //m_commandList->EndEvent();
     PIXEndEvent(m_commandList);
