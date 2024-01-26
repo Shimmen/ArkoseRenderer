@@ -489,7 +489,7 @@ ComPtr<IDXGISwapChain> D3D12Backend::createSwapChain(ID3D12CommandQueue* command
     swapChainDesc.Windowed = !System::get().windowIsFullscreen();
 
     swapChainDesc.BufferDesc.Width = UINT(m_windowFramebufferExtent.width());
-    swapChainDesc.BufferDesc.Height = UINT(m_windowFramebufferExtent.width());
+    swapChainDesc.BufferDesc.Height = UINT(m_windowFramebufferExtent.height());
 
     swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 
