@@ -1326,16 +1326,6 @@ void VulkanCommandList::traceRays(Extent2D extent)
     }
 }
 
-void VulkanCommandList::dispatch(Extent3D globalSize, Extent3D localSize)
-{
-    SCOPED_PROFILE_ZONE_GPUCOMMAND();
-
-    uint32_t x = (globalSize.width() + localSize.width() - 1) / localSize.width();
-    uint32_t y = (globalSize.height() + localSize.height() - 1) / localSize.height();
-    uint32_t z = (globalSize.depth() + localSize.depth() - 1) / localSize.depth();
-    dispatch(x, y, z);
-}
-
 void VulkanCommandList::dispatch(uint32_t x, uint32_t y, uint32_t z)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();

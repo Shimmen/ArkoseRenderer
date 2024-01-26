@@ -55,7 +55,7 @@ public:
     virtual void buildBottomLevelAcceratationStructure(BottomLevelAS&, AccelerationStructureBuildType) = 0;
     virtual void traceRays(Extent2D) = 0;
 
-    virtual void dispatch(Extent3D globalSize, Extent3D localSize) = 0;
+    void dispatch(Extent3D globalSize, Extent3D localSize);
     virtual void dispatch(uint32_t x, uint32_t y, uint32_t z = 1) = 0;
 
     //! A barrier for all commands and memory, which probably only should be used for debug stuff.
@@ -88,4 +88,12 @@ inline void CommandList::setNamedUniform(const std::string& name, bool value)
 {
     uint32_t intValue = (value) ? 1 : 0;
     setNamedUniform(name, &intValue, sizeof(uint32_t));
+}
+
+inline void CommandList::dispatch(Extent3D globalSize, Extent3D localSize)
+{
+    u32 x = (globalSize.width() + localSize.width() - 1) / localSize.width();
+    u32 y = (globalSize.height() + localSize.height() - 1) / localSize.height();
+    u32 z = (globalSize.depth() + localSize.depth() - 1) / localSize.depth();
+    dispatch(x, y, z);
 }

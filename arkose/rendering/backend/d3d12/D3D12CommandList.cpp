@@ -18,31 +18,44 @@ D3D12CommandList::D3D12CommandList(D3D12Backend& backend, ID3D12GraphicsCommandL
 void D3D12CommandList::fillBuffer(Buffer&, u32 fillValue)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::clearTexture(Texture& genColorTexture, ClearValue clearValue)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t srcMip, uint32_t dstMip)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::generateMipmaps(Texture& genTexture)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::executeBufferCopyOperations(std::vector<BufferCopyOperation> copyOperations)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    // TODO!
+    //NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::beginRendering(const RenderState& genRenderState, bool autoSetViewport)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearValue clearValue, bool autoSetViewport)
@@ -184,31 +197,43 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearVa
 void D3D12CommandList::endRendering()
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    m_activeRenderState = nullptr;
 }
 
 void D3D12CommandList::setRayTracingState(const RayTracingState& rtState)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::setComputeState(const ComputeState& genComputeState)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::evaluateUpscaling(UpscalingState const&, UpscalingParameters)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::bindTextureSet(BindingSet&, u32 index)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::setNamedUniform(const std::string& name, void* data, size_t size)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::draw(u32 vertexCount, u32 firstVertex)
@@ -245,17 +270,23 @@ void D3D12CommandList::drawIndexed(u32 indexCount, u32 instanceIndex)
 void D3D12CommandList::drawIndirect(const Buffer& indirectBuffer, const Buffer& countBuffer)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::drawMeshTasks(u32 groupCountX, u32 groupCountY, u32 groupCountZ)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::drawMeshTasksIndirect(Buffer const& indirectBuffer, u32 indirectDataStride, u32 indirectDataOffset,
                                              Buffer const& countBuffer, u32 countDataOffset)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::setViewport(ivec2 origin, ivec2 size)
@@ -289,6 +320,8 @@ void D3D12CommandList::setViewport(ivec2 origin, ivec2 size)
 void D3D12CommandList::setDepthBias(float constantFactor, float slopeFactor)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::bindVertexBuffer(Buffer const& vertexBuffer, u32 stride, u32 bindingIdx)
@@ -345,44 +378,56 @@ void D3D12CommandList::bindIndexBuffer(Buffer const& indexBuffer, IndexType inde
 void D3D12CommandList::issueDrawCall(DrawCallDescription const& drawCall)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::buildTopLevelAcceratationStructure(TopLevelAS& tlas, AccelerationStructureBuildType buildType)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::buildBottomLevelAcceratationStructure(BottomLevelAS& blas, AccelerationStructureBuildType buildType)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::traceRays(Extent2D extent)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
-}
 
-void D3D12CommandList::dispatch(Extent3D globalSize, Extent3D localSize)
-{
-    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::dispatch(uint32_t x, uint32_t y, uint32_t z)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::slowBlockingReadFromBuffer(const Buffer& buffer, size_t offset, size_t size, void* dst)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::debugBarrier()
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::beginDebugLabel(std::string const& scopeName)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     // From the RenderDoc documentation (https://renderdoc.org/docs/how/how_annotate_capture.html):
     //   1 for the first parameter means the data is an ANSI string. Pass 0 for a wchar string. the length should include the NULL terminator
     //m_commandList->BeginEvent(1u, scopeName.c_str(), scopeName.size());
@@ -395,18 +440,29 @@ void D3D12CommandList::beginDebugLabel(std::string const& scopeName)
 
 void D3D12CommandList::endDebugLabel()
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
     //m_commandList->EndEvent();
     PIXEndEvent(m_commandList);
 }
 
 void D3D12CommandList::textureWriteBarrier(const Texture& genTexture)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::textureMipWriteBarrier(const Texture& genTexture, uint32_t mip)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
 
 void D3D12CommandList::bufferWriteBarrier(std::vector<Buffer const*> buffers)
 {
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
 }
