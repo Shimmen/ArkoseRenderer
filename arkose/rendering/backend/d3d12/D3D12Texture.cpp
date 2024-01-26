@@ -106,7 +106,7 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
     }
 
     bufferDescription.SampleDesc.Count = static_cast<UINT>(multisampling());
-    bufferDescription.SampleDesc.Quality = DXGI_STANDARD_MULTISAMPLE_QUALITY_PATTERN;
+    bufferDescription.SampleDesc.Quality = isMultisampled() ? DXGI_STANDARD_MULTISAMPLE_QUALITY_PATTERN : 0;
 
     bufferDescription.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 
