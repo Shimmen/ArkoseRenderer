@@ -7,6 +7,7 @@
 #include "rendering/backend/d3d12/D3D12RenderTarget.h"
 #include "rendering/backend/d3d12/D3D12Texture.h"
 #include <d3d12.h>
+#include <pix.h> // for PIXBeginEvent & PIXEndEvent
 
 D3D12CommandList::D3D12CommandList(D3D12Backend& backend, ID3D12GraphicsCommandList* d3d12CommandList)
     : m_backend(backend)
@@ -384,12 +385,18 @@ void D3D12CommandList::beginDebugLabel(std::string const& scopeName)
 {
     // From the RenderDoc documentation (https://renderdoc.org/docs/how/how_annotate_capture.html):
     //   1 for the first parameter means the data is an ANSI string. Pass 0 for a wchar string. the length should include the NULL terminator
-    m_commandList->BeginEvent(1u, scopeName.c_str(), scopeName.size());
+    //m_commandList->BeginEvent(1u, scopeName.c_str(), scopeName.size());
+    // However, if we use that as-is we get spammed by validation, saying:
+    //  "BeginEvent is a diagnostic API used by debugging tools for D3D. Developers should use PIXBeginEvent"
+    // which is fair enough because it's documented as internal only and not for use.
+
+    PIXBeginEvent(m_commandList, 0x333333, scopeName.c_str());
 }
 
 void D3D12CommandList::endDebugLabel()
 {
-    m_commandList->EndEvent();
+    //m_commandList->EndEvent();
+    PIXEndEvent(m_commandList);
 }
 
 void D3D12CommandList::textureWriteBarrier(const Texture& genTexture)
