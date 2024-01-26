@@ -1,6 +1,7 @@
 #include "rendering/backend/base/CommandList.h"
 
 class D3D12Backend;
+class D3D12RenderState;
 class ID3D12GraphicsCommandList;
 class ID3D12Resource;
 
@@ -69,5 +70,7 @@ private:
 
     ID3D12Resource* m_boundVertexBuffer { nullptr };
     ID3D12Resource* m_boundIndexBuffer { nullptr };
+
+    D3D12RenderState const* m_activeRenderState { nullptr };
 
 };

@@ -2,6 +2,8 @@
 
 #include "rendering/backend/base/Texture.h"
 
+#include "rendering/backend/d3d12/D3D12Common.h"
+
 struct D3D12Texture final : public Texture {
 public:
     D3D12Texture(Backend&, Description);
@@ -17,4 +19,9 @@ public:
     void generateMipmaps() override;
 
     ImTextureID asImTextureID() override;
+
+    ComPtr<ID3D12Resource> textureResource;
+    D3D12_RESOURCE_STATES resourceState;
+
+    DXGI_FORMAT dxgiFormat { DXGI_FORMAT_UNKNOWN };
 };

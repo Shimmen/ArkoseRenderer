@@ -3,6 +3,9 @@
 #include "utility/Profiling.h"
 #include "rendering/backend/d3d12/D3D12Backend.h"
 #include "rendering/backend/d3d12/D3D12Buffer.h"
+#include "rendering/backend/d3d12/D3D12RenderState.h"
+#include "rendering/backend/d3d12/D3D12RenderTarget.h"
+#include "rendering/backend/d3d12/D3D12Texture.h"
 #include <d3d12.h>
 
 D3D12CommandList::D3D12CommandList(D3D12Backend& backend, ID3D12GraphicsCommandList* d3d12CommandList)
@@ -44,6 +47,96 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, bool au
 void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearValue clearValue, bool autoSetViewport)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    if (m_activeRenderState) {
+        ARKOSE_LOG(Warning, "beginRendering: already active render state!");
+        m_activeRenderState = nullptr;
+    }
+
+    auto& renderState = static_cast<const D3D12RenderState&>(genRenderState);
+    m_activeRenderState = &renderState;
+    //m_activeRayTracingState = nullptr;
+    //m_activeComputeState = nullptr;
+
+    auto& renderTarget = static_cast<const D3D12RenderTarget&>(renderState.renderTarget());
+
+    renderTarget.forEachAttachmentInOrder([&](const RenderTarget::Attachment& attachment) {
+        if (attachment.type == RenderTarget::AttachmentType::Depth) {
+            m_commandList->ClearDepthStencilView(renderTarget.depthStencilRenderTargetHandle,
+                                                 D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL,
+                                                 clearValue.depth, narrow_cast<u8>(clearValue.stencil),
+                                                 0, nullptr);
+        } else {
+            u32 attachmentIdx = toUnderlying(attachment.type);
+            m_commandList->ClearRenderTargetView(renderTarget.colorRenderTargetHandles[attachmentIdx],
+                                                 &clearValue.color.r,
+                                                 0, nullptr);
+        }
+    });
+
+    constexpr bool singleHandleToDescriptorRange = false; // TODO: Can we set this to true? Not sure..
+    m_commandList->OMSetRenderTargets(renderTarget.colorAttachmentCount(), renderTarget.colorRenderTargetHandles, singleHandleToDescriptorRange,
+                                      renderTarget.hasDepthAttachment() ? &renderTarget.depthStencilRenderTargetHandle : nullptr);
+
+    // TODO: Ensure all attached textures are in a suitable state for being rendered to!
+    //for (auto& [genAttachedTexture, targetResourceState] : renderTarget.attachedTextures) {
+    //    auto& attachedTexture = static_cast<D3D12Texture&>(*genAttachedTexture);
+    //
+    //    // We require textures that we render to to always have the optimal layout both as initial and final, so that we can
+    //    // do things like LoadOp::Load and then just always assume that we have e.g. color target optimal.
+    //    if (attachedTexture.resourceState != targetResourceState) {
+    //        // ..
+    //        attachedTexture.resourceState = targetResourceState;
+    //    }
+    //}
+
+    // TODO: Explicitly transition the layouts of the referenced textures to an optimal layout (if it isn't already)
+    //renderState.stateBindings().forEachBinding([&](ShaderBinding const& bindingInfo) {
+    //    if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
+    //        for (Texture const* texture : bindingInfo.getSampledTextures()) {
+    //            auto& d3d12Texture = static_cast<D3D12Texture const&>(*texture);
+    //
+    //            constexpr D3D12_RESOURCE_STATES targetResourceState = ..?;
+    //            if (d3d12Texture.resourceState != targetResourceState) {
+    //                // ...
+    //                d3d12Texture.resourceState = targetResourceState;
+    //            }
+    //        }
+    //    } else if (bindingInfo.type() == ShaderBindingType::StorageTexture) {
+    //        for (TextureMipView textureMip : bindingInfo.getStorageTextures()) {
+    //            auto& d3d12Texture = static_cast<D3D12Texture const&>(textureMip.texture());
+    //
+    //            constexpr D3D12_RESOURCE_STATES targetResourceState = ..?;
+    //            if (d3d12Texture.resourceState != targetResourceState) {
+    //                // ...
+    //                d3d12Texture.resourceState = targetResourceState;
+    //            }
+    //        }
+    //    }
+    //});
+
+    m_commandList->SetPipelineState(renderState.pso.Get());
+
+    switch (renderState.rasterState().primitiveType) {
+    case PrimitiveType::Triangles:
+        m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+        break;
+    case PrimitiveType::LineSegments:
+        m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
+        break;
+    case PrimitiveType::Points:
+        m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+
+    // NOTE: All bindings are effectively "baked" into the root signature so we only bind once for all
+    m_commandList->SetGraphicsRootSignature(renderState.rootSignature.Get());
+
+    if (autoSetViewport) {
+        setViewport({ 0, 0 }, renderTarget.extent().asIntVector());
+    }
 }
 
 void D3D12CommandList::endRendering()
@@ -126,6 +219,29 @@ void D3D12CommandList::drawMeshTasksIndirect(Buffer const& indirectBuffer, u32 i
 void D3D12CommandList::setViewport(ivec2 origin, ivec2 size)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    ARKOSE_ASSERT(origin.x >= 0);
+    ARKOSE_ASSERT(origin.y >= 0);
+    ARKOSE_ASSERT(size.x > 0);
+    ARKOSE_ASSERT(size.x > 0);
+
+    D3D12_VIEWPORT viewport {};
+    viewport.TopLeftX = static_cast<float>(origin.x);
+    viewport.TopLeftY = static_cast<float>(origin.y);
+    viewport.Width = static_cast<float>(size.x);
+    viewport.Height = static_cast<float>(size.y);
+    viewport.MinDepth = 0.0f;
+    viewport.MaxDepth = 1.0f;
+
+    // TODO: Allow independent scissor control
+    D3D12_RECT scissorRect {};
+    scissorRect.left = LONG(origin.x);
+    scissorRect.top = LONG(origin.y);
+    scissorRect.right = LONG(origin.x + size.x);
+    scissorRect.bottom = LONG(origin.y + size.y);
+
+    m_commandList->RSSetViewports(1, &viewport);
+    m_commandList->RSSetScissorRects(1, &scissorRect);
 }
 
 void D3D12CommandList::setDepthBias(float constantFactor, float slopeFactor)

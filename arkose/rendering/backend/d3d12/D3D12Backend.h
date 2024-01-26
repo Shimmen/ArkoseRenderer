@@ -125,15 +125,19 @@ private:
     struct Demo {
 
         struct Vertex {
-            float position[3];
-            float uv[2];
+            vec3 position;
+            vec2 uv;
         };
-
-        ComPtr<ID3D12RootSignature> rootSignature;
-        ComPtr<ID3D12PipelineState> pso;
     
         std::unique_ptr<D3D12Buffer> vertexBuffer;
         std::unique_ptr<D3D12Buffer> indexBuffer;
+
+        // actually just needed as a stand-in for the swapchain texture..
+        std::unique_ptr<Texture> hackTexture;
+
+        std::unique_ptr<Texture> depthTexture;
+        std::unique_ptr<RenderTarget> renderTarget;
+        std::unique_ptr<RenderState> renderState;
 
     } m_demo;
 
