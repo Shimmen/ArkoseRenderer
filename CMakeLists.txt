@@ -286,6 +286,7 @@ if (ARKOSE_BACKEND_D3D12)
         arkose/rendering/backend/d3d12/D3D12RenderState.cpp
         arkose/rendering/backend/d3d12/D3D12RenderTarget.cpp
         arkose/rendering/backend/d3d12/D3D12Texture.cpp
+        arkose/rendering/backend/shader/dxc/DxcInterface.cpp
         )
     target_link_libraries(ArkoseRenderer PRIVATE
         d3d12 dxgi dxguid  # core stuff
