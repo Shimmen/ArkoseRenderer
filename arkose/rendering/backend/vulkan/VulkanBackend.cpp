@@ -25,6 +25,14 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#if defined(TRACY_ENABLE)
+#define SCOPED_PROFILE_ZONE_GPU(commandBuffer, nameLiteral) TracyVkZone(m_tracyVulkanContext, commandBuffer, nameLiteral);
+#define SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandBuffer, nameString) TracyVkZoneTransient(m_tracyVulkanContext, TracyConcat(ScopedProfileZone, nameString), commandBuffer, nameString.c_str(), nameString.size());
+#else
+#define SCOPED_PROFILE_ZONE_GPU(commandBuffer, nameLiteral)
+#define SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandBuffer, nameString)
+#endif
+
 VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecification)
 {
     {
