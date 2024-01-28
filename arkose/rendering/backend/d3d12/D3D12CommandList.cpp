@@ -47,8 +47,58 @@ void D3D12CommandList::executeBufferCopyOperations(std::vector<BufferCopyOperati
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    // TODO!
-    //NOT_YET_IMPLEMENTED();
+    if (copyOperations.size() == 0) {
+        return;
+    }
+
+    beginDebugLabel(fmt::format("Execute buffer copy operations (x{})", copyOperations.size()));
+
+    for (BufferCopyOperation const& copyOperation : copyOperations) {
+
+        if (copyOperation.size == 0) {
+            continue;
+        }
+
+        if (std::holds_alternative<BufferCopyOperation::BufferDestination>(copyOperation.destination)) {
+            auto const& copyDestination = std::get<BufferCopyOperation::BufferDestination>(copyOperation.destination);
+
+            D3D12Buffer& srcBuffer = static_cast<D3D12Buffer&>(*copyOperation.srcBuffer);
+            D3D12Buffer& dstBuffer = static_cast<D3D12Buffer&>(*copyDestination.buffer);
+
+            constexpr D3D12_RESOURCE_STATES expectedResourceState = D3D12_RESOURCE_STATE_COPY_DEST;
+            if (dstBuffer.resourceState != expectedResourceState) {
+                D3D12_RESOURCE_BARRIER resourceBarrier {};
+                resourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+                resourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+                resourceBarrier.Transition.pResource = dstBuffer.bufferResource.Get();
+                resourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+                resourceBarrier.Transition.StateBefore = dstBuffer.resourceState;
+                resourceBarrier.Transition.StateAfter = expectedResourceState;
+
+                m_commandList->ResourceBarrier(1, &resourceBarrier);
+                dstBuffer.resourceState = expectedResourceState;
+            }
+
+            m_commandList->CopyBufferRegion(dstBuffer.bufferResource.Get(), copyDestination.offset,
+                                            srcBuffer.bufferResource.Get(), copyOperation.srcOffset,
+                                            copyOperation.size);
+
+            // TODO: Barrier after?!
+
+        } else if (std::holds_alternative<BufferCopyOperation::TextureDestination>(copyOperation.destination)) {
+            auto const& copyDestination = std::get<BufferCopyOperation::TextureDestination>(copyOperation.destination);
+
+            D3D12Texture& dstTexture = *static_cast<D3D12Texture*>(copyDestination.texture);
+            ID3D12Resource* srcBuffer = static_cast<D3D12Buffer*>(copyOperation.srcBuffer)->bufferResource.Get();
+
+            NOT_YET_IMPLEMENTED();
+
+        } else {
+            ASSERT_NOT_REACHED();
+        }
+    }
+
+    endDebugLabel();
 }
 
 void D3D12CommandList::beginRendering(const RenderState& genRenderState, bool autoSetViewport)
