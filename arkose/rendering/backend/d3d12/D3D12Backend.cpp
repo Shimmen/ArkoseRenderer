@@ -15,11 +15,8 @@
 #include "utility/FileIO.h"
 #include <backends/imgui_impl_dx12.h>
 
-// The DirectX Compiler API
-#include <dxcapi.h>
-
 // Surface setup
-#include <dxgi1_4.h>
+#include <dxgi1_6.h>
 
 #if defined(TRACY_ENABLE)
 #define SCOPED_PROFILE_ZONE_GPU(commandList, nameLiteral) TracyD3D12Zone(m_tracyD3D12Context, commandList, nameLiteral);
@@ -28,9 +25,6 @@
 #define SCOPED_PROFILE_ZONE_GPU(commandList, nameLiteral)
 #define SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandList, nameString)
 #endif
-
-// TODO: Set this to true when we detect window resize! From main.cpp or so perhaps?
-static bool s_unhandledWindowResize = false;
 
 D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecification)
 {
@@ -65,6 +59,7 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
 
     m_commandQueue = createDefaultCommandQueue();
     m_swapChain = createSwapChain(m_commandQueue.Get());
+    createWindowRenderTarget();
 
     /////////////////////////////////
 
@@ -138,31 +133,6 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
         }
     }
 
-    // Create depth texture for rendering to the swapchain texture
-    {
-        Texture::Description depthTextureDesc;
-        depthTextureDesc.extent = m_windowFramebufferExtent;
-        depthTextureDesc.format = Texture::Format::Depth24Stencil8;
-        m_swapchainDepthTexture = std::make_unique<D3D12Texture>(*this, depthTextureDesc);
-    }
-
-    // Create the "mock" texture and render target for rendering to this
-    {
-        m_mockSwapchainTexture = std::make_unique<D3D12Texture>();
-
-        m_mockSwapchainTexture->m_description.extent = m_windowFramebufferExtent;
-        m_mockSwapchainTexture->m_description.format = Texture::Format::Unknown;
-
-        m_mockSwapchainTexture->textureResource = nullptr;
-        m_mockSwapchainTexture->resourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        m_mockSwapchainTexture->dxgiFormat = SwapChainRenderTargetViewFormat;
-
-        //auto& referenceFrameContext = *m_frameContexts[0]; // doesn't matter for now, just grab any.
-        auto attachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, m_mockSwapchainTexture.get(), LoadOp::Clear, StoreOp::Store },
-                                                                   { RenderTarget::AttachmentType::Depth, m_swapchainDepthTexture.get(), LoadOp::Clear, StoreOp::Store } });
-        m_mockWindowRenderTarget = std::make_unique<D3D12RenderTarget>(*this, attachments);
-    }
-
     // Setup Dear ImGui
     {
         D3D12_DESCRIPTOR_HEAP_DESC dearImguiHeapDesc = {};
@@ -230,11 +200,6 @@ void D3D12Backend::newFrame()
 
 bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTime, float deltaTime)
 {
-    if (s_unhandledWindowResize) {
-        recreateSwapChain();
-        s_unhandledWindowResize = false;
-    }
-
     bool isRelativeFirstFrame = m_relativeFrameIndex < m_frameContexts.size();
     AppState appState { m_windowFramebufferExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
 
@@ -248,6 +213,9 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
         SCOPED_PROFILE_ZONE_BACKEND_NAMED("Waiting for fence");
         waitForFence(frameContext.frameFence.Get(), frameContext.frameFenceValue, frameContext.frameFenceEvent);
     }
+
+    // NOTE: We're ignoring any time spent waiting for the fence, as that would factor e.g. GPU time & sync into the CPU time
+    double cpuFrameStartTime = System::get().timeSinceStartup();
 
     // Draw frame
     {
@@ -341,6 +309,10 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
         commandQueue().ExecuteCommandLists(std::extent<decltype(commandLists)>::value, commandLists);
     }
 
+    // NOTE: We're ignoring any time relating to submitting & presenting, as that would factor e.g. GPU time & sync into the CPU time
+    double cpuFrameElapsedTime = System::get().timeSinceStartup() - cpuFrameStartTime;
+    renderPipeline.timer().reportCpuTime(cpuFrameElapsedTime);
+
     TracyD3D12Collect(m_tracyD3D12Context);
     TracyD3D12NewFrame(m_tracyD3D12Context);
 
@@ -357,6 +329,17 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
 
     m_currentFrameIndex += 1;
     m_relativeFrameIndex += 1;
+
+    Extent2D currentFramebufferExtent = System::get().windowFramebufferSize();
+    if (currentFramebufferExtent != m_windowFramebufferExtent) {
+        recreateSwapChain();
+
+        // As the window render target changed we also have to recreate the render pipeline & its resource
+        renderPipelineDidChange(renderPipeline);
+
+        TracyD3D12Destroy(m_tracyD3D12Context);
+        m_tracyD3D12Context = TracyD3D12Context(&device(), m_commandQueue.Get());
+    }
 
     return true;
 }
@@ -624,6 +607,33 @@ ComPtr<IDXGISwapChain> D3D12Backend::createSwapChain(ID3D12CommandQueue* command
     return swapChain;
 }
 
+void D3D12Backend::createWindowRenderTarget()
+{
+    // Create depth texture for rendering to the swapchain texture
+    {
+        Texture::Description depthTextureDesc;
+        depthTextureDesc.extent = m_windowFramebufferExtent;
+        depthTextureDesc.format = Texture::Format::Depth24Stencil8;
+        m_swapchainDepthTexture = std::make_unique<D3D12Texture>(*this, depthTextureDesc);
+    }
+
+    // Create the "mock" texture and render target for rendering to this
+    {
+        m_mockSwapchainTexture = std::make_unique<D3D12Texture>();
+
+        m_mockSwapchainTexture->m_description.extent = m_windowFramebufferExtent;
+        m_mockSwapchainTexture->m_description.format = Texture::Format::Unknown;
+
+        m_mockSwapchainTexture->textureResource = nullptr;
+        m_mockSwapchainTexture->resourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        m_mockSwapchainTexture->dxgiFormat = SwapChainRenderTargetViewFormat;
+
+        auto attachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, m_mockSwapchainTexture.get(), LoadOp::Clear, StoreOp::Store },
+                                                                   { RenderTarget::AttachmentType::Depth, m_swapchainDepthTexture.get(), LoadOp::Clear, StoreOp::Store } });
+        m_mockWindowRenderTarget = std::make_unique<D3D12RenderTarget>(*this, attachments);
+    }
+}
+
 void D3D12Backend::recreateSwapChain()
 {
     while (true) {
@@ -677,6 +687,10 @@ void D3D12Backend::recreateSwapChain()
             device().CreateRenderTargetView(frameContext.renderTarget.Get(), &viewDesc, rtvHandle);
         }
     }
+
+    waitForDeviceIdle();
+
+    createWindowRenderTarget();
 
     waitForDeviceIdle();
 }
