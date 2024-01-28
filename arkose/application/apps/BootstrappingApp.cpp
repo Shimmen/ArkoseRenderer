@@ -44,7 +44,7 @@ class DrawTriangleNode final : public RenderPipelineNode {
         return [&](AppState const& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
             ClearValue clearValue;
-            clearValue.color = ClearColor::srgbColor(0.2f, 0.2f, 0.2f, 1.0f);
+            clearValue.color = ClearColor::srgbColor(0.5f, 0.5f, 0.5f, 1.0f);
             cmdList.beginRendering(renderState, clearValue, true);
 
             cmdList.bindVertexBuffer(vertexBuffer, sizeof(Vertex), 0);
@@ -59,6 +59,8 @@ class DrawTriangleNode final : public RenderPipelineNode {
 
 void BootstrappingApp::setup(Scene& scene, RenderPipeline& pipeline)
 {
+    m_pipeline = &pipeline;
+
     scene.setupFromDescription({ .path = "assets/sample/sponza.json",
                                  .withRayTracing = false,
                                  .withMeshShading = false });
@@ -69,5 +71,6 @@ void BootstrappingApp::setup(Scene& scene, RenderPipeline& pipeline)
 
 bool BootstrappingApp::update(Scene&, float elapsedTime, float deltaTime)
 {
+    m_pipeline->drawGui();
     return true;
 }
