@@ -98,7 +98,8 @@ if(NOT dearimgui_fetch_POPULATED)
         "${dearimgui_fetch_SOURCE_DIR}/imgui_tables.cpp"
         "${dearimgui_fetch_SOURCE_DIR}/imgui_demo.cpp"
         "${dearimgui_fetch_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
-        "${dearimgui_fetch_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp") # TODO: What about non-vulkan builds?
+        "${dearimgui_fetch_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp"
+        "${dearimgui_fetch_SOURCE_DIR}/backends/imgui_impl_dx12.cpp") # TODO: Only include if `WITH_D3D12`?
 
     target_compile_features(dear_imgui PRIVATE cxx_std_17)
     target_include_directories(dear_imgui PUBLIC ${dearimgui_fetch_SOURCE_DIR})

@@ -13,6 +13,7 @@
 #include "rendering/RenderPipeline.h"
 #include "system/System.h"
 #include "utility/FileIO.h"
+#include <backends/imgui_impl_dx12.h>
 
 // The DirectX Compiler API
 #include <dxcapi.h>
@@ -162,6 +163,24 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
         m_mockWindowRenderTarget = std::make_unique<D3D12RenderTarget>(*this, attachments);
     }
 
+    // Setup Dear ImGui
+    {
+        D3D12_DESCRIPTOR_HEAP_DESC dearImguiHeapDesc = {};
+        dearImguiHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
+        dearImguiHeapDesc.NumDescriptors = 1;
+        dearImguiHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+        dearImguiHeapDesc.NodeMask = 0;
+        if (auto hr = device().CreateDescriptorHeap(&dearImguiHeapDesc, IID_PPV_ARGS(&m_dearImGuiDescriptorHeap)); !SUCCEEDED(hr)) {
+            ARKOSE_LOG(Fatal, "D3D12Backend: failed to create Dear ImGui descriptor healp, exiting.");
+        }
+
+        ImGui_ImplDX12_Init(&device(), QueueSlotCount, SwapChainRenderTargetViewFormat,
+                            m_dearImGuiDescriptorHeap.Get(),
+                            m_dearImGuiDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+                            m_dearImGuiDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+        ImGui_ImplDX12_CreateDeviceObjects();
+    }
+
     #if defined(TRACY_ENABLE)
     m_tracyD3D12Context = TracyD3D12Context(&device(), m_commandQueue.Get());
     #endif
@@ -170,6 +189,8 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
 D3D12Backend::~D3D12Backend()
 {
     m_pipelineRegistry.reset();
+
+    ImGui_ImplDX12_Shutdown();
 
     #if defined(TRACY_ENABLE)
     TracyD3D12Destroy(m_tracyD3D12Context);
@@ -204,6 +225,7 @@ void D3D12Backend::shadersDidRecompile(const std::vector<std::string>& shaderNam
 
 void D3D12Backend::newFrame()
 {
+    ImGui_ImplDX12_NewFrame();
 }
 
 bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTime, float deltaTime)
@@ -284,6 +306,23 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
                 node.timer().reportCpuTime(cpuElapsed);
             });
         }
+
+        cmdList.beginDebugLabel("GUI");
+        {
+            SCOPED_PROFILE_ZONE_GPU(commandList, "GUI");
+            SCOPED_PROFILE_ZONE_BACKEND_NAMED("GUI Rendering");
+
+            ImGui::Render();
+
+            commandList->SetDescriptorHeaps(1, m_dearImGuiDescriptorHeap.GetAddressOf());
+            ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
+
+            if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
+                ImGui::UpdatePlatformWindows();
+                ImGui::RenderPlatformWindowsDefault();
+            }
+        }
+        cmdList.endDebugLabel();
 
         // Transition the swap chain back to present
         D3D12_RESOURCE_BARRIER renderTargetToPresentBarrier;

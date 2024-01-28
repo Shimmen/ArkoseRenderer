@@ -98,6 +98,8 @@ private:
     static constexpr DXGI_FORMAT SwapChainFormat                 = DXGI_FORMAT_R8G8B8A8_UNORM;
     static constexpr DXGI_FORMAT SwapChainRenderTargetViewFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
 
+    ComPtr<ID3D12DescriptorHeap> m_dearImGuiDescriptorHeap {};
+
     ///////////////////////////////////////////////////////////////////////////
     /// Frame management related members
 
