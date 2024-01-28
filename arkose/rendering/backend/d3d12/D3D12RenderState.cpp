@@ -99,31 +99,60 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
 
     // Create the root signature
     {
-        std::vector<D3D12_ROOT_PARAMETER> allRootParameters {};
+        u32 nextCvbRegister = 0;
+        u32 nextSrvRegister = 0;
+        u32 nextUavRegister = 0;
+
         stateBindings.forEachBindingSet([&](u32 setIndex, BindingSet const& bindingSet) {
             auto const& d3d12BindingSet = static_cast<D3D12BindingSet const&>(bindingSet);
-            for (D3D12_ROOT_PARAMETER const& undecidedRootParameter : d3d12BindingSet.rootParameters) {
-                D3D12_ROOT_PARAMETER rootParameter;
 
-                switch (undecidedRootParameter.ParameterType) {
-                case D3D12_ROOT_PARAMETER_TYPE_CBV:
-                case D3D12_ROOT_PARAMETER_TYPE_SRV:
-                case D3D12_ROOT_PARAMETER_TYPE_UAV: {
-                    ARKOSE_ASSERT(undecidedRootParameter.Descriptor.RegisterSpace == D3D12BindingSet::UndecidedRegisterSpaceValue);
-                    rootParameter = undecidedRootParameter;
+            ARKOSE_ASSERT(d3d12BindingSet.shaderBindings().size() == d3d12BindingSet.rootParameters.size());
+            size_t rootParameterCount = d3d12BindingSet.rootParameters.size();
+
+            for (size_t rootParameterIdx = 0; rootParameterIdx < rootParameterCount; ++rootParameterIdx) {
+
+                D3D12_ROOT_PARAMETER const& undecidedRootParameter = d3d12BindingSet.rootParameters[rootParameterIdx];
+                ShaderBinding const& matchingBinding = d3d12BindingSet.shaderBindings()[rootParameterIdx];
+
+                D3D12_ROOT_PARAMETER rootParameter = undecidedRootParameter;
+
+                if (undecidedRootParameter.ParameterType == D3D12_ROOT_PARAMETER_TYPE_CBV
+                    || undecidedRootParameter.ParameterType == D3D12_ROOT_PARAMETER_TYPE_SRV
+                    || undecidedRootParameter.ParameterType == D3D12_ROOT_PARAMETER_TYPE_UAV) {
+                    ARKOSE_ASSERT(rootParameter.Descriptor.RegisterSpace == D3D12BindingSet::UndecidedRegisterSpace);
                     rootParameter.Descriptor.RegisterSpace = setIndex;
-                } break;
-                default:
-                    NOT_YET_IMPLEMENTED();
                 }
 
-                allRootParameters.push_back(rootParameter);
+                // TODO: We might need to change this later, not sure if this simple assignment algorithm actually
+                // hold up in practive. We might need to do some reflection to figure out what becomes what etc.
+                switch (undecidedRootParameter.ParameterType) {
+                case D3D12_ROOT_PARAMETER_TYPE_CBV:
+                    rootParameter.Descriptor.ShaderRegister = nextCvbRegister++;
+                    break;
+                case D3D12_ROOT_PARAMETER_TYPE_SRV:
+                    rootParameter.Descriptor.ShaderRegister = nextSrvRegister++;
+                    break;
+                case D3D12_ROOT_PARAMETER_TYPE_UAV:
+                    rootParameter.Descriptor.ShaderRegister = nextUavRegister++;
+                    break;
+                case D3D12_ROOT_PARAMETER_TYPE_32BIT_CONSTANTS:
+                    // TODO: Not even sure if we will use this? Possibly push constants?
+                    NOT_YET_IMPLEMENTED();
+                case D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE:
+                    NOT_YET_IMPLEMENTED();
+                default:
+                    ASSERT_NOT_REACHED();
+                }
+
+                boundRootParameters.push_back(rootParameter);
+                boundShaderBindings.push_back(&matchingBinding);
+
             }
         });
 
         D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc {};
-        rootSignatureDesc.NumParameters = narrow_cast<u32>(allRootParameters.size());
-        rootSignatureDesc.pParameters = allRootParameters.data();
+        rootSignatureDesc.NumParameters = narrow_cast<u32>(boundRootParameters.size());
+        rootSignatureDesc.pParameters = boundRootParameters.data();
 
         rootSignatureDesc.NumStaticSamplers = 0;
         rootSignatureDesc.pStaticSamplers = nullptr;

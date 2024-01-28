@@ -18,23 +18,23 @@ D3D12BindingSet::D3D12BindingSet(Backend& backend, std::vector<ShaderBinding> bi
         switch (bindingInfo.type()) {
         case ShaderBindingType::ConstantBuffer:
             parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-            parameter.Descriptor.ShaderRegister = bindingInfo.bindingIndex();
-            parameter.Descriptor.RegisterSpace = UndecidedRegisterSpaceValue;
+            parameter.Descriptor.ShaderRegister = UndecidedRegisterSlot;
+            parameter.Descriptor.RegisterSpace = UndecidedRegisterSpace;
             break;
         case ShaderBindingType::StorageBuffer:
             parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
-            parameter.Descriptor.ShaderRegister = bindingInfo.bindingIndex();
-            parameter.Descriptor.RegisterSpace = UndecidedRegisterSpaceValue;
+            parameter.Descriptor.ShaderRegister = UndecidedRegisterSlot;
+            parameter.Descriptor.RegisterSpace = UndecidedRegisterSpace;
             break;
         case ShaderBindingType::StorageTexture:
             parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
-            parameter.Descriptor.ShaderRegister = bindingInfo.bindingIndex();
-            parameter.Descriptor.RegisterSpace = UndecidedRegisterSpaceValue;
+            parameter.Descriptor.ShaderRegister = UndecidedRegisterSlot;
+            parameter.Descriptor.RegisterSpace = UndecidedRegisterSpace;
             break;
         case ShaderBindingType::SampledTexture:
             parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
-            parameter.Descriptor.ShaderRegister = bindingInfo.bindingIndex();
-            parameter.Descriptor.RegisterSpace = UndecidedRegisterSpaceValue;
+            parameter.Descriptor.ShaderRegister = UndecidedRegisterSlot;
+            parameter.Descriptor.RegisterSpace = UndecidedRegisterSpace;
             break;
         case ShaderBindingType::RTAccelerationStructure:
             NOT_YET_IMPLEMENTED();
@@ -63,6 +63,11 @@ D3D12BindingSet::D3D12BindingSet(Backend& backend, std::vector<ShaderBinding> bi
 
         rootParameters.push_back(parameter);
     }
+
+    // The shader bindings is out frontend representation, while the root parameters are what our D3D12 backend actually uses.
+    // To bind e.g. a buffer to root parameter 2 we need to look up shader binding 2 and ask for its buffer to bind it.
+    // Therefore we need these to match 1:1.
+    ARKOSE_ASSERT(shaderBindings().size() == rootParameters.size());
 
     // Q: Where are we actually creating the root signature for all these parameters?
     // A: The PSO wrapper (RenderState, ComputeState, RayTracingState) will create them!

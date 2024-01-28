@@ -2,6 +2,8 @@
 
 #include "utility/Profiling.h"
 #include "rendering/backend/d3d12/D3D12Backend.h"
+#include "rendering/backend/d3d12/D3D12Common.h"
+#include "rendering/backend/d3d12/D3D12BindingSet.h"
 #include "rendering/backend/d3d12/D3D12Buffer.h"
 #include "rendering/backend/d3d12/D3D12RenderState.h"
 #include "rendering/backend/d3d12/D3D12RenderTarget.h"
@@ -236,8 +238,23 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearVa
         ASSERT_NOT_REACHED();
     }
 
-    // NOTE: All bindings are effectively "baked" into the root signature so we only bind once for all
     m_commandList->SetGraphicsRootSignature(renderState.rootSignature.Get());
+
+    renderState.forEachRootParameterToBind([&](D3D12_ROOT_PARAMETER const& rootParameter, ShaderBinding const& shaderBinding) {
+
+        switch (shaderBinding.type()) {
+        case ShaderBindingType::ConstantBuffer: {
+            auto const& d3d12Buffer = static_cast<D3D12Buffer const&>(shaderBinding.getBuffer());
+            m_commandList->SetGraphicsRootConstantBufferView(rootParameter.Descriptor.ShaderRegister, d3d12Buffer.bufferResource->GetGPUVirtualAddress());
+        } break;
+        case ShaderBindingType::StorageBuffer: {
+            auto const& d3d12Buffer = static_cast<D3D12Buffer const&>(shaderBinding.getBuffer());
+            m_commandList->SetGraphicsRootUnorderedAccessView(rootParameter.Descriptor.ShaderRegister, d3d12Buffer.bufferResource->GetGPUVirtualAddress());
+        } break;
+        default:
+            NOT_YET_IMPLEMENTED();
+        }
+    });
 
     if (autoSetViewport) {
         setViewport({ 0, 0 }, renderTarget.extent().asIntVector());
