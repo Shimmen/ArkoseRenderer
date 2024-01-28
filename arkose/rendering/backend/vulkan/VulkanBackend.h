@@ -289,7 +289,6 @@ private:
         VkImage image {}; // NOTE: Owned by the swapchain!
         VkImageView imageView {};
         std::unique_ptr<VulkanTexture> mockColorTexture {};
-        std::unique_ptr<VulkanTexture> depthTexture {};
     };
 
     std::vector<std::unique_ptr<SwapchainImageContext>> m_swapchainImageContexts {};
@@ -319,6 +318,8 @@ private:
         uint32_t numTimestampsWrittenLastTime { 0 };
         VkQueryPool timestampQueryPool {};
     };
+
+    std::unique_ptr<VulkanTexture> m_depthTexture {};
 
     std::unique_ptr<VulkanRenderTarget> m_clearingRenderTarget {};
     std::unique_ptr<VulkanRenderTarget> m_guiRenderTargetForPresenting {};

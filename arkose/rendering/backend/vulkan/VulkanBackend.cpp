@@ -1194,20 +1194,20 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
             swapchainImageContext->mockColorTexture = std::move(mockTexture);
         }
 
-        // Create depth texture
-        {
-            Texture::Description depthDesc { .type = Texture::Type::Texture2D,
-                                             .arrayCount = 1u,
-                                             .extent = m_swapchainExtent,
-                                             .format = Texture::Format::Depth32F,
-                                             .filter = Texture::Filters::nearest(),
-                                             .wrapMode = ImageWrapModes::repeatAll(),
-                                             .mipmap = Texture::Mipmap::None,
-                                             .multisampling = Texture::Multisampling::None };
-            swapchainImageContext->depthTexture = std::make_unique<VulkanTexture>(*this, depthDesc);
-        }
-
         m_swapchainImageContexts.push_back(std::move(swapchainImageContext));
+    }
+
+    // Create depth texture
+    {
+        Texture::Description depthDesc { .type = Texture::Type::Texture2D,
+                                         .arrayCount = 1u,
+                                         .extent = m_swapchainExtent,
+                                         .format = Texture::Format::Depth32F,
+                                         .filter = Texture::Filters::nearest(),
+                                         .wrapMode = ImageWrapModes::repeatAll(),
+                                         .mipmap = Texture::Mipmap::None,
+                                         .multisampling = Texture::Multisampling::None };
+        m_depthTexture = std::make_unique<VulkanTexture>(*this, depthDesc);
     }
 
     if (m_guiIsSetup) {
@@ -1218,6 +1218,8 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
 void VulkanBackend::destroySwapchain()
 {
     SCOPED_PROFILE_ZONE_BACKEND();
+
+    m_depthTexture.reset();
 
     for (auto& swapchainImageContext : m_swapchainImageContexts) {
         vkDestroyImageView(device(), swapchainImageContext->imageView, nullptr);
@@ -1351,7 +1353,7 @@ void VulkanBackend::createFrameRenderTargets(const SwapchainImageContext& refere
     constexpr bool imageless = true;
 
     auto attachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, referenceImageContext.mockColorTexture.get(), LoadOp::Clear, StoreOp::Store },
-                                                                { RenderTarget::AttachmentType::Depth, referenceImageContext.depthTexture.get(), LoadOp::Clear, StoreOp::Store } });
+                                                               { RenderTarget::AttachmentType::Depth, m_depthTexture.get(), LoadOp::Clear, StoreOp::Store } });
     m_clearingRenderTarget = std::make_unique<VulkanRenderTarget>(*this, attachments, imageless);
 
     // NOTE: Does not handle depth & requires something to have already been written to the render target, as it has load op load on color0
@@ -1588,12 +1590,12 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
     SwapchainImageContext& swapchainImageContext = *m_swapchainImageContexts[swapchainImageIndex].get();
 
     // We've just found out what image views we should use for this frame, so send them to the render target so it knows to bind them
-    m_clearingRenderTarget->imagelessFramebufferAttachments = { swapchainImageContext.mockColorTexture->imageView, swapchainImageContext.depthTexture->imageView };
+    m_clearingRenderTarget->imagelessFramebufferAttachments = { swapchainImageContext.mockColorTexture->imageView, m_depthTexture->imageView };
     m_guiRenderTargetForPresenting->imagelessFramebufferAttachments = { swapchainImageContext.mockColorTexture->imageView };
 
     // We shouldn't (can't) use the existing data from the swapchain image, so we set current layout accordingly
     swapchainImageContext.mockColorTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    swapchainImageContext.depthTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    m_depthTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     // If we wrote any timestamps last time we processed this FrameContext, read and validate those results now
     if (frameContext.numTimestampsWrittenLastTime > 0) {
