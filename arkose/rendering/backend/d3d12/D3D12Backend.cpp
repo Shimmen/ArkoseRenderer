@@ -38,8 +38,8 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
         ComPtr<ID3D12Debug1> debugController;
         D3D12GetDebugInterface(IID_PPV_ARGS(&debugController));
         debugController->EnableDebugLayer();
-        debugController->SetEnableGPUBasedValidation(true);
         debugController->SetEnableSynchronizedCommandQueueValidation(true);
+        //debugController->SetEnableGPUBasedValidation(true); // NOTE: Enabling this seems to break rendering?
     }
 
     // Enable "experimental" feature of shader model 6
