@@ -2,14 +2,27 @@
 
 class DrawTriangleNode final : public RenderPipelineNode {
     virtual std::string name() const override { return "Draw Triangle"; }
+
+    virtual void drawGui() override
+    {
+        ImGui::SliderFloat2("Scale", &m_scale.x, 0.01f, 1.99f);
+    }
+
     virtual ExecuteCallback construct(GpuScene& scene, Registry& reg) override
     {
         Shader bootstrapShader = Shader::createBasicRasterize("d3d12-bootstrap/demo.hlsl",
                                                               "d3d12-bootstrap/demo.hlsl",
-                                                              { ShaderDefine::makeBool("D3D12_SAMPLE_BASIC", true) });
+                                                              { ShaderDefine::makeBool("D3D12_SAMPLE_CONSTANT_BUFFER", true) });
+
+        Buffer& constantBuffer = reg.createBuffer(sizeof(m_scale), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::TransferOptimal);
+        constantBuffer.setName("DemoConstantBuffer");
 
         VertexLayout vertexLayout = { VertexComponent::Position3F, VertexComponent::TexCoord2F };
         RenderStateBuilder renderStateBuilder { reg.windowRenderTarget(), bootstrapShader, vertexLayout };
+
+        BindingSet& bindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(constantBuffer, ShaderStage::Vertex) });
+        renderStateBuilder.stateBindings().at(0, bindingSet);
+
         RenderState& renderState = reg.createRenderState(renderStateBuilder);
         renderState.setName("DemoRenderState");
 
@@ -43,6 +56,9 @@ class DrawTriangleNode final : public RenderPipelineNode {
 
         return [&](AppState const& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
+            uploadBuffer.upload(m_scale, constantBuffer);
+            cmdList.executeBufferCopyOperations(uploadBuffer.popPendingOperations());
+
             ClearValue clearValue;
             clearValue.color = ClearColor::srgbColor(0.5f, 0.5f, 0.5f, 1.0f);
             cmdList.beginRendering(renderState, clearValue, true);
@@ -53,6 +69,9 @@ class DrawTriangleNode final : public RenderPipelineNode {
 
         };
     }
+
+private:
+    vec4 m_scale { 1.0f };
 };
 
 //
