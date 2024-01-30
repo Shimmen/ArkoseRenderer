@@ -394,65 +394,6 @@ void VulkanTexture::clear(ClearColor color)
     }
 }
 
-void VulkanTexture::setPixelData(vec4 pixel)
-{
-    SCOPED_PROFILE_ZONE_GPURESOURCE();
-
-    int numChannels = 0;
-    bool isHdr = false;
-
-    switch (format()) {
-    case Texture::Format::R8:
-        numChannels = 1;
-        isHdr = false;
-        break;
-    case Texture::Format::R16F:
-    case Texture::Format::R32F:
-        numChannels = 1;
-        isHdr = true;
-        break;
-    case Texture::Format::RG16F:
-    case Texture::Format::RG32F:
-        numChannels = 2;
-        isHdr = true;
-        break;
-    case Texture::Format::RGBA8:
-    case Texture::Format::sRGBA8:
-        numChannels = 4;
-        isHdr = false;
-        break;
-    case Texture::Format::RGBA16F:
-    case Texture::Format::RGBA32F:
-        numChannels = 4;
-        isHdr = true;
-        break;
-    case Texture::Format::Depth32F:
-        numChannels = 1;
-        isHdr = true;
-        break;
-    case Texture::Format::R32Uint:
-        numChannels = 1;
-        isHdr = false;
-        break;
-    case Texture::Format::Unknown:
-        ASSERT_NOT_REACHED();
-        break;
-    }
-
-    ARKOSE_ASSERT(numChannels == 4);
-
-    if (isHdr) {
-        setData(&pixel, sizeof(pixel), 0);
-    } else {
-        ark::u8 pixelUint8Data[4];
-        pixelUint8Data[0] = (ark::u8)(ark::clamp(pixel.x, 0.0f, 1.0f) * 255.99f);
-        pixelUint8Data[1] = (ark::u8)(ark::clamp(pixel.y, 0.0f, 1.0f) * 255.99f);
-        pixelUint8Data[2] = (ark::u8)(ark::clamp(pixel.z, 0.0f, 1.0f) * 255.99f);
-        pixelUint8Data[3] = (ark::u8)(ark::clamp(pixel.w, 0.0f, 1.0f) * 255.99f);
-        setData(pixelUint8Data, sizeof(pixelUint8Data), 0);
-    }
-}
-
 void VulkanTexture::setData(const void* data, size_t size, size_t mipIdx)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();

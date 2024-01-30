@@ -168,13 +168,6 @@ void D3D12Texture::clear(ClearColor color)
     // TODO
 }
 
-void D3D12Texture::setPixelData(vec4 pixel)
-{
-    SCOPED_PROFILE_ZONE_GPURESOURCE();
-
-    // TODO
-}
-
 void D3D12Texture::setData(const void* data, size_t size, size_t mipIdx)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
