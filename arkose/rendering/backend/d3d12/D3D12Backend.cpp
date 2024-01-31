@@ -203,7 +203,7 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
     bool isRelativeFirstFrame = m_relativeFrameIndex < m_frameContexts.size();
     AppState appState { m_windowFramebufferExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
 
-    uint32_t frameContextIndex = m_currentFrameIndex % m_frameContexts.size();
+    uint32_t frameContextIndex = m_nextSwapchainBufferIndex % m_frameContexts.size();
     FrameContext& frameContext = *m_frameContexts[frameContextIndex];
 
     // Can we not have separate frame context index from swapchain image index? Or am I just mixing up things?
@@ -329,6 +329,7 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
 
     m_currentFrameIndex += 1;
     m_relativeFrameIndex += 1;
+    m_nextSwapchainBufferIndex += 1;
 
     Extent2D currentFramebufferExtent = System::get().windowFramebufferSize();
     if (currentFramebufferExtent != m_windowFramebufferExtent) {
@@ -336,9 +337,6 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
 
         // As the window render target changed we also have to recreate the render pipeline & its resource
         renderPipelineDidChange(renderPipeline);
-
-        TracyD3D12Destroy(m_tracyD3D12Context);
-        m_tracyD3D12Context = TracyD3D12Context(&device(), m_commandQueue.Get());
     }
 
     return true;
@@ -570,7 +568,7 @@ ComPtr<ID3D12CommandQueue> D3D12Backend::createDefaultCommandQueue() const
     return commandQueue;
 }
 
-ComPtr<IDXGISwapChain> D3D12Backend::createSwapChain(ID3D12CommandQueue* commandQueue) const
+ComPtr<IDXGISwapChain4> D3D12Backend::createSwapChain(ID3D12CommandQueue* commandQueue) const
 {
     UINT dxgiFactoryFlags = 0;
     if constexpr (d3d12debugMode) {
@@ -582,29 +580,41 @@ ComPtr<IDXGISwapChain> D3D12Backend::createSwapChain(ID3D12CommandQueue* command
         ARKOSE_LOG(Fatal, "D3D12Backend: could not create the DXGI factory, exiting.");
     }
 
-    DXGI_SWAP_CHAIN_DESC swapChainDesc {};
+    DXGI_SWAP_CHAIN_DESC1 swapChainDesc {};
 
-    swapChainDesc.OutputWindow = System::get().win32WindowHandle();
-    swapChainDesc.Windowed = !System::get().windowIsFullscreen();
+    swapChainDesc.Width = UINT(m_windowFramebufferExtent.width());
+    swapChainDesc.Height = UINT(m_windowFramebufferExtent.height());
 
-    swapChainDesc.BufferDesc.Width = UINT(m_windowFramebufferExtent.width());
-    swapChainDesc.BufferDesc.Height = UINT(m_windowFramebufferExtent.height());
+    swapChainDesc.Format = SwapChainFormat; // TODO: Maybe query for best format instead?
 
-    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
+    // No stereo/VR rendering
+    swapChainDesc.Stereo = false;
 
     // No multisampling into the swap chain (if you want multisampling, just resolve before final target).
     swapChainDesc.SampleDesc.Count = 1;
+    swapChainDesc.SampleDesc.Quality = 0;
+
+    swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
 
     swapChainDesc.BufferCount = QueueSlotCount;
-    swapChainDesc.BufferDesc.Format = SwapChainFormat; // TODO: Maybe query for best format instead?
+
+    swapChainDesc.Scaling = DXGI_SCALING_STRETCH;
+
     swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD; // TODO: Investigate the different ones
 
-    ComPtr<IDXGISwapChain> swapChain;
-    if (auto hr = dxgiFactory->CreateSwapChain(commandQueue, &swapChainDesc, &swapChain); FAILED(hr)) {
+    swapChainDesc.AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED;
+    swapChainDesc.Flags = SwapChainFlags;
+
+    ComPtr<IDXGISwapChain1> swapChain1;
+    if (auto hr = dxgiFactory->CreateSwapChainForHwnd(commandQueue, System::get().win32WindowHandle(), &swapChainDesc, nullptr, nullptr, swapChain1.GetAddressOf()); FAILED(hr)) {
         ARKOSE_LOG(Fatal, "D3D12Backend: could not create swapchain, exiting.");
     }
 
-    return swapChain;
+    // We want api version 4 for the GetCurrentBackBufferIndex function
+    ComPtr<IDXGISwapChain4> swapChain4;
+    swapChain1.As(&swapChain4);
+
+    return swapChain4;
 }
 
 void D3D12Backend::createWindowRenderTarget()
@@ -658,14 +668,13 @@ void D3D12Backend::recreateSwapChain()
 
     waitForDeviceIdle();
 
-    m_swapChain->ResizeBuffers(QueueSlotCount, m_windowFramebufferExtent.width(), m_windowFramebufferExtent.height(), DXGI_FORMAT_UNKNOWN, 0u);
+    m_swapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, SwapChainFlags);
+    m_nextSwapchainBufferIndex = m_swapChain->GetCurrentBackBufferIndex();
 
     waitForDeviceIdle();
 
     for (int i = 0; i < QueueSlotCount; ++i) {
         auto& frameContext = *m_frameContexts[i];
-
-        frameContext.renderTarget.Reset();
 
         // Get the render target for the respective target in the swap chain
         if (auto hr = swapChain().GetBuffer(i, IID_PPV_ARGS(&frameContext.renderTarget)); FAILED(hr)) {
@@ -688,11 +697,7 @@ void D3D12Backend::recreateSwapChain()
         }
     }
 
-    waitForDeviceIdle();
-
     createWindowRenderTarget();
-
-    waitForDeviceIdle();
 }
 
 std::unique_ptr<Buffer> D3D12Backend::createBuffer(size_t size, Buffer::Usage usage, Buffer::MemoryHint memoryHint)
