@@ -21,7 +21,13 @@ class DrawTriangleNode final : public RenderPipelineNode {
         Buffer& constantBuffer = reg.createBuffer(sizeof(m_scale), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::TransferOptimal);
         constantBuffer.setName("DemoConstantBuffer");
 
-        Texture& testTexture = reg.createPixelTexture(vec4(1.0f, 0.0f, 1.0f, 1.0f), true);
+        ImageAsset* testImage = ImageAsset::loadOrCreate("assets/test-pattern.png");
+        Texture& testTexture = reg.createTexture({ .extent = { testImage->width(), testImage->height(), 1 },
+                                                   .format = Texture::convertImageFormatToTextureFormat(testImage->format(), ImageType::sRGBColor),
+                                                   .filter = Texture::Filters::linear(),
+                                                   .wrapMode = ImageWrapModes::clampAllToEdge(),
+                                                   .mipmap = Texture::Mipmap::Linear });
+        testTexture.setData(testImage->pixelDataForMip(0).data(), testImage->pixelDataForMip(0).size(), 0, 0);
         testTexture.setName("DemoTestTexture");
         m_texture = &testTexture;
 
