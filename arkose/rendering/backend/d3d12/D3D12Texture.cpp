@@ -85,18 +85,18 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
         storageCapable = false;
     }
 
-    D3D12_RESOURCE_DESC bufferDescription = {};
-    bufferDescription.Alignment = 0;
+    textureDescription = {};
+    textureDescription.Alignment = 0;
 
-    bufferDescription.MipLevels = narrow_cast<u16>(mipLevels());
-    bufferDescription.Format = dxgiFormat;
+    textureDescription.MipLevels = narrow_cast<u16>(mipLevels());
+    textureDescription.Format = dxgiFormat;
 
     switch (type()) {
     case Type::Texture2D:
-        bufferDescription.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-        bufferDescription.Width = extent().width();
-        bufferDescription.Height = extent().height();
-        bufferDescription.DepthOrArraySize = narrow_cast<u16>(arrayCount());
+        textureDescription.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+        textureDescription.Width = extent().width();
+        textureDescription.Height = extent().height();
+        textureDescription.DepthOrArraySize = narrow_cast<u16>(arrayCount());
         break;
     case Type::Cubemap:
         NOT_YET_IMPLEMENTED();
@@ -105,20 +105,20 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
         ASSERT_NOT_REACHED();
     }
 
-    bufferDescription.SampleDesc.Count = static_cast<UINT>(multisampling());
-    bufferDescription.SampleDesc.Quality = isMultisampled() ? DXGI_STANDARD_MULTISAMPLE_QUALITY_PATTERN : 0;
+    textureDescription.SampleDesc.Count = static_cast<UINT>(multisampling());
+    textureDescription.SampleDesc.Quality = isMultisampled() ? DXGI_STANDARD_MULTISAMPLE_QUALITY_PATTERN : 0;
 
-    bufferDescription.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    textureDescription.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
 
-    bufferDescription.Flags = D3D12_RESOURCE_FLAG_NONE;
+    textureDescription.Flags = D3D12_RESOURCE_FLAG_NONE;
     if (attachmentCapable) {
-        bufferDescription.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
+        textureDescription.Flags |= D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET;
     }
     if (depthStencilCapable) {
-        bufferDescription.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
+        textureDescription.Flags |= D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL;
     }
     if (storageCapable) {
-        bufferDescription.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+        textureDescription.Flags |= D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
     }
 
     D3D12_CLEAR_VALUE optimizedClearValue;
@@ -138,7 +138,7 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
 
     // TODO: Don't use commited resource! Sub-allocate instead
     auto hr = d3d12Backend.device().CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE,
-                                                            &bufferDescription, initialResourceState,
+                                                            &textureDescription, initialResourceState,
                                                             &optimizedClearValue,
                                                             IID_PPV_ARGS(&textureResource));
     if (FAILED(hr)) {
@@ -191,7 +191,26 @@ ImTextureID D3D12Texture::asImTextureID()
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
-    //TODO
+    if (srvNoAlphaForImGui.first.ptr == 0) {
+        auto& d3d12Backend = static_cast<D3D12Backend&>(backend());
+        srvNoAlphaForImGui = d3d12Backend.claimImGuiDescriptorHandle();
 
-    return ImTextureID();
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc {};
+        srvDesc.Format = textureDescription.Format;
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+
+        // NOTE: Don't render with alpha for the ImGui textures
+        srvDesc.Shader4ComponentMapping = D3D12_ENCODE_SHADER_4_COMPONENT_MAPPING(D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_0,
+                                                                                  D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_1,
+                                                                                  D3D12_SHADER_COMPONENT_MAPPING_FROM_MEMORY_COMPONENT_2,
+                                                                                  D3D12_SHADER_COMPONENT_MAPPING_FORCE_VALUE_1);
+        srvDesc.Texture2D.MostDetailedMip = 0;
+        srvDesc.Texture2D.MipLevels = mipLevels();
+        srvDesc.Texture2D.PlaneSlice = 0;
+        srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+        d3d12Backend.device().CreateShaderResourceView(textureResource.Get(), &srvDesc, srvNoAlphaForImGui.first);
+    }
+
+    return reinterpret_cast<ImTextureID>(srvNoAlphaForImGui.second.ptr);
 }

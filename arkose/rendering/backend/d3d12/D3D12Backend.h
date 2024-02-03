@@ -74,6 +74,8 @@ public:
     tracy::D3D12QueueCtx* tracyD3D12Context() { return m_tracyD3D12Context; }
     #endif
 
+    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> claimImGuiDescriptorHandle();
+
 private:
     ///////////////////////////////////////////////////////////////////////////
     /// Utility functions
@@ -100,6 +102,8 @@ private:
     static constexpr DXGI_FORMAT SwapChainRenderTargetViewFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
     static constexpr DXGI_SWAP_CHAIN_FLAG SwapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
 
+    u64 m_nextImGuiDescriptor { 1 }; // NOTE: The first descriptor is used by ImGui internally
+    static constexpr u32 NumImGuiDescriptors = 1'000;
     ComPtr<ID3D12DescriptorHeap> m_dearImGuiDescriptorHeap {};
 
     ///////////////////////////////////////////////////////////////////////////

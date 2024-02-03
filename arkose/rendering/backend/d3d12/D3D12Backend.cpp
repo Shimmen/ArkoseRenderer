@@ -137,7 +137,7 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
     {
         D3D12_DESCRIPTOR_HEAP_DESC dearImguiHeapDesc = {};
         dearImguiHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        dearImguiHeapDesc.NumDescriptors = 1;
+        dearImguiHeapDesc.NumDescriptors = NumImGuiDescriptors;
         dearImguiHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
         dearImguiHeapDesc.NodeMask = 0;
         if (auto hr = device().CreateDescriptorHeap(&dearImguiHeapDesc, IID_PPV_ARGS(&m_dearImGuiDescriptorHeap)); !SUCCEEDED(hr)) {
@@ -493,6 +493,23 @@ void D3D12Backend::issueUploadCommand(const std::function<void(ID3D12GraphicsCom
     uploadCommandAllocator->Reset();
     CloseHandle(waitEvent);
 
+}
+
+std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> D3D12Backend::claimImGuiDescriptorHandle()
+{
+    D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_dearImGuiDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
+    D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = m_dearImGuiDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
+
+    u64 descriptorIdx = m_nextImGuiDescriptor++;
+    if (m_nextImGuiDescriptor < NumImGuiDescriptors) {
+        u64 offset = descriptorIdx * device().GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+        cpuHandle.ptr += offset;
+        gpuHandle.ptr += offset;
+    } else {
+        ARKOSE_LOG(Error, "D3D12Backend: no more ImGui descriptor handles so will not display ImGui::Image correctly!");
+    }
+
+    return std::make_pair(cpuHandle, gpuHandle);
 }
 
 ComPtr<ID3D12Device> D3D12Backend::createDeviceAtMaxSupportedFeatureLevel() const

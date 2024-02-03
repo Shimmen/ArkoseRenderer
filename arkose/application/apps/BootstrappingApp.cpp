@@ -6,6 +6,10 @@ class DrawTriangleNode final : public RenderPipelineNode {
     virtual void drawGui() override
     {
         ImGui::SliderFloat2("Scale", &m_scale.x, 0.01f, 1.99f);
+
+        if (m_texture) {
+            drawTextureVisualizeGui(*m_texture);
+        }
     }
 
     virtual ExecuteCallback construct(GpuScene& scene, Registry& reg) override
@@ -16,6 +20,10 @@ class DrawTriangleNode final : public RenderPipelineNode {
 
         Buffer& constantBuffer = reg.createBuffer(sizeof(m_scale), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::TransferOptimal);
         constantBuffer.setName("DemoConstantBuffer");
+
+        Texture& testTexture = reg.createPixelTexture(vec4(1.0f, 0.0f, 1.0f, 1.0f), true);
+        testTexture.setName("DemoTestTexture");
+        m_texture = &testTexture;
 
         VertexLayout vertexLayout = { VertexComponent::Position3F, VertexComponent::TexCoord2F };
         RenderStateBuilder renderStateBuilder { reg.windowRenderTarget(), bootstrapShader, vertexLayout };
@@ -72,6 +80,7 @@ class DrawTriangleNode final : public RenderPipelineNode {
 
 private:
     vec4 m_scale { 1.0f };
+    Texture* m_texture {};
 };
 
 //
