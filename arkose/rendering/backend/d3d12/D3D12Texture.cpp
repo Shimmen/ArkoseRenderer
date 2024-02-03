@@ -2,6 +2,7 @@
 
 #include "core/Logging.h"
 #include "rendering/backend/d3d12/D3D12Backend.h"
+#include "rendering/backend/d3d12/D3D12Buffer.h"
 #include "utility/Profiling.h"
 
 D3D12Texture::D3D12Texture(Backend& backend, Description desc)
@@ -168,11 +169,62 @@ void D3D12Texture::clear(ClearColor color)
     // TODO
 }
 
-void D3D12Texture::setData(const void* data, size_t size, size_t mipIdx)
+void D3D12Texture::setData(const void* data, size_t size, size_t mipIdx, size_t arrayIdx)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
-    // TODO
+    auto& d3d12Backend = static_cast<D3D12Backend&>(backend());
+
+    // Other types are not yet implemented!
+    ARKOSE_ASSERT(type() == Texture::Type::Texture2D);
+    u32 subresourceIdx = narrow_cast<u32>(mipIdx + arrayIdx * mipLevels());
+
+    u64 textureMemorySize = 0;
+    u32 numRows;
+    u64 rowSizeInBytes;
+    D3D12_PLACED_SUBRESOURCE_FOOTPRINT subresourceFootprint;
+
+    d3d12Backend.device().GetCopyableFootprints(&textureDescription,
+                                                subresourceIdx, 1, 0,
+                                                &subresourceFootprint,
+                                                &numRows, &rowSizeInBytes,
+                                                &textureMemorySize);
+
+    auto stagingBuffer = std::make_unique<D3D12Buffer>(d3d12Backend, textureMemorySize, Buffer::Usage::Transfer, Buffer::MemoryHint::TransferOptimal);
+    d3d12Backend.setBufferDataUsingMapping(*stagingBuffer->bufferResource.Get(), static_cast<u8 const*>(data), size);
+
+    d3d12Backend.issueUploadCommand([&](ID3D12GraphicsCommandList& cmdList) {
+        D3D12_RESOURCE_BARRIER resourceBarrier {};
+        resourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+        resourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+        resourceBarrier.Transition.pResource = textureResource.Get();
+        resourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+
+        if (resourceState != D3D12_RESOURCE_STATE_COPY_DEST) {
+            resourceBarrier.Transition.StateBefore = resourceState;
+            resourceBarrier.Transition.StateAfter = D3D12_RESOURCE_STATE_COPY_DEST;
+            cmdList.ResourceBarrier(1, &resourceBarrier);
+        }
+
+        D3D12_TEXTURE_COPY_LOCATION source {};
+        source.pResource = stagingBuffer->bufferResource.Get();
+        source.Type = D3D12_TEXTURE_COPY_TYPE_PLACED_FOOTPRINT;
+        source.PlacedFootprint = subresourceFootprint;
+
+        D3D12_TEXTURE_COPY_LOCATION destination {};
+        destination.pResource = textureResource.Get();
+        destination.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+        destination.SubresourceIndex = subresourceIdx;
+
+        cmdList.CopyTextureRegion(&destination, 0, 0, 0,
+                                  &source, nullptr);
+
+        if (resourceState != D3D12_RESOURCE_STATE_COPY_DEST) {
+            resourceBarrier.Transition.StateBefore = D3D12_RESOURCE_STATE_COPY_DEST;
+            resourceBarrier.Transition.StateAfter = resourceState;
+            cmdList.ResourceBarrier(1, &resourceBarrier);
+        }
+    });
 }
 
 void D3D12Texture::generateMipmaps()

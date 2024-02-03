@@ -394,7 +394,7 @@ void VulkanTexture::clear(ClearColor color)
     }
 }
 
-void VulkanTexture::setData(const void* data, size_t size, size_t mipIdx)
+void VulkanTexture::setData(const void* data, size_t size, size_t mipIdx, size_t arrayIdx)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
@@ -457,37 +457,26 @@ void VulkanTexture::setData(const void* data, size_t size, size_t mipIdx)
         currentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     }
 
-    std::vector<VkBufferImageCopy> copyRegions {};
-    copyRegions.reserve(layerCount());
-
     Extent2D mipExtent = extentAtMip(narrow_cast<u32>(mipIdx));
 
-    // TODO: We currently assume we're uploading the entire texture array
-    const VkDeviceSize sizePerLayer = size / layerCount();
+    VkBufferImageCopy region = {};
 
-    for (uint32_t layerIdx = 0; layerIdx < layerCount(); ++layerIdx) {
+    region.bufferOffset = 0;
 
-        VkBufferImageCopy region = {};
+    // (zeros here indicate tightly packed data)
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
 
-        region.bufferOffset = layerIdx * sizePerLayer;
+    region.imageOffset = VkOffset3D { 0, 0, 0 };
+    region.imageExtent = VkExtent3D { mipExtent.width(), mipExtent.height(), 1 };
 
-        // (zeros here indicate tightly packed data)
-        region.bufferRowLength = 0;
-        region.bufferImageHeight = 0;
-
-        region.imageOffset = VkOffset3D { 0, 0, 0 };
-        region.imageExtent = VkExtent3D { mipExtent.width(), mipExtent.height(), 1 };
-
-        region.imageSubresource.aspectMask = aspectMask();
-        region.imageSubresource.mipLevel = narrow_cast<u32>(mipIdx);
-        region.imageSubresource.baseArrayLayer = layerIdx;
-        region.imageSubresource.layerCount = 1;
-
-        copyRegions.push_back(region);
-    }
+    region.imageSubresource.aspectMask = aspectMask();
+    region.imageSubresource.mipLevel = narrow_cast<u32>(mipIdx);
+    region.imageSubresource.baseArrayLayer = arrayIdx;
+    region.imageSubresource.layerCount = 1;
 
     bool copySuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
-        vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, (uint32_t)copyRegions.size(), copyRegions.data());
+        vkCmdCopyBufferToImage(commandBuffer, stagingBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
     });
 
     if (!copySuccess) {

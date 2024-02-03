@@ -153,7 +153,7 @@ public:
     virtual void clear(ClearColor) = 0;
 
     void setPixelData(vec4 pixel);
-    virtual void setData(const void* data, size_t size, size_t mipIdx = 0) = 0;
+    virtual void setData(const void* data, size_t size, size_t mipIdx, size_t arrayIdx) = 0;
 
     virtual void generateMipmaps() = 0;
 

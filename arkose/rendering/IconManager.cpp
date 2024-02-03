@@ -33,7 +33,7 @@ Icon IconManager::loadIcon(Backend& backend, std::string_view iconName)
                                 .multisampling = Texture::Multisampling::None };
 
     auto iconTexture = backend.createTexture(desc);
-    iconTexture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size(), 0);
+    iconTexture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size(), 0, 0);
 
     std::string textureName = fmt::format("Icon<{}>", iconName);
     iconTexture->setName(textureName);

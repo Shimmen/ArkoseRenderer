@@ -835,7 +835,7 @@ void GpuScene::updateEnvironmentMap(EnvironmentMap& environmentMap)
                                         .multisampling = Texture::Multisampling::None };
 
             m_environmentMapTexture = backend().createTexture(desc);
-            m_environmentMapTexture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size(), 0);
+            m_environmentMapTexture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size(), 0, 0);
             m_environmentMapTexture->setName("EnvironmentMap<" + environmentMap.assetPath + ">");
         }
     }
@@ -1301,14 +1301,14 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
                 bool textureWantMips = texture->mipmap() != Texture::Mipmap::None;
 
                 if (not assetHasMips || not textureWantMips) {
-                    texture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size(), 0);
+                    texture->setData(imageAsset->pixelDataForMip(0).data(), imageAsset->pixelDataForMip(0).size(), 0, 0);
                 }
 
                 if (textureWantMips) {
                     if (assetHasMips) {
                         for (size_t mipIdx = 0; mipIdx < imageAsset->numMips(); ++mipIdx) {
                             std::span<const u8> mipPixelData = imageAsset->pixelDataForMip(mipIdx);
-                            texture->setData(mipPixelData.data(), mipPixelData.size(), mipIdx);
+                            texture->setData(mipPixelData.data(), mipPixelData.size(), mipIdx, 0);
                         }
                     } else {
                         texture->generateMipmaps();

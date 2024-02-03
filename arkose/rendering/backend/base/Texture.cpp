@@ -230,14 +230,14 @@ void Texture::setPixelData(vec4 pixel)
     ARKOSE_ASSERT(numChannels == 4);
 
     if (isHdr) {
-        setData(&pixel, sizeof(pixel), 0);
+        setData(&pixel, sizeof(pixel), 0, 0);
     } else {
         ark::u8 pixelUint8Data[4];
         pixelUint8Data[0] = (ark::u8)(ark::clamp(pixel.x, 0.0f, 1.0f) * 255.99f);
         pixelUint8Data[1] = (ark::u8)(ark::clamp(pixel.y, 0.0f, 1.0f) * 255.99f);
         pixelUint8Data[2] = (ark::u8)(ark::clamp(pixel.z, 0.0f, 1.0f) * 255.99f);
         pixelUint8Data[3] = (ark::u8)(ark::clamp(pixel.w, 0.0f, 1.0f) * 255.99f);
-        setData(pixelUint8Data, sizeof(pixelUint8Data), 0);
+        setData(pixelUint8Data, sizeof(pixelUint8Data), 0, 0);
     }
 }
 
@@ -323,23 +323,21 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
 
     // Allocate temporary storage for pixel data ahead of upload to texture
     // TODO: Maybe we can just map the individual image into memory directly?
-    uint8_t* textureArrayMemory = static_cast<uint8_t*>(malloc(totalRequiredSize));
-    ark::AtScopeExit freeMemory { [&]() { free(textureArrayMemory); } };
+    //uint8_t* textureArrayMemory = static_cast<uint8_t*>(malloc(totalRequiredSize));
+    //ark::AtScopeExit freeMemory { [&]() { free(textureArrayMemory); } };
 
     // Load images and set texture data
-    // TODO: Ensure this is not completely starved by async material texture loading!
-    constexpr bool UseSingleThreadedLoading = true;
-    ParallelFor(imageAssets.size(), [&](size_t idx) {
+    for (size_t imageIdx = 0; imageIdx < imageAssets.size(); ++imageIdx) {
 
-        // TODO: Support setting data for multiple mips!
-        ImageAsset const& imageAsset = *imageAssets[idx];
+        ImageAsset const& imageAsset = *imageAssets[imageIdx];
         auto const& data = imageAsset.pixelDataForMip(0);
 
-        size_t offset = idx * data.size();
-        std::memcpy(textureArrayMemory + offset, data.data(), data.size());
+        //size_t offset = imageIdx * data.size();
+        //std::memcpy(textureArrayMemory + offset, data.data(), data.size());
 
-    }, UseSingleThreadedLoading);
-    texture->setData(textureArrayMemory, totalRequiredSize, 0);
+        // TODO: This is not very optimal at all.. a lot of staging buffers being created and teared down contantly..
+        texture->setData(data.data(), data.size(), 0, imageIdx);
+    }
 
     return texture;
 }

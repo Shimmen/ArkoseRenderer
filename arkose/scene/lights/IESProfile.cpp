@@ -87,7 +87,7 @@ std::unique_ptr<Texture> IESProfile::createLookupTexture(Backend& backend, int s
 
     uint8_t* data = reinterpret_cast<uint8_t*>(pixels.data());
     size_t byteSize = pixels.size() * sizeof(float);
-    texture->setData(data, byteSize);
+    texture->setData(data, byteSize, 0, 0);
 
     return texture;
 }
