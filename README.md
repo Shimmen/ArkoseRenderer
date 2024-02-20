@@ -82,8 +82,8 @@ Note that some details are omitted for brevity.
 Here are some basic steps to get it compiling & running for you:
 
  1. Download or clone this repository
- 1. Download & install the Vulkan SDK from https://vulkan.lunarg.com/
- 1. Create project files using CMake for your generator of choice. All third-party dependencies besides Vulkan are either already in-tree or dowloaded by CMake automatically via [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html).
+ 1. Download & install the Vulkan SDK from https://vulkan.lunarg.com/. This applies even if you're not indending on using Vulkan, as some tools and libraries we rely on are part of the SDK.
+ 1. Create project files using CMake for your generator of choice. All third-party dependencies besides the Vulkan SDK are either already in-tree or dowloaded by CMake automatically via [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html).
 
 You should now be able to compile and run!
 
