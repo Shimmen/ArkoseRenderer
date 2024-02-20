@@ -4,7 +4,7 @@
 #include "core/Logging.h"
 #include "rendering/Registry.h"
 #include "rendering/backend/Resources.h"
-#include "utility/FileIO.h"
+#include "utility/ParseContext.h"
 #include "utility/Profiling.h"
 #include <ark/vector.h>
 
@@ -97,7 +97,7 @@ void IESProfile::parse(const std::string& path)
     // We should never call parse a second time
     ARKOSE_ASSERT(m_anglesV.size() == 0 && m_anglesH.size() == 0 && m_candelaValues.size() == 0);
 
-    FileIO::ParseContext parseContext { "IES", path };
+    ParseContext parseContext { "IES", path };
     if (!parseContext.isValid()) {
         ARKOSE_LOG(Fatal, "IESProfile: could not read .ies file '{}'", path);
         return;

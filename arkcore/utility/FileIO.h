@@ -68,25 +68,4 @@ bool readFileLineByLine(const std::string& filePath, std::function<NextAction(co
 
 bool isFileReadable(const std::string& filePath);
 
-class ParseContext {
-public:
-    ParseContext(const std::string& fileType, const std::string& filePath);
-
-    bool isValid() const;
-
-    std::string nextLine();
-
-    std::optional<int> nextAsInt();
-    std::optional<float> nextAsFloat();
-
-    int nextAsInt(const char* token);
-    float nextAsFloat(const char* token);
-
-private:
-    std::string m_fileType;
-    std::string m_path;
-    std::ifstream m_stream;
-
-};
-
 }

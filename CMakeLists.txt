@@ -70,6 +70,7 @@ add_library(ArkoseCore STATIC
     arkcore/scene/Vertex.cpp
     arkcore/utility/FileDialog.cpp
     arkcore/utility/FileIO.cpp
+    arkcore/utility/ParseContext.cpp
     )
 
 target_include_directories(ArkoseCore PUBLIC arkcore/)
