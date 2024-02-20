@@ -59,6 +59,7 @@ add_library(ArkoseCore STATIC
     arkcore/asset/TextureCompressor.cpp
     arkcore/asset/import/AssetImporter.cpp
     arkcore/asset/import/GltfLoader.cpp
+    arkcore/core/CommandLine.cpp
     arkcore/core/math/Fibonacci.cpp
     arkcore/core/math/Frustum.cpp
     arkcore/core/math/Halton.cpp
@@ -67,7 +68,6 @@ add_library(ArkoseCore STATIC
     arkcore/scene/ProbeGrid.cpp
     arkcore/scene/Transform.cpp
     arkcore/scene/Vertex.cpp
-    arkcore/utility/CommandLine.cpp
     arkcore/utility/FileDialog.cpp
     arkcore/utility/FileIO.cpp
     )

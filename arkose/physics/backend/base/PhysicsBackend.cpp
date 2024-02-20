@@ -1,7 +1,7 @@
 #include "PhysicsBackend.h"
 
+#include "core/CommandLine.h"
 #include "core/Logging.h"
-#include "utility/CommandLine.h"
 #include "utility/Profiling.h"
 #include "physics/backend/jolt/JoltPhysicsBackend.h"
 

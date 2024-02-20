@@ -1,5 +1,6 @@
 #include "Arkose.h"
 
+#include "core/CommandLine.h"
 #include "core/Logging.h"
 #include "core/parallel/TaskGraph.h"
 #include "physics/PhysicsScene.h"
@@ -7,7 +8,6 @@
 #include "rendering/backend/base/Backend.h"
 #include "rendering/backend/shader/ShaderManager.h"
 #include "system/System.h"
-#include "utility/CommandLine.h"
 #include "utility/Profiling.h"
 
 // Apps - kind of like demos / applets(?) that can run within Arkose.
