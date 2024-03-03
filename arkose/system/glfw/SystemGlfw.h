@@ -42,6 +42,8 @@ private:
     static void mouseMovementEventCallback(GLFWwindow* window, double xPos, double yPos);
     static void mouseScrollEventCallback(GLFWwindow* window, double xOffset, double yOffset);
 
+    void collectGamepadState();
+
 private:
     GLFWwindow* m_glfwWindow { nullptr };
     Extent2D m_lastWindowSize { 0, 0 };

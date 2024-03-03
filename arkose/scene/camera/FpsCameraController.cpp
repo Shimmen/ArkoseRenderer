@@ -37,7 +37,8 @@ void FpsCameraController::update(const Input& input, float dt)
 
     vec3 acceleration { 0.0f };
 
-    vec2 controllerMovement = input.leftStick();
+    // TODO: Maybe don't use acceleration+velocity when controlling with a gamepad? Feels very sluggish. Or just quicker acceleration perhaps.
+    vec2 controllerMovement = input.leftStick(GamepadId::Gamepad0) * GamepadMoveSensitivity;
     bool usingController = length(controllerMovement) > 0.0f;
     acceleration += controllerMovement.x * ark::globalRight;
     acceleration += controllerMovement.y * ark::globalForward;
@@ -90,7 +91,8 @@ void FpsCameraController::update(const Input& input, float dt)
     // Make rotations less sensitive when zoomed in
     float fovMultiplier = 0.2f + ((camera.fieldOfView() - MinFieldOfView) / (MaxFieldOfView - MinFieldOfView)) * 0.8f;
 
-    vec2 controllerRotation = 0.3f * input.rightStick();
+    // TODO: Maybe don't use accumulate pitch/yaw/roll when using a gamepad? Feel very weird..
+    vec2 controllerRotation = input.rightStick(GamepadId::Gamepad0) * GamepadLookSensitivity;
     m_pitchYawRoll.x -= controllerRotation.x * fovMultiplier * dt;
     m_pitchYawRoll.y += controllerRotation.y * fovMultiplier * dt;
 

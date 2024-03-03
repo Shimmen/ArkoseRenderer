@@ -44,4 +44,6 @@ private:
 
     static constexpr float BaselineBankAngle { ark::toRadians(30.0f) };
 
+    static constexpr float GamepadMoveSensitivity { 0.4f };
+    static constexpr float GamepadLookSensitivity { 0.3f };
 };

@@ -88,15 +88,31 @@ bool Input::isGuiUsingKeyboard() const
     return io.WantCaptureKeyboard;
 }
 
-vec2 Input::leftStick() const
+GamepadState const& Input::gamepadState(GamepadId gamepadId) const
 {
-    // TODO: Add back support for gamepads!
+    u32 gamepadIndex = static_cast<u32>(gamepadId);
+    if (m_gamepadActive[gamepadIndex]) {
+        return m_gamepadState[gamepadIndex];
+    } else {
+        return m_nullGamepadState;
+    }
+}
+
+vec2 Input::leftStick(GamepadId gamepadId) const
+{
+    u32 gamepadIndex = static_cast<u32>(gamepadId);
+    if (m_gamepadActive[gamepadIndex]) {
+        return normalizeGamepadStick(m_gamepadState[gamepadIndex].leftStick());
+    }
     return { 0, 0 };
 }
 
-vec2 Input::rightStick() const
+vec2 Input::rightStick(GamepadId gamepadId) const
 {
-    // TODO: Add back support for gamepads!
+    u32 gamepadIndex = static_cast<u32>(gamepadId);
+    if (m_gamepadActive[gamepadIndex]) {
+        return normalizeGamepadStick(m_gamepadState[gamepadIndex].rightStick());
+    }
     return { 0, 0 };
 }
 
@@ -180,4 +196,28 @@ void Input::mouseScrollEventCallback(double xOffset, double yOffset)
 {
     // Ignore x-offset for now...
     m_currentScollOffset += yOffset;
+}
+
+void Input::setGamepadState(u32 gamepadIdx, GamepadState const& gamepadState)
+{
+    if (gamepadIdx < MaxGamepadCount) {
+        m_gamepadActive[gamepadIdx] = true;
+        m_gamepadState[gamepadIdx] = gamepadState;
+    }
+}
+
+void Input::setGamepadInactive(u32 gamepadIdx)
+{
+    if (gamepadIdx < MaxGamepadCount) {
+        m_gamepadActive[gamepadIdx] = false;
+    }
+}
+
+vec2 Input::normalizeGamepadStick(vec2 stickValue) const
+{
+    if (length(stickValue) < GamepadDeadzone) {
+        return { 0, 0 };
+    } else {
+        return normalize(stickValue) * ((length(stickValue) - GamepadDeadzone) / (1.0f - GamepadDeadzone));
+    }
 }

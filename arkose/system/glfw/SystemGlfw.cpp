@@ -3,6 +3,7 @@
 #include "core/Logging.h"
 #include "utility/Profiling.h"
 #include "system/Input.h"
+#include "system/Gamepad.h"
 
 // Dear ImGui & related
 #include <imgui.h>
@@ -20,6 +21,12 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #endif
+
+constexpr u32 MaxJoystickCount = GLFW_JOYSTICK_LAST + 1;
+
+namespace {
+std::array<GLFWgamepadstate, MaxJoystickCount> lastGamepadStates;
+}
 
 SystemGlfw::SystemGlfw()
 {
@@ -134,28 +141,12 @@ bool SystemGlfw::newFrame()
     Input::mutableInstance().preEventPoll();
     glfwPollEvents(); // will trigger calls to the event callbacks immediately
 
+    // glfw doesn't use callbacks for joysticks / gamepads, needs to be polled manually
+    collectGamepadState();
+
     Extent2D currentWindowSize = windowSize();
     bool windowSizeDidChange = currentWindowSize != m_lastWindowSize;
     m_lastWindowSize = currentWindowSize;
-
-    // glfw doesn't use callbacks for joysticks / gamepads, needs to be polled manually
-    for (int joystick = GLFW_JOYSTICK_1; joystick < GLFW_JOYSTICK_LAST; ++joystick) {
-        if (!glfwJoystickPresent(joystick)) {
-            continue;
-        }
-
-        if (!glfwJoystickIsGamepad(joystick)) { 
-            continue;
-        }
-
-        GLFWgamepadstate glfwGamepadState;
-        if (glfwGetGamepadState(GLFW_JOYSTICK_1, &glfwGamepadState) != GLFW_FALSE) {
-            // TODO: Add support for gamepads!
-            //  1. remap the state to something non-glfw specific
-            //  2. pass it to the Input object
-            //  3. done?
-        }
-    }
 
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
@@ -284,4 +275,37 @@ void SystemGlfw::mouseMovementEventCallback(GLFWwindow* window, double xPosition
 void SystemGlfw::mouseScrollEventCallback(GLFWwindow* window, double xOffset, double yOffset)
 {
     Input::mutableInstance().mouseScrollEventCallback(xOffset, yOffset);
+}
+
+void SystemGlfw::collectGamepadState()
+{
+    Input& input = Input::mutableInstance();
+
+    for (int joystickIdx = GLFW_JOYSTICK_1; joystickIdx <= GLFW_JOYSTICK_LAST; ++joystickIdx) {
+        if (!glfwJoystickPresent(joystickIdx)) {
+            input.setGamepadInactive(joystickIdx);
+            continue;
+        }
+
+        // What about non-gamepad joysticks?
+        if (!glfwJoystickIsGamepad(joystickIdx)) {
+            input.setGamepadInactive(joystickIdx);
+            continue;
+        }
+
+        GLFWgamepadstate glfwGamepadState;
+        if (glfwGetGamepadState(joystickIdx, &glfwGamepadState) != GLFW_FALSE) {
+
+            vec2 leftStick = vec2(glfwGamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_X], -glfwGamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_Y]);
+            vec2 rightStick = vec2(glfwGamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_X], -glfwGamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y]);
+
+            float leftTrigger = glfwGamepadState.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER];
+            float rightTrigger = glfwGamepadState.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER];
+
+            GamepadState gamepadState { leftStick, rightStick, leftTrigger, rightTrigger };
+            Input::mutableInstance().setGamepadState(joystickIdx, gamepadState);
+
+            lastGamepadStates[joystickIdx] = glfwGamepadState;
+        }
+    }
 }

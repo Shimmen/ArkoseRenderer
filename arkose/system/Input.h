@@ -1,7 +1,11 @@
 #pragma once
 
+#include "core/Types.h"
 #include "utility/EnumHelpers.h"
+#include "system/InputAction.h"
+#include "system/Gamepad.h"
 #include <ark/vector.h>
+#include <array>
 #include <optional>
 
 // Values map directly to GLFW's key defines
@@ -149,13 +153,6 @@ enum class Button : int {
     __Count = __Max + 1,
 };
 
-// Values map directly to GLFW's action defines
-enum class InputAction {
-    Release = 0,
-    Press = 1,
-    Repeat = 2,
-};
-
 // Values map directly to GLFW's modifier defines
 enum class InputModifier {
     Shift = 1,
@@ -168,6 +165,16 @@ enum class InputModifier {
 
 ARKOSE_ENUM_CLASS_BIT_FLAGS(InputModifier)
 using InputModifiers = InputModifier;
+
+enum class GamepadId : u32 {
+    Gamepad0 = 0,
+    Gamepad1 = 1,
+    Gamepad2 = 2,
+    Gamepad3 = 3,
+    __Max = Gamepad3,
+    __Count = __Max + 1,
+};
+ARKOSE_ENUM_CLASS_BIT_FLAGS(GamepadId)
 
 class Input final {
 public:
@@ -194,14 +201,20 @@ public:
     [[nodiscard]] bool isGuiUsingMouse() const;
     [[nodiscard]] bool isGuiUsingKeyboard() const;
 
-    [[nodiscard]] vec2 leftStick() const;
-    [[nodiscard]] vec2 rightStick() const;
+    [[nodiscard]] GamepadState const& gamepadState(GamepadId) const;
+    [[nodiscard]] vec2 leftStick(GamepadId) const;
+    [[nodiscard]] vec2 rightStick(GamepadId) const;
 
     void preEventPoll();
     void keyEventCallback(int key, int scancode, InputAction, InputModifiers);
     void mouseButtonEventCallback(int button, InputAction, InputModifiers);
     void mouseMovementEventCallback(double xPosition, double yPosition);
     void mouseScrollEventCallback(double xOffset, double yOffset);
+
+    void setGamepadState(u32 gamepadIdx, GamepadState const&);
+    void setGamepadInactive(u32 gamepadIdx);
+
+    vec2 normalizeGamepadStick(vec2 stickValue) const;
 
 private:
     Input() = default;
@@ -212,7 +225,7 @@ private:
     static constexpr int KeyboardKeyCount { static_cast<int>(Key::__Count) };
     static constexpr int MouseButtonCount { static_cast<int>(Button::__Count) };
 
-    //static constexpr float GamepadDeadzone { 0.25f };
+    static constexpr float GamepadDeadzone { 0.25f };
     static constexpr float MouseClickMaxAllowedDelta { 4.0f };
 
     bool m_isKeyDown[KeyboardKeyCount] {};
@@ -233,4 +246,10 @@ private:
 
     double m_currentScollOffset { 0.0 };
     double m_lastScrollOffset { 0.0 };
+
+    static constexpr u32 MaxGamepadCount = static_cast<u32>(GamepadId::__Count);
+    std::array<GamepadState, MaxGamepadCount> m_gamepadState {};
+    std::array<bool, MaxGamepadCount> m_gamepadActive { 0 };
+
+    GamepadState m_nullGamepadState {};
 };
