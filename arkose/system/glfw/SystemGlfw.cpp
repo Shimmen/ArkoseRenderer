@@ -85,6 +85,11 @@ bool SystemGlfw::createWindow(WindowType windowType, Extent2D const& requestedWi
     glfwSetCursorPosCallback(m_glfwWindow, SystemGlfw::mouseMovementEventCallback);
     glfwSetScrollCallback(m_glfwWindow, SystemGlfw::mouseScrollEventCallback);
 
+    // Enable raw mouse motion, if supported
+    if (glfwRawMouseMotionSupported()) {
+        glfwSetInputMode(m_glfwWindow, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    }
+
     // Set up Dear ImGui
     {
         IMGUI_CHECKVERSION();
