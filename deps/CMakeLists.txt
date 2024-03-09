@@ -32,7 +32,7 @@ set(GLFW_BUILD_EXAMPLES OFF)
 set(GLFW_BUILD_TESTS OFF)
 FetchContent_Declare(glfw
     GIT_REPOSITORY https://github.com/glfw/glfw.git
-    GIT_TAG        "3.3-stable")
+    GIT_TAG        "3.4")
 
 FetchContent_Declare(nativefiledialog-extended
     GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
