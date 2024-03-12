@@ -47,13 +47,19 @@ static wchar_t const* shaderModelForShaderFile(ShaderFile const& shaderFile)
     case ShaderFileType::Compute:
         return L"cs_6_0";
     case ShaderFileType::RTRaygen:
+        return L"raygeneration_6_0";
     case ShaderFileType::RTClosestHit:
+        return L"closesthit_6_0";
     case ShaderFileType::RTAnyHit:
+        return L"anyhit_6_0";
     case ShaderFileType::RTIntersection:
+        return L"intersection_6_0";
     case ShaderFileType::RTMiss:
+        return L"miss_6_0";
     case ShaderFileType::Task:
+        return L"as_6_0";
     case ShaderFileType::Mesh:
-        NOT_YET_IMPLEMENTED();
+        return L"ms_6_0";
     case ShaderFileType::Unknown:
         ARKOSE_LOG(Fatal, "Can't find shader model for for shader file of unknown type ('{}'), exiting", shaderFile.path());
     default:
