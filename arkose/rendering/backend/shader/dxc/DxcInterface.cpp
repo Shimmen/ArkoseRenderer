@@ -211,7 +211,7 @@ std::unique_ptr<CompilationResult<u8>> DxcInterface::compileShader(ShaderFile co
         dxcDefines.push_back(dxcDefine);
     }
 
-    wchar_t const* entryPointName = entryPointNameForShaderFile(shaderFile);
+    wchar_t const* entryPointName = ::entryPointNameForShaderFile(shaderFile);
     wchar_t const* shaderModel = shaderModelForShaderFile(shaderFile);
 
     ComPtr<IDxcOperationResult> compilationResult;
@@ -250,4 +250,10 @@ std::unique_ptr<CompilationResult<u8>> DxcInterface::compileShader(ShaderFile co
 
     ASSERT_NOT_REACHED();
     return nullptr;
+}
+
+std::string DxcInterface::entryPointNameForShaderFile(ShaderFile const& shaderFile)
+{
+    const wchar_t* entryPointWideStr = ::entryPointNameForShaderFile(shaderFile);
+    return convertFromWideString(entryPointWideStr);
 }
