@@ -4,6 +4,7 @@
 #include "rendering/backend/d3d12/D3D12Buffer.h"
 #include "rendering/backend/d3d12/D3D12CommandList.h"
 #include "rendering/backend/d3d12/D3D12ComputeState.h"
+#include "rendering/backend/d3d12/D3D12DescriptorHeapAllocator.h"
 #include "rendering/backend/d3d12/D3D12RenderState.h"
 #include "rendering/backend/d3d12/D3D12RenderTarget.h"
 #include "rendering/backend/d3d12/D3D12Texture.h"
@@ -132,6 +133,9 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
             frameContext.uploadBuffer = std::make_unique<UploadBuffer>(*this, registryUploadBufferSize);
         }
     }
+
+    // Create global descriptor heaps & allocators for them
+    m_cbvSrvUavDescriptorHeapAllocator = std::make_unique<D3D12DescriptorHeapAllocator>(device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 100'000);
 
     // Setup Dear ImGui
     {
@@ -493,6 +497,11 @@ void D3D12Backend::issueUploadCommand(const std::function<void(ID3D12GraphicsCom
     uploadCommandAllocator->Reset();
     CloseHandle(waitEvent);
 
+}
+
+D3D12DescriptorHeapAllocator& D3D12Backend::cbvSrvUavDescriptorHeapAllocator()
+{
+    return *m_cbvSrvUavDescriptorHeapAllocator.get();
 }
 
 std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> D3D12Backend::claimImGuiDescriptorHandle()

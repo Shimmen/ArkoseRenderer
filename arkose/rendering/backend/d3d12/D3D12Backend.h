@@ -4,6 +4,7 @@
 #include "rendering/backend/d3d12/D3D12Texture.h"
 struct IDXGISwapChain4;
 struct D3D12RenderTarget;
+class D3D12DescriptorHeapAllocator;
 
 
 #if defined(TRACY_ENABLE)
@@ -69,6 +70,8 @@ public:
     bool setBufferDataUsingStagingBuffer(struct D3D12Buffer&, const uint8_t* data, size_t size, size_t offset = 0);
 
     void issueUploadCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const;
+
+    D3D12DescriptorHeapAllocator& cbvSrvUavDescriptorHeapAllocator();
 
     #if defined(TRACY_ENABLE)
     tracy::D3D12QueueCtx* tracyD3D12Context() { return m_tracyD3D12Context; }
@@ -141,6 +144,8 @@ private:
 
     ///////////////////////////////////////////////////////////////////////////
     /// Resource & resource management members
+
+    std::unique_ptr<D3D12DescriptorHeapAllocator> m_cbvSrvUavDescriptorHeapAllocator { nullptr };
 
     std::unique_ptr<Registry> m_pipelineRegistry {};
 
