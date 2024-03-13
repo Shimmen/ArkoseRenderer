@@ -81,6 +81,11 @@ FetchContent_Declare(libigl
     GIT_REPOSITORY https://github.com/libigl/libigl.git
     GIT_TAG        "v2.5.0")
 
+# TODO: Change to https://github.com/sebbbi/OffsetAllocator if my changes are merged up
+FetchContent_Declare(offset-allocator
+    GIT_REPOSITORY https://github.com/Shimmen/OffsetAllocator.git
+    GIT_TAG        "1d23609fced94c6b9dc2c962fe086fd4b5ca5994") # (latest commit, with fixed cmake script)
+
 ##################################
 # FetchContent dependencies without cmake files
 
@@ -234,7 +239,8 @@ FetchContent_MakeAvailable(
     lz4
     concurrentqueue
     tracy
-    libigl)
+    libigl
+    offset-allocator)
 
 # Final dependency build setup
 igl_include(restricted triangle)

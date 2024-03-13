@@ -87,6 +87,7 @@ target_link_libraries(ArkoseCore PUBLIC
     TracyClient # real-time profiling
     concurrentqueue # lock-free concurrent queue
     nlohmann_json::nlohmann_json # json reading & writing
+    offsetAllocator # good general purpose offset/slot allocator
 
     glfw # window and event management
     nfd # native file dialogs
