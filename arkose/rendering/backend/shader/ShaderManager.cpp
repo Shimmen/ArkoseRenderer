@@ -207,11 +207,11 @@ ShaderManager::SpirvData const& ShaderManager::spirv(const ShaderFile& shaderFil
     //  because the frontend makes sure to not run if shaders don't work.
     ARKOSE_ASSERT(result != m_compiledShaders.end());
 
-    const ShaderManager::CompiledShader& data = *result->second;
-    if (data.binaryType == CompiledShader::BinaryType::SpirV) {
+    ShaderManager::CompiledShader const& data = *result->second;
+    if (data.currentSpirvBinary.size() > 0) {
         return data.currentSpirvBinary;
     } else {
-        ARKOSE_LOG(Fatal, "Trying to get a SPIR-V binary from a shader of a non SPIR-V binary type, exiting.");
+        ARKOSE_LOG(Fatal, "Trying to get a SPIR-V binary from a shader that was not compiled for SPIR-V, exiting.");
         return data.currentSpirvBinary;
     }
 }
@@ -227,10 +227,10 @@ ShaderManager::DXILData const& ShaderManager::dxil(ShaderFile const& shaderFile)
     ARKOSE_ASSERT(result != m_compiledShaders.end());
 
     const ShaderManager::CompiledShader& data = *result->second;
-    if (data.binaryType == CompiledShader::BinaryType::DXIL) {
+    if (data.currentDxilBinary.size() > 0) {
         return data.currentDxilBinary;
     } else {
-        ARKOSE_LOG(Fatal, "Trying to get a DXIL binary from a shader of a non DXIL binary type, exiting.");
+        ARKOSE_LOG(Fatal, "Trying to get a DXIL binary from a shader that was not compiled for DXIL, exiting.");
         return data.currentDxilBinary;
     }
 }
@@ -241,9 +241,9 @@ ShaderManager::CompiledShader::CompiledShader(ShaderManager& manager, const Shad
     , resolvedFilePath(std::move(resolvedPath))
 {
     if (resolvedFilePath.ends_with(".hlsl")) {
-        binaryType = BinaryType::DXIL;
+        sourceType = SourceType::HLSL;
     } else {
-        binaryType = BinaryType::SpirV;
+        sourceType = SourceType::GLSL;
     }
 }
 
@@ -260,23 +260,43 @@ bool ShaderManager::CompiledShader::tryLoadingFromBinaryCache()
     struct stat dxilStatResult { };
     bool dxilCacheExists = stat(dxilPath.c_str(), &dxilStatResult) == 0;
 
-    if (spirvCacheExists && dxilCacheExists) {
-        ARKOSE_LOG(Fatal, "We somehow have a file which is compiled to both SPIR-V and DXIL, but for now"
-                          "we're keeping them completely separate. So how did we end up here?");
+    // Do we allow a shader to be compile with just one or the other binary representation,
+    // or should we require both of them to exist? The latter is stricter but works better
+    // when actually working against DXIL.. in the future we probably need some system
+    // which queries for the actual files we want..
+    bool allowEitherOr = false;
+
+    if (allowEitherOr) {
+        if (!spirvCacheExists && !dxilCacheExists) {
+            return false;
+        }
+    } else {
+        if (!spirvCacheExists || !dxilCacheExists) {
+            return false;
+        }
     }
 
-    if (!spirvCacheExists && !dxilCacheExists) {
-        return false;
+    u64 includeTreeLatestTimestamp = findLatestEditTimestampInIncludeTree(true);
+    u64 cachedTimestamp = 0;
+
+    if (spirvCacheExists) {
+        if (spirvStatResult.st_mtime < includeTreeLatestTimestamp) {
+            return false;
+        }
+        cachedTimestamp = spirvStatResult.st_mtime;
     }
 
-    u64 cachedTimestamp = (spirvCacheExists ? spirvStatResult : dxilStatResult).st_mtime;
-    if (cachedTimestamp < findLatestEditTimestampInIncludeTree(true)) {
-        return false;
+    if (dxilCacheExists) {
+        if (dxilStatResult.st_mtime < includeTreeLatestTimestamp) {
+            return false;
+        }
+        cachedTimestamp = dxilStatResult.st_mtime;
     }
 
     if (spirvCacheExists) {
         currentSpirvBinary = FileIO::readBinaryDataFromFile<u32>(spirvPath).value();
-    } else {
+    }
+    if (dxilCacheExists) {
         currentDxilBinary = FileIO::readBinaryDataFromFile<u8>(dxilPath).value();
     }
 
@@ -292,8 +312,8 @@ bool ShaderManager::CompiledShader::recompile()
 
     bool compilationSuccess = false;
 
-    switch (binaryType) {
-    case BinaryType::SpirV: {
+    switch (sourceType) {
+    case SourceType::GLSL: {
 
         auto result = ShadercInterface::compileShader(shaderFile, resolvedFilePath);
         compilationSuccess = result->success();
@@ -313,20 +333,82 @@ bool ShaderManager::CompiledShader::recompile()
                 //FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvAssemblyPath(shaderFile), std::vector<char>(asmResult.cbegin(), asmResult.cend()));
             }
 
-            if constexpr (false) {
+            if constexpr (true) {
                 SCOPED_PROFILE_ZONE_NAMED("SPIR-V to HLSL");
 
-                spirv_cross::CompilerHLSL::Options options {};
-                options.shader_model = 66; // i.e. shader model 6.6
-
                 spirv_cross::CompilerHLSL hlslCompiler { currentSpirvBinary };
+
+                spirv_cross::CompilerHLSL::Options options {};
+                options.shader_model = 60; // i.e. shader model 6.0 (todo: use latest version of DXC and SM 6.6+)
+
+                spv::ExecutionModel spvExecutionModel = spv::ExecutionModelMax;
+                switch (shaderFile.type()) {
+                case ShaderFileType::Vertex:
+                    spvExecutionModel = spv::ExecutionModelVertex;
+                    break;
+                case ShaderFileType::Fragment:
+                    spvExecutionModel = spv::ExecutionModelFragment;
+                    break;
+                case ShaderFileType::Compute:
+                    spvExecutionModel = spv::ExecutionModelGLCompute;
+                    break;
+                case ShaderFileType::RTRaygen:
+                    spvExecutionModel = spv::ExecutionModelRayGenerationKHR; // NOTE: Only works with KHR extension!
+                    break;
+                case ShaderFileType::RTClosestHit:
+                    spvExecutionModel = spv::ExecutionModelClosestHitKHR; // NOTE: Only works with KHR extension!
+                    break;
+                case ShaderFileType::RTAnyHit:
+                    spvExecutionModel = spv::ExecutionModelAnyHitKHR; // NOTE: Only works with KHR extension!
+                    break;
+                case ShaderFileType::RTIntersection:
+                    spvExecutionModel = spv::ExecutionModelIntersectionKHR; // NOTE: Only works with KHR extension!
+                    break;
+                case ShaderFileType::RTMiss:
+                    spvExecutionModel = spv::ExecutionModelMissKHR; // NOTE: Only works with KHR extension!
+                    break;
+                case ShaderFileType::Task:
+                    spvExecutionModel = spv::ExecutionModelTaskEXT;
+                    break;
+                case ShaderFileType::Mesh:
+                    spvExecutionModel = spv::ExecutionModelMeshEXT;
+                    break;
+                default:
+                    ASSERT_NOT_REACHED();
+                    break;
+                }
+
+                std::string hlslEntryPoint = DxcInterface::entryPointNameForShaderFile(shaderFile);
+                hlslCompiler.rename_entry_point("main", hlslEntryPoint, spvExecutionModel);
+                options.use_entry_point_name = true; // note: required for the entry point renaming
+
+                // Compiles and remaps vertex attributes at specific locations to a fixed semantic. The default is TEXCOORD# where # denotes location.
+                // Matrices are unrolled to vectors with notation ${SEMANTIC}_#, where # denotes row. $SEMANTIC is either TEXCOORD# or a semantic name specified here.
+                //hlslCompiler.add_vertex_attribute_remap({ .location = 0, .semantic = "POSITION" });
+                //hlslCompiler.add_vertex_attribute_remap({ .location = 1, .semantic = "TEXCOORD" });
+
                 hlslCompiler.set_hlsl_options(options);
 
                 try {
+                    std::string hlslResolvedPath = shaderManager.resolveHlslPath(shaderFile);
+
                     std::string hlsl = hlslCompiler.compile();
-                    FileIO::writeBinaryDataToFile(shaderManager.resolveHlslPath(shaderFile), hlsl.data(), hlsl.size());
+                    FileIO::writeBinaryDataToFile(hlslResolvedPath, hlsl.data(), hlsl.size());
+
+                    #if WITH_D3D12
+                    auto result2 = DxcInterface::compileShader(shaderFile, hlslResolvedPath);
+                    if ( result2->success() ) {
+                        currentDxilBinary = std::vector<u8>(result2->begin(), result2->end());
+                        FileIO::writeBinaryDataToFile(shaderManager.resolveDxilPath(shaderFile), currentDxilBinary);
+                    } else {
+                        ARKOSE_LOG(Error, "Failed to compile transpiled HLSL '{}': {}", hlslResolvedPath, result2->errorMessage());
+                    }
+                    #else
+                    #error "Trying to compile to DXIL (DirectX Intermediate Language) but we are not built with the D3D12 backend so the compiler is not available"
+                    #endif
+
                 } catch (const spirv_cross::CompilerError& compilerError) {
-                    ARKOSE_LOG(Verbose, "Failed to compile '{}' to HLSL: {}. Ignoring, for now.", shaderFile.path(), compilerError.what());
+                    ARKOSE_LOG(Info, "Failed to transpile '{}' to HLSL: {}. Ignoring, for now.", shaderFile.path(), compilerError.what());
                 }
             }
 
@@ -336,7 +418,7 @@ bool ShaderManager::CompiledShader::recompile()
 
     } break;
 
-    case BinaryType::DXIL: {
+    case SourceType::HLSL: {
     #if WITH_D3D12
 
         auto result = DxcInterface::compileShader(shaderFile, resolvedFilePath);

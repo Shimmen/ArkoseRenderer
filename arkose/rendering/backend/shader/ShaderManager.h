@@ -70,11 +70,11 @@ private:
         uint64_t lastEditTimestamp { 0 };
         uint64_t compiledTimestamp { 0 };
 
-        enum class BinaryType {
+        enum class SourceType {
             Unknown,
-            SpirV,
-            DXIL,
-        } binaryType { BinaryType::Unknown };
+            GLSL,
+            HLSL,
+        } sourceType { SourceType::Unknown };
 
         SpirvData currentSpirvBinary {};
         DXILData currentDxilBinary {};
