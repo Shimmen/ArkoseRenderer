@@ -285,6 +285,7 @@ if (ARKOSE_BACKEND_D3D12)
         arkose/rendering/backend/d3d12/D3D12Buffer.cpp
         arkose/rendering/backend/d3d12/D3D12CommandList.cpp
         arkose/rendering/backend/d3d12/D3D12ComputeState.cpp
+        arkose/rendering/backend/d3d12/D3D12DescriptorHeapAllocator.cpp
         arkose/rendering/backend/d3d12/D3D12RenderState.cpp
         arkose/rendering/backend/d3d12/D3D12RenderTarget.cpp
         arkose/rendering/backend/d3d12/D3D12Texture.cpp
