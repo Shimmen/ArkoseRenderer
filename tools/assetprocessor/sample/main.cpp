@@ -33,6 +33,10 @@
 // tangent space generation
 #include <mikktspace.h>
 
+// Everything is namespaced with Usd* or similar anyway.. A lot of typing can be saved with this.
+// In the future we should probably do the same but ensure it doesn't leak into headers.
+using namespace pxr;
+
 ARK_DISABLE_OPTIMIZATIONS
 
 struct UnindexedTriangleMesh {
@@ -602,7 +606,7 @@ void generateTangents(UnindexedTriangleMesh& triangleMesh)
     }
 }
 
-std::shared_ptr<MaterialAsset> defineDisplayColorMaterial(pxr::UsdPrim const& meshPrim,
+std::shared_ptr<MaterialAsset> createDisplayColorMaterial(pxr::UsdPrim const& meshPrim,
                                                           pxr::UsdGeomMesh const& usdGeomMesh)
 {
     auto materialAsset = std::make_shared<MaterialAsset>();
@@ -639,14 +643,161 @@ std::shared_ptr<MaterialAsset> defineDisplayColorMaterial(pxr::UsdPrim const& me
     return materialAsset;
 }
 
-void defineMaterialFromUsdPreviewSurface(MaterialAsset& materialAsset,
-                                         pxr::UsdPrim const& shaderPrim)
+template<typename T>
+T readUsdAttributeValue(UsdPrim const& prim, TfToken attributeNameToken)
 {
-    ARKOSE_LOG(Info, "TODO: Implement UsdPreviewSurface material conversion!");
-    //NOT_YET_IMPLEMENTED();
+    UsdAttribute attribute = prim.GetAttribute(attributeNameToken);
+
+    T attributeValue;
+    if (attribute.Get(&attributeValue)) {
+        // ARKOSE_LOG(Verbose, "Read attribute '{}' with value '{}'", attributeName, attributeValue);
+        return attributeValue;
+    } else {
+        ARKOSE_LOG(Fatal, "Failed to read attribute '{}' for the requested type", attributeNameToken.GetString());
+    }
 }
 
-std::shared_ptr<MaterialAsset> defineMaterial(pxr::UsdShadeMaterialBindingAPI const& materialBinding)
+template<typename T>
+T readUsdAttributeValue(UsdPrim const& prim, std::string_view attributeName)
+{
+    TfToken nameToken { attributeName.data() };
+    return readUsdAttributeValue<T>(prim, nameToken);
+}
+
+ImageWrapMode createImageWrapMode(TfToken usdUvTextureWrap)
+{
+    if (usdUvTextureWrap == TfToken("black")) {
+        ARKOSE_LOG(Warning, "Using `ImageWrapMode::ClampToEdge` in place of 'black', which should probably be a wrap to black border");
+        return ImageWrapMode::ClampToEdge;
+    } else if (usdUvTextureWrap == TfToken("clamp")) {
+        return ImageWrapMode::ClampToEdge;
+    } else if (usdUvTextureWrap == TfToken("repeat")) {
+        return ImageWrapMode::Repeat;
+    } else if (usdUvTextureWrap == TfToken("mirror")) {
+        return ImageWrapMode::MirroredRepeat;
+    } else if (usdUvTextureWrap == TfToken("useMetadata")) {
+        ARKOSE_LOG(Warning, "Using `ImageWrapMode::ClampToEdge` in place of 'useMetadata', which can be whatever.. todo!");
+        return ImageWrapMode::ClampToEdge;
+    } else {
+        ASSERT_NOT_REACHED();
+    }
+}
+
+MaterialInput createMaterialInputForUsdUVTexture(UsdPrim usdUvTexturePrim)
+{
+    MaterialInput materialInput {};
+  
+    if (UsdAttribute inputFileAttr = usdUvTexturePrim.GetAttribute(TfToken("inputs:file"))) {
+        SdfAssetPath fileAssetPath;
+        if (inputFileAttr.Get(&fileAssetPath)) {
+            materialInput.image = fileAssetPath.GetAssetPath();
+        }
+
+        TfToken wrapS = readUsdAttributeValue<TfToken>(usdUvTexturePrim, "inputs:wrapS");
+        materialInput.wrapModes.u = createImageWrapMode(wrapS);
+
+        TfToken wrapT = readUsdAttributeValue<TfToken>(usdUvTexturePrim, "inputs:wrapT");
+        materialInput.wrapModes.v = createImageWrapMode(wrapT);
+
+        // We only have 2D textures here, but let's at least set the w-component to something reasonable
+        materialInput.wrapModes.w = materialInput.wrapModes.u;
+
+        // TODO: Handle scale (should expand to a scale node before the uv reading for this)
+        // TODO: Handle bias (should expand to a UV addition node the uv reading for this)
+        // TODO: Handle fallback (maybe add a fallback per MaterialInput? Currently we only have one for the entire material
+
+    } else {
+        // TODO: If this is a normals input specifically it just means we want to read the normal at this point -- which in the world
+        // of movies where they use subdivision and no normal maps -- means just read the normals primvar. So we might have to do some
+        // interpretation here.. but in short, it semantically means that this is the "shading normals" input for the shader graph.
+        ARKOSE_LOG(Warning, "No file input specified for UsdUVTexture prim '{}'.", usdUvTexturePrim.GetPath().GetAsString());
+    }
+
+    return materialInput;
+}
+
+MaterialInput createMaterialInput(UsdPrim const& shaderPrim, MaterialAsset& materialAsset, UsdAttribute attribute)
+{
+    SdfPathVector connections;
+    if (attribute.GetConnections(&connections)) {
+        
+        ARKOSE_ASSERT(connections.size() == 1); // no reason for more than one connection here, surely?
+        SdfPath const& connection = connections.front();
+        //ARKOSE_LOG(Info, " connection = '{}'", connection.GetAsString());
+
+        UsdPrim shaderInputPrim = shaderPrim.GetStage()->GetPrimAtPath(connection.GetPrimPath());
+        ARKOSE_ASSERT(shaderInputPrim.GetTypeName() == UsdShadeTokens->Shader);
+
+        TfToken shaderNodeType = readUsdAttributeValue<TfToken>(shaderInputPrim, UsdShadeTokens->infoId);
+        if (shaderNodeType == TfToken("UsdUVTexture")) {
+            return createMaterialInputForUsdUVTexture(shaderInputPrim);
+        } else if (shaderNodeType == TfToken("UsdPrimvarReader_float2")) {
+            NOT_YET_IMPLEMENTED();
+        } else {
+            NOT_YET_IMPLEMENTED();
+        }
+
+    } else {
+        GfVec3f diffuseColor;
+        bool success = attribute.Get(&diffuseColor);
+        ARKOSE_ASSERT(success);
+
+        // TODO: Should we add a fallback value to each material input? I suppose it's more flexible than what we have now,
+        // if we want to have a proper material graph implementation.
+        MaterialInput materialInput {};
+        return materialInput;
+    }
+}
+
+void createMaterialFromUsdPreviewSurface(MaterialAsset& materialAsset, UsdPrim const& shaderPrim)
+{
+    // Documentation: https://openusd.org/release/spec_usdpreviewsurface.html
+
+    materialAsset.brdf = Brdf::Default;
+
+    int useSpecularWorkflow = readUsdAttributeValue<int>(shaderPrim, "inputs:useSpecularWorkflow");
+    ARKOSE_ASSERT(useSpecularWorkflow == 0); // For now (or maybe always?) we want to use the specular workflow
+
+    UsdAttribute diffuseColorAttr = shaderPrim.GetAttribute(TfToken("inputs:diffuseColor"));
+    materialAsset.baseColor = createMaterialInput(shaderPrim, materialAsset, diffuseColorAttr);
+
+    UsdAttribute emissiveColorAttr = shaderPrim.GetAttribute(TfToken("inputs:emissiveColor"));
+    materialAsset.emissiveColor = createMaterialInput(shaderPrim, materialAsset, emissiveColorAttr);
+
+    UsdAttribute normalAttr = shaderPrim.GetAttribute(TfToken("inputs:normal"));
+    materialAsset.normalMap = createMaterialInput(shaderPrim, materialAsset, normalAttr);
+
+    // TODO: Read roughness & metallic which we need to combine into a single texture! Occlusion could also be baked into this
+
+    // TODO: Move the tint out to the input, maybe? Aligns more nicely with UsdPreviewSurface and many other materials definitions as well.
+    materialAsset.colorTint = vec4(1.0f);
+    // These factors are also effectively just tints of the inputs, so should probably also be inside the inputs
+    materialAsset.metallicFactor = 1.0f;
+    materialAsset.roughnessFactor = 1.0f;
+
+    // Determine blending
+    {
+        // TODO: Both of these can of course be connected to some other inputs, so we can't just assume constant values!
+        float opacity = readUsdAttributeValue<float>(shaderPrim, "inputs:opacity");
+        float opacityThreshold = readUsdAttributeValue<float>(shaderPrim, "inputs:opacityThreshold");
+
+        if (opacity == 1.0f) {
+            if (opacityThreshold == 0.0f) {
+                materialAsset.blendMode = BlendMode::Opaque;
+            } else {
+                materialAsset.blendMode = BlendMode::Masked;
+                materialAsset.maskCutoff = opacityThreshold;
+            }
+        } else {
+            materialAsset.blendMode = BlendMode::Translucent;
+        }
+    }
+
+    // TODO: Where would we get this from?
+    materialAsset.doubleSided = false;
+}
+
+std::shared_ptr<MaterialAsset> createMaterial(pxr::UsdShadeMaterialBindingAPI const& materialBinding)
 {
     // NOTE: Compare to this python example in reverse:
     // https://github.com/PixarAnimationStudios/OpenUSD/blob/release/extras/usd/tutorials/simpleShading/generate_simpleShading.py
@@ -666,7 +817,7 @@ std::shared_ptr<MaterialAsset> defineMaterial(pxr::UsdShadeMaterialBindingAPI co
     }
 
     std::vector<pxr::UsdShadeOutput> surfaceOutputs = usdShadeMaterial.GetSurfaceOutputs();
-    ARKOSE_ASSERT(surfaceOutputs.size() == 1); // Handle multiple outputs!
+    ARKOSE_ASSERT(surfaceOutputs.size() == 1); // TODO: Handle multiple outputs!
     pxr::UsdShadeOutput& surfaceOutput = surfaceOutputs.front();
 
     // Surely it needs something connected to be valid?
@@ -676,17 +827,18 @@ std::shared_ptr<MaterialAsset> defineMaterial(pxr::UsdShadeMaterialBindingAPI co
     pxr::UsdShadeConnectableAPI shadeConnectableAPI = sourceInfo.source;
 
     ARKOSE_LOG(Info, " material is bound to shader '{}'", shadeConnectableAPI.GetPath().GetString());
-    pxr::UsdAttribute shaderInfoIdAttr = shadeConnectableAPI.GetPrim().GetAttribute(pxr::TfToken("info:id"));
+    pxr::UsdAttribute shaderInfoIdAttr = shadeConnectableAPI.GetPrim().GetAttribute(UsdShadeTokens->infoId);
     pxr::TfToken shaderInfoIdToken;
     if (shaderInfoIdAttr.Get<pxr::TfToken>(&shaderInfoIdToken)) {
         ARKOSE_LOG(Info, "  shader is of type '{}'", shaderInfoIdToken.GetString());
     }
 
     if (shaderInfoIdToken == pxr::TfToken("UsdPreviewSurface")) {
-        defineMaterialFromUsdPreviewSurface(*materialAsset, shadeConnectableAPI.GetPrim());
+        createMaterialFromUsdPreviewSurface(*materialAsset, shadeConnectableAPI.GetPrim());
+    } else {
+        NOT_YET_IMPLEMENTED();
     }
 
-    //NOT_YET_IMPLEMENTED();
     return materialAsset;
 }
 
@@ -767,11 +919,11 @@ void defineMeshAssetAndDependencies(pxr::UsdPrim const& meshPrim,
         // Set up the material for this mesh
 
         std::shared_ptr<MaterialAsset> material = nullptr;
-        if (meshPrim.HasAPI<pxr::UsdShadeMaterialBindingAPI>()) {
-            pxr::UsdShadeMaterialBindingAPI materialBindingAPI { meshPrim };
-            material = defineMaterial(materialBindingAPI);
+        if (meshPrim.HasAPI<UsdShadeMaterialBindingAPI>() || meshPrim.GetRelationship(UsdShadeTokens->materialBinding)) {
+            UsdShadeMaterialBindingAPI materialBindingAPI { meshPrim };
+            material = createMaterial(materialBindingAPI);
         } else if (usdGeomMesh.GetDisplayColorPrimvar().IsDefined()) {
-            material = defineDisplayColorMaterial(meshPrim, usdGeomMesh);
+            material = createDisplayColorMaterial(meshPrim, usdGeomMesh);
         }
 
         // TODO: Don't do this..
@@ -790,7 +942,8 @@ void defineCamera(pxr::UsdPrim const& cameraPrim)
 int main()
 {
     //std::string filePath = "../assets/usd/usd-assets/cornell-box/display-color/cornell-box.usda";
-    std::string filePath = "../assets/usd/usd-assets/cornell-box/usdpreviewsurface/cornell-box.usda";
+    //std::string filePath = "../assets/usd/usd-assets/cornell-box/usdpreviewsurface/cornell-box.usda";
+    std::string filePath = "../assets/usd/sample/UsdPreviewSurfaceExample.usda";
 
     if (!pxr::UsdStage::IsSupportedFile(filePath)) {
         ARKOSE_LOG_FATAL("USD can't open file '{}'.", filePath);
