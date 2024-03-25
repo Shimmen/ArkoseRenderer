@@ -554,6 +554,15 @@ ComPtr<ID3D12Device> D3D12Backend::createDeviceAtMaxSupportedFeatureLevel() cons
         ARKOSE_LOG(Warning, "D3D12Backend: could not check feature support for the device, we'll just stick to 12.0.");
     }
 
+    D3D12_FEATURE_DATA_D3D12_OPTIONS d3d12Options {};
+    if (auto hr = device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS, &d3d12Options, sizeof(d3d12Options)); SUCCEEDED(hr)) {
+        if ( d3d12Options.ResourceBindingTier != D3D12_RESOURCE_BINDING_TIER_3 ) {
+            ARKOSE_LOG(Fatal, "D3D12Backend: this device does not support resource binding tier 3, which is required for this engine. Sorry!");
+        }
+    } else {
+        ARKOSE_LOG(Error, "D3D12Backend: failed to get device options! We will have to assume some things, hopefully that won't cause any issues");
+    }
+
     switch (currentFeatureLevel) {
     case D3D_FEATURE_LEVEL_12_0:
         ARKOSE_LOG(Info, "D3D12Backend: using device at feature level 12.0");
