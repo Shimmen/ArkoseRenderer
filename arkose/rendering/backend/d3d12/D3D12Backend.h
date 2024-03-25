@@ -131,7 +131,7 @@ private:
     std::array<std::unique_ptr<FrameContext>, QueueSlotCount> m_frameContexts {};
 
     ComPtr<ID3D12DescriptorHeap> m_renderTargetDescriptorHeap;
-    int32_t m_renderTargetViewDescriptorSize {};
+    i32 m_renderTargetViewDescriptorSize {};
 
     std::unique_ptr<D3D12Texture> m_swapchainDepthTexture {};
     std::unique_ptr<D3D12Texture> m_mockSwapchainTexture {};
