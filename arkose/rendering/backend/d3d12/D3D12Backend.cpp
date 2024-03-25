@@ -58,6 +58,10 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
         device().SetStablePowerState(true);
     }
 
+    // Create global descriptor heaps & allocators for them
+    m_copyableDescriptorHeapAllocator = std::make_unique<D3D12DescriptorHeapAllocator>(device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false, 100'000);
+    m_shaderVisibleDescriptorHeapAllocator = std::make_unique<D3D12DescriptorHeapAllocator>(device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true, 100'000);
+
     m_commandQueue = createDefaultCommandQueue();
     m_swapChain = createSwapChain(m_commandQueue.Get());
     createWindowRenderTarget();
@@ -134,24 +138,14 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
         }
     }
 
-    // Create global descriptor heaps & allocators for them
-    m_cbvSrvUavDescriptorHeapAllocator = std::make_unique<D3D12DescriptorHeapAllocator>(device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 100'000);
-
     // Setup Dear ImGui
     {
-        D3D12_DESCRIPTOR_HEAP_DESC dearImguiHeapDesc = {};
-        dearImguiHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV;
-        dearImguiHeapDesc.NumDescriptors = NumImGuiDescriptors;
-        dearImguiHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-        dearImguiHeapDesc.NodeMask = 0;
-        if (auto hr = device().CreateDescriptorHeap(&dearImguiHeapDesc, IID_PPV_ARGS(&m_dearImGuiDescriptorHeap)); !SUCCEEDED(hr)) {
-            ARKOSE_LOG(Fatal, "D3D12Backend: failed to create Dear ImGui descriptor healp, exiting.");
-        }
-
+        // No need to ever move this descriptor so might as well put it directly into the shader visible heap
+        D3D12DescriptorAllocation fontDescriptor = shaderVisibleDescriptorHeapAllocator().allocate(1);
         ImGui_ImplDX12_Init(&device(), QueueSlotCount, SwapChainRenderTargetViewFormat,
-                            m_dearImGuiDescriptorHeap.Get(),
-                            m_dearImGuiDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
-                            m_dearImGuiDescriptorHeap->GetGPUDescriptorHandleForHeapStart());
+                            shaderVisibleDescriptorHeapAllocator().heap(),
+                            fontDescriptor.firstCpuDescriptor,
+                            fontDescriptor.firstGpuDescriptor);
         ImGui_ImplDX12_CreateDeviceObjects();
     }
 
@@ -229,6 +223,10 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
         ID3D12GraphicsCommandList* commandList = frameContext.commandList.Get();
         commandList->Reset(commandAllocator, nullptr);
 
+        // Bind the global CBV/SRV/UAV descriptor heap as it will be used for all shader data bindings
+        ID3D12DescriptorHeap* globalCbvSrvUavDescriptorHeap = shaderVisibleDescriptorHeapAllocator().heap();
+        commandList->SetDescriptorHeaps(1, &globalCbvSrvUavDescriptorHeap);
+
         // Transition swapchain buffer to be a render target
         D3D12_RESOURCE_BARRIER presentToRenderTargetBarrier;
         presentToRenderTargetBarrier.Transition.pResource = frameContext.renderTarget.Get();
@@ -285,8 +283,6 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
             SCOPED_PROFILE_ZONE_BACKEND_NAMED("GUI Rendering");
 
             ImGui::Render();
-
-            commandList->SetDescriptorHeaps(1, m_dearImGuiDescriptorHeap.GetAddressOf());
             ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), commandList);
 
             if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable) {
@@ -499,26 +495,14 @@ void D3D12Backend::issueUploadCommand(const std::function<void(ID3D12GraphicsCom
 
 }
 
-D3D12DescriptorHeapAllocator& D3D12Backend::cbvSrvUavDescriptorHeapAllocator()
+D3D12DescriptorHeapAllocator& D3D12Backend::copyableDescriptorHeapAllocator()
 {
-    return *m_cbvSrvUavDescriptorHeapAllocator.get();
+    return *m_copyableDescriptorHeapAllocator.get();
 }
 
-std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> D3D12Backend::claimImGuiDescriptorHandle()
+D3D12DescriptorHeapAllocator& D3D12Backend::shaderVisibleDescriptorHeapAllocator()
 {
-    D3D12_CPU_DESCRIPTOR_HANDLE cpuHandle = m_dearImGuiDescriptorHeap->GetCPUDescriptorHandleForHeapStart();
-    D3D12_GPU_DESCRIPTOR_HANDLE gpuHandle = m_dearImGuiDescriptorHeap->GetGPUDescriptorHandleForHeapStart();
-
-    u64 descriptorIdx = m_nextImGuiDescriptor++;
-    if (m_nextImGuiDescriptor < NumImGuiDescriptors) {
-        u64 offset = descriptorIdx * device().GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
-        cpuHandle.ptr += offset;
-        gpuHandle.ptr += offset;
-    } else {
-        ARKOSE_LOG(Error, "D3D12Backend: no more ImGui descriptor handles so will not display ImGui::Image correctly!");
-    }
-
-    return std::make_pair(cpuHandle, gpuHandle);
+    return *m_shaderVisibleDescriptorHeapAllocator.get();
 }
 
 ComPtr<ID3D12Device> D3D12Backend::createDeviceAtMaxSupportedFeatureLevel() const

@@ -3,6 +3,7 @@
 #include "rendering/backend/base/Texture.h"
 
 #include "rendering/backend/d3d12/D3D12Common.h"
+#include "rendering/backend/d3d12/D3D12DescriptorHeapAllocator.h"
 
 struct D3D12Texture final : public Texture {
 public:
@@ -25,5 +26,8 @@ public:
     D3D12_RESOURCE_DESC textureDescription {};
     DXGI_FORMAT dxgiFormat { DXGI_FORMAT_UNKNOWN };
 
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> srvNoAlphaForImGui {};
+    D3D12DescriptorAllocation srvDescriptor {};
+    D3D12DescriptorAllocation uavDescriptor {};
+
+    D3D12DescriptorAllocation srvNoAlphaDesciptorForImGui {};
 };

@@ -71,13 +71,12 @@ public:
 
     void issueUploadCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const;
 
-    D3D12DescriptorHeapAllocator& cbvSrvUavDescriptorHeapAllocator();
+    D3D12DescriptorHeapAllocator& copyableDescriptorHeapAllocator();
+    D3D12DescriptorHeapAllocator& shaderVisibleDescriptorHeapAllocator();
 
     #if defined(TRACY_ENABLE)
     tracy::D3D12QueueCtx* tracyD3D12Context() { return m_tracyD3D12Context; }
     #endif
-
-    std::pair<D3D12_CPU_DESCRIPTOR_HANDLE, D3D12_GPU_DESCRIPTOR_HANDLE> claimImGuiDescriptorHandle();
 
 private:
     ///////////////////////////////////////////////////////////////////////////
@@ -104,10 +103,6 @@ private:
     static constexpr DXGI_FORMAT SwapChainFormat                 = DXGI_FORMAT_R8G8B8A8_UNORM;
     static constexpr DXGI_FORMAT SwapChainRenderTargetViewFormat = DXGI_FORMAT_R8G8B8A8_UNORM;
     static constexpr DXGI_SWAP_CHAIN_FLAG SwapChainFlags = DXGI_SWAP_CHAIN_FLAG_ALLOW_TEARING;
-
-    u64 m_nextImGuiDescriptor { 1 }; // NOTE: The first descriptor is used by ImGui internally
-    static constexpr u32 NumImGuiDescriptors = 1'000;
-    ComPtr<ID3D12DescriptorHeap> m_dearImGuiDescriptorHeap {};
 
     ///////////////////////////////////////////////////////////////////////////
     /// Frame management related members
@@ -145,7 +140,9 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     /// Resource & resource management members
 
-    std::unique_ptr<D3D12DescriptorHeapAllocator> m_cbvSrvUavDescriptorHeapAllocator { nullptr };
+    // NOTE: CBV/SRV/UAV is implied here to save some typing. Assume if the code says just "descriptor" it's a CBV/SRV/UAV.
+    std::unique_ptr<D3D12DescriptorHeapAllocator> m_copyableDescriptorHeapAllocator { nullptr };
+    std::unique_ptr<D3D12DescriptorHeapAllocator> m_shaderVisibleDescriptorHeapAllocator { nullptr };
 
     std::unique_ptr<Registry> m_pipelineRegistry {};
 

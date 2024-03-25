@@ -145,6 +145,31 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
     if (FAILED(hr)) {
         ARKOSE_LOG(Fatal, "D3D12Texture: could not create committed resource for texture, exiting.");
     }
+
+    if (!hasDepthFormat()) {
+        D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc {};
+        srvDesc.Format = textureDescription.Format;
+        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+        srvDesc.Texture2D.MostDetailedMip = 0;
+        srvDesc.Texture2D.MipLevels = mipLevels();
+        srvDesc.Texture2D.PlaneSlice = 0;
+        srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+
+        srvDescriptor = d3d12Backend.copyableDescriptorHeapAllocator().allocate(1);
+        d3d12Backend.device().CreateShaderResourceView(textureResource.Get(), &srvDesc, srvDescriptor.firstCpuDescriptor);
+    }
+
+    if (storageCapable) {
+        D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc {};
+        uavDesc.Format = textureDescription.Format;
+        uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+        uavDesc.Texture2D.MipSlice = 0;
+        uavDesc.Texture2D.PlaneSlice = 0;
+
+        uavDescriptor = d3d12Backend.copyableDescriptorHeapAllocator().allocate(1);
+        d3d12Backend.device().CreateUnorderedAccessView(textureResource.Get(), nullptr, &uavDesc, uavDescriptor.firstCpuDescriptor);
+    }
 }
 
 D3D12Texture::~D3D12Texture()
@@ -243,9 +268,11 @@ ImTextureID D3D12Texture::asImTextureID()
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
-    if (srvNoAlphaForImGui.first.ptr == 0) {
+    if (!srvNoAlphaDesciptorForImGui.valid()) {
         auto& d3d12Backend = static_cast<D3D12Backend&>(backend());
-        srvNoAlphaForImGui = d3d12Backend.claimImGuiDescriptorHandle();
+
+        // No need to ever move this descriptor so might as well put it directly into the shader visible heap
+        srvNoAlphaDesciptorForImGui = d3d12Backend.shaderVisibleDescriptorHeapAllocator().allocate(1);
 
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc {};
         srvDesc.Format = textureDescription.Format;
@@ -261,8 +288,8 @@ ImTextureID D3D12Texture::asImTextureID()
         srvDesc.Texture2D.PlaneSlice = 0;
         srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
 
-        d3d12Backend.device().CreateShaderResourceView(textureResource.Get(), &srvDesc, srvNoAlphaForImGui.first);
+        d3d12Backend.device().CreateShaderResourceView(textureResource.Get(), &srvDesc, srvNoAlphaDesciptorForImGui.firstCpuDescriptor);
     }
 
-    return reinterpret_cast<ImTextureID>(srvNoAlphaForImGui.second.ptr);
+    return reinterpret_cast<ImTextureID>(srvNoAlphaDesciptorForImGui.firstGpuDescriptor.ptr);
 }
