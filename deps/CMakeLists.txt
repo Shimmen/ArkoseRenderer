@@ -42,10 +42,6 @@ FetchContent_Declare(vulkan_memory_allocator
     GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
     GIT_TAG        "v3.0.1")
 
-FetchContent_Declare(directx_headers
-    GIT_REPOSITORY https://github.com/microsoft/DirectX-Headers.git
-    GIT_TAG        "v1.602.0")
-
 FetchContent_Declare(meshoptimizer
     GIT_REPOSITORY https://github.com/zeux/meshoptimizer.git
     GIT_TAG        "v0.18")
@@ -233,7 +229,6 @@ FetchContent_MakeAvailable(
     glfw
     nativefiledialog-extended
     vulkan_memory_allocator
-    directx_headers
     meshoptimizer
     jolt-physics
     lz4
