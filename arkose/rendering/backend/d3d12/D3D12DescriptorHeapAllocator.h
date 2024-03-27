@@ -9,11 +9,15 @@ struct D3D12DescriptorAllocation {
     D3D12_GPU_DESCRIPTOR_HANDLE firstGpuDescriptor {}; // invalid if `shaderVisible` is false
 
     u32 count { 0 };
-    bool shaderVisible{ false };
+    size_t incrementSize { 0 };
+    bool shaderVisible { false };
 
     OffsetAllocator::Allocation internalAllocation {};
 
     bool valid() const { return count > 0 && internalAllocation.offset != OffsetAllocator::Allocation::NO_SPACE; }
+
+    D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptorAt(u32 idx);
+    D3D12_GPU_DESCRIPTOR_HANDLE gpuDescriptorAt(u32 idx);
 };
 
 class D3D12DescriptorHeapAllocator {

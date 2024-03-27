@@ -1,5 +1,19 @@
 #include "D3D12DescriptorHeapAllocator.h"
 
+D3D12_CPU_DESCRIPTOR_HANDLE D3D12DescriptorAllocation::cpuDescriptorAt(u32 idx)
+{
+    D3D12_CPU_DESCRIPTOR_HANDLE result = firstCpuDescriptor;
+    result.ptr += idx * incrementSize;
+    return result;
+}
+
+D3D12_GPU_DESCRIPTOR_HANDLE D3D12DescriptorAllocation::gpuDescriptorAt(u32 idx)
+{
+    D3D12_GPU_DESCRIPTOR_HANDLE result = firstGpuDescriptor;
+    result.ptr += idx * incrementSize;
+    return result;
+}
+
 D3D12DescriptorHeapAllocator::D3D12DescriptorHeapAllocator(ID3D12Device& device, D3D12_DESCRIPTOR_HEAP_TYPE heapType, bool shaderVisible, u32 descriptorCount)
     : m_allocator(descriptorCount)
     , m_shaderVisible(shaderVisible)
@@ -42,14 +56,17 @@ D3D12DescriptorAllocation D3D12DescriptorHeapAllocator::allocate(u32 count)
     allocation.internalAllocation = internalAllocation;
 
     allocation.count = count;
+    allocation.incrementSize = m_descriptorHandleIncrementSize;
     allocation.shaderVisible = m_shaderVisible;
 
-    allocation.firstCpuDescriptor = m_firstCpuDescriptor;
-    allocation.firstCpuDescriptor.ptr += internalAllocation.offset * m_descriptorHandleIncrementSize;
+    size_t incrementForOffset = internalAllocation.offset * m_descriptorHandleIncrementSize;
 
-    if ( m_shaderVisible ) {
+    allocation.firstCpuDescriptor = m_firstCpuDescriptor;
+    allocation.firstCpuDescriptor.ptr += incrementForOffset;
+
+    if (m_shaderVisible) {
         allocation.firstGpuDescriptor = m_firstGpuDescriptor;
-        allocation.firstGpuDescriptor.ptr += internalAllocation.offset * m_descriptorHandleIncrementSize;
+        allocation.firstGpuDescriptor.ptr += incrementForOffset;
     }
 
     return allocation;
