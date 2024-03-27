@@ -240,20 +240,12 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearVa
 
     m_commandList->SetGraphicsRootSignature(renderState.rootSignature.Get());
 
-    renderState.forEachRootParameterToBind([&](D3D12_ROOT_PARAMETER const& rootParameter, ShaderBinding const& shaderBinding) {
+    renderState.stateBindings().forEachBindingSet([&](u32 setIndex, BindingSet& bindingSet) {
+        // TODO: Maybe reserve idx0 for "push constants"? Lower indices should be used for data that changes more often according to the D3D12 devs / Microsoft.
+        i32 rootParameterIdx = setIndex;
 
-        switch (shaderBinding.type()) {
-        case ShaderBindingType::ConstantBuffer: {
-            auto const& d3d12Buffer = static_cast<D3D12Buffer const&>(shaderBinding.getBuffer());
-            m_commandList->SetGraphicsRootConstantBufferView(rootParameter.Descriptor.ShaderRegister, d3d12Buffer.bufferResource->GetGPUVirtualAddress());
-        } break;
-        case ShaderBindingType::StorageBuffer: {
-            auto const& d3d12Buffer = static_cast<D3D12Buffer const&>(shaderBinding.getBuffer());
-            m_commandList->SetGraphicsRootUnorderedAccessView(rootParameter.Descriptor.ShaderRegister, d3d12Buffer.bufferResource->GetGPUVirtualAddress());
-        } break;
-        default:
-            NOT_YET_IMPLEMENTED();
-        }
+        auto& d3d12BindingSet = static_cast<D3D12BindingSet&>(bindingSet);
+        m_commandList->SetGraphicsRootDescriptorTable(rootParameterIdx, d3d12BindingSet.descriptorTableAllocation.firstGpuDescriptor);
     });
 
     if (autoSetViewport) {

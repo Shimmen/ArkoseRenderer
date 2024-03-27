@@ -3,6 +3,7 @@
 #include "rendering/backend/base/BindingSet.h"
 
 #include "rendering/backend/d3d12/D3D12Common.h"
+#include "rendering/backend/d3d12/D3D12DescriptorHeapAllocator.h"
 
 struct D3D12BindingSet : public BindingSet {
 public:
@@ -12,20 +13,15 @@ public:
     virtual void setName(const std::string& name) override;
     virtual void updateTextures(uint32_t index, const std::vector<TextureBindingUpdate>&) override;
 
-    //
-    // NOTE: In Arkose we have binding sets which bind to a specific space/set, but this doesn't
-    // map directly to how D3D12 works. For consistency we still have binding sets (well, it's
-    // how Arkose works) but here we don't do much more than just set up the root parameters,
-    // and we leave the binding slots undecided. These will be decided by the render/compute/rt
-    // states when we create one with a binding set.
-    // 
-    // For the register space: if this binding set is bound at set index 0 it will get that space
-    //
-    // For the register slots: we'll have to count up the total registers used for the state and
-    //  assign accordingly, so we don't get any overlap.
-    //
-    static constexpr u32 UndecidedRegisterSpace = 12345;
-    static constexpr u32 UndecidedRegisterSlot = 67890;
+    // NOTE: We want to start filling out all the root parameter info when creating the binding set,
+    // but in D3D12 this requires not just the binding slot/register but also the register space, i.e.,
+    // the set index, which we don't have available yet. When filling out this info here we use this
+    // special constant which indicates that it's yet to be decided and will have to be reassigned
+    // when we create a render/compute/raytracing state which uses this binding set at a specific index.
+    static constexpr u32 UndecidedRegisterSpace = UINT32_MAX;
 
-    std::vector<D3D12_ROOT_PARAMETER> rootParameters {};
+    std::vector<D3D12_DESCRIPTOR_RANGE> descriptorRanges {};
+    D3D12_ROOT_PARAMETER rootParameter;
+
+    D3D12DescriptorAllocation descriptorTableAllocation {};
 };

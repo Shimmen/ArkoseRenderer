@@ -1,6 +1,7 @@
 #include "D3D12BindingSet.h"
 
 #include "rendering/backend/d3d12/D3D12Backend.h"
+#include "rendering/backend/d3d12/D3D12Buffer.h"
 #include "utility/Profiling.h"
 
 D3D12BindingSet::D3D12BindingSet(Backend& backend, std::vector<ShaderBinding> bindings)
@@ -8,76 +9,216 @@ D3D12BindingSet::D3D12BindingSet(Backend& backend, std::vector<ShaderBinding> bi
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
-    auto const& d3d12Backend = static_cast<D3D12Backend const&>(backend);
-    ID3D12Device const& device = d3d12Backend.device();
+    auto& d3d12Backend = static_cast<D3D12Backend&>(backend);
 
-    for (auto& bindingInfo : shaderBindings()) {
+    // TODO: Consider writing the descriptor directly in the root parameter if it's small enough (according to some heuristic)
+    //       For example, a single buffer or texture could be written directly, and we then avoid one level of indirection.
 
-        D3D12_ROOT_PARAMETER parameter;
-
-        switch (bindingInfo.type()) {
-        case ShaderBindingType::ConstantBuffer:
-            parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
-            parameter.Descriptor.ShaderRegister = UndecidedRegisterSlot;
-            parameter.Descriptor.RegisterSpace = UndecidedRegisterSpace;
-            break;
-        case ShaderBindingType::StorageBuffer:
-            parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
-            parameter.Descriptor.ShaderRegister = UndecidedRegisterSlot;
-            parameter.Descriptor.RegisterSpace = UndecidedRegisterSpace;
-            break;
-        case ShaderBindingType::StorageTexture:
-            parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_UAV;
-            parameter.Descriptor.ShaderRegister = UndecidedRegisterSlot;
-            parameter.Descriptor.RegisterSpace = UndecidedRegisterSpace;
-            break;
-        case ShaderBindingType::SampledTexture:
-            parameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_SRV;
-            parameter.Descriptor.ShaderRegister = UndecidedRegisterSlot;
-            parameter.Descriptor.RegisterSpace = UndecidedRegisterSpace;
-            break;
-        case ShaderBindingType::RTAccelerationStructure:
-            NOT_YET_IMPLEMENTED();
-            break;
-        default:
-            ASSERT_NOT_REACHED();
+    // Allocate descriptors for the descriptor table that this binding set constitutes
+    {
+        u32 totalDescriptorCount = 0;
+        for (auto& bindingInfo : shaderBindings()) {
+            totalDescriptorCount += bindingInfo.arrayCount();
         }
 
-        switch (bindingInfo.shaderStage()) {
-        case ShaderStage::Vertex:
-            parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_VERTEX;
-            break;
-        case ShaderStage::Fragment:
-            parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-            break;
-        case ShaderStage::Task:
-            parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_AMPLIFICATION;
-            break;
-        case ShaderStage::Mesh:
-            parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_MESH;
-            break;
-        default:
-            // No more fine grained options available, simply go with "all"
-            parameter.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
-        }
-
-        rootParameters.push_back(parameter);
+        ARKOSE_ASSERT(totalDescriptorCount > 0);
+        descriptorTableAllocation = d3d12Backend.shaderVisibleDescriptorHeapAllocator().allocate(totalDescriptorCount);
     }
 
-    // The shader bindings is out frontend representation, while the root parameters are what our D3D12 backend actually uses.
-    // To bind e.g. a buffer to root parameter 2 we need to look up shader binding 2 and ask for its buffer to bind it.
-    // Therefore we need these to match 1:1.
-    ARKOSE_ASSERT(shaderBindings().size() == rootParameters.size());
+    // Setup descriptors & matching descriptor ranges for each shader binding
+    {
+        u32 currentDescriptorOffset = 0;
 
-    // Q: Where are we actually creating the root signature for all these parameters?
-    // A: The PSO wrapper (RenderState, ComputeState, RayTracingState) will create them!
+        for (auto& bindingInfo : shaderBindings()) {
+
+            D3D12_DESCRIPTOR_RANGE& descriptorRange = descriptorRanges.emplace_back();
+            descriptorRange.NumDescriptors = bindingInfo.arrayCount();
+            descriptorRange.BaseShaderRegister = bindingInfo.bindingIndex();
+            descriptorRange.RegisterSpace = UndecidedRegisterSpace; // To be resolved when making the PSO
+            descriptorRange.OffsetInDescriptorsFromTableStart = currentDescriptorOffset;
+
+            switch (bindingInfo.type()) {
+            case ShaderBindingType::ConstantBuffer: {
+                auto const& d3d12Buffer = static_cast<D3D12Buffer const&>(bindingInfo.getBuffer());
+
+                D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc {};
+                cbvDesc.BufferLocation = d3d12Buffer.bufferResource->GetGPUVirtualAddress();
+                cbvDesc.SizeInBytes = d3d12Buffer.sizeInMemory();
+
+                D3D12_CPU_DESCRIPTOR_HANDLE descriptor = descriptorTableAllocation.cpuDescriptorAt(currentDescriptorOffset++);
+                d3d12Backend.device().CreateConstantBufferView(&cbvDesc, descriptor);
+
+                descriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_CBV;
+
+            } break;
+            case ShaderBindingType::StorageBuffer: {
+
+                ARKOSE_ASSERT(bindingInfo.arrayCount() == bindingInfo.getBuffers().size());
+                if (bindingInfo.arrayCount() == 0) {
+                    continue;
+                }
+
+                for (u32 idx = 0; idx < bindingInfo.arrayCount(); ++idx) {
+
+                    Buffer const* buffer = bindingInfo.getBuffers()[idx];
+                    ARKOSE_ASSERT(buffer);
+                    auto& d3d12Buffer = static_cast<D3D12Buffer const&>(*buffer);
+
+                    // TODO:
+                    //   If StructureByteStride value is not 0, a view of a structured buffer is created and the D3D12_UNORDERED_ACCESS_VIEW_DESC::Format field
+                    //   must be DXGI_FORMAT_UNKNOWN. If StructureByteStride is 0, a typed view of a buffer is created and a format must be supplied.
+                    // NOTE/QUESTION: Should we use structured buffers for all of these? Or should we sometimes use regular buffers?
+                    ARKOSE_LOG(Error, "StorageBuffer bindings are not yet fully implemented for D3D12");
+
+#if 0
+                    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc {};
+                    uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+                    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+
+                    uavDesc.Buffer.FirstElement = 0;
+                    //uavDesc.Buffer.NumElements = d3d12Buffer.size() / d3d12Buffer.stride();
+                    //uavDesc.Buffer.StructureByteStride = d3d12Buffer.stride();
+                    uavDesc.Buffer.CounterOffsetInBytes = 0; // not supported
+                    uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+#else
+                    // TODO: We're just creating raw (byte address) buffers for now..
+                    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc {};
+                    uavDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+                    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+
+                    uavDesc.Buffer.FirstElement = 0;
+                    uavDesc.Buffer.NumElements = d3d12Buffer.size() / sizeof(u32);
+                    uavDesc.Buffer.StructureByteStride = 0;
+                    uavDesc.Buffer.CounterOffsetInBytes = 0; // not supported
+                    uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+#endif
+
+                    D3D12_CPU_DESCRIPTOR_HANDLE descriptor = descriptorTableAllocation.cpuDescriptorAt(currentDescriptorOffset++);
+                    d3d12Backend.device().CreateUnorderedAccessView(d3d12Buffer.bufferResource.Get(), nullptr, &uavDesc, descriptor);
+                }
+
+                descriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+
+            } break;
+            case ShaderBindingType::StorageTexture: {
+
+                auto& d3d12Texture = static_cast<D3D12Texture const&>(bindingInfo.getStorageTexture().texture());
+                u32 mipLevel = bindingInfo.getStorageTexture().mipLevel();
+
+                D3D12_CPU_DESCRIPTOR_HANDLE descriptor = descriptorTableAllocation.cpuDescriptorAt(currentDescriptorOffset++);
+
+                if (mipLevel == 0) {
+                    // All textures have an image view for mip0 already available if it's storage/UAV capable
+                    ARKOSE_ASSERT(d3d12Texture.uavDescriptor.valid());
+                    d3d12Backend.device().CopyDescriptorsSimple(1,
+                                                                descriptor,
+                                                                d3d12Texture.uavDescriptor.firstCpuDescriptor,
+                                                                D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                } else {
+                    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc {};
+                    uavDesc.Format = d3d12Texture.dxgiFormat;
+                    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+
+                    uavDesc.Texture2D.MipSlice = mipLevel;
+                    uavDesc.Texture2D.PlaneSlice = 0;
+
+                    d3d12Backend.device().CreateUnorderedAccessView(d3d12Texture.textureResource.Get(), nullptr, &uavDesc, descriptor); // allocation.firstCpuDescriptor);
+                }
+
+                descriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_UAV;
+
+            } break;
+            case ShaderBindingType::SampledTexture: {
+
+                const auto& sampledTextures = bindingInfo.getSampledTextures();
+                size_t numTextures = sampledTextures.size();
+                ARKOSE_ASSERT(numTextures > 0);
+
+                for (u32 idx = 0; idx < bindingInfo.arrayCount(); ++idx) {
+
+                    // NOTE: We always have to fill in the count here, but for the unused we just fill with a "default"
+                    const Texture* texture = (idx >= numTextures) ? sampledTextures.front() : sampledTextures[idx];
+                    ARKOSE_ASSERT(texture);
+                    auto& d3d12Texture = static_cast<D3D12Texture const&>(*texture);
+
+                    D3D12_CPU_DESCRIPTOR_HANDLE descriptor = descriptorTableAllocation.cpuDescriptorAt(currentDescriptorOffset++);
+                    d3d12Backend.device().CopyDescriptorsSimple(1,
+                                                                descriptor,
+                                                                d3d12Texture.srvDescriptor.firstCpuDescriptor,
+                                                                D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+                }
+
+                descriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;
+
+            } break;
+            case ShaderBindingType::RTAccelerationStructure: {
+                NOT_YET_IMPLEMENTED();
+            } break;
+            default:
+                ASSERT_NOT_REACHED();
+            }
+        }
+    }
+
+    // Define the root parameter for this descriptor table / binding set
+    {
+        std::optional<D3D12_SHADER_VISIBILITY> parameterVisibility {};
+        for (auto& bindingInfo : shaderBindings()) {
+
+            D3D12_SHADER_VISIBILITY visibilityForBinding;
+            switch (bindingInfo.shaderStage()) {
+            case ShaderStage::Vertex:
+                visibilityForBinding = D3D12_SHADER_VISIBILITY_VERTEX;
+                break;
+            case ShaderStage::Fragment:
+                visibilityForBinding = D3D12_SHADER_VISIBILITY_PIXEL;
+                break;
+            case ShaderStage::Compute:
+                visibilityForBinding = D3D12_SHADER_VISIBILITY_ALL;
+                break;
+            case ShaderStage::Task:
+                visibilityForBinding = D3D12_SHADER_VISIBILITY_AMPLIFICATION;
+                break;
+            case ShaderStage::Mesh:
+                visibilityForBinding = D3D12_SHADER_VISIBILITY_MESH;
+                break;
+            default:
+                // No more fine grained options available, simply go with "all"
+                visibilityForBinding = D3D12_SHADER_VISIBILITY_ALL;
+                break;
+            }
+
+            if (parameterVisibility.has_value()) {
+                if (parameterVisibility.value() != visibilityForBinding) {
+                    // There are bindings with different visibilities within this set so we have to make it visible for all stages.
+                    // There may be some slightly smarter configurations for this but this will have to work for now.
+                    parameterVisibility = D3D12_SHADER_VISIBILITY_ALL;
+                }
+            } else {
+                parameterVisibility = visibilityForBinding;
+            }
+        }
+
+        rootParameter = {};
+        rootParameter.ParameterType = D3D12_ROOT_PARAMETER_TYPE_DESCRIPTOR_TABLE;
+        rootParameter.DescriptorTable.NumDescriptorRanges = narrow_cast<u32>(descriptorRanges.size());
+        rootParameter.DescriptorTable.pDescriptorRanges = descriptorRanges.data();
+        rootParameter.ShaderVisibility = parameterVisibility.value_or(D3D12_SHADER_VISIBILITY_ALL);
+
+        // Q: Where are we actually creating the root signature for this and other root parameters?
+        // A: The PSO wrapper (RenderState, ComputeState, RayTracingState) will create them!
+    }
 }
 
 D3D12BindingSet::~D3D12BindingSet()
 {
-    if (!hasBackend())
+    if (!hasBackend()) {
         return;
-    // TODO
+    }
+
+    auto& d3d12Backend = static_cast<D3D12Backend&>(backend());
+
+    d3d12Backend.shaderVisibleDescriptorHeapAllocator().free(descriptorTableAllocation);
 }
 
 void D3D12BindingSet::setName(const std::string& name)
