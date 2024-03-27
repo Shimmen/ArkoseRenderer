@@ -291,11 +291,27 @@ if (ARKOSE_BACKEND_D3D12)
         arkose/rendering/backend/d3d12/D3D12Texture.cpp
         arkose/rendering/backend/shader/dxc/DxcInterface.cpp
         )
+
+    add_subdirectory(deps/directxagility)
+    add_subdirectory(deps/directxcompiler)
+
     target_link_libraries(ArkoseRenderer PRIVATE
-        d3d12 dxgi dxguid  # core stuff
-        dxcompiler # for HLSL shader compilation
-        DirectX-Headers # utility stuff, e.g. CD3DX12
+        agilitysdk # for latest D3D12 headers & DLLs
+        d3d12 # core library, assumed to be agility sdk compatible
+        dxgi # surface setup etc.
+        dxguid # GUIDs for relevant directx types
+        dxc # for HLSL shader compilation
         spirv-cross-hlsl # for spirv->hlsl transpiling
+        )
+
+    # Copy Agility SDK DLLs to correct location & pass version to the target
+    # See https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/ for more info
+    target_compile_definitions(ArkoseRenderer PRIVATE -DARKOSE_AGILITY_SDK_VERSION=${AGILITYSDK_VERSION_MAJOR})
+    add_custom_command(TARGET ArkoseRenderer POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:ArkoseRenderer>/D3D12/"
+        COMMAND ${CMAKE_COMMAND} -E copy        -t "$<TARGET_FILE_DIR:ArkoseRenderer>/D3D12/" ${AGILITYSDK_D3D12CORE_DLL}
+        COMMAND ${CMAKE_COMMAND} -E copy        -t "$<TARGET_FILE_DIR:ArkoseRenderer>/D3D12/" ${AGILITYSDK_D3D12SDKLAYERS_DLL}
+        COMMAND_EXPAND_LISTS
         )
 endif()
 

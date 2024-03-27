@@ -19,6 +19,11 @@
 // Surface setup
 #include <dxgi1_6.h>
 
+// DirectX Agility SDK setup
+// See https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/ for more info
+extern "C" { __declspec(dllexport) extern const UINT D3D12SDKVersion = ARKOSE_AGILITY_SDK_VERSION; }
+extern "C" { __declspec(dllexport) extern const char8_t* D3D12SDKPath = u8".\\D3D12\\"; }
+
 #if defined(TRACY_ENABLE)
 #define SCOPED_PROFILE_ZONE_GPU(commandList, nameLiteral) TracyD3D12Zone(m_tracyD3D12Context, commandList, nameLiteral);
 #define SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandList, nameString) TracyD3D12ZoneTransient(m_tracyD3D12Context, TracyConcat(ScopedProfileZone, nameString), commandList, nameString.c_str(), nameString.size());

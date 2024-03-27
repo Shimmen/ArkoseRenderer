@@ -6,7 +6,7 @@ class ID3D12GraphicsCommandList;
 class ID3D12Resource;
 
 #if defined(TRACY_ENABLE)
-#include <directx/d3d12.h>
+#include <d3d12.h>
 #include <tracy/TracyD3D12.hpp>
 #endif
 
