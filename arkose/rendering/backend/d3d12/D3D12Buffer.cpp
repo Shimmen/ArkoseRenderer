@@ -50,7 +50,15 @@ D3D12Buffer::D3D12Buffer(Backend& backend, size_t size, Usage usage, MemoryHint 
         ASSERT_NOT_REACHED();
     }
 
-    CD3DX12_RESOURCE_DESC bufferDescription = CD3DX12_RESOURCE_DESC::Buffer(size, resourceFlags);
+    if (usage == Buffer::Usage::ConstantBuffer) {
+        // D3D12 ERROR: ID3D12Device::CreateConstantBufferView: Size of <...> is invalid. Device requires SizeInBytes be a multiple of 256. [ STATE_CREATION ERROR #650: CREATE_CONSTANT_BUFFER_VIEW_INVALID_DESC]
+        constexpr size_t BufferMinimumAlignment = 256;
+        m_sizeInMemory = ark::divideAndRoundUp<size_t>(m_size, BufferMinimumAlignment) * BufferMinimumAlignment;
+    } else {
+        m_sizeInMemory = m_size;
+    }
+
+    CD3DX12_RESOURCE_DESC bufferDescription = CD3DX12_RESOURCE_DESC::Buffer(m_sizeInMemory, resourceFlags);
 
     // TODO: Don't use commited resource! Sub-allocate instead
     auto hr = d3d12Backend.device().CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE,
@@ -61,9 +69,6 @@ D3D12Buffer::D3D12Buffer(Backend& backend, size_t size, Usage usage, MemoryHint 
     }
 
     resourceState = initialResourceState;
-
-    // TODO: Actually track the allocated size, not just what we asked for
-    m_sizeInMemory = size;
 }
 
 D3D12Buffer::~D3D12Buffer()
