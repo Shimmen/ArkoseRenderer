@@ -136,7 +136,9 @@ D3D12BindingSet::D3D12BindingSet(Backend& backend, std::vector<ShaderBinding> bi
 
                 for (u32 idx = 0; idx < bindingInfo.arrayCount(); ++idx) {
 
-                    // NOTE: We always have to fill in the count here, but for the unused we just fill with a "default"
+                    // NOTE: Since we assume resource binding tier 3 we're actually allowed to leave a descriptor range partially unbound.
+                    // However, I think it makes more sense to write some kind of "default" for all slots like this. Ideally write some
+                    // special texture, e.g. magenta, but this will work for now (and is the same as we do for Vulkan).
                     const Texture* texture = (idx >= numTextures) ? sampledTextures.front() : sampledTextures[idx];
                     ARKOSE_ASSERT(texture);
                     auto& d3d12Texture = static_cast<D3D12Texture const&>(*texture);
