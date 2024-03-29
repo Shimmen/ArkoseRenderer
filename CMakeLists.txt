@@ -297,6 +297,7 @@ if (ARKOSE_BACKEND_D3D12)
 
     target_link_libraries(ArkoseRenderer PRIVATE
         agilitysdk # for latest D3D12 headers & DLLs
+        agilitysdk_d3dx12 # d3dx12 helper library from the agility sdk
         d3d12 # core library, assumed to be agility sdk compatible
         dxgi # surface setup etc.
         dxguid # GUIDs for relevant directx types

@@ -16,4 +16,10 @@ if(MSVC)
     set(AGILITYSDK_D3D12CORE_DLL      "${agilitysdk_fetch_SOURCE_DIR}/build/native/bin/x64/D3D12Core.dll"      CACHE INTERNAL "")
     set(AGILITYSDK_D3D12SDKLAYERS_DLL "${agilitysdk_fetch_SOURCE_DIR}/build/native/bin/x64/d3d12SDKLayers.dll" CACHE INTERNAL "")
 
+    # optional component: d3dx12 helper library
+    add_library(agilitysdk_d3dx12 STATIC)
+    target_link_libraries(agilitysdk_d3dx12 PRIVATE agilitysdk)
+    target_include_directories(agilitysdk_d3dx12 PRIVATE "${agilitysdk_fetch_SOURCE_DIR}/build/native/include/d3dx12/")
+    target_sources(agilitysdk_d3dx12 PRIVATE "${agilitysdk_fetch_SOURCE_DIR}/build/native/src/d3dx12/d3dx12_property_format_table.cpp")
+
 endif()
