@@ -18,6 +18,7 @@
 
 // Surface setup
 #include <dxgi1_6.h>
+#include <dxgidebug.h>
 
 // DirectX Agility SDK setup
 // See https://devblogs.microsoft.com/directx/gettingstarted-dx12agility/ for more info
@@ -40,6 +41,8 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
 
     m_windowFramebufferExtent = System::get().windowFramebufferSize();
 
+    /////////////////////////////////
+
     if constexpr (d3d12debugMode) {
         ComPtr<ID3D12Debug1> debugController;
         D3D12GetDebugInterface(IID_PPV_ARGS(&debugController));
@@ -53,7 +56,37 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
         ARKOSE_LOG(Fatal, "D3D12Backend: could not enable shader model 6 support, exiting.");
     }
 
+    /////////////////////////////////
+
+    // Pick the best adapter (physical device) to use
+
+    u32 dxgiFlags = 0;
+    if constexpr (d3d12debugMode) {
+        dxgiFlags |= DXGI_CREATE_FACTORY_DEBUG;
+    }
+
+    ComPtr<IDXGIFactory1> dxgiFactory;
+    if (auto hr = CreateDXGIFactory2(dxgiFlags, IID_PPV_ARGS(&dxgiFactory)); FAILED(hr)) {
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not create DXGI factory, exiting.");
+    }
+
+    ComPtr<IDXGIFactory6> dxgiFactory6;
+    if (auto hr = dxgiFactory.As(&dxgiFactory6); SUCCEEDED(hr)) {
+        dxgiFactory6->EnumAdapterByGpuPreference(0, DXGI_GPU_PREFERENCE_HIGH_PERFORMANCE, IID_PPV_ARGS(&m_dxgiAdapter));
+    } else {
+        // just pick the first one in the list (can be improved..)
+        dxgiFactory->EnumAdapters1(0, &m_dxgiAdapter);
+    }
+    
+    DXGI_ADAPTER_DESC1 adapterDesc;
+    if (auto hr = m_dxgiAdapter->GetDesc1(&adapterDesc); SUCCEEDED(hr)) {
+        ARKOSE_LOG(Info, "D3D12Backend: using adapter '{}'", convertFromWideString(adapterDesc.Description));
+    }
+
+    // Create the device
+
     m_device = createDeviceAtMaxSupportedFeatureLevel();
+
     if constexpr (d3d12debugMode) {
         if (auto hr = m_device->QueryInterface(IID_PPV_ARGS(&m_debugDevice)); FAILED(hr)) {
             ARKOSE_LOG(Warning, "D3D12Backend: failed to create debug device.");
@@ -512,12 +545,11 @@ D3D12DescriptorHeapAllocator& D3D12Backend::shaderVisibleDescriptorHeapAllocator
 
 ComPtr<ID3D12Device> D3D12Backend::createDeviceAtMaxSupportedFeatureLevel() const
 {
-    // TODO: Also get an adapter!
     ComPtr<ID3D12Device> device;
 
     // Create device at the min-spec feature level for Arkose
     constexpr D3D_FEATURE_LEVEL minSpecFeatureLevel { D3D_FEATURE_LEVEL_12_0 };
-    if (auto hr = D3D12CreateDevice(nullptr, minSpecFeatureLevel, IID_PPV_ARGS(&device)); FAILED(hr)) {
+    if (auto hr = D3D12CreateDevice(m_dxgiAdapter.Get(), minSpecFeatureLevel, IID_PPV_ARGS(&device)); FAILED(hr)) {
         ARKOSE_LOG(Fatal, "D3D12Backend: could not create the device for feature level 12.0, exiting.");
     }
     
@@ -534,7 +566,7 @@ ComPtr<ID3D12Device> D3D12Backend::createDeviceAtMaxSupportedFeatureLevel() cons
     query.pFeatureLevelsRequested = featureLevelsToQuery.data();
     if (auto hr = device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &query, sizeof(query)); SUCCEEDED(hr)) {
         if (currentFeatureLevel < query.MaxSupportedFeatureLevel) {
-            if (auto hr = D3D12CreateDevice(nullptr, query.MaxSupportedFeatureLevel, IID_PPV_ARGS(&device)); FAILED(hr)) {
+            if (auto hr = D3D12CreateDevice(m_dxgiAdapter.Get(), query.MaxSupportedFeatureLevel, IID_PPV_ARGS(&device)); FAILED(hr)) {
                 ARKOSE_LOG(Fatal, "D3D12Backend: could not create the device at max feature level, exiting.");
             }
             currentFeatureLevel = query.MaxSupportedFeatureLevel;

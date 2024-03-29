@@ -94,6 +94,8 @@ private:
 
     Extent2D m_windowFramebufferExtent { 0, 0 };
 
+    ComPtr<IDXGIAdapter1> m_dxgiAdapter {};
+
     ComPtr<ID3D12Device> m_device {};
     ComPtr<ID3D12DebugDevice> m_debugDevice {};
 
