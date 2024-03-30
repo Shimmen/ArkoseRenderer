@@ -249,15 +249,17 @@ D3D12Backend::~D3D12Backend()
 
     m_pipelineRegistry.reset();
 
+    for (auto& frameContext : m_frameContexts) {
+        frameContext.reset();
+    }
+
     ImGui_ImplDX12_Shutdown();
 
     #if defined(TRACY_ENABLE)
     TracyD3D12Destroy(m_tracyD3D12Context);
     #endif
 
-    m_memoryAllocator->Release();
-
-    // TODO!
+    m_memoryAllocator.Reset();
 }
 
 void D3D12Backend::renderPipelineDidChange(RenderPipeline& renderPipeline)

@@ -80,9 +80,6 @@ D3D12Buffer::D3D12Buffer(Backend& backend, size_t size, Usage usage)
 
 D3D12Buffer::~D3D12Buffer()
 {
-    //if (bufferAllocation != nullptr) {
-    //    bufferAllocation->Release();
-    //}
 }
 
 void D3D12Buffer::setName(const std::string& name)
