@@ -293,8 +293,6 @@ if (ARKOSE_BACKEND_D3D12)
         )
 
     add_subdirectory(deps/d3d12)
-    add_subdirectory(deps/directxagility)
-    add_subdirectory(deps/directxcompiler)
 
     target_link_libraries(ArkoseRenderer PRIVATE
         agilitysdk # for latest D3D12 headers & DLLs

@@ -1,6 +1,9 @@
+#
+# D3D12-specific dependencies
+#
 
-# TODO: Move the `add_subdirectory` calls for dxcompiler & agility SDK into here,
-# and also move their actual subdirectories to under this one, d3d12/
+add_subdirectory(directxagility)
+add_subdirectory(directxcompiler)
 
 set(D3D12MA_AGILITY_SDK_DIRECTORY ${AGILITYSDK_DIR})
 FetchContent_Declare(d3d12_memory_allocator
