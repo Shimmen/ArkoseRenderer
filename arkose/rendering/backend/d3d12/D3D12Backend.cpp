@@ -210,7 +210,12 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
             if (auto hr = device().CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, frameContext.commandAllocator.Get(), nullptr, IID_PPV_ARGS(&frameContext.commandList)); FAILED(hr)) {
                 ARKOSE_LOG(Fatal, "D3D12Backend: failed to create command list, exiting.");
             }
-            
+
+            if (d3d12debugMode) {
+                std::string commandListDebugName = fmt::format("FrameContext{}CommandList", i);
+                frameContext.commandList->SetName(convertToWideString(commandListDebugName).data());
+            }
+
             frameContext.commandList->Close();
         }
 
@@ -563,6 +568,10 @@ void D3D12Backend::issueUploadCommand(const std::function<void(ID3D12GraphicsCom
     ComPtr<ID3D12GraphicsCommandList> uploadCommandList;
     if (auto hr = device().CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, uploadCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&uploadCommandList)); FAILED(hr)) {
         ARKOSE_LOG(Fatal, "D3D12Backend: could not create command list for one-off upload command, exiting.");
+    }
+
+    if (d3d12debugMode) {
+        uploadCommandList->SetName(L"TemporaryUploadCommandList");
     }
 
     callback(*uploadCommandList.Get());
