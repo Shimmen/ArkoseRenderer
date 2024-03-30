@@ -63,6 +63,8 @@ public:
     IDXGISwapChain4& swapChain() { return *m_swapChain.Get(); }
     ID3D12CommandQueue& commandQueue() { return *m_commandQueue.Get(); }
 
+    D3D12MA::Allocator& globalAllocator() { return *m_memoryAllocator.Get(); }
+
     void waitForFence(ID3D12Fence* fence, UINT64 completionValue, HANDLE waitEvent) const;
     void waitForDeviceIdle();
 
@@ -141,6 +143,8 @@ private:
 
     ///////////////////////////////////////////////////////////////////////////
     /// Resource & resource management members
+
+    ComPtr<D3D12MA::Allocator> m_memoryAllocator {};
 
     // NOTE: CBV/SRV/UAV is implied here to save some typing. Assume if the code says just "descriptor" it's a CBV/SRV/UAV.
     std::unique_ptr<D3D12DescriptorHeapAllocator> m_copyableDescriptorHeapAllocator { nullptr };

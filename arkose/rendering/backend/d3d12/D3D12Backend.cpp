@@ -96,6 +96,23 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
         device().SetStablePowerState(true);
     }
 
+    /////////////////////////////////
+
+    D3D12MA::ALLOCATOR_DESC allocatorDesc {};
+    allocatorDesc.pAdapter = m_dxgiAdapter.Get();
+    allocatorDesc.pDevice = m_device.Get();
+
+    allocatorDesc.PreferredBlockSize = 0; // use default size
+    allocatorDesc.pAllocationCallbacks = nullptr;
+
+    allocatorDesc.Flags = D3D12MA::ALLOCATOR_FLAG_MSAA_TEXTURES_ALWAYS_COMMITTED | D3D12MA::ALLOCATOR_FLAG_DEFAULT_POOLS_NOT_ZEROED;
+
+    if (auto hr = D3D12MA::CreateAllocator(&allocatorDesc, m_memoryAllocator.GetAddressOf()); FAILED(hr)) {
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not create memory allocator, exiting.");
+    }
+
+    /////////////////////////////////
+
     // Create global descriptor heaps & allocators for them
     m_copyableDescriptorHeapAllocator = std::make_unique<D3D12DescriptorHeapAllocator>(device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false, 100'000);
     m_shaderVisibleDescriptorHeapAllocator = std::make_unique<D3D12DescriptorHeapAllocator>(device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true, 100'000);
@@ -194,6 +211,9 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
 
 D3D12Backend::~D3D12Backend()
 {
+    // Before destroying stuff, make sure we're done with all scheduled work
+    completePendingOperations();
+
     m_pipelineRegistry.reset();
 
     ImGui_ImplDX12_Shutdown();
@@ -201,6 +221,8 @@ D3D12Backend::~D3D12Backend()
     #if defined(TRACY_ENABLE)
     TracyD3D12Destroy(m_tracyD3D12Context);
     #endif
+
+    m_memoryAllocator->Release();
 
     // TODO!
 }
