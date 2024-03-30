@@ -23,6 +23,10 @@ public:
     size_t size() const { return m_size; }
     Usage usage() const { return m_usage; }
 
+    size_t stride() const { return m_stride; }
+    bool hasStride() const { return m_stride != 0; }
+    void setStride(size_t stride) { m_stride = stride; }
+
     size_t sizeInMemory() const { return m_sizeInMemory; }
 
     bool storageCapable() const;
@@ -65,4 +69,5 @@ protected:
 
 private:
     Usage m_usage { Usage::Vertex };
+    size_t m_stride { 0 };
 };
