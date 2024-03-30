@@ -64,34 +64,29 @@ D3D12BindingSet::D3D12BindingSet(Backend& backend, std::vector<ShaderBinding> bi
                     ARKOSE_ASSERT(buffer);
                     auto& d3d12Buffer = static_cast<D3D12Buffer const&>(*buffer);
 
-                    // TODO:
-                    //   If StructureByteStride value is not 0, a view of a structured buffer is created and the D3D12_UNORDERED_ACCESS_VIEW_DESC::Format field
-                    //   must be DXGI_FORMAT_UNKNOWN. If StructureByteStride is 0, a typed view of a buffer is created and a format must be supplied.
-                    // NOTE/QUESTION: Should we use structured buffers for all of these? Or should we sometimes use regular buffers?
-                    ARKOSE_LOG(Error, "StorageBuffer bindings are not yet fully implemented for D3D12");
-
-#if 0
                     D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc {};
-                    uavDesc.Format = DXGI_FORMAT_UNKNOWN;
                     uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
-
-                    uavDesc.Buffer.FirstElement = 0;
-                    //uavDesc.Buffer.NumElements = d3d12Buffer.size() / d3d12Buffer.stride();
-                    //uavDesc.Buffer.StructureByteStride = d3d12Buffer.stride();
+                    uavDesc.Buffer.FirstElement = 0; // no offset (for now)
                     uavDesc.Buffer.CounterOffsetInBytes = 0; // not supported
-                    uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
-#else
-                    // TODO: We're just creating raw (byte address) buffers for now..
-                    D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc {};
-                    uavDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-                    uavDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
 
-                    uavDesc.Buffer.FirstElement = 0;
-                    uavDesc.Buffer.NumElements = d3d12Buffer.size() / sizeof(u32);
-                    uavDesc.Buffer.StructureByteStride = 0;
-                    uavDesc.Buffer.CounterOffsetInBytes = 0; // not supported
-                    uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
-#endif
+                    // If StructureByteStride value is not 0, a view of a structured buffer is created and the D3D12_UNORDERED_ACCESS_VIEW_DESC::Format field
+                    // must be DXGI_FORMAT_UNKNOWN. If StructureByteStride is 0, a typed view of a buffer is created and a format must be supplied.
+                    // Alternatively, if `D3D12_BUFFER_UAV_FLAG_RAW` is passed along one can use `DXGI_FORMAT_R32_TYPELESS` for a raw buffer.
+
+                    if (d3d12Buffer.hasStride()) {
+                        // Create structured buffer
+                        uavDesc.Format = DXGI_FORMAT_UNKNOWN;
+                        uavDesc.Buffer.NumElements = narrow_cast<u32>(d3d12Buffer.size() / d3d12Buffer.stride());
+                        uavDesc.Buffer.StructureByteStride = narrow_cast<u32>(d3d12Buffer.stride());
+                    } else {
+                        // No stride available, create a raw (byte address) buffer
+                        ASSERT_NOT_REACHED();
+                        // NOTE: Currently I don't think we ever hit this code as we require storage buffers to have a stride
+                        // so that they can act as structured buffer in D3D12. However, I want to maybe allow raw buffers layer..
+                        uavDesc.Format = DXGI_FORMAT_R32_TYPELESS;
+                        uavDesc.Buffer.NumElements = d3d12Buffer.size() / sizeof(u32);
+                        uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
+                    }
 
                     D3D12_CPU_DESCRIPTOR_HANDLE descriptor = descriptorTableAllocation.cpuDescriptorAt(currentDescriptorOffset++);
                     d3d12Backend.device().CreateUnorderedAccessView(d3d12Buffer.bufferResource.Get(), nullptr, &uavDesc, descriptor);
