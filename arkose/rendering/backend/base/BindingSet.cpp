@@ -36,7 +36,9 @@ ShaderBinding ShaderBinding::storageBuffer(Buffer& buffer, ShaderStage shaderSta
 {
     ShaderBinding binding { ShaderBindingType::StorageBuffer, shaderStage };
 
+    ARKOSE_ASSERT(buffer.hasStride());
     ARKOSE_ASSERT(buffer.storageCapable());
+
     binding.m_buffers.push_back(&buffer);
 
     return binding;
@@ -46,7 +48,9 @@ ShaderBinding ShaderBinding::storageBufferReadonly(Buffer const& buffer, ShaderS
 {
     ShaderBinding binding { ShaderBindingType::StorageBuffer, shaderStage };
 
+    ARKOSE_ASSERT(buffer.hasStride());
     ARKOSE_ASSERT(buffer.storageCapable());
+
     binding.m_buffers.push_back(const_cast<Buffer*>(&buffer));
 
     return binding;
@@ -60,6 +64,7 @@ ShaderBinding ShaderBinding::storageBufferBindlessArray(const std::vector<Buffer
     binding.m_buffers.reserve(binding.m_arrayCount);
     for (Buffer* buffer : buffers) {
         ARKOSE_ASSERT(buffer);
+        ARKOSE_ASSERT(buffer->hasStride());
         ARKOSE_ASSERT(buffer->storageCapable());
         binding.m_buffers.push_back(buffer);
     }
