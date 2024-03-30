@@ -33,6 +33,23 @@ extern "C" { __declspec(dllexport) extern const char8_t* D3D12SDKPath = u8".\\D3
 #define SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandList, nameString)
 #endif
 
+static void d3d12DebugMessagCallback(D3D12_MESSAGE_CATEGORY category, D3D12_MESSAGE_SEVERITY severity, D3D12_MESSAGE_ID id, LPCSTR description, void* context)
+{
+    switch (severity) {
+    case D3D12_MESSAGE_SEVERITY_CORRUPTION:
+    case D3D12_MESSAGE_SEVERITY_ERROR:
+        ARKOSE_LOG(Error, "D3D12 debug message: {}", description);
+        break;
+    case D3D12_MESSAGE_SEVERITY_WARNING:
+        ARKOSE_LOG(Warning, "D3D12 debug message: {}", description);
+        break;
+    case D3D12_MESSAGE_SEVERITY_INFO:
+    case D3D12_MESSAGE_SEVERITY_MESSAGE:
+        ARKOSE_LOG(Info, "D3D12 debug message: {}", description);
+        break;
+    }
+}
+
 D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecification)
 {
     //
@@ -90,6 +107,17 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
     if constexpr (d3d12debugMode) {
         if (auto hr = m_device->QueryInterface(IID_PPV_ARGS(&m_debugDevice)); FAILED(hr)) {
             ARKOSE_LOG(Warning, "D3D12Backend: failed to create debug device.");
+        }
+
+        if (auto hr = m_device->QueryInterface(IID_PPV_ARGS(&m_infoQueue)); SUCCEEDED(hr)) {
+            ComPtr<ID3D12InfoQueue1> infoQueue1;
+            if (auto hr = m_infoQueue.As<ID3D12InfoQueue1>(&infoQueue1); SUCCEEDED(hr)) {
+                infoQueue1->RegisterMessageCallback(d3d12DebugMessagCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, nullptr);
+            } else {
+                ARKOSE_LOG(Warning, "D3D12Backend: failed to register message callback.");
+            }
+        } else {
+            ARKOSE_LOG(Warning, "D3D12Backend: failed to create info queue.");
         }
 
         // Can reduce overall performance, but it will give us a stable clock & consistent measurements

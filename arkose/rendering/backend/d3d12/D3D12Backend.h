@@ -100,6 +100,7 @@ private:
 
     ComPtr<ID3D12Device> m_device {};
     ComPtr<ID3D12DebugDevice> m_debugDevice {};
+    ComPtr<ID3D12InfoQueue> m_infoQueue {};
 
     ComPtr<ID3D12CommandQueue> m_commandQueue {};
 
