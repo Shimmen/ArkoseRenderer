@@ -292,6 +292,7 @@ if (ARKOSE_BACKEND_D3D12)
         arkose/rendering/backend/shader/dxc/DxcInterface.cpp
         )
 
+    add_subdirectory(deps/d3d12)
     add_subdirectory(deps/directxagility)
     add_subdirectory(deps/directxcompiler)
 
@@ -303,6 +304,7 @@ if (ARKOSE_BACKEND_D3D12)
         dxguid # GUIDs for relevant directx types
         dxc # for HLSL shader compilation
         spirv-cross-hlsl # for spirv->hlsl transpiling
+        D3D12MemoryAllocator # vram memory allocation
         )
 
     # Copy Agility SDK DLLs to correct location & pass version to the target
