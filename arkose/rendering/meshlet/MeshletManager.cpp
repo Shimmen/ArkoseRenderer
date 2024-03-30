@@ -23,15 +23,19 @@ MeshletManager::MeshletManager(Backend& backend)
     ARKOSE_LOG(Info, "MeshletManager: allocating a total of {:.1f} MB of VRAM for meshlet vertex and index data", totalMemoryUseMb);
 
     m_positionDataVertexBuffer = backend.createBuffer(positionDataBufferSize, Buffer::Usage::Vertex);
+    m_positionDataVertexBuffer->setStride(m_positionVertexLayout.packedVertexSize());
     m_positionDataVertexBuffer->setName("MeshletPositionVertexData");
 
     m_nonPositionDataVertexBuffer = backend.createBuffer(nonPositionDataBufferSize, Buffer::Usage::Vertex);
+    m_nonPositionDataVertexBuffer->setStride(m_nonPositionVertexLayout.packedVertexSize());
     m_nonPositionDataVertexBuffer->setName("MeshletNonPositionVertexData");
 
     m_indexBuffer = backend.createBuffer(loadedIndexBufferSize, Buffer::Usage::Index);
+    m_indexBuffer->setStride(sizeof(u32));
     m_indexBuffer->setName("MeshletIndexData");
 
     m_meshletBuffer = backend.createBuffer(meshletBufferSize, Buffer::Usage::StorageBuffer);
+    m_meshletBuffer->setStride(sizeof(ShaderMeshlet));
     m_meshletBuffer->setName("MeshletData");
 
     m_uploadBuffer = std::make_unique<UploadBuffer>(backend, UploadBufferSize);

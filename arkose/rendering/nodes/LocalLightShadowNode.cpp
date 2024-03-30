@@ -28,6 +28,7 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
 
     // TODO: Handle many lights!
     Buffer& shadowAllocationBuffer = reg.createBuffer(sizeof(vec4) * 32, Buffer::Usage::StorageBuffer);
+    shadowAllocationBuffer.setStride(sizeof(vec4));
     reg.publish("LocalLightShadowAllocations", shadowAllocationBuffer);
 
     RenderTarget& atlasRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, m_shadowMapAtlas } });

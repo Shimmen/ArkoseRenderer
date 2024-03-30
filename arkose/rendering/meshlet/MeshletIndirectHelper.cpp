@@ -12,8 +12,11 @@ MeshletIndirectBuffer& MeshletIndirectHelper::createIndirectBuffer(Registry& reg
     constexpr size_t countSizeWithPadding = sizeof(uvec4);
     size_t bufferSize = maxMeshletCount * sizeof(uvec4) + countSizeWithPadding;
 
+    Buffer& buffer = reg.createBuffer(bufferSize, Buffer::Usage::IndirectBuffer);
+    buffer.setStride(sizeof(uvec4));
+
     auto& indirectBuffer = reg.allocate<MeshletIndirectBuffer>();
-    indirectBuffer.buffer = &reg.createBuffer(bufferSize, Buffer::Usage::IndirectBuffer);
+    indirectBuffer.buffer = &buffer;
     indirectBuffer.drawKeyMask = drawKeyMask;
     return indirectBuffer;
 }

@@ -56,6 +56,8 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
 
     std::vector<vec3> initialProbeOffsets { static_cast<size_t>(probeGrid.probeCount()), vec3(0.0) };
     Buffer& probeOffsetBuffer = reg.createBuffer(initialProbeOffsets, Buffer::Usage::StorageBuffer);
+    probeOffsetBuffer.setName("DDGIProbeOffsetBuffer");
+    probeOffsetBuffer.setStride(sizeof(vec3));
 
     BindingSet& ddgiSamplingBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(probeGridDataBuffer),
                                                                 ShaderBinding::storageBuffer(probeOffsetBuffer),

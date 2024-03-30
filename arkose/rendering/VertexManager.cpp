@@ -36,18 +36,23 @@ VertexManager::VertexManager(Backend& backend)
     const size_t initialVelocityDataVertexBufferSize = 10'000 * velocityDataVertexLayout().packedVertexSize();
 
     m_indexBuffer = backend.createBuffer(initialIndexBufferSize, Buffer::Usage::Index);
+    m_indexBuffer->setStride(sizeofIndexType(indexType()));
     m_indexBuffer->setName("SceneIndexBuffer");
 
     m_positionOnlyVertexBuffer = backend.createBuffer(initialPostionVertexBufferSize, Buffer::Usage::Vertex);
+    m_positionOnlyVertexBuffer->setStride(positionVertexLayout().packedVertexSize());
     m_positionOnlyVertexBuffer->setName("ScenePositionOnlyVertexBuffer");
 
     m_nonPositionVertexBuffer = backend.createBuffer(initialNonPostionVertexBufferSize, Buffer::Usage::Vertex);
+    m_nonPositionVertexBuffer->setStride(nonPositionVertexLayout().packedVertexSize());
     m_nonPositionVertexBuffer->setName("SceneNonPositionVertexBuffer");
 
     m_skinningDataVertexBuffer = backend.createBuffer(initialSkinningDataVertexBufferSize, Buffer::Usage::Vertex);
+    m_skinningDataVertexBuffer->setStride(skinningDataVertexLayout().packedVertexSize());
     m_skinningDataVertexBuffer->setName("SceneSkinningDataVertexBuffer");
 
     m_velocityDataVertexBuffer = backend.createBuffer(initialVelocityDataVertexBufferSize, Buffer::Usage::Vertex);
+    m_velocityDataVertexBuffer->setStride(velocityDataVertexLayout().packedVertexSize());
     m_velocityDataVertexBuffer->setName("SceneVelocityDataVertexBuffer");
 }
 
