@@ -56,7 +56,7 @@ void SSSSNode::drawGui()
 
 RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registry& reg)
 {
-    Buffer& samplesBuffer = reg.createBuffer(MaxSampleCount * sizeof(Sample), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::GpuOptimal);
+    Buffer& samplesBuffer = reg.createBuffer(MaxSampleCount * sizeof(Sample), Buffer::Usage::ConstantBuffer);
     m_samples = generateDiffusionProfileSamples(m_sampleCount);
 
     Texture& diffuseIrradiance = *reg.getTexture("SceneDiffuseIrradiance");

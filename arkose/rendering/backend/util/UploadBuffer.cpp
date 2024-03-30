@@ -5,7 +5,7 @@
 UploadBuffer::UploadBuffer(Backend& backend, size_t size)
 {
     // TODO: Maybe create a persistent mapping for this buffer? Makes sense considering its use.
-    m_buffer = backend.createBuffer(size, Buffer::Usage::Transfer, Buffer::MemoryHint::TransferOptimal);
+    m_buffer = backend.createBuffer(size, Buffer::Usage::Upload);
 }
 
 std::vector<BufferCopyOperation> UploadBuffer::popPendingOperations()
@@ -34,6 +34,13 @@ bool UploadBuffer::upload(const void* data, size_t size, Texture& dstTexture, si
 
 bool UploadBuffer::upload(const void* data, size_t size, std::variant<BufferCopyOperation::BufferDestination, BufferCopyOperation::TextureDestination>&& destination)
 {
+    if (std::holds_alternative<BufferCopyOperation::BufferDestination>(destination)) {
+        auto const& copyDestination = std::get<BufferCopyOperation::BufferDestination>(destination).buffer;
+        if (copyDestination->usage() == Buffer::Usage::Upload) {
+            ARKOSE_LOG(Fatal, "Trying to use the upload buffer to upload to an upload buffer, which is not allowed, exiting.");
+        }
+    }
+
     size_t requiredSize = m_cursor + size;
     if (requiredSize > m_buffer->size()) {
         ARKOSE_LOG(Error, "UploadBuffer: not enough space for all requested uploads");

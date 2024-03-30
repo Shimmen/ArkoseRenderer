@@ -14,7 +14,7 @@
 
 RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Registry& reg)
 {
-    Buffer& resultBuffer = reg.createBuffer(sizeof(PickingData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::Readback);
+    Buffer& resultBuffer = reg.createBuffer(sizeof(PickingData), Buffer::Usage::Readback);
 
     Texture& indexTexture = reg.createTexture2D(pipeline().outputResolution(), Texture::Format::R32Uint);
     Texture& depthTexture = reg.createTexture2D(pipeline().outputResolution(), Texture::Format::Depth32F);

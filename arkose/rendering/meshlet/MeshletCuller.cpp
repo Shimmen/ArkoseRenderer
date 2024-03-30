@@ -15,7 +15,7 @@ MeshletCuller::CullData& MeshletCuller::construct(GpuScene& scene, Registry& reg
     Shader shader = Shader::createCompute("meshlet/culling.comp", defines);
 
     // TODO: Maybe pass in the result index buffer to this construct function?
-    Buffer& triangleResultIndexBuffer = reg.createBuffer(2 * 3 * sizeof(u32) * PostCullingMaxTriangleCount, Buffer::Usage::Index, Buffer::MemoryHint::GpuOnly);
+    Buffer& triangleResultIndexBuffer = reg.createBuffer(2 * 3 * sizeof(u32) * PostCullingMaxTriangleCount, Buffer::Usage::Index);
     triangleResultIndexBuffer.setName("MeshletPostCullIndexBuffer");
 
     Buffer& meshletRangeQueueBuffer = createBufferForBrokerQueue(reg, MeshletRangeQueueSize);
@@ -23,10 +23,10 @@ MeshletCuller::CullData& MeshletCuller::construct(GpuScene& scene, Registry& reg
     Buffer& triangleRangeQueueBuffer = createBufferForBrokerQueue(reg, TriangleRangeQueueSize);
     triangleRangeQueueBuffer.setName("TriangleRangeQueueBuffer");
 
-    Buffer& indirectDrawCmdBuffer = reg.createBuffer(sizeof(IndexedDrawCmd), Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
+    Buffer& indirectDrawCmdBuffer = reg.createBuffer(sizeof(IndexedDrawCmd), Buffer::Usage::IndirectBuffer);
     indirectDrawCmdBuffer.setName("MeshletIndirectDrawCmdBuffer");
 
-    Buffer& miscDataBuffer = reg.createBuffer(4 * sizeof(u32), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
+    Buffer& miscDataBuffer = reg.createBuffer(4 * sizeof(u32), Buffer::Usage::StorageBuffer);
     miscDataBuffer.setName("MeshletMiscDataBuffer");
 
     BindingSet& bindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData"), ShaderStage::Compute),
@@ -100,7 +100,7 @@ Buffer& MeshletCuller::createBufferForBrokerQueue(Registry& reg, u32 queueItemCa
 
     size_t totalSize = sizeof(u64) + sizeof(i32) + sizeof(i32) + ticketBufferSize + ringBufferSize; // todo: right size? We use scalar layout?
 
-    Buffer& buffer = reg.createBuffer(totalSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
+    Buffer& buffer = reg.createBuffer(totalSize, Buffer::Usage::StorageBuffer);
 
     return buffer;
 }

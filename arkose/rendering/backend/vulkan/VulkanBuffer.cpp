@@ -4,8 +4,8 @@
 #include "core/Logging.h"
 #include "utility/Profiling.h"
 
-VulkanBuffer::VulkanBuffer(Backend& backend, size_t size, Usage usage, MemoryHint memoryHint)
-    : Buffer(backend, size, usage, memoryHint)
+VulkanBuffer::VulkanBuffer(Backend& backend, size_t size, Usage usage)
+    : Buffer(backend, size, usage)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
     createInternal(size, buffer, allocation);
@@ -40,29 +40,28 @@ void VulkanBuffer::updateData(const std::byte* data, size_t updateSize, size_t o
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
-    if (updateSize == 0)
+    if (updateSize == 0) {
         return;
-    if (offset + updateSize > size())
-        ARKOSE_LOG(Fatal, "Attempt at updating buffer outside of bounds!");
+    }
+    if (offset + updateSize > size()) {
+        ARKOSE_LOG(Fatal, "Attempt at updating buffer outside of bounds, exiting.");
+    }
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
-    switch (memoryHint()) {
-    case Buffer::MemoryHint::GpuOptimal:
-        if (!vulkanBackend.setBufferDataUsingStagingBuffer(buffer, (uint8_t*)data, updateSize, offset)) {
-            ARKOSE_LOG(Error, "Could not update the data of GPU-optimal buffer");
-        }
-        break;
-    case Buffer::MemoryHint::TransferOptimal:
+    switch (usage()) {
+    case Buffer::Usage::Upload:
         if (!vulkanBackend.setBufferMemoryUsingMapping(allocation, (uint8_t*)data, updateSize, offset)) {
-            ARKOSE_LOG(Error, "Could not update the data of transfer-optimal buffer");
+            ARKOSE_LOG(Error, "Failed to update the data of upload buffer.");
         }
         break;
-    case Buffer::MemoryHint::GpuOnly:
-        ARKOSE_LOG(Error, "Can't update buffer with GpuOnly memory hint, ignoring");
+    case Buffer::Usage::Readback:
+        ARKOSE_LOG(Error, "Can't update buffer with Readback memory hint, ignoring.");
         break;
-    case Buffer::MemoryHint::Readback:
-        ARKOSE_LOG(Error, "Can't update buffer with Readback memory hint, ignoring");
+    default:
+        if (!vulkanBackend.setBufferDataUsingStagingBuffer(buffer, (uint8_t*)data, updateSize, offset)) {
+            ARKOSE_LOG(Error, "Failed to update the data of buffer");
+        }
         break;
     }
 }
@@ -123,14 +122,16 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
     VkBufferUsageFlags usageFlags = 0u;
+
+    VmaAllocationCreateInfo allocCreateInfo = {};
+    allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+
     switch (usage()) {
     case Buffer::Usage::Vertex:
         usageFlags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         break;
     case Buffer::Usage::Index:
         usageFlags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-        usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         break;
     case Buffer::Usage::RTInstanceBuffer:
         switch (vulkanBackend.rayTracingBackend()) {
@@ -154,22 +155,31 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
         break;
     case Buffer::Usage::IndirectBuffer:
         usageFlags |= VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
-        usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
         break;
-    case Buffer::Usage::Transfer:
-        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-        usageFlags |= VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    case Buffer::Usage::Upload:
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU; // (ensures host visible)
+        allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        break;
+    case Buffer::Usage::Readback:
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU; // (ensures host visible)
+        //allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; // ??
         break;
     default:
         ASSERT_NOT_REACHED();
     }
 
+    // Let all buffers be valid as transfer source & destination - I can't think of many times when
+    // we don't need it, and I also can't think of any hardware where this could make a difference.
+    // Hopefully it wont be a problem :^)
+    usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+    if (storageCapable()) {
+        usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+    }
+
     // Make vertex & index buffers also be usable in ray tracing acceleration structures
     if (usage() == Buffer::Usage::Vertex || usage() == Buffer::Usage::Index) {
         switch (vulkanBackend.rayTracingBackend()) {
-        case VulkanBackend::RayTracingBackend::NvExtension:
-            usageFlags |= VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
-            break;
         case VulkanBackend::RayTracingBackend::KhrExtension:
             usageFlags |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
             usageFlags |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
@@ -177,32 +187,6 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
                 usageFlags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
             }
         }
-    }
-
-    if constexpr (vulkanDebugMode) {
-        // for nsight debugging & similar stuff)
-        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-    }
-
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    switch (memoryHint()) {
-    case Buffer::MemoryHint::GpuOnly:
-        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        break;
-    case Buffer::MemoryHint::GpuOptimal:
-        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
-        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        break;
-    case Buffer::MemoryHint::TransferOptimal:
-        allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU; // (ensures host visible!)
-        allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        break;
-    case Buffer::MemoryHint::Readback:
-        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU; // (ensures host visible!)
-        allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-        usageFlags |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-        break;
     }
 
     VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };

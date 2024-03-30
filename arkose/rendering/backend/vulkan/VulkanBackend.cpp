@@ -491,9 +491,9 @@ ShaderDefine VulkanBackend::rayTracingShaderDefine() const
     }
 }
 
-std::unique_ptr<Buffer> VulkanBackend::createBuffer(size_t size, Buffer::Usage usage, Buffer::MemoryHint memoryHint)
+std::unique_ptr<Buffer> VulkanBackend::createBuffer(size_t size, Buffer::Usage usage)
 {
-    return std::make_unique<VulkanBuffer>(*this, size, usage, memoryHint);
+    return std::make_unique<VulkanBuffer>(*this, size, usage);
 }
 
 std::unique_ptr<RenderTarget> VulkanBackend::createRenderTarget(std::vector<RenderTarget::Attachment> attachments)

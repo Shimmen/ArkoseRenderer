@@ -182,21 +182,21 @@ Texture& Registry::createOrReuseTextureArray(const std::string& name, uint32_t i
     return texture;
 }
 
-Buffer& Registry::createBuffer(size_t size, Buffer::Usage usage, Buffer::MemoryHint memoryHint)
+Buffer& Registry::createBuffer(size_t size, Buffer::Usage usage)
 {
     if (size == 0)
         ARKOSE_LOG(Warning, "Warning: creating buffer of size 0!");
 
-    auto buffer = backend().createBuffer(size, usage, memoryHint);
+    auto buffer = backend().createBuffer(size, usage);
     buffer->setOwningRegistry({}, this);
 
     m_buffers.push_back(std::move(buffer));
     return *m_buffers.back();
 }
 
-Buffer& Registry::createBuffer(const std::byte* data, size_t size, Buffer::Usage usage, Buffer::MemoryHint memoryHint)
+Buffer& Registry::createBuffer(const std::byte* data, size_t size, Buffer::Usage usage)
 {
-    Buffer& buffer = createBuffer(size, usage, memoryHint);
+    Buffer& buffer = createBuffer(size, usage);
     buffer.updateData(data, size);
     return buffer;
 }

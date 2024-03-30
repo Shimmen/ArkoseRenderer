@@ -22,16 +22,16 @@ MeshletManager::MeshletManager(Backend& backend)
     float totalMemoryUseMb = ark::conversion::to::MB(positionDataBufferSize + nonPositionDataBufferSize + loadedIndexBufferSize + meshletBufferSize);
     ARKOSE_LOG(Info, "MeshletManager: allocating a total of {:.1f} MB of VRAM for meshlet vertex and index data", totalMemoryUseMb);
 
-    m_positionDataVertexBuffer = backend.createBuffer(positionDataBufferSize, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOnly);
+    m_positionDataVertexBuffer = backend.createBuffer(positionDataBufferSize, Buffer::Usage::Vertex);
     m_positionDataVertexBuffer->setName("MeshletPositionVertexData");
 
-    m_nonPositionDataVertexBuffer = backend.createBuffer(nonPositionDataBufferSize, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOnly);
+    m_nonPositionDataVertexBuffer = backend.createBuffer(nonPositionDataBufferSize, Buffer::Usage::Vertex);
     m_nonPositionDataVertexBuffer->setName("MeshletNonPositionVertexData");
 
-    m_indexBuffer = backend.createBuffer(loadedIndexBufferSize, Buffer::Usage::Index, Buffer::MemoryHint::GpuOnly);
+    m_indexBuffer = backend.createBuffer(loadedIndexBufferSize, Buffer::Usage::Index);
     m_indexBuffer->setName("MeshletIndexData");
 
-    m_meshletBuffer = backend.createBuffer(meshletBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
+    m_meshletBuffer = backend.createBuffer(meshletBufferSize, Buffer::Usage::StorageBuffer);
     m_meshletBuffer->setName("MeshletData");
 
     m_uploadBuffer = std::make_unique<UploadBuffer>(backend, UploadBufferSize);

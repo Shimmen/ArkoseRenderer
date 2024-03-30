@@ -815,9 +815,9 @@ void D3D12Backend::recreateSwapChain()
     createWindowRenderTarget();
 }
 
-std::unique_ptr<Buffer> D3D12Backend::createBuffer(size_t size, Buffer::Usage usage, Buffer::MemoryHint memoryHint)
+std::unique_ptr<Buffer> D3D12Backend::createBuffer(size_t size, Buffer::Usage usage)
 {
-    return std::make_unique<D3D12Buffer>(*this, size, usage, memoryHint);
+    return std::make_unique<D3D12Buffer>(*this, size, usage);
 }
 
 std::unique_ptr<RenderTarget> D3D12Backend::createRenderTarget(std::vector<RenderTarget::Attachment> attachments)

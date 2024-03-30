@@ -1345,7 +1345,7 @@ void VulkanCommandList::slowBlockingReadFromBuffer(const Buffer& buffer, size_t 
     ARKOSE_ASSERT(size <= buffer.size() - offset);
 
     auto& srcBuffer = static_cast<const VulkanBuffer&>(buffer);
-    auto dstGenericBuffer = m_backend.createBuffer(buffer.size(), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::Readback);
+    auto dstGenericBuffer = m_backend.createBuffer(buffer.size(), Buffer::Usage::Readback);
     auto& dstBuffer = static_cast<VulkanBuffer&>(*dstGenericBuffer);
 
     m_backend.issueSingleTimeCommand([&](VkCommandBuffer cmdBuffer) {

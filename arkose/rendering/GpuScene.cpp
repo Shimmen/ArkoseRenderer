@@ -42,8 +42,8 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable, bool meshShading
     m_maintainRayTracingScene = rayTracingCapable;
     m_meshShadingCapable = meshShadingCapable;
 
-    m_emptyVertexBuffer = backend().createBuffer(1, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-    m_emptyIndexBuffer = backend().createBuffer(1, Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+    m_emptyVertexBuffer = backend().createBuffer(1, Buffer::Usage::Vertex);
+    m_emptyIndexBuffer = backend().createBuffer(1, Buffer::Usage::Index);
 
     m_blackTexture = Texture::createFromPixel(backend(), vec4(0.0f, 0.0f, 0.0f, 0.0f), true);
     m_whiteTexture = Texture::createFromPixel(backend(), vec4(1.0f, 1.0f, 1.0f, 1.0f), true);
@@ -54,7 +54,7 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable, bool meshShading
     m_iconManager = std::make_unique<IconManager>(backend());
 
     size_t materialBufferSize = m_managedMaterials.capacity() * sizeof(ShaderMaterial);
-    m_materialDataBuffer = backend().createBuffer(materialBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+    m_materialDataBuffer = backend().createBuffer(materialBufferSize, Buffer::Usage::StorageBuffer);
     m_materialDataBuffer->setName("SceneMaterialData");
 
     MaterialAsset defaultMaterialAsset {};
@@ -276,7 +276,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         reg.publish("DiffuseGI", diffueGiTexture);
     }
 
-    Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::GpuOnly);
+    Buffer& cameraBuffer = reg.createBuffer(sizeof(CameraState), Buffer::Usage::ConstantBuffer);
     BindingSet& cameraBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(cameraBuffer, ShaderStage::Any) });
     reg.publish("SceneCameraData", cameraBuffer);
     reg.publish("SceneCameraSet", cameraBindingSet);
@@ -286,7 +286,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     // TODO: Make a more reasonable default too... we need: #meshes * #LODs * #segments-per-lod
     size_t objectDataBufferSize = m_drawables.capacity() * sizeof(ShaderDrawable);
     //ARKOSE_LOG(Info, "Allocating space for {} instances, requiring {:.1f} MB of VRAM", m_drawables.capacity(), ark::conversion::to::MB(objectDataBufferSize));
-    Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
+    Buffer& objectDataBuffer = reg.createBuffer(objectDataBufferSize, Buffer::Usage::StorageBuffer);
     reg.publish("SceneObjectData", objectDataBuffer);
     BindingSet& objectBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(objectDataBuffer, ShaderStage::Vertex) });
     reg.publish("SceneObjectSet", objectBindingSet);
@@ -299,7 +299,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     if (m_maintainRayTracingScene) {
         // TODO: Resize the buffer if needed when more meshes are added, OR crash hard
         // TODO: Make a more reasonable default too... we need: #meshes * #LODs * #segments-per-lod
-        Buffer& rtTriangleMeshBuffer = reg.createBuffer(10'000 * sizeof(RTTriangleMesh), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+        Buffer& rtTriangleMeshBuffer = reg.createBuffer(10'000 * sizeof(RTTriangleMesh), Buffer::Usage::StorageBuffer);
         rtTriangleMeshBufferPtr = &rtTriangleMeshBuffer;
 
         BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(rtTriangleMeshBuffer, ShaderStage::AnyRayTrace),
@@ -309,13 +309,13 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     }
 
     // Light data stuff
-    Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::GpuOnly);
+    Buffer& lightMetaDataBuffer = reg.createBuffer(sizeof(LightMetaData), Buffer::Usage::ConstantBuffer);
     lightMetaDataBuffer.setName("SceneLightMetaData");
-    Buffer& dirLightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
+    Buffer& dirLightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::StorageBuffer);
     dirLightDataBuffer.setName("SceneDirectionalLightData");
-    Buffer& sphereLightDataBuffer = reg.createBuffer(10 * sizeof(SphereLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
+    Buffer& sphereLightDataBuffer = reg.createBuffer(10 * sizeof(SphereLightData), Buffer::Usage::StorageBuffer);
     sphereLightDataBuffer.setName("SceneSphereLightData");
-    Buffer& spotLightDataBuffer = reg.createBuffer(10 * sizeof(SpotLightData), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOnly);
+    Buffer& spotLightDataBuffer = reg.createBuffer(10 * sizeof(SpotLightData), Buffer::Usage::StorageBuffer);
     spotLightDataBuffer.setName("SceneSpotLightData");
 
     BindingSet& lightBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(lightMetaDataBuffer),
@@ -329,7 +329,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     reg.publish("BlueNoise", blueNoiseTextureArray);
 
     // Skinning related
-    m_jointMatricesBuffer = backend().createBuffer(1024 * sizeof(mat4), Buffer::Usage::StorageBuffer, Buffer::MemoryHint::GpuOptimal);
+    m_jointMatricesBuffer = backend().createBuffer(1024 * sizeof(mat4), Buffer::Usage::StorageBuffer);
     Shader skinningShader = Shader::createCompute("skinning/skinning.comp");
     BindingSet& skinningBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(m_vertexManager->positionVertexBuffer()),
                                                             ShaderBinding::storageBuffer(m_vertexManager->velocityDataVertexBuffer()),

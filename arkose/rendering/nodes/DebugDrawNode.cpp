@@ -78,8 +78,8 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
     RenderState& linesRenderState = reg.createRenderState(linesStateBuilder);
     RenderState& trianglesRenderState = reg.createRenderState(trianglesStateBuilder);
 
-    m_lineVertexBuffer = &reg.createBuffer(LineVertexBufferSize, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOnly);
-    m_triangleVertexBuffer = &reg.createBuffer(TriangleVertexBufferSize, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOnly);
+    m_lineVertexBuffer = &reg.createBuffer(LineVertexBufferSize, Buffer::Usage::Vertex);
+    m_triangleVertexBuffer = &reg.createBuffer(TriangleVertexBufferSize, Buffer::Usage::Vertex);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 

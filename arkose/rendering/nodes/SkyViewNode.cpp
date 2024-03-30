@@ -36,7 +36,7 @@ RenderPipelineNode::ExecuteCallback SkyViewNode::construct(GpuScene& scene, Regi
     RenderState& skyViewRenderState = reg.createRenderState(renderStateBuilder);
 
     Buffer& fullscreenTriangleVertexBuffer = reg.createBuffer(std::vector<vec2> { { -1, -3 }, { -1, 1 }, { 3, 1 } },
-                                                              Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+                                                              Buffer::Usage::Vertex);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 

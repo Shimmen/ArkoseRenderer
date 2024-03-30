@@ -215,8 +215,8 @@ void D3D12Texture::setData(const void* data, size_t size, size_t mipIdx, size_t 
                                                 &numRows, &rowSizeInBytes,
                                                 &textureMemorySize);
 
-    auto stagingBuffer = std::make_unique<D3D12Buffer>(d3d12Backend, textureMemorySize, Buffer::Usage::Transfer, Buffer::MemoryHint::TransferOptimal);
-    d3d12Backend.setBufferDataUsingMapping(*stagingBuffer->bufferResource.Get(), static_cast<u8 const*>(data), size);
+    auto stagingBuffer = std::make_unique<D3D12Buffer>(d3d12Backend, textureMemorySize, Buffer::Usage::Upload);
+    stagingBuffer->updateData(static_cast<std::byte const*>(data), size, 0);
 
     d3d12Backend.issueUploadCommand([&](ID3D12GraphicsCommandList& cmdList) {
         D3D12_RESOURCE_BARRIER resourceBarrier {};

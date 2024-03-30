@@ -18,7 +18,7 @@ class DrawTriangleNode final : public RenderPipelineNode {
                                                               "d3d12-bootstrap/demo.hlsl",
                                                               { ShaderDefine::makeBool("D3D12_SAMPLE_CONSTANT_BUFFER", true) });
 
-        Buffer& constantBuffer = reg.createBuffer(sizeof(m_scale), Buffer::Usage::ConstantBuffer, Buffer::MemoryHint::TransferOptimal);
+        Buffer& constantBuffer = reg.createBuffer(sizeof(m_scale), Buffer::Usage::ConstantBuffer);
         constantBuffer.setName("DemoConstantBuffer");
 
         ImageAsset* testImage = ImageAsset::loadOrCreate("assets/test-pattern.png");
@@ -62,10 +62,10 @@ class DrawTriangleNode final : public RenderPipelineNode {
             0, 2, 1, 2, 0, 3
         };
 
-        Buffer& vertexBuffer = reg.createBufferForData(vertices, Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
+        Buffer& vertexBuffer = reg.createBufferForData(vertices, Buffer::Usage::Vertex);
         vertexBuffer.setName("DemoVertexBuffer");
 
-        Buffer& indexBuffer = reg.createBufferForData(indices, Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+        Buffer& indexBuffer = reg.createBufferForData(indices, Buffer::Usage::Index);
         indexBuffer.setName("DemoIndexBuffer");
 
         return [&](AppState const& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {

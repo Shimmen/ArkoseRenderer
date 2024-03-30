@@ -7,7 +7,7 @@
 
 struct VulkanBuffer final : public Buffer {
 public:
-    VulkanBuffer(Backend&, size_t size, Usage, MemoryHint);
+    VulkanBuffer(Backend&, size_t size, Usage);
     virtual ~VulkanBuffer() override;
 
     virtual void setName(const std::string& name) override;

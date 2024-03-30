@@ -2,6 +2,7 @@
 
 #include "rendering/backend/d3d12/D3D12Common.h"
 #include "rendering/backend/d3d12/D3D12Texture.h"
+#include <D3D12MemAlloc.h>
 struct IDXGISwapChain4;
 struct D3D12RenderTarget;
 class D3D12DescriptorHeapAllocator;
@@ -42,7 +43,7 @@ public:
     ///////////////////////////////////////////////////////////////////////////
     /// Backend-specific resource types
 
-    std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) override;
+    std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage) override;
     std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) override;
     std::unique_ptr<Texture> createTexture(Texture::Description) override;
     std::unique_ptr<BindingSet> createBindingSet(std::vector<ShaderBinding>) override;

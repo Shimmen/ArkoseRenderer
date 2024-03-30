@@ -13,24 +13,19 @@ public:
         ConstantBuffer,
         StorageBuffer,
         IndirectBuffer,
-        Transfer,
-    };
-
-    enum class MemoryHint {
-        TransferOptimal,
-        GpuOptimal,
-        GpuOnly,
+        Upload,
         Readback,
     };
 
     Buffer() = default;
-    Buffer(Backend&, size_t size, Usage usage, MemoryHint);
+    Buffer(Backend&, size_t size, Usage usage);
 
     size_t size() const { return m_size; }
     Usage usage() const { return m_usage; }
-    MemoryHint memoryHint() const { return m_memoryHint; }
 
     size_t sizeInMemory() const { return m_sizeInMemory; }
+
+    bool storageCapable() const;
 
     virtual void updateData(const std::byte* data, size_t size, size_t offset = 0) = 0;
     virtual bool updateDataAndGrowIfRequired(const std::byte* data, size_t size, size_t offset);
@@ -70,5 +65,4 @@ protected:
 
 private:
     Usage m_usage { Usage::Vertex };
-    MemoryHint m_memoryHint { MemoryHint::GpuOptimal };
 };

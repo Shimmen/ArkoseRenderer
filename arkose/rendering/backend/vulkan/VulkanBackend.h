@@ -70,7 +70,7 @@ public:
     ///////////////////////////////////////////////////////////////////////////
     /// Backend-specific resource types
 
-    std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) override;
+    std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage) override;
     std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) override;
     std::unique_ptr<Texture> createTexture(Texture::Description) override;
     std::unique_ptr<BindingSet> createBindingSet(std::vector<ShaderBinding>) override;

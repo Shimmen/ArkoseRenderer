@@ -57,7 +57,7 @@ VulkanTopLevelASNV::VulkanTopLevelASNV(Backend& backend, uint32_t maxInstanceCou
     }
 
     size_t instanceBufferSize = this->maxInstanceCount() * sizeof(VulkanRayTracingNV::GeometryInstance);
-    instanceBuffer = vulkanBackend.createBuffer(instanceBufferSize, Buffer::Usage::RTInstanceBuffer, Buffer::MemoryHint::GpuOptimal);
+    instanceBuffer = vulkanBackend.createBuffer(instanceBufferSize, Buffer::Usage::RTInstanceBuffer);
 
     if (initialInstances.size() > 0) {
         updateCurrentInstanceCount(static_cast<uint32_t>(initialInstances.size()));

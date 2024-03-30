@@ -13,7 +13,7 @@ MeshletIndirectBuffer& MeshletIndirectHelper::createIndirectBuffer(Registry& reg
     size_t bufferSize = maxMeshletCount * sizeof(uvec4) + countSizeWithPadding;
 
     auto& indirectBuffer = reg.allocate<MeshletIndirectBuffer>();
-    indirectBuffer.buffer = &reg.createBuffer(bufferSize, Buffer::Usage::IndirectBuffer, Buffer::MemoryHint::GpuOnly);
+    indirectBuffer.buffer = &reg.createBuffer(bufferSize, Buffer::Usage::IndirectBuffer);
     indirectBuffer.drawKeyMask = drawKeyMask;
     return indirectBuffer;
 }

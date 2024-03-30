@@ -6,19 +6,7 @@
 #include <algorithm>
 
 
-static bool isBufferStorageCapable(Buffer const& buffer)
-{
-    switch (buffer.usage()) {
-    case Buffer::Usage::Vertex: // includes storage buffer support
-    case Buffer::Usage::Index: // includes storage buffer support
-    case Buffer::Usage::StorageBuffer:
-    case Buffer::Usage::IndirectBuffer:
-        return true;
-    default:
-        return false;
-    }
-}
-
+// TODO: Move this to the Texture class, similarly to how Buffer does it
 static bool isTextureStorageCapable(Texture& texture)
 {
     if (texture.hasSrgbFormat() || texture.hasDepthFormat()) {
@@ -48,7 +36,7 @@ ShaderBinding ShaderBinding::storageBuffer(Buffer& buffer, ShaderStage shaderSta
 {
     ShaderBinding binding { ShaderBindingType::StorageBuffer, shaderStage };
 
-    ARKOSE_ASSERT(isBufferStorageCapable(buffer));
+    ARKOSE_ASSERT(buffer.storageCapable());
     binding.m_buffers.push_back(&buffer);
 
     return binding;
@@ -58,7 +46,7 @@ ShaderBinding ShaderBinding::storageBufferReadonly(Buffer const& buffer, ShaderS
 {
     ShaderBinding binding { ShaderBindingType::StorageBuffer, shaderStage };
 
-    ARKOSE_ASSERT(isBufferStorageCapable(buffer));
+    ARKOSE_ASSERT(buffer.storageCapable());
     binding.m_buffers.push_back(const_cast<Buffer*>(&buffer));
 
     return binding;
@@ -72,7 +60,7 @@ ShaderBinding ShaderBinding::storageBufferBindlessArray(const std::vector<Buffer
     binding.m_buffers.reserve(binding.m_arrayCount);
     for (Buffer* buffer : buffers) {
         ARKOSE_ASSERT(buffer);
-        ARKOSE_ASSERT(isBufferStorageCapable(*buffer));
+        ARKOSE_ASSERT(buffer->storageCapable());
         binding.m_buffers.push_back(buffer);
     }
 

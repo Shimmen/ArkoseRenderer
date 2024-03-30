@@ -114,8 +114,8 @@ DrawCallDescription DDGIProbeDebug::createSphereRenderData(GpuScene& scene, Regi
     }
 
     auto indexCount = static_cast<uint32_t>(indices.size());
-    Buffer& vertexBuffer = reg.createBuffer(std::move(positions), Buffer::Usage::Vertex, Buffer::MemoryHint::GpuOptimal);
-    Buffer& indexBuffer = reg.createBuffer(std::move(indices), Buffer::Usage::Index, Buffer::MemoryHint::GpuOptimal);
+    Buffer& vertexBuffer = reg.createBuffer(std::move(positions), Buffer::Usage::Vertex);
+    Buffer& indexBuffer = reg.createBuffer(std::move(indices), Buffer::Usage::Index);
 
     return DrawCallDescription::makeSimpleIndexed(vertexBuffer, indexBuffer, indexCount, IndexType::UInt16);
 }

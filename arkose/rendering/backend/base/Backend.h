@@ -68,7 +68,7 @@ public:
     virtual bool hasUpscalingSupport() const = 0;
     virtual UpscalingPreferences queryUpscalingPreferences(UpscalingTech, UpscalingQuality, Extent2D outputRes) const { return UpscalingPreferences(); }
 
-    virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage, Buffer::MemoryHint) = 0;
+    virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage) = 0;
     virtual std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) = 0;
     virtual std::unique_ptr<Texture> createTexture(Texture::Description) = 0;
     virtual std::unique_ptr<BindingSet> createBindingSet(std::vector<ShaderBinding>) = 0;
