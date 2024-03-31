@@ -16,5 +16,5 @@ public:
 
     ComPtr<D3D12MA::Allocation> bufferAllocation;
     ComPtr<ID3D12Resource> bufferResource;
-    D3D12_RESOURCE_STATES resourceState;
+    mutable D3D12_RESOURCE_STATES resourceState;
 };

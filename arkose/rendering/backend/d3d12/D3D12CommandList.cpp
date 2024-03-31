@@ -69,14 +69,7 @@ void D3D12CommandList::executeBufferCopyOperations(std::vector<BufferCopyOperati
 
             constexpr D3D12_RESOURCE_STATES expectedResourceState = D3D12_RESOURCE_STATE_COPY_DEST;
             if (dstBuffer.resourceState != expectedResourceState) {
-                D3D12_RESOURCE_BARRIER resourceBarrier {};
-                resourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-                resourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-                resourceBarrier.Transition.pResource = dstBuffer.bufferResource.Get();
-                resourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-                resourceBarrier.Transition.StateBefore = dstBuffer.resourceState;
-                resourceBarrier.Transition.StateAfter = expectedResourceState;
-
+                D3D12_RESOURCE_BARRIER resourceBarrier = createResourceTransitionBarrier(dstBuffer, expectedResourceState);
                 m_commandList->ResourceBarrier(1, &resourceBarrier);
                 dstBuffer.resourceState = expectedResourceState;
             }
@@ -84,8 +77,6 @@ void D3D12CommandList::executeBufferCopyOperations(std::vector<BufferCopyOperati
             m_commandList->CopyBufferRegion(dstBuffer.bufferResource.Get(), copyDestination.offset,
                                             srcBuffer.bufferResource.Get(), copyOperation.srcOffset,
                                             copyOperation.size);
-
-            // TODO: Barrier after?!
 
         } else if (std::holds_alternative<BufferCopyOperation::TextureDestination>(copyOperation.destination)) {
             auto const& copyDestination = std::get<BufferCopyOperation::TextureDestination>(copyOperation.destination);
@@ -126,7 +117,7 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearVa
 
     auto& renderTarget = static_cast<const D3D12RenderTarget&>(renderState.renderTarget());
 
-    // Ensure all attached textures are in a suitable state for being rendered to!
+    // Ensure all referenced resources are in a suitable resource state
     {
         std::vector<D3D12_RESOURCE_BARRIER> resourceBarriers {};
 
@@ -135,16 +126,8 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearVa
 
             constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
             if (attachedTexture.resourceState != targetResourceState) {
-
-                D3D12_RESOURCE_BARRIER resourceBarrier {};
-                resourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-                resourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-                resourceBarrier.Transition.pResource = attachedTexture.textureResource.Get();
-                resourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-                resourceBarrier.Transition.StateBefore = attachedTexture.resourceState;
-                resourceBarrier.Transition.StateAfter = targetResourceState;
-
-                resourceBarriers.push_back(resourceBarrier);
+                D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(attachedTexture, targetResourceState);
+                resourceBarriers.push_back(barrier);
                 attachedTexture.resourceState = targetResourceState;
             }
         }
@@ -158,19 +141,57 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearVa
             }
 
             if (attachedDepthTexture.resourceState != targetResourceState) {
-
-                D3D12_RESOURCE_BARRIER resourceBarrier {};
-                resourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
-                resourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
-                resourceBarrier.Transition.pResource = attachedDepthTexture.textureResource.Get();
-                resourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
-                resourceBarrier.Transition.StateBefore = attachedDepthTexture.resourceState;
-                resourceBarrier.Transition.StateAfter = targetResourceState;
-
-                resourceBarriers.push_back(resourceBarrier);
+                D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(attachedDepthTexture, targetResourceState);
+                resourceBarriers.push_back(barrier);
                 attachedDepthTexture.resourceState = targetResourceState;
             }
         }
+
+        renderState.stateBindings().forEachBinding([&](ShaderBinding const& bindingInfo) {
+            if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
+                for (Texture const* texture : bindingInfo.getSampledTextures()) {
+                    auto& d3d12Texture = static_cast<D3D12Texture const&>(*texture);
+
+                    constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+                    if (d3d12Texture.resourceState != targetResourceState) {
+                        D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Texture, targetResourceState);
+                        resourceBarriers.push_back(barrier);
+                        d3d12Texture.resourceState = targetResourceState;
+                    }
+                }
+            } else if (bindingInfo.type() == ShaderBindingType::StorageTexture) {
+                for (TextureMipView textureMip : bindingInfo.getStorageTextures()) {
+                    auto& d3d12Texture = static_cast<D3D12Texture const&>(textureMip.texture());
+
+                    constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+                    if (d3d12Texture.resourceState != targetResourceState) {
+                        D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Texture, targetResourceState);
+                        resourceBarriers.push_back(barrier);
+                        d3d12Texture.resourceState = targetResourceState;
+                    }
+                }
+            } else if (bindingInfo.type() == ShaderBindingType::StorageBuffer) {
+                for (Buffer* storageBuffer : bindingInfo.getBuffers()) {
+                    auto& d3d12Buffer = static_cast<D3D12Buffer const&>(*storageBuffer);
+
+                    constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+                    if (d3d12Buffer.resourceState != targetResourceState) {
+                        D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Buffer, targetResourceState);
+                        resourceBarriers.push_back(barrier);
+                        d3d12Buffer.resourceState = targetResourceState;
+                    }
+                }
+            } else if (bindingInfo.type() == ShaderBindingType::ConstantBuffer) {
+                auto& d3d12Buffer = static_cast<D3D12Buffer const&>(bindingInfo.getBuffer());
+
+                constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+                if (d3d12Buffer.resourceState != targetResourceState) {
+                    D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Buffer, targetResourceState);
+                    resourceBarriers.push_back(barrier);
+                    d3d12Buffer.resourceState = targetResourceState;
+                }
+            }
+        });
 
         if (resourceBarriers.size() > 0) {
             m_commandList->ResourceBarrier(narrow_cast<u32>(resourceBarriers.size()), resourceBarriers.data());
@@ -196,31 +217,6 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearVa
     constexpr bool singleHandleToDescriptorRange = false; // TODO: Can we set this to true? Not sure..
     m_commandList->OMSetRenderTargets(renderTarget.colorAttachmentCount(), renderTarget.colorRenderTargetHandles, singleHandleToDescriptorRange,
                                       renderTarget.hasDepthAttachment() ? &renderTarget.depthStencilRenderTargetHandle : nullptr);
-
-    // TODO: Explicitly transition the layouts of the referenced textures to an optimal layout (if it isn't already)
-    //renderState.stateBindings().forEachBinding([&](ShaderBinding const& bindingInfo) {
-    //    if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
-    //        for (Texture const* texture : bindingInfo.getSampledTextures()) {
-    //            auto& d3d12Texture = static_cast<D3D12Texture const&>(*texture);
-    //
-    //            constexpr D3D12_RESOURCE_STATES targetResourceState = ..?;
-    //            if (d3d12Texture.resourceState != targetResourceState) {
-    //                // ...
-    //                d3d12Texture.resourceState = targetResourceState;
-    //            }
-    //        }
-    //    } else if (bindingInfo.type() == ShaderBindingType::StorageTexture) {
-    //        for (TextureMipView textureMip : bindingInfo.getStorageTextures()) {
-    //            auto& d3d12Texture = static_cast<D3D12Texture const&>(textureMip.texture());
-    //
-    //            constexpr D3D12_RESOURCE_STATES targetResourceState = ..?;
-    //            if (d3d12Texture.resourceState != targetResourceState) {
-    //                // ...
-    //                d3d12Texture.resourceState = targetResourceState;
-    //            }
-    //        }
-    //    }
-    //});
 
     m_commandList->SetPipelineState(renderState.pso.Get());
 
@@ -391,7 +387,15 @@ void D3D12CommandList::bindVertexBuffer(Buffer const& vertexBuffer, u32 stride, 
         ARKOSE_LOG(Fatal, "bindVertexBuffer: not a vertex buffer!");
     }
 
-    ID3D12Resource* d3d12BufferResource = static_cast<D3D12Buffer const&>(vertexBuffer).bufferResource.Get();
+    auto const& d3d12Buffer = static_cast<D3D12Buffer const&>(vertexBuffer);
+    ID3D12Resource* d3d12BufferResource = d3d12Buffer.bufferResource.Get();
+
+    constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+    if (d3d12Buffer.resourceState != targetResourceState) {
+        D3D12_RESOURCE_BARRIER resourceBarrier = createResourceTransitionBarrier(d3d12Buffer, targetResourceState);
+        m_commandList->ResourceBarrier(1, &resourceBarrier);
+        d3d12Buffer.resourceState = targetResourceState;
+    }
 
     D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
     vertexBufferView.BufferLocation = d3d12BufferResource->GetGPUVirtualAddress();
@@ -411,7 +415,15 @@ void D3D12CommandList::bindIndexBuffer(Buffer const& indexBuffer, IndexType inde
         ARKOSE_LOG(Fatal, "bindIndexBuffer: not an index buffer!");
     }
 
-    ID3D12Resource* d3d12BufferResource = static_cast<D3D12Buffer const&>(indexBuffer).bufferResource.Get();
+    auto const& d3d12Buffer = static_cast<D3D12Buffer const&>(indexBuffer);
+    ID3D12Resource* d3d12BufferResource = d3d12Buffer.bufferResource.Get();
+
+    constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_INDEX_BUFFER;
+    if (d3d12Buffer.resourceState != targetResourceState) {
+        D3D12_RESOURCE_BARRIER resourceBarrier = createResourceTransitionBarrier(d3d12Buffer, targetResourceState);
+        m_commandList->ResourceBarrier(1, &resourceBarrier);
+        d3d12Buffer.resourceState = targetResourceState;
+    }
 
     D3D12_INDEX_BUFFER_VIEW indexBufferView;
     indexBufferView.BufferLocation = d3d12BufferResource->GetGPUVirtualAddress();
@@ -539,4 +551,36 @@ void D3D12CommandList::bufferWriteBarrier(std::vector<Buffer const*> buffers)
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
     NOT_YET_IMPLEMENTED();
+}
+
+D3D12_RESOURCE_BARRIER D3D12CommandList::createResourceTransitionBarrier(D3D12Buffer const& d3d12Buffer, D3D12_RESOURCE_STATES targetResourceState) const
+{
+    ARKOSE_ASSERT(d3d12Buffer.resourceState != targetResourceState);
+
+    D3D12_RESOURCE_BARRIER resourceBarrier {};
+    resourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    resourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    resourceBarrier.Transition.pResource = d3d12Buffer.bufferResource.Get();
+    resourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    resourceBarrier.Transition.StateBefore = d3d12Buffer.resourceState;
+    resourceBarrier.Transition.StateAfter = targetResourceState;
+
+    d3d12Buffer.resourceState = targetResourceState;
+    return resourceBarrier;
+}
+
+D3D12_RESOURCE_BARRIER D3D12CommandList::createResourceTransitionBarrier(D3D12Texture const& d3d12Texture, D3D12_RESOURCE_STATES targetResourceState) const
+{
+    ARKOSE_ASSERT(d3d12Texture.resourceState != targetResourceState);
+
+    D3D12_RESOURCE_BARRIER resourceBarrier {};
+    resourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_TRANSITION;
+    resourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    resourceBarrier.Transition.pResource = d3d12Texture.textureResource.Get();
+    resourceBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
+    resourceBarrier.Transition.StateBefore = d3d12Texture.resourceState;
+    resourceBarrier.Transition.StateAfter = targetResourceState;
+
+    d3d12Texture.resourceState = targetResourceState;
+    return resourceBarrier;
 }

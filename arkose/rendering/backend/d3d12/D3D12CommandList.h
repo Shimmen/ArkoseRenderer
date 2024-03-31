@@ -1,7 +1,9 @@
 #include "rendering/backend/base/CommandList.h"
 
 class D3D12Backend;
+class D3D12Buffer;
 class D3D12RenderState;
+class D3D12Texture;
 class ID3D12GraphicsCommandList;
 class ID3D12Resource;
 
@@ -68,7 +70,9 @@ public:
 private:
     D3D12Backend& backend() { return m_backend; }
 
-private:
+    D3D12_RESOURCE_BARRIER createResourceTransitionBarrier(D3D12Buffer const&, D3D12_RESOURCE_STATES targetResourceState) const;
+    D3D12_RESOURCE_BARRIER createResourceTransitionBarrier(D3D12Texture const&, D3D12_RESOURCE_STATES targetResourceState) const;
+
     D3D12Backend& m_backend;
     ID3D12GraphicsCommandList* m_commandList;
 

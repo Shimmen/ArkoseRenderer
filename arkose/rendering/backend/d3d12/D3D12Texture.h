@@ -21,7 +21,7 @@ public:
     ImTextureID asImTextureID() override;
 
     ComPtr<ID3D12Resource> textureResource;
-    D3D12_RESOURCE_STATES resourceState { D3D12_RESOURCE_STATE_COMMON };
+    mutable D3D12_RESOURCE_STATES resourceState { D3D12_RESOURCE_STATE_COMMON };
 
     D3D12_RESOURCE_DESC textureDescription {};
     DXGI_FORMAT dxgiFormat { DXGI_FORMAT_UNKNOWN };
