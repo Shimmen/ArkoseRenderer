@@ -16,6 +16,9 @@
 #include "utility/FileIO.h"
 #include <backends/imgui_impl_dx12.h>
 
+// D3D12 "helper" library
+#include <d3dx12/d3dx12.h>
+
 // Surface setup
 #include <dxgi1_6.h>
 #include <dxgidebug.h>

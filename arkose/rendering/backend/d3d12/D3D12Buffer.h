@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rendering/backend/base/Buffer.h"
+
 #include "rendering/backend/d3d12/D3D12Common.h"
 #include <D3D12MemAlloc.h>
 

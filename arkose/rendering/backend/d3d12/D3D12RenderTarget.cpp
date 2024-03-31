@@ -4,6 +4,7 @@
 #include "rendering/backend/d3d12/D3D12Texture.h"
 #include "utility/EnumHelpers.h"
 #include "utility/Profiling.h"
+#include <d3dx12/d3dx12.h>
 
 D3D12RenderTarget::D3D12RenderTarget(Backend& backend, std::vector<Attachment> attachments)
     : RenderTarget(backend, std::move(attachments))

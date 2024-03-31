@@ -5,6 +5,7 @@
 #include "rendering/backend/d3d12/D3D12Texture.h"
 #include "rendering/backend/shader/ShaderManager.h"
 #include "utility/Profiling.h"
+#include <d3dx12/d3dx12.h>
 
 D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderTarget, std::vector<VertexLayout> vertexLayouts,
                                    Shader shader, StateBindings const& stateBindings,

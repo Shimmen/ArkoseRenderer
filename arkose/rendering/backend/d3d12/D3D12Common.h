@@ -3,9 +3,6 @@
 // Core D3D12 API
 #include <d3d12.h>
 
-// D3D12 "helper" library
-#include <d3dx12/d3dx12.h>
-
 // For COM interfacing
 #include <wrl.h>
 using namespace Microsoft::WRL;

@@ -3,6 +3,7 @@
 #include "rendering/backend/d3d12/D3D12Backend.h"
 #include "core/Logging.h"
 #include "utility/Profiling.h"
+#include <d3dx12/d3dx12.h>
 
 D3D12Buffer::D3D12Buffer(Backend& backend, size_t size, Usage usage)
     : Buffer(backend, size, usage)
@@ -54,8 +55,7 @@ D3D12Buffer::D3D12Buffer(Backend& backend, size_t size, Usage usage)
         m_sizeInMemory = m_size;
     }
 
-    // TODO: Get rid of D3DX12!
-    CD3DX12_RESOURCE_DESC bufferDescription = CD3DX12_RESOURCE_DESC::Buffer(m_sizeInMemory, resourceFlags);
+    D3D12_RESOURCE_DESC bufferDescription = CD3DX12_RESOURCE_DESC::Buffer(m_sizeInMemory, resourceFlags);
 
     HRESULT hr = d3d12Backend.globalAllocator().CreateResource(
         &allocDescription, &bufferDescription,
