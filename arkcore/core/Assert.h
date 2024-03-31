@@ -10,14 +10,19 @@
 #include <Windows.h>
 #endif
 
-ARK_FORCE_INLINE void ArkoseAssertHandler(char const* assertion, char const* filename, int line)
+ARK_FORCE_INLINE void ArkoseAssertHandlerImpl(char const* assertion, char const* filename, int line, fmt::string_view format, fmt::format_args args)
 {
-    ARKOSE_LOG(Error, "Assertion failed: '{}' ({} line {})\n", assertion, filename, line);
+    std::string optionalMessage = "";
+    if (format.size() > 0) {
+        optionalMessage = fmt::vformat(format, args);
+        optionalMessage += '\n';
+    }
+
+    std::string assertionMessage = fmt::format("Assertion failed: '{}'\nIn file {} on line {}\n{}Do you want to break?", assertion, filename, line, optionalMessage);
 
 #if defined(_MSC_VER)
     if (IsDebuggerPresent()) {
-        std::string messageBoxMessage = fmt::format("Assertion failed: '{}'\nIn file {} on line {}\nDo you want to break?", assertion, filename, line);
-        switch (MessageBoxA(NULL, messageBoxMessage.c_str(), "Assertion failed!", MB_ABORTRETRYIGNORE)) {
+        switch (MessageBoxA(NULL, assertionMessage.c_str(), "Assertion failed!", MB_ABORTRETRYIGNORE)) {
         case IDABORT:
             exit(EXIT_FAILURE);
             break;
@@ -36,11 +41,24 @@ ARK_FORCE_INLINE void ArkoseAssertHandler(char const* assertion, char const* fil
 #endif
 }
 
-// NOTE: This triggers in both debug & release modes!
-#define ARKOSE_ASSERT(expression)                                 \
-    (void)(                                                       \
-        (!!(expression)) ||                                       \
-        (ArkoseAssertHandler(#expression, __FILE__, __LINE__), 0) \
+template<typename... Args>
+inline void ArkoseAssertHandler(char const* assertion, char const* filename, int line, fmt::format_string<Args...> format, Args&&... args)
+{
+    ArkoseAssertHandlerImpl(assertion, filename, line, format, fmt::make_format_args(args...));
+}
+
+// NOTE: These trigger in both debug & release modes!
+
+#define ARKOSE_ASSERT(expression)                                                                  \
+    (void)(                                                                                        \
+        (!!(expression)) ||                                                                        \
+        (ArkoseAssertHandler(#expression, __FILE__, __LINE__, FMT_STRING("")), 0)                  \
+    )
+
+#define ARKOSE_ASSERTM(expression, format, ...)                                                    \
+    (void)(                                                                                        \
+        (!!(expression)) ||                                                                        \
+        (ArkoseAssertHandler(#expression, __FILE__, __LINE__, FMT_STRING(format), __VA_ARGS__), 0) \
     )
 
 #define ASSERT_NOT_REACHED()  \
