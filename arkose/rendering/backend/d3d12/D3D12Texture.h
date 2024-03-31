@@ -30,4 +30,6 @@ public:
     D3D12DescriptorAllocation uavDescriptor {};
 
     D3D12DescriptorAllocation srvNoAlphaDesciptorForImGui {};
+
+    D3D12DescriptorAllocation samplerDescriptor {};
 };
