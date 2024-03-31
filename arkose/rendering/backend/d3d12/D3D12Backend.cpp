@@ -251,6 +251,7 @@ D3D12Backend::~D3D12Backend()
 
     m_pipelineRegistry.reset();
 
+    m_swapchainDepthTexture.reset();
     for (auto& frameContext : m_frameContexts) {
         frameContext.reset();
     }

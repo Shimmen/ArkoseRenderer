@@ -4,6 +4,7 @@
 
 #include "rendering/backend/d3d12/D3D12Common.h"
 #include "rendering/backend/d3d12/D3D12DescriptorHeapAllocator.h"
+#include <D3D12MemAlloc.h>
 
 struct D3D12Texture final : public Texture {
 public:
@@ -20,6 +21,7 @@ public:
 
     ImTextureID asImTextureID() override;
 
+    ComPtr<D3D12MA::Allocation> textureAllocation {};
     ComPtr<ID3D12Resource> textureResource;
     mutable D3D12_RESOURCE_STATES resourceState { D3D12_RESOURCE_STATE_COMMON };
 

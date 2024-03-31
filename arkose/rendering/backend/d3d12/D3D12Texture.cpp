@@ -134,14 +134,18 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
         optimizedClearValue.Color[3] = 0.0f;
     }
 
-    CD3DX12_HEAP_PROPERTIES heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
     D3D12_RESOURCE_STATES initialResourceState = resourceState;
 
-    // TODO: Don't use commited resource! Sub-allocate instead
-    auto hr = d3d12Backend.device().CreateCommittedResource(&heapProperties, D3D12_HEAP_FLAG_NONE,
-                                                            &textureDescription, initialResourceState,
-                                                            &optimizedClearValue,
-                                                            IID_PPV_ARGS(&textureResource));
+    D3D12MA::ALLOCATION_DESC allocDescription = {};
+    allocDescription.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+
+    HRESULT hr = d3d12Backend.globalAllocator().CreateResource(
+        &allocDescription, &textureDescription,
+        initialResourceState,
+        &optimizedClearValue,
+        textureAllocation.GetAddressOf(),
+        IID_PPV_ARGS(&textureResource));
+
     if (FAILED(hr)) {
         ARKOSE_LOG(Fatal, "D3D12Texture: could not create committed resource for texture, exiting.");
     }
@@ -239,9 +243,6 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
 
 D3D12Texture::~D3D12Texture()
 {
-    if (!hasBackend())
-        return;
-    // TODO
 }
 
 void D3D12Texture::setName(const std::string& name)
