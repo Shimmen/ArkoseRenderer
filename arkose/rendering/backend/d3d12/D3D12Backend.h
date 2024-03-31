@@ -76,6 +76,7 @@ public:
 
     D3D12DescriptorHeapAllocator& copyableDescriptorHeapAllocator();
     D3D12DescriptorHeapAllocator& shaderVisibleDescriptorHeapAllocator();
+    D3D12DescriptorHeapAllocator& samplerDescriptorHeapAllocator();
 
     #if defined(TRACY_ENABLE)
     tracy::D3D12QueueCtx* tracyD3D12Context() { return m_tracyD3D12Context; }
@@ -151,6 +152,8 @@ private:
     // NOTE: CBV/SRV/UAV is implied here to save some typing. Assume if the code says just "descriptor" it's a CBV/SRV/UAV.
     std::unique_ptr<D3D12DescriptorHeapAllocator> m_copyableDescriptorHeapAllocator { nullptr };
     std::unique_ptr<D3D12DescriptorHeapAllocator> m_shaderVisibleDescriptorHeapAllocator { nullptr };
+
+    std::unique_ptr<D3D12DescriptorHeapAllocator> m_samplerDescriptorHeapAllocator { nullptr };
 
     std::unique_ptr<Registry> m_pipelineRegistry {};
 

@@ -145,6 +145,8 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
     m_copyableDescriptorHeapAllocator = std::make_unique<D3D12DescriptorHeapAllocator>(device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, false, 100'000);
     m_shaderVisibleDescriptorHeapAllocator = std::make_unique<D3D12DescriptorHeapAllocator>(device(), D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true, 100'000);
 
+    m_samplerDescriptorHeapAllocator = std::make_unique<D3D12DescriptorHeapAllocator>(device(), D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, true, 2048);
+
     m_commandQueue = createDefaultCommandQueue();
     m_swapChain = createSwapChain(m_commandQueue.Get());
     createWindowRenderTarget();
@@ -602,6 +604,11 @@ D3D12DescriptorHeapAllocator& D3D12Backend::copyableDescriptorHeapAllocator()
 D3D12DescriptorHeapAllocator& D3D12Backend::shaderVisibleDescriptorHeapAllocator()
 {
     return *m_shaderVisibleDescriptorHeapAllocator.get();
+}
+
+D3D12DescriptorHeapAllocator& D3D12Backend::samplerDescriptorHeapAllocator()
+{
+    return *m_samplerDescriptorHeapAllocator.get();
 }
 
 ComPtr<ID3D12Device> D3D12Backend::createDeviceAtMaxSupportedFeatureLevel() const
