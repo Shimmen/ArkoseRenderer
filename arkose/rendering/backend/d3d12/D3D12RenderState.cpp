@@ -100,6 +100,10 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
 
     // Create the root signature
     {
+        std::vector<std::vector<D3D12_DESCRIPTOR_RANGE>> descriptorRangeStorage {}; // storage for if copies are needed
+
+        std::vector<D3D12_ROOT_PARAMETER> descriptorTableRootParameters {};
+
         stateBindings.forEachBindingSet([&](u32 setIndex, BindingSet const& bindingSet) {
             auto const& d3d12BindingSet = static_cast<D3D12BindingSet const&>(bindingSet);
 

@@ -12,9 +12,6 @@ public:
 
     virtual void setName(const std::string& name) override;
 
-    std::vector<std::vector<D3D12_DESCRIPTOR_RANGE>> descriptorRangeStorage {}; // storage for if copies are needed
-    std::vector<D3D12_ROOT_PARAMETER> descriptorTableRootParameters {};
-
     ComPtr<ID3D12RootSignature> rootSignature {};
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc {};
