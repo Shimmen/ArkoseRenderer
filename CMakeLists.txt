@@ -73,8 +73,8 @@ add_library(ArkoseCore STATIC
 
 target_include_directories(ArkoseCore PUBLIC arkcore/)
 
-get_target_property(ARKOCORE_SOURCES ArkoseCore SOURCES)
-source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/arkcore" FILES ${ARKOCORE_SOURCES})
+get_target_property(ARKCORE_SOURCES ArkoseCore SOURCES)
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/arkcore" FILES ${ARKCORE_SOURCES})
 
 # todo: see if we can move some of the libraries to PRIVATE
 target_link_libraries(ArkoseCore PUBLIC
@@ -369,7 +369,7 @@ set_property(TARGET ArkoseRenderer PROPERTY CXX_STANDARD 20)
 add_custom_command(TARGET ArkoseRenderer PRE_BUILD
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/assets" "$<TARGET_FILE_DIR:ArkoseRenderer>/assets"
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/arkose/shaders" "$<TARGET_FILE_DIR:ArkoseRenderer>/shaders"
-    COMMENT "Create symlinks to the assets & shaders so they will be locatable relative to the executable"
+    COMMENT "Creating symlinks to the assets and shaders so they will be locatable relative to the executable"
     VERBATIM)
 
 ##################################
