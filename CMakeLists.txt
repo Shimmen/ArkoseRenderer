@@ -6,6 +6,7 @@ cmake_policy(SET CMP0091 NEW)
 
 project(Arkose)
 
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 # Set default c++ version
 set(CMAKE_CXX_STANDARD 20)
