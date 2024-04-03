@@ -13,6 +13,8 @@ public:
     virtual void setName(const std::string& name) override;
     virtual void updateTextures(uint32_t index, const std::vector<TextureBindingUpdate>&) override;
 
+    D3D12_SHADER_VISIBILITY shaderVisibilityFromShaderStage(ShaderStage) const;
+
     // NOTE: We want to start filling out all the root parameter info when creating the binding set,
     // but in D3D12 this requires not just the binding slot/register but also the register space, i.e.,
     // the set index, which we don't have available yet. When filling out this info here we use this

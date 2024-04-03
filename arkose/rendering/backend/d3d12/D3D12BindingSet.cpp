@@ -162,28 +162,7 @@ D3D12BindingSet::D3D12BindingSet(Backend& backend, std::vector<ShaderBinding> bi
         std::optional<D3D12_SHADER_VISIBILITY> parameterVisibility {};
         for (auto& bindingInfo : shaderBindings()) {
 
-            D3D12_SHADER_VISIBILITY visibilityForBinding;
-            switch (bindingInfo.shaderStage()) {
-            case ShaderStage::Vertex:
-                visibilityForBinding = D3D12_SHADER_VISIBILITY_VERTEX;
-                break;
-            case ShaderStage::Fragment:
-                visibilityForBinding = D3D12_SHADER_VISIBILITY_PIXEL;
-                break;
-            case ShaderStage::Compute:
-                visibilityForBinding = D3D12_SHADER_VISIBILITY_ALL;
-                break;
-            case ShaderStage::Task:
-                visibilityForBinding = D3D12_SHADER_VISIBILITY_AMPLIFICATION;
-                break;
-            case ShaderStage::Mesh:
-                visibilityForBinding = D3D12_SHADER_VISIBILITY_MESH;
-                break;
-            default:
-                // No more fine grained options available, simply go with "all"
-                visibilityForBinding = D3D12_SHADER_VISIBILITY_ALL;
-                break;
-            }
+            D3D12_SHADER_VISIBILITY visibilityForBinding = shaderVisibilityFromShaderStage(bindingInfo.shaderStage());
 
             if (parameterVisibility.has_value()) {
                 if (parameterVisibility.value() != visibilityForBinding) {
@@ -232,4 +211,28 @@ void D3D12BindingSet::updateTextures(uint32_t bindingIndex, const std::vector<Te
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     // TODO
+}
+
+D3D12_SHADER_VISIBILITY D3D12BindingSet::shaderVisibilityFromShaderStage(ShaderStage shaderStage) const
+{
+    switch (shaderStage) {
+    case ShaderStage::Vertex:
+        return D3D12_SHADER_VISIBILITY_VERTEX;
+        break;
+    case ShaderStage::Fragment:
+        return D3D12_SHADER_VISIBILITY_PIXEL;
+        break;
+    case ShaderStage::Compute:
+        return D3D12_SHADER_VISIBILITY_ALL;
+        break;
+    case ShaderStage::Task:
+        return D3D12_SHADER_VISIBILITY_AMPLIFICATION;
+        break;
+    case ShaderStage::Mesh:
+        return D3D12_SHADER_VISIBILITY_MESH;
+        break;
+    default:
+        // No more fine grained options available, simply go with "all"
+        return D3D12_SHADER_VISIBILITY_ALL;
+    }
 }
