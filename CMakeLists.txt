@@ -6,7 +6,6 @@ cmake_policy(SET CMP0091 NEW)
 
 project(Arkose)
 
-set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 # Set default c++ version
 set(CMAKE_CXX_STANDARD 20)
@@ -35,8 +34,7 @@ endif()
 # VulkanSDK dependencies
 
 if (ARKOSE_BACKEND_VULKAN)
-    find_package(Vulkan REQUIRED)
-    find_package(Shaderc REQUIRED) # TODO: Provide alternate route for Shaderc? Or just require Vulkan backend..
+    find_package(Vulkan REQUIRED COMPONENTS shaderc_combined)
 endif()
 
 ##################################
@@ -342,7 +340,7 @@ target_link_libraries(ArkoseRenderer PRIVATE
     Jolt
 
     # Shader backend
-    Shaderc::Shaderc # glsl shader compiler
+    Vulkan::shaderc_combined # glsl shader compiler
     spirv-cross-core # generic spir-v reflection
     )
 
