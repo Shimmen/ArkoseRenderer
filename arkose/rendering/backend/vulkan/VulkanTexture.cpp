@@ -208,11 +208,11 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
         break;
     case Texture::Mipmap::Nearest:
         samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
-        samplerCreateInfo.maxLod = static_cast<float>(mipLevels());
+        samplerCreateInfo.maxLod = static_cast<float>(mipLevels() - 1);
         break;
     case Texture::Mipmap::Linear:
         samplerCreateInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        samplerCreateInfo.maxLod = static_cast<float>(mipLevels());
+        samplerCreateInfo.maxLod = static_cast<float>(mipLevels() - 1);
         break;
     }
 
