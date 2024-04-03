@@ -143,6 +143,14 @@ D3D12BindingSet::D3D12BindingSet(Backend& backend, std::vector<ShaderBinding> bi
                                                                 descriptor,
                                                                 d3d12Texture.srvDescriptor.firstCpuDescriptor,
                                                                 D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+
+                    // For now we only have combined image+sampler so always create a static sampler for each sampled image
+                    // We assume that it will have the same register number as the texture itself (but with the sampler prefix).
+                    D3D12_STATIC_SAMPLER_DESC staticSampler = d3d12Texture.createStaticSamplerDesc();
+                    staticSampler.ShaderRegister = bindingInfo.bindingIndex();
+                    staticSampler.RegisterSpace = UndecidedRegisterSpace; // to be resolved when making the PSO
+                    staticSampler.ShaderVisibility = shaderVisibilityFromShaderStage(bindingInfo.shaderStage());
+                    staticSamplers.push_back(staticSampler);
                 }
 
                 descriptorRange.RangeType = D3D12_DESCRIPTOR_RANGE_TYPE_SRV;

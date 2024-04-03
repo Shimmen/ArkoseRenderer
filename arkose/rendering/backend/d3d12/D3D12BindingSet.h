@@ -25,5 +25,7 @@ public:
     std::vector<D3D12_DESCRIPTOR_RANGE> descriptorRanges {};
     D3D12_ROOT_PARAMETER rootParameter;
 
+    std::vector<D3D12_STATIC_SAMPLER_DESC> staticSamplers {};
+
     D3D12DescriptorAllocation descriptorTableAllocation {};
 };
