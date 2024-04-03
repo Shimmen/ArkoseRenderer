@@ -16,7 +16,7 @@ class DrawTriangleNode final : public RenderPipelineNode {
     {
         Shader bootstrapShader = Shader::createBasicRasterize("d3d12-bootstrap/demo.hlsl",
                                                               "d3d12-bootstrap/demo.hlsl",
-                                                              { ShaderDefine::makeBool("D3D12_SAMPLE_CONSTANT_BUFFER", true) });
+                                                              { ShaderDefine::makeBool("D3D12_SAMPLE_TEXTURE", true) });
 
         Buffer& constantBuffer = reg.createBuffer(sizeof(m_scale), Buffer::Usage::ConstantBuffer);
         constantBuffer.setName("DemoConstantBuffer");
@@ -34,7 +34,8 @@ class DrawTriangleNode final : public RenderPipelineNode {
         VertexLayout vertexLayout = { VertexComponent::Position3F, VertexComponent::TexCoord2F };
         RenderStateBuilder renderStateBuilder { reg.windowRenderTarget(), bootstrapShader, vertexLayout };
 
-        BindingSet& bindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(constantBuffer, ShaderStage::Vertex) });
+        BindingSet& bindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(constantBuffer, ShaderStage::Vertex),
+                                                        ShaderBinding::sampledTexture(testTexture, ShaderStage::Fragment) });
         renderStateBuilder.stateBindings().at(0, bindingSet);
 
         RenderState& renderState = reg.createRenderState(renderStateBuilder);
