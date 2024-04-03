@@ -103,6 +103,7 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
         std::vector<std::vector<D3D12_DESCRIPTOR_RANGE>> descriptorRangeStorage {}; // storage for if copies are needed
 
         std::vector<D3D12_ROOT_PARAMETER> descriptorTableRootParameters {};
+        std::vector<D3D12_STATIC_SAMPLER_DESC> staticSamplerDescriptions {};
 
         stateBindings.forEachBindingSet([&](u32 setIndex, BindingSet const& bindingSet) {
             auto const& d3d12BindingSet = static_cast<D3D12BindingSet const&>(bindingSet);
@@ -123,14 +124,21 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
             D3D12_ROOT_PARAMETER& copiedRootParameter = descriptorTableRootParameters.emplace_back(d3d12BindingSet.rootParameter);
             copiedRootParameter.DescriptorTable.pDescriptorRanges = copiedDescriptorRanges.data();
             ARKOSE_ASSERT(copiedRootParameter.DescriptorTable.NumDescriptorRanges == copiedDescriptorRanges.size());
+
+            // If we have any static sampler, also make a copy of those and assign register space
+            for (D3D12_STATIC_SAMPLER_DESC const& staticSampler : d3d12BindingSet.staticSamplers) {
+                D3D12_STATIC_SAMPLER_DESC& copiedStaticSampler = staticSamplerDescriptions.emplace_back(staticSampler);
+                ARKOSE_ASSERT(copiedStaticSampler.RegisterSpace == D3D12BindingSet::UndecidedRegisterSpace);
+                copiedStaticSampler.RegisterSpace = setIndex;
+            }
         });
 
         D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc {};
         rootSignatureDesc.NumParameters = narrow_cast<u32>(descriptorTableRootParameters.size());
         rootSignatureDesc.pParameters = descriptorTableRootParameters.data();
 
-        rootSignatureDesc.NumStaticSamplers = 0;
-        rootSignatureDesc.pStaticSamplers = nullptr;
+        rootSignatureDesc.NumStaticSamplers = narrow_cast<u32>(staticSamplerDescriptions.size());
+        rootSignatureDesc.pStaticSamplers = staticSamplerDescriptions.data();
 
         // NOTE: Can use flags to allow/deny visibility for a whole root signature
         rootSignatureDesc.Flags = D3D12_ROOT_SIGNATURE_FLAG_NONE;
