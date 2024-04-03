@@ -76,19 +76,19 @@ VertexShaderOutput VS_main(
 	VertexShaderOutput output;
 
 	output.position = position;
-	output.position.xy *= scale.x;
+	output.position.xy *= scale.xy;
 	output.uv = uv;
 
 	return output;
 }
 
-Texture2D<float4> anteruTexture : register(t0);
-SamplerState texureSampler      : register(s0);
+Texture2D<float4> anteruTexture : register(t1);
+SamplerState texureSampler      : register(s1);
 
 float4 PS_main (float4 position : SV_POSITION,
 				float2 uv : TEXCOORD) : SV_TARGET
 {
-	return anteruTexture.Sample (texureSampler, uv);
+	return anteruTexture.Sample(texureSampler, uv);
 }
 
 #endif
