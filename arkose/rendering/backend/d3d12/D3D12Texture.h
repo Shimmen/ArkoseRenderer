@@ -21,6 +21,9 @@ public:
 
     ImTextureID asImTextureID() override;
 
+    D3D12_SAMPLER_DESC createSamplerDesc() const;
+    D3D12_STATIC_SAMPLER_DESC createStaticSamplerDesc() const;
+
     ComPtr<D3D12MA::Allocation> textureAllocation {};
     ComPtr<ID3D12Resource> textureResource;
     mutable D3D12_RESOURCE_STATES resourceState { D3D12_RESOURCE_STATE_COMMON };
