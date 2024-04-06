@@ -27,13 +27,14 @@
 #include "rendering/backend/vulkan/extensions/VulkanProcAddress.h"
 #endif
 
-#ifdef NDEBUG
-// We probably want yet another mode beyond relese, like "final" which doesn't include this,
-// because I'm now developing more and more in release and I need validation for that.
+#if defined(ARKOSE_DEBUG)
+static constexpr bool vulkanDebugMode = true;
+static constexpr bool vulkanVerboseDebugMessages = true;
+#elif defined(ARKOSE_DEVELOP)
 static constexpr bool vulkanDebugMode = true;
 static constexpr bool vulkanVerboseDebugMessages = false;
-#else
-static constexpr bool vulkanDebugMode = true;
+#elif defined(ARKOSE_RELEASE)
+static constexpr bool vulkanDebugMode = false;
 static constexpr bool vulkanVerboseDebugMessages = false;
 #endif
 

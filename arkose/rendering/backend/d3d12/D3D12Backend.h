@@ -12,7 +12,11 @@ class D3D12DescriptorHeapAllocator;
 #include <tracy/TracyD3D12.hpp>
 #endif
 
+#if defined(ARKOSE_DEVELOP) || defined(ARKOSE_DEBUG)
 static constexpr bool d3d12debugMode = true;
+#elif defined(ARKOSE_RELEASE)
+static constexpr bool d3d12debugMode = false;
+#endif
 
 class D3D12Backend final : public Backend {
 public:
