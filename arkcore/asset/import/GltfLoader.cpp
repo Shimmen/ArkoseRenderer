@@ -182,9 +182,9 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
 
             if (gltfCamera.type == "perspective") {
                 tinygltf::PerspectiveCamera const& gltfPerspectiveCamera = gltfCamera.perspective;
-                camera.verticalFieldOfView = gltfPerspectiveCamera.yfov;
-                camera.zNear = gltfPerspectiveCamera.znear;
-                camera.zFar = gltfPerspectiveCamera.zfar;
+                camera.verticalFieldOfView = static_cast<float>(gltfPerspectiveCamera.yfov);
+                camera.zNear = static_cast<float>(gltfPerspectiveCamera.znear);
+                camera.zFar = static_cast<float>(gltfPerspectiveCamera.zfar);
             }
         }
 
@@ -671,8 +671,8 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
 
     material->doubleSided = gltfMaterial.doubleSided;
 
-    material->metallicFactor = gltfMaterial.pbrMetallicRoughness.metallicFactor;
-    material->roughnessFactor = gltfMaterial.pbrMetallicRoughness.roughnessFactor;
+    material->metallicFactor = static_cast<float>(gltfMaterial.pbrMetallicRoughness.metallicFactor);
+    material->roughnessFactor = static_cast<float>(gltfMaterial.pbrMetallicRoughness.roughnessFactor);
 
     std::vector<double> c = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
     material->colorTint = vec4((float)c[0], (float)c[1], (float)c[2], (float)c[3]);

@@ -18,6 +18,7 @@ std::string UpscalingNode::name() const
 #endif
     default:
         ASSERT_NOT_REACHED();
+        return "";
     }
 }
 

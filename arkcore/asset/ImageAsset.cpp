@@ -389,13 +389,14 @@ bool ImageAsset::compress(int compressionLevel)
         return true;
     }
 
-    size_t maxCompressedSize = LZ4_compressBound(m_pixelData.size());
+    int uncompressedSize = narrow_cast<i32>(m_pixelData.size());
+    int maxCompressedSize = LZ4_compressBound(uncompressedSize);
     std::vector<u8> compressedBlob {};
     compressedBlob.resize(maxCompressedSize);
 
     char const* src = reinterpret_cast<char const*>(m_pixelData.data());
     char* dst = reinterpret_cast<char*>(compressedBlob.data());
-    int compressedSize = LZ4_compress_default(src, dst, m_pixelData.size(), maxCompressedSize);
+    int compressedSize = LZ4_compress_default(src, dst, uncompressedSize, maxCompressedSize);
 
     if (compressedSize <= 0) {
         ARKOSE_LOG(Error, "Failed to compress image");
@@ -404,7 +405,7 @@ bool ImageAsset::compress(int compressionLevel)
 
     compressedBlob.resize(compressedSize);
 
-    m_uncompressedSize = narrow_cast<u32>(m_pixelData.size());
+    m_uncompressedSize = narrow_cast<u32>(uncompressedSize);
     m_compressedSize = static_cast<u32>(compressedSize);
     std::swap(m_pixelData, compressedBlob);
     m_compressed = true;
@@ -426,7 +427,7 @@ bool ImageAsset::decompress()
 
     char const* src = reinterpret_cast<char const*>(m_pixelData.data());
     char* dst = reinterpret_cast<char*>(decompressedData.data());
-    size_t decompressedSize = LZ4_decompress_safe(src, dst, m_pixelData.size(), m_uncompressedSize);
+    size_t decompressedSize = LZ4_decompress_safe(src, dst, narrow_cast<i32>(m_pixelData.size()), m_uncompressedSize);
 
     if (decompressedSize <= 0) {
         ARKOSE_LOG(Error, "Failed to decompress image");

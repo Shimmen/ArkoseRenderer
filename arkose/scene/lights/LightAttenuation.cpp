@@ -19,7 +19,7 @@ float LightAttenuation::calculateModulatedLightAttenuation(float distanceToLight
     float const d = ark::clamp(distanceToLightSource, s, r);
 
     float numerator = std::cos(ark::PI * (d - s) / (r - s)) + 1;
-    float denominator = 2.0 * ark::square(d);
+    float denominator = 2.0f * ark::square(d);
     return numerator / denominator;
 }
 
