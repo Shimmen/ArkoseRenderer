@@ -53,7 +53,7 @@ set(TARGET_SAMPLES OFF)
 set(TARGET_VIEWER OFF)
 FetchContent_Declare(jolt-physics
     GIT_REPOSITORY https://github.com/jrouwe/JoltPhysics.git
-    GIT_TAG        "v4.0.1"
+    GIT_TAG        "v5.0.0"
     SOURCE_SUBDIR  "Build")
 
 set(LZ4_BUILD_CLI OFF)
