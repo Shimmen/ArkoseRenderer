@@ -47,7 +47,14 @@ inline void ArkoseAssertHandler(char const* assertion, char const* filename, int
     ArkoseAssertHandlerImpl(assertion, filename, line, format, fmt::make_format_args(args...));
 }
 
-// NOTE: These trigger in both debug & release modes!
+#if defined(ARKOSE_RELEASE)
+
+#define ARKOSE_ASSERT(expression)
+#define ARKOSE_ASSERTM(expression, format, ...)
+#define ASSERT_NOT_REACHED()
+#define NOT_YET_IMPLEMENTED()
+
+#else
 
 #define ARKOSE_ASSERT(expression)                                                                  \
     (void)(                                                                                        \
@@ -72,3 +79,5 @@ inline void ArkoseAssertHandler(char const* assertion, char const* filename, int
         ARKOSE_ASSERT(false); \
         exit(EXIT_FAILURE);   \
     } while (false)
+
+#endif
