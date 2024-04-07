@@ -315,6 +315,9 @@ endif()
 ### PRETTIFY THE PROJECT FILES ###
 ##################################
 
+get_target_property(ARKCORE_SOURCES ArkoseCore SOURCES)
+get_target_property(ARKOSE_SOURCES ArkoseRenderer SOURCES)
+
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/arkcore" FILES ${ARKCORE_SOURCES})
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/arkose" FILES ${ARKOSE_SOURCES})
 
