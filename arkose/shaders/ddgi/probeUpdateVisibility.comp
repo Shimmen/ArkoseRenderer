@@ -9,8 +9,8 @@ layout(set = 0, binding = 0, rgba16f) uniform readonly image2D surfelImage;
 layout(set = 0, binding = 1, rgba16f) uniform          image2D probeVisibilityAtlas;
 
 NAMED_UNIFORMS(pushConstants,
-    float visibilitySharpness;
     ivec3 gridDimensions;
+    float visibilitySharpness;
     float gridMaxSpacing;
     uint firstProbeIdx;
     uint raysPerProbe;

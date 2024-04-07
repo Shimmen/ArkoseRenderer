@@ -12,8 +12,8 @@ layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 layout(set = 0, binding = 1) uniform sampler2D environmentTex;
 
 NAMED_UNIFORMS(pushConstants,
-    float environmentMultiplier;
     vec2 frustumJitterCorrection;
+    float environmentMultiplier;
 )
 
 layout(location = 0) out vec4 oColor;

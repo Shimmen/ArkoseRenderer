@@ -6,9 +6,9 @@
 #endif
 
 struct ForwardPassConstants {
-    float ambientAmount;
     vec2 frustumJitterCorrection;
     vec2 invTargetSize;
+    float ambientAmount;
     float mipBias;
     bool withMaterialColor;
 
