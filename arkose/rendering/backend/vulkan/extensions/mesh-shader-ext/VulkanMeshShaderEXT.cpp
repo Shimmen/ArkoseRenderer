@@ -13,9 +13,9 @@ VulkanMeshShaderEXT::VulkanMeshShaderEXT(VulkanBackend& backend, VkPhysicalDevic
     deviceProps2.pNext = &m_meshShaderProperties;
     vkGetPhysicalDeviceProperties2(m_physicalDevice, &deviceProps2);
 
-    vkCmdDrawMeshTasksEXT = FetchProcAddr(device, vkCmdDrawMeshTasksEXT);
-    vkCmdDrawMeshTasksIndirectEXT = FetchProcAddr(device, vkCmdDrawMeshTasksIndirectEXT);
-    vkCmdDrawMeshTasksIndirectCountEXT = FetchProcAddr(device, vkCmdDrawMeshTasksIndirectCountEXT);
+    vkCmdDrawMeshTasksEXT = FetchVulkanDeviceProcAddr(device, vkCmdDrawMeshTasksEXT);
+    vkCmdDrawMeshTasksIndirectEXT = FetchVulkanDeviceProcAddr(device, vkCmdDrawMeshTasksIndirectEXT);
+    vkCmdDrawMeshTasksIndirectCountEXT = FetchVulkanDeviceProcAddr(device, vkCmdDrawMeshTasksIndirectCountEXT);
 
 }
 

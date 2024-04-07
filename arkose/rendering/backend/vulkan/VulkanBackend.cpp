@@ -198,8 +198,8 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
         vkAllocateCommandBuffers(device(), &commandBufferAllocInfo, &m_tracyCommandBuffer);
 
         m_tracyVulkanContext = TracyVkContextCalibrated(physicalDevice(), device(), m_graphicsQueue.queue, m_tracyCommandBuffer,
-                                                        FetchProcAddr(device(), vkGetPhysicalDeviceCalibrateableTimeDomainsEXT),
-                                                        FetchProcAddr(device(), vkGetCalibratedTimestampsEXT));
+                                                        FetchVulkanInstanceProcAddr(m_instance, vkGetPhysicalDeviceCalibrateableTimeDomainsEXT),
+                                                        FetchVulkanDeviceProcAddr(device(), vkGetCalibratedTimestampsEXT));
 
         const char tracyVulkanContextName[] = "Graphics Queue";
         TracyVkContextName(m_tracyVulkanContext, tracyVulkanContextName, sizeof(tracyVulkanContextName));
