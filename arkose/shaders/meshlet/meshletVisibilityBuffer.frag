@@ -5,12 +5,13 @@
 
 #include <common/material.glsl>
 #include <common/namedUniforms.glsl>
+#include <meshlet/meshletCommon.glsl>
 #include <shared/SceneData.h>
 #include <shared/ShaderBlendMode.h>
 
 layout(location = 0) flat in uint vDrawableIdx;
 layout(location = 1) flat in uint vMeshletIdx;
-layout(location = 2) flat in uint8_t vPrimitiveIdx;
+layout(location = 2) flat in meshlet_rel_idx_t vPrimitiveIdx;
 #if VISBUF_BLEND_MODE == BLEND_MODE_MASKED
 layout(location = 3) flat in uint vMaterialIdx;
 layout(location = 4) in vec2 vTexCoord;

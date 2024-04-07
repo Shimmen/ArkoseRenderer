@@ -23,7 +23,7 @@ taskPayloadSharedEXT MeshShaderInterpolants fromTaskShader;
 
 layout(location = 0) perprimitiveEXT flat out uint vDrawableIdx[];
 layout(location = 1) perprimitiveEXT flat out uint vMeshletIdx[];
-layout(location = 2) perprimitiveEXT flat out uint8_t vPrimitiveIdx[];
+layout(location = 2) perprimitiveEXT flat out meshlet_rel_idx_t vPrimitiveIdx[];
 #if VISBUF_BLEND_MODE == BLEND_MODE_MASKED
 layout(location = 3) perprimitiveEXT flat out uint vMaterialIdx[];
 layout(location = 4) out vec2 vTexCoord[];
@@ -79,7 +79,7 @@ void main()
 
         vDrawableIdx[primitiveIdx] = drawableIdx;
         vMeshletIdx[primitiveIdx] = meshletIdx;
-        vPrimitiveIdx[primitiveIdx] = uint8_t(primitiveIdx);
+        vPrimitiveIdx[primitiveIdx] = meshlet_rel_idx_t(primitiveIdx);
 
 #if VISBUF_BLEND_MODE == BLEND_MODE_MASKED
         vMaterialIdx[primitiveIdx] = drawable.materialIndex;

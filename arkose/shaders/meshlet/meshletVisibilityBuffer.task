@@ -53,7 +53,7 @@ void main()
 
     if (shouldDraw) {
         toMeshShader.drawableIdx = drawableIdx;
-        toMeshShader.meshletRelativeIndices[taskOffset] = uint8_t(gl_LocalInvocationID.x);
+        toMeshShader.meshletRelativeIndices[taskOffset] = meshlet_rel_idx_t(gl_LocalInvocationID.x);
     }
 
     EmitMeshTasksEXT(numTasks, 1, 1);
