@@ -653,7 +653,8 @@ T readUsdAttributeValue(UsdPrim const& prim, TfToken attributeNameToken)
         // ARKOSE_LOG(Verbose, "Read attribute '{}' with value '{}'", attributeName, attributeValue);
         return attributeValue;
     } else {
-        ARKOSE_LOG(Fatal, "Failed to read attribute '{}' for the requested type", attributeNameToken.GetString());
+        ARKOSE_LOG(Error, "Failed to read attribute '{}' for the requested type", attributeNameToken.GetString());
+        return T();
     }
 }
 
@@ -904,11 +905,12 @@ void defineMeshAssetAndDependencies(pxr::UsdPrim const& meshPrim,
         pxr::GfMatrix4d worldTransform = usdGeomMesh.ComputeLocalToWorldTransform(pxr::UsdTimeCode());
 
         UnindexedTriangleMesh triangleMesh;
-        if (isSingleIndexedTriangleMesh(usdGeomMesh)) {
-            populateUnindexedTriangleMesh(usdGeomMesh, triangleMesh);
-        } else {
-            triangulateMesh(usdGeomMesh, triangleMesh);
-        }
+        triangulateMesh(usdGeomMesh, triangleMesh); // maybe always worth doing?
+        //if (isSingleIndexedTriangleMesh(usdGeomMesh)) {
+        //    populateUnindexedTriangleMesh(usdGeomMesh, triangleMesh);
+        //} else {
+        //    triangulateMesh(usdGeomMesh, triangleMesh);
+        //}
 
         generateTangents(triangleMesh);
         indexifyMesh(triangleMesh, meshSegment);
@@ -941,9 +943,10 @@ void defineCamera(pxr::UsdPrim const& cameraPrim)
 
 int main()
 {
-    //std::string filePath = "../assets/usd/usd-assets/cornell-box/display-color/cornell-box.usda";
-    //std::string filePath = "../assets/usd/usd-assets/cornell-box/usdpreviewsurface/cornell-box.usda";
-    std::string filePath = "../assets/usd/sample/UsdPreviewSurfaceExample.usda";
+    //std::string filePath = "assets/usd/usd-assets/cornell-box/display-color/cornell-box.usda";
+    //std::string filePath = "assets/usd/usd-assets/cornell-box/usdpreviewsurface/cornell-box.usda";
+    //std::string filePath = "assets/usd/sample/UsdPreviewSurfaceExample.usda";
+    std::string filePath = "assets/usd/PKG_C_Trees/NewSponza_CypressTree_USDA_YUp.usda";
 
     if (!pxr::UsdStage::IsSupportedFile(filePath)) {
         ARKOSE_LOG_FATAL("USD can't open file '{}'.", filePath);
