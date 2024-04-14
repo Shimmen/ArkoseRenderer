@@ -960,7 +960,7 @@ void defineMeshAssetAndDependencies(pxr::UsdPrim const& meshPrim,
         meshSegment.setPathToMaterial(std::string(material->assetFilePath()));
     }
 
-    meshAsset->writeToFile(meshAsset->name + ".arkmsh", AssetStorage::Json);
+    meshAsset->writeToFile(meshAsset->name + ".arkmsh", AssetStorage::Binary);
 }
 
 void defineCamera(pxr::UsdPrim const& cameraPrim)
@@ -981,9 +981,19 @@ int main()
         ARKOSE_LOG_FATAL("USD can't open file '{}'.", filePath);
     }
 
-    pxr::UsdStageRefPtr stage = pxr::UsdStage::Open(filePath);
+    pxr::UsdStageRefPtr stage;
+    {
+        SCOPED_PROFILE_ZONE_NAMED("Load stage");
+        ARKOSE_LOG(Info, "Loading stage '{}' ...", filePath);
 
-    if (!stage) {
+        // Defer as much loading as possible - we might not load all data and we can possibly manually multi-thread it later
+        auto initialLoadSet = UsdStage::InitialLoadSet::LoadNone;
+        stage = pxr::UsdStage::Open(filePath, initialLoadSet);
+    }
+
+    if (stage) {
+        ARKOSE_LOG(Info, "  loaded stage");
+    } else {
         ARKOSE_LOG_FATAL("Failed to open USD stage.");
     }
 
