@@ -2,6 +2,7 @@
 #include <ark/vector.h>
 #include <asset/MeshAsset.h>
 #include <core/Logging.h>
+#include <utility/Profiling.h>
 
 // token stuff
 #include <pxr/base/tf/token.h>
@@ -48,6 +49,8 @@ struct UnindexedTriangleMesh {
 
 void generateGeometricFaceNormals(UnindexedTriangleMesh& triangleMesh)
 {
+    SCOPED_PROFILE_ZONE();
+
     ARKOSE_ASSERT(triangleMesh.normals.size() == 0);
     ARKOSE_ASSERT(triangleMesh.positions.size() > 0);
     triangleMesh.normals.resize(triangleMesh.positions.size());
@@ -81,6 +84,8 @@ void generateSmoothNormals(UnindexedTriangleMesh& triangleMesh)
 
 bool isSingleIndexedTriangleMesh(pxr::UsdGeomMesh const& usdMesh)
 {
+    SCOPED_PROFILE_ZONE();
+
     pxr::UsdAttribute subdivAttr = usdMesh.GetSubdivisionSchemeAttr();
     pxr::TfToken subdivToken;
     subdivAttr.Get(&subdivToken);
@@ -180,6 +185,8 @@ bool isSingleIndexedTriangleMesh(pxr::UsdGeomMesh const& usdMesh)
 
 void populateUnindexedTriangleMesh(pxr::UsdGeomMesh const& usdMesh, UnindexedTriangleMesh& triangleMesh)
 {
+    SCOPED_PROFILE_ZONE();
+
     // NOTE: Assumed that the mesh is single-indexed and triangle based!
 
     //
@@ -253,6 +260,8 @@ void populateUnindexedTriangleMesh(pxr::UsdGeomMesh const& usdMesh, UnindexedTri
 
 void triangulateMesh(pxr::UsdGeomMesh const& usdMesh, UnindexedTriangleMesh& triangleMesh)
 {
+    SCOPED_PROFILE_ZONE();
+
     // TODO: This whole implementation is pretty sketchy.. needs some good verification & testing
 
     pxr::UsdPrim const& meshPrim = usdMesh.GetPrim();
@@ -439,6 +448,8 @@ void triangulateMesh(pxr::UsdGeomMesh const& usdMesh, UnindexedTriangleMesh& tri
 
 void indexifyMesh(UnindexedTriangleMesh const& triangleMesh, MeshSegmentAsset& meshSegmentAsset)
 {
+    SCOPED_PROFILE_ZONE();
+
     size_t nonIndexedVertexCount = triangleMesh.positions.size();
     size_t indexCount = nonIndexedVertexCount;
 
@@ -524,6 +535,8 @@ void generateArbitraryTangentSpace(UnindexedTriangleMesh& triangleMesh)
 
 void generateMikkTSpaceTangents(UnindexedTriangleMesh& triangleMesh)
 {
+    SCOPED_PROFILE_ZONE();
+
     size_t vertexCount = triangleMesh.positions.size();
 
     // We can only generate proper tangents if we have texcoordinates. If not, define arbitrary tangents, orthogonal to the normals
@@ -594,6 +607,8 @@ void generateMikkTSpaceTangents(UnindexedTriangleMesh& triangleMesh)
 
 void generateTangents(UnindexedTriangleMesh& triangleMesh)
 {
+    SCOPED_PROFILE_ZONE();
+
     size_t vertexCount = triangleMesh.positions.size();
     ARKOSE_ASSERT(vertexCount > 0);
     ARKOSE_ASSERT(triangleMesh.normals.size() == vertexCount);
@@ -609,6 +624,8 @@ void generateTangents(UnindexedTriangleMesh& triangleMesh)
 std::shared_ptr<MaterialAsset> createDisplayColorMaterial(pxr::UsdPrim const& meshPrim,
                                                           pxr::UsdGeomMesh const& usdGeomMesh)
 {
+    SCOPED_PROFILE_ZONE();
+
     auto materialAsset = std::make_shared<MaterialAsset>();
     materialAsset->name = fmt::format("{}_displaycolor", meshPrim.GetName().GetString());
 
@@ -686,6 +703,8 @@ ImageWrapMode createImageWrapMode(TfToken usdUvTextureWrap)
 
 MaterialInput createMaterialInputForUsdUVTexture(UsdPrim usdUvTexturePrim)
 {
+    SCOPED_PROFILE_ZONE();
+
     MaterialInput materialInput {};
   
     if (UsdAttribute inputFileAttr = usdUvTexturePrim.GetAttribute(TfToken("inputs:file"))) {
@@ -719,6 +738,8 @@ MaterialInput createMaterialInputForUsdUVTexture(UsdPrim usdUvTexturePrim)
 
 MaterialInput createMaterialInput(UsdPrim const& shaderPrim, MaterialAsset& materialAsset, UsdAttribute attribute)
 {
+    SCOPED_PROFILE_ZONE();
+
     SdfPathVector connections;
     if (attribute.GetConnections(&connections)) {
         
@@ -752,6 +773,8 @@ MaterialInput createMaterialInput(UsdPrim const& shaderPrim, MaterialAsset& mate
 
 void createMaterialFromUsdPreviewSurface(MaterialAsset& materialAsset, UsdPrim const& shaderPrim)
 {
+    SCOPED_PROFILE_ZONE();
+
     // Documentation: https://openusd.org/release/spec_usdpreviewsurface.html
 
     materialAsset.brdf = Brdf::Default;
@@ -800,6 +823,8 @@ void createMaterialFromUsdPreviewSurface(MaterialAsset& materialAsset, UsdPrim c
 
 std::shared_ptr<MaterialAsset> createMaterial(pxr::UsdShadeMaterialBindingAPI const& materialBinding)
 {
+    SCOPED_PROFILE_ZONE();
+
     // NOTE: Compare to this python example in reverse:
     // https://github.com/PixarAnimationStudios/OpenUSD/blob/release/extras/usd/tutorials/simpleShading/generate_simpleShading.py
 
@@ -854,6 +879,8 @@ void defineMeshSegmentAssetAndDependencies(MeshSegmentAsset& meshSegment,
 void defineMeshAssetAndDependencies(pxr::UsdPrim const& meshPrim,
                                     pxr::UsdGeomBBoxCache& bboxCache)
 {
+    SCOPED_PROFILE_ZONE();
+
     pxr::UsdGeomMesh usdGeomMesh { meshPrim };
 
     auto meshAsset = std::make_unique<MeshAsset>();
@@ -943,6 +970,8 @@ void defineCamera(pxr::UsdPrim const& cameraPrim)
 
 int main()
 {
+    SCOPED_PROFILE_ZONE();
+
     //std::string filePath = "assets/usd/usd-assets/cornell-box/display-color/cornell-box.usda";
     //std::string filePath = "assets/usd/usd-assets/cornell-box/usdpreviewsurface/cornell-box.usda";
     //std::string filePath = "assets/usd/sample/UsdPreviewSurfaceExample.usda";
@@ -963,6 +992,7 @@ int main()
     //pxr::SdfLayerHandle rootLayer = stage->GetRootLayer();
 
     for (const pxr::UsdPrim& prim : stage->Traverse()) {
+        SCOPED_PROFILE_ZONE_NAMED("ForEachPrim");
 
         //if (prim.IsGroup()) {
         //    //ARKOSE_LOG(Info, "Found a model '{}'", prim.GetPath().GetText());

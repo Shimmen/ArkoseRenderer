@@ -81,6 +81,8 @@ bool MaterialAsset::readFromFile(std::string_view filePath)
 
 bool MaterialAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage)
 {
+    SCOPED_PROFILE_ZONE();
+
     if (not isValidAssetPath(filePath)) {
         ARKOSE_LOG(Error, "Trying to write asset to file with invalid extension: '{}'", filePath);
         return false;
