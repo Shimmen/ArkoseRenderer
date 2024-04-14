@@ -11,7 +11,9 @@ message(STATUS "PXR_LIBRARIES=${PXR_LIBRARIES}")
 ##################################
 
 add_library(AssetProcessor STATIC
+    assetprocessor/AssetIdentifier.h
     assetprocessor/AssetProcessor.cpp
+    assetprocessor/AssetProcessor.h
     )
 target_include_directories(AssetProcessor PUBLIC
     assetprocessor
@@ -33,8 +35,10 @@ target_link_libraries(AssetProcessorSample PRIVATE AssetProcessor)
 add_custom_command(TARGET AssetProcessorSample POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:AssetProcessorSample> $<TARGET_RUNTIME_DLLS:AssetProcessorSample> # copy DLLs to exe
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${PXR_USD_LOCATION}/lib/usd" "$<TARGET_FILE_DIR:AssetProcessorSample>/usd" # copy USD plugins to exe
-    COMMAND_EXPAND_LISTS
-)
+    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/assets" "$<TARGET_FILE_DIR:AssetProcessorSample>/assets" # make symlinks to the assets dir
+    COMMAND_EXPAND_LISTS )
+
+set_target_properties(AssetProcessorSample PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:AssetProcessorSample>")
 
 ##################################
 ########## ASSET SERVER ##########
