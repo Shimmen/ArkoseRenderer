@@ -190,9 +190,14 @@ if (ARKOSE_BACKEND_VULKAN)
         arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanAccelerationStructureNV.cpp
         arkose/rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingStateNV.cpp
         )
+
+    add_subdirectory(deps/vulkan)
+
     target_link_libraries(ArkoseRenderer PRIVATE
         Vulkan::Vulkan
         VulkanMemoryAllocator
+        Vulkan::shaderc_combined # glsl shader compiler
+        spirv-cross-core # spir-v reflection
         )
 endif()
 
@@ -262,10 +267,6 @@ target_link_libraries(ArkoseRenderer PRIVATE
 
     # Physics
     Jolt
-
-    # Shader backend
-    Vulkan::shaderc_combined # glsl shader compiler
-    spirv-cross-core # generic spir-v reflection
     )
 
 if(DLSS_AVAILABLE)

@@ -6,13 +6,6 @@ set_directory_properties(PROPERTIES EXCLUDE_FROM_ALL YES)
 ##################################
 # FetchContent dependencies with CMakeLists.txt
 
-set(SPIRV_CROSS_SKIP_INSTALL ON CACHE INTERNAL "")
-set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE INTERNAL "")
-set(SPIRV_CROSS_CLI OFF CACHE INTERNAL "")
-FetchContent_Declare(spirv-cross
-    GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
-    GIT_TAG        "sdk-1.3.243.0")
-
 FetchContent_Declare(json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG        "v3.11.2")
@@ -37,10 +30,6 @@ FetchContent_Declare(glfw
 FetchContent_Declare(nativefiledialog-extended
     GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
     GIT_TAG        "v1.0.3")
-
-FetchContent_Declare(vulkan_memory_allocator
-    GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-    GIT_TAG        "v3.0.1")
 
 FetchContent_Declare(meshoptimizer
     GIT_REPOSITORY https://github.com/zeux/meshoptimizer.git
@@ -226,13 +215,11 @@ add_subdirectory(dlss)
 # Finalize FetchContent dependencies
 
 FetchContent_MakeAvailable(
-    spirv-cross
     json
     cereal
     fmt
     glfw
     nativefiledialog-extended
-    vulkan_memory_allocator
     meshoptimizer
     jolt-physics
     lz4
