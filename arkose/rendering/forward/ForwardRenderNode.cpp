@@ -267,7 +267,7 @@ std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateS
                     drawKey.setHasExplicityVelocity(true);
                 }
 
-                u32 drawableIdx = instance.drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>();
+                u32 drawableIdx = instance.drawableHandleForSegmentIndex(segmentIdx).template indexOfType<u32>();
                 meshSegmentInstances.emplace_back(vertexAllocation, drawKey, instance.transform(), drawableIdx);
             }
         }

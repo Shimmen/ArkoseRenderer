@@ -6,6 +6,7 @@
 template<typename T>
 class CompilationResult {
 public:
+    virtual ~CompilationResult() {}
 
 	virtual bool success() const = 0;
     virtual std::string errorMessage() const = 0;

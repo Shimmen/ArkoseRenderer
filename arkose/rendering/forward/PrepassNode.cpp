@@ -165,7 +165,7 @@ std::vector<PrepassNode::MeshSegmentInstance> PrepassNode::generateSortedDrawLis
                     vertexAllocation = skinningVertexMapping.skinnedTarget;
                 }
 
-                u32 drawableIdx = instance.drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>();
+                u32 drawableIdx = instance.drawableHandleForSegmentIndex(segmentIdx).template indexOfType<u32>();
                 meshSegmentInstances.emplace_back(vertexAllocation, prepassDrawKey, drawableIdx);
             }
         }

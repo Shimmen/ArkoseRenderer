@@ -6,7 +6,7 @@
 #include "rendering/forward/ForwardModes.h"
 
 class CommandList;
-class StaticMeshSegment;
+struct StaticMeshSegment;
 
 class ForwardRenderNode final : public RenderPipelineNode {
 public:
