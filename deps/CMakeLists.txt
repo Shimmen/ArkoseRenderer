@@ -98,17 +98,21 @@ if(NOT dearimgui_fetch_POPULATED)
         "${dearimgui_fetch_SOURCE_DIR}/imgui_widgets.cpp"
         "${dearimgui_fetch_SOURCE_DIR}/imgui_tables.cpp"
         "${dearimgui_fetch_SOURCE_DIR}/imgui_demo.cpp"
-        "${dearimgui_fetch_SOURCE_DIR}/backends/imgui_impl_glfw.cpp"
-        "${dearimgui_fetch_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp"
-        "${dearimgui_fetch_SOURCE_DIR}/backends/imgui_impl_dx12.cpp") # TODO: Only include if `WITH_D3D12`?
+        "${dearimgui_fetch_SOURCE_DIR}/backends/imgui_impl_glfw.cpp")
+
+    if(ARKOSE_BACKEND_VULKAN)
+        target_sources(dear_imgui PRIVATE "${dearimgui_fetch_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp")
+        target_link_libraries(dear_imgui PRIVATE Vulkan::Vulkan)
+    endif()
+    if(ARKOSE_BACKEND_D3D12)
+        target_sources(dear_imgui PRIVATE "${dearimgui_fetch_SOURCE_DIR}/backends/imgui_impl_dx12.cpp")
+        target_link_libraries(dear_imgui PRIVATE d3d12 dxgi)
+    endif()
 
     target_compile_features(dear_imgui PRIVATE cxx_std_17)
     target_include_directories(dear_imgui PUBLIC ${dearimgui_fetch_SOURCE_DIR})
 
-    target_link_libraries(dear_imgui glfw)
-
-    target_include_directories(dear_imgui PRIVATE Vulkan::Vulkan)
-    target_link_libraries(dear_imgui Vulkan::Vulkan)
+    target_link_libraries(dear_imgui PRIVATE glfw)
 
 endif()
 
