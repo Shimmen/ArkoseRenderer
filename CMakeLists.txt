@@ -135,7 +135,7 @@ if (MSVC)
 else()
     target_compile_options(ArkoseCore PUBLIC
         -Wall
-        -Wimplicit-fallthrough)
+        )
 endif()
 
 set(ARKOSE_SYSTEM_GLFW False) # default off
@@ -169,6 +169,7 @@ target_include_directories(ArkoseRenderer PRIVATE arkose/)
 set_property(TARGET ArkoseRenderer PROPERTY COMPILE_WARNING_AS_ERROR OFF)
 
 if (ARKOSE_BACKEND_VULKAN)
+    message(STATUS "ArkoseRenderer: compiling Vulkan graphics backend")
     target_compile_definitions(ArkoseCore PUBLIC WITH_VULKAN)
     target_sources(ArkoseRenderer PRIVATE
         arkose/rendering/backend/vulkan/VulkanBackend.cpp
@@ -196,6 +197,7 @@ if (ARKOSE_BACKEND_VULKAN)
 endif()
 
 if (ARKOSE_BACKEND_D3D12)
+    message(STATUS "ArkoseRenderer: compiling D3D12 graphics backend")
     target_compile_definitions(ArkoseCore PUBLIC WITH_D3D12)
     target_sources(ArkoseRenderer PRIVATE
         arkose/rendering/backend/d3d12/D3D12Backend.cpp
@@ -280,8 +282,10 @@ add_custom_command(TARGET ArkoseRenderer POST_BUILD
     COMMAND_EXPAND_LISTS
 )
 
-# the debug version of shaderc doesn't ship with .pdb files in the VulkanSDK, so let's supress the warning about missing pdb files
-target_link_options(ArkoseRenderer PRIVATE "/ignore:4099")
+if(MSVC)
+    # the debug version of shaderc doesn't ship with .pdb files in the VulkanSDK, so let's supress the warning about missing pdb files
+    target_link_options(ArkoseRenderer PRIVATE "/ignore:4099")
+endif()
 
 ##################################
 #### CUSTOM BUILD STEPS ETC. #####
