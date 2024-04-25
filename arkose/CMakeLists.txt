@@ -102,8 +102,7 @@ set(ARKOSE_SOURCES
       arkose/rendering/backend/shader/ShaderManager.cpp
       arkose/rendering/backend/shader/ShaderManager.h
         # dxc
-        arkose/rendering/backend/shader/dxc/DxcInterface.cpp
-        arkose/rendering/backend/shader/dxc/DxcInterface.h
+        # (added separately)
         # shaderc
         arkose/rendering/backend/shader/shaderc/ShadercInterface.cpp
         arkose/rendering/backend/shader/shaderc/ShadercInterface.h

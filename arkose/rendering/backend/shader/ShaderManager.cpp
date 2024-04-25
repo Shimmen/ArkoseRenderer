@@ -333,6 +333,7 @@ bool ShaderManager::CompiledShader::recompile()
                 //FileIO::writeBinaryDataToFile(shaderManager.resolveSpirvAssemblyPath(shaderFile), std::vector<char>(asmResult.cbegin(), asmResult.cend()));
             }
 
+            #if WITH_D3D12
             if constexpr (true) {
                 SCOPED_PROFILE_ZONE_NAMED("SPIR-V to HLSL");
 
@@ -395,7 +396,6 @@ bool ShaderManager::CompiledShader::recompile()
                     std::string hlsl = hlslCompiler.compile();
                     FileIO::writeBinaryDataToFile(hlslResolvedPath, hlsl.data(), hlsl.size());
 
-                    #if WITH_D3D12
                     auto result2 = DxcInterface::compileShader(shaderFile, hlslResolvedPath);
                     if ( result2->success() ) {
                         currentDxilBinary = std::vector<u8>(result2->begin(), result2->end());
@@ -403,14 +403,12 @@ bool ShaderManager::CompiledShader::recompile()
                     } else {
                         ARKOSE_LOG(Error, "Failed to compile transpiled HLSL '{}': {}", hlslResolvedPath, result2->errorMessage());
                     }
-                    #else
-                    #error "Trying to compile to DXIL (DirectX Intermediate Language) but we are not built with the D3D12 backend so the compiler is not available"
-                    #endif
 
                 } catch (const spirv_cross::CompilerError& compilerError) {
                     ARKOSE_LOG(Info, "Failed to transpile '{}' to HLSL: {}. Ignoring, for now.", shaderFile.path(), compilerError.what());
                 }
             }
+            #endif
 
         } else {
             lastCompileError = result->errorMessage();
@@ -437,7 +435,7 @@ bool ShaderManager::CompiledShader::recompile()
         }
 
     #else
-        #error "Trying to compile to DXIL (DirectX Intermediate Language) but we are not built with the D3D12 backend so the compiler is not available"
+        ARKOSE_LOG(Error, "Trying to compile to HLSL file but we are not built with the D3D12 backend so the compiler is not available");
     #endif
     } break;
     }
