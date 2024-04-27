@@ -178,7 +178,7 @@ float Camera::exposureCompensation() const
     case ExposureMode::Auto:
         return m_exposureCompensation;
     default:
-        ARKOSE_LOG(Verbose, "Getting EC for camera but not using auto-exposure, is this intended?");
+        //ARKOSE_LOG(Verbose, "Getting EC for camera but not using auto-exposure, is this intended?");
         return 0.0f;
     }
 }
