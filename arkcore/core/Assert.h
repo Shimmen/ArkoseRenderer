@@ -10,7 +10,7 @@
 #include <Windows.h>
 #endif
 
-ARK_FORCE_INLINE inline void ArkoseAssertHandlerImpl(char const* assertion, char const* filename, int line, fmt::string_view format, fmt::format_args args)
+ARK_FORCE_INLINE void ArkoseAssertHandlerImpl(char const* assertion, char const* filename, int line, fmt::string_view format, fmt::format_args args)
 {
     std::string optionalMessage = "";
     if (format.size() > 0) {

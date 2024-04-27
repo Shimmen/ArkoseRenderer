@@ -27,7 +27,7 @@
 #if defined(_MSC_VER)
 #define ARK_FORCE_INLINE __forceinline
 #elif __has_attribute(always_inline)
-#define ARK_FORCE_INLINE __attribute__((always_inline))
+#define ARK_FORCE_INLINE __attribute__((always_inline)) inline
 #else
 #warning "No implementation for ARK_FORCE_INLINE for this platform!"
 #define ARK_FORCE_INLINE inline
