@@ -1483,6 +1483,12 @@ MeshletManager const& GpuScene::meshletManager() const
     return *m_meshletManager;
 }
 
+bool GpuScene::hasPendingUploads() const
+{
+    // This isn't entirely foolproof, but it's something
+    return m_asyncLoadedImages.size() > 0 || m_pendingTextureUpdates.size() > 0 || m_pendingMaterialUpdates.size() > 0;
+}
+
 void GpuScene::drawStatsGui(bool includeContainingWindow)
 {
     if (includeContainingWindow) {

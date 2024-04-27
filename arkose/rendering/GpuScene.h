@@ -163,6 +163,8 @@ public:
 
     // Misc.
 
+    bool hasPendingUploads() const;
+
     void drawStatsGui(bool includeContainingWindow = false);
     void drawVramUsageGui(bool includeContainingWindow = false);
 
