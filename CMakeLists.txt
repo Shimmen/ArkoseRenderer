@@ -90,6 +90,11 @@ target_include_directories(ArkoseCore PUBLIC arkcore/)
 # TODO: Work towards being able to enable this!
 set_property(TARGET ArkoseCore PROPERTY COMPILE_WARNING_AS_ERROR OFF)
 
+if(WITH_MIMALLOC)
+    target_link_libraries(ArkoseCore PUBLIC mimalloc)
+    target_compile_definitions(ArkoseCore PUBLIC WITH_MIMALLOC)
+endif()
+
 # todo: see if we can move some of the libraries to PRIVATE
 target_link_libraries(ArkoseCore PUBLIC
     arklib # core arkose library (math etc.)

@@ -2,6 +2,7 @@
 
 #include "core/CommandLine.h"
 #include "core/Logging.h"
+#include "core/memory/MemoryManager.h"
 #include "core/parallel/TaskGraph.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
@@ -71,6 +72,7 @@ static void checkOnShaderFileWatching(Callback&& callback)
 int Arkose::runArkoseApplication(int argc, char** argv)
 {
     // Initialize core systems
+    MemoryManager::initialize();
     CommandLine::initialize(argc, argv);
     TaskGraph::initialize();
     System::initialize();
@@ -169,6 +171,7 @@ int Arkose::runArkoseApplication(int argc, char** argv)
     TaskGraph::shutdown();
     System::shutdown();
     CommandLine::shutdown();
+    MemoryManager::shutdown();
 
     return 0;
 }

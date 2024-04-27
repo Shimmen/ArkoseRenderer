@@ -41,6 +41,8 @@ set(ARKCORE_SOURCES
     arkcore/core/math/Sphere.h
     # memory
     arkcore/core/memory/BumpAllocator.h
+    arkcore/core/memory/MemoryManager.cpp
+    arkcore/core/memory/MemoryManager.h
     # parallel
     arkcore/core/parallel/ParallelFor.h
     arkcore/core/parallel/Task.cpp
