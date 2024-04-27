@@ -16,7 +16,12 @@ enum class LogLevel {
     All
 };
 
+#if ARKOSE_DEBUG
+constexpr LogLevel CurrentLogLevel = LogLevel::Verbose;
+#elif ARKOSE_DEVELOP || ARKOSE_RELEASE
 constexpr LogLevel CurrentLogLevel = LogLevel::Info;
+#endif
+
 constexpr int FatalErrorExitCode = 13;
 
 // See https://fmt.dev/latest/api.html#argument-lists for reference
