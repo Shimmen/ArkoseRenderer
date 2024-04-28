@@ -82,19 +82,6 @@ void createOrthonormalBasis(in vec3 n, out vec3 b1, out vec3 b2)
     b2 = vec3(b, zSign + n.y * n.y * a, -n.y);
 }
 
-mat3 createTbnMatrix(vec3 tangent, vec3 bitangent, vec3 normal)
-{
-    reortogonalize(normal, tangent);
-    reortogonalize(tangent, bitangent);
-    reortogonalize(bitangent, normal);
-
-    tangent = normalize(tangent);
-    bitangent = normalize(bitangent);
-    normal = normalize(normal);
-
-    return mat3(tangent, bitangent, normal);
-}
-
 vec2 hammersley(uint i, uint n)
 {
     uint bits = i;
