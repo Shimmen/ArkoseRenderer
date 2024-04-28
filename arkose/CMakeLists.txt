@@ -21,6 +21,9 @@ set(ARKOSE_SOURCES
       # geodata
       arkose/application/apps/geodata/GeodataApp.cpp
       arkose/application/apps/geodata/GeodataApp.h
+      # pathtracer
+      arkose/application/apps/pathtracer/PathTracerApp.cpp
+      arkose/application/apps/pathtracer/PathTracerApp.h
 
   # physics
   arkose/physics/PhysicsScene.cpp

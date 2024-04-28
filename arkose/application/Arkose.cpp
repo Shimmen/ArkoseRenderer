@@ -18,6 +18,7 @@
 // in runtime, so we have a nice and usable environment, both for
 // editor purposes but potentially also for different game "views".
 #include "application/apps/geodata/GeodataApp.h"
+#include "application/apps/pathtracer/PathTracerApp.h"
 #include "application/apps/BootstrappingApp.h"
 #include "application/apps/MeshViewerApp.h"
 #include "application/apps/ShowcaseApp.h"
@@ -36,6 +37,9 @@ static std::unique_ptr<App> createApp()
     }
     if (CommandLine::hasArgument("-bootstrap")) {
         return std::make_unique<BootstrappingApp>();
+    }
+    if (CommandLine::hasArgument("-pathtracer")) {
+        return std::make_unique<PathTracerApp>();
     }
 
     return std::make_unique<ShowcaseApp>();
