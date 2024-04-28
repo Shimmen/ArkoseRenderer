@@ -1,0 +1,69 @@
+{
+    "level": {
+        "name": "CornellBox",
+        "objects": [
+            {
+                "name": "",
+                "transform": {
+                    "translation": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0
+                    },
+                    "orientation": {
+                        "x": 0.7071068286895752,
+                        "y": 0.0,
+                        "z": 0.0,
+                        "w": 0.7071067094802856
+                    },
+                    "scale": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    }
+                },
+                "mesh": {
+                    "index": 0,
+                    "data": "assets/sample/models/CornellBox/CornellBox-Original.arkmsh"
+                }
+            }
+        ],
+        "lights": [],
+        "cameras": [
+            {
+                "position": {
+                    "x": 0.0,
+                    "y": 1.0,
+                    "z": 4.0
+                },
+                "orientation": {
+                    "x": 0.0,
+                    "y": 0.0,
+                    "z": 0.0,
+                    "w": 1.0
+                },
+                "nearClipPlane": 0.25,
+                "farClipPlane": 10000.0,
+                "focusMode": "Manual",
+                "focalLength": 30.0,
+                "focusDepth": 5.0,
+                "sensorSize": {
+                    "x": 36.0,
+                    "y": 24.0
+                },
+                "exposureMode": "Manual",
+                "fNumber": 11.0,
+                "iso": 400.0,
+                "shutterSpeed": 0.008,
+                "exposureCompensation": 0.0,
+                "adaptionRate": 0.0017999999690800906
+            }
+        ],
+        "environmentMap": {
+            "nullopt": true
+        },
+        "probeGrid": {
+            "nullopt": true
+        }
+    }
+}
