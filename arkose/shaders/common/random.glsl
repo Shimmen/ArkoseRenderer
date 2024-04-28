@@ -14,12 +14,18 @@ uint rand_lcg()
     return _rng_state;
 }
 
-uint rand_xorshift()
+uint rand_xorshift(uint state)
 {
     // Xorshift algorithm from George Marsaglia's paper
-    _rng_state ^= (_rng_state << 13);
-    _rng_state ^= (_rng_state >> 17);
-    _rng_state ^= (_rng_state << 5);
+    state ^= (state << 13);
+    state ^= (state >> 17);
+    state ^= (state << 5);
+    return state;
+}
+
+uint rand_xorshift()
+{
+    _rng_state = rand_xorshift(_rng_state);
     return _rng_state;
 }
 
