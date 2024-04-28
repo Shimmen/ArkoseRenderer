@@ -182,6 +182,9 @@ set(ARKOSE_SOURCES
     arkose/rendering/nodes/TonemapNode.h
     arkose/rendering/nodes/VisibilityBufferShadingNode.cpp
     arkose/rendering/nodes/VisibilityBufferShadingNode.h
+    # pathtracer
+    arkose/rendering/pathtracer/PathTracerNode.cpp
+    arkose/rendering/pathtracer/PathTracerNode.h
     # postprocess
     arkose/rendering/postprocess/CASNode.cpp
     arkose/rendering/postprocess/CASNode.h

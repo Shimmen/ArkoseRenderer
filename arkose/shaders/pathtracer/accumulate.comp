@@ -1,0 +1,31 @@
+#version 460
+
+#include <common.glsl>
+#include <common/namedUniforms.glsl>
+
+layout(set = 0, binding = 0, rgba32f) uniform image2D pathTraceAccumImg;
+layout(set = 0, binding = 1, rgba16f) uniform readonly image2D pathTraceImg;
+
+NAMED_UNIFORMS(constants,
+    uvec2 targetSize;
+    uint frameCount;
+)
+
+layout(local_size_x = 8, local_size_y = 8) in;
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    if (any(greaterThanEqual(pixelCoord, constants.targetSize)))
+        return;
+
+    vec3 accumulated = imageLoad(pathTraceAccumImg, pixelCoord).rgb;
+    vec3 thisFrame = imageLoad(pathTraceImg, pixelCoord).rgb;
+
+    const uint n = constants.frameCount;
+
+    // NOTE: This is not great for precision when n grows big..
+    vec3 newTotal = (accumulated * float(n)) + thisFrame;
+    accumulated = newTotal / float(n + 1);
+
+    imageStore(pathTraceAccumImg, pixelCoord, vec4(accumulated, 1.0));
+}
