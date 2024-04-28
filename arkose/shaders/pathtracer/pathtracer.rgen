@@ -23,11 +23,7 @@ struct Ray {
 Ray createCameraRay()
 {
     // Stratify rays for basic anti-aliasing
-    vec2 intraPixelOffset;
-    intraPixelOffset.x = (payload.rngState / 4294967296.0) - 0.5;
-    payload.rngState = rand_xorshift(payload.rngState);
-    intraPixelOffset.y = (payload.rngState / 4294967296.0) - 0.5;
-    payload.rngState = rand_xorshift(payload.rngState);
+    vec2 intraPixelOffset = vec2(pt_randomFloat(payload), pt_randomFloat(payload));
 
     const vec2 pixelCenter = vec2(rt_LaunchID.xy) + vec2(0.5);
     const vec2 inUV = (pixelCenter + intraPixelOffset) / vec2(rt_LaunchSize.xy);

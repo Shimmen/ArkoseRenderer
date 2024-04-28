@@ -186,11 +186,9 @@ void main()
     // Scatter
     {
         // Sample rng values for this scatter event - white noise
-        vec3 lookupCoord = vec3(0.0, 0.0, float(constants.blueNoiseLayerIndex));
-        lookupCoord.x = payload.rngState * (1.0 / 4294967296.0);
-        payload.rngState = rand_xorshift(payload.rngState);
-        lookupCoord.y = payload.rngState * (1.0 / 4294967296.0);
-        payload.rngState = rand_xorshift(payload.rngState);
+        vec3 lookupCoord = vec3(pt_randomFloat(payload),
+                                pt_randomFloat(payload),
+                                float(constants.blueNoiseLayerIndex));
 
         // Convert white noise to blue noise
         #if 0 // todo: seems broken in some angles? not sure, but let's leave it off for now
