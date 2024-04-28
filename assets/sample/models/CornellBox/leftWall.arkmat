@@ -1,0 +1,28 @@
+{
+    "material": {
+        "brdf": "Default",
+        "baseColor": {
+            "nullopt": true
+        },
+        "emissiveColor": {
+            "nullopt": true
+        },
+        "normalMap": {
+            "nullopt": true
+        },
+        "materialProperties": {
+            "nullopt": true
+        },
+        "colorTint": {
+            "x": 0.6299999952316284,
+            "y": 0.06499999761581421,
+            "z": 0.05000000074505806,
+            "w": 1.0
+        },
+        "metallicFactor": 0.0,
+        "roughnessFactor": 0.8945907354354858,
+        "blendMode": "Opaque",
+        "maskCutoff": 1.0,
+        "doubleSided": true
+    }
+}
