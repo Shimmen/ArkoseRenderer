@@ -196,6 +196,7 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
     if (!dirLightProjectedShadow || !sphereLightProjectedShadow || !localLightShadowMapAtlas || !localLightShadowAllocations) {
         Texture& placeholderTex = reg.createPixelTexture(vec4(1.0f), false);
         Buffer& placeholderBuffer = reg.createBufferForData(std::vector<int>(0), Buffer::Usage::StorageBuffer);
+        placeholderBuffer.setStride(1); // add some non-zero stride just so that it won't complain, but it will likely generate some error on D3D12
         dirLightProjectedShadow = dirLightProjectedShadow ? dirLightProjectedShadow : &placeholderTex;
         sphereLightProjectedShadow = sphereLightProjectedShadow ? sphereLightProjectedShadow : &placeholderTex;
         localLightShadowMapAtlas = localLightShadowMapAtlas ? localLightShadowMapAtlas : &placeholderTex;
