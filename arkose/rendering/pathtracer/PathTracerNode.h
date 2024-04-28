@@ -12,5 +12,7 @@ public:
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:
-    u32 m_accumulatedFrames { 0 };
+    bool m_shouldAccumulate { true };
+    u32 m_currentAccumulatedFrames { 0 };
+    u32 m_maxAccumulatedFrames { 1'000 };
 };

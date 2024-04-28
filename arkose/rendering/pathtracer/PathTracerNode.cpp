@@ -9,7 +9,19 @@ PathTracerNode::PathTracerNode()
 
 void PathTracerNode::drawGui()
 {
-    ImGui::Text("Accumulated frames: %u", m_accumulatedFrames);
+    ImGui::Text("Accumulated frames: %u", m_currentAccumulatedFrames);
+
+    if (ImGui::Button("Reset accumulation")) {
+        m_currentAccumulatedFrames = 0;
+    }
+    ImGui::SameLine();
+    if (ImGui::Checkbox("Accumulation active", &m_shouldAccumulate)) {
+        m_currentAccumulatedFrames = 0;
+    }
+
+    ImGui::BeginDisabled(!m_shouldAccumulate);
+    ImGui::SliderInt("Max accumulated frames", (int*)&m_maxAccumulatedFrames, 1, 5'000);
+    ImGui::EndDisabled();
 }
 
 RenderPipelineNode::ExecuteCallback PathTracerNode::construct(GpuScene& scene, Registry& reg)
@@ -58,8 +70,8 @@ RenderPipelineNode::ExecuteCallback PathTracerNode::construct(GpuScene& scene, R
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        bool imageShouldReset = appState.isRelativeFirstFrame() || scene.camera().hasChangedSinceLastFrame() || scene.hasPendingUploads();
-        bool imageShouldAccumulate = !imageShouldReset && m_accumulatedFrames < 256;
+        bool imageShouldReset = !m_shouldAccumulate || appState.isRelativeFirstFrame() || scene.camera().hasChangedSinceLastFrame() || scene.hasPendingUploads();
+        bool imageShouldAccumulate = !imageShouldReset && m_shouldAccumulate && m_currentAccumulatedFrames < m_maxAccumulatedFrames;
 
         if (imageShouldReset || imageShouldAccumulate) {
             cmdList.setRayTracingState(rtState);
@@ -72,12 +84,12 @@ RenderPipelineNode::ExecuteCallback PathTracerNode::construct(GpuScene& scene, R
         if (imageShouldAccumulate) {
             cmdList.setComputeState(accumulateState);
             cmdList.setNamedUniform<uvec2>("targetSize", pathTraceImage.extent().asUIntVector());
-            cmdList.setNamedUniform<u32>("frameCount", m_accumulatedFrames);
+            cmdList.setNamedUniform<u32>("frameCount", m_currentAccumulatedFrames);
             cmdList.dispatch(pathTraceImage.extent3D(), { 8, 8, 1 });
-            m_accumulatedFrames += 1;
+            m_currentAccumulatedFrames += 1;
         } else if (imageShouldReset) {
             cmdList.copyTexture(pathTraceImage, pathTraceAccumImage);
-            m_accumulatedFrames = 1;
+            m_currentAccumulatedFrames = 1;
         }
     };
 }
