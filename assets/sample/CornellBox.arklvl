@@ -60,7 +60,11 @@
             }
         ],
         "environmentMap": {
-            "nullopt": true
+            "nullopt": false,
+            "data": {
+                "assetPath": "assets/sample/hdri/tiergarten_2k.hdr",
+                "brightnessFactor": 3000.0
+            }
         },
         "probeGrid": {
             "nullopt": true
