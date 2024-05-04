@@ -1,6 +1,6 @@
 {
     "material": {
-        "cereal_class_version": 1,
+        "cereal_class_version": 2,
         "brdf": "Default",
         "baseColor": {
             "nullopt": true
@@ -22,6 +22,11 @@
         },
         "metallicFactor": 0.0,
         "roughnessFactor": 0.8945907354354858,
+        "emissiveFactor": {
+            "x": 1.0,
+            "y": 1.0,
+            "z": 1.0
+        },
         "blendMode": "Opaque",
         "maskCutoff": 1.0,
         "doubleSided": true
