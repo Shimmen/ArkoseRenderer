@@ -23,7 +23,7 @@ struct PathTracerShadowRayPayload {
 
 struct PathTracerPushConstants {
     float environmentMultiplier;
-    uint blueNoiseLayerIndex;
+    uint frameIndex;
 };
 
 // Helper functions

@@ -20,7 +20,6 @@ hitAttribute vec3 attribs;
 layout(location = 1) rayPayload PathTracerShadowRayPayload shadowPayload;
 
 layout(set = 0, binding = 1) uniform CameraStateBlock { CameraState camera; };
-layout(set = 0, binding = 3) uniform sampler2DArray blueNoiseTexture;
 
 DeclareCommonBindingSet_RTMesh(1)
 DeclareCommonBindingSet_Material(2)

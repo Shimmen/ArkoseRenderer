@@ -34,13 +34,10 @@ RenderPipelineNode::ExecuteCallback PathTracerNode::construct(GpuScene& scene, R
     BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
     BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");
 
-    Texture& blueNoiseTexture = *reg.getTexture("BlueNoise");
-
     TopLevelAS& sceneTLAS = scene.globalTopLevelAccelerationStructure();
     BindingSet& frameBindingSet = reg.createBindingSet({ ShaderBinding::topLevelAccelerationStructure(sceneTLAS, ShaderStage::RTRayGen | ShaderStage::RTClosestHit),
                                                          ShaderBinding::constantBuffer(*reg.getBuffer("SceneCameraData"), ShaderStage::AnyRayTrace),
                                                          ShaderBinding::sampledTexture(scene.environmentMapTexture(), ShaderStage::RTRayGen),
-                                                         ShaderBinding::sampledTexture(blueNoiseTexture, ShaderStage::RTClosestHit),
                                                          ShaderBinding::storageTexture(pathTraceImage, ShaderStage::RTRayGen) });
 
     ShaderFile raygen { "pathtracer/pathtracer.rgen" };
@@ -76,8 +73,7 @@ RenderPipelineNode::ExecuteCallback PathTracerNode::construct(GpuScene& scene, R
         if (imageShouldReset || imageShouldAccumulate) {
             cmdList.setRayTracingState(rtState);
             cmdList.setNamedUniform("environmentMultiplier", scene.preExposedEnvironmentBrightnessFactor());
-            // TODO: We want to accumulate more frames than the array count and we need a constant source of new (blue) noise
-            cmdList.setNamedUniform("blueNoiseLayerIndex", appState.frameIndex());// % blueNoiseTexture.arrayCount());
+            cmdList.setNamedUniform("frameIndex", appState.frameIndex());
             cmdList.traceRays(appState.windowExtent());
         }
 

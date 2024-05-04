@@ -9,7 +9,7 @@
 layout(set = 0, binding = 0) uniform AccelerationStructure topLevelAS;
 layout(set = 0, binding = 1) uniform CameraStateBlock { CameraState camera; };
 layout(set = 0, binding = 2) uniform sampler2D environmentMap;
-layout(set = 0, binding = 4, rgba16f) uniform image2D pathTraceImage;
+layout(set = 0, binding = 3, rgba16f) uniform image2D pathTraceImage;
 
 NAMED_UNIFORMS_STRUCT(PathTracerPushConstants, constants)
 
@@ -51,7 +51,7 @@ bool doTraceRay(vec3 rayOrigin, vec3 rayDirection, float tmin, float tmax)
 
 void main()
 {
-    uint uniquePixelFrameId = (rt_LaunchID.x + rt_LaunchID.y * rt_LaunchSize.x) + constants.blueNoiseLayerIndex * (rt_LaunchSize.x * rt_LaunchSize.y);
+    uint uniquePixelFrameId = (rt_LaunchID.x + rt_LaunchID.y * rt_LaunchSize.x) + constants.frameIndex * (rt_LaunchSize.x * rt_LaunchSize.y);
     payload.rngState = wang_hash(uniquePixelFrameId);
 
     Ray ray = createCameraRay();
