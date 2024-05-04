@@ -10,6 +10,8 @@
 // documented here: https://google.github.io/filament/Filament.md#toc4.
 // It's licenced under the Apache License 2.0 which can be found
 // here: https://github.com/google/filament/blob/master/LICENSE.
+// With some supplemental information from here:
+// https://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html.
 //
 
 float D_GGX(float NdotH, float a) {
@@ -21,6 +23,17 @@ float D_GGX(float NdotH, float a) {
 
 vec3 F_Schlick(float VdotH, vec3 f0) {
     return f0 + (vec3(1.0) - f0) * pow(1.0 - VdotH, 5.0);
+}
+
+float G1_GGX(float NdotV, float a2)
+{
+    return (2.0 * NdotV) / (NdotV + sqrt(a2 + (1.0 - a2) * square(NdotV)));
+}
+
+float G_GGX(float NdotV, float NdotL, float a)
+{
+    float a2 = a * a;
+    return G1_GGX(NdotV, a2) * G1_GGX(NdotL, a2);
 }
 
 float V_SmithGGXCorrelated(float NdotV, float NdotL, float a) {
