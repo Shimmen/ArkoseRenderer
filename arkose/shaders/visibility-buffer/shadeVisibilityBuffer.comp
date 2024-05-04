@@ -259,6 +259,7 @@ void main()
     }
 
     vec3 emissive = textureGrad(material_getTexture(material.emissive), texCoord, ddx, ddy).rgb;
+    emissive *= material.emissiveFactor;
 
     vec4 metallicRoughness = textureGrad(material_getTexture(material.metallicRoughness), texCoord, ddx, ddy);
     float metallic = metallicRoughness.b * material.metallicFactor;

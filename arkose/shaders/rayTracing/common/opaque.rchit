@@ -150,7 +150,7 @@ void main()
     vec2 uv = v0.texCoord.xy * b.x + v1.texCoord.xy * b.y + v2.texCoord.xy * b.z;
 
     vec3 baseColor = texture(material_getTexture(material.baseColor), uv).rgb * material.colorTint.rgb;
-    vec3 emissive = texture(material_getTexture(material.emissive), uv).rgb;
+    vec3 emissive = texture(material_getTexture(material.emissive), uv).rgb * material.emissiveFactor;
 
     vec4 metallicRoughness = texture(material_getTexture(material.metallicRoughness), uv);
     float metallic = metallicRoughness.b * material.metallicFactor;

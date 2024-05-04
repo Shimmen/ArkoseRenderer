@@ -12,6 +12,9 @@ struct ShaderMaterial {
     float metallicFactor; // multiplied by value in texture
     float roughnessFactor; // multiplied by value in texture
 
+    vec3 emissiveFactor; // multiplied by value in texture
+    float _padding0;
+
     vec4 colorTint;
 };
 

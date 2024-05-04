@@ -155,7 +155,7 @@ void main()
     vec3 N = normalize(normalMatrix * normal);
 
     vec3 baseColor = texture(material_getTexture(material.baseColor), uv).rgb * material.colorTint.rgb;
-    vec3 emissive = texture(material_getTexture(material.emissive), uv).rgb;
+    vec3 emissive = texture(material_getTexture(material.emissive), uv).rgb * material.emissiveFactor;
 
     vec4 metallicRoughness = texture(material_getTexture(material.metallicRoughness), uv);
     float metallic = metallicRoughness.b * material.metallicFactor;
