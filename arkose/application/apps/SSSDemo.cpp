@@ -39,7 +39,9 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
 {
     SCOPED_PROFILE_ZONE();
 
-    scene.setupFromDescription({ .path = "assets/sample/models/Head/head-demo.arklvl" });
+    scene.setupFromDescription({ .path = "assets/sample/models/Head/head-demo.arklvl",
+                                 .withRayTracing = true,
+                                 .withMeshShading = true });
 
     // Generate panels
     {
