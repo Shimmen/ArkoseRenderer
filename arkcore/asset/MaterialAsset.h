@@ -40,7 +40,7 @@ public:
     int userData { -1 };
 
     template<class Archive>
-    void serialize(Archive&);
+    void serialize(Archive&, u32 version);
 };
 
 class MaterialAsset final : public Asset<MaterialAsset> {
@@ -59,7 +59,7 @@ public:
     virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) override;
 
     template<class Archive>
-    void serialize(Archive&);
+    void serialize(Archive&, u32 version);
 
     Brdf brdf { Brdf::Default };
 
@@ -82,6 +82,7 @@ public:
 ////////////////////////////////////////////////////////////////////////////////
 // Serialization
 
+#include "utility/EnumHelpers.h"
 #include <cereal/cereal.hpp>
 #include <cereal/types/memory.hpp>
 #include <cereal/types/optional.hpp>
@@ -95,8 +96,11 @@ enum class MaterialAssetVersion {
     LatestVersion
 };
 
+CEREAL_CLASS_VERSION(MaterialInput, toUnderlying(MaterialAssetVersion::LatestVersion))
+CEREAL_CLASS_VERSION(MaterialAsset, toUnderlying(MaterialAssetVersion::LatestVersion))
+
 template<class Archive>
-void MaterialInput::serialize(Archive& archive)
+void MaterialInput::serialize(Archive& archive, u32 version)
 {
     archive(CEREAL_NVP(image));
     archive(CEREAL_NVP(wrapModes));
@@ -105,7 +109,7 @@ void MaterialInput::serialize(Archive& archive)
 }
 
 template<class Archive>
-void MaterialAsset::serialize(Archive& archive)
+void MaterialAsset::serialize(Archive& archive, u32 version)
 {
     archive(CEREAL_NVP(brdf));
     archive(CEREAL_NVP(baseColor), CEREAL_NVP(emissiveColor), CEREAL_NVP(normalMap), CEREAL_NVP(materialProperties));
