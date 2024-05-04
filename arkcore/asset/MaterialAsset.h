@@ -72,6 +72,7 @@ public:
 
     float metallicFactor { 0.0f };
     float roughnessFactor { 0.0f };
+    vec3 emissiveFactor { 0.0f, 0.0f, 0.0f };
 
     BlendMode blendMode { BlendMode::Opaque };
     float maskCutoff { 1.0f };
@@ -91,6 +92,7 @@ public:
 
 enum class MaterialAssetVersion {
     Initial = 0,
+    AddEmissiveFactor,
     ////////////////////////////////////////////////////////////////////////////
     // Add new versions above this delimiter
     LatestVersion
@@ -116,6 +118,11 @@ void MaterialAsset::serialize(Archive& archive, u32 version)
     archive(CEREAL_NVP(colorTint));
     archive(CEREAL_NVP(metallicFactor));
     archive(CEREAL_NVP(roughnessFactor));
+    if (version > toUnderlying(MaterialAssetVersion::AddEmissiveFactor)) {
+        archive(CEREAL_NVP(emissiveFactor));
+    } else {
+        emissiveFactor = vec3(0.0f);
+    }
     archive(CEREAL_NVP(blendMode), CEREAL_NVP(maskCutoff));
     archive(CEREAL_NVP(doubleSided));
 }

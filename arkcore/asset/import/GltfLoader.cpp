@@ -674,6 +674,9 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
     material->metallicFactor = static_cast<float>(gltfMaterial.pbrMetallicRoughness.metallicFactor);
     material->roughnessFactor = static_cast<float>(gltfMaterial.pbrMetallicRoughness.roughnessFactor);
 
+    std::vector<double> e = gltfMaterial.emissiveFactor;
+    material->emissiveFactor = vec3((float)e[0], (float)e[1], (float)e[2]);
+
     std::vector<double> c = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
     material->colorTint = vec4((float)c[0], (float)c[1], (float)c[2], (float)c[3]);
 
