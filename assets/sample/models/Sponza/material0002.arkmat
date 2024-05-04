@@ -1,9 +1,11 @@
 {
     "material": {
+        "cereal_class_version": 1,
         "brdf": "Default",
         "baseColor": {
             "nullopt": false,
             "data": {
+                "cereal_class_version": 1,
                 "image": {
                     "index": 0,
                     "data": "assets/sample/models/Sponza/white.png"

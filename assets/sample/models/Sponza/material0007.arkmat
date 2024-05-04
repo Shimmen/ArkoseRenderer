@@ -1,9 +1,11 @@
 {
     "material": {
+        "cereal_class_version": 1,
         "brdf": "Default",
         "baseColor": {
             "nullopt": false,
             "data": {
+                "cereal_class_version": 1,
                 "image": {
                     "index": 0,
                     "data": "assets/sample/models/Sponza/15295713303328085182.jpg"
@@ -25,6 +27,7 @@
         "normalMap": {
             "nullopt": false,
             "data": {
+                "cereal_class_version": 1,
                 "image": {
                     "index": 0,
                     "data": "assets/sample/models/Sponza/10388182081421875623.jpg"
@@ -43,6 +46,7 @@
         "materialProperties": {
             "nullopt": false,
             "data": {
+                "cereal_class_version": 1,
                 "image": {
                     "index": 0,
                     "data": "assets/sample/models/Sponza/9916269861720640319.jpg"
