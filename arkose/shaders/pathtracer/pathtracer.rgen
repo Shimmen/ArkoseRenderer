@@ -61,8 +61,7 @@ void main()
     const int maxRayRepth = 16;
 
     payload.attenuation = vec3(1.0);
-    payload.color = vec3(0.0);
-    payload.scatteredDirectionPdf = 1.0;
+    payload.radiance = vec3(0.0);
 
     for (int rayDepth = 0; rayDepth < maxRayRepth && lengthSquared(payload.attenuation) > 0.00001; ++rayDepth) {
         if (doTraceRay(ray.origin, ray.direction, tmin, tmax)) {
@@ -73,10 +72,10 @@ void main()
             // no hit - draw environment as last hit
             vec2 sampleUv = sphericalUvFromDirection(ray.direction);
             vec3 environmentRadiance = constants.environmentMultiplier * texture(environmentMap, sampleUv).rgb;
-            payload.color += payload.attenuation * environmentRadiance;
+            payload.radiance += payload.attenuation * environmentRadiance;
             break;
         }
     }
 
-    imageStore(pathTraceImage, ivec2(rt_LaunchID.xy), vec4(payload.color, 0.0));
+    imageStore(pathTraceImage, ivec2(rt_LaunchID.xy), vec4(payload.radiance, 0.0));
 }

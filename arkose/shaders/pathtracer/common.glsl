@@ -7,11 +7,9 @@
 
 struct PathTracerRayPayload {
     vec3 attenuation;
-    vec3 color;
+    vec3 radiance;
 
     vec3 scatteredDirection;
-    float scatteredDirectionPdf;
-
     float hitT;
 
     uint rngState;

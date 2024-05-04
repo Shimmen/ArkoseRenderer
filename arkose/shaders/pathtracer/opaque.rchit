@@ -8,6 +8,7 @@
 #include <common/namedUniforms.glsl>
 #include <common/random.glsl>
 #include <pathtracer/common.glsl>
+#include <pathtracer/material.glsl>
 #include <shared/CameraState.h>
 #include <shared/SceneData.h>
 #include <shared/LightData.h>
@@ -160,41 +161,33 @@ void main()
     float metallic = metallicRoughness.b * material.metallicFactor;
     float roughness = metallicRoughness.g * material.roughnessFactor;
 
-    vec3 V = -rt_WorldRayDirection;
+    vec3 radiance = emissive;
 
-    vec3 color = emissive;
-
-    // Direct light
+    // Direct light (analytic lights) (in world space)
     {
+        vec3 V = -rt_WorldRayDirection;
+
         for (uint i = 0; i < light_getDirectionalLightCount(); ++i) {
-            color += evaluateDirectionalLight(light_getDirectionalLight(i), V, N, baseColor, roughness, metallic);
+            radiance += evaluateDirectionalLight(light_getDirectionalLight(i), V, N, baseColor, roughness, metallic);
         }
 
         for (uint i = 0; i < light_getSphereLightCount(); ++i) {
-            color += evaluateSphereLight(light_getSphereLight(i), V, N, baseColor, roughness, metallic);
+            radiance += evaluateSphereLight(light_getSphereLight(i), V, N, baseColor, roughness, metallic);
         }
 
         for (uint i = 0; i < light_getSpotLightCount(); ++i) {
-            color += evaluateSpotLight(light_getSpotLight(i), V, N, baseColor, roughness, metallic);
+            radiance += evaluateSpotLight(light_getSpotLight(i), V, N, baseColor, roughness, metallic);
         }
     }
 
-    payload.color += payload.attenuation * (color / payload.scatteredDirectionPdf); // pdf from previous scatter
-    payload.attenuation *= baseColor;
+    payload.radiance += payload.attenuation * radiance;
 
     // Scatter
     {
-        // Sample rng values for this scatter event - white noise
-        vec3 lookupCoord = vec3(pt_randomFloat(payload),
-                                pt_randomFloat(payload),
-                                float(constants.blueNoiseLayerIndex));
-
-        // Convert white noise to blue noise
-        #if 0 // todo: seems broken in some angles? not sure, but let's leave it off for now
-        vec2 randomness = textureLod(blueNoiseTexture, lookupCoord, 0.0).xy;
-        #else
-        vec2 randomness = lookupCoord.xy;
-        #endif
+        PathTraceMaterial material;
+        material.baseColor = baseColor;
+        material.roughness = max(0.001, roughness); // hack! it should be able to work with zero-roughness materials!
+        material.metallic = metallic;
 
         vec3 B1, B2;
         createOrthonormalBasis(N, B1, B2);
@@ -202,20 +195,25 @@ void main()
         mat3 inverseTangentBasisMatrix = transpose(tangentBasisMatrix); // rotation only
 
         // In tangent space!
-        vec3 viewDirection = inverseTangentBasisMatrix * V;
-        vec3 sampledNormal = sampleSpecularBRDF(viewDirection, roughness, randomness);
-        vec3 reflectedDirection = reflect(-viewDirection, sampledNormal);
+        vec3 V = inverseTangentBasisMatrix * -rt_WorldRayDirection;
 
-        // Calculate the PDF of the reflected importance sampled direction
-        // TODO: Implement!
-        float pdf = 1.0;
+        vec3 L;
+        float pdf;
+        vec3 brdf = sampleOpaqueMicrofacetMaterial(payload, material, V, L, pdf);
+
+        if (pdf > 0.0) {
+            payload.attenuation *= brdf / pdf;
+        } else {
+            payload.attenuation = vec3(0.0); // (kill the path)
+            return;
+        }
 
         // Transform back to world space
-        vec3 rayDirection = tangentBasisMatrix * reflectedDirection;
+        vec3 L_world = tangentBasisMatrix * L;
 
-        payload.scatteredDirection = rayDirection;
-        payload.scatteredDirectionPdf = pdf;
+        payload.scatteredDirection = L_world;
     }
 
+    // TODO: Encode backface hits more explicitly than this. For now we're not even handling them anyway..
     payload.hitT = (backface) ? -rt_RayHitT : rt_RayHitT;
 }
