@@ -43,8 +43,8 @@ RenderPipelineNode::ExecuteCallback PathTracerNode::construct(GpuScene& scene, R
     ShaderFile raygen { "pathtracer/pathtracer.rgen" };
     ShaderFile defaultMissShader { "pathtracer/miss.rmiss" };
     ShaderFile shadowMissShader { "pathtracer/shadow.rmiss" };
-    HitGroup mainHitGroup { ShaderFile("pathtracer/opaque.rchit"),
-                            ShaderFile("pathtracer/masked.rahit") };
+    HitGroup mainHitGroup { ShaderFile("pathtracer/closesthit.rchit"),
+                            ShaderFile("pathtracer/anyhit.rahit") };
     ShaderBindingTable sbt { raygen, { mainHitGroup }, { defaultMissShader, shadowMissShader } };
 
     StateBindings stateDataBindings;
