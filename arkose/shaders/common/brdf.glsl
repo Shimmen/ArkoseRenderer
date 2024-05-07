@@ -117,4 +117,10 @@ vec3 evaluateBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float
     return brdf;
 }
 
+vec3 evaluateGlassBRDF(vec3 L, vec3 V, vec3 N, float roughness)
+{
+    vec3 F;
+    return specularBRDF(L, V, N, vec3(1.0), roughness, 0.0, F);
+}
+
 #endif // BRDF_GLSL
