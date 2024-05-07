@@ -6,6 +6,9 @@
 
 // NOTE: All of this is in tangent space unless indicated otherwise.
 
+#define IOR_AIR (1.0)
+#define IOR_GLASS (1.5)
+
 struct PathTraceMaterial {
     vec3 baseColor;
     float roughness;
@@ -121,6 +124,35 @@ vec3 sampleOpaqueMicrofacetMaterial(inout PathTracerRayPayload payload, PathTrac
     }
 
     return evaluateOpaqueMicrofacetMaterial(payload, material, V, L, F, PDF);
+}
+
+vec3 samplePolishedGlassMaterial(inout PathTracerRayPayload payload, PathTraceMaterial material, vec3 V, out vec3 L, out float PDF)
+{
+    vec3 F = F_Schlick(V.z, vec3(DIELECTRIC_REFLECTANCE));
+    float reflectance = F.x;
+
+    const vec3 Z = vec3(0.0, 0.0, 1.0); // i.e., N in tangent-space
+
+    const float eta = payload.insideGlass
+        ? (IOR_GLASS / IOR_AIR)
+        : (IOR_AIR / IOR_GLASS);
+
+    // TODO: This is not the optimal code for this
+    vec3 L_refracted = refract(-V, Z, eta);
+    bool cantRefract = lengthSquared(L_refracted) < 1e-2f;
+
+    float r1 = pt_randomFloat(payload);
+    if (cantRefract || reflectance > r1) {
+        // Reflect over normal
+        L = reflect(-V, Z);
+    } else {
+        // Refract through the surface
+        L = L_refracted;
+        payload.insideGlass != payload.insideGlass;
+    }
+
+    PDF = 1.0; // really we want it to not evaluate PDF at all, as it's not a sampled/probabilistic direction
+    return vec3(1.0);
 }
 
 #endif // PATHTRACER_MATERIAL_GLSL

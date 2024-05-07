@@ -12,6 +12,8 @@ struct PathTracerRayPayload {
     vec3 scatteredDirection;
     float hitT;
 
+    bool insideGlass;
+
     uint rngState;
 };
 

@@ -42,7 +42,7 @@ Ray createCameraRay()
 bool doTraceRay(vec3 rayOrigin, vec3 rayDirection, float tmin, float tmax)
 {
     uint rayFlags = RayFlags_None;
-    uint cullMask = RT_HIT_MASK_OPAQUE | RT_HIT_MASK_MASKED;// | RT_HIT_MASK_BLEND;
+    uint cullMask = RT_HIT_MASK_OPAQUE | RT_HIT_MASK_MASKED | RT_HIT_MASK_BLEND;
 
     payload.hitT = tmax + 1.0;
     traceRay(topLevelAS, rayFlags, cullMask, 0, 0, 0, rayOrigin, tmin, rayDirection, tmax, 0);
@@ -62,6 +62,7 @@ void main()
 
     payload.attenuation = vec3(1.0);
     payload.radiance = vec3(0.0);
+    payload.insideGlass = false; // assume the camera is not inside
 
     for (int rayDepth = 0; rayDepth < maxRayRepth && lengthSquared(payload.attenuation) > 0.00001; ++rayDepth) {
         if (doTraceRay(ray.origin, ray.direction, tmin, tmax)) {

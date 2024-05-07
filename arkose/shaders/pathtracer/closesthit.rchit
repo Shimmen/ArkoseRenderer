@@ -48,6 +48,17 @@ float traceShadowRay(vec3 X, vec3 L, float maxDistance)
     return shadowPayload.inShadow ? 0.0 : 1.0;
 }
 
+vec3 evaluatePathtracerBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+{
+#if defined(PATHTRACER_BRDF_DEFAULT)
+    return evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+#elif defined(PATHTRACER_BRDF_GLASS)
+    return evaluateGlassBRDF(L, V, N, roughness);
+#else
+    #error "Unknown path tracer BRDF!"
+#endif
+}
+
 vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
 {
     vec3 L = -normalize(light.worldSpaceDirection.xyz);
@@ -58,7 +69,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
         vec3 hitPoint = rt_WorldRayOrigin + rt_RayHitT * rt_WorldRayDirection;
         float shadowFactor = traceShadowRay(hitPoint, L, 2.0 * camera.zFar);
 
-        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+        vec3 brdf = evaluatePathtracerBRDF(L, V, N, baseColor, roughness, metallic);
         vec3 directLight = light.color * shadowFactor;
 
         return brdf * LdotN * directLight;
@@ -81,7 +92,7 @@ vec3 evaluateSphereLight(SphereLightData light, vec3 V, vec3 N, vec3 baseColor, 
 
         float distanceAttenuation = calculateLightDistanceAttenuation(distanceToLight, light.lightSourceRadius, light.lightRadius);
 
-        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+        vec3 brdf = evaluatePathtracerBRDF(L, V, N, baseColor, roughness, metallic);
         vec3 directLight = light.color * shadowFactor * distanceAttenuation;
 
         return brdf * LdotN * directLight;
@@ -109,7 +120,7 @@ vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, floa
         float cosConeAngle = dot(L, normalizedToLight);
         float iesValue = evaluateIESLookupTable(material_getTexture(light.iesProfileIndex), light.outerConeHalfAngle, cosConeAngle);
 
-        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+        vec3 brdf = evaluatePathtracerBRDF(L, V, N, baseColor, roughness, metallic);
         vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;
 
         return brdf * LdotN * directLight;
@@ -198,7 +209,12 @@ void main()
 
         vec3 L;
         float pdf;
+#if defined(PATHTRACER_BRDF_DEFAULT)
         vec3 brdf = sampleOpaqueMicrofacetMaterial(payload, material, V, L, pdf);
+#elif defined(PATHTRACER_BRDF_GLASS)
+        // TODO: Make this a microfacet glass BSDF!
+        vec3 brdf = samplePolishedGlassMaterial(payload, material, V, L, pdf);
+#endif
 
         if (pdf > 0.0) {
             payload.attenuation *= brdf / pdf;
@@ -213,6 +229,5 @@ void main()
         payload.scatteredDirection = L_world;
     }
 
-    // TODO: Encode backface hits more explicitly than this. For now we're not even handling them anyway..
-    payload.hitT = (backface) ? -rt_RayHitT : rt_RayHitT;
+    payload.hitT = rt_RayHitT;
 }
