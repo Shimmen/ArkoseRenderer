@@ -139,8 +139,12 @@ void main()
     const vec3 b = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
     vec3 N = normalize(v0.normal.xyz * b.x + v1.normal.xyz * b.y + v2.normal.xyz * b.z);
-    // TODO: This is not 100% accurate due to the smooth interpolation. With GL_EXT_ray_tracing we can just check hit kind.
+#if defined(KHR_RAY_TRACING_GLSL)
+    bool backface = rt_HitKind == rt_HitKindBackFace;
+#else
+    // TODO: This is not 100% accurate due to the smooth interpolation, but hit kind is not available in the nvidia extension.
     bool backface = dot(N, normalize(rt_ObjectRayDirection)) > 1e-6;
+#endif
     N = (backface) ? -N : N;
 
     // NOTE: Assumes uniform scaling!

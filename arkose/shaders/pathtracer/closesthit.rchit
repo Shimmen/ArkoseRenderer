@@ -135,9 +135,8 @@ void main()
     vec2 uv = v0.texCoord.xy * b.x + v1.texCoord.xy * b.y + v2.texCoord.xy * b.z;
 
     vec3 normal = normalize(v0.normal.xyz * b.x + v1.normal.xyz * b.y + v2.normal.xyz * b.z);
-    // TODO: This is not 100% accurate due to the smooth interpolation. With GL_EXT_ray_tracing we can just check hit kind.
-    bool backface = dot(normal, normalize(rt_ObjectRayDirection)) > 1e-6;
-    normal = (backface) ? -normal : normal;
+    bool backfaceHit = rt_HitKind == rt_HitKindBackFace;
+    normal = backfaceHit ? -normal : normal;
 
 #if 1
     vec2 packedNormal = texture(material_getTexture(material.normalMap), uv).rg;
