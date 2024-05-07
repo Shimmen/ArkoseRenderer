@@ -43,9 +43,22 @@ RenderPipelineNode::ExecuteCallback PathTracerNode::construct(GpuScene& scene, R
     ShaderFile raygen { "pathtracer/pathtracer.rgen" };
     ShaderFile defaultMissShader { "pathtracer/miss.rmiss" };
     ShaderFile shadowMissShader { "pathtracer/shadow.rmiss" };
-    HitGroup mainHitGroup { ShaderFile("pathtracer/closesthit.rchit"),
-                            ShaderFile("pathtracer/anyhit.rahit") };
-    ShaderBindingTable sbt { raygen, { mainHitGroup }, { defaultMissShader, shadowMissShader } };
+
+    ShaderDefine defaultBrdf = ShaderDefine::makeSymbol("PATHTRACER_BRDF_DEFAULT");
+    ShaderDefine glassBrdf = ShaderDefine::makeSymbol("PATHTRACER_BRDF_GLASS");
+
+    HitGroup opaqueDefaultBrdfHitGroup { ShaderFile("pathtracer/closesthit.rchit", { defaultBrdf }) };
+    HitGroup maskedDefaultBrdfHitGroup { ShaderFile("pathtracer/closesthit.rchit", { defaultBrdf }),
+                                         ShaderFile("pathtracer/anyhit.rahit", { defaultBrdf }) };
+    HitGroup translucentGlassBrdfHitGroup { ShaderFile("pathtracer/closesthit.rchit", { glassBrdf }) };
+
+    ShaderBindingTable sbt;
+    sbt.setRayGenerationShader(raygen);
+    sbt.setMissShader(0, defaultMissShader);
+    sbt.setMissShader(1, shadowMissShader);
+    sbt.setHitGroup(0, opaqueDefaultBrdfHitGroup);
+    sbt.setHitGroup(1, maskedDefaultBrdfHitGroup);
+    sbt.setHitGroup(2, translucentGlassBrdfHitGroup);
 
     StateBindings stateDataBindings;
     stateDataBindings.at(0, frameBindingSet);
