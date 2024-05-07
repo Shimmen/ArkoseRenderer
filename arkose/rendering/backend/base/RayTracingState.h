@@ -5,6 +5,7 @@
 
 class HitGroup {
 public:
+    HitGroup();
     explicit HitGroup(ShaderFile closestHit, std::optional<ShaderFile> anyHit = {}, std::optional<ShaderFile> intersection = {});
 
     const ShaderFile& closestHit() const { return m_closestHit; }
@@ -15,10 +16,12 @@ public:
     bool hasIntersectionShader() const { return m_intersection.has_value(); }
     const ShaderFile& intersection() const { return m_intersection.value(); }
 
+    bool valid() const;
+
 private:
-    ShaderFile m_closestHit;
-    std::optional<ShaderFile> m_anyHit;
-    std::optional<ShaderFile> m_intersection;
+    ShaderFile m_closestHit {};
+    std::optional<ShaderFile> m_anyHit {};
+    std::optional<ShaderFile> m_intersection {};
 };
 
 class ShaderBindingTable {
@@ -29,12 +32,16 @@ public:
     ShaderBindingTable() = default;
     ShaderBindingTable(ShaderFile rayGen, std::vector<HitGroup> hitGroups, std::vector<ShaderFile> missShaders);
 
+    void setRayGenerationShader(ShaderFile);
+    void setMissShader(u32 index, ShaderFile);
+    void setHitGroup(u32 index, HitGroup);
+
     const ShaderFile& rayGen() const { return m_rayGen; }
     const std::vector<HitGroup>& hitGroups() const { return m_hitGroups; }
     const std::vector<ShaderFile>& missShaders() const { return m_missShaders; }
 
     std::vector<ShaderFile> allReferencedShaderFiles() const;
-    const Shader& pseudoShader() const { return m_pseudoShader; }
+    Shader const& pseudoShader() const;
 
 private:
     // TODO: In theory we can have more than one ray gen shader!
@@ -43,7 +50,7 @@ private:
     std::vector<ShaderFile> m_missShaders;
 
     // A shader which is simply a collection of all used shader files
-    Shader m_pseudoShader;
+    mutable Shader m_pseudoShader;
 };
 
 class RayTracingState : public Resource {

@@ -3,6 +3,8 @@
 #include "rendering/backend/shader/Shader.h"
 #include "core/Assert.h"
 
+HitGroup::HitGroup() = default;
+
 HitGroup::HitGroup(ShaderFile closestHit, std::optional<ShaderFile> anyHit, std::optional<ShaderFile> intersection)
     : m_closestHit(closestHit)
     , m_anyHit(anyHit)
@@ -11,6 +13,11 @@ HitGroup::HitGroup(ShaderFile closestHit, std::optional<ShaderFile> anyHit, std:
     ARKOSE_ASSERT(closestHit.type() == ShaderFileType::RTClosestHit);
     ARKOSE_ASSERT(!anyHit.has_value() || anyHit.value().type() == ShaderFileType::RTAnyHit);
     ARKOSE_ASSERT(!intersection.has_value() || intersection.value().type() == ShaderFileType::RTIntersection);
+}
+
+bool HitGroup::valid() const
+{
+    return m_closestHit.valid();
 }
 
 ShaderBindingTable::ShaderBindingTable(ShaderFile rayGen, std::vector<HitGroup> hitGroups, std::vector<ShaderFile> missShaders)
@@ -24,6 +31,36 @@ ShaderBindingTable::ShaderBindingTable(ShaderFile rayGen, std::vector<HitGroup> 
     }
 
     m_pseudoShader = Shader(allReferencedShaderFiles(), ShaderType::RayTrace);
+}
+
+void ShaderBindingTable::setRayGenerationShader(ShaderFile rayGenerationShader)
+{
+    ARKOSE_ASSERT(rayGenerationShader.type() == ShaderFileType::RTRaygen);
+
+    ARKOSE_ASSERT(!m_rayGen.valid());
+    m_rayGen = std::move(rayGenerationShader);
+}
+
+void ShaderBindingTable::setMissShader(u32 index, ShaderFile missShader)
+{
+    ARKOSE_ASSERT(missShader.type() == ShaderFileType::RTMiss);
+
+    if (index >= m_missShaders.size()) {
+        m_missShaders.resize(index + 1);
+    }
+
+    ARKOSE_ASSERT(!m_missShaders[index].valid());
+    m_missShaders[index] = std::move(missShader);
+}
+
+void ShaderBindingTable::setHitGroup(u32 index, HitGroup hitGroup)
+{
+    if (index >= m_hitGroups.size()) {
+        m_hitGroups.resize(index + 1);
+    }
+
+    ARKOSE_ASSERT(!m_hitGroups[index].valid());
+    m_hitGroups[index] = std::move(hitGroup);
 }
 
 std::vector<ShaderFile> ShaderBindingTable::allReferencedShaderFiles() const
@@ -47,6 +84,15 @@ std::vector<ShaderFile> ShaderBindingTable::allReferencedShaderFiles() const
     }
 
     return files;
+}
+
+Shader const& ShaderBindingTable::pseudoShader() const
+{
+    if (m_pseudoShader.files().size() == 0) {
+        m_pseudoShader = Shader(allReferencedShaderFiles(), ShaderType::RayTrace);
+    }
+
+    return m_pseudoShader;
 }
 
 

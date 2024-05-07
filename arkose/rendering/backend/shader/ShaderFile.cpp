@@ -85,6 +85,11 @@ ShaderFileType ShaderFile::type() const
     return m_type;
 }
 
+bool ShaderFile::valid() const
+{
+    return m_path.length() > 0 && m_type != ShaderFileType::Unknown;
+}
+
 bool ShaderFile::isRayTracingShaderFile() const
 {
     switch (type()) {
