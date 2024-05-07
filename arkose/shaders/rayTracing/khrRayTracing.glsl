@@ -45,6 +45,11 @@
 #define rt_LaunchID gl_LaunchIDEXT
 #define rt_LaunchSize gl_LaunchSizeEXT
 
+// NOTE: Not available in GL_NV_ray_tracing!
+#define rt_HitKind gl_HitKindEXT
+#define rt_HitKindFrontFace gl_HitKindFrontFacingTriangleEXT
+#define rt_HitKindBackFace gl_HitKindBackFacingTriangleEXT
+
 // Functions
 
 #define ignoreIntersection() ignoreIntersectionEXT
