@@ -726,16 +726,20 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                             */
 
                             uint8_t hitMask = 0x00;
+                            uint32_t sbtOffset = 0;
                             if (const ShaderMaterial* material = materialForHandle(meshSegment.material)) {
                                 switch (material->blendMode) {
                                 case BLEND_MODE_OPAQUE:
                                     hitMask = RT_HIT_MASK_OPAQUE;
+                                    sbtOffset = 0;
                                     break;
                                 case BLEND_MODE_MASKED:
                                     hitMask = RT_HIT_MASK_MASKED;
+                                    sbtOffset = 1;
                                     break;
                                 case BLEND_MODE_TRANSLUCENT:
                                     hitMask = RT_HIT_MASK_BLEND;
+                                    sbtOffset = 2;
                                     break;
                                 default:
                                     ASSERT_NOT_REACHED();
@@ -746,7 +750,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                             // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
                             rayTracingGeometryInstances.push_back(RTGeometryInstance { .blas = meshSegment.blas.get(),
                                                                                        .transform = &instance->transform(),
-                                                                                       .shaderBindingTableOffset = 0, // TODO: Generalize!
+                                                                                       .shaderBindingTableOffset = sbtOffset,
                                                                                        .customInstanceId = rtMeshIndex,
                                                                                        .hitMask = hitMask });
                         }
@@ -773,16 +777,20 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                             tlasBuildType = AccelerationStructureBuildType::FullBuild; // TODO: Only do a full rebuild sometimes!
 
                             uint8_t hitMask = 0x00;
+                            uint32_t sbtOffset = 0;
                             if (const ShaderMaterial* material = materialForHandle(meshSegment.material)) {
                                 switch (material->blendMode) {
                                 case BLEND_MODE_OPAQUE:
                                     hitMask = RT_HIT_MASK_OPAQUE;
+                                    sbtOffset = 0;
                                     break;
                                 case BLEND_MODE_MASKED:
                                     hitMask = RT_HIT_MASK_MASKED;
+                                    sbtOffset = 1;
                                     break;
                                 case BLEND_MODE_TRANSLUCENT:
                                     hitMask = RT_HIT_MASK_BLEND;
+                                    sbtOffset = 2;
                                     break;
                                 default:
                                     ASSERT_NOT_REACHED();
@@ -793,7 +801,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                             // TODO: Probably create a geometry per mesh but only a single instance per model, and use the SBT for material lookup!
                             rayTracingGeometryInstances.push_back(RTGeometryInstance { .blas = &blas,
                                                                                        .transform = &instance->transform(),
-                                                                                       .shaderBindingTableOffset = 0, // TODO: Generalize!
+                                                                                       .shaderBindingTableOffset = sbtOffset,
                                                                                        .customInstanceId = rtMeshIndex,
                                                                                        .hitMask = hitMask });
                         }

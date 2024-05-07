@@ -80,9 +80,17 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
     ShaderFile raygen { "ddgi/raygen.rgen", shaderDefines };
     ShaderFile defaultMissShader { "rayTracing/common/miss.rmiss" };
     ShaderFile shadowMissShader { "rayTracing/common/shadow.rmiss" };
-    HitGroup mainHitGroup { ShaderFile("rayTracing/common/opaque.rchit", shaderDefines),
-                            ShaderFile("rayTracing/common/masked.rahit", shaderDefines) };
-    ShaderBindingTable sbt { raygen, { mainHitGroup }, { defaultMissShader, shadowMissShader } };
+    HitGroup opaqueDefaultBrdfHitGroup { ShaderFile("rayTracing/common/opaque.rchit", shaderDefines) };
+    HitGroup maskedDefaultBrdfHitGroup { ShaderFile("rayTracing/common/opaque.rchit", shaderDefines),
+                                         ShaderFile("rayTracing/common/masked.rahit", shaderDefines) };
+
+    ShaderBindingTable sbt;
+    sbt.setRayGenerationShader(raygen);
+    sbt.setMissShader(0, defaultMissShader);
+    sbt.setMissShader(1, shadowMissShader);
+    sbt.setHitGroup(0, opaqueDefaultBrdfHitGroup);
+    sbt.setHitGroup(1, maskedDefaultBrdfHitGroup);
+    sbt.setHitGroup(2, opaqueDefaultBrdfHitGroup); // TODO: Make suitable hit group!
 
     StateBindings rtStateDataBindings;
     rtStateDataBindings.at(0, frameBindingSet);
