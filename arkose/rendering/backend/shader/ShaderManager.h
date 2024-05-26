@@ -32,7 +32,7 @@ public:
     std::string resolveSpirvAssemblyPath(ShaderFile const&) const;
     std::string resolveHlslPath(ShaderFile const&) const;
 
-    std::optional<std::string> loadAndCompileImmediately(const ShaderFile&);
+    void registerShaderFile(ShaderFile const&);
 
     SpirvData const& spirv(ShaderFile const&) const;
     DXILData const& dxil(ShaderFile const&) const;
@@ -53,7 +53,15 @@ private:
         CompiledShader() = default;
         CompiledShader(ShaderManager&, const ShaderFile&, std::string resolvedPath);
 
-        bool tryLoadingFromBinaryCache();
+        enum class TargetType {
+            Spirv,
+            DXIL,
+        };
+
+        bool tryLoadingFromBinaryCache(TargetType);
+        void compileWithRetry(TargetType);
+
+        bool compile(TargetType);
         bool recompile();
 
         uint64_t findLatestEditTimestampInIncludeTree(bool scanForNewIncludes = false);

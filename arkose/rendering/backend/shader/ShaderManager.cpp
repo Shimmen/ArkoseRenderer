@@ -43,9 +43,15 @@ void ShaderManager::startFileWatching(unsigned msBetweenPolls, FilesChangedCallb
                 std::vector<std::string> recompiledFiles {};
                 for (auto& [_, compiledShader] : m_compiledShaders) {
 
-                    uint64_t latestTimestamp = compiledShader->findLatestEditTimestampInIncludeTree();
-                    if (latestTimestamp <= compiledShader->compiledTimestamp)
+                    if (compiledShader->compiledTimestamp == 0) { 
+                        // This shader has only been registered but never compiled, so nothing to recompile
                         continue;
+                    }
+
+                    uint64_t latestTimestamp = compiledShader->findLatestEditTimestampInIncludeTree();
+                    if (latestTimestamp <= compiledShader->compiledTimestamp) {
+                        continue;
+                    }
 
                     ARKOSE_LOG(Info, "Recompiling shader '{}'", compiledShader->resolvedFilePath);
 
@@ -165,7 +171,7 @@ std::string ShaderManager::resolveHlslPath(ShaderFile const& shaderFile) const
     return resolvedPath;
 }
 
-std::optional<std::string> ShaderManager::loadAndCompileImmediately(const ShaderFile& shaderFile)
+void ShaderManager::registerShaderFile( ShaderFile const& shaderFile)
 {
     std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
 
@@ -178,23 +184,12 @@ std::optional<std::string> ShaderManager::loadAndCompileImmediately(const Shader
         std::string resolvedPath = resolveSourceFilePath(shaderName);
 
         if (!FileIO::isFileReadable(resolvedPath)) {
-            return "file '" + shaderName + "' not found";
+            ARKOSE_LOG(Error, "ShaderManager: file '{}' not found", shaderName);
         }
 
-        auto compiledShader = std::make_unique<CompiledShader>(*this, shaderFile, resolvedPath);
-        if (compiledShader->tryLoadingFromBinaryCache() == false) {
-            compiledShader->recompile();
-        }
-
-        m_compiledShaders[identifer] = std::move(compiledShader);
+        // It's not compiled *yet*, but it's in a state where we can store compiled results, hence the name..
+        m_compiledShaders[identifer] = std::make_unique<CompiledShader>(*this, shaderFile, resolvedPath);
     }
-
-    CompiledShader& compiledShader = *m_compiledShaders[identifer];
-    if (compiledShader.currentSpirvBinary.empty() && compiledShader.currentDxilBinary.empty()) {
-        return compiledShader.lastCompileError;
-    }
-
-    return {};
 }
 
 ShaderManager::SpirvData const& ShaderManager::spirv(const ShaderFile& shaderFile) const
@@ -207,11 +202,11 @@ ShaderManager::SpirvData const& ShaderManager::spirv(const ShaderFile& shaderFil
     //  because the frontend makes sure to not run if shaders don't work.
     ARKOSE_ASSERT(result != m_compiledShaders.end());
 
-    ShaderManager::CompiledShader const& data = *result->second;
+    ShaderManager::CompiledShader& data = *result->second;
     if (data.currentSpirvBinary.size() > 0) {
         return data.currentSpirvBinary;
     } else {
-        ARKOSE_LOG(Fatal, "Trying to get a SPIR-V binary from a shader that was not compiled for SPIR-V, exiting.");
+        data.compileWithRetry(CompiledShader::TargetType::Spirv);
         return data.currentSpirvBinary;
     }
 }
@@ -226,11 +221,11 @@ ShaderManager::DXILData const& ShaderManager::dxil(ShaderFile const& shaderFile)
     //  because the frontend makes sure to not run if shaders don't work.
     ARKOSE_ASSERT(result != m_compiledShaders.end());
 
-    const ShaderManager::CompiledShader& data = *result->second;
+    ShaderManager::CompiledShader& data = *result->second;
     if (data.currentDxilBinary.size() > 0) {
         return data.currentDxilBinary;
     } else {
-        ARKOSE_LOG(Fatal, "Trying to get a DXIL binary from a shader that was not compiled for DXIL, exiting.");
+        data.compileWithRetry(CompiledShader::TargetType::DXIL);
         return data.currentDxilBinary;
     }
 }
@@ -247,66 +242,68 @@ ShaderManager::CompiledShader::CompiledShader(ShaderManager& manager, const Shad
     }
 }
 
-bool ShaderManager::CompiledShader::tryLoadingFromBinaryCache()
+bool ShaderManager::CompiledShader::tryLoadingFromBinaryCache(TargetType targetType)
 {
     SCOPED_PROFILE_ZONE();
 
-    std::string spirvPath = shaderManager.resolveSpirvPath(shaderFile);
-    std::string dxilPath = shaderManager.resolveDxilPath(shaderFile);
+    std::string cachePath;
 
-    struct stat spirvStatResult {};
-    bool spirvCacheExists = stat(spirvPath.c_str(), &spirvStatResult) == 0;
+    switch (targetType) {
+    case TargetType::Spirv:
+        cachePath = shaderManager.resolveSpirvPath(shaderFile);
+        break;
+    case TargetType::DXIL:
+        cachePath = shaderManager.resolveDxilPath(shaderFile);
+        break;
+    }
 
-    struct stat dxilStatResult { };
-    bool dxilCacheExists = stat(dxilPath.c_str(), &dxilStatResult) == 0;
+    struct stat statResult { };
+    bool cacheExists = stat(cachePath.c_str(), &statResult) == 0;
 
-    // Do we allow a shader to be compile with just one or the other binary representation,
-    // or should we require both of them to exist? The latter is stricter but works better
-    // when actually working against DXIL.. in the future we probably need some system
-    // which queries for the actual files we want..
-    bool allowEitherOr = false;
-
-    if (allowEitherOr) {
-        if (!spirvCacheExists && !dxilCacheExists) {
-            return false;
-        }
-    } else {
-        if (!spirvCacheExists || !dxilCacheExists) {
-            return false;
-        }
+    if (!cacheExists) {
+        return false;
     }
 
     u64 includeTreeLatestTimestamp = findLatestEditTimestampInIncludeTree(true);
-    u64 cachedTimestamp = 0;
-
-    if (spirvCacheExists) {
-        if (spirvStatResult.st_mtime < includeTreeLatestTimestamp) {
-            return false;
-        }
-        cachedTimestamp = spirvStatResult.st_mtime;
+    if (statResult.st_mtime < includeTreeLatestTimestamp) {
+        return false;
     }
 
-    if (dxilCacheExists) {
-        if (dxilStatResult.st_mtime < includeTreeLatestTimestamp) {
-            return false;
-        }
-        cachedTimestamp = dxilStatResult.st_mtime;
+    switch (targetType) {
+    case TargetType::Spirv:
+        currentSpirvBinary = FileIO::readBinaryDataFromFile<u32>(cachePath).value();
+        break;
+    case TargetType::DXIL:
+        currentDxilBinary = FileIO::readBinaryDataFromFile<u8>(cachePath).value();
+        break;
     }
 
-    if (spirvCacheExists) {
-        currentSpirvBinary = FileIO::readBinaryDataFromFile<u32>(spirvPath).value();
-    }
-    if (dxilCacheExists) {
-        currentDxilBinary = FileIO::readBinaryDataFromFile<u8>(dxilPath).value();
-    }
-
-    compiledTimestamp = cachedTimestamp;
+    compiledTimestamp = statResult.st_mtime;
     lastCompileError.clear();
 
     return true;
 }
 
-bool ShaderManager::CompiledShader::recompile()
+void ShaderManager::CompiledShader::compileWithRetry(TargetType targetType)
+{
+    if (tryLoadingFromBinaryCache(targetType)) {
+        return;
+    }
+
+    do {
+        if (!compile(targetType)) {
+            ARKOSE_LOG(Error, "Shader file error: {}", lastCompileError);
+#ifdef _WIN32
+            ARKOSE_LOG(Error, "Edit & and save the shader, then ...");
+            system("pause");
+#else
+            ARKOSE_LOG(Fatal, "Exiting due to bad shader at startup.");
+#endif
+        }
+    } while (lastCompileError.size() > 0);
+}
+
+bool ShaderManager::CompiledShader::compile(TargetType targetType)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -334,13 +331,13 @@ bool ShaderManager::CompiledShader::recompile()
             }
 
             #if WITH_D3D12
-            if constexpr (true) {
+            if (targetType == TargetType::DXIL) {
                 SCOPED_PROFILE_ZONE_NAMED("SPIR-V to HLSL");
 
                 spirv_cross::CompilerHLSL hlslCompiler { currentSpirvBinary };
 
                 spirv_cross::CompilerHLSL::Options options {};
-                options.shader_model = 60; // i.e. shader model 6.0 (todo: use latest version of DXC and SM 6.6+)
+                options.shader_model = 68; // i.e. shader model 6.8
 
                 spv::ExecutionModel spvExecutionModel = spv::ExecutionModelMax;
                 switch (shaderFile.type()) {
@@ -419,6 +416,11 @@ bool ShaderManager::CompiledShader::recompile()
     case SourceType::HLSL: {
     #if WITH_D3D12
 
+        if (targetType == TargetType::Spirv) {
+            ARKOSE_LOG(Error, "Trying to compile HLSL source file into SPIR-V which is not yet supported!");
+            return false;
+        }
+
         auto result = DxcInterface::compileShader(shaderFile, resolvedFilePath);
         compilationSuccess = result->success();
 
@@ -446,6 +448,29 @@ bool ShaderManager::CompiledShader::recompile()
     compiledTimestamp = lastEditTimestamp;
 
     return compilationSuccess;
+}
+
+bool ShaderManager::CompiledShader::recompile()
+{
+    SCOPED_PROFILE_ZONE();
+
+    ARKOSE_ASSERT(currentSpirvBinary.size() > 0 || currentDxilBinary.size() > 0);
+
+    // Assume that we need to compile whatever binaries we currently have loaded
+
+    if (currentSpirvBinary.size() > 0) { 
+        if (!compile(TargetType::Spirv)) { 
+            return false;
+        }
+    }
+
+    if (currentDxilBinary.size() > 0) {
+        if (!compile(TargetType::DXIL)) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree(bool scanForNewIncludes)

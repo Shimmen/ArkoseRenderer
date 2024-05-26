@@ -50,19 +50,7 @@ ShaderFile::ShaderFile(std::string path, ShaderFileType type, std::vector<Shader
             m_defines_identifier.append(";");
     }
 
-    std::optional<std::string> maybeError = {};
-    do {
-        maybeError = ShaderManager::instance().loadAndCompileImmediately(*this);
-        if (maybeError.has_value()) {
-            ARKOSE_LOG(Error, "Shader file error: {}", maybeError.value());
-#ifdef _WIN32
-            ARKOSE_LOG(Error, "Edit & and save the shader, then ...");
-            system("pause");
-#else
-            ARKOSE_LOG(Fatal, "Exiting due to bad shader at startup.");
-#endif
-        }
-    } while (maybeError.has_value());
+    ShaderManager::instance().registerShaderFile(*this);
 }
 
 const std::string& ShaderFile::path() const
