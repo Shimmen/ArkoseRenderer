@@ -288,8 +288,11 @@ void D3D12Backend::renderPipelineDidChange(RenderPipeline& renderPipeline)
     m_relativeFrameIndex = 0;
 }
 
-void D3D12Backend::shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline& pipeline)
+void D3D12Backend::shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline& renderPipeline)
 {
+    if (shaderNames.size() > 0) {
+        renderPipelineDidChange(renderPipeline);
+    }
 }
 
 void D3D12Backend::newFrame()
