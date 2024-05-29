@@ -560,36 +560,32 @@ bool D3D12Backend::setBufferDataUsingStagingBuffer(D3D12Buffer& buffer, const ui
 
 }
 
-void D3D12Backend::issueUploadCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const
+void D3D12Backend::issueOneOffCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const
 {
-    // "The texture and mesh data is uploaded using an upload heap. This happens during the initialization and shows how to transfer data to the GPU.
-    //  Ideally, this should be running on the copy queue but for the sake of simplicity it is run on the general graphics queue."
-
-    // Create our upload fence, command list and command allocator. This will be only used while creating the mesh buffer and the texture to upload data to the GPU.
     ComPtr<ID3D12Fence> uploadFence;
     if (auto hr = device().CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&uploadFence)); FAILED(hr)) {
-        ARKOSE_LOG(Fatal, "D3D12Backend: could not create fence for one-off upload command, exiting.");
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not create fence for one-off command, exiting.");
     }
 
-    ComPtr<ID3D12CommandAllocator> uploadCommandAllocator;
-    if (auto hr = device().CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&uploadCommandAllocator)); FAILED(hr)) {
-        ARKOSE_LOG(Fatal, "D3D12Backend: could not create command allocator for one-off upload command, exiting.");
+    ComPtr<ID3D12CommandAllocator> commandAllocator;
+    if (auto hr = device().CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&commandAllocator)); FAILED(hr)) {
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not create command allocator for one-off command, exiting.");
     }
 
-    ComPtr<ID3D12GraphicsCommandList> uploadCommandList;
-    if (auto hr = device().CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, uploadCommandAllocator.Get(), nullptr, IID_PPV_ARGS(&uploadCommandList)); FAILED(hr)) {
-        ARKOSE_LOG(Fatal, "D3D12Backend: could not create command list for one-off upload command, exiting.");
+    ComPtr<ID3D12GraphicsCommandList> commandList;
+    if (auto hr = device().CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, commandAllocator.Get(), nullptr, IID_PPV_ARGS(&commandList)); FAILED(hr)) {
+        ARKOSE_LOG(Fatal, "D3D12Backend: could not create command list for one-off command, exiting.");
     }
 
     if (d3d12debugMode) {
-        uploadCommandList->SetName(L"TemporaryUploadCommandList");
+        commandList->SetName(L"TemporaryCommandList");
     }
 
-    callback(*uploadCommandList.Get());
+    callback(*commandList.Get());
 
-    uploadCommandList->Close();
+    commandList->Close();
 
-    ID3D12CommandList* commandLists[] = { uploadCommandList.Get() };
+    ID3D12CommandList* commandLists[] = { commandList.Get() };
     m_commandQueue->ExecuteCommandLists(std::extent<decltype(commandLists)>::value, commandLists);
     m_commandQueue->Signal(uploadFence.Get(), 1);
 
@@ -598,9 +594,15 @@ void D3D12Backend::issueUploadCommand(const std::function<void(ID3D12GraphicsCom
 
     waitForFence(uploadFence.Get(), 1, waitEvent);
 
-    uploadCommandAllocator->Reset();
+    commandAllocator->Reset();
     CloseHandle(waitEvent);
+}
 
+void D3D12Backend::issueUploadCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const
+{
+    // "The texture and mesh data is uploaded using an upload heap. This happens during the initialization and shows how to transfer data to the GPU.
+    //  Ideally, this should be running on the copy queue but for the sake of simplicity it is run on the general graphics queue."
+    issueOneOffCommand(callback);
 }
 
 D3D12DescriptorHeapAllocator& D3D12Backend::copyableDescriptorHeapAllocator()

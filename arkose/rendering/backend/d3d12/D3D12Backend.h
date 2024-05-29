@@ -76,6 +76,7 @@ public:
     bool setBufferDataUsingMapping(ID3D12Resource&, const uint8_t* data, size_t size, size_t offset = 0);
     bool setBufferDataUsingStagingBuffer(struct D3D12Buffer&, const uint8_t* data, size_t size, size_t offset = 0);
 
+    void issueOneOffCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const;
     void issueUploadCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const;
 
     D3D12DescriptorHeapAllocator& copyableDescriptorHeapAllocator();
