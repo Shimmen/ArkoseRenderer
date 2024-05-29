@@ -1,11 +1,11 @@
 #include "rendering/backend/base/CommandList.h"
 
 class D3D12Backend;
-class D3D12Buffer;
-class D3D12RenderState;
-class D3D12Texture;
-class ID3D12GraphicsCommandList;
-class ID3D12Resource;
+struct D3D12Buffer;
+struct D3D12RenderState;
+struct D3D12Texture;
+struct ID3D12GraphicsCommandList;
+struct ID3D12Resource;
 
 #if defined(TRACY_ENABLE)
 #include <d3d12.h>
