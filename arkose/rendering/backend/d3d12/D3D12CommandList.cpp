@@ -215,7 +215,7 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearVa
     });
 
     constexpr bool singleHandleToDescriptorRange = false; // TODO: Can we set this to true? Not sure..
-    m_commandList->OMSetRenderTargets(renderTarget.colorAttachmentCount(), renderTarget.colorRenderTargetHandles, singleHandleToDescriptorRange,
+    m_commandList->OMSetRenderTargets(narrow_cast<UINT>(renderTarget.colorAttachmentCount()), renderTarget.colorRenderTargetHandles, singleHandleToDescriptorRange,
                                       renderTarget.hasDepthAttachment() ? &renderTarget.depthStencilRenderTargetHandle : nullptr);
 
     m_commandList->SetPipelineState(renderState.pso.Get());
