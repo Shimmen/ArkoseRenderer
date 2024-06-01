@@ -39,9 +39,6 @@ struct ShaderDefine {
     }
 };
 
-// TODO: Remove the `ShaderFileType` name entirely, just use `ShaderStage`
-using ShaderFileType = ShaderStage;
-
 struct ShaderFile {
     ShaderFile() = default;
     explicit ShaderFile(const std::string& path, std::vector<ShaderDefine> = {});
