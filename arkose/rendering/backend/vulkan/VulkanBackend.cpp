@@ -2062,7 +2062,7 @@ std::optional<VkPushConstantRange> VulkanBackend::getPushConstantRangeForShader(
         case ShaderFileType::Compute:
             stageFlag = VK_SHADER_STAGE_COMPUTE_BIT;
             break;
-        case ShaderFileType::RTRaygen:
+        case ShaderFileType::RTRayGen:
             stageFlag = VK_SHADER_STAGE_RAYGEN_BIT_NV;
             break;
         case ShaderFileType::RTClosestHit:
@@ -2137,7 +2137,7 @@ std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>
         case ShaderFileType::Compute:
             stageFlag = VK_SHADER_STAGE_COMPUTE_BIT;
             break;
-        case ShaderFileType::RTRaygen:
+        case ShaderFileType::RTRayGen:
             stageFlag = VK_SHADER_STAGE_RAYGEN_BIT_NV;
             break;
         case ShaderFileType::RTClosestHit:
@@ -2305,7 +2305,7 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
         case ShaderFileType::Compute:
             stageFlag = ShaderStage::Compute;
             break;
-        case ShaderFileType::RTRaygen:
+        case ShaderFileType::RTRayGen:
             stageFlag = ShaderStage::RTRayGen;
             break;
         case ShaderFileType::RTClosestHit:

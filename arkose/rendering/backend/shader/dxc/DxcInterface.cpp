@@ -14,7 +14,7 @@ static wchar_t const* entryPointNameForShaderFile(ShaderFile const& shaderFile)
         return L"PS_main";
     case ShaderFileType::Compute:
         return L"CS_main";
-    case ShaderFileType::RTRaygen:
+    case ShaderFileType::RTRayGen:
         return L"RAYGEN_main";
     case ShaderFileType::RTClosestHit:
         return L"CLOSESTHIT_main";
@@ -46,7 +46,7 @@ static wchar_t const* shaderModelForShaderFile(ShaderFile const& shaderFile)
         return L"ps_6_8";
     case ShaderFileType::Compute:
         return L"cs_6_8";
-    case ShaderFileType::RTRaygen:
+    case ShaderFileType::RTRayGen:
         return L"raygeneration_6_8";
     case ShaderFileType::RTClosestHit:
         return L"closesthit_6_8";

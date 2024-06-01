@@ -25,7 +25,7 @@ ShaderBindingTable::ShaderBindingTable(ShaderFile rayGen, std::vector<HitGroup> 
     , m_hitGroups(std::move(hitGroups))
     , m_missShaders(std::move(missShaders))
 {
-    ARKOSE_ASSERT(m_rayGen.type() == ShaderFileType::RTRaygen);
+    ARKOSE_ASSERT(m_rayGen.type() == ShaderFileType::RTRayGen);
     for (const auto& miss : m_missShaders) {
         ARKOSE_ASSERT(miss.type() == ShaderFileType::RTMiss);
     }
@@ -35,7 +35,7 @@ ShaderBindingTable::ShaderBindingTable(ShaderFile rayGen, std::vector<HitGroup> 
 
 void ShaderBindingTable::setRayGenerationShader(ShaderFile rayGenerationShader)
 {
-    ARKOSE_ASSERT(rayGenerationShader.type() == ShaderFileType::RTRaygen);
+    ARKOSE_ASSERT(rayGenerationShader.type() == ShaderFileType::RTRayGen);
 
     ARKOSE_ASSERT(!m_rayGen.valid());
     m_rayGen = std::move(rayGenerationShader);

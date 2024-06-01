@@ -42,7 +42,7 @@ enum class ShaderFileType {
     Vertex,
     Fragment,
     Compute,
-    RTRaygen,
+    RTRayGen,
     RTClosestHit,
     RTAnyHit,
     RTIntersection,

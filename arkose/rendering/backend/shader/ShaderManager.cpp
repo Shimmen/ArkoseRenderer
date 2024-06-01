@@ -106,7 +106,7 @@ std::string ShaderManager::createShaderIdentifier(const ShaderFile& shaderFile) 
         case ShaderFileType::Compute:
             identifier += "_CS";
             break;
-        case ShaderFileType::RTRaygen:
+        case ShaderFileType::RTRayGen:
             identifier += "_RAYGEN";
             break;
         case ShaderFileType::RTClosestHit:
@@ -436,7 +436,7 @@ bool ShaderManager::CompiledShader::compile(TargetType targetType)
                 case ShaderFileType::Compute:
                     spvExecutionModel = spv::ExecutionModelGLCompute;
                     break;
-                case ShaderFileType::RTRaygen:
+                case ShaderFileType::RTRayGen:
                     spvExecutionModel = spv::ExecutionModelRayGenerationKHR; // NOTE: Only works with KHR extension!
                     break;
                 case ShaderFileType::RTClosestHit:

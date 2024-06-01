@@ -17,7 +17,7 @@ static shaderc_shader_kind glslShaderKindForShaderFile(ShaderFile const& shaderF
         return shaderc_fragment_shader;
     case ShaderFileType::Compute:
         return shaderc_compute_shader;
-    case ShaderFileType::RTRaygen:
+    case ShaderFileType::RTRayGen:
         return shaderc_raygen_shader;
     case ShaderFileType::RTClosestHit:
         return shaderc_closesthit_shader;

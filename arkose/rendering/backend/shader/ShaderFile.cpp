@@ -85,7 +85,7 @@ bool ShaderFile::isRayTracingShaderFile() const
     case ShaderFileType::RTClosestHit:
     case ShaderFileType::RTIntersection:
     case ShaderFileType::RTMiss:
-    case ShaderFileType::RTRaygen:
+    case ShaderFileType::RTRayGen:
         return true;
     default:
         return false;
@@ -103,7 +103,7 @@ ShaderFileType ShaderFile::typeFromPath(const std::string& path)
     else if (ext5 == ".frag")
         return ShaderFileType::Fragment;
     else if (ext5 == ".rgen")
-        return ShaderFileType::RTRaygen;
+        return ShaderFileType::RTRayGen;
     else if (ext5 == ".comp")
         return ShaderFileType::Compute;
     else if (ext5 == ".rint")
