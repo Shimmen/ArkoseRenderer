@@ -3,6 +3,8 @@
 #include "utility/EnumHelpers.h"
 
 enum class ShaderStage {
+    Unknown        = 0x000,
+
     Vertex         = 0x001,
     Fragment       = 0x002,
     Compute        = 0x004,
