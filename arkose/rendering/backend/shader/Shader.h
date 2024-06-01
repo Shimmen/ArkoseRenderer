@@ -1,29 +1,11 @@
 #pragma once
 
 #include "rendering/backend/shader/ShaderFile.h"
-#include "utility/EnumHelpers.h"
+#include "rendering/backend/shader/ShaderStage.h"
 #include <string>
 #include <vector>
 #include <optional>
 #include <unordered_map>
-
-enum class ShaderStage {
-    Vertex = 0x01,
-    Fragment = 0x02,
-    Compute = 0x04,
-    RTRayGen = 0x08,
-    RTMiss = 0x10,
-    RTClosestHit = 0x20,
-    RTAnyHit = 0x40,
-    RTIntersection = 0x80,
-    Task = 0x100,
-    Mesh = 0x200,
-
-    AnyRasterize = Vertex | Fragment | Task | Mesh,
-    AnyRayTrace = RTRayGen | RTMiss | RTClosestHit | RTAnyHit | RTIntersection,
-    Any = AnyRasterize | AnyRayTrace | Compute
-};
-ARKOSE_ENUM_CLASS_BIT_FLAGS(ShaderStage)
 
 enum class ShaderType {
     Raster,
