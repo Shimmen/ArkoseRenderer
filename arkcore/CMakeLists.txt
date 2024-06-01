@@ -82,6 +82,7 @@ set(ARKCORE_SOURCES
   arkcore/utility/ParseContext.cpp
   arkcore/utility/ParseContext.h
   arkcore/utility/Profiling.h
+  arkcore/utility/StringHelpers.h
 
   PARENT_SCOPE
   )
