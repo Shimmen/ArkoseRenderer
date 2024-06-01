@@ -30,12 +30,16 @@ public:
     std::string resolveDxilPath(ShaderFile const&) const;
     std::string resolveSpirvPath(ShaderFile const&) const;
     std::string resolveSpirvAssemblyPath(ShaderFile const&) const;
+    std::string resolveMetadataPath(ShaderFile const&) const;
     std::string resolveHlslPath(ShaderFile const&) const;
 
     void registerShaderFile(ShaderFile const&);
 
     SpirvData const& spirv(ShaderFile const&) const;
     DXILData const& dxil(ShaderFile const&) const;
+
+    void ensureCompatibleNamedConstants(Shader const&) const;
+    bool hasCompatibleNamedConstants(std::vector<ShaderFile> const&) const;
 
     using FilesChangedCallback = std::function<void(const std::vector<std::string>&)>;
     void startFileWatching(unsigned msBetweenPolls, FilesChangedCallback filesChangedCallback = {});
@@ -64,6 +68,11 @@ private:
         bool compile(TargetType);
         bool recompile();
 
+        bool collectNamedConstants();
+
+        void writeShaderMetadataFile() const;
+        bool readShaderMetadataFile();
+
         uint64_t findLatestEditTimestampInIncludeTree(bool scanForNewIncludes = false);
         std::vector<std::string> findAllIncludedFiles() const;
 
@@ -88,6 +97,15 @@ private:
         DXILData currentDxilBinary {};
 
         std::string lastCompileError {};
+
+        struct NamedConstant {
+            std::string name {};
+            std::string type {};
+            u32 size { 0 };
+            u32 offset { 0 };
+        };
+
+        std::vector<NamedConstant> namedConstants {};
     };
 
     std::string m_shaderBasePath;

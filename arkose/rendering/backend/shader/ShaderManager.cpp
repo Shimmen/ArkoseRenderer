@@ -4,11 +4,13 @@
 #include "core/Logging.h"
 #include "utility/FileIO.h"
 #include "utility/Profiling.h"
+#include "utility/StringHelpers.h"
 #include <algorithm>
 #include <chrono>
 #include <cstddef>
 #include <thread>
 #include <sys/stat.h>
+#include <spirv_cross.hpp>
 #include <spirv_hlsl.hpp>
 
 #include "rendering/backend/shader/shaderc/ShadercInterface.h"
@@ -164,6 +166,13 @@ std::string ShaderManager::resolveSpirvAssemblyPath(ShaderFile const& shaderFile
     return resolvedPath;
 }
 
+std::string ShaderManager::resolveMetadataPath(ShaderFile const& shaderFile) const
+{
+    std::string metaName = createShaderIdentifier(shaderFile) + ".meta";
+    std::string resolvedPath = m_shaderBasePath + "/.cache/" + metaName;
+    return resolvedPath;
+}
+
 std::string ShaderManager::resolveHlslPath(ShaderFile const& shaderFile) const
 {
     std::string hlslName = createShaderIdentifier(shaderFile) + ".hlsl";
@@ -230,6 +239,75 @@ ShaderManager::DXILData const& ShaderManager::dxil(ShaderFile const& shaderFile)
     }
 }
 
+void ShaderManager::ensureCompatibleNamedConstants(Shader const& shader) const
+{
+    bool compatible = hasCompatibleNamedConstants(shader.files());
+    ARKOSE_ASSERTM(compatible, "ShaderManager: all shader files of a shader needs to have a compatible set of named constants, "
+                               "i.e. no overlap, unless it's the exact same type and name and offset.");
+}
+
+bool ShaderManager::hasCompatibleNamedConstants(std::vector<ShaderFile> const& shaderFiles) const
+{
+    SCOPED_PROFILE_ZONE();
+
+    if (shaderFiles.size() <= 1) { 
+        return true;
+    }
+
+    using Constant = CompiledShader::NamedConstant;
+    std::vector<Constant const*> constants;
+
+    {
+        std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
+        for (ShaderFile const& shaderFile : shaderFiles) {
+            auto entry = m_compiledShaders.find(createShaderIdentifier(shaderFile));
+            ARKOSE_ASSERT(entry != m_compiledShaders.end());
+            ShaderManager::CompiledShader const& compiledShader = *entry->second;
+
+            if (compiledShader.compiledTimestamp == 0) {
+                ARKOSE_LOG(Fatal, "ShaderManager: trying to check for compatible named constants on shader files that haven't yet been compiled. "
+                                  "This function will never attempt to compile files for you, as it won't know what backend/compiled representation "
+                                  "is needed, so it's expected that you don't call this until you're sure all of the files have successfully been compiled.");
+            }
+
+            for (Constant const& constant : compiledShader.namedConstants) {
+                constants.push_back(&constant);
+            }
+        }
+    }
+
+    if (constants.size() == 0) {
+        return true;
+    }
+
+    std::sort(constants.begin(), constants.end(), [&](Constant const* lhs, Constant const* rhs) { return lhs->offset < rhs->offset; });
+
+    Constant const* previousConstant = constants[0];
+    for (size_t constantIdx = 1; constantIdx < constants.size(); ++constantIdx) {
+        Constant const* thisConstant = constants[constantIdx];
+
+        if (thisConstant->offset > previousConstant->offset) {
+            if (thisConstant->offset >= previousConstant->offset + previousConstant->size) { 
+                // this constant is not overlapping with the previous one
+            } else {
+                // this constant has an offset within the previous ones' range which is clearly not allowed
+                return false;
+            }
+        } else if (thisConstant->offset == previousConstant->offset) {
+            if (thisConstant->size == previousConstant->size && thisConstant->name == previousConstant->name && thisConstant->type == previousConstant->type) { 
+                // these two constants are identical, so overlap is what we'd expect!
+            } else {
+                // same offset but different properties
+                return false;
+            }
+        }
+
+        previousConstant = thisConstant;
+    }
+
+    return true;
+}
+
 ShaderManager::CompiledShader::CompiledShader(ShaderManager& manager, const ShaderFile& shaderFile, std::string resolvedPath)
     : shaderManager(manager)
     , shaderFile(shaderFile)
@@ -281,6 +359,9 @@ bool ShaderManager::CompiledShader::tryLoadingFromBinaryCache(TargetType targetT
     compiledTimestamp = statResult.st_mtime;
     lastCompileError.clear();
 
+    // If there's a binary cache there should also be metadata available, assuming this shader needs it, so load that now
+    readShaderMetadataFile();
+
     return true;
 }
 
@@ -322,6 +403,11 @@ bool ShaderManager::CompiledShader::compile(TargetType targetType)
 
             includedFilePaths = result->includedFiles();
             lastCompileError.clear();
+
+            if (collectNamedConstants()) {
+                // For now it only contains info about named constants so we write it here
+                writeShaderMetadataFile();
+            }
 
             if constexpr (false) {
                 // TODO: Add back through ShadercInterface
@@ -471,6 +557,131 @@ bool ShaderManager::CompiledShader::recompile()
     }
 
     return true;
+}
+
+bool ShaderManager::CompiledShader::collectNamedConstants()
+{
+    SCOPED_PROFILE_ZONE();
+
+    ARKOSE_ASSERT(currentSpirvBinary.size() > 0);
+    ARKOSE_ASSERT(namedConstants.size() == 0);
+
+    spirv_cross::Compiler compiler { currentSpirvBinary };
+    spirv_cross::ShaderResources resources = compiler.get_shader_resources();
+
+    if (!resources.push_constant_buffers.empty()) {
+        ARKOSE_ASSERT(resources.push_constant_buffers.size() == 1);
+
+        spirv_cross::Resource const& pushConstantResource = resources.push_constant_buffers[0];
+        spirv_cross::SPIRType const& pushConstantType = compiler.get_type(pushConstantResource.type_id);
+
+        // With the NAMED_UNIFORMS macro all push constant blocks will contain exactly one struct with named members
+        if (pushConstantType.member_types.size() != 1) {
+            ARKOSE_LOG(Fatal, "ShaderManager: please use the NAMED_UNIFORMS macro to define push constants!");
+        }
+
+        const spirv_cross::TypeID& structTypeId = pushConstantType.member_types[0];
+        const spirv_cross::SPIRType& structType = compiler.get_type(structTypeId);
+        if (structType.basetype != spirv_cross::SPIRType::Struct) {
+            ARKOSE_LOG(Fatal, "ShaderManager: please use the NAMED_UNIFORMS macro to define push constants!");
+        }
+
+        size_t memberCount = structType.member_types.size();
+        for (int i = 0; i < memberCount; ++i) {
+
+            spirv_cross::TypeID memberTypeId = structType.member_types[i];
+            spirv_cross::SPIRType memberType = compiler.get_type(memberTypeId);
+
+            std::string memberTypeName;
+            switch (memberType.basetype) {
+                using namespace spirv_cross;
+            case SPIRType::Float:
+                memberTypeName = "float";
+                break;
+            case SPIRType::UInt:
+                memberTypeName = "uint";
+                break;
+            case SPIRType::Int:
+                memberTypeName = "int";
+                break;
+            default:
+                ARKOSE_LOG(Fatal, "ShaderManager: unknown type used for named constant");
+                memberTypeName = "unknown";
+                break;
+            }
+
+            if (memberType.columns > 1) {
+                memberTypeName = fmt::format("{}{}", memberTypeName, memberType.columns);
+            }
+            if (memberType.vecsize > 1) {
+                memberTypeName = fmt::format("{}{}", memberTypeName, memberType.vecsize);
+            }
+
+            std::string const& memberName = compiler.get_member_name(structTypeId, i);
+            size_t offset = compiler.type_struct_member_offset(structType, i);
+            size_t size = compiler.get_declared_struct_member_size(structType, i);
+
+            NamedConstant& constant = namedConstants.emplace_back();
+
+            constant.name = memberName;
+            constant.type = memberTypeName;
+            constant.offset = narrow_cast<u32>(offset);
+            constant.size = narrow_cast<u32>(size);
+        }
+    }
+
+    return namedConstants.size() > 0;
+}
+
+void ShaderManager::CompiledShader::writeShaderMetadataFile() const
+{
+    SCOPED_PROFILE_ZONE();
+
+    ARKOSE_ASSERT(namedConstants.size() > 0);
+
+    std::string metadataContent {};
+    for (NamedConstant const& constant : namedConstants) {
+        metadataContent.append(fmt::format("{}:{}:{}:{}\n", constant.name, constant.type, constant.size, constant.offset));
+    }
+
+    std::string metadataPath = shaderManager.resolveMetadataPath(shaderFile);
+    FileIO::writeTextDataToFile(metadataPath, metadataContent);
+}
+
+bool ShaderManager::CompiledShader::readShaderMetadataFile()
+{
+    SCOPED_PROFILE_ZONE();
+
+    namedConstants.clear();
+
+    std::string metadataPath = shaderManager.resolveMetadataPath(shaderFile);
+    bool readSuccess = FileIO::readFileLineByLine(metadataPath, [&](std::string const& line) {
+        
+        NamedConstant& constant = namedConstants.emplace_back();
+
+        StringHelpers::forEachToken(line, ':', [&](std::string_view token, size_t tokenIndex) {
+            switch (tokenIndex) {
+            case 0:
+                constant.name = token;
+                break;
+            case 1:
+                constant.type = token;
+                break;
+            case 2: {
+                auto result = std::from_chars(token.data(), token.data() + token.size(), constant.size);
+                ARKOSE_ASSERT(result.ec != std::errc::invalid_argument && result.ec != std::errc::result_out_of_range);
+            } break;
+            case 3: {
+                auto result = std::from_chars(token.data(), token.data() + token.size(), constant.offset);
+                ARKOSE_ASSERT(result.ec != std::errc::invalid_argument && result.ec != std::errc::result_out_of_range);
+            } break;
+            }
+        });
+
+        return FileIO::NextAction::Continue;
+    });
+
+    return readSuccess;
 }
 
 uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree(bool scanForNewIncludes)

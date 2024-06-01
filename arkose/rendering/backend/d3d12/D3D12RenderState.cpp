@@ -98,6 +98,11 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
         }
     }
 
+    // Ensure all named constants across the shader files are compatible with each other
+    // Note that this can't be called until we're sure all shaders are compiled, which they
+    // definitely should be now after we're set up all the shader modules.
+    ShaderManager::instance().ensureCompatibleNamedConstants(shader);
+
     // Create the root signature
     {
         std::vector<std::vector<D3D12_DESCRIPTOR_RANGE>> descriptorRangeStorage {}; // storage for if copies are needed

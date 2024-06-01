@@ -218,6 +218,11 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
         vkDestroyShaderModule(vulkanBackend.device(), shaderModule, nullptr);
     }
 
+    // Ensure all named constants across the shader files are compatible with each other
+    // Note that this can't be called until we're sure all shaders are compiled, which they
+    // definitely should be now after we're set up all the shader modules.
+    ShaderManager::instance().ensureCompatibleNamedConstants(sbt.pseudoShader());
+
     // Create buffer for the shader binding table
     {
         uint32_t sizeOfSingleHandle = vulkanBackend.rayTracingKHR().pipelineStateProperties().shaderGroupHandleSize;
