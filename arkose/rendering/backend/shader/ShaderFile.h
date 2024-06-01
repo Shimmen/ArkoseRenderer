@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rendering/backend/shader/ShaderStage.h"
 #include <vector>
 #include <string>
 #include <optional>
@@ -38,19 +39,8 @@ struct ShaderDefine {
     }
 };
 
-enum class ShaderFileType {
-    Vertex,
-    Fragment,
-    Compute,
-    RTRayGen,
-    RTClosestHit,
-    RTAnyHit,
-    RTIntersection,
-    RTMiss,
-    Task,
-    Mesh,
-    Unknown,
-};
+// TODO: Remove the `ShaderFileType` name entirely, just use `ShaderStage`
+using ShaderFileType = ShaderStage;
 
 struct ShaderFile {
     ShaderFile() = default;
