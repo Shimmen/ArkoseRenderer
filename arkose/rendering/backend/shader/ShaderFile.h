@@ -45,22 +45,22 @@ using ShaderFileType = ShaderStage;
 struct ShaderFile {
     ShaderFile() = default;
     explicit ShaderFile(const std::string& path, std::vector<ShaderDefine> = {});
-    ShaderFile(std::string path, ShaderFileType, std::vector<ShaderDefine> = {});
+    ShaderFile(std::string path, ShaderStage, std::vector<ShaderDefine> = {});
 
     [[nodiscard]] const std::string& path() const;
     [[nodiscard]] const std::vector<ShaderDefine>& defines() const;
     [[nodiscard]] const std::string& definesIdentifier() const;
-    [[nodiscard]] ShaderFileType type() const;
+    [[nodiscard]] ShaderStage shaderStage() const;
 
     bool valid() const;
 
     bool isRayTracingShaderFile() const;
 
 private:
-    static ShaderFileType typeFromPath(const std::string&);
+    static ShaderStage stageFromPath(const std::string&);
 
     std::string m_path;
     std::vector<ShaderDefine> m_defines;
     std::string m_defines_identifier;
-    ShaderFileType m_type { ShaderFileType::Unknown };
+    ShaderStage m_shaderStage { ShaderStage::Unknown };
 };

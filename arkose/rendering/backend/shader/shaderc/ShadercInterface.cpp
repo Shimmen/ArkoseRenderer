@@ -10,28 +10,28 @@
 
 static shaderc_shader_kind glslShaderKindForShaderFile(ShaderFile const& shaderFile)
 {
-    switch (shaderFile.type()) {
-    case ShaderFileType::Vertex:
+    switch (shaderFile.shaderStage()) {
+    case ShaderStage::Vertex:
         return shaderc_vertex_shader;
-    case ShaderFileType::Fragment:
+    case ShaderStage::Fragment:
         return shaderc_fragment_shader;
-    case ShaderFileType::Compute:
+    case ShaderStage::Compute:
         return shaderc_compute_shader;
-    case ShaderFileType::RTRayGen:
+    case ShaderStage::RTRayGen:
         return shaderc_raygen_shader;
-    case ShaderFileType::RTClosestHit:
+    case ShaderStage::RTClosestHit:
         return shaderc_closesthit_shader;
-    case ShaderFileType::RTAnyHit:
+    case ShaderStage::RTAnyHit:
         return shaderc_anyhit_shader;
-    case ShaderFileType::RTIntersection:
+    case ShaderStage::RTIntersection:
         return shaderc_intersection_shader;
-    case ShaderFileType::RTMiss:
+    case ShaderStage::RTMiss:
         return shaderc_miss_shader;
-    case ShaderFileType::Task:
+    case ShaderStage::Task:
         return shaderc_task_shader;
-    case ShaderFileType::Mesh:
+    case ShaderStage::Mesh:
         return shaderc_mesh_shader;
-    case ShaderFileType::Unknown:
+    case ShaderStage::Unknown:
         ARKOSE_LOG(Warning, "Can't find glsl shader kind for shader file of unknown type ('{}')", shaderFile.path());
         return shaderc_glsl_infer_from_source;
     default:

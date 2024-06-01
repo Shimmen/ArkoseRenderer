@@ -96,38 +96,38 @@ std::string ShaderManager::createShaderIdentifier(const ShaderFile& shaderFile) 
     // We need unique identifiers for each "ShaderFile" i.e. compiled unit, so we add this type
     // identifier to the identifier to solve that for the HLSL case.
     if (shaderFile.path().ends_with(".hlsl")) {
-        switch (shaderFile.type()) {
-        case ShaderFileType::Vertex:
+        switch (shaderFile.shaderStage()) {
+        case ShaderStage::Vertex:
             identifier += "_VS";
             break;
-        case ShaderFileType::Fragment:
+        case ShaderStage::Fragment:
             identifier += "_FS";
             break;
-        case ShaderFileType::Compute:
+        case ShaderStage::Compute:
             identifier += "_CS";
             break;
-        case ShaderFileType::RTRayGen:
+        case ShaderStage::RTRayGen:
             identifier += "_RAYGEN";
             break;
-        case ShaderFileType::RTClosestHit:
+        case ShaderStage::RTClosestHit:
             identifier += "_CLOSESTHIT";
             break;
-        case ShaderFileType::RTAnyHit:
+        case ShaderStage::RTAnyHit:
             identifier += "_ANYHIT";
             break;
-        case ShaderFileType::RTIntersection:
+        case ShaderStage::RTIntersection:
             identifier += "_INTERSECTION";
             break;
-        case ShaderFileType::RTMiss:
+        case ShaderStage::RTMiss:
             identifier += "_MISS";
             break;
-        case ShaderFileType::Task:
+        case ShaderStage::Task:
             identifier += "_TASK";
             break;
-        case ShaderFileType::Mesh:
+        case ShaderStage::Mesh:
             identifier += "_MESH";
             break;
-        case ShaderFileType::Unknown:
+        case ShaderStage::Unknown:
             // ignore
             break;
         default:
@@ -426,35 +426,35 @@ bool ShaderManager::CompiledShader::compile(TargetType targetType)
                 options.shader_model = 68; // i.e. shader model 6.8
 
                 spv::ExecutionModel spvExecutionModel = spv::ExecutionModelMax;
-                switch (shaderFile.type()) {
-                case ShaderFileType::Vertex:
+                switch (shaderFile.shaderStage()) {
+                case ShaderStage::Vertex:
                     spvExecutionModel = spv::ExecutionModelVertex;
                     break;
-                case ShaderFileType::Fragment:
+                case ShaderStage::Fragment:
                     spvExecutionModel = spv::ExecutionModelFragment;
                     break;
-                case ShaderFileType::Compute:
+                case ShaderStage::Compute:
                     spvExecutionModel = spv::ExecutionModelGLCompute;
                     break;
-                case ShaderFileType::RTRayGen:
+                case ShaderStage::RTRayGen:
                     spvExecutionModel = spv::ExecutionModelRayGenerationKHR; // NOTE: Only works with KHR extension!
                     break;
-                case ShaderFileType::RTClosestHit:
+                case ShaderStage::RTClosestHit:
                     spvExecutionModel = spv::ExecutionModelClosestHitKHR; // NOTE: Only works with KHR extension!
                     break;
-                case ShaderFileType::RTAnyHit:
+                case ShaderStage::RTAnyHit:
                     spvExecutionModel = spv::ExecutionModelAnyHitKHR; // NOTE: Only works with KHR extension!
                     break;
-                case ShaderFileType::RTIntersection:
+                case ShaderStage::RTIntersection:
                     spvExecutionModel = spv::ExecutionModelIntersectionKHR; // NOTE: Only works with KHR extension!
                     break;
-                case ShaderFileType::RTMiss:
+                case ShaderStage::RTMiss:
                     spvExecutionModel = spv::ExecutionModelMissKHR; // NOTE: Only works with KHR extension!
                     break;
-                case ShaderFileType::Task:
+                case ShaderStage::Task:
                     spvExecutionModel = spv::ExecutionModelTaskEXT;
                     break;
-                case ShaderFileType::Mesh:
+                case ShaderStage::Mesh:
                     spvExecutionModel = spv::ExecutionModelMeshEXT;
                     break;
                 default:

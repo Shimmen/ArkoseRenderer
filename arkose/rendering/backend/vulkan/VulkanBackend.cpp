@@ -2051,41 +2051,7 @@ std::optional<VkPushConstantRange> VulkanBackend::getPushConstantRangeForShader(
 
     for (auto& file : shader.files()) {
 
-        VkShaderStageFlags stageFlag;
-        switch (file.type()) {
-        case ShaderFileType::Vertex:
-            stageFlag = VK_SHADER_STAGE_VERTEX_BIT;
-            break;
-        case ShaderFileType::Fragment:
-            stageFlag = VK_SHADER_STAGE_FRAGMENT_BIT;
-            break;
-        case ShaderFileType::Compute:
-            stageFlag = VK_SHADER_STAGE_COMPUTE_BIT;
-            break;
-        case ShaderFileType::RTRayGen:
-            stageFlag = VK_SHADER_STAGE_RAYGEN_BIT_NV;
-            break;
-        case ShaderFileType::RTClosestHit:
-            stageFlag = VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
-            break;
-        case ShaderFileType::RTAnyHit:
-            stageFlag = VK_SHADER_STAGE_ANY_HIT_BIT_NV;
-            break;
-        case ShaderFileType::RTMiss:
-            stageFlag = VK_SHADER_STAGE_MISS_BIT_NV;
-            break;
-        case ShaderFileType::RTIntersection:
-            stageFlag = VK_SHADER_STAGE_INTERSECTION_BIT_NV;
-            break;
-        case ShaderFileType::Task:
-            stageFlag = VK_SHADER_STAGE_TASK_BIT_EXT;
-            break;
-        case ShaderFileType::Mesh:
-            stageFlag = VK_SHADER_STAGE_MESH_BIT_EXT;
-            break;
-        default:
-            ASSERT_NOT_REACHED();
-        }
+        VkShaderStageFlags stageFlag = shaderStageToVulkanShaderStageFlags(file.shaderStage());
 
         const auto& spv = ShaderManager::instance().spirv(file);
         spirv_cross::Compiler compiler { spv };
@@ -2126,35 +2092,7 @@ std::pair<std::vector<VkDescriptorSetLayout>, std::optional<VkPushConstantRange>
 
     for (auto& file : shader.files()) {
 
-        VkShaderStageFlags stageFlag;
-        switch (file.type()) {
-        case ShaderFileType::Vertex:
-            stageFlag = VK_SHADER_STAGE_VERTEX_BIT;
-            break;
-        case ShaderFileType::Fragment:
-            stageFlag = VK_SHADER_STAGE_FRAGMENT_BIT;
-            break;
-        case ShaderFileType::Compute:
-            stageFlag = VK_SHADER_STAGE_COMPUTE_BIT;
-            break;
-        case ShaderFileType::RTRayGen:
-            stageFlag = VK_SHADER_STAGE_RAYGEN_BIT_NV;
-            break;
-        case ShaderFileType::RTClosestHit:
-            stageFlag = VK_SHADER_STAGE_CLOSEST_HIT_BIT_NV;
-            break;
-        case ShaderFileType::RTAnyHit:
-            stageFlag = VK_SHADER_STAGE_ANY_HIT_BIT_NV;
-            break;
-        case ShaderFileType::RTMiss:
-            stageFlag = VK_SHADER_STAGE_MISS_BIT_NV;
-            break;
-        case ShaderFileType::RTIntersection:
-            stageFlag = VK_SHADER_STAGE_INTERSECTION_BIT_NV;
-            break;
-        default:
-            ASSERT_NOT_REACHED();
-        }
+        VkShaderStageFlags stageFlag = shaderStageToVulkanShaderStageFlags(file.shaderStage());
 
         const auto& spv = ShaderManager::instance().spirv(file);
         spirv_cross::Compiler compiler { spv };
@@ -2293,43 +2231,6 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
 
     for (auto& file : shader.files()) {
 
-        // Hmm, why aren't ShaderFileType and ShaderStage the same thing?
-        ShaderStage stageFlag;
-        switch (file.type()) {
-        case ShaderFileType::Vertex:
-            stageFlag = ShaderStage::Vertex;
-            break;
-        case ShaderFileType::Fragment:
-            stageFlag = ShaderStage::Fragment;
-            break;
-        case ShaderFileType::Compute:
-            stageFlag = ShaderStage::Compute;
-            break;
-        case ShaderFileType::RTRayGen:
-            stageFlag = ShaderStage::RTRayGen;
-            break;
-        case ShaderFileType::RTClosestHit:
-            stageFlag = ShaderStage::RTClosestHit;
-            break;
-        case ShaderFileType::RTAnyHit:
-            stageFlag = ShaderStage::RTAnyHit;
-            break;
-        case ShaderFileType::RTMiss:
-            stageFlag = ShaderStage::RTMiss;
-            break;
-        case ShaderFileType::RTIntersection:
-            stageFlag = ShaderStage::RTIntersection;
-            break;
-        case ShaderFileType::Task:
-            stageFlag = ShaderStage::Task;
-            break;
-        case ShaderFileType::Mesh:
-            stageFlag = ShaderStage::Mesh;
-            break;
-        default:
-            ASSERT_NOT_REACHED();
-        }
-
         const auto& spv = ShaderManager::instance().spirv(file);
         spirv_cross::Compiler compiler { spv };
         spirv_cross::ShaderResources resources = compiler.get_shader_resources();
@@ -2365,7 +2266,7 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
                 if (infos.size() == i) {
                     VulkanBackend::PushConstantInfo info;
                     info.name = member_name;
-                    info.stages = stageFlag;
+                    info.stages = file.shaderStage();
                     info.offset = (uint32_t)offset;
                     info.size = (int32_t)size;
 
@@ -2377,7 +2278,7 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
                     if (existing.name != member_name || existing.offset != offset || existing.size != size) {
                         ARKOSE_LOG(Fatal, "identifyAllPushConstants: mismatch in push constant layout!");
                     } else {
-                        existing.stages = ShaderStage(existing.stages | stageFlag);
+                        existing.stages = ShaderStage(existing.stages | file.shaderStage());
                     }
                 }
 

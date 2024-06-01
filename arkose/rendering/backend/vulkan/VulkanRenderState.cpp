@@ -85,26 +85,9 @@ VulkanRenderState::VulkanRenderState(Backend& backend, RenderTarget const& rende
             stageCreateInfo.module = shaderModule;
             stageCreateInfo.pName = "main";
 
-            VkShaderStageFlagBits stageFlags;
-            switch (file.type()) {
-            case ShaderFileType::Vertex:
-                stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-                break;
-            case ShaderFileType::Fragment:
-                stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-                break;
-            case ShaderFileType::Task:
-                ARKOSE_ASSERT(vulkanBackend.hasMeshShadingSupport());
-                stageFlags = VK_SHADER_STAGE_TASK_BIT_EXT;
-                break;
-            case ShaderFileType::Mesh:
-                ARKOSE_ASSERT(vulkanBackend.hasMeshShadingSupport());
-                stageFlags = VK_SHADER_STAGE_MESH_BIT_EXT;
-                break;
-            default:
-                ASSERT_NOT_REACHED();
-            }
-            stageCreateInfo.stage = stageFlags;
+            ARKOSE_ASSERT(isSet(file.shaderStage() & ShaderStage::AnyRasterize));
+            VkShaderStageFlags stageFlags = vulkanBackend.shaderStageToVulkanShaderStageFlags(file.shaderStage());
+            stageCreateInfo.stage = static_cast<VkShaderStageFlagBits>(stageFlags);
 
             shaderStages.push_back(stageCreateInfo);
         }

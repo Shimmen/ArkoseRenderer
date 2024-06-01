@@ -7,28 +7,28 @@
 
 static wchar_t const* entryPointNameForShaderFile(ShaderFile const& shaderFile)
 {
-    switch (shaderFile.type()) {
-    case ShaderFileType::Vertex:
+    switch (shaderFile.shaderStage()) {
+    case ShaderStage::Vertex:
         return L"VS_main";
-    case ShaderFileType::Fragment:
+    case ShaderStage::Fragment:
         return L"PS_main";
-    case ShaderFileType::Compute:
+    case ShaderStage::Compute:
         return L"CS_main";
-    case ShaderFileType::RTRayGen:
+    case ShaderStage::RTRayGen:
         return L"RAYGEN_main";
-    case ShaderFileType::RTClosestHit:
+    case ShaderStage::RTClosestHit:
         return L"CLOSESTHIT_main";
-    case ShaderFileType::RTAnyHit:
+    case ShaderStage::RTAnyHit:
         return L"ANYHIT_main";
-    case ShaderFileType::RTIntersection:
+    case ShaderStage::RTIntersection:
         return L"INTERSECTION_main";
-    case ShaderFileType::RTMiss:
+    case ShaderStage::RTMiss:
         return L"MISS_main";
-    case ShaderFileType::Task:
+    case ShaderStage::Task:
         return L"TASK_main";
-    case ShaderFileType::Mesh:
+    case ShaderStage::Mesh:
         return L"MESH_main";
-    case ShaderFileType::Unknown:
+    case ShaderStage::Unknown:
         ARKOSE_LOG(Warning, "Can't find entry point name for for shader file of unknown type ('{}'), defaulting to 'main'", shaderFile.path());
         return L"main";
     default:
@@ -39,28 +39,28 @@ static wchar_t const* entryPointNameForShaderFile(ShaderFile const& shaderFile)
 
 static wchar_t const* shaderModelForShaderFile(ShaderFile const& shaderFile)
 {
-    switch (shaderFile.type()) {
-    case ShaderFileType::Vertex:
+    switch (shaderFile.shaderStage()) {
+    case ShaderStage::Vertex:
         return L"vs_6_8";
-    case ShaderFileType::Fragment:
+    case ShaderStage::Fragment:
         return L"ps_6_8";
-    case ShaderFileType::Compute:
+    case ShaderStage::Compute:
         return L"cs_6_8";
-    case ShaderFileType::RTRayGen:
+    case ShaderStage::RTRayGen:
         return L"raygeneration_6_8";
-    case ShaderFileType::RTClosestHit:
+    case ShaderStage::RTClosestHit:
         return L"closesthit_6_8";
-    case ShaderFileType::RTAnyHit:
+    case ShaderStage::RTAnyHit:
         return L"anyhit_6_8";
-    case ShaderFileType::RTIntersection:
+    case ShaderStage::RTIntersection:
         return L"intersection_6_8";
-    case ShaderFileType::RTMiss:
+    case ShaderStage::RTMiss:
         return L"miss_6_8";
-    case ShaderFileType::Task:
+    case ShaderStage::Task:
         return L"as_6_8";
-    case ShaderFileType::Mesh:
+    case ShaderStage::Mesh:
         return L"ms_6_8";
-    case ShaderFileType::Unknown:
+    case ShaderStage::Unknown:
         ARKOSE_LOG(Fatal, "Can't find shader model for for shader file of unknown type ('{}'), exiting", shaderFile.path());
     default:
         ASSERT_NOT_REACHED();

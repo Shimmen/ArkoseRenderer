@@ -10,9 +10,9 @@ HitGroup::HitGroup(ShaderFile closestHit, std::optional<ShaderFile> anyHit, std:
     , m_anyHit(anyHit)
     , m_intersection(intersection)
 {
-    ARKOSE_ASSERT(closestHit.type() == ShaderFileType::RTClosestHit);
-    ARKOSE_ASSERT(!anyHit.has_value() || anyHit.value().type() == ShaderFileType::RTAnyHit);
-    ARKOSE_ASSERT(!intersection.has_value() || intersection.value().type() == ShaderFileType::RTIntersection);
+    ARKOSE_ASSERT(closestHit.shaderStage() == ShaderStage::RTClosestHit);
+    ARKOSE_ASSERT(!anyHit.has_value() || anyHit.value().shaderStage() == ShaderStage::RTAnyHit);
+    ARKOSE_ASSERT(!intersection.has_value() || intersection.value().shaderStage() == ShaderStage::RTIntersection);
 }
 
 bool HitGroup::valid() const
@@ -25,9 +25,9 @@ ShaderBindingTable::ShaderBindingTable(ShaderFile rayGen, std::vector<HitGroup> 
     , m_hitGroups(std::move(hitGroups))
     , m_missShaders(std::move(missShaders))
 {
-    ARKOSE_ASSERT(m_rayGen.type() == ShaderFileType::RTRayGen);
+    ARKOSE_ASSERT(m_rayGen.shaderStage() == ShaderStage::RTRayGen);
     for (const auto& miss : m_missShaders) {
-        ARKOSE_ASSERT(miss.type() == ShaderFileType::RTMiss);
+        ARKOSE_ASSERT(miss.shaderStage() == ShaderStage::RTMiss);
     }
 
     m_pseudoShader = Shader(allReferencedShaderFiles(), ShaderType::RayTrace);
@@ -35,7 +35,7 @@ ShaderBindingTable::ShaderBindingTable(ShaderFile rayGen, std::vector<HitGroup> 
 
 void ShaderBindingTable::setRayGenerationShader(ShaderFile rayGenerationShader)
 {
-    ARKOSE_ASSERT(rayGenerationShader.type() == ShaderFileType::RTRayGen);
+    ARKOSE_ASSERT(rayGenerationShader.shaderStage() == ShaderStage::RTRayGen);
 
     ARKOSE_ASSERT(!m_rayGen.valid());
     m_rayGen = std::move(rayGenerationShader);
@@ -43,7 +43,7 @@ void ShaderBindingTable::setRayGenerationShader(ShaderFile rayGenerationShader)
 
 void ShaderBindingTable::setMissShader(u32 index, ShaderFile missShader)
 {
-    ARKOSE_ASSERT(missShader.type() == ShaderFileType::RTMiss);
+    ARKOSE_ASSERT(missShader.shaderStage() == ShaderStage::RTMiss);
 
     if (index >= m_missShaders.size()) {
         m_missShaders.resize(index + 1);

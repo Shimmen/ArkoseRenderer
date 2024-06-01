@@ -19,8 +19,8 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, StateBin
         ARKOSE_ASSERT(shader.type() == ShaderType::Compute);
         ARKOSE_ASSERT(shader.files().size() == 1);
 
-        const ShaderFile& file = shader.files().front();
-        ARKOSE_ASSERT(file.type() == ShaderFileType::Compute);
+        ShaderFile const& file = shader.files().front();
+        ARKOSE_ASSERT(file.shaderStage() == ShaderStage::Compute);
 
         // TODO: Maybe don't create new modules every time? Currently they are deleted later in this function
         VkShaderModuleCreateInfo moduleCreateInfo = { VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO };

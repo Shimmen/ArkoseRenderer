@@ -6,28 +6,28 @@
 
 Shader Shader::createVertexOnly(std::string vertexName, std::vector<ShaderDefine> defines)
 {
-    ShaderFile vertexFile { std::move(vertexName), ShaderFileType::Vertex, defines };
+    ShaderFile vertexFile { std::move(vertexName), ShaderStage::Vertex, defines };
     return Shader({ vertexFile }, ShaderType::Raster);
 }
 
 Shader Shader::createBasicRasterize(std::string vertexName, std::string fragmentName, std::vector<ShaderDefine> defines)
 {
-    ShaderFile vertexFile { std::move(vertexName), ShaderFileType::Vertex, defines };
-    ShaderFile fragmentFile { std::move(fragmentName), ShaderFileType::Fragment, defines };
+    ShaderFile vertexFile { std::move(vertexName), ShaderStage::Vertex, defines };
+    ShaderFile fragmentFile { std::move(fragmentName), ShaderStage::Fragment, defines };
     return Shader({ vertexFile, fragmentFile }, ShaderType::Raster);
 }
 
 Shader Shader::createMeshShading(std::string taskName, std::string meshName, std::string fragmentName, std::vector<ShaderDefine> defines)
 {
-    ShaderFile taskFile { std::move(taskName), ShaderFileType::Task, defines };
-    ShaderFile meshFile { std::move(meshName), ShaderFileType::Mesh, defines };
-    ShaderFile fragmentFile { std::move(fragmentName), ShaderFileType::Fragment, defines };
+    ShaderFile taskFile { std::move(taskName), ShaderStage::Task, defines };
+    ShaderFile meshFile { std::move(meshName), ShaderStage::Mesh, defines };
+    ShaderFile fragmentFile { std::move(fragmentName), ShaderStage::Fragment, defines };
     return Shader({ taskFile, meshFile, fragmentFile }, ShaderType::Raster);
 }
 
 Shader Shader::createCompute(std::string computeName, std::vector<ShaderDefine> defines)
 {
-    ShaderFile computeFile { std::move(computeName), ShaderFileType::Compute, defines };
+    ShaderFile computeFile { std::move(computeName), ShaderStage::Compute, defines };
     return Shader({ computeFile }, ShaderType::Compute);
 }
 

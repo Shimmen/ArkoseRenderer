@@ -12,14 +12,14 @@
 #endif
 
 ShaderFile::ShaderFile(const std::string& path, std::vector<ShaderDefine> defines)
-    : ShaderFile(path, typeFromPath(path), std::move(defines))
+    : ShaderFile(path, stageFromPath(path), std::move(defines))
 {
 }
 
-ShaderFile::ShaderFile(std::string path, ShaderFileType type, std::vector<ShaderDefine> defines)
+ShaderFile::ShaderFile(std::string path, ShaderStage shaderStage, std::vector<ShaderDefine> defines)
     : m_path(std::move(path))
     , m_defines(std::move(defines))
-    , m_type(type)
+    , m_shaderStage(shaderStage)
 {
     if (isRayTracingShaderFile()) {
         // TODO: We want to get rid of Backend::get(). What should we do here?
@@ -68,57 +68,48 @@ const std::string& ShaderFile::definesIdentifier() const
     return m_defines_identifier;
 }
 
-ShaderFileType ShaderFile::type() const
+ShaderStage ShaderFile::shaderStage() const
 {
-    return m_type;
+    return m_shaderStage;
 }
 
 bool ShaderFile::valid() const
 {
-    return m_path.length() > 0 && m_type != ShaderFileType::Unknown;
+    return m_path.length() > 0 && m_shaderStage != ShaderStage::Unknown;
 }
 
 bool ShaderFile::isRayTracingShaderFile() const
 {
-    switch (type()) {
-    case ShaderFileType::RTAnyHit:
-    case ShaderFileType::RTClosestHit:
-    case ShaderFileType::RTIntersection:
-    case ShaderFileType::RTMiss:
-    case ShaderFileType::RTRayGen:
-        return true;
-    default:
-        return false;
-    }
+    return isSet(shaderStage() & ShaderStage::AnyRayTrace);
 }
 
-ShaderFileType ShaderFile::typeFromPath(const std::string& path)
+ShaderStage ShaderFile::stageFromPath(const std::string& path)
 {
     if (path.length() < 5)
-        return ShaderFileType::Unknown;
+        return ShaderStage::Unknown;
     std::string ext5 = path.substr(path.length() - 5);
 
     if (ext5 == ".vert")
-        return ShaderFileType::Vertex;
+        return ShaderStage::Vertex;
     else if (ext5 == ".frag")
-        return ShaderFileType::Fragment;
+        return ShaderStage::Fragment;
     else if (ext5 == ".rgen")
-        return ShaderFileType::RTRayGen;
+        return ShaderStage::RTRayGen;
     else if (ext5 == ".comp")
-        return ShaderFileType::Compute;
+        return ShaderStage::Compute;
     else if (ext5 == ".rint")
-        return ShaderFileType::RTIntersection;
+        return ShaderStage::RTIntersection;
 
     if (path.length() < 6)
-        return ShaderFileType::Unknown;
+        return ShaderStage::Unknown;
     std::string ext6 = path.substr(path.length() - 6);
 
     if (ext6 == ".rmiss")
-        return ShaderFileType::RTMiss;
+        return ShaderStage::RTMiss;
     else if (ext6 == ".rchit")
-        return ShaderFileType::RTClosestHit;
+        return ShaderStage::RTClosestHit;
     else if (ext6 == ".rahit")
-        return ShaderFileType::RTAnyHit;
+        return ShaderStage::RTAnyHit;
 
-    return ShaderFileType::Unknown;
+    return ShaderStage::Unknown;
 }

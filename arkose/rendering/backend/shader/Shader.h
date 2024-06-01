@@ -18,7 +18,6 @@ struct Shader {
     struct UniformBinding {
         // TODO: Include type information for extra safety?
         ShaderStage stages;
-        //std::vector<ShaderFileType> stages; // TODO: Use ShaderStage!
         uint32_t offset;
         uint32_t size;
     };

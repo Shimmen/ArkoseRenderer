@@ -78,19 +78,19 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
 
         std::vector<u8> const& codeBlob = ShaderManager::instance().dxil(file);
 
-        switch (file.type()) {
-        case ShaderFileType::Vertex:
+        switch (file.shaderStage()) {
+        case ShaderStage::Vertex:
             psoDesc.VS.pShaderBytecode = codeBlob.data();
             psoDesc.VS.BytecodeLength = codeBlob.size();
             break;
-        case ShaderFileType::Fragment:
+        case ShaderStage::Fragment:
             psoDesc.PS.pShaderBytecode = codeBlob.data();
             psoDesc.PS.BytecodeLength = codeBlob.size();
             break;
-        case ShaderFileType::Task:
+        case ShaderStage::Task:
             NOT_YET_IMPLEMENTED();
             break;
-        case ShaderFileType::Mesh:
+        case ShaderStage::Mesh:
             NOT_YET_IMPLEMENTED();
             break;
         default:
