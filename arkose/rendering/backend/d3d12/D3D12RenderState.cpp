@@ -170,7 +170,7 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
     psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
     psoDesc.SampleMask = 0xFFFFFFFF; // ??
 
-    psoDesc.NumRenderTargets = renderTarget.colorAttachmentCount();
+    psoDesc.NumRenderTargets = narrow_cast<UINT>(renderTarget.colorAttachmentCount());
     for (UINT attachmentIdx = 0; attachmentIdx < 8; ++attachmentIdx) {
         RenderTarget::AttachmentType attachmentType { attachmentIdx };
         if (Texture* attachedTexture = renderTarget.attachment(attachmentType)) {

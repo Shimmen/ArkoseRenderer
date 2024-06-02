@@ -43,7 +43,7 @@ D3D12BindingSet::D3D12BindingSet(Backend& backend, std::vector<ShaderBinding> bi
 
                 D3D12_CONSTANT_BUFFER_VIEW_DESC cbvDesc {};
                 cbvDesc.BufferLocation = d3d12Buffer.bufferResource->GetGPUVirtualAddress();
-                cbvDesc.SizeInBytes = d3d12Buffer.sizeInMemory();
+                cbvDesc.SizeInBytes = narrow_cast<UINT>(d3d12Buffer.sizeInMemory());
 
                 D3D12_CPU_DESCRIPTOR_HANDLE descriptor = descriptorTableAllocation.cpuDescriptorAt(currentDescriptorOffset++);
                 d3d12Backend.device().CreateConstantBufferView(&cbvDesc, descriptor);
@@ -76,15 +76,15 @@ D3D12BindingSet::D3D12BindingSet(Backend& backend, std::vector<ShaderBinding> bi
                     if (d3d12Buffer.hasStride()) {
                         // Create structured buffer
                         uavDesc.Format = DXGI_FORMAT_UNKNOWN;
-                        uavDesc.Buffer.NumElements = narrow_cast<u32>(d3d12Buffer.size() / d3d12Buffer.stride());
-                        uavDesc.Buffer.StructureByteStride = narrow_cast<u32>(d3d12Buffer.stride());
+                        uavDesc.Buffer.NumElements = narrow_cast<UINT>(d3d12Buffer.size() / d3d12Buffer.stride());
+                        uavDesc.Buffer.StructureByteStride = narrow_cast<UINT>(d3d12Buffer.stride());
                     } else {
                         // No stride available, create a raw (byte address) buffer
                         ASSERT_NOT_REACHED();
                         // NOTE: Currently I don't think we ever hit this code as we require storage buffers to have a stride
                         // so that they can act as structured buffer in D3D12. However, I want to maybe allow raw buffers layer..
                         uavDesc.Format = DXGI_FORMAT_R32_TYPELESS;
-                        uavDesc.Buffer.NumElements = d3d12Buffer.size() / sizeof(u32);
+                        uavDesc.Buffer.NumElements = narrow_cast<UINT>(d3d12Buffer.size() / sizeof(UINT));
                         uavDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_RAW;
                     }
 
