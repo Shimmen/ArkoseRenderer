@@ -16,6 +16,7 @@ std::string UpscalingNode::name() const
     case UpscalingTech::DLSS:
         return "DLSS";
 #endif
+    case UpscalingTech::None:
     default:
         ASSERT_NOT_REACHED();
         return "";
