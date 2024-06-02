@@ -379,7 +379,7 @@ void D3D12CommandList::setDepthBias(float constantFactor, float slopeFactor)
     NOT_YET_IMPLEMENTED();
 }
 
-void D3D12CommandList::bindVertexBuffer(Buffer const& vertexBuffer, u32 stride, u32 bindingIdx)
+void D3D12CommandList::bindVertexBuffer(Buffer const& vertexBuffer, size_t stride, u32 bindingIdx)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
@@ -399,8 +399,8 @@ void D3D12CommandList::bindVertexBuffer(Buffer const& vertexBuffer, u32 stride, 
 
     D3D12_VERTEX_BUFFER_VIEW vertexBufferView;
     vertexBufferView.BufferLocation = d3d12BufferResource->GetGPUVirtualAddress();
-    vertexBufferView.SizeInBytes = static_cast<UINT>(vertexBuffer.size());
-    vertexBufferView.StrideInBytes = stride;
+    vertexBufferView.SizeInBytes = narrow_cast<UINT>(vertexBuffer.size());
+    vertexBufferView.StrideInBytes = narrow_cast<UINT>(stride);
 
     m_commandList->IASetVertexBuffers(bindingIdx, 1, &vertexBufferView);
 

@@ -1184,7 +1184,7 @@ void VulkanCommandList::setDepthBias(float constantFactor, float slopeFactor)
     vkCmdSetDepthBias(m_commandBuffer, constantFactor, depthBiasClamp, slopeFactor);
 }
 
-void VulkanCommandList::bindVertexBuffer(Buffer const& vertexBuffer, u32 stride, u32 bindingIdx)
+void VulkanCommandList::bindVertexBuffer(Buffer const& vertexBuffer, size_t stride, u32 bindingIdx)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
