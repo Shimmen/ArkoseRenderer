@@ -98,6 +98,7 @@ set(ARKOSE_SOURCES
       # (added separately)
       # shader
       arkose/rendering/backend/shader/CompilationResult.h
+      arkose/rendering/backend/shader/NamedConstant.h
       arkose/rendering/backend/shader/Shader.cpp
       arkose/rendering/backend/shader/Shader.h
       arkose/rendering/backend/shader/ShaderFile.cpp

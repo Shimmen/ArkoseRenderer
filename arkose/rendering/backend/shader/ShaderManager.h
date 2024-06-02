@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rendering/backend/shader/NamedConstant.h"
 #include "rendering/backend/shader/Shader.h"
 #include "core/Badge.h"
 #include "core/Types.h"
@@ -97,13 +98,6 @@ private:
         DXILData currentDxilBinary {};
 
         std::string lastCompileError {};
-
-        struct NamedConstant {
-            std::string name {};
-            std::string type {};
-            u32 size { 0 };
-            u32 offset { 0 };
-        };
 
         std::vector<NamedConstant> namedConstants {};
     };

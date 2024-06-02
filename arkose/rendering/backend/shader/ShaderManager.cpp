@@ -254,8 +254,7 @@ bool ShaderManager::hasCompatibleNamedConstants(std::vector<ShaderFile> const& s
         return true;
     }
 
-    using Constant = CompiledShader::NamedConstant;
-    std::vector<Constant const*> constants;
+    std::vector<NamedConstant const*> constants;
 
     {
         std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
@@ -270,7 +269,7 @@ bool ShaderManager::hasCompatibleNamedConstants(std::vector<ShaderFile> const& s
                                   "is needed, so it's expected that you don't call this until you're sure all of the files have successfully been compiled.");
             }
 
-            for (Constant const& constant : compiledShader.namedConstants) {
+            for (NamedConstant const& constant : compiledShader.namedConstants) {
                 constants.push_back(&constant);
             }
         }
@@ -280,11 +279,11 @@ bool ShaderManager::hasCompatibleNamedConstants(std::vector<ShaderFile> const& s
         return true;
     }
 
-    std::sort(constants.begin(), constants.end(), [&](Constant const* lhs, Constant const* rhs) { return lhs->offset < rhs->offset; });
+    std::sort(constants.begin(), constants.end(), [&](NamedConstant const* lhs, NamedConstant const* rhs) { return lhs->offset < rhs->offset; });
 
-    Constant const* previousConstant = constants[0];
+    NamedConstant const* previousConstant = constants[0];
     for (size_t constantIdx = 1; constantIdx < constants.size(); ++constantIdx) {
-        Constant const* thisConstant = constants[constantIdx];
+        NamedConstant const* thisConstant = constants[constantIdx];
 
         if (thisConstant->offset > previousConstant->offset) {
             if (thisConstant->offset >= previousConstant->offset + previousConstant->size) { 
