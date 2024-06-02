@@ -172,7 +172,7 @@ float GeodataApp::sampleHeightmap(vec2 latlong) const
 
     vec2 normalizedLatlong = ark::clamp((latlong + vec2(90.0f, 180.0f)) / vec2(180.0f, 360.0f), vec2(0.0f), vec2(1.0f));
     vec2 textureSpaceLongLat = vec2(normalizedLatlong.y, normalizedLatlong.x) * (m_worldHeightMap->extentAtMip(0).asExtent2D().asFloatVector() - vec2(0.01f, 0.01f));
-    ivec2 pixelCoord = ivec2(textureSpaceLongLat.x, m_worldHeightMap->extentAtMip(0).height() - 1 - textureSpaceLongLat.y);
+    ivec2 pixelCoord = ivec2(static_cast<i32>(textureSpaceLongLat.x), static_cast<i32>(m_worldHeightMap->extentAtMip(0).height() - 1 - textureSpaceLongLat.y));
 
     // TODO: Do bilinear filtering!
     ImageAsset::rgba8 heightmapValue = m_worldHeightMap->getPixelAsRGBA8(pixelCoord.x, pixelCoord.y, 0, 0);
@@ -257,8 +257,8 @@ void GeodataApp::createMapRegions()
             }
 
             for (size_t edgeIdx = 0; edgeIdx < polygonEdgeCount; ++edgeIdx) {
-                E(edgeIdx, 0) = edgeIdx;
-                E(edgeIdx, 1) = (edgeIdx + 1) % polygonVertexCount;
+                E(edgeIdx, 0) = narrow_cast<int>(edgeIdx);
+                E(edgeIdx, 1) = narrow_cast<int>((edgeIdx + 1) % polygonVertexCount);
             }
 
             // see https://www.cs.cmu.edu/~quake/triangle.switch.html
