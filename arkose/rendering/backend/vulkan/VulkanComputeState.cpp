@@ -36,6 +36,8 @@ VulkanComputeState::VulkanComputeState(Backend& backend, Shader shader, StateBin
         computeShaderStage.module = shaderModule;
     }
 
+    m_namedConstantLookup = ShaderManager::instance().mergeNamedConstants(shader);
+
     //
     // Create pipeline layout
     //

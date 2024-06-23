@@ -2,6 +2,7 @@
 
 #include "rendering/backend/Resource.h"
 #include "rendering/backend/util/StateBindings.h"
+#include "rendering/backend/shader/NamedConstantLookup.h"
 
 class HitGroup {
 public:
@@ -61,6 +62,10 @@ public:
     [[nodiscard]] uint32_t maxRecursionDepth() const;
     [[nodiscard]] const ShaderBindingTable& shaderBindingTable() const;
     const StateBindings& stateBindings() const { return m_stateBindings; }
+    NamedConstantLookup const& namedConstantLookup() const { return m_namedConstantLookup; }
+
+protected:
+    NamedConstantLookup m_namedConstantLookup;
 
 private:
     ShaderBindingTable m_shaderBindingTable;

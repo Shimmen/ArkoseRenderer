@@ -92,10 +92,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, RenderTarget const& rende
             shaderStages.push_back(stageCreateInfo);
         }
 
-        // Ensure all named constants across the shader files are compatible with each other
-        // Note that this can't be called until we're sure all shaders are compiled, which they
-        // definitely should be now after we're set up all the shader modules.
-        ShaderManager::instance().ensureCompatibleNamedConstants(shader);
+        m_namedConstantLookup = ShaderManager::instance().mergeNamedConstants(shader);
     }
 
     //

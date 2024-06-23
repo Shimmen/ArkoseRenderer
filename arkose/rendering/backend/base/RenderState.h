@@ -2,6 +2,7 @@
 
 #include "rendering/backend/Resource.h"
 #include "rendering/backend/base/RenderTarget.h"
+#include "rendering/backend/shader/NamedConstantLookup.h"
 #include "rendering/backend/shader/Shader.h"
 #include "rendering/backend/util/StateBindings.h"
 
@@ -99,6 +100,11 @@ public:
     const RasterState& rasterState() const { return m_rasterState; }
     const DepthState& depthState() const { return m_depthState; }
     const StencilState& stencilState() const { return m_stencilState; }
+
+    NamedConstantLookup const& namedConstantLookup() const { return m_namedConstantLookup; }
+
+protected:
+    NamedConstantLookup m_namedConstantLookup;
 
 private:
     const RenderTarget* m_renderTarget;
