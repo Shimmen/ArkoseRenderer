@@ -239,18 +239,31 @@ ShaderManager::DXILData const& ShaderManager::dxil(ShaderFile const& shaderFile)
     }
 }
 
-void ShaderManager::ensureCompatibleNamedConstants(Shader const& shader) const
+NamedConstantLookup ShaderManager::mergeNamedConstants(Shader const& shader) const
 {
-    bool compatible = hasCompatibleNamedConstants(shader.files());
+    std::vector<NamedConstant> mergedNamedConstants {};
+    bool compatible = hasCompatibleNamedConstants(shader.files(), mergedNamedConstants);
     ARKOSE_ASSERTM(compatible, "ShaderManager: all shader files of a shader needs to have a compatible set of named constants, "
                                "i.e. no overlap, unless it's the exact same type and name and offset.");
+
+    return NamedConstantLookup(mergedNamedConstants);
 }
 
-bool ShaderManager::hasCompatibleNamedConstants(std::vector<ShaderFile> const& shaderFiles) const
+bool ShaderManager::hasCompatibleNamedConstants(std::vector<ShaderFile> const& shaderFiles, std::vector<NamedConstant>& outMergedConstants) const
 {
     SCOPED_PROFILE_ZONE();
 
-    if (shaderFiles.size() <= 1) { 
+    auto getCompiledShader = [this](ShaderFile const& shaderFile) -> ShaderManager::CompiledShader const& {
+        auto entry = m_compiledShaders.find(createShaderIdentifier(shaderFile));
+        ARKOSE_ASSERT(entry != m_compiledShaders.end());
+        ShaderManager::CompiledShader const& compiledShader = *entry->second;
+        return compiledShader;
+    };
+
+    if (shaderFiles.size() <= 1) {
+        std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
+        auto const& compiledShader = getCompiledShader(shaderFiles[0]);
+        outMergedConstants = compiledShader.namedConstants;
         return true;
     }
 
@@ -259,9 +272,7 @@ bool ShaderManager::hasCompatibleNamedConstants(std::vector<ShaderFile> const& s
     {
         std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
         for (ShaderFile const& shaderFile : shaderFiles) {
-            auto entry = m_compiledShaders.find(createShaderIdentifier(shaderFile));
-            ARKOSE_ASSERT(entry != m_compiledShaders.end());
-            ShaderManager::CompiledShader const& compiledShader = *entry->second;
+            auto const& compiledShader = getCompiledShader(shaderFile);
 
             if (compiledShader.compiledTimestamp == 0) {
                 ARKOSE_LOG(Fatal, "ShaderManager: trying to check for compatible named constants on shader files that haven't yet been compiled. "
@@ -276,10 +287,14 @@ bool ShaderManager::hasCompatibleNamedConstants(std::vector<ShaderFile> const& s
     }
 
     if (constants.size() == 0) {
+        outMergedConstants.clear();
         return true;
     }
 
     std::sort(constants.begin(), constants.end(), [&](NamedConstant const* lhs, NamedConstant const* rhs) { return lhs->offset < rhs->offset; });
+
+    outMergedConstants.clear();
+    outMergedConstants.push_back(*constants[0]);
 
     NamedConstant const* previousConstant = constants[0];
     for (size_t constantIdx = 1; constantIdx < constants.size(); ++constantIdx) {
@@ -287,21 +302,25 @@ bool ShaderManager::hasCompatibleNamedConstants(std::vector<ShaderFile> const& s
 
         if (thisConstant->offset > previousConstant->offset) {
             if (thisConstant->offset >= previousConstant->offset + previousConstant->size) { 
-                // this constant is not overlapping with the previous one
+                // this constant is not overlapping with the previous one, i.e. this is the next one
+                outMergedConstants.push_back(*thisConstant);
+                previousConstant = thisConstant;
             } else {
                 // this constant has an offset within the previous ones' range which is clearly not allowed
+                outMergedConstants.clear();
                 return false;
             }
         } else if (thisConstant->offset == previousConstant->offset) {
             if (thisConstant->size == previousConstant->size && thisConstant->name == previousConstant->name && thisConstant->type == previousConstant->type) { 
-                // these two constants are identical, so overlap is what we'd expect!
+                // these two constants are identical, so overlap is what we'd expect! Just merge the stage flags
+                outMergedConstants.back().stages = outMergedConstants.back().stages | thisConstant->stages;
+                continue;
             } else {
                 // same offset but different properties
+                outMergedConstants.clear();
                 return false;
             }
         }
-
-        previousConstant = thisConstant;
     }
 
     return true;

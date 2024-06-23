@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rendering/backend/shader/NamedConstant.h"
+#include "rendering/backend/shader/NamedConstantLookup.h"
 #include "rendering/backend/shader/Shader.h"
 #include "core/Badge.h"
 #include "core/Types.h"
@@ -39,8 +40,8 @@ public:
     SpirvData const& spirv(ShaderFile const&) const;
     DXILData const& dxil(ShaderFile const&) const;
 
-    void ensureCompatibleNamedConstants(Shader const&) const;
-    bool hasCompatibleNamedConstants(std::vector<ShaderFile> const&) const;
+    NamedConstantLookup mergeNamedConstants(Shader const&) const;
+    bool hasCompatibleNamedConstants(std::vector<ShaderFile> const&, std::vector<NamedConstant>& outMergedConstants) const;
 
     using FilesChangedCallback = std::function<void(const std::vector<std::string>&)>;
     void startFileWatching(unsigned msBetweenPolls, FilesChangedCallback filesChangedCallback = {});
