@@ -2,6 +2,7 @@
 
 class D3D12Backend;
 struct D3D12Buffer;
+struct D3D12ComputeState;
 struct D3D12RenderState;
 struct D3D12Texture;
 struct ID3D12GraphicsCommandList;
@@ -80,6 +81,7 @@ private:
     ID3D12Resource* m_boundIndexBuffer { nullptr };
 
     D3D12RenderState const* m_activeRenderState { nullptr };
+    D3D12ComputeState const* m_activeComputeState { nullptr };
 
 #if defined(TRACY_ENABLE)
     std::vector<std::unique_ptr<tracy::D3D12ZoneScope>> m_tracyDebugLabelStack;

@@ -4,6 +4,7 @@
 #include "rendering/backend/d3d12/D3D12Backend.h"
 #include "rendering/backend/d3d12/D3D12Common.h"
 #include "rendering/backend/d3d12/D3D12BindingSet.h"
+#include "rendering/backend/d3d12/D3D12ComputeState.h"
 #include "rendering/backend/d3d12/D3D12Buffer.h"
 #include "rendering/backend/d3d12/D3D12RenderState.h"
 #include "rendering/backend/d3d12/D3D12RenderTarget.h"
@@ -113,7 +114,7 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearVa
     auto& renderState = static_cast<const D3D12RenderState&>(genRenderState);
     m_activeRenderState = &renderState;
     //m_activeRayTracingState = nullptr;
-    //m_activeComputeState = nullptr;
+    m_activeComputeState = nullptr;
 
     auto& renderTarget = static_cast<const D3D12RenderTarget&>(renderState.renderTarget());
 
@@ -267,7 +268,78 @@ void D3D12CommandList::setComputeState(const ComputeState& genComputeState)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    NOT_YET_IMPLEMENTED();
+    if (m_activeRenderState) {
+        ARKOSE_LOG(Warning, "setComputeState: active render state when starting compute state.");
+        endRendering();
+    }
+
+    auto& computeState = static_cast<const D3D12ComputeState&>(genComputeState);
+    m_activeComputeState = &computeState;
+    //m_activeRayTracingState = nullptr;
+
+    // Ensure all referenced resources are in a suitable resource state
+    {
+        std::vector<D3D12_RESOURCE_BARRIER> resourceBarriers {};
+
+        computeState.stateBindings().forEachBinding([&](ShaderBinding const& bindingInfo) {
+            if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
+                for (Texture const* texture : bindingInfo.getSampledTextures()) {
+                    auto& d3d12Texture = static_cast<D3D12Texture const&>(*texture);
+
+                    constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+                    if (d3d12Texture.resourceState != targetResourceState) {
+                        D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Texture, targetResourceState);
+                        resourceBarriers.push_back(barrier);
+                        d3d12Texture.resourceState = targetResourceState;
+                    }
+                }
+            } else if (bindingInfo.type() == ShaderBindingType::StorageTexture) {
+                for (TextureMipView textureMip : bindingInfo.getStorageTextures()) {
+                    auto& d3d12Texture = static_cast<D3D12Texture const&>(textureMip.texture());
+
+                    constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+                    if (d3d12Texture.resourceState != targetResourceState) {
+                        D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Texture, targetResourceState);
+                        resourceBarriers.push_back(barrier);
+                        d3d12Texture.resourceState = targetResourceState;
+                    }
+                }
+            } else if (bindingInfo.type() == ShaderBindingType::StorageBuffer) {
+                for (Buffer* storageBuffer : bindingInfo.getBuffers()) {
+                    auto& d3d12Buffer = static_cast<D3D12Buffer const&>(*storageBuffer);
+
+                    constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+                    if (d3d12Buffer.resourceState != targetResourceState) {
+                        D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Buffer, targetResourceState);
+                        resourceBarriers.push_back(barrier);
+                        d3d12Buffer.resourceState = targetResourceState;
+                    }
+                }
+            } else if (bindingInfo.type() == ShaderBindingType::ConstantBuffer) {
+                auto& d3d12Buffer = static_cast<D3D12Buffer const&>(bindingInfo.getBuffer());
+
+                constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+                if (d3d12Buffer.resourceState != targetResourceState) {
+                    D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Buffer, targetResourceState);
+                    resourceBarriers.push_back(barrier);
+                    d3d12Buffer.resourceState = targetResourceState;
+                }
+            }
+        });
+
+        if (resourceBarriers.size() > 0) {
+            m_commandList->ResourceBarrier(narrow_cast<u32>(resourceBarriers.size()), resourceBarriers.data());
+        }
+    }
+
+    m_commandList->SetPipelineState(computeState.pso.Get());
+    m_commandList->SetComputeRootSignature(computeState.rootSignature.Get());
+
+    computeState.stateBindings().forEachBindingSet([&](u32 setIndex, BindingSet& bindingSet) {
+        i32 rootParameterIdx = setIndex;
+        auto& d3d12BindingSet = static_cast<D3D12BindingSet&>(bindingSet);
+        m_commandList->SetComputeRootDescriptorTable(rootParameterIdx, d3d12BindingSet.descriptorTableAllocation.firstGpuDescriptor);
+    });
 }
 
 void D3D12CommandList::evaluateUpscaling(UpscalingState const&, UpscalingParameters)
