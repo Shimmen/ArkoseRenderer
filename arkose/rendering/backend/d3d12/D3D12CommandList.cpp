@@ -360,7 +360,27 @@ void D3D12CommandList::setNamedUniform(const std::string& name, void* data, size
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    NOT_YET_IMPLEMENTED();
+    // We always use CBV 0 for named constants
+    constexpr UINT rootParameterIndex = 0;
+
+    ARKOSE_ASSERT(size % sizeof(u32) == 0);
+    UINT num32bitConstants = narrow_cast<UINT>(size / sizeof(UINT));
+
+    std::optional<u32> constantOffset = m_activeRenderState->namedConstantLookup().lookupConstantOffset(name, size);
+    if (!constantOffset.has_value()) {
+        ARKOSE_LOG(Error, "D3D12CommandList: failed to look up constant with name '{}' and size {}, ignoring.", name, size);
+        return;
+    }
+
+    UINT offset = static_cast<UINT>(constantOffset.value());
+
+    if (m_activeRenderState) {
+        m_commandList->SetGraphicsRoot32BitConstants(rootParameterIndex, num32bitConstants, data, offset);
+    } else if (m_activeComputeState) {
+        m_commandList->SetComputeRoot32BitConstants(rootParameterIndex, num32bitConstants, data, offset);
+    } else {
+        NOT_YET_IMPLEMENTED();
+    }
 }
 
 void D3D12CommandList::draw(u32 vertexCount, u32 firstVertex)
