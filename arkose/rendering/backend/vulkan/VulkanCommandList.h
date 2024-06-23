@@ -75,9 +75,7 @@ private:
     // TODO: Remove this.. Make something more fine grained
     void transitionImageLayoutDEBUG(VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags, VkCommandBuffer) const;
 
-    void requireExactlyOneStateToBeSet(const std::string& context) const;
-    std::pair<VkPipelineLayout, VkPipelineBindPoint> getCurrentlyBoundPipelineLayout();
-    const Shader& getCurrentlyBoundShader();
+    std::pair<VkPipelineLayout, VkPipelineBindPoint> currentlyBoundPipelineLayout();
 
 private:
     VulkanBackend& m_backend;

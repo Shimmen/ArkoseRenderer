@@ -971,7 +971,7 @@ void VulkanCommandList::bindSet(BindingSet& bindingSet, u32 index)
 
     ARKOSE_ASSERT(!(activeRenderState && activeRayTracingState && activeComputeState));
 
-    auto pipelinePair = getCurrentlyBoundPipelineLayout();
+    auto pipelinePair = currentlyBoundPipelineLayout();
     VkPipelineLayout pipelineLayout = pipelinePair.first;
     VkPipelineBindPoint bindPoint = pipelinePair.second;
 
@@ -1004,41 +1004,34 @@ void VulkanCommandList::setNamedUniform(const std::string& name, void* data, siz
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    requireExactlyOneStateToBeSet("setNamedUniform");
-
-    Shader const& shader = getCurrentlyBoundShader();
-
-    // TODO: Don't do it lazily like this
-    if (!shader.hasUniformBindingsSetup()) {
-
-        std::unordered_map<std::string, Shader::UniformBinding> bindings;
-
-        const std::vector<VulkanBackend::PushConstantInfo>& pushConstants = m_backend.identifyAllPushConstants(shader);
-        for (auto& constant : pushConstants) {
-
-            Shader::UniformBinding binding;
-            binding.stages = constant.stages;
-            binding.offset = constant.offset;
-            binding.size = constant.size;
-
-            bindings[constant.name] = binding;
-        }
-
-        const_cast<Shader&>(shader).setUniformBindings(bindings);
+    if (!activeRenderState && !activeRayTracingState && !activeComputeState) {
+        ARKOSE_LOG(Fatal, "VulkanCommandList: no active render or compute or ray tracing state for setting named uniform");
     }
 
-    std::optional<Shader::UniformBinding> binding = shader.uniformBindingForName(name);
-    if (binding.has_value()) {
-        if (size != binding->size) {
-            ARKOSE_LOG(Fatal, "setNamedUniform: size mismatch for uniform named '{}' (provided={}, actual={}).", name, size, binding->size);
+    NamedConstantLookup const* constantLookup = nullptr;
+    if (!constantLookup && activeRenderState) { 
+        constantLookup = &activeRenderState->namedConstantLookup();
+    }
+    if (!constantLookup && activeComputeState) {
+        constantLookup = &activeComputeState->namedConstantLookup();
+    }
+    if (!constantLookup && activeRayTracingState) {
+        constantLookup = &activeRayTracingState->namedConstantLookup();
+    }
+
+    ARKOSE_ASSERTM(constantLookup != nullptr, "failed to find a constant lookup object, which should be impossible");
+    if (constantLookup == nullptr) {
+        return;
+    }
+
+    if (NamedConstant const* constant = constantLookup->lookupConstant(name)) {
+        if (constantLookup->validateConstant(*constant, size)) {
+            VkPipelineLayout pipelineLayout = currentlyBoundPipelineLayout().first;
+            VkShaderStageFlags stageFlags = backend().shaderStageToVulkanShaderStageFlags(constant->stages);
+            vkCmdPushConstants(m_commandBuffer, pipelineLayout, stageFlags, constant->offset, constant->size, data);
         }
-
-        VkPipelineLayout pipelineLayout = getCurrentlyBoundPipelineLayout().first;
-        VkShaderStageFlags stageFlags = backend().shaderStageToVulkanShaderStageFlags(binding->stages);
-        vkCmdPushConstants(m_commandBuffer, pipelineLayout, stageFlags, binding->offset, binding->size, data);
-
     } else {
-        ARKOSE_LOG(Error, "setNamedUniform: no corresponding uniform for name '{}', ignoring.", name);
+        ARKOSE_LOG(Error, "VulkanCommandList: failed to look up constant with name '{}', ignoring.", name, size);
     }
 }
 
@@ -1611,16 +1604,7 @@ void VulkanCommandList::transitionImageLayoutDEBUG(VkImage image, VkImageLayout 
                          1, &imageMemoryBarrier);
 }
 
-void VulkanCommandList::requireExactlyOneStateToBeSet(const std::string& context) const
-{
-    if (!activeRenderState && !activeRayTracingState && !activeComputeState) {
-        ARKOSE_LOG(Fatal, "{}: no active render or compute or ray tracing state to bind to!", context);
-    }
-
-    ARKOSE_ASSERT(!(activeRenderState && activeRayTracingState && activeComputeState));
-}
-
-std::pair<VkPipelineLayout, VkPipelineBindPoint> VulkanCommandList::getCurrentlyBoundPipelineLayout()
+std::pair<VkPipelineLayout, VkPipelineBindPoint> VulkanCommandList::currentlyBoundPipelineLayout()
 {
     if (activeRenderState) {
         return { activeRenderState->pipelineLayout, VK_PIPELINE_BIND_POINT_GRAPHICS };
@@ -1635,21 +1619,6 @@ std::pair<VkPipelineLayout, VkPipelineBindPoint> VulkanCommandList::getCurrently
         case VulkanBackend::RayTracingBackend::KhrExtension:
             return { static_cast<const VulkanRayTracingStateKHR*>(activeRayTracingState)->pipelineLayout, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR };
         }
-    }
-
-    ASSERT_NOT_REACHED();
-}
-
-const Shader& VulkanCommandList::getCurrentlyBoundShader()
-{
-    if (activeRenderState) {
-        return activeRenderState->shader();
-    }
-    if (activeComputeState) {
-        return activeComputeState->shader();
-    }
-    if (activeRayTracingState) {
-        return activeRayTracingState->shaderBindingTable().pseudoShader();
     }
 
     ASSERT_NOT_REACHED();
