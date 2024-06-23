@@ -4,6 +4,7 @@ NamedConstantLookup::NamedConstantLookup(std::vector<NamedConstant> const& merge
 {
     for (NamedConstant const& namedConstant : mergedNamedConstants) { 
         m_lookupMap[namedConstant.name] = namedConstant;
+        m_totalOccupiedSize = std::max(m_totalOccupiedSize, namedConstant.offset + namedConstant.size);
     }
 }
 
@@ -39,4 +40,9 @@ bool NamedConstantLookup::validateConstant(NamedConstant const& constant, size_t
     }
 
     return true;
+}
+
+u32 NamedConstantLookup::totalOccupiedSize() const
+{
+    return m_totalOccupiedSize;
 }

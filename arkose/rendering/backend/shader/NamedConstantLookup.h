@@ -15,6 +15,10 @@ public:
 
     bool validateConstant(NamedConstant const&, size_t expectedSize) const;
 
+    bool empty() const { return m_lookupMap.empty(); }
+    u32 totalOccupiedSize() const;
+
 private:
     std::unordered_map<std::string, NamedConstant> m_lookupMap {};
+    u32 m_totalOccupiedSize { 0 };
 };
