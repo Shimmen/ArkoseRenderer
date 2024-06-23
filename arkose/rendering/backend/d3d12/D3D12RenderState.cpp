@@ -104,7 +104,7 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
     {
         std::vector<std::vector<D3D12_DESCRIPTOR_RANGE>> descriptorRangeStorage {}; // storage for if copies are needed
 
-        std::vector<D3D12_ROOT_PARAMETER> descriptorTableRootParameters {};
+        std::vector<D3D12_ROOT_PARAMETER> rootParameters {};
         std::vector<D3D12_STATIC_SAMPLER_DESC> staticSamplerDescriptions {};
 
         stateBindings.forEachBindingSet([&](u32 setIndex, BindingSet const& bindingSet) {
@@ -123,7 +123,7 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
             }
 
             // .. and make a copy of the root parameter as we now need to point it at the new descriptor range
-            D3D12_ROOT_PARAMETER& copiedRootParameter = descriptorTableRootParameters.emplace_back(d3d12BindingSet.rootParameter);
+            D3D12_ROOT_PARAMETER& copiedRootParameter = rootParameters.emplace_back(d3d12BindingSet.rootParameter);
             copiedRootParameter.DescriptorTable.pDescriptorRanges = copiedDescriptorRanges.data();
             ARKOSE_ASSERT(copiedRootParameter.DescriptorTable.NumDescriptorRanges == copiedDescriptorRanges.size());
 
@@ -135,9 +135,26 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
             }
         });
 
+        if (!m_namedConstantLookup.empty()) {
+            u32 numUsedBytes = m_namedConstantLookup.totalOccupiedSize();
+            if (numUsedBytes % 4 != 0) {
+                ARKOSE_LOG(Warning, "D3D12RenderState: named constant range has a range that doesn't subdivide into a number of 32-bit values. Rounding up. Is this fine?");
+                numUsedBytes = ark::roundUp(numUsedBytes, 4u);
+            }
+
+            D3D12_ROOT_PARAMETER namedConstantsRootParam;
+            namedConstantsRootParam.ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+            namedConstantsRootParam.ParameterType = D3D12_ROOT_PARAMETER_TYPE_CBV;
+            namedConstantsRootParam.Constants.ShaderRegister = 0; // always use index zero for named constants
+            namedConstantsRootParam.Constants.RegisterSpace = 0; // always use space zero for named constants
+            namedConstantsRootParam.Constants.Num32BitValues = numUsedBytes / 4;
+
+            rootParameters.push_back(namedConstantsRootParam);
+        }
+
         D3D12_ROOT_SIGNATURE_DESC rootSignatureDesc {};
-        rootSignatureDesc.NumParameters = narrow_cast<u32>(descriptorTableRootParameters.size());
-        rootSignatureDesc.pParameters = descriptorTableRootParameters.data();
+        rootSignatureDesc.NumParameters = narrow_cast<u32>(rootParameters.size());
+        rootSignatureDesc.pParameters = rootParameters.data();
 
         rootSignatureDesc.NumStaticSamplers = narrow_cast<u32>(staticSamplerDescriptions.size());
         rootSignatureDesc.pStaticSamplers = staticSamplerDescriptions.data();
@@ -299,9 +316,6 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
 
 D3D12RenderState::~D3D12RenderState()
 {
-    if (!hasBackend())
-        return;
-    // TODO
 }
 
 void D3D12RenderState::setName(const std::string& name)
