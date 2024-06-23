@@ -443,6 +443,12 @@ bool ShaderManager::CompiledShader::compile(TargetType targetType)
                 spirv_cross::CompilerHLSL::Options options {};
                 options.shader_model = 68; // i.e. shader model 6.8
 
+                // NOTE: We use `ShaderBinding::storageBuffer` vs. `ShaderBinding::storageBufferReadonly` to differentiate the two types in the graphics
+                // frontend but internally (i.e. in the backend) it's not used so there we can't know if a buffer is readonly or not. This is simply because
+                // it doesn't matter for Vulkan when binding. However, in D3D12 we use a UAV vs. a SRV for this distinction. I feel it would likely be better
+                // to use SRVs when a storage buffer is read-only but for now/simplicity let's just force them all to be UAVs.
+                options.force_storage_buffer_as_uav = true;
+
                 spv::ExecutionModel spvExecutionModel = spv::ExecutionModelMax;
                 switch (shaderFile.shaderStage()) {
                 case ShaderStage::Vertex:
