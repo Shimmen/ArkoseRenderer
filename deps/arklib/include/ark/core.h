@@ -159,6 +159,17 @@ constexpr Float toDegrees(Float radians)
 }
 
 template<typename T, ENABLE_IF_INTEGRAL(T)>
+constexpr T roundUp(T x, T granularity)
+{
+    T remainder = x % granularity;
+    if (remainder == 0) { 
+        return x;
+    } else {
+        return x + (granularity - remainder);
+    }
+}
+
+template<typename T, ENABLE_IF_INTEGRAL(T)>
 constexpr T divideAndRoundUp(T numerator, T denominator)
 {
     return (numerator + denominator - 1) / denominator;
