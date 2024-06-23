@@ -626,6 +626,7 @@ bool ShaderManager::CompiledShader::collectNamedConstants()
             constant.type = memberTypeName;
             constant.offset = narrow_cast<u32>(offset);
             constant.size = narrow_cast<u32>(size);
+            constant.stages = shaderFile.shaderStage();
         }
     }
 
@@ -655,8 +656,9 @@ bool ShaderManager::CompiledShader::readShaderMetadataFile()
 
     std::string metadataPath = shaderManager.resolveMetadataPath(shaderFile);
     bool readSuccess = FileIO::readFileLineByLine(metadataPath, [&](std::string const& line) {
-        
+
         NamedConstant& constant = namedConstants.emplace_back();
+        constant.stages = shaderFile.shaderStage();
 
         StringHelpers::forEachToken(line, ':', [&](std::string_view token, size_t tokenIndex) {
             switch (tokenIndex) {
