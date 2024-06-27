@@ -22,15 +22,15 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
     for (size_t vertexLayoutIdx = 0; vertexLayoutIdx < vertexLayouts.size(); ++vertexLayoutIdx) {
 
         u32 currentOffset = 0;
+        u32 nextSemanticIndex = 0; // for GLSL->HLSL transpiled sources
 
         VertexLayout const& vertexLayout = vertexLayouts[vertexLayoutIdx];
         for (VertexComponent const& component : vertexLayout.components()) {
 
             D3D12_INPUT_ELEMENT_DESC inputElementDesc;
-            inputElementDesc.SemanticIndex = 0; // not supported
-            inputElementDesc.InputSlot = vertexLayoutIdx;
+            inputElementDesc.SemanticIndex = 0;
+            inputElementDesc.InputSlot = narrow_cast<UINT>(vertexLayoutIdx);
 
-            // TODO: Use modern SV_* semantics: https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semanticso09 ..?
             switch (component) {
             case VertexComponent::Position2F:
                 inputElementDesc.SemanticName = "POSITION";
@@ -53,12 +53,28 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
                 inputElementDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
                 break;
             case VertexComponent::Color3F:
+                inputElementDesc.SemanticName = "COLOR";
+                inputElementDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
+                break;
             case VertexComponent::JointIdx4U32:
+                inputElementDesc.SemanticName = "BLENDINDICES";
+                inputElementDesc.Format = DXGI_FORMAT_R32G32B32A32_UINT;
+                break;
             case VertexComponent::JointWeight4F:
+                inputElementDesc.SemanticName = "BLENDWEIGHT";
+                inputElementDesc.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
+                break;
             case VertexComponent::Velocity3F:
                 NOT_YET_IMPLEMENTED();
+                inputElementDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
                 break;
             }
+
+            // NOTE: If we're getting HLSL source transpiled from GLSL all input attributes will have
+            // the name TEXCOORD with increasing semantic index, starting at 0! For now, let's just
+            // override the more "logical" semantics with this simple scheme.
+            inputElementDesc.SemanticName = "TEXCOORD";
+            inputElementDesc.SemanticIndex = nextSemanticIndex++;
 
             inputElementDesc.AlignedByteOffset = currentOffset;
             currentOffset += narrow_cast<u32>(vertexComponentSize(component));

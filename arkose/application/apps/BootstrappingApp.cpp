@@ -1,5 +1,7 @@
 #include "BootstrappingApp.h"
 
+#include "core/CommandLine.h"
+
 class DrawTriangleNode final : public RenderPipelineNode {
     virtual std::string name() const override { return "Draw Triangle"; }
 
@@ -14,9 +16,8 @@ class DrawTriangleNode final : public RenderPipelineNode {
 
     virtual ExecuteCallback construct(GpuScene& scene, Registry& reg) override
     {
-        Shader bootstrapShader = Shader::createBasicRasterize("d3d12-bootstrap/demo.hlsl",
-                                                              "d3d12-bootstrap/demo.hlsl",
-                                                              { ShaderDefine::makeBool("D3D12_SAMPLE_TEXTURE", true) });
+        Shader bootstrapShader = Shader::createBasicRasterize("d3d12-bootstrap/demo.vert",
+                                                              "d3d12-bootstrap/demo.frag");
 
         Buffer& constantBuffer = reg.createBuffer(sizeof(m_scale), Buffer::Usage::ConstantBuffer);
         constantBuffer.setName("DemoConstantBuffer");
@@ -48,16 +49,25 @@ class DrawTriangleNode final : public RenderPipelineNode {
 
         // Create mesh buffers
 
-        const Vertex vertices[4] = {
+        Vertex vertices[4] = {
             // Upper left
-            { { -0.5f, 0.5f, 0 }, { 0, 0 } },
+            { { -0.5f, -0.5f, 0 }, { 0, 0 } },
             // Upper right
-            { { 0.5f, 0.5f, 0 }, { 1, 0 } },
+            { { 0.5f, -0.5f, 0 }, { 1, 0 } },
             // Bottom right
-            { { 0.5f, -0.5f, 0 }, { 1, 1 } },
+            { { 0.5f, 0.5f, 0 }, { 1, 1 } },
             // Bottom left
-            { { -0.5f, -0.5f, 0 }, { 0, 1 } }
+            { { -0.5f, 0.5f, 0 }, { 0, 1 } }
         };
+
+        // HACK: Figure out how we actually want to handle these cases! In most cases we just use different
+        // backend-specific projections, but when we truly want to draw a screen space quad it'd be nice to
+        // actually have a way to handle this case.
+        if (CommandLine::hasArgument("-d3d12")) {
+            for (Vertex& vertex : vertices) { 
+                vertex.position.y *= -1.0f;
+            }
+        }
 
         const int indices[6] = {
             0, 2, 1, 2, 0, 3
