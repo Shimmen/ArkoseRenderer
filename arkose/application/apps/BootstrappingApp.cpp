@@ -27,7 +27,7 @@ class DrawTriangleNode final : public RenderPipelineNode {
                                                    .format = Texture::convertImageFormatToTextureFormat(testImage->format(), ImageType::sRGBColor),
                                                    .filter = Texture::Filters::linear(),
                                                    .wrapMode = ImageWrapModes::clampAllToEdge(),
-                                                   .mipmap = Texture::Mipmap::Linear });
+                                                   .mipmap = Texture::Mipmap::None });
         testTexture.setData(testImage->pixelDataForMip(0).data(), testImage->pixelDataForMip(0).size(), 0, 0);
         testTexture.setName("DemoTestTexture");
         m_texture = &testTexture;
