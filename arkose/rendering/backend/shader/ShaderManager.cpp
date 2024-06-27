@@ -441,7 +441,7 @@ bool ShaderManager::CompiledShader::compile(TargetType targetType)
                 spirv_cross::CompilerHLSL hlslCompiler { currentSpirvBinary };
 
                 spirv_cross::CompilerHLSL::Options options {};
-                options.shader_model = 68; // i.e. shader model 6.8
+                options.shader_model = 66; // i.e. shader model 6.6
 
                 // NOTE: We use `ShaderBinding::storageBuffer` vs. `ShaderBinding::storageBufferReadonly` to differentiate the two types in the graphics
                 // frontend but internally (i.e. in the backend) it's not used so there we can't know if a buffer is readonly or not. This is simply because
