@@ -187,7 +187,8 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
         ComPtr<ID3DBlob> rootBlob;
         ComPtr<ID3DBlob> errorBlob;
         if (auto hr = D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1_0, &rootBlob, &errorBlob); FAILED(hr)) {
-            ARKOSE_LOG(Fatal, "D3D12RenderState: failed to serialize root signature, exiting.");
+            char const* errorMessage = static_cast<char const*>(errorBlob->GetBufferPointer());
+            ARKOSE_LOG(Fatal, "D3D12RenderState: failed to serialize root signature:\n{}exiting.", errorMessage);
         }
 
         if (auto hr = d3d12Backend.device().CreateRootSignature(0, rootBlob->GetBufferPointer(), rootBlob->GetBufferSize(), IID_PPV_ARGS(&rootSignature)); FAILED(hr)) {
