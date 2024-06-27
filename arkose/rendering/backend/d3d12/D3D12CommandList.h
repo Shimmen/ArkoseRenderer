@@ -73,6 +73,7 @@ private:
 
     D3D12_RESOURCE_BARRIER createResourceTransitionBarrier(D3D12Buffer const&, D3D12_RESOURCE_STATES targetResourceState) const;
     D3D12_RESOURCE_BARRIER createResourceTransitionBarrier(D3D12Texture const&, D3D12_RESOURCE_STATES targetResourceState) const;
+    void createTransitionBarriersForAllReferencedResources(StateBindings const&, std::vector<D3D12_RESOURCE_BARRIER>& outBarriers) const;
 
     D3D12Backend& m_backend;
     ID3D12GraphicsCommandList* m_commandList;

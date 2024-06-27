@@ -148,51 +148,7 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearVa
             }
         }
 
-        renderState.stateBindings().forEachBinding([&](ShaderBinding const& bindingInfo) {
-            if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
-                for (Texture const* texture : bindingInfo.getSampledTextures()) {
-                    auto& d3d12Texture = static_cast<D3D12Texture const&>(*texture);
-
-                    constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-                    if (d3d12Texture.resourceState != targetResourceState) {
-                        D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Texture, targetResourceState);
-                        resourceBarriers.push_back(barrier);
-                        d3d12Texture.resourceState = targetResourceState;
-                    }
-                }
-            } else if (bindingInfo.type() == ShaderBindingType::StorageTexture) {
-                for (TextureMipView textureMip : bindingInfo.getStorageTextures()) {
-                    auto& d3d12Texture = static_cast<D3D12Texture const&>(textureMip.texture());
-
-                    constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-                    if (d3d12Texture.resourceState != targetResourceState) {
-                        D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Texture, targetResourceState);
-                        resourceBarriers.push_back(barrier);
-                        d3d12Texture.resourceState = targetResourceState;
-                    }
-                }
-            } else if (bindingInfo.type() == ShaderBindingType::StorageBuffer) {
-                for (Buffer* storageBuffer : bindingInfo.getBuffers()) {
-                    auto& d3d12Buffer = static_cast<D3D12Buffer const&>(*storageBuffer);
-
-                    constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-                    if (d3d12Buffer.resourceState != targetResourceState) {
-                        D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Buffer, targetResourceState);
-                        resourceBarriers.push_back(barrier);
-                        d3d12Buffer.resourceState = targetResourceState;
-                    }
-                }
-            } else if (bindingInfo.type() == ShaderBindingType::ConstantBuffer) {
-                auto& d3d12Buffer = static_cast<D3D12Buffer const&>(bindingInfo.getBuffer());
-
-                constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-                if (d3d12Buffer.resourceState != targetResourceState) {
-                    D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Buffer, targetResourceState);
-                    resourceBarriers.push_back(barrier);
-                    d3d12Buffer.resourceState = targetResourceState;
-                }
-            }
-        });
+        createTransitionBarriersForAllReferencedResources(renderState.stateBindings(), resourceBarriers);
 
         if (resourceBarriers.size() > 0) {
             m_commandList->ResourceBarrier(narrow_cast<u32>(resourceBarriers.size()), resourceBarriers.data());
@@ -280,52 +236,7 @@ void D3D12CommandList::setComputeState(const ComputeState& genComputeState)
     // Ensure all referenced resources are in a suitable resource state
     {
         std::vector<D3D12_RESOURCE_BARRIER> resourceBarriers {};
-
-        computeState.stateBindings().forEachBinding([&](ShaderBinding const& bindingInfo) {
-            if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
-                for (Texture const* texture : bindingInfo.getSampledTextures()) {
-                    auto& d3d12Texture = static_cast<D3D12Texture const&>(*texture);
-
-                    constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
-                    if (d3d12Texture.resourceState != targetResourceState) {
-                        D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Texture, targetResourceState);
-                        resourceBarriers.push_back(barrier);
-                        d3d12Texture.resourceState = targetResourceState;
-                    }
-                }
-            } else if (bindingInfo.type() == ShaderBindingType::StorageTexture) {
-                for (TextureMipView textureMip : bindingInfo.getStorageTextures()) {
-                    auto& d3d12Texture = static_cast<D3D12Texture const&>(textureMip.texture());
-
-                    constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-                    if (d3d12Texture.resourceState != targetResourceState) {
-                        D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Texture, targetResourceState);
-                        resourceBarriers.push_back(barrier);
-                        d3d12Texture.resourceState = targetResourceState;
-                    }
-                }
-            } else if (bindingInfo.type() == ShaderBindingType::StorageBuffer) {
-                for (Buffer* storageBuffer : bindingInfo.getBuffers()) {
-                    auto& d3d12Buffer = static_cast<D3D12Buffer const&>(*storageBuffer);
-
-                    constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
-                    if (d3d12Buffer.resourceState != targetResourceState) {
-                        D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Buffer, targetResourceState);
-                        resourceBarriers.push_back(barrier);
-                        d3d12Buffer.resourceState = targetResourceState;
-                    }
-                }
-            } else if (bindingInfo.type() == ShaderBindingType::ConstantBuffer) {
-                auto& d3d12Buffer = static_cast<D3D12Buffer const&>(bindingInfo.getBuffer());
-
-                constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
-                if (d3d12Buffer.resourceState != targetResourceState) {
-                    D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Buffer, targetResourceState);
-                    resourceBarriers.push_back(barrier);
-                    d3d12Buffer.resourceState = targetResourceState;
-                }
-            }
-        });
+        createTransitionBarriersForAllReferencedResources(computeState.stateBindings(), resourceBarriers);
 
         if (resourceBarriers.size() > 0) {
             m_commandList->ResourceBarrier(narrow_cast<u32>(resourceBarriers.size()), resourceBarriers.data());
@@ -675,4 +586,55 @@ D3D12_RESOURCE_BARRIER D3D12CommandList::createResourceTransitionBarrier(D3D12Te
 
     d3d12Texture.resourceState = targetResourceState;
     return resourceBarrier;
+}
+
+void D3D12CommandList::createTransitionBarriersForAllReferencedResources(StateBindings const& stateBindings, std::vector<D3D12_RESOURCE_BARRIER>& outBarriers) const
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    stateBindings.forEachBinding([&](ShaderBinding const& bindingInfo) {
+        if (bindingInfo.type() == ShaderBindingType::SampledTexture) {
+            for (Texture const* texture : bindingInfo.getSampledTextures()) {
+                auto& d3d12Texture = static_cast<D3D12Texture const&>(*texture);
+
+                constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
+                if (d3d12Texture.resourceState != targetResourceState) {
+                    D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Texture, targetResourceState);
+                    outBarriers.push_back(barrier);
+                    d3d12Texture.resourceState = targetResourceState;
+                }
+            }
+        } else if (bindingInfo.type() == ShaderBindingType::StorageTexture) {
+            for (TextureMipView textureMip : bindingInfo.getStorageTextures()) {
+                auto& d3d12Texture = static_cast<D3D12Texture const&>(textureMip.texture());
+
+                constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+                if (d3d12Texture.resourceState != targetResourceState) {
+                    D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Texture, targetResourceState);
+                    outBarriers.push_back(barrier);
+                    d3d12Texture.resourceState = targetResourceState;
+                }
+            }
+        } else if (bindingInfo.type() == ShaderBindingType::StorageBuffer) {
+            for (Buffer* storageBuffer : bindingInfo.getBuffers()) {
+                auto& d3d12Buffer = static_cast<D3D12Buffer const&>(*storageBuffer);
+
+                constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_UNORDERED_ACCESS;
+                if (d3d12Buffer.resourceState != targetResourceState) {
+                    D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Buffer, targetResourceState);
+                    outBarriers.push_back(barrier);
+                    d3d12Buffer.resourceState = targetResourceState;
+                }
+            }
+        } else if (bindingInfo.type() == ShaderBindingType::ConstantBuffer) {
+            auto& d3d12Buffer = static_cast<D3D12Buffer const&>(bindingInfo.getBuffer());
+
+            constexpr D3D12_RESOURCE_STATES targetResourceState = D3D12_RESOURCE_STATE_VERTEX_AND_CONSTANT_BUFFER;
+            if (d3d12Buffer.resourceState != targetResourceState) {
+                D3D12_RESOURCE_BARRIER barrier = createResourceTransitionBarrier(d3d12Buffer, targetResourceState);
+                outBarriers.push_back(barrier);
+                d3d12Buffer.resourceState = targetResourceState;
+            }
+        }
+    });
 }
