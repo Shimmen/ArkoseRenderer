@@ -3,6 +3,7 @@
 #include "core/Logging.h"
 #include "rendering/backend/d3d12/D3D12Backend.h"
 #include "rendering/backend/d3d12/D3D12Buffer.h"
+#include "rendering/backend/d3d12/D3D12CommandList.h"
 #include "utility/Profiling.h"
 
 D3D12Texture::D3D12Texture(Backend& backend, Description desc)
@@ -261,12 +262,16 @@ void D3D12Texture::generateMipmaps()
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
-    if (!hasMipmaps()) {
-        ARKOSE_LOG(Error, "D3D12Texture: generateMipmaps() called on texture which doesn't have space for mipmaps allocated. Ignoring request.");
-        return;
+    auto& d3d12Backend = static_cast<D3D12Backend&>(backend());
+
+    bool success = d3d12Backend.issueOneOffCommand([&](ID3D12GraphicsCommandList& commandList) {
+        D3D12CommandList cmdList { d3d12Backend, &commandList };
+        cmdList.generateMipmaps(*this);
+    });
+
+    if (!success) {
+        ARKOSE_LOG(Error, "D3D12Texture: error while generating mipmaps");
     }
-    
-    // TODO
 }
 
 ImTextureID D3D12Texture::asImTextureID()
