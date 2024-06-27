@@ -539,7 +539,7 @@ bool D3D12Backend::setBufferDataUsingStagingBuffer(D3D12Buffer& buffer, const ui
     auto idealCopyState = D3D12_RESOURCE_STATE_COPY_DEST;
 
     ID3D12Resource* bufferResource = buffer.bufferResource.Get();
-    issueUploadCommand([&](ID3D12GraphicsCommandList& uploadCommandList) {
+    bool success = issueUploadCommand([&](ID3D12GraphicsCommandList& uploadCommandList) {
 
         if (baseResourceState != idealCopyState) {
             auto transitionBeforeCopy = CD3DX12_RESOURCE_BARRIER::Transition(bufferResource, baseResourceState, D3D12_RESOURCE_STATE_COPY_DEST);
@@ -556,11 +556,11 @@ bool D3D12Backend::setBufferDataUsingStagingBuffer(D3D12Buffer& buffer, const ui
         }
     });
 
-    return true;
+    return success;
 
 }
 
-void D3D12Backend::issueOneOffCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const
+bool D3D12Backend::issueOneOffCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const
 {
     ComPtr<ID3D12Fence> uploadFence;
     if (auto hr = device().CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&uploadFence)); FAILED(hr)) {
@@ -596,13 +596,16 @@ void D3D12Backend::issueOneOffCommand(const std::function<void(ID3D12GraphicsCom
 
     commandAllocator->Reset();
     CloseHandle(waitEvent);
+
+    // TODO: How can we detect if something went wrong?
+    return true;
 }
 
-void D3D12Backend::issueUploadCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const
+bool D3D12Backend::issueUploadCommand(const std::function<void(ID3D12GraphicsCommandList&)>& callback) const
 {
     // "The texture and mesh data is uploaded using an upload heap. This happens during the initialization and shows how to transfer data to the GPU.
     //  Ideally, this should be running on the copy queue but for the sake of simplicity it is run on the general graphics queue."
-    issueOneOffCommand(callback);
+    return issueOneOffCommand(callback);
 }
 
 D3D12DescriptorHeapAllocator& D3D12Backend::copyableDescriptorHeapAllocator()
