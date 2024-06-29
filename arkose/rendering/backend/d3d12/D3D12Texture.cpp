@@ -151,6 +151,8 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
         ARKOSE_LOG(Fatal, "D3D12Texture: could not create committed resource for texture, exiting.");
     }
 
+    m_sizeInMemory = textureAllocation.Get()->GetSize();
+
     if (!hasDepthFormat()) {
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc {};
         srvDesc.Format = textureDescription.Format;
