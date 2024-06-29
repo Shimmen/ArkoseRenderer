@@ -32,18 +32,70 @@ void D3D12CommandList::clearTexture(Texture& genColorTexture, ClearValue clearVa
     NOT_YET_IMPLEMENTED();
 }
 
-void D3D12CommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t srcMip, uint32_t dstMip)
+void D3D12CommandList::copyTexture(Texture& srcTexture, Texture& dstTexture, u32 srcMip, u32 dstMip)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    NOT_YET_IMPLEMENTED();
+    Extent3D srcExtent = srcTexture.extent3DAtMip(srcMip);
+    Extent3D dstExtent = dstTexture.extent3DAtMip(dstMip);
+
+    if (srcExtent == dstExtent) {
+
+        auto& d3d12srcTexture = static_cast<D3D12Texture&>(srcTexture);
+        auto& d3d12dstTexture = static_cast<D3D12Texture&>(dstTexture);
+
+        D3D12_TEXTURE_COPY_LOCATION srcCopyLocation;
+        srcCopyLocation.pResource = d3d12srcTexture.textureResource.Get();
+        srcCopyLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+        srcCopyLocation.SubresourceIndex = srcMip; // is this always correct? e.g. in case of texture arrays?
+
+        D3D12_TEXTURE_COPY_LOCATION dstCopyLocation;
+        dstCopyLocation.pResource = d3d12dstTexture.textureResource.Get();
+        dstCopyLocation.Type = D3D12_TEXTURE_COPY_TYPE_SUBRESOURCE_INDEX;
+        dstCopyLocation.SubresourceIndex = dstMip; // is this always correct? e.g. in case of texture arrays?
+
+        m_commandList->CopyTextureRegion(&dstCopyLocation, 0, 0, 0,
+                                         &srcCopyLocation, nullptr);
+
+        // any barrier needed? see https://asawicki.info/news_1722_secrets_of_direct3d_12_copies_to_the_same_buffer
+
+    } else {
+
+        // Perform a blit, backed by an authored compute shader
+
+        NOT_YET_IMPLEMENTED();
+
+        // TODO - something like this:
+        //backend().blitTexture(dstTexture, dstMip, srcTexture, srcMip);
+        //textureMipWriteBarrier(dstTexture, dstMip);
+
+        // More info (these are specifically about mipmap generation, but the core problem is essentially the same):
+        // https://slindev.com/d3d12-texture-mipmap-generation/
+        // https://github.com/microsoft/DirectXTex/wiki/GenerateMipMaps
+
+    }
 }
 
 void D3D12CommandList::generateMipmaps(Texture& genTexture)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    NOT_YET_IMPLEMENTED();
+    auto& texture = static_cast<D3D12Texture&>(genTexture);
+
+    if (!texture.hasMipmaps()) {
+        ARKOSE_LOG(Error, "generateMipmaps called on command list for texture which doesn't have mipmaps. Ignoring request.");
+        return;
+    }
+
+    beginDebugLabel(fmt::format("Generate Mipmaps ({}x{})", genTexture.extent().width(), genTexture.extent().height()));
+
+    u32 mipLevels = texture.mipLevels();
+    for (u32 targetMipLevel = 1; targetMipLevel < mipLevels; ++targetMipLevel) {
+        u32 sourceMipLevel = targetMipLevel - 1;
+        copyTexture(texture, texture, sourceMipLevel, targetMipLevel);
+    }
+
+    endDebugLabel();
 }
 
 void D3D12CommandList::executeBufferCopyOperations(std::vector<BufferCopyOperation> copyOperations)
@@ -203,6 +255,10 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearVa
 
     if (autoSetViewport) {
         setViewport({ 0, 0 }, renderTarget.extent().asIntVector());
+    }
+
+    if (renderState.stencilState().mode != StencilMode::Disabled) {
+        m_commandList->OMSetStencilRef(renderState.stencilState().value);
     }
 }
 
@@ -535,25 +591,47 @@ void D3D12CommandList::endDebugLabel()
     PIXEndEvent(m_commandList);
 }
 
-void D3D12CommandList::textureWriteBarrier(const Texture& genTexture)
+void D3D12CommandList::textureWriteBarrier(Texture const& texture)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    NOT_YET_IMPLEMENTED();
+    auto const& d3d12Texture = static_cast<D3D12Texture const&>(texture);
+    ARKOSE_ASSERT(d3d12Texture.storageCapable());
+
+    D3D12_RESOURCE_BARRIER resourceBarrier {};
+    resourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+    resourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+    resourceBarrier.UAV.pResource = d3d12Texture.textureResource.Get();
+    m_commandList->ResourceBarrier(1, &resourceBarrier);
 }
 
-void D3D12CommandList::textureMipWriteBarrier(const Texture& genTexture, uint32_t mip)
+void D3D12CommandList::textureMipWriteBarrier(Texture const& texture, u32 mip)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    NOT_YET_IMPLEMENTED();
+    textureWriteBarrier(texture);
 }
 
 void D3D12CommandList::bufferWriteBarrier(std::vector<Buffer const*> buffers)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    NOT_YET_IMPLEMENTED();
+    std::vector<D3D12_RESOURCE_BARRIER> resourceBarriers {};
+    for (Buffer const* buffer : buffers) {
+        if (auto const* d3d12Buffer = static_cast<D3D12Buffer const*>(buffer)) {
+            ARKOSE_ASSERT(d3d12Buffer->storageCapable());
+
+            D3D12_RESOURCE_BARRIER resourceBarrier {};
+            resourceBarrier.Type = D3D12_RESOURCE_BARRIER_TYPE_UAV;
+            resourceBarrier.Flags = D3D12_RESOURCE_BARRIER_FLAG_NONE;
+            resourceBarrier.UAV.pResource = d3d12Buffer->bufferResource.Get();
+            resourceBarriers.push_back(resourceBarrier);
+        }
+    }
+
+    if (resourceBarriers.size() > 0) {
+        m_commandList->ResourceBarrier(narrow_cast<UINT>(resourceBarriers.size()), resourceBarriers.data());
+    }
 }
 
 D3D12_RESOURCE_BARRIER D3D12CommandList::createResourceTransitionBarrier(D3D12Buffer const& d3d12Buffer, D3D12_RESOURCE_STATES targetResourceState) const

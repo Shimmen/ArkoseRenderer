@@ -19,7 +19,7 @@ public:
 
     void fillBuffer(Buffer&, u32 fillValue) override;
     void clearTexture(Texture&, ClearValue) override;
-    void copyTexture(Texture& src, Texture& dst, uint32_t srcMip, uint32_t dstMip) override;
+    void copyTexture(Texture& src, Texture& dst, u32 srcMip, u32 dstMip) override;
     void generateMipmaps(Texture&) override;
 
     void executeBufferCopyOperations(std::vector<BufferCopyOperation>) override;
@@ -62,8 +62,8 @@ public:
     void beginDebugLabel(const std::string&) override;
     void endDebugLabel() override;
 
-    void textureWriteBarrier(const Texture&) override;
-    void textureMipWriteBarrier(const Texture&, uint32_t mip) override;
+    void textureWriteBarrier(Texture const&) override;
+    void textureMipWriteBarrier(Texture const&, u32 mip) override;
     void bufferWriteBarrier(std::vector<Buffer const*>) override;
 
     void slowBlockingReadFromBuffer(const Buffer&, size_t offset, size_t size, void* dst) override;
