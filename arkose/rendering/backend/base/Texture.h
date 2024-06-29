@@ -149,6 +149,7 @@ public:
     static std::unique_ptr<Texture> createFromImagePathSequence(Backend&, const std::string& imagePathSequencePattern, bool sRGB, bool generateMipmaps, ImageWrapModes);
 
     bool hasFloatingPointDataFormat() const;
+    virtual bool storageCapable() const = 0;
 
     virtual void clear(ClearColor) = 0;
 

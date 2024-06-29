@@ -289,6 +289,11 @@ void VulkanTexture::setName(const std::string& name)
     }
 }
 
+bool VulkanTexture::storageCapable() const
+{
+    return (vkUsage & VK_IMAGE_USAGE_STORAGE_BIT) != 0;
+}
+
 void VulkanTexture::clear(ClearColor color)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();

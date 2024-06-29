@@ -5,17 +5,6 @@
 #include "core/Logging.h"
 #include <algorithm>
 
-
-// TODO: Move this to the Texture class, similarly to how Buffer does it
-static bool isTextureStorageCapable(Texture& texture)
-{
-    if (texture.hasSrgbFormat() || texture.hasDepthFormat()) {
-        return false;
-    }
-
-    return true;
-}
-
 ShaderBinding::ShaderBinding(ShaderBindingType type, ShaderStage shaderStage)
     : m_type(type)
     , m_shaderStage(shaderStage)
@@ -123,7 +112,7 @@ ShaderBinding ShaderBinding::storageTextureAtMip(Texture& texture, uint32_t mipL
 {
     ShaderBinding binding { ShaderBindingType::StorageTexture, shaderStage };
 
-    ARKOSE_ASSERT(isTextureStorageCapable(texture));
+    ARKOSE_ASSERT(texture.storageCapable());
     binding.m_storageTextures.push_back(TextureMipView(texture, mipLevel));
 
     return binding;

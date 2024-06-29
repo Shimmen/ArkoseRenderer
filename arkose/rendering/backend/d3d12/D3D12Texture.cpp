@@ -195,6 +195,11 @@ void D3D12Texture::setName(const std::string& name)
     textureResource->SetName(convertToWideString(name).c_str());
 }
 
+bool D3D12Texture::storageCapable() const
+{
+    return (textureDescription.Flags & D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS) != 0;
+}
+
 void D3D12Texture::clear(ClearColor color)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
