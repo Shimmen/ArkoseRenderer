@@ -274,6 +274,8 @@ VulkanRenderState::VulkanRenderState(Backend& backend, RenderTarget const& rende
             depthStencilState.front.compareMask = 0x00;
             // Writing
             depthStencilState.front.passOp = VK_STENCIL_OP_REPLACE;
+            depthStencilState.front.failOp = VK_STENCIL_OP_KEEP;
+            depthStencilState.front.depthFailOp = VK_STENCIL_OP_KEEP;
             depthStencilState.front.reference = stencilState.value;
             depthStencilState.front.writeMask = 0xff;
             break;
