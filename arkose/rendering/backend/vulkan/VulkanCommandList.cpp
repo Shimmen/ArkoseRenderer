@@ -277,12 +277,10 @@ void VulkanCommandList::generateMipmaps(Texture& genTexture)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    beginDebugLabel(fmt::format("Generate Mipmaps ({}x{})", genTexture.extent().width(), genTexture.extent().height()));
-
     auto& texture = static_cast<VulkanTexture&>(genTexture);
 
     if (!texture.hasMipmaps()) {
-        ARKOSE_LOG(Error, "generateMipmaps called on command list for texture which doesn't have space for mipmaps allocated. Ignoring request.");
+        ARKOSE_LOG(Error, "generateMipmaps called on command list for texture which doesn't have mipmaps. Ignoring request.");
         return;
     }
 
@@ -290,6 +288,8 @@ void VulkanCommandList::generateMipmaps(Texture& genTexture)
         ARKOSE_LOG(Error, "generateMipmaps called on command list for texture which currently has the layout VK_IMAGE_LAYOUT_UNDEFINED. Ignoring request.");
         return;
     }
+
+    beginDebugLabel(fmt::format("Generate Mipmaps ({}x{})", genTexture.extent().width(), genTexture.extent().height()));
 
     // Make sure that all mips have whatever layout the texture has before this function was called!
     VkImageLayout finalLayout = texture.currentLayout;
