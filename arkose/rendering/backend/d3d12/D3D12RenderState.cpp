@@ -318,9 +318,55 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
         ASSERT_NOT_REACHED();
     }
 
-    // No stencil support for now..
-    ARKOSE_ASSERT(stencilState.mode == StencilMode::Disabled);
-    psoDesc.DepthStencilState.StencilEnable = false;
+    if (stencilState.mode != StencilMode::Disabled) {
+        psoDesc.DepthStencilState.StencilEnable = true;
+        switch (stencilState.mode) {
+        case StencilMode::AlwaysWrite:
+            // Test
+            psoDesc.DepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_ALWAYS;
+            psoDesc.DepthStencilState.StencilReadMask = 0x00;
+            // Writing
+            psoDesc.DepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+            psoDesc.DepthStencilState.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+            psoDesc.DepthStencilState.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+            psoDesc.DepthStencilState.StencilWriteMask = 0xff;
+            break;
+
+        case StencilMode::ReplaceIfGreaterOrEqual:
+            // Test
+            psoDesc.DepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_GREATER_EQUAL;
+            psoDesc.DepthStencilState.StencilReadMask = 0xff;
+            // Writing
+            psoDesc.DepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_REPLACE;
+            psoDesc.DepthStencilState.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+            psoDesc.DepthStencilState.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+            psoDesc.DepthStencilState.StencilWriteMask = 0xff;
+            break;
+
+        case StencilMode::PassIfEqual:
+            // Test
+            psoDesc.DepthStencilState.FrontFace.StencilFunc = D3D12_COMPARISON_FUNC_EQUAL;
+            psoDesc.DepthStencilState.StencilReadMask = 0xff;
+            // Writing
+            psoDesc.DepthStencilState.FrontFace.StencilPassOp = D3D12_STENCIL_OP_KEEP;
+            psoDesc.DepthStencilState.FrontFace.StencilFailOp = D3D12_STENCIL_OP_KEEP;
+            psoDesc.DepthStencilState.FrontFace.StencilDepthFailOp = D3D12_STENCIL_OP_KEEP;
+            psoDesc.DepthStencilState.StencilWriteMask = 0x00;
+            break;
+
+        default:
+            ASSERT_NOT_REACHED();
+        }
+
+        // For now, no separate front/back treatment supported
+        psoDesc.DepthStencilState.BackFace = psoDesc.DepthStencilState.FrontFace;
+    } else {
+        psoDesc.DepthStencilState.StencilEnable = false;
+        psoDesc.DepthStencilState.StencilReadMask = 0x00;
+        psoDesc.DepthStencilState.StencilWriteMask = 0x00;
+        psoDesc.DepthStencilState.FrontFace = {};
+        psoDesc.DepthStencilState.BackFace = {};
+    }
 
     // TODO: Pipeline caching!
     psoDesc.CachedPSO.pCachedBlob = nullptr;
