@@ -588,7 +588,8 @@ bool ShaderManager::CompiledShader::collectNamedConstants()
     SCOPED_PROFILE_ZONE();
 
     ARKOSE_ASSERT(currentSpirvBinary.size() > 0);
-    ARKOSE_ASSERT(namedConstants.size() == 0);
+
+    namedConstants.clear();
 
     spirv_cross::Compiler compiler { currentSpirvBinary };
     spirv_cross::ShaderResources resources = compiler.get_shader_resources();
