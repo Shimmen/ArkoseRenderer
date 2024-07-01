@@ -160,8 +160,8 @@ void main()
     normal = normalize(tangentNormal.x * tangent + tangentNormal.y * bitangent + tangentNormal.z * normal);
 #endif
 
-    // NOTE: Assumes uniform scaling!
-    mat3 normalMatrix = mat3(rt_ObjectToWorld);
+    // TODO: Probably pass in instead of computing for every closest hit
+    mat3 normalMatrix = transpose(inverse(mat3(rt_ObjectToWorld)));
     vec3 N = normalize(normalMatrix * normal);
 
     vec3 baseColor = texture(material_getTexture(material.baseColor), uv).rgb * material.colorTint.rgb;
