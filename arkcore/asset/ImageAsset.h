@@ -103,9 +103,6 @@ public:
     using rgba8 = ark::tvec4<u8>;
     rgba8 getPixelAsRGBA8(u32 x, u32 y, u32 z, u32 mipIdx) const;
 
-    // Not serialized, can be used to store whatever intermediate you want
-    int userData { -1 };
-
 private:
     u32 m_width { 1 };
     u32 m_height { 1 };

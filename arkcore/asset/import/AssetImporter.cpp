@@ -72,6 +72,9 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
             if (image->hasSourceAsset()) {
                 fileName = std::string(FileIO::extractFileNameFromPath(image->sourceAssetFilePath()));
                 fileName = std::string(FileIO::removeExtensionFromPath(fileName));
+            } else if (image->name.size() > 0) {
+                // TODO: Perform proper name de-duplication (only increment when two identical ones would be saved)
+                fileName = fmt::format("{}{:04}", image->name, unnamedImageIdx++);
             } else {
                 fileName = fmt::format("image{:04}", unnamedImageIdx++);
             }

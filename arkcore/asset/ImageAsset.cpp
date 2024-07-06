@@ -25,6 +25,8 @@ std::unique_ptr<ImageAsset> ImageAsset::createCopyWithReplacedFormat(ImageAsset 
 {
     auto newImage = std::make_unique<ImageAsset>();
 
+    newImage->name = inputImage.name;
+
     newImage->m_width = inputImage.m_width;
     newImage->m_height = inputImage.m_height;
     newImage->m_depth = inputImage.m_depth;
@@ -39,9 +41,6 @@ std::unique_ptr<ImageAsset> ImageAsset::createCopyWithReplacedFormat(ImageAsset 
     newImage->m_compressed = false;
     newImage->m_uncompressedSize = narrow_cast<u32>(newImage->m_pixelData.size());
     newImage->m_compressedSize = newImage->m_compressedSize;
-
-    // TODO: Do we need to copy this over?
-    newImage->userData = inputImage.userData;
 
     return newImage;
 }
@@ -279,9 +278,17 @@ bool ImageAsset::generateMipmaps()
 
     // TODO: Implement proper error handling!
     ARKOSE_ASSERT(m_mips.size() == 1);
-    ARKOSE_ASSERT(ark::isPowerOfTwo(width()));
-    ARKOSE_ASSERT(ark::isPowerOfTwo(height()));
     ARKOSE_ASSERT(depth() == 1);
+
+    if (!ark::isPowerOfTwo(width()) || ark::isPowerOfTwo(height())) {
+        // TODO: Implement non-power-of-two mipmap generation
+        return false;
+    }
+
+    if (width() != height()) {
+        // TODO: Implement non-square texture mipmap generation
+        return false;
+    }
 
     // TODO: Support more formats!
     ARKOSE_ASSERT(m_format == ImageFormat::RGBA8);

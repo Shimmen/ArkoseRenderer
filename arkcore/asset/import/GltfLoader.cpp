@@ -61,28 +61,19 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
     std::string gltfDirectory = std::string(FileIO::extractDirectoryFromPath(gltfFilePath));
 
     // Make best guesses for images' types
-    std::unordered_map<int, ImageType> imageColorSpaceBestGuess {};
+    std::unordered_map<int, ImageType> imageTypeBestGuess {};
     for (tinygltf::Material const& gltfMaterial : gltfModel.materials) {
-        auto imageIdxForTexture = [&](int gltfTextureIdx) {
-            if (gltfTextureIdx == -1) {
-                return -1;
-            }
-
-            tinygltf::Texture& gltfTexture = gltfModel.textures[gltfTextureIdx];
-            return gltfTexture.source;
-        };
-
         // Note that we're relying on all -1 i.e. invalid textures mapping to the same slot which will be unused anyway
-        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.pbrMetallicRoughness.baseColorTexture.index)] = ImageType::sRGBColor;
-        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index)] = ImageType::GenericData;
-        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.emissiveTexture.index)] = ImageType::sRGBColor;
-        imageColorSpaceBestGuess[imageIdxForTexture(gltfMaterial.normalTexture.index)] = ImageType::NormalMap;
+        imageTypeBestGuess[gltfMaterial.pbrMetallicRoughness.baseColorTexture.index] = ImageType::sRGBColor;
+        imageTypeBestGuess[gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index] = ImageType::GenericData;
+        imageTypeBestGuess[gltfMaterial.emissiveTexture.index] = ImageType::sRGBColor;
+        imageTypeBestGuess[gltfMaterial.normalTexture.index] = ImageType::NormalMap;
     }
 
     // Create all images defined in the glTF file (even potentially unused ones)
-    size_t imageCount = gltfModel.images.size();
-    result.images.resize(imageCount);
-    ParallelFor(imageCount, [&](size_t idx) {
+    size_t textureCount = gltfModel.textures.size();
+    result.images.resize(textureCount);
+    ParallelFor(textureCount, [&](size_t idx) {
 
         tinygltf::Texture& gltfTexture = gltfModel.textures[idx];
         tinygltf::Image& gltfImage = gltfModel.images[gltfTexture.source];
@@ -103,18 +94,15 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
             const uint8_t* encodedData = gltfBuffer.data.data() + gltfBufferView.byteOffset;
 
             image = ImageAsset::createFromSourceAsset(encodedData, encodedDataSize);
+            image->name = gltfImage.name;
 
         }
 
-        // Assign the best-guess color space for this image
-        auto entry = imageColorSpaceBestGuess.find(static_cast<int>(idx));
-        if (entry != imageColorSpaceBestGuess.end()) {
+        // Assign the best-guess type of this image
+        auto entry = imageTypeBestGuess.find(static_cast<int>(idx));
+        if (entry != imageTypeBestGuess.end()) {
             image->setType(entry->second);
         }
-
-        // Write glTF image index to user data until we can resolve file paths
-        int imageIdx = static_cast<int>(idx);
-        image->userData = imageIdx;
 
         result.images[idx] = std::move(image);
     });
