@@ -68,9 +68,13 @@ void Scene::setupFromDescription(const Description& description)
     // NOTE: Must initialize GPU scene before we start registering meshes etc.
     gpuScene().initialize({}, description.withRayTracing, description.withMeshShading);
 
-    if (FileIO::isFileReadable(description.path)) {
-        if (LevelAsset* levelAsset = LevelAsset::load(description.path)) {
-            addLevel(levelAsset);
+    if (description.path.size() > 0) {
+        if (FileIO::isFileReadable(description.path)) {
+            if (LevelAsset* levelAsset = LevelAsset::load(description.path)) {
+                addLevel(levelAsset);
+            }
+        } else {
+            ARKOSE_ERROR("Failed to setup scene from description file '{}'", description.path);
         }
     }
 
