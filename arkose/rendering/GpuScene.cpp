@@ -1244,6 +1244,7 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
         auto fallbackEntry = m_materialFallbackTextureCache.find(fallback);
         if (fallbackEntry == m_materialFallbackTextureCache.end()) {
             TextureHandle handle = registerTextureSlot();
+            m_managedTextures.markPersistent(handle);
             updateTextureUnowned(handle, fallback);
             m_materialFallbackTextureCache[fallback] = handle;
             return handle;
