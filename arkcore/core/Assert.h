@@ -18,7 +18,12 @@ ARK_FORCE_INLINE void ArkoseAssertHandlerImpl(char const* assertion, char const*
         optionalMessage += '\n';
     }
 
-    std::string assertionMessage = fmt::format("Assertion failed: '{}'\nIn file {} on line {}\n{}Do you want to break?", assertion, filename, line, optionalMessage);
+    std::string assertionMessage;
+    if (assertion != nullptr) {
+        assertionMessage = fmt::format("Assertion failed: '{}'\nIn file {} on line {}\n{}Do you want to break?", assertion, filename, line, optionalMessage);
+    } else {
+        assertionMessage = fmt::format("Error!\nIn file {} on line {}\n{}Do you want to break?", filename, line, optionalMessage);
+    }
 
 #if defined(_MSC_VER)
     if (IsDebuggerPresent()) {
@@ -51,6 +56,7 @@ inline void ArkoseAssertHandler(char const* assertion, char const* filename, int
 
 #define ARKOSE_ASSERT(expression)
 #define ARKOSE_ASSERTM(expression, format, ...)
+#define ARKOSE_ERROR(format, ...)
 #define ASSERT_NOT_REACHED()
 #define NOT_YET_IMPLEMENTED()
 
@@ -66,6 +72,11 @@ inline void ArkoseAssertHandler(char const* assertion, char const* filename, int
     (void)(                                                                                        \
         (!!(expression)) ||                                                                        \
         (ArkoseAssertHandler(#expression, __FILE__, __LINE__, FMT_STRING(format), __VA_ARGS__), 0) \
+    )
+
+#define ARKOSE_ERROR(format, ...)                                                                  \
+    (void)(                                                                                        \
+        (ArkoseAssertHandler(nullptr, __FILE__, __LINE__, FMT_STRING(format), __VA_ARGS__), 0)     \
     )
 
 #define ASSERT_NOT_REACHED()  \
