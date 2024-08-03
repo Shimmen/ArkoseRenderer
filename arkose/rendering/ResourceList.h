@@ -99,15 +99,29 @@ public:
         return m_resources[handle.index()];
     }
 
+    void markPersistent(HandleType handle)
+    {
+        ResourceMetadata& resourceMetadata = getMetadata(handle);
+        resourceMetadata.persistent = true;
+        resourceMetadata.referenceCount = 0;
+    }
+
     void addReference(HandleType handle)
     {
         ResourceMetadata& resourceMetadata = getMetadata(handle);
-        resourceMetadata.referenceCount += 1;
+        if (!resourceMetadata.persistent) {
+            resourceMetadata.referenceCount += 1;
+        }
     }
 
     bool removeReference(HandleType handle, size_t currentFrame)
     {
         ResourceMetadata& resourceMetadata = getMetadata(handle);
+
+        if (resourceMetadata.persistent) {
+            ARKOSE_ASSERT(resourceMetadata.referenceCount == 0);
+            return false;
+        }
 
         ARKOSE_ASSERT(resourceMetadata.referenceCount > 0);
         resourceMetadata.referenceCount -= 1;
@@ -135,6 +149,9 @@ public:
 
             HandleType handle = m_deferredDeleteList[idx];
             ResourceMetadata& resourceMetadata = getMetadata(handle);
+
+            // Persistent resources should never be put into this list!
+            ARKOSE_ASSERT(!resourceMetadata.persistent);
 
             bool removeFromList = false;
             bool deleteResource = false;
@@ -199,6 +216,7 @@ public:
 private:
     struct ResourceMetadata {
         bool alive { true };
+        bool persistent { false };
         size_t referenceCount { 1 };
         size_t zeroReferencesAtFrame { SIZE_MAX };
         // TODO: Add some kind of generation value to track use-after-free?
