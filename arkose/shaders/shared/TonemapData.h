@@ -1,0 +1,8 @@
+#ifndef TONEMAP_DATA_H
+#define TONEMAP_DATA_H
+
+#define TONEMAP_METHOD_CLAMP    1
+#define TONEMAP_METHOD_REINHARD 2
+#define TONEMAP_METHOD_ACES     3
+
+#endif // TONEMAP_DATA_H

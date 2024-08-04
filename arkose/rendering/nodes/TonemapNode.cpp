@@ -4,17 +4,36 @@
 #include "rendering/RenderPipeline.h"
 #include <imgui.h>
 
+#include "shaders/shared/TonemapData.h"
+
 TonemapNode::TonemapNode(std::string sourceTextureName, Mode mode)
     : m_sourceTextureName(sourceTextureName)
     , m_mode(mode)
+    , m_tonemapMethod(TONEMAP_METHOD_ACES)
 {
+}
+
+void TonemapNode::drawGui()
+{
+    ImGui::Text("Method:");
+
+    if (ImGui::RadioButton("Clamp", m_tonemapMethod == TONEMAP_METHOD_CLAMP)) {
+        m_tonemapMethod = TONEMAP_METHOD_CLAMP;
+    }
+    if (ImGui::RadioButton("Reinhard", m_tonemapMethod == TONEMAP_METHOD_REINHARD)) {
+        m_tonemapMethod = TONEMAP_METHOD_REINHARD;
+    }
+    if (ImGui::RadioButton("ACES", m_tonemapMethod == TONEMAP_METHOD_ACES)) {
+        m_tonemapMethod = TONEMAP_METHOD_ACES;
+    }
 }
 
 RenderPipelineNode::ExecuteCallback TonemapNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture* sourceTexture = reg.getTexture(m_sourceTextureName);
-    if (!sourceTexture)
+    if (!sourceTexture) {
         ARKOSE_LOG(Fatal, "Tonemap: specified source texture '{}' not found, exiting.\n", m_sourceTextureName);
+    }
 
     const RenderTarget* ldrTarget;
     if (m_mode == Mode::RenderToWindow) {
@@ -40,10 +59,13 @@ RenderPipelineNode::ExecuteCallback TonemapNode::construct(GpuScene& scene, Regi
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        if (m_mode == Mode::RenderToWindow)
+        if (m_mode == Mode::RenderToWindow) {
             cmdList.beginRendering(tonemapRenderState, ClearValue::blackAtMaxDepth());
-        else
+        } else {
             cmdList.beginRendering(tonemapRenderState);
+        }
+
+        cmdList.setNamedUniform<int>("tonemapMethod", m_tonemapMethod);
 
         cmdList.bindVertexBuffer(vertexBuffer, tonemapRenderState.vertexLayout().packedVertexSize(), 0);
         cmdList.draw(3);

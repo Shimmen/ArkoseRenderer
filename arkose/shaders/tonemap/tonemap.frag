@@ -2,16 +2,38 @@
 
 #include <common.glsl>
 #include <common/aces.glsl>
+#include <common/namedUniforms.glsl>
 #include <common/srgb.glsl>
+#include <shared/TonemapData.h>
 
 layout(set = 0, binding = 0) uniform sampler2D uTexture;
+
+NAMED_UNIFORMS(constants,
+    int tonemapMethod;
+)
 
 layout(location = 0) out vec4 oColor;
 
 void main()
 {
     vec3 hdrColor = texelFetch(uTexture, ivec2(gl_FragCoord.xy), 0).rgb;
-    vec3 ldrColor = ACES_tonemap(hdrColor);
+
+    vec3 ldrColor;
+    switch (constants.tonemapMethod) {
+    case TONEMAP_METHOD_CLAMP:
+        ldrColor = clamp(hdrColor, vec3(0.0), vec3(1.0));
+        break;
+    case TONEMAP_METHOD_REINHARD:
+        ldrColor = hdrColor / (hdrColor + vec3(1.0));
+        break;
+    case TONEMAP_METHOD_ACES:
+        ldrColor = ACES_tonemap(hdrColor);
+        break;
+    default:
+        ldrColor = vec3(1.0, 0.0, 1.0);
+        break;
+    }
+
     vec3 nonlinearLdrColor = sRGB_gammaEncode(ldrColor);
 
     // TODO: Add some dithering before writing to RGBA8 target!
