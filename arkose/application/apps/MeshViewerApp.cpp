@@ -236,7 +236,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
         // NOTE: We're not actually loading it from disk every time because it's cached, but this still seems a little silly to do.
         if (MaterialAsset* material = MaterialAsset::load(materialPath)) {
 
-            auto drawMaterialInputGui = [&](const char* name, std::optional<MaterialInput> materialInput) -> bool {
+            auto drawMaterialInputGui = [&](const char* name, std::optional<MaterialInput>& materialInput) -> bool {
 
                 bool didChange = false;
 
