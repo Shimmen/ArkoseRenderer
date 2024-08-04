@@ -298,6 +298,8 @@ void MeshViewerApp::drawMeshMaterialPanel()
             materialDidChange |= drawBlendModeSelectorGui("Blend mode", material->blendMode);
             if (material->blendMode == BlendMode::Masked) {
                 materialDidChange |= ImGui::SliderFloat("Mask cutoff", &material->maskCutoff, 0.0f, 1.0f);
+            } else if (material->blendMode == BlendMode::Translucent) {
+                materialDidChange |= ImGui::SliderFloat("Opacity (tint)", &material->colorTint.w, 0.0f, 1.0f);
             }
 
             if (materialDidChange) {
