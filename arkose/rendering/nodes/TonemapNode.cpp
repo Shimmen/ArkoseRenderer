@@ -26,6 +26,9 @@ void TonemapNode::drawGui()
     if (ImGui::RadioButton("ACES", m_tonemapMethod == TONEMAP_METHOD_ACES)) {
         m_tonemapMethod = TONEMAP_METHOD_ACES;
     }
+    if (ImGui::RadioButton("AgX", m_tonemapMethod == TONEMAP_METHOD_AGX)) {
+        m_tonemapMethod = TONEMAP_METHOD_AGX;
+    }
 }
 
 RenderPipelineNode::ExecuteCallback TonemapNode::construct(GpuScene& scene, Registry& reg)
