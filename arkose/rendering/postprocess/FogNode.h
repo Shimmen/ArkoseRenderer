@@ -15,6 +15,6 @@ public:
 
 private:
     bool m_enabled { true };
-    float m_fogDensity { 0.0007f };
+    float m_fogDensity { 0.00001f };
     vec3 m_fogColor { 0.5f, 0.6f, 0.7f };
 };
