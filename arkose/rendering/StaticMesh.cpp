@@ -30,7 +30,7 @@ void StaticMeshSegment::setMaterial(MaterialAsset* materialAsset, GpuScene& scen
 
     drawKey = DrawKey::generate(materialAsset);
 
-    scene.updateStaticMesh(staticMeshHandle);
+    scene.notifyStaticMeshHasChanged(staticMeshHandle);
     scene.unregisterMaterial(oldMaterial);
 }
 

@@ -112,7 +112,7 @@ public:
 
     StaticMeshHandle registerStaticMesh(MeshAsset const*);
     void unregisterStaticMesh(StaticMeshHandle);
-    void updateStaticMesh(StaticMeshHandle);
+    void notifyStaticMeshHasChanged(StaticMeshHandle);
 
     [[nodiscard]] MaterialHandle registerMaterial(MaterialAsset const*);
     void unregisterMaterial(MaterialHandle);
@@ -204,7 +204,7 @@ private:
 
     ResourceList<ManagedStaticMesh, StaticMeshHandle> m_managedStaticMeshes { "Static Meshes", 1024 };
     std::unordered_map<MeshAsset const*, StaticMeshHandle> m_staticMeshAssetCache {};
-    std::unordered_set<StaticMeshHandle> m_pendingStaticMeshUpdates {};
+    std::unordered_set<StaticMeshHandle> m_changedStaticMeshes {};
 
     std::vector<std::unique_ptr<SkeletalMeshInstance>> m_skeletalMeshInstances {};
     std::vector<std::unique_ptr<StaticMeshInstance>> m_staticMeshInstances {};
