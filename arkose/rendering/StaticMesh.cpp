@@ -3,16 +3,18 @@
 #include "asset/MeshAsset.h"
 #include "rendering/backend/base/AccelerationStructure.h"
 
-StaticMeshSegment::StaticMeshSegment(MeshSegmentAsset const* inAsset, MaterialHandle inMaterial, BlendMode inBlendMode, DrawKey inDrawKey)
+StaticMeshSegment::StaticMeshSegment(StaticMeshLOD& parent, MeshSegmentAsset const* inAsset, MaterialHandle inMaterial, BlendMode inBlendMode, DrawKey inDrawKey)
     : asset(inAsset)
     , material(inMaterial)
     , blendMode(inBlendMode)
     , drawKey(inDrawKey)
+    , m_lod(parent)
 {
 }
 
-StaticMeshLOD::StaticMeshLOD(MeshLODAsset const* inAsset)
+StaticMeshLOD::StaticMeshLOD(StaticMesh& parent, MeshLODAsset const* inAsset)
     : asset(inAsset)
+    , m_mesh(parent)
 {
 }
 
@@ -25,7 +27,7 @@ StaticMesh::StaticMesh(MeshAsset const* asset, MeshMaterialResolver&& materialRe
     , m_boundingSphere(asset->boundingSphere)
 {
     for (MeshLODAsset const& lodAsset : asset->LODs) {
-        StaticMeshLOD& lod = m_lods.emplace_back(&lodAsset);
+        StaticMeshLOD& lod = m_lods.emplace_back(*this, &lodAsset);
         for (auto& segmentAsset : lodAsset.meshSegments) {
 
             MaterialAsset* materialAsset = nullptr;
@@ -48,7 +50,7 @@ StaticMesh::StaticMesh(MeshAsset const* asset, MeshMaterialResolver&& materialRe
             DrawKey drawKey = DrawKey::generate(materialAsset);
 
             MaterialHandle materialHandle = materialResolver(materialAsset);
-            lod.meshSegments.emplace_back(&segmentAsset, materialHandle, materialAsset->blendMode, drawKey);
+            lod.meshSegments.emplace_back(lod, &segmentAsset, materialHandle, materialAsset->blendMode, drawKey);
         }
     }
 }

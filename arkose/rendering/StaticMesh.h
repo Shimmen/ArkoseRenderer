@@ -19,11 +19,16 @@
 
 ARK_DEFINE_HANDLE_TYPE(StaticMeshHandle)
 
+class StaticMesh;
+class StaticMeshLOD;
+
 using MeshMaterialResolver = std::function<MaterialHandle(MaterialAsset const*)>;
 
 struct StaticMeshSegment {
 
-    StaticMeshSegment(MeshSegmentAsset const*, MaterialHandle, BlendMode, DrawKey);
+    StaticMeshSegment(StaticMeshLOD& parent, MeshSegmentAsset const*, MaterialHandle, BlendMode, DrawKey);
+
+    void setMaterial(MaterialAsset*, GpuScene&);
 
     MeshSegmentAsset const* asset { nullptr };
 
@@ -49,17 +54,24 @@ struct StaticMeshSegment {
 
     // Vertex allocation into the buffer's from the vertex manager
     VertexAllocation vertexAllocation {};
+
+private:
+    StaticMeshLOD& m_lod;
 };
 
 struct StaticMeshLOD {
 
-    explicit StaticMeshLOD(MeshLODAsset const*);
+    explicit StaticMeshLOD(StaticMesh& parent, MeshLODAsset const*);
+
+    friend StaticMeshSegment;
 
     MeshLODAsset const* asset { nullptr };
 
     // List of static mesh segments to be rendered (at least one needed)
     std::vector<StaticMeshSegment> meshSegments {};
 
+private:
+    StaticMesh& m_mesh;
 };
 
 class StaticMesh {
@@ -68,6 +80,9 @@ public:
     StaticMesh(MeshAsset const*, MeshMaterialResolver&&);
     StaticMesh() = default;
     ~StaticMesh() = default;
+
+    friend StaticMeshLOD;
+    friend StaticMeshSegment;
 
     void setName(std::string name) { m_name = std::move(name); }
     std::string_view name() const { return m_name; }
