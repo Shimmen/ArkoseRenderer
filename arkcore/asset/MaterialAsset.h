@@ -39,9 +39,42 @@ public:
     // Not serialized, can be used to store whatever intermediate you want
     int userData { -1 };
 
+    bool operator==(MaterialInput const& rhs) const
+    {
+        ARKOSE_ASSERT(hasPathToImage());
+        return pathToImage() == rhs.pathToImage()
+            && wrapModes == rhs.wrapModes
+            && minFilter == rhs.minFilter
+            && magFilter == rhs.magFilter
+            && useMipmapping == rhs.useMipmapping
+            && mipFilter == rhs.mipFilter;
+    }
+
     template<class Archive>
     void serialize(Archive&, u32 version);
 };
+
+namespace std {
+
+    template<>
+    struct hash<MaterialInput> {
+        std::size_t operator()(const MaterialInput& input) const
+        {
+            auto pathHash = std::hash<std::string_view>()(input.pathToImage());
+            auto wrapModesHash = std::hash<ImageWrapModes>()(input.wrapModes);
+
+            auto filterHash = hashCombine(std::hash<ImageFilter>()(input.minFilter),
+                                          std::hash<ImageFilter>()(input.magFilter));
+            auto mipHash = hashCombine(std::hash<bool>()(input.useMipmapping),
+                                       std::hash<ImageFilter>()(input.mipFilter));
+
+            return hashCombine(
+                hashCombine(pathHash, wrapModesHash),
+                hashCombine(filterHash, mipHash));
+        }
+    };
+
+}
 
 class MaterialAsset final : public Asset<MaterialAsset> {
 public:
