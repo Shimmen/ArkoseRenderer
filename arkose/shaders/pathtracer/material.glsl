@@ -67,19 +67,40 @@ float powerHeuristic(float fPdf, float gPdf) {
 
 vec3 evaluateOpaqueMicrofacetMaterial(inout PathTracerRayPayload payload, PathTraceMaterial material, vec3 V, vec3 L, vec3 F, out float PDF)
 {
-    float pdfLambertian;
-    vec3 fLambertian = evaluateLambertian(material, L, pdfLambertian);
+    PDF = 0.0;
+    vec3 f = vec3(0.0);
 
-    float pdfMicrofacet;
-    vec3 fMicrofacet = evaluateMicrofacet(material, V, L, F, pdfMicrofacet);
+    float reflectance = luminance(F);
 
-    // Not sure if this is a great blend.. can we use a single sample estimator for this?
-    float blendFactor = luminance(F);
-    PDF = mix(pdfLambertian, pdfMicrofacet, blendFactor);
+    float metalWeight = material.metallic;
+    float dielectricWeight = (1.0 - material.metallic);
 
-    vec3 fMix = mix(fLambertian, fMicrofacet, blendFactor);
+    float diffuseReflectionProb = dielectricWeight * luminance(material.baseColor);
+    float microfacetReflectionProb = reflectance;
 
-    return fMix * abs(L.z);
+    // Normalize probabilities
+    float invTotalWeight = 1.0 / (diffuseReflectionProb + microfacetReflectionProb);
+    diffuseReflectionProb *= invTotalWeight;
+    microfacetReflectionProb *= invTotalWeight;
+
+    bool reflected = L.z * V.z > 0.0;
+
+    // Diffuse reflection
+    if (diffuseReflectionProb > 0.0 && reflected) {
+        float lambertialPdf;
+        f += evaluateLambertian(material, L, lambertialPdf) * dielectricWeight;
+        PDF += lambertialPdf * diffuseReflectionProb;
+    }
+
+    // Microfacet reflection
+    if (microfacetReflectionProb > 0.0 && reflected) {
+        float microfacetPdf;
+        float microfacetWeight = dielectricWeight + metalWeight; // (always 1.0 for now)
+        f += evaluateMicrofacet(material, V, L, F, microfacetPdf) * microfacetWeight;
+        PDF += microfacetPdf * microfacetReflectionProb;
+    }
+
+    return f * abs(L.z);
 }
 
 vec3 sampleOpaqueMicrofacetMaterial(inout PathTracerRayPayload payload, PathTraceMaterial material, vec3 V, out vec3 L, out float PDF)
