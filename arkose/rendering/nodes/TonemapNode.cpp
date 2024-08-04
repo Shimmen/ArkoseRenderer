@@ -9,7 +9,7 @@
 TonemapNode::TonemapNode(std::string sourceTextureName, Mode mode)
     : m_sourceTextureName(sourceTextureName)
     , m_mode(mode)
-    , m_tonemapMethod(TONEMAP_METHOD_ACES)
+    , m_tonemapMethod(TONEMAP_METHOD_AGX)
 {
 }
 
