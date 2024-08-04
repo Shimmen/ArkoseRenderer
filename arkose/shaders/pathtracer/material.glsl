@@ -48,7 +48,7 @@ vec3 evaluateMicrofacet(PathTraceMaterial material, vec3 V, vec3 L, vec3 F, out 
     // From https://jcgt.org/published/0007/04/01/paper.pdf
     // and https://graphicrants.blogspot.com/2013/08/specular-brdf-reference.html
     float a = square(material.roughness);
-    float D = D_GGX(H.z, a);
+    float D = D_GGX(H.z, max(a, 1e-10));
     float G1 = G1_GGX(V.z, a);
     float G2 = G1 * G1_GGX(L.z, a);
 
