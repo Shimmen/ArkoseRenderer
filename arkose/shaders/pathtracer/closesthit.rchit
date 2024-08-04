@@ -196,7 +196,7 @@ void main()
     {
         PathTraceMaterial material;
         material.baseColor = baseColor;
-        material.roughness = max(0.001, roughness); // hack! it should be able to work with zero-roughness materials!
+        material.roughness = roughness;
         material.metallic = metallic;
 
         vec3 B1, B2;
