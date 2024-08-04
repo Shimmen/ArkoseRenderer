@@ -1,6 +1,7 @@
 #include "StaticMesh.h"
 
 #include "asset/MeshAsset.h"
+#include "rendering/GpuScene.h"
 #include "rendering/backend/base/AccelerationStructure.h"
 
 StaticMeshSegment::StaticMeshSegment(StaticMeshLOD& parent, MeshSegmentAsset const* inAsset, MaterialHandle inMaterial, BlendMode inBlendMode, DrawKey inDrawKey)
@@ -10,6 +11,27 @@ StaticMeshSegment::StaticMeshSegment(StaticMeshLOD& parent, MeshSegmentAsset con
     , drawKey(inDrawKey)
     , m_lod(parent)
 {
+}
+
+void StaticMeshSegment::setMaterial(MaterialAsset* materialAsset, GpuScene& scene)
+{
+    MaterialHandle oldMaterial = material;
+    material = scene.registerMaterial(materialAsset);
+
+    if (blendMode != materialAsset->blendMode) {
+        blendMode = materialAsset->blendMode;
+
+        if (materialAsset->blendMode == BlendMode::Translucent) {
+            m_lod.m_mesh.m_hasTranslucentSegments |= true;
+        } else {
+            m_lod.m_mesh.m_hasNonTranslucentSegments |= true;
+        }
+    }
+
+    drawKey = DrawKey::generate(materialAsset);
+
+    scene.updateStaticMesh(staticMeshHandle);
+    scene.unregisterMaterial(oldMaterial);
 }
 
 StaticMeshLOD::StaticMeshLOD(StaticMesh& parent, MeshLODAsset const* inAsset)
