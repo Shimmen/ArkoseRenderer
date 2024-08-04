@@ -11,7 +11,6 @@
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/DebugDrawNode.h"
 #include "rendering/nodes/FinalNode.h"
-#include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/SSAONode.h"
 #include "rendering/nodes/SkyViewNode.h"
 #include "rendering/nodes/TAANode.h"
@@ -58,8 +57,6 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     ////////////////////////////////////////////////////////////////////////////
     // Render pipeline setup
-
-    pipeline.addNode<PickingNode>();
 
     pipeline.addNode<ForwardRenderNode>(ForwardRenderNode::Mode::Opaque,
                                         ForwardMeshFilter::AllMeshes,
