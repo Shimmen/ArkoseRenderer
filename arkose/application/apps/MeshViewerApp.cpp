@@ -11,6 +11,7 @@
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/DebugDrawNode.h"
 #include "rendering/nodes/FinalNode.h"
+#include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/SSAONode.h"
 #include "rendering/nodes/SkyViewNode.h"
 #include "rendering/nodes/TAANode.h"
@@ -37,22 +38,13 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     scene.setupFromDescription({ .withRayTracing = false,
                                  .withMeshShading = false });
 
-    MeshAsset* boxMesh = MeshAsset::load("assets/sample/models/Box/Box.arkmsh");
-    StaticMeshInstance& boxInstance = scene.addMesh(boxMesh);
-    boxInstance.transform().setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(30.0f)));
-
-    /*
-    // Spawn a grid of static mesh instances for a little stress test of instances
-    Transform t2 = boxInstance.transform();
-    for (int z = 0; z < 200; z++) {
-        for (int x = 0; x < 200; x++) {
-            t2.setTranslation(vec3(1.5f + 1.5f * x, 0.0f, -1.5f - 1.5f * z));
-            scene.createStaticMeshInstance(boxInstance.mesh(), t2);
-        }
+    if (MeshAsset* defaultMeshAsset = MeshAsset::load("assets/sample/models/Box/Box.arkmsh")) {
+        m_targetAsset = defaultMeshAsset;
+        m_targetInstance = &m_scene->addMesh(defaultMeshAsset);
+        m_targetInstance->transform().setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(30.0f)));
     }
-    */
 
-    scene.setAmbientIlluminance(600.0f);
+    scene.setAmbientIlluminance(200.0f);
     scene.setEnvironmentMap({ .assetPath = "assets/sample/hdri/tiergarten_2k.hdr",
                               .brightnessFactor = 5000.0f });
 
@@ -67,7 +59,8 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     ////////////////////////////////////////////////////////////////////////////
     // Render pipeline setup
 
-    pipeline.addNode<PrepassNode>();
+    pipeline.addNode<PickingNode>();
+
     pipeline.addNode<ForwardRenderNode>();
     // TODO: Maybe add some IBL for this?
     pipeline.addNode<SkyViewNode>();
@@ -169,12 +162,11 @@ void MeshViewerApp::drawMenuBar()
 void MeshViewerApp::drawMeshHierarchyPanel()
 {
     ImGui::Begin("Hierarchy");
-    if (m_targetAsset != nullptr) {
+    if (m_targetAsset && m_targetInstance) {
 
         ImGui::Checkbox("Draw bounding box", &m_drawBoundingBox);
         if (m_drawBoundingBox) {
-            ark::aabb3 aabb = m_targetAsset->boundingBox;
-            DebugDrawer::get().drawBox(aabb.min, aabb.max, vec3(1.0f, 1.0f, 1.0f));
+            m_scene->drawInstanceBoundingBox(*m_targetInstance);
         }
 
         if (ImGui::BeginTabBar("MeshViewerLODTabBar")) {
@@ -500,7 +492,6 @@ void MeshViewerApp::importMeshWithDialog()
                    assets.meshes.size(), assets.materials.size(), assets.images.size());
     }
 }
-
 
 void MeshViewerApp::importLevelWithDialog()
 {
