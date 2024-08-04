@@ -452,9 +452,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         }
 
         // Update mesh streaming (well, it's not much streaming to speak of right now, but it's the basis of something like that)
-        std::unordered_set<StaticMeshHandle> updatedStaticMeshes {};
         if (m_meshletManager != nullptr) {
-            m_meshletManager->processMeshStreaming(cmdList, updatedStaticMeshes);
+            m_meshletManager->processMeshStreaming(cmdList, m_pendingStaticMeshUpdates);
         }
 
         // Update camera data
@@ -564,10 +563,10 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
             size_t itemCount = staticMeshInstances().size();
             size_t batchSize = itemCount >= 512 ? 512 : 64; // if instance count is small don't go crazy with batch size
-            ParallelForBatched(itemCount, batchSize, [this, &drawableCount, &updatedStaticMeshes, &instancesNeedingReinit](size_t idx) {
+            ParallelForBatched(itemCount, batchSize, [this, &drawableCount, &instancesNeedingReinit](size_t idx) {
                 auto& instance = staticMeshInstances()[idx];
 
-                bool meshHasUpdated = updatedStaticMeshes.contains(instance->mesh());
+                bool meshHasUpdated = m_pendingStaticMeshUpdates.contains(instance->mesh());
 
                 if (meshHasUpdated) {
                     // Full update: reinit the mesh instance
@@ -588,6 +587,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 drawableCount += instance->drawableHandles().size();
             });
+
+            m_pendingStaticMeshUpdates.clear();
 
             // NOTE: `try_dequeue` should be able to empty the entire queue as all producers are done at this point in time
             StaticMeshInstance* instanceNeedingReinit;
@@ -1172,6 +1173,11 @@ void GpuScene::unregisterStaticMesh(StaticMeshHandle handle)
     // the reference count and returns the same handle? Not sure if that's a good use case, but this will work
     // for now and allows us to delete unused meshes...
     m_managedStaticMeshes.removeReference(handle, m_currentFrameIdx);
+}
+
+void GpuScene::updateStaticMesh(StaticMeshHandle handle)
+{
+    m_pendingStaticMeshUpdates.insert(handle);
 }
 
 MaterialHandle GpuScene::registerMaterial(MaterialAsset const* materialAsset)
