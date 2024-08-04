@@ -1260,11 +1260,7 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
         }
     }
 
-    std::string const& imageAssetPath = std::string(input->pathToImage());
-
-    // TODO: Cache on material inputs, beyond just the path! If we don't handle this we can't update materials in runtime like we want as the path won't change.
-    // Also, ensure that even if ref-count is zero it should be here in the map, and we remove from the deferred-delete list when we increment the count again
-    auto entry = m_materialTextureCache.find(imageAssetPath);
+    auto entry = m_materialTextureCache.find(input.value());
     if (entry == m_materialTextureCache.end()) {
 
         auto makeTextureDescription = [](ImageAsset const& imageAsset, MaterialInput const& input, ImageType providedImageType) -> Texture::Description {
@@ -1294,7 +1290,9 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
         };
 
         TextureHandle handle = registerTextureSlot();
-        m_materialTextureCache[imageAssetPath] = handle;
+        m_materialTextureCache[input.value()] = handle;
+
+        std::string const& imageAssetPath = std::string(input->pathToImage());
 
         // TODO: Also make the texture GPU resource itself on a worker thread, not just the image loading!
         if (UseAsyncTextureLoads) {

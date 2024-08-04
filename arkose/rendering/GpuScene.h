@@ -231,7 +231,7 @@ private:
 
     ResourceList<std::unique_ptr<Texture>, TextureHandle> m_managedTextures { "Textures", 4096 };
     // TODO: This key should probably be not just the path but also some meta-info, e.g. what wrap modes we want!
-    std::unordered_map<std::string, TextureHandle> m_materialTextureCache {};
+    std::unordered_map<MaterialInput, TextureHandle> m_materialTextureCache {};
     std::unordered_map<Texture*, TextureHandle> m_materialFallbackTextureCache {};
     std::vector<BindingSet::TextureBindingUpdate> m_pendingTextureUpdates {};
 
