@@ -304,7 +304,11 @@ void MeshViewerApp::drawMeshMaterialPanel()
             if (materialDidChange) {
                 if (StaticMeshSegment* segment = selectedSegment()) {
                     MaterialHandle oldMaterial = segment->material;
-                    segment->material = m_scene->gpuScene().registerMaterial(material);
+                    MaterialHandle newMaterial = m_scene->gpuScene().registerMaterial(material);
+
+                    segment->material = newMaterial;
+                    m_scene->gpuScene().updateStaticMesh(segment->staticMeshHandle);
+
                     m_scene->gpuScene().unregisterMaterial(oldMaterial);
                 }
             }
