@@ -41,8 +41,9 @@ private:
     void drawMenuBar();
 
     void drawMeshHierarchyPanel();
-    
+
     void drawMeshMaterialPanel();
+    bool drawBrdfSelectorGui(const char* id, Brdf&);
     bool drawWrapModeSelectorGui(const char* id, ImageWrapModes&);
     bool drawBlendModeSelectorGui(const char* id, BlendMode&);
     bool drawImageFilterSelectorGui(const char* id, ImageFilter&);

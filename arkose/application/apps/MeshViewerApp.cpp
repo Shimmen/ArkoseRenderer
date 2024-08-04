@@ -281,9 +281,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
 
             bool materialDidChange = false;
 
-            // TODO: Add something for when we actually support multiple BRDFs..
-            int currentBrdfItem = 0;
-            materialDidChange |= ImGui::Combo("BRDF", &currentBrdfItem, "Default");
+            materialDidChange |= drawBrdfSelectorGui("Blend mode", material->brdf);
 
             materialDidChange |= drawMaterialInputGui("Base color", material->baseColor);
             materialDidChange |= drawMaterialInputGui("Emissive color", material->emissiveColor);
@@ -307,6 +305,42 @@ void MeshViewerApp::drawMeshMaterialPanel()
         }
     }
     ImGui::End();
+}
+
+bool MeshViewerApp::drawBrdfSelectorGui(const char* id, Brdf& brdf)
+{
+    bool didChange = false;
+
+    int currentBrdfIdx = static_cast<int>(brdf);
+    const char* currentBrdfString = BrdfName(brdf);
+
+    if (ImGui::BeginCombo("BRDF", currentBrdfString)) {
+
+        int brdfMin = static_cast<int>(Brdf_Min);
+        int brdfMax = static_cast<int>(Brdf_Max);
+
+        for (int i = brdfMin; i <= brdfMax; i++) {
+            ImGui::PushID(i);
+
+            auto itemBrdf = static_cast<Brdf>(i);
+            const char* itemText = BrdfName(itemBrdf);
+
+            if (ImGui::Selectable(itemText, i == currentBrdfIdx)) {
+                brdf = itemBrdf;
+                didChange = true;
+            }
+
+            if (didChange) {
+                ImGui::SetItemDefaultFocus();
+            }
+
+            ImGui::PopID();
+        }
+
+        ImGui::EndCombo();
+    }
+
+    return didChange;
 }
 
 bool MeshViewerApp::drawWrapModeSelectorGui(const char* id, ImageWrapModes& wrapModes)
