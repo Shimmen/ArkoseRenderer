@@ -61,9 +61,16 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     pipeline.addNode<PickingNode>();
 
-    pipeline.addNode<ForwardRenderNode>();
+    pipeline.addNode<ForwardRenderNode>(ForwardRenderNode::Mode::Opaque,
+                                        ForwardMeshFilter::AllMeshes,
+                                        ForwardClearMode ::ClearBeforeFirstDraw);
+
     // TODO: Maybe add some IBL for this?
     pipeline.addNode<SkyViewNode>();
+    
+    pipeline.addNode<ForwardRenderNode>(ForwardRenderNode::Mode::Translucent,
+                                        ForwardMeshFilter::AllMeshes,
+                                        ForwardClearMode ::DontClear);
 
     pipeline.addNode<TonemapNode>("SceneColor");
     pipeline.addNode<TAANode>(scene.camera());
