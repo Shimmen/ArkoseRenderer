@@ -168,10 +168,8 @@ void MeshViewerApp::drawMeshHierarchyPanel()
     ImGui::Begin("Hierarchy");
     if (m_targetAsset && m_targetInstance) {
 
-        ImGui::Checkbox("Draw bounding box", &m_drawBoundingBox);
-        if (m_drawBoundingBox) {
-            m_scene->drawInstanceBoundingBox(*m_targetInstance);
-        }
+        ImGui::Text("Asset file '%s'", m_targetAsset->assetFilePath().data());
+        ImGui::Text("Mesh name  '%s'", m_targetAsset->name.c_str());
 
         if (ImGui::BeginTabBar("MeshViewerLODTabBar")) {
 
@@ -215,6 +213,11 @@ void MeshViewerApp::drawMeshHierarchyPanel()
             }
 
             ImGui::EndTabBar();
+        }
+
+        ImGui::Checkbox("Draw bounding box", &m_drawBoundingBox);
+        if (m_drawBoundingBox) {
+            m_scene->drawInstanceBoundingBox(*m_targetInstance);
         }
     }
     ImGui::End();
@@ -487,6 +490,7 @@ void MeshViewerApp::drawMeshPhysicsPanel()
         if (ImGui::BeginTabBar("PhysicsTabBar")) {
             
             if (ImGui::BeginTabItem("Simple physics")) {
+                ImGui::Text("TODO!");
                 ImGui::EndTabItem();
             }
 
@@ -496,6 +500,8 @@ void MeshViewerApp::drawMeshPhysicsPanel()
                     constexpr int lodForPhysics = 0;
                     std::vector<PhysicsMesh> physicsMeshes = m_targetAsset->createPhysicsMeshes(lodForPhysics);
                     PhysicsShapeHandle shapeHandle = m_scene->physicsScene().backend().createPhysicsShapeForTriangleMeshes(physicsMeshes);
+
+                    // TODO: Add the shape (in Jolt's binary format) to the mesh asset
 
                 }
                 ImGui::EndTabItem();
