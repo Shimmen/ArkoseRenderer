@@ -1,7 +1,7 @@
 #version 460
 
+#include <color/aces.glsl>
 #include <common.glsl>
-#include <common/aces.glsl>
 #include <common/namedUniforms.glsl>
 #include <common/srgb.glsl>
 #include <shared/TonemapData.h>
