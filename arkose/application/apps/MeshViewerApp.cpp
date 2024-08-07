@@ -165,11 +165,37 @@ void MeshViewerApp::drawMenuBar()
 
 void MeshViewerApp::drawMeshHierarchyPanel()
 {
+    // TODO: Make the "Hierarchy" window just be a tree of the currently loaded set,
+    // and then have another window for the Mesh, just like we do for the Material etc.
     ImGui::Begin("Hierarchy");
     if (m_targetAsset && m_targetInstance) {
 
-        ImGui::Text("Asset file '%s'", m_targetAsset->assetFilePath().data());
-        ImGui::Text("Mesh name  '%s'", m_targetAsset->name.c_str());
+        MeshAsset const& meshAsset = *m_targetAsset;
+        std::string meshPath = std::string(meshAsset.assetFilePath());
+
+        ImGui::Text("%s", meshPath.c_str());
+        if (ImGui::Button("Save")) {
+            meshAsset.writeToFile(meshPath, AssetStorage::Json);
+            // TODO: *All* references to this mesh must now reload that mesh! Is that a good behaviour?
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Save as...")) {
+            if (auto maybePath = FileDialog::save({ { "Arkose mesh", MeshAsset::AssetFileExtension } })) {
+                // Write the mesh to disk
+                std::string newMeshPath = maybePath.value();
+                meshAsset.writeToFile(newMeshPath, AssetStorage::Json); // TODO: Use binary!
+                // Then immediately load it and make it the material for this segment (all other segments still use the old one)
+                if (MeshAsset* newMeshAsset = MeshAsset::load(newMeshPath)) {
+                    // TODO: Also assign to the parent SetAsset if there is one (there's not one yet..)
+                    m_targetAsset = newMeshAsset;
+                }
+            }
+        }
+
+        ImGui::Checkbox("Draw bounding box", &m_drawBoundingBox);
+        if (m_drawBoundingBox) {
+            m_scene->drawInstanceBoundingBox(*m_targetInstance);
+        }
 
         if (ImGui::BeginTabBar("MeshViewerLODTabBar")) {
 
@@ -215,9 +241,46 @@ void MeshViewerApp::drawMeshHierarchyPanel()
             ImGui::EndTabBar();
         }
 
-        ImGui::Checkbox("Draw bounding box", &m_drawBoundingBox);
-        if (m_drawBoundingBox) {
-            m_scene->drawInstanceBoundingBox(*m_targetInstance);
+        if (MeshSegmentAsset* segmentAsset = selectedSegmentAsset()) {
+
+            if (ImGui::TreeNode("Geometry")) {
+                ImGui::Text("  posititions: %u", segmentAsset->positions.size());
+                ImGui::Text("    texcoords: %u", segmentAsset->texcoord0s.size());
+                ImGui::Text("      normals: %u", segmentAsset->normals.size());
+                ImGui::Text("     tangents: %u", segmentAsset->tangents.size());
+                ImGui::Spacing();
+                ImGui::Text("joint indices: %u", segmentAsset->jointIndices.size());
+                ImGui::Text("joint weights: %u", segmentAsset->jointWeights.size());
+                ImGui::Spacing();
+                ImGui::Text("      indices: %u", segmentAsset->indices.size());
+
+                // TODO: Add option for (re-)generating tangents here!
+
+                ImGui::TreePop();
+            }
+
+            if (ImGui::TreeNode("Material")) {
+
+                // Only handle non-packaged up assets here, i.e. using a path, not a direct assets as it would be in a packed case
+                ARKOSE_ASSERT(segmentAsset->hasPathToMaterial());
+                std::string materialPath = std::string(segmentAsset->pathToMaterial());
+
+                ImGui::InputText("Material", materialPath.data(), materialPath.length(), ImGuiInputTextFlags_ReadOnly);
+                if (ImGui::IsItemHovered()) {
+                    ImGui::SetTooltip("%s", materialPath.c_str());
+                }
+                ImGui::SameLine();
+                if (ImGui::Button("...")) {
+                    if (auto maybePath = FileDialog::open({ { "Arkose material", MaterialAsset::AssetFileExtension } })) {
+                        std::string newMaterialPath = maybePath.value();
+                        if (MaterialAsset* newMaterialAsset = MaterialAsset::load(newMaterialPath)) {
+                            segmentAsset->setPathToMaterial(newMaterialPath); // TODO: Avoid setting an absolute path here!
+                            selectedSegment()->setMaterial(newMaterialAsset, m_scene->gpuScene());
+                        }
+                    }
+                }
+                ImGui::TreePop();
+            }
         }
     }
     ImGui::End();
@@ -227,58 +290,65 @@ void MeshViewerApp::drawMeshMaterialPanel()
 {
     ImGui::Begin("Material");
     if (MeshSegmentAsset* segmentAsset = selectedSegmentAsset()) {
-        StaticMeshSegment* segment = selectedSegment();
 
         // Only handle non-packaged up assets here, i.e. using a path, not a direct assets as it would be in a packed case
         ARKOSE_ASSERT(segmentAsset->hasPathToMaterial());
         std::string materialPath = std::string(segmentAsset->pathToMaterial());
 
-        ImGui::BeginDisabled();
-        ImGui::InputText("Material asset", materialPath.data(), materialPath.length(), ImGuiInputTextFlags_ReadOnly);
-        ImGui::EndDisabled();
-        ImGui::SameLine();
-        if (ImGui::Button("...")) { 
-            if (auto maybePath = FileDialog::open({ { "Arkose material", MaterialAsset::AssetFileExtension } })) {
-                std::string newMaterialPath = maybePath.value();
-                if (MaterialAsset* newMaterialAsset = MaterialAsset::load(newMaterialPath)) {
-                    segmentAsset->setPathToMaterial(newMaterialPath);
-                    segment->setMaterial(newMaterialAsset, m_scene->gpuScene());
-                }
-            }
-        }
-
         // NOTE: We're not actually loading it from disk every time because it's cached, but this still seems a little silly to do.
         if (MaterialAsset* material = MaterialAsset::load(materialPath)) {
 
-            auto drawMaterialInputGui = [&](const char* name, std::optional<MaterialInput>& materialInput) -> bool {
+            ImGui::Text("%s", materialPath.c_str());
+            if (ImGui::Button("Save")) {
+                material->writeToFile(materialPath, AssetStorage::Json);
+                // TODO: *All* references to this material must now reload their material! Right? Is that a good behaviour?
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Save as...")) {
+                if (auto maybePath = FileDialog::save({ { "Arkose material", MaterialAsset::AssetFileExtension } })) {
+                    // Write the material to disk
+                    std::string newMaterialPath = maybePath.value();
+                    material->writeToFile(newMaterialPath, AssetStorage::Json);
+                    // Then immediately load it and make it the material for this segment (all other segments still use the old one)
+                    if (MaterialAsset* newMaterialAsset = MaterialAsset::load(newMaterialPath)) {
+                        segmentAsset->setPathToMaterial(newMaterialPath); // TODO: Avoid setting an absolute path here!
+                        selectedSegment()->setMaterial(newMaterialAsset, m_scene->gpuScene());
+                        material = newMaterialAsset;
+                    }
+                }
+            }
+
+            auto drawMaterialInputGui = [&](const char* name, std::optional<MaterialInput>& materialInput, int textureIndex) -> bool {
 
                 bool didChange = false;
 
                 ImGui::PushID(name);
 
-                ImGuiTreeNodeFlags flags = 0;
-                if (not materialInput.has_value()) {
-                    //flags = ImGuiTreeNodeFlags_Leaf;
-                    ImGui::BeginDisabled();
-                }
-
-                if (ImGui::CollapsingHeader(name, flags)) {
+                if (ImGui::CollapsingHeader(name)) {
                     if (materialInput.has_value()) {
 
-                        // Only handle non-packaged up assets here, i.e. using a path, not a direct assets as it would be in a packed case
-                        std::string imagePath = std::string(materialInput->pathToImage());
-
-                        ImGui::BeginDisabled();
-                        ImGui::InputText("Image asset", imagePath.data(), imagePath.length(), ImGuiInputTextFlags_ReadOnly);
-                        ImGui::EndDisabled();
-                        ImGui::SameLine();
-                        if (ImGui::Button("...")) {
+                        auto imageSelectDialog = [&]() {
                             if (auto maybePath = FileDialog::open({ { "Arkose image", ImageAsset::AssetFileExtension } })) {
                                 std::string newImagePath = maybePath.value();
                                 if (ImageAsset* newImageAsset = ImageAsset::load(newImagePath)) {
                                     materialInput->setPathToImage(newImagePath);
                                     didChange |= true;
                                 }
+                            }
+                        };
+
+                        if (Texture const* texture = m_scene->gpuScene().textureForHandle(TextureHandle(textureIndex))) {
+                            ImTextureID textureId = const_cast<Texture*>(texture)->asImTextureID(); // HACK: const_cast
+                            if (ImGui::ImageButton(textureId, ImVec2(256.0f, 256.0f * texture->extent().aspectRatio()))) { 
+                                imageSelectDialog();
+                            }
+                            if (ImGui::IsItemHovered()) {
+                                std::string imagePath = std::string(materialInput->pathToImage());
+                                ImGui::SetTooltip("%s", imagePath.c_str());
+                            }
+                        } else {
+                            if (ImGui::Button("Add image...")) {
+                                imageSelectDialog();
                             }
                         }
 
@@ -291,11 +361,11 @@ void MeshViewerApp::drawMeshMaterialPanel()
                         if (materialInput->useMipmapping) {
                             didChange |= drawImageFilterSelectorGui("Mipmap filter", materialInput->mipFilter);
                         }
+                    } else {
+                        if (ImGui::Button("Add input")) { 
+                            materialInput = MaterialInput();
+                        }
                     }
-                }
-
-                if (not materialInput.has_value()) {
-                    ImGui::EndDisabled();
                 }
 
                 ImGui::PopID();
@@ -307,10 +377,11 @@ void MeshViewerApp::drawMeshMaterialPanel()
 
             materialDidChange |= drawBrdfSelectorGui("Blend mode", material->brdf);
 
-            materialDidChange |= drawMaterialInputGui("Base color", material->baseColor);
-            materialDidChange |= drawMaterialInputGui("Emissive color", material->emissiveColor);
-            materialDidChange |= drawMaterialInputGui("Normal map", material->normalMap);
-            materialDidChange |= drawMaterialInputGui("Properties map", material->materialProperties);
+            ShaderMaterial const* shaderMaterial = m_scene->gpuScene().materialForHandle(selectedSegment()->material);
+            materialDidChange |= drawMaterialInputGui("Base color", material->baseColor, shaderMaterial->baseColor);
+            materialDidChange |= drawMaterialInputGui("Emissive color", material->emissiveColor, shaderMaterial->emissive);
+            materialDidChange |= drawMaterialInputGui("Normal map", material->normalMap, shaderMaterial->normalMap);
+            materialDidChange |= drawMaterialInputGui("Properties map", material->materialProperties, shaderMaterial->metallicRoughness);
 
             materialDidChange |= ImGui::ColorEdit4("Tint", value_ptr(material->colorTint));
 
@@ -322,7 +393,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
             }
 
             if (materialDidChange) {
-                segment->setMaterial(material, m_scene->gpuScene());
+                selectedSegment()->setMaterial(material, m_scene->gpuScene());
             }
         }
     }
