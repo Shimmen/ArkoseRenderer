@@ -227,6 +227,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
 {
     ImGui::Begin("Material");
     if (MeshSegmentAsset* segmentAsset = selectedSegmentAsset()) {
+        StaticMeshSegment* segment = selectedSegment();
 
         // Only handle non-packaged up assets here, i.e. using a path, not a direct assets as it would be in a packed case
         ARKOSE_ASSERT(segmentAsset->hasPathToMaterial());
@@ -235,6 +236,16 @@ void MeshViewerApp::drawMeshMaterialPanel()
         ImGui::BeginDisabled();
         ImGui::InputText("Material asset", materialPath.data(), materialPath.length(), ImGuiInputTextFlags_ReadOnly);
         ImGui::EndDisabled();
+        ImGui::SameLine();
+        if (ImGui::Button("...")) { 
+            if (auto maybePath = FileDialog::open({ { "Arkose material", MaterialAsset::AssetFileExtension } })) {
+                std::string newMaterialPath = maybePath.value();
+                if (MaterialAsset* newMaterialAsset = MaterialAsset::load(newMaterialPath)) {
+                    segmentAsset->setPathToMaterial(newMaterialPath);
+                    segment->setMaterial(newMaterialAsset, m_scene->gpuScene());
+                }
+            }
+        }
 
         // NOTE: We're not actually loading it from disk every time because it's cached, but this still seems a little silly to do.
         if (MaterialAsset* material = MaterialAsset::load(materialPath)) {
@@ -260,6 +271,16 @@ void MeshViewerApp::drawMeshMaterialPanel()
                         ImGui::BeginDisabled();
                         ImGui::InputText("Image asset", imagePath.data(), imagePath.length(), ImGuiInputTextFlags_ReadOnly);
                         ImGui::EndDisabled();
+                        ImGui::SameLine();
+                        if (ImGui::Button("...")) {
+                            if (auto maybePath = FileDialog::open({ { "Arkose image", ImageAsset::AssetFileExtension } })) {
+                                std::string newImagePath = maybePath.value();
+                                if (ImageAsset* newImageAsset = ImageAsset::load(newImagePath)) {
+                                    materialInput->setPathToImage(newImagePath);
+                                    didChange |= true;
+                                }
+                            }
+                        }
 
                         didChange |= drawWrapModeSelectorGui("Wrap modes", materialInput->wrapModes);
 
@@ -301,9 +322,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
             }
 
             if (materialDidChange) {
-                if (StaticMeshSegment* segment = selectedSegment()) {
-                    segment->setMaterial(material, m_scene->gpuScene());
-                }
+                segment->setMaterial(material, m_scene->gpuScene());
             }
         }
     }
