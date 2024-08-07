@@ -82,6 +82,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
             std::string targetFilePath = fmt::format("{}/{}.arkimg", targetDirectory, fileName);
 
             image->writeToFile(targetFilePath, AssetStorage::Binary);
+            image->setAssetFilePath(targetFilePath);
         }
     }
 
@@ -121,6 +122,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         std::string targetFilePath = fmt::format("{}/{}.arkmat", targetDirectory, fileName);
 
         material->writeToFile(targetFilePath, AssetStorage::Json);
+        material->setAssetFilePath(targetFilePath);
     }
 
     // Generate meshlets for all meshes in parallel
@@ -165,6 +167,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         // TODO: Json is currently super slow with all the data we have, even for smaller meshes, but if we separate out the core data it will be fine.
         AssetStorage assetStorage = options.saveMeshesInTextualFormat ? AssetStorage::Json : AssetStorage::Binary;
         mesh->writeToFile(targetFilePath, assetStorage);
+        mesh->setAssetFilePath(targetFilePath);
     }
 
     std::unordered_map<std::string, int> skeletonNameMap {};
@@ -183,6 +186,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         std::string targetFilePath = fmt::format("{}/{}.arkskel", targetDirectory, fileName);
 
         skeleton->writeToFile(targetFilePath, AssetStorage::Json);
+        skeleton->setAssetFilePath(targetFilePath);
     }
 
     std::unordered_map<std::string, int> animationNameMap {};
@@ -201,6 +205,7 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         std::string targetFilePath = fmt::format("{}/{}.arkanim", targetDirectory, fileName);
 
         animation->writeToFile(targetFilePath, AssetStorage::Json);
+        animation->setAssetFilePath(targetFilePath);
 
     }
 
@@ -236,9 +241,11 @@ std::unique_ptr<LevelAsset> AssetImporter::importAsLevel(std::string_view assetF
     levelAsset->name = std::string(levelName);
 
     std::string levelFilePath = fmt::format("{}{}.arklvl", targetDirectory, levelName);
-    if (not levelAsset->writeToFile(levelFilePath, AssetStorage::Json)) {
+    if (!levelAsset->writeToFile(levelFilePath, AssetStorage::Json)) {
         ARKOSE_LOG(Error, "Failed to write level asset '{}' to file.", levelAsset->name);
         return nullptr;
+    } else {
+        levelAsset->setAssetFilePath(levelFilePath);
     }
 
     return levelAsset;

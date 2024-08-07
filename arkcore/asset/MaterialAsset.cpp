@@ -79,7 +79,7 @@ bool MaterialAsset::readFromFile(std::string_view filePath)
     return true;
 }
 
-bool MaterialAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage)
+bool MaterialAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage) const
 {
     SCOPED_PROFILE_ZONE();
 
@@ -88,10 +88,7 @@ bool MaterialAsset::writeToFile(std::string_view filePath, AssetStorage assetSto
         return false;
     }
 
-    ARKOSE_ASSERT(assetFilePath().empty() || assetFilePath() == filePath);
-    setAssetFilePath(filePath);
-
-    std::ofstream fileStream { std::string(assetFilePath()), std::ios::binary | std::ios::trunc };
+    std::ofstream fileStream { std::string(filePath), std::ios::binary | std::ios::trunc };
     if (not fileStream.is_open()) {
         return false;
     }

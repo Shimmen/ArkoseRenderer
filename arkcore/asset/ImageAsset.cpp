@@ -219,7 +219,7 @@ bool ImageAsset::readFromFile(std::string_view filePath)
     return true;
 }
 
-bool ImageAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage)
+bool ImageAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage) const
 {
     if (assetStorage != AssetStorage::Binary) {
         ARKOSE_LOG_FATAL("Image asset only supports binary serialization.");
@@ -230,14 +230,12 @@ bool ImageAsset::writeToFile(std::string_view filePath, AssetStorage assetStorag
         return false;
     }
 
-    ARKOSE_ASSERT(assetFilePath().empty() || assetFilePath() == filePath);
-    setAssetFilePath(filePath);
-
     if (not m_compressed) {
-        compress();
+        // HACK: const_cast! I really want writing to be a const operation...
+        const_cast<ImageAsset*>(this)->compress();
     }
 
-    std::ofstream fileStream { std::string(assetFilePath()), std::ios::binary | std::ios::trunc };
+    std::ofstream fileStream { std::string(filePath), std::ios::binary | std::ios::trunc };
     if (not fileStream.is_open()) {
         return false;
     }

@@ -50,7 +50,7 @@ public:
     // like that at all. I've tried a bunch of possible solutions but whatever I do it doesn't compile, or it
     // makes the code 10x more complex. For now, let's keep it simple with copy pasted code.
     virtual bool readFromFile(std::string_view filePath) = 0;
-    virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) = 0;
+    virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) const = 0;
 
     static bool isValidAssetPath(std::string_view assetPath);
 

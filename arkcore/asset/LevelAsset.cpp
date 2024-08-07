@@ -73,17 +73,14 @@ bool LevelAsset::readFromFile(std::string_view filePath)
     return true;
 }
 
-bool LevelAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage)
+bool LevelAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage) const
 {
     if (not isValidAssetPath(filePath)) {
         ARKOSE_LOG(Error, "Trying to write asset to file with invalid extension: '{}'", filePath);
         return false;
     }
 
-    ARKOSE_ASSERT(assetFilePath().empty() || assetFilePath() == filePath);
-    setAssetFilePath(filePath);
-
-    std::ofstream fileStream { std::string(assetFilePath()), std::ios::binary | std::ios::trunc };
+    std::ofstream fileStream { std::string(filePath), std::ios::binary | std::ios::trunc };
     if (not fileStream.is_open()) {
         return false;
     }

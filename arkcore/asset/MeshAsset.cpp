@@ -234,7 +234,7 @@ bool MeshAsset::readFromFile(std::string_view filePath)
     return true;
 }
 
-bool MeshAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage)
+bool MeshAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage) const
 {
     SCOPED_PROFILE_ZONE();
 
@@ -243,10 +243,7 @@ bool MeshAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage
         return false;
     }
 
-    ARKOSE_ASSERT(assetFilePath().empty() || assetFilePath() == filePath);
-    setAssetFilePath(filePath);
-
-    std::ofstream fileStream { std::string(assetFilePath()), std::ios::binary | std::ios::trunc };
+    std::ofstream fileStream { std::string(filePath), std::ios::binary | std::ios::trunc };
     if (not fileStream.is_open()) {
         return false;
     }

@@ -65,7 +65,7 @@ public:
     static ImageAsset* loadOrCreate(std::string const& filePath);
 
     virtual bool readFromFile(std::string_view filePath) override;
-    virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) override;
+    virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) const override;
 
     template<class Archive>
     void serialize(Archive& ar);
