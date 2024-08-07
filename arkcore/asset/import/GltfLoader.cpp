@@ -253,12 +253,8 @@ std::unique_ptr<MeshAsset> GltfLoader::createMesh(const tinygltf::Model& gltfMod
         ARKOSE_ASSERT(positionAccessor.componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
         ARKOSE_ASSERT(positionAccessor.type == TINYGLTF_TYPE_VEC3);
 
-        ark::aabb3 aabb = ark::aabb3(createVec3(positionAccessor.minValues), createVec3(positionAccessor.maxValues));
-        mesh->boundingBox = aabb;
-
-        vec3 center = (aabb.max + aabb.min) / 2.0f;
-        float radius = length(aabb.max - aabb.min) / 2.0f;
-        mesh->boundingSphere = geometry::Sphere(center, radius);
+        mesh->boundingBox.expandWithPoint(createVec3(positionAccessor.minValues));
+        mesh->boundingBox.expandWithPoint(createVec3(positionAccessor.maxValues));
 
         MeshSegmentAsset& meshSegment = lod0.meshSegments.emplace_back();
 
@@ -375,6 +371,11 @@ std::unique_ptr<MeshAsset> GltfLoader::createMesh(const tinygltf::Model& gltfMod
             }
         }
     }
+
+    // Generate bounding sphere from bounding box (not the tighest sphere necessarily but it'll work)
+    vec3 center = (mesh->boundingBox.max + mesh->boundingBox.min) / 2.0f;
+    float radius = length(mesh->boundingBox.max - mesh->boundingBox.min) / 2.0f;
+    mesh->boundingSphere = geometry::Sphere(center, radius);
 
     return mesh;
 }
