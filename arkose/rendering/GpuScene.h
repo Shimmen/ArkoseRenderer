@@ -67,6 +67,7 @@ public:
     const StaticMesh* staticMeshForHandle(StaticMeshHandle handle) const;
     const ShaderMaterial* materialForHandle(MaterialHandle handle) const;
     ShaderDrawable const* drawableForHandle(DrawableObjectHandle handle) const;
+    Texture const* textureForHandle(TextureHandle handle) const;
 
     size_t lightCount() const;
     size_t shadowCastingLightCount() const;

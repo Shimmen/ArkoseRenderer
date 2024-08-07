@@ -141,6 +141,11 @@ ShaderDrawable const* GpuScene::drawableForHandle(DrawableObjectHandle handle) c
     return handle.valid() ? &m_drawables.get(handle) : nullptr;
 }
 
+Texture const* GpuScene::textureForHandle(TextureHandle handle) const
+{
+    return handle.valid() ? m_managedTextures.get(handle).get() : nullptr;
+}
+
 size_t GpuScene::lightCount() const
 {
     return m_managedDirectionalLights.size() + m_managedSphereLights.size() + m_managedSpotLights.size();
