@@ -137,9 +137,6 @@ public:
     geometry::Sphere boundingSphere {};
 
     // TODO: Add simple & complex physics data!
-
-    // Not serialized, can be used to store whatever intermediate you want
-    int userData { -1 };
 };
 
 ////////////////////////////////////////////////////////////////////////////////
