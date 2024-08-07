@@ -21,7 +21,7 @@ ARK_DEFINE_HANDLE_TYPE(StaticMeshHandle)
 
 class GpuScene;
 class StaticMesh;
-class StaticMeshLOD;
+struct StaticMeshLOD;
 
 using MeshMaterialResolver = std::function<MaterialHandle(MaterialAsset const*)>;
 
