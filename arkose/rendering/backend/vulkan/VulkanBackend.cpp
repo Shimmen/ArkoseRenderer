@@ -444,6 +444,8 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         allRequiredSupported = false;
     }
 
+    // NOTE: Not currently in use
+    /*
     if (!features.shaderInt64 ||
         !vk12features.shaderBufferInt64Atomics ||
         !vk12features.shaderSharedInt64Atomics) {
@@ -451,6 +453,7 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
                           "If this isn't supported on your machine there might possibly be a version which doesn't require that.");
         allRequiredSupported = false;
     }
+    */
 
     if (!vk13features.maintenance4) {
         ARKOSE_LOG(Error, "VulkanBackend: no support for 'maintenance4', which is required for for various maintenance features.");
@@ -863,9 +866,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     features.textureCompressionBC = VK_TRUE;
 
     // 64-bit shader support including atomics
-    features.shaderInt64 = VK_TRUE;
-    vk12features.shaderBufferInt64Atomics = VK_TRUE;
-    vk12features.shaderSharedInt64Atomics = VK_TRUE;
+    //features.shaderInt64 = VK_TRUE;
+    //vk12features.shaderBufferInt64Atomics = VK_TRUE;
+    //vk12features.shaderSharedInt64Atomics = VK_TRUE;
 
     // 'maintenance4' for various maintenance features
     vk13features.maintenance4 = VK_TRUE;
