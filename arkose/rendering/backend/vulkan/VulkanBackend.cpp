@@ -393,7 +393,11 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
 
     bool allRequiredSupported = true;
 
-    if (!features.samplerAnisotropy || !features.fillModeNonSolid || !features.wideLines || !features.fragmentStoresAndAtomics || !features.vertexPipelineStoresAndAtomics) {
+    if (!features.wideLines) {
+        ARKOSE_LOG(Warning, "VulkanBackend: no support for wide lines feature. Lines may appear thin.");
+    }
+
+    if (!features.samplerAnisotropy || !features.fillModeNonSolid || !features.fragmentStoresAndAtomics || !features.vertexPipelineStoresAndAtomics) {
         ARKOSE_LOG(Error, "VulkanBackend: no support for required common device feature");
         allRequiredSupported = false;
     }
