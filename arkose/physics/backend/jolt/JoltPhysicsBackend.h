@@ -66,6 +66,10 @@ public:
 
     virtual void applyImpulse(PhysicsInstanceHandle, vec3 impulse) override;
 
+    // Pre-create stuff
+
+    void createPhysicsShapeForExport(PhysicsMesh const&) const;
+
 private:
 
     JPH::ObjectLayer physicsLayerToJoltObjectLayer(PhysicsLayer) const;

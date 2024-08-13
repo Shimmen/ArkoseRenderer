@@ -25,6 +25,11 @@
 #include <Jolt/Physics/PhysicsSystem.h>
 #include <Jolt/RegisterTypes.h>
 
+// Jolt serialization
+//#include <Jolt/ObjectStream/ObjectStreamBinaryIn.h>
+#include <Jolt/ObjectStream/ObjectStreamBinaryOut.h>
+//#include <Jolt/ObjectStream/ObjectStreamTextOut.h>
+
 // Disable common warnings triggered by Jolt, you can use JPH_SUPPRESS_WARNING_PUSH / JPH_SUPPRESS_WARNING_POP to store and restore the warning state
 JPH_SUPPRESS_WARNINGS
 
@@ -468,4 +473,51 @@ void JoltPhysicsBackend::updateRenderDataForNonStaticInstances(float alpha)
         renderTransform->setPositionInWorld({ joltPosition.GetX(), joltPosition.GetY(), joltPosition.GetZ() });
         renderTransform->setOrientationInWorld({ { joltOrientation.GetX(), joltOrientation.GetY(), joltOrientation.GetZ() }, joltOrientation.GetW() });
     }
+}
+
+void JoltPhysicsBackend::createPhysicsShapeForExport(PhysicsMesh const& mesh) const
+{
+    SCOPED_PROFILE_ZONE_PHYSICS();
+
+    // TODO: Use the physics materials from the PhysicsMesh!
+    constexpr u32 physicsMaterialIdx = 0;
+
+    JPH::VertexList vertices {}; // OPTIMIZATION: Can we avoid copying vertex data? JPH::VertexList is just a std::vector with a 3xFloat struct inside
+    JPH::IndexedTriangleList indexedTriangles {};
+    JPH::PhysicsMaterialList physicsMaterials {};
+
+    for (vec3 const& position : mesh.positions) {
+        vertices.emplace_back(position.x, position.y, position.z);
+    }
+
+    ARKOSE_ASSERT(mesh.indices.size() % 3 == 0);
+    size_t numTriangles = mesh.indices.size() / 3;
+
+    for (size_t triangleIdx = 0; triangleIdx < numTriangles; ++triangleIdx) {
+        uint32_t i0 = mesh.indices[3 * triangleIdx + 0];
+        uint32_t i1 = mesh.indices[3 * triangleIdx + 1];
+        uint32_t i2 = mesh.indices[3 * triangleIdx + 2];
+        indexedTriangles.emplace_back(i0, i1, i2, physicsMaterialIdx);
+    }
+
+    JPH::MeshShapeSettings meshShapeSettings = JPH::MeshShapeSettings(vertices, indexedTriangles, physicsMaterials);
+
+    JPH::ShapeSettings::ShapeResult meshShapeResult;
+    {
+        SCOPED_PROFILE_ZONE_PHYSICS_NAMED("Create mesh shape");
+        meshShapeResult = meshShapeSettings.Create();
+    }
+
+    if (meshShapeResult.HasError()) {
+        ARKOSE_LOG(Error, "JoltPhysics error trying to create mesh shape: {}", meshShapeResult.GetError());
+    }
+
+    JPH::ShapeRefC shapeRef = meshShapeResult.Get();
+
+    // WIP stuff...
+
+    //std::ofstream outStream;
+    //outStream.open("assets/physics-data.bin");
+    //JPH::ObjectStreamBinaryOut joltOutStream{outStream};
+    //shapeRef->SaveBinaryState(joltOutStream);
 }
