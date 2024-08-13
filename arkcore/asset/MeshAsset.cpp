@@ -282,3 +282,25 @@ std::vector<PhysicsMesh> MeshAsset::createPhysicsMeshes(size_t lodIdx) const
 
     return physicsMeshes;
 }
+
+PhysicsMesh MeshAsset::createUnifiedPhysicsMesh(size_t lodIdx) const
+{
+    ARKOSE_ASSERT(lodIdx < LODs.size());
+    MeshLODAsset const& lod = LODs[lodIdx];
+
+    PhysicsMesh physicsMesh;
+
+    for (MeshSegmentAsset const& meshSegment : lod.meshSegments) {
+        u32 segmentIndexOffset = narrow_cast<u32>(physicsMesh.positions.size());
+
+        for (vec3 position : meshSegment.positions) {
+            physicsMesh.positions.push_back(position);
+        }
+
+        for (u32 index : meshSegment.indices) {
+            physicsMesh.indices.push_back(segmentIndexOffset + index);
+        }
+    }
+
+    return physicsMesh;
+}

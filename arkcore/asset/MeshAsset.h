@@ -4,6 +4,7 @@
 #include "asset/MaterialAsset.h"
 #include "core/Types.h"
 #include "core/math/Sphere.h"
+#include "physics/PhysicsMesh.h"
 #include "scene/Vertex.h"
 #include <ark/aabb.h>
 #include <string>
@@ -122,6 +123,7 @@ public:
     void serialize(Archive&, u32 version);
 
     std::vector<PhysicsMesh> createPhysicsMeshes(size_t lodIdx) const;
+    PhysicsMesh createUnifiedPhysicsMesh(size_t lodIdx) const;
 
     // Mesh render data for each LODs (at least LOD0 needed)
     std::vector<MeshLODAsset> LODs {};
