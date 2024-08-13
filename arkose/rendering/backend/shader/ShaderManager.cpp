@@ -6,6 +6,7 @@
 #include "utility/Profiling.h"
 #include "utility/StringHelpers.h"
 #include <algorithm>
+#include <charconv>
 #include <chrono>
 #include <cstddef>
 #include <thread>
