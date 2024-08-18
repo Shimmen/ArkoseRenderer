@@ -118,8 +118,8 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
 ForwardRenderNode::MeshSegmentInstance::MeshSegmentInstance(VertexAllocation inVertexAllocation, DrawKey inDrawKey, Transform const& inTransform, u32 inDrawableIdx)
     : vertexAllocation(inVertexAllocation)
     , drawKey(inDrawKey)
-    , transform(&inTransform)
     , drawableIdx(inDrawableIdx)
+    , transform(&inTransform)
 {
 }
 
@@ -232,7 +232,7 @@ std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateS
     std::vector<MeshSegmentInstance> meshSegmentInstances {};
 
     vec3 cameraPosition = scene.camera().position();
-    geometry::Frustum const& cameraFrustum = scene.camera().frustum();
+    //geometry::Frustum const& cameraFrustum = scene.camera().frustum();
     
     auto conditionallyAppendInstance = [&]<typename InstanceType>(InstanceType const& instance, StaticMesh const& mesh) -> void {
 

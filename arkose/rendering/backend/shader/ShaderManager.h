@@ -56,7 +56,6 @@ private:
     ~ShaderManager() = default;
 
     struct CompiledShader {
-        CompiledShader() = default;
         CompiledShader(ShaderManager&, const ShaderFile&, std::string resolvedPath);
 
         enum class TargetType {

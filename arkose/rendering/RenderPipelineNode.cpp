@@ -26,7 +26,7 @@ static bool drawTextureVisualizeButton(Texture& texture, bool& isHovered)
         ImGuiWindow* window = ImGui::GetCurrentContext()->CurrentWindow;
         ImGui::SameLine(window->DC.CursorPos.x + window->WindowPadding.x);
         window->DC.CursorPos.y += window->WindowPadding.y;
-        ImGui::Text(texture.name().c_str());
+        ImGui::Text("%s", texture.name().c_str());
     }
 
     return pressed;

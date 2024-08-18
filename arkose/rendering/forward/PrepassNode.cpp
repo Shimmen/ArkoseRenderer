@@ -131,8 +131,7 @@ std::vector<PrepassNode::MeshSegmentInstance> PrepassNode::generateSortedDrawLis
 
     std::vector<MeshSegmentInstance> meshSegmentInstances {};
 
-    vec3 cameraPosition = scene.camera().position();
-    geometry::Frustum const& cameraFrustum = scene.camera().frustum();
+    //geometry::Frustum const& cameraFrustum = scene.camera().frustum();
 
     auto conditionallyAppendInstance = [&]<typename InstanceType>(InstanceType const& instance, StaticMesh const& mesh) -> void {
         constexpr u32 lodIdx = 0;

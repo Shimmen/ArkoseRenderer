@@ -200,6 +200,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<TonemapNode>(sceneTexture);
 
     switch (antiAliasingMode) {
+    case AntiAliasing::None:
+        break;
     case AntiAliasing::FXAA:
         pipeline.addNode<FXAANode>();
         break;
