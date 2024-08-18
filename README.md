@@ -5,9 +5,9 @@
 
 ![Header image](/assets/demo/demo1.jpg)
 
-*Arkose Renderer* tries to make it as simple as possible for you to write graphics features while still keeping it expressive enough to allow you to do graphics R&D.
+*Arkose Renderer* attempts to make it as simple as possible for you to write complex & robust graphics features while still keeping it expressive enough to allow you to do graphics R&D.
 
-It can support multiple rendering backends and abstracts the specifics with a coarse granularity (i.e. not 1:1 with APIs) which focuses more on logical groupings than hardware specifics, while staying performant. It is based on modern rendering APIs and heavily relies on features such as bindless textures and ray tracing.
+It supports multiple rendering backends and abstracts the specifics with a coarse granularity (i.e. not 1:1 with APIs) which focuses more on logical groupings than hardware specifics, while staying performant. It is based on modern rendering APIs and heavily relies on features such as bindless textures and ray tracing.
 
 Arkose Renderer is very much a rendering engine and *not* a game engine, but I have some ambition to over time make it into more of a general purpose system with physics, audio, and gameplay scripting.
 
@@ -35,9 +35,9 @@ This list is not complete, it's just a showcase of various features that are imp
  - Real-time ray tracing
  - Bindless texture support
  - Skeletal mesh skinning and rendering
- - Meshlet based visibility buffer rendering with meshlet culling
+ - Meshlet based visibility buffer rendering with meshlet culling (using mesh shaders)
  - GPU driven rendering, with object-level culling (still supported as part of the old path, but visibility buffer is now the main rendering path)
- - A realistic camera model, with focus and exposure controls familiar to photographers
+ - A realistic camera model, with focus and exposure controls that will be familiar to photographers
  - Depth of field, respecting the realistic camera model paramer such as aperture size and focal length
  - Dynamic Diffuse Global Illumination (DDGI) – a probe based global illumination solution with infinite light bounces.
  - Physically based subsurface scattering
@@ -75,19 +75,35 @@ Arkose
 
 Note that some details are omitted for brevity.
 
+## Prerequisites
+
+### Hardware
+ - You will need a fairly modern GPU (e.g., ray tracing support is strongly recommended)
+
+### Software
+ - A C++ 20 compiler (or later)
+ - CMake 3.7 (or later)
+ - The Vulkan SDK (see https://vulkan.lunarg.com/). This applies even if you don't intend on using the Vulkan graphics backend, as some tools and libraries we rely on are part of the SDK. *Make sure to include shader toolchain debug symbols if you intend on making Debug builds!*
+
+ > **DISCLAIMER:** Not much about Arkose is platform specific but it has mostly been compiled and run by myself on Windows and with MSVC. Most other platforms and compilers *should* work but no guarantees.
+
 ## Setup
 
- > **DISCLAIMER:** Nothing about Arkose is platform specific but it has only ever been compiled and run by me on *Windows*. Additionally, while we're graphics API agnostic the only fully featured backend is for *Vulkan*. Finally, since much of this engine relies on modern graphics features you will need a fairly modern GPU to handle most of the demos. With all of these things in mind...
+Here are some simple steps to get it compiling & running for you:
 
-Here are some basic steps to get it compiling & running for you:
+ 1. Download (or clone) this repository
+ 1. Run the `GenerateProjectFiles` script (`.bat` for Windows or `.sh` for Linux/macOS/etc.)
+ 1. Project files should now be generated under `build/` – build the project as you'd usually do
+ 1. When running ensure the working directory is the one containing the executable (for the Visual Studio generator this should be done for you!)
 
- 1. Download or clone this repository
- 1. Download & install the Vulkan SDK from https://vulkan.lunarg.com/. This applies even if you're not indending on using Vulkan, as some tools and libraries we rely on are part of the SDK.
- 1. Create project files using CMake for your generator of choice. All third-party dependencies besides the Vulkan SDK are either already in-tree or dowloaded by CMake automatically via [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html).
+All the GenerateProjectFiles script does is run CMake and generate project files into `build/` for the default generator. However, you can of course also run CMake manually if you wish.
 
-You should now be able to compile and run!
+Note that all third-party dependencies (besides the Vulkan SDK) are either in-tree or dowloaded by CMake automatically via [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html) during configure. Due to this CMake will take a few minutes to configure the project the first time around. Similarly, and for the same reason, the first build will also be slower.
+
 
 ### Tools setup
+
+ > **Work in progress!** Not much point in looking here yet.
 
 The entire tools stack depends on [OpenUSD](https://github.com/PixarAnimationStudios/OpenUSD) and is needed for compilation. Note that this dependency only exists for the offline tooling so it's not needed for anything runtime, e.g. renderer/game.
 
