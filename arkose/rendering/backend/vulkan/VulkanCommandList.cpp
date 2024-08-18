@@ -885,10 +885,7 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
                     imageBarrier.subresourceRange.baseArrayLayer = 0;
                     imageBarrier.subresourceRange.layerCount = vulkanTexture.layerCount();
 
-                    VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
                     imageBarrier.srcAccessMask = 0;
-
-                    VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
                     imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
                     imageMemoryBarriers.push_back(imageBarrier);
@@ -916,10 +913,7 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
                     imageBarrier.subresourceRange.baseArrayLayer = 0;
                     imageBarrier.subresourceRange.layerCount = vulkanTexture.layerCount();
 
-                    VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
                     imageBarrier.srcAccessMask = 0;
-
-                    VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT;
                     imageBarrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT | VK_ACCESS_SHADER_WRITE_BIT; // FIXME: Maybe memory read & write?
 
                     imageMemoryBarriers.push_back(imageBarrier);
