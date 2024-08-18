@@ -68,15 +68,15 @@ inline void ArkoseAssertHandler(char const* assertion, char const* filename, int
         (ArkoseAssertHandler(#expression, __FILE__, __LINE__, FMT_STRING("")), 0)                  \
     )
 
-#define ARKOSE_ASSERTM(expression, format, ...)                                                    \
-    (void)(                                                                                        \
-        (!!(expression)) ||                                                                        \
-        (ArkoseAssertHandler(#expression, __FILE__, __LINE__, FMT_STRING(format), __VA_ARGS__), 0) \
+#define ARKOSE_ASSERTM(expression, format, ...)                                                                 \
+    (void)(                                                                                                     \
+        (!!(expression)) ||                                                                                     \
+        (ArkoseAssertHandler(#expression, __FILE__, __LINE__, FMT_STRING(format) __VA_OPT__(,) __VA_ARGS__), 0) \
     )
 
-#define ARKOSE_ERROR(format, ...)                                                                  \
-    (void)(                                                                                        \
-        (ArkoseAssertHandler(nullptr, __FILE__, __LINE__, FMT_STRING(format), __VA_ARGS__), 0)     \
+#define ARKOSE_ERROR(format, ...)                                                                               \
+    (void)(                                                                                                     \
+        (ArkoseAssertHandler(nullptr, __FILE__, __LINE__, FMT_STRING(format) __VA_OPT__(,) __VA_ARGS__), 0)     \
     )
 
 #define ASSERT_NOT_REACHED()  \
