@@ -17,6 +17,7 @@
 #include <unordered_map>
 
 class Backend;
+class CubeLUT;
 class GpuScene;
 class LevelAsset;
 class MeshAsset;
@@ -99,6 +100,8 @@ public:
 
     void setEnvironmentMap(EnvironmentMap);
     const EnvironmentMap& environmentMap() const { return m_environmentMap; }
+
+    void setColorGradingLUT(CubeLUT const*);
 
     // Meta
 

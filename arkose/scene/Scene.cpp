@@ -2,6 +2,7 @@
 
 #include "asset/LevelAsset.h"
 #include "asset/MeshAsset.h"
+#include "asset/external/CubeLUT.h"
 #include "core/Assert.h"
 #include "system/Input.h"
 #include "rendering/GpuScene.h"
@@ -402,6 +403,17 @@ void Scene::setEnvironmentMap(EnvironmentMap environmentMap)
     }
 
     m_environmentMap = environmentMap;
+}
+
+void Scene::setColorGradingLUT(CubeLUT const* lut)
+{
+    // TODO: Track current LUT to avoid redundant updates
+    if (lut) {
+        gpuScene().updateColorGradingLUT(*lut);
+    } else {
+        static CubeLUT identityLut{};
+        gpuScene().updateColorGradingLUT(identityLut);
+    }
 }
 
 void Scene::generateProbeGridFromBoundingBox()

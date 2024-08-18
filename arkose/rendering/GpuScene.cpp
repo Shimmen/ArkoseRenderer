@@ -4,6 +4,7 @@
 #include "asset/MaterialAsset.h"
 #include "asset/MeshAsset.h"
 #include "asset/SkeletonAsset.h"
+#include "asset/external/CubeLUT.h"
 #include "rendering/Skeleton.h"
 #include "rendering/DrawKey.h"
 #include "rendering/RenderPipeline.h"
@@ -873,6 +874,33 @@ Texture& GpuScene::environmentMapTexture()
     }
 
     return *m_environmentMapTexture;
+}
+
+void GpuScene::updateColorGradingLUT(CubeLUT const& lut)
+{
+    SCOPED_PROFILE_ZONE();
+
+    Texture::Description lutDesc{};
+    lutDesc.format = Texture::Format::RGBA32F; // (a-channel unused)
+    lutDesc.filter = Texture::Filters::linear();
+    lutDesc.wrapMode = ImageWrapModes::clampAllToEdge();
+
+    if (lut.is1d()) {
+        lutDesc.type = Texture::Type::Texture2D;
+        lutDesc.extent = { lut.tableSize(), 1, 1 };
+    } else if (lut.is3d()) {
+        lutDesc.type = Texture::Type::Texture3D;
+        lutDesc.extent = { lut.tableSize(), lut.tableSize(), lut.tableSize() };
+    }
+
+    m_colorGradingLutTexture = backend().createTexture(lutDesc);
+
+    // TODO/FIXME: This is broken as we're not taking into account the missing a-channel!
+    std::span<const float> lutData = lut.dataForGpuUpload();
+    m_colorGradingLutTexture->setData(lutData.data(), lutData.size() * sizeof(float), 0, 0);
+
+    static int nextLutIdx = 0;
+    m_colorGradingLutTexture->setName("ColorGradeLUT<" + std::to_string(nextLutIdx++) + ">");
 }
 
 void GpuScene::registerLight(DirectionalLight& light)

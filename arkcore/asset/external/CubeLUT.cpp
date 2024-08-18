@@ -181,3 +181,19 @@ vec3 CubeLUT::sample(vec3 input) const
 
     }
 }
+
+std::span<const float> CubeLUT::dataForGpuUpload() const
+{
+    if (!all(domainMin() == vec3(0.0f))) {
+        ARKOSE_LOG(Fatal, "CubeLUT: only LUTs with domain min of (0, 0, 0) are supported for GPU upload");
+    }
+
+    if (!all(domainMax() == vec3(1.0f))) {
+        ARKOSE_LOG(Fatal, "CubeLUT: only LUTs with domain max of (1, 1, 1) are supported for GPU upload");
+    }
+
+    float const* firstFloat = &m_table[0].x;
+    size_t numFloats = m_table.size() * 3;
+
+    return std::span<const float>(firstFloat, numFloats);
+}

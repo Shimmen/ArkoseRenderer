@@ -24,6 +24,7 @@
 #include "shaders/shared/SceneData.h"
 #include "shaders/shared/RTData.h"
 
+class CubeLUT;
 class DirectionalLight;
 class Light;
 class MaterialAsset;
@@ -133,6 +134,8 @@ public:
 
     void updateEnvironmentMap(EnvironmentMap&);
     Texture& environmentMapTexture();
+
+    void updateColorGradingLUT(CubeLUT const&);
 
     float globalMipBias() const { return m_globalMipBias; }
 
@@ -260,6 +263,7 @@ private:
     uint32_t m_framesUntilNextFullTlasBuild { 0u };
 
     std::unique_ptr<Texture> m_environmentMapTexture {};
+    std::unique_ptr<Texture> m_colorGradingLutTexture {};
 
     // Skinning related data
     std::unique_ptr<Buffer> m_jointMatricesBuffer {};

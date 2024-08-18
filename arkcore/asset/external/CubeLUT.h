@@ -4,6 +4,7 @@
 #include <ark/vector.h>
 #include <memory>
 #include <string_view>
+#include <span>
 #include <vector>
 
 class CubeLUT {
@@ -28,6 +29,8 @@ public:
     vec3 fetch3d(ivec3) const;
 
     vec3 sample(vec3) const;
+
+    std::span<const float> dataForGpuUpload() const;
 
 private:
     std::vector<vec3> m_table{};
