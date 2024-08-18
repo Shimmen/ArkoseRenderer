@@ -24,9 +24,14 @@ public:
     vec3 domainMin() const { return m_domainMin; }
     vec3 domainMax() const { return m_domainMax; }
 
+    vec3 fetch1d(i32) const;
+    vec3 fetch3d(ivec3) const;
+
+    vec3 sample(vec3) const;
+
 private:
     std::vector<vec3> m_table{};
-    size_t m_tableSize{ 0 };
+    u32 m_tableSize{ 0 };
     bool m_is3dLut{ false };
     vec3 m_domainMin{ 0.0f };
     vec3 m_domainMax{ 1.0f };

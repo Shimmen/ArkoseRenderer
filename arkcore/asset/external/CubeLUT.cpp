@@ -94,7 +94,7 @@ std::unique_ptr<CubeLUT> CubeLUT::load(std::string_view path)
 
 CubeLUT::CubeLUT(std::vector<vec3>&& table, size_t tableSize, bool is3dLut, vec3 domainMin, vec3 domainMax)
     : m_table(std::move(table))
-    , m_tableSize(tableSize)
+    , m_tableSize(narrow_cast<u32>(tableSize))
     , m_is3dLut(is3dLut)
     , m_domainMin(domainMin)
     , m_domainMax(domainMax)
@@ -107,4 +107,77 @@ CubeLUT::CubeLUT()
     m_tableSize = 2;
     m_table.emplace_back(0.0f, 0.0f, 0.0f);
     m_table.emplace_back(1.0f, 1.0f, 1.0f);
+}
+
+vec3 CubeLUT::fetch1d(i32 coord) const
+{
+    ARKOSE_ASSERT(is1d());
+
+    if (coord < 0) {
+        ARKOSE_LOG(Error, "CubeLUT: trying to fetch 1D with coord < 0, clamping");
+        coord = 0;
+    }
+
+    if (coord >= tableSize()) {
+        ARKOSE_LOG(Error, "CubeLUT: trying to fetch 1D with coord >= table size, clamping");
+        coord = tableSize() - 1;
+    }
+
+    return m_table[coord];
+}
+
+vec3 CubeLUT::fetch3d(ivec3 coord) const
+{
+    ARKOSE_ASSERT(is3d());
+
+    if (any(lessThan(coord, ivec3(0)))) {
+        ARKOSE_LOG(Error, "CubeLUT: trying to fetch with coord < 0, clamping");
+        coord = ark::max(coord, ivec3(0));
+    }
+
+    if (any(greaterThanEqual(coord, ivec3(tableSize())))) {
+        ARKOSE_LOG(Error, "CubeLUT: trying to fetch with coord >= table size, clamping");
+        coord = ark::max(coord, ivec3(tableSize() - 1));
+    }
+
+    i32 linearCoord = coord.x + (coord.y * tableSize()) + (coord.z * tableSize() * tableSize());
+    return m_table[linearCoord];
+}
+
+vec3 CubeLUT::sample(vec3 input) const
+{
+    if (any(lessThan(input, domainMin()))) {
+        ARKOSE_LOG(Error, "CubeLUT: trying to sample with input less than domain minimum, clamping");
+        input = ark::max(input, domainMin());
+    }
+
+    if (any(greaterThan(input, domainMax()))) {
+        ARKOSE_LOG(Error, "CubeLUT: trying to sample with input greater than domain maximum, clamping");
+        input = ark::min(input, domainMax());
+    }
+
+    vec3 normalizedSampleCoords = (input - domainMin()) / (domainMax() - domainMin());
+    vec3 sampleCoords = normalizedSampleCoords * vec3(static_cast<float>(m_tableSize) * 0.99f);
+
+    if (is1d()) {
+
+        float r = ark::lerp(fetch1d(floor(sampleCoords.x)).x, fetch1d(ceil(sampleCoords.x)).x, ark::fract(sampleCoords.x));
+        float g = ark::lerp(fetch1d(floor(sampleCoords.y)).y, fetch1d(ceil(sampleCoords.y)).y, ark::fract(sampleCoords.y));
+        float b = ark::lerp(fetch1d(floor(sampleCoords.z)).z, fetch1d(ceil(sampleCoords.z)).z, ark::fract(sampleCoords.z));
+
+        return vec3(r, g, b);
+
+    } else {
+
+        // TODO: Implement trilinear interpolation! Or maybe just don't and let the GPU handle it..
+
+        ivec3 topLeftCoords = ivec3(floor(sampleCoords.x),
+                                    floor(sampleCoords.y),
+                                    floor(sampleCoords.z));
+
+        vec3 topLeftRgb = fetch3d(topLeftCoords);
+
+        return topLeftRgb;
+
+    }
 }
