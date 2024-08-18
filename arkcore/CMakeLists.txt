@@ -17,6 +17,9 @@ set(ARKCORE_SOURCES
   arkcore/asset/SkeletonAsset.h
   arkcore/asset/TextureCompressor.cpp
   arkcore/asset/TextureCompressor.h
+    # external
+    arkcore/asset/external/CubeLUT.cpp
+    arkcore/asset/external/CubeLUT.h
     # import
     arkcore/asset/import/AssetImporter.cpp
     arkcore/asset/import/AssetImporter.h
