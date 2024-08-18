@@ -126,6 +126,11 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
         imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
         imageCreateInfo.arrayLayers = arrayCount();
         break;
+    case Type::Texture3D:
+        imageCreateInfo.imageType = VK_IMAGE_TYPE_3D;
+        ARKOSE_ASSERTM(arrayCount() == 1, "Vulkan does not support 3D array textures");
+        imageCreateInfo.arrayLayers = 1;
+        break;
     case Type::Cubemap:
         imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
         imageCreateInfo.flags = VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
@@ -404,6 +409,11 @@ void VulkanTexture::setData(const void* data, size_t size, size_t mipIdx, size_t
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
+    if (type() == Type::Texture3D && arrayIdx > 0) {
+        ARKOSE_LOG(Error, "VulkanTexture: array index must be 0 for 3D textures as there can only be 1 layer");
+        arrayIdx = 0;
+    }
+
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
     VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
@@ -512,6 +522,9 @@ uint32_t VulkanTexture::layerCount() const
     switch (type()) {
     case Texture::Type::Texture2D:
         return arrayCount();
+    case Texture::Type::Texture3D:
+        ARKOSE_ASSERT(arrayCount() == 1);
+        return 1;
     case Texture::Type::Cubemap:
         return 6 * arrayCount();
     default:
@@ -565,6 +578,12 @@ VkImageView VulkanTexture::createImageView(uint32_t baseMip, uint32_t numMips, s
         viewCreateInfo.viewType = isArray()
             ? VK_IMAGE_VIEW_TYPE_2D_ARRAY
             : VK_IMAGE_VIEW_TYPE_2D;
+        break;
+    case Type::Texture3D:
+        viewCreateInfo.subresourceRange.baseArrayLayer = 0;
+        viewCreateInfo.subresourceRange.layerCount = layerCount();
+        ARKOSE_ASSERT(!isArray());
+        viewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_3D;
         break;
     case Type::Cubemap:
         viewCreateInfo.subresourceRange.baseArrayLayer = 0;

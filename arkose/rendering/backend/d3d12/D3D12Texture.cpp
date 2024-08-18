@@ -100,6 +100,9 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
         textureDescription.Height = extent().height();
         textureDescription.DepthOrArraySize = narrow_cast<u16>(arrayCount());
         break;
+    case Type::Texture3D:
+        NOT_YET_IMPLEMENTED();
+        break;
     case Type::Cubemap:
         NOT_YET_IMPLEMENTED();
         break;

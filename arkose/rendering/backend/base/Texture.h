@@ -22,6 +22,7 @@ public:
 
     enum class Type {
         Texture2D,
+        Texture3D,
         Cubemap,
     };
 
