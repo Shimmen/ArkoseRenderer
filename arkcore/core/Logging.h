@@ -54,13 +54,6 @@ inline void _internal_log(fmt::format_string<Args...> format, Args&&... args)
 
 #define MAKE_QUALIFIED_LOG_LEVEL(level) Logging::LogLevel::level
 
-#if defined(_MSC_VER)
-// It seems like MSVC may not yet support __VA_OPT__(..) fully... need to test this on MSVC for real, but this old version of my macro should work.
-#define ARKOSE_LOG(logLevel, format, ...) Logging::_internal_log<MAKE_QUALIFIED_LOG_LEVEL(logLevel)>(FMT_STRING(format), __VA_ARGS__)
-#define ARKOSE_LOG_FATAL(format, ...)  do { Logging::_internal_log<Logging::LogLevel::Fatal>(FMT_STRING(format), __VA_ARGS__); \
-                                            exit(Logging::FatalErrorExitCode); /* ensure noreturn behaviour */ } while (false)
-#else
 #define ARKOSE_LOG(logLevel, format, ...) Logging::_internal_log<MAKE_QUALIFIED_LOG_LEVEL(logLevel)>(FMT_STRING(format) __VA_OPT__(,) __VA_ARGS__)
 #define ARKOSE_LOG_FATAL(format, ...)  do { Logging::_internal_log<Logging::LogLevel::Fatal>(FMT_STRING(format) __VA_OPT__(,) __VA_ARGS__); \
                                             exit(Logging::FatalErrorExitCode); /* ensure noreturn behaviour */ } while (false)
-#endif
