@@ -23,4 +23,13 @@ private:
 
     bool m_applyVignette { true };
     float m_vignetteIntensity { 0.18f };
+
+    enum BlackBars {
+        None,
+        Cinematic,
+        CameraSensorAspectRatio,
+    };
+
+    BlackBars m_blackBars { BlackBars::None };
+    vec4 calculateBlackBarLimits(GpuScene const&) const;
 };

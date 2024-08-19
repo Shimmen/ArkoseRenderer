@@ -15,6 +15,8 @@ NAMED_UNIFORMS(constants,
 
     float vignetteIntensity;
     float aspectRatio;
+
+    vec4 blackBarsLimits;
 )
 
 layout(location = 0) out vec4 oColor;
@@ -33,12 +35,19 @@ void main()
         finalPixel.rgb *= falloffFactor;
     }
 
+    // Apply film grain
     vec2 filmGrainUv = gl_FragCoord.xy / (vec2(textureSize(filmGrainTexture, 0).xy) * constants.filmGrainScale);
     vec3 lookupCoord = vec3(filmGrainUv, float(constants.filmGrainArrayIdx));
     vec3 filmGrain01 = textureLod(filmGrainTexture, lookupCoord, 0.0).rgb;
     vec3 filmGrain = vec3(constants.filmGrainGain * (2.0 * filmGrain01 - 1.0));
     filmGrain *= pow(1.0 - luminance(finalPixel), 25.0);
+    finalPixel = clamp(finalPixel + filmGrain, vec3(0.0), vec3(1.0));
 
-    vec3 finalColor = clamp(finalPixel + filmGrain, vec3(0.0), vec3(1.0));
-    oColor = vec4(finalColor, 1.0);
+    // Apply black bars
+    if (gl_FragCoord.x < constants.blackBarsLimits.x || gl_FragCoord.y < constants.blackBarsLimits.y
+     || gl_FragCoord.x > constants.blackBarsLimits.z || gl_FragCoord.y > constants.blackBarsLimits.w) {
+        finalPixel = vec3(0.0);
+    }
+
+    oColor = vec4(finalPixel, 1.0);
 }

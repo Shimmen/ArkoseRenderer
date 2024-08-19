@@ -16,6 +16,30 @@ void FinalNode::drawGui()
 
     ImGui::Checkbox("Apply vignette", &m_applyVignette);
     ImGui::SliderFloat("Vignette intensity", &m_vignetteIntensity, 0.0f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
+
+    auto nameForBlackBars = [](BlackBars blackBars) -> char const* {
+        switch (blackBars) {
+        case BlackBars::None:
+            return "None";
+        case BlackBars::Cinematic:
+            return "Cinematic";
+        case BlackBars::CameraSensorAspectRatio:
+            return "Virtual camera sensor aspect ratio";
+        }
+    };
+
+    if (ImGui::BeginCombo("Black bars", nameForBlackBars(m_blackBars))) {
+        if (ImGui::Selectable(nameForBlackBars(BlackBars::None), m_blackBars == BlackBars::None)) {
+            m_blackBars = BlackBars::None;
+        }
+        if (ImGui::Selectable(nameForBlackBars(BlackBars::Cinematic), m_blackBars == BlackBars::Cinematic)) {
+            m_blackBars = BlackBars::Cinematic;
+        }
+        if (ImGui::Selectable(nameForBlackBars(BlackBars::CameraSensorAspectRatio), m_blackBars == BlackBars::CameraSensorAspectRatio)) {
+            m_blackBars = BlackBars::CameraSensorAspectRatio;
+        }
+        ImGui::EndCombo();
+    }
 }
 
 RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Registry& reg)
@@ -51,6 +75,9 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Regist
             float vignetteIntensity = m_applyVignette ? m_vignetteIntensity : 0.0f;
             cmdList.setNamedUniform("vignetteIntensity", vignetteIntensity);
             cmdList.setNamedUniform("aspectRatio", scene.camera().aspectRatio());
+
+            vec4 blackBarsLimits = calculateBlackBarLimits(scene);
+            cmdList.setNamedUniform("blackBarsLimits", blackBarsLimits);
         }
 
         cmdList.bindVertexBuffer(vertexBuffer, renderState.vertexLayout().packedVertexSize(), 0);
@@ -58,4 +85,47 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Regist
 
         cmdList.endRendering();
     };
+}
+
+vec4 FinalNode::calculateBlackBarLimits(GpuScene const& scene) const
+{
+    // default/null limits
+    vec4 limits = vec4(0.0f, 0.0f, std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+
+    if (m_blackBars == BlackBars::None) {
+        return limits;
+    }
+
+    float barAspectRatio = 1.0f;
+    switch (m_blackBars) {
+    case BlackBars::Cinematic:
+        barAspectRatio = 2.39f / 1.0f;
+        break;
+    case BlackBars::CameraSensorAspectRatio:
+        barAspectRatio = scene.camera().sensorVirtualAspectRatio();
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+
+    float windowAspectRatio = scene.camera().aspectRatio();
+    float relativeAspectRatio = barAspectRatio / windowAspectRatio;
+
+    if (relativeAspectRatio > 1.0f) {
+        // draw letterbox-style black bars
+        float windowHeight = static_cast<float>(scene.camera().viewport().height());
+        float innerViewHeight = windowHeight / relativeAspectRatio;
+        float barHeight = (windowHeight - innerViewHeight) / 2.0f;
+        limits.y = barHeight;
+        limits.w = windowHeight - barHeight;
+    } else if (relativeAspectRatio < 1.0f) {
+        // draw left-right black bars
+        float windowWidth = static_cast<float>(scene.camera().viewport().width());
+        float innerViewWidth = windowWidth * relativeAspectRatio;
+        float barWidth = (windowWidth - innerViewWidth) / 2.0f;
+        limits.x = barWidth;
+        limits.z = windowWidth - barWidth;
+    }
+
+    return limits;
 }

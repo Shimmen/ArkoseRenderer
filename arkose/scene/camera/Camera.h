@@ -61,6 +61,9 @@ public:
     float focusDepth() const { return m_focusDepth; }
     void setFocusDepth(float focusDepth);
 
+    vec2 sensorSize() const { return m_sensorSize; }
+    float sensorVirtualAspectRatio() const { return m_sensorSize.x / m_sensorSize.y; }
+
     float circleOfConfusionMmToPxFactor() const;
 
     // NOTE: *horizontal* field of view
