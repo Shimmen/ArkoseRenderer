@@ -11,7 +11,7 @@ class CubeLUT {
 public:
     static std::unique_ptr<CubeLUT> load(std::string_view path);
 
-    CubeLUT(std::vector<vec3>&& table, size_t tableSize, bool is3dLut, vec3 domainMin, vec3 domainMax);
+    CubeLUT(std::vector<vec4>&& table, size_t tableSize, bool is3dLut, vec3 domainMin, vec3 domainMax);
     CubeLUT();
 
     CubeLUT(CubeLUT const&) = default;
@@ -33,9 +33,10 @@ public:
     std::span<const float> dataForGpuUpload() const;
 
 private:
-    std::vector<vec3> m_table{};
-    u32 m_tableSize{ 0 };
-    bool m_is3dLut{ false };
-    vec3 m_domainMin{ 0.0f };
-    vec3 m_domainMax{ 1.0f };
+    // NOTE: We store the table as rgba/float4 as it works better for the GPU
+    std::vector<vec4> m_table {};
+    u32 m_tableSize { 0 };
+    bool m_is3dLut { false };
+    vec3 m_domainMin { 0.0f };
+    vec3 m_domainMax { 1.0f };
 };

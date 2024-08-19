@@ -12,7 +12,7 @@ std::unique_ptr<CubeLUT> CubeLUT::load(std::string_view path)
         return nullptr;
     }
 
-    int numTableEntries = 0;
+    size_t numTableEntries = 0;
 
     // CubeLUT specification version 1.0:
     // https://kono.phpage.fr/images/a/a1/Adobe-cube-lut-specification-1.0.pdf
@@ -22,7 +22,7 @@ std::unique_ptr<CubeLUT> CubeLUT::load(std::string_view path)
     vec3 domainMin { 0.0, 0.0, 0.0 }; // "If DOMAIN_MIN is omitted from the file, the lower bounds shall be 0 0 0"
     vec3 domainMax { 1.0, 1.0, 1.0 }; // "If DOMAIN_MAX is omitted from the file, the upper bounds shall be 1 1 1"
     size_t tableSize = 0;
-    std::vector<vec3> tableData;
+    std::vector<vec4> tableData;
 
     while (!parseContext.isEndOfFile()) {
 
@@ -45,7 +45,7 @@ std::unique_ptr<CubeLUT> CubeLUT::load(std::string_view path)
                 float blue = parseContext.nextAsFloat("table value blue");
                 parseContext.consumeNewline(1, '\n');
 
-                tableData.emplace_back(red, green, blue);
+                tableData.emplace_back(red, green, blue, 1.0f);
 
             } else {
                 // TODO: Handle error properly..
@@ -92,7 +92,7 @@ std::unique_ptr<CubeLUT> CubeLUT::load(std::string_view path)
     return std::make_unique<CubeLUT>(std::move(tableData), tableSize, is3dLut, domainMin, domainMax);
 }
 
-CubeLUT::CubeLUT(std::vector<vec3>&& table, size_t tableSize, bool is3dLut, vec3 domainMin, vec3 domainMax)
+CubeLUT::CubeLUT(std::vector<vec4>&& table, size_t tableSize, bool is3dLut, vec3 domainMin, vec3 domainMax)
     : m_table(std::move(table))
     , m_tableSize(narrow_cast<u32>(tableSize))
     , m_is3dLut(is3dLut)
@@ -105,8 +105,8 @@ CubeLUT::CubeLUT()
 {
     // Make the most simple identity 2D LUT
     m_tableSize = 2;
-    m_table.emplace_back(0.0f, 0.0f, 0.0f);
-    m_table.emplace_back(1.0f, 1.0f, 1.0f);
+    m_table.emplace_back(0.0f, 0.0f, 0.0f, 1.0f);
+    m_table.emplace_back(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
 vec3 CubeLUT::fetch1d(i32 coord) const
@@ -123,7 +123,7 @@ vec3 CubeLUT::fetch1d(i32 coord) const
         coord = tableSize() - 1;
     }
 
-    return m_table[coord];
+    return m_table[coord].xyz();
 }
 
 vec3 CubeLUT::fetch3d(ivec3 coord) const
@@ -141,7 +141,7 @@ vec3 CubeLUT::fetch3d(ivec3 coord) const
     }
 
     i32 linearCoord = coord.x + (coord.y * tableSize()) + (coord.z * tableSize() * tableSize());
-    return m_table[linearCoord];
+    return m_table[linearCoord].xyz();
 }
 
 vec3 CubeLUT::sample(vec3 input) const
@@ -171,9 +171,9 @@ vec3 CubeLUT::sample(vec3 input) const
 
         // TODO: Implement trilinear interpolation! Or maybe just don't and let the GPU handle it..
 
-        ivec3 topLeftCoords = ivec3(floor(sampleCoords.x),
-                                    floor(sampleCoords.y),
-                                    floor(sampleCoords.z));
+        ivec3 topLeftCoords = ivec3(static_cast<i32>(floor(sampleCoords.x)),
+                                    static_cast<i32>(floor(sampleCoords.y)),
+                                    static_cast<i32>(floor(sampleCoords.z)));
 
         vec3 topLeftRgb = fetch3d(topLeftCoords);
 
@@ -193,7 +193,7 @@ std::span<const float> CubeLUT::dataForGpuUpload() const
     }
 
     float const* firstFloat = &m_table[0].x;
-    size_t numFloats = m_table.size() * 3;
+    size_t numFloats = m_table.size() * 4;
 
     return std::span<const float>(firstFloat, numFloats);
 }
