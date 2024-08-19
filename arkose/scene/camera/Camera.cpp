@@ -1,4 +1,4 @@
-#include "Camera.h"
+﻿#include "Camera.h"
 
 #include "asset/LevelAsset.h" // for CameraAsset
 #include "core/Logging.h"
@@ -388,14 +388,22 @@ void Camera::drawGui(bool includeContainingWindow)
 
     ImGui::Separator();
 
-    ImGui::Text("Focus depth:        %.2f m", focusDepth());
+    if (focusDepth() >= m_farClipPlane) {
+        ImGui::Text("Focus depth:        inf");
+    } else {
+        ImGui::Text("Focus depth:        %.2f m", focusDepth());
+    }
 
     // TODO: If upscaling, should this be render resolution (viewport) or display resolution (targetWindowSize)?!
     float acceptibleCocMm = calculateAcceptableCircleOfConfusion(m_sensorSize, viewport());
     float acceptibleCocPx = convertCircleOfConfusionToPixelUnits(acceptibleCocMm, m_sensorSize, viewport());
     float acceptibleDof = calculateDepthOfField(acceptibleCocMm, focalLengthMillimeters(), fNumber(), focusDepth());
     vec2 acceptibleDofRange = calculateDepthOfFieldRange(focusDepth(), acceptibleDof);
-    ImGui::Text("Acceptable DOF:     %.2f m (range: %.2f m to %.2f m)", acceptibleDof, acceptibleDofRange.x, acceptibleDofRange.y);
+    if (acceptibleDofRange.x <= 0.0f && acceptibleDofRange.y >= m_farClipPlane) {
+        ImGui::Text("Acceptable DOF:     inf (range: 0.00 m to inf)");
+    } else {
+        ImGui::Text("Acceptable DOF:     %.2f m (range: %.2f m to %.2f m)", acceptibleDof, acceptibleDofRange.x, acceptibleDofRange.y);
+    }
     ImGui::Text("                    (using CoC of %.3f mm or %.2f px)", acceptibleCocMm, acceptibleCocPx);
 
     ImGui::Separator();
