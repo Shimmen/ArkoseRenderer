@@ -6,6 +6,8 @@
 
 std::unique_ptr<CubeLUT> CubeLUT::load(std::string_view path)
 {
+    SCOPED_PROFILE_ZONE();
+
     ParseContext parseContext { "CUBE", std::string(path) };
     if (!parseContext.isValid()) {
         ARKOSE_LOG(Error, "CubeLUT: failed to read .cube file '{}'", path);
@@ -30,6 +32,9 @@ std::unique_ptr<CubeLUT> CubeLUT::load(std::string_view path)
             parseContext.nextLine(); // discard line
             continue;
         }
+
+        // NOTE: According to spec there should be no newlines here but I found some such examples of it so let's be lenient.
+        parseContext.consumeWhitespace();
 
         std::optional<std::string> maybeSymbol = parseContext.consumeStandardSymbol();
         std::string const& symbol = maybeSymbol.value_or("");
@@ -104,8 +109,20 @@ CubeLUT::CubeLUT(std::vector<vec4>&& table, size_t tableSize, bool is3dLut, vec3
 CubeLUT::CubeLUT()
 {
     // Make the most simple identity 2D LUT
+    //m_tableSize = 2;
+    //m_table.emplace_back(0.0f, 0.0f, 0.0f, 1.0f);
+    //m_table.emplace_back(1.0f, 1.0f, 1.0f, 1.0f);
+
+    // Make the most simple identity 3D LUT
     m_tableSize = 2;
+    m_is3dLut = true;
     m_table.emplace_back(0.0f, 0.0f, 0.0f, 1.0f);
+    m_table.emplace_back(1.0f, 0.0f, 0.0f, 1.0f);
+    m_table.emplace_back(0.0f, 1.0f, 0.0f, 1.0f);
+    m_table.emplace_back(1.0f, 1.0f, 0.0f, 1.0f);
+    m_table.emplace_back(0.0f, 0.0f, 1.0f, 1.0f);
+    m_table.emplace_back(1.0f, 0.0f, 1.0f, 1.0f);
+    m_table.emplace_back(0.0f, 1.0f, 1.0f, 1.0f);
     m_table.emplace_back(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
@@ -184,6 +201,10 @@ vec3 CubeLUT::sample(vec3 input) const
 
 std::span<const float> CubeLUT::dataForGpuUpload() const
 {
+    if (is1d()) {
+        ARKOSE_LOG(Fatal, "CubeLUT: only 3D LUTs are currently supported for GPU upload");
+    }
+
     if (!all(domainMin() == vec3(0.0f))) {
         ARKOSE_LOG(Fatal, "CubeLUT: only LUTs with domain min of (0, 0, 0) are supported for GPU upload");
     }
