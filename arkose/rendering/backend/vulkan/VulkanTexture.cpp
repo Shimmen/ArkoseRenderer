@@ -110,7 +110,7 @@ VulkanTexture::VulkanTexture(Backend& backend, Description desc)
     allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
 
     VkImageCreateInfo imageCreateInfo = { VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO };
-    imageCreateInfo.extent = { .width = extent().width(), .height = extent().height(), .depth = 1 };
+    imageCreateInfo.extent = { .width = extent3D().width(), .height = extent3D().height(), .depth = extent3D().depth() };
     imageCreateInfo.mipLevels = mipLevels();
     imageCreateInfo.usage = usageFlags;
     imageCreateInfo.format = vkFormat;
@@ -473,7 +473,7 @@ void VulkanTexture::setData(const void* data, size_t size, size_t mipIdx, size_t
         currentLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     }
 
-    Extent2D mipExtent = extentAtMip(narrow_cast<u32>(mipIdx));
+    Extent3D mipExtent = extent3DAtMip(narrow_cast<u32>(mipIdx));
 
     VkBufferImageCopy region = {};
 
@@ -484,7 +484,7 @@ void VulkanTexture::setData(const void* data, size_t size, size_t mipIdx, size_t
     region.bufferImageHeight = 0;
 
     region.imageOffset = VkOffset3D { 0, 0, 0 };
-    region.imageExtent = VkExtent3D { mipExtent.width(), mipExtent.height(), 1 };
+    region.imageExtent = VkExtent3D { mipExtent.width(), mipExtent.height(), mipExtent.depth() };
 
     region.imageSubresource.aspectMask = aspectMask();
     region.imageSubresource.mipLevel = narrow_cast<u32>(mipIdx);
