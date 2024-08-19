@@ -49,7 +49,7 @@ std::unique_ptr<CubeLUT> CubeLUT::load(std::string_view path)
 
             } else {
                 // TODO: Handle error properly..
-                //ARKOSE_ERROR("CubeLUT: parsing error, no symbol found but also not able to read table data yet");
+                ARKOSE_ERROR("CubeLUT: parsing error, no symbol found but also not able to read table data yet");
             }
         } else if (symbol == "TITLE") {
             parseContext.consumeWhitespace();
@@ -82,7 +82,7 @@ std::unique_ptr<CubeLUT> CubeLUT::load(std::string_view path)
             ARKOSE_ERROR("CubeLUT: parsing error, symbol '{}' not known", symbol);
         }
 
-        parseContext.consumeNewline(1, '\n');
+        parseContext.consumeNewline(-1, '\n');
     }
 
     bool is1dLut = tableData.size() == tableSize;
