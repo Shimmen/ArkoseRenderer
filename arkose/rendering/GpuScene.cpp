@@ -69,6 +69,10 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable, bool meshShading
                                                         ShaderBinding::sampledTextureBindlessArray(static_cast<uint32_t>(m_managedTextures.capacity()), placeholderTexture) });
     m_materialBindingSet->setName("SceneMaterialSet");
 
+    // TODO: Set up from somewhere more logical/opinionated source, like the scene/level?
+    auto identityLUT = CubeLUT::load("assets/identity.cube");
+    updateColorGradingLUT(*identityLUT);
+
     m_vertexManager = std::make_unique<VertexManager>(m_backend);
 
     if (m_maintainRayTracingScene) {
@@ -895,7 +899,6 @@ void GpuScene::updateColorGradingLUT(CubeLUT const& lut)
 
     m_colorGradingLutTexture = backend().createTexture(lutDesc);
 
-    // TODO/FIXME: This is broken as we're not taking into account the missing a-channel!
     std::span<const float> lutData = lut.dataForGpuUpload();
     m_colorGradingLutTexture->setData(lutData.data(), lutData.size() * sizeof(float), 0, 0);
 
