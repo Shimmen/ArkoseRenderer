@@ -1,6 +1,8 @@
 #ifndef SAMPLING_GLSL
 #define SAMPLING_GLSL
 
+#include <common.glsl>
+
 vec4 bilinearFilter(vec4 tl, vec4 tr, vec4 bl, vec4 br, vec2 frac)
 {
     vec4 top = mix(tl, tr, frac.x);
@@ -67,5 +69,70 @@ vec4 sampleTextureCatmullRom(in sampler2D tex, in vec2 uv, in vec2 texSize)
 }
 // End of this specified license: https://gist.github.com/TheRealMJP/bc503b0b87b643d3505d41eab8b332ae
 ////////////////////////////////////////////////////////////////////////////////
+
+vec4 sampleTexture3dTetrahedralInterpolation(in sampler3D tex, in vec3 uv)
+{
+    //
+    // Math/theory from
+    //
+    // "Real-Time Color Space Conversion for High Resolution Video"
+    // Klaus Gaedke, Jörn Jachalsky
+    // Technicolor Research & Innovation, Germany
+    // klaus.gaedke@technicolor.com
+    //
+    // found at https://www.nvidia.com/content/GTC/posters/2010/V01-Real-Time-Color-Space-Conversion-for-High-Resolution-Video.pdf
+    //
+
+    ivec3 texSize = textureSize(tex, 0);
+    vec3 texelCoord = saturate(uv) * vec3(texSize - ivec3(1));
+
+    ivec3 texelCoord000 = ivec3(floor(texelCoord));
+    ivec3 texelCoord111 = ivec3(ceil(texelCoord));
+    vec4 texel000 = texelFetch(tex, texelCoord000, 0);
+    vec4 texel111 = texelFetch(tex, texelCoord111, 0);
+
+    vec3 f = fract(texelCoord);
+
+    if (f.g >= f.b && f.b >= f.r) {
+
+        vec4 texel010 = texelFetch(tex, texelCoord000 + ivec3(0, 1, 0), 0);
+        vec4 texel011 = texelFetch(tex, texelCoord000 + ivec3(0, 1, 1), 0);
+        return (1.0 - f.g) * texel000 + (f.g - f.b) * texel010 + (f.b - f.r) * texel011 + f.r * texel111;
+
+    } else if (f.b > f.r && f.r > f.g) {
+
+        vec4 texel001 = texelFetch(tex, texelCoord000 + ivec3(0, 0, 1), 0);
+        vec4 texel101 = texelFetch(tex, texelCoord000 + ivec3(1, 0, 1), 0);
+        return (1.0 - f.b) * texel000 + (f.b - f.r) * texel001 + (f.r - f.g) * texel101 + f.g * texel111;
+
+    } else if (f.b > f.g && f.g >= f.r) {
+
+        vec4 texel001 = texelFetch(tex, texelCoord000 + ivec3(0, 0, 1), 0);
+        vec4 texel011 = texelFetch(tex, texelCoord000 + ivec3(0, 1, 1), 0);
+        return (1.0 - f.b) * texel000 + (f.b - f.g) * texel001 + (f.g - f.r) * texel011 + f.r * texel111;
+
+    } else if (f.r >= f.g && f.g > f.b) {
+
+        vec4 texel100 = texelFetch(tex, texelCoord000 + ivec3(1, 0, 0), 0);
+        vec4 texel110 = texelFetch(tex, texelCoord000 + ivec3(1, 1, 0), 0);
+        return (1.0 - f.r) * texel000 + (f.r - f.g) * texel100 + (f.g - f.b) * texel110 + f.b * texel111;
+
+    } else if (f.g > f.r && f.r >= f.b) {
+
+        vec4 texel010 = texelFetch(tex, texelCoord000 + ivec3(0, 1, 0), 0);
+        vec4 texel110 = texelFetch(tex, texelCoord000 + ivec3(1, 1, 0), 0);
+        return (1.0 - f.g) * texel000 + (f.g - f.r) * texel010 + (f.r - f.b) * texel110 + f.b * texel111;
+
+    } else if (f.r >= f.b && f.b >= f.g) {
+
+        vec4 texel100 = texelFetch(tex, texelCoord000 + ivec3(1, 0, 0), 0);
+        vec4 texel101 = texelFetch(tex, texelCoord000 + ivec3(1, 0, 1), 0);
+        return (1.0 - f.r) * texel000 + (f.r - f.b) * texel100 + (f.b - f.g) * texel101 + f.g * texel111;
+
+    }
+
+    // Should be impossible to hit this
+    return vec4(1.0, 0.0, 1.0, 1.0);
+}
 
 #endif // SAMPLING_GLSL
