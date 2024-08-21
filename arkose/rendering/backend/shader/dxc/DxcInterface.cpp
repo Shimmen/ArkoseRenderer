@@ -240,7 +240,7 @@ std::unique_ptr<CompilationResult<u8>> DxcInterface::compileShader(ShaderFile co
 
     } else {
         ComPtr<IDxcBlob> compiledCode;
-        if (auto hr = compilationResult->GetResult(&compiledCode); FAILED(hr)) {
+        if (hr = compilationResult->GetResult(&compiledCode); FAILED(hr)) {
             ARKOSE_LOG(Fatal, "DxcInterface: failed to get dxc compilation results, exiting.");
         }
 

@@ -212,7 +212,7 @@ RenderPipelineNode::ExecuteCallback DDGINode::construct(GpuScene& scene, Registr
             // NOTE: No barriers between these: they operate on the same resources but different memory within them, so they can safely overlap!
 
             {
-                ScopedDebugZone copyProbeBordersZone(cmdList, "Copy probe corners");
+                ScopedDebugZone copyProbeCornersZone(cmdList, "Copy probe corners");
 
                 cmdList.setComputeState(probeBorderCopyCornersState);
                 cmdList.dispatch(probeCountX, probeCountY, 2);

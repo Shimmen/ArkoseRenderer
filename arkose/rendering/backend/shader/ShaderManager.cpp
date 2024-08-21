@@ -362,7 +362,7 @@ bool ShaderManager::CompiledShader::tryLoadingFromBinaryCache(TargetType targetT
     }
 
     u64 includeTreeLatestTimestamp = findLatestEditTimestampInIncludeTree(true);
-    if (statResult.st_mtime < includeTreeLatestTimestamp) {
+    if (statResult.st_mtime < static_cast<time_t>(includeTreeLatestTimestamp)) {
         return false;
     }
 

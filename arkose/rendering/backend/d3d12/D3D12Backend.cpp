@@ -114,7 +114,7 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
 
         if (auto hr = m_device->QueryInterface(IID_PPV_ARGS(&m_infoQueue)); SUCCEEDED(hr)) {
             ComPtr<ID3D12InfoQueue1> infoQueue1;
-            if (auto hr = m_infoQueue.As<ID3D12InfoQueue1>(&infoQueue1); SUCCEEDED(hr)) {
+            if (hr = m_infoQueue.As<ID3D12InfoQueue1>(&infoQueue1); SUCCEEDED(hr)) {
                 infoQueue1->RegisterMessageCallback(d3d12DebugMessagCallback, D3D12_MESSAGE_CALLBACK_FLAG_NONE, nullptr, nullptr);
             } else {
                 ARKOSE_LOG(Warning, "D3D12Backend: failed to register message callback.");
@@ -646,7 +646,7 @@ ComPtr<ID3D12Device> D3D12Backend::createDeviceAtMaxSupportedFeatureLevel() cons
     query.pFeatureLevelsRequested = featureLevelsToQuery.data();
     if (auto hr = device->CheckFeatureSupport(D3D12_FEATURE_FEATURE_LEVELS, &query, sizeof(query)); SUCCEEDED(hr)) {
         if (currentFeatureLevel < query.MaxSupportedFeatureLevel) {
-            if (auto hr = D3D12CreateDevice(m_dxgiAdapter.Get(), query.MaxSupportedFeatureLevel, IID_PPV_ARGS(&device)); FAILED(hr)) {
+            if (hr = D3D12CreateDevice(m_dxgiAdapter.Get(), query.MaxSupportedFeatureLevel, IID_PPV_ARGS(&device)); FAILED(hr)) {
                 ARKOSE_LOG(Fatal, "D3D12Backend: could not create the device at max feature level, exiting.");
             }
             currentFeatureLevel = query.MaxSupportedFeatureLevel;

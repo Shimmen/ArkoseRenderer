@@ -196,12 +196,12 @@ void GeodataApp::createMapRegions()
     auto const& geoFeatures = geoFeatureCollection["features"];
 
     ark::Random rng;
-    int geoFeatureCount = 0;
+    //int geoFeatureCount = 0;
 
     ARKOSE_ASSERT(geoFeatures.is_array());
     for (auto const& geoFeature : geoFeatures) {
 
-        int geoFeatureIdx = geoFeatureCount++;
+        //int geoFeatureIdx = geoFeatureCount++;
 
         // "Feature"
         ARKOSE_ASSERT(geoFeature.is_object());

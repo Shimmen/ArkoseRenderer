@@ -72,26 +72,26 @@ struct SkeletalMeshInstance : public IEditorObject {
 
     Transform* findTransformForJoint(std::string_view jointName);
 
-    bool hasDrawableHandleForSegmentIndex(u32 segmentIdx) const;
-    DrawableObjectHandle drawableHandleForSegmentIndex(u32 segmentIdx) const;
+    bool hasDrawableHandleForSegmentIndex(size_t segmentIdx) const;
+    DrawableObjectHandle drawableHandleForSegmentIndex(size_t segmentIdx) const;
     std::vector<DrawableObjectHandle> const& drawableHandles() const { return m_drawableHandles; }
 
     void resetDrawableHandles();
-    void setDrawableHandle(u32 segmentIndex, DrawableObjectHandle);
+    void setDrawableHandle(size_t segmentIndex, DrawableObjectHandle);
 
-    bool hasSkinningVertexMappingForSegmentIndex(u32 segmentIdx) const;
-    SkinningVertexMapping const& skinningVertexMappingForSegmentIndex(u32 segmentIdx) const;
+    bool hasSkinningVertexMappingForSegmentIndex(size_t segmentIdx) const;
+    SkinningVertexMapping const& skinningVertexMappingForSegmentIndex(size_t segmentIdx) const;
     std::vector<SkinningVertexMapping> const& skinningVertexMappings() const { return m_skinningVertexMappings; }
 
     void resetSkinningVertexMappings();
-    void setSkinningVertexMapping(u32 segmentIdx, SkinningVertexMapping);
+    void setSkinningVertexMapping(size_t segmentIdx, SkinningVertexMapping);
 
-    bool hasBlasForSegmentIndex(u32 segmentIdx) const;
-    std::unique_ptr<BottomLevelAS> const& blasForSegmentIndex(u32 segmentIdx) const;
+    bool hasBlasForSegmentIndex(size_t segmentIdx) const;
+    std::unique_ptr<BottomLevelAS> const& blasForSegmentIndex(size_t segmentIdx) const;
     std::vector<std::unique_ptr<BottomLevelAS>>& BLASes() { return m_blases; }
 
     void resetBLASes();
-    void setBLAS(u32 segmentIdx, std::unique_ptr<BottomLevelAS>&&);
+    void setBLAS(size_t segmentIdx, std::unique_ptr<BottomLevelAS>&&);
 
     std::string name;
 

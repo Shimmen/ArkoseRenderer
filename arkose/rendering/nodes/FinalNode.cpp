@@ -27,6 +27,8 @@ void FinalNode::drawGui()
             return "Cinematic";
         case BlackBars::CameraSensorAspectRatio:
             return "Virtual camera sensor aspect ratio";
+        default:
+            ASSERT_NOT_REACHED();
         }
     };
 

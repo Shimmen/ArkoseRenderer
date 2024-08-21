@@ -78,7 +78,7 @@ DrawCallDescription DDGIProbeDebug::createSphereRenderData(GpuScene& scene, Regi
     using namespace ark;
 
     std::vector<vec3> positions {};
-    std::vector<uint16_t> indices {};
+    std::vector<u16> indices {};
     {
         float R = 1.0f / (rings - 1);
         float S = 1.0f / (sectors - 1);
@@ -102,13 +102,13 @@ DrawCallDescription DDGIProbeDebug::createSphereRenderData(GpuScene& scene, Regi
                 int i2 = (r + 1) * sectors + (s + 1);
                 int i3 = (r + 1) * sectors + s;
 
-                indices.push_back(i2);
-                indices.push_back(i1);
-                indices.push_back(i0);
+                indices.push_back(narrow_cast<u16>(i2));
+                indices.push_back(narrow_cast<u16>(i1));
+                indices.push_back(narrow_cast<u16>(i0));
 
-                indices.push_back(i3);
-                indices.push_back(i2);
-                indices.push_back(i0);
+                indices.push_back(narrow_cast<u16>(i3));
+                indices.push_back(narrow_cast<u16>(i2));
+                indices.push_back(narrow_cast<u16>(i0));
             }
         }
     }

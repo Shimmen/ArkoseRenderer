@@ -137,6 +137,8 @@ void D3D12CommandList::executeBufferCopyOperations(std::vector<BufferCopyOperati
             D3D12Texture& dstTexture = *static_cast<D3D12Texture*>(copyDestination.texture);
             ID3D12Resource* srcBuffer = static_cast<D3D12Buffer*>(copyOperation.srcBuffer)->bufferResource.Get();
 
+            (void)dstTexture;
+            (void)srcBuffer;
             NOT_YET_IMPLEMENTED();
 
         } else {

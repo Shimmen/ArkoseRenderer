@@ -51,6 +51,14 @@ constexpr u16 narrow_cast(u32 wideValue)
 }
 
 template<>
+constexpr u16 narrow_cast(i32 wideValue)
+{
+    ARKOSE_ASSERT(wideValue >= 0);
+    ARKOSE_ASSERT(wideValue <= static_cast<u32>(UINT16_MAX));
+    return static_cast<u16>(wideValue);
+}
+
+template<>
 constexpr u8 narrow_cast(u32 wideValue)
 {
     ARKOSE_ASSERT(wideValue <= static_cast<u32>(UINT8_MAX));

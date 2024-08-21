@@ -125,7 +125,7 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
     if (deferredResult.selectMesh) {
         int selectedIdx = pickingData.meshIdx;
 
-        uint32_t drawIdx = 0;
+        i32 drawIdx = 0;
         
         for (auto& instance : scene.staticMeshInstances()) {
             if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
@@ -133,7 +133,8 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
                 // TODO: Pick LOD properly (i.e. the same as drawn in the main passes)
                 const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
 
-                for (const StaticMeshSegment& meshSegment : lod.meshSegments) {
+                for (StaticMeshSegment const& meshSegment : lod.meshSegments) {
+                    (void)meshSegment;
 
                     if (drawIdx == selectedIdx) {
                         // TODO: This will break if/when we resize the instance vector
@@ -148,6 +149,8 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
 
          for (auto& instance : scene.skeletalMeshInstances()) {
             for (SkinningVertexMapping const& skinningVertexMapping : instance->skinningVertexMappings()) {
+                 (void)skinningVertexMapping;
+
                  if (drawIdx == selectedIdx) {
                      // TODO: This will break if/when we resize the instance vector
                      scene.scene().setSelectedObject(*instance);

@@ -361,10 +361,10 @@ void VulkanTexture::clear(ClearColor color)
     range.baseArrayLayer = 0;
     range.layerCount = layerCount();
 
-    bool success = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+    bool clearSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
         vkCmdClearColorImage(commandBuffer, image, VK_IMAGE_LAYOUT_GENERAL, &clearValue, 1, &range);
     });
-    if (!success) {
+    if (!clearSuccess) {
         ARKOSE_LOG(Error, "Could not clear the color image.");
         return;
     }
@@ -391,14 +391,14 @@ void VulkanTexture::clear(ClearColor color)
         VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
         imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
 
-        bool success = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+        bool barrierSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
             vkCmdPipelineBarrier(commandBuffer,
                                  sourceStage, destinationStage, 0,
                                  0, nullptr,
                                  0, nullptr,
                                  1, &imageBarrier);
         });
-        if (!success) {
+        if (!barrierSuccess) {
             ARKOSE_LOG(Error, "Could not transition image back to original layout.");
             return;
         }
@@ -488,7 +488,7 @@ void VulkanTexture::setData(const void* data, size_t size, size_t mipIdx, size_t
 
     region.imageSubresource.aspectMask = aspectMask();
     region.imageSubresource.mipLevel = narrow_cast<u32>(mipIdx);
-    region.imageSubresource.baseArrayLayer = arrayIdx;
+    region.imageSubresource.baseArrayLayer = narrow_cast<u32>(arrayIdx);
     region.imageSubresource.layerCount = 1;
 
     bool copySuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {

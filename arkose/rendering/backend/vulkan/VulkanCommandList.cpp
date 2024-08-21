@@ -942,10 +942,9 @@ void VulkanCommandList::evaluateUpscaling(UpscalingState const& upscalingState, 
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
-    auto const& vulkanUpscalingState = static_cast<VulkanUpscalingState const&>(upscalingState);
-
 #if WITH_DLSS
     if (upscalingState.upscalingTech() == UpscalingTech::DLSS) {
+        auto const& vulkanUpscalingState = static_cast<VulkanUpscalingState const&>(upscalingState);
         backend().dlssFeature().evaluate(m_commandBuffer, vulkanUpscalingState.dlssFeatureHandle, parameters);
     } else {
 #else

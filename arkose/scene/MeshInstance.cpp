@@ -52,12 +52,12 @@ Transform* SkeletalMeshInstance::findTransformForJoint(std::string_view jointNam
     return m_skeleton->findTransformForJoint(jointName);
 }
 
-bool SkeletalMeshInstance::hasDrawableHandleForSegmentIndex(u32 segmentIdx) const
+bool SkeletalMeshInstance::hasDrawableHandleForSegmentIndex(size_t segmentIdx) const
 {
     return segmentIdx < m_drawableHandles.size();
 }
 
-DrawableObjectHandle SkeletalMeshInstance::drawableHandleForSegmentIndex(u32 segmentIdx) const
+DrawableObjectHandle SkeletalMeshInstance::drawableHandleForSegmentIndex(size_t segmentIdx) const
 {
     return m_drawableHandles[segmentIdx];
 }
@@ -67,7 +67,7 @@ void SkeletalMeshInstance::resetDrawableHandles()
     m_drawableHandles.clear();
 }
 
-void SkeletalMeshInstance::setDrawableHandle(u32 segmentIdx, DrawableObjectHandle drawableHandle)
+void SkeletalMeshInstance::setDrawableHandle(size_t segmentIdx, DrawableObjectHandle drawableHandle)
 {
     if (not hasDrawableHandleForSegmentIndex(segmentIdx)) {
         m_drawableHandles.resize(segmentIdx + 1, DrawableObjectHandle());
@@ -76,12 +76,12 @@ void SkeletalMeshInstance::setDrawableHandle(u32 segmentIdx, DrawableObjectHandl
     m_drawableHandles[segmentIdx] = drawableHandle;
 }
 
-bool SkeletalMeshInstance::hasSkinningVertexMappingForSegmentIndex(u32 segmentIdx) const
+bool SkeletalMeshInstance::hasSkinningVertexMappingForSegmentIndex(size_t segmentIdx) const
 {
     return segmentIdx < m_skinningVertexMappings.size();
 }
 
-SkinningVertexMapping const& SkeletalMeshInstance::skinningVertexMappingForSegmentIndex(u32 segmentIdx) const
+SkinningVertexMapping const& SkeletalMeshInstance::skinningVertexMappingForSegmentIndex(size_t segmentIdx) const
 {
     return m_skinningVertexMappings[segmentIdx];
 }
@@ -91,7 +91,7 @@ void SkeletalMeshInstance::resetSkinningVertexMappings()
     m_skinningVertexMappings.clear();
 }
 
-void SkeletalMeshInstance::setSkinningVertexMapping(u32 segmentIdx, SkinningVertexMapping skinningVertexMapping)
+void SkeletalMeshInstance::setSkinningVertexMapping(size_t segmentIdx, SkinningVertexMapping skinningVertexMapping)
 {
     if (not hasSkinningVertexMappingForSegmentIndex(segmentIdx)) {
         m_skinningVertexMappings.resize(segmentIdx + 1);
@@ -100,12 +100,12 @@ void SkeletalMeshInstance::setSkinningVertexMapping(u32 segmentIdx, SkinningVert
     m_skinningVertexMappings[segmentIdx] = skinningVertexMapping;
 }
 
-bool SkeletalMeshInstance::hasBlasForSegmentIndex(u32 segmentIdx) const
+bool SkeletalMeshInstance::hasBlasForSegmentIndex(size_t segmentIdx) const
 {
     return segmentIdx < m_blases.size();
 }
 
-std::unique_ptr<BottomLevelAS> const& SkeletalMeshInstance::blasForSegmentIndex(u32 segmentIdx) const
+std::unique_ptr<BottomLevelAS> const& SkeletalMeshInstance::blasForSegmentIndex(size_t segmentIdx) const
 {
     return m_blases[segmentIdx];
 }
@@ -115,7 +115,7 @@ void SkeletalMeshInstance::resetBLASes()
     m_blases.clear();
 }
 
-void SkeletalMeshInstance::setBLAS(u32 segmentIdx, std::unique_ptr<BottomLevelAS>&& blas)
+void SkeletalMeshInstance::setBLAS(size_t segmentIdx, std::unique_ptr<BottomLevelAS>&& blas)
 {
     if (not hasBlasForSegmentIndex(segmentIdx)) {
         m_blases.resize(segmentIdx + 1);

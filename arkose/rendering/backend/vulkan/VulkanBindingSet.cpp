@@ -122,7 +122,6 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 ASSERT_NOT_REACHED();
             }
 
-            const auto& vulkanBackend = static_cast<const VulkanBackend&>(backend);
             binding.stageFlags = vulkanBackend.shaderStageToVulkanShaderStageFlags(bindingInfo.shaderStage());
 
             binding.pImmutableSamplers = nullptr;
