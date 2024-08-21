@@ -906,6 +906,11 @@ void GpuScene::updateColorGradingLUT(CubeLUT const& lut)
     m_colorGradingLutTexture->setName("ColorGradeLUT<" + std::to_string(nextLutIdx++) + ">");
 }
 
+Texture const& GpuScene::colorGradingLUT() const
+{
+    return *m_colorGradingLutTexture;
+}
+
 void GpuScene::registerLight(DirectionalLight& light)
 {
     ManagedDirectionalLight managedLight { .light = &light };

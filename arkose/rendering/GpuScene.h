@@ -136,6 +136,7 @@ public:
     Texture& environmentMapTexture();
 
     void updateColorGradingLUT(CubeLUT const&);
+    Texture const& colorGradingLUT() const;
 
     float globalMipBias() const { return m_globalMipBias; }
 

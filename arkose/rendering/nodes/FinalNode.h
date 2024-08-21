@@ -24,6 +24,8 @@ private:
     bool m_applyVignette { true };
     float m_vignetteIntensity { 0.18f };
 
+    bool m_applyColorGrade { false };
+
     enum BlackBars {
         None,
         Cinematic,

@@ -17,6 +17,8 @@ void FinalNode::drawGui()
     ImGui::Checkbox("Apply vignette", &m_applyVignette);
     ImGui::SliderFloat("Vignette intensity", &m_vignetteIntensity, 0.0f, 10.0f, "%.2f", ImGuiSliderFlags_Logarithmic);
 
+    ImGui::Checkbox("Apply color grade", &m_applyColorGrade);
+
     auto nameForBlackBars = [](BlackBars blackBars) -> char const* {
         switch (blackBars) {
         case BlackBars::None:
@@ -49,9 +51,12 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Regist
         ARKOSE_LOG(Fatal, "Final: specified source texture '{}' not found, exiting.", m_sourceTextureName);
     }
 
-    Texture& filmGrainTexture = *reg.getTexture("BlueNoise");
+    Texture const& filmGrainTexture = *reg.getTexture("BlueNoise");
+    Texture const& colorGradingLUT = scene.colorGradingLUT();
+
     BindingSet& bindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(*sourceTexture, ShaderStage::Fragment),
-                                                    ShaderBinding::sampledTexture(filmGrainTexture, ShaderStage::Fragment) });
+                                                    ShaderBinding::sampledTexture(filmGrainTexture, ShaderStage::Fragment),
+                                                    ShaderBinding::sampledTexture(colorGradingLUT, ShaderStage::Fragment) });
 
     std::vector<vec2> fullScreenTriangle { { -1, -3 }, { -1, 1 }, { 3, 1 } };
     Buffer& vertexBuffer = reg.createBuffer(std::move(fullScreenTriangle), Buffer::Usage::Vertex);
@@ -78,6 +83,8 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Regist
 
             vec4 blackBarsLimits = calculateBlackBarLimits(scene);
             cmdList.setNamedUniform("blackBarsLimits", blackBarsLimits);
+
+            cmdList.setNamedUniform("colorGrade", m_applyColorGrade);
         }
 
         cmdList.bindVertexBuffer(vertexBuffer, renderState.vertexLayout().packedVertexSize(), 0);
