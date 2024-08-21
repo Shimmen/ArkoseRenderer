@@ -8,7 +8,7 @@ set_directory_properties(PROPERTIES EXCLUDE_FROM_ALL YES)
 
 FetchContent_Declare(json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG        "v3.11.2")
+    GIT_TAG        "v3.11.3")
 
 set(BUILD_DOC OFF)
 set(BUILD_SANDBOX OFF)
@@ -29,7 +29,7 @@ FetchContent_Declare(glfw
 
 FetchContent_Declare(nativefiledialog-extended
     GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
-    GIT_TAG        "v1.0.3")
+    GIT_TAG        "v1.2.1")
 
 FetchContent_Declare(meshoptimizer
     GIT_REPOSITORY https://github.com/zeux/meshoptimizer.git
