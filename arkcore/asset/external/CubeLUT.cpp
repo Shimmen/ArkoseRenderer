@@ -135,7 +135,7 @@ vec3 CubeLUT::fetch1d(i32 coord) const
         coord = 0;
     }
 
-    if (coord >= tableSize()) {
+    if (coord >= static_cast<i32>(tableSize())) {
         ARKOSE_LOG(Error, "CubeLUT: trying to fetch 1D with coord >= table size, clamping");
         coord = tableSize() - 1;
     }
@@ -178,9 +178,9 @@ vec3 CubeLUT::sample(vec3 input) const
 
     if (is1d()) {
 
-        float r = ark::lerp(fetch1d(floor(sampleCoords.x)).x, fetch1d(ceil(sampleCoords.x)).x, ark::fract(sampleCoords.x));
-        float g = ark::lerp(fetch1d(floor(sampleCoords.y)).y, fetch1d(ceil(sampleCoords.y)).y, ark::fract(sampleCoords.y));
-        float b = ark::lerp(fetch1d(floor(sampleCoords.z)).z, fetch1d(ceil(sampleCoords.z)).z, ark::fract(sampleCoords.z));
+        float r = ark::lerp(fetch1d(static_cast<i32>(floor(sampleCoords.x))).x, fetch1d(static_cast<i32>(ceil(sampleCoords.x))).x, ark::fract(sampleCoords.x));
+        float g = ark::lerp(fetch1d(static_cast<i32>(floor(sampleCoords.y))).y, fetch1d(static_cast<i32>(ceil(sampleCoords.y))).y, ark::fract(sampleCoords.y));
+        float b = ark::lerp(fetch1d(static_cast<i32>(floor(sampleCoords.z))).z, fetch1d(static_cast<i32>(ceil(sampleCoords.z))).z, ark::fract(sampleCoords.z));
 
         return vec3(r, g, b);
 

@@ -125,10 +125,10 @@ void TaskGraph::waitForCompletion(Task& task)
 {
     SCOPED_PROFILE_ZONE_TASKGRAPH();
 
-    while (not task.isCompleted()) {
-        if (Task* task = getNextTask()) {
+    while (!task.isCompleted()) {
+        if (Task* otherTask = getNextTask()) {
             SCOPED_PROFILE_ZONE_NAME_AND_COLOR("Execute task", 0xaa33aa);
-            task->execute();
+            otherTask->execute();
         } else {
             std::this_thread::yield();
         }
