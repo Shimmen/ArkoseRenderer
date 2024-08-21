@@ -11,12 +11,12 @@ StaticMeshInstance::StaticMeshInstance(StaticMeshHandle inMesh, Transform inTran
 
 StaticMeshInstance::~StaticMeshInstance() = default;
 
-bool StaticMeshInstance::hasDrawableHandleForSegmentIndex(u32 segmentIdx) const
+bool StaticMeshInstance::hasDrawableHandleForSegmentIndex(size_t segmentIdx) const
 {
     return segmentIdx < m_drawableHandles.size();
 }
 
-DrawableObjectHandle StaticMeshInstance::drawableHandleForSegmentIndex(u32 segmentIdx) const
+DrawableObjectHandle StaticMeshInstance::drawableHandleForSegmentIndex(size_t segmentIdx) const
 {
 	return m_drawableHandles[segmentIdx];
 }
@@ -26,9 +26,9 @@ void StaticMeshInstance::resetDrawableHandles()
     m_drawableHandles.clear();
 }
 
-void StaticMeshInstance::setDrawableHandle(u32 segmentIdx, DrawableObjectHandle drawableHandle)
+void StaticMeshInstance::setDrawableHandle(size_t segmentIdx, DrawableObjectHandle drawableHandle)
 {
-    if (not hasDrawableHandleForSegmentIndex(segmentIdx)) {
+    if (!hasDrawableHandleForSegmentIndex(segmentIdx)) {
         m_drawableHandles.resize(segmentIdx + 1, DrawableObjectHandle());
     }
 

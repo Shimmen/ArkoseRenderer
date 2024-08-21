@@ -115,8 +115,8 @@ int Arkose::runArkoseApplication(int argc, char** argv)
     bool exitRequested = false;
     while (!exitRequested) {
 
-        checkOnShaderFileWatching([&](std::vector<std::string> const& changedShaderFiles) {
-            graphicsBackend.shadersDidRecompile(changedShaderFiles, *renderPipeline);
+        checkOnShaderFileWatching([&](std::vector<std::string> const& modifiedShaderFiles) {
+            graphicsBackend.shadersDidRecompile(modifiedShaderFiles, *renderPipeline);
         });
 
         bool windowSizeDidChange = system.newFrame();

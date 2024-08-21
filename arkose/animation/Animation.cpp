@@ -36,15 +36,15 @@ void Animation::tick(float deltaTime)
         sampledInputTracks[idx] = evaluateInputTrack(idx, inputTrack);
     }
 
-    for (AnimationChannelAsset<f32> const& channel : m_asset->floatPropertyChannels) {
-        // We don't yet have any float properties that can be animated!
-        NOT_YET_IMPLEMENTED();
-    }
+    //for (AnimationChannelAsset<f32> const& channel : m_asset->floatPropertyChannels) {
+    //    // We don't yet have any float properties that can be animated!
+    //    NOT_YET_IMPLEMENTED();
+    //}
 
-    for (AnimationChannelAsset<vec2> const& channel : m_asset->float2PropertyChannels) {
-        // We don't yet have any float2 properties that can be animated!
-        NOT_YET_IMPLEMENTED();
-    }
+    //for (AnimationChannelAsset<vec2> const& channel : m_asset->float2PropertyChannels) {
+    //    // We don't yet have any float2 properties that can be animated!
+    //    NOT_YET_IMPLEMENTED();
+    //}
 
     for (AnimationChannelAsset<vec3> const& channel : m_asset->float3PropertyChannels) {
         // NOTE: Float3 properties can only be used for translation and scale, possibly also rotation using euler angles

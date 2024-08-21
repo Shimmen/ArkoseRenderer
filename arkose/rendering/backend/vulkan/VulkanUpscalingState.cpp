@@ -13,6 +13,9 @@ VulkanUpscalingState::VulkanUpscalingState(Backend& backend, UpscalingTech tech,
 {
     switch (upscalingTech())
     {
+    case UpscalingTech::None:
+        ARKOSE_LOG(Fatal, "Creating upscaling state but with no upscaling tech");
+        break;
 #if WITH_DLSS
     case UpscalingTech::DLSS:
         createDlssFeature();

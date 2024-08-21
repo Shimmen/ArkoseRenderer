@@ -246,8 +246,6 @@ std::unique_ptr<CompilationResult<u8>> DxcInterface::compileShader(ShaderFile co
 
         return std::make_unique<DxcResult>(std::move(compiledCode), includeHandler->includedFiles(), "");
     }
-
-    ASSERT_NOT_REACHED();
 }
 
 std::string DxcInterface::entryPointNameForShaderFile(ShaderFile const& shaderFile)

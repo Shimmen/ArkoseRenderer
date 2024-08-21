@@ -79,13 +79,13 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
         if (considerResolve && attachInfo.multisampleResolveTexture) {
 
             // FIXME: Should we use "Don't care" for load op?
-            uint32_t attachmentIndex = createAttachmentDescription(attachInfo.multisampleResolveTexture, finalLayout, attachInfo.loadOp, attachInfo.storeOp);
+            uint32_t multisampleAttachmentIndex = createAttachmentDescription(attachInfo.multisampleResolveTexture, finalLayout, attachInfo.loadOp, attachInfo.storeOp);
 
-            VkAttachmentReference attachmentRef = {};
-            attachmentRef.attachment = attachmentIndex;
+            VkAttachmentReference multisampleAttachmentRef = {};
+            attachmentRef.attachment = multisampleAttachmentIndex;
             attachmentRef.layout = finalLayout;
 
-            resolveAttachmentRefs.push_back(attachmentRef);
+            resolveAttachmentRefs.push_back(multisampleAttachmentRef);
         }
 
         return attachmentRef;

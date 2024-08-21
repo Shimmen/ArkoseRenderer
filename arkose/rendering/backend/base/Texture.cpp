@@ -93,11 +93,9 @@ Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageForm
         case ImageFormat::BC7:
             return Format::BC7sRGB;
         default:
-            ASSERT_NOT_REACHED();
+            // TODO: Add fmt support for enums!
+            ARKOSE_LOG(Fatal, "Texture: using sRGB color space but no suitabe image format ({}), exiting.", static_cast<int>(imageFormat));
         }
-
-        // TODO: Add fmt support for enums!
-        ARKOSE_LOG(Fatal, "Texture: using sRGB color space but no suitabe image format ({}), exiting.", static_cast<int>(imageFormat));
     }
 
     if (imageType == ImageType::NormalMap && imageFormat == ImageFormat::BC5) {

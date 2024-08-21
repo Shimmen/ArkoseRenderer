@@ -84,6 +84,7 @@ bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
     drawMenuBar();
 
     ImGuiID dockspace = ImGui::DockSpaceOverViewport(nullptr, ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingInCentralNode);
+    (void)dockspace;
 
     drawMeshHierarchyPanel();
     drawMeshPhysicsPanel();

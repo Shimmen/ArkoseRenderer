@@ -598,12 +598,12 @@ VkImageView VulkanTexture::createImageView(uint32_t baseMip, uint32_t numMips, s
 
     VkDevice device = static_cast<const VulkanBackend&>(backend()).device();
 
-    VkImageView imageView {};
-    if (vkCreateImageView(device, &viewCreateInfo, nullptr, &imageView) != VK_SUCCESS) {
+    VkImageView newImageView {};
+    if (vkCreateImageView(device, &viewCreateInfo, nullptr, &newImageView) != VK_SUCCESS) {
         ARKOSE_LOG(Fatal, "VulkanBackend: could not create image view.");
     }
 
-    return imageView;
+    return newImageView;
 }
 
 std::vector<VulkanTexture*> VulkanTexture::texturesForImGuiRendering {};

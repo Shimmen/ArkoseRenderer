@@ -632,7 +632,6 @@ bool ShaderManager::CompiledShader::collectNamedConstants()
                 break;
             default:
                 ARKOSE_LOG(Fatal, "ShaderManager: unknown type used for named constant");
-                memberTypeName = "unknown";
                 break;
             }
 

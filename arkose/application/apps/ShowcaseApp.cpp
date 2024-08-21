@@ -249,9 +249,9 @@ bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
     }
 
     for (AnimatingInstance animatingInstance : m_animatingInstances) {
-        quat rotation = axisAngle(animatingInstance.axisOfRotation, animatingInstance.rotationSpeed * deltaTime);
-        quat orientiation = animatingInstance.staticMeshInstance->transform().localOrientation();
-        animatingInstance.staticMeshInstance->transform().setOrientation(rotation * orientiation);
+        quat instanceRotation = axisAngle(animatingInstance.axisOfRotation, animatingInstance.rotationSpeed * deltaTime);
+        quat instanceOrientiation = animatingInstance.staticMeshInstance->transform().localOrientation();
+        animatingInstance.staticMeshInstance->transform().setOrientation(instanceRotation * instanceOrientiation);
     }
 
     // Physics experiment, to be removed!

@@ -365,8 +365,8 @@ VulkanBottomLevelASNV::~VulkanBottomLevelASNV()
     vulkanBackend.rayTracingNV().vkDestroyAccelerationStructureNV(vulkanBackend.device(), accelerationStructure, nullptr);
     vmaFreeMemory(vulkanBackend.globalAllocator(), allocation);
 
-    for (auto& [buffer, allocation] : associatedBuffers) {
-        vmaDestroyBuffer(vulkanBackend.globalAllocator(), buffer, allocation);
+    for (auto& [associatedBuffer, associatedAllocation] : associatedBuffers) {
+        vmaDestroyBuffer(vulkanBackend.globalAllocator(), associatedBuffer, associatedAllocation);
     }
 }
 
