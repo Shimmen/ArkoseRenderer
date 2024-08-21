@@ -19,7 +19,7 @@ FetchContent_Declare(cereal
 
 FetchContent_Declare(fmt
     GIT_REPOSITORY https://github.com/fmtlib/fmt.git
-    GIT_TAG        "10.1.1")
+    GIT_TAG        "11.0.2")
 
 set(GLFW_BUILD_EXAMPLES OFF)
 set(GLFW_BUILD_TESTS OFF)
