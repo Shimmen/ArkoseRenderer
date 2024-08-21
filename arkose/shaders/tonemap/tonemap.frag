@@ -2,6 +2,7 @@
 
 #include <color/aces.glsl>
 #include <color/agx.glsl>
+#include <color/khronosPbrNeutral.glsl>
 #include <common.glsl>
 #include <common/namedUniforms.glsl>
 #include <common/srgb.glsl>
@@ -32,6 +33,9 @@ void main()
         break;
     case TONEMAP_METHOD_AGX:
         ldrColor = AgX_tonemap(hdrColor);
+        break;
+    case TONEMAP_METHOD_KHRONOS_PBR_NEUTRAL:
+        ldrColor = khronosPbrNeutralTonemap(hdrColor);
         break;
     default:
         ldrColor = vec3(1.0, 0.0, 1.0);

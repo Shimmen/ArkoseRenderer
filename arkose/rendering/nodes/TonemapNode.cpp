@@ -29,6 +29,9 @@ void TonemapNode::drawGui()
     if (ImGui::RadioButton("AgX", m_tonemapMethod == TONEMAP_METHOD_AGX)) {
         m_tonemapMethod = TONEMAP_METHOD_AGX;
     }
+    if (ImGui::RadioButton("Khronos PBR Neutral", m_tonemapMethod == TONEMAP_METHOD_KHRONOS_PBR_NEUTRAL)) {
+        m_tonemapMethod = TONEMAP_METHOD_KHRONOS_PBR_NEUTRAL;
+    }
 }
 
 RenderPipelineNode::ExecuteCallback TonemapNode::construct(GpuScene& scene, Registry& reg)
