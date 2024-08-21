@@ -180,7 +180,11 @@ add_subdirectory(arkose)
 add_executable(ArkoseRenderer ${ARKOSE_SOURCES})
 target_include_directories(ArkoseRenderer PRIVATE arkose/)
 
-# TODO: Work towards being able to enable this!
+if(MSVC)
+  target_compile_options(ArkoseRenderer PRIVATE /W4)
+else()
+  # todo!
+endif()
 set_property(TARGET ArkoseRenderer PROPERTY COMPILE_WARNING_AS_ERROR OFF)
 
 if (ARKOSE_BACKEND_VULKAN)
