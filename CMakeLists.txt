@@ -18,6 +18,11 @@ set(CMAKE_CONFIGURATION_TYPES "Debug;Develop;Release")
 if (MSVC)
     set(ARKOSE_CXX_FLAGS "/Zc:preprocessor")
 
+    # Disable warnings from external dependencies' headers which are included into our source file
+    # TODO: See if CMake can use the `/external:I /external:W0` and similar for GCC/Clang to avoid this!
+    set(ARKOSE_CXX_FLAGS "${ARKOSE_CXX_FLAGS} /wd4100") # 'identifier' : unreferenced formal parameter
+    set(ARKOSE_CXX_FLAGS "${ARKOSE_CXX_FLAGS} /wd5054") # operator 'operator-name': deprecated between enumerations of different types
+
     set(CMAKE_CXX_FLAGS_DEBUG   "${ARKOSE_CXX_FLAGS} /Od /Ob0 /Zi /RTC1           /DARKOSE_DEBUG  ")
     set(CMAKE_CXX_FLAGS_DEVELOP "${ARKOSE_CXX_FLAGS} /O2 /Ob0 /Zi        /DNDEBUG /DARKOSE_DEVELOP")
     set(CMAKE_CXX_FLAGS_RELEASE "${ARKOSE_CXX_FLAGS} /O2 /Ob2 /GL        /DNDEBUG /DARKOSE_RELEASE")
@@ -91,8 +96,12 @@ add_subdirectory(arkcore)
 add_library(ArkoseCore STATIC ${ARKCORE_SOURCES})
 target_include_directories(ArkoseCore PUBLIC arkcore/)
 
-# TODO: Work towards being able to enable this!
-set_property(TARGET ArkoseCore PROPERTY COMPILE_WARNING_AS_ERROR OFF)
+if(MSVC)
+  target_compile_options(ArkoseCore PRIVATE /W4)
+else()
+  # todo!
+endif()
+set_property(TARGET ArkoseCore PROPERTY COMPILE_WARNING_AS_ERROR ON)
 
 if(WITH_MIMALLOC)
     target_link_libraries(ArkoseCore PUBLIC mimalloc)
@@ -142,15 +151,6 @@ if (MSVC)
     target_compile_definitions(ArkoseCore PUBLIC
         WIN32_LEAN_AND_MEAN NOMINMAX
         _CRT_SECURE_NO_WARNINGS)
-
-    target_compile_options(ArkoseCore PUBLIC
-        /wd26812 # prefer scoped enum class
-        )
-
-else()
-    target_compile_options(ArkoseCore PUBLIC
-        -Wall
-        )
 endif()
 
 set(ARKOSE_SYSTEM_GLFW False) # default off
