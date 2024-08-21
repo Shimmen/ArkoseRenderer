@@ -148,9 +148,9 @@ template<typename T, typename... Args>
         return *data; // return as reference type
 
     } else {
-        ARKOSE_LOG_FATAL("Registry ran out of persistent storage space while trying to allocate {} bytes. "
-                         "This shouldn't fail, we probably want to increase the buffer size (current size {})",
-                         sizeof(T), PersistentBufferSize);
+        ARKOSE_LOG(Fatal, "Registry ran out of persistent storage space while trying to allocate {} bytes. "
+                          "This shouldn't fail, we probably want to increase the buffer size (current size {})",
+                          sizeof(T), PersistentBufferSize);
     }
 }
 

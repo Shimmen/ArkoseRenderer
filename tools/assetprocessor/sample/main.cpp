@@ -978,7 +978,7 @@ int main()
     std::string filePath = "assets/usd/PKG_C_Trees/NewSponza_CypressTree_USDA_YUp.usda";
 
     if (!pxr::UsdStage::IsSupportedFile(filePath)) {
-        ARKOSE_LOG_FATAL("USD can't open file '{}'.", filePath);
+        ARKOSE_LOG(Fatal, "USD can't open file '{}'.", filePath);
     }
 
     pxr::UsdStageRefPtr stage;
@@ -994,7 +994,7 @@ int main()
     if (stage) {
         ARKOSE_LOG(Info, "  loaded stage");
     } else {
-        ARKOSE_LOG_FATAL("Failed to open USD stage.");
+        ARKOSE_LOG(Fatal, "Failed to open USD stage.");
     }
 
     pxr::UsdGeomBBoxCache bboxCache{ pxr::UsdTimeCode(0.0f), pxr::UsdGeomImageable::GetOrderedPurposeTokens() };

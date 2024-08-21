@@ -37,14 +37,14 @@ Backend& Backend::create(Backend::AppSpecification const& appSpecification)
         #if WITH_VULKAN
         s_globalBackend = new VulkanBackend({}, appSpecification);
         #else
-        ARKOSE_LOG_FATAL("Trying to create Vulkan backend which is not included in this build, exiting.");
+        ARKOSE_LOG(Fatal, "Trying to create Vulkan backend which is not included in this build, exiting.");
         #endif
         break;
     case Backend::Type::D3D12:
         #if WITH_D3D12
         s_globalBackend = new D3D12Backend({}, appSpecification);
         #else
-        ARKOSE_LOG_FATAL("Trying to create D3D12 backend which is not included in this build, exiting.");
+        ARKOSE_LOG(Fatal, "Trying to create D3D12 backend which is not included in this build, exiting.");
         #endif
         break;
     }

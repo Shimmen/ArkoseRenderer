@@ -21,7 +21,7 @@ static std::vector<nfdfilteritem_t> translateFilterItems(std::vector<FilterItem>
 std::optional<std::string> open(std::vector<FilterItem> filterItems, std::string_view defaultPath)
 {
     if (NFD_Init() != NFD_OKAY) {
-        ARKOSE_LOG_FATAL("Failed to init NFD");
+        ARKOSE_LOG(Fatal, "Failed to init NFD");
     }
 
     std::optional<std::string> result {};
@@ -44,7 +44,7 @@ std::optional<std::string> open(std::vector<FilterItem> filterItems, std::string
 std::vector<std::string> openMultiple(std::vector<FilterItem> filterItems, std::string_view defaultPath)
 {
     if (NFD_Init() != NFD_OKAY) {
-        ARKOSE_LOG_FATAL("Failed to init NFD");
+        ARKOSE_LOG(Fatal, "Failed to init NFD");
     }
 
     std::vector<std::string> result {};
@@ -78,7 +78,7 @@ std::vector<std::string> openMultiple(std::vector<FilterItem> filterItems, std::
 std::optional<std::string> save(std::vector<FilterItem> filterItems, std::string_view defaultPath, std::string_view defaultName)
 {
     if (NFD_Init() != NFD_OKAY) {
-        ARKOSE_LOG_FATAL("Failed to init NFD");
+        ARKOSE_LOG(Fatal, "Failed to init NFD");
     }
 
     std::optional<std::string> result {};

@@ -20,7 +20,7 @@ Icon IconManager::loadIcon(Backend& backend, std::string_view iconName)
     ImageAsset* imageAsset = ImageAsset::loadOrCreate(iconPath);
 
     if (imageAsset == nullptr) {
-        ARKOSE_LOG_FATAL("Failed to load common icon '{}' (with path '{}')", iconName, iconPath);
+        ARKOSE_LOG(Fatal, "Failed to load common icon '{}' (with path '{}')", iconName, iconPath);
     }
 
     Texture::Description desc { .type = Texture::Type::Texture2D,

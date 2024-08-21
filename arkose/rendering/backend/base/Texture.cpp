@@ -97,8 +97,8 @@ Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageForm
             ASSERT_NOT_REACHED();
         }
 
-        // TODO: Add fmt support for flatbuffers enums!
-        ARKOSE_LOG_FATAL("Texture: using sRGB color space but no suitabe image format ({}), exiting.", static_cast<int>(imageFormat));
+        // TODO: Add fmt support for enums!
+        ARKOSE_LOG(Fatal, "Texture: using sRGB color space but no suitabe image format ({}), exiting.", static_cast<int>(imageFormat));
     }
 
     if (imageType == ImageType::NormalMap && imageFormat == ImageFormat::BC5) {
@@ -127,7 +127,7 @@ Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageForm
     case ImageFormat::BC7:
         return Format::BC7;
     default:
-        ARKOSE_LOG_FATAL("No good conversion from image format {}", static_cast<int>(imageFormat));
+        ARKOSE_LOG(Fatal, "No good conversion from image format {}", static_cast<int>(imageFormat));
         return Format::Unknown;
     }
 }

@@ -153,7 +153,6 @@ int ParseContext::nextAsInt(const char* token)
     if (maybeInt)
         return maybeInt.value();
     ARKOSE_LOG(Fatal, "Error parsing <{}> in {} file '{}'", token, m_fileType, m_path);
-    return -1;
 }
 
 float ParseContext::nextAsFloat(const char* token)
@@ -162,5 +161,4 @@ float ParseContext::nextAsFloat(const char* token)
     if (maybeFloat)
         return maybeFloat.value();
     ARKOSE_LOG(Fatal, "Error parsing <{}> in {} file '{}'", token, m_fileType, m_path);
-    return -1.0f;
 }

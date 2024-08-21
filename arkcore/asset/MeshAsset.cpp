@@ -159,7 +159,7 @@ std::vector<u8> MeshSegmentAsset::assembleVertexData(const VertexLayout& layout)
             offsetInFirstVertex += copyComponentData(inputData, jointIndicesU32.size(), component);
         } break;
         default: {
-            ARKOSE_LOG_FATAL("Unable to assemble vertex data for unknown VertexComponent: '{}'", vertexComponentToString(component));
+            ARKOSE_LOG(Fatal, "Unable to assemble vertex data for unknown VertexComponent: '{}'", vertexComponentToString(component));
         } break;
         }
     }

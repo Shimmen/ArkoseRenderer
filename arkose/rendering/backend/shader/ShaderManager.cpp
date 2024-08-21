@@ -743,7 +743,7 @@ uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree(boo
         for (std::string const& missingFile : missingFiles) {
             ARKOSE_LOG(Error, "  {}", missingFile);
         }
-        ARKOSE_LOG_FATAL("Can't resolve edit timestamps, exiting");
+        ARKOSE_LOG(Fatal, "Can't resolve edit timestamps, exiting");
     }
 
     lastEditTimestamp = latestTimestamp;

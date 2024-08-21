@@ -222,7 +222,7 @@ bool ImageAsset::readFromFile(std::string_view filePath)
 bool ImageAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage) const
 {
     if (assetStorage != AssetStorage::Binary) {
-        ARKOSE_LOG_FATAL("Image asset only supports binary serialization.");
+        ARKOSE_LOG(Fatal, "Image asset only supports binary serialization.");
     }
 
     if (not isValidAssetPath(filePath)) {

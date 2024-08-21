@@ -105,7 +105,7 @@ void Task::shutdownTasks()
 #if WITH_LIFETIME_TRACKING
     i64 count = g_numAliveTasks;
     if (count != 0) {
-        ARKOSE_LOG_FATAL("The number of freed tasks does not equal the number of allocated ones. Current count: {}", count);
+        ARKOSE_LOG(Fatal, "The number of freed tasks does not equal the number of allocated ones. Current count: {}", count);
     }
 #endif
 }

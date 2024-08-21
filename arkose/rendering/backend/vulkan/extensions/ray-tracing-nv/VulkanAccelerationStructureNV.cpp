@@ -172,7 +172,7 @@ VulkanBottomLevelASNV::VulkanBottomLevelASNV(Backend& backend, std::vector<RTGeo
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
     if (copySource != nullptr) {
-        ARKOSE_LOG_FATAL("Creating a BLAS from a copy source is currently only implemented for the KHR extention!");
+        ARKOSE_LOG(Fatal, "Creating a BLAS from a copy source is currently only implemented for the KHR extention!");
     }
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);

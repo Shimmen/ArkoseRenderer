@@ -28,18 +28,18 @@ VulkanDLSS::VulkanDLSS(VulkanBackend& backend, VkInstance instance, VkPhysicalDe
 
     NVSDK_NGX_Result initResult = NVSDK_NGX_VULKAN_Init(applicationIdentifier().v.ApplicationId, applicationDataPath(), instance, physicalDevice, device);
     if (NVSDK_NGX_FAILED(initResult)) {
-        ARKOSE_LOG_FATAL("Failed to initialize NVSDK NGX");
+        ARKOSE_LOG(Fatal, "Failed to initialize NVSDK NGX");
     }
 
     NVSDK_NGX_Result getCapParamsResult = NVSDK_NGX_VULKAN_GetCapabilityParameters(&m_ngxParameters);
     if (NVSDK_NGX_FAILED(getCapParamsResult)) {
-        ARKOSE_LOG_FATAL("Failed to get NVSDK NGX capability parameters");
+        ARKOSE_LOG(Fatal, "Failed to get NVSDK NGX capability parameters");
     }
 
     int dlssAvailable = 0;
     NVSDK_NGX_Result dlssCheckSupportResult = m_ngxParameters->Get(NVSDK_NGX_Parameter_SuperSampling_Available, &dlssAvailable);
     if (NVSDK_NGX_FAILED(dlssCheckSupportResult)) {
-        ARKOSE_LOG_FATAL("Failed to check NVSDK NGX DLSS support");
+        ARKOSE_LOG(Fatal, "Failed to check NVSDK NGX DLSS support");
     }
 
     m_dlssSupported = dlssAvailable != 0;
@@ -283,7 +283,7 @@ bool VulkanDLSS::evaluate(VkCommandBuffer commandBuffer, NVSDK_NGX_Handle* dlssF
     NVSDK_NGX_Result evaluateResult = NGX_VULKAN_EVALUATE_DLSS_EXT(commandBuffer, dlssFeatureHandle, m_ngxParameters, &dlssEvalParams);
 
     if (NVSDK_NGX_FAILED(evaluateResult)) {
-        ARKOSE_LOG_FATAL("Failed to evaluate DLSS, exiting.");
+        ARKOSE_LOG(Fatal, "Failed to evaluate DLSS, exiting.");
         return false;
     }
 
@@ -332,7 +332,7 @@ std::vector<VkExtensionProperties*> VulkanDLSS::requiredDeviceExtensions(VkInsta
     VkExtensionProperties* extensions;
     result = NVSDK_NGX_VULKAN_GetFeatureDeviceExtensionRequirements(instance, physicalDevice, &info, &extensionCount, &extensions);
     if (NVSDK_NGX_FAILED(result)) {
-        ARKOSE_LOG_FATAL("Failed to get feature device extension requirements for DLSS3");
+        ARKOSE_LOG(Fatal, "Failed to get feature device extension requirements for DLSS3");
     }
 
     std::vector<VkExtensionProperties*> requiredExtensions;

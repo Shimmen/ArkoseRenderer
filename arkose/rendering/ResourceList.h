@@ -67,7 +67,7 @@ public:
 
             uint64_t handleIdx = m_resources.size();
             if (handleIdx >= m_capacity) {
-                ARKOSE_LOG_FATAL("Ran out of capacity for {}, exiting.", m_name);
+                ARKOSE_LOG(Fatal, "Ran out of capacity for {}, exiting.", m_name);
             }
 
             handle = HandleType(handleIdx);

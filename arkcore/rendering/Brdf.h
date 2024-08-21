@@ -38,6 +38,6 @@ void load_minimal(Archive const&, Brdf& brdf, std::string const& value)
     } else if (value == BrdfName(Brdf::Skin)) {
         brdf = Brdf::Skin;
     } else {
-        ARKOSE_LOG_FATAL("Invalid BRDF name in asset '{}'", value);
+        ARKOSE_LOG(Fatal, "Invalid BRDF name in asset '{}'", value);
     }
 }

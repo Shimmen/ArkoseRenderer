@@ -16,7 +16,7 @@ RenderPipelineNode::ExecuteCallback RTSphereLightShadowNode::construct(GpuScene&
 {
     // TODO: Figure out a more robust way of figuring out if we have written depth as required
     //if (!(reg.hasPreviousNode("Prepass") || reg.hasPreviousNode("Forward"))) {
-    //    ARKOSE_LOG_FATAL("Sphere light shadow needs scene depth information, can't progress");
+    //    ARKOSE_LOG(Fatal, "Sphere light shadow needs scene depth information, can't progress");
     //}
 
     Texture& sceneDepth = *reg.getTexture("SceneDepth");
