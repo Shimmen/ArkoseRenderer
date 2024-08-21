@@ -123,7 +123,7 @@ public:
 #include <cereal/types/variant.hpp>
 #include <cereal/types/vector.hpp>
 
-enum class MaterialAssetVersion {
+enum class MaterialAssetVersion : u32 {
     Initial = 0,
     AddEmissiveFactor,
     ////////////////////////////////////////////////////////////////////////////

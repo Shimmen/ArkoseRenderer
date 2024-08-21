@@ -150,7 +150,7 @@ public:
 #include <cereal/types/variant.hpp>
 #include <cereal/types/vector.hpp>
 
-enum class MeshAssetVersion {
+enum class MeshAssetVersion : u32 {
     Initial = 0,
     ////////////////////////////////////////////////////////////////////////////
     // Add new versions above this delimiter

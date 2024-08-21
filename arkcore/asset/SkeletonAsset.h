@@ -52,7 +52,7 @@ public:
 #include <cereal/types/string.hpp>
 #include <cereal/types/vector.hpp>
 
-enum class SkeletonAssetVersion {
+enum class SkeletonAssetVersion : u32 {
     Initial = 0,
     ////////////////////////////////////////////////////////////////////////////
     // Add new versions above this delimiter

@@ -90,7 +90,7 @@ public:
 #include <cereal/types/vector.hpp>
 #include "asset/SerialisationHelpers.h"
 
-enum class AnimationAssetVersion {
+enum class AnimationAssetVersion : u32 {
     Initial = 0,
     ////////////////////////////////////////////////////////////////////////////
     // Add new versions above this delimiter
