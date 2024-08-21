@@ -19,7 +19,6 @@ std::string UpscalingNode::name() const
     case UpscalingTech::None:
     default:
         ASSERT_NOT_REACHED();
-        return "";
     }
 }
 

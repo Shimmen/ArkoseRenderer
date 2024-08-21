@@ -39,7 +39,6 @@ bool Texture::hasFloatingPointDataFormat() const
     case Texture::Format::Unknown:
     default:
         ASSERT_NOT_REACHED();
-        return false;
     }
 }
 
@@ -128,7 +127,6 @@ Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageForm
         return Format::BC7;
     default:
         ARKOSE_LOG(Fatal, "No good conversion from image format {}", static_cast<int>(imageFormat));
-        return Format::Unknown;
     }
 }
 

@@ -387,7 +387,6 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
                 && vk12features.shaderFloat16;
         default:
             ASSERT_NOT_REACHED();
-            return false;
         }
     };
 
@@ -2317,5 +2316,4 @@ UpscalingPreferences VulkanBackend::queryUpscalingPreferences(UpscalingTech tech
 #endif
 
     ASSERT_NOT_REACHED();
-    return UpscalingPreferences();
 }

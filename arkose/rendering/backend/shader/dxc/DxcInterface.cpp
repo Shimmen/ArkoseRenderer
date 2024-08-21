@@ -33,7 +33,6 @@ static wchar_t const* entryPointNameForShaderFile(ShaderFile const& shaderFile)
         return L"main";
     default:
         ASSERT_NOT_REACHED();
-        return L"main";
     }
 }
 
@@ -249,7 +248,6 @@ std::unique_ptr<CompilationResult<u8>> DxcInterface::compileShader(ShaderFile co
     }
 
     ASSERT_NOT_REACHED();
-    return nullptr;
 }
 
 std::string DxcInterface::entryPointNameForShaderFile(ShaderFile const& shaderFile)

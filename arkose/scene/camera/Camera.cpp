@@ -164,7 +164,6 @@ float Camera::exposure() const
     switch (m_exposureMode) {
     case ExposureMode::Auto:
         NOT_YET_IMPLEMENTED();
-        return 0.0f;
     case ExposureMode::Manual:
         return calculateManualExposure(fNumber(), shutterSpeed(), ISO());
     }

@@ -66,7 +66,7 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
                 break;
             case VertexComponent::Velocity3F:
                 NOT_YET_IMPLEMENTED();
-                inputElementDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
+                //inputElementDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
                 break;
             }
 

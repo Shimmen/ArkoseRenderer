@@ -36,7 +36,6 @@ static shaderc_shader_kind glslShaderKindForShaderFile(ShaderFile const& shaderF
         return shaderc_glsl_infer_from_source;
     default:
         ASSERT_NOT_REACHED();
-        return shaderc_glsl_infer_from_source;
     }
 }
 
