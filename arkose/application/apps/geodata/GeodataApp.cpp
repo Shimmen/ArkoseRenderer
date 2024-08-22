@@ -28,8 +28,16 @@
 
 // Geodata related
 #include <nlohmann/json.hpp>
+
+#pragma warning(push)
+#pragma warning(disable: 4127)
 #include <Eigen/Dense>
+#pragma warning(pop)
+
+#pragma warning(push)
+#pragma warning(disable: 4244)
 #include <igl/triangle/triangulate.h>
+#pragma warning(pop)
 
 std::vector<Backend::Capability> GeodataApp::requiredCapabilities()
 {
