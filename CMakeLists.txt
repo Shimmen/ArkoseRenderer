@@ -185,7 +185,7 @@ if(MSVC)
 else()
   # todo!
 endif()
-set_property(TARGET ArkoseRenderer PROPERTY COMPILE_WARNING_AS_ERROR OFF)
+set_property(TARGET ArkoseRenderer PROPERTY COMPILE_WARNING_AS_ERROR ON)
 
 if (ARKOSE_BACKEND_VULKAN)
     message(STATUS "ArkoseRenderer: compiling Vulkan graphics backend")
