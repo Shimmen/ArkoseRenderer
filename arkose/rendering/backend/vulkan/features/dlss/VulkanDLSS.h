@@ -12,7 +12,7 @@
 #include <nvsdk_ngx_params.h>
 
 class VulkanBackend;
-class VulkanTexture;
+struct VulkanTexture;
 
 class VulkanDLSS {
 public:
