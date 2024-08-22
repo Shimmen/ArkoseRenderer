@@ -12,7 +12,11 @@
 #include <fmt/format.h>
 #include <fstream>
 #include <stb_image.h>
+
+#pragma warning(push)
+#pragma warning(disable: 4711)
 #include <lz4.h>
+#pragma warning(pop)
 
 namespace {
 AssetCache<ImageAsset> s_imageAssetCache {};
