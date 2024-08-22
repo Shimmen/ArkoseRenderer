@@ -20,8 +20,8 @@ if (MSVC)
 
     # Disable warnings from external dependencies' headers which are included into our source file
     # TODO: See if CMake can use the `/external:I /external:W0` and similar for GCC/Clang to avoid this!
-    set(ARKOSE_CXX_FLAGS "${ARKOSE_CXX_FLAGS} /wd4100") # 'identifier' : unreferenced formal parameter
-    set(ARKOSE_CXX_FLAGS "${ARKOSE_CXX_FLAGS} /wd5054") # operator 'operator-name': deprecated between enumerations of different types
+    set(ARKOSE_CXX_FLAGS "${ARKOSE_CXX_FLAGS} /wd4100") # 'identifier' : unreferenced formal parameter (we break this a lot ourselves - consider tidying this up)
+    set(ARKOSE_CXX_FLAGS "${ARKOSE_CXX_FLAGS} /wd5054") # operator 'operator-name': deprecated between enumerations of different types (cereal break this a lot)
 
     set(CMAKE_CXX_FLAGS_DEBUG   "${ARKOSE_CXX_FLAGS} /Od /Ob0 /Zi /RTC1           /DARKOSE_DEBUG  ")
     set(CMAKE_CXX_FLAGS_DEVELOP "${ARKOSE_CXX_FLAGS} /O2 /Ob0 /Zi        /DNDEBUG /DARKOSE_DEVELOP")
