@@ -1911,6 +1911,9 @@ void VulkanBackend::reconstructRenderPipelineResources(RenderPipeline& renderPip
     Registry* previousRegistry = m_pipelineRegistry.get();
     Registry* registry = new Registry(*this, templateWindowRenderTarget, previousRegistry);
 
+    Extent2D framebufferExtent = System::get().windowFramebufferSize();
+    renderPipeline.setOutputResolution(framebufferExtent);
+
     renderPipeline.constructAll(*registry);
 
     m_pipelineRegistry.reset(registry);
