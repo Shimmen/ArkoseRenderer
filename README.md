@@ -84,6 +84,7 @@ Note that some details are omitted for brevity.
  - A C++ 20 compiler (or later)
  - CMake 3.7 (or later)
  - The Vulkan SDK (see https://vulkan.lunarg.com/). This applies even if you don't intend on using the Vulkan graphics backend, as some tools and libraries we rely on are part of the SDK. *Make sure to include shader toolchain debug symbols if you intend on making Debug builds!*
+ - For Windows/MSVC, Windows 10 SDK version 2104 (10.0.20348.0) or later, as previous versions don't work well with `/Zc:preprocessor` which we use ([more info](https://developercommunity.visualstudio.com/t/stdc17-generates-warning-compiling-windowsh/1249671))
 
  > **DISCLAIMER:** Not much about Arkose is platform specific but it has mostly been compiled and run by myself on Windows and with MSVC. Most other platforms and compilers *should* work but no guarantees.
 
