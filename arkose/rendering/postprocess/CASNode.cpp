@@ -17,7 +17,7 @@ void CASNode::drawGui()
 RenderPipelineNode::ExecuteCallback CASNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& inputColorTex = *reg.getTexture(m_textureName);
-    Texture& sharpenedTex = reg.createTexture2D(pipeline().renderResolution(), inputColorTex.format());
+    Texture& sharpenedTex = reg.createTexture(inputColorTex.description());
 
     BindingSet& casBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(sharpenedTex, ShaderStage::Compute),
                                                        ShaderBinding::sampledTexture(inputColorTex, ShaderStage::Compute) });
@@ -35,7 +35,7 @@ RenderPipelineNode::ExecuteCallback CASNode::construct(GpuScene& scene, Registry
 
         cmdList.setComputeState(casState);
 
-        Extent2D targetSize = pipeline().renderResolution();
+        Extent2D targetSize = inputColorTex.extent();
         cmdList.setNamedUniform("sharpness", m_sharpness);
         cmdList.setNamedUniform("targetSize", targetSize);
 
