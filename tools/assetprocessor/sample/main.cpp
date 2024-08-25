@@ -890,8 +890,8 @@ void defineMeshAssetAndDependencies(pxr::UsdPrim const& meshPrim,
     pxr::GfBBox3d aabb = bboxCache.ComputeLocalBound(meshPrim);
     pxr::GfVec3d aabbMin = aabb.GetRange().GetMin();
     pxr::GfVec3d aabbMax = aabb.GetRange().GetMax();
-    meshAsset->boundingBox.min = vec3(aabbMin[0], aabbMin[1], aabbMin[2]);
-    meshAsset->boundingBox.max = vec3(aabbMax[0], aabbMax[1], aabbMax[2]);
+    meshAsset->boundingBox.min = vec3(static_cast<float>(aabbMin[0]), static_cast<float>(aabbMin[1]), static_cast<float>(aabbMin[2]));
+    meshAsset->boundingBox.max = vec3(static_cast<float>(aabbMax[0]), static_cast<float>(aabbMax[1]), static_cast<float>(aabbMax[2]));
 
     MeshLODAsset& lod0 = meshAsset->LODs.emplace_back();
 
