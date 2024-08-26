@@ -10,3 +10,11 @@ UpscalingState::UpscalingState(Backend& backend, UpscalingTech tech, UpscalingQu
     , m_outputResolution(outputRes)
 {
 }
+
+float UpscalingState::optimalMipBias() const
+{
+    float renderResolutionX = static_cast<float>(renderResolution().width());
+    float outputResolutionX = static_cast<float>(outputResolution().width());
+    float mipBias = std::log2(renderResolutionX / outputResolutionX) - 1.0f;
+    return mipBias;
+}

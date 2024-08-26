@@ -31,6 +31,8 @@ public:
     bool hasOptimalSharpness() const { return m_optimalSharpness.has_value(); }
     std::optional<float> optimalSharpness() const { return m_optimalSharpness; }
 
+    float optimalMipBias() const;
+
 protected:
     // Can be nullopt, e.g. if the upscaling tech doesn't support sharpness or has no preference.
     std::optional<float> m_optimalSharpness {};
