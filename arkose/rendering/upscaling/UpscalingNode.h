@@ -19,4 +19,7 @@ private:
     UpscalingTech m_upscalingTech;
     UpscalingQuality m_upscalingQuality;
     UpscalingState* m_upscalingState { nullptr };
+
+    bool m_enabled { true };
+    bool m_controlGlobalMipBias { true };
 };

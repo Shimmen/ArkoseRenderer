@@ -44,6 +44,7 @@
 #include "asset/import/AssetImporter.h"
 
 constexpr bool keepRenderDocCompatible = false;
+constexpr bool withUpscaling = false && !keepRenderDocCompatible;
 constexpr bool withRayTracing = true && !keepRenderDocCompatible;
 constexpr bool withMeshShading = true && !keepRenderDocCompatible;
 constexpr bool withVisibilityBuffer = true && withMeshShading;
@@ -169,7 +170,6 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     AntiAliasing antiAliasingMode = AntiAliasing::TAA;
 
 #if WITH_DLSS
-    constexpr bool withUpscaling = false;
     if constexpr (withUpscaling) {
         antiAliasingMode = AntiAliasing::None;
     }
@@ -192,7 +192,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
 #if WITH_DLSS
     if constexpr (withUpscaling) {
-        pipeline.addNode<UpscalingNode>(UpscalingTech::DLSS, UpscalingQuality::Balanced);
+        pipeline.addNode<UpscalingNode>(UpscalingTech::DLSS, UpscalingQuality::GoodQuality);
         sceneTexture = "SceneColorUpscaled";
     }
 #endif
@@ -210,7 +210,10 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         break;
     }
 
-    pipeline.addNode<DebugDrawNode>();
+    // TODO: Make debug drawing work (properly) with upscaling
+    if constexpr (!withUpscaling) {
+        pipeline.addNode<DebugDrawNode>();
+    }
 
     pipeline.addNode<CASNode>(finalTextureToScreen);
 

@@ -28,18 +28,26 @@ void UpscalingNode::drawGui()
         return;
     }
 
+    ImGui::Checkbox("Upscaling enabled", &m_enabled);
+
     UpscalingQuality quality = m_upscalingState->quality();
 
-    // TODO: Make nice GUI for quality selector! When quality changes, make sure we request a the pipeline to reconstruct!
+    // TODO: Make nice GUI for quality selector! When quality changes, make sure we request the pipeline to reconstruct!
 
     if (quality != m_upscalingState->quality()) {
         m_upscalingState->setQuality(quality);
+    }
+
+    if (ImGui::TreeNode("Advanced")) {
+        ImGui::Checkbox("Let upscaling control global mip-bias", &m_controlGlobalMipBias);
+        ImGui::TreePop();
     }
 }
 
 RenderPipelineNode::ExecuteCallback UpscalingNode::construct(GpuScene& scene, Registry& reg)
 {
-    Texture::Description upscaledSceneColorDesc = reg.getTexture("SceneColor")->description();
+    Texture& sceneColorTex = *reg.getTexture("SceneColor");
+    Texture::Description upscaledSceneColorDesc = sceneColorTex.description();
     upscaledSceneColorDesc.extent = pipeline().outputResolution();
     Texture& upscaledSceneColorTex = reg.createTexture(upscaledSceneColorDesc);
     reg.publish("SceneColorUpscaled", upscaledSceneColorTex);
@@ -58,7 +66,18 @@ RenderPipelineNode::ExecuteCallback UpscalingNode::construct(GpuScene& scene, Re
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
+        if (!m_enabled) {
+            scene.camera().setFrustumJitteringEnabled(false);
+            cmdList.copyTexture(sceneColorTex, upscaledSceneColorTex);
+            cmdList.textureWriteBarrier(*params.upscaledColor);
+            return;
+        }
+
         scene.camera().setFrustumJitteringEnabled(true);
+        if (m_controlGlobalMipBias) {
+            float recommendedMipBias = m_upscalingState->optimalMipBias();
+            scene.setGlobalMipBias(recommendedMipBias);
+        }
 
         params.preExposure = scene.lightPreExposure();
         params.frustumJitterOffset = scene.camera().frustumJitterPixelOffset();
