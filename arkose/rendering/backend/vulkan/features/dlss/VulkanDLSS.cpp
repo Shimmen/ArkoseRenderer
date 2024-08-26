@@ -47,6 +47,10 @@ VulkanDLSS::VulkanDLSS(VulkanBackend& backend, VkInstance instance, VkPhysicalDe
 
 VulkanDLSS::~VulkanDLSS()
 {
+    for (auto [sourceTexture, remappedImageView] : m_customRemappedImageViews) {
+        vkDestroyImageView(m_device, remappedImageView, nullptr);
+    }
+
     NVSDK_NGX_Result destroyParamsResult = NVSDK_NGX_VULKAN_DestroyParameters(m_ngxParameters);
     if (NVSDK_NGX_FAILED(destroyParamsResult)) {
         ARKOSE_LOG(Error, "Failed to destroy NVSDK NGX parameters object");
@@ -216,16 +220,21 @@ bool VulkanDLSS::evaluate(VkCommandBuffer commandBuffer, NVSDK_NGX_Handle* dlssF
         upscaledTexture.currentLayout = upscaledTextureTargetLayout;
     }
 
-    auto textureToNgxResourceVk = [](Texture const& texture, bool writeCapable, std::optional<VkComponentMapping> componentMapping) {
+    auto textureToNgxResourceVk = [this](Texture const& texture, bool writeCapable, std::optional<VkComponentMapping> componentMapping) {
         auto const& vulkanTexture = static_cast<VulkanTexture const&>(texture);
 
         VkImageView imageView = vulkanTexture.imageView;
         if (componentMapping.has_value()) {
-            // HACK: This is created each frame and never deleted!!
-            // HACK: This is created each frame and never deleted!!
-            // HACK: This is created each frame and never deleted!!
-            // HACK: This is created each frame and never deleted!!
-            imageView = vulkanTexture.createImageView(0, 1, componentMapping.value());
+            // NOTE: This assumes that we'd never try to use more than one component mapping
+            // per texture, which seems like a pretty safe assumption to make.
+            auto entry = m_customRemappedImageViews.find(&vulkanTexture);
+            if (entry == m_customRemappedImageViews.end()) {
+                VkImageView remappedImageView = vulkanTexture.createImageView(0, 1, componentMapping.value());
+                m_customRemappedImageViews[&vulkanTexture] = remappedImageView;
+                imageView = remappedImageView;
+            } else {
+                imageView = entry->second;
+            }
         }
 
         VkImageSubresourceRange subresourceRange {};
@@ -244,7 +253,12 @@ bool VulkanDLSS::evaluate(VkCommandBuffer commandBuffer, NVSDK_NGX_Handle* dlssF
     NVSDK_NGX_Resource_VK srcColorResource = textureToNgxResourceVk(*parameters.inputColor, false, {});
     NVSDK_NGX_Resource_VK depthResource = textureToNgxResourceVk(*parameters.depthTexture, false, {});
 
-    VkComponentMapping velocityComponentMapping { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_ZERO, VK_COMPONENT_SWIZZLE_ZERO };
+    std::optional<VkComponentMapping> velocityComponentMapping = std::nullopt;
+    if (parameters.velocityTextureIsSceneNormalVelocity) {
+        // NOTE: Arkose's default "SceneNormalVelocity" puts the velocity in the B and A components but DLSS expects in in R and G
+        velocityComponentMapping = { VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A, VK_COMPONENT_SWIZZLE_ZERO, VK_COMPONENT_SWIZZLE_ZERO };
+    }
+
     NVSDK_NGX_Resource_VK motionVectorsResource = textureToNgxResourceVk(*parameters.velocityTexture, false, velocityComponentMapping);
 
     NVSDK_NGX_VK_DLSS_Eval_Params dlssEvalParams {};
@@ -265,10 +279,12 @@ bool VulkanDLSS::evaluate(VkCommandBuffer commandBuffer, NVSDK_NGX_Handle* dlssF
     dlssEvalParams.InReset = parameters.resetAccumulation;
 
     // Motion vector scale
-    // NOTE: Our motion vectors typically point point towards the direction of motion, but DLSS expects it to point towards prev. frame
-    // NOTE: Our motion vectors are in uv-space but DLSS expects them to be in pixel space.
-    dlssEvalParams.InMVScaleX = -1.0f * srcColorResource.Resource.ImageViewInfo.Width;
-    dlssEvalParams.InMVScaleY = -1.0f * srcColorResource.Resource.ImageViewInfo.Height;
+    if (parameters.velocityTextureIsSceneNormalVelocity) {
+        // NOTE: Arkose's default "SceneNormalVelocity" motion vectors typically point point towards the direction of motion, but DLSS expects it to point towards prev. frame
+        // NOTE: Arkose's default "SceneNormalVelocity" motion vectors are in uv-space but DLSS expects them to be in pixel space.
+        dlssEvalParams.InMVScaleX = -1.0f * srcColorResource.Resource.ImageViewInfo.Width;
+        dlssEvalParams.InMVScaleY = -1.0f * srcColorResource.Resource.ImageViewInfo.Height;
+    }
 
     if (parameters.exposureTexture != nullptr) {
         // I would guess for auto exposure, so we don't need to do any readback?

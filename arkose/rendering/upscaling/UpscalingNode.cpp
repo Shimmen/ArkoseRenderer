@@ -60,8 +60,8 @@ RenderPipelineNode::ExecuteCallback UpscalingNode::construct(GpuScene& scene, Re
     params.upscaledColor = &upscaledSceneColorTex;
     params.inputColor = reg.getTexture("SceneColor");
     params.depthTexture = reg.getTexture("SceneDepth");
-    params.velocityTexture = reg.getTexture("SceneNormalVelocity"); // TODO: NEEDS REMAPPING TO A RG16F FORMAT WITH VELOCITY IN THE RG-components!
-                                                                    // OR, we create a custom image view / sampler with a rg-ba swapping swizzle?
+    params.velocityTexture = reg.getTexture("SceneNormalVelocity");
+    params.velocityTextureIsSceneNormalVelocity = true;
     params.exposureTexture = nullptr; // we're not using auto-exposure for now.
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {

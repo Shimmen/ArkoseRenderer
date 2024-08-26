@@ -44,6 +44,8 @@ private:
 
     NVSDK_NGX_Parameter* m_ngxParameters { nullptr };
 
+    std::unordered_map<VulkanTexture const*, VkImageView> m_customRemappedImageViews {};
+
 };
 
 #endif // WITH_DLSS

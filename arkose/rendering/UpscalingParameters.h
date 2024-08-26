@@ -24,7 +24,9 @@ struct UpscalingParameters {
     Texture* upscaledColor {};
 
     Texture* depthTexture {};
+
     Texture* velocityTexture {};
+    bool velocityTextureIsSceneNormalVelocity { false };
 
     Texture* exposureTexture {}; // for auto exposure
     float preExposure { 1.0f }; // for manual exposure
