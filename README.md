@@ -43,6 +43,7 @@ This list is not complete, it's just a showcase of various features that are imp
  - Physically based subsurface scattering
  - Ray traced reflections with denoising
  - Temporal Anti-Aliasing (TAA)
+ - DLSS 3 integration
 
  > **DISCLAIMER:** There is still a long list of features to add, many of them quite basic. The philosophy with this project has always been to work on whatever I feel like at that point in time, so there is no real concept of natural order here or minimum viable product. We're not in production after all :^) Some of these obvious basic features that I can think of right now are: light culling to make the rendering tiled or clustered and proper support for transparent objects.
 
