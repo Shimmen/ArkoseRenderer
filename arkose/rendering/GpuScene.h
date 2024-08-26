@@ -139,6 +139,7 @@ public:
     Texture const& colorGradingLUT() const;
 
     float globalMipBias() const { return m_globalMipBias; }
+    void setGlobalMipBias(float globalMipBias) { m_globalMipBias = globalMipBias; }
 
     bool shouldIncludeMaterialColor() const { return m_includeMaterialColor; }
     bool& shouldIncludeMaterialColorMutable() { return m_includeMaterialColor; }
