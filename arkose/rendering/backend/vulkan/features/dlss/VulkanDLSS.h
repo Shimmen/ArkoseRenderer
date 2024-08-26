@@ -23,7 +23,7 @@ public:
     bool isReadyToUse() const { return m_dlssSupported; }
 
     UpscalingPreferences queryOptimalSettings(Extent2D targetResolution, UpscalingQuality);
-    NVSDK_NGX_Handle* createWithSettings(Extent2D inputResolution, Extent2D outputResolution, UpscalingQuality, bool inputIsHDR, bool enableSharpening);
+    NVSDK_NGX_Handle* createWithSettings(Extent2D inputResolution, Extent2D outputResolution, UpscalingQuality, bool inputIsHDR);
     bool evaluate(VkCommandBuffer, NVSDK_NGX_Handle* dlssFeatureHandle, UpscalingParameters const&);
 
     static NVSDK_NGX_PerfQuality_Value dlssQualityForUpscalingQuality(UpscalingQuality);

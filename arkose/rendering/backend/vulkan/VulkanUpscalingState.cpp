@@ -61,7 +61,6 @@ void VulkanUpscalingState::createDlssFeature()
     m_optimalSharpness = preferences.preferredSharpening;
 
     constexpr bool inputIsHDR = true;
-    constexpr bool enableSharpening = true;
-    dlssFeatureHandle = vulkanDlss.createWithSettings(renderResolution(), outputResolution(), quality(), inputIsHDR, enableSharpening);
+    dlssFeatureHandle = vulkanDlss.createWithSettings(renderResolution(), outputResolution(), quality(), inputIsHDR);
 }
 #endif

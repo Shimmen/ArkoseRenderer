@@ -6,6 +6,7 @@
 class Texture;
 
 enum class UpscalingQuality {
+    NativeResolution,
     BestQuality,
     GoodQuality,
     Balanced,

@@ -61,6 +61,8 @@ VulkanDLSS::~VulkanDLSS()
 NVSDK_NGX_PerfQuality_Value VulkanDLSS::dlssQualityForUpscalingQuality(UpscalingQuality quality)
 {
     switch (quality) {
+    case UpscalingQuality::NativeResolution:
+        return NVSDK_NGX_PerfQuality_Value_DLAA;
     case UpscalingQuality::BestQuality:
         return NVSDK_NGX_PerfQuality_Value_UltraQuality;
     case UpscalingQuality::GoodQuality:
@@ -89,8 +91,8 @@ UpscalingPreferences VulkanDLSS::queryOptimalSettings(Extent2D targetResolution,
     NVSDK_NGX_PerfQuality_Value dlssQuality = dlssQualityForUpscalingQuality(quality);
     NVSDK_NGX_Result result = NGX_DLSS_GET_OPTIMAL_SETTINGS(m_ngxParameters, targetResolution.width(), targetResolution.height(), dlssQuality,
                                                             &optimalRenderWidth, &optimalRenderHeight,
-                                                            &minRenderWidth, &minRenderHeight,
                                                             &maxRenderWidth, &maxRenderHeight,
+                                                            &minRenderWidth, &minRenderHeight,
                                                             &recommendedSharpness);
 
     if (NVSDK_NGX_FAILED(result) || optimalRenderWidth == 0 || optimalRenderHeight == 0) {
@@ -100,12 +102,14 @@ UpscalingPreferences VulkanDLSS::queryOptimalSettings(Extent2D targetResolution,
         recommendedSharpness = 0.0f;
     }
 
+    // DLSS sharpening is deprecated & disabled in the API
+    recommendedSharpness = 0.0f;
 
     return UpscalingPreferences { .preferredRenderResolution = { optimalRenderWidth, optimalRenderHeight },
                                   .preferredSharpening = recommendedSharpness };
 }
 
-NVSDK_NGX_Handle* VulkanDLSS::createWithSettings(Extent2D renderResolution, Extent2D targetResolution, UpscalingQuality quality, bool inputIsHDR, bool enableSharpening)
+NVSDK_NGX_Handle* VulkanDLSS::createWithSettings(Extent2D renderResolution, Extent2D targetResolution, UpscalingQuality quality, bool inputIsHDR)
 {
     int dlssCreateFeatureFlags = NVSDK_NGX_DLSS_Feature_Flags_None;
 
@@ -130,7 +134,8 @@ NVSDK_NGX_Handle* VulkanDLSS::createWithSettings(Extent2D renderResolution, Exte
     // We don't use reverse z, for now.
     //dlssCreateFeatureFlags |= depthInverted ? NVSDK_NGX_DLSS_Feature_Flags_DepthInverted : 0;
 
-    dlssCreateFeatureFlags |= enableSharpening ? NVSDK_NGX_DLSS_Feature_Flags_DoSharpening : 0;
+    // DLSS sharpening is deprecated and removed from their API
+    //dlssCreateFeatureFlags |= enableSharpening ? NVSDK_NGX_DLSS_Feature_Flags_DoSharpening : 0;
 
     // We don't use auto-exposure, for now.
     //dlssCreateFeatureFlags |= enableAutoExposure ? NVSDK_NGX_DLSS_Feature_Flags_AutoExposure : 0;
@@ -230,7 +235,7 @@ bool VulkanDLSS::evaluate(VkCommandBuffer commandBuffer, NVSDK_NGX_Handle* dlssF
         subresourceRange.baseArrayLayer = 0;
         subresourceRange.layerCount = 1;
 
-        return NVSDK_NGX_Create_ImageView_Resource_VK(vulkanTexture.imageView, vulkanTexture.image, subresourceRange, vulkanTexture.vkFormat,
+        return NVSDK_NGX_Create_ImageView_Resource_VK(imageView, vulkanTexture.image, subresourceRange, vulkanTexture.vkFormat,
                                                       vulkanTexture.extent().width(), vulkanTexture.extent().height(), writeCapable);
     };
 
@@ -354,8 +359,8 @@ NVSDK_NGX_Application_Identifier const& VulkanDLSS::applicationIdentifier()
 
 wchar_t const* VulkanDLSS::applicationDataPath()
 {
-    // TODO: Use somewhere better..
-    static wchar_t const* path = L"assets/temp/";
+    FileIO::ensureDirectory("logs/");
+    static wchar_t const* path = L"logs";
     return path;
 }
 
