@@ -1,4 +1,0 @@
-# The prebuild binares are big! Let's not store them here.
-# If you do download the SDK yourself however, just unzip
-# them into this directory and you're set!
-nvngx_dlss_sdk/
