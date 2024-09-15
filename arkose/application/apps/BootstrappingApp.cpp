@@ -106,8 +106,7 @@ void BootstrappingApp::setup(Scene& scene, RenderPipeline& pipeline)
 {
     m_pipeline = &pipeline;
 
-    scene.setupFromDescription({ .path = "assets/sample/sponza.json",
-                                 .withRayTracing = false,
+    scene.setupFromDescription({ .withRayTracing = false,
                                  .withMeshShading = false });
 
     pipeline.addNode<DrawTriangleNode>();
