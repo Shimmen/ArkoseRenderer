@@ -266,7 +266,7 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
                 
                 triangles.vertexData.deviceAddress = vertexBufferBaseAddress + triGeo.vertexOffset;
                 triangles.vertexStride = (VkDeviceSize)triGeo.vertexStride;
-                triangles.maxVertex = triGeo.vertexCount;
+                triangles.maxVertex = triGeo.vertexCount - 1;
                 switch (triGeo.vertexFormat) {
                 case RTVertexFormat::XYZ32F:
                     triangles.vertexFormat = VK_FORMAT_R32G32B32_SFLOAT;
