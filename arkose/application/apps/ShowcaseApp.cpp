@@ -169,12 +169,6 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     std::string finalTextureToScreen = "SceneColorLDR";
     AntiAliasing antiAliasingMode = AntiAliasing::TAA;
 
-#if WITH_DLSS
-    if constexpr (withUpscaling) {
-        antiAliasingMode = AntiAliasing::None;
-    }
-#endif
-
     if constexpr (withVisibilityBuffer) {
         // Uncomment for visibility buffer visualisation
         //pipeline.addNode<VisibilityBufferDebugNode>(); sceneTexture = "VisibilityBufferDebugVis";
@@ -192,8 +186,11 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
 #if WITH_DLSS
     if constexpr (withUpscaling) {
-        pipeline.addNode<UpscalingNode>(UpscalingTech::DLSS, UpscalingQuality::GoodQuality);
-        sceneTexture = "SceneColorUpscaled";
+        if (Backend::get().hasUpscalingSupport()) {
+            pipeline.addNode<UpscalingNode>(UpscalingTech::DLSS, UpscalingQuality::GoodQuality);
+            antiAliasingMode = AntiAliasing::None;
+            sceneTexture = "SceneColorUpscaled";
+        }
     }
 #endif
 

@@ -165,7 +165,8 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
     }
 
 #if WITH_DLSS
-    if (m_dlssHasAllRequiredExtensions) {
+    bool runningOnNvidiaPhysicalDevice = m_physicalDeviceProperties.vendorID == 0x10DE;
+    if (runningOnNvidiaPhysicalDevice && m_dlssHasAllRequiredExtensions) {
         m_dlss = std::make_unique<VulkanDLSS>(*this, m_instance, physicalDevice(), device());
         if (m_dlss->isReadyToUse()) {
             ARKOSE_LOG(Info, "VulkanBackend: DLSS is ready to use!");

@@ -348,7 +348,7 @@ std::vector<VkExtensionProperties*> VulkanDLSS::requiredDeviceExtensions(VkInsta
 
     NVSDK_NGX_Result result;
 
-    u32 extensionCount;
+    u32 extensionCount = 0;
     VkExtensionProperties* extensions;
     result = NVSDK_NGX_VULKAN_GetFeatureDeviceExtensionRequirements(instance, physicalDevice, &info, &extensionCount, &extensions);
     if (NVSDK_NGX_FAILED(result)) {
