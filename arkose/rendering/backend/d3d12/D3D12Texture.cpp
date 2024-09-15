@@ -101,7 +101,11 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
         textureDescription.DepthOrArraySize = narrow_cast<u16>(arrayCount());
         break;
     case Type::Texture3D:
-        NOT_YET_IMPLEMENTED();
+        textureDescription.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE3D;
+        textureDescription.Width = extent3D().width();
+        textureDescription.Height = extent3D().height();
+        textureDescription.DepthOrArraySize = narrow_cast<u16>(extent3D().depth());
+        attachmentCapable = false;
         break;
     case Type::Cubemap:
         NOT_YET_IMPLEMENTED();
@@ -127,15 +131,21 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
     }
 
     D3D12_CLEAR_VALUE optimizedClearValue;
-    optimizedClearValue.Format = dxgiFormat;
-    if (hasDepthFormat()) {
-        optimizedClearValue.DepthStencil.Depth = 1.0f;
-        optimizedClearValue.DepthStencil.Stencil = 0u;
-    } else {
-        optimizedClearValue.Color[0] = 0.0f;
-        optimizedClearValue.Color[1] = 0.0f;
-        optimizedClearValue.Color[2] = 0.0f;
-        optimizedClearValue.Color[3] = 0.0f;
+    D3D12_CLEAR_VALUE* optimizedClearValuePtr = nullptr;
+
+    bool hasOptimizedClearValue = attachmentCapable || depthStencilCapable;
+    if (hasOptimizedClearValue) {
+        optimizedClearValue.Format = dxgiFormat;
+        if (hasDepthFormat()) {
+            optimizedClearValue.DepthStencil.Depth = 1.0f;
+            optimizedClearValue.DepthStencil.Stencil = 0u;
+        } else {
+            optimizedClearValue.Color[0] = 0.0f;
+            optimizedClearValue.Color[1] = 0.0f;
+            optimizedClearValue.Color[2] = 0.0f;
+            optimizedClearValue.Color[3] = 0.0f;
+        }
+        optimizedClearValuePtr = &optimizedClearValue;
     }
 
     D3D12_RESOURCE_STATES initialResourceState = resourceState;
@@ -146,7 +156,7 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
     HRESULT hr = d3d12Backend.globalAllocator().CreateResource(
         &allocDescription, &textureDescription,
         initialResourceState,
-        &optimizedClearValue,
+        optimizedClearValuePtr,
         textureAllocation.GetAddressOf(),
         IID_PPV_ARGS(&textureResource));
 
@@ -159,12 +169,26 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
     if (!hasDepthFormat()) {
         D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc {};
         srvDesc.Format = textureDescription.Format;
-        srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
-        srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
-        srvDesc.Texture2D.MostDetailedMip = 0;
-        srvDesc.Texture2D.MipLevels = mipLevels();
-        srvDesc.Texture2D.PlaneSlice = 0;
-        srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+        switch (type()) {
+        case Texture::Type::Texture2D:
+            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+            srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            srvDesc.Texture2D.MostDetailedMip = 0;
+            srvDesc.Texture2D.MipLevels = mipLevels();
+            srvDesc.Texture2D.PlaneSlice = 0;
+            srvDesc.Texture2D.ResourceMinLODClamp = 0.0f;
+            break;
+        case Texture::Type::Texture3D:
+            srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE3D;
+            srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+            srvDesc.Texture3D.MostDetailedMip = 0;
+            srvDesc.Texture3D.MipLevels = mipLevels();
+            srvDesc.Texture3D.ResourceMinLODClamp = 0.0f;
+            break;
+        case Type::Cubemap:
+            NOT_YET_IMPLEMENTED();
+            break;
+        }
 
         srvDescriptor = d3d12Backend.copyableDescriptorHeapAllocator().allocate(1);
         d3d12Backend.device().CreateShaderResourceView(textureResource.Get(), &srvDesc, srvDescriptor.firstCpuDescriptor);
@@ -173,9 +197,22 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
     if (storageCapable) {
         D3D12_UNORDERED_ACCESS_VIEW_DESC uavDesc {};
         uavDesc.Format = textureDescription.Format;
-        uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
-        uavDesc.Texture2D.MipSlice = 0;
-        uavDesc.Texture2D.PlaneSlice = 0;
+        switch (type()) {
+        case Texture::Type::Texture2D:
+            uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+            uavDesc.Texture2D.MipSlice = 0;
+            uavDesc.Texture2D.PlaneSlice = 0;
+            break;
+        case Texture::Type::Texture3D:
+            uavDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE3D;
+            uavDesc.Texture3D.MipSlice = 0;
+            uavDesc.Texture3D.FirstWSlice = 0;
+            uavDesc.Texture3D.WSize = extent3D().depth();
+            break;
+        case Type::Cubemap:
+            NOT_YET_IMPLEMENTED();
+            break;
+        }
 
         uavDescriptor = d3d12Backend.copyableDescriptorHeapAllocator().allocate(1);
         d3d12Backend.device().CreateUnorderedAccessView(textureResource.Get(), nullptr, &uavDesc, uavDescriptor.firstCpuDescriptor);
@@ -217,7 +254,6 @@ void D3D12Texture::setData(const void* data, size_t size, size_t mipIdx, size_t 
     auto& d3d12Backend = static_cast<D3D12Backend&>(backend());
 
     // Other types are not yet implemented!
-    ARKOSE_ASSERT(type() == Texture::Type::Texture2D);
     u32 subresourceIdx = narrow_cast<u32>(mipIdx + arrayIdx * mipLevels());
 
     u64 textureMemorySize = 0;
