@@ -152,7 +152,14 @@ std::unique_ptr<CompilationResult<u32>> ShadercInterface::compileShader(ShaderFi
     options.SetTargetSpirv(shaderc_spirv_version_1_6);
     options.SetSourceLanguage(shaderc_source_language_glsl);
     options.SetForcedVersionProfile(460, shaderc_profile_none);
-    options.SetGenerateDebugInfo(); // always generate debug info (for now)
+
+    if (ShaderManager::instance().usingDebugShaders()) {
+        options.SetOptimizationLevel(shaderc_optimization_level_zero);
+        options.SetGenerateDebugInfo();
+    } else {
+        options.SetOptimizationLevel(shaderc_optimization_level_performance);
+        options.SetGenerateDebugInfo(); // needed for named constant lookup! :/
+    }
 
     // Setup a file includer
     std::vector<std::string> includedFiles;

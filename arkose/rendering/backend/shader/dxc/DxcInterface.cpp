@@ -1,6 +1,7 @@
 #include "DxcInterface.h"
 
 #include "rendering/backend/d3d12/D3D12Common.h"
+#include "rendering/backend/shader/ShaderManager.h"
 #include "utility/FileIO.h"
 #include <dxcapi.h>
 #include <unordered_set>
@@ -210,13 +211,22 @@ std::unique_ptr<CompilationResult<u8>> DxcInterface::compileShader(ShaderFile co
         dxcDefines.push_back(dxcDefine);
     }
 
+    // Collect all arguments
+    std::vector<LPCWSTR> arguments {};
+    arguments.push_back(DXC_ARG_ENABLE_STRICTNESS);
+    arguments.push_back(DXC_ARG_WARNINGS_ARE_ERRORS);
+    if (ShaderManager::instance().usingDebugShaders()) {
+        arguments.push_back(DXC_ARG_DEBUG);
+        arguments.push_back(DXC_ARG_SKIP_OPTIMIZATIONS);
+    }
+
     wchar_t const* entryPointName = ::entryPointNameForShaderFile(shaderFile);
     wchar_t const* shaderModel = shaderModelForShaderFile(shaderFile);
 
     ComPtr<IDxcOperationResult> compilationResult;
     auto hr = compiler->Compile(sourceBlob.Get(), convertToWideString(resolvedFilePath).c_str(),
                                 entryPointName, shaderModel,
-                                nullptr, 0,
+                                arguments.data(), narrow_cast<u32>(arguments.size()),
                                 dxcDefines.data(), narrow_cast<u32>(dxcDefines.size()),
                                 includeHandler.Get(),
                                 &compilationResult);

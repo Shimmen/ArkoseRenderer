@@ -29,6 +29,9 @@ public:
 
     std::string createShaderIdentifier(const ShaderFile&) const;
 
+    bool usingDebugShaders() const;
+    char const* currentCachePath() const;
+
     std::string resolveDxilPath(ShaderFile const&) const;
     std::string resolveSpirvPath(ShaderFile const&) const;
     std::string resolveSpirvAssemblyPath(ShaderFile const&) const;

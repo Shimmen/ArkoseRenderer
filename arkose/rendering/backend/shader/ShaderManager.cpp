@@ -146,38 +146,58 @@ std::string ShaderManager::createShaderIdentifier(const ShaderFile& shaderFile) 
     return identifier;
 }
 
+bool ShaderManager::usingDebugShaders() const
+{
+#if ARKOSE_RELEASE
+    // Never use debug shaders in a release build
+    return false;
+#else
+    // TODO: Perhaps allow some way of specifying a preference?
+    return true;
+#endif
+}
+
+char const* ShaderManager::currentCachePath() const
+{
+    if (usingDebugShaders()) {
+        return "/.cache/debug/";
+    } else {
+        return "/.cache/release/";
+    }
+}
+
 std::string ShaderManager::resolveDxilPath(ShaderFile const& shaderFile) const
 {
     std::string dxilName = createShaderIdentifier(shaderFile) + ".dxil";
-    std::string resolvedPath = m_shaderBasePath + "/.cache/" + dxilName;
+    std::string resolvedPath = m_shaderBasePath + currentCachePath() + dxilName;
     return resolvedPath;
 }
 
 std::string ShaderManager::resolveSpirvPath(ShaderFile const& shaderFile) const
 {
     std::string spirvName = createShaderIdentifier(shaderFile) + ".spv";
-    std::string resolvedPath = m_shaderBasePath + "/.cache/" + spirvName;
+    std::string resolvedPath = m_shaderBasePath + currentCachePath() + spirvName;
     return resolvedPath;
 }
 
 std::string ShaderManager::resolveSpirvAssemblyPath(ShaderFile const& shaderFile) const
 {
     std::string asmName = createShaderIdentifier(shaderFile) + ".spv-asm";
-    std::string resolvedPath = m_shaderBasePath + "/.cache/" + asmName;
+    std::string resolvedPath = m_shaderBasePath + currentCachePath() + asmName;
     return resolvedPath;
 }
 
 std::string ShaderManager::resolveMetadataPath(ShaderFile const& shaderFile) const
 {
     std::string metaName = createShaderIdentifier(shaderFile) + ".meta";
-    std::string resolvedPath = m_shaderBasePath + "/.cache/" + metaName;
+    std::string resolvedPath = m_shaderBasePath + currentCachePath() + metaName;
     return resolvedPath;
 }
 
 std::string ShaderManager::resolveHlslPath(ShaderFile const& shaderFile) const
 {
     std::string hlslName = createShaderIdentifier(shaderFile) + ".hlsl";
-    std::string resolvedPath = m_shaderBasePath + "/.cache/" + hlslName;
+    std::string resolvedPath = m_shaderBasePath + currentCachePath() + hlslName;
     return resolvedPath;
 }
 
