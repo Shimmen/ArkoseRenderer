@@ -2,6 +2,7 @@
 
 #include "utility/Extent.h"
 #include <ark/copying.h>
+#include <optional>
 
 class System {
 public:
@@ -20,7 +21,7 @@ public:
         Fullscreen
     };
 
-    virtual bool createWindow(WindowType windowType, Extent2D const& windowSize) = 0;
+    virtual bool createWindow(WindowType windowType, Extent2D const& windowSize, std::optional<u32> preferredMonitor) = 0;
 
     virtual Extent2D windowSize() const = 0;
     virtual Extent2D windowFramebufferSize() const = 0;

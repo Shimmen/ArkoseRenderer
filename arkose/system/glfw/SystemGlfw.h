@@ -11,7 +11,7 @@ public:
 
     ARK_NON_COPYABLE(SystemGlfw)
 
-    bool createWindow(WindowType, Extent2D const& windowSize) override;
+    bool createWindow(WindowType, Extent2D const& windowSize, std::optional<u32> preferredMonitor) override;
 
     Extent2D windowSize() const override;
     Extent2D windowFramebufferSize() const override;

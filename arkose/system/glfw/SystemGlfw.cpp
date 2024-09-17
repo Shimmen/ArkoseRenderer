@@ -50,7 +50,7 @@ SystemGlfw::~SystemGlfw()
     glfwTerminate();
 }
 
-bool SystemGlfw::createWindow(WindowType windowType, Extent2D const& requestedWindowSize)
+bool SystemGlfw::createWindow(WindowType windowType, Extent2D const& requestedWindowSize, std::optional<u32> preferredMonitor)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -61,9 +61,28 @@ bool SystemGlfw::createWindow(WindowType windowType, Extent2D const& requestedWi
 
     switch (windowType) {
     case WindowType::Fullscreen: {
-        GLFWmonitor* defaultMonitor = glfwGetPrimaryMonitor();
-        const GLFWvidmode* defaultVideoMode = glfwGetVideoMode(defaultMonitor);
-        m_glfwWindow = glfwCreateWindow(defaultVideoMode->width, defaultVideoMode->height, windowTitle.c_str(), defaultMonitor, nullptr);
+
+        GLFWmonitor* monitor = nullptr;
+
+        if (preferredMonitor.has_value()) {
+            int preferredMonitorIdx = preferredMonitor.value();
+
+            int monitorCount;
+            GLFWmonitor** allMonitors = glfwGetMonitors(&monitorCount);
+            if (preferredMonitorIdx >= 0 && preferredMonitorIdx < monitorCount) {
+                monitor = allMonitors[preferredMonitorIdx];
+            }
+        }
+
+        if (monitor == nullptr) {
+            monitor = glfwGetPrimaryMonitor();
+        }
+
+        // Use the default / currently set video mode for the monitor.
+        // This is likely what the monitor is set to in the OS so it should be reasonable.
+        GLFWvidmode const* videoMode = glfwGetVideoMode(monitor);
+
+        m_glfwWindow = glfwCreateWindow(videoMode->width, videoMode->height, windowTitle.c_str(), monitor, nullptr);
         break;
     }
     case WindowType::Windowed: {

@@ -73,6 +73,26 @@ static void checkOnShaderFileWatching(Callback&& callback)
     }
 }
 
+void createWindow(System& system)
+{
+    auto windowType = System::WindowType::Windowed;
+    Extent2D windowExtents = Extent2D(1920, 1080);
+    std::optional<int> preferredMonitor = std::nullopt;
+
+    if (CommandLine::hasArgument("-fullscreen")) {
+        windowType = System::WindowType::Fullscreen;
+    }
+
+    // TODO: Implement `-name value` style command line argument
+    if (CommandLine::hasArgument("-monitor0")) {
+        preferredMonitor = 0;
+    } else if (CommandLine::hasArgument("-monitor1")) {
+        preferredMonitor = 1;
+    }
+
+    system.createWindow(windowType, windowExtents, preferredMonitor);
+}
+
 int Arkose::runArkoseApplication(int argc, char** argv)
 {
     // Initialize core systems
@@ -84,7 +104,7 @@ int Arkose::runArkoseApplication(int argc, char** argv)
     System& system = System::get();
 
     // Create window & input handling for that window
-    system.createWindow(System::WindowType::Windowed, { 1920, 1080 });
+    createWindow(system);
 
     // Create the app that will drive this "engine"
     auto app = createApp();
