@@ -576,21 +576,36 @@ VkSurfaceFormatKHR VulkanBackend::pickBestSurfaceFormat() const
 {
     uint32_t formatCount;
     vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_surface, &formatCount, nullptr);
-    std::vector<VkSurfaceFormatKHR> surfaceFormats(formatCount);
+    std::vector<VkSurfaceFormatKHR> surfaceFormats { formatCount };
     vkGetPhysicalDeviceSurfaceFormatsKHR(m_physicalDevice, m_surface, &formatCount, surfaceFormats.data());
+
+    VkSurfaceFormatKHR const* optimalSdrSrgbFormat = nullptr;
+    VkSurfaceFormatKHR const* optimalHdrHdr10Format = nullptr;
 
     for (const auto& format : surfaceFormats) {
         // Note that we use the *_UNORM format here and thus require some pass to convert colors to sRGB-encoded before final output.
         // Another option is to use e.g. VK_FORMAT_B8G8R8A8_SRGB and then let the drivers convert to sRGB-encoded automatically.
         // See this stackoverflow answer for more information: https://stackoverflow.com/a/66401423.
         if (format.format == VK_FORMAT_B8G8R8A8_UNORM && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-            ARKOSE_LOG(Info, "VulkanBackend: picked optimal RGBA8 sRGB surface format.");
-            return format;
+            optimalSdrSrgbFormat = &format;
+        } else if (format.format == VK_FORMAT_A2B10G10R10_UNORM_PACK32 && format.colorSpace == VK_COLOR_SPACE_HDR10_ST2084_EXT) {
+            optimalHdrHdr10Format = &format;
         }
     }
 
+    // TODO: We can't really support this, yet!
+    //if (optimalHdrHdr10Format) {
+    //    ARKOSE_LOG(Info, "VulkanBackend: using 10-bit HDR10 (ST2084/PQ) surface format.");
+    //    return *optimalHdrHdr10Format;
+    //}
+
+    if (optimalSdrSrgbFormat) {
+        ARKOSE_LOG(Info, "VulkanBackend: using 8-bit sRGB surface format.");
+        return *optimalSdrSrgbFormat;
+    }
+
     // If we didn't find the optimal one, just chose an arbitrary one
-    ARKOSE_LOG(Info, "VulkanBackend: couldn't find optimal surface format, so picked arbitrary supported format.");
+    ARKOSE_LOG(Info, "VulkanBackend: couldn't find preferred surface format, so picked arbitrary supported format.");
     VkSurfaceFormatKHR format = surfaceFormats[0];
 
     if (format.colorSpace != VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
@@ -604,19 +619,19 @@ VkPresentModeKHR VulkanBackend::pickBestPresentMode() const
 {
     uint32_t presentModeCount;
     vkGetPhysicalDeviceSurfacePresentModesKHR(m_physicalDevice, m_surface, &presentModeCount, nullptr);
-    std::vector<VkPresentModeKHR> presentModes(presentModeCount);
+    std::vector<VkPresentModeKHR> presentModes { presentModeCount };
     vkGetPhysicalDeviceSurfacePresentModesKHR(m_physicalDevice, m_surface, &presentModeCount, presentModes.data());
 
     for (const auto& mode : presentModes) {
         // Try to chose the mailbox mode, i.e. use-last-fully-generated-image mode
         if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {
-            ARKOSE_LOG(Info, "VulkanBackend: picked optimal mailbox present mode.");
+            ARKOSE_LOG(Info, "VulkanBackend: using mailbox present mode.");
             return mode;
         }
     }
 
     // VK_PRESENT_MODE_FIFO_KHR is guaranteed to be available and it basically corresponds to normal v-sync so it's fine
-    ARKOSE_LOG(Info, "VulkanBackend: picked standard FIFO present mode.");
+    ARKOSE_LOG(Info, "VulkanBackend: using v-sync present mode.");
     return VK_PRESENT_MODE_FIFO_KHR;
 }
 
