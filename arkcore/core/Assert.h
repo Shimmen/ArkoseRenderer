@@ -54,11 +54,11 @@ inline void ArkoseAssertHandler(char const* assertion, char const* filename, int
 
 #if defined(ARKOSE_RELEASE)
 
-#define ARKOSE_ASSERT(expression)
-#define ARKOSE_ASSERTM(expression, format, ...)
+#define ARKOSE_ASSERT(expression) (void)(expression)
+#define ARKOSE_ASSERTM(expression, format, ...) (void)(expression)
 #define ARKOSE_ERROR(format, ...)
-#define ASSERT_NOT_REACHED()
-#define NOT_YET_IMPLEMENTED()
+#define ASSERT_NOT_REACHED() exit(EXIT_FAILURE)
+#define NOT_YET_IMPLEMENTED() exit(EXIT_FAILURE)
 
 #else
 
