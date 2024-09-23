@@ -36,16 +36,19 @@ inline void _internal_vlog(fmt::string_view format, fmt::format_args args)
         fmt::vprint(format, args);
         fmt::print("\n");
     }
-
-    // NOTE: If the noreturn behaviour is required to silence the compiler use ARKOSE_LOG_FATAL
-    if constexpr (level == LogLevel::Fatal) {
-        ARK_DEBUG_BREAK();
-        exit(Logging::FatalErrorExitCode);
-    }
 }
 
 template<LogLevel level, typename... Args>
-inline void _internal_log(fmt::format_string<Args...> format, Args&&... args)
+[[noreturn]] inline std::enable_if_t<level == LogLevel::Fatal> _internal_log(fmt::format_string<Args...> format, Args&&... args)
+{
+    _internal_vlog<level>(format, fmt::make_format_args(args...));
+
+    ARK_DEBUG_BREAK();
+    exit(Logging::FatalErrorExitCode);
+}
+
+template<LogLevel level, typename... Args>
+inline std::enable_if_t<level != LogLevel::Fatal> _internal_log(fmt::format_string<Args...> format, Args&&... args)
 {
     _internal_vlog<level>(format, fmt::make_format_args(args...));
 }
