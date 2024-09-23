@@ -125,6 +125,7 @@ int Arkose::runArkoseApplication(int argc, char** argv)
     renderPipeline->setRenderResolution(system.windowFramebufferSize());
     app->setup(*scene, *renderPipeline);
     graphicsBackend.renderPipelineDidChange(*renderPipeline);
+    scene->camera().setTargetWindowSize(system.windowFramebufferSize());
 
     initializeShaderFileWatching();
 
