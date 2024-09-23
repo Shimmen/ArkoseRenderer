@@ -460,10 +460,12 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         allRequiredSupported = false;
     }
 
-    if (vulkanDebugMode && !(vk12features.bufferDeviceAddress && vk12features.bufferDeviceAddressCaptureReplay)) {
-        ARKOSE_LOG(Error, "VulkanBackend: no support for buffer device address & buffer device address capture replay, which is required by e.g. Nsight for debugging. "
-                 "If this is a problem, try compiling and running with vulkanDebugMode set to false.");
-        allRequiredSupported = false;
+    if constexpr (vulkanDebugMode) {
+        if (!(vk12features.bufferDeviceAddress && vk12features.bufferDeviceAddressCaptureReplay)) {
+            ARKOSE_LOG(Error, "VulkanBackend: no support for buffer device address & buffer device address capture replay, which is required by e.g. Nsight for debugging. "
+                              "If this is a problem, try compiling and running with vulkanDebugMode set to false.");
+            allRequiredSupported = false;
+        }
     }
 
     for (auto& cap : appSpecification.requiredCapabilities) {
