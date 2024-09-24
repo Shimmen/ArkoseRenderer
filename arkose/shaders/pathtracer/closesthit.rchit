@@ -194,10 +194,10 @@ void main()
 
     // Scatter
     {
-        PathTraceMaterial material;
-        material.baseColor = baseColor;
-        material.roughness = roughness;
-        material.metallic = metallic;
+        PathTraceMaterial ptMaterial;
+        ptMaterial.baseColor = baseColor;
+        ptMaterial.roughness = roughness;
+        ptMaterial.metallic = metallic;
 
         vec3 B1, B2;
         createOrthonormalBasis(N, B1, B2);
@@ -210,10 +210,11 @@ void main()
         vec3 L;
         float pdf;
 #if defined(PATHTRACER_BRDF_DEFAULT)
-        vec3 brdf = sampleOpaqueMicrofacetMaterial(payload, material, V, L, pdf);
+        vec3 brdf = sampleOpaqueMicrofacetMaterial(payload, ptMaterial, V, L, pdf);
 #elif defined(PATHTRACER_BRDF_GLASS)
         // TODO: Make this a microfacet glass BSDF!
-        vec3 brdf = samplePolishedGlassMaterial(payload, material, V, L, pdf);
+        float alpha = texture(material_getTexture(material.baseColor), uv).a * material.colorTint.a;
+        vec3 brdf = samplePolishedGlassMaterial(payload, ptMaterial, 1.0 - alpha, V, L, pdf);
 #endif
 
         if (pdf > 0.0) {

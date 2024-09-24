@@ -147,7 +147,7 @@ vec3 sampleOpaqueMicrofacetMaterial(inout PathTracerRayPayload payload, PathTrac
     return evaluateOpaqueMicrofacetMaterial(payload, material, V, L, F, PDF);
 }
 
-vec3 samplePolishedGlassMaterial(inout PathTracerRayPayload payload, PathTraceMaterial material, vec3 V, out vec3 L, out float PDF)
+vec3 samplePolishedGlassMaterial(inout PathTracerRayPayload payload, PathTraceMaterial material, float absorptionFactor, vec3 V, out vec3 L, out float PDF)
 {
     vec3 F = F_Schlick(V.z, vec3(DIELECTRIC_REFLECTANCE));
     float reflectance = F.x;
@@ -173,7 +173,7 @@ vec3 samplePolishedGlassMaterial(inout PathTracerRayPayload payload, PathTraceMa
     }
 
     PDF = 1.0; // really we want it to not evaluate PDF at all, as it's not a sampled/probabilistic direction
-    return vec3(1.0);
+    return payload.insideGlass ? vec3(1.0) : vec3(absorptionFactor);
 }
 
 #endif // PATHTRACER_MATERIAL_GLSL

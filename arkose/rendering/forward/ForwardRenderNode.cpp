@@ -133,7 +133,7 @@ RenderTarget& ForwardRenderNode::makeRenderTarget(Registry& reg, Mode mode) cons
 
     if (mode == Mode::Translucent) {
 
-        return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, colorTexture, loadOp, storeOp, RenderTargetBlendMode::Additive },
+        return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, colorTexture, loadOp, storeOp, RenderTargetBlendMode::AlphaBlending },
                                         { RenderTarget::AttachmentType::Depth, depthTexture, loadOp, storeOp } });
 
     } else if (mode == Mode::Opaque) {
