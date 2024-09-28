@@ -55,6 +55,11 @@ Task::~Task()
     ARKOSE_ASSERT(isCompleted());
 }
 
+void Task::executeSynchronous()
+{
+    execute();
+}
+
 bool Task::isCompleted() const
 {
     return m_unfinishedTasks.load(std::memory_order_seq_cst) == 0;

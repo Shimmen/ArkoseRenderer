@@ -7,25 +7,28 @@
 
 using TaskFunction = std::function<void()>;
 
-class Task final {
+class Task {
 public:
     static Task& create(TaskFunction&&);
     static Task& createEmpty();
     static Task& createWithParent(Task& parentTask, TaskFunction&&);
 
     ARK_NON_COPYABLE(Task)
-    ~Task();
+    virtual ~Task();
+
+    void executeSynchronous();
 
     bool isCompleted() const;
 
     void release();
-    void autoReleaseOnCompletion();
+    virtual void autoReleaseOnCompletion();
 
-private:
+protected:
     Task(TaskFunction&&, Task* parentTask);
 
     friend class TaskGraph;
 
+private:
     void execute();
     void finish();
 
