@@ -50,8 +50,7 @@ private:
     
     void drawMeshPhysicsPanel();
 
-    void importMeshWithDialog();
-    void importLevelWithDialog();
+    void importAssetWithDialog();
     void loadMeshWithDialog();
     void saveMeshWithDialog();
 
@@ -59,6 +58,8 @@ private:
                                            .generateMipmaps = true,
                                            .blockCompressImages = true,
                                            .saveMeshesInTextualFormat = false };
+
+    std::unique_ptr<AssetImportTask> m_currentImportTask { nullptr };
 
     // Since ImGui uses `const char*` for everything and we don't have a natural storage for these names we have to keep it in here...
     std::vector<std::string> m_segmentNameCache {};

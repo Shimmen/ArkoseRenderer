@@ -90,6 +90,51 @@ bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
     drawMeshPhysicsPanel();
     drawMeshMaterialPanel();
 
+    if (m_currentImportTask) {
+
+        ImVec2 displayCenter { ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f };
+        ImGui::SetNextWindowPos(displayCenter, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSize(ImVec2(500, 0), ImGuiCond_Appearing);
+        ImGui::Begin("Importing asset", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse);
+
+        ImGui::ProgressBar(m_currentImportTask->progress());
+        ImGui::Text("%s...", m_currentImportTask->status().c_str());
+
+        if (m_currentImportTask->isCompleted()) {
+            ImportResult const& result = *m_currentImportTask->result();
+
+            ImGui::Separator();
+
+            ImGui::Text("Imported");
+            ImGui::Text("  %d meshes", result.meshes.size());
+            ImGui::Text("  %d materials", result.materials.size());
+            ImGui::Text("  %d images.", result.images.size());
+            ImGui::Text("  %d skeletons", result.skeletons.size());
+            ImGui::Text("  %d animations", result.animations.size());
+
+            ImGui::NewLine();
+
+            if (ImGui::Button("Create level...", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+                if (auto maybePath = FileDialog::save({ { "Arkose level", LevelAsset::AssetFileExtension } })) {
+
+                    std::string savePath = maybePath.value();
+                    ARKOSE_LOG(Info, "Saving level to file '{}'", savePath);
+
+                    auto levelAsset = LevelAsset::createFromAssetImportResult(result);
+                    levelAsset->writeToFile(savePath, AssetStorage::Json);
+
+                    m_currentImportTask.reset();
+                }
+            }
+
+            if (ImGui::Button("Close", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
+                m_currentImportTask.reset();
+            }
+        }
+
+        ImGui::End();
+    }
+
     //ImGui::DockBuilderSplitNode(dockspace, ImGuiDir_Left, 0.2f, nullptr, &dockspace_id);
     //ImGui::SetNextWindowDockID(dockspace, ImGuiCond_Always);
 
@@ -122,11 +167,15 @@ void MeshViewerApp::drawMenuBar()
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Import")) {
-            if (ImGui::MenuItem("Import meshes...")) {
-                importMeshWithDialog();
+            bool hasActiveImportTask = m_currentImportTask != nullptr;
+            if (hasActiveImportTask) {
+                ImGui::BeginDisabled();
             }
-            if (ImGui::MenuItem("Import level...")) {
-                importLevelWithDialog();
+            if (ImGui::MenuItem("Import asset...")) {
+                importAssetWithDialog();
+            }
+            if (hasActiveImportTask) {
+                ImGui::EndDisabled();
             }
             ImGui::Separator();
             if (ImGui::BeginMenu("Import options")) {
@@ -604,7 +653,7 @@ void MeshViewerApp::drawMeshPhysicsPanel()
     ImGui::End();
 }
 
-void MeshViewerApp::importMeshWithDialog()
+void MeshViewerApp::importAssetWithDialog()
 {
     std::vector<FileDialog::FilterItem> filterItems = { { "glTF", "gltf,glb" } };
 
@@ -616,31 +665,8 @@ void MeshViewerApp::importMeshWithDialog()
         std::string_view importFileDir = FileIO::extractDirectoryFromPath(importFilePath);
         std::string targetDirectory = FileIO::normalizePath(importFileDir);
 
-        auto importTask = AssetImportTask::create(importFilePath, targetDirectory, m_importOptions);
-        importTask->executeSynchronous();
-
-        ARKOSE_LOG(Info, "Imported {} meshes, {} materials, and {} images.",
-                   importTask->result()->meshes.size(), importTask->result()->materials.size(), importTask->result()->images.size());
-    }
-}
-
-void MeshViewerApp::importLevelWithDialog()
-{
-    std::vector<FileDialog::FilterItem> filterItems = { { "glTF", "gltf,glb" } };
-
-    if (auto maybePath = FileDialog::open(filterItems)) {
-
-        std::string importFilePath = maybePath.value();
-        ARKOSE_LOG(Info, "Importing level from file '{}'", importFilePath);
-
-        std::string_view importFileDir = FileIO::extractDirectoryFromPath(importFilePath);
-        std::string targetDirectory = FileIO::normalizePath(importFileDir);
-
-        // FIXME!
-        //AssetImporter importer {};
-        //std::unique_ptr<LevelAsset> levelAsset = importer.importAsLevel(importFilePath, targetDirectory, m_importOptions);
-
-        ARKOSE_LOG(Info, "Imported level.");
+        m_currentImportTask = AssetImportTask::create(importFilePath, targetDirectory, m_importOptions);
+        TaskGraph::get().scheduleTask(*m_currentImportTask);
     }
 }
 
