@@ -134,6 +134,8 @@ public:
     // TODO: Figure out how we want to return this! Basic type, e.g. LevelAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
     static LevelAsset* load(std::string const& filePath);
 
+    static std::unique_ptr<LevelAsset> createFromAssetImportResult(struct ImportResult const&);
+
     virtual bool readFromFile(std::string_view filePath) override;
     virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) const override;
 

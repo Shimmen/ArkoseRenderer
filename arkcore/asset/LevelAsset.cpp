@@ -1,6 +1,7 @@
 #include "LevelAsset.h"
 
 #include "asset/AssetCache.h"
+#include "asset/import/AssetImporter.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "utility/FileIO.h"
@@ -33,6 +34,32 @@ LevelAsset* LevelAsset::load(std::string const& filePath)
     }
 
     return s_levelAssetCache.put(filePath, std::move(newLevelAsset));
+}
+
+std::unique_ptr<LevelAsset> LevelAsset::createFromAssetImportResult(ImportResult const& result)
+{
+    auto levelAsset = std::make_unique<LevelAsset>();
+
+    // TODO: Also add lights, cameras, etc.
+
+    for (MeshInstance const& meshInstance : result.meshInstances) {
+        SceneObjectAsset sceneObject {};
+        sceneObject.transform = meshInstance.transform;
+        sceneObject.mesh = std::string(meshInstance.mesh->assetFilePath());
+        levelAsset->objects.push_back(sceneObject);
+    }
+
+    for (ImportedCamera const& importedCamera : result.cameras) {
+        CameraAsset& camera = levelAsset->cameras.emplace_back();
+        camera.position = importedCamera.transform.positionInWorld();
+        camera.orientation = importedCamera.transform.orientationInWorld();
+        // TODO: Add zNear, zFar, and FOV to CameraAsset.
+        // camera.zNear = importedCamera.zNear;
+        // camera.zNear = importedCamera.zFar;
+        // camera.verticalFieldOfView = importedCamera.verticalFieldOfView;
+    }
+
+    return levelAsset;
 }
 
 bool LevelAsset::readFromFile(std::string_view filePath)
