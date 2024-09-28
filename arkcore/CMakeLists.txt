@@ -48,6 +48,8 @@ set(ARKCORE_SOURCES
     arkcore/core/memory/MemoryManager.h
     # parallel
     arkcore/core/parallel/ParallelFor.h
+    arkcore/core/parallel/PollableTask.cpp
+    arkcore/core/parallel/PollableTask.h
     arkcore/core/parallel/Task.cpp
     arkcore/core/parallel/Task.h
     arkcore/core/parallel/TaskGraph.cpp
