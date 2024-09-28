@@ -79,10 +79,10 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     if (description.path.empty()) {
         //setupCullingShowcaseScene(scene);
 
-        AssetImporter importer {};
-        importer.importAsLevel("assets/sample/models/CesiumMan/CesiumMan.gltf",
-                               "assets/sample/models/CesiumMan/",
-                               AssetImporterOptions());
+        auto importTask = AssetImportTask::create("assets/sample/models/CesiumMan/CesiumMan.gltf",
+                                                  "assets/sample/models/CesiumMan/",
+                                                  AssetImporterOptions());
+        importTask->executeSynchronous();
 
         MeshAsset* meshAsset = MeshAsset::load("assets/sample/models/CesiumMan/Cesium_Man.arkmsh");
         SkeletonAsset* skeletonAsset = SkeletonAsset::load("assets/sample/models/CesiumMan/Armature.arkskel");

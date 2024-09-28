@@ -6,6 +6,7 @@
 #include "asset/MaterialAsset.h"
 #include "asset/MeshAsset.h"
 #include "asset/SkeletonAsset.h"
+#include "core/parallel/PollableTask.h"
 #include <string_view>
 #include <vector>
 
@@ -45,11 +46,34 @@ struct AssetImporterOptions {
     bool saveMeshesInTextualFormat { false };
 };
 
-class AssetImporter {
+
+// All asset importing is wrapped into this pollable task, meaning it can be run async and polled for its status.
+// If you wish to import synchronously, simply create an AssetImportTask and call `executeSynchronous()` on it. 
+class AssetImportTask : public PollableTask {
 public:
-    ImportResult importAsset(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions = AssetImporterOptions());
-    ImportResult importGltf(std::string_view gltfFilePath, std::string_view targetDirectory, AssetImporterOptions = AssetImporterOptions());
+    static std::unique_ptr<AssetImportTask> create(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions);
 
-    std::unique_ptr<LevelAsset> importAsLevel(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions = AssetImporterOptions());
+    bool success() const;
+    ImportResult const* result() const;
 
+    float progress() const;
+    std::string status() const;
+
+private:
+    AssetImportTask(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions);
+
+    void importAsset();
+    void importGltf();
+
+    std::string m_assetFilePath {};
+    std::string m_targetDirectory {};
+    AssetImporterOptions m_options {};
+
+    ImportResult m_result {};
+
+    bool m_error { false };
+    char const* m_status = "Importing asset";
+
+    size_t m_processedItemCount { 0 };
+    size_t m_totalItemCount { 0 };
 };

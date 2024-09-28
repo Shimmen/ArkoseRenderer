@@ -8,36 +8,107 @@
 #include "utility/FileIO.h"
 #include <fmt/format.h>
 
-ImportResult AssetImporter::importAsset(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions options)
+std::unique_ptr<AssetImportTask> AssetImportTask::create(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions options)
 {
-    SCOPED_PROFILE_ZONE();
-
-    if (not FileIO::isFileReadable(std::string(assetFilePath))) {
-        ARKOSE_LOG(Error, "Trying to import asset '{}' that is not readable / doesn't exist.", assetFilePath);
-        return {};
-    }
-
-    if (assetFilePath.ends_with(".gltf") || assetFilePath.ends_with(".glb")) {
-        return importGltf(assetFilePath, targetDirectory, options);
-    }
-
-    ARKOSE_LOG(Error, "Trying to import asset '{}' of unsupported file type.", assetFilePath);
-    return ImportResult();
+    // NOTE: The task auto-release logic be damned..
+    return std::unique_ptr<AssetImportTask>(new AssetImportTask(assetFilePath, targetDirectory, options));
 }
 
-ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::string_view targetDirectory, AssetImporterOptions options)
+AssetImportTask::AssetImportTask(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions options)
+    : PollableTask([this]() { importAsset(); })
+    , m_assetFilePath(assetFilePath)
+    , m_options(options)
 {
     FileIO::ensureDirectory(std::string(targetDirectory));
+
     if (targetDirectory.ends_with('/')) {
         targetDirectory.remove_suffix(1);
     }
+    m_targetDirectory = targetDirectory;
 
-    if (options.blockCompressImages || options.generateMipmaps) {
-        options.alwaysMakeImageAsset = true;
+    if (m_options.blockCompressImages || m_options.generateMipmaps) {
+        m_options.alwaysMakeImageAsset = true;
+    }
+}
+
+bool AssetImportTask::success() const
+{
+    return m_error == false;
+}
+
+ImportResult const* AssetImportTask::result() const
+{
+    if (progress() >= 1.0f) {
+        ARKOSE_ASSERT(isCompleted());
+        return &m_result;
+    } else {
+        ARKOSE_ERROR("AssetImportTask::result(): not yet available");
+        return nullptr;
+    }
+}
+
+float AssetImportTask::progress() const
+{
+    if (m_totalItemCount == 0) {
+        return 0.0f;
     }
 
+    return static_cast<float>(m_processedItemCount) / static_cast<float>(m_totalItemCount);
+}
+
+std::string AssetImportTask::status() const
+{
+    return std::string(m_status);
+}
+
+void AssetImportTask::importAsset()
+{
+    SCOPED_PROFILE_ZONE();
+
+    if (!FileIO::isFileReadable(std::string(m_assetFilePath))) {
+        ARKOSE_LOG(Error, "Trying to import asset '{}' that is not readable / doesn't exist.", m_assetFilePath);
+        m_error = true;
+        return;
+    }
+
+    if (m_assetFilePath.ends_with(".gltf") || m_assetFilePath.ends_with(".glb")) {
+        importGltf();
+        return;
+    }
+
+    ARKOSE_LOG(Error, "Trying to import asset '{}' of unsupported file type.", m_assetFilePath);
+    m_error = true;
+}
+
+void AssetImportTask::importGltf()
+{
+    SCOPED_PROFILE_ZONE();
+
+    // (Just to avoid too many changes part of this big refactor)
+    ImportResult& result = m_result;
+    AssetImporterOptions& options = m_options;
+    std::string& targetDirectory = m_targetDirectory;
+
+    m_status = "Loading glTF file";
+
     GltfLoader gltfLoader {};
-    ImportResult result = gltfLoader.load(std::string(gltfFilePath));
+    m_result = gltfLoader.load(m_assetFilePath);
+
+    // Figure out total number of work items
+    m_totalItemCount = 1 + // initial glTF file load
+        m_result.images.size() + // compress images
+        m_result.images.size() + // writing images
+        m_result.materials.size() + // writing materials
+        m_result.meshes.size() + // generate meshlets
+        m_result.meshes.size() + // write meshes
+        m_result.skeletons.size() + // write skeletons
+        m_result.animations.size(); // write animations
+
+    m_processedItemCount += 1;
+
+    if (m_result.images.size() > 0) {
+        m_status = "Generating MIP maps & compressing textures";
+    }
 
     // Compress all images (the slow part of this process) in parallel
     ParallelFor(result.images.size(), [&](size_t idx) {
@@ -61,7 +132,13 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
             image->compress();
         }
+
+        m_processedItemCount += 1;
     });
+
+    if (result.images.size() > 0) {
+        m_status = "Writing images";
+    }
 
     int unnamedImageIdx = 0;
     for (auto& image : result.images) {
@@ -84,6 +161,12 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
             image->writeToFile(targetFilePath, AssetStorage::Binary);
             image->setAssetFilePath(targetFilePath);
         }
+
+        m_processedItemCount += 1;
+    }
+
+    if (m_result.materials.size() > 0) {
+        m_status = "Writing materials";
     }
 
     std::unordered_map<std::string, int> materialNameMap {};
@@ -123,6 +206,12 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         material->writeToFile(targetFilePath, AssetStorage::Json);
         material->setAssetFilePath(targetFilePath);
+
+        m_processedItemCount += 1;
+    }
+
+    if (m_result.meshes.size() > 0) {
+        m_status = "Generating meshlets";
     }
 
     // Generate meshlets for all meshes in parallel
@@ -133,7 +222,13 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
                 meshSegment.generateMeshlets();
             }
         }
+
+        m_processedItemCount += 1;
     });
+
+    if (m_result.meshes.size() > 0) {
+        m_status = "Writing meshes";
+    }
 
     std::unordered_map<std::string, int> meshNameMap {};
     for (auto& mesh : result.meshes) {
@@ -168,6 +263,12 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         AssetStorage assetStorage = options.saveMeshesInTextualFormat ? AssetStorage::Json : AssetStorage::Binary;
         mesh->writeToFile(targetFilePath, assetStorage);
         mesh->setAssetFilePath(targetFilePath);
+
+        m_processedItemCount += 1;
+    }
+
+    if (m_result.skeletons.size() > 0) {
+        m_status = "Writing skeletons";
     }
 
     std::unordered_map<std::string, int> skeletonNameMap {};
@@ -187,6 +288,12 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
 
         skeleton->writeToFile(targetFilePath, AssetStorage::Json);
         skeleton->setAssetFilePath(targetFilePath);
+
+        m_processedItemCount += 1;
+    }
+
+    if (m_result.animations.size() > 0) {
+        m_status = "Writing animations";
     }
 
     std::unordered_map<std::string, int> animationNameMap {};
@@ -207,46 +314,9 @@ ImportResult AssetImporter::importGltf(std::string_view gltfFilePath, std::strin
         animation->writeToFile(targetFilePath, AssetStorage::Json);
         animation->setAssetFilePath(targetFilePath);
 
+        m_processedItemCount += 1;
     }
 
-    return result;
-}
-
-std::unique_ptr<LevelAsset> AssetImporter::importAsLevel(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions options)
-{
-    ImportResult result = importAsset(assetFilePath, targetDirectory, options);
-
-    auto levelAsset = std::make_unique<LevelAsset>();
-
-    // TODO: Also add lights, cameras, etc.
-
-    for (MeshInstance const& meshInstance : result.meshInstances) {
-        SceneObjectAsset sceneObject {};
-        sceneObject.transform = meshInstance.transform;
-        sceneObject.mesh = std::string(meshInstance.mesh->assetFilePath());
-        levelAsset->objects.push_back(sceneObject);
-    }
-
-    for (ImportedCamera const& importedCamera : result.cameras) {
-        CameraAsset& camera = levelAsset->cameras.emplace_back();
-        camera.position = importedCamera.transform.positionInWorld();
-        camera.orientation = importedCamera.transform.orientationInWorld();
-        // TODO: Add zNear, zFar, and FOV to CameraAsset.
-        //camera.zNear = importedCamera.zNear;
-        //camera.zNear = importedCamera.zFar;
-        //camera.verticalFieldOfView = importedCamera.verticalFieldOfView;
-    }
-
-    std::string_view levelName = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(assetFilePath));
-    levelAsset->name = std::string(levelName);
-
-    std::string levelFilePath = fmt::format("{}{}.arklvl", targetDirectory, levelName);
-    if (!levelAsset->writeToFile(levelFilePath, AssetStorage::Json)) {
-        ARKOSE_LOG(Error, "Failed to write level asset '{}' to file.", levelAsset->name);
-        return nullptr;
-    } else {
-        levelAsset->setAssetFilePath(levelFilePath);
-    }
-
-    return levelAsset;
+    ARKOSE_ASSERT(progress() == 1.0f);
+    m_status = "Done";
 }

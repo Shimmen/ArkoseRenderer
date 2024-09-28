@@ -616,11 +616,11 @@ void MeshViewerApp::importMeshWithDialog()
         std::string_view importFileDir = FileIO::extractDirectoryFromPath(importFilePath);
         std::string targetDirectory = FileIO::normalizePath(importFileDir);
 
-        AssetImporter importer {};
-        ImportResult assets = importer.importAsset(importFilePath, targetDirectory, m_importOptions);
+        auto importTask = AssetImportTask::create(importFilePath, targetDirectory, m_importOptions);
+        importTask->executeSynchronous();
 
         ARKOSE_LOG(Info, "Imported {} meshes, {} materials, and {} images.",
-                   assets.meshes.size(), assets.materials.size(), assets.images.size());
+                   importTask->result()->meshes.size(), importTask->result()->materials.size(), importTask->result()->images.size());
     }
 }
 
@@ -636,8 +636,9 @@ void MeshViewerApp::importLevelWithDialog()
         std::string_view importFileDir = FileIO::extractDirectoryFromPath(importFilePath);
         std::string targetDirectory = FileIO::normalizePath(importFileDir);
 
-        AssetImporter importer {};
-        std::unique_ptr<LevelAsset> levelAsset = importer.importAsLevel(importFilePath, targetDirectory, m_importOptions);
+        // FIXME!
+        //AssetImporter importer {};
+        //std::unique_ptr<LevelAsset> levelAsset = importer.importAsLevel(importFilePath, targetDirectory, m_importOptions);
 
         ARKOSE_LOG(Info, "Imported level.");
     }
