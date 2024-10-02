@@ -121,12 +121,12 @@ void FpsCameraController::update(const Input& input, float dt)
         float bankAmountRotation = ark::clamp(std::abs(rotationAlongY) * 100.0f, 0.0f, 3.0f);
 
         float targetBank = ((signOrZeroSpeed * bankAmountSpeed) + (signOrZeroRotation * bankAmountRotation)) * BaselineBankAngle;
-        m_pitchYawRoll.z = ark::lerp(m_pitchYawRoll.z, targetBank, 1.0f - pow(0.35f, dt));
+        m_pitchYawRoll.z = ark::lerp(m_pitchYawRoll.z, targetBank, 1.0f - std::pow(0.35f, dt));
     }
 
     // Damp rotation continuously
 
-    m_pitchYawRoll *= pow(RotationDampening, dt);
+    m_pitchYawRoll *= std::pow(RotationDampening, dt);
 
     // Apply rotation
 
@@ -142,7 +142,7 @@ void FpsCameraController::update(const Input& input, float dt)
         m_targetFieldOfView += -input.scrollDelta() * ZoomSensitivity;
         m_targetFieldOfView = ark::clamp(m_targetFieldOfView, MinFieldOfView, MaxFieldOfView);
     }
-    float fov = ark::lerp(camera.fieldOfView(), m_targetFieldOfView, 1.0f - pow(0.01f, dt));
+    float fov = ark::lerp(camera.fieldOfView(), m_targetFieldOfView, 1.0f - std::pow(0.01f, dt));
     camera.setFieldOfView(fov);
 
     // Apply focus adjustments

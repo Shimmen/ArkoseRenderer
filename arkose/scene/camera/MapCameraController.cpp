@@ -75,7 +75,7 @@ void MapCameraController::update(const Input& input, float dt)
         m_targetFieldOfView += -input.scrollDelta() * ZoomSensitivity;
         m_targetFieldOfView = ark::clamp(m_targetFieldOfView, MinFieldOfView, MaxFieldOfView);
     }
-    float fov = ark::lerp(camera.fieldOfView(), m_targetFieldOfView, 1.0f - pow(0.0001f, dt));
+    float fov = ark::lerp(camera.fieldOfView(), m_targetFieldOfView, 1.0f - std::pow(0.0001f, dt));
     camera.setFieldOfView(fov);
 
     // Create the view matrix
