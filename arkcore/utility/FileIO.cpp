@@ -1,5 +1,6 @@
 #include "FileIO.h"
 
+#include "core/Assert.h"
 #include "core/Logging.h"
 #include "utility/Profiling.h"
 #include <fstream>
@@ -27,7 +28,8 @@ void FileIO::ensureDirectory(const std::string& directoryPath)
     }
     CreateDirectory(directoryPath.c_str(), NULL);
 #else
-#warning Missing implementation for this platform!
+    // TODO: Implement for this platform!
+    NOT_YET_IMPLEMENTED();
 #endif
 }
 
