@@ -54,7 +54,7 @@ jobs:
 
     - name: Install GLFW dependencies
       if: ${{ matrix.os == 'ubuntu-latest' }}
-      run: sudo apt install libwayland-dev libxkbcommon-dev wayland-protocols extra-cmake-modules libxrandr-devel
+      run: sudo apt install xorg-dev libwayland-dev libxkbcommon-dev wayland-protocols extra-cmake-modules
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
