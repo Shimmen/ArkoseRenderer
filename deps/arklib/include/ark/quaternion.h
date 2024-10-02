@@ -76,12 +76,12 @@ struct tquat<T, ENABLE_STRUCT_IF_FLOATING_POINT(T)> {
         return res;
     }
 
-    constexpr bool operator==(const tquat<T>& q)
+    constexpr bool operator==(const tquat<T>& q) const
     {
         return all(vec == q.vec) && w == q.w;
     }
 
-    constexpr bool operator!=(const tquat<T>& q)
+    constexpr bool operator!=(const tquat<T>& q) const
     {
         return !all(vec == q.vec) || w != q.w;
     }

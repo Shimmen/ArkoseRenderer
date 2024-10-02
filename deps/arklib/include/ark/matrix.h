@@ -129,12 +129,12 @@ struct tmat3<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
         return { f * x, f * y, f * z };
     }
 
-    constexpr bool operator==(const tmat3<T>& m)
+    constexpr bool operator==(const tmat3<T>& m) const
     {
         return all(x == m.x) && all(y == m.y) && all(z == m.z);
     }
 
-    constexpr bool operator!=(const tmat3<T>& m)
+    constexpr bool operator!=(const tmat3<T>& m) const
     {
         return !all(x == m.x) || !all(y == m.y) || !all(z == m.z);
     }
@@ -276,12 +276,12 @@ struct tmat4<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
         return { f * x, f * y, f * z, f * w };
     }
 
-    constexpr bool operator==(const tmat4<T>& m)
+    constexpr bool operator==(const tmat4<T>& m) const
     {
         return all(x == m.x) && all(y == m.y) && all(z == m.z) && all(w == m.w);
     }
 
-    constexpr bool operator!=(const tmat4<T>& m)
+    constexpr bool operator!=(const tmat4<T>& m) const
     {
         return !all(x == m.x) || !all(y == m.y) || !all(z == m.z) || !all(w == m.w);
     }

@@ -472,12 +472,12 @@ struct tvec3<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
         return *this;
     }
 
-    constexpr tvec3<bool> operator==(const tvec3<T>& v)
+    constexpr tvec3<bool> operator==(const tvec3<T>& v) const
     {
         return tvec3<bool>(x == v.x, y == v.y, z == v.z);
     }
 
-    constexpr tvec3<bool> operator!=(const tvec3<T>& v)
+    constexpr tvec3<bool> operator!=(const tvec3<T>& v) const
     {
         return tvec3<bool>(x != v.x, y != v.y, z != v.z);
     }
@@ -759,12 +759,12 @@ struct tvec4<T, ENABLE_STRUCT_IF_ARITHMETIC(T)> {
         return *this;
     }
 
-    constexpr tvec4<bool> operator==(const tvec4<T>& v)
+    constexpr tvec4<bool> operator==(const tvec4<T>& v) const
     {
         return tvec4<bool>(x == v.x, y == v.y, z == v.z, w == v.w);
     }
 
-    constexpr tvec4<bool> operator!=(const tvec4<T>& v)
+    constexpr tvec4<bool> operator!=(const tvec4<T>& v) const
     {
         return tvec4<bool>(x != v.x, y != v.y, z != v.z, w != v.w);
     }
