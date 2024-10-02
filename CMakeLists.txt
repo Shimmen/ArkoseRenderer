@@ -165,6 +165,9 @@ elseif (APPLE)
     # TODO: Make sure it's not iOS or similar
     target_compile_definitions(ArkoseCore PUBLIC PLATFORM_MACOS=1)
     set(ARKOSE_SYSTEM_GLFW True)
+elseif (UNIX)
+    target_compile_definitions(ArkoseCore PUBLIC PLATFORM_LINUX=1)
+    set(ARKOSE_SYSTEM_GLFW True)
 endif ()
 
 # TODO: Disable tracy for release!
