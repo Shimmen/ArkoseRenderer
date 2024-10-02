@@ -24,6 +24,7 @@
 #include "scene/lights/DirectionalLight.h"
 #include "utility/Profiling.h"
 #include <ark/random.h>
+#include <cmath>
 #include <imgui.h>
 
 // Geodata related
@@ -439,7 +440,7 @@ void GeodataApp::controlSunOrientation(Scene& scene, Input const& input, float d
     float adjustedInput = hoursPerSecond * deltaTime;
     m_timeOfDay += input.isKeyDown(Key::Comma) ? adjustedInput : 0.0f;
     m_timeOfDay -= input.isKeyDown(Key::Period) ? adjustedInput : 0.0f;
-    m_timeOfDay = std::fmodf(m_timeOfDay, 24.00f);
+    m_timeOfDay = std::fmod(m_timeOfDay, 24.00f);
 
     if (DirectionalLight* sun = scene.firstDirectionalLight()) {
         float sunRotationAngle = (m_timeOfDay - 12.00f) / 24.00f * ark::TWO_PI;

@@ -7,6 +7,7 @@
 #include "utility/ParseContext.h"
 #include "utility/Profiling.h"
 #include <ark/vector.h>
+#include <cmath>
 
 IESProfile::IESProfile(const std::string& path)
     : m_path(path)
@@ -244,7 +245,7 @@ float IESProfile::lookupValue(float angleH, float angleV) const
             // "The luminaire is assumed to be bilaterally symmetric about the 0-180 degree photometric plane."
             lookupLocation = { angleH, angleV };
             if (angleH >= 180.0f)
-                lookupLocation.x = 180.0f - std::fmodf(angleH, 180.0f);
+                lookupLocation.x = 180.0f - std::fmod(angleH, 180.0f);
 
         } else if (lastHorizontal > 180 && lastHorizontal <= 360) {
 

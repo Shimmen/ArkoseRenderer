@@ -105,7 +105,7 @@ Animation::SampledInputTrack Animation::evaluateInputTrack(size_t inputTrackIdx,
         while (inputTrackTime < inputTrackStart) {
             inputTrackTime += inputTrackLength;
         }
-        inputTrackTime = inputTrackStart + std::fmodf(inputTrackTime - inputTrackStart, inputTrackLength);
+        inputTrackTime = inputTrackStart + std::fmod(inputTrackTime - inputTrackStart, inputTrackLength);
     }
 
     // Find the first input track index
