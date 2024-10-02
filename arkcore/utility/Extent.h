@@ -24,8 +24,8 @@ struct Extent2D {
         ARKOSE_ASSERT(height >= 0);
     }
 
-    [[nodiscard]] uint32_t width() const { return m_width; }
-    [[nodiscard]] uint32_t height() const { return m_height; }
+    constexpr [[nodiscard]] uint32_t width() const { return m_width; }
+    constexpr [[nodiscard]] uint32_t height() const { return m_height; }
 
     [[nodiscard]] bool hasZeroArea() const { return m_width == 0 || m_height == 0; }
 
@@ -87,9 +87,9 @@ struct Extent3D {
     {
     }
 
-    [[nodiscard]] uint32_t width() const { return m_width; }
-    [[nodiscard]] uint32_t height() const { return m_height; }
-    [[nodiscard]] uint32_t depth() const { return m_depth; }
+    constexpr [[nodiscard]] uint32_t width() const { return m_width; }
+    constexpr [[nodiscard]] uint32_t height() const { return m_height; }
+    constexpr [[nodiscard]] uint32_t depth() const { return m_depth; }
 
     [[nodiscard]] bool hasZeroArea() const { return m_width == 0 || m_height == 0 || m_depth == 0; }
 
