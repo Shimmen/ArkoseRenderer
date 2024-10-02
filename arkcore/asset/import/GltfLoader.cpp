@@ -496,7 +496,7 @@ std::unique_ptr<SkeletonAsset> GltfLoader::createSkeleton(tinygltf::Model const&
     [[maybe_unused]] mat4 const* firstInvBindMatrix = getTypedMemoryBufferForAccessor<mat4>(gltfModel, invBindMatricesAccessor);
 
     std::unordered_map<int, int> jointIdxLookup {};
-    for (int idx = 0; idx < gltfSkin.joints.size(); ++idx) {
+    for (size_t idx = 0; idx < gltfSkin.joints.size(); ++idx) {
         int nodeIdx = gltfSkin.joints[idx];
         jointIdxLookup[nodeIdx] = idx;
     }

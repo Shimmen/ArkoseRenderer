@@ -178,9 +178,9 @@ void AssetImportTask::importGltf()
         auto resolveImageFilePath = [&](std::optional<MaterialInput>& materialInput) {
             if (materialInput.has_value()) {
                 int gltfIdx = materialInput->userData;
-                ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < result.images.size());
+                ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < narrow_cast<int>(result.images.size()));
                 auto& image = result.images[gltfIdx];
-                std::string_view imagePath = (not image->hasSourceAsset() || options.alwaysMakeImageAsset)
+                std::string_view imagePath = (!image->hasSourceAsset() || options.alwaysMakeImageAsset)
                     ? image->assetFilePath()
                     : image->sourceAssetFilePath();
                 materialInput->setPathToImage(std::string(imagePath));
@@ -240,7 +240,7 @@ void AssetImportTask::importGltf()
             for (MeshSegmentAsset& meshSegment : lod.meshSegments) {
                 if (meshSegment.userData != -1) {
                     int gltfIdx = meshSegment.userData;
-                    ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < result.materials.size());
+                    ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < narrow_cast<int>(result.materials.size()));
                     auto& material = result.materials[gltfIdx];
                     meshSegment.setPathToMaterial(std::string(material->assetFilePath()));
                 }
