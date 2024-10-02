@@ -31,7 +31,7 @@ if (MSVC)
     set(CMAKE_EXE_LINKER_FLAGS_DEVELOP "/DEBUG /INCREMENTAL    ")
     set(CMAKE_EXE_LINKER_FLAGS_RELEASE "       /INCREMENTAL:NO ") # todo: add /LTCG together with /GL above
 else ()
-    set(ARKOSE_CXX_FLAGS "")
+    set(ARKOSE_CXX_FLAGS "${ARKOSE_CXX_FLAGS} -Wno-unused-variable -Wno-unused-parameter")
 
     set(CMAKE_CXX_FLAGS_DEBUG   "${ARKOSE_CXX_FLAGS} -O0 -g                       -DARKOSE_DEBUG  ")
     set(CMAKE_CXX_FLAGS_DEVELOP "${ARKOSE_CXX_FLAGS} -O2 -g              -DNDEBUG -DARKOSE_DEVELOP")
