@@ -2,6 +2,7 @@
 
 #include "scene/MeshInstance.h"
 #include "scene/Transform.h"
+#include <cmath>
 
 Animation::Animation(AnimationAsset const* asset)
     : m_asset(asset)
