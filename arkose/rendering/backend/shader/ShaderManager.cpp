@@ -571,6 +571,11 @@ bool ShaderManager::CompiledShader::compile(TargetType targetType)
         ARKOSE_LOG(Error, "Trying to compile to HLSL file but we are not built with the D3D12 backend so the compiler is not available");
     #endif
     } break;
+
+    case SourceType::Unknown: {
+        ASSERT_NOT_REACHED();
+    } break;
+
     }
 
     if (lastEditTimestamp == 0) {
