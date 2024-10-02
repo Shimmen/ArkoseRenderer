@@ -4,10 +4,15 @@
 #include <variant>
 
 struct BufferCopyOperation {
-    size_t size;
+    BufferCopyOperation()
+        : destination(BufferDestination())
+    {
+    }
 
-    Buffer* srcBuffer;
-    size_t srcOffset;
+    size_t size { 0 };
+
+    Buffer* srcBuffer { nullptr };
+    size_t srcOffset { 0 };
 
     struct BufferDestination {
         Buffer* buffer { nullptr };
@@ -20,7 +25,7 @@ struct BufferCopyOperation {
         size_t textureArrayLayer { 0 };
     };
 
-    std::variant<BufferDestination, TextureDestination> destination {};
+    std::variant<BufferDestination, TextureDestination> destination;
 };
 
 class UploadBuffer final {
