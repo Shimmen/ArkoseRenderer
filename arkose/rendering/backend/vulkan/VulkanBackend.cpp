@@ -920,6 +920,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
                 deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
                 vk12features.bufferDeviceAddress = VK_TRUE;
                 break;
+            default:
+                ASSERT_NOT_REACHED();
+
             }
             break;
         case Capability::MeshShading:
