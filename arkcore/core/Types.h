@@ -65,7 +65,7 @@ constexpr u8 narrow_cast(u32 wideValue)
     return static_cast<u8>(wideValue);
 }
 
-#if defined(__clang__)
+#if defined(__clang__) && 0 // NOTE: Had to define this for it to compile on macOS, so might need some more specifiers.
 template<>
 constexpr u32 narrow_cast(size_t wideValue)
 {
