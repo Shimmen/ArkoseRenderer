@@ -91,7 +91,7 @@ public:
     bool generateMipmaps();
 
     // Apply lossless compression on the pixel data
-    bool compress(int compressionLevel = 10);
+    bool compress();
     bool decompress();
 
     bool isCompressed() const { return m_compressed; }

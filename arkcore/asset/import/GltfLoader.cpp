@@ -440,6 +440,9 @@ std::unique_ptr<AnimationAsset> GltfLoader::createAnimation(tinygltf::Model cons
         }
 
         auto createAnimationChannelAsset = [&]<typename T>(T proxyValue) -> AnimationChannelAsset<T> {
+            // Unused, just there to help the compiler to figure out what T is
+            (void)proxyValue;
+
             AnimationChannelAsset<T> channelAsset {};
             channelAsset.targetProperty = targetProperty;
             channelAsset.targetReference = targetName;

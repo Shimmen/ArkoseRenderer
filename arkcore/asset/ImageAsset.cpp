@@ -390,7 +390,7 @@ bool ImageAsset::hasCompressedFormat() const
     }
 }
 
-bool ImageAsset::compress(int compressionLevel)
+bool ImageAsset::compress()
 {
     SCOPED_PROFILE_ZONE();
 

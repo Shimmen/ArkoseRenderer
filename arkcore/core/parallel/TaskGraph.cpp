@@ -200,6 +200,8 @@ void TaskGraph::validateTaskQueueMap(size_t expectedCount)
 
 Task* TaskGraph::getNextTask(std::thread::id thisThreadId)
 {
+    (void)thisThreadId;
+
     Task* nextTask = nullptr;
 
     // Try grabbing one from the local queue
