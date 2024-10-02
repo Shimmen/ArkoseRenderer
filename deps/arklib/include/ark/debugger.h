@@ -29,6 +29,13 @@
  #define ARK_DEBUG_BREAK() __debugbreak()
 #elif __has_builtin(__builtin_debugtrap)
  #define ARK_DEBUG_BREAK() __builtin_debugtrap()
+#elif defined(__GNUC__)
+ #include <signal.h>
+ #if defined(SIGTRAP)
+  #define ARK_DEBUG_BREAK() raise(SIGTRAP)
+ #else
+  #define ARK_DEBUG_BREAK() raise(SIGABRT)
+ #endif
 #else
  #warning "No implementation for ARK_DEBUG_BREAK() for this platform!"
  #define ARK_DEBUG_BREAK()
