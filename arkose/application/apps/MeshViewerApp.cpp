@@ -106,11 +106,11 @@ bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
             ImGui::Separator();
 
             ImGui::Text("Imported");
-            ImGui::Text("  %d meshes", result.meshes.size());
-            ImGui::Text("  %d materials", result.materials.size());
-            ImGui::Text("  %d images.", result.images.size());
-            ImGui::Text("  %d skeletons", result.skeletons.size());
-            ImGui::Text("  %d animations", result.animations.size());
+            ImGui::Text("  %d meshes", narrow_cast<i32>(result.meshes.size()));
+            ImGui::Text("  %d materials", narrow_cast<i32>(result.materials.size()));
+            ImGui::Text("  %d images.", narrow_cast<i32>(result.images.size()));
+            ImGui::Text("  %d skeletons", narrow_cast<i32>(result.skeletons.size()));
+            ImGui::Text("  %d animations", narrow_cast<i32>(result.animations.size()));
 
             ImGui::NewLine();
 
@@ -256,7 +256,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
                     m_selectedLodIdx = lodIdx;
                     MeshLODAsset& lod = targetAsset().LODs[lodIdx];
 
-                    if (m_selectedSegmentIdx >= lod.meshSegments.size()) {
+                    if (m_selectedSegmentIdx >= narrow_cast<int>(lod.meshSegments.size())) {
                         m_selectedSegmentIdx = 0;
                     }
 
@@ -264,14 +264,14 @@ void MeshViewerApp::drawMeshHierarchyPanel()
                     // We can never have this list grow during rendering of this ImGui frame.
                     if (lod.meshSegments.size() > m_segmentNameCache.size()) {
                         size_t numSegmentNames = std::max(static_cast<size_t>(1'000), lod.meshSegments.size());
-                        for (int idx = 0; idx < numSegmentNames; ++idx) {
+                        for (size_t idx = 0; idx < numSegmentNames; ++idx) {
                             m_segmentNameCache.push_back(fmt::format("segment{:03}", idx));
                         }
                     }
 
                     auto itemGetter = [](void* data, int idx, const char** outText) -> bool {
                         auto& segmentNameCache = *reinterpret_cast<std::vector<std::string>*>(data);
-                        ARKOSE_ASSERT(idx < segmentNameCache.size());
+                        ARKOSE_ASSERT(idx < narrow_cast<int>(segmentNameCache.size()));
                         *outText = segmentNameCache[idx].data();
                         return true;
                     };
@@ -294,15 +294,15 @@ void MeshViewerApp::drawMeshHierarchyPanel()
         if (MeshSegmentAsset* segmentAsset = selectedSegmentAsset()) {
 
             if (ImGui::TreeNode("Geometry")) {
-                ImGui::Text("  posititions: %u", segmentAsset->positions.size());
-                ImGui::Text("    texcoords: %u", segmentAsset->texcoord0s.size());
-                ImGui::Text("      normals: %u", segmentAsset->normals.size());
-                ImGui::Text("     tangents: %u", segmentAsset->tangents.size());
+                ImGui::Text("  posititions: %u", narrow_cast<i32>(segmentAsset->positions.size()));
+                ImGui::Text("    texcoords: %u", narrow_cast<i32>(segmentAsset->texcoord0s.size()));
+                ImGui::Text("      normals: %u", narrow_cast<i32>(segmentAsset->normals.size()));
+                ImGui::Text("     tangents: %u", narrow_cast<i32>(segmentAsset->tangents.size()));
                 ImGui::Spacing();
-                ImGui::Text("joint indices: %u", segmentAsset->jointIndices.size());
-                ImGui::Text("joint weights: %u", segmentAsset->jointWeights.size());
+                ImGui::Text("joint indices: %u", narrow_cast<i32>(segmentAsset->jointIndices.size()));
+                ImGui::Text("joint weights: %u", narrow_cast<i32>(segmentAsset->jointWeights.size()));
                 ImGui::Spacing();
-                ImGui::Text("      indices: %u", segmentAsset->indices.size());
+                ImGui::Text("      indices: %u", narrow_cast<i32>(segmentAsset->indices.size()));
 
                 // TODO: Add option for (re-)generating tangents here!
 

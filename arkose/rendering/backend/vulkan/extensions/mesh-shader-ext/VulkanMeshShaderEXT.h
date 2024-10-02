@@ -25,5 +25,5 @@ private:
     VkPhysicalDevice m_physicalDevice;
     VkDevice m_device;
 
-    VkPhysicalDeviceMeshShaderPropertiesEXT m_meshShaderProperties { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT };
+    VkPhysicalDeviceMeshShaderPropertiesEXT m_meshShaderProperties {};
 };

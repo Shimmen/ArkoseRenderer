@@ -10,6 +10,9 @@ VulkanRayTracingKHR::VulkanRayTracingKHR(VulkanBackend& backend, VkPhysicalDevic
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
+    m_accelerationStructureProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
+    m_rayTracingPipelineProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
+
     VkPhysicalDeviceProperties2 deviceProps2 { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
     deviceProps2.pNext = &m_accelerationStructureProperties;
     m_accelerationStructureProperties.pNext = &m_rayTracingPipelineProperties;

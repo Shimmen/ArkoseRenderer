@@ -1552,11 +1552,11 @@ void GpuScene::drawStatsGui(bool includeContainingWindow)
 
     ImGui::Text("Number of managed resources:");
     ImGui::Columns(3);
-    ImGui::Text("static meshes: %u", m_managedStaticMeshes.size());
+    ImGui::Text("static meshes: %u", narrow_cast<int>(m_managedStaticMeshes.size()));
     ImGui::NextColumn();
-    ImGui::Text("materials: %u", m_managedMaterials.size());
+    ImGui::Text("materials: %u", narrow_cast<int>(m_managedMaterials.size()));
     ImGui::NextColumn();
-    ImGui::Text("textures: %u", m_managedTextures.size());
+    ImGui::Text("textures: %u", narrow_cast<int>(m_managedTextures.size()));
     ImGui::Columns(1);
 
     if (includeContainingWindow) {
@@ -1613,7 +1613,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
                 ImGui::TableSetColumnIndex(0);
                 heapNames.push_back(fmt::format("Heap{}", heapIdx));
-                ImGui::Text(heapNames.back().c_str());
+                ImGui::Text("%s", heapNames.back().c_str());
 
                 ImGui::TableSetColumnIndex(1);
                 float heapUsedMB = ark::conversion::to::MB(heap.used);
@@ -1635,7 +1635,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
         }
 
         if (ImGui::BeginTabBar("VramGraphsTabBar")) {
-            for (int i = 0; i < stats.heaps.size(); ++i) {
+            for (size_t i = 0; i < stats.heaps.size(); ++i) {
                 if (ImGui::BeginTabItem(heapNames[i].c_str())) {
 
                     auto valuesGetter = [](void* data, int idx) -> float {
@@ -1664,7 +1664,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
         if (ImGui::BeginTabItem("Managed textures")) {
 
-            ImGui::Text("Number of managed textures: %u", m_managedTextures.size());
+            ImGui::Text("Number of managed textures: %u", narrow_cast<int>(m_managedTextures.size()));
 
             float managedTexturesTotalGB = ark::conversion::to::GB(m_managedTexturesVramUsage);
             ImGui::Text("Using %.2f GB", managedTexturesTotalGB);

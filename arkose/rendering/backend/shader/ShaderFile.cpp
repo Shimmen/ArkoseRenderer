@@ -39,7 +39,7 @@ ShaderFile::ShaderFile(std::string path, ShaderStage shaderStage, std::vector<Sh
     });
 
     m_defines_identifier = "";
-    for (int i = 0; i < m_defines.size(); ++i) {
+    for (size_t i = 0; i < m_defines.size(); ++i) {
         const ShaderDefine& define = m_defines[i];
         m_defines_identifier.append(define.symbol);
         if (define.value.has_value()) {

@@ -137,13 +137,13 @@ public:
     }
 
     template<typename DeleterFunction>
-    int processDeferredDeletes(size_t currentFrame, size_t deferFrames, DeleterFunction&& deleterFunction)
+    size_t processDeferredDeletes(size_t currentFrame, size_t deferFrames, DeleterFunction&& deleterFunction)
     {
         if (m_deferredDeleteList.empty()) {
             return 0;
         }
 
-        int numDeletes = 0;
+        size_t numDeletes = 0;
 
         for (int64_t idx = std::ssize(m_deferredDeleteList) - 1; idx >= 0; idx -= 1) {
 

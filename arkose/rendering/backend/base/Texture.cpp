@@ -221,6 +221,8 @@ void Texture::setPixelData(vec4 pixel)
     case Texture::Format::Unknown:
         ASSERT_NOT_REACHED();
         break;
+    default:
+        ARKOSE_LOG(Fatal, "Texture::setPixelData: unhandled texture format");
     }
 
     ARKOSE_ASSERT(numChannels == 4);
@@ -269,7 +271,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     //       a single file, e.g. a compressed binary blob or some proper format with layer support,
     //       such as OpenEXR.
 
-    size_t totalRequiredSize = 0;
+    //size_t totalRequiredSize = 0;
     std::vector<ImageAsset*> imageAssets;
     for (size_t idx = 0;; ++idx) {
         std::string imagePath = fmt::vformat(imagePathSequencePattern, fmt::make_format_args(idx));
@@ -277,7 +279,7 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
         if (!imageAsset)
             break;
         // TODO: Support multiple mips!
-        totalRequiredSize += imageAsset->pixelDataForMip(0).size();
+        //totalRequiredSize += imageAsset->pixelDataForMip(0).size();
         imageAssets.push_back(imageAsset);
     }
 

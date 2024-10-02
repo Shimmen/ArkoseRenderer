@@ -498,7 +498,7 @@ std::unique_ptr<SkeletonAsset> GltfLoader::createSkeleton(tinygltf::Model const&
     std::unordered_map<int, int> jointIdxLookup {};
     for (size_t idx = 0; idx < gltfSkin.joints.size(); ++idx) {
         int nodeIdx = gltfSkin.joints[idx];
-        jointIdxLookup[nodeIdx] = idx;
+        jointIdxLookup[nodeIdx] = narrow_cast<int>(idx);
     }
 
     // This max is not immediately obvious when in an hierarchy as it is in the asset...

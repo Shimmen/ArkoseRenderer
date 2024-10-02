@@ -55,6 +55,6 @@ private:
     VkPhysicalDevice m_physicalDevice;
     VkDevice m_device;
 
-    VkPhysicalDeviceAccelerationStructurePropertiesKHR m_accelerationStructureProperties { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR };
-    VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_rayTracingPipelineProperties { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR };
+    VkPhysicalDeviceAccelerationStructurePropertiesKHR m_accelerationStructureProperties {};
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR m_rayTracingPipelineProperties {};
 };

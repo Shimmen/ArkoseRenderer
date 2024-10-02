@@ -9,6 +9,8 @@ VulkanMeshShaderEXT::VulkanMeshShaderEXT(VulkanBackend& backend, VkPhysicalDevic
 {
     SCOPED_PROFILE_ZONE_BACKEND();
 
+    m_meshShaderProperties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
+
     VkPhysicalDeviceProperties2 deviceProps2 { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2 };
     deviceProps2.pNext = &m_meshShaderProperties;
     vkGetPhysicalDeviceProperties2(m_physicalDevice, &deviceProps2);

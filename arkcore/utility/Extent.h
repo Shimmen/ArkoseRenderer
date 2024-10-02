@@ -23,10 +23,6 @@ struct Extent2D {
         ARKOSE_ASSERT(width >= 0);
         ARKOSE_ASSERT(height >= 0);
     }
-    constexpr Extent2D(const Extent2D& other)
-        : Extent2D(other.m_width, other.m_height)
-    {
-    }
 
     [[nodiscard]] uint32_t width() const { return m_width; }
     [[nodiscard]] uint32_t height() const { return m_height; }
@@ -84,10 +80,6 @@ struct Extent3D {
         : m_width(width)
         , m_height(height)
         , m_depth(depth)
-    {
-    }
-    constexpr Extent3D(const Extent3D& other)
-        : Extent3D(other.m_width, other.m_height, other.m_depth)
     {
     }
     constexpr Extent3D(const Extent2D& extent2d, uint32_t depth = 1)

@@ -315,7 +315,7 @@ private:
         std::unique_ptr<UploadBuffer> uploadBuffer {};
 
         static constexpr uint32_t TimestampQueryPoolCount = 100;
-        TimestampResult64 timestampResults[TimestampQueryPoolCount] = { 0 };
+        TimestampResult64 timestampResults[TimestampQueryPoolCount] = {};
         uint32_t numTimestampsWrittenLastTime { 0 };
         VkQueryPool timestampQueryPool {};
     };
