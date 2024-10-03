@@ -16,8 +16,10 @@ if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
 	set_property(TARGET dlss PROPERTY IMPORTED_IMPLIB         "${dlss_fetch_SOURCE_DIR}/lib/Windows_x86_64/x86_64/nvsdk_ngx_d.lib")
 	set_property(TARGET dlss PROPERTY IMPORTED_IMPLIB_DEBUG   "${dlss_fetch_SOURCE_DIR}/lib/Windows_x86_64/x86_64/nvsdk_ngx_d_dbg.lib")
 elseif(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
-	set_property(TARGET dlss PROPERTY IMPORTED_LOCATION       "${dlss_fetch_SOURCE_DIR}/lib/Linux_x86_64/rel/libnvidia-ngx-dlss.so.3.7.10")
-	set_property(TARGET dlss PROPERTY IMPORTED_IMPLIB         "${dlss_fetch_SOURCE_DIR}/lib/Linux_x86_64/libnvsdk_ngx.a")
+	# Disable for now as it doesn't seem to link correctly on Linux for some reason.. Linux is just used for CI builds for now anyway
+	set(DLSS_AVAILABLE OFF CACHE INTERNAL "" FORCE)
+	#set_property(TARGET dlss PROPERTY IMPORTED_LOCATION       "${dlss_fetch_SOURCE_DIR}/lib/Linux_x86_64/rel/libnvidia-ngx-dlss.so.3.7.10")
+	#set_property(TARGET dlss PROPERTY IMPORTED_IMPLIB         "${dlss_fetch_SOURCE_DIR}/lib/Linux_x86_64/libnvsdk_ngx.a")
 else()
 	# NOTE: DLSS is only available on Windows & Linux
 	set(DLSS_AVAILABLE OFF CACHE INTERNAL "" FORCE)
