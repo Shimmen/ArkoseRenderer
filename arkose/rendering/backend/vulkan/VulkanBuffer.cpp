@@ -145,6 +145,8 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
                 usageFlags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
             }
             break;
+        default:
+            ASSERT_NOT_REACHED();
         }
         break;
     case Buffer::Usage::ConstantBuffer:
@@ -186,6 +188,10 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
             if constexpr (vulkanDebugMode) {
                 usageFlags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
             }
+            break;
+        default:
+            // no action needed
+            break;
         }
     }
 

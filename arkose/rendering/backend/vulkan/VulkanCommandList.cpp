@@ -842,6 +842,9 @@ void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
         issuePipelineBarrierForRayTracingStateResources(VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR);
         vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, khrRtState.pipeline);
     } break;
+    default: {
+        ASSERT_NOT_REACHED();
+    } break;
     }
 
     rtState.stateBindings().forEachBindingSet([this](u32 setIndex, BindingSet& bindingSet) {
@@ -1263,6 +1266,9 @@ void VulkanCommandList::buildTopLevelAcceratationStructure(TopLevelAS& tlas, Acc
         auto& rtxTlas = static_cast<VulkanTopLevelASNV&>(tlas);
         rtxTlas.build(m_commandBuffer, buildType);
     } break;
+    default: {
+        ASSERT_NOT_REACHED();
+    } break;
     }
 
     endDebugLabel();
@@ -1286,6 +1292,9 @@ void VulkanCommandList::buildBottomLevelAcceratationStructure(BottomLevelAS& bla
         [[maybe_unused]] auto& rtxBlas = static_cast<VulkanBottomLevelASNV&>(blas);
         NOT_YET_IMPLEMENTED();
     } break;
+    default: {
+        ASSERT_NOT_REACHED();
+    } break;
     }
 
     endDebugLabel();
@@ -1308,6 +1317,9 @@ void VulkanCommandList::traceRays(Extent2D extent)
     case VulkanBackend::RayTracingBackend::NvExtension: {
         auto& rtxRtState = static_cast<const VulkanRayTracingStateNV&>(*activeRayTracingState);
         rtxRtState.traceRays(m_commandBuffer, extent);
+    } break;
+    default: {
+        ASSERT_NOT_REACHED();
     } break;
     }
 }
@@ -1611,6 +1623,8 @@ std::pair<VkPipelineLayout, VkPipelineBindPoint> VulkanCommandList::currentlyBou
             return { static_cast<const VulkanRayTracingStateNV*>(activeRayTracingState)->pipelineLayout, VK_PIPELINE_BIND_POINT_RAY_TRACING_NV };
         case VulkanBackend::RayTracingBackend::KhrExtension:
             return { static_cast<const VulkanRayTracingStateKHR*>(activeRayTracingState)->pipelineLayout, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR };
+        default:
+            ASSERT_NOT_REACHED();
         }
     }
 
