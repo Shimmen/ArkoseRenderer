@@ -50,6 +50,8 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                     case VulkanBackend::RayTracingBackend::KhrExtension:
                         poolSize.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
                         break;
+                    default:
+                        ASSERT_NOT_REACHED();
                     }
                     break;
                 default:
@@ -116,6 +118,8 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 case VulkanBackend::RayTracingBackend::KhrExtension:
                     binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
                     break;
+                default:
+                    ASSERT_NOT_REACHED();
                 }
                 break;
             default:
@@ -378,6 +382,10 @@ void VulkanBindingSet::updateBindings()
                 write.pNext = &khrAccelStructWrites.back();
                 write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 
+            } break;
+
+            default: {
+                ASSERT_NOT_REACHED();
             } break;
             }
 
