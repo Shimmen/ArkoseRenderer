@@ -380,9 +380,11 @@ void MeshViewerApp::drawMeshMaterialPanel()
                     if (materialInput.has_value()) {
 
                         auto imageSelectDialog = [&]() {
-                            if (auto maybePath = FileDialog::open({ { "Arkose image", ImageAsset::AssetFileExtension } })) {
+                            if (auto maybePath = FileDialog::open({ { "Arkose image", ImageAsset::AssetFileExtension },
+                                                                    { "png", "png" },
+                                                                    { "jpeg", "jpeg,jpg" } })) {
                                 std::string newImagePath = maybePath.value();
-                                if (ImageAsset* newImageAsset = ImageAsset::load(newImagePath)) {
+                                if (ImageAsset* newImageAsset = ImageAsset::loadOrCreate(newImagePath)) {
                                     materialInput->setPathToImage(newImagePath);
                                     didChange |= true;
                                 }
