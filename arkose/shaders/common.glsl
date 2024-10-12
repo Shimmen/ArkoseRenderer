@@ -71,6 +71,11 @@ vec3 saturate(vec3 x)
     return clamp(x, vec3(0.0), vec3(1.0));
 }
 
+float maxComponent(vec2 v)
+{
+    return max(v.x, v.y);
+}
+
 float maxComponent(vec3 v)
 {
     return max(max(v.x, v.y), v.z);

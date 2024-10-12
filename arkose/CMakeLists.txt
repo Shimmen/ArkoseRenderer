@@ -127,6 +127,8 @@ set(ARKOSE_SOURCES
     # debug
     arkose/rendering/debug/DebugDrawer.cpp
     arkose/rendering/debug/DebugDrawer.h
+    arkose/rendering/debug/EditorGridRenderNode.cpp
+    arkose/rendering/debug/EditorGridRenderNode.h
     # forward
     arkose/rendering/forward/ForwardModes.h
     arkose/rendering/forward/ForwardRenderNode.cpp

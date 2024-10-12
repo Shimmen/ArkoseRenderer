@@ -85,6 +85,11 @@ float valueForManualExposure(float aperture, float shutterSpeed, float ISO)
     return exposure;
 }
 
+vec3 camera_getPosition(CameraState camera)
+{
+    return camera.worldFromView[3].xyz;
+}
+
 ivec2 projectViewSpaceToPixel(vec3 viewSpacePos, ivec2 pixelDimensions, CameraState camera)
 {
     vec4 projectedPixel = camera.pixelFromView * vec4(viewSpacePos, 1.0);
