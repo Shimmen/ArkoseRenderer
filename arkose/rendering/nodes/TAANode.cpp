@@ -13,9 +13,9 @@ TAANode::TAANode(Camera& camera)
 
 void TAANode::drawGui()
 {
-    ImGui::Checkbox("Enabled##taa", &m_taaEnabled);
+    ImGui::Checkbox("Enabled", &m_taaEnabled);
 
-    if (ImGui::TreeNode("Advanced##taa")) {
+    if (ImGui::TreeNode("Advanced")) {
         ImGui::SliderFloat("Hysteresis", &m_hysteresis, 0.0f, 1.0f);
         ImGui::Checkbox("Use Catmull-Rom history sampling", &m_useCatmullRom);
         ImGui::TreePop();
@@ -24,15 +24,12 @@ void TAANode::drawGui()
 
 RenderPipelineNode::ExecuteCallback TAANode::construct(GpuScene& scene, Registry& reg)
 {
-    ///////////////////////
-    // constructNode
-    Texture& accumulationTexture = reg.createTexture2D(pipeline().renderResolution(), Texture::Format::RGBA8);
-    ///////////////////////
-
-    Texture& currentFrameTexture = *reg.getTexture("SceneColorLDR");
+    // Add LDR fallback for if placed after tone-mapping?
+    Texture& currentFrameTexture = *reg.getTexture("SceneColor");
     Texture& currentFrameVelocity = *reg.getTexture("SceneNormalVelocity");
 
-    Texture& historyTexture = reg.createTexture2D(accumulationTexture.extent(), accumulationTexture.format(),
+    Texture& accumulationTexture = reg.createTexture2D(currentFrameTexture.extent(), Texture::Format::RGBA16F);
+    Texture& historyTexture = reg.createTexture2D(currentFrameTexture.extent(), currentFrameTexture.format(),
                                                   Texture::Filters::linear(), Texture::Mipmap::None, ImageWrapModes::clampAllToEdge());
 
     BindingSet& taaBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(accumulationTexture, ShaderStage::Compute),
@@ -53,8 +50,9 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(GpuScene& scene, Registry
         const bool wasEnabledThisFrame = m_taaEnabled && !m_taaEnabledPreviousFrame;
         m_taaEnabledPreviousFrame = m_taaEnabled;
 
-        if (!m_taaEnabled)
+        if (!m_taaEnabled) {
             return;
+        }
 
         // NOTE: Relative first frame includes first frame after e.g. screen resize and other pipline invalidating actions
         const bool firstFrame = appState.isRelativeFirstFrame() || wasEnabledThisFrame;
@@ -74,7 +72,6 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(GpuScene& scene, Registry
         cmdList.setNamedUniform("useCatmullRom", m_useCatmullRom);
 
         cmdList.dispatch(currentFrameTexture.extent3D(), { 16, 16, 1 });
-
 
         // TODO: Noooo.. we don't want to have to do this :(
         // There might be some clever way to avoid all these copies.

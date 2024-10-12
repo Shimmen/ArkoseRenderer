@@ -117,8 +117,8 @@ void GeodataApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     //pipeline.addNode<VisibilityBufferDebugNode>(); sceneTexture = "VisibilityBufferDebugVis";
 
-    pipeline.addNode<TonemapNode>(sceneTexture);
     pipeline.addNode<TAANode>(scene.camera());
+    pipeline.addNode<TonemapNode>(sceneTexture);
 
     pipeline.addNode<DebugDrawNode>();
 

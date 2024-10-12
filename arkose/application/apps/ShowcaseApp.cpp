@@ -194,25 +194,22 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     }
 #endif
 
-    pipeline.addNode<TonemapNode>(sceneTexture);
-
-    switch (antiAliasingMode) {
-    case AntiAliasing::None:
-        break;
-    case AntiAliasing::FXAA:
-        pipeline.addNode<FXAANode>();
-        break;
-    case AntiAliasing::TAA:
+    if (antiAliasingMode == AntiAliasing::TAA) {
         pipeline.addNode<TAANode>(scene.camera());
-        break;
     }
+
+    pipeline.addNode<TonemapNode>(sceneTexture);
 
     // TODO: Make debug drawing work (properly) with upscaling
     if constexpr (!withUpscaling) {
         pipeline.addNode<DebugDrawNode>();
     }
 
-    pipeline.addNode<CASNode>(finalTextureToScreen);
+    if (antiAliasingMode == AntiAliasing::FXAA) {
+        pipeline.addNode<FXAANode>();
+    }
+
+    pipeline.addNode<CASNode>(sceneTexture);
 
     FinalNode& finalNode = pipeline.addNode<FinalNode>(finalTextureToScreen);
     finalNode.setRenderFilmGrain(true);

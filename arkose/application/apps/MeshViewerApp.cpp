@@ -70,8 +70,8 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
                                         ForwardMeshFilter::AllMeshes,
                                         ForwardClearMode ::DontClear);
 
-    pipeline.addNode<TonemapNode>("SceneColor");
     pipeline.addNode<TAANode>(scene.camera());
+    pipeline.addNode<TonemapNode>("SceneColor");
 
     pipeline.addNode<EditorGridRenderNode>();
     pipeline.addNode<DebugDrawNode>();

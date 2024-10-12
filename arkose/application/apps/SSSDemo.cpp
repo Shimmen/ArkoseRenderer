@@ -132,8 +132,8 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
     const std::string sceneTexture = "SceneColor";
     const std::string finalTextureToScreen = "SceneColorLDR";
 
-    pipeline.addNode<TonemapNode>(sceneTexture);
     pipeline.addNode<TAANode>(scene.camera());
+    pipeline.addNode<TonemapNode>(sceneTexture);
 
     pipeline.addNode<DebugDrawNode>();
 
