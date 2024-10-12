@@ -176,4 +176,91 @@ vec3 samplePolishedGlassMaterial(inout PathTracerRayPayload payload, PathTraceMa
     return payload.insideGlass ? vec3(1.0) : vec3(1.0 - absorptionFactor);
 }
 
+vec3 evaluateTranslucentMicrofacetMaterial(inout PathTracerRayPayload payload, PathTraceMaterial material, float absorptionFactor, vec3 V, vec3 L, vec3 F, out float PDF)
+{
+    PDF = 0.0;
+    vec3 f = vec3(0.0);
+
+    float reflectance = luminance(F);
+
+    float microfacetReflectionProb = reflectance;
+    float refractionProb = (1.0 - microfacetReflectionProb) * (1.0 - absorptionFactor);
+
+    // Normalize probabilities
+    float invTotalWeight = 1.0 / (microfacetReflectionProb + refractionProb);
+    microfacetReflectionProb *= invTotalWeight;
+    refractionProb *= invTotalWeight;
+
+    bool reflected = L.z * V.z > 0.0;
+
+    // Microfacet reflection
+    if (microfacetReflectionProb > 0.0 && reflected) {
+        float microfacetPdf;
+        float microfacetWeight = 1.0; // ??
+        f += evaluateMicrofacet(material, V, L, F, microfacetPdf) * microfacetWeight;
+        PDF += microfacetPdf * microfacetReflectionProb;
+    }
+
+    // Refraction
+    if (refractionProb > 0.0) {
+        float refractionPdf = 1.0; // ??
+        float refractionWeight = 1.0 - absorptionFactor;
+        f += vec3(1.0) * refractionWeight;
+        PDF += refractionPdf * refractionProb;
+    }
+
+    return f * abs(L.z);
+}
+
+vec3 sampleTranslucentMicrofacetMaterial(inout PathTracerRayPayload payload, PathTraceMaterial material, float absorptionFactor, vec3 V, out vec3 L, out float PDF)
+{
+    if (V.z <= 0.0) {
+        PDF = 0.0;
+        return vec3(0.0);
+    }
+
+    // Should this be conditional on it not reflecting to begin with..?
+    float r0 = pt_randomFloat(payload);
+    bool isAbsorbed = !payload.insideGlass && absorptionFactor > r0;
+
+    vec3 f0 = vec3(DIELECTRIC_REFLECTANCE);
+    vec3 F = F_Schlick(V.z, f0);
+    float reflectance = luminance(F);
+
+    const float eta = payload.insideGlass
+        ? (IOR_GLASS / IOR_AIR)
+        : (IOR_AIR / IOR_GLASS);
+
+    float r1 = pt_randomFloat(payload);
+    float r2 = pt_randomFloat(payload);
+
+    vec2 a = vec2(square(material.roughness)); // isotropic, for now
+    vec3 H = sampleGGXVNDF(V, a.x, a.y, r1, r2);
+
+    vec3 L_refracted = refract(-V, H, eta);
+    bool cantRefract = lengthSquared(L_refracted) < 1e-2f;
+
+    float r3 = pt_randomFloat(payload);
+    if (cantRefract || reflectance > r3) {
+        // Reflect over microfacet
+
+        L = reflect(-V, H);
+
+    } else if (isAbsorbed) {
+        // Not reflected and absorbed
+
+        PDF = 0.0; // kill path
+        return vec3(0.0);
+
+    } else {
+        // Refract through the surface
+
+        L = L_refracted;
+        payload.insideGlass != payload.insideGlass;
+
+    }
+
+    return evaluateTranslucentMicrofacetMaterial(payload, material, absorptionFactor, V, L, F, PDF);
+}
+
 #endif // PATHTRACER_MATERIAL_GLSL

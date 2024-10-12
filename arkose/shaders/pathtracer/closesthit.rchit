@@ -212,9 +212,8 @@ void main()
 #if defined(PATHTRACER_BRDF_DEFAULT)
         vec3 brdf = sampleOpaqueMicrofacetMaterial(payload, ptMaterial, V, L, pdf);
 #elif defined(PATHTRACER_BRDF_GLASS)
-        // TODO: Make this a microfacet glass BSDF!
         float alpha = texture(material_getTexture(material.baseColor), uv).a * material.colorTint.a;
-        vec3 brdf = samplePolishedGlassMaterial(payload, ptMaterial, 1.0 - alpha, V, L, pdf);
+        vec3 brdf = sampleTranslucentMicrofacetMaterial(payload, ptMaterial, alpha, V, L, pdf);
 #endif
 
         if (pdf > 0.0) {
