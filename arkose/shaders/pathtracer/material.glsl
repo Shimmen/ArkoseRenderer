@@ -173,7 +173,7 @@ vec3 samplePolishedGlassMaterial(inout PathTracerRayPayload payload, PathTraceMa
     }
 
     PDF = 1.0; // really we want it to not evaluate PDF at all, as it's not a sampled/probabilistic direction
-    return payload.insideGlass ? vec3(1.0) : vec3(absorptionFactor);
+    return payload.insideGlass ? vec3(1.0) : vec3(1.0 - absorptionFactor);
 }
 
 #endif // PATHTRACER_MATERIAL_GLSL
