@@ -6,6 +6,7 @@
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
 #include "rendering/debug/DebugDrawer.h"
+#include "rendering/debug/EditorGridRenderNode.h"
 #include "rendering/forward/ForwardRenderNode.h"
 #include "rendering/forward/PrepassNode.h"
 #include "rendering/nodes/BloomNode.h"
@@ -72,8 +73,9 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<TonemapNode>("SceneColor");
     pipeline.addNode<TAANode>(scene.camera());
 
+    pipeline.addNode<EditorGridRenderNode>();
     pipeline.addNode<DebugDrawNode>();
-    
+
     FinalNode& finalNode = pipeline.addNode<FinalNode>("SceneColorLDR");
     finalNode.setRenderFilmGrain(false);
     finalNode.setRenderVignette(false);
