@@ -1120,10 +1120,9 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
         createInfo.minImageCount = std::min(createInfo.minImageCount, surfaceCapabilities.maxImageCount);
     }
 
-    VkSurfaceFormatKHR surfaceFormat = pickBestSurfaceFormat();
-    createInfo.imageFormat = surfaceFormat.format;
-    createInfo.imageColorSpace = surfaceFormat.colorSpace;
-    m_swapchainImageFormat = surfaceFormat.format;
+    m_surfaceFormat = pickBestSurfaceFormat();
+    createInfo.imageFormat = m_surfaceFormat.format;
+    createInfo.imageColorSpace = m_surfaceFormat.colorSpace;
 
     VkPresentModeKHR presentMode = pickBestPresentMode();
     createInfo.presentMode = presentMode;
@@ -1175,7 +1174,7 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
 
             imageViewCreateInfo.image = swapchainImageContext->image;
             imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-            imageViewCreateInfo.format = surfaceFormat.format;
+            imageViewCreateInfo.format = m_surfaceFormat.format;
 
             imageViewCreateInfo.components = {
                 .r = VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -1213,7 +1212,7 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
             mockTexture->m_description.multisampling = Texture::Multisampling::None;
 
             mockTexture->vkUsage = createInfo.imageUsage;
-            mockTexture->vkFormat = m_swapchainImageFormat;
+            mockTexture->vkFormat = m_surfaceFormat.format;
             mockTexture->image = swapchainImageContext->image;
             mockTexture->imageView = swapchainImageContext->imageView;
             mockTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -2340,4 +2339,16 @@ UpscalingPreferences VulkanBackend::queryUpscalingPreferences(UpscalingTech tech
 #endif
 
     ASSERT_NOT_REACHED();
+}
+
+Backend::SwapchainTransferFunction VulkanBackend::swapchainTransferFunction() const
+{
+    switch (m_surfaceFormat.colorSpace) {
+    case VK_COLOR_SPACE_SRGB_NONLINEAR_KHR:
+        return SwapchainTransferFunction::sRGB_nonLinear;
+    case VK_COLOR_SPACE_HDR10_ST2084_EXT:
+        return SwapchainTransferFunction::ST2084;
+    default:
+        ASSERT_NOT_REACHED();
+    }
 }

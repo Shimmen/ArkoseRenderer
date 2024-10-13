@@ -68,6 +68,8 @@ public:
     bool hasUpscalingSupport() const override;
     UpscalingPreferences queryUpscalingPreferences(UpscalingTech, UpscalingQuality, Extent2D outputRes) const override;
 
+    SwapchainTransferFunction swapchainTransferFunction() const override;
+
     ///////////////////////////////////////////////////////////////////////////
     /// Backend-specific resource types
 
@@ -281,10 +283,10 @@ private:
     /// Window and swapchain related members
 
     VkSurfaceKHR m_surface {};
+    VkSurfaceFormatKHR m_surfaceFormat {};
 
     VkSwapchainKHR m_swapchain {};
     Extent2D m_swapchainExtent {};
-    VkFormat m_swapchainImageFormat {};
 
     struct SwapchainImageContext {
         VkImage image {}; // NOTE: Owned by the swapchain!

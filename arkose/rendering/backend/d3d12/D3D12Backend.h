@@ -44,6 +44,8 @@ public:
 
     virtual bool hasUpscalingSupport() const override { return false; }
 
+    SwapchainTransferFunction swapchainTransferFunction() const override { return SwapchainTransferFunction::sRGB_nonLinear; }
+
     ///////////////////////////////////////////////////////////////////////////
     /// Backend-specific resource types
 

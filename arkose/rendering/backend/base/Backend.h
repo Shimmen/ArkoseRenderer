@@ -37,6 +37,13 @@ public:
         Shader16BitFloat,
     };
 
+    enum class SwapchainTransferFunction {
+        // i.e., using the sRGB / Rec. 709 transfer function
+        sRGB_nonLinear,
+        // i.e., using the perceptual quantizer (PQ) transfer function
+        ST2084,
+    };
+
     struct AppSpecification {
         std::vector<Backend::Capability> requiredCapabilities;
         std::vector<Backend::Capability> optionalCapabilities;
@@ -67,6 +74,9 @@ public:
 
     virtual bool hasUpscalingSupport() const = 0;
     virtual UpscalingPreferences queryUpscalingPreferences(UpscalingTech, UpscalingQuality, Extent2D outputRes) const { return UpscalingPreferences(); }
+
+    virtual SwapchainTransferFunction swapchainTransferFunction() const = 0;
+    virtual bool hasSrgbTransferFunction() const { return swapchainTransferFunction() == SwapchainTransferFunction::sRGB_nonLinear; }
 
     virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage) = 0;
     virtual std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) = 0;
