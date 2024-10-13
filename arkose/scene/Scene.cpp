@@ -519,6 +519,9 @@ void Scene::drawSettingsGui(bool includeContainingWindow)
     if (ImGui::TreeNode("Visualisations")) {
         ImGui::Checkbox("Draw all mesh bounding boxes", &m_shouldDrawAllInstanceBoundingBoxes);
         ImGui::Checkbox("Draw bounding box of the selected mesh instance", &m_shouldDrawSelectedInstanceBoundingBox);
+        ImGui::Separator();
+        ImGui::Checkbox("Draw all mesh skeletons", &m_shouldDrawAllSkeletons);
+        ImGui::Checkbox("Draw skeleton of the selected mesh instance", &m_shouldDrawSelectedInstanceSkeleton);
         ImGui::TreePop();
     }
 
@@ -543,6 +546,11 @@ void Scene::drawInstanceBoundingBox(SkeletalMeshInstance const& instance)
         ark::aabb3 transformedAABB = skeletalMesh->underlyingMesh().boundingBox().transformed(instance.transform().worldMatrix());
         DebugDrawer::get().drawBox(transformedAABB.min, transformedAABB.max, vec3(1.0f, 1.0f, 1.0f));
     }
+}
+
+void Scene::drawInstanceSkeleton(SkeletalMeshInstance const& instance)
+{
+    DebugDrawer::get().drawSkeleton(instance.skeleton(), instance.transform().worldMatrix());
 }
 
 void Scene::drawSceneGizmos()
@@ -596,14 +604,26 @@ void Scene::drawSceneGizmos()
             drawInstanceBoundingBox(*instance);
         }
     }
+    if (m_shouldDrawAllSkeletons) {
+        for (auto const& instance : gpuScene().skeletalMeshInstances()) {
+            drawInstanceSkeleton(*instance);
+        }
+    }
 
     if (selectedObject()) {
 
-        if (m_shouldDrawSelectedInstanceBoundingBox) {
+        if (m_shouldDrawSelectedInstanceBoundingBox || m_shouldDrawSelectedInstanceSkeleton) {
             if (auto* staticInstance = dynamic_cast<StaticMeshInstance*>(selectedObject())) {
-                drawInstanceBoundingBox(*staticInstance);
+                if (m_shouldDrawSelectedInstanceBoundingBox) {
+                    drawInstanceBoundingBox(*staticInstance);
+                }
             } else if (auto* skeletalInstance = dynamic_cast<SkeletalMeshInstance*>(selectedObject())) {
-                drawInstanceBoundingBox(*skeletalInstance);
+                if (m_shouldDrawSelectedInstanceBoundingBox) {
+                    drawInstanceBoundingBox(*skeletalInstance);
+                }
+                if (m_shouldDrawSelectedInstanceSkeleton) { 
+                    drawInstanceSkeleton(*skeletalInstance);
+                }
             }
         }
 

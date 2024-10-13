@@ -118,6 +118,7 @@ public:
     void drawSettingsGui(bool includeContainingWindow = false);
     void drawInstanceBoundingBox(StaticMeshInstance const&);
     void drawInstanceBoundingBox(SkeletalMeshInstance const&);
+    void drawInstanceSkeleton(SkeletalMeshInstance const&);
     void drawSceneGizmos();
 
 private:
@@ -144,6 +145,8 @@ private:
 
     bool m_shouldDrawAllInstanceBoundingBoxes { false };
     bool m_shouldDrawSelectedInstanceBoundingBox { false };
+    bool m_shouldDrawAllSkeletons { false };
+    bool m_shouldDrawSelectedInstanceSkeleton { false };
 
     bool m_shouldDrawGizmos { false };
     std::vector<EditorGizmo> m_editorGizmos {};
