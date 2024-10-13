@@ -40,6 +40,14 @@ void DebugDrawer::drawIcon(IconBillboard const& iconBillboard, vec3 tint)
     }
 }
 
+void DebugDrawer::drawSkeleton(Skeleton const& skeleton, mat4 rootTransform, vec3 color)
+{
+    validateDebugDrawersAreSetup("skeleton");
+    for (IDebugDrawer* debugDrawer : m_debugDrawers) {
+        debugDrawer->drawSkeleton(skeleton, rootTransform, color);
+    }
+}
+
 void DebugDrawer::registerDebugDrawer(IDebugDrawer& debugDrawer)
 {
     m_debugDrawers.push_back(&debugDrawer);

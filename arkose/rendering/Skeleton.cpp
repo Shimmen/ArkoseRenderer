@@ -89,6 +89,11 @@ std::vector<mat3> const& Skeleton::appliedJointTangentMatrices() const
     return m_appliedJointTangentMatrices;
 }
 
+SkeletonJoint const& Skeleton::rootJoint() const
+{
+    return m_rootJoint;
+}
+
 void Skeleton::debugPrintState() const
 {
     fmt::print("Skeleton:\n");

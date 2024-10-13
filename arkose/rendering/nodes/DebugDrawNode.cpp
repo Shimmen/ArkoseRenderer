@@ -3,6 +3,7 @@
 #include "core/Logging.h"
 #include "rendering/GpuScene.h"
 #include "rendering/Icon.h"
+#include "rendering/Skeleton.h"
 #include "rendering/debug/DebugDrawer.h"
 #include <ark/core.h>
 #include <imgui.h>
@@ -235,6 +236,31 @@ void DebugDrawNode::drawIcon(IconBillboard const& icon, vec3 tint)
     m_triangleVertices.emplace_back(ps[0], tint, uvs[0]);
     m_triangleVertices.emplace_back(ps[3], tint, uvs[3]);
     m_triangleVertices.emplace_back(ps[2], tint, uvs[2]);
+}
+
+void DebugDrawNode::drawSkeleton(Skeleton const& skeleton, mat4 rootTransform, vec3 color)
+{
+    std::function<void(SkeletonJoint const&, vec3)> recursivelyDrawJoints = [&](SkeletonJoint const& joint, vec3 previousJointPosition) {
+        mat4 jointTransform = rootTransform * joint.transform().worldMatrix();
+        vec3 jointPosition = jointTransform.w.xyz();
+
+        drawSphere(jointPosition, 0.01f, color);
+        drawLine(previousJointPosition, jointPosition, color);
+
+        if (joint.childJoints().size() == 0) { 
+            // Draw end-joints as a xyz axis visualization (is there a nicer way of doing this? probably..)
+            drawLine(jointPosition, jointPosition + jointTransform.x.xyz() * 0.1f, vec3(1.0f, 0.0f, 0.0f));
+            drawLine(jointPosition, jointPosition + jointTransform.y.xyz() * 0.1f, vec3(0.0f, 1.0f, 0.0f));
+            drawLine(jointPosition, jointPosition + jointTransform.z.xyz() * 0.1f, vec3(0.0f, 0.0f, 1.0f));
+        }
+
+        for (SkeletonJoint const& childJoint : joint.childJoints()) {
+            recursivelyDrawJoints(childJoint, jointPosition);
+        }
+    };
+
+    vec3 rootPosition = rootTransform.w.xyz();
+    recursivelyDrawJoints(skeleton.rootJoint(), rootPosition);
 }
 
 DebugTextureBindingSetHandle DebugDrawNode::createIconTextureBindingSet(Icon const* icon)

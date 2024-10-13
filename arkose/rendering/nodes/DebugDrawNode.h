@@ -24,6 +24,7 @@ public:
     virtual void drawBox(vec3 minPoint, vec3 maxPoint, vec3 color) override;
     virtual void drawSphere(vec3 center, float radius, vec3 color) override;
     virtual void drawIcon(IconBillboard const&, vec3 tint) override;
+    virtual void drawSkeleton(Skeleton const&, mat4 rootTransform, vec3 color) override;
 
 private:
     Backend* m_backend { nullptr };

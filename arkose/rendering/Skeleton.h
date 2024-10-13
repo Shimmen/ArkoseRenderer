@@ -47,6 +47,8 @@ public:
     std::vector<mat4> const& appliedJointMatrices() const;
     std::vector<mat3> const& appliedJointTangentMatrices() const;
 
+    SkeletonJoint const& rootJoint() const;
+
     void debugPrintState() const;
 
 private:
