@@ -117,6 +117,7 @@ public:
 
     void drawSettingsGui(bool includeContainingWindow = false);
     void drawInstanceBoundingBox(StaticMeshInstance const&);
+    void drawInstanceBoundingBox(SkeletalMeshInstance const&);
     void drawSceneGizmos();
 
 private:

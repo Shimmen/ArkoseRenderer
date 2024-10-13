@@ -536,6 +536,15 @@ void Scene::drawInstanceBoundingBox(StaticMeshInstance const& instance)
     }
 }
 
+void Scene::drawInstanceBoundingBox(SkeletalMeshInstance const& instance)
+{
+    if (SkeletalMesh* skeletalMesh = gpuScene().skeletalMeshForHandle(instance.mesh())) {
+        // TODO: Use an animated bounding box! The static one is only guaranteed to be bounding for the rest pose
+        ark::aabb3 transformedAABB = skeletalMesh->underlyingMesh().boundingBox().transformed(instance.transform().worldMatrix());
+        DebugDrawer::get().drawBox(transformedAABB.min, transformedAABB.max, vec3(1.0f, 1.0f, 1.0f));
+    }
+}
+
 void Scene::drawSceneGizmos()
 {
     // Reset "persistent" gizmos
@@ -583,13 +592,18 @@ void Scene::drawSceneGizmos()
         for (auto const& instance : gpuScene().staticMeshInstances()) {
             drawInstanceBoundingBox(*instance);
         }
+        for (auto const& instance : gpuScene().skeletalMeshInstances()) {
+            drawInstanceBoundingBox(*instance);
+        }
     }
 
     if (selectedObject()) {
 
         if (m_shouldDrawSelectedInstanceBoundingBox) {
-            if (auto* instance = dynamic_cast<StaticMeshInstance*>(selectedObject())) {
-                drawInstanceBoundingBox(*instance);
+            if (auto* staticInstance = dynamic_cast<StaticMeshInstance*>(selectedObject())) {
+                drawInstanceBoundingBox(*staticInstance);
+            } else if (auto* skeletalInstance = dynamic_cast<SkeletalMeshInstance*>(selectedObject())) {
+                drawInstanceBoundingBox(*skeletalInstance);
             }
         }
 
