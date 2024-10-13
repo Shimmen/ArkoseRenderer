@@ -175,4 +175,11 @@ constexpr T divideAndRoundUp(T numerator, T denominator)
     return (numerator + denominator - 1) / denominator;
 }
 
+template<typename T, ENABLE_IF_INTEGRAL(T)>
+constexpr T alignUp(T x, T minAlignment)
+{
+    ARK_ASSERT(isPowerOfTwo(minAlignment));
+    return (x + minAlignment - static_cast<T>(1)) & ~(minAlignment - static_cast<T>(1));
+}
+
 } // namespace ark
