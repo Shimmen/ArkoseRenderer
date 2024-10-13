@@ -36,7 +36,7 @@ bool AssetImportTask::success() const
     return m_error == false;
 }
 
-ImportResult const* AssetImportTask::result() const
+ImportResult* AssetImportTask::result()
 {
     if (progress() >= 1.0f) {
         ARKOSE_ASSERT(isCompleted());

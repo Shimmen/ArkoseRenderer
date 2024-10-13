@@ -54,7 +54,7 @@ public:
     static std::unique_ptr<AssetImportTask> create(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions);
 
     bool success() const;
-    ImportResult const* result() const;
+    ImportResult* result();
 
     float progress() const;
     std::string status() const;

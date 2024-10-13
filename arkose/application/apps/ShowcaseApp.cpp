@@ -84,9 +84,14 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
                                                   AssetImporterOptions());
         importTask->executeSynchronous();
 
-        MeshAsset* meshAsset = MeshAsset::load("assets/sample/models/CesiumMan/Cesium_Man.arkmsh");
-        SkeletonAsset* skeletonAsset = SkeletonAsset::load("assets/sample/models/CesiumMan/Armature.arkskel");
-        AnimationAsset* animationAsset = AnimationAsset::load("assets/sample/models/CesiumMan/animation0000.arkanim");
+        if (ImportResult* result = importTask->result()) {
+
+            // NOTE: While we could use the ImportResult assets directly, they are not managed by the asset system,
+            // but merely as unique_ptrs owned by the ImportResult. This way we transfer ownership to the asset system,
+            // so we don't need to manually keep hold of the unique_ptrs for them not to go out of scope.
+            MeshAsset* meshAsset = MeshAsset::manage(std::move(result->meshes[0]));
+            SkeletonAsset* skeletonAsset = SkeletonAsset::manage(std::move(result->skeletons[0]));
+            AnimationAsset* animationAsset = AnimationAsset::manage(std::move(result->animations[0]));
 
         Transform transform {};
         transform.setOrientation(quat(vec3(0.5f, 0.5f, 0.5f), -0.5f));
