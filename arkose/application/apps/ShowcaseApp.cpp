@@ -101,7 +101,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
             m_testAnimation->setPlaybackMode(Animation::PlaybackMode::Looping);
 
             Camera& camera = scene.addCamera("LookatCam", true);
-            camera.lookAt(vec3(0.0f, 0.0f, 15.0f), vec3(0.0f, 0.0f, 0.0f));
+            camera.lookAt(vec3(-1.0f, 1.0f, 3.0f), vec3(0.0f, 1.0f, 0.0f));
         }
     }
 
