@@ -1,5 +1,6 @@
 #include "AnimationAsset.h"
 
+#include "asset/AssetCache.h"
 #include "core/Logging.h"
 #include "utility/FileIO.h"
 #include "utility/Profiling.h"
@@ -9,8 +10,7 @@
 #include <mutex>
 
 namespace {
-    static std::mutex s_animationAssetCacheMutex {};
-    static std::unordered_map<std::string, std::unique_ptr<AnimationAsset>> s_animationAssetCache {};
+AssetCache<AnimationAsset> s_animationAssetCache {};
 }
 
 AnimationAsset::AnimationAsset() = default;
@@ -24,26 +24,18 @@ AnimationAsset* AnimationAsset::load(std::string const& filePath)
         ARKOSE_LOG(Warning, "Trying to load animation asset with invalid file extension: '{}'", filePath);
     }
 
-    {
-        SCOPED_PROFILE_ZONE_NAMED("Animation cache - load");
-        std::scoped_lock<std::mutex> lock { s_animationAssetCacheMutex };
-
-        auto entry = s_animationAssetCache.find(filePath);
-        if (entry != s_animationAssetCache.end()) {
-            return entry->second.get();
-        }
+    if (AnimationAsset* cachedAsset = s_animationAssetCache.get(filePath)) {
+        return cachedAsset;
     }
 
     auto newAnimationAsset = std::make_unique<AnimationAsset>();
-    newAnimationAsset->readFromFile(filePath);
+    bool success = newAnimationAsset->readFromFile(filePath);
 
-    {
-        SCOPED_PROFILE_ZONE_NAMED("Animation cache - store");
-        std::scoped_lock<std::mutex> lock { s_animationAssetCacheMutex };
-        s_animationAssetCache[filePath] = std::move(newAnimationAsset);
+    if (!success) {
+        return nullptr;
     }
 
-    return s_animationAssetCache[filePath].get();
+    return s_animationAssetCache.put(filePath, std::move(newAnimationAsset));
 }
 
 bool AnimationAsset::readFromFile(std::string_view filePath)
