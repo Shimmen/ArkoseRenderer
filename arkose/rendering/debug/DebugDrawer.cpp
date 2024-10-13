@@ -32,7 +32,7 @@ void DebugDrawer::drawSphere(vec3 center, float radius, vec3 color)
     }
 }
 
-void DebugDrawer::drawIcon(IconBillboard iconBillboard, vec3 tint)
+void DebugDrawer::drawIcon(IconBillboard const& iconBillboard, vec3 tint)
 {
     validateDebugDrawersAreSetup("icon");
     for (IDebugDrawer* debugDrawer : m_debugDrawers) {

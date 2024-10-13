@@ -12,7 +12,7 @@ public:
     virtual void drawLine(vec3 p0, vec3 p1, vec3 color) = 0;
     virtual void drawBox(vec3 minPoint, vec3 maxPoint, vec3 color) = 0;
     virtual void drawSphere(vec3 center, float radius, vec3 color) = 0;
-    virtual void drawIcon(IconBillboard, vec3 tint) = 0;
+    virtual void drawIcon(IconBillboard const&, vec3 tint) = 0;
 
 };
 
@@ -25,7 +25,7 @@ public:
     virtual void drawLine(vec3 p0, vec3 p1, vec3 color = vec3(1.0f, 1.0f, 1.0f)) override;
     virtual void drawBox(vec3 minPoint, vec3 maxPoint, vec3 color = vec3(1.0f, 1.0f, 1.0f)) override;
     virtual void drawSphere(vec3 center, float radius, vec3 color = vec3(1.0f, 1.0f, 1.0f)) override;
-    virtual void drawIcon(IconBillboard, vec3 tint = vec3(1.0f, 1.0f, 1.0f)) override;
+    virtual void drawIcon(IconBillboard const&, vec3 tint = vec3(1.0f, 1.0f, 1.0f)) override;
 
     void registerDebugDrawer(IDebugDrawer&);
     void unregisterDebugDrawer(IDebugDrawer&);

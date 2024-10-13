@@ -23,7 +23,7 @@ public:
     virtual void drawLine(vec3 p0, vec3 p1, vec3 color) override;
     virtual void drawBox(vec3 minPoint, vec3 maxPoint, vec3 color) override;
     virtual void drawSphere(vec3 center, float radius, vec3 color) override;
-    virtual void drawIcon(IconBillboard, vec3 tint) override;
+    virtual void drawIcon(IconBillboard const&, vec3 tint) override;
 
 private:
     Backend* m_backend { nullptr };

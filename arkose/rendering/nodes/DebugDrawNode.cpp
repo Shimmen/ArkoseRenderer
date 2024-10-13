@@ -214,7 +214,7 @@ void DebugDrawNode::drawSphere(vec3 center, float radius, vec3 color)
     }
 }
 
-void DebugDrawNode::drawIcon(IconBillboard icon, vec3 tint)
+void DebugDrawNode::drawIcon(IconBillboard const& icon, vec3 tint)
 {
     if (m_triangleVertices.size() + 6 > MaxNumTriangles * 3) {
         ARKOSE_LOG(Warning, "Debug draw: maximum number of triangles reached, will not draw all requested icons.");
