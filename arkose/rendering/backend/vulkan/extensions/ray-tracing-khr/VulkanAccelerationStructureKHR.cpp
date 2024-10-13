@@ -67,13 +67,16 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
     // Create scratch buffer
     // TODO: Don't create a scratch buffer per TLAS! If we can guarantee they don't build/update at the same time a single buffer can be reused.
     {
+        VkDeviceSize minScratchBufferAlignment = vulkanBackend.rayTracingKHR().accelerationStructureProperties().minAccelerationStructureScratchOffsetAlignment;
+
         // NOTE: The update scratch size will generally be much smaller than the build scratch size, so we're wasting a lot by this!
-        VkDeviceSize scratchBufferMinSize = std::max(buildSizesInfo.buildScratchSize, buildSizesInfo.updateScratchSize);
+        VkDeviceSize scratchBufferMinSize = ark::alignUp(std::max(buildSizesInfo.buildScratchSize, buildSizesInfo.updateScratchSize), minScratchBufferAlignment);
         scratchBufferAndAllocation = vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(scratchBufferMinSize, true, false);
 
         VkBufferDeviceAddressInfo bufferDeviceAddressInfo { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
         bufferDeviceAddressInfo.buffer = scratchBufferAndAllocation.first;
         scratchBufferAddress = vkGetBufferDeviceAddress(vulkanBackend.device(), &bufferDeviceAddressInfo);
+        scratchBufferAddress = ark::alignUp(scratchBufferAddress, minScratchBufferAlignment);
     }
 
     if (initialInstances.size() > 0) {
@@ -396,13 +399,16 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
     // Create scratch buffer
     // TODO: Don't create a scratch buffer per BLAS! If we can guarantee they don't build/update at the same time a single buffer can be reused.
     {
+        VkDeviceSize minScratchBufferAlignment = vulkanBackend.rayTracingKHR().accelerationStructureProperties().minAccelerationStructureScratchOffsetAlignment;
+
         // NOTE: The update scratch size will generally be much smaller than the build scratch size, so we're wasting a lot by this!
-        VkDeviceSize scratchBufferMinSize = std::max(buildSizesInfo.buildScratchSize, buildSizesInfo.updateScratchSize);
+        VkDeviceSize scratchBufferMinSize = ark::alignUp(std::max(buildSizesInfo.buildScratchSize, buildSizesInfo.updateScratchSize), minScratchBufferAlignment);
         associatedBuffers.push_back(vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(scratchBufferMinSize, true, false));
 
         VkBufferDeviceAddressInfo bufferDeviceAddressInfo { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
         bufferDeviceAddressInfo.buffer = associatedBuffers.back().first;
         scratchBufferAddress = vkGetBufferDeviceAddress(vulkanBackend.device(), &bufferDeviceAddressInfo);
+        scratchBufferAddress = ark::alignUp(scratchBufferAddress, minScratchBufferAlignment);
     }
 
     if (copySource == nullptr) {
