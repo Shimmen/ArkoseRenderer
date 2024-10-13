@@ -206,7 +206,11 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     }
 
     if (antiAliasingMode == AntiAliasing::FXAA) {
-        pipeline.addNode<FXAANode>();
+        if (scene.gpuScene().backend().hasSrgbTransferFunction()) {
+            pipeline.addNode<FXAANode>();
+        } else {
+            ARKOSE_LOG(Error, "FXAA is not supported for non-sRGB output, skipping anti-aliasing");
+        }
     }
 
     pipeline.addNode<CASNode>(sceneTexture);

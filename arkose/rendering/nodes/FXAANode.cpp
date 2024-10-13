@@ -5,6 +5,11 @@
 
 RenderPipelineNode::ExecuteCallback FXAANode::construct(GpuScene& scene, Registry& reg)
 {
+    if (!scene.backend().hasSrgbTransferFunction()) {
+        ARKOSE_LOG(Error, "FXAA is designed to work specifically on a gamma encoded (non-linear) sRGB output, ignoring.");
+        return RenderPipelineNode::NullExecuteCallback;
+    }
+
     Texture& ldrTexture = *reg.getTexture("SceneColorLDR");
     Texture& replaceTex = reg.createTexture2D(ldrTexture.extent(), ldrTexture.format(), ldrTexture.filters(), ldrTexture.mipmap(), ldrTexture.wrapMode());
 
