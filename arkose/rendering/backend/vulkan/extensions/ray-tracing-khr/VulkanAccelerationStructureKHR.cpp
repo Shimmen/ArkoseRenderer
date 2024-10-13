@@ -231,7 +231,7 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
 
     // TODO: Probably don't have a single buffer per transform. It's easy enough to manage a shared one for this.
     std::pair<VkBuffer, VmaAllocation> transformBufferAndAllocation;
-    size_t singleTransformSize = 3 * 4 * sizeof(float);
+    constexpr size_t singleTransformSize = 3 * 4 * sizeof(float);
     if (isTriangleBLAS) {
         std::vector<ark::mat3x4> transforms {};
         for (auto& geo : geometries()) {
@@ -250,6 +250,10 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
             ARKOSE_LOG(Fatal, "Error trying to copy data to the bottom level acceeration structure transform buffer.");
         }
     }
+
+    VkBufferDeviceAddressInfo transformBufferDeviceAddressInfo { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
+    transformBufferDeviceAddressInfo.buffer = transformBufferAndAllocation.first;
+    VkDeviceAddress transformBufferBaseAddress = vkGetBufferDeviceAddress(vulkanBackend.device(), &transformBufferDeviceAddressInfo);
 
     std::vector<uint32_t> maxPrimitiveCounts {};
 
@@ -296,11 +300,7 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
 
             // Transform data
             {
-                VkBufferDeviceAddressInfo transformBufferDeviceAddressInfo { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
-                transformBufferDeviceAddressInfo.buffer = transformBufferAndAllocation.first;
-                VkDeviceAddress transformBufferBaseAddress = vkGetBufferDeviceAddress(vulkanBackend.device(), &transformBufferDeviceAddressInfo);
-
-                triangles.transformData.deviceAddress = transformBufferBaseAddress; 
+                triangles.transformData.deviceAddress = transformBufferBaseAddress + (geoIdx * singleTransformSize);
             }
 
             VkAccelerationStructureGeometryKHR geometry { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR };
