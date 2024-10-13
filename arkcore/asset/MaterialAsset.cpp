@@ -41,6 +41,12 @@ MaterialAsset* MaterialAsset::load(std::string const& filePath)
     return s_materialAssetCache.put(filePath, std::move(newMaterialAsset));
 }
 
+MaterialAsset* MaterialAsset::manage(std::unique_ptr<MaterialAsset>&& materialAsset)
+{
+    ARKOSE_ASSERT(!materialAsset->assetFilePath().empty());
+    return s_materialAssetCache.put(std::string(materialAsset->assetFilePath()), std::move(materialAsset));
+}
+
 bool MaterialAsset::readFromFile(std::string_view filePath)
 {
     std::ifstream fileStream(std::string(filePath), std::ios::binary);

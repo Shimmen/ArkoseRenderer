@@ -60,6 +60,8 @@ public:
     // TODO: Figure out how we want to return this! Basic type, e.g. ImageAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
     static ImageAsset* load(std::string const& filePath);
 
+    static ImageAsset* manage(std::unique_ptr<ImageAsset>&&);
+
     // Load an image asset (cached) from an .arkimg file or create from source asset, depending on the file extension
     // TODO: Figure out how we want to return this! Basic type, e.g. ImageAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
     static ImageAsset* loadOrCreate(std::string const& filePath);

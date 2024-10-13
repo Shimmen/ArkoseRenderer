@@ -34,6 +34,12 @@ SkeletonAsset* SkeletonAsset::load(std::string const& filePath)
     return s_skeletonAssetCache.put(filePath, std::move(newSkeletonAsset));
 }
 
+SkeletonAsset* SkeletonAsset::manage(std::unique_ptr<SkeletonAsset>&& skeletonAsset)
+{
+    ARKOSE_ASSERT(!skeletonAsset->assetFilePath().empty());
+    return s_skeletonAssetCache.put(std::string(skeletonAsset->assetFilePath()), std::move(skeletonAsset));
+}
+
 bool SkeletonAsset::readFromFile(std::string_view filePath)
 {
     std::ifstream fileStream(std::string(filePath), std::ios::binary);

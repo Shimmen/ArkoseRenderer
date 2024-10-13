@@ -195,6 +195,11 @@ MeshAsset* MeshAsset::load(std::string const& filePath)
     return s_meshAssetCache.put(filePath, std::move(newMeshAsset));
 }
 
+MeshAsset* MeshAsset::manage(std::unique_ptr<MeshAsset>&& meshAsset)
+{
+    ARKOSE_ASSERT(!meshAsset->assetFilePath().empty());
+    return s_meshAssetCache.put(std::string(meshAsset->assetFilePath()), std::move(meshAsset));
+}
 
 bool MeshAsset::readFromFile(std::string_view filePath)
 {

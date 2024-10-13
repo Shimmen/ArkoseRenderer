@@ -67,6 +67,8 @@ public:
     // TODO: Figure out how we want to return this! Basic type, e.g. AnimationAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
     static AnimationAsset* load(std::string const& filePath);
 
+    static AnimationAsset* manage(std::unique_ptr<AnimationAsset>&&);
+
     virtual bool readFromFile(std::string_view filePath) override;
     virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) const override;
 

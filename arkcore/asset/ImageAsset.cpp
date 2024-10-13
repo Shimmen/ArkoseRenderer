@@ -169,6 +169,12 @@ ImageAsset* ImageAsset::load(std::string const& filePath)
     return s_imageAssetCache.put(filePath, std::move(newImageAsset));
 }
 
+ImageAsset* ImageAsset::manage(std::unique_ptr<ImageAsset>&& imageAsset)
+{
+    ARKOSE_ASSERT(!imageAsset->assetFilePath().empty());
+    return s_imageAssetCache.put(std::string(imageAsset->assetFilePath()), std::move(imageAsset));
+}
+
 ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
 {
     if (isValidAssetPath(filePath)) {

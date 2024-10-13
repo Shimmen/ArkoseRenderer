@@ -88,6 +88,8 @@ public:
     // TODO: Figure out how we want to return this! Basic type, e.g. MaterialAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
     static MaterialAsset* load(std::string const& filePath);
 
+    static MaterialAsset* manage(std::unique_ptr<MaterialAsset>&&);
+
     virtual bool readFromFile(std::string_view filePath) override;
     virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) const override;
 

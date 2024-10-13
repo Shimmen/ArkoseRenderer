@@ -33,6 +33,8 @@ public:
     // TODO: Figure out how we want to return this! Basic type, e.g. SkeletonAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
     static SkeletonAsset* load(std::string const& filePath);
 
+    static SkeletonAsset* manage(std::unique_ptr<SkeletonAsset>&&);
+
     virtual bool readFromFile(std::string_view filePath) override;
     virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) const override;
 

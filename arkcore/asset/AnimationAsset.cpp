@@ -38,6 +38,12 @@ AnimationAsset* AnimationAsset::load(std::string const& filePath)
     return s_animationAssetCache.put(filePath, std::move(newAnimationAsset));
 }
 
+AnimationAsset* AnimationAsset::manage(std::unique_ptr<AnimationAsset>&& animationAsset)
+{
+    ARKOSE_ASSERT(!animationAsset->assetFilePath().empty());
+    return s_animationAssetCache.put(std::string(animationAsset->assetFilePath()), std::move(animationAsset));
+}
+
 bool AnimationAsset::readFromFile(std::string_view filePath)
 {
     std::ifstream fileStream(std::string(filePath), std::ios::binary);

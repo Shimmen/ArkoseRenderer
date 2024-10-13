@@ -116,6 +116,8 @@ public:
     // TODO: Figure out how we want to return this! Basic type, e.g. MeshAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
     static MeshAsset* load(std::string const& filePath);
 
+    static MeshAsset* manage(std::unique_ptr<MeshAsset>&&);
+
     virtual bool readFromFile(std::string_view filePath) override;
     virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) const override;
 
