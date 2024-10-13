@@ -55,6 +55,12 @@ using Float = double;
 using Float = float;
 #endif
 
+// By default including e.g. uniqueptr.h will expose ark::UniquePtr (and more) to the global namespace.
+// This makes it very convenient, I find, however, it might not suitable in all cases, so define
+// this to avoid polluting the global namespace.
+#ifdef ARK_DONT_EXPOSE_COMMON_TYPES
+#endif
+
 // By default including e.g. vector.h will expose ark::vec3 (and more) to the global namespace.
 // This makes it very convenient, I find, in cases where math code is found everywhere, e.g. in
 // a renderer. However, it might not suitable in all cases, so define this to avoid polluting the
