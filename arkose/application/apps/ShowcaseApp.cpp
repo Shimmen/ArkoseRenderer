@@ -93,15 +93,16 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
             SkeletonAsset* skeletonAsset = SkeletonAsset::manage(std::move(result->skeletons[0]));
             AnimationAsset* animationAsset = AnimationAsset::manage(std::move(result->animations[0]));
 
-        Transform transform {};
-        transform.setOrientation(quat(vec3(0.5f, 0.5f, 0.5f), -0.5f));
-        m_skeletalMeshInstance = &scene.addSkeletalMesh(meshAsset, skeletonAsset, transform);
+            Transform transform {};
+            transform.setOrientation(quat(vec3(0.5f, 0.5f, 0.5f), -0.5f));
+            m_skeletalMeshInstance = &scene.addSkeletalMesh(meshAsset, skeletonAsset, transform);
 
-        m_testAnimation = Animation::bind(animationAsset, *m_skeletalMeshInstance);
-        m_testAnimation->setPlaybackMode(Animation::PlaybackMode::Looping);
+            m_testAnimation = Animation::bind(animationAsset, *m_skeletalMeshInstance);
+            m_testAnimation->setPlaybackMode(Animation::PlaybackMode::Looping);
 
-        Camera& camera = scene.addCamera("LookatCam", true);
-        camera.lookAt(vec3(0.0f, 0.0f, 15.0f), vec3(0.0f, 0.0f, 0.0f));
+            Camera& camera = scene.addCamera("LookatCam", true);
+            camera.lookAt(vec3(0.0f, 0.0f, 15.0f), vec3(0.0f, 0.0f, 0.0f));
+        }
     }
 
     if (scene.directionalLightCount() == 0) {
