@@ -39,11 +39,9 @@ jobs:
           # exclude gcc & clang Release builds for now, as they fail to link
           - os: ubuntu-latest
             c_compiler: gcc
-            cpp_compiler: g++
             build_type: Release
           - os: ubuntu-latest
             c_compiler: clang
-            cpp_compiler: clang++
             build_type: Release
 
     steps:
