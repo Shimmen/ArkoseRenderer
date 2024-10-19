@@ -215,14 +215,14 @@ VulkanBackend::~VulkanBackend()
     // Before destroying stuff, make sure we're done with all scheduled work
     completePendingOperations();
 
+    m_pipelineRegistry.reset();
+
 #if WITH_DLSS
     m_dlss.reset();
 #endif
 
     m_rayTracingNv.reset();
     m_rayTracingKhr.reset();
-
-    m_pipelineRegistry.reset();
 
     destroyDearImgui();
 
