@@ -38,6 +38,14 @@ void UpscalingNode::drawGui()
         m_upscalingState->setQuality(quality);
     }
 
+    Extent2D renderRes = m_upscalingState->renderResolution();
+    Extent2D outputRes = m_upscalingState->outputResolution();
+    float upscaleFactor = static_cast<float>(renderRes.width()) / static_cast<float>(outputRes.width());
+    ImGui::Text("%ux%u -> %ux%u (%.2f render scale)",
+                renderRes.width(), renderRes.height(),
+                outputRes.width(), outputRes.height(),
+                upscaleFactor);
+
     if (ImGui::TreeNode("Advanced")) {
         ImGui::Checkbox("Let upscaling control global mip-bias", &m_controlGlobalMipBias);
         ImGui::TreePop();
