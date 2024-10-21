@@ -131,6 +131,12 @@ constexpr bool isPowerOfTwo(T x)
 }
 
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr bool isEffectivelyZero(T x, T epsilon = 1e-6f)
+{
+    return std::abs(x) < epsilon;
+}
+
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
 constexpr T lerp(T a, T b, T x)
 {
     return (static_cast<T>(1) - x) * a + x * b;
