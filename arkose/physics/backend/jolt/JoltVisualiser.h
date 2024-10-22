@@ -2,6 +2,7 @@
 
 #if JPH_DEBUG_RENDERER
 
+#include <ark/color.h>
 #include <ark/vector.h>
 #include <Jolt/Jolt.h>
 #include <Jolt/Renderer/DebugRenderer.h>
@@ -23,7 +24,7 @@ public:
 
 private:
 
-    vec3 joltColorToFloatColor(JPH::ColorArg) const;
+    Color joltColorToArkColor(JPH::ColorArg) const;
 
     // Implementation specific batch object
     class ArkoseBatch : public JPH::RefTargetVirtual {

@@ -13,23 +13,23 @@ JoltVisualiser::JoltVisualiser()
 
 JoltVisualiser::~JoltVisualiser() = default;
 
-vec3 JoltVisualiser::joltColorToFloatColor(JPH::ColorArg color) const
+Color JoltVisualiser::joltColorToArkColor(JPH::ColorArg color) const
 {
     // TODO: Handle alpha?
-    return vec3(color.r * 255.99f, color.g * 255.99f, color.b * 255.99f);
+    return Color::fromNonLinearSRGB(color.r / 255.0f, color.g / 255.0f, color.b / 255.0f);
 }
 
 void JoltVisualiser::DrawLine(JPH::RVec3Arg inFrom, JPH::RVec3Arg inTo, JPH::ColorArg inColor)
 {
-    DebugDrawer::get().drawLine({ inFrom.GetX(), inFrom.GetY(), inFrom.GetZ() }, { inTo.GetX(), inTo.GetY(), inTo.GetZ() }, joltColorToFloatColor(inColor));
+    DebugDrawer::get().drawLine({ inFrom.GetX(), inFrom.GetY(), inFrom.GetZ() }, { inTo.GetX(), inTo.GetY(), inTo.GetZ() }, joltColorToArkColor(inColor));
 }
 
 void JoltVisualiser::DrawTriangle(JPH::Vec3Arg inV1, JPH::Vec3Arg inV2, JPH::Vec3Arg inV3, JPH::ColorArg inColor, ECastShadow)
 {
     // TODO: Maybe make a more streamlined path for this?
-    DebugDrawer::get().drawLine({ inV1.GetX(), inV1.GetY(), inV1.GetZ() }, { inV2.GetX(), inV2.GetY(), inV2.GetZ() }, joltColorToFloatColor(inColor));
-    DebugDrawer::get().drawLine({ inV2.GetX(), inV2.GetY(), inV2.GetZ() }, { inV3.GetX(), inV3.GetY(), inV3.GetZ() }, joltColorToFloatColor(inColor));
-    DebugDrawer::get().drawLine({ inV3.GetX(), inV3.GetY(), inV3.GetZ() }, { inV1.GetX(), inV1.GetY(), inV1.GetZ() }, joltColorToFloatColor(inColor));
+    DebugDrawer::get().drawLine({ inV1.GetX(), inV1.GetY(), inV1.GetZ() }, { inV2.GetX(), inV2.GetY(), inV2.GetZ() }, joltColorToArkColor(inColor));
+    DebugDrawer::get().drawLine({ inV2.GetX(), inV2.GetY(), inV2.GetZ() }, { inV3.GetX(), inV3.GetY(), inV3.GetZ() }, joltColorToArkColor(inColor));
+    DebugDrawer::get().drawLine({ inV3.GetX(), inV3.GetY(), inV3.GetZ() }, { inV1.GetX(), inV1.GetY(), inV1.GetZ() }, joltColorToArkColor(inColor));
 }
 
 JPH::DebugRenderer::Batch JoltVisualiser::CreateTriangleBatch(const JPH::DebugRenderer::Triangle* inTriangles, int inTriangleCount)
