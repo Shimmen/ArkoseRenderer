@@ -25,6 +25,7 @@
 #pragma once
 
 #include "matrix.h"
+#include "vector.h"
 
 namespace ark {
 
@@ -378,4 +379,195 @@ namespace colorspace {
 
 } // namespace colorspace
 
+// A 8-bit "storage" Color type, similarly to what you'd expect in a png or any other bitmap format
+struct Color_sRGBA_U8 {
+    u8 r { 0 };
+    u8 g { 0 };
+    u8 b { 0 };
+    u8 a { 0 };
+};
+
+// A 16-bit "storage" Color type, similarly to what you'd expect in a high bit-depth png or exr
+struct Color_sRGBA_U16 {
+    u16 r { 0 };
+    u16 g { 0 };
+    u16 b { 0 };
+    u16 a { 0 };
+};
+
+// An opinionated Color type
+//  - unless otherwise noted, sRGB
+//  - floating point (f32) storage
+//  - normalized to [0, 1] range
+//  - linear storage (no EOTFs)
+//  - always pre-multiplied alpha
+class Color {
+public:
+    f32 r() const { return m_r; }
+    f32 g() const { return m_g; }
+    f32 b() const { return m_b; }
+
+    f32 alpha() const { return m_a; }
+    f32 a() const { return alpha(); }
+
+    static constexpr Color fromNonLinearSRGB(f32 r, f32 g, f32 b, f32 a)
+    {
+        ARK_ASSERT(a >= 0.0f);
+        ARK_ASSERT(a <= 1.0f);
+
+        if (isEffectivelyZero(a)) {
+            return Color { 0.0f, 0.0f, 0.0f, 0.0f };
+        } else {
+            using namespace colorspace::sRGB;
+            return Color { gammaDecode(r) * a, gammaDecode(g) * a, gammaDecode(b) * a, a };
+        }
+    }
+
+    static constexpr Color fromNonLinearSRGB(vec3 rgb)
+    {
+        using namespace colorspace::sRGB;
+        return Color { gammaDecode(rgb.x), gammaDecode(rgb.y), gammaDecode(rgb.z), 1.0f };
+    }
+
+    static constexpr Color fromNonLinearSRGB(f32 r, f32 g, f32 b)
+    {
+        using namespace colorspace::sRGB;
+        return Color { gammaDecode(r), gammaDecode(g), gammaDecode(b), 1.0f };
+    }
+
+    // This is unsafe, in the sense that you're trusted to only input valid values!
+    static constexpr Color fromFixedValuesUnsafe(f32 r, f32 g, f32 b, f32 a)
+    {
+        return Color { r, g, b, a };
+    }
+
+    constexpr vec4 asVec4() const
+    {
+        return vec4(r(), g(), b(), alpha());
+    }
+
+    constexpr vec3 asVec3() const
+    {
+        ARK_ASSERT(alpha() == 1.0f);
+        return vec3(r(), g(), b());
+    }
+
+    constexpr f32* asFloatPointer()
+    {
+        return &m_r;
+    }
+
+    constexpr f32 const* asFloatPointer() const
+    {
+        return &m_r;
+    }
+
+    constexpr vec4 toNonLinearSRGB() const
+    {
+        using namespace colorspace::sRGB;
+        f32 rNonLinear = gammaEncode(r());
+        f32 gNonLinear = gammaEncode(g());
+        f32 bNonLinear = gammaEncode(b());
+        return vec4(rNonLinear, gNonLinear, bNonLinear, m_a);
+    }
+
+    constexpr vec4 toNonLinearSRGBUnPreMultiplied() const
+    {
+        if (isEffectivelyZero(alpha())) {
+            return vec4(0.0f);
+        } else {
+            using namespace colorspace::sRGB;
+            f32 rNonLinear = gammaEncode(r() / alpha());
+            f32 gNonLinear = gammaEncode(g() / alpha());
+            f32 bNonLinear = gammaEncode(b() / alpha());
+            return vec4(rNonLinear, gNonLinear, bNonLinear, m_a);
+        }
+    }
+
+    Color_sRGBA_U8 toStorageFormat_sRGBA_U8() const
+    {
+        Color_sRGBA_U8 rgba8;
+
+        if (isEffectivelyZero(alpha())) { 
+            rgba8.r = 0;
+            rgba8.b = 0;
+            rgba8.b = 0;
+            rgba8.a = 0;
+        } else {
+            using namespace colorspace::sRGB;
+            f32 rNonLinear = gammaEncode(r() / alpha());
+            f32 gNonLinear = gammaEncode(g() / alpha());
+            f32 bNonLinear = gammaEncode(b() / alpha());
+
+            rgba8.r = static_cast<u8>(std::roundf(rNonLinear * 255.0f));
+            rgba8.g = static_cast<u8>(std::roundf(gNonLinear * 255.0f));
+            rgba8.b = static_cast<u8>(std::roundf(bNonLinear * 255.0f));
+            rgba8.a = static_cast<u8>(std::roundf(alpha()    * 255.0f));
+        }
+
+        return rgba8;
+    }
+
+    Color_sRGBA_U16 toStorageFormat_sRGBA_U16() const
+    {
+        Color_sRGBA_U16 rgba16;
+
+        if (isEffectivelyZero(alpha())) {
+            rgba16.r = 0;
+            rgba16.b = 0;
+            rgba16.b = 0;
+            rgba16.a = 0;
+        } else {
+            using namespace colorspace::sRGB;
+            f32 rNonLinear = gammaEncode(r() / alpha());
+            f32 gNonLinear = gammaEncode(g() / alpha());
+            f32 bNonLinear = gammaEncode(b() / alpha());
+
+            rgba16.r = static_cast<u16>(std::roundf(rNonLinear * 65'535.0f));
+            rgba16.g = static_cast<u16>(std::roundf(gNonLinear * 65'535.0f));
+            rgba16.b = static_cast<u16>(std::roundf(bNonLinear * 65'535.0f));
+            rgba16.a = static_cast<u16>(std::roundf(alpha()    * 65'535.0f));
+        }
+
+        return rgba16;
+    }
+
+private:
+    constexpr Color(f32 r, f32 g, f32 b, f32 a)
+        : m_r { r }
+        , m_g { g }
+        , m_b { b }
+        , m_a { a }
+    {
+        ARK_ASSERT(m_r >= 0.0f && m_r <= 1.0f);
+        ARK_ASSERT(m_g >= 0.0f && m_g <= 1.0f);
+        ARK_ASSERT(m_b >= 0.0f && m_b <= 1.0f);
+        ARK_ASSERT(m_a >= 0.0f && m_a <= 1.0f);
+    }
+
+    f32 m_r { 0.0f };
+    f32 m_g { 0.0f };
+    f32 m_b { 0.0f };
+    f32 m_a { 0.0f };
+};
+
+class Colors {
+public:
+    static constexpr Color transparent = Color::fromFixedValuesUnsafe(0.0f, 0.0f, 0.0f, 0.0f);
+
+    static constexpr Color black       = Color::fromFixedValuesUnsafe(0.0f, 0.0f, 0.0f, 1.0f);
+    static constexpr Color white       = Color::fromFixedValuesUnsafe(1.0f, 1.0f, 1.0f, 1.0f);
+
+    static constexpr Color red         = Color::fromFixedValuesUnsafe(1.0f, 0.0f, 0.0f, 1.0f);
+    static constexpr Color green       = Color::fromFixedValuesUnsafe(0.0f, 1.0f, 0.0f, 1.0f);
+    static constexpr Color blue        = Color::fromFixedValuesUnsafe(0.0f, 0.0f, 1.0f, 1.0f);
+};
+
 } // namespace ark
+
+#ifndef ARK_DONT_EXPOSE_COMMON_TYPES
+using ark::Color;
+using ark::Colors;
+using ark::Color_sRGBA_U8;
+using ark::Color_sRGBA_U16;
+#endif
