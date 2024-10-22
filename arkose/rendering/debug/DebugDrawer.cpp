@@ -8,7 +8,7 @@ DebugDrawer& DebugDrawer::get()
     return dispatchDrawer;
 }
 
-void DebugDrawer::drawLine(vec3 p0, vec3 p1, vec3 color)
+void DebugDrawer::drawLine(vec3 p0, vec3 p1, Color color)
 {
     validateDebugDrawersAreSetup("line");
     for (IDebugDrawer* debugDrawer : m_debugDrawers) {
@@ -16,7 +16,7 @@ void DebugDrawer::drawLine(vec3 p0, vec3 p1, vec3 color)
     }
 }
 
-void DebugDrawer::drawBox(vec3 minPoint, vec3 maxPoint, vec3 color)
+void DebugDrawer::drawBox(vec3 minPoint, vec3 maxPoint, Color color)
 {
     validateDebugDrawersAreSetup("box");
     for (IDebugDrawer* debugDrawer : m_debugDrawers) {
@@ -24,7 +24,7 @@ void DebugDrawer::drawBox(vec3 minPoint, vec3 maxPoint, vec3 color)
     }
 }
 
-void DebugDrawer::drawSphere(vec3 center, float radius, vec3 color)
+void DebugDrawer::drawSphere(vec3 center, float radius, Color color)
 {
     validateDebugDrawersAreSetup("sphere");
     for (IDebugDrawer* debugDrawer : m_debugDrawers) {
@@ -32,7 +32,7 @@ void DebugDrawer::drawSphere(vec3 center, float radius, vec3 color)
     }
 }
 
-void DebugDrawer::drawIcon(IconBillboard const& iconBillboard, vec3 tint)
+void DebugDrawer::drawIcon(IconBillboard const& iconBillboard, Color tint)
 {
     validateDebugDrawersAreSetup("icon");
     for (IDebugDrawer* debugDrawer : m_debugDrawers) {
@@ -40,7 +40,7 @@ void DebugDrawer::drawIcon(IconBillboard const& iconBillboard, vec3 tint)
     }
 }
 
-void DebugDrawer::drawSkeleton(Skeleton const& skeleton, mat4 rootTransform, vec3 color)
+void DebugDrawer::drawSkeleton(Skeleton const& skeleton, mat4 rootTransform, Color color)
 {
     validateDebugDrawersAreSetup("skeleton");
     for (IDebugDrawer* debugDrawer : m_debugDrawers) {

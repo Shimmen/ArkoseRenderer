@@ -51,7 +51,8 @@ void SphereLight::drawGui()
     }
 
     if (ImGui::IsItemHovered() || ImGui::IsItemActive()) {
-        DebugDrawer::get().drawSphere(transform().positionInWorld(), m_lightRadius, color());
+        // TODO
+        //DebugDrawer::get().drawSphere(transform().positionInWorld(), m_lightRadius, color());
     }
 
     // TODO: Make it possible to adjust radius and calculate the lumens from the radius

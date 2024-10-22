@@ -53,7 +53,8 @@ void DirectionalLight::drawGui()
 
     // TODO: Draw arrow!
     vec3 lightPosition = transform().positionInWorld();
-    DebugDrawer::get().drawLine(lightPosition, lightPosition + forwardDirection() * 0.2f, color());
+    // TODO!
+    //DebugDrawer::get().drawLine(lightPosition, lightPosition + forwardDirection() * 0.2f, color());
 }
 
 mat4 DirectionalLight::projectionMatrix() const

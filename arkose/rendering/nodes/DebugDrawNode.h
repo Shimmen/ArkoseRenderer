@@ -2,6 +2,7 @@
 
 class Icon;
 
+#include <ark/color.h>
 #include <ark/handle.h>
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/ResourceList.h"
@@ -20,11 +21,11 @@ public:
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
     // IDebugDrawer implementation
-    virtual void drawLine(vec3 p0, vec3 p1, vec3 color) override;
-    virtual void drawBox(vec3 minPoint, vec3 maxPoint, vec3 color) override;
-    virtual void drawSphere(vec3 center, float radius, vec3 color) override;
-    virtual void drawIcon(IconBillboard const&, vec3 tint) override;
-    virtual void drawSkeleton(Skeleton const&, mat4 rootTransform, vec3 color) override;
+    virtual void drawLine(vec3 p0, vec3 p1, Color color) override;
+    virtual void drawBox(vec3 minPoint, vec3 maxPoint, Color color) override;
+    virtual void drawSphere(vec3 center, float radius, Color color) override;
+    virtual void drawIcon(IconBillboard const&, Color tint) override;
+    virtual void drawSkeleton(Skeleton const&, mat4 rootTransform, Color color) override;
 
 private:
     Backend* m_backend { nullptr };

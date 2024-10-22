@@ -1,5 +1,6 @@
 #pragma once
 
+#include <ark/color.h>
 #include <ark/matrix.h>
 #include <ark/vector.h>
 #include <string_view>
@@ -11,11 +12,11 @@ class Skeleton;
 class IDebugDrawer {
 public:
 
-    virtual void drawLine(vec3 p0, vec3 p1, vec3 color) = 0;
-    virtual void drawBox(vec3 minPoint, vec3 maxPoint, vec3 color) = 0;
-    virtual void drawSphere(vec3 center, float radius, vec3 color) = 0;
-    virtual void drawIcon(IconBillboard const&, vec3 tint) = 0;
-    virtual void drawSkeleton(Skeleton const&, mat4 rootTransform, vec3 color) = 0;
+    virtual void drawLine(vec3 p0, vec3 p1, Color color) = 0;
+    virtual void drawBox(vec3 minPoint, vec3 maxPoint, Color color) = 0;
+    virtual void drawSphere(vec3 center, float radius, Color color) = 0;
+    virtual void drawIcon(IconBillboard const&, Color tint) = 0;
+    virtual void drawSkeleton(Skeleton const&, mat4 rootTransform, Color color) = 0;
 
 };
 
@@ -25,11 +26,11 @@ public:
 
     static DebugDrawer& get();
 
-    virtual void drawLine(vec3 p0, vec3 p1, vec3 color = vec3(1.0f, 1.0f, 1.0f)) override;
-    virtual void drawBox(vec3 minPoint, vec3 maxPoint, vec3 color = vec3(1.0f, 1.0f, 1.0f)) override;
-    virtual void drawSphere(vec3 center, float radius, vec3 color = vec3(1.0f, 1.0f, 1.0f)) override;
-    virtual void drawIcon(IconBillboard const&, vec3 tint = vec3(1.0f, 1.0f, 1.0f)) override;
-    virtual void drawSkeleton(Skeleton const&, mat4 rootTransform, vec3 color = vec3(1.0f, 1.0f, 1.0f)) override;
+    virtual void drawLine(vec3 p0, vec3 p1, Color color = Colors::white) override;
+    virtual void drawBox(vec3 minPoint, vec3 maxPoint, Color color = Colors::white) override;
+    virtual void drawSphere(vec3 center, float radius, Color color = Colors::white) override;
+    virtual void drawIcon(IconBillboard const&, Color tint = Colors::white) override;
+    virtual void drawSkeleton(Skeleton const&, mat4 rootTransform, Color color = Colors::white) override;
 
     void registerDebugDrawer(IDebugDrawer&);
     void unregisterDebugDrawer(IDebugDrawer&);

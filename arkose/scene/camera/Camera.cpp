@@ -544,7 +544,7 @@ void Camera::drawAutomaticExposureGui()
 
 void Camera::debugRenderCullingFrustum() const
 {
-    const vec3 color = vec3(1.0f, 0.0f, 1.0f);
+    constexpr Color color = Colors::white;
     mat4 m = inverse(m_cullingViewProjection);
 
     vec4 zNear[4];

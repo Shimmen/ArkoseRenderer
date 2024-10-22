@@ -535,7 +535,7 @@ void Scene::drawInstanceBoundingBox(StaticMeshInstance const& instance)
 {
     if (StaticMesh* staticMesh = gpuScene().staticMeshForHandle(instance.mesh())) {
         ark::aabb3 transformedAABB = staticMesh->boundingBox().transformed(instance.transform().worldMatrix());
-        DebugDrawer::get().drawBox(transformedAABB.min, transformedAABB.max, vec3(1.0f, 1.0f, 1.0f));
+        DebugDrawer::get().drawBox(transformedAABB.min, transformedAABB.max, Colors::white);
     }
 }
 
@@ -544,7 +544,7 @@ void Scene::drawInstanceBoundingBox(SkeletalMeshInstance const& instance)
     if (SkeletalMesh* skeletalMesh = gpuScene().skeletalMeshForHandle(instance.mesh())) {
         // TODO: Use an animated bounding box! The static one is only guaranteed to be bounding for the rest pose
         ark::aabb3 transformedAABB = skeletalMesh->underlyingMesh().boundingBox().transformed(instance.transform().worldMatrix());
-        DebugDrawer::get().drawBox(transformedAABB.min, transformedAABB.max, vec3(1.0f, 1.0f, 1.0f));
+        DebugDrawer::get().drawBox(transformedAABB.min, transformedAABB.max, Colors::white);
     }
 }
 

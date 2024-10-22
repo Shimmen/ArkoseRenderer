@@ -131,18 +131,18 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
     };
 }
 
-void DebugDrawNode::drawLine(vec3 p0, vec3 p1, vec3 color)
+void DebugDrawNode::drawLine(vec3 p0, vec3 p1, Color color)
 {
     if (m_lineVertices.size() + 2 > MaxNumLineSegments * 2) {
         ARKOSE_LOG(Warning, "Debug draw: maximum number of line segments reached, will not draw all requested lines.");
         return;
     }
 
-    m_lineVertices.emplace_back(p0, color);
-    m_lineVertices.emplace_back(p1, color);
+    m_lineVertices.emplace_back(p0, color.asVec3());
+    m_lineVertices.emplace_back(p1, color.asVec3());
 }
 
-void DebugDrawNode::drawBox(vec3 minPoint, vec3 maxPoint, vec3 color)
+void DebugDrawNode::drawBox(vec3 minPoint, vec3 maxPoint, Color color)
 {
     vec3 p0 = vec3(minPoint.x, minPoint.y, minPoint.z);
     vec3 p1 = vec3(minPoint.x, minPoint.y, maxPoint.z);
@@ -172,7 +172,7 @@ void DebugDrawNode::drawBox(vec3 minPoint, vec3 maxPoint, vec3 color)
     drawLine(p5, p7, color);
 }
 
-void DebugDrawNode::drawSphere(vec3 center, float radius, vec3 color)
+void DebugDrawNode::drawSphere(vec3 center, float radius, Color color)
 {
     using namespace ark;
 
@@ -215,7 +215,7 @@ void DebugDrawNode::drawSphere(vec3 center, float radius, vec3 color)
     }
 }
 
-void DebugDrawNode::drawIcon(IconBillboard const& icon, vec3 tint)
+void DebugDrawNode::drawIcon(IconBillboard const& icon, Color tint)
 {
     if (m_triangleVertices.size() + 6 > MaxNumTriangles * 3) {
         ARKOSE_LOG(Warning, "Debug draw: maximum number of triangles reached, will not draw all requested icons.");
@@ -229,16 +229,18 @@ void DebugDrawNode::drawIcon(IconBillboard const& icon, vec3 tint)
     auto const& ps = icon.positions();
     auto const& uvs = icon.texCoords();
 
-    m_triangleVertices.emplace_back(ps[0], tint, uvs[0]);
-    m_triangleVertices.emplace_back(ps[2], tint, uvs[2]);
-    m_triangleVertices.emplace_back(ps[1], tint, uvs[1]);
+    vec3 tintVec3 = tint.asVec3();
 
-    m_triangleVertices.emplace_back(ps[0], tint, uvs[0]);
-    m_triangleVertices.emplace_back(ps[3], tint, uvs[3]);
-    m_triangleVertices.emplace_back(ps[2], tint, uvs[2]);
+    m_triangleVertices.emplace_back(ps[0], tintVec3, uvs[0]);
+    m_triangleVertices.emplace_back(ps[2], tintVec3, uvs[2]);
+    m_triangleVertices.emplace_back(ps[1], tintVec3, uvs[1]);
+
+    m_triangleVertices.emplace_back(ps[0], tintVec3, uvs[0]);
+    m_triangleVertices.emplace_back(ps[3], tintVec3, uvs[3]);
+    m_triangleVertices.emplace_back(ps[2], tintVec3, uvs[2]);
 }
 
-void DebugDrawNode::drawSkeleton(Skeleton const& skeleton, mat4 rootTransform, vec3 color)
+void DebugDrawNode::drawSkeleton(Skeleton const& skeleton, mat4 rootTransform, Color color)
 {
     std::function<void(SkeletonJoint const&, vec3)> recursivelyDrawJoints = [&](SkeletonJoint const& joint, vec3 previousJointPosition) {
         mat4 jointTransform = rootTransform * joint.transform().worldMatrix();
@@ -249,9 +251,9 @@ void DebugDrawNode::drawSkeleton(Skeleton const& skeleton, mat4 rootTransform, v
 
         if (joint.childJoints().size() == 0) { 
             // Draw end-joints as a xyz axis visualization (is there a nicer way of doing this? probably..)
-            drawLine(jointPosition, jointPosition + jointTransform.x.xyz() * 0.1f, vec3(1.0f, 0.0f, 0.0f));
-            drawLine(jointPosition, jointPosition + jointTransform.y.xyz() * 0.1f, vec3(0.0f, 1.0f, 0.0f));
-            drawLine(jointPosition, jointPosition + jointTransform.z.xyz() * 0.1f, vec3(0.0f, 0.0f, 1.0f));
+            drawLine(jointPosition, jointPosition + jointTransform.x.xyz() * 0.1f, Colors::red);
+            drawLine(jointPosition, jointPosition + jointTransform.y.xyz() * 0.1f, Colors::green);
+            drawLine(jointPosition, jointPosition + jointTransform.z.xyz() * 0.1f, Colors::blue);
         }
 
         for (SkeletonJoint const& childJoint : joint.childJoints()) {
