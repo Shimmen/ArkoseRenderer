@@ -403,12 +403,12 @@ struct Color_sRGBA_U16 {
 //  - always pre-multiplied alpha
 class Color {
 public:
-    f32 r() const { return m_r; }
-    f32 g() const { return m_g; }
-    f32 b() const { return m_b; }
+    constexpr f32 r() const { return m_r; }
+    constexpr f32 g() const { return m_g; }
+    constexpr f32 b() const { return m_b; }
 
-    f32 alpha() const { return m_a; }
-    f32 a() const { return alpha(); }
+    constexpr f32 alpha() const { return m_a; }
+    constexpr f32 a() const { return alpha(); }
 
     static constexpr Color fromNonLinearSRGB(f32 r, f32 g, f32 b, f32 a)
     {
