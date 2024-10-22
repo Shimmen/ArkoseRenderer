@@ -2,13 +2,14 @@
 
 #include "Light.h"
 
+#include <ark/color.h>
 #include <ark/transform.h>
 
 class DirectionalLight final : public Light {
 public:
     DirectionalLight();
     DirectionalLight(LightAsset const&);
-    DirectionalLight(vec3 color, float illuminance, vec3 direction);
+    DirectionalLight(Color color, float illuminance, vec3 direction);
     virtual ~DirectionalLight() { }
 
     float illuminance() const { return m_illuminance; }

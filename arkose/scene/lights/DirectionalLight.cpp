@@ -7,7 +7,7 @@
 #include <imgui.h>
 
 DirectionalLight::DirectionalLight()
-    : Light(Type::DirectionalLight, vec3(1.0f))
+    : Light(Type::DirectionalLight, Colors::white)
 {
 }
 
@@ -23,7 +23,7 @@ DirectionalLight::DirectionalLight(LightAsset const& asset)
     shadowMapWorldExtent = data.shadowMapWorldExtent;
 }
 
-DirectionalLight::DirectionalLight(vec3 color, float illuminance, vec3 direction)
+DirectionalLight::DirectionalLight(Color color, float illuminance, vec3 direction)
     : Light(Type::DirectionalLight, color)
     , m_illuminance(illuminance)
 {
@@ -53,8 +53,7 @@ void DirectionalLight::drawGui()
 
     // TODO: Draw arrow!
     vec3 lightPosition = transform().positionInWorld();
-    // TODO!
-    //DebugDrawer::get().drawLine(lightPosition, lightPosition + forwardDirection() * 0.2f, color());
+    DebugDrawer::get().drawLine(lightPosition, lightPosition + forwardDirection() * 0.2f, color());
 }
 
 mat4 DirectionalLight::projectionMatrix() const

@@ -2,13 +2,14 @@
 
 #include "scene/Transform.h"
 #include "scene/lights/Light.h"
+#include <ark/color.h>
 #include <ark/transform.h>
 
 class SphereLight final : public Light {
 public:
     SphereLight();
     SphereLight(LightAsset const&);
-    SphereLight(vec3 color, float luminousPower, vec3 position, float lightSourceRadius);
+    SphereLight(Color color, float luminousPower, vec3 position, float lightSourceRadius);
     virtual ~SphereLight() { }
 
     // IEditorObject interface

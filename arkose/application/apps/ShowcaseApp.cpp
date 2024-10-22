@@ -106,7 +106,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     }
 
     if (scene.directionalLightCount() == 0) {
-        DirectionalLight& sun = scene.addLight(std::make_unique<DirectionalLight>(vec3(1.0f), 90'000.0f, normalize(vec3(0.5f, -1.0f, 0.2f))));
+        DirectionalLight& sun = scene.addLight(std::make_unique<DirectionalLight>(Colors::white, 90'000.0f, normalize(vec3(0.5f, -1.0f, 0.2f))));
         sun.transform().setTranslation({ 0.0f, 2.5f, 0.0f });
     }
 

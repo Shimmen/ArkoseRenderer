@@ -18,6 +18,7 @@
 #include <imgui.h>
 #include <ImGuizmo.h>
 #include <ark/aabb.h>
+#include <ark/color.h>
 #include <ark/conversion.h>
 #include <ark/transform.h>
 #include <concurrentqueue.h>
@@ -643,7 +644,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 const DirectionalLight& light = *managedLight.light;
 
-                dirLightData.emplace_back(DirectionalLightData { .color = light.color() * light.intensityValue() * lightPreExposure(),
+                dirLightData.emplace_back(DirectionalLightData { .color = light.color().asVec3() * light.intensityValue() * lightPreExposure(),
                                                                  .exposure = lightPreExposure(),
                                                                  .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0),
                                                                  .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0),
@@ -659,7 +660,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 const SphereLight& light = *managedLight.light;
 
-                sphereLightData.emplace_back(SphereLightData { .color = light.color() * light.intensityValue() * lightPreExposure(),
+                sphereLightData.emplace_back(SphereLightData { .color = light.color().asVec3() * light.intensityValue() * lightPreExposure(),
                                                                .exposure = lightPreExposure(),
                                                                .worldSpacePosition = vec4(light.transform().positionInWorld(), 0.0f),
                                                                .viewSpacePosition = viewFromWorld * vec4(light.transform().positionInWorld(), 1.0f),
@@ -675,7 +676,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 const SpotLight& light = *managedLight.light;
 
-                spotLightData.emplace_back(SpotLightData { .color = light.color() * light.intensityValue() * lightPreExposure(),
+                spotLightData.emplace_back(SpotLightData { .color = light.color().asVec3() * light.intensityValue() * lightPreExposure(),
                                                            .exposure = lightPreExposure(),
                                                            .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0f),
                                                            .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0f),

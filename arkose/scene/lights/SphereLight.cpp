@@ -7,7 +7,7 @@
 #include <imgui.h>
 
 SphereLight::SphereLight()
-    : Light(Type::SphereLight, vec3(1.0f))
+    : Light(Type::SphereLight, Colors::white)
 {
 }
 
@@ -23,7 +23,7 @@ SphereLight::SphereLight(LightAsset const& asset)
     m_lightSourceRadius = data.lightSourceRadius;
 }
 
-SphereLight::SphereLight(vec3 color, float luminousPower, vec3 position, float lightSourceRadius)
+SphereLight::SphereLight(Color color, float luminousPower, vec3 position, float lightSourceRadius)
     : Light(Type::SphereLight, color)
     , m_luminousPower(luminousPower)
     , m_lightSourceRadius(lightSourceRadius)
@@ -51,8 +51,7 @@ void SphereLight::drawGui()
     }
 
     if (ImGui::IsItemHovered() || ImGui::IsItemActive()) {
-        // TODO
-        //DebugDrawer::get().drawSphere(transform().positionInWorld(), m_lightRadius, color());
+        DebugDrawer::get().drawSphere(transform().positionInWorld(), m_lightRadius, color());
     }
 
     // TODO: Make it possible to adjust radius and calculate the lumens from the radius

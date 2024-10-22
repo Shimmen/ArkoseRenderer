@@ -3,13 +3,14 @@
 #include "scene/lights/Light.h"
 #include "scene/lights/IESProfile.h"
 #include "scene/Transform.h"
+#include <ark/color.h>
 #include <ark/transform.h>
 
 class SpotLight final : public Light {
 public:
     SpotLight();
     SpotLight(LightAsset const&);
-    SpotLight(vec3 color, float luminousIntensity, const std::string& iesProfilePath, vec3 position, vec3 direction);
+    SpotLight(Color color, float luminousIntensity, const std::string& iesProfilePath, vec3 position, vec3 direction);
     virtual ~SpotLight() { }
 
     // IEditorObject interface

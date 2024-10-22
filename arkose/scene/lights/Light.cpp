@@ -4,7 +4,7 @@
 #include <fmt/format.h>
 #include <imgui.h>
 
-Light::Light(Type type, vec3 color)
+Light::Light(Type type, Color color)
     : m_type(type)
     , m_color(color)
 {
@@ -15,7 +15,7 @@ Light::Light(Type type, vec3 color)
 Light::Light(Type type, LightAsset const& asset)
     : m_type(type)
     , m_name(asset.name)
-    , m_color(asset.color)
+    , m_color(Color::fromNonLinearSRGB(asset.color))
     , m_transform(asset.transform)
 {
     m_castsShadows = asset.castsShadows;
@@ -32,7 +32,7 @@ void Light::drawGui()
 {
     ImGui::Text("Light");
     ImGui::Separator();
-    ImGui::ColorEdit3("Color", value_ptr(m_color));
+    ImGui::ColorEdit3("Color", m_color.asFloatPointer());
 }
 
 vec3 Light::forwardDirection() const

@@ -2,6 +2,7 @@
 
 #include "rendering/backend/Resources.h"
 #include "scene/editor/EditorObject.h"
+#include <ark/color.h>
 #include <ark/matrix.h>
 
 class LightAsset;
@@ -16,13 +17,13 @@ public:
     };
 
     Light() = default;
-    Light(Type type, vec3 color);
+    Light(Type type, Color color);
     Light(Type type, LightAsset const&);
 
     virtual ~Light() { }
 
-    vec3 color() const { return m_color; }
-    void setColor(vec3 color) { m_color = color; }
+    Color color() const { return m_color; }
+    void setColor(Color color) { m_color = color; }
 
     Type type() const { return m_type; }
 
@@ -60,8 +61,7 @@ private:
     bool m_castsShadows { true };
     std::string m_name {};
 
-    // Linear sRGB color
-    vec3 m_color { 1.0f };
+    Color m_color { Colors::white };
 
     Transform m_transform {};
 };

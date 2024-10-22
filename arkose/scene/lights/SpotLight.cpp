@@ -5,7 +5,7 @@
 #include <imgui.h>
 
 SpotLight::SpotLight()
-    : Light(Type::SpotLight, vec3(1.0f))
+    : Light(Type::SpotLight, Colors::white)
 {
 }
 
@@ -21,7 +21,7 @@ SpotLight::SpotLight(LightAsset const& asset)
     m_outerConeAngle = data.outerConeAngle;
 }
 
-SpotLight::SpotLight(vec3 color, float luminousIntensity, const std::string& iesProfilePath, vec3 position, vec3 direction)
+SpotLight::SpotLight(Color color, float luminousIntensity, const std::string& iesProfilePath, vec3 position, vec3 direction)
     : Light(Type::SpotLight, color)
     , m_iesProfile(iesProfilePath)
     , m_luminousIntensity(luminousIntensity)
