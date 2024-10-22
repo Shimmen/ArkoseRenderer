@@ -46,7 +46,7 @@ namespace colorTemperature {
     constexpr Float fluorescentBulb = 5000.0;
 }
 
-Float blackBodyRadiation(Float temperature, Float wavelengthInNanometer)
+inline Float blackBodyRadiation(Float temperature, Float wavelengthInNanometer)
 {
     // From https://www.shadertoy.com/view/MstcD7 but it's also trivial to
     // reconstruct from Planck's Law: https://en.wikipedia.org/wiki/Planck%27s_law
@@ -72,7 +72,7 @@ namespace colorspace {
 
         // xyz (bar) fits from Listing 1 of https://research.nvidia.com/publication/simple-analytic-approximations-cie-xyz-color-matching-functions
 
-        Float xBarFit(Float wave)
+        inline Float xBarFit(Float wave)
         {
             Float t1 = (wave - 442.0) * ((wave < 442.0) ? 0.0624 : 0.0374);
             Float t2 = (wave - 599.8) * ((wave < 599.8) ? 0.0264 : 0.0323);
@@ -80,26 +80,26 @@ namespace colorspace {
             return 0.362 * std::exp(-0.5 * t1 * t1) + 1.056 * std::exp(-0.5 * t2 * t2) - 0.065 * std::exp(-0.5 * t3 * t3);
         }
 
-        Float yBarFit(Float wave)
+        inline Float yBarFit(Float wave)
         {
             Float t1 = (wave - 568.8) * ((wave < 568.8) ? 0.0213 : 0.0247);
             Float t2 = (wave - 530.9) * ((wave < 530.9) ? 0.0613 : 0.0322);
             return 0.821 * std::exp(-0.5 * t1 * t1) + 0.286 * std::exp(-0.5 * t2 * t2);
         }
 
-        Float zBarFit(Float wave)
+        inline Float zBarFit(Float wave)
         {
             Float t1 = (wave - 437.0) * ((wave < 437.0) ? 0.0845 : 0.0278);
             Float t2 = (wave - 459.0) * ((wave < 459.0) ? 0.0385 : 0.0725);
             return 1.217 * std::exp(-0.5 * t1 * t1) + 0.681 * std::exp(-0.5 * t2 * t2);
         }
 
-        Float photometricCurveFit(Float wave)
+        inline Float photometricCurveFit(Float wave)
         {
             return yBarFit(wave);
         }
 
-        vec3 fromSingleWavelength(Float power, Float wavelength)
+        inline vec3 fromSingleWavelength(Float power, Float wavelength)
         {
             Float X = xBarFit(wavelength);
             Float Y = yBarFit(wavelength);
@@ -107,7 +107,7 @@ namespace colorspace {
             return power * vec3(X, Y, Z);
         }
 
-        vec3 fromBlackBodyTemperature(Float temperature, int numSteps = 100)
+        inline vec3 fromBlackBodyTemperature(Float temperature, int numSteps = 100)
         {
             Float stepWidth = visibleLightWavelengthRangeLength / static_cast<Float>(numSteps);
 
@@ -122,7 +122,7 @@ namespace colorspace {
             return XYZ;
         }
 
-        vec3 from_xyY(vec2 xy, Float Y)
+        constexpr vec3 from_xyY(vec2 xy, Float Y)
         {
             Float scale = Y / xy.y;
             Float X = scale * xy.x;
@@ -130,7 +130,7 @@ namespace colorspace {
             return { X, Y, Z };
         }
 
-        vec2 to_xy(vec3 XYZ)
+        constexpr vec2 to_xy(vec3 XYZ)
         {
             Float sum = XYZ.x + XYZ.y + XYZ.z;
             Float x = XYZ.x / sum;
@@ -138,7 +138,7 @@ namespace colorspace {
             return { x, y };
         }
 
-        vec3 to_xyz(vec3 XYZ)
+        constexpr vec3 to_xyz(vec3 XYZ)
         {
             vec2 xy = to_xy(XYZ);
             Float z = 1.0 - xy.x - xy.y;
@@ -170,13 +170,13 @@ namespace colorspace {
         const vec2 whitePoint = vec2(0.3127, 0.3290);
         const Float whitePointIlluminant = standardIlluminant::D65;
 
-        Float luminance(const vec3& color)
+        constexpr Float luminance(const vec3& color)
         {
             constexpr vec3 Y = vec3(0.2126, 0.7152, 0.0722);
             return dot(color, Y);
         }
 
-        Float gammaEncode(Float linear)
+        constexpr Float gammaEncode(Float linear)
         {
             // (i.e. convert from linear sRGB to gamma-encoded sRGB)
             return (linear < 0.0031308)
@@ -184,7 +184,7 @@ namespace colorspace {
                 : 1.055 * std::pow(linear, 1.0 / 2.4) - 0.055;
         }
 
-        Float gammaDecode(Float encoded)
+        constexpr Float gammaDecode(Float encoded)
         {
             // (i.e. convert from gamma-encoded sRGB to linear sRGB)
             return (encoded < 0.04045)
@@ -192,17 +192,17 @@ namespace colorspace {
                 : std::pow((encoded + 0.055) / 1.055, 2.4);
         }
 
-        vec3 gammaEncode(const vec3& linear)
+        constexpr vec3 gammaEncode(const vec3& linear)
         {
             return { gammaEncode(linear.x), gammaEncode(linear.y), gammaEncode(linear.z) };
         }
 
-        vec3 gammaDecode(const vec3& encoded)
+        constexpr vec3 gammaDecode(const vec3& encoded)
         {
             return { gammaDecode(encoded.x), gammaDecode(encoded.y), gammaDecode(encoded.z) };
         }
 
-        vec3 fromBlackBodyTemperature(Float temperature, int numSteps = 100)
+        inline vec3 fromBlackBodyTemperature(Float temperature, int numSteps = 100)
         {
             vec3 XYZ = XYZ::fromBlackBodyTemperature(temperature, numSteps);
             vec3 sRGB = sRGB_from_XYZ * XYZ;
@@ -234,7 +234,7 @@ namespace colorspace {
         const vec2 whitePoint = vec2(0.3127, 0.3290);
         const Float whitePointIlluminant = standardIlluminant::D65;
 
-        Float encodePQfromLinear(Float x, Float maxNits)
+        inline Float encodePQfromLinear(Float x, Float maxNits)
         {
             // From https://www.khronos.org/registry/DataFormat/specs/1.3/dataformat.1.3.html#TRANSFER_PQ_IEOTF
 
@@ -257,7 +257,7 @@ namespace colorspace {
             return V;
         }
 
-        vec3 encodePQfromLinear(vec3 rgb, Float maxNits = 1500.0)
+        inline vec3 encodePQfromLinear(vec3 rgb, Float maxNits = 1500.0)
         {
             Float r = encodePQfromLinear(rgb.x, maxNits);
             Float g = encodePQfromLinear(rgb.y, maxNits);
@@ -286,14 +286,14 @@ namespace colorspace {
             { -0.53108, 1.10813, -0.07276 },
             { -0.07367, -0.00605, 1.07602 });
 
-        vec3 RRTAndODTFit(vec3 v)
+        constexpr vec3 RRTAndODTFit(vec3 v)
         {
             vec3 a = v * (v + 0.0245786) - 0.000090537;
             vec3 b = v * (v * 0.983729 + 0.4329510) + 0.238081;
             return a / b;
         }
 
-        vec3 referenceToneMap(vec3 color)
+        constexpr vec3 referenceToneMap(vec3 color)
         {
             color = inputMatrix * color;
             color = RRTAndODTFit(color);
@@ -306,7 +306,7 @@ namespace colorspace {
 
     namespace HSV {
 
-        vec3 toRGB(const vec3& HSV)
+        inline vec3 toRGB(const vec3& HSV)
         {
             // From https://en.wikipedia.org/wiki/HSL_and_HSV#HSV_to_RGB
 
@@ -341,7 +341,7 @@ namespace colorspace {
             return { 0.0, 0.0, 0.0 };
         }
 
-        vec3 fromRGB(vec3 RGB)
+        constexpr vec3 fromRGB(vec3 RGB)
         {
             // From https://en.wikipedia.org/wiki/HSL_and_HSV#From_RGB
 
