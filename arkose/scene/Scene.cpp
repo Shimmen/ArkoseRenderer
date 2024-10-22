@@ -7,6 +7,7 @@
 #include "system/Input.h"
 #include "rendering/GpuScene.h"
 #include "rendering/debug/DebugDrawer.h"
+#include "rendering/RenderPipeline.h"
 #include "scene/camera/Camera.h"
 #include "physics/PhysicsMesh.h"
 #include "physics/PhysicsScene.h"
@@ -490,6 +491,12 @@ void Scene::setSelectedObject(StaticMeshInstance& meshInstance)
 
 EditorGizmo* Scene::raycastScreenPointAgainstEditorGizmos(vec2 screenPoint)
 {
+    // `screenPoint` is a point in the output resolution but internally for
+    // everything about a scene we only care about the render resolution.
+    vec2 renderResolution = gpuScene().pipeline().renderResolution().asFloatVector();
+    vec2 outputResolution = gpuScene().pipeline().outputResolution().asFloatVector();
+    screenPoint *= renderResolution / outputResolution;
+
     EditorGizmo* closestGizmo = nullptr;
 
     for (EditorGizmo& gizmo : m_editorGizmos) {
