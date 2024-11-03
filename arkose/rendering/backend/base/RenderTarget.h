@@ -20,6 +20,7 @@ enum class RenderTargetBlendMode {
     None,
     Additive,
     AlphaBlending,
+    PremultipliedAlphaBlending,
 };
 
 class RenderTarget : public Resource {
