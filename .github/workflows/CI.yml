@@ -63,6 +63,7 @@ jobs:
     - name: Install dependencies
       if: ${{ matrix.os == 'ubuntu-latest' }}
       run: |
+        sudo apt update
         echo 'Install GLFW dependencies'
         sudo apt install xorg-dev libwayland-dev libxkbcommon-dev wayland-protocols extra-cmake-modules
         echo 'Install nativefiledialog-extended dependencies'
