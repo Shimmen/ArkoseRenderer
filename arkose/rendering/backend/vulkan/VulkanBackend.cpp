@@ -111,6 +111,7 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
 
     m_physicalDevice = pickBestPhysicalDevice();
     vkGetPhysicalDeviceProperties(physicalDevice(), &m_physicalDeviceProperties);
+    vkGetPhysicalDeviceMemoryProperties(physicalDevice(), &m_physicalDeviceMemoryProperties);
     auto deviceName = std::string(m_physicalDeviceProperties.deviceName);
     ARKOSE_LOG(Info, "VulkanBackend: using physical device '{}'", deviceName);
 
@@ -2044,6 +2045,10 @@ bool VulkanBackend::setBufferMemoryUsingMapping(VmaAllocation allocation, const 
 
     VmaAllocationInfo allocationInfo;
     vmaGetAllocationInfo(globalAllocator(), allocation, &allocationInfo);
+
+    VkMemoryType const& memoryType = m_physicalDeviceMemoryProperties.memoryTypes[allocationInfo.memoryType];
+    ARKOSE_ASSERT(memoryType.propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+
     void* mappedMemory = allocationInfo.pMappedData;
 
     //void* mappedMemory;
@@ -2056,6 +2061,11 @@ bool VulkanBackend::setBufferMemoryUsingMapping(VmaAllocation allocation, const 
     std::memcpy(dst, data, size);
 
     //vmaUnmapMemory(globalAllocator(), allocation);
+
+
+    if ((memoryType.propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) == 0) {
+        vmaFlushAllocation(globalAllocator(), allocation, offset, size);
+    }
 
     return true;
 }

@@ -265,6 +265,7 @@ private:
 
     VkPhysicalDevice m_physicalDevice {};
     VkPhysicalDeviceProperties m_physicalDeviceProperties {};
+    VkPhysicalDeviceMemoryProperties m_physicalDeviceMemoryProperties {};
 
     VkDevice m_device {};
 
