@@ -13,7 +13,7 @@ static std::unique_ptr<TaskGraph> g_taskGraphInstance { nullptr };
 std::mutex TaskGraph::s_taskQueueListMutex {};
 std::atomic_bool TaskGraph::s_validated { false };
 
-TaskGraph::PerThreadTaskList TaskGraph::s_taskQueueList {};
+TaskGraph::PerThreadTaskQueues TaskGraph::s_taskQueueList {};
 TaskGraph::ThreadTaskQueueLookupMap TaskGraph::s_taskQueueLookup {};
 
 void TaskGraph::initialize()
@@ -22,14 +22,12 @@ void TaskGraph::initialize()
 
     Task::initializeTasks();
 
-    unsigned int hardwareConcurrency = std::thread::hardware_concurrency();
-    if (hardwareConcurrency == 1) {
+    if (std::thread::hardware_concurrency() == 1) {
         ARKOSE_LOG(Fatal, "TaskGraph: this CPU only supports a single hardware thread, which is not compatible with this TaskGraph, exiting.");
     }
-    uint32_t numWorkerThreads = std::min(hardwareConcurrency - 1, 10u);
 
     ARKOSE_ASSERT(g_taskGraphInstance == nullptr);
-    g_taskGraphInstance = std::unique_ptr<TaskGraph>(new TaskGraph(numWorkerThreads));
+    g_taskGraphInstance = std::unique_ptr<TaskGraph>(new TaskGraph());
 }
 
 void TaskGraph::shutdown()
@@ -46,16 +44,32 @@ TaskGraph& TaskGraph::get()
     return *g_taskGraphInstance;
 }
 
-TaskGraph::TaskGraph(uint32_t numWorkerThreads)
+TaskGraph::TaskGraph()
 {
-    const size_t numExpectedTaskQueues = numWorkerThreads + 1;
+    unsigned int hardwareConcurrency = std::thread::hardware_concurrency();
 
-    createTaskQueueForThisThread();
+    u32 numDefaultWorkerThreads = std::min(hardwareConcurrency - 1, 10u);
 
-    for (size_t i = 0; i < numWorkerThreads; ++i) {
-        uint64_t workerId = i + 1;
-        std::string workerName = fmt::format("TaskGraphWorker{}", workerId);
-        m_workers.push_back(std::make_unique<Worker>(*this, workerId, workerName));
+    // These don't necessarily need to be on hardware threads
+    u32 numBackgroundWorkerThreads = 2;
+
+    // NOTE: The +1 is for the main thread queues, i.e. this current one which doesn't get an explicit worker
+    const size_t numExpectedTaskQueues = (numDefaultWorkerThreads + numBackgroundWorkerThreads) + 1;
+
+    createTaskQueuesForThisThread();
+
+    u64 workerId = 1;
+
+    for (size_t i = 0; i < numDefaultWorkerThreads; ++i) {
+        std::string workerName = fmt::format("TaskGraphWorker{}", i + 1);
+        m_workers.push_back(std::make_unique<Worker>(*this, WorkStrategy::Default, workerId, workerName));
+        workerId += 1;
+    }
+
+    for (size_t i = 0; i < numBackgroundWorkerThreads; ++i) {
+        std::string workerName = fmt::format("TaskGraphBackgroundWorker{}", i + 1);
+        m_workers.push_back(std::make_unique<Worker>(*this, WorkStrategy::BackgroundOnly, workerId, workerName));
+        workerId += 1;
     }
 
     // Ensure all workers have created their task queues before progressing!
@@ -114,10 +128,11 @@ bool TaskGraph::thisThreadIsWorker() const
     return false;
 }
 
-void TaskGraph::scheduleTask(Task& task)
+void TaskGraph::scheduleTask(Task& task, QueueType queueType)
 {
     // Always enqueue on own queue, let other workers steal from this
-    TaskQueue& taskQueue = taskQueueForThisThread();
+    TaskQueues& taskQueues = taskQueuesForThisThread();
+    TaskQueue& taskQueue = taskQueues.queue(queueType);
     taskQueue.enqueue(&task);
 }
 
@@ -126,7 +141,7 @@ void TaskGraph::waitForCompletion(Task& task)
     SCOPED_PROFILE_ZONE_TASKGRAPH();
 
     while (!task.isCompleted()) {
-        if (Task* otherTask = getNextTask()) {
+        if (Task* otherTask = getNextTask(QueueType::Default)) {
             SCOPED_PROFILE_ZONE_NAME_AND_COLOR("Execute task", 0xaa33aa);
             otherTask->execute();
         } else {
@@ -154,20 +169,42 @@ void TaskGraph::waitUntilGraphIsIdle() const
     }
 }
 
-TaskGraph::TaskQueue& TaskGraph::createTaskQueueForThisThread()
+TaskGraph::TaskQueues::TaskQueues()
+    : defaultQueue(1024)
+    , backgroundQueue(100)
+{
+}
+
+TaskGraph::TaskQueues::~TaskQueues()
+{
+}
+
+TaskGraph::TaskQueue& TaskGraph::TaskQueues::queue(QueueType queueType)
+{
+    switch (queueType) {
+    case QueueType::Default:
+        return defaultQueue;
+    case QueueType::Background:
+        return backgroundQueue;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+}
+
+TaskGraph::TaskQueues& TaskGraph::createTaskQueuesForThisThread()
 {
     std::scoped_lock<std::mutex> lock { s_taskQueueListMutex };
 
-    auto& taskQueue = s_taskQueueList.emplace_back(std::make_unique<TaskQueue>(1024));
+    auto& taskQueues = s_taskQueueList.emplace_back(std::make_unique<TaskQueues>());
 
     std::thread::id threadId = std::this_thread::get_id();
-    ARKOSE_ASSERT(not s_taskQueueLookup.contains(threadId));
-    s_taskQueueLookup[threadId] = taskQueue.get();
+    ARKOSE_ASSERT(!s_taskQueueLookup.contains(threadId));
+    s_taskQueueLookup[threadId] = taskQueues.get();
 
-    return *taskQueue;
+    return *taskQueues;
 }
 
-TaskGraph::TaskQueue& TaskGraph::taskQueueForThisThread()
+TaskGraph::TaskQueues& TaskGraph::taskQueuesForThisThread()
 {
     // NOTE: All threads must register at startup, before ever calling this function!
     // After that the task queue map is immutable so we make no attempt at guarding access to it
@@ -179,15 +216,8 @@ TaskGraph::TaskQueue& TaskGraph::taskQueueForThisThread()
     ARKOSE_ASSERT(entry != s_taskQueueLookup.end());
     ARKOSE_ASSERT(entry->second != nullptr);
 
-    TaskQueue* taskQueue = entry->second;
-    return *taskQueue;
-}
-
-TaskGraph::TaskQueue& TaskGraph::taskQueueForThreadWithIndex(size_t idx)
-{
-    ARKOSE_ASSERT(idx < s_taskQueueList.size());
-    ARKOSE_ASSERT(s_taskQueueList[idx] != nullptr);
-    return *s_taskQueueList[idx];
+    TaskQueues* taskQueues = entry->second;
+    return *taskQueues;
 }
 
 void TaskGraph::validateTaskQueueMap(size_t expectedCount)
@@ -198,22 +228,20 @@ void TaskGraph::validateTaskQueueMap(size_t expectedCount)
     s_validated = true;
 }
 
-Task* TaskGraph::getNextTask(std::thread::id thisThreadId)
+Task* TaskGraph::getNextTask(QueueType queueType)
 {
-    (void)thisThreadId;
-
     Task* nextTask = nullptr;
 
     // Try grabbing one from the local queue
-    TaskQueue& localTaskQueue = taskQueueForThisThread();
-    if (localTaskQueue.try_dequeue(nextTask)) {
+    TaskQueues& localTaskQueues = taskQueuesForThisThread();
+    if (localTaskQueues.queue(queueType).try_dequeue(nextTask)) {
         return nextTask;
     }
 
     // Try stealing one from another thread's queue
     // NOTE: For now the queue is short enough that we can just try all.. (including our own queue again)
     for (auto& stealTaskQueue : s_taskQueueList) {
-        if (stealTaskQueue->try_dequeue(nextTask)) {
+        if (stealTaskQueue->queue(queueType).try_dequeue(nextTask)) {
             return nextTask;
         }
     }
@@ -221,8 +249,26 @@ Task* TaskGraph::getNextTask(std::thread::id thisThreadId)
     return nullptr;
 }
 
-TaskGraph::Worker::Worker(TaskGraph& owningTaskGraph, uint64_t workerId, std::string name)
+Task* TaskGraph::getNextTaskForWorkStrategy(WorkStrategy strategy)
+{
+    switch (strategy) {
+    case WorkStrategy::Default: {
+        Task* task = getNextTask(QueueType::Default);
+        if (!task) {
+            task = getNextTask(QueueType::Background);
+        }
+        return task;
+    }
+    case WorkStrategy::BackgroundOnly:
+        return getNextTask(QueueType::Background);
+    default:
+        ASSERT_NOT_REACHED();
+    }
+}
+
+TaskGraph::Worker::Worker(TaskGraph& owningTaskGraph, WorkStrategy strategy, u64 workerId, std::string name)
     : m_taskGraph(&owningTaskGraph)
+    , m_strategy(strategy)
     , m_name(std::move(name))
     , m_workerId(workerId)
 {
@@ -233,16 +279,16 @@ TaskGraph::Worker::Worker(TaskGraph& owningTaskGraph, uint64_t workerId, std::st
             Profiling::setNameForActiveThread(m_name.c_str());
 
             m_threadId = std::this_thread::get_id();
-            m_taskQueue = &TaskGraph::createTaskQueueForThisThread();
+            m_taskQueues = &TaskGraph::createTaskQueuesForThisThread();
 
-            while (not s_validated) {
+            while (!s_validated) {
                 std::this_thread::sleep_for(std::chrono::nanoseconds::min());
             }
         }
 
         while (m_alive) {
 
-            if (Task* taskToExecute = m_taskGraph->getNextTask(m_threadId)) {
+            if (Task* taskToExecute = m_taskGraph->getNextTaskForWorkStrategy(m_strategy)) {
 
                 SCOPED_PROFILE_ZONE_NAME_AND_COLOR("Execute task", 0xaa33aa);
 
@@ -311,4 +357,9 @@ void TaskGraph::Worker::waitUntilShutdown()
         m_thread->join();
         m_thread = {};
     }
+}
+
+u64 TaskGraph::Worker::numWaitingTasks(QueueType queueType) const
+{
+    return taskQueuesForThisThread().queue(queueType).size_approx();
 }

@@ -14,6 +14,16 @@
 // TaskGraph / job system implementation based on the one outline here:
 // https://blog.molecular-matters.com/tag/job-system/
 
+enum class QueueType {
+    Default,
+    Background,
+};
+
+enum class WorkStrategy {
+    Default,
+    BackgroundOnly,
+};
+
 class TaskGraph final {
 public:
 
@@ -24,7 +34,7 @@ public:
 
     static TaskGraph& get();
 
-    void scheduleTask(Task&);
+    void scheduleTask(Task&, QueueType = QueueType::Default);
     void waitForCompletion(Task&);
 
     size_t workerThreadCount() const;
@@ -35,26 +45,38 @@ public:
     bool isGraphIdle() const;
     void waitUntilGraphIsIdle() const;
 
-    Task* getNextTask(std::thread::id thisThreadId = std::this_thread::get_id());
+    Task* getNextTask(QueueType);
+    Task* getNextTaskForWorkStrategy(WorkStrategy);
 
 private:
 
-    TaskGraph(uint32_t numWorkerThreads);
+    TaskGraph();
     TaskGraph(TaskGraph&) = delete;
     TaskGraph& operator=(TaskGraph&) = delete;
 
     using TaskQueue = moodycamel::ConcurrentQueue<Task*>;
-    using PerThreadTaskList = std::vector<std::unique_ptr<TaskQueue>>;
-    using ThreadTaskQueueLookupMap = std::unordered_map<std::thread::id, TaskQueue*>;
 
-    static PerThreadTaskList s_taskQueueList;
+    struct TaskQueues {
+        TaskQueues();
+        ~TaskQueues();
+
+        TaskQueue& queue(QueueType);
+
+    private:
+        TaskQueue defaultQueue;
+        TaskQueue backgroundQueue;
+    };
+
+    using PerThreadTaskQueues = std::vector<std::unique_ptr<TaskQueues>>;
+    using ThreadTaskQueueLookupMap = std::unordered_map<std::thread::id, TaskQueues*>;
+
+    static PerThreadTaskQueues s_taskQueueList;
     static ThreadTaskQueueLookupMap s_taskQueueLookup;
     static std::mutex s_taskQueueListMutex;
     static std::atomic_bool s_validated;
 
-    static TaskQueue& createTaskQueueForThisThread();
-    static TaskQueue& taskQueueForThisThread();
-    static TaskQueue& taskQueueForThreadWithIndex(size_t);
+    static TaskQueues& createTaskQueuesForThisThread();
+    static TaskQueues& taskQueuesForThisThread();
     static void validateTaskQueueMap(size_t expectedCount);
 
     //
@@ -62,7 +84,7 @@ private:
     class Worker {
     public:
 
-        Worker(TaskGraph&, uint64_t workerId, std::string name);
+        Worker(TaskGraph&, WorkStrategy, u64 workerId, std::string name);
         ~Worker();
 
         const std::string& name() const { return m_name; }
@@ -71,18 +93,18 @@ private:
         void triggerShutdown();
         void waitUntilShutdown();
 
-        uint64_t numWaitingTasks() const { return taskQueueForThisThread().size_approx(); }
+        u64 numWaitingTasks(QueueType) const;
         bool isIdle() const { return m_idle.load(); }
 
     private:
 
         TaskGraph* m_taskGraph { nullptr };
 
-        std::string m_name;
-        uint64_t m_workerId;
-        std::thread::id m_threadId {};
+        WorkStrategy m_strategy;
 
-        uint64_t m_nextSequentialTaskId { 1 };
+        std::string m_name;
+        u64 m_workerId;
+        std::thread::id m_threadId {};
 
         std::optional<std::thread> m_thread {};
         std::atomic<bool> m_alive { true };
@@ -91,7 +113,7 @@ private:
         std::mutex m_idleMutex {};
         std::condition_variable m_idleCondition {};
 
-        TaskGraph::TaskQueue* m_taskQueue {};
+        TaskGraph::TaskQueues* m_taskQueues {};
     };
 
     std::vector<std::unique_ptr<Worker>> m_workers {};
