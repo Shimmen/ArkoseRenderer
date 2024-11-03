@@ -211,6 +211,7 @@ add_subdirectory(tiny_gltf)
 add_subdirectory(half)
 add_subdirectory(dlss)
 add_subdirectory(mimalloc)
+add_subdirectory(renderdoc)
 
 ##################################
 # Finalize FetchContent dependencies

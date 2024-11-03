@@ -289,6 +289,9 @@ endif()
 target_link_libraries(ArkoseRenderer PRIVATE
     ArkoseCore # core arkose library
 
+    # Debug tools
+    renderdoc_api
+
     # Physics
     Jolt
     )

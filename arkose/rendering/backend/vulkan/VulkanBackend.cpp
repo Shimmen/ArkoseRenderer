@@ -1,6 +1,7 @@
 #include "VulkanBackend.h"
 
-#include "VulkanCommandList.h"
+#include "core/CommandLine.h"
+#include "rendering/backend/vulkan/VulkanCommandList.h"
 #include "rendering/backend/vulkan/VulkanResources.h"
 #include "rendering/backend/vulkan/VulkanUpscalingState.h"
 #include "rendering/backend/shader/Shader.h"
@@ -33,6 +34,28 @@
 
 VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecification)
 {
+    if constexpr (vulkanDebugMode) {
+        if (CommandLine::hasArgument("-renderdoc")) {
+            #if PLATFORM_WINDOWS
+            // TODO: Don't hard-code renderdoc.dll location. Instead, find it during CMake configuration
+            // and copy it to the executable directory. Then we can just check for "renderdoc.dll" to find it.
+            if (HMODULE renderdocModule = LoadLibraryA("C:\\Program Files\\RenderDoc\\renderdoc.dll")) {
+                pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)GetProcAddress(renderdocModule, "RENDERDOC_GetAPI");
+            #elif PLATFORM_LINUX
+            if (void* renderdocModule = dlopen("librenderdoc.so", RTLD_NOW)) {
+                pRENDERDOC_GetAPI RENDERDOC_GetAPI = (pRENDERDOC_GetAPI)dlsym(renderdocModule, "RENDERDOC_GetAPI");
+            #endif
+                int result = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_6_0, (void**)&m_renderdocAPI);
+                if (result == 1) {
+                    ARKOSE_LOG(Info, "VulkanBackend: RenderDoc overlay enabled");
+                    m_usingRenderDoc = true;
+                } else {
+                    ARKOSE_LOG(Error, "VulkanBackend: failed to initialize RenderDoc API ({})", result);
+                }
+            }
+        }
+    }
+
     {
         uint32_t availableLayerCount;
         vkEnumerateInstanceLayerProperties(&availableLayerCount, nullptr);
@@ -166,7 +189,7 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
 
 #if WITH_DLSS
     bool runningOnNvidiaPhysicalDevice = m_physicalDeviceProperties.vendorID == 0x10DE;
-    if (runningOnNvidiaPhysicalDevice && m_dlssHasAllRequiredExtensions) {
+    if (runningOnNvidiaPhysicalDevice && m_dlssHasAllRequiredExtensions && !m_usingRenderDoc) {
         m_dlss = std::make_unique<VulkanDLSS>(*this, m_instance, physicalDevice(), device());
         if (m_dlss->isReadyToUse()) {
             ARKOSE_LOG(Info, "VulkanBackend: DLSS is ready to use!");
@@ -822,7 +845,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     #endif
 
 #if WITH_DLSS
-    if (m_dlssHasAllRequiredExtensions) {
+    if (m_dlssHasAllRequiredExtensions && !m_usingRenderDoc) {
         for (VkExtensionProperties const* extension : VulkanDLSS::requiredDeviceExtensions(m_instance, physicalDevice)) {
             if (hasSupportForDeviceExtension(extension->extensionName)) {
                 addDeviceExtension(extension->extensionName);

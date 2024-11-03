@@ -15,6 +15,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include <renderdoc_app.h>
+
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.h>
 
@@ -366,4 +368,11 @@ private:
         tracy::VkCtx* m_tracyVulkanContext {};
         VkCommandBuffer m_tracyCommandBuffer {};
     #endif
+
+    ///////////////////////////////////////////////////////////////////////////
+    /// Debug stuff
+
+    bool m_usingRenderDoc { false };
+    RENDERDOC_API_1_6_0 m_renderdocAPI { nullptr };
+
 };
