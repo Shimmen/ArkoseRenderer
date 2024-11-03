@@ -72,14 +72,17 @@ std::pair<VkBuffer, VmaAllocation> VulkanRayTracingKHR::createAccelerationStruct
         bufferCreateInfo.usage |= VK_BUFFER_USAGE_TRANSFER_SRC_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
     }
 
-    VmaAllocationCreateInfo scratchAllocCreateInfo = {};
-    scratchAllocCreateInfo.usage = deviceOnlyMemory
-        ? VMA_MEMORY_USAGE_GPU_ONLY
-        : VMA_MEMORY_USAGE_CPU_TO_GPU;
+    VmaAllocationCreateInfo allocCreateInfo = {};
+    if (deviceOnlyMemory) { 
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_ONLY;
+    } else {
+        allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+        allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+    }
 
     VkBuffer buffer;
     VmaAllocation allocation;
-    if (vmaCreateBuffer(m_backend.globalAllocator(), &bufferCreateInfo, &scratchAllocCreateInfo, &buffer, &allocation, nullptr) != VK_SUCCESS) {
+    if (vmaCreateBuffer(m_backend.globalAllocator(), &bufferCreateInfo, &allocCreateInfo, &buffer, &allocation, nullptr) != VK_SUCCESS) {
         ARKOSE_LOG(Fatal, "Vulkan ray tracing: could not create acceleration structure buffer.");
     }
 

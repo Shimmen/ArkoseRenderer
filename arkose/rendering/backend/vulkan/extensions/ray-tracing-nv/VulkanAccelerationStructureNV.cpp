@@ -202,6 +202,7 @@ VulkanBottomLevelASNV::VulkanBottomLevelASNV(Backend& backend, std::vector<RTGeo
 
         VmaAllocationCreateInfo allocCreateInfo = {};
         allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU;
+        allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
         VmaAllocationInfo allocationInfo;
         if (vmaCreateBuffer(vulkanBackend.globalAllocator(), &bufferCreateInfo, &allocCreateInfo, &transformBuffer, &transformBufferAllocation, &allocationInfo) != VK_SUCCESS) {

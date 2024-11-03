@@ -2042,16 +2042,20 @@ bool VulkanBackend::setBufferMemoryUsingMapping(VmaAllocation allocation, const 
         return true;
     }
 
-    void* mappedMemory;
-    if (vmaMapMemory(globalAllocator(), allocation, &mappedMemory) != VK_SUCCESS) {
-        ARKOSE_LOG(Error, "VulkanBackend: could not map staging buffer.");
-        return false;
-    }
+    VmaAllocationInfo allocationInfo;
+    vmaGetAllocationInfo(globalAllocator(), allocation, &allocationInfo);
+    void* mappedMemory = allocationInfo.pMappedData;
+
+    //void* mappedMemory;
+    //if (vmaMapMemory(globalAllocator(), allocation, &mappedMemory) != VK_SUCCESS) {
+    //    ARKOSE_LOG(Error, "VulkanBackend: could not map staging buffer.");
+    //    return false;
+    //}
 
     uint8_t* dst = ((uint8_t*)mappedMemory) + offset;
     std::memcpy(dst, data, size);
 
-    vmaUnmapMemory(globalAllocator(), allocation);
+    //vmaUnmapMemory(globalAllocator(), allocation);
 
     return true;
 }
@@ -2071,6 +2075,7 @@ bool VulkanBackend::setBufferDataUsingStagingBuffer(VkBuffer buffer, const uint8
 
     VmaAllocationCreateInfo allocCreateInfo = {};
     allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+    allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
     VkBuffer stagingBuffer;
     VmaAllocation stagingAllocation;

@@ -161,10 +161,12 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
     case Buffer::Usage::Upload:
         allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU; // (ensures host visible)
         allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+        allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
         break;
     case Buffer::Usage::Readback:
         allocCreateInfo.usage = VMA_MEMORY_USAGE_GPU_TO_CPU; // (ensures host visible)
         //allocCreateInfo.requiredFlags = VK_MEMORY_PROPERTY_HOST_COHERENT_BIT; // ??
+        allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
         break;
     default:
         ASSERT_NOT_REACHED();

@@ -423,6 +423,7 @@ void VulkanTexture::setData(const void* data, size_t size, size_t mipIdx, size_t
 
     VmaAllocationCreateInfo allocCreateInfo = {};
     allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+    allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
     VkBuffer stagingBuffer;
     VmaAllocation stagingAllocation;

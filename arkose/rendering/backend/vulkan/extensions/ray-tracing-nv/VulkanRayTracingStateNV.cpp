@@ -244,6 +244,7 @@ VulkanRayTracingStateNV::VulkanRayTracingStateNV(Backend& backend, ShaderBinding
 
         VmaAllocationCreateInfo sbtAllocCreateInfo = {};
         sbtAllocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_TO_GPU; // Gpu only is probably perfectly fine, except we need to copy the data using a staging buffer
+        sbtAllocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
         if (vmaCreateBuffer(vulkanBackend.globalAllocator(), &sbtBufferCreateInfo, &sbtAllocCreateInfo, &sbtBuffer, &sbtBufferAllocation, nullptr) != VK_SUCCESS) {
             ARKOSE_LOG(Fatal, "Error trying to create buffer for the shader binding table.");
