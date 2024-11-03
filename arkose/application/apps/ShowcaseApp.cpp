@@ -44,9 +44,11 @@
 #include "asset/import/AssetImporter.h"
 
 constexpr bool keepRenderDocCompatible = false;
+
 constexpr bool withUpscaling = true && !keepRenderDocCompatible;
 constexpr bool withRayTracing = true && !keepRenderDocCompatible;
-constexpr bool withMeshShading = true && !keepRenderDocCompatible;
+
+constexpr bool withMeshShading = true;
 constexpr bool withVisibilityBuffer = true && withMeshShading;
 
 std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
