@@ -2,8 +2,8 @@
 <AutoVisualizer xmlns="http://schemas.microsoft.com/vstudio/debugger/natvis/2010">
 
     <Type Name="ark::UniquePtr&lt;*&gt;">
-        <DisplayString Condition="m_value == nullptr">nullptr</DisplayString>
-        <DisplayString>{m_value}</DisplayString>
+        <DisplayString Condition="m_ptr == nullptr">nullptr</DisplayString>
+        <DisplayString>{m_ptr}</DisplayString>
     </Type>
 
 </AutoVisualizer>

@@ -4,6 +4,10 @@ project(arklib)
 add_library(arklib INTERFACE)
 target_include_directories(arklib INTERFACE include)
 
+if (MSVC)
+    target_sources(arklib INTERFACE arklib.natvis)
+endif ()
+
 set_property(TARGET arklib PROPERTY CXX_STANDARD 20)
 
 # Build tests if this is invoked directly from CMake (i.e., not through add_subdirectory)
