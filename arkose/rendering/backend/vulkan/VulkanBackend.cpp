@@ -2393,3 +2393,27 @@ Backend::SwapchainTransferFunction VulkanBackend::swapchainTransferFunction() co
         ASSERT_NOT_REACHED();
     }
 }
+
+void VulkanBackend::beginRenderDocCapture()
+{
+    if (m_renderdocAPI) {
+        #if PLATFORM_WINDOWS
+        m_renderdocAPI->StartFrameCapture(RENDERDOC_DEVICEPOINTER_FROM_VKINSTANCE(m_instance),
+                                          System::get().win32WindowHandle());
+        #else
+        // TODO: Implement for non-Windows platforms
+        #endif
+    }
+}
+
+void VulkanBackend::endRenderDocCapture()
+{
+    if (m_renderdocAPI) {
+        #if PLATFORM_WINDOWS
+        m_renderdocAPI->EndFrameCapture(RENDERDOC_DEVICEPOINTER_FROM_VKINSTANCE(m_instance),
+                                        System::get().win32WindowHandle());
+        #else
+        // TODO: Implement for non-Windows platforms
+        #endif
+    }
+}

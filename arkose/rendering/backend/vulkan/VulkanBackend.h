@@ -375,4 +375,7 @@ private:
 
     RENDERDOC_API_1_6_0* m_renderdocAPI { nullptr };
 
+    void beginRenderDocCapture();
+    void endRenderDocCapture();
+
 };
