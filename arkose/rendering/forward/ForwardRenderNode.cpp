@@ -20,7 +20,11 @@ std::string ForwardRenderNode::name() const
 {
     switch (m_mode) {
     case ForwardRenderNode::Mode::Opaque:
-        return "Forward opaque";
+        if (m_meshFilter == ForwardMeshFilter::OnlySkeletalMeshes) {
+            return "Forward opaque (skeletal meshes)";
+        } else {
+            return "Forward opaque";
+        }
     case ForwardRenderNode::Mode::Translucent:
         return "Translucency";
     }
