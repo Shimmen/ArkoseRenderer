@@ -44,17 +44,18 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
         m_targetInstance->transform().setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(30.0f)));
     }
 
-    scene.setAmbientIlluminance(200.0f);
+    scene.setAmbientIlluminance(150.0f);
     scene.setEnvironmentMap({ .assetPath = "assets/sample/hdri/tiergarten_2k.hdr",
-                              .brightnessFactor = 5000.0f });
+                              .brightnessFactor = 10000.0f });
 
     vec3 sunDirecton = normalize(vec3(-1.0f, -1.0f, -1.0f));
     scene.addLight(std::make_unique<DirectionalLight>(Colors::white, 90'000.0f, sunDirecton));
 
     Camera& camera = scene.addCamera("default", true);
     camera.lookAt(vec3(0, 1.0f, 4.0f), vec3(0, 0, 0));
-    camera.setManualExposureParameters(11.0f, 1.0f / 125.0f, 400.0f);
+    camera.setManualExposureParameters(11.0f, 1.0f / 125.0f, 100.0f);
     m_fpsCameraController.takeControlOfCamera(camera);
+    m_fpsCameraController.setMaxSpeed(2.5f);
 
     ////////////////////////////////////////////////////////////////////////////
     // Render pipeline setup
