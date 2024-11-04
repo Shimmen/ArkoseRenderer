@@ -373,7 +373,6 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     /// Debug stuff
 
-    bool m_usingRenderDoc { false };
-    RENDERDOC_API_1_6_0 m_renderdocAPI { nullptr };
+    RENDERDOC_API_1_6_0* m_renderdocAPI { nullptr };
 
 };

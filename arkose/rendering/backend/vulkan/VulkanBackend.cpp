@@ -52,7 +52,6 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
                 int result = RENDERDOC_GetAPI(eRENDERDOC_API_Version_1_6_0, (void**)&m_renderdocAPI);
                 if (result == 1) {
                     ARKOSE_LOG(Info, "VulkanBackend: RenderDoc overlay enabled");
-                    m_usingRenderDoc = true;
                 } else {
                     ARKOSE_LOG(Error, "VulkanBackend: failed to initialize RenderDoc API ({})", result);
                 }
@@ -194,7 +193,7 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
 
 #if WITH_DLSS
     bool runningOnNvidiaPhysicalDevice = m_physicalDeviceProperties.vendorID == 0x10DE;
-    if (runningOnNvidiaPhysicalDevice && m_dlssHasAllRequiredExtensions && !m_usingRenderDoc) {
+    if (runningOnNvidiaPhysicalDevice && m_dlssHasAllRequiredExtensions && !m_renderdocAPI) {
         m_dlss = std::make_unique<VulkanDLSS>(*this, m_instance, physicalDevice(), device());
         if (m_dlss->isReadyToUse()) {
             ARKOSE_LOG(Info, "VulkanBackend: DLSS is ready to use!");
@@ -850,7 +849,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     #endif
 
 #if WITH_DLSS
-    if (m_dlssHasAllRequiredExtensions && !m_usingRenderDoc) {
+    if (m_dlssHasAllRequiredExtensions && !m_renderdocAPI) {
         for (VkExtensionProperties const* extension : VulkanDLSS::requiredDeviceExtensions(m_instance, physicalDevice)) {
             if (hasSupportForDeviceExtension(extension->extensionName)) {
                 addDeviceExtension(extension->extensionName);
