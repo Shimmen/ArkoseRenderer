@@ -73,7 +73,7 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<TAANode>(scene.camera());
     pipeline.addNode<TonemapNode>("SceneColor");
 
-    pipeline.addNode<EditorGridRenderNode>();
+    m_editorGrid = &pipeline.addNode<EditorGridRenderNode>();
     pipeline.addNode<DebugDrawNode>();
 
     FinalNode& finalNode = pipeline.addNode<FinalNode>("SceneColorLDR");
@@ -248,6 +248,11 @@ void MeshViewerApp::drawMeshHierarchyPanel()
         if (m_drawBoundingBox) {
             m_scene->drawInstanceBoundingBox(*m_targetInstance);
         }
+
+        // This isn't really related to the current mesh so should probably be moved to its own panel..
+        bool enableGrid = m_editorGrid->enabled();
+        ImGui::Checkbox("Render grid", &enableGrid);
+        m_editorGrid->setEnabled(enableGrid);
 
         if (ImGui::BeginTabBar("MeshViewerLODTabBar")) {
 

@@ -39,7 +39,9 @@ RenderPipelineNode::ExecuteCallback EditorGridRenderNode::construct(GpuScene& sc
     RenderState& gridRenderState = reg.createRenderState(gridStateBuilder);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
-        cmdList.beginRendering(gridRenderState);
-        cmdList.draw(6);
+        if (m_enabled) {
+            cmdList.beginRendering(gridRenderState);
+            cmdList.draw(6);
+        }
     };
 }

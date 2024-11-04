@@ -9,6 +9,8 @@
 // TODO: Move BlendMode and ImageFilter out of the asset so we don't have to include this!
 #include "asset/MaterialAsset.h"
 
+class EditorGridRenderNode;
+
 class MeshViewerApp : public App {
 public:
     void setup(Scene&, RenderPipeline&) override;
@@ -19,6 +21,7 @@ public:
 
 private:
     Scene* m_scene { nullptr };
+    EditorGridRenderNode* m_editorGrid { nullptr };
 
     // The mesh we're currently viewing & editing
     MeshAsset* m_targetAsset {};
