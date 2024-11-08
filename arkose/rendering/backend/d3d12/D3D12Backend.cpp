@@ -446,6 +446,21 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
     return true;
 }
 
+std::optional<Backend::SubmitStatus> D3D12Backend::submitRenderPipeline(RenderPipeline& renderPipeline, Registry& registry, UploadBuffer& uploadBuffer, char const* debugName)
+{
+    NOT_YET_IMPLEMENTED();
+}
+
+bool D3D12Backend::pollSubmissionStatus(SubmitStatus& submitStatus) const
+{
+    NOT_YET_IMPLEMENTED();
+}
+
+bool D3D12Backend::waitForSubmissionCompletion(SubmitStatus& submitStatus, u64 timeout) const
+{
+    NOT_YET_IMPLEMENTED();
+}
+
 void D3D12Backend::completePendingOperations()
 {
     waitForDeviceIdle();

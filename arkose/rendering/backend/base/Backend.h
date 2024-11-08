@@ -44,6 +44,10 @@ public:
         ST2084,
     };
 
+    struct SubmitStatus {
+        void* data;
+    };
+
     struct AppSpecification {
         std::vector<Backend::Capability> requiredCapabilities;
         std::vector<Backend::Capability> optionalCapabilities;
@@ -68,6 +72,10 @@ public:
 
     virtual void newFrame() = 0;
     virtual bool executeFrame(RenderPipeline&, float elapsedTime, float deltaTime) = 0;
+
+    virtual std::optional<SubmitStatus> submitRenderPipeline(RenderPipeline&, Registry&, UploadBuffer&, char const* debugName = nullptr) = 0;
+    virtual bool pollSubmissionStatus(SubmitStatus&) const = 0;
+    virtual bool waitForSubmissionCompletion(SubmitStatus&, u64 timeout) const = 0;
 
     virtual int vramStatsReportRate() const { return 0; }
     virtual std::optional<VramStats> vramStats() { return {}; }

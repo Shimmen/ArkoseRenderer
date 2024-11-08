@@ -64,6 +64,10 @@ public:
     void newFrame() override;
     bool executeFrame(RenderPipeline&, float elapsedTime, float deltaTime) override;
 
+    std::optional<SubmitStatus> submitRenderPipeline(RenderPipeline&, Registry&, UploadBuffer&, char const* debugName) override;
+    bool pollSubmissionStatus(SubmitStatus&) const override;
+    bool waitForSubmissionCompletion(SubmitStatus&, u64 timeout) const override;
+
     int vramStatsReportRate() const override { return VramStatsQueryRate; }
     std::optional<VramStats> vramStats() override;
 

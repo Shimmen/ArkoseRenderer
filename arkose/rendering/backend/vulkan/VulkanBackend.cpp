@@ -1702,7 +1702,7 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
         vkCmdWriteTimestamp(commandBuffer, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, frameContext.timestampQueryPool, frameStartTimestampIdx);
 
         {
-            SCOPED_PROFILE_ZONE_GPU(commandBuffer, "Render Pipeline");
+            SCOPED_PROFILE_ZONE_GPU(commandBuffer, "Frame Render Pipeline");
             renderPipeline.forEachNodeInResolvedOrder(registry, [&](RenderPipelineNode& node, const RenderPipelineNode::ExecuteCallback& nodeExecuteCallback) {
 
                 std::string nodeName = node.name();
@@ -1924,6 +1924,162 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
     m_relativeFrameIndex += 1;
 
     return true;
+}
+
+std::optional<Backend::SubmitStatus> VulkanBackend::submitRenderPipeline(RenderPipeline& renderPipeline, Registry& registry, UploadBuffer& uploadBuffer, char const* debugName)
+{
+    SCOPED_PROFILE_ZONE_BACKEND();
+
+    double cpuFrameStartTime = System::get().timeSinceStartup();
+
+    VkCommandBufferAllocateInfo commandBufferAllocateInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO };
+    commandBufferAllocateInfo.commandPool = m_defaultCommandPool;
+    commandBufferAllocateInfo.commandBufferCount = 1;
+    commandBufferAllocateInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+
+    VkCommandBuffer commandBuffer;
+    if (vkAllocateCommandBuffers(device(), &commandBufferAllocateInfo, &commandBuffer) != VK_SUCCESS) {
+        ARKOSE_LOG(Error, "VulkanBackend: could not create command buffer, exiting.");
+        return {};
+    }
+
+    VkCommandBufferBeginInfo commandBufferBeginInfo = { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+    commandBufferBeginInfo.flags = 0u;
+    commandBufferBeginInfo.pInheritanceInfo = nullptr;
+
+    if (vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo) != VK_SUCCESS) {
+        ARKOSE_LOG(Error, "VulkanBackend: error beginning command buffer command!");
+        return {};
+    }
+
+    uploadBuffer.reset();
+
+    VulkanCommandList cmdList { *this, commandBuffer };
+
+    AppState hackAppState { renderPipeline.renderResolution(), 1.0f / 60.0f, 0.0f, 0, true };
+
+    {
+        std::string pipelineLabel;
+        if (debugName) {
+            pipelineLabel = fmt::format("Render Pipeline '{}'", debugName);
+        } else {
+            pipelineLabel = "Render Pipeline";
+        }
+
+        SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandBuffer, pipelineLabel);
+
+        renderPipeline.forEachNodeInResolvedOrder(registry, [&](RenderPipelineNode& node, const RenderPipelineNode::ExecuteCallback& nodeExecuteCallback) {
+            std::string nodeName = node.name();
+
+            SCOPED_PROFILE_ZONE_DYNAMIC(nodeName, 0x00ffff);
+            double cpuStartTime = System::get().timeSinceStartup();
+
+            cmdList.beginDebugLabel(nodeName);
+
+            nodeExecuteCallback(hackAppState, cmdList, uploadBuffer);
+            cmdList.endNode({});
+
+            cmdList.endDebugLabel();
+
+            double cpuElapsed = System::get().timeSinceStartup() - cpuStartTime;
+            node.timer().reportCpuTime(cpuElapsed);
+        });
+    }
+
+    if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        ARKOSE_LOG(Error, "VulkanBackend: error ending command buffer command!");
+        return {};
+    }
+
+    double cpuFrameElapsedTime = System::get().timeSinceStartup() - cpuFrameStartTime;
+    renderPipeline.timer().reportCpuTime(cpuFrameElapsedTime);
+
+    // NOTE: This fence will be leaked if it's never waited on or polled for completion (so ensure that's done)
+    VkFence submitFence = VK_NULL_HANDLE;
+
+    VkFenceCreateInfo fenceCreateInfo = { VK_STRUCTURE_TYPE_FENCE_CREATE_INFO };
+    if (vkCreateFence(device(), &fenceCreateInfo, nullptr, &submitFence) != VK_SUCCESS) {
+        ARKOSE_LOG(Error, "VulkanBackend: could not create execution fence, exiting.");
+        return {};
+    }
+
+    // Submit queue
+    {
+        SCOPED_PROFILE_ZONE_BACKEND_NAMED("Submitting for queue");
+
+        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+
+        submitInfo.commandBufferCount = 1;
+        submitInfo.pCommandBuffers = &commandBuffer;
+
+        submitInfo.waitSemaphoreCount = 0;
+        submitInfo.pWaitSemaphores = nullptr;
+        submitInfo.pWaitDstStageMask = nullptr;
+
+        submitInfo.signalSemaphoreCount = 0;
+        submitInfo.pSignalSemaphores = nullptr;
+
+        VkResult submitStatus = vkQueueSubmit(m_graphicsQueue.queue, 1, &submitInfo, submitFence);
+        if (submitStatus != VK_SUCCESS) {
+            ARKOSE_LOG(Error, "VulkanBackend: could not submit to the graphics queue.");
+            return {};
+        }
+    }
+
+    SubmitStatus submitStatus;
+
+    static_assert(sizeof(VkFence) == sizeof(void*));
+    submitStatus.data = reinterpret_cast<void*>(submitFence);
+
+    return submitStatus;
+}
+
+bool VulkanBackend::pollSubmissionStatus(SubmitStatus& submitStatus) const
+{
+    if (submitStatus.data == nullptr) {
+
+        // We've already checked for completion and subsequently cleaned up the fence
+        return true;
+
+    } else {
+
+        VkFence submitFence = reinterpret_cast<VkFence>(submitStatus.data);
+
+        VkResult status = vkGetFenceStatus(device(), submitFence);
+        ARKOSE_ASSERT(status == VK_SUCCESS || status == VK_NOT_READY);
+        bool completed = status == VK_SUCCESS;
+
+        if (completed) {
+            vkDestroyFence(device(), submitFence, nullptr);
+            submitStatus.data = nullptr;
+        }
+
+        return completed;
+    }
+}
+
+bool VulkanBackend::waitForSubmissionCompletion(SubmitStatus& submitStatus, u64 timeout) const
+{
+    if (submitStatus.data == nullptr) {
+
+        // We've already checked for completion and subsequently cleaned up the fence
+        return true;
+
+    } else {
+
+        VkFence submitFence = reinterpret_cast<VkFence>(submitStatus.data);
+
+        VkResult status = vkWaitForFences(device(), 1, &submitFence, VK_TRUE, timeout);
+        ARKOSE_ASSERT(status == VK_SUCCESS || status == VK_TIMEOUT);
+        bool completed = status == VK_SUCCESS;
+
+        if (completed) {
+            vkDestroyFence(device(), submitFence, nullptr);
+            submitStatus.data = nullptr;
+        }
+
+        return completed;
+    }
 }
 
 std::optional<VramStats> VulkanBackend::vramStats()

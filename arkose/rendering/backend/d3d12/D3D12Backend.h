@@ -40,6 +40,11 @@ public:
     void newFrame() override;
     bool executeFrame(RenderPipeline&, float elapsedTime, float deltaTime) override;
 
+    std::optional<SubmitStatus> submitRenderPipeline(RenderPipeline&, Registry&, UploadBuffer&, char const* debugName) override;
+    bool pollSubmissionStatus(SubmitStatus&) const override;
+    bool waitForSubmissionCompletion(SubmitStatus&, u64 timeout) const override;
+
+
     void completePendingOperations() override;
 
     virtual bool hasUpscalingSupport() const override { return false; }
