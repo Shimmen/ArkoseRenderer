@@ -18,6 +18,31 @@ bool VertexLayout::operator==(const VertexLayout& other) const
     return true;
 }
 
+VertexLayout VertexLayout::replaceAllWithPaddingBut(VertexComponent savedComponent) const
+{
+    VertexLayout paddedLayout = *this;
+
+    for (VertexComponent& component : paddedLayout.m_components) { 
+        if (component != savedComponent) {
+            switch (vertexComponentSize(component)) {
+            case 8:
+                component = VertexComponent::Padding2F;
+                break;
+            case 12:
+                component = VertexComponent::Padding3F;
+                break;
+            case 16:
+                component = VertexComponent::Padding4F;
+                break;
+            default:
+                NOT_YET_IMPLEMENTED();
+            }
+        }
+    }
+
+    return paddedLayout;
+}
+
 size_t VertexLayout::packedVertexSize() const
 {
     size_t size = 0u;

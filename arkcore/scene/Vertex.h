@@ -15,6 +15,10 @@ enum class VertexComponent : int {
     JointIdx4U32,
     JointWeight4F,
     Velocity3F,
+
+    Padding2F,
+    Padding3F,
+    Padding4F,
 };
 
 static constexpr size_t vertexComponentSize(VertexComponent component)
@@ -33,6 +37,14 @@ static constexpr size_t vertexComponentSize(VertexComponent component)
         return 4 * sizeof(float);
     case VertexComponent::JointIdx4U32:
         return 4 * sizeof(u32);
+
+    case VertexComponent::Padding2F:
+        return 2 * sizeof(float);
+    case VertexComponent::Padding3F:
+        return 3 * sizeof(float);
+    case VertexComponent::Padding4F:
+        return 4 * sizeof(float);
+
     default:
         ASSERT_NOT_REACHED();
     }
@@ -59,16 +71,39 @@ static constexpr const char* vertexComponentToString(VertexComponent component)
         return "JointWeight4F";
     case VertexComponent::Velocity3F:
         return "Velocity3F";
+
+    case VertexComponent::Padding2F:
+        return "Padding2F";
+    case VertexComponent::Padding3F:
+        return "Padding3F";
+    case VertexComponent::Padding4F:
+        return "Padding4F";
+
     default:
         ASSERT_NOT_REACHED();
     }
 }
 
+static constexpr bool vertexComponentIsPadding(VertexComponent component)
+{
+    switch (component) {
+    case VertexComponent::Padding2F:
+    case VertexComponent::Padding3F:
+    case VertexComponent::Padding4F:
+        return true;
+    default:
+        return false;
+    }
+}
+
 class VertexLayout {
 public:
+    VertexLayout() = default;
     VertexLayout(std::initializer_list<VertexComponent>);
 
     bool operator==(const VertexLayout&) const;
+
+    VertexLayout replaceAllWithPaddingBut(VertexComponent) const;
 
     size_t componentCount() const { return m_components.size(); }
     const std::vector<VertexComponent>& components() const { return m_components; }

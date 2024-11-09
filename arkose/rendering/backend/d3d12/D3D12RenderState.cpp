@@ -27,6 +27,11 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
         VertexLayout const& vertexLayout = vertexLayouts[vertexLayoutIdx];
         for (VertexComponent const& component : vertexLayout.components()) {
 
+            if (vertexComponentIsPadding(component)) {
+                currentOffset += narrow_cast<u32>(vertexComponentSize(component));
+                continue;
+            }
+
             D3D12_INPUT_ELEMENT_DESC inputElementDesc;
             inputElementDesc.SemanticIndex = 0;
             inputElementDesc.InputSlot = narrow_cast<UINT>(vertexLayoutIdx);

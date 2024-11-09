@@ -36,6 +36,11 @@ VulkanRenderState::VulkanRenderState(Backend& backend, RenderTarget const& rende
 
             for (const VertexComponent& component : vertexLayout.components()) {
 
+                if (vertexComponentIsPadding(component)) {
+                    currentOffset += narrow_cast<u32>(vertexComponentSize(component));
+                    continue;
+                }
+
                 VkVertexInputAttributeDescription description = {};
                 description.binding = bindingIdx;
                 description.location = nextLocation;
