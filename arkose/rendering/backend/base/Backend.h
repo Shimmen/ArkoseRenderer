@@ -35,6 +35,7 @@ public:
         RayTracing,
         MeshShading,
         Shader16BitFloat,
+        ShaderBarycentrics,
     };
 
     enum class SwapchainTransferFunction {

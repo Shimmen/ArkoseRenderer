@@ -362,6 +362,9 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
     VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT };
     khrRayQueryFeatures.pNext = &meshShaderFeatures;
 
+    VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR fragmentShaderBarycentricFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR };
+    meshShaderFeatures.pNext = &fragmentShaderBarycentricFeatures;
+
     vkGetPhysicalDeviceFeatures2(physicalDevice(), &features2);
 
     auto isSupported = [&](Capability capability) -> bool {
@@ -413,6 +416,11 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
                 && vk11features.storageInputOutput16
                 && vk11features.storagePushConstant16
                 && vk12features.shaderFloat16;
+
+        case Capability::ShaderBarycentrics: {
+            bool supportsExtension = hasSupportForDeviceExtension(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME);
+            return supportsExtension && fragmentShaderBarycentricFeatures.fragmentShaderBarycentric;
+        }
         default:
             ASSERT_NOT_REACHED();
         }
@@ -870,6 +878,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     VkPhysicalDeviceAccelerationStructureFeaturesKHR khrAccelerationStructureFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
     VkPhysicalDeviceRayQueryFeaturesKHR khrRayQueryFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR };
     VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT };
+    VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR fragmentShaderBarycentricFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR };
 
     // Enable some very basic common features expected by everyone to exist
     features.samplerAnisotropy = VK_TRUE;
@@ -965,6 +974,10 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
             vk11features.storagePushConstant16 = VK_TRUE;
             vk12features.shaderFloat16 = VK_TRUE;
             break;
+        case Capability::ShaderBarycentrics:
+            deviceExtensions.push_back(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME);
+            fragmentShaderBarycentricFeatures.fragmentShaderBarycentric = VK_TRUE;
+            break;
         default:
             ASSERT_NOT_REACHED();
         }
@@ -994,6 +1007,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     khrRayTracingPipelineFeatures.pNext = &khrAccelerationStructureFeatures;
     khrAccelerationStructureFeatures.pNext = &khrRayQueryFeatures;
     khrRayQueryFeatures.pNext = &meshShaderFeatures;
+    meshShaderFeatures.pNext = &fragmentShaderBarycentricFeatures;
 
     VkDevice device;
     if (vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device) != VK_SUCCESS)

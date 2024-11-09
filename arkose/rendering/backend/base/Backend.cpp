@@ -70,8 +70,12 @@ std::string Backend::capabilityName(Capability capability)
     switch (capability) {
     case Capability::RayTracing:
         return "RayTracing";
+    case Capability::MeshShading:
+        return "MeshShading";
     case Capability::Shader16BitFloat:
         return "Shader16BitFloat";
+    case Capability::ShaderBarycentrics:
+        return "ShaderBarycentrics";
     default:
         ASSERT_NOT_REACHED();
     }
