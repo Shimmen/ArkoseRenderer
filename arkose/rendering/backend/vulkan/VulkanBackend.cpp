@@ -437,6 +437,12 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
         allRequiredSupported = false;
     }
 
+    if (!features.geometryShader) {
+        ARKOSE_LOG(Error, "VulkanBackend: no support for geometry shaders, which while we don't use directly seems to be required for reading `gl_PrimitiveID` "
+                          "in a fragment shader, which we do use. This requirement can possibly be removed if there's another way to do achieve the same result.");
+        allRequiredSupported = false;
+    }
+
     if (!vk11features.shaderDrawParameters) {
         ARKOSE_LOG(Error, "VulkanBackend: no support for required feature shader draw parameters, which is required for 'gl_DrawID' among others.");
         allRequiredSupported = false;
@@ -886,6 +892,10 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     features.wideLines = VK_TRUE;
     features.fragmentStoresAndAtomics = VK_TRUE;
     features.vertexPipelineStoresAndAtomics = VK_TRUE;
+
+    // NOTE: We only use this to read `gl_PrimitiveID` in the fragment shader. See this for context:
+    // https://computergraphics.stackexchange.com/questions/9449/vulkan-using-gl-primitiveid-without-geometryshader-feature
+    features.geometryShader = VK_TRUE;
 
     // Common shader parameters, such as 'gl_DrawID'
     vk11features.shaderDrawParameters = VK_TRUE;
