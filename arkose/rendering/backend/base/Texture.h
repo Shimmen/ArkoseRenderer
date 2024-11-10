@@ -40,6 +40,7 @@ public:
         Depth32F,
         Depth24Stencil8,
         R32Uint,
+        R8Uint,
         BC5,
         BC7,
         BC7sRGB,

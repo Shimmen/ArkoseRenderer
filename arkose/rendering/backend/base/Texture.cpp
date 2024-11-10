@@ -27,6 +27,7 @@ bool Texture::hasFloatingPointDataFormat() const
 {
     switch (format()) {
     case Texture::Format::R8:
+    case Texture::Format::R8Uint:
     case Texture::Format::R32Uint:
     case Texture::Format::RGBA8:
     case Texture::Format::sRGBA8:
@@ -214,6 +215,7 @@ void Texture::setPixelData(vec4 pixel)
         numChannels = 1;
         isHdr = true;
         break;
+    case Texture::Format::R8Uint:
     case Texture::Format::R32Uint:
         numChannels = 1;
         isHdr = false;

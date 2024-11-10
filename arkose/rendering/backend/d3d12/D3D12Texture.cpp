@@ -61,6 +61,9 @@ D3D12Texture::D3D12Texture(Backend& backend, Description desc)
     case Texture::Format::R32Uint:
         dxgiFormat = DXGI_FORMAT_R32_UINT;
         break;
+    case Texture::Format::R8Uint:
+        dxgiFormat = DXGI_FORMAT_R8_UINT;
+        break;
     case Texture::Format::BC5:
         dxgiFormat = DXGI_FORMAT_BC5_UNORM;
         storageCapable = false;
