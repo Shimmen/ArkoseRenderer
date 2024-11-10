@@ -124,6 +124,9 @@ set(ARKOSE_SOURCES
       arkose/rendering/backend/util/VramStats.h
       # vulkan
       # (added separately)
+    # baking
+    arkose/rendering/baking/BakeAmbientOcclusionNode.cpp
+    arkose/rendering/baking/BakeAmbientOcclusionNode.h
     # debug
     arkose/rendering/debug/DebugDrawer.cpp
     arkose/rendering/debug/DebugDrawer.h
