@@ -15,10 +15,12 @@
 #define DeclareCommonBindingSet_RTMesh(index) \
     layout(set = 1, binding = 0, scalar) buffer readonly RTTriangleMeshesBlock { RTTriangleMesh _rtMeshes[]; };  \
     layout(set = 1, binding = 1, scalar) buffer readonly RTIndicesBlock        { uint           _rtIndices[]; }; \
-    layout(set = 1, binding = 2, scalar) buffer readonly RTVerticesBlock       { RTVertex       _rtVertices[]; };
+    layout(set = 1, binding = 2, scalar) buffer readonly RTPositionsBlock      { vec3           _rtPositions[]; }; \
+    layout(set = 1, binding = 3, scalar) buffer readonly RTVerticesBlock       { RTVertex       _rtVertices[]; };
 
 #define rtmesh_getMesh(index) _rtMeshes[index]
 #define rtmesh_getIndex(index) _rtIndices[index]
+#define rtmesh_getPosition(index) _rtPositions[index]
 #define rtmesh_getVertex(index) _rtVertices[index]
 
 #endif // RAY_TRACING_GLSL

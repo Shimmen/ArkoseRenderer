@@ -41,6 +41,8 @@ GpuScene::GpuScene(Scene& scene, Backend& backend)
 
 void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable, bool meshShadingCapable)
 {
+    SCOPED_PROFILE_ZONE();
+
     m_maintainRayTracingScene = rayTracingCapable;
     m_meshShadingCapable = meshShadingCapable;
 
@@ -320,6 +322,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
         BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(rtTriangleMeshBuffer, ShaderStage::AnyRayTrace),
                                                                   ShaderBinding::storageBufferReadonly(vertexManager().indexBuffer(), ShaderStage::AnyRayTrace),
+                                                                  ShaderBinding::storageBufferReadonly(vertexManager().positionVertexBuffer(), ShaderStage::AnyRayTrace),
                                                                   ShaderBinding::storageBufferReadonly(vertexManager().nonPositionVertexBuffer(), ShaderStage::AnyRayTrace) });
         reg.publish("SceneRTMeshDataSet", rtMeshDataBindingSet);
     }
