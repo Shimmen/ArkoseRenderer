@@ -56,6 +56,9 @@ public:
     static std::unique_ptr<ImageAsset> createFromSourceAsset(std::string const& sourceAssetFilePath);
     static std::unique_ptr<ImageAsset> createFromSourceAsset(uint8_t const* data, size_t size);
 
+    // Create a new ImageAsset from raw bitmap image data, i.e. rows of ImageFormat pixels according to the supplied dimensions
+    static std::unique_ptr<ImageAsset> createFromRawData(uint8_t const* data, size_t size, ImageFormat, Extent2D);
+
     // Load an image asset (cached) from an .arkimg file
     // TODO: Figure out how we want to return this! Basic type, e.g. ImageAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
     static ImageAsset* load(std::string const& filePath);

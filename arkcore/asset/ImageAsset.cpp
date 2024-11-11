@@ -147,6 +147,36 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
     return imageAsset;
 }
 
+std::unique_ptr<ImageAsset> ImageAsset::createFromRawData(uint8_t const* data, size_t size, ImageFormat format, Extent2D extent)
+{
+    SCOPED_PROFILE_ZONE();
+
+    if (data == nullptr || size == 0) {
+        return nullptr;
+    }
+
+    auto imageAsset = std::make_unique<ImageAsset>();
+
+    imageAsset->m_width = extent.width();
+    imageAsset->m_height = extent.height();
+    imageAsset->m_depth = 1;
+
+    imageAsset->m_format = format;
+    imageAsset->m_type = ImageType::Unknown;
+
+    imageAsset->m_pixelData = std::vector<uint8_t>(data, data + size);
+
+    ImageMip mip0 { .offset = 0,
+                    .size = size };
+    imageAsset->m_mips.push_back(mip0);
+
+    // No compression when creating here now, but we might want to apply it before writing to disk
+    imageAsset->m_compressed = false;
+    imageAsset->m_uncompressedSize = narrow_cast<u32>(size);
+
+    return imageAsset;
+}
+
 ImageAsset* ImageAsset::load(std::string const& filePath)
 {
     SCOPED_PROFILE_ZONE();
