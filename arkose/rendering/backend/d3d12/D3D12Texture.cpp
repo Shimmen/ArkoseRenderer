@@ -307,6 +307,13 @@ void D3D12Texture::setData(const void* data, size_t size, size_t mipIdx, size_t 
     });
 }
 
+std::unique_ptr<ImageAsset> D3D12Texture::copyDataToImageAsset(u32 mipIdx)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    return nullptr;
+}
+
 void D3D12Texture::generateMipmaps()
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();

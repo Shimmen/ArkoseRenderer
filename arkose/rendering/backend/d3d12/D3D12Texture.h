@@ -17,7 +17,9 @@ public:
     virtual bool storageCapable() const override;
 
     void clear(ClearColor) override;
+
     void setData(const void* data, size_t size, size_t mipIdx, size_t arrayIdx) override;
+    std::unique_ptr<ImageAsset> copyDataToImageAsset(u32 mipIdx) override;
 
     void generateMipmaps() override;
 

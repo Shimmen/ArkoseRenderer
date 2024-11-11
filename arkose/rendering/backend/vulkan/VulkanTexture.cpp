@@ -505,6 +505,109 @@ void VulkanTexture::setData(const void* data, size_t size, size_t mipIdx, size_t
     }
 }
 
+std::unique_ptr<ImageAsset> VulkanTexture::copyDataToImageAsset(u32 mipIdx)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    if (type() != Type::Texture2D) {
+        ARKOSE_LOG(Error, "VulkanBackend::copyDataToImageAsset: can only handle 2D textures for now.");
+        return nullptr;
+    }
+
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+
+    VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
+    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+    bufferCreateInfo.size = sizeInMemory();
+
+    VmaAllocationCreateInfo allocCreateInfo = {};
+    allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
+    allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
+    VkBuffer readbackBuffer;
+    VmaAllocation readbackAllocation;
+    VmaAllocationInfo readbackAllocInfo;
+    if (vmaCreateBuffer(vulkanBackend.globalAllocator(), &bufferCreateInfo, &allocCreateInfo, &readbackBuffer, &readbackAllocation, &readbackAllocInfo) != VK_SUCCESS) {
+        ARKOSE_LOG(Error, "VulkanBackend::copyDataToImageAsset: could not create readback buffer.");
+    }
+
+    ark::AtScopeExit cleanUpReadbackBuffer([&]() {
+        vmaDestroyBuffer(vulkanBackend.globalAllocator(), readbackBuffer, readbackAllocation);
+    });
+
+    if (currentLayout != VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {
+        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+        imageBarrier.oldLayout = currentLayout;
+        imageBarrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+        imageBarrier.image = image;
+        imageBarrier.subresourceRange.aspectMask = aspectMask();
+        imageBarrier.subresourceRange.baseMipLevel = 0;
+        imageBarrier.subresourceRange.levelCount = mipLevels();
+        imageBarrier.subresourceRange.baseArrayLayer = 0;
+        imageBarrier.subresourceRange.layerCount = layerCount();
+
+        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+        imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+        imageBarrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+
+        bool success = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+            vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 1, &imageBarrier);
+        });
+        if (!success) {
+            ARKOSE_LOG(Error, "Could not transition the image to transfer optimal layout.");
+            return nullptr;
+        }
+
+        // Or should we just revert it back to the original layout once we're done..?
+        currentLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+    }
+
+    Extent3D mipExtent = extent3DAtMip(mipIdx);
+
+    VkBufferImageCopy region = {};
+
+    region.bufferOffset = 0;
+
+    // (zeros here indicate tightly packed data)
+    region.bufferRowLength = 0;
+    region.bufferImageHeight = 0;
+
+    region.imageOffset = VkOffset3D { 0, 0, 0 };
+    region.imageExtent = VkExtent3D { mipExtent.width(), mipExtent.height(), mipExtent.depth() };
+
+    region.imageSubresource.aspectMask = aspectMask();
+    region.imageSubresource.mipLevel = mipIdx;
+    region.imageSubresource.baseArrayLayer = 0;
+    region.imageSubresource.layerCount = 1;
+
+    bool copySuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
+        vkCmdCopyImageToBuffer(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, readbackBuffer, 1, &region);
+    });
+
+    if (!copySuccess) {
+        ARKOSE_LOG(Error, "Could not copy the image to the readback buffer.");
+        return nullptr;
+    }
+
+    u8 const* rawImageData = reinterpret_cast<u8 const*>(readbackAllocInfo.pMappedData);
+    size_t rawImageDataSize = readbackAllocInfo.size;
+
+    // TODO: Make a `convertTextureFormatToImageFormat` function!
+    ARKOSE_ASSERT(format() == Texture::Format::R8Uint);
+    ImageFormat imageFormat = ImageFormat::R8;
+
+    return ImageAsset::createFromRawData(rawImageData, rawImageDataSize, imageFormat, extent());
+}
+
 void VulkanTexture::generateMipmaps()
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();

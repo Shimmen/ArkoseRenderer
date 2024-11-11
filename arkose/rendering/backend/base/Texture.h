@@ -13,6 +13,8 @@
 #include <imgui.h>
 #include <memory>
 
+class ImageAsset;
+
 class Texture : public Resource {
 public:
 
@@ -157,6 +159,7 @@ public:
 
     void setPixelData(vec4 pixel);
     virtual void setData(const void* data, size_t size, size_t mipIdx, size_t arrayIdx) = 0;
+    virtual std::unique_ptr<ImageAsset> copyDataToImageAsset(u32 mipIdx) = 0; // not the most beautiful API but it will have to do for now..
 
     virtual void generateMipmaps() = 0;
 
