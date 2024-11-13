@@ -1,0 +1,35 @@
+#version 460
+#extension GL_EXT_nonuniform_qualifier : require
+#extension GL_EXT_scalar_block_layout : require
+
+#include <common/material.glsl>
+#include <common/rayTracing.glsl>
+
+layout(location = 0) rayPayloadIn float payloadHitDistance;
+hitAttribute vec3 attribs;
+
+DeclareCommonBindingSet_RTMesh(1)
+DeclareCommonBindingSet_Material(2)
+
+void main()
+{
+    RTTriangleMesh mesh = rtmesh_getMesh(rt_InstanceCustomIndex);
+    ShaderMaterial material = material_getMaterial(mesh.materialIndex);
+
+    ivec3 idx = ivec3(rtmesh_getIndex(mesh.firstIndex + 3 * gl_PrimitiveID + 0),
+                      rtmesh_getIndex(mesh.firstIndex + 3 * gl_PrimitiveID + 1),
+                      rtmesh_getIndex(mesh.firstIndex + 3 * gl_PrimitiveID + 2));
+
+    RTVertex v0 = rtmesh_getVertex(mesh.firstVertex + idx.x);
+    RTVertex v1 = rtmesh_getVertex(mesh.firstVertex + idx.y);
+    RTVertex v2 = rtmesh_getVertex(mesh.firstVertex + idx.z);
+
+    const vec3 b = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
+
+    vec2 uv = v0.texCoord.xy * b.x + v1.texCoord.xy * b.y + v2.texCoord.xy * b.z;
+    float mask = texture(material_getTexture(material.baseColor), uv).a;
+
+    if (mask < material.maskCutoff) {
+        ignoreIntersection();
+    }
+}

@@ -13,7 +13,7 @@ BakeAmbientOcclusionNode::BakeAmbientOcclusionNode(StaticMeshInstance& instanceT
 RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& outputTexture = *reg.windowRenderTarget().colorAttachments()[0].texture;
-    ARKOSE_ASSERT(outputTexture.format() == Texture::Format::R8); // TODO!
+    ARKOSE_ASSERT(outputTexture.format() == Texture::Format::R8Uint); // TODO!
 
     Extent2D const& bakeExtent = reg.windowRenderTarget().extent();
 
@@ -27,7 +27,7 @@ RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene
                                                       .wrapMode = ImageWrapModes::clampAllToEdge(),
                                                       .mipmap = Texture::Mipmap::None });
     Texture& barycentricsTexture = reg.createTexture({ .extent = bakeExtent,
-                                                       .format = Texture::Format::RGBA8,
+                                                       .format = Texture::Format::RGBA16F,
                                                        .filter = Texture::Filters::nearest(),
                                                        .wrapMode = ImageWrapModes::clampAllToEdge(),
                                                        .mipmap = Texture::Mipmap::None });
@@ -52,8 +52,31 @@ RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene
     //
     // Construct for ray tracing step
     //
-    
-    // ..
+
+    ShaderFile raygen { "baking/ao/bakeAmbientOcclusion.rgen" };
+    ShaderFile missShader { "baking/ao/bakeAmbientOcclusion.rmiss" };
+    HitGroup opaqueHitGroup { ShaderFile("baking/ao/bakeAmbientOcclusion.rchit") };
+    HitGroup maskedHitGroup { ShaderFile("baking/ao/bakeAmbientOcclusion.rchit"),
+                              ShaderFile("baking/ao/bakeAmbientOcclusion.rahit") };
+
+    ShaderBindingTable sbt;
+    sbt.setRayGenerationShader(raygen);
+    sbt.setMissShader(0, missShader);
+    sbt.setHitGroup(0, opaqueHitGroup);
+    sbt.setHitGroup(1, maskedHitGroup);
+
+    BindingSet& bakeBindingSet = reg.createBindingSet({ ShaderBinding::topLevelAccelerationStructure(scene.globalTopLevelAccelerationStructure(), ShaderStage::RTRayGen),
+                                                        ShaderBinding::sampledTexture(triangleIdxTexture, ShaderStage::RTRayGen),
+                                                        ShaderBinding::sampledTexture(barycentricsTexture, ShaderStage::RTRayGen),
+                                                        ShaderBinding::storageTexture(outputTexture, ShaderStage::RTRayGen) });
+
+    StateBindings stateDataBindings;
+    stateDataBindings.at(0, bakeBindingSet);
+    stateDataBindings.at(1, *reg.getBindingSet("SceneRTMeshDataSet"));
+    stateDataBindings.at(2, scene.globalMaterialBindingSet());
+
+    constexpr uint32_t maxRecursionDepth = 1; // raygen -> closest/any hit
+    RayTracingState& aoRayTracingState = reg.createRayTracingState(sbt, stateDataBindings, maxRecursionDepth);
 
     //
 
@@ -68,6 +91,9 @@ RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene
                 return;
             }
 
+            // NOTE: This is hard-coded to 0 in the baking shader atm, ensure we match these two up! Make it a uniform value.
+            ARKOSE_ASSERT(meshSegment.staticMeshHandle.index() == 0);
+
             DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
 
             // Bake the parameterization down so we can refer back to the triangles given a pixel
@@ -78,8 +104,8 @@ RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene
             cmdList.endRendering();
 
             // For each pixel, ray trace to calculate the ambient occlusion (on the output texture)
-            // cmdList.setRayTracingState(..);
-            // cmdList.traceRays(bakeExtent);
+            cmdList.setRayTracingState(aoRayTracingState);
+            cmdList.traceRays(bakeExtent);
 
         } else {
             ARKOSE_LOG(Error, "BakeAmbientOcclusionNode: the supplied mesh instance is not in the current scene!");

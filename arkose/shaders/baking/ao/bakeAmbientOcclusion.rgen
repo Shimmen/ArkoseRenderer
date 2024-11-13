@@ -1,0 +1,87 @@
+#version 460
+#extension GL_EXT_scalar_block_layout : require
+
+#include <common.glsl>
+#include <common/material.glsl>
+#include <common/random.glsl>
+#include <common/rayTracing.glsl>
+
+layout(set = 0, binding = 0) uniform AccelerationStructure topLevelAccelerationStructure;
+layout(set = 0, binding = 1) uniform usampler2D triangleIdxTex;
+layout(set = 0, binding = 2) uniform sampler2D barycentricsTex;
+layout(set = 0, binding = 3, r8ui) uniform uimage2D ambientOcclusionImg;
+
+DeclareCommonBindingSet_RTMesh(1)
+DeclareCommonBindingSet_Material(2)
+
+layout(location = 0) rayPayload float payloadHitDistance;
+
+void main()
+{
+    ivec2 targetPixel = ivec2(rt_LaunchID.xy);
+    ivec2 targetResolution = ivec2(imageSize(ambientOcclusionImg));
+
+    uint triangleIdxOrZero = texelFetch(triangleIdxTex, targetPixel, 0).r;
+    if (triangleIdxOrZero == 0) {
+        imageStore(ambientOcclusionImg, targetPixel, uvec4(0, 0, 0, 0));
+        return;
+    }
+
+    uint triangleIdx = triangleIdxOrZero - 1;
+    uint meshIndex = 0; // TODO: Handle non-zero mesh index! Important for when we're processing a specific segment.
+
+    RTTriangleMesh mesh = rtmesh_getMesh(meshIndex);
+
+    ivec3 idx = ivec3(rtmesh_getIndex(mesh.firstIndex + 3 * triangleIdx + 0),
+                      rtmesh_getIndex(mesh.firstIndex + 3 * triangleIdx + 1),
+                      rtmesh_getIndex(mesh.firstIndex + 3 * triangleIdx + 2));
+
+    vec3 p0 = rtmesh_getPosition(mesh.firstVertex + idx.x);
+    vec3 p1 = rtmesh_getPosition(mesh.firstVertex + idx.y);
+    vec3 p2 = rtmesh_getPosition(mesh.firstVertex + idx.z);
+
+    RTVertex v0 = rtmesh_getVertex(mesh.firstVertex + idx.x);
+    RTVertex v1 = rtmesh_getVertex(mesh.firstVertex + idx.y);
+    RTVertex v2 = rtmesh_getVertex(mesh.firstVertex + idx.z);
+
+    vec3 b = texelFetch(barycentricsTex, targetPixel, 0).rgb;
+
+    vec3 position = p0 * b.x + p1 * b.y + p2 * b.z;
+    vec3 normal = normalize(v0.normal * b.x + v1.normal * b.y + v2.normal * b.z);
+
+    const float tmin = 0.0005; // 0.5mm (appears to be too small for some meshes)
+    const float tmax = 5.0; // TODO: adjust to mesh bounding box diagonal, perhaps?
+
+    const uint rayFlags = RayFlags_None;
+    const uint cullMask = 0xff;
+
+    const uint numSamples = 500;
+    float ambientOcclusionAcc = 0.0;
+
+    seedRandom(targetPixel.x + (targetPixel.y * targetResolution.x));
+
+    for (uint sampleIdx = 0; sampleIdx < numSamples; sampleIdx++) {
+
+        // If sampling using these cosine-weighted samples (which this gives us exactly, I think, or should it be samples IN the sphere, not ON?)
+        // (close enough for now) then we can average these samples directly to get the correct integral.
+        // See https://www.sciencedirect.com/topics/computer-science/ambient-occlusion#:~:text=Ambient%20Occlusion%20refers%20to%20a,caused%20by%20surrounding%20light%20sources.
+        vec3 sampleDirection;
+        do {
+            sampleDirection = normal + randomPointOnSphere();
+        } while (lengthSquared(sampleDirection) <= 1e-4);
+        sampleDirection = normalize(sampleDirection);
+
+        traceRay(topLevelAccelerationStructure, rayFlags, cullMask, 0, 0, 0, position, tmin, sampleDirection, tmax, 0);
+
+        if (payloadHitDistance <= tmax) {
+            float occlusion = 1.0;//saturate(dot(normal, sampleDirection));
+            float distanceAttenuation = 1.0;//1.0 - pow(payloadHitDistance / tmax, 5.0);
+            ambientOcclusionAcc += occlusion * distanceAttenuation;
+        }
+    }
+
+    float ambientOcclusion = ambientOcclusionAcc / float(numSamples);
+
+    uint ambientOcclusionEncoded = uint(round(saturate(1.0 - ambientOcclusion) * 255.0));
+    imageStore(ambientOcclusionImg, targetPixel, uvec4(ambientOcclusionEncoded, 0, 0, 0));
+}
