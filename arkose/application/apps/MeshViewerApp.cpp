@@ -164,7 +164,6 @@ void MeshViewerApp::drawMenuBar()
     }
 
     bool showNewSceneModalHack = false;
-    bool showBakeAOModalHack = false;
 
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
@@ -176,12 +175,6 @@ void MeshViewerApp::drawMenuBar()
             }
             if (ImGui::MenuItem("Save...", "Ctrl+S")) {
                 saveMeshWithDialog();
-            }
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu("Bake")) {
-            if (ImGui::MenuItem("Bake ambient occlusion...")) {
-                showBakeAOModalHack = true;
             }
             ImGui::EndMenu();
         }
