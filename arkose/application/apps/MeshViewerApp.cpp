@@ -399,7 +399,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
 
                         if (Texture const* texture = m_scene->gpuScene().textureForHandle(TextureHandle(textureIndex))) {
                             ImTextureID textureId = const_cast<Texture*>(texture)->asImTextureID(); // HACK: const_cast
-                            if (ImGui::ImageButton(textureId, ImVec2(256.0f * texture->extent().aspectRatio(), 256.0f))) { 
+                            if (ImGui::ImageButton(textureId, ImVec2(512.0f * texture->extent().aspectRatio(), 512.0f))) { 
                                 imageSelectDialog();
                             }
                             if (ImGui::IsItemHovered()) {
