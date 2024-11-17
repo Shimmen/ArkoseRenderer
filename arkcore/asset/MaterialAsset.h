@@ -14,6 +14,11 @@
 
 class MaterialInput {
 public:
+    explicit MaterialInput(std::string_view imagePath)
+    {
+        setPathToImage(std::string(imagePath));
+    }
+
     MaterialInput();
     ~MaterialInput();
 

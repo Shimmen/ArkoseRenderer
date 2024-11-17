@@ -800,8 +800,20 @@ void MeshViewerApp::drawBakeUiIfActive()
         if (ImGui::Button("Bake")) {
             auto aoImage = performAmbientOcclusionBake(resolution, sampleCount);
 
-            // TODO: Place in in an appropriate location on disk & assign it to the material
-            aoImage->writeToFile("assets/sample/models/Head/ao.arkimg", AssetStorage::Binary);
+            std::string_view materialDirectory = FileIO::extractDirectoryFromPath(selectedSegmentAsset()->pathToMaterial());
+            if (auto maybePath = FileDialog::save({ { "Arkose image", ImageAsset::AssetFileExtension } }, materialDirectory, "AmbientOcclusion.arkimg")) {
+                aoImage->writeToFile(maybePath.value(), AssetStorage::Binary);
+                aoImage->setAssetFilePath(maybePath.value());
+
+                // Let's hope no other object is using this material, because now we're saving object-specific data to it :)
+                // Really though, this should only be done for non-trimsheet-style materials, but for object specific ones.
+                if (MaterialAsset* material = MaterialAsset::load(std::string(selectedSegmentAsset()->pathToMaterial()))) {
+                    material->bentNormalMap = MaterialInput(aoImage->assetFilePath());
+                    material->writeToFile(material->assetFilePath(), AssetStorage::Json);
+                    // Re-register the material for the segment
+                    selectedSegment()->setMaterial(material, m_scene->gpuScene());
+                }
+            }
 
             ImGui::CloseCurrentPopup();
         }
