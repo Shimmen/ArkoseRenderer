@@ -99,6 +99,8 @@ bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
     drawMeshPhysicsPanel();
     drawMeshMaterialPanel();
 
+    drawBakeUiIfActive();
+
     if (m_currentImportTask) {
 
         ImVec2 displayCenter { ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f };
@@ -229,32 +231,6 @@ void MeshViewerApp::drawMenuBar()
         ImGui::EndPopup();
     }
 
-    if (showBakeAOModalHack) {
-        ImGui::OpenPopup("Bake Ambient Occlusion");
-        showBakeAOModalHack = false;
-    }
-    if (ImGui::BeginPopupModal("Bake Ambient Occlusion")) {
-        // TODO: Also check that the current asset has UVs!
-        if (Backend::get().hasActiveCapability(Backend::Capability::RayTracing) && Backend::get().hasActiveCapability(Backend::Capability::ShaderBarycentrics)) {
-            // TODO: Make a nice ui :)
-            ImGui::Text("Resolution: %dx%d", 4096, 4096);
-            ImGui::Text("Rays:       %d", 500);
-            if (ImGui::Button("Bake")) {
-                performAmbientOcclusionBake(4096, 500);
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Cancel")) {
-                ImGui::CloseCurrentPopup();
-            }
-        } else {
-            ImGui::Text("No ray tracing capability enabled, can't bake AO!");
-            if (ImGui::Button("Ok")) {
-                ImGui::CloseCurrentPopup();
-            }
-        }
-        ImGui::EndPopup();
-    }
 }
 
 void MeshViewerApp::drawMeshHierarchyPanel()
@@ -417,7 +393,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
                 }
             }
 
-            auto drawMaterialInputGui = [&](const char* name, std::optional<MaterialInput>& materialInput, int textureIndex) -> bool {
+            auto drawMaterialInputGui = [&](const char* name, std::optional<MaterialInput>& materialInput, int textureIndex, bool includeBakeBentNormalsUI = false) -> bool {
 
                 bool didChange = false;
 
@@ -466,6 +442,12 @@ void MeshViewerApp::drawMeshMaterialPanel()
                         if (ImGui::Button("Add input")) { 
                             materialInput = MaterialInput();
                         }
+                        if (includeBakeBentNormalsUI && selectedSegmentAsset() && selectedSegmentAsset()->hasTextureCoordinates()) {
+                            ImGui::SameLine();
+                            if (ImGui::Button("Bake...")) {
+                                m_showBakeUI = true;
+                            }
+                        }
                     }
                 }
 
@@ -482,7 +464,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
             materialDidChange |= drawMaterialInputGui("Base color", material->baseColor, shaderMaterial->baseColor);
             materialDidChange |= drawMaterialInputGui("Emissive color", material->emissiveColor, shaderMaterial->emissive);
             materialDidChange |= drawMaterialInputGui("Normal map", material->normalMap, shaderMaterial->normalMap);
-            materialDidChange |= drawMaterialInputGui("Bent normal map", material->bentNormalMap, shaderMaterial->bentNormalMap);
+            materialDidChange |= drawMaterialInputGui("Bent normal map", material->bentNormalMap, shaderMaterial->bentNormalMap, true);
             materialDidChange |= drawMaterialInputGui("Properties map", material->materialProperties, shaderMaterial->metallicRoughness);
 
             materialDidChange |= ImGui::ColorEdit4("Tint", value_ptr(material->colorTint));
@@ -770,7 +752,53 @@ StaticMeshSegment* MeshViewerApp::selectedSegment()
     return nullptr;
 }
 
-void MeshViewerApp::performAmbientOcclusionBake(u32 resolution, u32 sampleCount)
+void MeshViewerApp::drawBakeUiIfActive()
+{
+    // All our baking expects texture coordinates
+    if (!selectedSegmentAsset() || !selectedSegmentAsset()->hasTextureCoordinates()) {
+        return;
+    }
+    
+    // All our baking capabilities are dependent on ray tracing & reading shader barycentrics
+    if (!Backend::get().hasActiveCapability(Backend::Capability::RayTracing) || !Backend::get().hasActiveCapability(Backend::Capability::ShaderBarycentrics)) {
+        return;
+    }
+
+    char const* bakeAmbientOcclusionPopupId = "Bake Ambient Occlusion";
+
+    if (m_showBakeUI) {
+        ImGui::OpenPopup(bakeAmbientOcclusionPopupId);
+        m_showBakeUI = false;
+    }
+
+    if (ImGui::BeginPopupModal(bakeAmbientOcclusionPopupId)) {
+
+        static int resolutionPower = 12;
+        u32 resolution = static_cast<u32>(std::pow(2.0f, resolutionPower));
+        std::string resFormatString = fmt::format("{0}x{0}", resolution);
+        ImGui::SliderInt("Resolution", &resolutionPower, 8, 14, resFormatString.c_str());
+
+        static int sampleCount = 500;
+        ImGui::SliderInt("Sample count", &sampleCount, 10, 1000);
+
+        if (ImGui::Button("Bake")) {
+            auto aoImage = performAmbientOcclusionBake(resolution, sampleCount);
+
+            // TODO: Place in in an appropriate location on disk & assign it to the material
+            aoImage->writeToFile("assets/sample/models/Head/ao.arkimg", AssetStorage::Binary);
+
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) {
+            ImGui::CloseCurrentPopup();
+        }
+
+        ImGui::EndPopup();
+    }
+}
+
+std::unique_ptr<ImageAsset> MeshViewerApp::performAmbientOcclusionBake(u32 resolution, u32 sampleCount)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -807,12 +835,10 @@ void MeshViewerApp::performAmbientOcclusionBake(u32 resolution, u32 sampleCount)
     std::optional<Backend::SubmitStatus> submitStatus = backend.submitRenderPipeline(*bakePipeline, *registry, *uploadBuffer, "AO Bake");
     if (!submitStatus.has_value()) {
         ARKOSE_LOG(Error, "Failed to submit AO bake");
-        return;
+        return nullptr;
     }
 
     backend.waitForSubmissionCompletion(submitStatus.value(), UINT64_MAX);
 
-    // TODO: Place in in an appropriate location on disk & assign it to the material
-    auto image = aoOutputTexture->copyDataToImageAsset(0);
-    image->writeToFile("assets/sample/models/Head/ao.arkimg", AssetStorage::Binary);
+    return aoOutputTexture->copyDataToImageAsset(0);
 }

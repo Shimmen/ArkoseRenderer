@@ -54,6 +54,8 @@ public:
 
     void generateMeshlets();
 
+    bool hasTextureCoordinates() const;
+
     // Returns true if this segment contains skinning data and thus can be used to create a skeletal mesh
     bool hasSkinningData() const;
 

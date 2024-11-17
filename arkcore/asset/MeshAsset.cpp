@@ -75,6 +75,12 @@ void MeshSegmentAsset::generateMeshlets()
     }
 }
 
+bool MeshSegmentAsset::hasTextureCoordinates() const
+{
+    ARKOSE_ASSERT(texcoord0s.size() == 0 || texcoord0s.size() == positions.size());
+    return texcoord0s.size() > 0;
+}
+
 bool MeshSegmentAsset::hasSkinningData() const
 {
     return jointIndices.size() == jointWeights.size() && jointIndices.size() == vertexCount();

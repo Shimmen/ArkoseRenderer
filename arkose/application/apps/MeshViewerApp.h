@@ -59,7 +59,10 @@ private:
     void loadMeshWithDialog();
     void saveMeshWithDialog();
 
-    void performAmbientOcclusionBake(u32 resolution, u32 sampleCount);
+    bool m_showBakeUI { false };
+    void drawBakeUiIfActive();
+
+    std::unique_ptr<ImageAsset> performAmbientOcclusionBake(u32 resolution, u32 sampleCount);
 
     AssetImporterOptions m_importOptions { .alwaysMakeImageAsset = false,
                                            .generateMipmaps = true,
