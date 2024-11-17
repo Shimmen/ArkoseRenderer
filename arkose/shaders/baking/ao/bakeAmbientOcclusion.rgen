@@ -3,6 +3,7 @@
 
 #include <common.glsl>
 #include <common/material.glsl>
+#include <common/namedUniforms.glsl>
 #include <common/random.glsl>
 #include <common/rayTracing.glsl>
 
@@ -13,6 +14,11 @@ layout(set = 0, binding = 3, r8ui) uniform uimage2D ambientOcclusionImg;
 
 DeclareCommonBindingSet_RTMesh(1)
 DeclareCommonBindingSet_Material(2)
+
+NAMED_UNIFORMS(constants,
+    uint sampleCount;
+    uint meshIndex;
+)
 
 layout(location = 0) rayPayload float payloadHitDistance;
 
@@ -28,7 +34,7 @@ void main()
     }
 
     uint triangleIdx = triangleIdxOrZero - 1;
-    uint meshIndex = 0; // TODO: Handle non-zero mesh index! Important for when we're processing a specific segment.
+    uint meshIndex = constants.meshIndex;
 
     RTTriangleMesh mesh = rtmesh_getMesh(meshIndex);
 
@@ -50,12 +56,12 @@ void main()
     vec3 normal = normalize(v0.normal * b.x + v1.normal * b.y + v2.normal * b.z);
 
     const float tmin = 0.0005; // 0.5mm (appears to be too small for some meshes)
-    const float tmax = 5.0; // TODO: adjust to mesh bounding box diagonal, perhaps?
+    const float tmax = 100.0; // TODO: adjust to mesh bounding box diagonal, perhaps?
 
     const uint rayFlags = RayFlags_None;
     const uint cullMask = 0xff;
 
-    const uint numSamples = 500;
+    const uint numSamples = constants.sampleCount;
     float ambientOcclusionAcc = 0.0;
 
     seedRandom(targetPixel.x + (targetPixel.y * targetResolution.x));

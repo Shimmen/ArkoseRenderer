@@ -3,11 +3,13 @@
 #include "core/Logging.h"
 #include "rendering/GpuScene.h"
 
-BakeAmbientOcclusionNode::BakeAmbientOcclusionNode(StaticMeshInstance& instanceToBake, u32 meshLodIdxToBake, u32 meshSegmentIdxToBake)
+BakeAmbientOcclusionNode::BakeAmbientOcclusionNode(StaticMeshInstance& instanceToBake, u32 meshLodIdxToBake, u32 meshSegmentIdxToBake, u32 sampleCount)
     : m_instanceToBake(instanceToBake)
     , m_meshLodIdxToBake(meshLodIdxToBake)
     , m_meshSegmentIdxToBake(meshSegmentIdxToBake)
+    , m_sampleCount(sampleCount)
 {
+    ARKOSE_ASSERT(sampleCount > 0);
 }
 
 RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene& scene, Registry& reg)
@@ -91,8 +93,7 @@ RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene
                 return;
             }
 
-            // NOTE: This is hard-coded to 0 in the baking shader atm, ensure we match these two up! Make it a uniform value.
-            ARKOSE_ASSERT(meshSegment.staticMeshHandle.index() == 0);
+            u32 meshIndex = meshSegment.staticMeshHandle.indexOfType<u32>();
 
             DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
 
@@ -105,6 +106,8 @@ RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene
 
             // For each pixel, ray trace to calculate the ambient occlusion (on the output texture)
             cmdList.setRayTracingState(aoRayTracingState);
+            cmdList.setNamedUniform("sampleCount", m_sampleCount);
+            cmdList.setNamedUniform("meshIndex", meshIndex);
             cmdList.traceRays(bakeExtent);
 
         } else {
