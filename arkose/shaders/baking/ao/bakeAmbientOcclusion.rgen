@@ -1,6 +1,10 @@
 #version 460
 #extension GL_EXT_scalar_block_layout : require
 
+#ifndef BAKE_BENT_NORMALS
+#error "Ensure `BAKE_BENT_NORMALS` is defined to 0 or 1"
+#endif
+
 #include <common.glsl>
 #include <common/material.glsl>
 #include <common/namedUniforms.glsl>
@@ -10,7 +14,11 @@
 layout(set = 0, binding = 0) uniform AccelerationStructure topLevelAccelerationStructure;
 layout(set = 0, binding = 1) uniform usampler2D triangleIdxTex;
 layout(set = 0, binding = 2) uniform sampler2D barycentricsTex;
+#if BAKE_BENT_NORMALS
+layout(set = 0, binding = 3, rgba8) uniform image2D bentNormalImg;
+#else
 layout(set = 0, binding = 3, r8ui) uniform uimage2D ambientOcclusionImg;
+#endif
 
 DeclareCommonBindingSet_RTMesh(1)
 DeclareCommonBindingSet_Material(2)
@@ -25,11 +33,19 @@ layout(location = 0) rayPayload float payloadHitDistance;
 void main()
 {
     ivec2 targetPixel = ivec2(rt_LaunchID.xy);
+    #if BAKE_BENT_NORMALS
+    ivec2 targetResolution = ivec2(imageSize(bentNormalImg));
+    #else
     ivec2 targetResolution = ivec2(imageSize(ambientOcclusionImg));
+    #endif
 
     uint triangleIdxOrZero = texelFetch(triangleIdxTex, targetPixel, 0).r;
     if (triangleIdxOrZero == 0) {
+        #if BAKE_BENT_NORMALS
+        imageStore(bentNormalImg, targetPixel, vec4(0, 0, 0, 0));
+        #else
         imageStore(ambientOcclusionImg, targetPixel, uvec4(0, 0, 0, 0));
+        #endif
         return;
     }
 
@@ -61,11 +77,12 @@ void main()
     const uint rayFlags = RayFlags_None;
     const uint cullMask = 0xff;
 
-    const uint numSamples = constants.sampleCount;
     float ambientOcclusionAcc = 0.0;
+    vec3 unoccludedDirectionAcc = vec3(0.0);
 
     seedRandom(targetPixel.x + (targetPixel.y * targetResolution.x));
 
+    const uint numSamples = constants.sampleCount;
     for (uint sampleIdx = 0; sampleIdx < numSamples; sampleIdx++) {
 
         // If sampling using these cosine-weighted samples we can average these samples directly to compute the integral.
@@ -81,11 +98,21 @@ void main()
         if (payloadHitDistance <= tmax) {
             // TODO: Consider doing some kind of distance attenuation for distant hits
             ambientOcclusionAcc += 1.0;
+        } else {
+            unoccludedDirectionAcc += sampleDirection;
         }
     }
 
+#if BAKE_BENT_NORMALS
+    vec3 bentNormal = unoccludedDirectionAcc / float(numSamples); // this is intentionally *not* normalized
+    float bentCone = PI / 2.0; // TODO: Calculate the cone!
+
+    vec4 encodedData = vec4(bentNormal * vec3(0.5) + vec3(0.5), bentCone / (PI / 2.0));
+    imageStore(bentNormalImg, targetPixel, encodedData);
+#else
     float ambientOcclusion = ambientOcclusionAcc / float(numSamples);
 
     uint ambientOcclusionEncoded = uint(round(saturate(1.0 - ambientOcclusion) * 255.0));
     imageStore(ambientOcclusionImg, targetPixel, uvec4(ambientOcclusionEncoded, 0, 0, 0));
+#endif
 }

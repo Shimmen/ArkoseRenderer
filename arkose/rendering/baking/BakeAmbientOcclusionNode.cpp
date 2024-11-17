@@ -15,7 +15,18 @@ BakeAmbientOcclusionNode::BakeAmbientOcclusionNode(StaticMeshInstance& instanceT
 RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& outputTexture = *reg.windowRenderTarget().colorAttachments()[0].texture;
-    ARKOSE_ASSERT(outputTexture.format() == Texture::Format::R8Uint); // TODO!
+
+    bool bakeBentNormals = false;
+    switch (outputTexture.format()) {
+    case Texture::Format::R8Uint:
+        bakeBentNormals = false;
+        break;
+    case Texture::Format::RGBA8:
+        bakeBentNormals = true;
+        break;
+    default:
+        ARKOSE_LOG(Fatal, "BakeAmbientOcclusionNode: unknown AO texture format - we only support R8Uint & RGBA16F (for bent normals)");
+    }
 
     Extent2D const& bakeExtent = reg.windowRenderTarget().extent();
 
@@ -55,7 +66,9 @@ RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene
     // Construct for ray tracing step
     //
 
-    ShaderFile raygen { "baking/ao/bakeAmbientOcclusion.rgen" };
+    ShaderDefine bakeBentNormalsDefine = ShaderDefine::makeBool("BAKE_BENT_NORMALS", bakeBentNormals);
+
+    ShaderFile raygen { "baking/ao/bakeAmbientOcclusion.rgen", { bakeBentNormalsDefine } };
     ShaderFile missShader { "baking/ao/bakeAmbientOcclusion.rmiss" };
     HitGroup opaqueHitGroup { ShaderFile("baking/ao/bakeAmbientOcclusion.rchit") };
     HitGroup maskedHitGroup { ShaderFile("baking/ao/bakeAmbientOcclusion.rchit"),
