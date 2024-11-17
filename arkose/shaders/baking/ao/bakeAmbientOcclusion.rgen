@@ -68,9 +68,8 @@ void main()
 
     for (uint sampleIdx = 0; sampleIdx < numSamples; sampleIdx++) {
 
-        // If sampling using these cosine-weighted samples (which this gives us exactly, I think, or should it be samples IN the sphere, not ON?)
-        // (close enough for now) then we can average these samples directly to get the correct integral.
-        // See https://www.sciencedirect.com/topics/computer-science/ambient-occlusion#:~:text=Ambient%20Occlusion%20refers%20to%20a,caused%20by%20surrounding%20light%20sources.
+        // If sampling using these cosine-weighted samples we can average these samples directly to compute the integral.
+        // Use rejection-sampling to generate a non-zero cosine-distributed direction
         vec3 sampleDirection;
         do {
             sampleDirection = normal + randomPointOnSphere();
@@ -80,9 +79,8 @@ void main()
         traceRay(topLevelAccelerationStructure, rayFlags, cullMask, 0, 0, 0, position, tmin, sampleDirection, tmax, 0);
 
         if (payloadHitDistance <= tmax) {
-            float occlusion = 1.0;//saturate(dot(normal, sampleDirection));
-            float distanceAttenuation = 1.0;//1.0 - pow(payloadHitDistance / tmax, 5.0);
-            ambientOcclusionAcc += occlusion * distanceAttenuation;
+            // TODO: Consider doing some kind of distance attenuation for distant hits
+            ambientOcclusionAcc += 1.0;
         }
     }
 
