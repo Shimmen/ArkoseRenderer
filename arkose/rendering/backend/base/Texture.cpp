@@ -129,6 +129,49 @@ Texture::Format Texture::convertImageFormatToTextureFormat(ImageFormat imageForm
     }
 }
 
+ImageFormat Texture::convertTextureFormatToImageFormat(Texture::Format textureFormat)
+{
+    switch (textureFormat) {
+    case Texture::Format::R8:
+        return ImageFormat::R8;
+    case Texture::Format::R16F:
+        NOT_YET_IMPLEMENTED();
+    case Texture::Format::R32F:
+        return ImageFormat::R32F;
+    case Texture::Format::RG16F:
+        NOT_YET_IMPLEMENTED();
+    case Texture::Format::RG32F:
+        return ImageFormat::RG32F;
+    case Texture::Format::RGBA8:
+        return ImageFormat::RGBA8;
+    case Texture::Format::sRGBA8:
+        return ImageFormat::RGBA8;
+    case Texture::Format::RGBA16F:
+        NOT_YET_IMPLEMENTED();
+    case Texture::Format::RGBA32F:
+        return ImageFormat::RGBA32F;
+    case Texture::Format::Depth32F:
+        return ImageFormat::R32F;
+    case Texture::Format::Depth24Stencil8:
+        // Not sure we can/should support this anyway..
+        NOT_YET_IMPLEMENTED();
+    case Texture::Format::R32Uint:
+        NOT_YET_IMPLEMENTED();
+    case Texture::Format::R8Uint:
+        return ImageFormat::R8;
+    case Texture::Format::BC5:
+        return ImageFormat::BC5;
+    case Texture::Format::BC7:
+        return ImageFormat::BC7;
+    case Texture::Format::BC7sRGB:
+        return ImageFormat::BC7;
+    case Texture::Format::Unknown:
+        return ImageFormat::Unknown;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+}
+
 const Extent2D Texture::extentAtMip(uint32_t mip) const
 {
     Extent3D mipExtent3D = extent3DAtMip(mip);

@@ -146,6 +146,7 @@ public:
     Texture(Backend&, Description);
 
     static Texture::Format convertImageFormatToTextureFormat(ImageFormat, ImageType);
+    static ImageFormat convertTextureFormatToImageFormat(Texture::Format);
 
     static std::unique_ptr<Texture> createFromPixel(Backend&, vec4 pixelColor, bool sRGB);
 
