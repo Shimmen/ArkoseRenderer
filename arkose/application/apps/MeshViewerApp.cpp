@@ -460,12 +460,28 @@ void MeshViewerApp::drawMeshMaterialPanel()
 
             materialDidChange |= drawBrdfSelectorGui("Blend mode", material->brdf);
 
+            ImGui::Spacing();
+
+            // No point in showing the texture material inputs when there's no texture coordinates..
+            bool showMaterialInputTextureUI = segmentAsset->hasTextureCoordinates();
+
+            if (!showMaterialInputTextureUI) {
+                ImGui::BeginDisabled();
+                ImGui::Text("No texture coordinates for this mesh segment - hiding material inputs");
+            }
+
             ShaderMaterial const* shaderMaterial = m_scene->gpuScene().materialForHandle(selectedSegment()->material);
             materialDidChange |= drawMaterialInputGui("Base color", material->baseColor, shaderMaterial->baseColor);
             materialDidChange |= drawMaterialInputGui("Emissive color", material->emissiveColor, shaderMaterial->emissive);
             materialDidChange |= drawMaterialInputGui("Normal map", material->normalMap, shaderMaterial->normalMap);
             materialDidChange |= drawMaterialInputGui("Bent normal map", material->bentNormalMap, shaderMaterial->bentNormalMap, true);
             materialDidChange |= drawMaterialInputGui("Properties map", material->materialProperties, shaderMaterial->metallicRoughness);
+
+            if (!showMaterialInputTextureUI) {
+                ImGui::EndDisabled();
+            }
+
+            ImGui::Spacing();
 
             materialDidChange |= ImGui::ColorEdit4("Tint", value_ptr(material->colorTint));
 
