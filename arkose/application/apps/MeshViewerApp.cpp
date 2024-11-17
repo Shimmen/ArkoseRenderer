@@ -482,6 +482,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
             materialDidChange |= drawMaterialInputGui("Base color", material->baseColor, shaderMaterial->baseColor);
             materialDidChange |= drawMaterialInputGui("Emissive color", material->emissiveColor, shaderMaterial->emissive);
             materialDidChange |= drawMaterialInputGui("Normal map", material->normalMap, shaderMaterial->normalMap);
+            materialDidChange |= drawMaterialInputGui("Bent normal map", material->bentNormalMap, shaderMaterial->bentNormalMap);
             materialDidChange |= drawMaterialInputGui("Properties map", material->materialProperties, shaderMaterial->metallicRoughness);
 
             materialDidChange |= ImGui::ColorEdit4("Tint", value_ptr(material->colorTint));

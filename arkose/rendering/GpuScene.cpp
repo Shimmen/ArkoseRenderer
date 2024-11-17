@@ -1235,12 +1235,14 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset const* materialAsset)
     TextureHandle baseColor = registerMaterialTexture(materialAsset->baseColor, ImageType::sRGBColor, m_whiteTexture.get());
     TextureHandle emissive = registerMaterialTexture(materialAsset->emissiveColor, ImageType::sRGBColor, m_whiteTexture.get());
     TextureHandle normalMap = registerMaterialTexture(materialAsset->normalMap, ImageType::NormalMap, m_normalMapBlueTexture.get());
+    TextureHandle bentNormalMap = registerMaterialTexture(materialAsset->bentNormalMap, ImageType::NormalMap, m_blackTexture.get()); // NOTE: Using black texture as default as we have object-space normals (for now)!
     TextureHandle metallicRoughness = registerMaterialTexture(materialAsset->materialProperties, ImageType::GenericData, m_whiteTexture.get());
 
     ShaderMaterial shaderMaterial {};
 
     shaderMaterial.baseColor = baseColor.indexOfType<int>();
     shaderMaterial.normalMap = normalMap.indexOfType<int>();
+    shaderMaterial.bentNormalMap = bentNormalMap.indexOfType<int>();
     shaderMaterial.metallicRoughness = metallicRoughness.indexOfType<int>();
     shaderMaterial.emissive = emissive.indexOfType<int>();
 
@@ -1494,6 +1496,7 @@ void GpuScene::processDeferredDeletions()
         unregisterTexture(TextureHandle(shaderMaterial.baseColor));
         unregisterTexture(TextureHandle(shaderMaterial.emissive));
         unregisterTexture(TextureHandle(shaderMaterial.normalMap));
+        unregisterTexture(TextureHandle(shaderMaterial.bentNormalMap));
         unregisterTexture(TextureHandle(shaderMaterial.metallicRoughness));
 
         shaderMaterial = ShaderMaterial();

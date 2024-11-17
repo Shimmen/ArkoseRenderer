@@ -101,6 +101,7 @@ public:
     std::optional<MaterialInput> baseColor {};
     std::optional<MaterialInput> emissiveColor {};
     std::optional<MaterialInput> normalMap {};
+    std::optional<MaterialInput> bentNormalMap {};
     std::optional<MaterialInput> materialProperties {};
 
     vec4 colorTint { vec4(1.0f, 1.0f, 1.0f, 1.0f) };
@@ -128,6 +129,7 @@ public:
 enum class MaterialAssetVersion : u32 {
     Initial = 0,
     AddEmissiveFactor,
+    AddBentNormalMap,
     ////////////////////////////////////////////////////////////////////////////
     // Add new versions above this delimiter
     LatestVersion
@@ -149,7 +151,15 @@ template<class Archive>
 void MaterialAsset::serialize(Archive& archive, u32 version)
 {
     archive(CEREAL_NVP(brdf));
-    archive(CEREAL_NVP(baseColor), CEREAL_NVP(emissiveColor), CEREAL_NVP(normalMap), CEREAL_NVP(materialProperties));
+    archive(CEREAL_NVP(baseColor));
+    archive(CEREAL_NVP(emissiveColor));
+    archive(CEREAL_NVP(normalMap));
+    if (version > toUnderlying(MaterialAssetVersion::AddBentNormalMap)) {
+        archive(CEREAL_NVP(bentNormalMap));
+    } else {
+        bentNormalMap = {};
+    }
+    archive(CEREAL_NVP(materialProperties));
     archive(CEREAL_NVP(colorTint));
     archive(CEREAL_NVP(metallicFactor));
     archive(CEREAL_NVP(roughnessFactor));

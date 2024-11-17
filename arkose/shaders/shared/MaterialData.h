@@ -13,7 +13,7 @@ struct ShaderMaterial {
     float roughnessFactor; // multiplied by value in texture
 
     vec3 emissiveFactor; // multiplied by value in texture
-    float _padding0;
+    int bentNormalMap;
 
     vec4 colorTint;
 };
