@@ -438,7 +438,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
                         if (includeBakeBentNormalsUI && selectedSegmentAsset() && selectedSegmentAsset()->hasTextureCoordinates()) {
                             ImGui::SameLine();
                             if (ImGui::Button("Bake...")) {
-                                m_showBakeUI = true;
+                                m_pendingBake = BakeMode::BentNormals;
                             }
                         }
                     }
@@ -773,14 +773,11 @@ void MeshViewerApp::drawBakeUiIfActive()
         return;
     }
 
-    char const* bakeAmbientOcclusionPopupId = "Bake Ambient Occlusion";
-
-    if (m_showBakeUI) {
-        ImGui::OpenPopup(bakeAmbientOcclusionPopupId);
-        m_showBakeUI = false;
+    if (m_pendingBake != BakeMode::None) {
+        ImGui::OpenPopup("Bake");
     }
 
-    if (ImGui::BeginPopupModal(bakeAmbientOcclusionPopupId)) {
+    if (ImGui::BeginPopupModal("Bake")) {
 
         static int resolutionPower = 12;
         u32 resolution = static_cast<u32>(std::pow(2.0f, resolutionPower));
@@ -791,7 +788,8 @@ void MeshViewerApp::drawBakeUiIfActive()
         ImGui::SliderInt("Sample count", &sampleCount, 10, 1000);
 
         if (ImGui::Button("Bake")) {
-            auto aoImage = performAmbientOcclusionBake(resolution, sampleCount);
+            auto aoImage = performAmbientOcclusionBake(m_pendingBake, resolution, sampleCount);
+            m_pendingBake = BakeMode::None;
 
             std::string_view materialDirectory = FileIO::extractDirectoryFromPath(selectedSegmentAsset()->pathToMaterial());
             if (auto maybePath = FileDialog::save({ { "Arkose image", ImageAsset::AssetFileExtension } }, materialDirectory, "AmbientOcclusion.arkimg")) {
@@ -819,7 +817,7 @@ void MeshViewerApp::drawBakeUiIfActive()
     }
 }
 
-std::unique_ptr<ImageAsset> MeshViewerApp::performAmbientOcclusionBake(u32 resolution, u32 sampleCount)
+std::unique_ptr<ImageAsset> MeshViewerApp::performAmbientOcclusionBake(BakeMode bakeMode, u32 resolution, u32 sampleCount)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -840,9 +838,18 @@ std::unique_ptr<ImageAsset> MeshViewerApp::performAmbientOcclusionBake(u32 resol
 
     bakePipeline->addNode<BakeAmbientOcclusionNode>(instanceToBake, instanceMeshLod, instanceMeshSegment, sampleCount);
 
-    Texture::Description desc { .extent = { aoTextureExtent, 1 },
-                                .format = Texture::Format::R8Uint };
-    auto aoOutputTexture = backend.createTexture(desc);
+    Texture::Description outputTextureDesc { .extent = { aoTextureExtent, 1 } };
+    switch (bakeMode) {
+    case BakeMode::AmbientOcclusion:
+        outputTextureDesc.format = Texture::Format::R8Uint;
+        break;
+    case BakeMode::BentNormals:
+        outputTextureDesc.format = Texture::Format::RGBA8; // TODO: Probably use a higher-precision format!
+        break;
+    default:
+        ARKOSE_LOG(Fatal, "Mesh viewer: unknown bake mode ({})", static_cast<u32>(bakeMode));
+    }
+    auto aoOutputTexture = backend.createTexture(outputTextureDesc);
 
     // TODO: We should not need to create a render target, and the Registry should just accept an (optional) "output render target"
     // If you want to write to it, create your own render target with it, or simply use it as a rw texture output.
