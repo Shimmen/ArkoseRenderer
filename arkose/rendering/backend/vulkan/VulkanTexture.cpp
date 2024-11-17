@@ -601,10 +601,7 @@ std::unique_ptr<ImageAsset> VulkanTexture::copyDataToImageAsset(u32 mipIdx)
     u8 const* rawImageData = reinterpret_cast<u8 const*>(readbackAllocInfo.pMappedData);
     size_t rawImageDataSize = readbackAllocInfo.size;
 
-    // TODO: Make a `convertTextureFormatToImageFormat` function!
-    ARKOSE_ASSERT(format() == Texture::Format::R8Uint);
-    ImageFormat imageFormat = ImageFormat::R8;
-
+    ImageFormat imageFormat = convertTextureFormatToImageFormat(format());
     return ImageAsset::createFromRawData(rawImageData, rawImageDataSize, imageFormat, extent());
 }
 
