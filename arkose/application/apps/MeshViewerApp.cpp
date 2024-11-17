@@ -5,6 +5,7 @@
 #include "system/Input.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
+#include "rendering/baking/BakeAmbientOcclusionNode.h"
 #include "rendering/debug/DebugDrawer.h"
 #include "rendering/debug/EditorGridRenderNode.h"
 #include "rendering/forward/ForwardRenderNode.h"
@@ -25,6 +26,11 @@
 #include <fmt/format.h>
 #include <imgui.h>
 #include <imgui_internal.h>
+
+std::vector<Backend::Capability> MeshViewerApp::optionalCapabilities()
+{
+    return { Backend::Capability::RayTracing, Backend::Capability::ShaderBarycentrics };
+}
 
 void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
 {
@@ -156,6 +162,8 @@ void MeshViewerApp::drawMenuBar()
     }
 
     bool showNewSceneModalHack = false;
+    bool showBakeAOModalHack = false;
+
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             if (ImGui::MenuItem("New empty...", "Ctrl+N")) {
@@ -166,6 +174,12 @@ void MeshViewerApp::drawMenuBar()
             }
             if (ImGui::MenuItem("Save...", "Ctrl+S")) {
                 saveMeshWithDialog();
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Bake")) {
+            if (ImGui::MenuItem("Bake ambient occlusion...")) {
+                showBakeAOModalHack = true;
             }
             ImGui::EndMenu();
         }
@@ -211,6 +225,33 @@ void MeshViewerApp::drawMenuBar()
         ImGui::SameLine();
         if (ImGui::Button("Cancel")) {
             ImGui::CloseCurrentPopup();
+        }
+        ImGui::EndPopup();
+    }
+
+    if (showBakeAOModalHack) {
+        ImGui::OpenPopup("Bake Ambient Occlusion");
+        showBakeAOModalHack = false;
+    }
+    if (ImGui::BeginPopupModal("Bake Ambient Occlusion")) {
+        // TODO: Also check that the current asset has UVs!
+        if (Backend::get().hasActiveCapability(Backend::Capability::RayTracing) && Backend::get().hasActiveCapability(Backend::Capability::ShaderBarycentrics)) {
+            // TODO: Make a nice ui :)
+            ImGui::Text("Resolution: %dx%d", 4096, 4096);
+            ImGui::Text("Rays:       %d", 500);
+            if (ImGui::Button("Bake")) {
+                performAmbientOcclusionBake(4096, 500);
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel")) {
+                ImGui::CloseCurrentPopup();
+            }
+        } else {
+            ImGui::Text("No ray tracing capability enabled, can't bake AO!");
+            if (ImGui::Button("Ok")) {
+                ImGui::CloseCurrentPopup();
+            }
         }
         ImGui::EndPopup();
     }
@@ -726,4 +767,51 @@ StaticMeshSegment* MeshViewerApp::selectedSegment()
     }
 
     return nullptr;
+}
+
+void MeshViewerApp::performAmbientOcclusionBake(u32 resolution, u32 sampleCount)
+{
+    SCOPED_PROFILE_ZONE();
+
+    Extent2D aoTextureExtent { resolution, resolution };
+
+    Backend& backend = Backend::get();
+
+    auto bakeScene = std::make_unique<Scene>(backend, nullptr);
+    bakeScene->setupFromDescription({ .withRayTracing = true });
+
+    // Put the currently viewed mesh into the baking scene
+    StaticMeshInstance& instanceToBake = bakeScene->addMesh(m_targetAsset);
+    u32 instanceMeshLod = m_selectedLodIdx;
+    u32 instanceMeshSegment = m_selectedSegmentIdx;
+
+    auto bakePipeline = std::make_unique<RenderPipeline>(&bakeScene->gpuScene());
+    bakePipeline->setOutputResolution(aoTextureExtent); // TODO: Setting this shouldn't be strictly required..? The output texture defines the output res.
+
+    bakePipeline->addNode<BakeAmbientOcclusionNode>(instanceToBake, instanceMeshLod, instanceMeshSegment, sampleCount);
+
+    Texture::Description desc { .extent = { aoTextureExtent, 1 },
+                                .format = Texture::Format::R8Uint };
+    auto aoOutputTexture = backend.createTexture(desc);
+
+    // TODO: We should not need to create a render target, and the Registry should just accept an (optional) "output render target"
+    // If you want to write to it, create your own render target with it, or simply use it as a rw texture output.
+    auto hackTempOutputRenderTarget = backend.createRenderTarget({ { RenderTarget::AttachmentType::Color0, aoOutputTexture.get(), LoadOp::Clear, StoreOp::Store, RenderTargetBlendMode::None } });
+
+    auto registry = std::make_unique<Registry>(backend, *hackTempOutputRenderTarget, nullptr);
+    bakePipeline->constructAll(*registry);
+
+    auto uploadBuffer = std::make_unique<UploadBuffer>(backend, 100 * 1024 * 1024);
+
+    std::optional<Backend::SubmitStatus> submitStatus = backend.submitRenderPipeline(*bakePipeline, *registry, *uploadBuffer, "AO Bake");
+    if (!submitStatus.has_value()) {
+        ARKOSE_LOG(Error, "Failed to submit AO bake");
+        return;
+    }
+
+    backend.waitForSubmissionCompletion(submitStatus.value(), UINT64_MAX);
+
+    // TODO: Place in in an appropriate location on disk & assign it to the material
+    auto image = aoOutputTexture->copyDataToImageAsset(0);
+    image->writeToFile("assets/sample/models/Head/ao.arkimg", AssetStorage::Binary);
 }

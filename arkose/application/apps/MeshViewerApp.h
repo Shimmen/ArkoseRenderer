@@ -16,6 +16,8 @@ public:
     void setup(Scene&, RenderPipeline&) override;
     bool update(Scene&, float elapsedTime, float deltaTime) override;
 
+    std::vector<Backend::Capability> optionalCapabilities() override;
+
     // TODO: Probably replace with some arcball-like camera controller
     FpsCameraController m_fpsCameraController {};
 
@@ -56,6 +58,8 @@ private:
     void importAssetWithDialog();
     void loadMeshWithDialog();
     void saveMeshWithDialog();
+
+    void performAmbientOcclusionBake(u32 resolution, u32 sampleCount);
 
     AssetImporterOptions m_importOptions { .alwaysMakeImageAsset = false,
                                            .generateMipmaps = true,
