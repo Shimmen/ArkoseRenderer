@@ -10,6 +10,8 @@ public:
 
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
+    void setWithAmbientOcclusion(bool value) { m_withAmbientOcclusion = value; }
+
 private:
     GpuScene* m_scene { nullptr };
 

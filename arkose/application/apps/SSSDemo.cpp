@@ -15,7 +15,6 @@
 #include "rendering/nodes/LocalLightShadowNode.h"
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/RTReflectionsNode.h"
-#include "rendering/nodes/SSAONode.h"
 #include "rendering/nodes/SkyViewNode.h"
 #include "rendering/nodes/TAANode.h"
 #include "rendering/nodes/TonemapNode.h"
@@ -116,8 +115,9 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
     rtReflectionsNode.setNoTracingRoughnessThreshold(1.0f);
 
     pipeline.addNode<SSSSNode>();
-    pipeline.addNode<SSAONode>();
-    pipeline.addNode<LightingComposeNode>();
+
+    LightingComposeNode& lightingComposeNode = pipeline.addNode<LightingComposeNode>();
+    lightingComposeNode.setWithAmbientOcclusion(false); // no SSAO available
 
     pipeline.addNode<SkyViewNode>();
     scene.setEnvironmentMap({ .assetPath = "", .brightnessFactor = 500.0f });
