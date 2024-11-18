@@ -65,4 +65,19 @@ vec3 randomPointOnSphere()
     );
 }
 
+vec3 randomOrthogonal(vec3 reference)
+{
+    float dotProduct;
+    vec3 randomDirection;
+    do {
+        randomDirection = randomPointOnSphere();
+        dotProduct = dot(randomDirection, reference);
+    } while (abs(dotProduct) > 0.999);
+
+    // Gram–Schmidt ortogonalization
+    vec3 orthogonalDirection = normalize(randomDirection - reference * dotProduct);
+
+    return orthogonalDirection;
+}
+
 #endif // RANDOM_GLSL
