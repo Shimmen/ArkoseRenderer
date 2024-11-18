@@ -277,6 +277,10 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         Texture& normalVelocityTexture = reg.createTexture2D(renderResolution, Texture::Format::RGBA16F, linearFilter, mipMode, wrapMode);
         reg.publish("SceneNormalVelocity", normalVelocityTexture);
 
+        // rgb: bent normal, a: bent cone
+        Texture& bentNormalTexture = reg.createTexture2D(renderResolution, Texture::Format::RGBA16F, linearFilter, mipMode, wrapMode);
+        reg.publish("SceneBentNormal", bentNormalTexture);
+
         // r: roughness, g: metallic, b: unused, a: unused
         Texture& materialTexture = reg.createTexture2D(renderResolution, Texture::Format::RGBA16F, linearFilter, mipMode, wrapMode);
         reg.publish("SceneMaterial", materialTexture);
@@ -1235,7 +1239,7 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset const* materialAsset)
     TextureHandle baseColor = registerMaterialTexture(materialAsset->baseColor, ImageType::sRGBColor, m_whiteTexture.get());
     TextureHandle emissive = registerMaterialTexture(materialAsset->emissiveColor, ImageType::sRGBColor, m_whiteTexture.get());
     TextureHandle normalMap = registerMaterialTexture(materialAsset->normalMap, ImageType::NormalMap, m_normalMapBlueTexture.get());
-    TextureHandle bentNormalMap = registerMaterialTexture(materialAsset->bentNormalMap, ImageType::NormalMap, m_normalMapBlueTexture.get());
+    TextureHandle bentNormalMap = registerMaterialTexture(materialAsset->bentNormalMap, ImageType::NormalMap, m_whiteTexture.get());
     TextureHandle metallicRoughness = registerMaterialTexture(materialAsset->materialProperties, ImageType::GenericData, m_whiteTexture.get());
 
     ShaderMaterial shaderMaterial {};

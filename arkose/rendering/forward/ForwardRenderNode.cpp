@@ -145,11 +145,13 @@ RenderTarget& ForwardRenderNode::makeRenderTarget(Registry& reg, Mode mode) cons
         Texture* normalVelocityTexture = reg.getTexture("SceneNormalVelocity");
         Texture* materialTexture = reg.getTexture("SceneMaterial");
         Texture* baseColorTexture = reg.getTexture("SceneBaseColor");
+        Texture* bentNormalTexture = reg.getTexture("SceneBentNormal");
 
         return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, colorTexture, loadOp, storeOp },
                                         { RenderTarget::AttachmentType::Color1, normalVelocityTexture, loadOp, storeOp },
-                                        { RenderTarget::AttachmentType::Color2, materialTexture, loadOp, storeOp },
-                                        { RenderTarget::AttachmentType::Color3, baseColorTexture, loadOp, storeOp },
+                                        { RenderTarget::AttachmentType::Color2, bentNormalTexture, loadOp, storeOp },
+                                        { RenderTarget::AttachmentType::Color3, materialTexture, loadOp, storeOp },
+                                        { RenderTarget::AttachmentType::Color4, baseColorTexture, loadOp, storeOp },
                                         { RenderTarget::AttachmentType::Depth, depthTexture, loadOp, storeOp } });
     } else {
         ASSERT_NOT_REACHED();

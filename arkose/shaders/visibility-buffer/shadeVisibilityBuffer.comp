@@ -18,8 +18,9 @@ layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 layout(set = 1, binding = 0, rgba16f) uniform restrict writeonly image2D sceneColorImg;
 layout(set = 1, binding = 1, rgba16f) uniform restrict writeonly image2D diffuseIrradianceImg;
 layout(set = 1, binding = 2, rgba16f) uniform restrict writeonly image2D normalVelocityImg;
-layout(set = 1, binding = 3, rgba8) uniform restrict writeonly image2D materialPropertyImg;
-layout(set = 1, binding = 4, rgba8) uniform restrict writeonly image2D baseColorImg;
+layout(set = 1, binding = 3, rgba16f) uniform restrict writeonly image2D bentNormalImg;
+layout(set = 1, binding = 4, rgba8) uniform restrict writeonly image2D materialPropertyImg;
+layout(set = 1, binding = 5, rgba8) uniform restrict writeonly image2D baseColorImg;
 
 DeclareCommonBindingSet_VisibilityBuffer(2)
 DeclareCommonBindingSet_Material(3)
@@ -233,6 +234,19 @@ void main()
         N = -N;
     }
 
+    vec3 worldSpaceBentNormal;
+    float bentCone;
+
+    vec4 encodedBentNormal = textureGrad(material_getTexture(material.bentNormalMap), texCoord, ddx, ddy);
+    if (any(lessThan(encodedBentNormal.rgb, vec3(1.0, 1.0, 1.0)))) { // a valid encoded bent normal always fulfills this
+        vec3 objectSpaceBentNormal = encodedBentNormal.rgb * vec3(2.0) - vec3(1.0);
+        worldSpaceBentNormal = mat3(drawable.worldFromLocal) * objectSpaceBentNormal;
+        bentCone = encodedBentNormal.w * (PI / 2.0);
+    } else {
+        worldSpaceBentNormal = vec3(0.0);
+        bentCone = -1.0;
+    }
+
     #if USE_NORMAL_MAPPING
         vec3 packedNormal = textureGrad(material_getTexture(material.normalMap), texCoord, ddx, ddy).rgb;
         #if USE_2COMPONENT_NORMALS
@@ -295,6 +309,7 @@ void main()
 
     // TODO: Eventually we probably don't want to be writing these.. this is just for the visibility buffer transition period
     imageStore(normalVelocityImg, pixelCoord, vec4(octahedralEncode(N), velocity));
+    imageStore(bentNormalImg, pixelCoord, vec4(worldSpaceBentNormal, bentCone));
     imageStore(materialPropertyImg, pixelCoord, vec4(roughness, metallic, 0.0, 0.0));
     imageStore(baseColorImg, pixelCoord, vec4(baseColor, 1.0));
 }
