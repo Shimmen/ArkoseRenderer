@@ -62,6 +62,7 @@ RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registr
     Texture& diffuseIrradiance = *reg.getTexture("SceneDiffuseIrradiance");
     Texture& sceneDepth = *reg.getTexture("SceneDepth");
     Texture& sceneBaseColor = *reg.getTexture("SceneBaseColor");
+    Texture& sceneNormals = *reg.getTexture("SceneNormalVelocity");
     Buffer& sceneCameraBuffer = *reg.getBuffer("SceneCameraData");
 
     BindingSet& visibilityBufferSampleSet = *reg.getBindingSet("VisibilityBufferData");
@@ -72,6 +73,7 @@ RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registr
                                                         ShaderBinding::sampledTexture(diffuseIrradiance, ShaderStage::Compute),
                                                         ShaderBinding::sampledTexture(sceneDepth, ShaderStage::Compute),
                                                         ShaderBinding::sampledTexture(sceneBaseColor, ShaderStage::Compute),
+                                                        ShaderBinding::sampledTexture(sceneNormals, ShaderStage::Compute),
                                                         ShaderBinding::constantBuffer(samplesBuffer, ShaderStage::Compute),
                                                         ShaderBinding::constantBuffer(sceneCameraBuffer, ShaderStage::Compute) });
 

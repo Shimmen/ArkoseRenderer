@@ -4,6 +4,7 @@
 
 #include <common.glsl>
 #include <common/camera.glsl>
+#include <common/gBuffer.glsl>
 #include <common/namedUniforms.glsl>
 #include <common/visibilityBuffer.glsl>
 #include <shared/SceneData.h>
@@ -12,8 +13,9 @@ layout(set = 0, binding = 0, rgba16f) uniform writeonly image2D resultImg;
 layout(set = 0, binding = 1) uniform sampler2D diffuseIrradianceTex;
 layout(set = 0, binding = 2) uniform sampler2D sceneDepthTex;
 layout(set = 0, binding = 3) uniform sampler2D sceneBaseColorTex;
-layout(set = 0, binding = 4) uniform SamplesBlock { vec4 samples[MAX_SAMPLE_COUNT]; };
-layout(set = 0, binding = 5) uniform CameraStateBlock { CameraState camera; };
+layout(set = 0, binding = 4) uniform sampler2D sceneNormalVelocityTex;
+layout(set = 0, binding = 5) uniform SamplesBlock { vec4 samples[MAX_SAMPLE_COUNT]; };
+layout(set = 0, binding = 6) uniform CameraStateBlock { CameraState camera; };
 
 DeclareCommonBindingSet_VisibilityBuffer(1)
 DeclareVisibilityBufferSamplingFunctions
@@ -64,6 +66,7 @@ void main()
         return;
     }
 
+#if 0
     vec3 p0, p1, p2;
     uvec3 triangle = visbuf_calculateTriangle(pixelCoord);
     visbuf_getTriangleVertexPositions(triangle, p0, p1, p2);
@@ -71,6 +74,15 @@ void main()
     // NOTE: We do want the geometric normal for aligning the SSSS sample disc with
     vec3 localNormal = normalize(cross(p1 - p0, p2 - p0));
     vec3 worldNormal = mat3(drawable.worldFromTangent) * localNormal;
+#else
+    // This appears to look better to my eyes, as you can otherwise see the faceting in areas of high curvature.
+    // In the paper this is based on they discuss that it'd be better to use the hard, geometric normals for the
+    // purpose of calculating subsurface scattering, but I'm not sure I agree now. Or perhaps I misunderstood what
+    // they were trying to say. Either way, I think this is better. However, with this we don't really need it to
+    // be using the visibility buffer data, except for the drawableIdx exclusion. Let keep it like this for now!
+    vec3 viewNormal = decodeNormal(texelFetch(sceneNormalVelocityTex, pixelCoord, 0).rg);
+    vec3 worldNormal = mat3(camera.worldFromView) * viewNormal;
+#endif
 
     vec3 B1, B2;
     createOrthonormalBasis(worldNormal, B1, B2);
