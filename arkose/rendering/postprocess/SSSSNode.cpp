@@ -81,7 +81,7 @@ RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registr
     ssssStateBindings.at(0, ssssBindingSet);
     ssssStateBindings.at(1, visibilityBufferSampleSet);
 
-    Shader ssssShader = Shader::createCompute("postprocess/ssss.comp", { ShaderDefine::makeInt("MAX_SAMPLE_COUNT", MaxSampleCount) });
+    Shader ssssShader = Shader::createCompute("subsurface/ssss.comp", { ShaderDefine::makeInt("MAX_SAMPLE_COUNT", MaxSampleCount) });
     ComputeState& ssssState = reg.createComputeState(ssssShader, ssssStateBindings);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
