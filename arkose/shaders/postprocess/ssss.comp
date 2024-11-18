@@ -6,6 +6,7 @@
 #include <common/camera.glsl>
 #include <common/gBuffer.glsl>
 #include <common/namedUniforms.glsl>
+#include <common/random.glsl>
 #include <common/visibilityBuffer.glsl>
 #include <shared/SceneData.h>
 
@@ -84,9 +85,17 @@ void main()
     vec3 worldNormal = mat3(camera.worldFromView) * viewNormal;
 #endif
 
+#if 0
     vec3 B1, B2;
     createOrthonormalBasis(worldNormal, B1, B2);
     mat3 tangentBasisMatrix = mat3(B1, B2, worldNormal);
+#else
+    seedRandom(pixelCoord.x + constants.targetSize.x * pixelCoord.y);
+    vec3 B1 = randomOrthogonal(worldNormal);
+    vec3 B2 = cross(worldNormal, B1);
+    mat3 tangentBasisMatrix = mat3(B1, B2, worldNormal);
+#endif
+
 
     // TODO: OR we calculate it from the visibility buffer? We just need to get the barycords & multiply with the world matrix.. so which is quicker..?
     float sceneDepthNonLinear = texelFetch(sceneDepthTex, pixelCoord, 0).r;
