@@ -115,9 +115,7 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
     rtReflectionsNode.setNoTracingRoughnessThreshold(1.0f);
 
     pipeline.addNode<SSSSNode>();
-
-    LightingComposeNode& lightingComposeNode = pipeline.addNode<LightingComposeNode>();
-    lightingComposeNode.setWithAmbientOcclusion(false); // no SSAO available
+    pipeline.addNode<LightingComposeNode>();
 
     pipeline.addNode<SkyViewNode>();
     scene.setEnvironmentMap({ .assetPath = "", .brightnessFactor = 500.0f });

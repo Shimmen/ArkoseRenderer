@@ -15,12 +15,32 @@ void LightingComposeNode::drawGui()
     ImGui::Separator();
 
     ImGui::Checkbox("Glossy indirect (reflections)", &m_includeGlossyGI);
+
+    ImGui::Separator();
+
     ImGui::Checkbox("Diffuse indirect (DDGI)", &m_includeDiffuseGI);
+
+    if (!m_includeDiffuseGI) { 
+        ImGui::BeginDisabled();
+    }
+
+    ImGui::Checkbox("Use bent normal direction (if available)", &m_useBentNormalDirection);
+
+    if (!m_useBentNormalDirection) { ImGui::BeginDisabled(); }
+    ImGui::Checkbox("Include bent normal occlusion", &m_withBentNormalOcclusion);
+    if (!m_useBentNormalDirection) { ImGui::EndDisabled(); }
+
+    if (!m_hasScreenSpaceOcclusionTexture) { ImGui::BeginDisabled(); }
+    ImGui::Checkbox("Include screen space occlusion", &m_withScreenSpaceOcclusion);
+    if (!m_hasScreenSpaceOcclusionTexture) { ImGui::EndDisabled(); }
+
+    if (!m_includeDiffuseGI) {
+        ImGui::EndDisabled();
+    }
 
     ImGui::Separator();
 
     ImGui::Checkbox("Include material colors", &m_scene->shouldIncludeMaterialColorMutable());
-    ImGui::Checkbox("Include ambient occlusion (for diffuse indirect)", &m_withAmbientOcclusion);
 }
 
 RenderPipelineNode::ExecuteCallback LightingComposeNode::construct(GpuScene& scene, Registry& reg)
@@ -29,10 +49,15 @@ RenderPipelineNode::ExecuteCallback LightingComposeNode::construct(GpuScene& sce
 
     Texture& sceneColor = *reg.getTexture("SceneColor");
     Texture& sceneDiffuseIrradiance = *reg.getTexture("SceneDiffuseIrradiance");
-    
-    Texture* ambientOcclusionTex = reg.getTexture("AmbientOcclusion");
-    if (!ambientOcclusionTex) {
-        ambientOcclusionTex = &reg.createPixelTexture(vec4(1.0f), false);
+
+    Texture* screenSpaceOcclusionTex = reg.getTexture("AmbientOcclusion");
+    if (screenSpaceOcclusionTex) {
+        m_hasScreenSpaceOcclusionTexture = true;
+    } else {
+        // this won't be sampled, it's just so we can put something in the binding set
+        screenSpaceOcclusionTex = &reg.createPixelTexture(vec4(0.0f), false);
+        m_hasScreenSpaceOcclusionTexture = false;
+        m_withScreenSpaceOcclusion = false;
     }
 
     Texture* reflectionsTex = reg.getTexture("DenoisedReflections");
@@ -58,7 +83,7 @@ RenderPipelineNode::ExecuteCallback LightingComposeNode::construct(GpuScene& sce
                                                            ShaderBinding::sampledTexture(sceneDiffuseIrradiance, ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(*reflectionsTex, ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(*reflectionDirectionTex, ShaderStage::Compute),
-                                                           ShaderBinding::sampledTexture(*ambientOcclusionTex, ShaderStage::Compute) });
+                                                           ShaderBinding::sampledTexture(*screenSpaceOcclusionTex, ShaderStage::Compute) });
 
     StateBindings stateBindings;
     stateBindings.at(0, composeBindingSet);
@@ -80,9 +105,11 @@ RenderPipelineNode::ExecuteCallback LightingComposeNode::construct(GpuScene& sce
         cmdList.setNamedUniform("includeSpecularDirectLight", m_includeSpecularDirectLight);
         cmdList.setNamedUniform("includeDiffuseDirectLight", m_includeDiffuseDirectLight);
         cmdList.setNamedUniform("includeDiffuseGI", m_includeDiffuseGI);
+        cmdList.setNamedUniform("useBentNormalDirection", m_useBentNormalDirection);
+        cmdList.setNamedUniform("withBentNormalOcclusion", m_withBentNormalOcclusion);
+        cmdList.setNamedUniform("withScreenSpaceOcclusion", m_withScreenSpaceOcclusion);
         cmdList.setNamedUniform("includeGlossyGI", m_includeGlossyGI);
         cmdList.setNamedUniform("withMaterialColor", scene.shouldIncludeMaterialColor());
-        cmdList.setNamedUniform("withAmbientOcclusion", m_withAmbientOcclusion);
 
         cmdList.dispatch({ sceneColorWithGI.extent(), 1 }, { 8, 8, 1 });
 

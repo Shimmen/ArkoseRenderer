@@ -10,8 +10,6 @@ public:
 
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
-    void setWithAmbientOcclusion(bool value) { m_withAmbientOcclusion = value; }
-
 private:
     GpuScene* m_scene { nullptr };
 
@@ -19,9 +17,12 @@ private:
     bool m_includeDiffuseDirectLight { true };
 
     bool m_includeGlossyGI { true };
-    bool m_includeDiffuseGI { true };
 
-    bool m_withAmbientOcclusion { true };
+    bool m_includeDiffuseGI { true };
+    bool m_useBentNormalDirection { true };
+    bool m_withBentNormalOcclusion { true };
+    bool m_withScreenSpaceOcclusion { true };
 
     BindingSet* m_ddgiBindingSet { nullptr };
+    bool m_hasScreenSpaceOcclusionTexture { false };
 };
