@@ -52,6 +52,7 @@ RenderPipelineNode::ExecuteCallback LightingComposeNode::construct(GpuScene& sce
                                                            ShaderBinding::sampledTexture(*reg.getTexture("SceneBaseColor"), ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(*reg.getTexture("SceneMaterial"), ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(*reg.getTexture("SceneNormalVelocity"), ShaderStage::Compute),
+                                                           ShaderBinding::sampledTexture(*reg.getTexture("SceneBentNormal"), ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(*reg.getTexture("SceneDepth"), ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(sceneColor, ShaderStage::Compute),
                                                            ShaderBinding::sampledTexture(sceneDiffuseIrradiance, ShaderStage::Compute),

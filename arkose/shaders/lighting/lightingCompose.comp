@@ -11,12 +11,13 @@ layout(set = 0, binding = 1, rgba16f) uniform writeonly image2D sceneColorWithGI
 layout(set = 0, binding = 2) uniform sampler2D sceneBaseColorTex;
 layout(set = 0, binding = 3) uniform sampler2D sceneMaterialTex;
 layout(set = 0, binding = 4) uniform sampler2D sceneNormalVelocityTex;
-layout(set = 0, binding = 5) uniform sampler2D sceneDepthTex;
-layout(set = 0, binding = 6) uniform sampler2D directLightTex;
-layout(set = 0, binding = 7) uniform sampler2D directDiffuseIrradianceTex;
-layout(set = 0, binding = 8) uniform sampler2D reflectionsTex;
-layout(set = 0, binding = 9) uniform sampler2D reflectionDirectionTex;
-layout(set = 0, binding =10) uniform sampler2D ambientOcclusionTex;
+layout(set = 0, binding = 5) uniform sampler2D sceneBentNormalTex;
+layout(set = 0, binding = 6) uniform sampler2D sceneDepthTex;
+layout(set = 0, binding = 7) uniform sampler2D directLightTex;
+layout(set = 0, binding = 8) uniform sampler2D directDiffuseIrradianceTex;
+layout(set = 0, binding = 9) uniform sampler2D reflectionsTex;
+layout(set = 0, binding =10) uniform sampler2D reflectionDirectionTex;
+layout(set = 0, binding =11) uniform sampler2D ambientOcclusionTex;
 
 #if WITH_DDGI
 #include <ddgi/probeSampling.glsl>
@@ -65,7 +66,7 @@ void main()
     }
 
     float nonLinearDepth = texelFetch(sceneDepthTex, pixelCoord, 0).x;
-    if (nonLinearDepth < 1.0 - 1e-6) { // TODO: Scalarize?
+    if (nonLinearDepth < 1.0 - 1e-6) {
 
         vec3 reflectionRadiance = texelFetch(reflectionsTex, pixelCoord, 0).rgb;
         vec3 reflectionWorldDirection = texelFetch(reflectionDirectionTex, pixelCoord, 0).xyz;
@@ -97,11 +98,30 @@ void main()
         #if WITH_DDGI
         if (pushConstants.includeDiffuseGI) {
 
+            vec4 bentNormalAndCone = texelFetch(sceneBentNormalTex, pixelCoord, 0);
+            float bentCone = bentNormalAndCone.a;
+
+            vec3 worldSpaceSampleDir;
+            if (bentCone >= 0.0) {
+                vec3 worldSpaceBentNormal = bentNormalAndCone.rgb;
+                float bentNormalLength = length(worldSpaceBentNormal);
+                worldSpaceSampleDir = worldSpaceBentNormal / bentNormalLength;
+                ambientOcclusion = min(ambientOcclusion, bentNormalLength);
+            } else {
+                vec3 worldSpaceNormal = normalize(mat3(camera.worldFromView) * N);
+                worldSpaceSampleDir = worldSpaceNormal;
+            }
+
             vec3 worldSpacePos = vec3(camera.worldFromView * vec4(pixelViewSpacePosition, 1.0));
-            vec3 worldSpaceNormal = normalize(mat3(camera.worldFromView) * N);
             vec3 worldSpaceView = normalize(mat3(camera.worldFromView) * V);
 
-            vec3 indirectIrradiance = sampleDynamicDiffuseGlobalIllumination(worldSpacePos, worldSpaceNormal, worldSpaceView, ddgiProbeGridData, ddgiIrradianceAtlas, ddgiVisibilityAtlas);
+            vec3 indirectIrradiance = sampleDynamicDiffuseGlobalIllumination(
+                worldSpacePos,
+                worldSpaceSampleDir,
+                worldSpaceView,
+                ddgiProbeGridData,
+                ddgiIrradianceAtlas,
+                ddgiVisibilityAtlas);
 
             // If the surface is rough enough we don't trace reflection rays and have no valid data for it.
             // (Since L is invalid (zero) we will also get an invalid F value, which we need to zero out.)
