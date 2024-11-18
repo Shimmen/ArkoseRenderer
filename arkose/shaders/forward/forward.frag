@@ -3,7 +3,7 @@
 #extension GL_EXT_nonuniform_qualifier : require
 
 #include <common/brdf.glsl>
-#include <common/gBuffer.glsl>
+#include <common/encoding.glsl>
 #include <common/lighting.glsl>
 #include <common/material.glsl>
 #include <common/namedUniforms.glsl>

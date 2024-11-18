@@ -1,7 +1,7 @@
 #version 460
 
 #include <shared/CameraState.h>
-#include <common/gBuffer.glsl>
+#include <common/encoding.glsl>
 #include <common/namedUniforms.glsl>
 #include <common/spherical.glsl>
 

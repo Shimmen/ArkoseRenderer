@@ -4,7 +4,7 @@
 
 #include <common.glsl>
 #include <common/camera.glsl>
-#include <common/gBuffer.glsl>
+#include <common/encoding.glsl>
 #include <common/namedUniforms.glsl>
 #include <common/random.glsl>
 #include <common/visibilityBuffer.glsl>

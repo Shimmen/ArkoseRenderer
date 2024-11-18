@@ -2,7 +2,7 @@
 
 #include <common.glsl>
 #include <common/brdf.glsl>
-#include <common/gBuffer.glsl>
+#include <common/encoding.glsl>
 #include <common/namedUniforms.glsl>
 #include <common/spherical.glsl>
 #include <rayTracing/common/common.glsl>

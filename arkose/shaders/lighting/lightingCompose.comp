@@ -3,7 +3,7 @@
 #include <common.glsl>
 #include <common/brdf.glsl>
 #include <common/camera.glsl>
-#include <common/gBuffer.glsl>
+#include <common/encoding.glsl>
 #include <common/namedUniforms.glsl>
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };

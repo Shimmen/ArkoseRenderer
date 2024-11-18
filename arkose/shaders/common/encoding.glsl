@@ -1,5 +1,5 @@
-#ifndef G_BUFFER_GLSL
-#define G_BUFFER_GLSL
+#ifndef G_ENCODING_GLSL
+#define G_ENCODING_GLSL
 
 #include <common/octahedral.glsl>
 
@@ -19,4 +19,4 @@ vec3 decodeNormal(vec2 encodedNormal)
     return octahedralDecode(encodedNormal);
 }
 
-#endif // G_BUFFER_GLSL
+#endif // G_ENCODING_GLSL
