@@ -25,6 +25,7 @@
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
 #include "scene/lights/DirectionalLight.h"
+#include "shaders/shared/TonemapData.h"
 #include "utility/Profiling.h"
 #include <ark/random.h>
 #include <imgui.h>
@@ -131,7 +132,9 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
     const std::string finalTextureToScreen = "SceneColorLDR";
 
     pipeline.addNode<TAANode>(scene.camera());
-    pipeline.addNode<TonemapNode>(sceneTexture);
+
+    TonemapNode& tonemapNode = pipeline.addNode<TonemapNode>(sceneTexture);
+    tonemapNode.setTonemapMethod(TONEMAP_METHOD_KHRONOS_PBR_NEUTRAL);
 
     pipeline.addNode<DebugDrawNode>();
 

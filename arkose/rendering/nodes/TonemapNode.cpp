@@ -13,6 +13,12 @@ TonemapNode::TonemapNode(std::string sourceTextureName, Mode mode)
 {
 }
 
+void TonemapNode::setTonemapMethod(int method)
+{
+    ARKOSE_ASSERT(method >= TONEMAP_METHOD_CLAMP && method <= TONEMAP_METHOD_KHRONOS_PBR_NEUTRAL);
+    m_tonemapMethod = method;
+}
+
 void TonemapNode::drawGui()
 {
     ImGui::Text("Method:");

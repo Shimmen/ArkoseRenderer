@@ -13,6 +13,8 @@ public:
 
     TonemapNode(std::string sourceTextureName, Mode = Mode::RenderToSceneColorLDR);
 
+    void setTonemapMethod(int method);
+
     std::string name() const override { return "Tonemap"; }
     void drawGui() override;
 
