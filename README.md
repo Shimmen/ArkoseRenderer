@@ -11,8 +11,11 @@ It supports multiple rendering backends and abstracts the specifics with a coars
 
 Arkose Renderer is very much a rendering engine and *not* a game engine, but I have some ambition to over time make it into more of a general purpose system with physics, audio, and gameplay scripting.
 
-<img src="assets/demo/demo3.jpg" width="49%"></img>
-<img src="assets/demo/demo2.jpg" width="49%"></img>
+![Subsurface scattering demo](/assets/demo/subsurface2.jpg)
+
+<img src="assets/demo/demo3.jpg" width="32%"></img>
+<img src="assets/demo/demo2.jpg" width="32%"></img>
+<img src="assets/demo/subsurface.jpg" width="32%"></img>
 
 ## Incomplete list of features
 
@@ -40,6 +43,7 @@ This list is not complete, it's just a showcase of various features that are imp
  - A realistic camera model, with focus and exposure controls that will be familiar to photographers
  - Depth of field, respecting the realistic camera model paramer such as aperture size and focal length
  - Dynamic Diffuse Global Illumination (DDGI) – a probe based global illumination solution with infinite light bounces.
+ - Built-in support for baking AO & bent normals
  - Physically based subsurface scattering
  - Ray traced reflections with denoising
  - Temporal Anti-Aliasing (TAA)
