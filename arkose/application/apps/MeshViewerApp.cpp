@@ -800,6 +800,7 @@ void MeshViewerApp::drawBakeUiIfActive()
                 // Really though, this should only be done for non-trimsheet-style materials, but for object specific ones.
                 if (MaterialAsset* material = MaterialAsset::load(std::string(selectedSegmentAsset()->pathToMaterial()))) {
                     material->bentNormalMap = MaterialInput(aoImage->assetFilePath());
+                    material->bentNormalMap->wrapModes = ImageWrapModes::clampAllToEdge();
                     material->writeToFile(material->assetFilePath(), AssetStorage::Json);
                     // Re-register the material for the segment
                     selectedSegment()->setMaterial(material, m_scene->gpuScene());
