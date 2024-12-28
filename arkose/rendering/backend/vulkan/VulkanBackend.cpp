@@ -1255,19 +1255,6 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
     // where the exact image + imageView is not known until the frame begins.
     m_placeholderSwapchainTexture = VulkanTexture::createSwapchainPlaceholderTexture(m_swapchainExtent, createInfo.imageUsage, m_surfaceFormat.format);
 
-    // Create depth texture
-    {
-        Texture::Description depthDesc { .type = Texture::Type::Texture2D,
-                                         .arrayCount = 1u,
-                                         .extent = m_swapchainExtent,
-                                         .format = Texture::Format::Depth32F,
-                                         .filter = Texture::Filters::nearest(),
-                                         .wrapMode = ImageWrapModes::repeatAll(),
-                                         .mipmap = Texture::Mipmap::None,
-                                         .multisampling = Texture::Multisampling::None };
-        m_depthTexture = std::make_unique<VulkanTexture>(*this, depthDesc);
-    }
-
     if (m_guiIsSetup) {
         ImGui_ImplVulkan_SetMinImageCount(createInfo.minImageCount);
     }
@@ -1276,8 +1263,6 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
 void VulkanBackend::destroySwapchain()
 {
     SCOPED_PROFILE_ZONE_BACKEND();
-
-    m_depthTexture.reset();
 
     for (auto& swapchainImageContext : m_swapchainImageContexts) {
         vkDestroyImageView(device(), swapchainImageContext->imageView, nullptr);
@@ -1654,26 +1639,14 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
             imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
             imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
 
-            // Also transition the global depth texture to depth-attachement-optimal layout
-
-            VkImageMemoryBarrier depthImageBarrier = imageBarrier;
-            depthImageBarrier.image = m_depthTexture->image;
-            depthImageBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
-            depthImageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-
-            //
-
-            VkImageMemoryBarrier imageBarriers[] = { imageBarrier, depthImageBarrier };
-
             vkCmdPipelineBarrier(commandBuffer,
                                  VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
                                  0,
                                  0, nullptr,
                                  0, nullptr,
-                                 2, imageBarriers);
+                                 1, &imageBarrier);
 
             m_placeholderSwapchainTexture->currentLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-            m_depthTexture->currentLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
         }
 
         m_currentlyExecutingMainCommandBuffer = true;

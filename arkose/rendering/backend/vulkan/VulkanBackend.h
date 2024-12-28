@@ -331,8 +331,6 @@ private:
         VkQueryPool timestampQueryPool {};
     };
 
-    std::unique_ptr<VulkanTexture> m_depthTexture {};
-
     std::array<std::unique_ptr<FrameContext>, NumInFlightFrames> m_frameContexts {};
 
     ///////////////////////////////////////////////////////////////////////////
