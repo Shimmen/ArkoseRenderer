@@ -279,7 +279,7 @@ void D3D12Backend::renderPipelineDidChange(RenderPipeline& renderPipeline)
     ARKOSE_ASSERT(numFrameManagers == QueueSlotCount);
 
     Registry* previousRegistry = m_pipelineRegistry.get();
-    Registry* registry = new Registry(*this, *m_mockWindowRenderTarget, previousRegistry);
+    Registry* registry = new Registry(*this, nullptr /* TODO! */, *m_mockWindowRenderTarget, previousRegistry);
 
     renderPipeline.constructAll(*registry);
 

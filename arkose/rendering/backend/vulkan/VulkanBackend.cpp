@@ -2126,11 +2126,13 @@ void VulkanBackend::reconstructRenderPipelineResources(RenderPipeline& renderPip
     size_t numFrameManagers = m_frameContexts.size();
     ARKOSE_ASSERT(numFrameManagers == NumInFlightFrames);
 
+    Texture* outputTexture = m_placeholderSwapchainTexture.get();
+
     // We use imageless framebuffers for this one so it doesn't matter that we don't construct the render pipeline knowing the exact images.
     const RenderTarget& templateWindowRenderTarget = *m_windowRenderTarget;
 
     Registry* previousRegistry = m_pipelineRegistry.get();
-    Registry* registry = new Registry(*this, templateWindowRenderTarget, previousRegistry);
+    Registry* registry = new Registry(*this, outputTexture, templateWindowRenderTarget, previousRegistry);
 
     Extent2D framebufferExtent = System::get().windowFramebufferSize();
     renderPipeline.setOutputResolution(framebufferExtent);
