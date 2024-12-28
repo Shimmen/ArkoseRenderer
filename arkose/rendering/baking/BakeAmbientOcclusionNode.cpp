@@ -14,7 +14,8 @@ BakeAmbientOcclusionNode::BakeAmbientOcclusionNode(StaticMeshInstance& instanceT
 
 RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene& scene, Registry& reg)
 {
-    Texture& outputTexture = *reg.windowRenderTarget().colorAttachments()[0].texture;
+    ARKOSE_ASSERT(reg.outputTexture());
+    Texture& outputTexture = *reg.outputTexture();
 
     bool bakeBentNormals = false;
     switch (outputTexture.format()) {
@@ -28,7 +29,8 @@ RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene
         ARKOSE_LOG(Fatal, "BakeAmbientOcclusionNode: unknown AO texture format - we only support R8Uint & RGBA16F (for bent normals)");
     }
 
-    Extent2D const& bakeExtent = reg.windowRenderTarget().extent();
+    Extent2D& bakeExtent = reg.allocate<Extent2D>();
+    bakeExtent = outputTexture.extent();
 
     //
     // Construct for bake to parameterization map

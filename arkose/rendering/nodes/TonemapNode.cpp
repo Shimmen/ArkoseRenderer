@@ -49,7 +49,7 @@ RenderPipelineNode::ExecuteCallback TonemapNode::construct(GpuScene& scene, Regi
 
     const RenderTarget* ldrTarget;
     if (m_mode == Mode::RenderToWindow) {
-        ldrTarget = &reg.windowRenderTarget();
+        ldrTarget = &reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, reg.outputTexture(), LoadOp::Discard, StoreOp::Store } });
     } else {
         Texture& ldrTexture = reg.createTexture2D(sourceTexture->extent(), Texture::Format::RGBA8);
         reg.publish("SceneColorLDR", ldrTexture);

@@ -63,8 +63,10 @@ RenderPipelineNode::ExecuteCallback FinalNode::construct(GpuScene& scene, Regist
     std::vector<vec2> fullScreenTriangle { { -1, -3 }, { -1, 1 }, { 3, 1 } };
     Buffer& vertexBuffer = reg.createBuffer(std::move(fullScreenTriangle), Buffer::Usage::Vertex);
 
+    RenderTarget& outputRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, reg.outputTexture(), LoadOp::Discard, StoreOp::Store } });
+
     Shader taaShader = Shader::createBasicRasterize("final/final.vert", "final/postprocessing.frag");
-    RenderStateBuilder stateBuilder { reg.windowRenderTarget(), taaShader, VertexLayout { VertexComponent::Position2F } };
+    RenderStateBuilder stateBuilder { outputRenderTarget, taaShader, VertexLayout { VertexComponent::Position2F } };
     stateBuilder.stateBindings().at(0, bindingSet);
     stateBuilder.writeDepth = false;
     stateBuilder.testDepth = false;
