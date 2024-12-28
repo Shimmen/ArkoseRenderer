@@ -547,7 +547,7 @@ std::unique_ptr<Buffer> VulkanBackend::createBuffer(size_t size, Buffer::Usage u
 
 std::unique_ptr<RenderTarget> VulkanBackend::createRenderTarget(std::vector<RenderTarget::Attachment> attachments)
 {
-    return std::make_unique<VulkanRenderTarget>(*this, attachments, VulkanRenderTarget::QuirkMode::None);
+    return std::make_unique<VulkanRenderTarget>(*this, attachments);
 }
 
 std::unique_ptr<Texture> VulkanBackend::createTexture(Texture::Description desc)
@@ -1296,7 +1296,7 @@ Extent2D VulkanBackend::recreateSwapchain()
 
     // Re-create the ImGui render target with the new placeholder texture
     auto imguiAttachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, m_placeholderSwapchainTexture.get(), LoadOp::Load, StoreOp::Store } });
-    m_imguiRenderTarget = std::make_unique<VulkanRenderTarget>(*this, imguiAttachments, VulkanRenderTarget::QuirkMode::None); // TODO: Remove quirk mode as we're not using any more.
+    m_imguiRenderTarget = std::make_unique<VulkanRenderTarget>(*this, imguiAttachments);
 
     m_relativeFrameIndex = 0;
 
@@ -1433,7 +1433,7 @@ void VulkanBackend::setupDearImgui()
     initInfo.PipelineCache = VK_NULL_HANDLE;
 
     auto imguiAttachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, m_placeholderSwapchainTexture.get(), LoadOp::Load, StoreOp::Store } });
-    m_imguiRenderTarget = std::make_unique<VulkanRenderTarget>(*this, imguiAttachments, VulkanRenderTarget::QuirkMode::None); // TODO: Remove quirk mode as we're not using any more.
+    m_imguiRenderTarget = std::make_unique<VulkanRenderTarget>(*this, imguiAttachments);
 
     VkRenderPass compatibleRenderPassForImGui = m_imguiRenderTarget->compatibleRenderPass;
     ImGui_ImplVulkan_Init(&initInfo, compatibleRenderPassForImGui);

@@ -4,9 +4,8 @@
 #include "core/Logging.h"
 #include "utility/Profiling.h"
 
-VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment> attachments, QuirkMode quirkMode)
+VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment> attachments)
     : RenderTarget(backend, std::move(attachments))
-    , quirkMode(quirkMode)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
@@ -58,8 +57,6 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
         }
 
         attachment.finalLayout = finalLayout;
-        if (quirkMode == QuirkMode::ForPresenting)
-            attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
         uint32_t attachmentIndex = (uint32_t)allAttachments.size();
         allAttachments.push_back(attachment);
