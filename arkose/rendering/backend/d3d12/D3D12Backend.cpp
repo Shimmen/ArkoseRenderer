@@ -277,11 +277,8 @@ void D3D12Backend::renderPipelineDidChange(RenderPipeline& renderPipeline)
     size_t numFrameManagers = m_frameContexts.size();
     ARKOSE_ASSERT(numFrameManagers == QueueSlotCount);
 
-    // TODO: Remove me once the Registry ctor is updated!
-    auto tempRenderTarget = createRenderTarget({ { RenderTarget::AttachmentType::Color0, m_placeholderSwapchainTexture.get(), LoadOp::Clear, StoreOp::Store } });
-
     Registry* previousRegistry = m_pipelineRegistry.get();
-    Registry* registry = new Registry(*this, m_placeholderSwapchainTexture.get(), *tempRenderTarget, previousRegistry);
+    Registry* registry = new Registry(*this, m_placeholderSwapchainTexture.get(), previousRegistry);
 
     renderPipeline.constructAll(*registry);
 

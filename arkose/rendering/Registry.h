@@ -16,13 +16,12 @@ class RenderPipeline;
 
 class Registry final {
 public:
-    Registry(Backend&, Texture* outputTexture, const RenderTarget& windowRenderTarget, Registry* previousRegistry);
+    Registry(Backend&, Texture* outputTexture, Registry* previousRegistry);
 
     void setCurrentNode(Badge<RenderPipeline>, std::optional<std::string>);
 
     [[nodiscard]] Texture* outputTexture();
 
-    [[nodiscard]] const RenderTarget& windowRenderTarget();
     [[nodiscard]] RenderTarget& createRenderTarget(std::vector<RenderTarget::Attachment>);
 
     [[nodiscard]] Texture& createPixelTexture(vec4 pixelValue, bool srgb);
@@ -89,7 +88,6 @@ private:
     std::vector<std::string> m_allNodeNames;
 
     Texture* m_outputTexture;
-    const RenderTarget& m_windowRenderTarget;
 
     template<typename ResourceType>
     struct PublishedResource {

@@ -5,11 +5,10 @@
 #include "core/Assert.h"
 #include <stb_image.h>
 
-Registry::Registry(Backend& backend, Texture* outputTexture, const RenderTarget& windowRenderTarget, Registry* previousRegistry)
+Registry::Registry(Backend& backend, Texture* outputTexture, Registry* previousRegistry)
     : m_backend(backend)
     , m_previousRegistry(previousRegistry)
     , m_outputTexture(outputTexture)
-    , m_windowRenderTarget(windowRenderTarget)
 {
 }
 
@@ -23,11 +22,6 @@ void Registry::setCurrentNode(Badge<RenderPipeline>, std::optional<std::string> 
 Texture* Registry::outputTexture()
 {
     return m_outputTexture;
-}
-
-const RenderTarget& Registry::windowRenderTarget()
-{
-    return m_windowRenderTarget;
 }
 
 RenderTarget& Registry::createRenderTarget(std::vector<RenderTarget::Attachment> attachments)

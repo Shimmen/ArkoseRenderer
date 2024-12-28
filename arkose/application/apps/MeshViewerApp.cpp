@@ -852,11 +852,7 @@ std::unique_ptr<ImageAsset> MeshViewerApp::performAmbientOcclusionBake(BakeMode 
     }
     auto aoOutputTexture = backend.createTexture(outputTextureDesc);
 
-    // TODO: We should not need to create a render target, and the Registry should just accept an (optional) "output render target"
-    // If you want to write to it, create your own render target with it, or simply use it as a rw texture output.
-    auto hackTempOutputRenderTarget = backend.createRenderTarget({ { RenderTarget::AttachmentType::Color0, aoOutputTexture.get(), LoadOp::Clear, StoreOp::Store, RenderTargetBlendMode::None } });
-
-    auto registry = std::make_unique<Registry>(backend, aoOutputTexture.get(), *hackTempOutputRenderTarget, nullptr);
+    auto registry = std::make_unique<Registry>(backend, aoOutputTexture.get(), nullptr);
     bakePipeline->constructAll(*registry);
 
     auto uploadBuffer = std::make_unique<UploadBuffer>(backend, 100 * 1024 * 1024);
