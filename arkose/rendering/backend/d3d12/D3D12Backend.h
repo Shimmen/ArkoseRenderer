@@ -105,7 +105,6 @@ private:
     ComPtr<ID3D12CommandQueue> createDefaultCommandQueue() const;
     ComPtr<IDXGISwapChain4> createSwapChain(ID3D12CommandQueue*) const;
 
-    void createWindowRenderTarget();
     void recreateSwapChain();
 
     ///////////////////////////////////////////////////////////////////////////

@@ -12,6 +12,9 @@ public:
     D3D12Texture(Backend&, Description);
     virtual ~D3D12Texture() override;
 
+    // Specifically used to create a texture from a swapchain image, which we do not own and also do not yet know the exact render target handle for.
+    static std::unique_ptr<D3D12Texture> createSwapchainPlaceholderTexture(Extent2D swapchainExtent, DXGI_FORMAT swapchainFormat);
+
     virtual void setName(const std::string& name) override;
 
     virtual bool storageCapable() const override;

@@ -230,6 +230,20 @@ D3D12Texture::~D3D12Texture()
 {
 }
 
+std::unique_ptr<D3D12Texture> D3D12Texture::createSwapchainPlaceholderTexture(Extent2D swapchainExtent, DXGI_FORMAT swapchainFormat)
+{
+    auto texture = std::make_unique<D3D12Texture>();
+
+    texture->mutableDescription().extent = swapchainExtent;
+    texture->mutableDescription().format = Texture::Format::Unknown;
+
+    texture->textureResource = nullptr;
+    texture->resourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+    texture->dxgiFormat = swapchainFormat;
+
+    return texture;
+}
+
 void D3D12Texture::setName(const std::string& name)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();

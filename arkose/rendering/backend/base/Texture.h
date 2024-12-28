@@ -212,6 +212,7 @@ public:
     virtual ImTextureID asImTextureID() = 0;
 
 protected:
+    Description& mutableDescription() { return m_description; }
     size_t m_sizeInMemory { SIZE_MAX };
 
 private:

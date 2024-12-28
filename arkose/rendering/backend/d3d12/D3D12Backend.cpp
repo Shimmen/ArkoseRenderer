@@ -152,7 +152,7 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
 
     m_commandQueue = createDefaultCommandQueue();
     m_swapChain = createSwapChain(m_commandQueue.Get());
-    createWindowRenderTarget();
+    m_placeholderSwapchainTexture = D3D12Texture::createSwapchainPlaceholderTexture(m_windowFramebufferExtent, SwapChainRenderTargetViewFormat);
 
     /////////////////////////////////
 
@@ -763,21 +763,6 @@ ComPtr<IDXGISwapChain4> D3D12Backend::createSwapChain(ID3D12CommandQueue* comman
     return swapChain4;
 }
 
-void D3D12Backend::createWindowRenderTarget()
-{
-    // Create the placeholder texture for rendering to the swapchain
-    {
-        m_placeholderSwapchainTexture = std::make_unique<D3D12Texture>();
-
-        m_placeholderSwapchainTexture->m_description.extent = m_windowFramebufferExtent;
-        m_placeholderSwapchainTexture->m_description.format = Texture::Format::Unknown;
-
-        m_placeholderSwapchainTexture->textureResource = nullptr;
-        m_placeholderSwapchainTexture->resourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        m_placeholderSwapchainTexture->dxgiFormat = SwapChainRenderTargetViewFormat;
-    }
-}
-
 void D3D12Backend::recreateSwapChain()
 {
     while (true) {
@@ -831,7 +816,7 @@ void D3D12Backend::recreateSwapChain()
         }
     }
 
-    createWindowRenderTarget();
+    m_placeholderSwapchainTexture = D3D12Texture::createSwapchainPlaceholderTexture(m_windowFramebufferExtent, SwapChainRenderTargetViewFormat);
 }
 
 std::unique_ptr<Buffer> D3D12Backend::createBuffer(size_t size, Buffer::Usage usage)
