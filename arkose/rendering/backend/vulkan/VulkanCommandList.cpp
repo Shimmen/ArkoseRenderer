@@ -713,16 +713,27 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearV
     renderPassBeginInfo.pClearValues = clearValues.data();
 
     VkRenderPassAttachmentBeginInfo attachmentBeginInfo = { VK_STRUCTURE_TYPE_RENDER_PASS_ATTACHMENT_BEGIN_INFO };
+    std::vector<VkImageView> imageAttachments {};
     if (renderTarget.framebufferIsImageless) {
 
-        ARKOSE_ASSERT(renderTarget.totalAttachmentCount() == renderTarget.imagelessFramebufferAttachments.size());
-        attachmentBeginInfo.attachmentCount = (uint32_t)renderTarget.imagelessFramebufferAttachments.size();
-        attachmentBeginInfo.pAttachments = renderTarget.imagelessFramebufferAttachments.data();
+        renderTarget.forEachAttachmentInOrder([&](RenderTarget::Attachment const& attachment) {
+            if (attachment.texture == backend().placeholderSwapchainTexture()) {
+                // NOTE: This code should be equivalent to the below, but I think this makes it more explicit,
+                // so that it's clear that we're using the current swapchain imageView set from the backend.
+                imageAttachments.push_back(backend().placeholderSwapchainTexture()->imageView);
+            } else {
+                VulkanTexture const* vulkanTexture = static_cast<VulkanTexture const*>(attachment.texture);
+                imageAttachments.push_back(vulkanTexture->imageView);
+            }
+        });
+
+        ARKOSE_ASSERT(renderTarget.totalAttachmentCount() == imageAttachments.size());
+        attachmentBeginInfo.attachmentCount = narrow_cast<u32>(imageAttachments.size());
+        attachmentBeginInfo.pAttachments = imageAttachments.data();
 
         renderPassBeginInfo.pNext = &attachmentBeginInfo;
     }
 
-    // TODO: Handle subpasses properly!
     vkCmdBeginRenderPass(m_commandBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     vkCmdBindPipeline(m_commandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, renderState.pipeline);
 

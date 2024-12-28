@@ -13,7 +13,7 @@ public:
     };
 
     VulkanRenderTarget() = default;
-    explicit VulkanRenderTarget(Backend&, std::vector<Attachment> attachments, bool imageless, QuirkMode = QuirkMode::None);
+    explicit VulkanRenderTarget(Backend&, std::vector<Attachment> attachments, QuirkMode = QuirkMode::None);
     virtual ~VulkanRenderTarget() override;
 
     virtual void setName(const std::string& name) override;
@@ -24,7 +24,5 @@ public:
     std::vector<std::pair<Texture*, VkImageLayout>> attachedTextures;
 
     bool framebufferIsImageless { false };
-    std::vector<VkImageView> imagelessFramebufferAttachments {};
-
     QuirkMode quirkMode;
 };

@@ -4,12 +4,14 @@
 #include "core/Logging.h"
 #include "utility/Profiling.h"
 
-VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment> attachments, bool imageless, QuirkMode quirkMode)
+VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment> attachments, QuirkMode quirkMode)
     : RenderTarget(backend, std::move(attachments))
-    , framebufferIsImageless(imageless)
     , quirkMode(quirkMode)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    VulkanBackend& vulkanBackend = static_cast<VulkanBackend&>(backend);
+    VkDevice device = vulkanBackend.device();
 
     std::vector<VkImageView> allAttachmentImageViews {};
     std::vector<VkAttachmentDescription> allAttachments {};
@@ -123,7 +125,6 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
     renderPassCreateInfo.dependencyCount = 0;
     renderPassCreateInfo.pDependencies = nullptr;
 
-    VkDevice device = static_cast<VulkanBackend&>(backend).device();
     if (vkCreateRenderPass(device, &renderPassCreateInfo, nullptr, &compatibleRenderPass) != VK_SUCCESS) {
         ARKOSE_LOG(Fatal, "Error trying to create render pass");
     }
@@ -136,9 +137,18 @@ VulkanRenderTarget::VulkanRenderTarget(Backend& backend, std::vector<Attachment>
     framebufferCreateInfo.height = extent().height();
     framebufferCreateInfo.layers = 1;
 
+    bool makeImagelessFramebuffer = false;
+    for (const Attachment& attachment : colorAttachments()) {
+        if (attachment.texture == vulkanBackend.placeholderSwapchainTexture()) {
+            makeImagelessFramebuffer = true;
+            break;
+        }
+    }
+
     VkFramebufferAttachmentsCreateInfo attachmentCreateInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_ATTACHMENTS_CREATE_INFO };
     std::vector<VkFramebufferAttachmentImageInfo> attachmentImageInfos {};
-    if (framebufferIsImageless) {
+    if (makeImagelessFramebuffer) {
+        framebufferIsImageless = true;
 
         forEachAttachmentInOrder([&attachmentImageInfos](const RenderTarget::Attachment& attachment) {
             VkFramebufferAttachmentImageInfo attachmentImageInfo = { VK_STRUCTURE_TYPE_FRAMEBUFFER_ATTACHMENT_IMAGE_INFO };

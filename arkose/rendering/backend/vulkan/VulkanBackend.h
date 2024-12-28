@@ -99,6 +99,8 @@ public:
     VkPhysicalDevice physicalDevice() const { return m_physicalDevice; }
     VkPipelineCache pipelineCache() const { return m_pipelineCache; }
 
+    VulkanTexture* placeholderSwapchainTexture() const { return m_placeholderSwapchainTexture.get(); }
+
     enum class RayTracingBackend {
         None,
         NvExtension,
@@ -298,10 +300,11 @@ private:
     struct SwapchainImageContext {
         VkImage image {}; // NOTE: Owned by the swapchain!
         VkImageView imageView {};
-        std::unique_ptr<VulkanTexture> mockColorTexture {};
     };
 
     std::vector<std::unique_ptr<SwapchainImageContext>> m_swapchainImageContexts {};
+
+    std::unique_ptr<VulkanTexture> m_placeholderSwapchainTexture {};
 
     ///////////////////////////////////////////////////////////////////////////
     /// Frame management related members
@@ -331,8 +334,7 @@ private:
 
     std::unique_ptr<VulkanTexture> m_depthTexture {};
 
-    std::unique_ptr<VulkanRenderTarget> m_clearingRenderTarget {};
-    std::unique_ptr<VulkanRenderTarget> m_guiRenderTargetForPresenting {};
+    std::unique_ptr<VulkanRenderTarget> m_windowRenderTarget {};
 
     std::array<std::unique_ptr<FrameContext>, NumInFlightFrames> m_frameContexts {};
 

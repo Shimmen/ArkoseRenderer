@@ -548,8 +548,7 @@ std::unique_ptr<Buffer> VulkanBackend::createBuffer(size_t size, Buffer::Usage u
 
 std::unique_ptr<RenderTarget> VulkanBackend::createRenderTarget(std::vector<RenderTarget::Attachment> attachments)
 {
-    bool imageless = false; // for now, keep using normal framebuffers for these generic render targets
-    return std::make_unique<VulkanRenderTarget>(*this, attachments, imageless, VulkanRenderTarget::QuirkMode::None);
+    return std::make_unique<VulkanRenderTarget>(*this, attachments, VulkanRenderTarget::QuirkMode::None);
 }
 
 std::unique_ptr<Texture> VulkanBackend::createTexture(Texture::Description desc)
@@ -1250,28 +1249,29 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
             swapchainImageContext->imageView = swapchainImageView;
         }
 
-        // Create mock VulkanTexture for the swapchain image & its image view
-        {
-            auto mockTexture = std::make_unique<VulkanTexture>();
-
-            mockTexture->m_description.type = Texture::Type::Texture2D;
-            mockTexture->m_description.extent = m_swapchainExtent;
-            mockTexture->m_description.format = Texture::Format::Unknown;
-            mockTexture->m_description.filter = Texture::Filters::nearest();
-            mockTexture->m_description.wrapMode = ImageWrapModes::repeatAll();
-            mockTexture->m_description.mipmap = Texture::Mipmap::None;
-            mockTexture->m_description.multisampling = Texture::Multisampling::None;
-
-            mockTexture->vkUsage = createInfo.imageUsage;
-            mockTexture->vkFormat = m_surfaceFormat.format;
-            mockTexture->image = swapchainImageContext->image;
-            mockTexture->imageView = swapchainImageContext->imageView;
-            mockTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-            swapchainImageContext->mockColorTexture = std::move(mockTexture);
-        }
-
         m_swapchainImageContexts.push_back(std::move(swapchainImageContext));
+    }
+
+    // Create placeholder VulkanTexture as a stand-in for the swapchain image,
+    // where the exact image + imageView is not known until the frame begins.
+    {
+        auto mockTexture = std::make_unique<VulkanTexture>();
+
+        mockTexture->m_description.type = Texture::Type::Texture2D;
+        mockTexture->m_description.extent = m_swapchainExtent;
+        mockTexture->m_description.format = Texture::Format::Unknown;
+        mockTexture->m_description.filter = Texture::Filters::nearest();
+        mockTexture->m_description.wrapMode = ImageWrapModes::repeatAll();
+        mockTexture->m_description.mipmap = Texture::Mipmap::None;
+        mockTexture->m_description.multisampling = Texture::Multisampling::None;
+
+        mockTexture->vkUsage = createInfo.imageUsage;
+        mockTexture->vkFormat = m_surfaceFormat.format;
+        mockTexture->image = VK_NULL_HANDLE;
+        mockTexture->imageView = VK_NULL_HANDLE;
+        mockTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+        m_placeholderSwapchainTexture = std::move(mockTexture);
     }
 
     // Create depth texture
@@ -1426,22 +1426,14 @@ void VulkanBackend::destroyFrameContexts()
 
 void VulkanBackend::createFrameRenderTargets(const SwapchainImageContext& referenceImageContext)
 {
-    // We use imageless framebuffers for these swapchain render targets!
-    constexpr bool imageless = true;
-
-    auto attachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, referenceImageContext.mockColorTexture.get(), LoadOp::Clear, StoreOp::Store },
-                                                               { RenderTarget::AttachmentType::Depth, m_depthTexture.get(), LoadOp::Clear, StoreOp::Store } });
-    m_clearingRenderTarget = std::make_unique<VulkanRenderTarget>(*this, attachments, imageless);
-
-    // NOTE: Does not handle depth & requires something to have already been written to the render target, as it has load op load on color0
-    auto finalAttachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, referenceImageContext.mockColorTexture.get(), LoadOp::Load, StoreOp::Store } });
-    m_guiRenderTargetForPresenting = std::make_unique<VulkanRenderTarget>(*this, finalAttachments, imageless, VulkanRenderTarget::QuirkMode::ForPresenting);
+    // NOTE: Does not do any clearing!
+    auto attachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, m_placeholderSwapchainTexture.get(), LoadOp::Load, StoreOp::Store } });
+    m_windowRenderTarget = std::make_unique<VulkanRenderTarget>(*this, attachments, VulkanRenderTarget::QuirkMode::None); // TODO: Remove quirk mode as we're not using any more.
 }
 
 void VulkanBackend::destroyFrameRenderTargets()
 {
-    m_clearingRenderTarget.reset();
-    m_guiRenderTargetForPresenting.reset();
+    m_windowRenderTarget.reset();
 }
 
 void VulkanBackend::setupDearImgui()
@@ -1491,8 +1483,8 @@ void VulkanBackend::setupDearImgui()
     initInfo.DescriptorPool = m_guiDescriptorPool;
     initInfo.PipelineCache = VK_NULL_HANDLE;
 
-    ARKOSE_ASSERT(m_guiRenderTargetForPresenting != nullptr); // make sure this is created after the swapchain is created so we know what to render to!
-    VkRenderPass compatibleRenderPassForImGui = m_guiRenderTargetForPresenting->compatibleRenderPass;
+    ARKOSE_ASSERT(m_windowRenderTarget != nullptr); // make sure this is created after the swapchain is created so we know what to render to!
+    VkRenderPass compatibleRenderPassForImGui = m_windowRenderTarget->compatibleRenderPass;
     ImGui_ImplVulkan_Init(&initInfo, compatibleRenderPassForImGui);
 
     issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
@@ -1512,38 +1504,6 @@ void VulkanBackend::destroyDearImgui()
 
 void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameContext& frameContext, SwapchainImageContext& swapchainImageContext)
 {
-    VulkanTexture& swapchainTexture = *swapchainImageContext.mockColorTexture;
-    if (swapchainTexture.currentLayout != VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-
-        // Performing explicit swapchain layout transition. This should only happen if we haven't rendered anything before GUI.
-
-        VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-        imageBarrier.oldLayout = swapchainTexture.currentLayout;
-        imageBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-
-        imageBarrier.image = swapchainTexture.image;
-        imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        imageBarrier.subresourceRange.baseMipLevel = 0;
-        imageBarrier.subresourceRange.levelCount = 1;
-        imageBarrier.subresourceRange.baseArrayLayer = 0;
-        imageBarrier.subresourceRange.layerCount = 1;
-
-        // Wait for all color attachment writes ...
-        VkPipelineStageFlags sourceStage = VK_PIPELINE_STAGE_ALL_COMMANDS_BIT;
-        imageBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-        // ... before allowing it can be read or written to
-        VkPipelineStageFlags destinationStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-        imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT |VK_ACCESS_MEMORY_WRITE_BIT;
-
-        vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0,
-                             0, nullptr,
-                             0, nullptr,
-                             1, &imageBarrier);
-    }
-
     // Transition all textures that will be used for ImGui rendering to the required image layout
     if (VulkanTexture::texturesForImGuiRendering.size() > 0) {
         std::vector<VkImageMemoryBarrier> imageMemoryBarriers {};
@@ -1586,8 +1546,8 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameCon
 
     VkRenderPassBeginInfo passBeginInfo = {};
     passBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    passBeginInfo.renderPass = m_guiRenderTargetForPresenting->compatibleRenderPass;
-    passBeginInfo.framebuffer = m_guiRenderTargetForPresenting->framebuffer;
+    passBeginInfo.renderPass = m_windowRenderTarget->compatibleRenderPass;
+    passBeginInfo.framebuffer = m_windowRenderTarget->framebuffer;
     passBeginInfo.renderArea.extent.width = m_swapchainExtent.width();
     passBeginInfo.renderArea.extent.height = m_swapchainExtent.height();
     passBeginInfo.clearValueCount = 0;
@@ -1602,8 +1562,6 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameCon
     vkCmdBeginRenderPass(commandBuffer, &passBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), commandBuffer);
     vkCmdEndRenderPass(commandBuffer);
-
-    swapchainTexture.currentLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 }
 
 void VulkanBackend::newFrame()
@@ -1666,13 +1624,9 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
 
     SwapchainImageContext& swapchainImageContext = *m_swapchainImageContexts[swapchainImageIndex].get();
 
-    // We've just found out what image views we should use for this frame, so send them to the render target so it knows to bind them
-    m_clearingRenderTarget->imagelessFramebufferAttachments = { swapchainImageContext.mockColorTexture->imageView, m_depthTexture->imageView };
-    m_guiRenderTargetForPresenting->imagelessFramebufferAttachments = { swapchainImageContext.mockColorTexture->imageView };
-
-    // We shouldn't (can't) use the existing data from the swapchain image, so we set current layout accordingly
-    swapchainImageContext.mockColorTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    m_depthTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    // We've just found out what image & view we should use for this frame, so send them to the placeholder texture so it knows to bind them
+    m_placeholderSwapchainTexture->image = swapchainImageContext.image;
+    m_placeholderSwapchainTexture->imageView = swapchainImageContext.imageView;
 
     // If we wrote any timestamps last time we processed this FrameContext, read and validate those results now
     if (frameContext.numTimestampsWrittenLastTime > 0) {
@@ -1712,6 +1666,47 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
         VkCommandBuffer commandBuffer = frameContext.commandBuffer;
         if (vkBeginCommandBuffer(commandBuffer, &commandBufferBeginInfo) != VK_SUCCESS) {
             ARKOSE_LOG(Error, "VulkanBackend: error beginning command buffer command!");
+        }
+
+        {
+            // Transition swapchain image to attachment-optimal layout
+
+            VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
+            imageBarrier.oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+            imageBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+            imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+            imageBarrier.image = swapchainImageContext.image;
+            imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+            imageBarrier.subresourceRange.baseMipLevel = 0;
+            imageBarrier.subresourceRange.levelCount = 1;
+            imageBarrier.subresourceRange.baseArrayLayer = 0;
+            imageBarrier.subresourceRange.layerCount = 1;
+
+            imageBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+            imageBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT;
+
+            // Also transition the global depth texture to depth-attachement-optimal layout
+
+            VkImageMemoryBarrier depthImageBarrier = imageBarrier;
+            depthImageBarrier.image = m_depthTexture->image;
+            depthImageBarrier.newLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
+            depthImageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+
+            //
+
+            VkImageMemoryBarrier imageBarriers[] = { imageBarrier, depthImageBarrier };
+
+            vkCmdPipelineBarrier(commandBuffer,
+                                 VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                                 0,
+                                 0, nullptr,
+                                 0, nullptr,
+                                 2, imageBarriers);
+
+            m_placeholderSwapchainTexture->currentLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+            m_depthTexture->currentLayout = VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL;
         }
 
         m_currentlyExecutingMainCommandBuffer = true;
@@ -1768,18 +1763,17 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
         }
         cmdList.endDebugLabel();
 
-        VulkanTexture& swapchainTexture = *swapchainImageContext.mockColorTexture;
-        if (swapchainTexture.currentLayout != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+        {
 
             // Performing explicit swapchain layout transition. This should only happen if we don't render any GUI.
 
             VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
-            imageBarrier.oldLayout = swapchainTexture.currentLayout;
+            imageBarrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
             imageBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
             imageBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
             imageBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
-            imageBarrier.image = swapchainTexture.image;
+            imageBarrier.image = swapchainImageContext.image;
             imageBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
             imageBarrier.subresourceRange.baseMipLevel = 0;
             imageBarrier.subresourceRange.levelCount = 1;
@@ -2133,7 +2127,7 @@ void VulkanBackend::reconstructRenderPipelineResources(RenderPipeline& renderPip
     ARKOSE_ASSERT(numFrameManagers == NumInFlightFrames);
 
     // We use imageless framebuffers for this one so it doesn't matter that we don't construct the render pipeline knowing the exact images.
-    const RenderTarget& templateWindowRenderTarget = *m_clearingRenderTarget;
+    const RenderTarget& templateWindowRenderTarget = *m_windowRenderTarget;
 
     Registry* previousRegistry = m_pipelineRegistry.get();
     Registry* registry = new Registry(*this, templateWindowRenderTarget, previousRegistry);
