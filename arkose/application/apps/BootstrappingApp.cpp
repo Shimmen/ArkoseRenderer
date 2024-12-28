@@ -32,8 +32,10 @@ class DrawTriangleNode final : public RenderPipelineNode {
         testTexture.setName("DemoTestTexture");
         m_texture = &testTexture;
 
+        RenderTarget& outputRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, reg.outputTexture() } });
+
         VertexLayout vertexLayout = { VertexComponent::Position3F, VertexComponent::TexCoord2F };
-        RenderStateBuilder renderStateBuilder { reg.windowRenderTarget(), bootstrapShader, vertexLayout };
+        RenderStateBuilder renderStateBuilder { outputRenderTarget, bootstrapShader, vertexLayout };
 
         BindingSet& bindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(constantBuffer, ShaderStage::Vertex),
                                                         ShaderBinding::sampledTexture(testTexture, ShaderStage::Fragment) });

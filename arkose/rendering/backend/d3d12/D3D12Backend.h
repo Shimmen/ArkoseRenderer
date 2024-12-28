@@ -75,6 +75,9 @@ public:
     IDXGISwapChain4& swapChain() { return *m_swapChain.Get(); }
     ID3D12CommandQueue& commandQueue() { return *m_commandQueue.Get(); }
 
+    D3D12Texture* placeholderSwapchainTexture() const { return m_placeholderSwapchainTexture.get(); }
+    D3D12_CPU_DESCRIPTOR_HANDLE currentSwapchainRenderTargetHandle() const { return m_currentSwapchainRenderTargetHandle; }
+
     D3D12MA::Allocator& globalAllocator() { return *m_memoryAllocator.Get(); }
 
     void waitForFence(ID3D12Fence* fence, UINT64 completionValue, HANDLE waitEvent) const;
@@ -152,9 +155,8 @@ private:
     ComPtr<ID3D12DescriptorHeap> m_renderTargetDescriptorHeap;
     i32 m_renderTargetViewDescriptorSize {};
 
-    std::unique_ptr<D3D12Texture> m_swapchainDepthTexture {};
-    std::unique_ptr<D3D12Texture> m_mockSwapchainTexture {};
-    std::unique_ptr<D3D12RenderTarget> m_mockWindowRenderTarget {};
+    std::unique_ptr<D3D12Texture> m_placeholderSwapchainTexture {};
+    D3D12_CPU_DESCRIPTOR_HANDLE m_currentSwapchainRenderTargetHandle {};
 
     ///////////////////////////////////////////////////////////////////////////
     /// Resource & resource management members

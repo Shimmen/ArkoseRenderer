@@ -15,6 +15,7 @@ public:
     ComPtr<ID3D12DescriptorHeap> depthStencilDescriptorHeap;
 
     // NOTE: Must match the attached textures 1:1
-    D3D12_CPU_DESCRIPTOR_HANDLE colorRenderTargetHandles[8];
+    // NOTE: Mutable to allow for updating in case of rendering to the swapchain (as we don't know the exact handle until we start rendering the frame)
+    mutable D3D12_CPU_DESCRIPTOR_HANDLE colorRenderTargetHandles[8];
     D3D12_CPU_DESCRIPTOR_HANDLE depthStencilRenderTargetHandle;
 };

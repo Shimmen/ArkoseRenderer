@@ -254,7 +254,6 @@ D3D12Backend::~D3D12Backend()
 
     m_pipelineRegistry.reset();
 
-    m_swapchainDepthTexture.reset();
     for (auto& frameContext : m_frameContexts) {
         frameContext.reset();
     }
@@ -278,8 +277,11 @@ void D3D12Backend::renderPipelineDidChange(RenderPipeline& renderPipeline)
     size_t numFrameManagers = m_frameContexts.size();
     ARKOSE_ASSERT(numFrameManagers == QueueSlotCount);
 
+    // TODO: Remove me once the Registry ctor is updated!
+    auto tempRenderTarget = createRenderTarget({ { RenderTarget::AttachmentType::Color0, m_placeholderSwapchainTexture.get(), LoadOp::Clear, StoreOp::Store } });
+
     Registry* previousRegistry = m_pipelineRegistry.get();
-    Registry* registry = new Registry(*this, nullptr /* TODO! */, *m_mockWindowRenderTarget, previousRegistry);
+    Registry* registry = new Registry(*this, m_placeholderSwapchainTexture.get(), *tempRenderTarget, previousRegistry);
 
     renderPipeline.constructAll(*registry);
 
@@ -341,12 +343,8 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
         presentToRenderTargetBarrier.Transition.Subresource = D3D12_RESOURCE_BARRIER_ALL_SUBRESOURCES;
         commandList->ResourceBarrier(1, &presentToRenderTargetBarrier);
 
-        D3D12_CPU_DESCRIPTOR_HANDLE renderTargetHandle;
-        CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(renderTargetHandle, m_renderTargetDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
+        CD3DX12_CPU_DESCRIPTOR_HANDLE::InitOffsetted(m_currentSwapchainRenderTargetHandle, m_renderTargetDescriptorHeap->GetCPUDescriptorHandleForHeapStart(),
                                                      backBufferIndex, m_renderTargetViewDescriptorSize);
-
-        // Assign the render target handle of the current swapchain image to the mock window render target
-        m_mockWindowRenderTarget->colorRenderTargetHandles[0] = renderTargetHandle;
 
         UploadBuffer& uploadBuffer = *frameContext.uploadBuffer;
         uploadBuffer.reset();
@@ -770,28 +768,16 @@ ComPtr<IDXGISwapChain4> D3D12Backend::createSwapChain(ID3D12CommandQueue* comman
 
 void D3D12Backend::createWindowRenderTarget()
 {
-    // Create depth texture for rendering to the swapchain texture
+    // Create the placeholder texture for rendering to the swapchain
     {
-        Texture::Description depthTextureDesc;
-        depthTextureDesc.extent = m_windowFramebufferExtent;
-        depthTextureDesc.format = Texture::Format::Depth24Stencil8;
-        m_swapchainDepthTexture = std::make_unique<D3D12Texture>(*this, depthTextureDesc);
-    }
+        m_placeholderSwapchainTexture = std::make_unique<D3D12Texture>();
 
-    // Create the "mock" texture and render target for rendering to this
-    {
-        m_mockSwapchainTexture = std::make_unique<D3D12Texture>();
+        m_placeholderSwapchainTexture->m_description.extent = m_windowFramebufferExtent;
+        m_placeholderSwapchainTexture->m_description.format = Texture::Format::Unknown;
 
-        m_mockSwapchainTexture->m_description.extent = m_windowFramebufferExtent;
-        m_mockSwapchainTexture->m_description.format = Texture::Format::Unknown;
-
-        m_mockSwapchainTexture->textureResource = nullptr;
-        m_mockSwapchainTexture->resourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
-        m_mockSwapchainTexture->dxgiFormat = SwapChainRenderTargetViewFormat;
-
-        auto attachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, m_mockSwapchainTexture.get(), LoadOp::Clear, StoreOp::Store },
-                                                                   { RenderTarget::AttachmentType::Depth, m_swapchainDepthTexture.get(), LoadOp::Clear, StoreOp::Store } });
-        m_mockWindowRenderTarget = std::make_unique<D3D12RenderTarget>(*this, attachments);
+        m_placeholderSwapchainTexture->textureResource = nullptr;
+        m_placeholderSwapchainTexture->resourceState = D3D12_RESOURCE_STATE_RENDER_TARGET;
+        m_placeholderSwapchainTexture->dxgiFormat = SwapChainRenderTargetViewFormat;
     }
 }
 

@@ -209,6 +209,16 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearVa
         }
     }
 
+    // Replace render target handles with the current swapchain one, if relevant
+    renderTarget.forEachAttachmentInOrder([&](const RenderTarget::Attachment& attachment) {
+        if (attachment.texture == backend().placeholderSwapchainTexture()) {
+            ARKOSE_ASSERT(attachment.type != RenderTarget::AttachmentType::Depth);
+
+            u32 attachmentIdx = toUnderlying(attachment.type);
+            renderTarget.colorRenderTargetHandles[attachmentIdx] = backend().currentSwapchainRenderTargetHandle();
+        }
+    });
+
     renderTarget.forEachAttachmentInOrder([&](const RenderTarget::Attachment& attachment) {
         if (attachment.loadOp == LoadOp::Clear) {
             if (attachment.type == RenderTarget::AttachmentType::Depth) {
