@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.7)
 project(mimalloc)
 
-if(MSVC)
+if(False)#(MSVC)
     set(WITH_MIMALLOC True CACHE INTERNAL "")
     message(STATUS "Will use mimalloc for all allocations (with mimalloc override mode)")
 
