@@ -233,19 +233,18 @@ private:
     void createFrameContexts();
     void destroyFrameContexts();
 
-    void createFrameRenderTargets(const SwapchainImageContext& referenceImageContext);
-    void destroyFrameRenderTargets();
-
     ///////////////////////////////////////////////////////////////////////////
     /// ImGui related
 
     void setupDearImgui();
     void destroyDearImgui();
-    
+
     void renderDearImguiFrame(VkCommandBuffer, FrameContext&, SwapchainImageContext&);
 
     bool m_guiIsSetup { false };
     VkDescriptorPool m_guiDescriptorPool {};
+
+    std::unique_ptr<VulkanRenderTarget> m_imguiRenderTarget {};
 
     ///////////////////////////////////////////////////////////////////////////
     /// Vulkan core stuff (e.g. instance, device)
@@ -333,8 +332,6 @@ private:
     };
 
     std::unique_ptr<VulkanTexture> m_depthTexture {};
-
-    std::unique_ptr<VulkanRenderTarget> m_windowRenderTarget {};
 
     std::array<std::unique_ptr<FrameContext>, NumInFlightFrames> m_frameContexts {};
 

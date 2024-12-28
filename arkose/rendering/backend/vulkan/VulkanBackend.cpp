@@ -260,7 +260,6 @@ VulkanBackend::~VulkanBackend()
     }
     #endif
 
-    destroyFrameRenderTargets();
     destroyFrameContexts();
     destroySwapchain();
 
@@ -1254,25 +1253,7 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
 
     // Create placeholder VulkanTexture as a stand-in for the swapchain image,
     // where the exact image + imageView is not known until the frame begins.
-    {
-        auto mockTexture = std::make_unique<VulkanTexture>();
-
-        mockTexture->m_description.type = Texture::Type::Texture2D;
-        mockTexture->m_description.extent = m_swapchainExtent;
-        mockTexture->m_description.format = Texture::Format::Unknown;
-        mockTexture->m_description.filter = Texture::Filters::nearest();
-        mockTexture->m_description.wrapMode = ImageWrapModes::repeatAll();
-        mockTexture->m_description.mipmap = Texture::Mipmap::None;
-        mockTexture->m_description.multisampling = Texture::Multisampling::None;
-
-        mockTexture->vkUsage = createInfo.imageUsage;
-        mockTexture->vkFormat = m_surfaceFormat.format;
-        mockTexture->image = VK_NULL_HANDLE;
-        mockTexture->imageView = VK_NULL_HANDLE;
-        mockTexture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-        m_placeholderSwapchainTexture = std::move(mockTexture);
-    }
+    m_placeholderSwapchainTexture = VulkanTexture::createSwapchainPlaceholderTexture(m_swapchainExtent, createInfo.imageUsage, m_surfaceFormat.format);
 
     // Create depth texture
     {
@@ -1328,8 +1309,9 @@ Extent2D VulkanBackend::recreateSwapchain()
     destroySwapchain();
     createSwapchain(physicalDevice(), device(), m_surface);
 
-    SwapchainImageContext& referenceImageContext = *m_swapchainImageContexts[0];
-    createFrameRenderTargets(referenceImageContext);
+    // Re-create the ImGui render target with the new placeholder texture
+    auto imguiAttachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, m_placeholderSwapchainTexture.get(), LoadOp::Load, StoreOp::Store } });
+    m_imguiRenderTarget = std::make_unique<VulkanRenderTarget>(*this, imguiAttachments, VulkanRenderTarget::QuirkMode::None); // TODO: Remove quirk mode as we're not using any more.
 
     m_relativeFrameIndex = 0;
 
@@ -1338,10 +1320,6 @@ Extent2D VulkanBackend::recreateSwapchain()
 
 void VulkanBackend::createFrameContexts()
 {
-    // We need the swapchain to be created for reference!
-    ARKOSE_ASSERT(m_swapchainImageContexts.size() > 0);
-    SwapchainImageContext& referenceImageContext = *m_swapchainImageContexts[0];
-
     for (int i = 0; i < NumInFlightFrames; ++i) {
 
         if (m_frameContexts[i] == nullptr)
@@ -1407,8 +1385,6 @@ void VulkanBackend::createFrameContexts()
 
             frameContext.timestampQueryPool = timestampQueryPool;
         }
-
-        createFrameRenderTargets(referenceImageContext);
     }
 }
 
@@ -1422,18 +1398,6 @@ void VulkanBackend::destroyFrameContexts()
         vkDestroyFence(device(), frameContext->frameFence, nullptr);
         frameContext.reset();
     }
-}
-
-void VulkanBackend::createFrameRenderTargets(const SwapchainImageContext& referenceImageContext)
-{
-    // NOTE: Does not do any clearing!
-    auto attachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, m_placeholderSwapchainTexture.get(), LoadOp::Load, StoreOp::Store } });
-    m_windowRenderTarget = std::make_unique<VulkanRenderTarget>(*this, attachments, VulkanRenderTarget::QuirkMode::None); // TODO: Remove quirk mode as we're not using any more.
-}
-
-void VulkanBackend::destroyFrameRenderTargets()
-{
-    m_windowRenderTarget.reset();
 }
 
 void VulkanBackend::setupDearImgui()
@@ -1483,8 +1447,10 @@ void VulkanBackend::setupDearImgui()
     initInfo.DescriptorPool = m_guiDescriptorPool;
     initInfo.PipelineCache = VK_NULL_HANDLE;
 
-    ARKOSE_ASSERT(m_windowRenderTarget != nullptr); // make sure this is created after the swapchain is created so we know what to render to!
-    VkRenderPass compatibleRenderPassForImGui = m_windowRenderTarget->compatibleRenderPass;
+    auto imguiAttachments = std::vector<RenderTarget::Attachment>({ { RenderTarget::AttachmentType::Color0, m_placeholderSwapchainTexture.get(), LoadOp::Load, StoreOp::Store } });
+    m_imguiRenderTarget = std::make_unique<VulkanRenderTarget>(*this, imguiAttachments, VulkanRenderTarget::QuirkMode::None); // TODO: Remove quirk mode as we're not using any more.
+
+    VkRenderPass compatibleRenderPassForImGui = m_imguiRenderTarget->compatibleRenderPass;
     ImGui_ImplVulkan_Init(&initInfo, compatibleRenderPassForImGui);
 
     issueSingleTimeCommand([&](VkCommandBuffer commandBuffer) {
@@ -1499,6 +1465,7 @@ void VulkanBackend::destroyDearImgui()
 {
     vkDestroyDescriptorPool(device(), m_guiDescriptorPool, nullptr);
     ImGui_ImplVulkan_Shutdown();
+    m_imguiRenderTarget.reset();
     m_guiIsSetup = false;
 }
 
@@ -1546,8 +1513,8 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameCon
 
     VkRenderPassBeginInfo passBeginInfo = {};
     passBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    passBeginInfo.renderPass = m_windowRenderTarget->compatibleRenderPass;
-    passBeginInfo.framebuffer = m_windowRenderTarget->framebuffer;
+    passBeginInfo.renderPass = m_imguiRenderTarget->compatibleRenderPass;
+    passBeginInfo.framebuffer = m_imguiRenderTarget->framebuffer;
     passBeginInfo.renderArea.extent.width = m_swapchainExtent.width();
     passBeginInfo.renderArea.extent.height = m_swapchainExtent.height();
     passBeginInfo.clearValueCount = 0;

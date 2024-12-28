@@ -250,6 +250,27 @@ VulkanTexture::~VulkanTexture()
     vmaDestroyImage(vulkanBackend.globalAllocator(), image, allocation);
 }
 
+std::unique_ptr<VulkanTexture> VulkanTexture::createSwapchainPlaceholderTexture(Extent2D swapchainExtent, VkImageUsageFlags imageUsage, VkFormat swapchainFormat)
+{
+    auto texture = std::make_unique<VulkanTexture>();
+
+    texture->mutableDescription().type = Texture::Type::Texture2D;
+    texture->mutableDescription().extent = swapchainExtent;
+    texture->mutableDescription().format = Texture::Format::Unknown;
+    texture->mutableDescription().filter = Texture::Filters::nearest();
+    texture->mutableDescription().wrapMode = ImageWrapModes::repeatAll();
+    texture->mutableDescription().mipmap = Texture::Mipmap::None;
+    texture->mutableDescription().multisampling = Texture::Multisampling::None;
+
+    texture->vkUsage = imageUsage;
+    texture->vkFormat = swapchainFormat;
+    texture->image = VK_NULL_HANDLE;
+    texture->imageView = VK_NULL_HANDLE;
+    texture->currentLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    return texture;
+}
+
 void VulkanTexture::setName(const std::string& name)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();

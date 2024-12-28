@@ -11,6 +11,9 @@ public:
     VulkanTexture(Backend&, Description);
     virtual ~VulkanTexture() override;
 
+    // Specifically used to create a texture from a swapchain image, which we do not own and also do not yet know the exact image & imageView for.
+    static std::unique_ptr<VulkanTexture> createSwapchainPlaceholderTexture(Extent2D swapchainExtent, VkImageUsageFlags imageUsage, VkFormat swapchainFormat);
+
     virtual void setName(const std::string& name) override;
 
     virtual bool storageCapable() const override;
