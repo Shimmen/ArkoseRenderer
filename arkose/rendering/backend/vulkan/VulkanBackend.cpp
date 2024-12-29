@@ -634,11 +634,10 @@ VkSurfaceFormatKHR VulkanBackend::pickBestSurfaceFormat() const
         }
     }
 
-    // TODO: We can't really support this, yet!
-    //if (optimalHdrHdr10Format) {
-    //    ARKOSE_LOG(Info, "VulkanBackend: using 10-bit HDR10 (ST2084/PQ) surface format.");
-    //    return *optimalHdrHdr10Format;
-    //}
+    if (optimalHdrHdr10Format) {
+        ARKOSE_LOG(Info, "VulkanBackend: using 10-bit HDR10 (ST2084/PQ) surface format.");
+        return *optimalHdrHdr10Format;
+    }
 
     if (optimalSdrSrgbFormat) {
         ARKOSE_LOG(Info, "VulkanBackend: using 8-bit sRGB surface format.");
