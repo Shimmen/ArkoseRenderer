@@ -3,9 +3,9 @@
 #include <color/aces.glsl>
 #include <color/agx.glsl>
 #include <color/khronosPbrNeutral.glsl>
+#include <color/srgb.glsl>
 #include <common.glsl>
 #include <common/namedUniforms.glsl>
-#include <common/srgb.glsl>
 #include <shared/TonemapData.h>
 
 layout(set = 0, binding = 0) uniform sampler2D uTexture;

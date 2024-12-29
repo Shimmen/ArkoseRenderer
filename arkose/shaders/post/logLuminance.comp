@@ -1,6 +1,6 @@
 #version 460
 
-#include <common/srgb.glsl>
+#include <color/srgb.glsl>
 #include <common/namedUniforms.glsl>
 
 layout(set = 0, binding = 0) uniform sampler2D sourceTexture;
