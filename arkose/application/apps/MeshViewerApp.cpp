@@ -26,6 +26,8 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
+#include "shaders/shared/TonemapData.h"
+
 std::vector<Backend::Capability> MeshViewerApp::optionalCapabilities()
 {
     return { Backend::Capability::RayTracing, Backend::Capability::ShaderBarycentrics };
@@ -79,6 +81,7 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<TAANode>(scene.camera());
 
     OutputNode& outputNode = pipeline.addNode<OutputNode>("SceneColor");
+    outputNode.setTonemapMethod(TONEMAP_METHOD_KHRONOS_PBR_NEUTRAL);
     outputNode.setRenderFilmGrain(false);
     outputNode.setRenderVignette(false);
 
