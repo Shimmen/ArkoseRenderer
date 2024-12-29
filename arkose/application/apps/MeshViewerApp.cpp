@@ -17,6 +17,7 @@
 #include "rendering/nodes/SkyViewNode.h"
 #include "rendering/nodes/TAANode.h"
 #include "rendering/nodes/TonemapNode.h"
+#include "rendering/output/OutputNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
 #include "scene/lights/DirectionalLight.h"
@@ -78,14 +79,13 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
                                         ForwardClearMode ::DontClear);
 
     pipeline.addNode<TAANode>(scene.camera());
-    pipeline.addNode<TonemapNode>("SceneColor");
+
+    OutputNode& outputNode = pipeline.addNode<OutputNode>("SceneColor");
+    outputNode.setRenderFilmGrain(false);
+    outputNode.setRenderVignette(false);
 
     m_editorGrid = &pipeline.addNode<EditorGridRenderNode>();
     pipeline.addNode<DebugDrawNode>();
-
-    FinalNode& finalNode = pipeline.addNode<FinalNode>("SceneColorLDR");
-    finalNode.setRenderFilmGrain(false);
-    finalNode.setRenderVignette(false);
 }
 
 bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)

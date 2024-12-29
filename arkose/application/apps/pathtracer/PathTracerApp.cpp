@@ -2,9 +2,8 @@
 
 // Nodes
 #include "rendering/nodes/DebugDrawNode.h"
-#include "rendering/nodes/FinalNode.h"
 #include "rendering/nodes/PickingNode.h"
-#include "rendering/nodes/TonemapNode.h"
+#include "rendering/output/OutputNode.h"
 #include "rendering/pathtracer/PathTracerNode.h"
 #include "rendering/postprocess/CASNode.h"
 
@@ -48,19 +47,13 @@ void PathTracerApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<PathTracerNode>();
     std::string sceneTexture = "PathTracerAccumulation";
 
-    pipeline.addNode<TonemapNode>(sceneTexture);
-    std::string finalTextureToScreen = "SceneColorLDR";
+    auto& outputNode = pipeline.addNode<OutputNode>(sceneTexture);
+    outputNode.setRenderVignette(false);
+    outputNode.setRenderFilmGrain(false);
 
     if (debugNodes) {
         pipeline.addNode<DebugDrawNode>();
     }
-
-    auto& sharpeningNode = pipeline.addNode<CASNode>(finalTextureToScreen);
-    sharpeningNode.setEnabled(false);
-
-    auto& finalNode = pipeline.addNode<FinalNode>(finalTextureToScreen);
-    finalNode.setRenderVignette(false);
-    finalNode.setRenderFilmGrain(false);
 }
 
 bool PathTracerApp::update(Scene& scene, float elapsedTime, float deltaTime)

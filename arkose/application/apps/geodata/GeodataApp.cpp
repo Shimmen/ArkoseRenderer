@@ -18,7 +18,7 @@
 #include "rendering/nodes/TAANode.h"
 #include "rendering/nodes/TonemapNode.h"
 #include "rendering/nodes/VisibilityBufferShadingNode.h"
-#include "rendering/postprocess/CASNode.h"
+#include "rendering/output/OutputNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
 #include "scene/lights/DirectionalLight.h"
@@ -113,19 +113,14 @@ void GeodataApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<BloomNode>();
 
     std::string sceneTexture = "SceneColor";
-    const std::string finalTextureToScreen = "SceneColorLDR";
-
     //pipeline.addNode<VisibilityBufferDebugNode>(); sceneTexture = "VisibilityBufferDebugVis";
 
     pipeline.addNode<TAANode>(scene.camera());
-    pipeline.addNode<TonemapNode>(sceneTexture);
+
+    OutputNode& outputNode = pipeline.addNode<OutputNode>(sceneTexture);
+    outputNode.setRenderFilmGrain(false);
 
     pipeline.addNode<DebugDrawNode>();
-
-    pipeline.addNode<CASNode>(finalTextureToScreen);
-
-    FinalNode& finalNode = pipeline.addNode<FinalNode>(finalTextureToScreen);
-    finalNode.setRenderFilmGrain(false);
 
     m_renderPipeline = &pipeline;
 }

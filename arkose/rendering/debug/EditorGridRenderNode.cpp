@@ -7,17 +7,12 @@ RenderPipelineNode::ExecuteCallback EditorGridRenderNode::construct(GpuScene& sc
 {
     BindingSet& cameraBindingSet = *reg.getBindingSet("SceneCameraSet");
 
-    // If placed after tonemapping, render to the post-tonemapped (LDR) target, otherwise fallback onto the HDR scene color
-    Texture* sceneColorTex = reg.getTexture("SceneColorLDR");
-    if (!sceneColorTex) {
-        sceneColorTex = reg.getTexture("SceneColor");
-    }
-
+    Texture* targetTex = reg.outputTexture();
     Texture* sceneDepthTex = reg.getTexture("SceneDepth");
 
     std::vector<RenderTarget::Attachment> attachments;
-    attachments.push_back({ RenderTarget::AttachmentType::Color0, sceneColorTex, LoadOp::Load, StoreOp::Store, RenderTargetBlendMode::AlphaBlending });
-    if (sceneDepthTex->extent() == sceneColorTex->extent()) {
+    attachments.push_back({ RenderTarget::AttachmentType::Color0, targetTex, LoadOp::Load, StoreOp::Store, RenderTargetBlendMode::AlphaBlending });
+    if (sceneDepthTex->extent() == targetTex->extent()) {
         attachments.push_back({ RenderTarget::AttachmentType::Depth, sceneDepthTex, LoadOp::Load, StoreOp::Store });
     } else {
         ARKOSE_LOG(Error, "EDITOR GRID UPSCALING HACK: Since the editor grid needs to depth test it can't use the non-upscaled "

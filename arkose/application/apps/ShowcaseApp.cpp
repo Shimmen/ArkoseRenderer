@@ -26,8 +26,8 @@
 #include "rendering/nodes/TAANode.h"
 #include "rendering/nodes/TonemapNode.h"
 #include "rendering/nodes/VisibilityBufferShadingNode.h"
+#include "rendering/output/OutputNode.h"
 #include "rendering/postprocess/FogNode.h"
-#include "rendering/postprocess/CASNode.h"
 #include "rendering/upscaling/UpscalingNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
@@ -174,7 +174,6 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     }
 
     std::string sceneTexture = "SceneColor";
-    std::string finalTextureToScreen = "SceneColorLDR";
     AntiAliasing antiAliasingMode = AntiAliasing::TAA;
 
     if constexpr (withVisibilityBuffer) {
@@ -206,25 +205,9 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         pipeline.addNode<TAANode>(scene.camera());
     }
 
-    pipeline.addNode<TonemapNode>(sceneTexture);
+    pipeline.addNode<OutputNode>(sceneTexture);
 
-    // TODO: Make debug drawing work (properly) with upscaling
-    if constexpr (!withUpscaling) {
-        pipeline.addNode<DebugDrawNode>();
-    }
-
-    if (antiAliasingMode == AntiAliasing::FXAA) {
-        if (scene.gpuScene().backend().hasSrgbTransferFunction()) {
-            pipeline.addNode<FXAANode>();
-        } else {
-            ARKOSE_LOG(Error, "FXAA is not supported for non-sRGB output, skipping anti-aliasing");
-        }
-    }
-
-    pipeline.addNode<CASNode>(sceneTexture);
-
-    FinalNode& finalNode = pipeline.addNode<FinalNode>(finalTextureToScreen);
-    finalNode.setRenderFilmGrain(true);
+    pipeline.addNode<DebugDrawNode>();
 
     // Save reference to the render pipeline for GUI purposes
     m_renderPipeline = &pipeline;

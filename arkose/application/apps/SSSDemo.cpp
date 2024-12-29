@@ -19,7 +19,7 @@
 #include "rendering/nodes/TAANode.h"
 #include "rendering/nodes/TonemapNode.h"
 #include "rendering/nodes/VisibilityBufferShadingNode.h"
-#include "rendering/postprocess/CASNode.h"
+#include "rendering/output/OutputNode.h"
 #include "rendering/postprocess/SSSSNode.h"
 #include "rendering/upscaling/UpscalingNode.h"
 #include "scene/Scene.h"
@@ -133,15 +133,11 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
 
     pipeline.addNode<TAANode>(scene.camera());
 
-    TonemapNode& tonemapNode = pipeline.addNode<TonemapNode>(sceneTexture);
-    tonemapNode.setTonemapMethod(TONEMAP_METHOD_KHRONOS_PBR_NEUTRAL);
+    OutputNode& outputNode = pipeline.addNode<OutputNode>(sceneTexture);
+    outputNode.setTonemapMethod(TONEMAP_METHOD_KHRONOS_PBR_NEUTRAL);
+    outputNode.setRenderFilmGrain(false);
 
     pipeline.addNode<DebugDrawNode>();
-
-    pipeline.addNode<CASNode>(finalTextureToScreen);
-
-    FinalNode& finalNode = pipeline.addNode<FinalNode>(finalTextureToScreen);
-    finalNode.setRenderFilmGrain(false);
 
     m_renderPipeline = &pipeline;
 }
