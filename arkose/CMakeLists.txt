@@ -170,8 +170,6 @@ set(ARKOSE_SOURCES
     arkose/rendering/nodes/DepthOfFieldNode.h
     arkose/rendering/nodes/DirectionalLightShadowNode.cpp
     arkose/rendering/nodes/DirectionalLightShadowNode.h
-    arkose/rendering/nodes/FinalNode.cpp
-    arkose/rendering/nodes/FinalNode.h
     arkose/rendering/nodes/FXAANode.cpp
     arkose/rendering/nodes/FXAANode.h
     arkose/rendering/nodes/LocalLightShadowNode.cpp
@@ -190,8 +188,6 @@ set(ARKOSE_SOURCES
     arkose/rendering/nodes/SSAONode.h
     arkose/rendering/nodes/TAANode.cpp
     arkose/rendering/nodes/TAANode.h
-    arkose/rendering/nodes/TonemapNode.cpp
-    arkose/rendering/nodes/TonemapNode.h
     arkose/rendering/nodes/VisibilityBufferShadingNode.cpp
     arkose/rendering/nodes/VisibilityBufferShadingNode.h
     # output
