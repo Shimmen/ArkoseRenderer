@@ -44,21 +44,21 @@ public:
     vec3 position;
     quat orientation;
 
-    float nearClipPlane;
-    float farClipPlane;
+    float nearClipPlane = 0.25f;
+    float farClipPlane = 10'000.0f;
 
-    std::string focusMode;
-    float focalLength;
-    float focusDepth;
-    vec2 sensorSize;
+    std::string focusMode = "Manual";
+    float focalLength = 30.0f;
+    float focusDepth = 5.0f;
+    vec2 sensorSize = { 36.0f, 24.0f };
 
-    std::string exposureMode;
-    float fNumber;
-    float iso;
-    float shutterSpeed;
+    std::string exposureMode = "Manual";
+    float fNumber = 16.0f;
+    float iso = 400.0f;
+    float shutterSpeed = 1.0f / 400.0f;
 
-    float exposureCompensation;
-    float adaptionRate;
+    float exposureCompensation = 0.0f;
+    float adaptionRate = 0.0018f;
 };
 
 class DirectionalLightAssetData {
