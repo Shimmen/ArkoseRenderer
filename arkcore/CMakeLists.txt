@@ -20,6 +20,8 @@ set(ARKCORE_SOURCES
     # external
     arkcore/asset/external/CubeLUT.cpp
     arkcore/asset/external/CubeLUT.h
+    arkcore/asset/external/DDSImage.cpp
+    arkcore/asset/external/DDSImage.h
     # import
     arkcore/asset/import/AssetImporter.cpp
     arkcore/asset/import/AssetImporter.h
