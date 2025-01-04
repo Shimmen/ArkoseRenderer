@@ -617,7 +617,13 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
         auto input = std::make_optional<MaterialInput>();
 
         auto& gltfTexture = gltfModel.textures[texIndex];
-        auto& gltfSampler = gltfModel.samplers[gltfTexture.sampler];
+
+        // From glTF 2.0 spec: "When texture.sampler is undefined, a sampler with repeat wrapping (in both directions) and auto filtering MUST be used."
+        // Fortunately, the default constructor for tinygltf::Sampler does exactly that, so we can use that.
+        static tinygltf::Sampler defaultSampler {};
+        tinygltf::Sampler const& gltfSampler = gltfTexture.sampler >= 0
+            ? gltfModel.samplers[gltfTexture.sampler]
+            : defaultSampler;
 
         // Write glTF image index to user data until we can resolve file paths
         input->userData = texIndex;
