@@ -7,6 +7,15 @@
 #include "utility/Profiling.h"
 #include "utility/FileIO.h"
 
+namespace {
+static std::vector<std::string> supportedExtensions = { "MSFT_texture_dds" };
+}
+
+bool hasSupportForExtension(const std::string& extension)
+{
+    return std::find(supportedExtensions.begin(), supportedExtensions.end(), extension) != supportedExtensions.end();
+}
+
 ImportResult GltfLoader::load(const std::string& gltfFilePath)
 {
     SCOPED_PROFILE_ZONE();
@@ -53,6 +62,22 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
         ARKOSE_LOG(Warning, "glTF loader: {}", warning);
     }
 
+    for (std::string const& extension : gltfModel.extensionsRequired) {
+        if (!hasSupportForExtension(extension)) {
+            ARKOSE_LOG(Error, "glTF loader: unsupported required extension '{}'", extension);
+            return result;
+        }
+    }
+
+    bool fileHasDDSExtension = false;
+    for (auto& extension : gltfModel.extensionsUsed) {
+        if (!hasSupportForExtension(extension)) {
+            ARKOSE_LOG(Warning, "glTF loader: unsupported optional extension '{}', will be ignored", extension);
+        } else if (extension == "MSFT_texture_dds") {
+            fileHasDDSExtension = true;
+        }
+    }
+
     if (gltfModel.defaultScene == -1 && gltfModel.scenes.size() > 1) {
         ARKOSE_LOG(Warning, "glTF loader: more than one scene defined in glTF file '{}' but no default scene. Will pick scene 0.", gltfFilePath);
         gltfModel.defaultScene = 0;
@@ -78,8 +103,20 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
         tinygltf::Texture& gltfTexture = gltfModel.textures[idx];
         tinygltf::Image& gltfImage = gltfModel.images[gltfTexture.source];
 
+        // Prefer to use the DDS image file, if available, as it can have mips & block compression
+        if (fileHasDDSExtension) {
+            auto const& ddsExtensionDataIterator = gltfTexture.extensions.find("MSFT_texture_dds");
+            if (ddsExtensionDataIterator != gltfTexture.extensions.end()) {
+                tinygltf::Value const& ddsExtensionData = ddsExtensionDataIterator->second;
+                tinygltf::Value const& ddsSource = ddsExtensionData.Get("source");
+                ARKOSE_ASSERT(ddsSource.IsNumber());
+                int ddsImageIdx = ddsSource.GetNumberAsInt();
+                gltfImage = gltfModel.images[ddsImageIdx];
+            }
+        }
+
         std::unique_ptr<ImageAsset> image {};
-        if (not gltfImage.uri.empty()) {
+        if (!gltfImage.uri.empty()) {
 
             std::string absolutePath = gltfDirectory + gltfImage.uri;
             std::string path = FileIO::normalizePath(absolutePath);
