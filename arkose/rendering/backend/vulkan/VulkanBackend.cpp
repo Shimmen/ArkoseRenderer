@@ -872,7 +872,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 #endif
 
     VkPhysicalDeviceFeatures2 features2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
-    VkPhysicalDeviceFeatures& features = features2.features;
+    VkPhysicalDeviceFeatures& vk10features = features2.features;
     VkPhysicalDeviceVulkan11Features vk11features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
     VkPhysicalDeviceVulkan12Features vk12features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
     VkPhysicalDeviceVulkan13Features vk13features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
@@ -884,27 +884,27 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR fragmentShaderBarycentricFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR };
 
     // Enable some very basic common features expected by everyone to exist
-    features.samplerAnisotropy = VK_TRUE;
-    features.fillModeNonSolid = VK_TRUE;
-    features.wideLines = VK_TRUE;
-    features.fragmentStoresAndAtomics = VK_TRUE;
-    features.vertexPipelineStoresAndAtomics = VK_TRUE;
+    vk10features.samplerAnisotropy = VK_TRUE;
+    vk10features.fillModeNonSolid = VK_TRUE;
+    vk10features.wideLines = VK_TRUE;
+    vk10features.fragmentStoresAndAtomics = VK_TRUE;
+    vk10features.vertexPipelineStoresAndAtomics = VK_TRUE;
 
     // NOTE: We only use this to read `gl_PrimitiveID` in the fragment shader. See this for context:
     // https://computergraphics.stackexchange.com/questions/9449/vulkan-using-gl-primitiveid-without-geometryshader-feature
-    features.geometryShader = VK_TRUE;
+    vk10features.geometryShader = VK_TRUE;
 
     // Common shader parameters, such as 'gl_DrawID'
     vk11features.shaderDrawParameters = VK_TRUE;
     
     // Common dynamic & non-uniform indexing features that should be supported on a modern GPU
-    features.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
+    vk10features.shaderUniformBufferArrayDynamicIndexing = VK_TRUE;
     vk12features.shaderUniformBufferArrayNonUniformIndexing = VK_TRUE;
-    features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
+    vk10features.shaderStorageBufferArrayDynamicIndexing = VK_TRUE;
     vk12features.shaderStorageBufferArrayNonUniformIndexing = VK_TRUE;
-    features.shaderStorageImageArrayDynamicIndexing = VK_TRUE;
+    vk10features.shaderStorageImageArrayDynamicIndexing = VK_TRUE;
     vk12features.shaderStorageImageArrayNonUniformIndexing = VK_TRUE;
-    features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+    vk10features.shaderSampledImageArrayDynamicIndexing = VK_TRUE;
     vk12features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
 
     // Common descriptor binding features that should be supported on a modern GPU
@@ -923,7 +923,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     vk12features.imagelessFramebuffer = VK_TRUE;
 
     // BC texture compression
-    features.textureCompressionBC = VK_TRUE;
+    vk10features.textureCompressionBC = VK_TRUE;
 
     // 64-bit shader support including atomics
     //features.shaderInt64 = VK_TRUE;
@@ -945,7 +945,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
         nextChain = &object;
     };
 
-    appendToNextChain(features2);
+    appendToNextChain(features2); // for `vk10features`
     appendToNextChain(vk11features);
     appendToNextChain(vk12features);
     appendToNextChain(vk13features);
