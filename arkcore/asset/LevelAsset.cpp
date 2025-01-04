@@ -59,6 +59,11 @@ std::unique_ptr<LevelAsset> LevelAsset::createFromAssetImportResult(ImportResult
         // camera.verticalFieldOfView = importedCamera.verticalFieldOfView;
     }
 
+    for (auto const& lightAssetSrc : result.lights) {
+        // Simply copy over the light to the level asset
+        levelAsset->lights.push_back(*lightAssetSrc.get());
+    }
+
     return levelAsset;
 }
 

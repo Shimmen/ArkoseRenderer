@@ -9,6 +9,7 @@
 
 namespace {
 static std::vector<std::string> supportedExtensions = { "KHR_materials_pbrSpecularGlossiness", // partial support
+                                                        "KHR_lights_punctual",
                                                         "MSFT_texture_dds" };
 }
 
@@ -71,11 +72,14 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
     }
 
     bool fileHasDDSExtension = false;
+    bool fileHasPunctualLightsExtension = false;
     for (auto& extension : gltfModel.extensionsUsed) {
         if (!hasSupportForExtension(extension)) {
             ARKOSE_LOG(Warning, "glTF loader: unsupported optional extension '{}', will be ignored", extension);
         } else if (extension == "MSFT_texture_dds") {
             fileHasDDSExtension = true;
+        } else if (extension == "KHR_lights_punctual") {
+            fileHasPunctualLightsExtension = true;
         }
     }
 
@@ -223,6 +227,30 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
                 camera.zNear = static_cast<float>(gltfPerspectiveCamera.znear);
                 camera.zFar = static_cast<float>(gltfPerspectiveCamera.zfar);
             }
+        }
+
+        if (fileHasPunctualLightsExtension) {
+            auto const& nodeEntry = node.extensions.find("KHR_lights_punctual");
+            if (nodeEntry != node.extensions.end()) {
+                // Get the light index for this node
+                tinygltf::Value const& gltfLightExtensionData = nodeEntry->second;
+                int lightIdx = gltfLightExtensionData.Get("light").GetNumberAsInt();
+
+                // Find the light in the global list
+                auto const& modelEntry = gltfModel.extensions.find("KHR_lights_punctual");
+                if (modelEntry != gltfModel.extensions.end()) {
+                    tinygltf::Value const& gltfLightsExtension = modelEntry->second;
+                    tinygltf::Value const& gltfLightsArray = gltfLightsExtension.Get("lights");
+                    ARKOSE_ASSERT(gltfLightsArray.IsArray());
+                    tinygltf::Value const& gltfLight = gltfLightsArray.Get(lightIdx);
+
+                    // Create the light with the node's transform (flattened, for now)
+                    std::unique_ptr<LightAsset> light = createLight(gltfModel, gltfLight);
+                    light->transform = transform.flattened();
+                    result.lights.push_back(std::move(light));
+                }
+            }
+
         }
 
         for (int childNodeIdx : node.children) {
@@ -591,6 +619,54 @@ std::unique_ptr<SkeletonAsset> GltfLoader::createSkeleton(tinygltf::Model const&
     createSkeletonRecursively(gltfSkin.skeleton, skeleton->rootJoint, nullptr);
 
     return skeleton;
+}
+
+std::unique_ptr<LightAsset> GltfLoader::createLight(tinygltf::Model const& gltfModel, tinygltf::Value const& gltfLight)
+{
+    SCOPED_PROFILE_ZONE();
+
+    auto light = std::make_unique<LightAsset>();
+
+    // NOTE: `gltfLight` is assumed to be a light according to the "KHR_lights_punctual" extension
+
+    light->name = gltfLight.Get("name").Get<std::string>();
+
+    auto& color = gltfLight.Get("color");
+    light->color = vec3(static_cast<float>(color.Get(0).GetNumberAsDouble()),
+                        static_cast<float>(color.Get(1).GetNumberAsDouble()),
+                        static_cast<float>(color.Get(2).GetNumberAsDouble()));
+
+    // TODO: Add support for the "range" property
+
+    std::string const& lightType = gltfLight.Get("type").Get<std::string>();
+    if (lightType == "directional") { 
+
+        light->type = "DirectionalLight";
+
+        light->castsShadows = true;
+        light->customConstantBias = 3.5f;
+        light->customSlopeBias = 2.5f;
+
+        DirectionalLightAssetData dirLightData;
+
+        float intensity = static_cast<float>(gltfLight.Get("intensity").GetNumberAsDouble());
+        dirLightData.illuminance = intensity;
+
+        dirLightData.shadowMapWorldExtent = 80.0f; // !!
+
+        light->data = dirLightData;
+
+    } else if (lightType == "spot") {
+        light->type = "SpotLight";
+        NOT_YET_IMPLEMENTED();
+    } else if (lightType == "point") {
+        light->type = "SphereLight";
+        NOT_YET_IMPLEMENTED();
+    } else {
+        ASSERT_NOT_REACHED();
+    }
+
+    return light;
 }
 
 const tinygltf::Accessor* GltfLoader::findAccessorForPrimitive(const tinygltf::Model& gltfModel, const tinygltf::Primitive& gltfPrimitive, const char* name) const

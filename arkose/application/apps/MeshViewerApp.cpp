@@ -120,9 +120,10 @@ bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
             ImGui::Text("Imported");
             ImGui::Text("  %d meshes", narrow_cast<i32>(result.meshes.size()));
             ImGui::Text("  %d materials", narrow_cast<i32>(result.materials.size()));
-            ImGui::Text("  %d images.", narrow_cast<i32>(result.images.size()));
+            ImGui::Text("  %d images", narrow_cast<i32>(result.images.size()));
             ImGui::Text("  %d skeletons", narrow_cast<i32>(result.skeletons.size()));
             ImGui::Text("  %d animations", narrow_cast<i32>(result.animations.size()));
+            ImGui::Text("  %d lights", narrow_cast<i32>(result.lights.size()));
 
             ImGui::NewLine();
 

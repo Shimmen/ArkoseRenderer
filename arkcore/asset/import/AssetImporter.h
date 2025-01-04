@@ -30,6 +30,7 @@ struct ImportResult {
     std::vector<std::unique_ptr<SkeletonAsset>> skeletons {};
     std::vector<std::unique_ptr<AnimationAsset>> animations {};
 
+    std::vector<std::unique_ptr<LightAsset>> lights {};
     std::vector<ImportedCamera> cameras {};
 
     std::vector<MeshInstance> meshInstances {};
