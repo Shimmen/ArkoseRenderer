@@ -41,11 +41,17 @@ bool UploadBuffer::upload(const void* data, size_t size, std::variant<BufferCopy
         }
     }
 
-    size_t requiredSize = m_cursor + size;
+    // TODO: Figure out what this is for the dst item! 16 bytes is likely safe for most cases, but we should probably query the real value.
+    size_t requiredAlignment = 16;
+
+    size_t alignedCursor = ark::alignUp(m_cursor, requiredAlignment);
+    size_t requiredSize = alignedCursor + size;
     if (requiredSize > m_buffer->size()) {
         ARKOSE_LOG(Error, "UploadBuffer: not enough space for all requested uploads");
         return false;
     }
+
+    m_cursor = alignedCursor;
 
     BufferCopyOperation copyOperation;
     copyOperation.size = size;
