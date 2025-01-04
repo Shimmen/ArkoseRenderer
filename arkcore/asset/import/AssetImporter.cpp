@@ -19,12 +19,12 @@ AssetImportTask::AssetImportTask(std::string_view assetFilePath, std::string_vie
     , m_assetFilePath(assetFilePath)
     , m_options(options)
 {
-    FileIO::ensureDirectory(std::string(targetDirectory));
-
     if (targetDirectory.ends_with('/')) {
         targetDirectory.remove_suffix(1);
     }
     m_targetDirectory = targetDirectory;
+    m_targetDirectory += "/imported";
+    FileIO::ensureDirectory(m_targetDirectory);
 
     if (m_options.blockCompressImages || m_options.generateMipmaps) {
         m_options.alwaysMakeImageAsset = true;
