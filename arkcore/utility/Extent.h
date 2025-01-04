@@ -108,6 +108,15 @@ struct Extent3D {
     ark::ivec3 asIntVector() const { return ark::ivec3(m_width, m_height, m_depth); }
     ark::vec3 asFloatVector() const {return ark::vec3(static_cast<float>(m_width), static_cast<float>(m_height), static_cast<float>(m_depth)); }
 
+    static Extent3D divideAndRoundDownClampTo1(Extent3D extent, u32 numerator)
+    {
+        ARKOSE_ASSERT(numerator > 0);
+        u32 w = std::max(1u, extent.width() / 2);
+        u32 h = std::max(1u, extent.height() / 2);
+        u32 d = std::max(1u, extent.depth() / 2);
+        return Extent3D(w, h, d);
+    }
+
     template<class Archive>
     void serialize(Archive&);
 
