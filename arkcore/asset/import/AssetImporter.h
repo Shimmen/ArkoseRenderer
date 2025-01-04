@@ -57,8 +57,8 @@ public:
     bool success() const;
     ImportResult* result();
 
-    float progress() const;
-    std::string status() const;
+    virtual float progress() const override;
+    virtual std::string status() const override;
 
 private:
     AssetImportTask(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions);
