@@ -42,6 +42,7 @@ public:
 
     vec3 positionInWorld() const { return m_parent ? m_parent->worldMatrix() * m_translation : m_translation; }
     quat orientationInWorld() const { return m_parent ? m_parent->orientationInWorld() * m_orientation : m_orientation; }
+    vec3 scaleInWorld() const { return m_parent ? m_parent->scaleInWorld() * m_scale : m_scale; }
 
     void setPositionInWorld(vec3 worldPosition);
     void setOrientationInWorld(quat worldOrientation);

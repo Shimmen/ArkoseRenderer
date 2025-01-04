@@ -10,7 +10,7 @@ Transform Transform::flattened() const
 {
     vec3 globalTranslation = positionInWorld();
     quat globalOrientation = orientationInWorld();
-    vec3 globalScale = localScale(); // NOTE: Scale does not propagate!
+    vec3 globalScale = scaleInWorld();
 
     return Transform(globalTranslation, globalOrientation, globalScale);
 }
