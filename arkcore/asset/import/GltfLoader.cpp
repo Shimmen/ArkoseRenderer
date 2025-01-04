@@ -8,7 +8,8 @@
 #include "utility/FileIO.h"
 
 namespace {
-static std::vector<std::string> supportedExtensions = { "MSFT_texture_dds" };
+static std::vector<std::string> supportedExtensions = { "KHR_materials_pbrSpecularGlossiness", // partial support
+                                                        "MSFT_texture_dds" };
 }
 
 bool hasSupportForExtension(const std::string& extension)
@@ -89,13 +90,22 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
     std::unordered_map<int, ImageType> imageTypeBestGuess {};
     for (tinygltf::Material const& gltfMaterial : gltfModel.materials) {
         // Note that we're relying on all -1 i.e. invalid textures mapping to the same slot which will be unused anyway
-        imageTypeBestGuess[gltfMaterial.pbrMetallicRoughness.baseColorTexture.index] = ImageType::sRGBColor;
-        imageTypeBestGuess[gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index] = ImageType::GenericData;
+
         imageTypeBestGuess[gltfMaterial.emissiveTexture.index] = ImageType::sRGBColor;
         imageTypeBestGuess[gltfMaterial.normalTexture.index] = ImageType::NormalMap;
+
+        auto specularGlossinessMatEntry = gltfMaterial.extensions.find("KHR_materials_pbrSpecularGlossiness");
+        if (specularGlossinessMatEntry != gltfMaterial.extensions.end()) {
+            tinygltf::Value const& specularGlossinessMat = specularGlossinessMatEntry->second;
+            imageTypeBestGuess[specularGlossinessMat.Get("diffuseTexture").Get("index").GetNumberAsInt()] = ImageType::sRGBColor;
+            imageTypeBestGuess[specularGlossinessMat.Get("specularGlossinessTexture").Get("index").GetNumberAsInt()] = ImageType::GenericData;
+        } else {
+            imageTypeBestGuess[gltfMaterial.pbrMetallicRoughness.baseColorTexture.index] = ImageType::sRGBColor;
+            imageTypeBestGuess[gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index] = ImageType::GenericData;
+        }
     }
 
-    // Create all images defined in the glTF file (even potentially unused ones)
+    // Create all textures defined in the glTF file (even potentially unused ones)
     size_t textureCount = gltfModel.textures.size();
     result.images.resize(textureCount);
     ParallelFor(textureCount, [&](size_t idx) {
@@ -702,17 +712,8 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
 
     material->doubleSided = gltfMaterial.doubleSided;
 
-    material->metallicFactor = static_cast<float>(gltfMaterial.pbrMetallicRoughness.metallicFactor);
-    material->roughnessFactor = static_cast<float>(gltfMaterial.pbrMetallicRoughness.roughnessFactor);
-
     std::vector<double> e = gltfMaterial.emissiveFactor;
     material->emissiveFactor = vec3((float)e[0], (float)e[1], (float)e[2]);
-
-    std::vector<double> c = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
-    material->colorTint = vec4((float)c[0], (float)c[1], (float)c[2], (float)c[3]);
-
-    int baseColorIdx = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
-    material->baseColor = toMaterialInput(baseColorIdx);
 
     int emissiveIdx = gltfMaterial.emissiveTexture.index;
     material->emissiveColor = toMaterialInput(emissiveIdx);
@@ -720,8 +721,42 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
     int normalMapIdx = gltfMaterial.normalTexture.index;
     material->normalMap = toMaterialInput(normalMapIdx);
 
-    int metallicRoughnessIdx = gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
-    material->materialProperties = toMaterialInput(metallicRoughnessIdx);
+    auto specularGlossinessMatEntry = gltfMaterial.extensions.find("KHR_materials_pbrSpecularGlossiness");
+    if (specularGlossinessMatEntry != gltfMaterial.extensions.end()) {
+        tinygltf::Value const& specGlossMat = specularGlossinessMatEntry->second;
+
+        // NOTE: We don't really support the specular-glossiness material model..
+
+        material->metallicFactor = 0.0f; // TODO!
+        material->roughnessFactor = 0.0f; // TODO!
+
+        tinygltf::Value const& diffuseFactor = specGlossMat.Get("diffuseFactor");
+        material->colorTint = vec4((float)diffuseFactor.Get(0).GetNumberAsDouble(),
+                                   (float)diffuseFactor.Get(1).GetNumberAsDouble(),
+                                   (float)diffuseFactor.Get(2).GetNumberAsDouble(),
+                                   (float)diffuseFactor.Get(3).GetNumberAsDouble());
+
+        int diffuseIdx = specGlossMat.Get("diffuseTexture").Get("index").GetNumberAsInt();
+        material->baseColor = toMaterialInput(diffuseIdx);
+
+        int specGlossIdx = specGlossMat.Get("specularGlossinessTexture").Get("index").GetNumberAsInt();
+        material->materialProperties = toMaterialInput(specGlossIdx); // TODO: This is straight up wrong, but it will give us *something*
+
+    } else {
+
+        material->metallicFactor = static_cast<float>(gltfMaterial.pbrMetallicRoughness.metallicFactor);
+        material->roughnessFactor = static_cast<float>(gltfMaterial.pbrMetallicRoughness.roughnessFactor);
+
+        std::vector<double> c = gltfMaterial.pbrMetallicRoughness.baseColorFactor;
+        material->colorTint = vec4((float)c[0], (float)c[1], (float)c[2], (float)c[3]);
+
+        int baseColorIdx = gltfMaterial.pbrMetallicRoughness.baseColorTexture.index;
+        material->baseColor = toMaterialInput(baseColorIdx);
+
+        int metallicRoughnessIdx = gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
+        material->materialProperties = toMaterialInput(metallicRoughnessIdx);
+
+    }
 
     return material;
 }
