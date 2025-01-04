@@ -115,7 +115,7 @@ void AssetImportTask::importGltf()
         auto& image = result.images[idx];
 
         // Only compress if we're importing images in arkimg format
-        if (image->sourceAssetFilePath().empty() || options.alwaysMakeImageAsset) {
+        if (image && (image->sourceAssetFilePath().empty() || options.alwaysMakeImageAsset)) {
 
             if (options.generateMipmaps && image->numMips() == 1) {
                 // NOTE: Can fail!
@@ -144,7 +144,7 @@ void AssetImportTask::importGltf()
     int unnamedImageIdx = 0;
     for (auto& image : result.images) {
 
-        if (not image->hasSourceAsset() || options.alwaysMakeImageAsset) {
+        if (image && (!image->hasSourceAsset() || options.alwaysMakeImageAsset)) {
 
             std::string fileName;
             if (image->hasSourceAsset()) {
@@ -181,10 +181,12 @@ void AssetImportTask::importGltf()
                 int gltfIdx = materialInput->userData;
                 ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < narrow_cast<int>(result.images.size()));
                 auto& image = result.images[gltfIdx];
-                std::string_view imagePath = (!image->hasSourceAsset() || options.alwaysMakeImageAsset)
-                    ? image->assetFilePath()
-                    : image->sourceAssetFilePath();
-                materialInput->setPathToImage(std::string(imagePath));
+                if (image) {
+                    std::string_view imagePath = (!image->hasSourceAsset() || options.alwaysMakeImageAsset)
+                        ? image->assetFilePath()
+                        : image->sourceAssetFilePath();
+                    materialInput->setPathToImage(std::string(imagePath));
+                }
             }
         };
 

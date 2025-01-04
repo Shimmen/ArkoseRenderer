@@ -101,7 +101,9 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
         // Assign the best-guess type of this image
         auto entry = imageTypeBestGuess.find(static_cast<int>(idx));
         if (entry != imageTypeBestGuess.end()) {
-            image->setType(entry->second);
+            if (image) {
+                image->setType(entry->second);
+            }
         }
 
         result.images[idx] = std::move(image);
