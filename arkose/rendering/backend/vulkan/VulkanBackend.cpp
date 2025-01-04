@@ -939,6 +939,17 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
         vk12features.bufferDeviceAddressCaptureReplay = VK_TRUE;
     }
 
+    void* nextChain = nullptr;
+    auto appendToNextChain = [&](auto& object) -> void {
+        object.pNext = nextChain;
+        nextChain = &object;
+    };
+
+    appendToNextChain(features2);
+    appendToNextChain(vk11features);
+    appendToNextChain(vk12features);
+    appendToNextChain(vk13features);
+
     for (auto& [capability, active] : m_activeCapabilities) {
         if (!active)
             continue;
@@ -950,15 +961,18 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
                 break;
             case RayTracingBackend::KhrExtension:
                 deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+                appendToNextChain(khrRayTracingPipelineFeatures);
                 khrRayTracingPipelineFeatures.rayTracingPipeline = VK_TRUE;
                 khrRayTracingPipelineFeatures.rayTracingPipelineTraceRaysIndirect = VK_TRUE;
                 khrRayTracingPipelineFeatures.rayTraversalPrimitiveCulling = VK_TRUE;
                 deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+                appendToNextChain(khrAccelerationStructureFeatures);
                 khrAccelerationStructureFeatures.accelerationStructure = VK_TRUE;
                 //khrAccelerationStructureFeatures.accelerationStructureIndirectBuild = VK_TRUE;
                 khrAccelerationStructureFeatures.descriptorBindingAccelerationStructureUpdateAfterBind = VK_TRUE;
                 //khrAccelerationStructureFeatures.accelerationStructureHostCommands = VK_TRUE;
                 deviceExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+                appendToNextChain(khrRayQueryFeatures);
                 khrRayQueryFeatures.rayQuery = VK_TRUE;
                 deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
                 vk12features.bufferDeviceAddress = VK_TRUE;
@@ -970,6 +984,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
             break;
         case Capability::MeshShading:
             deviceExtensions.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+            appendToNextChain(meshShaderFeatures);
             meshShaderFeatures.taskShader = VK_TRUE;
             meshShaderFeatures.meshShader = VK_TRUE;
             vk12features.shaderInt8 = VK_TRUE;
@@ -983,6 +998,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
             break;
         case Capability::ShaderBarycentrics:
             deviceExtensions.push_back(VK_KHR_FRAGMENT_SHADER_BARYCENTRIC_EXTENSION_NAME);
+            appendToNextChain(fragmentShaderBarycentricFeatures);
             fragmentShaderBarycentricFeatures.fragmentShaderBarycentric = VK_TRUE;
             break;
         default:
@@ -1005,16 +1021,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     // Since we use VkPhysicalDeviceFeatures2 this should be null according to spec
     deviceCreateInfo.pEnabledFeatures = nullptr;
 
-    // Device features extension chain
-    deviceCreateInfo.pNext = &features2;
-    features2.pNext = &vk11features;
-    vk11features.pNext = &vk12features;
-    vk12features.pNext = &vk13features;
-    vk13features.pNext = &khrRayTracingPipelineFeatures;
-    khrRayTracingPipelineFeatures.pNext = &khrAccelerationStructureFeatures;
-    khrAccelerationStructureFeatures.pNext = &khrRayQueryFeatures;
-    khrRayQueryFeatures.pNext = &meshShaderFeatures;
-    meshShaderFeatures.pNext = &fragmentShaderBarycentricFeatures;
+    deviceCreateInfo.pNext = nextChain;
 
     VkDevice device;
     if (vkCreateDevice(physicalDevice, &deviceCreateInfo, nullptr, &device) != VK_SUCCESS)
