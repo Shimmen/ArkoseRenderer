@@ -117,11 +117,12 @@ void AssetImportTask::importGltf()
         // Only compress if we're importing images in arkimg format
         if (image->sourceAssetFilePath().empty() || options.alwaysMakeImageAsset) {
 
-            if (options.generateMipmaps) {
+            if (options.generateMipmaps && image->numMips() == 1) {
+                // NOTE: Can fail!
                 image->generateMipmaps();
             }
 
-            if (options.blockCompressImages) {
+            if (options.blockCompressImages && !image->hasCompressedFormat()) {
                 TextureCompressor textureCompressor {};
                 if (image->type() == ImageType::NormalMap) {
                     image = textureCompressor.compressBC5(*image);

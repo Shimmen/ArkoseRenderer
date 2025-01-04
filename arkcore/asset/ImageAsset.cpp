@@ -1,6 +1,7 @@
 #include "ImageAsset.h"
 
 #include "asset/AssetCache.h"
+#include "asset/external/DDSImage.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "utility/FileIO.h"
@@ -20,6 +21,32 @@
 
 namespace {
 AssetCache<ImageAsset> s_imageAssetCache {};
+}
+
+bool imageFormatIsBlockCompressed(ImageFormat format)
+{
+    switch (format) {
+    case ImageFormat::BC5:
+    case ImageFormat::BC7:
+        return true;
+    default:
+        return false;
+    }
+}
+
+u32 imageFormatBlockSize(ImageFormat format)
+{
+    switch (format) {
+    case ImageFormat::BC5:
+    case ImageFormat::BC7:
+        return 16;
+    default:
+        if (imageFormatIsBlockCompressed(format)) { 
+            NOT_YET_IMPLEMENTED();
+        } else {
+            ASSERT_NOT_REACHED();
+        }
+    }
 }
 
 ImageAsset::ImageAsset() = default;
@@ -71,78 +98,111 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
 {
     SCOPED_PROFILE_ZONE();
 
-    void* data;
-    size_t size;
+    std::unique_ptr<ImageAsset> imageAsset = nullptr;
 
-    bool isFloatType = false;
-    int width, height, channelsInFile;
+    if (DDS::isValidHeader(sourceAssetData, sourceAssetSize)) {
 
-    int success = stbi_info_from_memory(sourceAssetData, static_cast<int>(sourceAssetSize), &width, &height, &channelsInFile);
+        Extent3D extent;
+        ImageFormat format;
+        bool srgb;
+        u32 numMips;
+        void* data = (void*)DDS::loadFromMemory(sourceAssetData, sourceAssetSize, extent, format, srgb, numMips);
 
-    if (not success) {
-        ARKOSE_LOG(Error, "Failed to load to load image asset (stb reported error, likely invalid file)");
-        return nullptr;
-    }
+        if (data == nullptr) {
+            ARKOSE_LOG(Error, "Failed to load image asset (DDS reported error, likely invalid file)");
+            return nullptr;
+        }
 
-    // TODO: Allow storing 3-component RGB images. We do this for now to avoid handling it in runtime, because e.g. Vulkan doesn't always support sRGB8
-    int desiredChannels = channelsInFile;
-    if (channelsInFile == STBI_rgb) {
-        desiredChannels = STBI_rgb_alpha;
-    }
+        imageAsset = std::make_unique<ImageAsset>();
 
-    if (stbi_is_hdr_from_memory(sourceAssetData, static_cast<int>(sourceAssetSize))) {
-        data = stbi_loadf_from_memory(sourceAssetData, static_cast<int>(sourceAssetSize), &width, &height, &channelsInFile, desiredChannels);
-        size = width * height * desiredChannels * sizeof(float);
-        isFloatType = true;
+        imageAsset->m_width = extent.width();
+        imageAsset->m_height = extent.height();
+        imageAsset->m_depth = extent.depth();
+
+        imageAsset->m_format = format;
+        imageAsset->m_type = srgb ? ImageType::sRGBColor : ImageType::Unknown;
+
+        imageAsset->m_mips = DDS::computeMipOffsetAndSize(extent, format, numMips);
+
+        uint8_t* dataPtr = reinterpret_cast<uint8_t*>(data);
+        ARKOSE_ASSERT(imageAsset->m_mips[0].offset == 0); // we assume all the mips are laid out sequentially
+        size_t dataSize = imageAsset->m_mips.back().offset + imageAsset->m_mips.back().size;
+        imageAsset->m_pixelData = std::vector<uint8_t>(dataPtr, dataPtr + dataSize);
+
     } else {
-        data = stbi_load_from_memory(sourceAssetData, static_cast<int>(sourceAssetSize), &width, &height, &channelsInFile, desiredChannels);
-        size = width * height * desiredChannels * sizeof(stbi_uc);
+
+        bool isFloatType = false;
+        int width, height, channelsInFile;
+
+        int success = stbi_info_from_memory(sourceAssetData, static_cast<int>(sourceAssetSize), &width, &height, &channelsInFile);
+
+        if (!success) {
+            ARKOSE_LOG(Error, "Failed to load to load image asset (stb reported error, likely invalid file)");
+            return nullptr;
+        }
+
+        // TODO: Allow storing 3-component RGB images. We do this for now to avoid handling it in runtime, because e.g. Vulkan doesn't always support sRGB8
+        int desiredChannels = channelsInFile;
+        if (channelsInFile == STBI_rgb) {
+            desiredChannels = STBI_rgb_alpha;
+        }
+
+        void* data;
+        size_t size;
+        if (stbi_is_hdr_from_memory(sourceAssetData, static_cast<int>(sourceAssetSize))) {
+            data = stbi_loadf_from_memory(sourceAssetData, static_cast<int>(sourceAssetSize), &width, &height, &channelsInFile, desiredChannels);
+            size = width * height * desiredChannels * sizeof(float);
+            isFloatType = true;
+        } else {
+            data = stbi_load_from_memory(sourceAssetData, static_cast<int>(sourceAssetSize), &width, &height, &channelsInFile, desiredChannels);
+            size = width * height * desiredChannels * sizeof(stbi_uc);
+        }
+
+        auto format { ImageFormat::Unknown };
+        #define SelectFormat(intFormat, floatFormat) (isFloatType ? floatFormat : intFormat)
+
+        switch (desiredChannels) {
+        case 1:
+            format = SelectFormat(ImageFormat::R8, ImageFormat::R32F);
+            break;
+        case 2:
+            format = SelectFormat(ImageFormat::RG8, ImageFormat::RG32F);
+            break;
+        case 3:
+            format = SelectFormat(ImageFormat::RGB8, ImageFormat::RGB32F);
+            break;
+        case 4:
+            format = SelectFormat(ImageFormat::RGBA8, ImageFormat::RGBA32F);
+            break;
+        }
+
+        #undef SelectFormat
+        ARKOSE_ASSERT(format != ImageFormat::Unknown);
+
+        imageAsset = std::make_unique<ImageAsset>();
+
+        imageAsset->m_width = width;
+        imageAsset->m_height = height;
+        imageAsset->m_depth = 1;
+
+        imageAsset->m_format = format;
+        imageAsset->m_type = ImageType::Unknown;
+
+        uint8_t* dataPtr = reinterpret_cast<uint8_t*>(data);
+        imageAsset->m_pixelData = std::vector<uint8_t>(dataPtr, dataPtr + size);
+
+        ImageMip mip0 { .offset = 0,
+                        .size = size };
+        imageAsset->m_mips.push_back(mip0);
+
+        if (data != nullptr) {
+            stbi_image_free(data);
+        }
     }
-
-    auto format { ImageFormat::Unknown };
-    #define SelectFormat(intFormat, floatFormat) (isFloatType ? floatFormat : intFormat)
-
-    switch (desiredChannels) {
-    case 1:
-        format = SelectFormat(ImageFormat::R8, ImageFormat::R32F);
-        break;
-    case 2:
-        format = SelectFormat(ImageFormat::RG8, ImageFormat::RG32F);
-        break;
-    case 3:
-        format = SelectFormat(ImageFormat::RGB8, ImageFormat::RGB32F);
-        break;
-    case 4:
-        format = SelectFormat(ImageFormat::RGBA8, ImageFormat::RGBA32F);
-        break;
-    }
-
-    #undef SelectFormat
-    ARKOSE_ASSERT(format != ImageFormat::Unknown);
-
-    auto imageAsset = std::make_unique<ImageAsset>();
-    
-    imageAsset->m_width = width;
-    imageAsset->m_height = height;
-    imageAsset->m_depth = 1;
-
-    imageAsset->m_format = format;
-    imageAsset->m_type = ImageType::Unknown;
-
-    uint8_t* dataPtr = reinterpret_cast<uint8_t*>(data);
-    imageAsset->m_pixelData = std::vector<uint8_t>(dataPtr, dataPtr + size);
-
-    ImageMip mip0 { .offset = 0,
-                    .size = size };
-    imageAsset->m_mips.push_back(mip0);
 
     // No compression when creating here now, but we might want to apply it before writing to disk
     imageAsset->m_compressed = false;
-    imageAsset->m_uncompressedSize = narrow_cast<u32>(size);
-
-    if (data != nullptr) {
-        stbi_image_free(data);
-    }
+    imageAsset->m_uncompressedSize = narrow_cast<u32>(imageAsset->m_pixelData.size());
 
     return imageAsset;
 }
@@ -417,13 +477,7 @@ Extent3D ImageAsset::extentAtMip(size_t mipIdx) const
 
 bool ImageAsset::hasCompressedFormat() const
 {
-    switch (format()) {
-    //case ImageFormat::BC5: TODO!
-    case ImageFormat::BC7:
-        return true;
-    default:
-        return false;
-    }
+    return imageFormatIsBlockCompressed(format());
 }
 
 bool ImageAsset::compress()

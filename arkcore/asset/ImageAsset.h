@@ -36,6 +36,9 @@ enum class ImageFormat {
     BC7 = 301,
 };
 
+bool imageFormatIsBlockCompressed(ImageFormat);
+u32 imageFormatBlockSize(ImageFormat);
+
 struct ImageMip {
     size_t offset;
     size_t size;
