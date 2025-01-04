@@ -7,6 +7,7 @@
 #include "asset/MeshAsset.h"
 #include "asset/SkeletonAsset.h"
 #include "core/parallel/PollableTask.h"
+#include <atomic>
 #include <string_view>
 #include <vector>
 
@@ -75,6 +76,6 @@ private:
     bool m_error { false };
     char const* m_status = "Importing asset";
 
-    size_t m_processedItemCount { 0 };
+    std::atomic_uint64_t m_processedItemCount { 0 };
     size_t m_totalItemCount { 0 };
 };
