@@ -495,6 +495,11 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
     }
     */
 
+    if (!vk13features.synchronization2) {
+        ARKOSE_LOG(Error, "VulkanBackend: no support for 'synchronization2' which is required");
+        allRequiredSupported = false;
+    }
+
     if (!vk13features.maintenance4) {
         ARKOSE_LOG(Error, "VulkanBackend: no support for 'maintenance4', which is required for for various maintenance features.");
         allRequiredSupported = false;
@@ -929,6 +934,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     //features.shaderInt64 = VK_TRUE;
     //vk12features.shaderBufferInt64Atomics = VK_TRUE;
     //vk12features.shaderSharedInt64Atomics = VK_TRUE;
+
+    // The way we now transition the swapchain image layout apparently requires this..
+    vk13features.synchronization2 = VK_TRUE;
 
     // 'maintenance4' for various maintenance features
     vk13features.maintenance4 = VK_TRUE;
