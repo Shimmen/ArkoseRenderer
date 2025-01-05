@@ -149,6 +149,14 @@ void MeshSegmentAsset::generateTangents()
             tangent.y = fvTangent[1];
             tangent.z = fvTangent[2];
             tangent.w = fSign;
+
+            // This seems like quite the hack, and I'm not sure why the MikkTSpace library returns such
+            // a tangent vector. Possibly to indicate it's a degenerate triangle or something akin to that?
+            // However, we need "valid" tangents (length == 1) for all triangles so let's at least write
+            // something valid in these cases.
+            if (length(tangent.xyz()) == 0.0f) {
+                tangent = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+            }
         };
 
         SMikkTSpaceContext mikktspaceContext;
