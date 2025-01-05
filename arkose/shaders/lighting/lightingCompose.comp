@@ -94,7 +94,7 @@ void main()
 
         if (hasReflections && constants.includeGlossyGI) {
             // TODO: This is *not* yet correct! We need to factor in the BRDF correctly, but also divide by the PDF due to the importance sampling!
-            sceneColor.rgb += materialBaseColor * reflectionRadiance;
+            sceneColor.rgb += materialBaseColor * reflectionRadiance * 0.25;
             //sceneColor.rgb += brdfSpecular * reflectionRadiance / PDF;
         }
 
