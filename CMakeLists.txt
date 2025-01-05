@@ -139,6 +139,7 @@ target_link_libraries(ArkoseCore PUBLIC
     cereal # serialisation
     lz4_static # generic lossless compression
     bc7enc_lib # texture compression
+    mikktspace # tangent space generation
     meshoptimizer # mesh optimization & meshlet generation
     )
 

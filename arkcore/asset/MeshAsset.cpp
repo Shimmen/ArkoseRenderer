@@ -9,6 +9,7 @@
 #include <cereal/archives/binary.hpp>
 #include <cereal/archives/json.hpp>
 #include <meshoptimizer.h>
+#include <mikktspace.h>
 
 namespace {
 AssetCache<MeshAsset> s_meshAssetCache {};
@@ -72,6 +73,112 @@ void MeshSegmentAsset::generateMeshlets()
                                                        .vertexCount = meshlet.vertex_count,
                                                        .center = vec3(bounds.center[0], bounds.center[1], bounds.center[2]),
                                                        .radius = bounds.radius });
+    }
+}
+
+void MeshSegmentAsset::generateTangents()
+{
+    SCOPED_PROFILE_ZONE();
+
+    ARKOSE_ASSERT(tangents.size() == 0);
+
+    bool generatedMikktspaceTangents = false;
+    if (hasTextureCoordinates()) {
+
+        // Generate proper MikkTSpace tangents
+
+        //
+        // From the MikkTSpace documentation in mikktspace.h:
+        //
+        //   "Note that the results are returned unindexed. It is possible to generate a new index list
+        //    But averaging/overwriting tangent spaces by using an already existing index list WILL produce INCRORRECT results.
+        //    DO NOT! use an already existing index list."
+        //
+        // So we're doing exactly what they tell us not to do.. What we *should* do is "deindexify" the mesh, generate tangents, and finally re-index it.
+        // The meshopt library provides functionality for doing the re-indexing (meshopt_remapIndexBuffer + meshopt_remapVertexBuffer) so we should probably
+        // go ahead and implement this. HOWEVER, in almost all cases we already have tangents available so we're kind of working with something already, so
+        // ideally we already have the exact index map we'd expect to get after re-indexing. But yeah, this is not correct, and we should fix it.
+        //
+
+        tangents.resize(vertexCount());
+
+        SMikkTSpaceInterface mikktspaceInterface;
+
+        mikktspaceInterface.m_getNumFaces = [](SMikkTSpaceContext const* pContext) -> int {
+            auto* mesh = static_cast<MeshSegmentAsset*>(pContext->m_pUserData);
+            ARKOSE_ASSERT(mesh->indices.size() % 3 == 0);
+            return narrow_cast<int>(mesh->indices.size()) / 3;
+        };
+
+        mikktspaceInterface.m_getNumVerticesOfFace = [](SMikkTSpaceContext const* pContext, const int iFace) -> int {
+            return 3;
+        };
+
+        mikktspaceInterface.m_getPosition = [](SMikkTSpaceContext const* pContext, float fvPosOut[], const int iFace, const int iVert) -> void {
+            auto* mesh = static_cast<MeshSegmentAsset*>(pContext->m_pUserData);
+            u32 index = mesh->indices[3 * iFace + iVert];
+            vec3 position = mesh->positions[index];
+            fvPosOut[0] = position.x;
+            fvPosOut[1] = position.y;
+            fvPosOut[2] = position.z;
+        };
+
+        mikktspaceInterface.m_getNormal = [](SMikkTSpaceContext const* pContext, float fvNormOut[], const int iFace, const int iVert) -> void {
+            auto* mesh = static_cast<MeshSegmentAsset*>(pContext->m_pUserData);
+            u32 index = mesh->indices[3 * iFace + iVert];
+            vec3 normal = mesh->normals[index];
+            fvNormOut[0] = normal.x;
+            fvNormOut[1] = normal.y;
+            fvNormOut[2] = normal.z;
+        };
+
+        mikktspaceInterface.m_getTexCoord = [](SMikkTSpaceContext const* pContext, float fvTexcOut[], const int iFace, const int iVert) -> void {
+            auto* mesh = static_cast<MeshSegmentAsset*>(pContext->m_pUserData);
+            u32 index = mesh->indices[3 * iFace + iVert];
+            vec2 texcoord = mesh->texcoord0s[index];
+            fvTexcOut[0] = texcoord.x;
+            fvTexcOut[1] = texcoord.y;
+        };
+
+        mikktspaceInterface.m_setTSpace = nullptr;
+        mikktspaceInterface.m_setTSpaceBasic = [](SMikkTSpaceContext const* pContext, const float fvTangent[], const float fSign, const int iFace, const int iVert) -> void {
+            auto* mesh = static_cast<MeshSegmentAsset*>(pContext->m_pUserData);
+            u32 index = mesh->indices[3 * iFace + iVert];
+            vec4& tangent = mesh->tangents[index];
+            tangent.x = fvTangent[0];
+            tangent.y = fvTangent[1];
+            tangent.z = fvTangent[2];
+            tangent.w = fSign;
+        };
+
+        SMikkTSpaceContext mikktspaceContext;
+        mikktspaceContext.m_pInterface = &mikktspaceInterface;
+        mikktspaceContext.m_pUserData = this;
+
+        generatedMikktspaceTangents = genTangSpaceDefault(&mikktspaceContext);
+
+        ARKOSE_ASSERT(generatedMikktspaceTangents);
+    }
+
+    if (!generatedMikktspaceTangents) {
+
+        // Was not able to generate MikkTSpace tangents so fall back onto an arbitrary tangent space
+
+        tangents.reserve(vertexCount());
+        for (vec3 n : normals) {
+
+            vec3 orthogonal = ark::globalRight;
+            if (std::abs(dot(n, orthogonal)) > 0.99f) {
+                orthogonal = ark::globalForward;
+            }
+
+            orthogonal = normalize(orthogonal - dot(n, orthogonal) * n);
+
+            float d = dot(n, orthogonal);
+            ARKOSE_ASSERT(ark::isEffectivelyZero(d, 1e-4f));
+
+            tangents.emplace_back(orthogonal.x, orthogonal.y, orthogonal.z, 1.0f);
+        }
     }
 }
 

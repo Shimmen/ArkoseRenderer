@@ -53,6 +53,7 @@ public:
     }
 
     void generateMeshlets();
+    void generateTangents();
 
     bool hasTextureCoordinates() const;
 
