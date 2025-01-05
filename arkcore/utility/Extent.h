@@ -40,6 +40,11 @@ struct Extent2D {
         return m_width == other.m_width && m_height == other.m_height;
     }
 
+    bool operator<(Extent2D const& other) const
+    {
+        return m_width < other.m_width && m_height < other.m_height;
+    }
+
     Extent2D operator/(int factor) const
     {
         return { m_width / factor, m_height / factor };

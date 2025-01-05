@@ -73,6 +73,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     // NOTE: Scene not under "assets/sample/" will not be available in the Git-repo, either due to file size or license or both!
     //description.path = "assets/IntelSponza/NewSponzaWithCurtains.arklvl";
     //description.path = "assets/PicaPica/PicaPicaMiniDiorama.arklvl";
+    //description.path = "assets/bistro/bistro.arklvl";
     description.path = "assets/sample/Sponza.arklvl";
     scene.setupFromDescription(description);
 
@@ -192,7 +193,10 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 #if WITH_DLSS
     if constexpr (withUpscaling) {
         if (Backend::get().hasUpscalingSupport()) {
-            pipeline.addNode<UpscalingNode>(UpscalingTech::DLSS, UpscalingQuality::GoodQuality);
+            UpscalingQuality quality = pipeline.outputResolution() < Extent2D(2560, 1440)
+                ? UpscalingQuality::NativeResolution
+                : UpscalingQuality::GoodQuality;
+            pipeline.addNode<UpscalingNode>(UpscalingTech::DLSS, quality);
             antiAliasingMode = AntiAliasing::None;
             sceneTexture = "SceneColorUpscaled";
         }
