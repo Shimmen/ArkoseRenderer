@@ -35,7 +35,7 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
     m_projectedShadow = &reg.createTexture2D(pipeline().renderResolution(), Texture::Format::R8);
     reg.publish("DirectionalLightProjectedShadow", *m_projectedShadow);
 
-    m_shadowMap = &reg.createTexture2D({ 4096, 4096 },
+    m_shadowMap = &reg.createTexture2D({ 8192, 8192 },
                                        Texture::Format::Depth32F,
                                        Texture::Filters::linear(),
                                        Texture::Mipmap::None,

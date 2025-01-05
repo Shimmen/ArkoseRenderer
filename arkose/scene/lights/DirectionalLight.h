@@ -28,7 +28,7 @@ public:
     static constexpr vec3 shadowMapWorldOrigin { 0, 0, 0 };
 
     // When rendering a shadow map, how much of the scene around it should it cover (area, relative to direction)
-    float shadowMapWorldExtent { 80.0f };
+    float shadowMapWorldExtent { 175.0f };
 
 private:
     // Light illuminance (lux, lx = lm / m^2)

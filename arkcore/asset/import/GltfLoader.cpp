@@ -652,7 +652,7 @@ std::unique_ptr<LightAsset> GltfLoader::createLight(tinygltf::Model const& gltfM
         float intensity = static_cast<float>(gltfLight.Get("intensity").GetNumberAsDouble());
         dirLightData.illuminance = intensity;
 
-        dirLightData.shadowMapWorldExtent = 80.0f; // !!
+        dirLightData.shadowMapWorldExtent = 175.0f;
 
         light->data = dirLightData;
 
