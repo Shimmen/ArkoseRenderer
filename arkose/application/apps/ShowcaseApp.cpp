@@ -289,8 +289,8 @@ bool ShowcaseApp::drawGui(Scene& scene)
     bool exitRequested = false;
 
     static bool showAbout = false;
-    static bool showCameraGui = false;
-    static bool showSceneGui = false;
+    static bool showCameraGui = true;
+    static bool showSceneGui = true;
     static bool showGpuSceneGui = false;
     static bool showVramUsageGui = false;
     static bool showRenderPipelineGui = true;
