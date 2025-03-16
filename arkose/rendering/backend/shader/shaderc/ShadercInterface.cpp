@@ -148,7 +148,7 @@ std::unique_ptr<CompilationResult<u32>> ShadercInterface::compileShader(ShaderFi
     shaderc::CompileOptions options;
 
     // Setup default settings (works for now when we only target Vulkan for GLSL files)
-    options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_3);
+    options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_4);
     options.SetTargetSpirv(shaderc_spirv_version_1_6);
     options.SetSourceLanguage(shaderc_source_language_glsl);
     options.SetForcedVersionProfile(460, shaderc_profile_none);

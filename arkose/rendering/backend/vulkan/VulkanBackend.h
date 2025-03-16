@@ -249,7 +249,7 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     /// Vulkan core stuff (e.g. instance, device)
 
-    static constexpr auto VulkanApiVersion = VK_API_VERSION_1_3;
+    static constexpr auto VulkanApiVersion = VK_API_VERSION_1_4;
 
     VkSurfaceFormatKHR pickBestSurfaceFormat() const;
     VkPresentModeKHR pickBestPresentMode() const;

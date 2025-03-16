@@ -349,8 +349,11 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
     VkPhysicalDeviceVulkan13Features vk13features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
     vk12features.pNext = &vk13features;
 
+    VkPhysicalDeviceVulkan14Features vk14features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES };
+    vk13features.pNext = &vk14features;
+
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR khrRayTracingPipelineFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
-    vk13features.pNext = &khrRayTracingPipelineFeatures;
+    vk14features.pNext = &khrRayTracingPipelineFeatures;
 
     VkPhysicalDeviceAccelerationStructureFeaturesKHR khrAccelerationStructureFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
     khrRayTracingPipelineFeatures.pNext = &khrAccelerationStructureFeatures;
@@ -881,6 +884,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     VkPhysicalDeviceVulkan11Features vk11features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
     VkPhysicalDeviceVulkan12Features vk12features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_2_FEATURES };
     VkPhysicalDeviceVulkan13Features vk13features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_3_FEATURES };
+    VkPhysicalDeviceVulkan14Features vk14features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_4_FEATURES };
 
     VkPhysicalDeviceRayTracingPipelineFeaturesKHR khrRayTracingPipelineFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR };
     VkPhysicalDeviceAccelerationStructureFeaturesKHR khrAccelerationStructureFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR };
@@ -957,6 +961,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     appendToNextChain(vk11features);
     appendToNextChain(vk12features);
     appendToNextChain(vk13features);
+    appendToNextChain(vk14features);
 
     for (auto& [capability, active] : m_activeCapabilities) {
         if (!active)
