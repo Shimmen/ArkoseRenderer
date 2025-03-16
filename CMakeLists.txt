@@ -220,7 +220,7 @@ if (ARKOSE_BACKEND_VULKAN)
 
     target_link_libraries(ArkoseRenderer PRIVATE
         Vulkan::Vulkan
-        VulkanMemoryAllocator
+        VulkanMemoryAllocator_static
         Vulkan::shaderc_combined # glsl shader compiler
         spirv-cross-core # spir-v reflection
         )
