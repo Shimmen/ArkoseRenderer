@@ -34,7 +34,7 @@ RenderPipelineNode::ExecuteCallback SSAONode::construct(GpuScene& scene, Registr
     Texture* sceneOpaqueDepth = reg.getTexture("SceneDepth");
     Texture* sceneOpaqueNormals = reg.getTexture("SceneNormalVelocity");
 
-    Texture& ambientOcclusionTex = reg.createTexture2D(pipeline().renderResolution(), Texture::Format::RGBA16F); //Texture::Format::R16F);
+    Texture& ambientOcclusionTex = reg.createTexture2D(pipeline().renderResolution(), Texture::Format::R16F);
     reg.publish("AmbientOcclusion", ambientOcclusionTex);
 
     BindingSet& ssaoBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(ambientOcclusionTex, ShaderStage::Compute),
