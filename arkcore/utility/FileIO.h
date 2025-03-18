@@ -13,6 +13,7 @@ void ensureDirectory(const std::string& directoryPath);
 void ensureDirectoryForFile(const std::string& filePath);
 
 size_t indexOfLashSlash(std::string_view path);
+size_t indexOfFirstSlash(std::string_view path, size_t offset = 0);
 std::string_view extractDirectoryFromPath(std::string_view path);
 std::string_view extractFileNameFromPath(std::string_view path);
 std::string_view removeExtensionFromPath(std::string_view path);

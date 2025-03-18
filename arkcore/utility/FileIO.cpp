@@ -17,14 +17,14 @@ void FileIO::ensureDirectory(const std::string& directoryPath)
 
 #if defined(WIN32)
     // Well, this is fucking stupid..
-    size_t index = directoryPath.find_first_of('/');
+    size_t index = indexOfFirstSlash(directoryPath);
     size_t offset = 0;
     while (index != std::string::npos) {
         std::string directoryBasePath = directoryPath.substr(0, index);
         CreateDirectory(directoryBasePath.c_str(), NULL);
 
         offset = index + 1;
-        index = directoryPath.find_first_of('/', offset);
+        index = indexOfFirstSlash(directoryPath, offset);
     }
     CreateDirectory(directoryPath.c_str(), NULL);
 #else
@@ -35,7 +35,7 @@ void FileIO::ensureDirectory(const std::string& directoryPath)
 
 void FileIO::ensureDirectoryForFile(const std::string& filePath)
 {
-    std::string directoryPath = filePath.substr(0, filePath.find_last_of('/'));
+    std::string directoryPath = filePath.substr(0, indexOfLashSlash(filePath));
     ensureDirectory(directoryPath);
 }
 
@@ -48,6 +48,17 @@ size_t FileIO::indexOfLashSlash(std::string_view path)
     }
 
     return lastSlash;
+}
+
+size_t FileIO::indexOfFirstSlash(std::string_view path, size_t offset)
+{
+    size_t firstSlash = path.find_first_of('/', offset);
+
+    if (firstSlash == std::string::npos) {
+        firstSlash = path.find_first_of('\\', offset);
+    }
+
+    return firstSlash;
 }
 
 std::string_view FileIO::extractDirectoryFromPath(std::string_view path)
