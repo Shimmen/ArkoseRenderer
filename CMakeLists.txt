@@ -329,22 +329,6 @@ add_custom_command(TARGET ArkoseRenderer PRE_BUILD
     VERBATIM)
 
 ##################################
-######### ARKOSE TOOLING #########
-##################################
-
-if((DEFINED {PXR_USD_LOCATION}) OR (DEFINED ENV{PXR_USD_LOCATION}))
-    message(STATUS "Will attempt to build tools")
-    set(ARKOSE_BUILD_TOOLS True)
-else()
-    message(STATUS "Will NOT attempt to build tools as PXR_USD_LOCATION is not set")
-    set(ARKOSE_BUILD_TOOLS False)
-endif()
-
-if(ARKOSE_BUILD_TOOLS)
-    add_subdirectory(tools)
-endif()
-
-##################################
 ### PRETTIFY THE PROJECT FILES ###
 ##################################
 
@@ -357,9 +341,7 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/arkose" FILES ${ARKOSE_SOURCES})
 function(iterate_all_targets dir)
     get_property(targets DIRECTORY "${dir}" PROPERTY BUILDSYSTEM_TARGETS)
     foreach(target IN LISTS targets)
-        if(target STREQUAL "AssetProcessor" OR target STREQUAL "AssetProcessorSample")
-            set_target_properties(${target} PROPERTIES FOLDER "tools")
-        elseif(NOT target STREQUAL "ArkoseCore" AND NOT target STREQUAL "ArkoseRenderer")
+        if(NOT target STREQUAL "ArkoseCore" AND NOT target STREQUAL "ArkoseRenderer")
             set_target_properties(${target} PROPERTIES FOLDER "deps")
         endif()
     endforeach()
@@ -383,5 +365,11 @@ set_target_properties(ArkoseRenderer PROPERTIES
     MAP_IMPORTED_CONFIG_MINSIZEREL     Release
     MAP_IMPORTED_CONFIG_RELWITHDEBINFO Release
     )
+
+##################################
+######### ARKOSE TOOLING #########
+##################################
+
+add_subdirectory(tools)
 
 ##################################
