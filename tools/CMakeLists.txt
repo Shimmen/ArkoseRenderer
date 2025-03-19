@@ -3,7 +3,10 @@
 ###### Command line tools ########
 ##################################
 
-# .. todo!
+project(GltfImportTool)
+add_executable(${PROJECT_NAME} GltfImportTool.cpp)
+target_link_libraries(${PROJECT_NAME} ArkoseCore)
+set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "tools")
 
 ##################################
 ## OpenUSD-specific tooling WIP ##
