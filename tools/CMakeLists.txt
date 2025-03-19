@@ -7,6 +7,7 @@ project(GltfImportTool)
 add_executable(${PROJECT_NAME} GltfImportTool.cpp)
 target_link_libraries(${PROJECT_NAME} ArkoseCore)
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "tools")
+set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_LIST_DIR}/bin")
 
 ##################################
 ## OpenUSD-specific tooling WIP ##
