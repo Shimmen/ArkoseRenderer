@@ -142,9 +142,12 @@ if(NOT implot_fetch_POPULATED)
 
 endif()
 
+# Temporarily(TM) switch out the repo to a fork which adds a missing include of cstdint. Hopefully it will be upstreamed at some point.
 FetchContent_Declare(bc7enc_rdo_fetch
-    GIT_REPOSITORY https://github.com/richgel999/bc7enc_rdo.git
-    GIT_TAG        "e6990bc11829c072d9f9e37296f3335072aab4e4")
+    GIT_REPOSITORY https://github.com/Sewer56/bc7enc_rdo
+    GIT_TAG        ba0b7de9843e467ef804557ac228fe7d2a39cdb0)
+    #GIT_REPOSITORY https://github.com/richgel999/bc7enc_rdo.git
+    #GIT_TAG        "e6990bc11829c072d9f9e37296f3335072aab4e4")
 FetchContent_GetProperties(bc7enc_rdo_fetch)
 if(NOT bc7enc_rdo_fetch_POPULATED)
     FetchContent_Populate(bc7enc_rdo_fetch)
