@@ -52,10 +52,19 @@ public:
         return std::get<std::weak_ptr<MaterialAsset>>(material);
     }
 
+    void processForImport();
+
+    bool isIndexedMesh() const;
+    void flattenToNonIndexedMesh();
+    void convertToIndexedMesh();
+
+    void optimize();
+
     void generateMeshlets();
     void generateTangents();
 
     bool hasTextureCoordinates() const;
+    bool hasTangents() const;
 
     // Returns true if this segment contains skinning data and thus can be used to create a skeletal mesh
     bool hasSkinningData() const;
@@ -93,6 +102,10 @@ public:
 
     // Not serialized, can be used to store whatever intermediate you want
     int userData { -1 };
+
+private:
+    void remapVertexData(std::vector<u32> const& remapTable, size_t newVertexCount);
+
 };
 
 class MeshLODAsset {

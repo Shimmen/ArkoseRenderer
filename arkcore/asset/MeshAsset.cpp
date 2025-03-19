@@ -18,6 +18,170 @@ AssetCache<MeshAsset> s_meshAssetCache {};
 MeshSegmentAsset::MeshSegmentAsset() = default;
 MeshSegmentAsset::~MeshSegmentAsset() = default;
 
+void MeshSegmentAsset::processForImport()
+{
+    // We want to generate MikkTSpace tangents - or, if not possible, generate arbitrary tangents (e.g. no texcoords)
+    // The meshes may or may not already have tangents, but let's still regenerate them with the proper MikkTSpace tangent space
+    // as it's cheap to do and there are definitely assets out there with broken and incorrect tangents.
+
+    // To generate tangents a non-indexed mesh is needed
+    if (isIndexedMesh()) {
+        flattenToNonIndexedMesh();
+    }
+
+    // Generate the tangents
+    generateTangents();
+
+    // Convert back to an indexed mesh
+    convertToIndexedMesh();
+
+    // Optimize the mesh - non-destructive!
+    optimize();
+
+    // Generate meshlets
+    generateMeshlets();
+}
+
+bool MeshSegmentAsset::isIndexedMesh() const
+{
+    return indices.size() > 0;
+}
+
+void MeshSegmentAsset::flattenToNonIndexedMesh()
+{
+    if (!isIndexedMesh()) {
+        return;
+    }
+
+    std::vector<vec3> newPositions {};
+    std::vector<vec3> newNormals {};
+    std::vector<vec2> newTexcoord0s {};
+    std::vector<vec4> newTangents {};
+    std::vector<ark::tvec4<u16>> newJointIndices {};
+    std::vector<vec4> newJointWeights {};
+
+    for (u32 index : indices) {
+        newPositions.push_back(positions[index]);
+        newNormals.push_back(normals[index]);
+        if (hasTextureCoordinates()) {
+            newTexcoord0s.push_back(texcoord0s[index]);
+        }
+        if (hasTangents()) {
+            newTangents.push_back(tangents[index]);
+        }
+        if (hasSkinningData()) {
+            newJointIndices.push_back(jointIndices[index]);
+            newJointWeights.push_back(jointWeights[index]);
+        }
+    }
+
+    positions = std::move(newPositions);
+    normals = std::move(newNormals);
+    texcoord0s = std::move(newTexcoord0s);
+    tangents = std::move(newTangents);
+    jointIndices = std::move(newJointIndices);
+    jointWeights = std::move(newJointWeights);
+
+    indices.clear();
+
+    // This is effectively invalidated by the flattening
+    meshletData.reset();
+}
+
+void MeshSegmentAsset::convertToIndexedMesh()
+{
+    ARKOSE_ASSERT(!isIndexedMesh());
+
+    // Generate vertex remap table
+
+#define APPEND_STREAM(dataStream) streams.push_back({ dataStream.data(), sizeof(decltype(dataStream[0])), sizeof(decltype(dataStream[0])) })
+    std::vector<meshopt_Stream> streams;
+
+    APPEND_STREAM(positions);
+    APPEND_STREAM(normals);
+    if (hasTextureCoordinates()) {
+        APPEND_STREAM(texcoord0s);
+    }
+    if (hasTangents()) {
+        APPEND_STREAM(tangents);
+    }
+    if (hasSkinningData()) {
+        APPEND_STREAM(jointIndices);
+        APPEND_STREAM(jointWeights);
+    }
+
+#undef APPEND_STREAM
+
+    size_t unindexedVertexCount = vertexCount();
+    size_t indexCount = unindexedVertexCount; // since we're currently unindexed
+
+    std::vector<u32> remap(unindexedVertexCount);
+    size_t newVertexCount = meshopt_generateVertexRemapMulti(remap.data(), nullptr, indexCount, unindexedVertexCount, streams.data(), streams.size());
+
+    // Create the new index buffer
+
+    indices.resize(indexCount);
+    meshopt_remapIndexBuffer(indices.data(), nullptr, indexCount, remap.data());
+
+    // Create the new vertex buffers
+
+    remapVertexData(remap, newVertexCount);
+}
+
+void MeshSegmentAsset::optimize()
+{
+    ARKOSE_ASSERT(isIndexedMesh());
+
+    // Optimize for vertex caching
+
+    meshopt_optimizeVertexCache(indices.data(), indices.data(), indices.size(), vertexCount());
+
+    // Optimize for overdraw
+
+    constexpr float overdrawThreshold = 1.05f;
+
+    float const* vertexPositions = value_ptr(positions[0]);
+    size_t vertexPositionStride = sizeof(decltype(positions[0]));
+    meshopt_optimizeOverdraw(indices.data(), indices.data(), indices.size(), vertexPositions, vertexCount(), vertexPositionStride, overdrawThreshold);
+
+    // Optimize for vertex fetching
+
+    std::vector<u32> vertFetchRemap(vertexCount());
+    size_t numUniqueVertices = meshopt_optimizeVertexFetchRemap(vertFetchRemap.data(), indices.data(), indices.size(), vertexCount());
+    meshopt_remapIndexBuffer(indices.data(), indices.data(), indices.size(), vertFetchRemap.data());
+    remapVertexData(vertFetchRemap, numUniqueVertices); // if we've just re-indexed this mesh, then the vertex count should remain unchanged
+    
+}
+
+void MeshSegmentAsset::remapVertexData(std::vector<u32> const& remapTable, size_t newVertexCount)
+{
+    meshopt_remapVertexBuffer(positions.data(), positions.data(), positions.size(), sizeof(decltype(positions[0])), remapTable.data());
+    positions.resize(newVertexCount);
+
+    meshopt_remapVertexBuffer(normals.data(), normals.data(), normals.size(), sizeof(decltype(normals[0])), remapTable.data());
+    normals.resize(newVertexCount);
+
+    if (texcoord0s.size() > 0) {
+        meshopt_remapVertexBuffer(texcoord0s.data(), texcoord0s.data(), texcoord0s.size(), sizeof(decltype(texcoord0s[0])), remapTable.data());
+        texcoord0s.resize(newVertexCount);
+    }
+
+    if (tangents.size() > 0) {
+        meshopt_remapVertexBuffer(tangents.data(), tangents.data(), tangents.size(), sizeof(decltype(tangents[0])), remapTable.data());
+        tangents.resize(newVertexCount);
+    }
+
+    if (jointIndices.size() > 0) {
+        meshopt_remapVertexBuffer(jointIndices.data(), jointIndices.data(), jointIndices.size(), sizeof(decltype(jointIndices[0])), remapTable.data());
+        jointIndices.resize(newVertexCount);
+    }
+
+    if (jointWeights.size() > 0) {
+        meshopt_remapVertexBuffer(jointWeights.data(), jointWeights.data(), jointWeights.size(), sizeof(decltype(jointWeights[0])), remapTable.data());
+        jointWeights.resize(newVertexCount);
+    }
+}
+
 void MeshSegmentAsset::generateMeshlets()
 {
     SCOPED_PROFILE_ZONE();
@@ -80,25 +244,18 @@ void MeshSegmentAsset::generateTangents()
 {
     SCOPED_PROFILE_ZONE();
 
-    ARKOSE_ASSERT(tangents.size() == 0);
+    tangents.clear();
 
     bool generatedMikktspaceTangents = false;
     if (hasTextureCoordinates()) {
 
         // Generate proper MikkTSpace tangents
 
-        //
         // From the MikkTSpace documentation in mikktspace.h:
-        //
         //   "Note that the results are returned unindexed. It is possible to generate a new index list
         //    But averaging/overwriting tangent spaces by using an already existing index list WILL produce INCRORRECT results.
         //    DO NOT! use an already existing index list."
-        //
-        // So we're doing exactly what they tell us not to do.. What we *should* do is "deindexify" the mesh, generate tangents, and finally re-index it.
-        // The meshopt library provides functionality for doing the re-indexing (meshopt_remapIndexBuffer + meshopt_remapVertexBuffer) so we should probably
-        // go ahead and implement this. HOWEVER, in almost all cases we already have tangents available so we're kind of working with something already, so
-        // ideally we already have the exact index map we'd expect to get after re-indexing. But yeah, this is not correct, and we should fix it.
-        //
+        ARKOSE_ASSERT(!isIndexedMesh());
 
         tangents.resize(vertexCount());
 
@@ -106,8 +263,7 @@ void MeshSegmentAsset::generateTangents()
 
         mikktspaceInterface.m_getNumFaces = [](SMikkTSpaceContext const* pContext) -> int {
             auto* mesh = static_cast<MeshSegmentAsset*>(pContext->m_pUserData);
-            ARKOSE_ASSERT(mesh->indices.size() % 3 == 0);
-            return narrow_cast<int>(mesh->indices.size()) / 3;
+            return narrow_cast<int>(mesh->vertexCount()) / 3;
         };
 
         mikktspaceInterface.m_getNumVerticesOfFace = [](SMikkTSpaceContext const* pContext, const int iFace) -> int {
@@ -116,8 +272,7 @@ void MeshSegmentAsset::generateTangents()
 
         mikktspaceInterface.m_getPosition = [](SMikkTSpaceContext const* pContext, float fvPosOut[], const int iFace, const int iVert) -> void {
             auto* mesh = static_cast<MeshSegmentAsset*>(pContext->m_pUserData);
-            u32 index = mesh->indices[3 * iFace + iVert];
-            vec3 position = mesh->positions[index];
+            vec3 position = mesh->positions[3 * iFace + iVert];
             fvPosOut[0] = position.x;
             fvPosOut[1] = position.y;
             fvPosOut[2] = position.z;
@@ -125,8 +280,7 @@ void MeshSegmentAsset::generateTangents()
 
         mikktspaceInterface.m_getNormal = [](SMikkTSpaceContext const* pContext, float fvNormOut[], const int iFace, const int iVert) -> void {
             auto* mesh = static_cast<MeshSegmentAsset*>(pContext->m_pUserData);
-            u32 index = mesh->indices[3 * iFace + iVert];
-            vec3 normal = mesh->normals[index];
+            vec3 normal = mesh->normals[3 * iFace + iVert];
             fvNormOut[0] = normal.x;
             fvNormOut[1] = normal.y;
             fvNormOut[2] = normal.z;
@@ -134,8 +288,7 @@ void MeshSegmentAsset::generateTangents()
 
         mikktspaceInterface.m_getTexCoord = [](SMikkTSpaceContext const* pContext, float fvTexcOut[], const int iFace, const int iVert) -> void {
             auto* mesh = static_cast<MeshSegmentAsset*>(pContext->m_pUserData);
-            u32 index = mesh->indices[3 * iFace + iVert];
-            vec2 texcoord = mesh->texcoord0s[index];
+            vec2 texcoord = mesh->texcoord0s[3 * iFace + iVert];
             fvTexcOut[0] = texcoord.x;
             fvTexcOut[1] = texcoord.y;
         };
@@ -143,8 +296,7 @@ void MeshSegmentAsset::generateTangents()
         mikktspaceInterface.m_setTSpace = nullptr;
         mikktspaceInterface.m_setTSpaceBasic = [](SMikkTSpaceContext const* pContext, const float fvTangent[], const float fSign, const int iFace, const int iVert) -> void {
             auto* mesh = static_cast<MeshSegmentAsset*>(pContext->m_pUserData);
-            u32 index = mesh->indices[3 * iFace + iVert];
-            vec4& tangent = mesh->tangents[index];
+            vec4& tangent = mesh->tangents[3 * iFace + iVert];
             tangent.x = fvTangent[0];
             tangent.y = fvTangent[1];
             tangent.z = fvTangent[2];
@@ -196,6 +348,13 @@ bool MeshSegmentAsset::hasTextureCoordinates() const
     return texcoord0s.size() > 0;
 }
 
+bool MeshSegmentAsset::hasTangents() const
+{
+    ARKOSE_ASSERT(tangents.size() == 0 || tangents.size() == positions.size());
+    ARKOSE_ASSERT(tangents.size() == 0 || tangents.size() == texcoord0s.size());
+    return tangents.size() > 0;
+}
+
 bool MeshSegmentAsset::hasSkinningData() const
 {
     return jointIndices.size() == jointWeights.size() && jointIndices.size() == vertexCount();
@@ -209,8 +368,14 @@ size_t MeshSegmentAsset::vertexCount() const
     if (texcoord0s.size() > 0) {
         ARKOSE_ASSERT(texcoord0s.size() == count);
 
-        // TODO: Ensure we have tangents whenever we have UVs!
+        // Ensure we have tangents whenever we have texcoords
         //ARKOSE_ASSERT(tangents.size() == count);
+    }
+
+    // Ensure if we have any kind of skinning data, it all adds up
+    if (jointIndices.size() > 0 || jointWeights.size() > 0) {
+        ARKOSE_ASSERT(jointIndices.size() == jointWeights.size());
+        ARKOSE_ASSERT(jointIndices.size() == count);
     }
 
     return count;

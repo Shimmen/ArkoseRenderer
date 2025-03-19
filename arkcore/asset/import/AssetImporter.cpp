@@ -99,8 +99,7 @@ void AssetImportTask::importGltf()
         m_result.images.size() + // compress images
         m_result.images.size() + // writing images
         m_result.materials.size() + // writing materials
-        m_result.meshes.size() + // generate tangents
-        m_result.meshes.size() + // generate meshlets
+        m_result.meshes.size() + // process meshes
         m_result.meshes.size() + // write meshes
         m_result.skeletons.size() + // write skeletons
         m_result.animations.size(); // write animations
@@ -215,35 +214,14 @@ void AssetImportTask::importGltf()
     }
 
     if (m_result.meshes.size() > 0) {
-        m_status = "Generating tangents";
+        m_status = "Processing meshes";
     }
 
-    // Generate MikkTSpace tangents for all meshes in parallel
-    // The meshes may or may not already have tangents, but let's still regenerate them
-    // with the proper MikkTSpace tangent space as it's cheap to do and there are definitely
-    // assets out there with broken and incorrect tangents.
     ParallelFor(result.meshes.size(), [&](size_t idx) {
         auto& mesh = result.meshes[idx];
         for (MeshLODAsset& lod : mesh->LODs) {
             for (MeshSegmentAsset& meshSegment : lod.meshSegments) {
-                meshSegment.tangents.clear();
-                meshSegment.generateTangents();
-            }
-        }
-
-        m_processedItemCount += 1;
-    });
-
-    if (m_result.meshes.size() > 0) {
-        m_status = "Generating meshlets";
-    }
-
-    // Generate meshlets for all meshes in parallel
-    ParallelFor(result.meshes.size(), [&](size_t idx) {
-        auto& mesh = result.meshes[idx];
-        for (MeshLODAsset& lod : mesh->LODs) {
-            for (MeshSegmentAsset& meshSegment : lod.meshSegments) {
-                meshSegment.generateMeshlets();
+                meshSegment.processForImport();
             }
         }
 
