@@ -1,0 +1,12 @@
+# ignore all files, except...
+*
+
+# don't ignore this ignore file
+!.gitignore
+
+# let's keep documentation around
+!*.md
+
+# don't ignore the AssetCooker config files
+!config.toml
+!rules.toml

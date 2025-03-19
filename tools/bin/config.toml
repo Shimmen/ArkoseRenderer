@@ -1,0 +1,20 @@
+# Path to the rule file
+# Extension can be toml or lua.
+RuleFile = "rules.toml"
+
+LogDirectory = "Logs"
+CacheDirectory = "Cache"
+
+WindowTitle = "Asset Cooker for Arkose"
+
+[[Repo]]
+Name = "Assets"
+Path = '../../assets/'
+
+[[Repo]]
+Name = "Imported"
+Path = '../../imported/'
+
+[[Repo]]
+Name = "Tools"
+Path = '.'
