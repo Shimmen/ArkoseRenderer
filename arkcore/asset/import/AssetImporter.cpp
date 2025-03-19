@@ -23,7 +23,6 @@ AssetImportTask::AssetImportTask(std::string_view assetFilePath, std::string_vie
         targetDirectory.remove_suffix(1);
     }
     m_targetDirectory = targetDirectory;
-    m_targetDirectory += "/imported";
     FileIO::ensureDirectory(m_targetDirectory);
 
     if (m_options.blockCompressImages || m_options.generateMipmaps) {
