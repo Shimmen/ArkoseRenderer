@@ -33,7 +33,7 @@ FetchContent_Declare(nativefiledialog-extended
 
 FetchContent_Declare(meshoptimizer
     GIT_REPOSITORY https://github.com/zeux/meshoptimizer.git
-    GIT_TAG        "v0.18")
+    GIT_TAG        "v0.23")
 
 set(TARGET_UNIT_TESTS OFF)
 set(TARGET_HELLO_WORLD OFF)
