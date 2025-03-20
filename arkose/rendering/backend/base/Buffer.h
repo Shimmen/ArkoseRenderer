@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/Types.h"
 #include "rendering/backend/Resource.h"
 #include <vector>
 
