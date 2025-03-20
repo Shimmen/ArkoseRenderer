@@ -45,7 +45,7 @@ public:
 
     explicit ShadercIncluder(ShaderManager const& shaderManager, OnIncludeFileCallback callback)
         : m_shaderManager(shaderManager)
-        , m_onIncludeFileCallback(move(callback))
+        , m_onIncludeFileCallback(std::move(callback))
     {
     }
 
