@@ -18,6 +18,8 @@ public:
     void consumeWhitespace(int count = -1);
     void consumeNewline(int count, char newlineChar = '\n');
 
+    void consumeDelimiter(char delimiter, bool alsoConsumeWhitespace);
+
     // a "standard" symbol in the regex format /[_a-zA-Z][_a-zA-Z0-9]*/
     std::optional<std::string> consumeStandardSymbol();
 

@@ -62,6 +62,21 @@ void ParseContext::consumeNewline(int count, char newlineChar)
     }
 }
 
+void ParseContext::consumeDelimiter(char delimiter, bool alsoConsumeWhitespace)
+{
+    if (alsoConsumeWhitespace) { 
+        consumeWhitespace();
+    }
+
+    if (peekNextCharacter() == delimiter) {
+        consumeCharacter();
+    }
+
+    if (alsoConsumeWhitespace) {
+        consumeWhitespace();
+    }
+}
+
 std::optional<std::string> ParseContext::consumeStandardSymbol()
 {
     std::string symbol = "";
