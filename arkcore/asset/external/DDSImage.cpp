@@ -6,6 +6,9 @@ struct DDSHeader {
     // https://learn.microsoft.com/en-us/windows/win32/direct3d11/texture-block-compression-in-direct3d-11
     // `dxgiformat.h` is used as reference, however not included here, as that header is not available on all platforms.
 
+    static constexpr u32 DDS_MAGIC = 0x20534444;
+
+    static constexpr u32 FOURCC_R32F = 0x72;
     static constexpr u32 FOURCC_DXT1 = 0x31545844;
     static constexpr u32 FOURCC_DXT3 = 0x33545844;
     static constexpr u32 FOURCC_DXT5 = 0x35545844;
@@ -66,7 +69,7 @@ bool DDS::isValidHeader(u8 const* data, size_t size)
     }
 
     u32 magic = *reinterpret_cast<u32 const*>(data);
-    if (magic != 0x20534444) {
+    if (magic != DDSHeader::DDS_MAGIC) {
         return false;
     }
 
@@ -241,4 +244,72 @@ std::vector<ImageMip> DDS::computeMipOffsetAndSize(Extent3D extentMip0, ImageFor
     }
 
     return mips;
+}
+
+bool DDS::writeToFile(std::string_view filePath, u8 const* imageData, size_t imageDataSize, Extent3D extent, ImageFormat format, u32 numMips)
+{
+    size_t fileSize = 4 + sizeof(DDSHeader) + imageDataSize;
+
+    bool hasDX10Header = false;
+    if (imageFormatIsBlockCompressed(format)) {
+        fileSize += sizeof(DDSHeaderDX10);
+        hasDX10Header = true;
+
+        ARKOSE_LOG(Error, "We can't yet handle the DX10 header when writing!");
+        return false;
+    }
+
+    u8* fileData = static_cast<u8*>(malloc(fileSize));
+    if (!fileData) {
+        ARKOSE_LOG(Error, "Failed to allocate memory");
+        return false;
+    }
+
+    u32* magic = reinterpret_cast<u32*>(fileData);
+    *magic = DDSHeader::DDS_MAGIC;
+
+    DDSHeader* header = reinterpret_cast<DDSHeader*>(fileData + 4);
+    memset(header, 0, sizeof(DDSHeader));
+
+    header->flags |= DDSHeader::DDSD_WIDTH;
+    header->width = extent.width();
+
+    header->flags |= DDSHeader::DDSD_HEIGHT;
+    header->height = extent.height();
+
+    if (extent.depth() > 1) {
+        header->flags |= DDSHeader::DDSD_DEPTH;
+        header->depth = extent.depth();
+    }
+
+    if (numMips > 1) {
+        header->flags |= DDSHeader::DDSD_MIPMAPCOUNT;
+        header->mipMapCount = numMips;
+    }
+
+    header->flags |= DDSHeader::DDSD_PIXELFORMAT;
+    switch (format) {
+    case ImageFormat::RGB8:
+        header->pixelFormat.flags |= DDSHeader::DDPF_RGB;
+        break;
+    case ImageFormat::RGBA8:
+        header->pixelFormat.flags |= DDSHeader::DDPF_RGB;
+        header->pixelFormat.flags |= DDSHeader::DDPF_ALPHAPIXELS;
+        break;
+    case ImageFormat::R32F:
+        header->pixelFormat.flags |= DDSHeader::DDPF_FOURCC;
+        header->pixelFormat.fourCC |= DDSHeader::FOURCC_R32F;
+        break;
+    default:
+        NOT_YET_IMPLEMENTED();
+    }
+
+    u8* imageDataStart = fileData + 4 + sizeof(DDSHeader) + (hasDX10Header ? sizeof(DDSHeaderDX10) : 0);
+    memcpy(imageDataStart, imageData, imageDataSize);
+
+    // TODO: Add error handling for writing files!
+    FileIO::ensureDirectoryForFile(std::string(filePath));
+    FileIO::writeBinaryDataToFile(std::string(filePath), fileData, fileSize);
+
+    return true;
 }
