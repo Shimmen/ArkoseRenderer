@@ -178,16 +178,24 @@ float IESProfile::lookupValue(float angleH, float angleV) const
     // at all when we're just applying them to arbitrary virtual light sources in a virtual scene. So in short, don't trust the relative
     // rotation of the values around the forward direction (e.g. for a spot light, the direction of it)
 
+    ARKOSE_ASSERT(angleH >= 0.0f);
+    ARKOSE_ASSERT(angleH <= 360.0f);
+
+    ARKOSE_ASSERT(angleV >= 0.0f);
+    ARKOSE_ASSERT(angleV <= 180.0f);
+
     vec2 lookupLocation {};
     switch (photometricType()) {
 
     case PhotometricType::TypeA: {
-        NOT_YET_IMPLEMENTED();
+
+        lookupLocation = computeLookupLocation(angleH, angleV);
+
         break;
     }
 
     case PhotometricType::TypeB: {
-        NOT_YET_IMPLEMENTED();
+        ARKOSE_LOG(Fatal, "IESProfile: Type B IES profiles are not yet implemented.");
         break;
     }
 
@@ -204,14 +212,27 @@ float IESProfile::lookupValue(float angleH, float angleV) const
         } else if (lastHorizontal == 90) {
 
             // "The luminaire is assumed to be symmetric in each quadrant."
-            NOT_YET_IMPLEMENTED();
+
+            float quadrantAngle = std::fmod(angleH, 90.0f);
+
+            i32 quadrant = static_cast<i32>(angleH / 90.0f);
+            if (quadrant == 1 || quadrant == 3) {
+                quadrantAngle = 90.0f - quadrantAngle;
+            }
+
+            lookupLocation = computeLookupLocation(quadrantAngle, angleV);
 
         } else if (lastHorizontal == 180) {
 
             // "The luminaire is assumed to be bilaterally symmetric about the 0-180 degree photometric plane."
-            lookupLocation = { angleH, angleV };
-            if (angleH >= 180.0f)
-                lookupLocation.x = 180.0f - std::fmod(angleH, 180.0f);
+
+            float planeAngle = std::fmod(angleH, 180.0f);
+
+            if (angleH > 180.0f) {
+                planeAngle = 360.0f - angleH;
+            }
+
+            lookupLocation = computeLookupLocation(planeAngle, angleV);
 
         } else if (lastHorizontal > 180 && lastHorizontal <= 360) {
 
