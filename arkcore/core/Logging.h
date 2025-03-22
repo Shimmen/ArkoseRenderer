@@ -43,7 +43,10 @@ template<LogLevel level, typename... Args>
 {
     _internal_vlog<level>(format, fmt::make_format_args(args...));
 
+    #if !defined( ARKOSE_RELEASE )
     ARK_DEBUG_BREAK();
+    #endif
+
     exit(Logging::FatalErrorExitCode);
 }
 
