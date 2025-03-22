@@ -96,8 +96,7 @@ void IESProfile::parse(const std::string& path)
         ARKOSE_LOG(Fatal, "IESProfile: bad .ies file, invalid lamp count '{}' ('{}')", m_lampCount, path);
         return;
     } else if (m_lampCount != 1) {
-        ARKOSE_LOG(Fatal, "IESProfile: only a lamp count of 1 is supported, found {} ('{}')", m_lampCount, path);
-        return;
+        ARKOSE_LOG(Warning, "IESProfile: only a lamp count of 1 is supported, found {}. Will treat as 1. ('{}')", m_lampCount, path);
     }
 
     m_lumensPerLamp = parseContext.nextAsFloat("lumens per lamp");
@@ -140,6 +139,9 @@ void IESProfile::parse(const std::string& path)
     [[maybe_unused]] float futureUse = parseContext.nextAsFloat("future use");
     m_inputWatts = parseContext.nextAsFloat("input watts");
 
+    // NOTE: The standard specifies that only whitespace characters are allowed to delimit numbers.
+    //       However, there are files out there using commas, so we choose to support this here.
+
     m_anglesV.reserve(numAnglesV);
     float lastAngleV = -std::numeric_limits<float>::infinity();
     for (int vi = 0; vi < numAnglesV; ++vi) {
@@ -148,6 +150,7 @@ void IESProfile::parse(const std::string& path)
             ARKOSE_LOG(Fatal, "IESProfile: bad .ies file, vertical angles should be strictly increasing ('{}')", path);
         m_anglesV.emplace_back(angle);
         lastAngleV = angle;
+        parseContext.consumeDelimiter(',', true);
     }
 
     m_anglesH.reserve(numAnglesH);
@@ -158,12 +161,14 @@ void IESProfile::parse(const std::string& path)
             ARKOSE_LOG(Fatal, "IESProfile: bad .ies file, horizontal angles should be strictly increasing ('{}')", path);
         m_anglesH.emplace_back(angle);
         lastAngleH = angle;
+        parseContext.consumeDelimiter(',', true);
     }
 
     m_candelaValues.reserve(numValues);
     for (int i = 0; i < numValues; ++i) {
         float value = candelaMultiplier * parseContext.nextAsFloat("candela value");
         m_candelaValues.emplace_back(value);
+        parseContext.consumeDelimiter(',', true);
     }
 }
 
