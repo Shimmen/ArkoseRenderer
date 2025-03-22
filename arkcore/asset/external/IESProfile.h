@@ -1,5 +1,6 @@
 #pragma once
 
+#include "core/Types.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -51,6 +52,9 @@ public:
     //float requiredSpotLightConeAngle(float minThreshold) const;
 
     float lookupValue(float angleH, float angleV) const;
+
+    template<typename T>
+    std::vector<T> assembleLookupTextureData(u32 lutSize) const;
 
     template<class Archive>
     std::string save_minimal(Archive const&) const

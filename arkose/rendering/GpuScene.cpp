@@ -938,18 +938,7 @@ void GpuScene::registerLight(SpotLight& light)
         IESProfile const& iesProfile = light.iesProfile();
         constexpr u32 size = 256;
 
-        std::vector<float> pixels {};
-        pixels.reserve(size * size);
-
-        for (u32 y = 0; y < size; ++y) {
-            float horizontal = y / static_cast<float>(size) * 360.0f;
-            for (u32 x = 0; x < size; ++x) {
-                float vertical = x / static_cast<float>(size) * 180.0f;
-
-                float value = iesProfile.lookupValue(horizontal, vertical);
-                pixels.push_back(value);
-            }
-        }
+        std::vector<float> pixels = iesProfile.assembleLookupTextureData<float>(size);
 
         Texture::Description iesLutDesc { .type = Texture::Type::Texture2D,
                                           .arrayCount = 1u,

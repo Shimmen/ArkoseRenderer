@@ -5,6 +5,7 @@
 #include "utility/ParseContext.h"
 #include "utility/Profiling.h"
 #include <ark/vector.h>
+#include <half.hpp>
 #include <cmath>
 
 IESProfile::IESProfile(const std::string& path)
@@ -302,3 +303,25 @@ float IESProfile::getValue(vec2 lookupLocation) const
 
     return value;
 }
+
+template<typename T>
+std::vector<T> IESProfile::assembleLookupTextureData(u32 lutSize) const
+{
+    std::vector<T> pixels {};
+    pixels.reserve(lutSize * lutSize);
+
+    for (u32 y = 0; y < lutSize; ++y) {
+        float horizontal = y / static_cast<float>(lutSize) * 360.0f;
+        for (u32 x = 0; x < lutSize; ++x) {
+            float vertical = x / static_cast<float>(lutSize) * 180.0f;
+
+            T value = static_cast<T>(lookupValue(horizontal, vertical));
+            pixels.push_back(value);
+        }
+    }
+
+    return pixels;
+}
+
+template std::vector<float> IESProfile::assembleLookupTextureData(u32) const;
+template std::vector<half_float::half> IESProfile::assembleLookupTextureData(u32) const;
