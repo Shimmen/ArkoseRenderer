@@ -6,3 +6,11 @@ InputFilters = [
 ]
 CommandLine = '{ Repo:Tools }GltfImportTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }"'
 DepFile = { Path = '{ Repo:Imported }{ Dir }dependencies.dep', Format = 'AssetCooker' }
+
+[[Rule]]
+Name = "Convert IES profile to LUT"
+InputFilters = [ 
+    { Repo = "Assets", PathPattern = "*.ies" },
+]
+CommandLine = '{ Repo:Tools }IESConvertTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }{ File }{ Ext }.dds"'
+OutputPaths = [ '{ Repo:Imported }{ Dir }{ File }{ Ext }.dds' ]

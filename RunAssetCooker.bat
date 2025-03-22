@@ -19,11 +19,12 @@ IF NOT EXIST "tools/bin/AssetCooker.exe" (
 
 echo(
 echo ====================================
-echo == Ensure GltfImportTool is built ==
+echo ====== Ensure tools are built ======
 echo ====================================
 echo(
 
 cmake --build build --target GltfImportTool --config Release
+cmake --build build --target IESConvertTool --config Release
 
 echo(
 echo ====================================
