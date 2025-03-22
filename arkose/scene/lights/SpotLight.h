@@ -1,7 +1,7 @@
 #pragma once
 
+#include "asset/external/IESProfile.h"
 #include "scene/lights/Light.h"
-#include "scene/lights/IESProfile.h"
 #include "scene/Transform.h"
 #include <ark/color.h>
 #include <ark/transform.h>
@@ -26,8 +26,6 @@ public:
 
     bool hasIesProfile() const { return true; }
     const IESProfile& iesProfile() const { return m_iesProfile; }
-
-    static constexpr int IESLookupTextureSize = 256;
 
 private:
 

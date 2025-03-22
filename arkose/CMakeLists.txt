@@ -231,8 +231,6 @@ set(ARKOSE_SOURCES
     # lights
     arkose/scene/lights/DirectionalLight.cpp
     arkose/scene/lights/DirectionalLight.h
-    arkose/scene/lights/IESProfile.cpp
-    arkose/scene/lights/IESProfile.h
     arkose/scene/lights/Light.cpp
     arkose/scene/lights/Light.h
     arkose/scene/lights/LightAttenuation.cpp

@@ -935,8 +935,38 @@ void GpuScene::registerLight(SpotLight& light)
 {
     TextureHandle iesLutHandle {};
     if (light.hasIesProfile()) {
-        auto iesLut = light.iesProfile().createLookupTexture(backend(), SpotLight::IESLookupTextureSize);
-        iesLut->setName("IES-LUT:" + light.iesProfile().path());
+        IESProfile const& iesProfile = light.iesProfile();
+        constexpr u32 size = 256;
+
+        std::vector<float> pixels {};
+        pixels.reserve(size * size);
+
+        for (u32 y = 0; y < size; ++y) {
+            float horizontal = y / static_cast<float>(size) * 360.0f;
+            for (u32 x = 0; x < size; ++x) {
+                float vertical = x / static_cast<float>(size) * 180.0f;
+
+                float value = iesProfile.lookupValue(horizontal, vertical);
+                pixels.push_back(value);
+            }
+        }
+
+        Texture::Description iesLutDesc { .type = Texture::Type::Texture2D,
+                                          .arrayCount = 1u,
+                                          .extent = { size, size, 1 },
+                                          .format = Texture::Format::R32F,
+                                          .filter = Texture::Filters::linear(),
+                                          .wrapMode = ImageWrapModes::clampAllToEdge(),
+                                          .mipmap = Texture::Mipmap::None,
+                                          .multisampling = Texture::Multisampling::None };
+
+        auto iesLut = backend().createTexture(iesLutDesc);
+
+        uint8_t* data = reinterpret_cast<uint8_t*>(pixels.data());
+        size_t byteSize = pixels.size() * sizeof(float);
+        iesLut->setData(data, byteSize, 0, 0);
+
+        iesLut->setName("IES-LUT:" + iesProfile.path());
         iesLutHandle = registerTexture(std::move(iesLut));
     }
 

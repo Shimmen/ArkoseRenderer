@@ -22,6 +22,8 @@ set(ARKCORE_SOURCES
     arkcore/asset/external/CubeLUT.h
     arkcore/asset/external/DDSImage.cpp
     arkcore/asset/external/DDSImage.h
+    arkcore/asset/external/IESProfile.cpp
+    arkcore/asset/external/IESProfile.h
     # import
     arkcore/asset/import/AssetImporter.cpp
     arkcore/asset/import/AssetImporter.h

@@ -2,8 +2,6 @@
 
 #include "core/Assert.h"
 #include "core/Logging.h"
-#include "rendering/Registry.h"
-#include "rendering/backend/Resources.h"
 #include "utility/ParseContext.h"
 #include "utility/Profiling.h"
 #include <ark/vector.h>
@@ -54,44 +52,6 @@ float IESProfile::requiredSpotLightConeAngle(float minThreshold) const
     return angle;
 }
 */
-
-std::unique_ptr<Texture> IESProfile::createLookupTexture(Backend& backend, int size) const
-{
-    SCOPED_PROFILE_ZONE();
-
-    std::vector<float> pixels {};
-    pixels.reserve((size_t)size * (size_t)size);
-
-    for (int y = 0; y < size; ++y) {
-        float horizontal = y / static_cast<float>(size) * 360.0f;
-        for (int x = 0; x < size; ++x) {
-            float vertical = x / static_cast<float>(size) * 180.0f;
-
-            float value = lookupValue(horizontal, vertical);
-            pixels.push_back(value);
-        }
-    }
-
-    Texture::Description desc {
-        .type = Texture::Type::Texture2D,
-        .arrayCount = 1u,
-        .extent = { static_cast<uint32_t>(size), static_cast<uint32_t>(size), 1 },
-        .format = Texture::Format::R32F,
-        .filter = Texture::Filters::linear(),
-        .wrapMode = ImageWrapModes::clampAllToEdge(),
-        .mipmap = Texture::Mipmap::None,
-        .multisampling = Texture::Multisampling::None
-    };
-
-    // validateTextureDescription(desc);
-    auto texture = backend.createTexture(desc);
-
-    uint8_t* data = reinterpret_cast<uint8_t*>(pixels.data());
-    size_t byteSize = pixels.size() * sizeof(float);
-    texture->setData(data, byteSize, 0, 0);
-
-    return texture;
-}
 
 void IESProfile::parse(const std::string& path)
 {
