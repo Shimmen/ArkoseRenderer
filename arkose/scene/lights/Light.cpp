@@ -35,13 +35,8 @@ void Light::drawGui()
     ImGui::ColorEdit3("Color", m_color.asFloatPointer());
 }
 
-vec3 Light::forwardDirection() const
-{
-    return ark::rotateVector(transform().orientationInWorld(), ark::globalForward);
-}
-
 mat4 Light::lightViewMatrix() const
 {
     vec3 position = transform().positionInWorld();
-    return ark::lookAt(position, position + forwardDirection());
+    return ark::lookAt(position, position + transform().forward());
 }

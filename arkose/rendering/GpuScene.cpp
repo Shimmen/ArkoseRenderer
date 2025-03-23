@@ -653,8 +653,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 dirLightData.emplace_back(DirectionalLightData { .color = light.color().asVec3() * light.intensityValue() * lightPreExposure(),
                                                                  .exposure = lightPreExposure(),
-                                                                 .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0),
-                                                                 .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0),
+                                                                 .worldSpaceDirection = vec4(light.transform().forward(), 0.0),
+                                                                 .viewSpaceDirection = viewFromWorld * vec4(light.transform().forward(), 0.0),
                                                                  .lightProjectionFromWorld = light.viewProjection(),
                                                                  .lightProjectionFromView = light.viewProjection() * worldFromView });
             }
@@ -685,8 +685,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 spotLightData.emplace_back(SpotLightData { .color = light.color().asVec3() * light.intensityValue() * lightPreExposure(),
                                                            .exposure = lightPreExposure(),
-                                                           .worldSpaceDirection = vec4(normalize(light.forwardDirection()), 0.0f),
-                                                           .viewSpaceDirection = viewFromWorld * vec4(normalize(light.forwardDirection()), 0.0f),
+                                                           .worldSpaceDirection = vec4(light.transform().forward(), 0.0),
+                                                           .viewSpaceDirection = viewFromWorld * vec4(light.transform().forward(), 0.0),
                                                            .lightProjectionFromWorld = light.viewProjection(),
                                                            .lightProjectionFromView = light.viewProjection() * worldFromView,
                                                            .worldSpacePosition = vec4(light.transform().positionInWorld(), 0.0f),

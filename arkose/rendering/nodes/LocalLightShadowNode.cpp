@@ -233,7 +233,7 @@ void LocalLightShadowNode::drawSpotLightShadowMap(CommandList& cmdList, GpuScene
     Extent2D effectiveShadowMapExtent = { shadowMapAllocation.rect.size.x, shadowMapAllocation.rect.size.y };
 
     cmdList.setNamedUniform<mat4>("lightProjectionFromWorld", lightProjectionFromWorld);
-    cmdList.setNamedUniform<vec3>("worldLightDirection", light.forwardDirection());
+    cmdList.setNamedUniform<vec3>("worldLightDirection", light.transform().forward());
     cmdList.setNamedUniform<float>("constantBias", light.constantBias(effectiveShadowMapExtent));
     cmdList.setNamedUniform<float>("slopeBias", light.slopeBias(effectiveShadowMapExtent));
 

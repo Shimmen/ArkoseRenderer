@@ -35,9 +35,6 @@ public:
     virtual bool shouldDrawGui() const override;
     virtual void drawGui() override;
 
-    // Direction of outgoing light, i.e. -L in a BRDF
-    virtual vec3 forwardDirection() const;
-
     virtual mat4 lightViewMatrix() const;
 
     virtual float intensityValue() const = 0;

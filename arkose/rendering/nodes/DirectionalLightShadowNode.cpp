@@ -82,7 +82,7 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
             cmdList.beginRendering(renderState, ClearValue::blackAtMaxDepth());
 
             cmdList.setNamedUniform<mat4>("lightProjectionFromWorld", lightProjectionFromWorld);
-            cmdList.setNamedUniform<vec3>("worldLightDirection", light->forwardDirection());
+            cmdList.setNamedUniform<vec3>("worldLightDirection", light->transform().forward());
             cmdList.setNamedUniform<float>("constantBias", light->constantBias(m_shadowMap->extent()));
             cmdList.setNamedUniform<float>("slopeBias", light->slopeBias(m_shadowMap->extent()));
 
