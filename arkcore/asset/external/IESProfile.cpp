@@ -146,6 +146,7 @@ void IESProfile::parse(const std::string& path)
     float lastAngleV = -std::numeric_limits<float>::infinity();
     for (int vi = 0; vi < numAnglesV; ++vi) {
         float angle = parseContext.nextAsFloat("v angle");
+        ARKOSE_ASSERT(angle >= 0.0f && angle <= 180.0f);
         if (angle <= lastAngleV)
             ARKOSE_LOG(Fatal, "IESProfile: bad .ies file, vertical angles should be strictly increasing ('{}')", path);
         m_anglesV.emplace_back(angle);
@@ -157,6 +158,7 @@ void IESProfile::parse(const std::string& path)
     float lastAngleH = -std::numeric_limits<float>::infinity();
     for (int hi = 0; hi < numAnglesH; ++hi) {
         float angle = parseContext.nextAsFloat("h angle");
+        ARKOSE_ASSERT(angle >= 0.0f && angle <= 360.0f);
         if (angle <= lastAngleH)
             ARKOSE_LOG(Fatal, "IESProfile: bad .ies file, horizontal angles should be strictly increasing ('{}')", path);
         m_anglesH.emplace_back(angle);
@@ -228,7 +230,7 @@ float IESProfile::lookupValue(float angleH, float angleV) const
 
             float planeAngle = std::fmod(angleH, 180.0f);
 
-            if (angleH > 180.0f) {
+            if (angleH >= 180.0f) {
                 planeAngle = 360.0f - angleH;
             }
 
@@ -290,7 +292,7 @@ vec2 IESProfile::computeLookupLocation(float angleH, float angleV) const
             else if (angle > midVal)
                 startIdx = midIdx;
             else if (angle < midVal)
-                endIdx = midIdx - 1;
+                endIdx = midIdx;
         }
 
         // We landed right on the correct value, return its index
