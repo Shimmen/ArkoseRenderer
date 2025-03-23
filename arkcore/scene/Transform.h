@@ -47,6 +47,10 @@ public:
     void setPositionInWorld(vec3 worldPosition);
     void setOrientationInWorld(quat worldOrientation);
 
+    vec3 right() const { return ark::rotateVector(orientationInWorld(), ark::globalRight); }
+    vec3 up() const { return ark::rotateVector(orientationInWorld(), ark::globalUp); }
+    vec3 forward() const { return ark::rotateVector(orientationInWorld(), ark::globalForward); }
+
     void set(vec3 translation, quat orientation, vec3 scale = vec3(1.0f))
     {
         setTranslation(translation);
