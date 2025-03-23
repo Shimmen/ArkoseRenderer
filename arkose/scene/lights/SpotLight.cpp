@@ -43,6 +43,9 @@ void SpotLight::drawGui()
 
     ImGui::SliderFloat("Luminous intensity (cd)", &m_luminousIntensity, 0.0f, 1'000.0f);
 
+    std::string coneAngleDeg = fmt::format("{:.1f} degrees", ark::toDegrees(m_outerConeAngle));
+    ImGui::SliderFloat("Max cone angle", &m_outerConeAngle, ark::toRadians(1.0f), ark::toRadians(179.0f), coneAngleDeg.c_str());
+
     ImGui::Separator();
 
     if (ImGui::TreeNode("Shadow mapping controls")) {
