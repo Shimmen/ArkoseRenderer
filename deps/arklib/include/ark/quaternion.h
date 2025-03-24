@@ -211,7 +211,7 @@ constexpr tquat<T> quatFromEulerAngles(const tvec3<T>& euler)
 }
 
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
-constexpr tmat4<T> quatToMatrix(const tquat<T>& q)
+constexpr tmat3<T> quatToMatrix(const tquat<T>& q)
 {
     // This function is a rewritten version of mat4x4_from_quat from https://github.com/datenwolf/linmath.h
 
@@ -224,27 +224,19 @@ constexpr tmat4<T> quatToMatrix(const tquat<T>& q)
     T c2 = square(c);
     T d2 = square(d);
 
-    tmat4<T> res;
+    tmat3<T> res;
 
     res.x.x = a2 + b2 - c2 - d2;
     res.x.y = static_cast<T>(2) * (b * c + a * d);
     res.x.z = static_cast<T>(2) * (b * d - a * c);
-    res.x.w = static_cast<T>(0);
 
     res.y.x = static_cast<T>(2) * (b * c - a * d);
     res.y.y = a2 - b2 + c2 - d2;
     res.y.z = static_cast<T>(2) * (c * d + a * b);
-    res.y.w = static_cast<T>(0);
 
     res.z.x = static_cast<T>(2) * (b * d + a * c);
     res.z.y = static_cast<T>(2) * (c * d - a * b);
     res.z.z = a2 - b2 - c2 + d2;
-    res.z.w = static_cast<T>(0);
-
-    res.w.x = static_cast<T>(0);
-    res.w.y = static_cast<T>(0);
-    res.w.z = static_cast<T>(0);
-    res.w.w = static_cast<T>(1);
 
     return res;
 }

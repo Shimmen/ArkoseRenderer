@@ -59,7 +59,7 @@ constexpr tmat4<T> translate(const tvec3<T>& v)
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
 constexpr tmat4<T> rotate(const tquat<T>& q)
 {
-    return quatToMatrix(q);
+    return tmat4<T>(quatToMatrix(q));
 }
 
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
