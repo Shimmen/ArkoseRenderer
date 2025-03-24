@@ -111,8 +111,10 @@ vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, floa
 
         float distanceAttenuation = 1.0 / square(distanceToLight); // epsilon term??
 
-        float cosConeAngle = dot(L, normalizedToLight);
-        float iesValue = evaluateIESLookupTable(material_getTexture(light.iesProfileIndex), light.outerConeHalfAngle, cosConeAngle);
+        mat3 lightViewMatrix = mat3(light.worldSpaceRight.xyz,
+                                    light.worldSpaceUp.xyz,
+                                    light.worldSpaceDirection.xyz);
+        float iesValue = evaluateIESLookupTable(material_getTexture(light.iesProfileIndex), light.outerConeHalfAngle, lightViewMatrix, -normalizedToLight);
 
         vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
         vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;

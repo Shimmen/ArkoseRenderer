@@ -20,18 +20,23 @@
 #define light_getSpotLight(index) _spotLights[index]
 
 
-float evaluateIESLookupTable(sampler2D iesLUT, float outerConeHalfAngle, float cosAngle/*, theOtherAngle*/)
+float evaluateIESLookupTable(sampler2D iesLUT, float outerConeHalfAngle, mat3 lightMatrix, vec3 lightRayDir)
 {
-    if (cosAngle <= 0.0) {
+    float angleV = dot(lightRayDir, lightMatrix[2]);
+
+    // NOTE: Since this light is shadow mapped we can't handle angles >=90 so we might as well return black for those.
+    // If we use ray-traced shadows we can support any angle here and don't need to consider this, or the outer/max angle.
+    if (angleV <= 0.0) {
         return 0.0;
     }
 
-    // TODO: This is not 100% correct..
-    // And we're only evaluating one of the angles, obviously..
-    float x = acos(cosAngle) / (2.0 * outerConeHalfAngle);
-    float y = 0.5;
+    float hx = dot(lightRayDir, lightMatrix[0]);
+    float hy = dot(lightRayDir, lightMatrix[1]);
+    float angleH = atan(hy, hx) + PI;
 
-    vec2 lookup = vec2(x, y);
+    vec2 lookup;
+    lookup.x = acos(angleV) / (2.0 * outerConeHalfAngle);
+    lookup.y = clamp(angleH / TWO_PI, 0.0, 1.0);
 
     return textureLod(iesLUT, lookup, 0.0).r;
 }

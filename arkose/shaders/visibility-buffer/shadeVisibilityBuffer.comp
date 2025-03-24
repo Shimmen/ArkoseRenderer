@@ -133,8 +133,10 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 viewSpacePos, v
     float dist = length(toLight);
     float distanceAttenuation = 1.0 / square(dist);
 
-    float cosConeAngle = dot(L, toLight / dist);
-    float iesValue = evaluateIESLookupTable(material_getTexture(light.iesProfileIndex), light.outerConeHalfAngle, cosConeAngle);
+    mat3 lightViewMatrix = mat3(light.viewSpaceRight.xyz,
+                                light.viewSpaceUp.xyz,
+                                light.viewSpaceDirection.xyz);
+    float iesValue = evaluateIESLookupTable(material_getTexture(light.iesProfileIndex), light.outerConeHalfAngle, lightViewMatrix, -toLight / dist);
 
     vec3 F;
     vec3 specular = specularBRDF(L, V, N, baseColor, roughness, metallic, F);

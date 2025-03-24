@@ -121,8 +121,10 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3
     float dist = length(toLight);
     float distanceAttenuation = 1.0 / square(dist);
 
-    float cosConeAngle = dot(L, toLight / dist);
-    float iesValue = evaluateIESLookupTable(material_getTexture(light.iesProfileIndex), light.outerConeHalfAngle, cosConeAngle);
+    mat3 lightViewMatrix = mat3(light.viewSpaceRight.xyz,
+                                light.viewSpaceUp.xyz,
+                                light.viewSpaceDirection.xyz);
+    float iesValue = evaluateIESLookupTable(material_getTexture(light.iesProfileIndex), light.outerConeHalfAngle, lightViewMatrix, -toLight / dist);
 
 #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
     vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);

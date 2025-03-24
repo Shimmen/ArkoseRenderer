@@ -41,6 +41,11 @@ struct SpotLightData {
     mat4 lightProjectionFromWorld;
     mat4 lightProjectionFromView;
 
+    vec4 worldSpaceRight;
+    vec4 worldSpaceUp;
+    vec4 viewSpaceRight;
+    vec4 viewSpaceUp;
+
     vec4 worldSpacePosition;
     vec4 viewSpacePosition;
 
