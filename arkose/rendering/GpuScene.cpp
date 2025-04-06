@@ -959,7 +959,7 @@ void GpuScene::registerLight(SpotLight& light)
         size_t byteSize = pixels.size() * sizeof(float);
         iesLut->setData(data, byteSize, 0, 0);
 
-        iesLut->setName("IES-LUT:" + iesProfile.path());
+        iesLut->setName("IES-LUT:" + iesProfile.path().generic_string());
         iesLutHandle = registerTexture(std::move(iesLut));
     }
 

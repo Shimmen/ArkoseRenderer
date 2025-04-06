@@ -54,7 +54,7 @@ float IESProfile::requiredSpotLightConeAngle(float minThreshold) const
 }
 */
 
-void IESProfile::parse(const std::string& path)
+void IESProfile::parse(std::filesystem::path const& path)
 {
     // We should never call parse a second time
     ARKOSE_ASSERT(m_anglesV.size() == 0 && m_anglesH.size() == 0 && m_candelaValues.size() == 0);

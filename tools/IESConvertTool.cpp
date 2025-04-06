@@ -12,10 +12,10 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    std::string inputFile = argv[1];
+    std::filesystem::path inputFile = argv[1];
     ARKOSE_LOG(Info, "IESConvertTool: converting IES file '{}'", inputFile);
 
-    std::string outputFile = argv[2];
+    std::filesystem::path outputFile = argv[2];
     ARKOSE_LOG(Info, "IESConvertTool: will write DDS file to '{}'", outputFile);
 
     // Load the IES profile

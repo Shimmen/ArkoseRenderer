@@ -39,13 +39,13 @@ public:
     IESProfile(IESProfile&) = delete;
     IESProfile& operator=(IESProfile&) = delete;
 
-    void load(std::string const& path)
+    void load(std::filesystem::path const& path)
     {
         m_path = path;
         parse(m_path);
     }
 
-    const std::string& path() const { return m_path; }
+    std::filesystem::path const& path() const { return m_path; }
     UnitsType unitsType() const { return m_unitsType; }
     PhotometricType photometricType() const { return m_photometricType; }
 
@@ -59,7 +59,7 @@ public:
     template<class Archive>
     std::string save_minimal(Archive const&) const
     {
-        return m_path;
+        return m_path.string();
     }
 
     template<class Archive>
@@ -71,8 +71,8 @@ public:
 
 private:
 
-    void parse(const std::string& path);
-    std::string m_path;
+    void parse(std::filesystem::path const& path);
+    std::filesystem::path m_path;
 
     vec2 computeLookupLocation(float angleH, float angleV) const;
     float getValue(vec2 lookupLocation) const;
