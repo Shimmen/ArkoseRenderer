@@ -179,7 +179,7 @@ void AssetImportTask::importGltf()
                     std::filesystem::path const& imagePath = (!image->hasSourceAsset() || options.alwaysMakeImageAsset)
                         ? image->assetFilePath()
                         : image->sourceAssetFilePath();
-                    materialInput->setPathToImage(imagePath.string());
+                    materialInput->setPathToImage(imagePath.generic_string());
                 }
             }
         };
@@ -238,7 +238,7 @@ void AssetImportTask::importGltf()
                     int gltfIdx = meshSegment.userData;
                     ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < narrow_cast<int>(result.materials.size()));
                     auto& material = result.materials[gltfIdx];
-                    meshSegment.setPathToMaterial(material->assetFilePath().string());
+                    meshSegment.setPathToMaterial(material->assetFilePath().generic_string());
                 }
             }
         }

@@ -236,7 +236,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
     if (m_targetAsset && m_targetInstance) {
 
         MeshAsset const& meshAsset = *m_targetAsset;
-        std::string meshPath = meshAsset.assetFilePath().string();
+        std::string meshPath = meshAsset.assetFilePath().generic_string();
 
         ImGui::Text("%s", meshPath.c_str());
         if (ImGui::Button("Save")) {
@@ -344,7 +344,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
                     if (auto maybePath = FileDialog::open({ { "Arkose material", MaterialAsset::AssetFileExtension } })) {
                         std::filesystem::path newMaterialPath = maybePath.value();
                         if (MaterialAsset* newMaterialAsset = MaterialAsset::load(newMaterialPath)) {
-                            segmentAsset->setPathToMaterial(newMaterialPath.string()); // TODO: Avoid setting an absolute path here!
+                            segmentAsset->setPathToMaterial(newMaterialPath.generic_string()); // TODO: Avoid setting an absolute path here!
                             selectedSegment()->setMaterial(newMaterialAsset, m_scene->gpuScene());
                         }
                     }
@@ -381,7 +381,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
                     material->writeToFile(newMaterialPath, AssetStorage::Json);
                     // Then immediately load it and make it the material for this segment (all other segments still use the old one)
                     if (MaterialAsset* newMaterialAsset = MaterialAsset::load(newMaterialPath)) {
-                        segmentAsset->setPathToMaterial(newMaterialPath.string()); // TODO: Avoid setting an absolute path here!
+                        segmentAsset->setPathToMaterial(newMaterialPath.generic_string()); // TODO: Avoid setting an absolute path here!
                         selectedSegment()->setMaterial(newMaterialAsset, m_scene->gpuScene());
                         material = newMaterialAsset;
                     }
@@ -403,7 +403,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
                                                                     { "jpeg", "jpeg,jpg" } })) {
                                 std::filesystem::path newImagePath = maybePath.value();
                                 if (ImageAsset* newImageAsset = ImageAsset::loadOrCreate(newImagePath)) {
-                                    materialInput->setPathToImage(newImagePath.string());
+                                    materialInput->setPathToImage(newImagePath.generic_string());
                                     didChange |= true;
                                 }
                             }
@@ -800,7 +800,7 @@ void MeshViewerApp::drawBakeUiIfActive()
                 // Let's hope no other object is using this material, because now we're saving object-specific data to it :)
                 // Really though, this should only be done for non-trimsheet-style materials, but for object specific ones.
                 if (MaterialAsset* material = MaterialAsset::load(std::string(selectedSegmentAsset()->pathToMaterial()))) {
-                    material->bentNormalMap = MaterialInput(aoImage->assetFilePath().string());
+                    material->bentNormalMap = MaterialInput(aoImage->assetFilePath().generic_string());
                     material->bentNormalMap->wrapModes = ImageWrapModes::clampAllToEdge();
                     material->writeToFile(material->assetFilePath(), AssetStorage::Json);
                     // Re-register the material for the segment
