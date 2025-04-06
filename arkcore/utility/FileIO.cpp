@@ -2,149 +2,45 @@
 
 #include "core/Assert.h"
 #include "core/Logging.h"
-#include "utility/Profiling.h"
-#include <fstream>
 
-#ifdef WIN32
-#include <sys/stat.h>
-#include <Windows.h>
-#else
-#endif
-
-void FileIO::ensureDirectory(const std::string& directoryPath)
+bool FileIO::fileReadable(std::filesystem::path const& filePath)
 {
-    SCOPED_PROFILE_ZONE();
-
-#if defined(WIN32)
-    // Well, this is fucking stupid..
-    size_t index = indexOfFirstSlash(directoryPath);
-    size_t offset = 0;
-    while (index != std::string::npos) {
-        std::string directoryBasePath = directoryPath.substr(0, index);
-        CreateDirectory(directoryBasePath.c_str(), NULL);
-
-        offset = index + 1;
-        index = indexOfFirstSlash(directoryPath, offset);
-    }
-    CreateDirectory(directoryPath.c_str(), NULL);
-#else
-    // TODO: Implement for this platform!
-    NOT_YET_IMPLEMENTED();
-#endif
+    return std::filesystem::exists(filePath);
 }
 
-void FileIO::ensureDirectoryForFile(const std::string& filePath)
+void FileIO::ensureDirectory(std::filesystem::path const& directoryPath)
 {
-    std::string directoryPath = filePath.substr(0, indexOfLashSlash(filePath));
-    ensureDirectory(directoryPath);
+    std::filesystem::create_directories(directoryPath);
 }
 
-size_t FileIO::indexOfLashSlash(std::string_view path)
+void FileIO::ensureDirectoryForFile(std::filesystem::path const& filePath)
 {
-    size_t lastSlash = path.rfind('/');
-
-    if (lastSlash == std::string::npos) {
-        lastSlash = path.rfind('\\');
-    }
-
-    return lastSlash;
-}
-
-size_t FileIO::indexOfFirstSlash(std::string_view path, size_t offset)
-{
-    size_t firstSlash = path.find_first_of('/', offset);
-
-    if (firstSlash == std::string::npos) {
-        firstSlash = path.find_first_of('\\', offset);
-    }
-
-    return firstSlash;
-}
-
-std::string_view FileIO::extractDirectoryFromPath(std::string_view path)
-{
-    size_t lastSlash = indexOfLashSlash(path);
-    if (lastSlash == std::string::npos) {
-        return "";
-    }
-
-    // Remove filename, keep the final '/'
-    path.remove_suffix(path.length() - lastSlash - 1);
-    return path;
-}
-
-
-std::string_view FileIO::extractFileNameFromPath(std::string_view path)
-{
-    size_t lastSlash = indexOfLashSlash(path);
-    if (lastSlash == std::string::npos) {
-        return "";
-    }
-
-    path.remove_prefix(lastSlash + 1);
-    return path;
-}
-
-std::string_view FileIO::removeExtensionFromPath(std::string_view path)
-{
-    size_t lastDot = path.find_last_of('.');
-    if (lastDot != std::string::npos) {
-        return path.substr(0, lastDot);
+    if (filePath.has_stem()) {
+        return ensureDirectory(filePath.parent_path());
     } else {
-        return path;
+        return ensureDirectory(filePath);
     }
 }
 
-std::string FileIO::normalizePath(std::string_view absolutePath)
-{
-    std::string normalizedPath = std::string(absolutePath);
-
-    for (char& c : normalizedPath) {
-        if (c == '\\') {
-            c = '/';
-        }
-    }
-
-    size_t idxOfAssetsDir = normalizedPath.find("/assets/");
-    if (idxOfAssetsDir != std::string::npos) {
-        normalizedPath = normalizedPath.substr(idxOfAssetsDir + 1);
-    }
-
-    return normalizedPath;
-}
-
-uint8_t* FileIO::readBinaryDataFromFileRawPtr(const std::string& filePath, size_t* outSize)
+void FileIO::writeTextDataToFile(std::filesystem::path const& filePath, std::string_view text)
 {
     SCOPED_PROFILE_ZONE();
 
-    // Open file as binary and immediately seek to the end
-    std::ifstream file(filePath, std::ios::ate | std::ios::binary);
-    if (!file.is_open())
-        return nullptr;
+    ensureDirectoryForFile(filePath);
 
-    size_t dataSize = file.tellg();
-    uint8_t* data = reinterpret_cast<uint8_t*>(malloc(dataSize));
+    std::ofstream file;
+    file.open(filePath, std::ios::out | std::ios::trunc);
 
-    file.seekg(0);
-    file.read(reinterpret_cast<char*>(data), dataSize);
-
-    file.close();
-
-    if (outSize != nullptr) {
-        *outSize = dataSize;
+    if (!file.is_open()) {
+        ARKOSE_LOG(Fatal, "Could not create file '{}' for writing text data", filePath);
+        return;
     }
 
-    return data;
+    file.write(text.data(), text.size());
+    file.close();
 }
 
-void FileIO::writeTextDataToFile(const std::string& filePath, const std::string& text)
-{
-    const char* textData = text.data();
-    size_t sizeInBytes = text.size();
-    writeBinaryDataToFile(filePath, textData, sizeInBytes);
-}
-
-void FileIO::writeBinaryDataToFile(const std::string& filePath, const char* data, size_t size)
+void FileIO::writeBinaryDataToFile(std::filesystem::path const& filePath, std::byte const* data, size_t size)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -158,19 +54,19 @@ void FileIO::writeBinaryDataToFile(const std::string& filePath, const char* data
         return;
     }
 
-    file.write(data, size);
+    file.write(reinterpret_cast<char const*>(data), size);
     file.close();
 }
 
-std::optional<std::string> FileIO::readEntireFile(const std::string& filePath)
+std::optional<std::string> FileIO::readFile(std::filesystem::path const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    // Open file as binary and immediately seek to the end
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);
 
-    if (!file.is_open())
+    if (!file.is_open()) {
         return {};
+    }
 
     std::string contents {};
 
@@ -184,12 +80,13 @@ std::optional<std::string> FileIO::readEntireFile(const std::string& filePath)
     return contents;
 }
 
-bool FileIO::readFileLineByLine(const std::string& filePath, std::function<LoopAction(const std::string&)> lineCallback)
+bool FileIO::readFileLineByLine(std::filesystem::path const& filePath, std::function<LoopAction(std::string const& line)> lineCallback)
 {
     std::ifstream file(filePath);
 
-    if (!file.is_open())
+    if (!file.is_open()) {
         return false;
+    }
 
     std::string line;
     while (std::getline(file, line)) {
@@ -200,20 +97,4 @@ bool FileIO::readFileLineByLine(const std::string& filePath, std::function<LoopA
     }
 
     return true;
-}
-
-bool FileIO::isFileReadable(const std::string& filePath)
-{
-    SCOPED_PROFILE_ZONE();
-
-#ifdef WIN32
-    struct _stat statObject;
-    int result = _stat(filePath.c_str(), &statObject);
-    return result == 0;
-#else
-    // TODO: Use stat for other platforms too. Should work the same, but can't test that now..
-    std::ifstream file(filePath);
-    bool isGood = file.good();
-    return isGood;
-#endif
 }

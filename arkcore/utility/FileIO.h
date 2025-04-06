@@ -1,7 +1,9 @@
 #pragma once
 
+#include "core/Types.h"
 #include "utility/Profiling.h"
 #include <optional>
+#include <filesystem>
 #include <functional>
 #include <fstream>
 #include <string>
@@ -9,60 +11,45 @@
 
 namespace FileIO {
 
-void ensureDirectory(const std::string& directoryPath);
-void ensureDirectoryForFile(const std::string& filePath);
+bool fileReadable(std::filesystem::path const& filePath);
 
-size_t indexOfLashSlash(std::string_view path);
-size_t indexOfFirstSlash(std::string_view path, size_t offset = 0);
-std::string_view extractDirectoryFromPath(std::string_view path);
-std::string_view extractFileNameFromPath(std::string_view path);
-std::string_view removeExtensionFromPath(std::string_view path);
+void ensureDirectory(std::filesystem::path const& directoryPath);
+void ensureDirectoryForFile(std::filesystem::path const& filePath);
 
-std::string normalizePath(std::string_view absolutePath);
+void writeTextDataToFile(std::filesystem::path const& filePath, std::string_view text);
+void writeBinaryDataToFile(std::filesystem::path const& filePath, std::byte const* data, size_t size);
+
+std::optional<std::string> readFile(std::filesystem::path const& filePath);
+bool readFileLineByLine(std::filesystem::path const& filePath, std::function<LoopAction(const std::string& line)>);
 
 template<typename T>
-std::optional<std::vector<T>> readBinaryDataFromFile(const std::string& filePath)
+void writeBinaryDataToFile(std::filesystem::path const& filePath, const std::vector<T>& vector)
+{
+    std::byte const* data = reinterpret_cast<std::byte const*>(vector.data());
+    size_t size = sizeof(T) * vector.size();
+
+    writeBinaryDataToFile(filePath, data, size);
+}
+
+template<typename T>
+std::optional<std::vector<T>> readBinaryDataFromFile(std::filesystem::path const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    // Open file as binary and immediately seek to the end
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);
-    if (!file.is_open())
+    if (!file.is_open()) {
         return {};
+    }
 
     size_t sizeInBytes = file.tellg();
     size_t sizeInTs = sizeInBytes / sizeof(T);
     std::vector<T> binaryData(sizeInTs);
 
     file.seekg(0);
-    file.read((char*)binaryData.data(), sizeInBytes);
+    file.read(reinterpret_cast<char*>(binaryData.data()), sizeInBytes);
 
     file.close();
     return binaryData;
 }
-
-uint8_t* readBinaryDataFromFileRawPtr(const std::string& filePath, size_t* outSize);
-
-void writeTextDataToFile(const std::string& filePath, const std::string& text);
-void writeBinaryDataToFile(const std::string& filePath, const char* data, size_t size);
-
-inline void writeBinaryDataToFile(const std::string& filePath, const uint8_t* data, size_t size)
-{
-    writeBinaryDataToFile(filePath, reinterpret_cast<const char*>(data), size);
-}
-
-template<typename T>
-void writeBinaryDataToFile(const std::string& filePath, const std::vector<T>& vector)
-{
-    const char* data = (const char*)vector.data();
-    size_t size = sizeof(T) * vector.size();
-    writeBinaryDataToFile(filePath, data, size);
-}
-
-std::optional<std::string> readEntireFile(const std::string& filePath);
-
-bool readFileLineByLine(const std::string& filePath, std::function<LoopAction(const std::string& line)>);
-
-bool isFileReadable(const std::string& filePath);
 
 }
