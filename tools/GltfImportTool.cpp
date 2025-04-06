@@ -40,6 +40,8 @@ int main(int argc, char* argv[])
 
         std::string dependencyData = "";
 
+        dependencyData += fmt::format("INPUT: {}\n", inputAsset);
+
         for (auto const& image : result.images) {
             dependencyData += fmt::format("OUTPUT: {}\n", image->assetFilePath());
         }
