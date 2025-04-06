@@ -151,7 +151,7 @@ void AssetImportTask::importGltf()
                 fileName = fmt::format("image{:04}", unnamedImageIdx++);
             }
 
-            std::filesystem::path targetFilePath = m_targetDirectory / fileName / ImageAsset::AssetFileExtension;
+            std::filesystem::path targetFilePath = (m_targetDirectory / fileName).replace_extension(ImageAsset::AssetFileExtension);
 
             image->writeToFile(targetFilePath, AssetStorage::Binary);
             image->setAssetFilePath(targetFilePath);
@@ -199,7 +199,7 @@ void AssetImportTask::importGltf()
             fileName = fmt::format("{}{:04}", fileName, count);
         }
 
-        std::filesystem::path targetFilePath = m_targetDirectory / fileName / MaterialAsset::AssetFileExtension;
+        std::filesystem::path targetFilePath = (m_targetDirectory / fileName).replace_extension(MaterialAsset::AssetFileExtension);
 
         material->writeToFile(targetFilePath, AssetStorage::Json);
         material->setAssetFilePath(targetFilePath);
@@ -253,7 +253,7 @@ void AssetImportTask::importGltf()
             fileName = fmt::format("{}{:04}", fileName, count);
         }
 
-        std::filesystem::path targetFilePath = m_targetDirectory / fileName / MeshAsset::AssetFileExtension;
+        std::filesystem::path targetFilePath = (m_targetDirectory / fileName).replace_extension(MeshAsset::AssetFileExtension);
 
         // TODO: Json is currently super slow with all the data we have, even for smaller meshes, but if we separate out the core data it will be fine.
         AssetStorage assetStorage = options.saveMeshesInTextualFormat ? AssetStorage::Json : AssetStorage::Binary;
@@ -280,7 +280,7 @@ void AssetImportTask::importGltf()
             fileName = fmt::format("{}{:04}", fileName, count);
         }
 
-        std::filesystem::path targetFilePath = m_targetDirectory / fileName / SkeletonAsset::AssetFileExtension;
+        std::filesystem::path targetFilePath = (m_targetDirectory / fileName).replace_extension(SkeletonAsset::AssetFileExtension);
 
         skeleton->writeToFile(targetFilePath, AssetStorage::Json);
         skeleton->setAssetFilePath(targetFilePath);
@@ -305,7 +305,7 @@ void AssetImportTask::importGltf()
             fileName = fmt::format("{}{:04}", fileName, count);
         }
 
-        std::filesystem::path targetFilePath = m_targetDirectory / fileName / AnimationAsset::AssetFileExtension;
+        std::filesystem::path targetFilePath = (m_targetDirectory / fileName).replace_extension(AnimationAsset::AssetFileExtension);
 
         animation->writeToFile(targetFilePath, AssetStorage::Json);
         animation->setAssetFilePath(targetFilePath);
