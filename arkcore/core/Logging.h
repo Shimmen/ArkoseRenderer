@@ -2,6 +2,7 @@
 
 #include <ark/debugger.h>
 #include <fmt/format.h>
+#include <fmt/std.h>
 #include <cstdlib> // for exit()
 
 namespace Logging {
