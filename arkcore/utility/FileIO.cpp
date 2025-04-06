@@ -184,7 +184,7 @@ std::optional<std::string> FileIO::readEntireFile(const std::string& filePath)
     return contents;
 }
 
-bool FileIO::readFileLineByLine(const std::string& filePath, std::function<NextAction(const std::string&)> lineCallback)
+bool FileIO::readFileLineByLine(const std::string& filePath, std::function<LoopAction(const std::string&)> lineCallback)
 {
     std::ifstream file(filePath);
 
@@ -193,8 +193,8 @@ bool FileIO::readFileLineByLine(const std::string& filePath, std::function<NextA
 
     std::string line;
     while (std::getline(file, line)) {
-        NextAction nextAction = lineCallback(line);
-        if (nextAction == NextAction::Stop) {
+        LoopAction nextAction = lineCallback(line);
+        if (nextAction == LoopAction::Break) {
             break;
         }
     }

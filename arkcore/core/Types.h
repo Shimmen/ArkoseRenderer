@@ -19,6 +19,11 @@ using f64 = double;
 // Useful for GLSL interopt
 using uint = uint32_t;
 
+enum class LoopAction {
+    Break = 0,
+    Continue = 1,
+};
+
 template<typename NarrowType, typename WideType>
 constexpr NarrowType narrow_cast(WideType);
 

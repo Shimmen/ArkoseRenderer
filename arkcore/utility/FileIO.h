@@ -61,11 +61,7 @@ void writeBinaryDataToFile(const std::string& filePath, const std::vector<T>& ve
 
 std::optional<std::string> readEntireFile(const std::string& filePath);
 
-enum class NextAction {
-    Continue,
-    Stop,
-};
-bool readFileLineByLine(const std::string& filePath, std::function<NextAction(const std::string& line)>);
+bool readFileLineByLine(const std::string& filePath, std::function<LoopAction(const std::string& line)>);
 
 bool isFileReadable(const std::string& filePath);
 

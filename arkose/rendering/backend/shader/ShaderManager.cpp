@@ -730,7 +730,7 @@ bool ShaderManager::CompiledShader::readShaderMetadataFile()
             }
         });
 
-        return FileIO::NextAction::Continue;
+        return LoopAction::Continue;
     });
 
     return readSuccess;
@@ -795,7 +795,7 @@ std::vector<std::string> ShaderManager::CompiledShader::findAllIncludedFiles() c
             std::string_view specifiedPath = findIncludedPathFromShaderCodeLine(line, relativePath);
 
             if (specifiedPath == "") {
-                return FileIO::NextAction::Continue;
+                return LoopAction::Continue;
             }
 
             std::string includePath = (relativePath)
@@ -807,7 +807,7 @@ std::vector<std::string> ShaderManager::CompiledShader::findAllIncludedFiles() c
                 filesToTest.push_back(includePath);
             }
 
-            return FileIO::NextAction::Continue;
+            return LoopAction::Continue;
         });
     }
 
