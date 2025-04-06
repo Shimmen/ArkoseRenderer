@@ -19,7 +19,7 @@ MaterialInput::~MaterialInput() = default;
 MaterialAsset::MaterialAsset() = default;
 MaterialAsset::~MaterialAsset() = default;
 
-MaterialAsset* MaterialAsset::load(std::string const& filePath)
+MaterialAsset* MaterialAsset::load(std::filesystem::path const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -44,12 +44,12 @@ MaterialAsset* MaterialAsset::load(std::string const& filePath)
 MaterialAsset* MaterialAsset::manage(std::unique_ptr<MaterialAsset>&& materialAsset)
 {
     ARKOSE_ASSERT(!materialAsset->assetFilePath().empty());
-    return s_materialAssetCache.put(std::string(materialAsset->assetFilePath()), std::move(materialAsset));
+    return s_materialAssetCache.put(materialAsset->assetFilePath(), std::move(materialAsset));
 }
 
-bool MaterialAsset::readFromFile(std::string_view filePath)
+bool MaterialAsset::readFromFile(std::filesystem::path const& filePath)
 {
-    std::ifstream fileStream(std::string(filePath), std::ios::binary);
+    std::ifstream fileStream(filePath, std::ios::binary);
     if (not fileStream.is_open()) {
         return false;
     }
@@ -76,16 +76,16 @@ bool MaterialAsset::readFromFile(std::string_view filePath)
         jsonArchive(*this);
     }
 
-    this->setAssetFilePath(filePath);
+    setAssetFilePath(filePath);
 
     if (name.empty()) {
-        this->name = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(filePath));
+        name = filePath.stem().string();
     }
 
     return true;
 }
 
-bool MaterialAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage) const
+bool MaterialAsset::writeToFile(std::filesystem::path const& filePath, AssetStorage assetStorage) const
 {
     SCOPED_PROFILE_ZONE();
 
@@ -94,7 +94,7 @@ bool MaterialAsset::writeToFile(std::string_view filePath, AssetStorage assetSto
         return false;
     }
 
-    std::ofstream fileStream { std::string(filePath), std::ios::binary | std::ios::trunc };
+    std::ofstream fileStream { filePath, std::ios::binary | std::ios::trunc };
     if (not fileStream.is_open()) {
         return false;
     }

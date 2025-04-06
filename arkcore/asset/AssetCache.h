@@ -12,7 +12,7 @@ public:
     AssetCache() = default;
     ~AssetCache() = default;
 
-    AssetType* get(std::string const& path)
+    AssetType* get(std::filesystem::path const& path)
     {
         SCOPED_PROFILE_ZONE_NAMED("Asset cache - get");
         std::scoped_lock<std::mutex> lock { m_cacheMutex };
@@ -25,7 +25,7 @@ public:
         }
     }
 
-    AssetType* put(std::string const& path, std::unique_ptr<AssetType>&& asset)
+    AssetType* put(std::filesystem::path const& path, std::unique_ptr<AssetType>&& asset)
     {
         SCOPED_PROFILE_ZONE_NAMED("Asset cache - put");
         std::scoped_lock<std::mutex> lock { m_cacheMutex };
@@ -36,5 +36,5 @@ public:
 
 private:
     std::mutex m_cacheMutex {};
-    std::unordered_map<std::string, std::unique_ptr<AssetType>> m_cache {};
+    std::unordered_map<std::filesystem::path, std::unique_ptr<AssetType>> m_cache {};
 };

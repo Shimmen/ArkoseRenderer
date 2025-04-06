@@ -18,11 +18,11 @@ public:
     GltfLoader() = default;
     ~GltfLoader() = default;
 
-    ImportResult load(const std::string& gltfFilePath);
+    ImportResult load(std::filesystem::path const& gltfFilePath);
 
 private:
 
-    std::string m_gltfFilePath {};
+    std::filesystem::path m_gltfFilePath {};
 
     std::unique_ptr<MaterialAsset> createMaterial(tinygltf::Model const&, tinygltf::Material const&);
     std::unique_ptr<MeshAsset> createMesh(tinygltf::Model const&, tinygltf::Mesh const&);

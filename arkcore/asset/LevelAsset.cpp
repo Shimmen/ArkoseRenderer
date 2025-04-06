@@ -14,7 +14,7 @@ AssetCache<LevelAsset> s_levelAssetCache {};
 LevelAsset::LevelAsset() = default;
 LevelAsset::~LevelAsset() = default;
 
-LevelAsset* LevelAsset::load(std::string const& filePath)
+LevelAsset* LevelAsset::load(std::filesystem::path const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -45,7 +45,7 @@ std::unique_ptr<LevelAsset> LevelAsset::createFromAssetImportResult(ImportResult
     for (MeshInstance const& meshInstance : result.meshInstances) {
         SceneObjectAsset sceneObject {};
         sceneObject.transform = meshInstance.transform;
-        sceneObject.mesh = std::string(meshInstance.mesh->assetFilePath());
+        sceneObject.mesh = meshInstance.mesh->assetFilePath().string();
         levelAsset->objects.push_back(sceneObject);
     }
 
@@ -67,9 +67,9 @@ std::unique_ptr<LevelAsset> LevelAsset::createFromAssetImportResult(ImportResult
     return levelAsset;
 }
 
-bool LevelAsset::readFromFile(std::string_view filePath)
+bool LevelAsset::readFromFile(std::filesystem::path const& filePath)
 {
-    std::ifstream fileStream(std::string(filePath), std::ios::binary);
+    std::ifstream fileStream(filePath, std::ios::binary);
     if (not fileStream.is_open()) {
         return false;
     }
@@ -99,20 +99,20 @@ bool LevelAsset::readFromFile(std::string_view filePath)
     this->setAssetFilePath(filePath);
 
     if (name.empty()) {
-        this->name = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(filePath));
+        name = filePath.stem().string();
     }
 
     return true;
 }
 
-bool LevelAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage) const
+bool LevelAsset::writeToFile(std::filesystem::path const& filePath, AssetStorage assetStorage) const
 {
     if (not isValidAssetPath(filePath)) {
         ARKOSE_LOG(Error, "Trying to write asset to file with invalid extension: '{}'", filePath);
         return false;
     }
 
-    std::ofstream fileStream { std::string(filePath), std::ios::binary | std::ios::trunc };
+    std::ofstream fileStream { filePath, std::ios::binary | std::ios::trunc };
     if (not fileStream.is_open()) {
         return false;
     }

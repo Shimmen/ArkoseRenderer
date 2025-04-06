@@ -49,38 +49,23 @@ public:
     // as they are already pretty much copies of each other. However, cereal, our serialization library doesn't
     // like that at all. I've tried a bunch of possible solutions but whatever I do it doesn't compile, or it
     // makes the code 10x more complex. For now, let's keep it simple with copy pasted code.
-    virtual bool readFromFile(std::string_view filePath) = 0;
-    virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) const = 0;
+    virtual bool readFromFile(std::filesystem::path const& filePath) = 0;
+    virtual bool writeToFile(std::filesystem::path const& filePath, AssetStorage assetStorage) const = 0;
 
-    static bool isValidAssetPath(std::string_view assetPath);
+    static bool isValidAssetPath(std::filesystem::path assetPath);
 
-    virtual void setAssetFilePath(std::string_view assetFilePath) { m_assetFilePath = assetFilePath; }
-    virtual std::string_view assetFilePath() const final { return m_assetFilePath; }
+    virtual void setAssetFilePath(std::filesystem::path assetFilePath) { m_assetFilePath = std::move(assetFilePath); }
+    virtual std::filesystem::path const& assetFilePath() const final { return m_assetFilePath; }
 
 private:
-    std::string m_assetFilePath {};
+    std::filesystem::path m_assetFilePath {};
 
 };
 
 template<typename AssetType>
-bool Asset<AssetType>::isValidAssetPath(std::string_view assetPath)
+bool Asset<AssetType>::isValidAssetPath(std::filesystem::path assetPath)
 {
-    // Need at least the extension length plus space for the dot before it
-    const size_t minimumLength = std::string(AssetType::AssetFileExtension).length() + 1;
-
-    if (assetPath.length() < minimumLength) {
-        return false;
-    }
-
-    if (assetPath.at(assetPath.length() - minimumLength) != '.') {
-        return false;
-    }
-
-    if (not assetPath.ends_with(AssetType::AssetFileExtension)) {
-        return false;
-    }
-
-    return true;
+    return assetPath.extension() == AssetType::AssetFileExtension;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

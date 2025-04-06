@@ -76,7 +76,7 @@ std::unique_ptr<ImageAsset> ImageAsset::createCopyWithReplacedFormat(ImageAsset 
     return newImage;
 }
 
-std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(std::string const& sourceAssetFilePath)
+std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(std::filesystem::path const& sourceAssetFilePath)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -89,7 +89,7 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(std::string const&
     size_t size = maybeData.value().size();
 
     auto imageAsset = createFromSourceAsset(data, size);
-    imageAsset->m_sourceAssetFilePath = sourceAssetFilePath;
+    imageAsset->m_sourceAssetFilePath = sourceAssetFilePath.string();
 
     return imageAsset;
 }
@@ -237,7 +237,7 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromRawData(uint8_t const* data, s
     return imageAsset;
 }
 
-ImageAsset* ImageAsset::load(std::string const& filePath)
+ImageAsset* ImageAsset::load(std::filesystem::path const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -262,10 +262,10 @@ ImageAsset* ImageAsset::load(std::string const& filePath)
 ImageAsset* ImageAsset::manage(std::unique_ptr<ImageAsset>&& imageAsset)
 {
     ARKOSE_ASSERT(!imageAsset->assetFilePath().empty());
-    return s_imageAssetCache.put(std::string(imageAsset->assetFilePath()), std::move(imageAsset));
+    return s_imageAssetCache.put(imageAsset->assetFilePath(), std::move(imageAsset));
 }
 
-ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
+ImageAsset* ImageAsset::loadOrCreate(std::filesystem::path const& filePath)
 {
     if (isValidAssetPath(filePath)) {
         return load(filePath);
@@ -286,14 +286,14 @@ ImageAsset* ImageAsset::loadOrCreate(std::string const& filePath)
     }
 }
 
-bool ImageAsset::readFromFile(std::string_view filePath)
+bool ImageAsset::readFromFile(std::filesystem::path const& filePath)
 {
     if (not isValidAssetPath(filePath)) {
         ARKOSE_LOG(Warning, "Trying to load image asset with invalid file extension: '{}'", filePath);
         return false;
     }
 
-    std::ifstream fileStream(std::string(filePath), std::ios::binary);
+    std::ifstream fileStream(filePath, std::ios::binary);
     if (not fileStream.is_open()) {
         return false;
     }
@@ -319,7 +319,7 @@ bool ImageAsset::readFromFile(std::string_view filePath)
     return true;
 }
 
-bool ImageAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage) const
+bool ImageAsset::writeToFile(std::filesystem::path const& filePath, AssetStorage assetStorage) const
 {
     if (assetStorage != AssetStorage::Binary) {
         ARKOSE_LOG(Fatal, "Image asset only supports binary serialization.");
@@ -335,7 +335,7 @@ bool ImageAsset::writeToFile(std::string_view filePath, AssetStorage assetStorag
         const_cast<ImageAsset*>(this)->compress();
     }
 
-    std::ofstream fileStream { std::string(filePath), std::ios::binary | std::ios::trunc };
+    std::ofstream fileStream { filePath, std::ios::binary | std::ios::trunc };
     if (not fileStream.is_open()) {
         return false;
     }

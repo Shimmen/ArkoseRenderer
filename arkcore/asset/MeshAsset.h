@@ -125,17 +125,17 @@ public:
     MeshAsset();
     ~MeshAsset();
 
-    static constexpr const char* AssetFileExtension = "arkmsh";
+    static constexpr const char* AssetFileExtension = ".arkmsh";
     static constexpr std::array<char, 4> AssetMagicValue = { 'a', 'm', 's', 'h' };
 
     // Load a mesh asset (cached) from an .arkmsh file
     // TODO: Figure out how we want to return this! Basic type, e.g. MeshAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
-    static MeshAsset* load(std::string const& filePath);
+    static MeshAsset* load(std::filesystem::path const& filePath);
 
     static MeshAsset* manage(std::unique_ptr<MeshAsset>&&);
 
-    virtual bool readFromFile(std::string_view filePath) override;
-    virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) const override;
+    virtual bool readFromFile(std::filesystem::path const& filePath) override;
+    virtual bool writeToFile(std::filesystem::path const& filePath, AssetStorage assetStorage) const override;
 
     template<class Archive>
     void serialize(Archive&, u32 version);

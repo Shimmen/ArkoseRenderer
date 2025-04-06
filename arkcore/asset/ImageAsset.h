@@ -49,14 +49,14 @@ public:
     ImageAsset();
     ~ImageAsset();
 
-    static constexpr const char* AssetFileExtension = "arkimg";
+    static constexpr const char* AssetFileExtension = ".arkimg";
     static constexpr std::array<char, 4> AssetMagicValue = { 'a', 'i', 'm', 'g' };
 
     // Create a new ImageAsset that is a copy of the passed in image asset but with replaced image format. The data of the new format is passed in at constuction time.
     static std::unique_ptr<ImageAsset> createCopyWithReplacedFormat(ImageAsset const&, ImageFormat, std::vector<u8>&& pixelData, std::vector<ImageMip>);
 
     // Create a new ImageAsset from an image on disk, e.g. png or jpg. This can then be modified in place and finally be written to disk (as an .argimg)
-    static std::unique_ptr<ImageAsset> createFromSourceAsset(std::string const& sourceAssetFilePath);
+    static std::unique_ptr<ImageAsset> createFromSourceAsset(std::filesystem::path const& sourceAssetFilePath);
     static std::unique_ptr<ImageAsset> createFromSourceAsset(uint8_t const* data, size_t size);
 
     // Create a new ImageAsset from raw bitmap image data, i.e. rows of ImageFormat pixels according to the supplied dimensions
@@ -64,16 +64,16 @@ public:
 
     // Load an image asset (cached) from an .arkimg file
     // TODO: Figure out how we want to return this! Basic type, e.g. ImageAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
-    static ImageAsset* load(std::string const& filePath);
+    static ImageAsset* load(std::filesystem::path const& filePath);
 
     static ImageAsset* manage(std::unique_ptr<ImageAsset>&&);
 
     // Load an image asset (cached) from an .arkimg file or create from source asset, depending on the file extension
     // TODO: Figure out how we want to return this! Basic type, e.g. ImageAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
-    static ImageAsset* loadOrCreate(std::string const& filePath);
+    static ImageAsset* loadOrCreate(std::filesystem::path const& filePath);
 
-    virtual bool readFromFile(std::string_view filePath) override;
-    virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) const override;
+    virtual bool readFromFile(std::filesystem::path const& filePath) override;
+    virtual bool writeToFile(std::filesystem::path const& filePath, AssetStorage assetStorage) const override;
 
     template<class Archive>
     void serialize(Archive& ar);
@@ -106,7 +106,7 @@ public:
     bool isUncompressed() const { return not m_compressed; }
 
     bool hasSourceAsset() const { return not m_sourceAssetFilePath.empty(); }
-    std::string_view sourceAssetFilePath() const { return m_sourceAssetFilePath; }
+    std::filesystem::path sourceAssetFilePath() const { return std::filesystem::path(m_sourceAssetFilePath); }
 
     using rgba8 = ark::tvec4<u8>;
     rgba8 getPixelAsRGBA8(u32 x, u32 y, u32 z, u32 mipIdx) const;

@@ -246,7 +246,7 @@ std::vector<ImageMip> DDS::computeMipOffsetAndSize(Extent3D extentMip0, ImageFor
     return mips;
 }
 
-bool DDS::writeToFile(std::string_view filePath, u8 const* imageData, size_t imageDataSize, Extent3D extent, ImageFormat format, u32 numMips)
+bool DDS::writeToFile(std::filesystem::path const& filePath, u8 const* imageData, size_t imageDataSize, Extent3D extent, ImageFormat format, u32 numMips)
 {
     size_t fileSize = 4 + sizeof(DDSHeader) + imageDataSize;
 
@@ -259,7 +259,7 @@ bool DDS::writeToFile(std::string_view filePath, u8 const* imageData, size_t ima
         return false;
     }
 
-    u8* fileData = static_cast<u8*>(malloc(fileSize));
+    std::byte* fileData = static_cast<std::byte*>(malloc(fileSize));
     if (!fileData) {
         ARKOSE_LOG(Error, "Failed to allocate memory");
         return false;
@@ -304,12 +304,11 @@ bool DDS::writeToFile(std::string_view filePath, u8 const* imageData, size_t ima
         NOT_YET_IMPLEMENTED();
     }
 
-    u8* imageDataStart = fileData + 4 + sizeof(DDSHeader) + (hasDX10Header ? sizeof(DDSHeaderDX10) : 0);
+    std::byte* imageDataStart = fileData + 4 + sizeof(DDSHeader) + (hasDX10Header ? sizeof(DDSHeaderDX10) : 0);
     memcpy(imageDataStart, imageData, imageDataSize);
 
     // TODO: Add error handling for writing files!
-    FileIO::ensureDirectoryForFile(std::string(filePath));
-    FileIO::writeBinaryDataToFile(std::string(filePath), fileData, fileSize);
+    FileIO::writeBinaryDataToFile(filePath, fileData, fileSize);
 
     return true;
 }

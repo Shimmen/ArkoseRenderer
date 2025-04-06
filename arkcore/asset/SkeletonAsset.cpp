@@ -12,7 +12,7 @@ SkeletonJointAsset::~SkeletonJointAsset() = default;
 SkeletonAsset::SkeletonAsset() = default;
 SkeletonAsset::~SkeletonAsset() = default;
 
-SkeletonAsset* SkeletonAsset::load(std::string const& filePath)
+SkeletonAsset* SkeletonAsset::load(std::filesystem::path const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -37,12 +37,12 @@ SkeletonAsset* SkeletonAsset::load(std::string const& filePath)
 SkeletonAsset* SkeletonAsset::manage(std::unique_ptr<SkeletonAsset>&& skeletonAsset)
 {
     ARKOSE_ASSERT(!skeletonAsset->assetFilePath().empty());
-    return s_skeletonAssetCache.put(std::string(skeletonAsset->assetFilePath()), std::move(skeletonAsset));
+    return s_skeletonAssetCache.put(skeletonAsset->assetFilePath(), std::move(skeletonAsset));
 }
 
-bool SkeletonAsset::readFromFile(std::string_view filePath)
+bool SkeletonAsset::readFromFile(std::filesystem::path const& filePath)
 {
-    std::ifstream fileStream(std::string(filePath), std::ios::binary);
+    std::ifstream fileStream(filePath, std::ios::binary);
     if (not fileStream.is_open()) {
         return false;
     }
@@ -69,23 +69,23 @@ bool SkeletonAsset::readFromFile(std::string_view filePath)
         jsonArchive(*this);
     }
 
-    this->setAssetFilePath(filePath);
+    setAssetFilePath(filePath);
 
     if (name.empty()) {
-        this->name = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(filePath));
+        name = filePath.stem().string();
     }
 
     return true;
 }
 
-bool SkeletonAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage) const
+bool SkeletonAsset::writeToFile(std::filesystem::path const& filePath, AssetStorage assetStorage) const
 {
     if (not isValidAssetPath(filePath)) {
         ARKOSE_LOG(Error, "Trying to write asset to file with invalid extension: '{}'", filePath);
         return false;
     }
 
-    std::ofstream fileStream { std::string(filePath), std::ios::binary | std::ios::trunc };
+    std::ofstream fileStream { filePath, std::ios::binary | std::ios::trunc };
     if (not fileStream.is_open()) {
         return false;
     }

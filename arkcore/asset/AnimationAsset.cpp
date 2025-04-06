@@ -16,7 +16,7 @@ AssetCache<AnimationAsset> s_animationAssetCache {};
 AnimationAsset::AnimationAsset() = default;
 AnimationAsset::~AnimationAsset() = default;
 
-AnimationAsset* AnimationAsset::load(std::string const& filePath)
+AnimationAsset* AnimationAsset::load(std::filesystem::path const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -41,12 +41,12 @@ AnimationAsset* AnimationAsset::load(std::string const& filePath)
 AnimationAsset* AnimationAsset::manage(std::unique_ptr<AnimationAsset>&& animationAsset)
 {
     ARKOSE_ASSERT(!animationAsset->assetFilePath().empty());
-    return s_animationAssetCache.put(std::string(animationAsset->assetFilePath()), std::move(animationAsset));
+    return s_animationAssetCache.put(animationAsset->assetFilePath(), std::move(animationAsset));
 }
 
-bool AnimationAsset::readFromFile(std::string_view filePath)
+bool AnimationAsset::readFromFile(std::filesystem::path const& filePath)
 {
-    std::ifstream fileStream(std::string(filePath), std::ios::binary);
+    std::ifstream fileStream(filePath, std::ios::binary);
     if (not fileStream.is_open()) {
         return false;
     }
@@ -73,23 +73,23 @@ bool AnimationAsset::readFromFile(std::string_view filePath)
         jsonArchive(*this);
     }
 
-    this->setAssetFilePath(filePath);
+    setAssetFilePath(filePath);
 
     if (name.empty()) {
-        this->name = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(filePath));
+        name = filePath.stem().string();
     }
 
     return true;
 }
 
-bool AnimationAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage) const
+bool AnimationAsset::writeToFile(std::filesystem::path const& filePath, AssetStorage assetStorage) const
 {
     if (not isValidAssetPath(filePath)) {
         ARKOSE_LOG(Error, "Trying to write asset to file with invalid extension: '{}'", filePath);
         return false;
     }
 
-    std::ofstream fileStream { std::string(filePath), std::ios::binary | std::ios::trunc };
+    std::ofstream fileStream { filePath, std::ios::binary | std::ios::trunc };
     if (not fileStream.is_open()) {
         return false;
     }

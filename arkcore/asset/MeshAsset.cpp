@@ -459,12 +459,12 @@ MeshLODAsset::~MeshLODAsset() = default;
 MeshAsset::MeshAsset() = default;
 MeshAsset::~MeshAsset() = default;
 
-MeshAsset* MeshAsset::load(std::string const& filePath)
+MeshAsset* MeshAsset::load(std::filesystem::path const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
     if (not isValidAssetPath(filePath)) {
-        ARKOSE_LOG(Warning, "Trying to load material asset with invalid file extension: '{}'", filePath);
+        ARKOSE_LOG(Warning, "Trying to load mesh asset with invalid file extension: '{}'", filePath);
     }
 
     if (MeshAsset* cachedAsset = s_meshAssetCache.get(filePath)) {
@@ -484,12 +484,12 @@ MeshAsset* MeshAsset::load(std::string const& filePath)
 MeshAsset* MeshAsset::manage(std::unique_ptr<MeshAsset>&& meshAsset)
 {
     ARKOSE_ASSERT(!meshAsset->assetFilePath().empty());
-    return s_meshAssetCache.put(std::string(meshAsset->assetFilePath()), std::move(meshAsset));
+    return s_meshAssetCache.put(meshAsset->assetFilePath(), std::move(meshAsset));
 }
 
-bool MeshAsset::readFromFile(std::string_view filePath)
+bool MeshAsset::readFromFile(std::filesystem::path const& filePath)
 {
-    std::ifstream fileStream(std::string(filePath), std::ios::binary);
+    std::ifstream fileStream(filePath, std::ios::binary);
     if (not fileStream.is_open()) {
         return false;
     }
@@ -516,16 +516,16 @@ bool MeshAsset::readFromFile(std::string_view filePath)
         jsonArchive(*this);
     }
 
-    this->setAssetFilePath(filePath);
+    setAssetFilePath(filePath);
 
     if (name.empty()) {
-        this->name = FileIO::removeExtensionFromPath(FileIO::extractFileNameFromPath(filePath));
+        name = filePath.stem().string();
     }
 
     return true;
 }
 
-bool MeshAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage) const
+bool MeshAsset::writeToFile(std::filesystem::path const& filePath, AssetStorage assetStorage) const
 {
     SCOPED_PROFILE_ZONE();
 
@@ -534,7 +534,7 @@ bool MeshAsset::writeToFile(std::string_view filePath, AssetStorage assetStorage
         return false;
     }
 
-    std::ofstream fileStream { std::string(filePath), std::ios::binary | std::ios::trunc };
+    std::ofstream fileStream { filePath, std::ios::binary | std::ios::trunc };
     if (not fileStream.is_open()) {
         return false;
     }

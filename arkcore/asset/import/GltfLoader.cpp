@@ -18,13 +18,13 @@ bool hasSupportForExtension(const std::string& extension)
     return std::find(supportedExtensions.begin(), supportedExtensions.end(), extension) != supportedExtensions.end();
 }
 
-ImportResult GltfLoader::load(const std::string& gltfFilePath)
+ImportResult GltfLoader::load(std::filesystem::path const& gltfFilePath)
 {
     SCOPED_PROFILE_ZONE();
 
     ImportResult result {};
 
-    if (!FileIO::isFileReadable(gltfFilePath)) {
+    if (!FileIO::fileReadable(gltfFilePath)) {
         ARKOSE_LOG(Error, "Could not find glTF file at path '{}'", gltfFilePath);
         return result;
     }
@@ -40,10 +40,10 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
     bool loadSuccess = false;
     {
         SCOPED_PROFILE_ZONE_NAMED("TinyGLTF work");
-        if (gltfFilePath.ends_with(".gltf")) {
-            loadSuccess = loader.LoadASCIIFromFile(&gltfModel, &error, &warning, gltfFilePath);
-        } else if (gltfFilePath.ends_with(".glb")) {
-            loadSuccess = loader.LoadBinaryFromFile(&gltfModel, &error, &warning, gltfFilePath);
+        if (gltfFilePath.extension() == ".gltf") {
+            loadSuccess = loader.LoadASCIIFromFile(&gltfModel, &error, &warning, gltfFilePath.string());
+        } else if (gltfFilePath.extension() == ".glb") {
+            loadSuccess = loader.LoadBinaryFromFile(&gltfModel, &error, &warning, gltfFilePath.string());
         } else {
             ARKOSE_LOG(Error, "glTF loader: invalid file glTF file path/extension '{}'", gltfFilePath);
             return result;
@@ -88,7 +88,7 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
         gltfModel.defaultScene = 0;
     }
 
-    std::string gltfDirectory = std::string(FileIO::extractDirectoryFromPath(gltfFilePath));
+    std::filesystem::path gltfDirectory = gltfFilePath.parent_path();
 
     // Make best guesses for images' types
     std::unordered_map<int, ImageType> imageTypeBestGuess {};
@@ -132,7 +132,7 @@ ImportResult GltfLoader::load(const std::string& gltfFilePath)
         std::unique_ptr<ImageAsset> image {};
         if (!gltfImage.uri.empty()) {
 
-            std::string absolutePath = gltfDirectory + gltfImage.uri;
+            std::filesystem::path absolutePath = gltfDirectory / gltfImage.uri;
             image = ImageAsset::createFromSourceAsset(absolutePath);
 
         } else {

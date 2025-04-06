@@ -60,17 +60,17 @@ public:
     AnimationAsset();
     ~AnimationAsset();
 
-    static constexpr const char* AssetFileExtension = "arkanim";
+    static constexpr const char* AssetFileExtension = ".arkanim";
     static constexpr std::array<char, 4> AssetMagicValue = { 'a', 'a', 'n', 'm' };
 
     // Load an animation asset (cached) from an .arkanim file
     // TODO: Figure out how we want to return this! Basic type, e.g. AnimationAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
-    static AnimationAsset* load(std::string const& filePath);
+    static AnimationAsset* load(std::filesystem::path const& filePath);
 
     static AnimationAsset* manage(std::unique_ptr<AnimationAsset>&&);
 
-    virtual bool readFromFile(std::string_view filePath) override;
-    virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) const override;
+    virtual bool readFromFile(std::filesystem::path const& filePath) override;
+    virtual bool writeToFile(std::filesystem::path const& filePath, AssetStorage assetStorage) const override;
 
     template<class Archive>
     void serialize(Archive&, u32 version);

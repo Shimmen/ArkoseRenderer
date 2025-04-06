@@ -86,17 +86,17 @@ public:
     MaterialAsset();
     ~MaterialAsset();
 
-    static constexpr const char* AssetFileExtension = "arkmat";
+    static constexpr const char* AssetFileExtension = ".arkmat";
     static constexpr std::array<char, 4> AssetMagicValue = { 'a', 'm', 'a', 't' };
 
     // Load a material asset (cached) from an .arkmat file
     // TODO: Figure out how we want to return this! Basic type, e.g. MaterialAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
-    static MaterialAsset* load(std::string const& filePath);
+    static MaterialAsset* load(std::filesystem::path const& filePath);
 
     static MaterialAsset* manage(std::unique_ptr<MaterialAsset>&&);
 
-    virtual bool readFromFile(std::string_view filePath) override;
-    virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) const override;
+    virtual bool readFromFile(std::filesystem::path const& filePath) override;
+    virtual bool writeToFile(std::filesystem::path const& filePath, AssetStorage assetStorage) const override;
 
     template<class Archive>
     void serialize(Archive&, u32 version);

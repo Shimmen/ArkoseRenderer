@@ -26,17 +26,17 @@ public:
     SkeletonAsset();
     ~SkeletonAsset();
 
-    static constexpr const char* AssetFileExtension = "arkskel";
+    static constexpr const char* AssetFileExtension = ".arkskel";
     static constexpr std::array<char, 4> AssetMagicValue = { 'a', 's', 'k', 'l' };
 
     // Load a skeleton asset (cached) from an .arkskel file
     // TODO: Figure out how we want to return this! Basic type, e.g. SkeletonAsset*, or something reference counted, e.g. shared_ptr or manual ref-count?
-    static SkeletonAsset* load(std::string const& filePath);
+    static SkeletonAsset* load(std::filesystem::path const& filePath);
 
     static SkeletonAsset* manage(std::unique_ptr<SkeletonAsset>&&);
 
-    virtual bool readFromFile(std::string_view filePath) override;
-    virtual bool writeToFile(std::string_view filePath, AssetStorage assetStorage) const override;
+    virtual bool readFromFile(std::filesystem::path const& filePath) override;
+    virtual bool writeToFile(std::filesystem::path const& filePath, AssetStorage assetStorage) const override;
 
     template<class Archive>
     void serialize(Archive&, u32 version);

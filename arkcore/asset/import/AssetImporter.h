@@ -53,7 +53,7 @@ struct AssetImporterOptions {
 // If you wish to import synchronously, simply create an AssetImportTask and call `executeSynchronous()` on it. 
 class AssetImportTask : public PollableTask {
 public:
-    static std::unique_ptr<AssetImportTask> create(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions);
+    static std::unique_ptr<AssetImportTask> create(std::filesystem::path const& assetFilePath, std::filesystem::path const& targetDirectory, AssetImporterOptions);
 
     bool success() const;
     ImportResult* result();
@@ -62,13 +62,13 @@ public:
     virtual std::string status() const override;
 
 private:
-    AssetImportTask(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions);
+    AssetImportTask(std::filesystem::path const& assetFilePath, std::filesystem::path const& targetDirectory, AssetImporterOptions);
 
     void importAsset();
     void importGltf();
 
-    std::string m_assetFilePath {};
-    std::string m_targetDirectory {};
+    std::filesystem::path m_assetFilePath {};
+    std::filesystem::path m_targetDirectory {};
     AssetImporterOptions m_options {};
 
     ImportResult m_result {};

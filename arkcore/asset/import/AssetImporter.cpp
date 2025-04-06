@@ -8,21 +8,18 @@
 #include "utility/FileIO.h"
 #include <fmt/format.h>
 
-std::unique_ptr<AssetImportTask> AssetImportTask::create(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions options)
+std::unique_ptr<AssetImportTask> AssetImportTask::create(std::filesystem::path const& assetFilePath, std::filesystem::path const& targetDirectory, AssetImporterOptions options)
 {
     // NOTE: The task auto-release logic be damned..
     return std::unique_ptr<AssetImportTask>(new AssetImportTask(assetFilePath, targetDirectory, options));
 }
 
-AssetImportTask::AssetImportTask(std::string_view assetFilePath, std::string_view targetDirectory, AssetImporterOptions options)
+AssetImportTask::AssetImportTask(std::filesystem::path const& assetFilePath, std::filesystem::path const& targetDirectory, AssetImporterOptions options)
     : PollableTask([this]() { importAsset(); })
     , m_assetFilePath(assetFilePath)
+    , m_targetDirectory(targetDirectory)
     , m_options(options)
 {
-    if (targetDirectory.ends_with('/')) {
-        targetDirectory.remove_suffix(1);
-    }
-    m_targetDirectory = targetDirectory;
     FileIO::ensureDirectory(m_targetDirectory);
 
     if (m_options.blockCompressImages || m_options.generateMipmaps) {
@@ -64,13 +61,13 @@ void AssetImportTask::importAsset()
 {
     SCOPED_PROFILE_ZONE();
 
-    if (!FileIO::isFileReadable(std::string(m_assetFilePath))) {
+    if (!FileIO::fileReadable(m_assetFilePath)) {
         ARKOSE_LOG(Error, "Trying to import asset '{}' that is not readable / doesn't exist.", m_assetFilePath);
         m_error = true;
         return;
     }
 
-    if (m_assetFilePath.ends_with(".gltf") || m_assetFilePath.ends_with(".glb")) {
+    if (m_assetFilePath.extension() == ".gltf" || m_assetFilePath.extension() == ".glb") {
         importGltf();
         return;
     }
@@ -86,7 +83,6 @@ void AssetImportTask::importGltf()
     // (Just to avoid too many changes part of this big refactor)
     ImportResult& result = m_result;
     AssetImporterOptions& options = m_options;
-    std::string& targetDirectory = m_targetDirectory;
 
     m_status = "Loading glTF file";
 
@@ -147,8 +143,7 @@ void AssetImportTask::importGltf()
 
             std::string fileName;
             if (image->hasSourceAsset()) {
-                fileName = std::string(FileIO::extractFileNameFromPath(image->sourceAssetFilePath()));
-                fileName = std::string(FileIO::removeExtensionFromPath(fileName));
+                fileName = image->sourceAssetFilePath().stem().string();
             } else if (image->name.size() > 0) {
                 // TODO: Perform proper name de-duplication (only increment when two identical ones would be saved)
                 fileName = fmt::format("{}{:04}", image->name, unnamedImageIdx++);
@@ -156,7 +151,7 @@ void AssetImportTask::importGltf()
                 fileName = fmt::format("image{:04}", unnamedImageIdx++);
             }
 
-            std::string targetFilePath = fmt::format("{}/{}.arkimg", targetDirectory, fileName);
+            std::filesystem::path targetFilePath = m_targetDirectory / fileName / ImageAsset::AssetFileExtension;
 
             image->writeToFile(targetFilePath, AssetStorage::Binary);
             image->setAssetFilePath(targetFilePath);
@@ -181,10 +176,10 @@ void AssetImportTask::importGltf()
                 ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < narrow_cast<int>(result.images.size()));
                 auto& image = result.images[gltfIdx];
                 if (image) {
-                    std::string_view imagePath = (!image->hasSourceAsset() || options.alwaysMakeImageAsset)
+                    std::filesystem::path const& imagePath = (!image->hasSourceAsset() || options.alwaysMakeImageAsset)
                         ? image->assetFilePath()
                         : image->sourceAssetFilePath();
-                    materialInput->setPathToImage(std::string(imagePath));
+                    materialInput->setPathToImage(imagePath.string());
                 }
             }
         };
@@ -204,7 +199,7 @@ void AssetImportTask::importGltf()
             fileName = fmt::format("{}{:04}", fileName, count);
         }
 
-        std::string targetFilePath = fmt::format("{}/{}.arkmat", targetDirectory, fileName);
+        std::filesystem::path targetFilePath = m_targetDirectory / fileName / MaterialAsset::AssetFileExtension;
 
         material->writeToFile(targetFilePath, AssetStorage::Json);
         material->setAssetFilePath(targetFilePath);
@@ -243,7 +238,7 @@ void AssetImportTask::importGltf()
                     int gltfIdx = meshSegment.userData;
                     ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < narrow_cast<int>(result.materials.size()));
                     auto& material = result.materials[gltfIdx];
-                    meshSegment.setPathToMaterial(std::string(material->assetFilePath()));
+                    meshSegment.setPathToMaterial(material->assetFilePath().string());
                 }
             }
         }
@@ -258,7 +253,7 @@ void AssetImportTask::importGltf()
             fileName = fmt::format("{}{:04}", fileName, count);
         }
 
-        std::string targetFilePath = fmt::format("{}/{}.arkmsh", targetDirectory, fileName);
+        std::filesystem::path targetFilePath = m_targetDirectory / fileName / MeshAsset::AssetFileExtension;
 
         // TODO: Json is currently super slow with all the data we have, even for smaller meshes, but if we separate out the core data it will be fine.
         AssetStorage assetStorage = options.saveMeshesInTextualFormat ? AssetStorage::Json : AssetStorage::Binary;
@@ -285,7 +280,7 @@ void AssetImportTask::importGltf()
             fileName = fmt::format("{}{:04}", fileName, count);
         }
 
-        std::string targetFilePath = fmt::format("{}/{}.arkskel", targetDirectory, fileName);
+        std::filesystem::path targetFilePath = m_targetDirectory / fileName / SkeletonAsset::AssetFileExtension;
 
         skeleton->writeToFile(targetFilePath, AssetStorage::Json);
         skeleton->setAssetFilePath(targetFilePath);
@@ -310,7 +305,7 @@ void AssetImportTask::importGltf()
             fileName = fmt::format("{}{:04}", fileName, count);
         }
 
-        std::string targetFilePath = fmt::format("{}/{}.arkanim", targetDirectory, fileName);
+        std::filesystem::path targetFilePath = m_targetDirectory / fileName / AnimationAsset::AssetFileExtension;
 
         animation->writeToFile(targetFilePath, AssetStorage::Json);
         animation->setAssetFilePath(targetFilePath);
