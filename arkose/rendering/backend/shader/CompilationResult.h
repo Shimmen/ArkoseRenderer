@@ -11,7 +11,7 @@ public:
 	virtual bool success() const = 0;
     virtual std::string errorMessage() const = 0;
     
-    virtual std::vector<std::string> const& includedFiles() const = 0;
+    virtual std::vector<std::filesystem::path> const& includedFiles() const = 0;
 
     using const_iterator = T const*;
 

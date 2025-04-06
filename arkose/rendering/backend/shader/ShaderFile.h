@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rendering/backend/shader/ShaderStage.h"
+#include <filesystem>
 #include <vector>
 #include <string>
 #include <optional>
@@ -41,10 +42,10 @@ struct ShaderDefine {
 
 struct ShaderFile {
     ShaderFile() = default;
-    explicit ShaderFile(const std::string& path, std::vector<ShaderDefine> = {});
-    ShaderFile(std::string path, ShaderStage, std::vector<ShaderDefine> = {});
+    explicit ShaderFile(std::filesystem::path path, std::vector<ShaderDefine> = {});
+    ShaderFile(std::filesystem::path path, ShaderStage, std::vector<ShaderDefine> = {});
 
-    [[nodiscard]] const std::string& path() const;
+    [[nodiscard]] const std::filesystem::path& path() const;
     [[nodiscard]] const std::vector<ShaderDefine>& defines() const;
     [[nodiscard]] const std::string& definesIdentifier() const;
     [[nodiscard]] ShaderStage shaderStage() const;
@@ -54,9 +55,9 @@ struct ShaderFile {
     bool isRayTracingShaderFile() const;
 
 private:
-    static ShaderStage stageFromPath(const std::string&);
+    static ShaderStage stageFromPath(std::filesystem::path const&);
 
-    std::string m_path;
+    std::filesystem::path m_path;
     std::vector<ShaderDefine> m_defines;
     std::string m_defines_identifier;
     ShaderStage m_shaderStage { ShaderStage::Unknown };

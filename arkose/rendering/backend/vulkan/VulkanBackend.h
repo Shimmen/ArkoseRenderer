@@ -57,7 +57,7 @@ public:
     ShaderDefine rayTracingShaderDefine() const override;
 
     void renderPipelineDidChange(RenderPipeline&) override;
-    void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline&) override;
+    void shadersDidRecompile(std::vector<std::filesystem::path> const& shaderNames, RenderPipeline&) override;
 
     void completePendingOperations() override;
 

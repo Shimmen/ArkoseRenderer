@@ -11,12 +11,12 @@
 #include <cstdio>
 #endif
 
-ShaderFile::ShaderFile(const std::string& path, std::vector<ShaderDefine> defines)
-    : ShaderFile(path, stageFromPath(path), std::move(defines))
+ShaderFile::ShaderFile(std::filesystem::path path, std::vector<ShaderDefine> defines)
+    : ShaderFile(std::move(path), stageFromPath(path), std::move(defines))
 {
 }
 
-ShaderFile::ShaderFile(std::string path, ShaderStage shaderStage, std::vector<ShaderDefine> defines)
+ShaderFile::ShaderFile(std::filesystem::path path, ShaderStage shaderStage, std::vector<ShaderDefine> defines)
     : m_path(std::move(path))
     , m_defines(std::move(defines))
     , m_shaderStage(shaderStage)
@@ -53,7 +53,7 @@ ShaderFile::ShaderFile(std::string path, ShaderStage shaderStage, std::vector<Sh
     ShaderManager::instance().registerShaderFile(*this);
 }
 
-const std::string& ShaderFile::path() const
+const std::filesystem::path& ShaderFile::path() const
 {
     return m_path;
 }
@@ -75,7 +75,7 @@ ShaderStage ShaderFile::shaderStage() const
 
 bool ShaderFile::valid() const
 {
-    return m_path.length() > 0 && m_shaderStage != ShaderStage::Unknown;
+    return !m_path.empty() && m_shaderStage != ShaderStage::Unknown;
 }
 
 bool ShaderFile::isRayTracingShaderFile() const
@@ -83,32 +83,29 @@ bool ShaderFile::isRayTracingShaderFile() const
     return isSet(shaderStage() & ShaderStage::AnyRayTrace);
 }
 
-ShaderStage ShaderFile::stageFromPath(const std::string& path)
+ShaderStage ShaderFile::stageFromPath(std::filesystem::path const& path)
 {
-    if (path.length() < 5)
+    if (!path.has_extension()) { 
         return ShaderStage::Unknown;
-    std::string ext5 = path.substr(path.length() - 5);
+    }
 
-    if (ext5 == ".vert")
+    std::filesystem::path ext = path.extension();
+
+    if (ext == ".vert")
         return ShaderStage::Vertex;
-    else if (ext5 == ".frag")
+    else if (ext == ".frag")
         return ShaderStage::Fragment;
-    else if (ext5 == ".rgen")
+    else if (ext == ".rgen")
         return ShaderStage::RTRayGen;
-    else if (ext5 == ".comp")
+    else if (ext == ".comp")
         return ShaderStage::Compute;
-    else if (ext5 == ".rint")
+    else if (ext == ".rint")
         return ShaderStage::RTIntersection;
-
-    if (path.length() < 6)
-        return ShaderStage::Unknown;
-    std::string ext6 = path.substr(path.length() - 6);
-
-    if (ext6 == ".rmiss")
+    else if (ext == ".rmiss")
         return ShaderStage::RTMiss;
-    else if (ext6 == ".rchit")
+    else if (ext == ".rchit")
         return ShaderStage::RTClosestHit;
-    else if (ext6 == ".rahit")
+    else if (ext == ".rahit")
         return ShaderStage::RTAnyHit;
 
     return ShaderStage::Unknown;

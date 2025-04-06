@@ -41,16 +41,16 @@ static shaderc_shader_kind glslShaderKindForShaderFile(ShaderFile const& shaderF
 
 class ShadercIncluder : public shaderc::CompileOptions::IncluderInterface {
 public:
-    using OnIncludeFileCallback = std::function<void(std::string const& filePath)>;
+    using OnIncludeFileCallback = std::function<void(std::filesystem::path const& filePath)>;
 
-    explicit ShadercIncluder(ShaderManager const& shaderManager, OnIncludeFileCallback callback)
+    ShadercIncluder(ShaderManager const& shaderManager, OnIncludeFileCallback callback)
         : m_shaderManager(shaderManager)
         , m_onIncludeFileCallback(std::move(callback))
     {
     }
 
     struct FileData {
-        std::string path;
+        std::string pathString;
         std::string content;
     };
 
@@ -58,14 +58,14 @@ public:
     {
         SCOPED_PROFILE_ZONE();
 
-        std::string path;
+        std::filesystem::path path;
         switch (includeType) {
         case shaderc_include_type_standard:
             path = m_shaderManager.resolveSourceFilePath(requestedSource);
             break;
         case shaderc_include_type_relative:
-            std::string_view dirOfRequesting = FileIO::extractDirectoryFromPath(requestingSource);
-            path = std::string(dirOfRequesting) + requestedSource;
+            std::filesystem::path dirOfRequesting = std::filesystem::path(requestingSource).parent_path();
+            path = dirOfRequesting / requestedSource;
             break;
         }
 
@@ -73,11 +73,11 @@ public:
         auto* dataOwner = new FileData();
         data->user_data = dataOwner;
 
-        dataOwner->path = path;
-        data->source_name = dataOwner->path.c_str();
-        data->source_name_length = dataOwner->path.size();
+        dataOwner->pathString = path.string();
+        data->source_name = dataOwner->pathString.c_str();
+        data->source_name_length = dataOwner->pathString.size();
 
-        auto maybeFileContent = FileIO::readEntireFile(path);
+        auto maybeFileContent = FileIO::readFile(path);
         if (maybeFileContent.has_value()) {
 
             m_onIncludeFileCallback(path);
@@ -107,7 +107,7 @@ private:
 
 class ShadercResult final : public CompilationResult<u32> {
 public:
-    explicit ShadercResult(shaderc::SpvCompilationResult&& svpCompilationResult, std::vector<std::string>&& includedFiles)
+    explicit ShadercResult(shaderc::SpvCompilationResult&& svpCompilationResult, std::vector<std::filesystem::path>&& includedFiles)
         : m_svpCompilationResult(std::move(svpCompilationResult))
         , m_includedFiles(std::move(includedFiles))
     {
@@ -123,7 +123,7 @@ public:
         return m_svpCompilationResult.GetErrorMessage();
     }
 
-    virtual std::vector<std::string> const& includedFiles() const override
+    virtual std::vector<std::filesystem::path> const& includedFiles() const override
     {
         return m_includedFiles;
     }
@@ -140,10 +140,10 @@ public:
 
 private:
     shaderc::SpvCompilationResult m_svpCompilationResult;
-    std::vector<std::string> m_includedFiles;
+    std::vector<std::filesystem::path> m_includedFiles;
 };
 
-std::unique_ptr<CompilationResult<u32>> ShadercInterface::compileShader(ShaderFile const& shaderFile, std::string_view resolvedFilePath)
+std::unique_ptr<CompilationResult<u32>> ShadercInterface::compileShader(ShaderFile const& shaderFile, std::filesystem::path const& resolvedFilePath)
 {
     shaderc::CompileOptions options;
 
@@ -162,9 +162,9 @@ std::unique_ptr<CompilationResult<u32>> ShadercInterface::compileShader(ShaderFi
     }
 
     // Setup a file includer
-    std::vector<std::string> includedFiles;
-    auto includer = std::make_unique<ShadercIncluder>(ShaderManager::instance(), [&includedFiles](std::string includedFile) {
-        includedFiles.push_back(std::move(includedFile));
+    std::vector<std::filesystem::path> includedFiles;
+    auto includer = std::make_unique<ShadercIncluder>(ShaderManager::instance(), [&includedFiles](std::filesystem::path const& includedFile) {
+        includedFiles.push_back(includedFile);
     });
     options.SetIncluder(std::move(includer));
 
@@ -178,13 +178,13 @@ std::unique_ptr<CompilationResult<u32>> ShadercInterface::compileShader(ShaderFi
     }
 
     shaderc_shader_kind shaderKind = glslShaderKindForShaderFile(shaderFile);
-    std::string glslSource = FileIO::readEntireFile(std::string(resolvedFilePath)).value();
+    std::string glslSource = FileIO::readFile(resolvedFilePath).value();
 
     shaderc::Compiler compiler {};
     shaderc::SpvCompilationResult result;
     {
         SCOPED_PROFILE_ZONE_NAMED("Shaderc - CompileGlslToSpv");
-        result = compiler.CompileGlslToSpv(glslSource, shaderKind, resolvedFilePath.data(), options);
+        result = compiler.CompileGlslToSpv(glslSource, shaderKind, resolvedFilePath.string().c_str(), options);
     };
 
     return std::make_unique<ShadercResult>(std::move(result), std::move(includedFiles));

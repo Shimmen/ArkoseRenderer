@@ -69,7 +69,7 @@ static wchar_t const* shaderModelForShaderFile(ShaderFile const& shaderFile)
 
 class DxcResult final : public CompilationResult<u8> {
 public:
-    explicit DxcResult(ComPtr<IDxcBlob>&& compiledCode, std::vector<std::string>&& includedFiles, std::string errorMessage)
+    DxcResult(ComPtr<IDxcBlob>&& compiledCode, std::vector<std::filesystem::path>&& includedFiles, std::string errorMessage)
         : m_compiledCode(std::move(compiledCode))
         , m_errorMessage(std::move(errorMessage))
         , m_includedFiles(std::move(includedFiles))
@@ -86,7 +86,7 @@ public:
         return m_errorMessage;
     }
 
-    virtual std::vector<std::string> const& includedFiles() const override
+    virtual std::vector<std::filesystem::path> const& includedFiles() const override
     {
         return m_includedFiles;
     }
@@ -103,7 +103,7 @@ public:
 
 private:
     ComPtr<IDxcBlob> m_compiledCode;
-    std::vector<std::string> m_includedFiles;
+    std::vector<std::filesystem::path> m_includedFiles;
     std::string m_errorMessage;
 };
 
@@ -145,17 +145,17 @@ public:
     ULONG STDMETHODCALLTYPE AddRef(void) override { return 0; }
     ULONG STDMETHODCALLTYPE Release(void) override { return 0; }
 
-    std::vector<std::string> includedFiles() const
+    std::vector<std::filesystem::path> includedFiles() const
     {
-        return std::vector<std::string>(m_includedFiles.begin(), m_includedFiles.end());
+        return std::vector<std::filesystem::path>(m_includedFiles.begin(), m_includedFiles.end());
     }
 
 private:
     ComPtr<IDxcLibrary> m_library;
-    std::unordered_set<std::string> m_includedFiles {};
+    std::unordered_set<std::filesystem::path> m_includedFiles {};
 };
 
-std::unique_ptr<CompilationResult<u8>> DxcInterface::compileShader(ShaderFile const& shaderFile, std::string_view resolvedFilePath)
+std::unique_ptr<CompilationResult<u8>> DxcInterface::compileShader(ShaderFile const& shaderFile, std::filesystem::path const& resolvedFilePath)
 {
     // Useful info https://simoncoenen.com/blog/programming/graphics/DxcCompiling
 
@@ -187,7 +187,7 @@ std::unique_ptr<CompilationResult<u8>> DxcInterface::compileShader(ShaderFile co
 
     ComPtr<IDxcBlobEncoding> sourceBlob;
     // TODO: Probably use library->CreateBlobWithEncodingFromPinned(..) to create from text instead of a file
-    if (auto hr = library->CreateBlobFromFile(convertToWideString(resolvedFilePath).c_str(), &codePage, &sourceBlob); FAILED(hr)) {
+    if (auto hr = library->CreateBlobFromFile(resolvedFilePath.c_str(), &codePage, &sourceBlob); FAILED(hr)) {
         ARKOSE_LOG(Fatal, "DxcInterface: failed to create source blob for shader, exiting.");
     }
 
@@ -224,7 +224,7 @@ std::unique_ptr<CompilationResult<u8>> DxcInterface::compileShader(ShaderFile co
     wchar_t const* shaderModel = shaderModelForShaderFile(shaderFile);
 
     ComPtr<IDxcOperationResult> compilationResult;
-    auto hr = compiler->Compile(sourceBlob.Get(), convertToWideString(resolvedFilePath).c_str(),
+    auto hr = compiler->Compile(sourceBlob.Get(), resolvedFilePath.c_str(),
                                 entryPointName, shaderModel,
                                 arguments.data(), narrow_cast<u32>(arguments.size()),
                                 dxcDefines.data(), narrow_cast<u32>(dxcDefines.size()),
@@ -246,7 +246,7 @@ std::unique_ptr<CompilationResult<u8>> DxcInterface::compileShader(ShaderFile co
             }
         }
 
-        return std::make_unique<DxcResult>(nullptr, std::vector<std::string>(), errorMessage);
+        return std::make_unique<DxcResult>(nullptr, std::vector<std::filesystem::path>(), errorMessage);
 
     } else {
         ComPtr<IDxcBlob> compiledCode;

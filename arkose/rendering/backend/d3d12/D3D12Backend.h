@@ -35,7 +35,7 @@ public:
     ShaderDefine rayTracingShaderDefine() const override { return ShaderDefine(); }
 
     void renderPipelineDidChange(RenderPipeline&) override;
-    void shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline&) override;
+    void shadersDidRecompile(std::vector<std::filesystem::path> const& shaderNames, RenderPipeline&) override;
 
     void newFrame() override;
     bool executeFrame(RenderPipeline&, float elapsedTime, float deltaTime) override;

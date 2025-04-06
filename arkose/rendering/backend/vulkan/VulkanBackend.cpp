@@ -2069,7 +2069,7 @@ void VulkanBackend::renderPipelineDidChange(RenderPipeline& renderPipeline)
     reconstructRenderPipelineResources(renderPipeline);
 }
 
-void VulkanBackend::shadersDidRecompile(const std::vector<std::string>& shaderNames, RenderPipeline& renderPipeline)
+void VulkanBackend::shadersDidRecompile(std::vector<std::filesystem::path> const& shaderNames, RenderPipeline& renderPipeline)
 {
     // Maybe figure out what nodes needs updating and only reconstruct that node & nodes depending on it?
     // On the other hand, creatating these resources should be very fast anyway so maybe shouldn't bother.

@@ -21,11 +21,11 @@
 
 ShaderManager& ShaderManager::instance()
 {
-    static ShaderManager instance { "shaders" };
+    static ShaderManager instance { std::filesystem::path("shaders") };
     return instance;
 }
 
-ShaderManager::ShaderManager(std::string basePath)
+ShaderManager::ShaderManager(std::filesystem::path basePath)
     : m_shaderBasePath(std::move(basePath))
 {
 }
@@ -43,7 +43,7 @@ void ShaderManager::startFileWatching(unsigned msBetweenPolls, FilesChangedCallb
                 SCOPED_PROFILE_ZONE_NAMED("Shader file watching");
                 std::lock_guard<std::mutex> dataLock(m_shaderDataMutex);
 
-                std::vector<std::string> recompiledFiles {};
+                std::vector<std::filesystem::path> recompiledFiles {};
                 for (auto& [_, compiledShader] : m_compiledShaders) {
 
                     if (compiledShader->compiledTimestamp == 0) { 
@@ -67,8 +67,9 @@ void ShaderManager::startFileWatching(unsigned msBetweenPolls, FilesChangedCallb
                     }
                 }
 
-                if (recompiledFiles.size() > 0 && filesChangedCallback)
+                if (recompiledFiles.size() > 0 && filesChangedCallback) {
                     filesChangedCallback(recompiledFiles);
+                }
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(msBetweenPolls));
         }
@@ -83,20 +84,20 @@ void ShaderManager::stopFileWatching()
     m_fileWatcherThread->join();
 }
 
-std::string ShaderManager::resolveSourceFilePath(std::string const& name) const
+std::filesystem::path ShaderManager::resolveSourceFilePath(std::filesystem::path const& name) const
 {
-    std::string resolvedPath = m_shaderBasePath + "/" + name;
+    std::filesystem::path resolvedPath = m_shaderBasePath / name;
     return resolvedPath;
 }
 
 std::string ShaderManager::createShaderIdentifier(const ShaderFile& shaderFile) const
 {
-    std::string identifier = shaderFile.path();
+    std::string identifier = shaderFile.path().string();
 
     // In HLSL you often pack all related (e.g. vertex & pixel) shaders together in a single file.
     // We need unique identifiers for each "ShaderFile" i.e. compiled unit, so we add this type
     // identifier to the identifier to solve that for the HLSL case.
-    if (shaderFile.path().ends_with(".hlsl")) {
+    if (shaderFile.path().extension() == ".hlsl") {
         switch (shaderFile.shaderStage()) {
         case ShaderStage::Vertex:
             identifier += "_VS";
@@ -157,47 +158,50 @@ bool ShaderManager::usingDebugShaders() const
 #endif
 }
 
-char const* ShaderManager::currentCachePath() const
+std::filesystem::path const& ShaderManager::currentCachePath() const
 {
+    static std::filesystem::path debugPath { ".cache/debug" };
+    static std::filesystem::path releasePath { ".cache/release" };
+
     if (usingDebugShaders()) {
-        return "/.cache/debug/";
+        return debugPath;
     } else {
-        return "/.cache/release/";
+        return releasePath;
     }
 }
 
-std::string ShaderManager::resolveDxilPath(ShaderFile const& shaderFile) const
+std::filesystem::path ShaderManager::resolveDxilPath(ShaderFile const& shaderFile) const
 {
     std::string dxilName = createShaderIdentifier(shaderFile) + ".dxil";
-    std::string resolvedPath = m_shaderBasePath + currentCachePath() + dxilName;
+    std::filesystem::path resolvedPath = m_shaderBasePath / currentCachePath() / dxilName;
     return resolvedPath;
 }
 
-std::string ShaderManager::resolveSpirvPath(ShaderFile const& shaderFile) const
+std::filesystem::path ShaderManager::resolveSpirvPath(ShaderFile const& shaderFile) const
 {
     std::string spirvName = createShaderIdentifier(shaderFile) + ".spv";
-    std::string resolvedPath = m_shaderBasePath + currentCachePath() + spirvName;
+    std::filesystem::path resolvedPath = m_shaderBasePath / currentCachePath() / spirvName;
     return resolvedPath;
 }
 
-std::string ShaderManager::resolveSpirvAssemblyPath(ShaderFile const& shaderFile) const
+std::filesystem::path ShaderManager::resolveSpirvAssemblyPath(ShaderFile const& shaderFile) const
 {
     std::string asmName = createShaderIdentifier(shaderFile) + ".spv-asm";
-    std::string resolvedPath = m_shaderBasePath + currentCachePath() + asmName;
+    std::filesystem::path resolvedPath = m_shaderBasePath / currentCachePath() / asmName;
     return resolvedPath;
 }
 
-std::string ShaderManager::resolveMetadataPath(ShaderFile const& shaderFile) const
+std::filesystem::path ShaderManager::resolveMetadataPath(ShaderFile const& shaderFile) const
 {
     std::string metaName = createShaderIdentifier(shaderFile) + ".meta";
-    std::string resolvedPath = m_shaderBasePath + currentCachePath() + metaName;
+    std::filesystem::path resolvedPath = m_shaderBasePath / currentCachePath() / metaName;
     return resolvedPath;
 }
 
-std::string ShaderManager::resolveHlslPath(ShaderFile const& shaderFile) const
+std::filesystem::path ShaderManager::resolveHlslPath(ShaderFile const& shaderFile) const
 {
     std::string hlslName = createShaderIdentifier(shaderFile) + ".hlsl";
-    std::string resolvedPath = m_shaderBasePath + currentCachePath() + hlslName;
+    std::filesystem::path resolvedPath = m_shaderBasePath / currentCachePath() / hlslName;
     return resolvedPath;
 }
 
@@ -210,10 +214,10 @@ void ShaderManager::registerShaderFile( ShaderFile const& shaderFile)
     auto entry = m_compiledShaders.find(identifer);
     if (entry == m_compiledShaders.end() || entry->second->lastCompileError.length() > 0) {
 
-        const std::string& shaderName = shaderFile.path();
-        std::string resolvedPath = resolveSourceFilePath(shaderName);
+        std::filesystem::path const& shaderName = shaderFile.path();
+        std::filesystem::path resolvedPath = resolveSourceFilePath(shaderName);
 
-        if (!FileIO::isFileReadable(resolvedPath)) {
+        if (!FileIO::fileReadable(resolvedPath)) {
             ARKOSE_LOG(Error, "ShaderManager: file '{}' not found", shaderName);
         }
 
@@ -347,12 +351,12 @@ bool ShaderManager::hasCompatibleNamedConstants(std::vector<ShaderFile> const& s
     return true;
 }
 
-ShaderManager::CompiledShader::CompiledShader(ShaderManager& manager, const ShaderFile& shaderFile, std::string resolvedPath)
+ShaderManager::CompiledShader::CompiledShader(ShaderManager& manager, const ShaderFile& shaderFile, std::filesystem::path resolvedPath)
     : shaderManager(manager)
     , shaderFile(shaderFile)
     , resolvedFilePath(std::move(resolvedPath))
 {
-    if (resolvedFilePath.ends_with(".hlsl")) {
+    if (resolvedFilePath.extension() == ".hlsl") {
         sourceType = SourceType::HLSL;
     } else {
         sourceType = SourceType::GLSL;
@@ -363,7 +367,7 @@ bool ShaderManager::CompiledShader::tryLoadingFromBinaryCache(TargetType targetT
 {
     SCOPED_PROFILE_ZONE();
 
-    std::string cachePath;
+    std::filesystem::path cachePath;
 
     switch (targetType) {
     case TargetType::Spirv:
@@ -375,7 +379,7 @@ bool ShaderManager::CompiledShader::tryLoadingFromBinaryCache(TargetType targetT
     }
 
     struct stat statResult { };
-    bool cacheExists = stat(cachePath.c_str(), &statResult) == 0;
+    bool cacheExists = stat(cachePath.string().c_str(), &statResult) == 0;
 
     if (!cacheExists) {
         return false;
@@ -519,10 +523,10 @@ bool ShaderManager::CompiledShader::compile(TargetType targetType)
                 hlslCompiler.set_hlsl_options(options);
 
                 try {
-                    std::string hlslResolvedPath = shaderManager.resolveHlslPath(shaderFile);
+                    std::filesystem::path hlslResolvedPath = shaderManager.resolveHlslPath(shaderFile);
 
                     std::string hlsl = hlslCompiler.compile();
-                    FileIO::writeBinaryDataToFile(hlslResolvedPath, hlsl.data(), hlsl.size());
+                    FileIO::writeBinaryDataToFile(hlslResolvedPath, reinterpret_cast<std::byte*>(hlsl.data()), hlsl.size());
 
                     auto result2 = DxcInterface::compileShader(shaderFile, hlslResolvedPath);
                     if ( result2->success() ) {
@@ -695,7 +699,7 @@ void ShaderManager::CompiledShader::writeShaderMetadataFile() const
         metadataContent.append(fmt::format("{}:{}:{}:{}\n", constant.name, constant.type, constant.size, constant.offset));
     }
 
-    std::string metadataPath = shaderManager.resolveMetadataPath(shaderFile);
+    std::filesystem::path metadataPath = shaderManager.resolveMetadataPath(shaderFile);
     FileIO::writeTextDataToFile(metadataPath, metadataContent);
 }
 
@@ -705,7 +709,7 @@ bool ShaderManager::CompiledShader::readShaderMetadataFile()
 
     namedConstants.clear();
 
-    std::string metadataPath = shaderManager.resolveMetadataPath(shaderFile);
+    std::filesystem::path metadataPath = shaderManager.resolveMetadataPath(shaderFile);
     bool readSuccess = FileIO::readFileLineByLine(metadataPath, [&](std::string const& line) {
 
         NamedConstant& constant = namedConstants.emplace_back();
@@ -740,12 +744,12 @@ uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree(boo
 {
     SCOPED_PROFILE_ZONE();
 
-    std::vector<std::string> missingFiles {};
+    std::vector<std::filesystem::path> missingFiles {};
     uint64_t latestTimestamp = 0;
 
-    auto checkFile = [&](const std::string& file) {
+    auto checkFile = [&](std::filesystem::path const& file) {
         struct stat statResult {};
-        if (stat(file.c_str(), &statResult) == 0) {
+        if (stat(file.string().c_str(), &statResult) == 0) {
             uint64_t timestamp = statResult.st_mtime;
             latestTimestamp = std::max(timestamp, latestTimestamp);
         } else {
@@ -764,7 +768,7 @@ uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree(boo
 
     if (missingFiles.size() > 0) {
         ARKOSE_LOG(Error, "Shader file '{}' has {} non-existant file(s) in its include tree:", resolvedFilePath, missingFiles.size());
-        for (std::string const& missingFile : missingFiles) {
+        for (std::filesystem::path const& missingFile : missingFiles) {
             ARKOSE_LOG(Error, "  {}", missingFile);
         }
         ARKOSE_LOG(Fatal, "Can't resolve edit timestamps, exiting");
@@ -774,19 +778,19 @@ uint64_t ShaderManager::CompiledShader::findLatestEditTimestampInIncludeTree(boo
     return latestTimestamp;
 }
 
-std::vector<std::string> ShaderManager::CompiledShader::findAllIncludedFiles() const
+std::vector<std::filesystem::path> ShaderManager::CompiledShader::findAllIncludedFiles() const
 {
     SCOPED_PROFILE_ZONE();
 
     // NOTE: If the resulting list does not line up with what the shader compiler
     // believes is the true set of includes we should expect some weird issues.
 
-    std::vector<std::string> files {};
+    std::vector<std::filesystem::path> files {};
 
-    std::vector<std::string> filesToTest { resolvedFilePath };
+    std::vector<std::filesystem::path> filesToTest { resolvedFilePath };
     while (filesToTest.size() > 0) {
 
-        std::string fileToTest = filesToTest.back();
+        std::filesystem::path fileToTest = filesToTest.back();
         filesToTest.pop_back();
 
         FileIO::readFileLineByLine(fileToTest, [&files, &fileToTest, & filesToTest, this](const std::string& line) {
@@ -798,8 +802,8 @@ std::vector<std::string> ShaderManager::CompiledShader::findAllIncludedFiles() c
                 return LoopAction::Continue;
             }
 
-            std::string includePath = (relativePath)
-                ? fmt::format("{}{}", FileIO::extractDirectoryFromPath(fileToTest), specifiedPath)
+            std::filesystem::path includePath = (relativePath)
+                ? fileToTest.parent_path() / specifiedPath
                 : shaderManager.resolveSourceFilePath(std::string(specifiedPath));
 
             if (std::find(files.begin(), files.end(), includePath) == files.end()) {

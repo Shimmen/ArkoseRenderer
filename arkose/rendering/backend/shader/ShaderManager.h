@@ -25,18 +25,18 @@ public:
     using SpirvData = std::vector<u32>;
     using DXILData = std::vector<u8>;
 
-    std::string resolveSourceFilePath(std::string const& name) const;
+    std::filesystem::path resolveSourceFilePath(std::filesystem::path const& name) const;
 
     std::string createShaderIdentifier(const ShaderFile&) const;
 
     bool usingDebugShaders() const;
-    char const* currentCachePath() const;
+    std::filesystem::path const& currentCachePath() const;
 
-    std::string resolveDxilPath(ShaderFile const&) const;
-    std::string resolveSpirvPath(ShaderFile const&) const;
-    std::string resolveSpirvAssemblyPath(ShaderFile const&) const;
-    std::string resolveMetadataPath(ShaderFile const&) const;
-    std::string resolveHlslPath(ShaderFile const&) const;
+    std::filesystem::path resolveDxilPath(ShaderFile const&) const;
+    std::filesystem::path resolveSpirvPath(ShaderFile const&) const;
+    std::filesystem::path resolveSpirvAssemblyPath(ShaderFile const&) const;
+    std::filesystem::path resolveMetadataPath(ShaderFile const&) const;
+    std::filesystem::path resolveHlslPath(ShaderFile const&) const;
 
     void registerShaderFile(ShaderFile const&);
 
@@ -46,7 +46,7 @@ public:
     NamedConstantLookup mergeNamedConstants(Shader const&) const;
     bool hasCompatibleNamedConstants(std::vector<ShaderFile> const&, std::vector<NamedConstant>& outMergedConstants) const;
 
-    using FilesChangedCallback = std::function<void(const std::vector<std::string>&)>;
+    using FilesChangedCallback = std::function<void(const std::vector<std::filesystem::path>&)>;
     void startFileWatching(unsigned msBetweenPolls, FilesChangedCallback filesChangedCallback = {});
     void stopFileWatching();
 
@@ -55,11 +55,11 @@ public:
     ShaderManager(ShaderManager&&) = delete;
 
 private:
-    explicit ShaderManager(std::string basePath);
+    explicit ShaderManager(std::filesystem::path basePath);
     ~ShaderManager() = default;
 
     struct CompiledShader {
-        CompiledShader(ShaderManager&, const ShaderFile&, std::string resolvedPath);
+        CompiledShader(ShaderManager&, const ShaderFile&, std::filesystem::path resolvedPath);
 
         enum class TargetType {
             Spirv,
@@ -78,15 +78,15 @@ private:
         bool readShaderMetadataFile();
 
         uint64_t findLatestEditTimestampInIncludeTree(bool scanForNewIncludes = false);
-        std::vector<std::string> findAllIncludedFiles() const;
+        std::vector<std::filesystem::path> findAllIncludedFiles() const;
 
         std::string_view findIncludedPathFromShaderCodeLine(std::string_view line, bool& outIsRelative) const;
 
         const ShaderManager& shaderManager;
 
         ShaderFile shaderFile;
-        std::string resolvedFilePath {};
-        std::vector<std::string> includedFilePaths {};
+        std::filesystem::path resolvedFilePath {};
+        std::vector<std::filesystem::path> includedFilePaths {};
 
         uint64_t lastEditTimestamp { 0 };
         uint64_t compiledTimestamp { 0 };
@@ -105,7 +105,7 @@ private:
         std::vector<NamedConstant> namedConstants {};
     };
 
-    std::string m_shaderBasePath;
+    std::filesystem::path m_shaderBasePath;
     std::unordered_map<std::string, std::unique_ptr<CompiledShader>> m_compiledShaders {};
 
     std::unique_ptr<std::thread> m_fileWatcherThread {};

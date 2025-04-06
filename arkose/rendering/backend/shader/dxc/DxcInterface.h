@@ -8,7 +8,7 @@
 
 namespace DxcInterface {
 
-    std::unique_ptr<CompilationResult<u8>> compileShader(ShaderFile const& shaderFile, std::string_view resolvedFilePath);
+    std::unique_ptr<CompilationResult<u8>> compileShader(ShaderFile const& shaderFile, std::filesystem::path const& resolvedFilePath);
 
     std::string entryPointNameForShaderFile(ShaderFile const&);
 

@@ -8,6 +8,6 @@
 
 namespace ShadercInterface {
 
-    std::unique_ptr<CompilationResult<u32>> compileShader(ShaderFile const& shaderFile, std::string_view resolvedFilePath);
+    std::unique_ptr<CompilationResult<u32>> compileShader(ShaderFile const& shaderFile, std::filesystem::path const& resolvedFilePath);
 
 }

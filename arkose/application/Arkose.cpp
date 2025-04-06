@@ -46,10 +46,10 @@ static std::unique_ptr<App> createApp()
 }
 
 static std::mutex shaderFileWatchMutex {};
-static std::vector<std::string> changedShaderFiles {};
+static std::vector<std::filesystem::path> changedShaderFiles {};
 static void initializeShaderFileWatching()
 {
-    ShaderManager::instance().startFileWatching(1'000, [&](const std::vector<std::string>& changedFiles) {
+    ShaderManager::instance().startFileWatching(1'000, [&](const std::vector<std::filesystem::path>& changedFiles) {
         shaderFileWatchMutex.lock();
         changedShaderFiles = changedFiles;
         shaderFileWatchMutex.unlock();
@@ -136,7 +136,7 @@ int Arkose::runArkoseApplication(int argc, char** argv)
     bool exitRequested = false;
     while (!exitRequested) {
 
-        checkOnShaderFileWatching([&](std::vector<std::string> const& modifiedShaderFiles) {
+        checkOnShaderFileWatching([&](std::vector<std::filesystem::path> const& modifiedShaderFiles) {
             graphicsBackend.shadersDidRecompile(modifiedShaderFiles, *renderPipeline);
         });
 
