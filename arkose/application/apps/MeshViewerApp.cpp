@@ -130,7 +130,7 @@ bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
             if (ImGui::Button("Create level...", ImVec2(ImGui::GetContentRegionAvail().x, 0))) {
                 if (auto maybePath = FileDialog::save({ { "Arkose level", LevelAsset::AssetFileExtension } })) {
 
-                    std::string savePath = maybePath.value();
+                    std::filesystem::path savePath = maybePath.value();
                     ARKOSE_LOG(Info, "Saving level to file '{}'", savePath);
 
                     auto levelAsset = LevelAsset::createFromAssetImportResult(result);
@@ -236,18 +236,18 @@ void MeshViewerApp::drawMeshHierarchyPanel()
     if (m_targetAsset && m_targetInstance) {
 
         MeshAsset const& meshAsset = *m_targetAsset;
-        std::string meshPath = std::string(meshAsset.assetFilePath());
+        std::string meshPath = meshAsset.assetFilePath().string();
 
         ImGui::Text("%s", meshPath.c_str());
         if (ImGui::Button("Save")) {
-            meshAsset.writeToFile(meshPath, AssetStorage::Json);
+            meshAsset.writeToFile(meshAsset.assetFilePath(), AssetStorage::Json);
             // TODO: *All* references to this mesh must now reload that mesh! Is that a good behaviour?
         }
         ImGui::SameLine();
         if (ImGui::Button("Save as...")) {
             if (auto maybePath = FileDialog::save({ { "Arkose mesh", MeshAsset::AssetFileExtension } })) {
                 // Write the mesh to disk
-                std::string newMeshPath = maybePath.value();
+                std::filesystem::path newMeshPath = maybePath.value();
                 meshAsset.writeToFile(newMeshPath, AssetStorage::Json); // TODO: Use binary!
                 // Then immediately load it and make it the material for this segment (all other segments still use the old one)
                 if (MeshAsset* newMeshAsset = MeshAsset::load(newMeshPath)) {
@@ -342,9 +342,9 @@ void MeshViewerApp::drawMeshHierarchyPanel()
                 ImGui::SameLine();
                 if (ImGui::Button("...")) {
                     if (auto maybePath = FileDialog::open({ { "Arkose material", MaterialAsset::AssetFileExtension } })) {
-                        std::string newMaterialPath = maybePath.value();
+                        std::filesystem::path newMaterialPath = maybePath.value();
                         if (MaterialAsset* newMaterialAsset = MaterialAsset::load(newMaterialPath)) {
-                            segmentAsset->setPathToMaterial(newMaterialPath); // TODO: Avoid setting an absolute path here!
+                            segmentAsset->setPathToMaterial(newMaterialPath.string()); // TODO: Avoid setting an absolute path here!
                             selectedSegment()->setMaterial(newMaterialAsset, m_scene->gpuScene());
                         }
                     }
@@ -377,11 +377,11 @@ void MeshViewerApp::drawMeshMaterialPanel()
             if (ImGui::Button("Save as...")) {
                 if (auto maybePath = FileDialog::save({ { "Arkose material", MaterialAsset::AssetFileExtension } })) {
                     // Write the material to disk
-                    std::string newMaterialPath = maybePath.value();
+                    std::filesystem::path newMaterialPath = maybePath.value();
                     material->writeToFile(newMaterialPath, AssetStorage::Json);
                     // Then immediately load it and make it the material for this segment (all other segments still use the old one)
                     if (MaterialAsset* newMaterialAsset = MaterialAsset::load(newMaterialPath)) {
-                        segmentAsset->setPathToMaterial(newMaterialPath); // TODO: Avoid setting an absolute path here!
+                        segmentAsset->setPathToMaterial(newMaterialPath.string()); // TODO: Avoid setting an absolute path here!
                         selectedSegment()->setMaterial(newMaterialAsset, m_scene->gpuScene());
                         material = newMaterialAsset;
                     }
@@ -401,9 +401,9 @@ void MeshViewerApp::drawMeshMaterialPanel()
                             if (auto maybePath = FileDialog::open({ { "Arkose image", ImageAsset::AssetFileExtension },
                                                                     { "png", "png" },
                                                                     { "jpeg", "jpeg,jpg" } })) {
-                                std::string newImagePath = maybePath.value();
+                                std::filesystem::path newImagePath = maybePath.value();
                                 if (ImageAsset* newImageAsset = ImageAsset::loadOrCreate(newImagePath)) {
-                                    materialInput->setPathToImage(newImagePath);
+                                    materialInput->setPathToImage(newImagePath.string());
                                     didChange |= true;
                                 }
                             }
@@ -704,11 +704,11 @@ void MeshViewerApp::importAssetWithDialog()
 
     if (auto maybePath = FileDialog::open(filterItems)) {
 
-        std::string importFilePath = maybePath.value();
+        std::filesystem::path importFilePath = maybePath.value();
         ARKOSE_LOG(Info, "Importing mesh from file '{}'", importFilePath);
 
-        std::string_view importFileDir = FileIO::extractDirectoryFromPath(importFilePath);
-        std::string targetDirectory = FileIO::normalizePath(importFileDir);
+        std::filesystem::path importFileDir = importFilePath.parent_path();
+        std::filesystem::path targetDirectory = std::filesystem::absolute(importFileDir);
 
         m_currentImportTask = AssetImportTask::create(importFilePath, targetDirectory, m_importOptions);
         TaskGraph::get().scheduleTask(*m_currentImportTask);
@@ -719,7 +719,7 @@ void MeshViewerApp::loadMeshWithDialog()
 {
     if (auto maybePath = FileDialog::open({ { "Arkose mesh", MeshAsset::AssetFileExtension } })) {
 
-        std::string openPath = maybePath.value();
+        std::filesystem::path openPath = maybePath.value();
         ARKOSE_LOG(Info, "Loading mesh from file '{}'", openPath);
 
         if (MeshAsset* meshAsset = MeshAsset::load(openPath)) {
@@ -735,8 +735,7 @@ void MeshViewerApp::loadMeshWithDialog()
 void MeshViewerApp::saveMeshWithDialog()
 {
     if (auto maybePath = FileDialog::save({ { "Arkose mesh", MeshAsset::AssetFileExtension } })) {
-        
-        std::string savePath = maybePath.value();
+        std::filesystem::path savePath = maybePath.value();
         ARKOSE_LOG(Info, "Saving mesh to file '{}'", savePath);
         // TODO: Save all(?) m_targets to savePath
 
@@ -793,7 +792,7 @@ void MeshViewerApp::drawBakeUiIfActive()
             auto aoImage = performAmbientOcclusionBake(m_pendingBake, resolution, sampleCount);
             m_pendingBake = BakeMode::None;
 
-            std::string_view materialDirectory = FileIO::extractDirectoryFromPath(selectedSegmentAsset()->pathToMaterial());
+            std::filesystem::path materialDirectory = std::filesystem::path(selectedSegmentAsset()->pathToMaterial()).parent_path();
             if (auto maybePath = FileDialog::save({ { "Arkose image", ImageAsset::AssetFileExtension } }, materialDirectory, "AmbientOcclusion.arkimg")) {
                 aoImage->writeToFile(maybePath.value(), AssetStorage::Binary);
                 aoImage->setAssetFilePath(maybePath.value());
@@ -801,7 +800,7 @@ void MeshViewerApp::drawBakeUiIfActive()
                 // Let's hope no other object is using this material, because now we're saving object-specific data to it :)
                 // Really though, this should only be done for non-trimsheet-style materials, but for object specific ones.
                 if (MaterialAsset* material = MaterialAsset::load(std::string(selectedSegmentAsset()->pathToMaterial()))) {
-                    material->bentNormalMap = MaterialInput(aoImage->assetFilePath());
+                    material->bentNormalMap = MaterialInput(aoImage->assetFilePath().string());
                     material->bentNormalMap->wrapModes = ImageWrapModes::clampAllToEdge();
                     material->writeToFile(material->assetFilePath(), AssetStorage::Json);
                     // Re-register the material for the segment

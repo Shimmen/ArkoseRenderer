@@ -256,7 +256,7 @@ private:
     VkExtent2D pickBestSwapchainExtent() const;
     VkPhysicalDevice pickBestPhysicalDevice() const;
 
-    static constexpr const char* piplineCacheFilePath = "assets/.cache/pipeline-cache.bin";
+    std::filesystem::path pipelineCacheFilePath = "assets/.cache/pipeline-cache.bin";
     VkPipelineCache createAndLoadPipelineCacheFromDisk() const;
     void savePipelineCacheToDisk(VkPipelineCache) const;
 

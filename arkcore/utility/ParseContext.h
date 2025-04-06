@@ -2,11 +2,12 @@
 
 #include <optional>
 #include <string>
+#include <filesystem>
 #include <fstream>
 
 class ParseContext {
 public:
-    ParseContext(std::string const& fileType, std::string const& filePath);
+    ParseContext(std::string const& fileType, std::filesystem::path const& filePath);
 
     bool isValid() const;
 
@@ -36,6 +37,6 @@ public:
 
 private:
     std::string m_fileType;
-    std::string m_path;
+    std::filesystem::path m_path;
     std::ifstream m_stream;
 };

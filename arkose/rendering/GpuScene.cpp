@@ -412,7 +412,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 }
 
                 auto texture = backend().createTexture(loadedImageForTex.textureDescription);
-                texture->setName("Texture<" + std::string(loadedImageForTex.imageAsset->assetFilePath()) + ">");
+                texture->setName("Texture<" + loadedImageForTex.imageAsset->assetFilePath().string() + ">");
 
                 if (not assetHasMips || not textureWantMips) {
                     std::span<const u8> mip0PixelData = loadedImageForTex.imageAsset->pixelDataForMip(0);

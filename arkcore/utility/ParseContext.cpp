@@ -3,7 +3,7 @@
 #include "core/Logging.h"
 #include <cctype>
 
-ParseContext::ParseContext(std::string const& fileType, std::string const& filePath)
+ParseContext::ParseContext(std::string const& fileType, std::filesystem::path const& filePath)
     : m_fileType(fileType)
     , m_path(filePath)
     , m_stream(filePath)

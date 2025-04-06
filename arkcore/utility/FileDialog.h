@@ -1,5 +1,6 @@
 #pragma once
 
+#include <filesystem>
 #include <optional>
 #include <vector>
 #include <string>
@@ -13,9 +14,9 @@ struct FilterItem {
     const char* extensions;
 };
 
-std::optional<std::string> open(std::vector<FilterItem>, std::string_view defaultPath = {});
-std::vector<std::string> openMultiple(std::vector<FilterItem>, std::string_view defaultPath = {});
+std::optional<std::filesystem::path> open(std::vector<FilterItem>, std::filesystem::path defaultPath = {});
+std::vector<std::filesystem::path> openMultiple(std::vector<FilterItem>, std::filesystem::path defaultPath = {});
 
-std::optional<std::string> save(std::vector<FilterItem>, std::string_view defaultPath = {}, std::string_view defaultName = {});
+std::optional<std::filesystem::path> save(std::vector<FilterItem>, std::filesystem::path defaultPath = {}, std::string_view defaultName = {});
 
 }

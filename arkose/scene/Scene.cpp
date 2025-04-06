@@ -71,7 +71,7 @@ void Scene::setupFromDescription(const Description& description)
     gpuScene().initialize({}, description.withRayTracing, description.withMeshShading);
 
     if (description.path.size() > 0) {
-        if (FileIO::isFileReadable(description.path)) {
+        if (FileIO::fileReadable(description.path)) {
             if (LevelAsset* levelAsset = LevelAsset::load(description.path)) {
                 addLevel(levelAsset);
             }

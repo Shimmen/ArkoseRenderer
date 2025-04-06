@@ -1140,7 +1140,7 @@ VkPipelineCache VulkanBackend::createAndLoadPipelineCacheFromDisk() const
     VkPipelineCacheCreateInfo pipelineCacheInfo = { VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO };
 
     // TODO: Maybe do some validation on the data e.g. in case version change? On the other hand, it's easy to just delete the cache if it doesn't load properly..
-    auto maybeCacheData = FileIO::readBinaryDataFromFile<char>(piplineCacheFilePath);
+    auto maybeCacheData = FileIO::readBinaryDataFromFile<char>(pipelineCacheFilePath);
     if (maybeCacheData.has_value()) {
         const std::vector<char>& cacheData = maybeCacheData.value();
         pipelineCacheInfo.pInitialData = cacheData.data();
@@ -1167,7 +1167,7 @@ void VulkanBackend::savePipelineCacheToDisk(VkPipelineCache pipelineCache) const
     std::vector<char> data(size);
     vkGetPipelineCacheData(device(), pipelineCache, &size, data.data());
 
-    FileIO::writeBinaryDataToFile(piplineCacheFilePath, data);
+    FileIO::writeBinaryDataToFile(pipelineCacheFilePath, data);
 }
 
 void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice device, VkSurfaceKHR surface)
