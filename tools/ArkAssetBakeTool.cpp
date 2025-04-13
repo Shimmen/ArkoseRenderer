@@ -34,12 +34,6 @@ int main(int argc, char* argv[])
         AnimationAsset* animationAsset = AnimationAsset::load(inputFile);
         animationAsset->writeToFile(outputFile, AssetStorage::Binary);
 
-    } else if (extension == ImageAsset::AssetFileExtension) {
-
-        ARKOSE_LOG(Info, "ArkAssetBakeTool: loading image asset file '{}'", inputFile);
-        ImageAsset* imageAsset = ImageAsset::loadOrCreate(inputFile);
-        imageAsset->writeToFile(outputFile, AssetStorage::Binary);
-
     } else if (extension == LevelAsset::AssetFileExtension) {
 
         ARKOSE_LOG(Info, "ArkAssetBakeTool: loading level asset file '{}'", inputFile);
