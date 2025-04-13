@@ -91,7 +91,7 @@ u8 const* DDS::loadFromMemory(u8 const* data, size_t size, Extent3D& outExtent, 
     }
 
     DDSHeader const* header = reinterpret_cast<DDSHeader const*>(data + 4);
-    u8 const* dataStart = reinterpret_cast<u8 const*>(header) + 124;
+    u8 const* dataStart = reinterpret_cast<u8 const*>(header) + sizeof(DDSHeader);
 
     u32 width = 0;
     if (header->flags & DDSHeader::DDSD_WIDTH) {
@@ -136,9 +136,12 @@ u8 const* DDS::loadFromMemory(u8 const* data, size_t size, Extent3D& outExtent, 
             case DDSHeader::FOURCC_DX10: {
                 ARKOSE_ASSERT(size >= 4 + sizeof(DDSHeader) + sizeof(DDSHeaderDX10));
                 DDSHeaderDX10 const* headerDX10 = reinterpret_cast<DDSHeaderDX10 const*>(dataStart);
-                dataStart += 20; // skip past the DX10 header
+                dataStart += sizeof(DDSHeaderDX10);
 
                 switch (headerDX10->dxgiFormat) {
+                case 83: // DXGI_FORMAT_BC5_UNORM
+                    outFormat = ImageFormat::BC5;
+                    break;
                 case 98: // DXGI_FORMAT_BC7_UNORM
                     outFormat = ImageFormat::BC7;
                     outSrgb = false;
@@ -252,9 +255,6 @@ bool DDS::writeToFile(std::filesystem::path const& filePath, u8 const* imageData
     if (imageFormatIsBlockCompressed(format)) {
         fileSize += sizeof(DDSHeaderDX10);
         hasDX10Header = true;
-
-        ARKOSE_LOG(Error, "We can't yet handle the DX10 header when writing!");
-        return false;
     }
 
     std::byte* fileData = static_cast<std::byte*>(malloc(fileSize));
@@ -268,6 +268,14 @@ bool DDS::writeToFile(std::filesystem::path const& filePath, u8 const* imageData
 
     DDSHeader* header = reinterpret_cast<DDSHeader*>(fileData + 4);
     memset(header, 0, sizeof(DDSHeader));
+
+    header->size = sizeof(DDSHeader);
+
+    DDSHeaderDX10* headerDX10 = nullptr;
+    if (hasDX10Header) {
+        headerDX10 = reinterpret_cast<DDSHeaderDX10*>(fileData + 4 + sizeof(DDSHeader));
+        memset(headerDX10, 0, sizeof(DDSHeaderDX10));
+    }
 
     header->flags |= DDSHeader::DDSD_WIDTH;
     header->width = extent.width();
@@ -297,6 +305,22 @@ bool DDS::writeToFile(std::filesystem::path const& filePath, u8 const* imageData
     case ImageFormat::R32F:
         header->pixelFormat.flags |= DDSHeader::DDPF_FOURCC;
         header->pixelFormat.fourCC |= DDSHeader::FOURCC_R32F;
+        break;
+    case ImageFormat::BC5:
+        ARKOSE_ASSERT(headerDX10 != nullptr);
+        header->pixelFormat.flags |= DDSHeader::DDPF_FOURCC;
+        header->pixelFormat.fourCC |= DDSHeader::FOURCC_DX10;
+        headerDX10->dxgiFormat = 83; // DXGI_FORMAT_BC5_UNORM
+        break;
+    case ImageFormat::BC7:
+        ARKOSE_ASSERT(headerDX10 != nullptr);
+        header->pixelFormat.flags |= DDSHeader::DDPF_FOURCC;
+        header->pixelFormat.fourCC |= DDSHeader::FOURCC_DX10;
+        if (sRGB) {
+            headerDX10->dxgiFormat = 99; // DXGI_FORMAT_BC7_UNORM_SRGB
+        } else {
+            headerDX10->dxgiFormat = 98; // DXGI_FORMAT_BC7_UNORM
+        }
         break;
     default:
         NOT_YET_IMPLEMENTED();
