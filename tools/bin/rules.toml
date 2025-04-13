@@ -44,3 +44,19 @@ InputFilters = [
 ]
 CommandLine = '{ Repo:Tools }ImgAssetBakeTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }{ File }.dds"'
 OutputPaths = [ '{ Repo:Imported }{ Dir }{ File }.dds' ]
+
+[[Rule]]
+Name = "Copy .cube LUTs"
+InputFilters = [ 
+   { Repo = "Assets", PathPattern = "*.cube" },
+]
+CommandLine = '{ Repo:Tools }CopyFileTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Path }"'
+OutputPaths = [ '{ Repo:Imported }{ Path }' ]
+
+[[Rule]]
+Name = "Copy .hdr image files (TODO: Convert to DDS)"
+InputFilters = [ 
+   { Repo = "Assets", PathPattern = "*.hdr" },
+]
+CommandLine = '{ Repo:Tools }CopyFileTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Path }"'
+OutputPaths = [ '{ Repo:Imported }{ Path }' ]
