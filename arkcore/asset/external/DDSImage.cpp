@@ -1,7 +1,5 @@
 #include "DDSImage.h"
 
-ARK_DISABLE_OPTIMIZATIONS
-
 struct DDSHeader {
     // https://learn.microsoft.com/en-us/windows/win32/direct3d11/texture-block-compression-in-direct3d-11
     // `dxgiformat.h` is used as reference, however not included here, as that header is not available on all platforms.
