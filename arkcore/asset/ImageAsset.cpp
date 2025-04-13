@@ -14,11 +14,6 @@
 #include <fstream>
 #include <stb_image.h>
 
-#pragma warning(push)
-#pragma warning(disable: 4711)
-#include <lz4.h>
-#pragma warning(pop)
-
 namespace {
 AssetCache<ImageAsset> s_imageAssetCache {};
 }
@@ -67,11 +62,6 @@ std::unique_ptr<ImageAsset> ImageAsset::createCopyWithReplacedFormat(ImageAsset 
     newImage->m_format = newFormat;
     newImage->m_pixelData = std::move(pixelData);
     newImage->m_mips = std::move(imageMips);
-
-    // Passed in data must be in an uncompressed state (compressed data formats are okay but not lossless compression on pixel_data!)
-    newImage->m_compressed = false;
-    newImage->m_uncompressedSize = narrow_cast<u32>(newImage->m_pixelData.size());
-    newImage->m_compressedSize = newImage->m_compressedSize;
 
     return newImage;
 }
@@ -200,10 +190,6 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
         }
     }
 
-    // No compression when creating here now, but we might want to apply it before writing to disk
-    imageAsset->m_compressed = false;
-    imageAsset->m_uncompressedSize = narrow_cast<u32>(imageAsset->m_pixelData.size());
-
     return imageAsset;
 }
 
@@ -229,10 +215,6 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromRawData(uint8_t const* data, s
     ImageMip mip0 { .offset = 0,
                     .size = size };
     imageAsset->m_mips.push_back(mip0);
-
-    // No compression when creating here now, but we might want to apply it before writing to disk
-    imageAsset->m_compressed = false;
-    imageAsset->m_uncompressedSize = narrow_cast<u32>(size);
 
     return imageAsset;
 }
@@ -312,10 +294,6 @@ bool ImageAsset::readFromFile(std::filesystem::path const& filePath)
     archive(*this);
     setAssetFilePath(filePath);
 
-    if (isCompressed()) {
-        decompress();
-    }
-
     return true;
 }
 
@@ -328,11 +306,6 @@ bool ImageAsset::writeToFile(std::filesystem::path const& filePath, AssetStorage
     if (not isValidAssetPath(filePath)) {
         ARKOSE_LOG(Error, "Trying to write image asset to file with invalid extension: '{}'", filePath);
         return false;
-    }
-
-    if (not m_compressed) {
-        // HACK: const_cast! I really want writing to be a const operation...
-        const_cast<ImageAsset*>(this)->compress();
     }
 
     std::ofstream fileStream { filePath, std::ios::binary | std::ios::trunc };
@@ -478,72 +451,6 @@ Extent3D ImageAsset::extentAtMip(size_t mipIdx) const
 bool ImageAsset::hasCompressedFormat() const
 {
     return imageFormatIsBlockCompressed(format());
-}
-
-bool ImageAsset::compress()
-{
-    SCOPED_PROFILE_ZONE();
-
-    if (m_compressed) {
-        return true;
-    }
-
-    int uncompressedSize = narrow_cast<i32>(m_pixelData.size());
-    int maxCompressedSize = LZ4_compressBound(uncompressedSize);
-    std::vector<u8> compressedBlob {};
-    compressedBlob.resize(maxCompressedSize);
-
-    char const* src = reinterpret_cast<char const*>(m_pixelData.data());
-    char* dst = reinterpret_cast<char*>(compressedBlob.data());
-    int compressedSize = LZ4_compress_default(src, dst, uncompressedSize, maxCompressedSize);
-
-    if (compressedSize <= 0) {
-        ARKOSE_LOG(Error, "Failed to compress image");
-        return false;
-    }
-
-    compressedBlob.resize(compressedSize);
-
-    m_uncompressedSize = narrow_cast<u32>(uncompressedSize);
-    m_compressedSize = static_cast<u32>(compressedSize);
-    std::swap(m_pixelData, compressedBlob);
-    m_compressed = true;
-
-    return true;
-}
-
-bool ImageAsset::decompress()
-{
-    SCOPED_PROFILE_ZONE();
-
-    if (not m_compressed) {
-        return true;
-    }
-
-    ARKOSE_ASSERT(m_uncompressedSize > 0);
-    std::vector<uint8_t> decompressedData {};
-    decompressedData.resize(m_uncompressedSize);
-
-    char const* src = reinterpret_cast<char const*>(m_pixelData.data());
-    char* dst = reinterpret_cast<char*>(decompressedData.data());
-    size_t decompressedSize = LZ4_decompress_safe(src, dst, narrow_cast<i32>(m_pixelData.size()), m_uncompressedSize);
-
-    if (decompressedSize <= 0) {
-        ARKOSE_LOG(Error, "Failed to decompress image");
-        return false;
-    }
-
-    if (decompressedSize != m_uncompressedSize) {
-        ARKOSE_LOG(Error, "Decompressed size does not match uncompressed size in image asset: {} vs {}", decompressedSize, m_uncompressedSize);
-        return false;
-    }
-
-    std::swap(m_pixelData, decompressedData);
-
-    m_compressed = false;
-    m_compressedSize = 0;
-
-    return true;
 }
 
 ImageAsset::rgba8 ImageAsset::getPixelAsRGBA8(u32 x, u32 y, u32 z, u32 mipIdx) const

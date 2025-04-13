@@ -125,8 +125,6 @@ void AssetImportTask::importGltf()
                     image = textureCompressor.compressBC7(*image);
                 }
             }
-
-            image->compress();
         }
 
         m_processedItemCount += 1;

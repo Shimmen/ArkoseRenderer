@@ -98,13 +98,6 @@ public:
     // Generate mipmaps (slow)
     bool generateMipmaps();
 
-    // Apply lossless compression on the pixel data
-    bool compress();
-    bool decompress();
-
-    bool isCompressed() const { return m_compressed; }
-    bool isUncompressed() const { return not m_compressed; }
-
     bool hasSourceAsset() const { return not m_sourceAssetFilePath.empty(); }
     std::filesystem::path sourceAssetFilePath() const { return std::filesystem::path(m_sourceAssetFilePath); }
 
@@ -125,11 +118,6 @@ private:
     std::vector<ImageMip> m_mips {};
 
     std::vector<rgba8> pixelDataAsRGBA8(size_t mipIdx) const;
-
-    // Optional lossless compression applied to `pixelData`
-    bool m_compressed { false };
-    u32 m_compressedSize { 0 };
-    u32 m_uncompressedSize { 0 };
 
     std::string m_sourceAssetFilePath {};
 };
