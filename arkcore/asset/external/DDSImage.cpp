@@ -244,7 +244,7 @@ std::vector<ImageMip> DDS::computeMipOffsetAndSize(Extent3D extentMip0, ImageFor
     return mips;
 }
 
-bool DDS::writeToFile(std::filesystem::path const& filePath, u8 const* imageData, size_t imageDataSize, Extent3D extent, ImageFormat format, u32 numMips)
+bool DDS::writeToFile(std::filesystem::path const& filePath, u8 const* imageData, size_t imageDataSize, Extent3D extent, ImageFormat format, bool sRGB, u32 numMips)
 {
     size_t fileSize = 4 + sizeof(DDSHeader) + imageDataSize;
 

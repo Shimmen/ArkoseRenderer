@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
     uint8_t* pixelData = reinterpret_cast<uint8_t*>(pixels.data());
     size_t pixelDataSize = pixels.size() * sizeof(float);
 
-    bool writeSuccess = DDS::writeToFile(outputFile, pixelData, pixelDataSize, { size, size, 1 }, ImageFormat::R32F, 1);
+    bool writeSuccess = DDS::writeToFile(outputFile, pixelData, pixelDataSize, { size, size, 1 }, ImageFormat::R32F, false, 1);
 
     if (!writeSuccess) {
         ARKOSE_LOG(Error, "IESConvertTool: failed to write out DDS file");

@@ -11,5 +11,5 @@ namespace DDS {
     std::vector<ImageMip> computeMipOffsetAndSize(Extent3D extentMip0, ImageFormat format, u32 numMips);
 
     // Writing
-    bool writeToFile(std::filesystem::path const& filePath, u8 const* data, size_t size, Extent3D extent, ImageFormat format, u32 numMips);
+    bool writeToFile(std::filesystem::path const& filePath, u8 const* data, size_t size, Extent3D extent, ImageFormat format, bool sRGB, u32 numMips);
 }
