@@ -352,7 +352,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     reg.publish("SceneLightSet", lightBindingSet);
 
     // Misc. data
-    Texture& blueNoiseTextureArray = reg.loadTextureArrayFromFileSequence("assets/blue-noise/64_64/HDR_RGBA_{}.dds", false, false);
+    Texture& blueNoiseTextureArray = reg.loadTextureArrayFromFileSequence("assets/engine/blue-noise/64_64/HDR_RGBA_{}.dds", false, false);
     reg.publish("BlueNoise", blueNoiseTextureArray);
 
     // Skinning related
