@@ -26,6 +26,7 @@ echo(
 cmake --build build --target GltfImportTool --config Release
 cmake --build build --target IESConvertTool --config Release
 cmake --build build --target ArkAssetBakeTool --config Release
+cmake --build build --target ImgAssetBakeTool --config Release
 
 echo(
 echo ====================================
