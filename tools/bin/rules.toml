@@ -38,9 +38,9 @@ OutputPaths = [ '{ Repo:Imported }{ Path }' ]
 [[Rule]]
 Name = "Bake image assets"
 InputFilters = [ 
-    { Repo = "Assets", PathPattern = "icons/*.png" },
-    { Repo = "Assets", PathPattern = "default/*.png" },
-    { Repo = "Assets", PathPattern = "blue-noise/*.png" },
+    { Repo = "Assets", PathPattern = "engine/icons/*.png" },
+    { Repo = "Assets", PathPattern = "engine/default/*.png" },
+    { Repo = "Assets", PathPattern = "engine/blue-noise/*.png" },
 ]
 CommandLine = '{ Repo:Tools }ImgAssetBakeTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }{ File }.dds"'
 OutputPaths = [ '{ Repo:Imported }{ Dir }{ File }.dds' ]
