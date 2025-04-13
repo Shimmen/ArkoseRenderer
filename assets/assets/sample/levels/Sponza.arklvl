@@ -24,7 +24,7 @@
                 },
                 "mesh": {
                     "index": 0,
-                    "data": "assets/sample/models/Sponza/Sponza.arkmsh"
+                    "data": "assets/sample/models/Sponza/mesh0000.arkmsh"
                 }
             },
             {
@@ -49,7 +49,7 @@
                 },
                 "mesh": {
                     "index": 0,
-                    "data": "assets/sample/models/DamagedHelmet/DamagedHelmet.arkmsh"
+                    "data": "assets/sample/models/DamagedHelmet/mesh_helmet_LP_13930damagedHelmet.arkmsh"
                 }
             }
         ],

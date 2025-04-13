@@ -74,7 +74,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     //description.path = "assets/IntelSponza/NewSponzaWithCurtains.arklvl";
     //description.path = "assets/PicaPica/PicaPicaMiniDiorama.arklvl";
     //description.path = "assets/bistro/bistro.arklvl";
-    description.path = "assets/sample/Sponza.arklvl";
+    description.path = "assets/sample/levels/Sponza.arklvl";
     scene.setupFromDescription(description);
 
     if (description.path.empty()) {
