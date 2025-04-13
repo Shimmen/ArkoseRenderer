@@ -19,7 +19,6 @@ OutputPaths = [ '{ Repo:Imported }{ Dir }{ File }{ Ext }.dds' ]
 Name = "Bake Arkose asset"
 InputFilters = [ 
     { Repo = "Assets", PathPattern = "*.arkanim" },
-    { Repo = "Assets", PathPattern = "*.arkimg" },
     { Repo = "Assets", PathPattern = "*.arklvl" },
     { Repo = "Assets", PathPattern = "*.arkmat" },
     { Repo = "Assets", PathPattern = "*.arkmsh" },
@@ -27,3 +26,13 @@ InputFilters = [
 ]
 CommandLine = '{ Repo:Tools }ArkAssetBakeTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Path }"'
 OutputPaths = [ '{ Repo:Imported }{ Path }' ]
+
+[[Rule]]
+Name = "Bake image assets"
+InputFilters = [ 
+    { Repo = "Assets", PathPattern = "icons/*.png" },
+    { Repo = "Assets", PathPattern = "default/*.png" },
+    { Repo = "Assets", PathPattern = "blue-noise/*.png" },
+]
+CommandLine = '{ Repo:Tools }ImgAssetBakeTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }{ File }.dds"'
+OutputPaths = [ '{ Repo:Imported }{ Dir }{ File }.dds' ]
