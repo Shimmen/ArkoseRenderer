@@ -3,7 +3,7 @@
    <h3><i>A flexible rendering engine for real-time graphics R&D</i></h3>
 </div>
 
-![Header image](/assets/demo/demo1.jpg)
+![Header image](/assets/web/demo1.jpg)
 
 *Arkose Renderer* attempts to make it as simple as possible for you to write complex & robust graphics features while still keeping it expressive enough to allow you to do graphics R&D.
 
@@ -11,11 +11,11 @@ It supports multiple rendering backends and abstracts the specifics with a coars
 
 Arkose Renderer is very much a rendering engine and *not* a game engine, but I have some ambition to over time make it into more of a general purpose system with physics, audio, and gameplay scripting.
 
-![Subsurface scattering demo](/assets/demo/subsurface2.jpg)
+![Subsurface scattering demo](/assets/web/subsurface2.jpg)
 
-<img src="assets/demo/demo3.jpg" width="32%"></img>
-<img src="assets/demo/demo2.jpg" width="32%"></img>
-<img src="assets/demo/subsurface.jpg" width="32%"></img>
+<img src="assets/web/demo3.jpg" width="32%"></img>
+<img src="assets/web/demo2.jpg" width="32%"></img>
+<img src="assets/web/subsurface.jpg" width="32%"></img>
 
 ## Incomplete list of features
 
@@ -51,7 +51,7 @@ This list is not complete, it's just a showcase of various features that are imp
 
  > **DISCLAIMER:** There is still a long list of features to add, many of them quite basic. The philosophy with this project has always been to work on whatever I feel like at that point in time, so there is no real concept of natural order here or minimum viable product. We're not in production after all :^) Some of these obvious basic features that I can think of right now are: light culling to make the rendering tiled or clustered and proper support for transparent objects.
 
-![GUI demo image](/assets/demo/demo-gui.jpg)
+![GUI demo image](/assets/web/demo-gui.jpg)
 
 ## Repository structure
 
