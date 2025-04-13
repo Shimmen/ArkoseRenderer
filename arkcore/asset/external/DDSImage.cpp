@@ -295,12 +295,32 @@ bool DDS::writeToFile(std::filesystem::path const& filePath, u8 const* imageData
 
     header->flags |= DDSHeader::DDSD_PIXELFORMAT;
     switch (format) {
+    case ImageFormat::R8:
+        header->pixelFormat.flags |= DDSHeader::DDPF_RGB;
+        header->pixelFormat.rgbBitCount = 8;
+        header->pixelFormat.rBitMask = 0xFF000000;
+        break;
+    case ImageFormat::RG8:
+        header->pixelFormat.flags |= DDSHeader::DDPF_RGB;
+        header->pixelFormat.rgbBitCount = 16;
+        header->pixelFormat.rBitMask = 0xFF000000;
+        header->pixelFormat.gBitMask = 0x00FF0000;
+        break;
     case ImageFormat::RGB8:
         header->pixelFormat.flags |= DDSHeader::DDPF_RGB;
+        header->pixelFormat.rgbBitCount = 24;
+        header->pixelFormat.rBitMask = 0xFF000000;
+        header->pixelFormat.gBitMask = 0x00FF0000;
+        header->pixelFormat.bBitMask = 0x0000FF00;
         break;
     case ImageFormat::RGBA8:
         header->pixelFormat.flags |= DDSHeader::DDPF_RGB;
         header->pixelFormat.flags |= DDSHeader::DDPF_ALPHAPIXELS;
+        header->pixelFormat.rgbBitCount = 32;
+        header->pixelFormat.rBitMask = 0xFF000000;
+        header->pixelFormat.gBitMask = 0x00FF0000;
+        header->pixelFormat.bBitMask = 0x0000FF00;
+        header->pixelFormat.aBitMask = 0x000000FF;
         break;
     case ImageFormat::R32F:
         header->pixelFormat.flags |= DDSHeader::DDPF_FOURCC;
