@@ -73,7 +73,7 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable, bool meshShading
     m_materialBindingSet->setName("SceneMaterialSet");
 
     // TODO: Set up from somewhere more logical/opinionated source, like the scene/level?
-    auto identityLUT = CubeLUT::load("assets/identity.cube");
+    auto identityLUT = CubeLUT::load("assets/engine/lut/identity.cube");
     updateColorGradingLUT(*identityLUT);
 
     m_vertexManager = std::make_unique<VertexManager>(m_backend);
