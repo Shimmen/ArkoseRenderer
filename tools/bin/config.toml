@@ -9,11 +9,11 @@ WindowTitle = "Asset Cooker for Arkose"
 
 [[Repo]]
 Name = "Assets"
-Path = '../../assets/'
+Path = '../../assets/assets/'
 
 [[Repo]]
 Name = "Imported"
-Path = '../../imported/'
+Path = '../../assets/imported/'
 
 [[Repo]]
 Name = "Tools"
