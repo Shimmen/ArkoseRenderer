@@ -53,9 +53,7 @@ std::unique_ptr<ImageAsset> ImageAsset::createCopyWithReplacedFormat(ImageAsset 
 
     newImage->name = inputImage.name;
 
-    newImage->m_width = inputImage.m_width;
-    newImage->m_height = inputImage.m_height;
-    newImage->m_depth = inputImage.m_depth;
+    newImage->m_extent = inputImage.m_extent;
     newImage->m_type = inputImage.m_type;
     newImage->m_sourceAssetFilePath = inputImage.m_sourceAssetFilePath;
 
@@ -92,6 +90,9 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
 
     if (DDS::isValidHeader(sourceAssetData, sourceAssetSize)) {
 
+        // TODO: Get rid of this path! It's no longer a source asset format!
+
+#if 0
         Extent3D extent;
         ImageFormat format;
         bool srgb;
@@ -105,9 +106,7 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
 
         imageAsset = std::make_unique<ImageAsset>();
 
-        imageAsset->m_width = extent.width();
-        imageAsset->m_height = extent.height();
-        imageAsset->m_depth = extent.depth();
+        imageAsset->m_extent = extent;
 
         imageAsset->m_format = format;
         imageAsset->m_type = srgb ? ImageType::sRGBColor : ImageType::Unknown;
@@ -118,6 +117,7 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
         ARKOSE_ASSERT(imageAsset->m_mips[0].offset == 0); // we assume all the mips are laid out sequentially
         size_t dataSize = imageAsset->m_mips.back().offset + imageAsset->m_mips.back().size;
         imageAsset->m_pixelData = std::vector<uint8_t>(dataPtr, dataPtr + dataSize);
+#endif
 
     } else {
 
@@ -171,9 +171,7 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
 
         imageAsset = std::make_unique<ImageAsset>();
 
-        imageAsset->m_width = width;
-        imageAsset->m_height = height;
-        imageAsset->m_depth = 1;
+        imageAsset->m_extent = { narrow_cast<u32>(width), narrow_cast<u32>(height), 1 };
 
         imageAsset->m_format = format;
         imageAsset->m_type = ImageType::Unknown;
@@ -203,9 +201,7 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromRawData(uint8_t const* data, s
 
     auto imageAsset = std::make_unique<ImageAsset>();
 
-    imageAsset->m_width = extent.width();
-    imageAsset->m_height = extent.height();
-    imageAsset->m_depth = 1;
+    imageAsset->m_extent = extent;
 
     imageAsset->m_format = format;
     imageAsset->m_type = ImageType::Unknown;
@@ -270,28 +266,45 @@ ImageAsset* ImageAsset::loadOrCreate(std::filesystem::path const& filePath)
 
 bool ImageAsset::readFromFile(std::filesystem::path const& filePath)
 {
-    if (not isValidAssetPath(filePath)) {
+    if (!isValidAssetPath(filePath)) {
         ARKOSE_LOG(Warning, "Trying to load image asset with invalid file extension: '{}'", filePath);
         return false;
     }
 
-    std::ifstream fileStream(filePath, std::ios::binary);
-    if (not fileStream.is_open()) {
+    std::optional<std::vector<std::byte>> maybeFileData = FileIO::readBinaryDataFromFile<std::byte>(filePath);
+    if (!maybeFileData) { 
+        ARKOSE_LOG(Error, "Failed to load binary data from '{}'", filePath);
         return false;
     }
 
-    cereal::BinaryInputArchive archive(fileStream);
+    std::vector<std::byte> const& fileData = maybeFileData.value();
+    if (!DDS::isValidHeader(reinterpret_cast<u8 const*>(fileData.data()), fileData.size())) { 
+        ARKOSE_LOG(Warning, "File '{}' is not a valid DDS file, trying to load as image asset", filePath);
+    }
 
-    AssetHeader header;
-    archive(header);
+    Extent3D extent;
+    ImageFormat format;
+    bool srgb;
+    u32 numMips;
+    void* data = (void*)DDS::loadFromMemory(reinterpret_cast<u8 const*>(fileData.data()), fileData.size(), extent, format, srgb, numMips);
 
-    if (header != AssetHeader(AssetMagicValue)) {
-        ARKOSE_LOG(Warning, "Trying to load image asset with invalid file magic: '{}{}{}{}'",
-                   header.magicValue[0], header.magicValue[1], header.magicValue[2], header.magicValue[3]);
+    if (data == nullptr) {
+        ARKOSE_LOG(Error, "Failed to load image asset '{}' (DDS reported error, likely invalid file)", filePath);
         return false;
     }
 
-    archive(*this);
+    m_extent = extent;
+
+    m_format = format;
+    m_type = srgb ? ImageType::sRGBColor : ImageType::Unknown;
+
+    m_mips = DDS::computeMipOffsetAndSize(extent, format, numMips);
+
+    uint8_t* dataPtr = reinterpret_cast<uint8_t*>(data);
+    ARKOSE_ASSERT(m_mips[0].offset == 0); // we assume all the mips are laid out sequentially
+    size_t dataSize = m_mips.back().offset + m_mips.back().size;
+    m_pixelData = std::vector<uint8_t>(dataPtr, dataPtr + dataSize);
+
     setAssetFilePath(filePath);
 
     return true;
@@ -303,23 +316,14 @@ bool ImageAsset::writeToFile(std::filesystem::path const& filePath, AssetStorage
         ARKOSE_LOG(Fatal, "Image asset only supports binary serialization.");
     }
 
-    if (not isValidAssetPath(filePath)) {
+    if (!isValidAssetPath(filePath)) {
         ARKOSE_LOG(Error, "Trying to write image asset to file with invalid extension: '{}'", filePath);
         return false;
     }
 
-    std::ofstream fileStream { filePath, std::ios::binary | std::ios::trunc };
-    if (not fileStream.is_open()) {
-        return false;
-    }
+    bool sRGB = m_type == ImageType::sRGBColor;
 
-    cereal::BinaryOutputArchive archive(fileStream);
-
-    archive(AssetHeader(AssetMagicValue));
-    archive(*this);
-
-    fileStream.close();
-    return true;
+    return DDS::writeToFile(filePath, m_pixelData.data(), m_pixelData.size(), m_extent, m_format, sRGB, narrow_cast<u32>(m_mips.size()));
 }
 
 std::span<u8 const> ImageAsset::pixelDataForMip(size_t mipIdx) const
@@ -433,7 +437,7 @@ Extent3D ImageAsset::extentAtMip(size_t mipIdx) const
     ARKOSE_ASSERT(mipIdx < m_mips.size());
 
     if (mipIdx == 0) {
-        return { width(), height(), depth() };
+        return m_extent;
     }
 
     float p = std::pow(2.0f, static_cast<float>(mipIdx));

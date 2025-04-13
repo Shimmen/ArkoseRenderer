@@ -49,8 +49,7 @@ public:
     ImageAsset();
     ~ImageAsset();
 
-    static constexpr const char* AssetFileExtension = ".arkimg";
-    static constexpr std::array<char, 4> AssetMagicValue = { 'a', 'i', 'm', 'g' };
+    static constexpr const char* AssetFileExtension = ".dds";
 
     // Create a new ImageAsset that is a copy of the passed in image asset but with replaced image format. The data of the new format is passed in at constuction time.
     static std::unique_ptr<ImageAsset> createCopyWithReplacedFormat(ImageAsset const&, ImageFormat, std::vector<u8>&& pixelData, std::vector<ImageMip>);
@@ -75,12 +74,10 @@ public:
     virtual bool readFromFile(std::filesystem::path const& filePath) override;
     virtual bool writeToFile(std::filesystem::path const& filePath, AssetStorage assetStorage) const override;
 
-    template<class Archive>
-    void serialize(Archive& ar);
-
-    u32 width() const { return m_width; }
-    u32 height() const { return m_height; }
-    u32 depth() const { return m_depth; }
+    Extent3D extent() const { return m_extent; }
+    u32 width() const { return m_extent.width(); }
+    u32 height() const { return m_extent.height(); }
+    u32 depth() const { return m_extent.depth(); }
 
     Extent3D extentAtMip(size_t mipIdx) const;
 
@@ -105,9 +102,7 @@ public:
     rgba8 getPixelAsRGBA8(u32 x, u32 y, u32 z, u32 mipIdx) const;
 
 private:
-    u32 m_width { 1 };
-    u32 m_height { 1 };
-    u32 m_depth { 1 };
+    Extent3D m_extent { 1, 1, 1 };
 
     ImageFormat m_format { ImageFormat::RGBA8 };
     ImageType m_type { ImageType::Unknown };
@@ -121,25 +116,3 @@ private:
 
     std::string m_sourceAssetFilePath {};
 };
-
-////////////////////////////////////////////////////////////////////////////////
-// Serialization
-
-#include <cereal/cereal.hpp>
-
-template<class Archive>
-void serialize(Archive& archive, ImageMip& mip)
-{
-    archive(cereal::make_nvp("offset", mip.offset),
-            cereal::make_nvp("size", mip.size));
-}
-
-template<class Archive>
-void ImageAsset::serialize(Archive& archive)
-{
-    archive(CEREAL_NVP(m_width), CEREAL_NVP(m_height), CEREAL_NVP(m_depth));
-    archive(CEREAL_NVP(m_format), CEREAL_NVP(m_type));
-    archive(CEREAL_NVP(m_pixelData), CEREAL_NVP(m_mips));
-    archive(CEREAL_NVP(m_compressed), CEREAL_NVP(m_compressedSize), CEREAL_NVP(m_uncompressedSize));
-    archive(CEREAL_NVP(m_sourceAssetFilePath));
-}
