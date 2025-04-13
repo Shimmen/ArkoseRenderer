@@ -177,7 +177,7 @@ void AssetImportTask::importGltf()
                     std::filesystem::path const& imagePath = (!image->hasSourceAsset() || options.alwaysMakeImageAsset)
                         ? image->assetFilePath()
                         : image->sourceAssetFilePath();
-                    materialInput->setPathToImage(imagePath.generic_string());
+                    materialInput->image = imagePath.generic_string();
                 }
             }
         };

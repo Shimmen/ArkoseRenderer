@@ -1366,7 +1366,7 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
         TextureHandle handle = registerTextureSlot();
         m_materialTextureCache[input.value()] = handle;
 
-        std::string const& imageAssetPath = std::string(input->pathToImage());
+        std::string const& imageAssetPath = input->image;
 
         // TODO: Also make the texture GPU resource itself on a worker thread, not just the image loading!
         if (UseAsyncTextureLoads) {

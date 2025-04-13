@@ -403,7 +403,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
                                                                     { "jpeg", "jpeg,jpg" } })) {
                                 std::filesystem::path newImagePath = maybePath.value();
                                 if (ImageAsset* newImageAsset = ImageAsset::loadOrCreate(newImagePath)) {
-                                    materialInput->setPathToImage(newImagePath.generic_string());
+                                    materialInput->image = newImagePath.generic_string();
                                     didChange |= true;
                                 }
                             }
@@ -415,8 +415,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
                                 imageSelectDialog();
                             }
                             if (ImGui::IsItemHovered()) {
-                                std::string imagePath = std::string(materialInput->pathToImage());
-                                ImGui::SetTooltip("%s", imagePath.c_str());
+                                ImGui::SetTooltip("%s", materialInput->image.c_str());
                             }
                         } else {
                             if (ImGui::Button("Add image...")) {

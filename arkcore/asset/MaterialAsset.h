@@ -10,28 +10,19 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <variant>
 
 class MaterialInput {
 public:
     explicit MaterialInput(std::string_view imagePath)
+        : image(imagePath)
     {
-        setPathToImage(std::string(imagePath));
     }
 
     MaterialInput();
     ~MaterialInput();
 
-    bool hasPathToImage() const { return std::holds_alternative<std::string>(image); }
-    void setPathToImage(std::string path) { image = std::move(path); }
-    std::string_view pathToImage() const
-    {
-        ARKOSE_ASSERT(hasPathToImage());
-        return std::get<std::string>(image);
-    }
-
-    // Path to an image or an image asset directly
-    std::variant<std::string, std::weak_ptr<ImageAsset>> image;
+    // TODO: Change to use std::filesystem::path
+    std::string image;
 
     ImageWrapModes wrapModes { ImageWrapModes::repeatAll() };
 
@@ -46,8 +37,7 @@ public:
 
     bool operator==(MaterialInput const& rhs) const
     {
-        ARKOSE_ASSERT(hasPathToImage());
-        return pathToImage() == rhs.pathToImage()
+        return image == rhs.image
             && wrapModes == rhs.wrapModes
             && minFilter == rhs.minFilter
             && magFilter == rhs.magFilter
@@ -65,7 +55,7 @@ namespace std {
     struct hash<MaterialInput> {
         std::size_t operator()(const MaterialInput& input) const
         {
-            auto pathHash = std::hash<std::string_view>()(input.pathToImage());
+            auto pathHash = std::hash<std::string_view>()(input.image);
             auto wrapModesHash = std::hash<ImageWrapModes>()(input.wrapModes);
 
             auto filterHash = hashCombine(std::hash<ImageFilter>()(input.minFilter),
