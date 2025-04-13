@@ -25,8 +25,8 @@ void PathTracerApp::setup(Scene& scene, RenderPipeline& pipeline)
     Scene::Description description { .withRayTracing = true };
     // NOTE: Scene not under "assets/sample/" will not be available in the Git-repo, either due to file size or license or both!
     //description.path = "assets/PicaPica/PicaPicaMiniDiorama.arklvl";
-    //description.path = "assets/sample/Sponza.arklvl";
-    description.path = "assets/sample/CornellBox.arklvl";
+    //description.path = "assets/sample/levels/Sponza.arklvl";
+    description.path = "assets/sample/levels/CornellBox.arklvl";
     scene.setupFromDescription(description);
 
     if (scene.directionalLightCount() == 0) {
