@@ -1,4 +1,0 @@
-
-# Ignore images in our own custom format to keep the repo lightweight.
-# The images can be recreated from the source assets (png/jpg/etc.) anyways..
-*.arkimg

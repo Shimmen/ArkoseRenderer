@@ -272,8 +272,7 @@ bool ImageAsset::readFromFile(std::filesystem::path const& filePath)
     }
 
     std::optional<std::vector<std::byte>> maybeFileData = FileIO::readBinaryDataFromFile<std::byte>(filePath);
-    if (!maybeFileData) { 
-        ARKOSE_LOG(Error, "Failed to load binary data from '{}'", filePath);
+    if (!maybeFileData) {
         return false;
     }
 
