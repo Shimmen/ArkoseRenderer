@@ -9,10 +9,7 @@
             "nullopt": false,
             "data": {
                 "cereal_class_version": 1,
-                "image": {
-                    "index": 0,
-                    "data": "assets/sample/models/Head/light-panel-emissive.png"
-                },
+                "image": "assets/sample/models/Head/light-panel-emissive.png",
                 "wrapModes": {
                     "u": "Repeat",
                     "v": "Repeat",

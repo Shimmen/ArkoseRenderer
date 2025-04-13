@@ -37,7 +37,7 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
 {
     SCOPED_PROFILE_ZONE();
 
-    scene.setupFromDescription({ .path = "assets/sample/models/Head/head-demo.arklvl",
+    scene.setupFromDescription({ .path = "assets/sample/levels/SSSDemo/SSSDemo.arklvl",
                                  .withRayTracing = true,
                                  .withMeshShading = true });
 
@@ -75,18 +75,18 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
             return scene.addMesh(meshAsset);
         };
 
-        StaticMeshInstance& panelM = generateQuadMesh("light-panel", "assets/sample/models/Head/light-panel.arkmat");
+        StaticMeshInstance& panelM = generateQuadMesh("light-panel", "assets/sample/levels/SSSDemo/light-panel.arkmat");
         panelM.transform().setScale({ 0.65f, 2.5f, 1.0f });
         //panelM.transform().setPositionInWorld({ -0.5f, 0.0f, -1.5f });
         //panelM.transform().setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(40.0f)));
         panelM.transform().setPositionInWorld({ 0.0f, 0.0f, -1.3f });
 
-        StaticMeshInstance& panelL = generateQuadMesh("green-panel", "assets/sample/models/Head/color-panel-g.arkmat");
+        StaticMeshInstance& panelL = generateQuadMesh("green-panel", "assets/sample/levels/SSSDemo/color-panel-g.arkmat");
         panelL.transform().setScale({ 1.0f, 2.5f, 1.0f });
         panelL.transform().setPositionInWorld({ -0.6f, 0.0f, -0.5f });
         panelL.transform().setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(+75.0f)));
 
-        StaticMeshInstance& panelR = generateQuadMesh("red-panel", "assets/sample/models/Head/color-panel-r.arkmat");
+        StaticMeshInstance& panelR = generateQuadMesh("red-panel", "assets/sample/levels/SSSDemo/color-panel-r.arkmat");
         panelR.transform().setScale({ 1.0f, 2.5f, 1.0f });
         panelR.transform().setPositionInWorld({ +0.6f, 0.0f, -0.5f });
         panelR.transform().setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(-75.0f)));
