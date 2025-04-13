@@ -14,3 +14,16 @@ InputFilters = [
 ]
 CommandLine = '{ Repo:Tools }IESConvertTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }{ File }{ Ext }.dds"'
 OutputPaths = [ '{ Repo:Imported }{ Dir }{ File }{ Ext }.dds' ]
+
+[[Rule]]
+Name = "Bake Arkose asset"
+InputFilters = [ 
+    { Repo = "Assets", PathPattern = "*.arkanim" },
+    { Repo = "Assets", PathPattern = "*.arkimg" },
+    { Repo = "Assets", PathPattern = "*.arklvl" },
+    { Repo = "Assets", PathPattern = "*.arkmat" },
+    { Repo = "Assets", PathPattern = "*.arkmsh" },
+    { Repo = "Assets", PathPattern = "*.arkskel" },
+]
+CommandLine = '{ Repo:Tools }ArkAssetBakeTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Path }"'
+OutputPaths = [ '{ Repo:Imported }{ Path }' ]
