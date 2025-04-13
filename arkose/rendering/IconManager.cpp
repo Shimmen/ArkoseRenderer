@@ -16,7 +16,7 @@ IconManager::~IconManager() = default;
 
 Icon IconManager::loadIcon(Backend& backend, std::string_view iconName)
 {
-    std::string iconPath = fmt::format("assets/icons/{}.dds", iconName);
+    std::string iconPath = fmt::format("assets/engine/icons/{}.dds", iconName);
     ImageAsset* imageAsset = ImageAsset::loadOrCreate(iconPath);
 
     if (imageAsset == nullptr) {
