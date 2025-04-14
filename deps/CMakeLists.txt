@@ -6,6 +6,10 @@ set_directory_properties(PROPERTIES EXCLUDE_FROM_ALL YES)
 ##################################
 # FetchContent dependencies with CMakeLists.txt
 
+FetchContent_Declare(magic_enum
+    GIT_REPOSITORY https://github.com/Neargye/magic_enum.git
+    GIT_TAG        "v0.9.7")
+
 FetchContent_Declare(json
     GIT_REPOSITORY https://github.com/nlohmann/json.git
     GIT_TAG        "v3.11.3")
@@ -220,6 +224,7 @@ add_subdirectory(renderdoc)
 # Finalize FetchContent dependencies
 
 FetchContent_MakeAvailable(
+    magic_enum
     json
     cereal
     fmt

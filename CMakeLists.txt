@@ -114,6 +114,7 @@ endif()
 target_link_libraries(ArkoseCore PUBLIC
     arklib # core arkose library (math etc.)
 
+    magic_enum # enum reflection
     fmt # string formatting (TODO: replace with stl fmt in C++20)
     half # 16-bit float
     TracyClient # real-time profiling
