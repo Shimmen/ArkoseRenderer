@@ -839,6 +839,22 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
 
     }
 
+    // Arkose-specific "extras"
+    if (gltfMaterial.extras.Has("arkose")) {
+        tinygltf::Value const& extras = gltfMaterial.extras.Get("arkose");
+        
+        // Arkose BRDF selection
+        if (extras.Has("brdf")) {
+            std::string const& materialBrdf = extras.Get("brdf").Get<std::string>();
+            if (auto maybeBrdf = magic_enum::enum_cast<Brdf>(materialBrdf)) {
+                material->brdf = maybeBrdf.value();
+            } else {
+                ARKOSE_LOG(Error, "glTF loader: unknown BRDF type '{}', using default", materialBrdf);
+                material->brdf = Brdf::Default;
+            }
+        }
+    }
+
     return material;
 }
 
