@@ -2,7 +2,8 @@
 
 #include <ark/debugger.h>
 #include <fmt/format.h>
-#include <fmt/std.h>
+#include <fmt/std.h> // for fmtlib formatters for std types
+#include <magic_enum/magic_enum_format.hpp> // for formattable enums to strings
 #include <cstdlib> // for exit()
 
 namespace Logging {
