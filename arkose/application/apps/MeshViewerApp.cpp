@@ -52,7 +52,7 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     }
 
     scene.setAmbientIlluminance(150.0f);
-    scene.setEnvironmentMap({ .assetPath = "assets/sample/hdri/tiergarten_2k.hdr",
+    scene.setEnvironmentMap({ .assetPath = "assets/sample/hdri/tiergarten_2k.dds",
                               .brightnessFactor = 10000.0f });
 
     vec3 sunDirecton = normalize(vec3(-1.0f, -1.0f, -1.0f));

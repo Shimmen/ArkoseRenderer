@@ -62,7 +62,7 @@
         "environmentMap": {
             "nullopt": false,
             "data": {
-                "assetPath": "assets/sample/hdri/tiergarten_2k.hdr",
+                "assetPath": "assets/sample/hdri/tiergarten_2k.dds",
                 "brightnessFactor": 3000.0
             }
         },

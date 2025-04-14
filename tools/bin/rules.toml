@@ -38,6 +38,7 @@ OutputPaths = [ '{ Repo:Imported }{ Path }' ]
 [[Rule]]
 Name = "Bake image assets"
 InputFilters = [ 
+    { Repo = "Assets", PathPattern = "*.hdr" },
     { Repo = "Assets", PathPattern = "engine/icons/*.png" },
     { Repo = "Assets", PathPattern = "engine/default/*.png" },
     { Repo = "Assets", PathPattern = "engine/blue-noise/*.png" },
@@ -53,10 +54,3 @@ InputFilters = [
 CommandLine = '{ Repo:Tools }CopyFileTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Path }"'
 OutputPaths = [ '{ Repo:Imported }{ Path }' ]
 
-[[Rule]]
-Name = "Copy .hdr image files (TODO: Convert to DDS)"
-InputFilters = [ 
-   { Repo = "Assets", PathPattern = "*.hdr" },
-]
-CommandLine = '{ Repo:Tools }CopyFileTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Path }"'
-OutputPaths = [ '{ Repo:Imported }{ Path }' ]
