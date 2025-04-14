@@ -37,6 +37,11 @@
                 },
                 "metallicFactor" : 0.0,
                 "roughnessFactor" : 0.9292893409729004
+            },
+            "extras": {
+                "arkose": {
+                    "brdf": "Skin"
+                }
             }
         }
     ],
