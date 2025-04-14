@@ -1,6 +1,5 @@
 #pragma once
 
-#include "core/Assert.h"
 #include "utility/Hash.h"
 
 enum class ImageWrapMode {
@@ -8,19 +7,6 @@ enum class ImageWrapMode {
     MirroredRepeat,
     ClampToEdge,
 };
-
-static constexpr std::array<const char*, 3> ImageWrapModeNames = { "Repeat",
-                                                                   "MirroredRepeat",
-                                                                   "ClampToEdge" };
-
-static inline const char* ImageWrapModeName(ImageWrapMode wrapMode)
-{
-    size_t idx = static_cast<size_t>(wrapMode);
-    return ImageWrapModeNames[idx];
-}
-
-static constexpr u64 ImageWrapMode_Min = 0;
-static constexpr u64 ImageWrapMode_Max = 2;
 
 struct ImageWrapModes {
     ImageWrapMode u { ImageWrapMode::Repeat };
@@ -97,25 +83,18 @@ namespace std {
 // Serialization
 
 #include <cereal/cereal.hpp>
+#include <magic_enum/magic_enum.hpp>
 
 template<class Archive>
 std::string save_minimal(Archive const&, ImageWrapMode const& wrapMode)
 {
-    return ImageWrapModeName(wrapMode);
+    return std::string(magic_enum::enum_name(wrapMode));
 }
 
 template<class Archive>
 void load_minimal(Archive const&, ImageWrapMode& wrapMode, std::string const& value)
 {
-    if (value == ImageWrapModeName(ImageWrapMode::Repeat)) {
-        wrapMode = ImageWrapMode::Repeat;
-    } else if (value == ImageWrapModeName(ImageWrapMode::MirroredRepeat)) {
-        wrapMode = ImageWrapMode::MirroredRepeat;
-    } else if (value == ImageWrapModeName(ImageWrapMode::ClampToEdge)) {
-        wrapMode = ImageWrapMode::ClampToEdge;
-    } else {
-        ASSERT_NOT_REACHED();
-    }
+    wrapMode = magic_enum::enum_cast<ImageWrapMode>(value).value();
 }
 
 template<class Archive>

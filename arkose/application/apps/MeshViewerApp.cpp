@@ -536,20 +536,19 @@ bool MeshViewerApp::drawWrapModeSelectorGui(const char* id, ImageWrapModes& wrap
     auto drawWrapModeComboBox = [&](const char* innerId, ImageWrapMode& wrapMode) -> bool {
 
         int currentWrapModeIdx = static_cast<int>(wrapMode);
-        const char* currentWrapModeString = ImageWrapModeName(wrapMode);
+        const char* currentWrapModeString = magic_enum::enum_name(wrapMode).data();
 
         if (ImGui::BeginCombo(innerId, currentWrapModeString)) {
 
             bool valueChanged = false;
 
-            int wrapModeMin = static_cast<int>(ImageWrapMode_Min);
-            int wrapModeMax = static_cast<int>(ImageWrapMode_Max);
+            constexpr auto imageWrapModeNames = magic_enum::enum_names<ImageWrapMode>();
 
-            for (int i = wrapModeMin; i <= wrapModeMax; i++) {
+            for (int i = 0; i < imageWrapModeNames.size(); i++) {
                 ImGui::PushID(i);
 
                 auto itemWrapMode = static_cast<ImageWrapMode>(i);
-                const char* itemText = ImageWrapModeName(itemWrapMode);
+                const char* itemText = imageWrapModeNames[i].data();
 
                 if (ImGui::Selectable(itemText, i == currentWrapModeIdx)) {
                     wrapMode = itemWrapMode;
