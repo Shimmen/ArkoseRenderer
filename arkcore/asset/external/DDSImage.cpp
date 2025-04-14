@@ -1,12 +1,13 @@
 #include "DDSImage.h"
 
+//#include "dxgiformat.h"
+
 struct DDSHeader {
     // https://learn.microsoft.com/en-us/windows/win32/direct3d11/texture-block-compression-in-direct3d-11
     // `dxgiformat.h` is used as reference, however not included here, as that header is not available on all platforms.
 
     static constexpr u32 DDS_MAGIC = 0x20534444;
 
-    static constexpr u32 FOURCC_R32F = 0x72;
     static constexpr u32 FOURCC_DXT1 = 0x31545844;
     static constexpr u32 FOURCC_DXT3 = 0x33545844;
     static constexpr u32 FOURCC_DXT5 = 0x35545844;
@@ -139,6 +140,12 @@ u8 const* DDS::loadFromMemory(u8 const* data, size_t size, Extent3D& outExtent, 
                 dataStart += sizeof(DDSHeaderDX10);
 
                 switch (headerDX10->dxgiFormat) {
+                case 2: // DXGI_FORMAT_R32G32B32A32_FLOAT
+                    outFormat = ImageFormat::RGBA32F;
+                    break;
+                case 41: // DXGI_FORMAT_R32_FLOAT
+                    outFormat = ImageFormat::R32F;
+                    break;
                 case 83: // DXGI_FORMAT_BC5_UNORM
                     outFormat = ImageFormat::BC5;
                     break;
@@ -221,6 +228,12 @@ std::vector<ImageMip> DDS::computeMipOffsetAndSize(Extent3D extentMip0, ImageFor
 
             u32 bytesPerPixel;
             switch (format) {
+            case ImageFormat::R32F:
+                bytesPerPixel = 4;
+                break;
+            case ImageFormat::RGBA32F:
+                bytesPerPixel = 16;
+                break;
             case ImageFormat::RGB8:
                 bytesPerPixel = 3;
                 break;
@@ -252,7 +265,7 @@ bool DDS::writeToFile(std::filesystem::path const& filePath, u8 const* imageData
     size_t fileSize = 4 + sizeof(DDSHeader) + imageDataSize;
 
     bool hasDX10Header = false;
-    if (imageFormatIsBlockCompressed(format)) {
+    if (imageFormatIsBlockCompressed(format) || format == ImageFormat::R32F || format == ImageFormat::RGBA32F) {
         fileSize += sizeof(DDSHeaderDX10);
         hasDX10Header = true;
     }
@@ -323,8 +336,16 @@ bool DDS::writeToFile(std::filesystem::path const& filePath, u8 const* imageData
         header->pixelFormat.aBitMask = 0x000000FF;
         break;
     case ImageFormat::R32F:
+        ARKOSE_ASSERT(headerDX10 != nullptr);
         header->pixelFormat.flags |= DDSHeader::DDPF_FOURCC;
-        header->pixelFormat.fourCC |= DDSHeader::FOURCC_R32F;
+        header->pixelFormat.fourCC |= DDSHeader::FOURCC_DX10;
+        headerDX10->dxgiFormat = 41; // DXGI_FORMAT_R32_FLOAT
+        break;
+    case ImageFormat::RGBA32F:
+        ARKOSE_ASSERT(headerDX10 != nullptr);
+        header->pixelFormat.flags |= DDSHeader::DDPF_FOURCC;
+        header->pixelFormat.fourCC |= DDSHeader::FOURCC_DX10;
+        headerDX10->dxgiFormat = 2; // DXGI_FORMAT_R32G32B32A32_FLOAT
         break;
     case ImageFormat::BC5:
         ARKOSE_ASSERT(headerDX10 != nullptr);
