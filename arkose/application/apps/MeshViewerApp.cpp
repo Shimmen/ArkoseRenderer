@@ -594,20 +594,19 @@ bool MeshViewerApp::drawWrapModeSelectorGui(const char* id, ImageWrapModes& wrap
 bool MeshViewerApp::drawBlendModeSelectorGui(const char* id, BlendMode& blendMode)
 {
     int currentBlendModeIdx = static_cast<int>(blendMode);
-    const char* currentBlendModeString = BlendModeName(blendMode);
+    const char* currentBlendModeString = magic_enum::enum_name(blendMode).data();
 
     if (ImGui::BeginCombo(id, currentBlendModeString)) {
 
         bool valueChanged = false;
 
-        int blendModeMin = static_cast<int>(BlendMode_Min);
-        int blendModeMax = static_cast<int>(BlendMode_Max);
+        constexpr auto blendModeNames = magic_enum::enum_names<BlendMode>();
 
-        for (int i = blendModeMin; i <= blendModeMax; i++) {
+        for (int i = 0; i < blendModeNames.size(); i++) {
             ImGui::PushID(i);
 
-            auto itemBlendMode = static_cast<BlendMode>(i);
-            const char* itemText = BlendModeName(itemBlendMode);
+            auto itemBlendMode = magic_enum::enum_cast<BlendMode>(i).value();
+            const char* itemText = blendModeNames[i].data();
 
             if (ImGui::Selectable(itemText, i == currentBlendModeIdx)) {
                 blendMode = itemBlendMode;

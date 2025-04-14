@@ -120,7 +120,7 @@ RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, 
     }
 
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
-    renderState.setName(fmt::format("Prepass{}[doublesided={}]", BlendModeName(blendMode), doubleSided));
+    renderState.setName(fmt::format("Prepass{}[doublesided={}]", magic_enum::enum_name(blendMode), doubleSided));
 
     return renderState;
 }

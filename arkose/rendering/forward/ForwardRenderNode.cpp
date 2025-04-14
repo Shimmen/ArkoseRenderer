@@ -223,8 +223,8 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
 
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
     renderState.setName(fmt::format("Forward{}{}[doublesided={}][explicitvelocity={}]",
-                                    BlendModeName(drawKey.blendMode().value()),
-                                    BrdfName(drawKey.brdf().value()),
+                                    magic_enum::enum_name(drawKey.blendMode().value()),
+                                    magic_enum::enum_name(drawKey.brdf().value()),
                                     drawKey.doubleSided().value(),
                                     drawKey.hasExplicityVelocity().value()));
 
