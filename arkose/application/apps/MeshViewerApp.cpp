@@ -632,20 +632,19 @@ bool MeshViewerApp::drawImageFilterSelectorGui(const char* id, ImageFilter& imag
     bool didChange = false;
 
     int currentImageFilterIdx = static_cast<int>(imageFilter);
-    const char* currentImageFilterString = ImageFilterName(imageFilter);
+    const char* currentImageFilterString = magic_enum::enum_name(imageFilter).data();
 
     if (ImGui::BeginCombo(id, currentImageFilterString)) {
 
         bool valueChanged = false;
 
-        int imageFilterMin = static_cast<int>(ImageFilter_Min);
-        int imageFilterMax = static_cast<int>(ImageFilter_Max);
+        constexpr auto imageFilterNames = magic_enum::enum_names<ImageFilter>();
 
-        for (int i = imageFilterMin; i <= imageFilterMax; i++) {
+        for (int i = 0; i < imageFilterNames.size(); i++) {
             ImGui::PushID(i);
 
-            auto itemImageFilter = static_cast<ImageFilter>(i);
-            const char* itemText = ImageFilterName(itemImageFilter);
+            auto itemImageFilter = magic_enum::enum_cast<ImageFilter>(i).value();
+            const char* itemText = imageFilterNames[i].data();
 
             if (ImGui::Selectable(itemText, i == currentImageFilterIdx)) {
                 imageFilter = itemImageFilter;
