@@ -499,18 +499,17 @@ bool MeshViewerApp::drawBrdfSelectorGui(const char* id, Brdf& brdf)
     bool didChange = false;
 
     int currentBrdfIdx = static_cast<int>(brdf);
-    const char* currentBrdfString = BrdfName(brdf);
+    const char* currentBrdfString = magic_enum::enum_name(brdf).data();
 
     if (ImGui::BeginCombo("BRDF", currentBrdfString)) {
 
-        int brdfMin = static_cast<int>(Brdf_Min);
-        int brdfMax = static_cast<int>(Brdf_Max);
+        constexpr auto brdfNames = magic_enum::enum_names<Brdf>();
 
-        for (int i = brdfMin; i <= brdfMax; i++) {
+        for (int i = 0; i < brdfNames.size(); i++) {
             ImGui::PushID(i);
 
-            auto itemBrdf = static_cast<Brdf>(i);
-            const char* itemText = BrdfName(itemBrdf);
+            Brdf itemBrdf = magic_enum::enum_cast<Brdf>(i).value();
+            const char* itemText = brdfNames[i].data();
 
             if (ImGui::Selectable(itemText, i == currentBrdfIdx)) {
                 brdf = itemBrdf;

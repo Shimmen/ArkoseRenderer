@@ -3,6 +3,7 @@
 #include "rendering/GpuScene.h"
 #include "rendering/util/BlendModeUtil.h"
 #include <imgui.h>
+#include <magic_enum/magic_enum.hpp>
 
 void MeshletForwardRenderNode::drawGui()
 {
@@ -154,7 +155,7 @@ std::vector<MeshletForwardRenderNode::RenderStateWithIndirectData*>& MeshletForw
     auto brdfs = { Brdf::Default, Brdf::Skin };
     for (Brdf brdf : brdfs) {
 
-        debugName += BrdfName(brdf);
+        debugName += magic_enum::enum_name(brdf);
 
         passes.push_back({ .drawKeyMask = DrawKey(brdf, BlendMode::Opaque, false, explicitVelocityMask),
                            .maxMeshlets = 50'000,
