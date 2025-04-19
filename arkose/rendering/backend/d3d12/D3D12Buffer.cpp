@@ -82,6 +82,65 @@ void D3D12Buffer::setName(const std::string& name)
     bufferResource->SetName(convertToWideString(name).c_str());
 }
 
+bool D3D12Buffer::mapData(MapMode mapMode, size_t size, size_t offset, std::function<void(std::byte*)>&& mapCallback)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    ARKOSE_ASSERT(size > 0);
+    ARKOSE_ASSERT(offset + size <= m_size);
+
+    switch (usage()) {
+    case Buffer::Usage::Upload:
+        if (mapMode == MapMode::Read) {
+            ARKOSE_LOG(Warning, "Mapping an upload buffer for reading - this can be prohibitively slow and is not recommended!");
+        }
+        break;
+    case Buffer::Usage::Readback:
+        if (mapMode == MapMode::Write) {
+            ARKOSE_LOG(Warning, "Mapping a readback buffer for writing - this can be prohibitively slow and is not recommended!");
+        }
+        break;
+    default:
+        ARKOSE_LOG(Error, "Can only mapData from an Upload or Readback buffer, ignoring.");
+        return false;
+    }
+
+    D3D12_RANGE readRange;
+    readRange.Begin = offset;
+    readRange.End = offset + size;
+
+    void* mappedMemory;
+    if (HRESULT hr = bufferResource->Map(0, &readRange, &mappedMemory); FAILED(hr)) {
+        ARKOSE_LOG(Error, "Failed to map buffer resource.");
+        return false;
+    }
+
+    std::byte* baseAddress = reinterpret_cast<std::byte*>(mappedMemory);
+    std::byte* requestedAddress = baseAddress + offset;
+
+    mapCallback(requestedAddress);
+
+    D3D12_RANGE writtenRange {};
+    switch (mapMode) {
+    case MapMode::Read:
+        writtenRange.Begin = 0;
+        writtenRange.End = 0;
+        break;
+    case MapMode::Write:
+    case MapMode::ReadWrite:
+        writtenRange.Begin = offset;
+        writtenRange.End = offset + size;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+        return false;
+    }
+
+    bufferResource->Unmap(0, &writtenRange);
+
+    return true;
+}
+
 void D3D12Buffer::updateData(const std::byte* data, size_t updateSize, size_t offset)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();

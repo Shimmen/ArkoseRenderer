@@ -12,6 +12,8 @@ public:
 
     virtual void setName(const std::string& name) override;
 
+    bool mapData(MapMode, size_t size, size_t offset, std::function<void(std::byte*)>&& mapCallback) override;
+
     void updateData(const std::byte* data, size_t size, size_t offset) override;
     void reallocateWithSize(size_t newSize, ReallocateStrategy) override;
 

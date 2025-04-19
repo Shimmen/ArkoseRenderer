@@ -99,6 +99,9 @@ public:
     VkPhysicalDevice physicalDevice() const { return m_physicalDevice; }
     VkPipelineCache pipelineCache() const { return m_pipelineCache; }
 
+    VkPhysicalDeviceProperties const& physicalDeviceProperties() const { return m_physicalDeviceProperties; }
+    VkPhysicalDeviceMemoryProperties const& physicalDeviceMemoryProperties() const { return m_physicalDeviceMemoryProperties; }
+
     VulkanTexture* placeholderSwapchainTexture() const { return m_placeholderSwapchainTexture.get(); }
 
     enum class RayTracingBackend {

@@ -32,6 +32,14 @@ public:
 
     bool storageCapable() const;
 
+    enum class MapMode {
+        Read,
+        Write,
+        ReadWrite,
+    };
+
+    virtual bool mapData(MapMode, size_t size, size_t offset, std::function<void(std::byte*)>&& mapCallback) = 0;
+
     virtual void updateData(const std::byte* data, size_t size, size_t offset = 0) = 0;
     virtual bool updateDataAndGrowIfRequired(const std::byte* data, size_t size, size_t offset);
 

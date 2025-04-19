@@ -36,6 +36,70 @@ void VulkanBuffer::setName(const std::string& name)
     }
 }
 
+bool VulkanBuffer::mapData(MapMode mapMode, size_t size, size_t offset, std::function<void(std::byte*)>&& mapCallback)
+{
+    SCOPED_PROFILE_ZONE_GPURESOURCE();
+
+    ARKOSE_ASSERT(size > 0);
+    ARKOSE_ASSERT(offset + size <= m_size);
+
+    switch (usage()) {
+    case Buffer::Usage::Upload:
+        if (mapMode == MapMode::Read) {
+            ARKOSE_LOG(Warning, "Mapping an upload buffer for reading - this can be prohibitively slow and is not recommended!");
+        }
+        break;
+    case Buffer::Usage::Readback:
+        if (mapMode == MapMode::Write) {
+            ARKOSE_LOG(Warning, "Mapping a readback buffer for writing - this can be prohibitively slow and is not recommended!");
+        }
+        break;
+    default:
+        ARKOSE_LOG(Error, "Can only mapData from an Upload or Readback buffer, ignoring.");
+        return false;
+    }
+
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+
+    VmaAllocationInfo allocationInfo;
+    vmaGetAllocationInfo(vulkanBackend.globalAllocator(), allocation, &allocationInfo);
+    ARKOSE_ASSERT(allocationInfo.pMappedData != nullptr); // should be persistently mapped!
+
+    std::byte* baseAddress = reinterpret_cast<std::byte*>(allocationInfo.pMappedData);
+    std::byte* requestedAddress = baseAddress + offset;
+
+    VkMappedMemoryRange mappedMemoryRange = { VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE };
+    mappedMemoryRange.memory = allocationInfo.deviceMemory;
+    mappedMemoryRange.offset = allocationInfo.offset + offset;
+    mappedMemoryRange.size = size;
+
+    VkMemoryType const& mappedMemoryType = vulkanBackend.physicalDeviceMemoryProperties().memoryTypes[allocationInfo.memoryType];
+    ARKOSE_ASSERT(mappedMemoryType.propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+    bool hostCoherentMemory = (mappedMemoryType.propertyFlags & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT) != 0;
+
+    if (!hostCoherentMemory) {
+        switch (mapMode) {
+        case MapMode::Read:
+        case MapMode::ReadWrite:
+            vkInvalidateMappedMemoryRanges(vulkanBackend.device(), 1, &mappedMemoryRange);
+            break;
+        }
+    }
+
+    mapCallback(requestedAddress);
+
+    if (!hostCoherentMemory) {
+        switch (mapMode) {
+        case MapMode::Write:
+        case MapMode::ReadWrite:
+            vkFlushMappedMemoryRanges(vulkanBackend.device(), 1, &mappedMemoryRange);
+            break;
+        }
+    }
+
+    return true;
+}
+
 void VulkanBuffer::updateData(const std::byte* data, size_t updateSize, size_t offset)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
