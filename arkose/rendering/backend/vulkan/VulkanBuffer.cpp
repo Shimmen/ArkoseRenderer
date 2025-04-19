@@ -83,6 +83,8 @@ bool VulkanBuffer::mapData(MapMode mapMode, size_t size, size_t offset, std::fun
         case MapMode::ReadWrite:
             vkInvalidateMappedMemoryRanges(vulkanBackend.device(), 1, &mappedMemoryRange);
             break;
+        case MapMode::Write:
+            break;
         }
     }
 
@@ -93,6 +95,8 @@ bool VulkanBuffer::mapData(MapMode mapMode, size_t size, size_t offset, std::fun
         case MapMode::Write:
         case MapMode::ReadWrite:
             vkFlushMappedMemoryRanges(vulkanBackend.device(), 1, &mappedMemoryRange);
+            break;
+        case MapMode::Read:
             break;
         }
     }
