@@ -38,7 +38,7 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(GpuScene& scene, R
     m_sphereDrawCall = createSphereRenderData(scene, reg);
 
     RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, reg.getTexture("SceneColor"), LoadOp::Load, StoreOp::Store },
-                                                          { RenderTarget::AttachmentType::Depth, reg.getTexture("SceneDepth"), LoadOp::Load, StoreOp::Discard } });
+                                                          { RenderTarget::AttachmentType::Depth, reg.getTexture("SceneDepth"), LoadOp::Load, StoreOp::Store } });
 
     Shader debugShader = Shader::createBasicRasterize("ddgi/probeDebug.vert", "ddgi/probeDebug.frag");
     RenderStateBuilder stateBuilder { renderTarget, debugShader, VertexLayout { VertexComponent::Position3F }};
