@@ -43,16 +43,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                     poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
                     break;
                 case ShaderBindingType::RTAccelerationStructure:
-                    switch (vulkanBackend.rayTracingBackend()) {
-                    case VulkanBackend::RayTracingBackend::NvExtension:
-                        poolSize.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
-                        break;
-                    case VulkanBackend::RayTracingBackend::KhrExtension:
-                        poolSize.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-                        break;
-                    default:
-                        ASSERT_NOT_REACHED();
-                    }
+                    poolSize.type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
                     break;
                 default:
                     ASSERT_NOT_REACHED();
@@ -111,16 +102,7 @@ VulkanBindingSet::VulkanBindingSet(Backend& backend, std::vector<ShaderBinding> 
                 flagsForBinding |= VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT; // TODO: Maybe allow this for more/all types?
                 break;
             case ShaderBindingType::RTAccelerationStructure:
-                switch (vulkanBackend.rayTracingBackend()) {
-                case VulkanBackend::RayTracingBackend::NvExtension:
-                    binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
-                    break;
-                case VulkanBackend::RayTracingBackend::KhrExtension:
-                    binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-                    break;
-                default:
-                    ASSERT_NOT_REACHED();
-                }
+                binding.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
                 break;
             default:
                 ASSERT_NOT_REACHED();
@@ -359,35 +341,13 @@ void VulkanBindingSet::updateBindings()
 
         case ShaderBindingType::RTAccelerationStructure: {
 
-            switch (vulkanBackend.rayTracingBackend()) {
-            case VulkanBackend::RayTracingBackend::NvExtension: {
+            VkWriteDescriptorSetAccelerationStructureKHR descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR };
+            descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASKHR&>(bindingInfo.getTopLevelAS()).accelerationStructure;
+            descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
 
-                VkWriteDescriptorSetAccelerationStructureNV descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_NV };
-                descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASNV&>(bindingInfo.getTopLevelAS()).accelerationStructure;
-                descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
-
-                rtxAccelStructWrites.push_back(descriptorAccelerationStructureInfo);
-                write.pNext = &rtxAccelStructWrites.back();
-                write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_NV;
-
-            } break;
-
-            case VulkanBackend::RayTracingBackend::KhrExtension: {
-
-                VkWriteDescriptorSetAccelerationStructureKHR descriptorAccelerationStructureInfo { VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR };
-                descriptorAccelerationStructureInfo.pAccelerationStructures = &static_cast<const VulkanTopLevelASKHR&>(bindingInfo.getTopLevelAS()).accelerationStructure;
-                descriptorAccelerationStructureInfo.accelerationStructureCount = 1;
-
-                khrAccelStructWrites.push_back(descriptorAccelerationStructureInfo);
-                write.pNext = &khrAccelStructWrites.back();
-                write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
-
-            } break;
-
-            default: {
-                ASSERT_NOT_REACHED();
-            } break;
-            }
+            khrAccelStructWrites.push_back(descriptorAccelerationStructureInfo);
+            write.pNext = &khrAccelStructWrites.back();
+            write.descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR;
 
             write.descriptorCount = 1;
             write.dstArrayElement = 0;

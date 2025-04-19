@@ -32,8 +32,6 @@ public:
 
     bool hasActiveCapability(Capability) const override { return false; }
 
-    ShaderDefine rayTracingShaderDefine() const override { return ShaderDefine(); }
-
     void renderPipelineDidChange(RenderPipeline&) override;
     void shadersDidRecompile(std::vector<std::filesystem::path> const& shaderNames, RenderPipeline&) override;
 

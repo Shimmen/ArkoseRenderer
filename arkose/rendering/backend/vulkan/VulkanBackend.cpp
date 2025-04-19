@@ -171,20 +171,10 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
     }
 
     if (hasActiveCapability(Backend::Capability::RayTracing)) {
-        switch (rayTracingBackend()) {
-        case RayTracingBackend::NvExtension:
-            m_rayTracingNv = std::make_unique<VulkanRayTracingNV>(*this, physicalDevice(), device());
-            ARKOSE_LOG(Info, "VulkanBackend: using NV ray tracing backend");
-            break;
-        case RayTracingBackend::KhrExtension:
-            m_rayTracingKhr = std::make_unique<VulkanRayTracingKHR>(*this, physicalDevice(), device());
-            ARKOSE_LOG(Info, "VulkanBackend: using KHR ray tracing backend");
-            break;
-        default:
-            ASSERT_NOT_REACHED();
-        }
+        m_rayTracingKhr = std::make_unique<VulkanRayTracingKHR>(*this, physicalDevice(), device());
+        ARKOSE_LOG(Info, "VulkanBackend: with ray tracing");
     } else {
-        ARKOSE_LOG(Info, "VulkanBackend: no ray tracing backend");
+        ARKOSE_LOG(Info, "VulkanBackend: no ray tracing");
     }
 
     if (hasActiveCapability(Backend::Capability::MeshShading)) {
@@ -248,7 +238,6 @@ VulkanBackend::~VulkanBackend()
     m_dlss.reset();
 #endif
 
-    m_rayTracingNv.reset();
     m_rayTracingKhr.reset();
 
     destroyDearImgui();
@@ -388,14 +377,13 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
                 && hasSupportForDeviceExtension(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)
                 && vk12features.bufferDeviceAddress;
 
-            // Prefer KHR as it's the more generic/agnostic implementation
-            if (khrRayTracingSupport) {
-                m_rayTracingBackend = RayTracingBackend::KhrExtension;
-            } else if (nvidiaRayTracingSupport) {
-                m_rayTracingBackend = RayTracingBackend::NvExtension;
+            // We now only support the KHR ray tracing extension as it's the more generic/agnostic implementation
+            if (nvidiaRayTracingSupport && !khrRayTracingSupport) {
+                ARKOSE_LOG(Warning, "The VK_NV_ray_tracing extension is supported but the modern KHR-variants are not. "
+                                    "Try updating your graphics drivers (it probably is supported on the latest drivers).");
             }
 
-            return nvidiaRayTracingSupport || khrRayTracingSupport; 
+            return khrRayTracingSupport;
         }
         case Capability::MeshShading: {
             bool supportsExtExtension = hasSupportForDeviceExtension(VK_EXT_MESH_SHADER_EXTENSION_NAME);
@@ -536,18 +524,6 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
     return allRequiredSupported;
 }
 
-ShaderDefine VulkanBackend::rayTracingShaderDefine() const
-{
-    switch (rayTracingBackend()) {
-    case RayTracingBackend::NvExtension:
-        return ShaderDefine::makeSymbol("RAY_TRACING_BACKEND_NV");
-    case RayTracingBackend::KhrExtension:
-        return ShaderDefine::makeSymbol("RAY_TRACING_BACKEND_KHR");
-    default:
-        return ShaderDefine();
-    }
-}
-
 std::unique_ptr<Buffer> VulkanBackend::createBuffer(size_t size, Buffer::Usage usage)
 {
     return std::make_unique<VulkanBuffer>(*this, size, usage);
@@ -577,38 +553,20 @@ std::unique_ptr<RenderState> VulkanBackend::createRenderState(const RenderTarget
 
 std::unique_ptr<BottomLevelAS> VulkanBackend::createBottomLevelAccelerationStructure(std::vector<RTGeometry> geometries, BottomLevelAS const* copySource)
 {
-    switch (rayTracingBackend()) {
-    case RayTracingBackend::KhrExtension:
-        return std::make_unique<VulkanBottomLevelASKHR>(*this, geometries, copySource);
-    case RayTracingBackend::NvExtension:
-        return std::make_unique<VulkanBottomLevelASNV>(*this, geometries, copySource);
-    default:
-        ASSERT_NOT_REACHED();
-    }
+    ARKOSE_ASSERT(hasRayTracingSupport());
+    return std::make_unique<VulkanBottomLevelASKHR>(*this, geometries, copySource);
 }
 
 std::unique_ptr<TopLevelAS> VulkanBackend::createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance> initialInstances)
 {
-    switch (rayTracingBackend()) {
-    case RayTracingBackend::KhrExtension:
-        return std::make_unique<VulkanTopLevelASKHR>(*this, maxInstanceCount, initialInstances);
-    case RayTracingBackend::NvExtension:
-        return std::make_unique<VulkanTopLevelASNV>(*this, maxInstanceCount, initialInstances);
-    default:
-        ASSERT_NOT_REACHED();
-    }
+    ARKOSE_ASSERT(hasRayTracingSupport());
+    return std::make_unique<VulkanTopLevelASKHR>(*this, maxInstanceCount, initialInstances);
 }
 
 std::unique_ptr<RayTracingState> VulkanBackend::createRayTracingState(ShaderBindingTable& sbt, const StateBindings& stateBindings, uint32_t maxRecursionDepth)
 {
-    switch (rayTracingBackend()) {
-    case RayTracingBackend::KhrExtension:
-        return std::make_unique<VulkanRayTracingStateKHR>(*this, sbt, stateBindings, maxRecursionDepth);
-    case RayTracingBackend::NvExtension:
-        return std::make_unique<VulkanRayTracingStateNV>(*this, sbt, stateBindings, maxRecursionDepth);
-    default:
-        ASSERT_NOT_REACHED();
-    }
+    ARKOSE_ASSERT(hasRayTracingSupport());
+    return std::make_unique<VulkanRayTracingStateKHR>(*this, sbt, stateBindings, maxRecursionDepth);
 }
 
 std::unique_ptr<ComputeState> VulkanBackend::createComputeState(Shader const& shader, StateBindings const& stateBindings)
@@ -968,32 +926,22 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
             continue;
         switch (capability) {
         case Capability::RayTracing:
-            switch (rayTracingBackend()) {
-            case RayTracingBackend::NvExtension:
-                deviceExtensions.push_back(VK_NV_RAY_TRACING_EXTENSION_NAME);
-                break;
-            case RayTracingBackend::KhrExtension:
-                deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
-                appendToNextChain(khrRayTracingPipelineFeatures);
-                khrRayTracingPipelineFeatures.rayTracingPipeline = VK_TRUE;
-                khrRayTracingPipelineFeatures.rayTracingPipelineTraceRaysIndirect = VK_TRUE;
-                khrRayTracingPipelineFeatures.rayTraversalPrimitiveCulling = VK_TRUE;
-                deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
-                appendToNextChain(khrAccelerationStructureFeatures);
-                khrAccelerationStructureFeatures.accelerationStructure = VK_TRUE;
-                //khrAccelerationStructureFeatures.accelerationStructureIndirectBuild = VK_TRUE;
-                khrAccelerationStructureFeatures.descriptorBindingAccelerationStructureUpdateAfterBind = VK_TRUE;
-                //khrAccelerationStructureFeatures.accelerationStructureHostCommands = VK_TRUE;
-                deviceExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
-                appendToNextChain(khrRayQueryFeatures);
-                khrRayQueryFeatures.rayQuery = VK_TRUE;
-                deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-                vk12features.bufferDeviceAddress = VK_TRUE;
-                break;
-            default:
-                ASSERT_NOT_REACHED();
-
-            }
+            deviceExtensions.push_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+            appendToNextChain(khrRayTracingPipelineFeatures);
+            khrRayTracingPipelineFeatures.rayTracingPipeline = VK_TRUE;
+            khrRayTracingPipelineFeatures.rayTracingPipelineTraceRaysIndirect = VK_TRUE;
+            khrRayTracingPipelineFeatures.rayTraversalPrimitiveCulling = VK_TRUE;
+            deviceExtensions.push_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
+            appendToNextChain(khrAccelerationStructureFeatures);
+            khrAccelerationStructureFeatures.accelerationStructure = VK_TRUE;
+            //khrAccelerationStructureFeatures.accelerationStructureIndirectBuild = VK_TRUE;
+            khrAccelerationStructureFeatures.descriptorBindingAccelerationStructureUpdateAfterBind = VK_TRUE;
+            //khrAccelerationStructureFeatures.accelerationStructureHostCommands = VK_TRUE;
+            deviceExtensions.push_back(VK_KHR_RAY_QUERY_EXTENSION_NAME);
+            appendToNextChain(khrRayQueryFeatures);
+            khrRayQueryFeatures.rayQuery = VK_TRUE;
+            deviceExtensions.push_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+            vk12features.bufferDeviceAddress = VK_TRUE;
             break;
         case Capability::MeshShading:
             deviceExtensions.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);

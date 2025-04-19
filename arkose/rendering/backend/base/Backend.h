@@ -64,8 +64,6 @@ public:
     static std::string capabilityName(Capability capability);
     virtual bool hasActiveCapability(Capability) const = 0;
 
-    virtual ShaderDefine rayTracingShaderDefine() const = 0;
-
     virtual void completePendingOperations() = 0;
 
     virtual void renderPipelineDidChange(RenderPipeline&) = 0;

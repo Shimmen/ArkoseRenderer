@@ -13,7 +13,6 @@ VulkanRayTracingStateKHR::VulkanRayTracingStateKHR(Backend& backend, ShaderBindi
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend);
 
     ARKOSE_ASSERT(vulkanBackend.hasRayTracingSupport());
-    ARKOSE_ASSERT(vulkanBackend.rayTracingBackend() == VulkanBackend::RayTracingBackend::KhrExtension);
 
     VkPipelineLayoutCreateInfo pipelineLayoutCreateInfo = { VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO };
 

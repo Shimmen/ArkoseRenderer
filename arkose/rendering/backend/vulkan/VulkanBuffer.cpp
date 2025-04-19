@@ -198,19 +198,10 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
         usageFlags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
         break;
     case Buffer::Usage::RTInstanceBuffer:
-        switch (vulkanBackend.rayTracingBackend()) {
-        case VulkanBackend::RayTracingBackend::NvExtension:
-            usageFlags |= VK_BUFFER_USAGE_RAY_TRACING_BIT_NV;
-            break;
-        case VulkanBackend::RayTracingBackend::KhrExtension:
-            usageFlags |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
-            usageFlags |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
-            if constexpr (vulkanDebugMode) {
-                usageFlags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
-            }
-            break;
-        default:
-            ASSERT_NOT_REACHED();
+        usageFlags |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
+        usageFlags |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
+        if constexpr (vulkanDebugMode) {
+            usageFlags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
         }
         break;
     case Buffer::Usage::ConstantBuffer:
@@ -247,17 +238,12 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
 
     // Make vertex & index buffers also be usable in ray tracing acceleration structures
     if (usage() == Buffer::Usage::Vertex || usage() == Buffer::Usage::Index) {
-        switch (vulkanBackend.rayTracingBackend()) {
-        case VulkanBackend::RayTracingBackend::KhrExtension:
+        if (vulkanBackend.hasRayTracingSupport()) {
             usageFlags |= VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT;
             usageFlags |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
             if constexpr (vulkanDebugMode) {
                 usageFlags |= VK_BUFFER_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
             }
-            break;
-        default:
-            // no action needed
-            break;
         }
     }
 

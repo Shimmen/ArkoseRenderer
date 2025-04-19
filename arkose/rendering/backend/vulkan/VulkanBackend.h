@@ -8,7 +8,6 @@
 #include "rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.h"
 #include "rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.h"
 #include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.h"
-#include "rendering/backend/vulkan/extensions/ray-tracing-nv/VulkanRayTracingNV.h"
 #include "utility/AvgElapsedTimer.h"
 #include <array>
 #include <optional>
@@ -53,8 +52,6 @@ public:
     /// Public backend API
 
     bool hasActiveCapability(Capability) const override;
-
-    ShaderDefine rayTracingShaderDefine() const override;
 
     void renderPipelineDidChange(RenderPipeline&) override;
     void shadersDidRecompile(std::vector<std::filesystem::path> const& shaderNames, RenderPipeline&) override;
@@ -104,36 +101,17 @@ public:
 
     VulkanTexture* placeholderSwapchainTexture() const { return m_placeholderSwapchainTexture.get(); }
 
-    enum class RayTracingBackend {
-        None,
-        NvExtension,
-        KhrExtension,
-    };
-
-    RayTracingBackend rayTracingBackend() const { return m_rayTracingBackend; }
-    bool hasRayTracingSupport() const { return rayTracingBackend() != RayTracingBackend::None; }
-
-    VulkanRayTracingNV& rayTracingNV()
-    {
-        ARKOSE_ASSERT(m_rayTracingBackend == RayTracingBackend::NvExtension && m_rayTracingNv);
-        return *m_rayTracingNv;
-    }
-
-    const VulkanRayTracingNV& rayTracingNV() const
-    {
-        ARKOSE_ASSERT(m_rayTracingBackend == RayTracingBackend::NvExtension && m_rayTracingNv);
-        return *m_rayTracingNv;
-    }
+    bool hasRayTracingSupport() const { return m_rayTracingKhr != nullptr; }
 
     VulkanRayTracingKHR& rayTracingKHR()
     {
-        ARKOSE_ASSERT(m_rayTracingBackend == RayTracingBackend::KhrExtension && m_rayTracingKhr);
+        ARKOSE_ASSERT(hasRayTracingSupport());
         return *m_rayTracingKhr;
     }
 
     const VulkanRayTracingKHR& rayTracingKHR() const
     {
-        ARKOSE_ASSERT(m_rayTracingBackend == RayTracingBackend::KhrExtension && m_rayTracingKhr);
+        ARKOSE_ASSERT(hasRayTracingSupport());
         return *m_rayTracingKhr;
     }
 
@@ -339,8 +317,6 @@ private:
     ///////////////////////////////////////////////////////////////////////////
     /// Sub-systems / extensions
 
-    RayTracingBackend m_rayTracingBackend { RayTracingBackend::None };
-    std::unique_ptr<VulkanRayTracingNV> m_rayTracingNv {};
     std::unique_ptr<VulkanRayTracingKHR> m_rayTracingKhr {};
 
     std::unique_ptr<VulkanMeshShaderEXT> m_meshShaderExt {};

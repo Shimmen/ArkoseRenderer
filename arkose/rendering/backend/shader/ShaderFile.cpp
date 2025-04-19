@@ -21,14 +21,6 @@ ShaderFile::ShaderFile(std::filesystem::path path, ShaderStage shaderStage, std:
     , m_defines(std::move(defines))
     , m_shaderStage(shaderStage)
 {
-    if (isRayTracingShaderFile()) {
-        // TODO: We want to get rid of Backend::get(). What should we do here?
-        ShaderDefine rayTracingDefine = Backend::get().rayTracingShaderDefine();
-        if (rayTracingDefine.valid()) {
-            m_defines.push_back(rayTracingDefine);
-        }
-    }
-
     // Sort the list so we can assume that equivalent set of defines generates the same identifier
     std::sort(m_defines.begin(), m_defines.end(), [](const ShaderDefine& lhs, const ShaderDefine& rhs) {
         if (lhs.symbol == rhs.symbol) {
