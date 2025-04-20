@@ -40,7 +40,8 @@ int main(int argc, char* argv[])
 
         std::string dependencyData = "";
 
-        dependencyData += fmt::format("INPUT: {}\n", inputAsset);
+        // Not needed / breaks the build in AssetCooker if this is included. Not sure why..
+        //dependencyData += fmt::format("INPUT: {}\n", inputAsset);
 
         for (auto const& image : result.images) {
             dependencyData += fmt::format("OUTPUT: {}\n", image->assetFilePath());
