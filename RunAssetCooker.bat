@@ -6,13 +6,14 @@ echo ====================================
 echo(
 
 IF NOT EXIST "tools/bin/AssetCooker.exe" (
-    echo ERROR: AssetCooker executable not found!
-    echo(
-    echo Please download, build, and copy the executable into this directory! This is temporary..
-    echo You can find the code at https://github.com/jlaumon/AssetCooker
-    echo(
-    pause
-    exit /b 1
+
+    echo AssetCooker executable not found - downloading it now...
+
+    pushd "tools/bin"
+    powershell -command "Invoke-WebRequest -Uri 'https://github.com/jlaumon/AssetCooker/releases/download/v0.0.1-prealpha/AssetCooker-v0.0.1-prealpha.zip' -OutFile 'AssetCooker.zip'"
+    powershell -command "Expand-Archive -Path AssetCooker.zip -DestinationPath ."
+    popd
+
 ) ELSE (
     echo AssetCooker executable found!
 )
