@@ -53,60 +53,56 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
         auto lightFrustum = geometry::Frustum::createFromProjectionMatrix(lightProjectionFromWorld);
         mat4 lightProjectionFromView = lightProjectionFromWorld * inverse(scene.camera().viewMatrix());
 
-        {
-            ScopedDebugZone zone { cmdList, "Shadow Map Drawing" };
+        cmdList.beginRendering(renderState, ClearValue::blackAtMaxDepth());
 
-            cmdList.beginRendering(renderState, ClearValue::blackAtMaxDepth());
+        cmdList.setNamedUniform<mat4>("lightProjectionFromWorld", lightProjectionFromWorld);
 
-            cmdList.setNamedUniform<mat4>("lightProjectionFromWorld", lightProjectionFromWorld);
+        cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), scene.vertexManager().positionVertexLayout().packedVertexSize(), 0);
+        cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
-            cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), scene.vertexManager().positionVertexLayout().packedVertexSize(), 0);
-            cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
+        cmdList.setDepthBias(light->constantBias(), light->slopeBias());
 
-            cmdList.setDepthBias(light->constantBias(), light->slopeBias());
+        moodycamel::ConcurrentQueue<DrawCallDescription> drawCalls {};
 
-            moodycamel::ConcurrentQueue<DrawCallDescription> drawCalls {};
+        auto& instances = scene.staticMeshInstances();
+        ParallelForBatched(instances.size(), 256, [&](size_t idx) {
+            auto& instance = instances[idx];
 
-            auto& instances = scene.staticMeshInstances();
-            ParallelForBatched(instances.size(), 256, [&](size_t idx) {
-                auto& instance = instances[idx];
+            if (const StaticMesh* staticMesh = scene.staticMeshForInstance(*instance)) {
 
-                if (const StaticMesh* staticMesh = scene.staticMeshForInstance(*instance)) {
+                if (!staticMesh->hasNonTranslucentSegments()) {
+                    return;
+                }
 
-                    if (!staticMesh->hasNonTranslucentSegments()) {
-                        return;
-                    }
+                // TODO: Pick LOD properly
+                const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
 
-                    // TODO: Pick LOD properly
-                    const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
+                ark::aabb3 aabb = staticMesh->boundingBox().transformed(instance->transform().worldMatrix());
+                if (lightFrustum.includesAABB(aabb)) {
 
-                    ark::aabb3 aabb = staticMesh->boundingBox().transformed(instance->transform().worldMatrix());
-                    if (lightFrustum.includesAABB(aabb)) {
+                    for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
+                        StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
 
-                        for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
-                            StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
-
-                            // Don't render translucent objects. We still do masked though and pretend they are opaque. This may fail
-                            // in some cases but in general if the masked features are small enough it's not really noticable.
-                            if (meshSegment.blendMode == BlendMode::Translucent) {
-                                continue;
-                            }
-
-                            DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
-                            drawCall.firstInstance = instance->drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>(); // TODO: Put this in some buffer instead!
-
-                            drawCalls.enqueue(drawCall);
+                        // Don't render translucent objects. We still do masked though and pretend they are opaque. This may fail
+                        // in some cases but in general if the masked features are small enough it's not really noticable.
+                        if (meshSegment.blendMode == BlendMode::Translucent) {
+                            continue;
                         }
+
+                        DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
+                        drawCall.firstInstance = instance->drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>(); // TODO: Put this in some buffer instead!
+
+                        drawCalls.enqueue(drawCall);
                     }
                 }
-            });
-
-            DrawCallDescription drawCall;
-            while (drawCalls.try_dequeue(drawCall)) {
-                cmdList.issueDrawCall(drawCall);
             }
+        });
 
-            cmdList.endRendering();
+        DrawCallDescription drawCall;
+        while (drawCalls.try_dequeue(drawCall)) {
+            cmdList.issueDrawCall(drawCall);
         }
+
+        cmdList.endRendering();
     };
 }
