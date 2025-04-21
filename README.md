@@ -31,6 +31,7 @@ This list is not complete, it's just a showcase of various features that are imp
  - Shader hot-reloading with support for `#include`s
  - Suite of editor tools, gizmos, and debug rendering
  - Tight integration with CPU & GPU profiling tools
+ - A tools pipeline built upon [AssetCooker](https://github.com/jlaumon/AssetCooker)
  - Physics (work-in-progress)
 
 ### Rendering features & techniques
@@ -91,29 +92,31 @@ Note that some details are omitted for brevity.
  - The Vulkan SDK (see https://vulkan.lunarg.com/). This applies even if you don't intend on using the Vulkan graphics backend, as some tools and libraries we rely on are part of the SDK. *Make sure to include shader toolchain debug symbols if you intend on making Debug builds!*
  - For Windows/MSVC, Windows 10 SDK version 2104 (10.0.20348.0) or later, as previous versions don't work well with `/Zc:preprocessor` which we use ([more info](https://developercommunity.visualstudio.com/t/stdc17-generates-warning-compiling-windowsh/1249671))
 
- > **DISCLAIMER:** Not much about Arkose is platform specific but it has mostly been compiled and run by myself on Windows and with MSVC. Most other platforms and compilers *should* work but no guarantees.
+ > **DISCLAIMER:** Not much about Arkose is platform specific but it has mostly been run by myself on Windows. Linux & macOS may work, but no guarantees. (The tooling pipeline itself is somewhat tied to Windows now, however..)
 
 ## Setup
 
-Here are some simple steps to get it compiling & running for you:
+Here are some simple steps to get it compiling & running for you (if you're on Windows):
 
  1. Download (or clone) this repository
- 1. Run the `GenerateProjectFiles` script (`.bat` for Windows or `.sh` for Linux/macOS/etc.)
- 1. Project files should now be generated under `build/` – build the project as you'd usually do
- 1. When running ensure the working directory is the one containing the executable (for the Visual Studio generator this should be done for you!)
+ 1. Run the `GenerateProjectFiles.bat` script
+ 1. Project files should now be generated under `build/` – now build the project as you'd usually do
+ 1. Run the `RunAssetCooker.bat` script to build all tools & launch AssetCooker, which will then automatically build all sample assets (ensure all assets are done building before progressing)
+ 1. Ensure the working directory is the one containing the executable (for the Visual Studio generator this should be done for you!)
+ 1. Now, run *ArkoseRenderer* and it should launch into a demo/showcase containing most of our fancy graphics features
 
-All the GenerateProjectFiles script does is run CMake and generate project files into `build/` for the default generator. However, you can of course also run CMake manually if you wish.
+> All the GenerateProjectFiles script does is run CMake and generate project files into `build/` for the default generator. However, you can of course also run CMake manually if you wish.
 
 Note that all third-party dependencies (besides the Vulkan SDK) are either in-tree or dowloaded by CMake automatically via [FetchContent](https://cmake.org/cmake/help/latest/module/FetchContent.html) during configure. Due to this CMake will take a few minutes to configure the project the first time around. Similarly, and for the same reason, the first build will also be slower.
 
 
-### Tools setup
+### OpenUSD tools setup
 
  > **Work in progress!** Not much point in looking here yet.
 
-The entire tools stack depends on [OpenUSD](https://github.com/PixarAnimationStudios/OpenUSD) and is needed for compilation. Note that this dependency only exists for the offline tooling so it's not needed for anything runtime, e.g. renderer/game.
+Eventually I want much of the tools stack to depend on [OpenUSD](https://github.com/PixarAnimationStudios/OpenUSD). Note that this dependency only exists for the offline tooling so it's not needed for anything runtime, e.g. renderer/game.
 
-To be able to build any of the tools, first install OpenUSD. Nowadays it's not too difficult to build USD yourself, so I'd recommend that. There is also the option to [download the pre-built libraries and tools provided by Nvidia](https://developer.nvidia.com/usd#libraries-and-tools), but I've never had any success with it for Windows.
+To be able to build the Arkose-USD tooling, first install OpenUSD. Nowadays it's not too difficult to build USD yourself, so I'd recommend that. There is also the option to [download the pre-built libraries and tools provided by Nvidia](https://developer.nvidia.com/usd#libraries-and-tools), but I've never had any success with it for Windows.
 
 For CMake to find USD, ensure that `PXR_USD_LOCATION` is defined (either as a CMake variable or as an environment variable), and pointing at the root directory of where you installed it. If setup correctly, CMake should pick up on this and build tools accordingly.
 
