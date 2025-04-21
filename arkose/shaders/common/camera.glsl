@@ -2,6 +2,7 @@
 #define CAMERA_GLSL
 
 #include <common.glsl>
+#include <common/culling.glsl>
 #include <shared/CameraState.h>
 
 //
@@ -118,14 +119,7 @@ float calculateLinearDepth(float nonlinearDepth, CameraState camera)
 
 bool isSphereInCameraFrustum(vec4 sphere, CameraState camera)
 {
-    bool fullyOutside = false;
-
-    for (int i = 0; i < 6; ++i) {
-        float signedDistance = dot(camera.frustumPlanes[i].xyz, sphere.xyz) + camera.frustumPlanes[i].w;
-        fullyOutside = fullyOutside || (signedDistance > sphere.w);
-    }
-
-    return !fullyOutside;
+    return isSphereInFrustum(sphere, camera.frustumPlanes);
 }
 
 #endif // CAMERA_GLSL
