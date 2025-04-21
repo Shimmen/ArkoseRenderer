@@ -7,7 +7,7 @@
 
 class Light;
 
-class LocalLightShadowNode final : public RenderPipelineNode {
+class LocalShadowDrawNode final : public RenderPipelineNode {
 public:
     std::string name() const override { return "Local light shadows"; }
     void drawGui() override;

@@ -8,7 +8,6 @@
 #include "rendering/meshlet/VisibilityBufferDebugNode.h"
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/DebugDrawNode.h"
-#include "rendering/nodes/LocalLightShadowNode.h"
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/RTReflectionsNode.h"
 #include "rendering/nodes/SSAONode.h"
@@ -18,6 +17,7 @@
 #include "rendering/output/OutputNode.h"
 #include "rendering/shadow/DirectionalShadowDrawNode.h"
 #include "rendering/shadow/DirectionalShadowProjectNode.h"
+#include "rendering/shadow/LocalShadowDrawNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
 #include "scene/lights/DirectionalLight.h"
@@ -93,7 +93,7 @@ void GeodataApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     pipeline.addNode<DirectionalShadowDrawNode>();
     pipeline.addNode<DirectionalShadowProjectNode>();
-    pipeline.addNode<LocalLightShadowNode>();
+    pipeline.addNode<LocalShadowDrawNode>();
 
     pipeline.addNode<VisibilityBufferShadingNode>();
     //pipeline.addNode<ForwardRenderNode>(ForwardRenderNode::Mode::Opaque,

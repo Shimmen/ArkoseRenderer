@@ -10,7 +10,6 @@
 #include "rendering/nodes/DDGIProbeDebug.h"
 #include "rendering/nodes/DebugDrawNode.h"
 #include "rendering/nodes/DepthOfFieldNode.h"
-#include "rendering/nodes/LocalLightShadowNode.h"
 #include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/RTReflectionsNode.h"
 #include "rendering/nodes/SkyViewNode.h"
@@ -20,6 +19,7 @@
 #include "rendering/postprocess/SSSSNode.h"
 #include "rendering/shadow/DirectionalShadowDrawNode.h"
 #include "rendering/shadow/DirectionalShadowProjectNode.h"
+#include "rendering/shadow/LocalShadowDrawNode.h"
 #include "rendering/upscaling/UpscalingNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
@@ -108,7 +108,7 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
 
     pipeline.addNode<DirectionalShadowDrawNode>();
     pipeline.addNode<DirectionalShadowProjectNode>();
-    pipeline.addNode<LocalLightShadowNode>();
+    pipeline.addNode<LocalShadowDrawNode>();
 
     pipeline.addNode<VisibilityBufferShadingNode>();
 

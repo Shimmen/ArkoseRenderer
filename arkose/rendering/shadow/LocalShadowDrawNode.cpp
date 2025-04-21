@@ -1,4 +1,4 @@
-#include "LocalLightShadowNode.h"
+#include "LocalShadowDrawNode.h"
 
 #include "core/math/Frustum.h"
 #include "core/parallel/ParallelFor.h"
@@ -11,13 +11,13 @@
 #include <fmt/format.h>
 #include <imgui.h>
 
-void LocalLightShadowNode::drawGui()
+void LocalShadowDrawNode::drawGui()
 {
     ImGui::SliderInt("Max number of shadow maps", &m_maxNumShadowMaps, 0, 32);
     drawTextureVisualizeGui(*m_shadowMapAtlas);
 }
 
-RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& scene, Registry& reg)
+RenderPipelineNode::ExecuteCallback LocalShadowDrawNode::construct(GpuScene& scene, Registry& reg)
 {
     m_shadowMapAtlas = &reg.createTexture2D({ 4096, 4096 },
                                             Texture::Format::Depth32F,
@@ -83,7 +83,7 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
     };
 }
 
-std::vector<LocalLightShadowNode::ShadowMapAtlasAllocation> LocalLightShadowNode::allocateShadowMapsInAtlas(const GpuScene& scene, const Texture& atlas) const
+std::vector<LocalShadowDrawNode::ShadowMapAtlasAllocation> LocalShadowDrawNode::allocateShadowMapsInAtlas(const GpuScene& scene, const Texture& atlas) const
 {
     SCOPED_PROFILE_ZONE();
 
@@ -182,7 +182,7 @@ std::vector<LocalLightShadowNode::ShadowMapAtlasAllocation> LocalLightShadowNode
     return allocations;
 }
 
-std::vector<vec4> LocalLightShadowNode::collectAtlasViewportDataForAllocations(const GpuScene& scene, Extent2D atlasExtent, const std::vector<ShadowMapAtlasAllocation>& shadowMapAllocations) const
+std::vector<vec4> LocalShadowDrawNode::collectAtlasViewportDataForAllocations(const GpuScene& scene, Extent2D atlasExtent, const std::vector<ShadowMapAtlasAllocation>& shadowMapAllocations) const
 {
     SCOPED_PROFILE_ZONE();
 
@@ -213,7 +213,7 @@ std::vector<vec4> LocalLightShadowNode::collectAtlasViewportDataForAllocations(c
     return viewports;
 }
 
-void LocalLightShadowNode::drawSpotLightShadowMap(CommandList& cmdList, GpuScene& scene, const ShadowMapAtlasAllocation& shadowMapAllocation) const
+void LocalShadowDrawNode::drawSpotLightShadowMap(CommandList& cmdList, GpuScene& scene, const ShadowMapAtlasAllocation& shadowMapAllocation) const
 {
     SCOPED_PROFILE_ZONE();
 
@@ -237,7 +237,7 @@ void LocalLightShadowNode::drawSpotLightShadowMap(CommandList& cmdList, GpuScene
     drawShadowCasters(cmdList, scene, lightFrustum);
 }
 
-void LocalLightShadowNode::drawShadowCasters(CommandList& cmdList, GpuScene& scene, geometry::Frustum const& lightFrustum) const
+void LocalShadowDrawNode::drawShadowCasters(CommandList& cmdList, GpuScene& scene, geometry::Frustum const& lightFrustum) const
 {
     // TODO: Use GPU based culling
 
