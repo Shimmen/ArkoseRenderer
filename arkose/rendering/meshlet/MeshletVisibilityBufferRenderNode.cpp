@@ -17,25 +17,6 @@ RenderPipelineNode::ExecuteCallback MeshletVisibilityBufferRenderNode::construct
         ARKOSE_LOG(Warning, "Using visibility buffer rendering when Prepass node is in the render pipeline, this is probably not intended!");
     }
 
-    Texture::Description visibilityDataTexDesc { .extent = pipeline().renderResolution(),
-                                                 .format = Texture::Format::R32Uint };
-    
-    m_instanceVisibilityTexture = &reg.createTexture(visibilityDataTexDesc);
-    reg.publish("InstanceVisibilityTexture", *m_instanceVisibilityTexture);
-
-    m_triangleVisibilityTexture = &reg.createTexture(visibilityDataTexDesc);
-    reg.publish("TriangleVisibilityTexture", *m_triangleVisibilityTexture);
-
-    // Binding set for all data required to interpret the visibility buffer - just get this binding set when you need to read it!
-    BindingSet& visBufferDataBindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(*m_instanceVisibilityTexture),
-                                                                 ShaderBinding::sampledTexture(*m_triangleVisibilityTexture),
-                                                                 ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
-                                                                 ShaderBinding::storageBufferReadonly(scene.meshletManager().meshletBuffer()),
-                                                                 ShaderBinding::storageBufferReadonly(scene.meshletManager().meshletIndexBuffer()),
-                                                                 ShaderBinding::storageBufferReadonly(scene.meshletManager().meshletPositionDataVertexBuffer()),
-                                                                 ShaderBinding::storageBufferReadonly(scene.meshletManager().meshletNonPositionDataVertexBuffer()) });
-    reg.publish("VisibilityBufferData", visBufferDataBindingSet);
-
     std::vector<RenderStateWithIndirectData*> const& renderStates = createRenderStates(reg, scene);
 
     // TODO: If we collect render states and indirect buffers into separate arrays we won't have to do this...
@@ -68,8 +49,8 @@ RenderPipelineNode::ExecuteCallback MeshletVisibilityBufferRenderNode::construct
 RenderTarget& MeshletVisibilityBufferRenderNode::makeRenderTarget(Registry& reg, LoadOp loadOp) const
 {
     Texture& depthTexture = *reg.getTexture("SceneDepth");
-    return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, m_instanceVisibilityTexture, loadOp, StoreOp::Store },
-                                    { RenderTarget::AttachmentType::Color1, m_triangleVisibilityTexture, loadOp, StoreOp::Store },
+    return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, reg.getTexture("InstanceVisibilityTexture"), loadOp, StoreOp::Store },
+                                    { RenderTarget::AttachmentType::Color1, reg.getTexture("TriangleVisibilityTexture"), loadOp, StoreOp::Store },
                                     { RenderTarget::AttachmentType::Depth, &depthTexture, loadOp, StoreOp::Store } });
 }
 

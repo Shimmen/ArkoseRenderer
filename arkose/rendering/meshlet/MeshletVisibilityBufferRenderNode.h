@@ -15,9 +15,6 @@ private:
     bool m_frustumCullInstances { false }; // Keep default off (for now!)
     bool m_frustumCullMeshlets { true };
 
-    Texture* m_instanceVisibilityTexture { nullptr };
-    Texture* m_triangleVisibilityTexture { nullptr };
-
     struct PassSettings {
         DrawKey drawKeyMask {};
         u32 maxMeshlets { 10'000 };

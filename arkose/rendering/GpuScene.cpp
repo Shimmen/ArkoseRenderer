@@ -310,6 +310,27 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     BindingSet& objectBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(objectDataBuffer, ShaderStage::Vertex) });
     reg.publish("SceneObjectSet", objectBindingSet);
 
+    // Visibility buffer textures & data
+    if (m_meshShadingCapable) {
+        Texture::Description visibilityDataTexDesc { .extent = pipeline().renderResolution(),
+                                                     .format = Texture::Format::R32Uint };
+
+        Texture& instanceVisibilityTexture = reg.createTexture(visibilityDataTexDesc);
+        reg.publish("InstanceVisibilityTexture", instanceVisibilityTexture);
+
+        Texture& triangleVisibilityTexture = reg.createTexture(visibilityDataTexDesc);
+        reg.publish("TriangleVisibilityTexture", triangleVisibilityTexture);
+
+        // Binding set for all data required to interpret the visibility buffer - just get this binding set when you need to read it!
+        BindingSet& visBufferDataBindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(instanceVisibilityTexture),
+                                                                     ShaderBinding::sampledTexture(triangleVisibilityTexture),
+                                                                     ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
+                                                                     ShaderBinding::storageBufferReadonly(meshletManager().meshletBuffer()),
+                                                                     ShaderBinding::storageBufferReadonly(meshletManager().meshletIndexBuffer()),
+                                                                     ShaderBinding::storageBufferReadonly(meshletManager().meshletPositionDataVertexBuffer()),
+                                                                     ShaderBinding::storageBufferReadonly(meshletManager().meshletNonPositionDataVertexBuffer()) });
+        reg.publish("VisibilityBufferData", visBufferDataBindingSet);
+    }
 
     // TODO: My lambda-system kind of fails horribly here. I need a reference-type for the capture to work nicely,
     //       and I also want to scope it under the if check. I either need to fix that or I'll need to make a pointer
