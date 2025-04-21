@@ -5,6 +5,7 @@
 
 #include <common.glsl>
 #include <common/camera.glsl>
+#include <common/namedUniforms.glsl>
 #include <meshlet/meshletCommon.glsl>
 #include <shared/SceneData.h>
 #include <shared/ShaderBlendMode.h>
@@ -18,6 +19,8 @@ layout(set = 1, binding = 2) buffer restrict readonly MeshletBlock { ShaderMeshl
 layout(set = 2, binding = 0, scalar) buffer restrict readonly IndicesBlock { uint meshletIndices[]; };
 layout(set = 2, binding = 1, scalar) buffer restrict readonly PositionsBlock { vec3 meshletPositions[]; };
 layout(set = 2, binding = 2, scalar) buffer restrict readonly NonPositionsBlock { NonPositionVertex meshletVertices[]; };
+
+NAMED_UNIFORMS_STRUCT(MeshletConstants, constants)
 
 taskPayloadSharedEXT MeshShaderInterpolants fromTaskShader;
 
@@ -54,8 +57,8 @@ void main()
         uint vertexIdx = meshlet.firstVertex + localVertexIdx;
         vec3 localPosition = meshletPositions[vertexIdx];
 
-        vec4 viewSpacePos = camera.viewFromWorld * drawable.worldFromLocal * vec4(localPosition, 1.0);
-        gl_MeshVerticesEXT[localVertexIdx].gl_Position = camera.projectionFromView * viewSpacePos;
+        vec4 worldSpacePos = drawable.worldFromLocal * vec4(localPosition, 1.0);
+        gl_MeshVerticesEXT[localVertexIdx].gl_Position = constants.projectionFromWorld * worldSpacePos;
 
 #if VISBUF_BLEND_MODE == BLEND_MODE_MASKED
         NonPositionVertex vertexData = meshletVertices[vertexIdx];

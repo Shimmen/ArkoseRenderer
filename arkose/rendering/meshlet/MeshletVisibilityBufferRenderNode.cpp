@@ -36,6 +36,7 @@ RenderPipelineNode::ExecuteCallback MeshletVisibilityBufferRenderNode::construct
             // NOTE: If render target is not set up to clear then the clear value specified here is arbitrary
             cmdList.beginRendering(*renderState->renderState, ClearValue::blackAtMaxDepth());
 
+            cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
             cmdList.setNamedUniform("frustumCullMeshlets", m_frustumCullMeshlets);
 
             MeshletIndirectBuffer& indirectBuffer = *renderState->indirectBuffer;

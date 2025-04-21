@@ -13,4 +13,9 @@ struct MeshShaderInterpolants {
     meshlet_rel_idx_t meshletRelativeIndices[GROUP_SIZE];
 };
 
+struct MeshletConstants {
+    mat4 projectionFromWorld;
+    bool frustumCullMeshlets;
+};
+
 #endif // MESHLET_COMMON_GLSL

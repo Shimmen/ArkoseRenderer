@@ -15,9 +15,7 @@ layout(set = 1, binding = 0) buffer restrict readonly IndirectDataBlock { uvec4 
 layout(set = 1, binding = 1) buffer restrict readonly InstanceBlock { ShaderDrawable instances[]; };
 layout(set = 1, binding = 2) buffer restrict readonly MeshletBlock { ShaderMeshlet meshlets[]; };
 
-NAMED_UNIFORMS(constants,
-    bool frustumCullMeshlets;
-)
+NAMED_UNIFORMS_STRUCT(MeshletConstants, constants)
 
 layout(local_size_x = GROUP_SIZE) in;
 
