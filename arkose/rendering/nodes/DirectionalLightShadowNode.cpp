@@ -48,10 +48,8 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
 
     Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
 
-    VertexLayout vertexLayoutPos = scene.vertexManager().positionVertexLayout();
-    VertexLayout vertexLayoutOther = scene.vertexManager().nonPositionVertexLayout();
-
-    RenderStateBuilder renderStateBuilder { shadowMapRenderTarget, shadowMapShader, { vertexLayoutPos, vertexLayoutOther } };
+    RenderStateBuilder renderStateBuilder { shadowMapRenderTarget, shadowMapShader, { scene.vertexManager().positionVertexLayout() } };
+    renderStateBuilder.enableDepthBias = true;
     renderStateBuilder.stateBindings().at(0, sceneObjectBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
@@ -82,13 +80,11 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
             cmdList.beginRendering(renderState, ClearValue::blackAtMaxDepth());
 
             cmdList.setNamedUniform<mat4>("lightProjectionFromWorld", lightProjectionFromWorld);
-            cmdList.setNamedUniform<vec3>("worldLightDirection", light->transform().forward());
-            cmdList.setNamedUniform<float>("constantBias", light->constantBias(m_shadowMap->extent()));
-            cmdList.setNamedUniform<float>("slopeBias", light->slopeBias(m_shadowMap->extent()));
 
             cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), scene.vertexManager().positionVertexLayout().packedVertexSize(), 0);
-            cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), scene.vertexManager().nonPositionVertexLayout().packedVertexSize(), 1);
             cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
+
+            cmdList.setDepthBias(light->constantBias(), light->slopeBias());
 
             moodycamel::ConcurrentQueue<DrawCallDescription> drawCalls {};
 

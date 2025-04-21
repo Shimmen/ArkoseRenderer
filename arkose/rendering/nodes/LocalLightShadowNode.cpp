@@ -37,10 +37,8 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
 
     Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
 
-    VertexLayout vertexLayoutPos = scene.vertexManager().positionVertexLayout();
-    VertexLayout vertexLayoutOther = scene.vertexManager().nonPositionVertexLayout();
-
-    RenderStateBuilder renderStateBuilder { atlasRenderTarget, shadowMapShader, { vertexLayoutPos, vertexLayoutOther } };
+    RenderStateBuilder renderStateBuilder { atlasRenderTarget, shadowMapShader, { scene.vertexManager().positionVertexLayout() } };
+    renderStateBuilder.enableDepthBias = true;
     renderStateBuilder.stateBindings().at(0, sceneObjectBindingSet);
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
 
@@ -65,7 +63,6 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
 
         cmdList.beginRendering(renderState, shadowMapClearValue);
         cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), scene.vertexManager().positionVertexLayout().packedVertexSize(), 0);
-        cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), scene.vertexManager().nonPositionVertexLayout().packedVertexSize(), 1);
         cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
         for (ShadowMapAtlasAllocation& shadowMapAllocation : shadowMapAllocations) {
@@ -230,15 +227,12 @@ void LocalLightShadowNode::drawSpotLightShadowMap(CommandList& cmdList, GpuScene
     mat4 lightProjectionFromWorld = light.viewProjection();
     auto lightFrustum = geometry::Frustum::createFromProjectionMatrix(lightProjectionFromWorld);
 
-    Extent2D effectiveShadowMapExtent = { shadowMapAllocation.rect.size.x, shadowMapAllocation.rect.size.y };
-
     cmdList.setNamedUniform<mat4>("lightProjectionFromWorld", lightProjectionFromWorld);
-    cmdList.setNamedUniform<vec3>("worldLightDirection", light.transform().forward());
-    cmdList.setNamedUniform<float>("constantBias", light.constantBias(effectiveShadowMapExtent));
-    cmdList.setNamedUniform<float>("slopeBias", light.slopeBias(effectiveShadowMapExtent));
 
     Rect2D viewportRect = shadowMapAllocation.rect;
     cmdList.setViewport(viewportRect.origin, viewportRect.size);
+
+    cmdList.setDepthBias(light.constantBias(), light.slopeBias());
 
     drawShadowCasters(cmdList, scene, lightFrustum);
 }
