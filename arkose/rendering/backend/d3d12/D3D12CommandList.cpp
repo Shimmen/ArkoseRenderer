@@ -335,7 +335,7 @@ void D3D12CommandList::bindTextureSet(BindingSet&, u32 index)
     NOT_YET_IMPLEMENTED();
 }
 
-void D3D12CommandList::setNamedUniform(const std::string& name, void* data, size_t size)
+void D3D12CommandList::setNamedUniform(const std::string& name, void const* data, size_t size)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 

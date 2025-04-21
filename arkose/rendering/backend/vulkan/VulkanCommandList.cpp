@@ -999,7 +999,7 @@ void VulkanCommandList::bindTextureSet(BindingSet& bindingSet, u32 index)
     bindSet(bindingSet, index);
 }
 
-void VulkanCommandList::setNamedUniform(const std::string& name, void* data, size_t size)
+void VulkanCommandList::setNamedUniform(const std::string& name, void const* data, size_t size)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 

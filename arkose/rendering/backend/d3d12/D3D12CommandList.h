@@ -35,7 +35,7 @@ public:
 
     void bindTextureSet(BindingSet&, u32 index) override;
 
-    void setNamedUniform(const std::string& name, void* data, size_t size) override;
+    void setNamedUniform(const std::string& name, void const* data, size_t size) override;
 
     void draw(u32 vertexCount, u32 firstVertex) override;
     void drawIndexed(u32 indexCount, u32 instanceIndex) override;

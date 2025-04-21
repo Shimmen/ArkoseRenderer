@@ -31,7 +31,7 @@ public:
     // suitable state for being sampled, as this function will NOT transition any textures.
     virtual void bindTextureSet(BindingSet&, u32 index) = 0;
 
-    virtual void setNamedUniform(const std::string& name, void*, size_t size) = 0;
+    virtual void setNamedUniform(const std::string& name, void const*, size_t size) = 0;
 
     template<typename T>
     void setNamedUniform(const std::string& name, T);
