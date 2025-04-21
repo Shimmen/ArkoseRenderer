@@ -34,10 +34,11 @@ void main()
 
     bool shouldDraw = (drawable.drawKey & constants.drawKeyMask) == drawable.drawKey;
 
-    if (constants.frustumCull) {
-        vec4 transformedSphere = transformSphere(drawable.localBoundingSphere, drawable.worldFromLocal);
-        shouldDraw = shouldDraw && isSphereInCameraFrustum(transformedSphere, camera);
-    }
+    // TODO: Fix this so it works with the custom frustum, not just the default/global camera one.
+    //if (constants.frustumCull) {
+    //    vec4 transformedSphere = transformSphere(drawable.localBoundingSphere, drawable.worldFromLocal);
+    //    shouldDraw = shouldDraw && isSphereInCameraFrustum(transformedSphere, camera);
+    //}
 
     // TODO: if (drawable.meshletCount % GROUP_SIZE) != 0, see if we can put the next instance in the same indirect cmd.
     // If we make the drawable lookup more complex, e.g. make it possible to store up to x instances per cmd,

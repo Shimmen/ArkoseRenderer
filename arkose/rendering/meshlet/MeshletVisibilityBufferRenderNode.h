@@ -1,16 +1,17 @@
 #pragma once
 
+#include "core/math/Frustum.h"
 #include "rendering/RenderPipelineNode.h"
 #include "rendering/meshlet/MeshletIndirectHelper.h"
 
-class MeshletVisibilityBufferRenderNode final : public RenderPipelineNode {
+class MeshletVisibilityBufferRenderNode : public RenderPipelineNode {
 public:
     std::string name() const override { return "Meshlet visibility buffer"; }
     void drawGui() override;
 
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
-private:
+protected:
     MeshletIndirectHelper m_meshletIndirectHelper {};
     bool m_frustumCullInstances { false }; // Keep default off (for now!)
     bool m_frustumCullMeshlets { true };
@@ -27,7 +28,12 @@ private:
         MeshletIndirectBuffer* indirectBuffer { nullptr };
     };
 
-    RenderTarget& makeRenderTarget(Registry&, LoadOp loadOp) const;
+    virtual mat4 calculateViewProjectionMatrix(GpuScene&) const;
+    virtual geometry::Frustum calculateCullingFrustum(GpuScene&) const;
+
+    virtual RenderTarget& makeRenderTarget(Registry&, LoadOp loadOp) const;
+    virtual Shader makeShader(BlendMode, std::vector<ShaderDefine> const& shaderDefines) const;
+
     RenderStateWithIndirectData& makeRenderState(Registry&, GpuScene const&, PassSettings) const;
     std::vector<RenderStateWithIndirectData*>& createRenderStates(Registry&, GpuScene const&) const;
 };

@@ -13,10 +13,6 @@ void MeshletVisibilityBufferRenderNode::drawGui()
 
 RenderPipelineNode::ExecuteCallback MeshletVisibilityBufferRenderNode::construct(GpuScene& scene, Registry& reg)
 {
-    if (reg.hasPreviousNode("Prepass")) {
-        ARKOSE_LOG(Warning, "Using visibility buffer rendering when Prepass node is in the render pipeline, this is probably not intended!");
-    }
-
     std::vector<RenderStateWithIndirectData*> const& renderStates = createRenderStates(reg, scene);
 
     // TODO: If we collect render states and indirect buffers into separate arrays we won't have to do this...
@@ -31,12 +27,19 @@ RenderPipelineNode::ExecuteCallback MeshletVisibilityBufferRenderNode::construct
         MeshletIndirectSetupOptions setupOptions { .frustumCullInstances = m_frustumCullInstances };
         m_meshletIndirectHelper.executeMeshletIndirectSetup(scene, cmdList, uploadBuffer, indirectSetupState, setupOptions);
 
+        mat4 projectionFromWorld = calculateViewProjectionMatrix(scene);
+
+        geometry::Frustum cullingFrustum = calculateCullingFrustum(scene);
+        size_t frustumPlaneDataSize;
+        void const* frustumPlaneData = reinterpret_cast<void const*>(cullingFrustum.rawPlaneData(&frustumPlaneDataSize));
+
         for (RenderStateWithIndirectData* renderState : renderStates) {
 
             // NOTE: If render target is not set up to clear then the clear value specified here is arbitrary
             cmdList.beginRendering(*renderState->renderState, ClearValue::blackAtMaxDepth());
 
-            cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
+            cmdList.setNamedUniform("projectionFromWorld", projectionFromWorld);
+            cmdList.setNamedUniform("frustumPlanes", frustumPlaneData, frustumPlaneDataSize);
             cmdList.setNamedUniform("frustumCullMeshlets", m_frustumCullMeshlets);
 
             MeshletIndirectBuffer& indirectBuffer = *renderState->indirectBuffer;
@@ -47,12 +50,30 @@ RenderPipelineNode::ExecuteCallback MeshletVisibilityBufferRenderNode::construct
     };
 }
 
+mat4 MeshletVisibilityBufferRenderNode::calculateViewProjectionMatrix(GpuScene& scene) const
+{
+    return scene.camera().viewProjectionMatrix();
+}
+
+geometry::Frustum MeshletVisibilityBufferRenderNode::calculateCullingFrustum(GpuScene& scene) const
+{
+    return scene.camera().frustum();
+}
+
 RenderTarget& MeshletVisibilityBufferRenderNode::makeRenderTarget(Registry& reg, LoadOp loadOp) const
 {
     Texture& depthTexture = *reg.getTexture("SceneDepth");
     return reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, reg.getTexture("InstanceVisibilityTexture"), loadOp, StoreOp::Store },
                                     { RenderTarget::AttachmentType::Color1, reg.getTexture("TriangleVisibilityTexture"), loadOp, StoreOp::Store },
                                     { RenderTarget::AttachmentType::Depth, &depthTexture, loadOp, StoreOp::Store } });
+}
+
+Shader MeshletVisibilityBufferRenderNode::makeShader(BlendMode, std::vector<ShaderDefine> const& shaderDefines) const
+{
+    return Shader::createMeshShading("meshlet/meshletVisibilityBuffer.task",
+                                     "meshlet/meshletVisibilityBuffer.mesh",
+                                     "meshlet/meshletVisibilityBuffer.frag",
+                                     shaderDefines);
 }
 
 MeshletVisibilityBufferRenderNode::RenderStateWithIndirectData& MeshletVisibilityBufferRenderNode::makeRenderState(Registry& reg, GpuScene const& scene, PassSettings passSettings) const
@@ -70,10 +91,7 @@ MeshletVisibilityBufferRenderNode::RenderStateWithIndirectData& MeshletVisibilit
                            ShaderDefine::makeInt("MAX_VERTEX_COUNT", maxVertexCount),
                            ShaderDefine::makeInt("MAX_PRIMITIVE_COUNT", maxPrimitiveCount) };
 
-    Shader shader = Shader::createMeshShading("meshlet/meshletVisibilityBuffer.task",
-                                              "meshlet/meshletVisibilityBuffer.mesh",
-                                              "meshlet/meshletVisibilityBuffer.frag",
-                                              shaderDefines);
+    Shader shader = makeShader(blendMode, shaderDefines);
 
     LoadOp loadOp = passSettings.firstPass ? LoadOp::Clear : LoadOp::Load;
     RenderStateBuilder renderStateBuilder { makeRenderTarget(reg, loadOp), shader, {} };
@@ -95,7 +113,7 @@ MeshletVisibilityBufferRenderNode::RenderStateWithIndirectData& MeshletVisibilit
                                                               ShaderBinding::storageBufferReadonly(meshletManager.meshletNonPositionDataVertexBuffer()) });
 
     StateBindings& bindings = renderStateBuilder.stateBindings();
-    bindings.at(0, *reg.getBindingSet("SceneCameraSet"));
+    //bindings.at(0, *reg.getBindingSet("SceneCameraSet"));
     bindings.at(1, taskShaderBindingSet);
     bindings.at(2, meshShaderBindingSet);
 

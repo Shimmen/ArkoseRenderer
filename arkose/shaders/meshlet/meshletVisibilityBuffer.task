@@ -9,7 +9,7 @@
 #include <meshlet/meshletCommon.glsl>
 #include <shared/SceneData.h>
 
-layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
+//layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 
 layout(set = 1, binding = 0) buffer restrict readonly IndirectDataBlock { uvec4 indirectData[]; };
 layout(set = 1, binding = 1) buffer restrict readonly InstanceBlock { ShaderDrawable instances[]; };
@@ -38,7 +38,7 @@ void main()
 
     if (constants.frustumCullMeshlets) {
         vec4 transformedMeshletSphere = transformSphere(vec4(meshlet.center, meshlet.radius), drawable.worldFromLocal);
-        shouldDraw = shouldDraw && isSphereInCameraFrustum(transformedMeshletSphere, camera);
+        shouldDraw = shouldDraw && isSphereInFrustum(transformedMeshletSphere, constants.frustumPlanes);
     }
 
     uvec4 ballot = subgroupBallot(shouldDraw);

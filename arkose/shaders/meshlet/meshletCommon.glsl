@@ -15,6 +15,7 @@ struct MeshShaderInterpolants {
 
 struct MeshletConstants {
     mat4 projectionFromWorld;
+    vec4 frustumPlanes[6];
     bool frustumCullMeshlets;
 };
 
