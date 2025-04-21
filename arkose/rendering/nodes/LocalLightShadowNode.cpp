@@ -35,7 +35,7 @@ RenderPipelineNode::ExecuteCallback LocalLightShadowNode::construct(GpuScene& sc
 
     BindingSet& sceneObjectBindingSet = *reg.getBindingSet("SceneObjectSet");
 
-    Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
+    Shader shadowMapShader = Shader::createVertexOnly("shadow/shadowMap.vert");
 
     RenderStateBuilder renderStateBuilder { atlasRenderTarget, shadowMapShader, { scene.vertexManager().positionVertexLayout() } };
     renderStateBuilder.enableDepthBias = true;

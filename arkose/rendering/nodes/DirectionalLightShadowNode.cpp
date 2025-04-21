@@ -46,7 +46,7 @@ RenderPipelineNode::ExecuteCallback DirectionalLightShadowNode::construct(GpuSce
 
     BindingSet& sceneObjectBindingSet = *reg.getBindingSet("SceneObjectSet");
 
-    Shader shadowMapShader = Shader::createVertexOnly("shadow/biasedShadowMap.vert");
+    Shader shadowMapShader = Shader::createVertexOnly("shadow/shadowMap.vert");
 
     RenderStateBuilder renderStateBuilder { shadowMapRenderTarget, shadowMapShader, { scene.vertexManager().positionVertexLayout() } };
     renderStateBuilder.enableDepthBias = true;
