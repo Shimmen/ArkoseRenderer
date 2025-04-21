@@ -38,6 +38,11 @@ RenderPipelineNode::ExecuteCallback MeshletVisibilityBufferRenderNode::construct
             // NOTE: If render target is not set up to clear then the clear value specified here is arbitrary
             cmdList.beginRendering(*renderState->renderState, ClearValue::blackAtMaxDepth());
 
+            if (usingDepthBias()) {
+                vec2 depthBiasParams = depthBiasParameters(scene);
+                cmdList.setDepthBias(depthBiasParams.x, depthBiasParams.y);
+            }
+
             cmdList.setNamedUniform("projectionFromWorld", projectionFromWorld);
             cmdList.setNamedUniform("frustumPlanes", frustumPlaneData, frustumPlaneDataSize);
             cmdList.setNamedUniform("frustumCullMeshlets", m_frustumCullMeshlets);
@@ -97,6 +102,12 @@ MeshletVisibilityBufferRenderNode::RenderStateWithIndirectData& MeshletVisibilit
     RenderStateBuilder renderStateBuilder { makeRenderTarget(reg, loadOp), shader, {} };
     renderStateBuilder.cullBackfaces = !passSettings.drawKeyMask.doubleSided().value(); // TODO: We probably want to use dynamic state for double sided!
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
+
+    if (usingDepthBias()) {
+        renderStateBuilder.enableDepthBias = true;
+    }
+
+    // TODO: We don't really want/need this for the shadow views.. but it does work, right, so eh?
     renderStateBuilder.stencilMode = StencilMode::AlwaysWrite; // for sky view
     renderStateBuilder.stencilValue = 0x01;
 

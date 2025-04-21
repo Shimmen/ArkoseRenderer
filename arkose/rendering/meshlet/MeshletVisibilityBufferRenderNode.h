@@ -28,6 +28,9 @@ protected:
         MeshletIndirectBuffer* indirectBuffer { nullptr };
     };
 
+    virtual bool usingDepthBias() const { return false; }
+    virtual vec2 depthBiasParameters(GpuScene&) const { return vec2(0.0f, 0.0f); }
+
     virtual mat4 calculateViewProjectionMatrix(GpuScene&) const;
     virtual geometry::Frustum calculateCullingFrustum(GpuScene&) const;
 
