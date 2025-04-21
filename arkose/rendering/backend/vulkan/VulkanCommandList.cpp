@@ -744,6 +744,10 @@ void VulkanCommandList::beginRendering(const RenderState& genRenderState, ClearV
     if (autoSetViewport) {
         setViewport({ 0, 0 }, renderTarget.extent().asIntVector());
     }
+
+    if (renderState.rasterState().depthBiasEnabled) {
+        setDepthBias(0.0f, 0.0f);
+    }
 }
 
 void VulkanCommandList::endRendering()
@@ -1166,6 +1170,8 @@ void VulkanCommandList::setViewport(ivec2 origin, ivec2 size)
 
 void VulkanCommandList::setDepthBias(float constantFactor, float slopeFactor)
 {
+    ARKOSE_ASSERT(activeRenderState && activeRenderState->rasterState().depthBiasEnabled);
+
     // If the depthBiasClamp feature is not enabled, depthBiasClamp must be 0.0
     constexpr float depthBiasClamp = 0.0f;
 

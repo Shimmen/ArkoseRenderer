@@ -156,7 +156,7 @@ VulkanRenderState::VulkanRenderState(Backend& backend, RenderTarget const& rende
     std::vector<VkDynamicState> activeDynamicStates {};
     activeDynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);
     activeDynamicStates.push_back(VK_DYNAMIC_STATE_SCISSOR);
-    //activeDynamicStates.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
+    activeDynamicStates.push_back(VK_DYNAMIC_STATE_DEPTH_BIAS);
 
     VkPipelineDynamicStateCreateInfo dynamicState = { VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO };
     dynamicState.dynamicStateCount = static_cast<uint32_t>(activeDynamicStates.size());
@@ -172,6 +172,8 @@ VulkanRenderState::VulkanRenderState(Backend& backend, RenderTarget const& rende
     rasterizer.depthClampEnable = VK_FALSE;
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.depthBiasEnable = rasterState.depthBiasEnabled ? VK_TRUE : VK_FALSE;
+    rasterizer.depthBiasConstantFactor = 0.0f; // (dynamic state)
+    rasterizer.depthBiasSlopeFactor = 0.0f; // (dynamic state)
     rasterizer.lineWidth = rasterState.lineWidth;
 
     switch (rasterState.polygonMode) {
