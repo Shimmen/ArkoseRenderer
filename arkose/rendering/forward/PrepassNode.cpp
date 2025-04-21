@@ -96,11 +96,11 @@ RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, 
 
     switch (blendMode) {
     case BlendMode::Opaque:
-        shader = Shader::createVertexOnly("forward/prepass.vert");
+        shader = Shader::createVertexOnly("forward/depthOnly.vert");
         vertexLayout = { scene.vertexManager().positionVertexLayout() };
         break;
     case BlendMode::Masked:
-        shader = Shader::createBasicRasterize("forward/prepassMasked.vert", "forward/prepassMasked.frag");
+        shader = Shader::createBasicRasterize("forward/depthOnlyMasked.vert", "forward/depthOnlyMasked.frag");
         vertexLayout = { scene.vertexManager().positionVertexLayout(), scene.vertexManager().nonPositionVertexLayout() };
         break;
     default:
