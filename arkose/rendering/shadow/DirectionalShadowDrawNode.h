@@ -2,7 +2,7 @@
 
 #include "rendering/meshlet/MeshletDepthOnlyRenderNode.h"
 
-class DirectionalLightShadowNode final : public MeshletDepthOnlyRenderNode {
+class DirectionalShadowDrawNode final : public MeshletDepthOnlyRenderNode {
 public:
     std::string name() const override { return "Directional light shadow"; }
     void drawGui() override;

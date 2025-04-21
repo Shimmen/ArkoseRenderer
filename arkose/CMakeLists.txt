@@ -168,8 +168,6 @@ set(ARKOSE_SOURCES
     arkose/rendering/nodes/DebugDrawNode.h
     arkose/rendering/nodes/DepthOfFieldNode.cpp
     arkose/rendering/nodes/DepthOfFieldNode.h
-    arkose/rendering/nodes/DirectionalLightShadowNode.cpp
-    arkose/rendering/nodes/DirectionalLightShadowNode.h
     arkose/rendering/nodes/FXAANode.cpp
     arkose/rendering/nodes/FXAANode.h
     arkose/rendering/nodes/LocalLightShadowNode.cpp
@@ -204,6 +202,8 @@ set(ARKOSE_SOURCES
     arkose/rendering/postprocess/SSSSNode.cpp
     arkose/rendering/postprocess/SSSSNode.h
     # shadow
+    arkose/rendering/shadow/DirectionalShadowDrawNode.cpp
+    arkose/rendering/shadow/DirectionalShadowDrawNode.h
     arkose/rendering/shadow/DirectionalShadowProjectNode.cpp
     arkose/rendering/shadow/DirectionalShadowProjectNode.h
     # upscaling

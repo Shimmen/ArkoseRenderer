@@ -14,7 +14,6 @@
 #include "rendering/nodes/DDGIProbeDebug.h"
 #include "rendering/nodes/DebugDrawNode.h"
 #include "rendering/nodes/DepthOfFieldNode.h"
-#include "rendering/nodes/DirectionalLightShadowNode.h"
 #include "rendering/nodes/FXAANode.h"
 #include "rendering/nodes/LocalLightShadowNode.h"
 #include "rendering/nodes/PickingNode.h"
@@ -27,6 +26,7 @@
 #include "rendering/nodes/VisibilityBufferShadingNode.h"
 #include "rendering/output/OutputNode.h"
 #include "rendering/postprocess/FogNode.h"
+#include "rendering/shadow/DirectionalShadowDrawNode.h"
 #include "rendering/shadow/DirectionalShadowProjectNode.h"
 #include "rendering/upscaling/UpscalingNode.h"
 #include "scene/Scene.h"
@@ -136,7 +136,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     if constexpr (withRayTracing) {
         pipeline.addNode<RTSphereLightShadowNode>();
     }
-    pipeline.addNode<DirectionalLightShadowNode>();
+    pipeline.addNode<DirectionalShadowDrawNode>();
     pipeline.addNode<DirectionalShadowProjectNode>();
     pipeline.addNode<LocalLightShadowNode>();
 
