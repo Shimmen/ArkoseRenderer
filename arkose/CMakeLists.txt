@@ -142,8 +142,6 @@ set(ARKOSE_SOURCES
     arkose/rendering/lighting/LightingComposeNode.cpp
     arkose/rendering/lighting/LightingComposeNode.h
     # meshlet
-    arkose/rendering/meshlet/MeshletCuller.cpp
-    arkose/rendering/meshlet/MeshletCuller.h
     arkose/rendering/meshlet/MeshletDebugNode.cpp
     arkose/rendering/meshlet/MeshletDebugNode.h
     arkose/rendering/meshlet/MeshletForwardRenderNode.cpp
