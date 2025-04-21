@@ -9,9 +9,11 @@
 #include <shared/SceneData.h>
 #include <shared/ShaderBlendMode.h>
 
+#ifndef VISBUF_DEPTH_ONLY
 layout(location = 0) flat in uint vDrawableIdx;
 layout(location = 1) flat in uint vMeshletIdx;
 layout(location = 2) flat in meshlet_rel_idx_t vPrimitiveIdx;
+#endif
 #if VISBUF_BLEND_MODE == BLEND_MODE_MASKED
 layout(location = 3) flat in uint vMaterialIdx;
 layout(location = 4) in vec2 vTexCoord;
@@ -21,8 +23,10 @@ layout(location = 4) in vec2 vTexCoord;
 DeclareCommonBindingSet_Material(3)
 #endif
 
+#ifndef VISBUF_DEPTH_ONLY
 layout(location = 0) out uint oInstanceVisibilityData;
 layout(location = 1) out uint oTriangleVisibilityData;
+#endif
 
 void main()
 {
@@ -35,6 +39,8 @@ void main()
     }
 #endif
 
+#ifndef VISBUF_DEPTH_ONLY
     oInstanceVisibilityData = vDrawableIdx + 1;
     oTriangleVisibilityData = ((vMeshletIdx + 1) << 8) | uint(vPrimitiveIdx);
+#endif
 }
