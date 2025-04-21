@@ -21,8 +21,8 @@ public:
     float intensityValue() const final { return illuminance(); }
 
     mat4 projectionMatrix() const final;
-    virtual float constantBias(Extent2D shadowMapSize) const override;
-    virtual float slopeBias(Extent2D shadowMapSize) const override;
+    virtual float constantBias() const override;
+    virtual float slopeBias() const override;
 
     // When rendering a shadow map, from what point in the world should it be rendered from
     static constexpr vec3 shadowMapWorldOrigin { 0, 0, 0 };

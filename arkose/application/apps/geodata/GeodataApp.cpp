@@ -54,7 +54,7 @@ void GeodataApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     DirectionalLight& sun = scene.addLight(std::make_unique<DirectionalLight>());
     sun.shadowMapWorldExtent = 360.0f + 10.0f; // map is 360 units wide, i.e. longitude degrees [-180, +180], then add some margins
-    sun.customConstantBias = 3.5f;
+    sun.customConstantBias = 0.5f;
     sun.customSlopeBias = 0.5f;
     sun.setIlluminance(90'000.0f);
 

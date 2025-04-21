@@ -56,7 +56,7 @@
                     }
                 },
                 "castsShadows": true,
-                "customConstantBias": 3.5,
+                "customConstantBias": 0.5,
                 "customSlopeBias": 2.5,
                 "data": {
                     "index": 0,

@@ -21,8 +21,8 @@ public:
     float outerConeAngle() const { return m_outerConeAngle; }
 
     mat4 projectionMatrix() const final;
-    virtual float constantBias(Extent2D shadowMapSize) const override;
-    virtual float slopeBias(Extent2D shadowMapSize) const override;
+    virtual float constantBias() const override;
+    virtual float slopeBias() const override;
 
     bool hasIesProfile() const { return true; }
     const IESProfile& iesProfile() const { return m_iesProfile; }

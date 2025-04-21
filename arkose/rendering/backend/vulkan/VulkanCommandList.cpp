@@ -1175,7 +1175,10 @@ void VulkanCommandList::setDepthBias(float constantFactor, float slopeFactor)
     // If the depthBiasClamp feature is not enabled, depthBiasClamp must be 0.0
     constexpr float depthBiasClamp = 0.0f;
 
-    vkCmdSetDepthBias(m_commandBuffer, constantFactor, depthBiasClamp, slopeFactor);
+    // TODO: Base this on the actual depth texture format!
+    float constantFactorScaled = constantFactor * 10'000.0f;
+
+    vkCmdSetDepthBias(m_commandBuffer, constantFactorScaled, depthBiasClamp, slopeFactor);
 }
 
 void VulkanCommandList::bindVertexBuffer(Buffer const& vertexBuffer, size_t stride, u32 bindingIdx)

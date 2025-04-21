@@ -22,8 +22,8 @@ public:
 
     // No shadow mapping for sphere lights, only ray traced shadows
     virtual mat4 projectionMatrix() const override { return mat4(); }
-    virtual float constantBias(Extent2D shadowMapSize) const override { return 0.0f; }
-    virtual float slopeBias(Extent2D shadowMapSize) const override { return 0.0f; }
+    virtual float constantBias() const override { return 0.0f; }
+    virtual float slopeBias() const override { return 0.0f; }
 
 private:
     void updateLightRadius();

@@ -45,8 +45,8 @@ public:
     float customConstantBias = 0.0f;
     float customSlopeBias = 0.0f;
 
-    virtual float constantBias(Extent2D shadowMapSize) const = 0;
-    virtual float slopeBias(Extent2D shadowMapSize) const = 0;
+    virtual float constantBias() const = 0;
+    virtual float slopeBias() const = 0;
 
     bool castsShadows() const { return m_castsShadows; }
 

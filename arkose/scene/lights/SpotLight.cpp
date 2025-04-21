@@ -60,13 +60,12 @@ mat4 SpotLight::projectionMatrix() const
     return ark::perspectiveProjectionToVulkanClipSpace(m_outerConeAngle, 1.0f, m_zNear, m_zFar);
 }
 
-float SpotLight::constantBias(Extent2D shadowMapSize) const
+float SpotLight::constantBias() const
 {
-    int maxShadowMapDim = std::max(shadowMapSize.width(), shadowMapSize.height());
-    return 0.1f * customConstantBias / float(maxShadowMapDim);
+    return customConstantBias;
 }
 
-float SpotLight::slopeBias(Extent2D shadowMapSize) const
+float SpotLight::slopeBias() const
 {
-    return customSlopeBias * constantBias(shadowMapSize);
+    return customSlopeBias;
 }

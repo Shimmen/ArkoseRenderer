@@ -643,7 +643,7 @@ std::unique_ptr<LightAsset> GltfLoader::createLight(tinygltf::Model const& gltfM
         light->type = "DirectionalLight";
 
         light->castsShadows = true;
-        light->customConstantBias = 3.5f;
+        light->customConstantBias = 0.5f;
         light->customSlopeBias = 2.5f;
 
         DirectionalLightAssetData dirLightData;

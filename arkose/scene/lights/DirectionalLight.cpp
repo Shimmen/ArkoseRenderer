@@ -31,7 +31,7 @@ DirectionalLight::DirectionalLight(Color color, float illuminance, vec3 directio
     transform().setOrientationInWorld(orientation);
 
     // NOTE: Feel free to adjust these on a per-light/case basis, but probably in the scene.json
-    customConstantBias = 3.5f;
+    customConstantBias = 0.5f;
     customSlopeBias = 2.5f;
 }
 
@@ -61,19 +61,12 @@ mat4 DirectionalLight::projectionMatrix() const
     return ark::orthographicProjectionToVulkanClipSpace(shadowMapWorldExtent, -0.5f * shadowMapWorldExtent, 0.5f * shadowMapWorldExtent);
 }
 
-float DirectionalLight::constantBias(Extent2D shadowMapSize) const
+float DirectionalLight::constantBias() const
 {
-    int maxShadowMapDim = std::max(shadowMapSize.width(), shadowMapSize.height());
-    float worldTexelScale = shadowMapWorldExtent / maxShadowMapDim;
-
-    // For the projection we use [-extent/2, +extent/2] for near & far so the full extent is the depth range
-    float worldDepthRange = shadowMapWorldExtent;
-
-    float bias = customConstantBias * worldTexelScale / worldDepthRange;
-    return bias;
+    return customConstantBias;
 }
 
-float DirectionalLight::slopeBias(Extent2D shadowMapSize) const
+float DirectionalLight::slopeBias() const
 {
-    return 0.1f * customSlopeBias * constantBias(shadowMapSize);
+    return customSlopeBias;
 }
