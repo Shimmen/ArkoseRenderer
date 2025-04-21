@@ -14,6 +14,7 @@ struct Shader {
     static Shader createVertexOnly(std::string vertexName, std::vector<ShaderDefine> = {});
     static Shader createBasicRasterize(std::string vertexName, std::string fragmentName, std::vector<ShaderDefine> = {});
     static Shader createMeshShading(std::string taskName, std::string meshName, std::string fragmentName, std::vector<ShaderDefine> = {});
+    static Shader createMeshShading(std::string taskName, std::string meshName, std::vector<ShaderDefine> = {});
     static Shader createCompute(std::string computeName, std::vector<ShaderDefine> = {});
 
     Shader() = default;

@@ -21,6 +21,13 @@ Shader Shader::createMeshShading(std::string taskName, std::string meshName, std
     return Shader({ taskFile, meshFile, fragmentFile }, ShaderType::Raster);
 }
 
+Shader Shader::createMeshShading(std::string taskName, std::string meshName, std::vector<ShaderDefine> defines)
+{
+    ShaderFile taskFile { std::move(taskName), ShaderStage::Task, defines };
+    ShaderFile meshFile { std::move(meshName), ShaderStage::Mesh, defines };
+    return Shader({ taskFile, meshFile }, ShaderType::Raster);
+}
+
 Shader Shader::createCompute(std::string computeName, std::vector<ShaderDefine> defines)
 {
     ShaderFile computeFile { std::move(computeName), ShaderStage::Compute, defines };
