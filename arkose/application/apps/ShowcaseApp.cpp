@@ -43,7 +43,7 @@
 // For animation & skinning tests
 #include "asset/import/AssetImporter.h"
 
-constexpr bool keepRenderDocCompatible = true;
+constexpr bool keepRenderDocCompatible = false;
 
 constexpr bool withUpscaling = true && !keepRenderDocCompatible;
 constexpr bool withRayTracing = true && !keepRenderDocCompatible;
