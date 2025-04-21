@@ -19,6 +19,7 @@
 #include "rendering/nodes/VisibilityBufferShadingNode.h"
 #include "rendering/output/OutputNode.h"
 #include "rendering/postprocess/SSSSNode.h"
+#include "rendering/shadow/DirectionalShadowProjectNode.h"
 #include "rendering/upscaling/UpscalingNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
@@ -106,6 +107,7 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<MeshletVisibilityBufferRenderNode>();
 
     pipeline.addNode<DirectionalLightShadowNode>();
+    pipeline.addNode<DirectionalShadowProjectNode>();
     pipeline.addNode<LocalLightShadowNode>();
 
     pipeline.addNode<VisibilityBufferShadingNode>();

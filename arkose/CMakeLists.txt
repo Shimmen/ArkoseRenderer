@@ -201,6 +201,9 @@ set(ARKOSE_SOURCES
     arkose/rendering/postprocess/FogNode.h
     arkose/rendering/postprocess/SSSSNode.cpp
     arkose/rendering/postprocess/SSSSNode.h
+    # shadow
+    arkose/rendering/shadow/DirectionalShadowProjectNode.cpp
+    arkose/rendering/shadow/DirectionalShadowProjectNode.h
     # upscaling
     arkose/rendering/upscaling/UpscalingNode.cpp
     arkose/rendering/upscaling/UpscalingNode.h

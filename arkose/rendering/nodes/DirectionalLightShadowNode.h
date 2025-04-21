@@ -10,9 +10,5 @@ public:
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:
-    // NOTE: No physical unit to this right now..
-    float m_lightDiscRadius = 2.4f;
-
     Texture* m_shadowMap { nullptr };
-    Texture* m_projectedShadow { nullptr };
 };

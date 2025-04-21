@@ -6,6 +6,7 @@
 #include "rendering/lighting/LightingComposeNode.h"
 #include "rendering/meshlet/MeshletDebugNode.h"
 #include "rendering/meshlet/MeshletForwardRenderNode.h"
+#include "rendering/meshlet/MeshletDepthOnlyRenderNode.h"
 #include "rendering/meshlet/MeshletVisibilityBufferRenderNode.h"
 #include "rendering/meshlet/VisibilityBufferDebugNode.h"
 #include "rendering/nodes/BloomNode.h"
@@ -26,6 +27,7 @@
 #include "rendering/nodes/VisibilityBufferShadingNode.h"
 #include "rendering/output/OutputNode.h"
 #include "rendering/postprocess/FogNode.h"
+#include "rendering/shadow/DirectionalShadowProjectNode.h"
 #include "rendering/upscaling/UpscalingNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
@@ -41,7 +43,7 @@
 // For animation & skinning tests
 #include "asset/import/AssetImporter.h"
 
-constexpr bool keepRenderDocCompatible = false;
+constexpr bool keepRenderDocCompatible = true;
 
 constexpr bool withUpscaling = true && !keepRenderDocCompatible;
 constexpr bool withRayTracing = true && !keepRenderDocCompatible;
@@ -135,6 +137,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
         pipeline.addNode<RTSphereLightShadowNode>();
     }
     pipeline.addNode<DirectionalLightShadowNode>();
+    pipeline.addNode<DirectionalShadowProjectNode>();
     pipeline.addNode<LocalLightShadowNode>();
 
     if constexpr (withVisibilityBuffer) {
