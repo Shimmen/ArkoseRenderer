@@ -46,11 +46,13 @@ RenderPipelineNode::ExecuteCallback LocalShadowDrawNode::construct(GpuScene& sce
 
         auto shadowMapClearValue = ClearValue::blackAtMaxDepth();
 
-        // TODO: Do more fine-grained clearning, only clear the atlas allocations that are needed
+        // Useful for debugging to avoid having to see stale shadow maps in the atlas.
+        // But in the future it might be better to clear the allocations as needed.
+        // Care has to be taken to ensure we never sample from a stale shadow map
+        // though, etc. so it takes a little more care than just clearing it here..
         cmdList.clearTexture(*m_shadowMapAtlas, shadowMapClearValue);
 
         if (m_maxNumShadowMaps == 0) {
-            //cmdList.clearTexture(*m_shadowMapAtlas, shadowMapClearValue);
             return;
         }
 
