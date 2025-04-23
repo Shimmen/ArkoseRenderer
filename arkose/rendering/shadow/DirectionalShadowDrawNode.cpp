@@ -6,6 +6,9 @@
 
 void DirectionalShadowDrawNode::drawGui()
 {
+    MeshletDepthOnlyRenderNode::drawGui();
+    ImGui::Separator();
+
     drawTextureVisualizeGui(*m_shadowMap);
 }
 
