@@ -21,6 +21,8 @@ public:
     void beginRendering(const RenderState&, ClearValue, bool autoSetViewport) override;
     void endRendering() override;
 
+    void clearRenderTargetAttachment(RenderTarget::AttachmentType, Rect2D, ClearValue) override;
+
     void setRayTracingState(const RayTracingState&) override;
     void setComputeState(const ComputeState&) override;
 

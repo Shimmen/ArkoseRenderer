@@ -3,6 +3,7 @@
 #include "rendering/backend/Resources.h"
 #include "rendering/backend/util/DrawCall.h"
 #include "rendering/backend/util/UploadBuffer.h"
+#include <ark/rect.h>
 #include <string>
 
 class CommandList {
@@ -18,6 +19,8 @@ public:
     virtual void beginRendering(const RenderState&, bool autoSetViewport = true) = 0;
     virtual void beginRendering(const RenderState&, ClearValue, bool autoSetViewport = true) = 0;
     virtual void endRendering() = 0;
+
+    virtual void clearRenderTargetAttachment(RenderTarget::AttachmentType, Rect2D clearRect, ClearValue) = 0;
 
     virtual void setRayTracingState(const RayTracingState&) = 0;
     virtual void setComputeState(const ComputeState&) = 0;

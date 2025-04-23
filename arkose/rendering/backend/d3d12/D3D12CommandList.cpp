@@ -281,6 +281,13 @@ void D3D12CommandList::endRendering()
     m_activeRenderState = nullptr;
 }
 
+void D3D12CommandList::clearRenderTargetAttachment(RenderTarget::AttachmentType attachmentType, Rect2D clearRect, ClearValue clearValue)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
+}
+
 void D3D12CommandList::setRayTracingState(const RayTracingState& rtState)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();

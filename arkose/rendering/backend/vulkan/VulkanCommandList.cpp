@@ -758,6 +758,56 @@ void VulkanCommandList::endRendering()
     }
 }
 
+void VulkanCommandList::clearRenderTargetAttachment(RenderTarget::AttachmentType attachmentType, Rect2D clearRect, ClearValue clearValue)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    if (!activeRenderState) {
+        ARKOSE_LOG(Error, "Trying to clear render target attachment but there is no active render state!");
+        return;
+    }
+
+    VulkanRenderTarget const& renderTarget = static_cast<VulkanRenderTarget const&>(activeRenderState->renderTarget());
+
+    VulkanTexture const* attachmentTexture = static_cast<VulkanTexture*>(renderTarget.attachment(attachmentType));
+    if (!attachmentTexture) {
+        ARKOSE_LOG(Error, "Trying to clear render target attachment but there is no attachment texture for the specified attachment type");
+        return;
+    }
+
+    VkClearAttachment clearAttachment {};
+
+    if (attachmentType == RenderTarget::AttachmentType::Depth) {
+        ARKOSE_ASSERT(attachmentTexture->hasDepthFormat());
+        clearAttachment.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+        if (attachmentTexture->hasStencilFormat()) {
+            clearAttachment.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+
+        clearAttachment.colorAttachment = VK_ATTACHMENT_UNUSED;
+
+        clearAttachment.clearValue.depthStencil.depth = clearValue.depth;
+        clearAttachment.clearValue.depthStencil.stencil = clearValue.stencil;
+    } else {
+        clearAttachment.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        clearAttachment.colorAttachment = toUnderlying(attachmentType);
+
+        clearAttachment.clearValue.color.float32[0] = clearValue.color.r;
+        clearAttachment.clearValue.color.float32[1] = clearValue.color.g;
+        clearAttachment.clearValue.color.float32[2] = clearValue.color.b;
+        clearAttachment.clearValue.color.float32[3] = clearValue.color.a;
+    }
+
+    VkClearRect vkClearRect {};
+    vkClearRect.rect.offset = { .x = clearRect.origin.x, .y = clearRect.origin.y };
+    vkClearRect.rect.extent = { .width = narrow_cast<u32>(clearRect.size.x), .height = narrow_cast<u32>(clearRect.size.y) };
+
+    vkClearRect.baseArrayLayer = 0;
+    vkClearRect.layerCount = attachmentTexture->layerCount();
+
+    vkCmdClearAttachments(m_commandBuffer, 1, &clearAttachment, 1, &vkClearRect);
+}
+
 void VulkanCommandList::setRayTracingState(const RayTracingState& rtState)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
