@@ -13,6 +13,9 @@
 
 void LocalShadowDrawNode::drawGui()
 {
+    MeshletDepthOnlyRenderNode::drawGui();
+    ImGui::Separator();
+
     ImGui::SliderInt("Max number of shadow maps", &m_maxNumShadowMaps, 0, 32);
     drawTextureVisualizeGui(*m_shadowMapAtlas);
 }
@@ -26,28 +29,28 @@ RenderPipelineNode::ExecuteCallback LocalShadowDrawNode::construct(GpuScene& sce
                                             ImageWrapModes::clampAllToEdge());
     reg.publish("LocalLightShadowMapAtlas", *m_shadowMapAtlas);
 
-    // TODO: Handle many lights!
+    // TODO: Handle many lights! (more than 32)
     Buffer& shadowAllocationBuffer = reg.createBuffer(sizeof(vec4) * 32, Buffer::Usage::StorageBuffer);
     shadowAllocationBuffer.setStride(sizeof(vec4));
     reg.publish("LocalLightShadowAllocations", shadowAllocationBuffer);
 
-    RenderTarget& atlasRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, m_shadowMapAtlas } });
+    std::vector<RenderStateWithIndirectData*> const& renderStates = createRenderStates(reg, scene);
 
-    BindingSet& sceneObjectBindingSet = *reg.getBindingSet("SceneObjectSet");
-
-    Shader shadowMapShader = Shader::createVertexOnly("shadow/shadowMap.vert");
-
-    RenderStateBuilder renderStateBuilder { atlasRenderTarget, shadowMapShader, { scene.vertexManager().positionVertexLayout() } };
-    renderStateBuilder.enableDepthBias = true;
-    renderStateBuilder.stateBindings().at(0, sceneObjectBindingSet);
-    RenderState& renderState = reg.createRenderState(renderStateBuilder);
+    std::vector<MeshletIndirectBuffer*> indirectBuffers {};
+    for (auto const& renderState : renderStates) {
+        indirectBuffers.push_back(renderState->indirectBuffer);
+    }
+    MeshletIndirectSetupState const& indirectSetupState = m_meshletIndirectHelper.createMeshletIndirectSetupState(reg, indirectBuffers);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         auto shadowMapClearValue = ClearValue::blackAtMaxDepth();
 
+        // TODO: Do more fine-grained clearning, only clear the atlas allocations that are needed
+        cmdList.clearTexture(*m_shadowMapAtlas, shadowMapClearValue);
+
         if (m_maxNumShadowMaps == 0) {
-            cmdList.clearTexture(*m_shadowMapAtlas, shadowMapClearValue);
+            //cmdList.clearTexture(*m_shadowMapAtlas, shadowMapClearValue);
             return;
         }
 
@@ -61,25 +64,42 @@ RenderPipelineNode::ExecuteCallback LocalShadowDrawNode::construct(GpuScene& sce
         uploadBuffer.upload(shadowMapViewports, shadowAllocationBuffer);
         cmdList.executeBufferCopyOperations(uploadBuffer);
 
-        cmdList.beginRendering(renderState, shadowMapClearValue);
-        cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), scene.vertexManager().positionVertexLayout().packedVertexSize(), 0);
-        cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
-
         for (ShadowMapAtlasAllocation& shadowMapAllocation : shadowMapAllocations) {
-            Light::Type lightType = shadowMapAllocation.light->type();
-            switch (lightType) {
-            case Light::Type::SpotLight:
-                drawSpotLightShadowMap(cmdList, scene, shadowMapAllocation);
-                break;
-            case Light::Type::SphereLight:
-                //NOT_YET_IMPLEMENTED();
-                break;
-            default:
-                ASSERT_NOT_REACHED();
+            Light const& light = *shadowMapAllocation.light;
+
+            // TODO: Also handle sphere lights, maybe, but we might have them be ray traced only..
+            ARKOSE_ASSERT(light.type() == Light::Type::SpotLight);
+
+            std::string zoneName = fmt::format("Light [{}]", light.name());
+            ScopedDebugZone zone { cmdList, zoneName };
+
+            MeshletIndirectSetupOptions setupOptions { .frustumCullInstances = m_frustumCullInstances };
+            m_meshletIndirectHelper.executeMeshletIndirectSetup(scene, cmdList, uploadBuffer, indirectSetupState, setupOptions);
+
+            mat4 projectionFromWorld = light.viewProjection();
+
+            geometry::Frustum cullingFrustum = geometry::Frustum::createFromProjectionMatrix(projectionFromWorld);
+            size_t frustumPlaneDataSize;
+            void const* frustumPlaneData = reinterpret_cast<void const*>(cullingFrustum.rawPlaneData(&frustumPlaneDataSize));
+
+            Rect2D viewportRect = shadowMapAllocation.rect;
+            cmdList.setViewport(viewportRect.origin, viewportRect.size);
+
+            for (RenderStateWithIndirectData* renderState : renderStates) {
+
+                cmdList.beginRendering(*renderState->renderState, false);
+                cmdList.setDepthBias(light.constantBias(), light.slopeBias());
+
+                cmdList.setNamedUniform("projectionFromWorld", projectionFromWorld);
+                cmdList.setNamedUniform("frustumPlanes", frustumPlaneData, frustumPlaneDataSize);
+                cmdList.setNamedUniform("frustumCullMeshlets", m_frustumCullMeshlets);
+
+                MeshletIndirectBuffer& indirectBuffer = *renderState->indirectBuffer;
+                m_meshletIndirectHelper.drawMeshletsWithIndirectBuffer(cmdList, indirectBuffer);
+
+                cmdList.endRendering();
             }
         }
-
-        cmdList.endRendering();
     };
 }
 
@@ -213,72 +233,10 @@ std::vector<vec4> LocalShadowDrawNode::collectAtlasViewportDataForAllocations(co
     return viewports;
 }
 
-void LocalShadowDrawNode::drawSpotLightShadowMap(CommandList& cmdList, GpuScene& scene, const ShadowMapAtlasAllocation& shadowMapAllocation) const
+RenderTarget& LocalShadowDrawNode::makeRenderTarget(Registry& reg, LoadOp loadOp) const
 {
-    SCOPED_PROFILE_ZONE();
+    // Ignore the supplied load-op, we instead clear the texture manually then always load for the render passes
+    (void)loadOp;
 
-    ARK_ASSERT(shadowMapAllocation.light);
-    ARK_ASSERT(shadowMapAllocation.light->type() == Light::Type::SpotLight);
-    const Light& light = *shadowMapAllocation.light;
-
-    std::string zoneName = fmt::format("Light [{}]", light.name());
-    ScopedDebugZone zone { cmdList, zoneName };
-
-    mat4 lightProjectionFromWorld = light.viewProjection();
-    auto lightFrustum = geometry::Frustum::createFromProjectionMatrix(lightProjectionFromWorld);
-
-    cmdList.setNamedUniform<mat4>("lightProjectionFromWorld", lightProjectionFromWorld);
-
-    Rect2D viewportRect = shadowMapAllocation.rect;
-    cmdList.setViewport(viewportRect.origin, viewportRect.size);
-
-    cmdList.setDepthBias(light.constantBias(), light.slopeBias());
-
-    drawShadowCasters(cmdList, scene, lightFrustum);
-}
-
-void LocalShadowDrawNode::drawShadowCasters(CommandList& cmdList, GpuScene& scene, geometry::Frustum const& lightFrustum) const
-{
-    // TODO: Use GPU based culling
-
-    moodycamel::ConcurrentQueue<DrawCallDescription> drawCalls {};
-
-    auto& instances = scene.staticMeshInstances();
-    ParallelForBatched(instances.size(), 64, [&](size_t idx) {
-        auto& instance = instances[idx];
-
-        if (StaticMesh const* staticMesh = scene.staticMeshForInstance(*instance)) {
-
-            if (!staticMesh->hasNonTranslucentSegments()) {
-                return;
-            }
-
-            // TODO: Pick LOD properly
-            const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
-
-            geometry::Sphere sphere = staticMesh->boundingSphere().transformed(instance->transform().worldMatrix());
-            if (lightFrustum.includesSphere(sphere)) {
-
-                for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
-                    StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
-
-                    // Don't render translucent objects. We still do masked though and pretend they are opaque. This may fail
-                    // in some cases but in general if the masked features are small enough it's not really noticable.
-                    if (meshSegment.blendMode == BlendMode::Translucent) {
-                        continue;
-                    }
-
-                    DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
-                    drawCall.firstInstance = instance->drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>(); // TODO: Put this in some buffer instead!
-
-                    drawCalls.enqueue(drawCall);
-                }
-            }
-        }
-    });
-
-    DrawCallDescription drawCall;
-    while (drawCalls.try_dequeue(drawCall)) {
-        cmdList.issueDrawCall(drawCall);
-    }
+    return reg.createRenderTarget({ { RenderTarget::AttachmentType::Depth, m_shadowMapAtlas, LoadOp::Load, StoreOp::Store } });
 }

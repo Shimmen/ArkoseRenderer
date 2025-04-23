@@ -1,13 +1,12 @@
 #pragma once
 
-#include "core/math/Frustum.h"
-#include "rendering/RenderPipelineNode.h"
+#include "rendering/meshlet/MeshletDepthOnlyRenderNode.h"
 #include <vector>
 #include <ark/rect.h>
 
 class Light;
 
-class LocalShadowDrawNode final : public RenderPipelineNode {
+class LocalShadowDrawNode final : public MeshletDepthOnlyRenderNode {
 public:
     std::string name() const override { return "Local light shadows"; }
     void drawGui() override;
@@ -23,13 +22,19 @@ private:
     ivec2 m_minimumViableShadowMapSize { 16, 16 };
 
     struct ShadowMapAtlasAllocation {
-        const Light* light { nullptr };
+        Light const* light { nullptr };
         Rect2D rect {};
     };
 
     std::vector<ShadowMapAtlasAllocation> allocateShadowMapsInAtlas(const GpuScene&, const Texture& atlas) const;
     std::vector<vec4> collectAtlasViewportDataForAllocations(const GpuScene&, Extent2D atlasExtent, const std::vector<ShadowMapAtlasAllocation>&) const;
 
-    void drawSpotLightShadowMap(CommandList&, GpuScene&, const ShadowMapAtlasAllocation&) const;
-    void drawShadowCasters(CommandList&, GpuScene&, geometry::Frustum const& lightFrustum) const;
+    RenderTarget& makeRenderTarget(Registry&, LoadOp loadOp) const override;
+
+    bool usingDepthBias() const override { return true; }
+    vec2 depthBiasParameters(GpuScene&) const override
+    {
+        // Done manually for this node
+        ASSERT_NOT_REACHED();
+    }
 };
