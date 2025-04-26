@@ -54,12 +54,12 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, uvec2 
 
     outDiffuseIrradiance += (1.0 - F) * vec3(1.0 - metallic) * irradiance;
 
-#if INCLUDE_DIFFUSE_IN_SCENE_COLOR()
-    vec3 diffuse = outDiffuseIrradiance * baseColor * diffuseBRDF();
-    return (irradiance * specular) + diffuse;
-#else
-    return irradiance * specular;
-#endif
+    #if INCLUDE_DIFFUSE_IN_SCENE_COLOR()
+        vec3 diffuse = outDiffuseIrradiance * baseColor * diffuseBRDF();
+        return (irradiance * specular) + diffuse;
+    #else
+        return irradiance * specular;
+    #endif
 }
 
 float evaluateLocalLightShadow(uint shadowIdx, mat4 lightProjectionFromView, vec3 viewSpacePos)
@@ -108,12 +108,12 @@ vec3 evaluateSphereLight(SphereLightData light, bool hasShadow, uvec2 pixelCoord
 
     outDiffuseIrradiance += (1.0 - F) * vec3(1.0 - metallic) * irradiance;
 
-#if INCLUDE_DIFFUSE_IN_SCENE_COLOR()
-    vec3 diffuse = outDiffuseIrradiance * baseColor * diffuseBRDF();
-    return (irradiance * specular) + diffuse;
-#else
-    return irradiance * specular;
-#endif
+    #if INCLUDE_DIFFUSE_IN_SCENE_COLOR()
+        vec3 diffuse = outDiffuseIrradiance * baseColor * diffuseBRDF();
+        return (irradiance * specular) + diffuse;
+    #else
+        return irradiance * specular;
+    #endif
 }
 
 vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 viewSpacePos, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, inout vec3 outDiffuseIrradiance)
@@ -139,12 +139,12 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 viewSpacePos, v
 
     outDiffuseIrradiance += (1.0 - F) * vec3(1.0 - metallic) * irradiance;
 
-#if INCLUDE_DIFFUSE_IN_SCENE_COLOR()
-    vec3 diffuse = outDiffuseIrradiance * baseColor * diffuseBRDF();
-    return (irradiance * specular) + diffuse;
-#else
-    return irradiance * specular;
-#endif
+    #if INCLUDE_DIFFUSE_IN_SCENE_COLOR()
+        vec3 diffuse = outDiffuseIrradiance * baseColor * diffuseBRDF();
+        return (irradiance * specular) + diffuse;
+    #else
+        return irradiance * specular;
+    #endif
 }
 
 layout(local_size_x = 8, local_size_y = 8) in;
