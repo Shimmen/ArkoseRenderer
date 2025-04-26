@@ -48,8 +48,7 @@ constexpr bool keepRenderDocCompatible = false;
 constexpr bool withUpscaling = true && !keepRenderDocCompatible;
 constexpr bool withRayTracing = true && !keepRenderDocCompatible;
 
-constexpr bool withMeshShading = true;
-constexpr bool withVisibilityBuffer = true && withMeshShading;
+constexpr bool withVisibilityBuffer = true;
 
 std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
 {
@@ -59,9 +58,7 @@ std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
         capabilities.push_back(Backend::Capability::RayTracing);
     }
 
-    if constexpr (withMeshShading) {
-        capabilities.push_back(Backend::Capability::MeshShading);
-    }
+    capabilities.push_back(Backend::Capability::MeshShading);
 
     return capabilities;
 }
@@ -71,7 +68,7 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     SCOPED_PROFILE_ZONE();
 
     Scene::Description description { .withRayTracing = withRayTracing,
-                                     .withMeshShading = withMeshShading };
+                                     .withMeshShading = true };
     // NOTE: Scene not under "assets/sample/" will not be available in the Git-repo, either due to file size or license or both!
     //description.path = "assets/IntelSponza/NewSponzaWithCurtains.arklvl";
     //description.path = "assets/PicaPica/PicaPicaMiniDiorama.arklvl";
@@ -178,14 +175,12 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     std::string sceneTexture = "SceneColor";
     AntiAliasing antiAliasingMode = AntiAliasing::TAA;
 
+    // Uncomment for meshlet visualisation
+    //pipeline.addNode<MeshletDebugNode>(); sceneTexture = "MeshletDebugVis";
+
     if constexpr (withVisibilityBuffer) {
         // Uncomment for visibility buffer visualisation
         //pipeline.addNode<VisibilityBufferDebugNode>(); sceneTexture = "VisibilityBufferDebugVis";
-    }
-
-    if constexpr (withMeshShading) {
-        // Uncomment for meshlet visualisation
-        //pipeline.addNode<MeshletDebugNode>(); sceneTexture = "MeshletDebugVis";
     }
 
     if constexpr (withRayTracing) {
