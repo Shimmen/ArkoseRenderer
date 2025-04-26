@@ -189,7 +189,7 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
         renderStateBuilder.stencilMode = m_hasPreviousPrepass ? StencilMode::ReplaceIfGreaterOrEqual : StencilMode::AlwaysWrite;
         renderStateBuilder.stencilValue = 0x01;
         if (drawKey.brdf().has_value() && drawKey.brdf().value() == Brdf::Skin) {
-            renderStateBuilder.stencilValue |= 0x03;
+            renderStateBuilder.stencilValue |= 0x02;
         }
     }
 
