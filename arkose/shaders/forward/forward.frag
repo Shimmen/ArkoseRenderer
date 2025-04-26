@@ -165,34 +165,23 @@ void main()
 
     vec3 V = -normalize(vPosition);
 
-    vec3 normal = vNormal;
+    vec3 N = vNormal;
 #if FORWARD_DOUBLE_SIDED
-    if (dot(V, normal) < 0.0) {
-        normal = -normal;
+    if (dot(V, N) < 0.0) {
+        N = -N;
     }
 #endif
 
-// NOTE: This is only really for debugging! In general we try to avoid permutations for very common cases (almost everything will be normal mapped in practice)
-// (If we want to make normal mapping a proper permutation we would also want to exclude interpolats vTangent and vBitangentSign)
-#define FORWARD_USE_NORMAL_MAPPING 1
-// NOTE: We have to use 2-component normals when using BC5 compressed normal maps, but we always *can* use it, which is nice since we avoid permutations.
-// In practice we will loose some level of precision by doing the reconstruction though, so the old path is left for A/B comparison purposes.
-#define FORWARD_USE_2COMPONENT_NORMALS 1
-#if FORWARD_USE_NORMAL_MAPPING
-    vec3 packedNormal = texture(material_getTexture(material.normalMap), vTexCoord, constants.mipBias).rgb;
-    #if FORWARD_USE_2COMPONENT_NORMALS
+    // Normal mapping
+    {
+        vec3 packedNormal = texture(material_getTexture(material.normalMap), vTexCoord, constants.mipBias).rgb;
         vec3 tangentNormal = vec3(packedNormal.rg * 2.0 - 1.0, 0.0);
         tangentNormal.z = sqrt(clamp(1.0 - lengthSquared(tangentNormal.xy), 0.0, 1.0));
-    #else
-        vec3 tangentNormal = packedNormal * 2.0 - 1.0;
-    #endif
 
-    // Using MikkT space (http://www.mikktspace.com/)
-    vec3 bitangent = vBitangentSign * cross(normal, vTangent);
-    vec3 N = normalize(tangentNormal.x * vTangent + tangentNormal.y * bitangent + tangentNormal.z * normal);
-#else
-    vec3 N = normal;
-#endif
+        // Using MikkT space (http://www.mikktspace.com/)
+        vec3 bitangent = vBitangentSign * cross(N, vTangent);
+        N = normalize(tangentNormal.x * vTangent + tangentNormal.y * bitangent + tangentNormal.z * N);
+    }
 
     vec3 ambient = constants.ambientAmount * baseColor;
     vec3 color = emissive + ambient;

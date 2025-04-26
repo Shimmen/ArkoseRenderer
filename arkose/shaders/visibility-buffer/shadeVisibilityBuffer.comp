@@ -35,13 +35,6 @@ NAMED_UNIFORMS_STRUCT(ForwardPassConstants, constants)
 
 DeclareVisibilityBufferSamplingFunctions
 
-// NOTE: This is only really for debugging! In general we try to avoid permutations for very common cases (almost everything will be normal mapped in practice)
-// (If we want to make normal mapping a proper permutation we would also want to exclude interpolats vTangent and vBitangentSign)
-#define USE_NORMAL_MAPPING 1
-// NOTE: We have to use 2-component normals when using BC5 compressed normal maps, but we always *can* use it, which is nice since we avoid permutations.
-// In practice we will loose some level of precision by doing the reconstruction though, so the old path is left for A/B comparison purposes.
-#define USE_2COMPONENT_NORMALS 1
-
 // If we have subsurface scattering in the pipeline we need to keep diffuse irradiance separate so we can "blur" that for those pixels before we apply
 // it to the scene color. Use the diffuse irradiance (i.e. the irradiance that enters the surface) for that.
 #define INCLUDE_DIFFUSE_IN_SCENE_COLOR() (0)
@@ -249,25 +242,20 @@ void main()
         bentCone = -1.0;
     }
 
-    #if USE_NORMAL_MAPPING
-        vec3 packedNormal = textureGrad(material_getTexture(material.normalMap), texCoord, ddx, ddy).rgb;
-        #if USE_2COMPONENT_NORMALS
-            vec3 tangentNormal = vec3(packedNormal.rg * 2.0 - 1.0, 0.0);
-            tangentNormal.z = sqrt(clamp(1.0 - lengthSquared(tangentNormal.xy), 0.0, 1.0));
-        #else
-            vec3 tangentNormal = packedNormal * 2.0 - 1.0;
-        #endif
+    // Save the pre-normal-mapped normal
+    // It's not strictly a geometric normal, as it's interpolated, but it's close enough for this..
+    vec3 geometricNormal = N;
 
-        // Save the pre-normal-mapped normal
-        // It's not strictly a geometric normal, as it's interpolated, but it's close enough for this..
-        vec3 geometricNormal = N;
+    // Normal mapping
+    {
+        vec3 packedNormal = textureGrad(material_getTexture(material.normalMap), texCoord, ddx, ddy).rgb;
+        vec3 tangentNormal = vec3(packedNormal.rg * 2.0 - 1.0, 0.0);
+        tangentNormal.z = sqrt(clamp(1.0 - lengthSquared(tangentNormal.xy), 0.0, 1.0));
 
         // Apply normal map according to MikkT space
         vec3 B = bitangentSign * cross(N, T);
         N = normalize(tangentNormal.x * T + tangentNormal.y * B + tangentNormal.z * N);
-    #else
-        vec3 geometricNormal = N;
-    #endif
+    }
 
     vec3 baseColor = material.colorTint.rgb * textureGrad(material_getTexture(material.baseColor), texCoord, ddx, ddy).rgb;
     if (!constants.withMaterialColor) {
