@@ -7,7 +7,6 @@
 
 void MeshletVisibilityBufferRenderNode::drawGui()
 {
-    ImGui::Checkbox("Frustum cull instances", &m_frustumCullInstances);
     ImGui::Checkbox("Frustum cull meshlets", &m_frustumCullMeshlets);
 }
 
@@ -24,8 +23,7 @@ RenderPipelineNode::ExecuteCallback MeshletVisibilityBufferRenderNode::construct
     MeshletIndirectSetupState const& indirectSetupState = m_meshletIndirectHelper.createMeshletIndirectSetupState(reg, indirectBuffers);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
-        MeshletIndirectSetupOptions setupOptions { .frustumCullInstances = m_frustumCullInstances };
-        m_meshletIndirectHelper.executeMeshletIndirectSetup(scene, cmdList, uploadBuffer, indirectSetupState, setupOptions);
+        m_meshletIndirectHelper.executeMeshletIndirectSetup(scene, cmdList, uploadBuffer, indirectSetupState, {});
 
         mat4 projectionFromWorld = calculateViewProjectionMatrix(scene);
 

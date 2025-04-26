@@ -173,8 +173,7 @@ void MeshletDebugNode::executeMeshShaderDirectPath(PassParams const& params, Gpu
 
 void MeshletDebugNode::executeMeshShaderIndirectPath(PassParams const& params, GpuScene& scene, CommandList& cmdList, UploadBuffer& uploadBuffer) const
 {
-    MeshletIndirectSetupOptions setupOptions { .frustumCullInstances = m_frustumCullInstances };
-    m_meshletIndirectHelper.executeMeshletIndirectSetup(scene, cmdList, uploadBuffer, *params.meshletIndirectSetupState, setupOptions);
+    m_meshletIndirectHelper.executeMeshletIndirectSetup(scene, cmdList, uploadBuffer, *params.meshletIndirectSetupState, {});
 
     cmdList.beginRendering(*params.renderState, ClearValue::blackAtMaxDepth());
     cmdList.setNamedUniform("frustumCull", m_frustumCullMeshlets);

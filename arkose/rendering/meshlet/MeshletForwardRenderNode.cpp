@@ -22,9 +22,7 @@ RenderPipelineNode::ExecuteCallback MeshletForwardRenderNode::construct(GpuScene
     MeshletIndirectSetupState const& indirectSetupState = m_meshletIndirectHelper.createMeshletIndirectSetupState(reg, indirectBuffers);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
-
-        MeshletIndirectSetupOptions setupOptions { .frustumCullInstances = m_frustumCullInstances };
-        m_meshletIndirectHelper.executeMeshletIndirectSetup(scene, cmdList, uploadBuffer, indirectSetupState, setupOptions);
+        m_meshletIndirectHelper.executeMeshletIndirectSetup(scene, cmdList, uploadBuffer, indirectSetupState, {});
 
         for (RenderStateWithIndirectData* renderState : renderStates) {
 

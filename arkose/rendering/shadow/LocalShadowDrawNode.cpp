@@ -75,8 +75,7 @@ RenderPipelineNode::ExecuteCallback LocalShadowDrawNode::construct(GpuScene& sce
             std::string zoneName = fmt::format("Light [{}]", light.name());
             ScopedDebugZone zone { cmdList, zoneName };
 
-            MeshletIndirectSetupOptions setupOptions { .frustumCullInstances = m_frustumCullInstances };
-            m_meshletIndirectHelper.executeMeshletIndirectSetup(scene, cmdList, uploadBuffer, indirectSetupState, setupOptions);
+            m_meshletIndirectHelper.executeMeshletIndirectSetup(scene, cmdList, uploadBuffer, indirectSetupState, {});
 
             mat4 projectionFromWorld = light.viewProjection();
 

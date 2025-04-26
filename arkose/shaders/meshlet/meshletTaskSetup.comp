@@ -3,21 +3,17 @@
 #extension GL_KHR_shader_subgroup_ballot : require
 
 #include <common.glsl>
-#include <common/camera.glsl>
 #include <common/namedUniforms.glsl>
 #include <shared/SceneData.h>
 
 layout(local_size_x = GROUP_SIZE) in;
 
-layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
-
-layout(set = 1, binding = 0) buffer restrict InstanceBlock { ShaderDrawable drawables[]; };
-layout(set = 1, binding = 1) buffer restrict IndirectCmdBlock { uvec4 indirectData[]; };
+layout(set = 0, binding = 0) buffer restrict InstanceBlock { ShaderDrawable drawables[]; };
+layout(set = 0, binding = 1) buffer restrict IndirectCmdBlock { uvec4 indirectData[]; };
 
 NAMED_UNIFORMS(constants,
     uint drawableCount;
     uint drawKeyMask;
-    bool frustumCull;
 )
 
 void main()
@@ -33,12 +29,6 @@ void main()
     }
 
     bool shouldDraw = (drawable.drawKey & constants.drawKeyMask) == drawable.drawKey;
-
-    // TODO: Fix this so it works with the custom frustum, not just the default/global camera one.
-    //if (constants.frustumCull) {
-    //    vec4 transformedSphere = transformSphere(drawable.localBoundingSphere, drawable.worldFromLocal);
-    //    shouldDraw = shouldDraw && isSphereInCameraFrustum(transformedSphere, camera);
-    //}
 
     // TODO: if (drawable.meshletCount % GROUP_SIZE) != 0, see if we can put the next instance in the same indirect cmd.
     // If we make the drawable lookup more complex, e.g. make it possible to store up to x instances per cmd,

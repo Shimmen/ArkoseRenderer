@@ -28,12 +28,11 @@ struct MeshletIndirectSetupState {
     std::vector<MeshletIndirectBuffer*> indirectBuffers {};
     std::vector<Buffer*> rawIndirectBuffers {};
 
-    BindingSet* cameraBindingSet { nullptr };
     std::vector<MeshletIndirectSetupDispatch> dispatches {};
 };
 
 struct MeshletIndirectSetupOptions {
-    bool frustumCullInstances { false };
+    // ..
 };
 
 class MeshletIndirectHelper {

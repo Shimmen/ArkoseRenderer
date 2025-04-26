@@ -27,7 +27,6 @@ MeshletIndirectSetupState const& MeshletIndirectHelper::createMeshletIndirectSet
     Shader meshletTaskSetupShader = Shader::createCompute("meshlet/meshletTaskSetup.comp", meshletTaskSetupDefines);
 
     MeshletIndirectSetupState& state = reg.allocate<MeshletIndirectSetupState>();
-    state.cameraBindingSet = reg.getBindingSet("SceneCameraSet");
 
     for (MeshletIndirectBuffer* indirectBuffer : indirectBuffers) {
 
@@ -41,8 +40,7 @@ MeshletIndirectSetupState const& MeshletIndirectHelper::createMeshletIndirectSet
                                                                   ShaderBinding::storageBuffer(*indirectBuffer->buffer) });
 
         StateBindings stateBindings;
-        stateBindings.at(0, *state.cameraBindingSet);
-        stateBindings.at(1, *dispatch.indirectDataBindingSet);
+        stateBindings.at(0, *dispatch.indirectDataBindingSet);
 
         dispatch.taskSetupComputeState = &reg.createComputeState(meshletTaskSetupShader, stateBindings);
     }
@@ -68,9 +66,6 @@ void MeshletIndirectHelper::executeMeshletIndirectSetup(GpuScene& scene, Command
 
         cmdList.setNamedUniform("drawableCount", drawableCount);
         cmdList.setNamedUniform("drawKeyMask", dispatch.drawKeyMask.asUint32());
-
-        // Set options
-        cmdList.setNamedUniform("frustumCull", options.frustumCullInstances);
 
         cmdList.dispatch({ drawableCount, 1, 1 }, { GroupSize, 1, 1 });
     }
