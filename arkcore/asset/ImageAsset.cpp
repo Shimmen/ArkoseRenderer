@@ -354,7 +354,7 @@ bool ImageAsset::generateMipmaps()
     ARKOSE_ASSERT(m_mips.size() == 1);
     ARKOSE_ASSERT(depth() == 1);
 
-    if (!ark::isPowerOfTwo(width()) || ark::isPowerOfTwo(height())) {
+    if (!ark::isPowerOfTwo(width()) || !ark::isPowerOfTwo(height())) {
         // TODO: Implement non-power-of-two mipmap generation
         return false;
     }
