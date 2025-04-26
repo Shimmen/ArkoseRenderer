@@ -49,11 +49,11 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, vec3 V
     vec2 sampleTexCoords = gl_FragCoord.xy * constants.invTargetSize;
     float shadowFactor = hasShadow ? texture(directionalLightProjectedShadowTex, sampleTexCoords).r : 1.0;
 
-#if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
-    vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);
-#else
-    vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
-#endif
+    #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
+        vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);
+    #else
+        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+    #endif
 
     vec3 directLight = light.color * shadowFactor;
 
@@ -99,11 +99,11 @@ vec3 evaluateSphereLight(SphereLightData light, bool hasShadow, vec3 V, vec3 N, 
     float dist = length(toLight);
     float distanceAttenuation = calculateLightDistanceAttenuation(dist, light.lightSourceRadius, light.lightRadius);
 
-#if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
-    vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);
-#else
-    vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
-#endif
+    #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
+        vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);
+    #else
+        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+    #endif
 
     vec3 directLight = light.color * shadowFactor * distanceAttenuation;
 
@@ -126,11 +126,11 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3
                                 light.viewSpaceDirection.xyz);
     float iesValue = evaluateIESLookupTable(material_getTexture(light.iesProfileIndex), light.outerConeHalfAngle, lightViewMatrix, -toLight / dist);
 
-#if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
-    vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);
-#else
-    vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
-#endif
+    #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
+        vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);
+    #else
+        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+    #endif
 
     vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;
 
@@ -144,12 +144,14 @@ void main()
 
     vec4 inputBaseColor = texture(material_getTexture(material.baseColor), vTexCoord, constants.mipBias).rgba;
 
-#if FORWARD_BLEND_MODE == BLEND_MODE_MASKED
-    float mask = inputBaseColor.a;
-    if (mask < material.maskCutoff) {
-        discard;
+    #if FORWARD_BLEND_MODE == BLEND_MODE_MASKED
+    {
+        float mask = inputBaseColor.a;
+        if (mask < material.maskCutoff) {
+            discard;
+        }
     }
-#endif
+    #endif
 
     vec3 baseColor = inputBaseColor.rgb * material.colorTint.rgb;
     if (!constants.withMaterialColor) {
@@ -166,11 +168,13 @@ void main()
     vec3 V = -normalize(vPosition);
 
     vec3 N = vNormal;
-#if FORWARD_DOUBLE_SIDED
-    if (dot(V, N) < 0.0) {
-        N = -N;
+    #if FORWARD_DOUBLE_SIDED
+    {
+        if (dot(V, N) < 0.0) {
+            N = -N;
+        }
     }
-#endif
+    #endif
 
     // Normal mapping
     {
@@ -188,15 +192,15 @@ void main()
 
     for (uint i = 0; i < light_getDirectionalLightCount(); ++i) {
 
-#if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
-        // NOTE: Since the shadow is pre-projected we can't use it for geometry that doesn't write to the depth buffer in the prepass
-        // TODO: Move to using only ray traced translucency, so we don't have to worry about these cases.
-        bool hasShadow = false;
-#else
-        // We only have shadow for the 0th directional light as they are pre-projected. If needed we could quite easily support up to 4 shadowed directional light
-        // by storing the projected shadow in an RGBA texture with a projected shadow per channel. However, a single dir. shadow should almost always be enough.
-        bool hasShadow = i == 0;
-#endif
+        #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
+            // NOTE: Since the shadow is pre-projected we can't use it for geometry that doesn't write to the depth buffer in the prepass
+            // TODO: Move to using only ray traced translucency, so we don't have to worry about these cases.
+            bool hasShadow = false;
+        #else
+            // We only have shadow for the 0th directional light as they are pre-projected. If needed we could quite easily support up to 4 shadowed directional light
+            // by storing the projected shadow in an RGBA texture with a projected shadow per channel. However, a single dir. shadow should almost always be enough.
+            bool hasShadow = i == 0;
+        #endif
 
         color += evaluateDirectionalLight(light_getDirectionalLight(i), hasShadow, V, N, baseColor, roughness, metallic);
     }
@@ -204,13 +208,13 @@ void main()
     // TODO: Use tiles or clusters to minimize number of light evaluations!
     {
         for (uint i = 0; i < light_getSphereLightCount(); ++i) {
-#if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
-            // NOTE: Since the shadow is pre-projected we can't use it for geometry that doesn't write to the depth buffer in the prepass
-            // TODO: Move to using only ray traced translucency, so we don't have to worry about these cases.
-            bool hasShadow = false;
-#else
-            bool hasShadow = i == 0; // todo: support multple shadowed point lights!
-#endif
+            #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
+                // NOTE: Since the shadow is pre-projected we can't use it for geometry that doesn't write to the depth buffer in the prepass
+                // TODO: Move to using only ray traced translucency, so we don't have to worry about these cases.
+                bool hasShadow = false;
+            #else
+                bool hasShadow = i == 0; // todo: support multple shadowed point lights!
+            #endif
             color += evaluateSphereLight(light_getSphereLight(i), hasShadow, V, N, baseColor, roughness, metallic);
         }
 
@@ -231,14 +235,14 @@ void main()
         //velocity = abs(velocity) * 100.0; // debug code
     }
 
-#if FORWARD_BLEND_MODE != BLEND_MODE_TRANSLUCENT
-    oColor = vec4(color, 1.0);
-    oNormalVelocity = vec4(encodeNormal(N), velocity);
-    oBentNormal = vec4(vec3(0.0), -1.0); // TODO!
-    oMaterialProps = vec4(roughness, metallic, 0.0, 0.0);
-    oBaseColor = vec4(baseColor, 0.0);
-#else
-    float alpha = inputBaseColor.a * material.colorTint.a;
-    oColor = vec4(color, alpha);
-#endif
+    #if FORWARD_BLEND_MODE != BLEND_MODE_TRANSLUCENT
+        oColor = vec4(color, 1.0);
+        oNormalVelocity = vec4(encodeNormal(N), velocity);
+        oBentNormal = vec4(vec3(0.0), -1.0); // TODO!
+        oMaterialProps = vec4(roughness, metallic, 0.0, 0.0);
+        oBaseColor = vec4(baseColor, 0.0);
+    #else
+        float alpha = inputBaseColor.a * material.colorTint.a;
+        oColor = vec4(color, alpha);
+    #endif
 }
