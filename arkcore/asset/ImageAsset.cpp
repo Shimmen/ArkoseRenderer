@@ -90,9 +90,6 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
 
     if (DDS::isValidHeader(sourceAssetData, sourceAssetSize)) {
 
-        // TODO: Get rid of this path! It's no longer a source asset format!
-
-#if 0
         Extent3D extent;
         ImageFormat format;
         bool srgb;
@@ -117,7 +114,6 @@ std::unique_ptr<ImageAsset> ImageAsset::createFromSourceAsset(uint8_t const* sou
         ARKOSE_ASSERT(imageAsset->m_mips[0].offset == 0); // we assume all the mips are laid out sequentially
         size_t dataSize = imageAsset->m_mips.back().offset + imageAsset->m_mips.back().size;
         imageAsset->m_pixelData = std::vector<uint8_t>(dataPtr, dataPtr + dataSize);
-#endif
 
     } else {
 
