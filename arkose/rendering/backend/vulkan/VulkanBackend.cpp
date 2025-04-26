@@ -2161,31 +2161,14 @@ bool VulkanBackend::setBufferDataUsingStagingBuffer(VkBuffer buffer, const uint8
         return true;
     }
 
-    VkBufferCreateInfo bufferCreateInfo = { VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO };
-    bufferCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    bufferCreateInfo.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-    bufferCreateInfo.size = size;
-
-    VmaAllocationCreateInfo allocCreateInfo = {};
-    allocCreateInfo.usage = VMA_MEMORY_USAGE_CPU_ONLY;
-    allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT;
-
-    VkBuffer stagingBuffer;
-    VmaAllocation stagingAllocation;
-    if (vmaCreateBuffer(globalAllocator(), &bufferCreateInfo, &allocCreateInfo, &stagingBuffer, &stagingAllocation, nullptr) != VK_SUCCESS) {
-        ARKOSE_LOG(Error, "VulkanBackend: could not create staging buffer.");
-    }
-
-    ark::AtScopeExit cleanUpStagingBuffer([&] {
-        vmaDestroyBuffer(globalAllocator(), stagingBuffer, stagingAllocation);
+    std::unique_ptr<Buffer> stagingBuffer = createBuffer(size, Buffer::Usage::Upload);
+    stagingBuffer->mapData(Buffer::MapMode::Write, size, 0, [&](std::byte* mappedMemory) {
+        std::memcpy(mappedMemory, data, size);
     });
 
-    if (!setBufferMemoryUsingMapping(stagingAllocation, data, size, 0)) {
-        ARKOSE_LOG(Error, "VulkanBackend: could set staging buffer memory.");
-        return false;
-    }
+    VkBuffer stagingVkBuffer = static_cast<VulkanBuffer*>(stagingBuffer.get())->buffer;
 
-    if (!copyBuffer(stagingBuffer, buffer, size, offset, commandBuffer)) {
+    if (!copyBuffer(stagingVkBuffer, buffer, size, offset, commandBuffer)) {
         ARKOSE_LOG(Error, "VulkanBackend: could not copy from staging buffer to buffer.");
         return false;
     }
