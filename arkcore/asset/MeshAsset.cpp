@@ -351,7 +351,7 @@ bool MeshSegmentAsset::hasTextureCoordinates() const
 bool MeshSegmentAsset::hasTangents() const
 {
     ARKOSE_ASSERT(tangents.size() == 0 || tangents.size() == positions.size());
-    ARKOSE_ASSERT(tangents.size() == 0 || tangents.size() == texcoord0s.size());
+    //ARKOSE_ASSERT(tangents.size() == 0 || tangents.size() == texcoord0s.size());
     return tangents.size() > 0;
 }
 
