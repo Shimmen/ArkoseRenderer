@@ -13,7 +13,7 @@ project(UsdImportTool)
 add_executable(${PROJECT_NAME} UsdImportTool.cpp)
 target_link_libraries(${PROJECT_NAME} ArkoseCore)
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "tools")
-set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_LIST_DIR}/bin/usd")
+set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_LIST_DIR}/../bin/usd")
 
 target_include_directories(${PROJECT_NAME} PRIVATE ${PXR_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${PXR_LIBRARIES})
