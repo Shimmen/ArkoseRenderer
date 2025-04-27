@@ -752,7 +752,8 @@ std::unique_ptr<MeshAsset> createMeshAsset(pxr::UsdPrim const& meshPrim, pxr::Us
                 pxr::UsdGeomSubset usdGeomSubset { childPrim };
                 MeshSegmentAsset& meshSegment = lod0.meshSegments.emplace_back();
 
-                NOT_YET_IMPLEMENTED();
+                ARKOSE_LOG(Error, "Mesh has UsdGeomSubset which we do not yet support! TODO!");
+                return nullptr;
                 //defineMeshSegmentAssetAndDependencies(meshSegment, meshPrim, usdGeomMesh, usdGeomSubset);
             }
         }
@@ -831,7 +832,8 @@ int main(int argc, char* argv[])
     ARKOSE_LOG(Info, "UsdImportTool: will write results to '{}'", targetDirectory);
 
     if (!pxr::UsdStage::IsSupportedFile(inputAsset.string())) {
-        ARKOSE_LOG(Fatal, "USD can't open file '{}'.", inputAsset);
+        ARKOSE_LOG(Error, "USD can't open file '{}'.", inputAsset);
+        return 1;
     }
 
     FileIO::ensureDirectory(targetDirectory);
@@ -856,6 +858,9 @@ int main(int argc, char* argv[])
 
     //pxr::SdfLayerHandle rootLayer = stage->GetRootLayer();
 
+    std::vector<std::filesystem::path> outputDependencies;
+    u32 errorCount = 0;
+
     for (const pxr::UsdPrim& prim : stage->Traverse()) {
         SCOPED_PROFILE_ZONE_NAMED("ForEachPrim");
 
@@ -870,10 +875,13 @@ int main(int argc, char* argv[])
         if (prim.IsA<pxr::UsdGeomMesh>()) {
             ARKOSE_LOG(Info,    " - MESH     {}", prim.GetPath().GetText());
 
-            std::unique_ptr<MeshAsset> mesh = createMeshAsset(prim, bboxCache);
-
-            std::string meshFileName = mesh->name + MeshAsset::AssetFileExtension;
-            mesh->writeToFile(targetDirectory / meshFileName, AssetStorage::Binary);
+            if (std::unique_ptr<MeshAsset> mesh = createMeshAsset(prim, bboxCache)) {
+                std::string meshFileName = mesh->name + MeshAsset::AssetFileExtension;
+                mesh->writeToFile(targetDirectory / meshFileName, AssetStorage::Binary);
+                outputDependencies.push_back(targetDirectory / meshFileName);
+            } else {
+                errorCount += 1;
+            }
 
         } else if (prim.IsA<pxr::UsdGeomXform>()) {
             ARKOSE_LOG(Verbose, " - XFORM    {}", prim.GetPath().GetText());
@@ -882,49 +890,67 @@ int main(int argc, char* argv[])
         } else if (prim.IsA<pxr::UsdShadeMaterial>()) {
             ARKOSE_LOG(Info,    " - MATERIAL {}", prim.GetPath().GetText());
 
-            std::unique_ptr<MaterialAsset> material = createMaterialAsset(prim);
+            if (std::unique_ptr<MaterialAsset> material = createMaterialAsset(prim)) {
 
-            auto processImage = [&](std::optional<MaterialInput>& materialInput, bool isNormalMap) {
-                if (materialInput && !materialInput->image.empty()) {
-                    std::filesystem::path imageRelativePath = materialInput->image;
-                    std::filesystem::path imageSourcePath = inputAsset.parent_path() / imageRelativePath;
-                    std::unique_ptr<ImageAsset> imageAsset = ImageAsset::createFromSourceAsset(imageSourcePath);
+                auto processImage = [&](std::optional<MaterialInput>& materialInput, bool isNormalMap) {
+                    if (materialInput && !materialInput->image.empty()) {
+                        std::filesystem::path imageRelativePath = materialInput->image;
+                        std::filesystem::path imageSourcePath = inputAsset.parent_path() / imageRelativePath;
+                        std::unique_ptr<ImageAsset> imageAsset = ImageAsset::createFromSourceAsset(imageSourcePath);
 
-                    if (imageAsset->numMips() == 1) {
-                        imageAsset->generateMipmaps();
-                    }
-
-                    if (!imageAsset->hasCompressedFormat()) {
-                        TextureCompressor textureCompressor {};
-                        if (isNormalMap) {
-                            imageAsset = textureCompressor.compressBC5(*imageAsset);
-                        } else {
-                            imageAsset = textureCompressor.compressBC7(*imageAsset);
+                        if (imageAsset->numMips() == 1) {
+                            imageAsset->generateMipmaps();
                         }
+
+                        if (!imageAsset->hasCompressedFormat()) {
+                            TextureCompressor textureCompressor {};
+                            if (isNormalMap) {
+                                imageAsset = textureCompressor.compressBC5(*imageAsset);
+                            } else {
+                                imageAsset = textureCompressor.compressBC7(*imageAsset);
+                            }
+                        }
+
+                        // Write out new & processed image asset
+                        std::filesystem::path imageNewRelativePath = imageRelativePath.replace_extension(ImageAsset::AssetFileExtension);
+                        imageAsset->writeToFile(targetDirectory / imageNewRelativePath, AssetStorage::Binary);
+
+                        // Re-target material input to use the new processed image
+                        materialInput->image = imageNewRelativePath.generic_string();
                     }
+                };
 
-                    // Write out new & processed image asset
-                    std::filesystem::path imageNewRelativePath = imageRelativePath.replace_extension(ImageAsset::AssetFileExtension);
-                    imageAsset->writeToFile(targetDirectory / imageNewRelativePath, AssetStorage::Binary);
+                processImage(material->baseColor, false);
+                processImage(material->emissiveColor, false);
+                processImage(material->normalMap, true);
+                processImage(material->bentNormalMap, true);
+                processImage(material->materialProperties, false);
 
-                    // Re-target material input to use the new processed image
-                    materialInput->image = imageNewRelativePath.generic_string();
-                }
-            };
-
-            processImage(material->baseColor, false);
-            processImage(material->emissiveColor, false);
-            processImage(material->normalMap, true);
-            processImage(material->bentNormalMap, true);
-            processImage(material->materialProperties, false);
-
-            std::string materialFileName = material->name + MaterialAsset::AssetFileExtension;
-            material->writeToFile(targetDirectory / materialFileName, AssetStorage::Json); // TODO: Use binary storage!
+                std::string materialFileName = material->name + MaterialAsset::AssetFileExtension;
+                material->writeToFile(targetDirectory / materialFileName, AssetStorage::Json); // TODO: Use binary storage!
+                outputDependencies.push_back(targetDirectory / materialFileName);
+            } else {
+                errorCount += 1;
+            }
 
         } else {
             ARKOSE_LOG(Verbose, "            {}", prim.GetPath().GetText());
         }
     }
 
-    return 0;
+    // Create dependency file
+    {
+        std::filesystem::path dependencyFile = targetDirectory / "dependencies.dep";
+        ARKOSE_LOG(Info, "UsdImportTool: writing dependency file '{}'", dependencyFile);
+
+        std::string dependencyData = "";
+
+        for (std::filesystem::path const& dependency : outputDependencies) {
+            dependencyData += fmt::format("OUTPUT: {}\n", dependency.generic_string());
+        }
+
+        FileIO::writeTextDataToFile(dependencyFile, dependencyData);
+    }
+
+    return errorCount;
 }
