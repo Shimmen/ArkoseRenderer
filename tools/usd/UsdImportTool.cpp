@@ -857,7 +857,7 @@ std::unique_ptr<MaterialAsset> createMaterial(pxr::UsdShadeMaterialBindingAPI co
     auto materialAsset = std::make_unique<MaterialAsset>();
     materialAsset->name = usdShadeMaterial.GetPrim().GetName().GetString();
 
-    ARKOSE_LOG(Info, "Material named '{}':", materialAsset->name);
+    //ARKOSE_LOG(Info, "Material named '{}':", materialAsset->name);
 
     for (pxr::UsdShadeOutput const& displacementOutput : usdShadeMaterial.GetDisplacementOutputs()) {
         if (displacementOutput.HasConnectedSource()) {
@@ -875,11 +875,11 @@ std::unique_ptr<MaterialAsset> createMaterial(pxr::UsdShadeMaterialBindingAPI co
     pxr::UsdShadeConnectionSourceInfo& sourceInfo = surfaceOutput.GetConnectedSources().front();
     pxr::UsdShadeConnectableAPI shadeConnectableAPI = sourceInfo.source;
 
-    ARKOSE_LOG(Info, " material is bound to shader '{}'", shadeConnectableAPI.GetPath().GetString());
+    //ARKOSE_LOG(Info, " material is bound to shader '{}'", shadeConnectableAPI.GetPath().GetString());
     pxr::UsdAttribute shaderInfoIdAttr = shadeConnectableAPI.GetPrim().GetAttribute(UsdShadeTokens->infoId);
     pxr::TfToken shaderInfoIdToken;
     if (shaderInfoIdAttr.Get<pxr::TfToken>(&shaderInfoIdToken)) {
-        ARKOSE_LOG(Info, "  shader is of type '{}'", shaderInfoIdToken.GetString());
+        //ARKOSE_LOG(Info, "  shader is of type '{}'", shaderInfoIdToken.GetString());
     }
 
     if (shaderInfoIdToken == pxr::TfToken("UsdPreviewSurface")) {
@@ -901,7 +901,7 @@ std::unique_ptr<MaterialAsset> defineMaterial(pxr::UsdPrim const& materialPrim)
     auto materialAsset = std::make_unique<MaterialAsset>();
     materialAsset->name = materialPrim.GetName().GetString();
 
-    ARKOSE_LOG(Info, "Material named '{}':", materialAsset->name);
+    //ARKOSE_LOG(Info, "Material named '{}':", materialAsset->name);
 
     pxr::UsdShadeMaterial usdShadeMaterial { materialPrim };
 
@@ -921,11 +921,11 @@ std::unique_ptr<MaterialAsset> defineMaterial(pxr::UsdPrim const& materialPrim)
     pxr::UsdShadeConnectionSourceInfo& sourceInfo = surfaceOutput.GetConnectedSources().front();
     pxr::UsdShadeConnectableAPI shadeConnectableAPI = sourceInfo.source;
 
-    ARKOSE_LOG(Info, " material is bound to shader '{}'", shadeConnectableAPI.GetPath().GetString());
+    //ARKOSE_LOG(Info, " material is bound to shader '{}'", shadeConnectableAPI.GetPath().GetString());
     pxr::UsdAttribute shaderInfoIdAttr = shadeConnectableAPI.GetPrim().GetAttribute(UsdShadeTokens->infoId);
     pxr::TfToken shaderInfoIdToken;
     if (shaderInfoIdAttr.Get<pxr::TfToken>(&shaderInfoIdToken)) {
-        ARKOSE_LOG(Info, "  shader is of type '{}'", shaderInfoIdToken.GetString());
+        //ARKOSE_LOG(Info, "  shader is of type '{}'", shaderInfoIdToken.GetString());
     }
 
     if (shaderInfoIdToken == pxr::TfToken("UsdPreviewSurface")) {
@@ -1068,7 +1068,7 @@ int main(int argc, char* argv[])
     }
 
     if (stage) {
-        ARKOSE_LOG(Info, "  loaded stage");
+        ARKOSE_LOG(Verbose, "  loaded stage");
     } else {
         ARKOSE_LOG(Fatal, "Failed to open USD stage.");
     }
@@ -1089,15 +1089,15 @@ int main(int argc, char* argv[])
         //bool isSubcomponent = pxr::UsdModelAPI(prim).IsKind(pxr::KindTokens->subcomponent);
 
         if (prim.IsA<pxr::UsdGeomMesh>()) {
-            ARKOSE_LOG(Info, "              MESH {}", prim.GetPath().GetText());
+            ARKOSE_LOG(Info,    " - MESH     {}", prim.GetPath().GetText());
             //defineMeshAssetAndDependencies(prim, bboxCache);
         } else if (prim.IsA<pxr::UsdGeomXform>()) {
-            ARKOSE_LOG(Info, "             XFORM {}", prim.GetPath().GetText());
+            ARKOSE_LOG(Verbose, " - XFORM    {}", prim.GetPath().GetText());
         } else if (prim.IsA<pxr::UsdGeomCamera>()) {
-            ARKOSE_LOG(Info, "            CAMERA {}", prim.GetPath().GetText());
+            ARKOSE_LOG(Info,    " - CAMERA   {}", prim.GetPath().GetText());
             //defineCamera(prim);
         } else if (prim.IsA<pxr::UsdShadeMaterial>()) {
-            ARKOSE_LOG(Info, "          MATERIAL {}", prim.GetPath().GetText());
+            ARKOSE_LOG(Info,    " - MATERIAL {}", prim.GetPath().GetText());
 
             std::unique_ptr<MaterialAsset> material = defineMaterial(prim);
 
@@ -1139,7 +1139,7 @@ int main(int argc, char* argv[])
             material->writeToFile(targetDirectory / std::filesystem::path(materialFileName), AssetStorage::Json); // TODO: Use binary storage!
 
         } else {
-            ARKOSE_LOG(Info, "                   {}", prim.GetPath().GetText());
+            ARKOSE_LOG(Verbose, "            {}", prim.GetPath().GetText());
         }
     }
 
