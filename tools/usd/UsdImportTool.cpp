@@ -849,54 +849,7 @@ void createMaterialFromUsdPreviewSurface(MaterialAsset& materialAsset, UsdPrim c
     materialAsset.doubleSided = false;
 }
 
-std::unique_ptr<MaterialAsset> createMaterial(pxr::UsdShadeMaterialBindingAPI const& materialBinding)
-{
-    SCOPED_PROFILE_ZONE();
-
-    // NOTE: Compare to this python example in reverse:
-    // https://github.com/PixarAnimationStudios/OpenUSD/blob/release/extras/usd/tutorials/simpleShading/generate_simpleShading.py
-
-    pxr::UsdShadeMaterial usdShadeMaterial = materialBinding.GetDirectBinding().GetMaterial();
-    //ARKOSE_LOG(Info, "UsdShadeMaterialBindingAPI: {}", usdShadeMaterial.GetPath().GetString());
-
-    auto materialAsset = std::make_unique<MaterialAsset>();
-    materialAsset->name = usdShadeMaterial.GetPrim().GetName().GetString();
-
-    //ARKOSE_LOG(Info, "Material named '{}':", materialAsset->name);
-
-    for (pxr::UsdShadeOutput const& displacementOutput : usdShadeMaterial.GetDisplacementOutputs()) {
-        if (displacementOutput.HasConnectedSource()) {
-            ARKOSE_LOG(Warning, "We can't yet handle displacement, ignoring displacement output");
-        }
-    }
-
-    std::vector<pxr::UsdShadeOutput> surfaceOutputs = usdShadeMaterial.GetSurfaceOutputs();
-    ARKOSE_ASSERT(surfaceOutputs.size() == 1); // TODO: Handle multiple outputs!
-    pxr::UsdShadeOutput& surfaceOutput = surfaceOutputs.front();
-
-    // Surely it needs something connected to be valid?
-    ARKOSE_ASSERT(surfaceOutput.HasConnectedSource());
-    ARKOSE_ASSERT(surfaceOutput.GetConnectedSources().size() == 1);
-    pxr::UsdShadeConnectionSourceInfo& sourceInfo = surfaceOutput.GetConnectedSources().front();
-    pxr::UsdShadeConnectableAPI shadeConnectableAPI = sourceInfo.source;
-
-    //ARKOSE_LOG(Info, " material is bound to shader '{}'", shadeConnectableAPI.GetPath().GetString());
-    pxr::UsdAttribute shaderInfoIdAttr = shadeConnectableAPI.GetPrim().GetAttribute(UsdShadeTokens->infoId);
-    pxr::TfToken shaderInfoIdToken;
-    if (shaderInfoIdAttr.Get<pxr::TfToken>(&shaderInfoIdToken)) {
-        //ARKOSE_LOG(Info, "  shader is of type '{}'", shaderInfoIdToken.GetString());
-    }
-
-    if (shaderInfoIdToken == pxr::TfToken("UsdPreviewSurface")) {
-        createMaterialFromUsdPreviewSurface(*materialAsset, shadeConnectableAPI.GetPrim());
-    } else {
-        NOT_YET_IMPLEMENTED();
-    }
-
-    return materialAsset;
-}
-
-std::unique_ptr<MaterialAsset> defineMaterial(pxr::UsdPrim const& materialPrim)
+std::unique_ptr<MaterialAsset> createMaterialAsset(pxr::UsdPrim const& materialPrim)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -942,7 +895,7 @@ std::unique_ptr<MaterialAsset> defineMaterial(pxr::UsdPrim const& materialPrim)
     return materialAsset;
 }
 
-std::unique_ptr<MeshAsset> defineMesh(pxr::UsdPrim const& meshPrim, pxr::UsdGeomBBoxCache& bboxCache)
+std::unique_ptr<MeshAsset> createMeshAsset(pxr::UsdPrim const& meshPrim, pxr::UsdGeomBBoxCache& bboxCache)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -1040,98 +993,6 @@ void defineMeshSegmentAssetAndDependencies(MeshSegmentAsset& meshSegment,
     NOT_YET_IMPLEMENTED();
 }
 
-void defineMeshAssetAndDependencies(pxr::UsdPrim const& meshPrim,
-                                    pxr::UsdGeomBBoxCache& bboxCache)
-{
-    SCOPED_PROFILE_ZONE();
-
-    pxr::UsdGeomMesh usdGeomMesh { meshPrim };
-
-    auto meshAsset = std::make_unique<MeshAsset>();
-    meshAsset->name = meshPrim.GetName().GetText();
-
-    //pxr::GfBBox3d aabb = usdGeomMesh.ComputeLocalBound(pxr::UsdTimeCode(0.0f));
-    pxr::GfBBox3d aabb = bboxCache.ComputeLocalBound(meshPrim);
-    pxr::GfVec3d aabbMin = aabb.GetRange().GetMin();
-    pxr::GfVec3d aabbMax = aabb.GetRange().GetMax();
-    meshAsset->boundingBox.min = vec3(static_cast<float>(aabbMin[0]), static_cast<float>(aabbMin[1]), static_cast<float>(aabbMin[2]));
-    meshAsset->boundingBox.max = vec3(static_cast<float>(aabbMax[0]), static_cast<float>(aabbMax[1]), static_cast<float>(aabbMax[2]));
-
-    MeshLODAsset& lod0 = meshAsset->LODs.emplace_back();
-
-    bool hasAnySubsets = false;
-    for (auto const& childPrim : meshPrim.GetDescendants()) {
-        if (childPrim.IsA<pxr::UsdGeomSubset>()) {
-            hasAnySubsets = true;
-            break;
-        }
-    }
-
-    if (hasAnySubsets) {
-
-        // Define the mesh asset in terms of the UsdGeomSubset's under the UsdGeomMesh
-        for (auto const& childPrim : meshPrim.GetDescendants()) {
-            if (childPrim.IsA<pxr::UsdGeomSubset>()) {
-                pxr::UsdGeomSubset usdGeomSubset { childPrim };
-                MeshSegmentAsset& meshSegment = lod0.meshSegments.emplace_back();
-                defineMeshSegmentAssetAndDependencies(meshSegment, meshPrim, usdGeomMesh, usdGeomSubset);
-            }
-        }
-
-    } else {
-
-        // Define the mesh asset directly from the UsdGeomMesh
-
-        MeshSegmentAsset& meshSegment = lod0.meshSegments.emplace_back();
-
-        // TODO: Is this not working..? Seems to always return an identity matrix. OTOH, I'm not sure
-        // how it would know what I want, as it depends on what I consider the "root" for the mesh.
-        // Will probably have to use the static variant of the function where I supply the xform ops
-        // to it and it bakes it down to a single 4x4 matrix.
-        pxr::GfMatrix4d localTransform;
-        bool resetsXformStack;
-        bool xformSuccess = usdGeomMesh.GetLocalTransformation(&localTransform, &resetsXformStack);
-        ARKOSE_ASSERT(xformSuccess && !resetsXformStack);
-
-        pxr::GfMatrix4d worldTransform = usdGeomMesh.ComputeLocalToWorldTransform(pxr::UsdTimeCode());
-
-        UnindexedTriangleMesh triangleMesh;
-        triangulateMesh(usdGeomMesh, triangleMesh); // maybe always worth doing?
-        //if (isSingleIndexedTriangleMesh(usdGeomMesh)) {
-        //    populateUnindexedTriangleMesh(usdGeomMesh, triangleMesh);
-        //} else {
-        //    triangulateMesh(usdGeomMesh, triangleMesh);
-        //}
-
-        generateTangents(triangleMesh);
-        indexifyMesh(triangleMesh, meshSegment);
-
-        //generateLODs(meshSegment);
-        //optimizeMesh(meshSegment);
-
-        // Set up the material for this mesh
-
-        std::unique_ptr<MaterialAsset> material = nullptr;
-        if (meshPrim.HasAPI<UsdShadeMaterialBindingAPI>() || meshPrim.GetRelationship(UsdShadeTokens->materialBinding)) {
-            UsdShadeMaterialBindingAPI materialBindingAPI { meshPrim };
-            material = createMaterial(materialBindingAPI);
-        } else if (usdGeomMesh.GetDisplayColorPrimvar().IsDefined()) {
-            material = createDisplayColorMaterial(meshPrim, usdGeomMesh);
-        }
-
-        // TODO: Don't do this..
-        material->writeToFile(material->name + ".arkmat", AssetStorage::Json);
-        meshSegment.setPathToMaterial(material->assetFilePath().generic_string());
-    }
-
-    meshAsset->writeToFile(meshAsset->name + ".arkmsh", AssetStorage::Binary);
-}
-
-void defineCamera(pxr::UsdPrim const& cameraPrim)
-{
-    ARKOSE_LOG(Error, "TODO: Implement defineCamera!");
-}
-
 int main(int argc, char* argv[])
 {
     if (argc < 3) {
@@ -1186,7 +1047,7 @@ int main(int argc, char* argv[])
         if (prim.IsA<pxr::UsdGeomMesh>()) {
             ARKOSE_LOG(Info,    " - MESH     {}", prim.GetPath().GetText());
 
-            std::unique_ptr<MeshAsset> mesh = defineMesh(prim, bboxCache);
+            std::unique_ptr<MeshAsset> mesh = createMeshAsset(prim, bboxCache);
 
             std::string meshFileName = mesh->name + MeshAsset::AssetFileExtension;
             mesh->writeToFile(targetDirectory / meshFileName, AssetStorage::Binary);
@@ -1194,12 +1055,11 @@ int main(int argc, char* argv[])
         } else if (prim.IsA<pxr::UsdGeomXform>()) {
             ARKOSE_LOG(Verbose, " - XFORM    {}", prim.GetPath().GetText());
         } else if (prim.IsA<pxr::UsdGeomCamera>()) {
-            ARKOSE_LOG(Info,    " - CAMERA   {}", prim.GetPath().GetText());
-            //defineCamera(prim);
+            ARKOSE_LOG(Verbose, " - CAMERA   {}", prim.GetPath().GetText());
         } else if (prim.IsA<pxr::UsdShadeMaterial>()) {
             ARKOSE_LOG(Info,    " - MATERIAL {}", prim.GetPath().GetText());
 
-            std::unique_ptr<MaterialAsset> material = defineMaterial(prim);
+            std::unique_ptr<MaterialAsset> material = createMaterialAsset(prim);
 
             auto processImage = [&](std::optional<MaterialInput>& materialInput, bool isNormalMap) {
                 if (materialInput && !materialInput->image.empty()) {
