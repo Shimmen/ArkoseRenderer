@@ -621,12 +621,12 @@ void generateTangents(UnindexedTriangleMesh& triangleMesh)
     }
 }
 
-std::shared_ptr<MaterialAsset> createDisplayColorMaterial(pxr::UsdPrim const& meshPrim,
+std::unique_ptr<MaterialAsset> createDisplayColorMaterial(pxr::UsdPrim const& meshPrim,
                                                           pxr::UsdGeomMesh const& usdGeomMesh)
 {
     SCOPED_PROFILE_ZONE();
 
-    auto materialAsset = std::make_shared<MaterialAsset>();
+    auto materialAsset = std::make_unique<MaterialAsset>();
     materialAsset->name = fmt::format("{}_displaycolor", meshPrim.GetName().GetString());
 
     pxr::UsdAttribute displayColorAttr = usdGeomMesh.GetDisplayColorAttr();
@@ -821,7 +821,7 @@ void createMaterialFromUsdPreviewSurface(MaterialAsset& materialAsset, UsdPrim c
     materialAsset.doubleSided = false;
 }
 
-std::shared_ptr<MaterialAsset> createMaterial(pxr::UsdShadeMaterialBindingAPI const& materialBinding)
+std::unique_ptr<MaterialAsset> createMaterial(pxr::UsdShadeMaterialBindingAPI const& materialBinding)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -831,7 +831,7 @@ std::shared_ptr<MaterialAsset> createMaterial(pxr::UsdShadeMaterialBindingAPI co
     pxr::UsdShadeMaterial usdShadeMaterial = materialBinding.GetDirectBinding().GetMaterial();
     //ARKOSE_LOG(Info, "UsdShadeMaterialBindingAPI: {}", usdShadeMaterial.GetPath().GetString());
 
-    auto materialAsset = std::make_shared<MaterialAsset>();
+    auto materialAsset = std::make_unique<MaterialAsset>();
     materialAsset->name = usdShadeMaterial.GetPrim().GetName().GetString();
 
     ARKOSE_LOG(Info, "Material named '{}':", materialAsset->name);
@@ -947,7 +947,7 @@ void defineMeshAssetAndDependencies(pxr::UsdPrim const& meshPrim,
 
         // Set up the material for this mesh
 
-        std::shared_ptr<MaterialAsset> material = nullptr;
+        std::unique_ptr<MaterialAsset> material = nullptr;
         if (meshPrim.HasAPI<UsdShadeMaterialBindingAPI>() || meshPrim.GetRelationship(UsdShadeTokens->materialBinding)) {
             UsdShadeMaterialBindingAPI materialBindingAPI { meshPrim };
             material = createMaterial(materialBindingAPI);
