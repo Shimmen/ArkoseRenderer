@@ -341,9 +341,11 @@ void triangulateMesh(pxr::UsdGeomMesh const& usdMesh, UnindexedTriangleMesh& tri
             /// UsdGeomTokens->uniform interpolation.
             pxr::TfToken normalsInterpToken = usdMesh.GetNormalsInterpolation();
             if (normalsInterpToken == pxr::UsdGeomTokens->vertex) {
+                shouldGenerateNormals = true;
                 shouldGenerateSmoothNormals = true;
             } else {
                 // NOTE: For now we're not distinguishing between faceVarying vs uniform interpolation.
+                shouldGenerateNormals = true;
                 shouldGenerateSmoothNormals = false;
             }
 
@@ -525,7 +527,10 @@ void generateArbitraryTangentSpace(UnindexedTriangleMesh& triangleMesh)
 
         // hacky conversions...
         pxr::GfVec3f normal = pxr::GfVec3f(n.x, n.y, n.z);
-        ARKOSE_ASSERT(normal.GetLength() > 0.99f);
+        if (normal.GetLength() < 0.99f) {
+            ARKOSE_LOG(Warning, "Normal length is not 1.0 when generating tangent - using arbitrary (1,0,0) normal instead");
+            normal = pxr::GfVec3f(1.0f, 0.0f, 0.0f);
+        }
 
         pxr::GfVec3f tangent, bitangent;
         normal.BuildOrthonormalFrame(&tangent, &bitangent);
@@ -937,6 +942,96 @@ std::unique_ptr<MaterialAsset> defineMaterial(pxr::UsdPrim const& materialPrim)
     return materialAsset;
 }
 
+std::unique_ptr<MeshAsset> defineMesh(pxr::UsdPrim const& meshPrim, pxr::UsdGeomBBoxCache& bboxCache)
+{
+    SCOPED_PROFILE_ZONE();
+
+    pxr::UsdGeomMesh usdGeomMesh { meshPrim };
+
+    auto meshAsset = std::make_unique<MeshAsset>();
+    meshAsset->name = meshPrim.GetName().GetText();
+
+    // pxr::GfBBox3d aabb = usdGeomMesh.ComputeLocalBound(pxr::UsdTimeCode(0.0f));
+    pxr::GfBBox3d aabb = bboxCache.ComputeLocalBound(meshPrim);
+    pxr::GfVec3d aabbMin = aabb.GetRange().GetMin();
+    pxr::GfVec3d aabbMax = aabb.GetRange().GetMax();
+    meshAsset->boundingBox.min = vec3(static_cast<float>(aabbMin[0]), static_cast<float>(aabbMin[1]), static_cast<float>(aabbMin[2]));
+    meshAsset->boundingBox.max = vec3(static_cast<float>(aabbMax[0]), static_cast<float>(aabbMax[1]), static_cast<float>(aabbMax[2]));
+
+    MeshLODAsset& lod0 = meshAsset->LODs.emplace_back();
+
+    bool hasAnySubsets = false;
+    for (auto const& childPrim : meshPrim.GetDescendants()) {
+        if (childPrim.IsA<pxr::UsdGeomSubset>()) {
+            hasAnySubsets = true;
+            break;
+        }
+    }
+
+    if (hasAnySubsets) {
+
+
+        // Define the mesh asset in terms of the UsdGeomSubset's under the UsdGeomMesh
+        for (auto const& childPrim : meshPrim.GetDescendants()) {
+            if (childPrim.IsA<pxr::UsdGeomSubset>()) {
+                pxr::UsdGeomSubset usdGeomSubset { childPrim };
+                MeshSegmentAsset& meshSegment = lod0.meshSegments.emplace_back();
+
+                NOT_YET_IMPLEMENTED();
+                //defineMeshSegmentAssetAndDependencies(meshSegment, meshPrim, usdGeomMesh, usdGeomSubset);
+            }
+        }
+
+    } else {
+
+        // Define the mesh asset directly from the UsdGeomMesh
+
+        MeshSegmentAsset& meshSegment = lod0.meshSegments.emplace_back();
+
+        // TODO: Is this not working..? Seems to always return an identity matrix. OTOH, I'm not sure
+        // how it would know what I want, as it depends on what I consider the "root" for the mesh.
+        // Will probably have to use the static variant of the function where I supply the xform ops
+        // to it and it bakes it down to a single 4x4 matrix.
+        //pxr::GfMatrix4d localTransform;
+        //bool resetsXformStack;
+        //bool xformSuccess = usdGeomMesh.GetLocalTransformation(&localTransform, &resetsXformStack);
+        //ARKOSE_ASSERT(xformSuccess && !resetsXformStack);
+
+        pxr::GfMatrix4d worldTransform = usdGeomMesh.ComputeLocalToWorldTransform(pxr::UsdTimeCode());
+
+        UnindexedTriangleMesh triangleMesh;
+        triangulateMesh(usdGeomMesh, triangleMesh); // maybe always worth doing?
+        // if (isSingleIndexedTriangleMesh(usdGeomMesh)) {
+        //     populateUnindexedTriangleMesh(usdGeomMesh, triangleMesh);
+        // } else {
+        //     triangulateMesh(usdGeomMesh, triangleMesh);
+        // }
+
+        generateTangents(triangleMesh);
+        indexifyMesh(triangleMesh, meshSegment);
+
+        // generateLODs(meshSegment);
+        // optimizeMesh(meshSegment);
+
+        // Set up the material for this mesh
+
+        if (meshPrim.HasAPI<UsdShadeMaterialBindingAPI>() || meshPrim.GetRelationship(UsdShadeTokens->materialBinding)) {
+            UsdShadeMaterialBindingAPI materialBindingAPI { meshPrim };
+            pxr::UsdShadeMaterial usdShadeMaterial = materialBindingAPI.GetDirectBinding().GetMaterial();
+            std::string materialName = usdShadeMaterial.GetPrim().GetName().GetString();
+
+            std::filesystem::path importedMaterialPath = std::filesystem::path(materialName).replace_extension(MaterialAsset::AssetFileExtension);
+            meshSegment.material = importedMaterialPath.generic_string();
+        }
+        // TODO: Handle basic display-color materials in some way.
+        //else if (usdGeomMesh.GetDisplayColorPrimvar().IsDefined()) {
+        //    material = createDisplayColorMaterial(meshPrim, usdGeomMesh);
+        //}
+    }
+
+    return meshAsset;
+}
+
 void defineMeshSegmentAssetAndDependencies(MeshSegmentAsset& meshSegment,
                                            pxr::UsdPrim const& meshPrim,
                                            pxr::UsdGeomMesh const& usdGeomMesh,
@@ -1090,7 +1185,12 @@ int main(int argc, char* argv[])
 
         if (prim.IsA<pxr::UsdGeomMesh>()) {
             ARKOSE_LOG(Info,    " - MESH     {}", prim.GetPath().GetText());
-            //defineMeshAssetAndDependencies(prim, bboxCache);
+
+            std::unique_ptr<MeshAsset> mesh = defineMesh(prim, bboxCache);
+
+            std::string meshFileName = mesh->name + MeshAsset::AssetFileExtension;
+            mesh->writeToFile(targetDirectory / meshFileName, AssetStorage::Binary);
+
         } else if (prim.IsA<pxr::UsdGeomXform>()) {
             ARKOSE_LOG(Verbose, " - XFORM    {}", prim.GetPath().GetText());
         } else if (prim.IsA<pxr::UsdGeomCamera>()) {
@@ -1135,8 +1235,8 @@ int main(int argc, char* argv[])
             processImage(material->bentNormalMap, true);
             processImage(material->materialProperties, false);
 
-            std::string materialFileName = material->name + ".arkmat";
-            material->writeToFile(targetDirectory / std::filesystem::path(materialFileName), AssetStorage::Json); // TODO: Use binary storage!
+            std::string materialFileName = material->name + MaterialAsset::AssetFileExtension;
+            material->writeToFile(targetDirectory / materialFileName, AssetStorage::Json); // TODO: Use binary storage!
 
         } else {
             ARKOSE_LOG(Verbose, "            {}", prim.GetPath().GetText());
