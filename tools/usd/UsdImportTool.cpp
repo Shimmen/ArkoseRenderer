@@ -5,6 +5,8 @@
 #include <core/Logging.h>
 #include <utility/Profiling.h>
 
+ARK_DISABLE_OPTIMIZATIONS
+
 // token stuff
 #include <pxr/base/tf/token.h>
 #include <pxr/usd/kind/registry.h>
@@ -940,7 +942,8 @@ int main(int argc, char* argv[])
 
     // Create dependency file
     {
-        std::filesystem::path dependencyFile = targetDirectory / "dependencies.dep";
+        std::string originalExt = inputAsset.extension().string();
+        std::filesystem::path dependencyFile = targetDirectory / inputAsset.filename().replace_extension(originalExt + ".dep");
         ARKOSE_LOG(Info, "UsdImportTool: writing dependency file '{}'", dependencyFile);
 
         std::string dependencyData = "";
