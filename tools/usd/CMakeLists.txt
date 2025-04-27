@@ -18,6 +18,8 @@ set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEAS
 target_include_directories(${PROJECT_NAME} PRIVATE ${PXR_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${PXR_LIBRARIES})
 
+target_compile_definitions(${PROJECT_NAME} PRIVATE _SILENCE_CXX20_OLD_SHARED_PTR_ATOMIC_SUPPORT_DEPRECATION_WARNING) # suppress warnings from USD headers
+
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:${PROJECT_NAME}> $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> # copy DLLs to exe location
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${PXR_USD_LOCATION}/lib/usd" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/usd" # copy USD plugins to exe location
