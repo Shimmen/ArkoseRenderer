@@ -1,6 +1,7 @@
 
 #include <ark/vector.h>
 #include <asset/MeshAsset.h>
+#include <asset/TextureCompressor.h>
 #include <core/Logging.h>
 #include <utility/Profiling.h>
 
@@ -890,6 +891,52 @@ std::unique_ptr<MaterialAsset> createMaterial(pxr::UsdShadeMaterialBindingAPI co
     return materialAsset;
 }
 
+std::unique_ptr<MaterialAsset> defineMaterial(pxr::UsdPrim const& materialPrim)
+{
+    SCOPED_PROFILE_ZONE();
+
+    // NOTE: Compare to this python example in reverse:
+    // https://github.com/PixarAnimationStudios/OpenUSD/blob/release/extras/usd/tutorials/simpleShading/generate_simpleShading.py
+
+    auto materialAsset = std::make_unique<MaterialAsset>();
+    materialAsset->name = materialPrim.GetName().GetString();
+
+    ARKOSE_LOG(Info, "Material named '{}':", materialAsset->name);
+
+    pxr::UsdShadeMaterial usdShadeMaterial { materialPrim };
+
+    for (pxr::UsdShadeOutput const& displacementOutput : usdShadeMaterial.GetDisplacementOutputs()) {
+        if (displacementOutput.HasConnectedSource()) {
+            ARKOSE_LOG(Warning, "We can't yet handle displacement, ignoring displacement output");
+        }
+    }
+
+    std::vector<pxr::UsdShadeOutput> surfaceOutputs = usdShadeMaterial.GetSurfaceOutputs();
+    ARKOSE_ASSERT(surfaceOutputs.size() == 1); // TODO: Handle multiple outputs!
+    pxr::UsdShadeOutput& surfaceOutput = surfaceOutputs.front();
+
+    // Surely it needs something connected to be valid?
+    ARKOSE_ASSERT(surfaceOutput.HasConnectedSource());
+    ARKOSE_ASSERT(surfaceOutput.GetConnectedSources().size() == 1);
+    pxr::UsdShadeConnectionSourceInfo& sourceInfo = surfaceOutput.GetConnectedSources().front();
+    pxr::UsdShadeConnectableAPI shadeConnectableAPI = sourceInfo.source;
+
+    ARKOSE_LOG(Info, " material is bound to shader '{}'", shadeConnectableAPI.GetPath().GetString());
+    pxr::UsdAttribute shaderInfoIdAttr = shadeConnectableAPI.GetPrim().GetAttribute(UsdShadeTokens->infoId);
+    pxr::TfToken shaderInfoIdToken;
+    if (shaderInfoIdAttr.Get<pxr::TfToken>(&shaderInfoIdToken)) {
+        ARKOSE_LOG(Info, "  shader is of type '{}'", shaderInfoIdToken.GetString());
+    }
+
+    if (shaderInfoIdToken == pxr::TfToken("UsdPreviewSurface")) {
+        createMaterialFromUsdPreviewSurface(*materialAsset, shadeConnectableAPI.GetPrim());
+    } else {
+        NOT_YET_IMPLEMENTED();
+    }
+
+    return materialAsset;
+}
+
 void defineMeshSegmentAssetAndDependencies(MeshSegmentAsset& meshSegment,
                                            pxr::UsdPrim const& meshPrim,
                                            pxr::UsdGeomMesh const& usdGeomMesh,
@@ -1043,14 +1090,54 @@ int main(int argc, char* argv[])
 
         if (prim.IsA<pxr::UsdGeomMesh>()) {
             ARKOSE_LOG(Info, "              MESH {}", prim.GetPath().GetText());
-            defineMeshAssetAndDependencies(prim, bboxCache);
+            //defineMeshAssetAndDependencies(prim, bboxCache);
         } else if (prim.IsA<pxr::UsdGeomXform>()) {
             ARKOSE_LOG(Info, "             XFORM {}", prim.GetPath().GetText());
         } else if (prim.IsA<pxr::UsdGeomCamera>()) {
             ARKOSE_LOG(Info, "            CAMERA {}", prim.GetPath().GetText());
-            defineCamera(prim);
+            //defineCamera(prim);
         } else if (prim.IsA<pxr::UsdShadeMaterial>()) {
             ARKOSE_LOG(Info, "          MATERIAL {}", prim.GetPath().GetText());
+
+            std::unique_ptr<MaterialAsset> material = defineMaterial(prim);
+
+            auto processImage = [&](std::optional<MaterialInput>& materialInput, bool isNormalMap) {
+                if (materialInput && !materialInput->image.empty()) {
+                    std::filesystem::path imageRelativePath = materialInput->image;
+                    std::filesystem::path imageSourcePath = inputAsset.parent_path() / imageRelativePath;
+                    std::unique_ptr<ImageAsset> imageAsset = ImageAsset::createFromSourceAsset(imageSourcePath);
+
+                    if (imageAsset->numMips() == 1) {
+                        imageAsset->generateMipmaps();
+                    }
+
+                    if (!imageAsset->hasCompressedFormat()) {
+                        TextureCompressor textureCompressor {};
+                        if (isNormalMap) {
+                            imageAsset = textureCompressor.compressBC5(*imageAsset);
+                        } else {
+                            imageAsset = textureCompressor.compressBC7(*imageAsset);
+                        }
+                    }
+
+                    // Write out new & processed image asset
+                    std::filesystem::path imageNewRelativePath = imageRelativePath.replace_extension(ImageAsset::AssetFileExtension);
+                    imageAsset->writeToFile(targetDirectory / imageNewRelativePath, AssetStorage::Binary);
+
+                    // Re-target material input to use the new processed image
+                    materialInput->image = imageNewRelativePath.generic_string();
+                }
+            };
+
+            processImage(material->baseColor, false);
+            processImage(material->emissiveColor, false);
+            processImage(material->normalMap, true);
+            processImage(material->bentNormalMap, true);
+            processImage(material->materialProperties, false);
+
+            std::string materialFileName = material->name + ".arkmat";
+            material->writeToFile(targetDirectory / std::filesystem::path(materialFileName), AssetStorage::Json); // TODO: Use binary storage!
+
         } else {
             ARKOSE_LOG(Info, "                   {}", prim.GetPath().GetText());
         }
