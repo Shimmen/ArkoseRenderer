@@ -976,15 +976,17 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    std::string inputAsset = argv[1];
+    std::filesystem::path inputAsset = argv[1];
     ARKOSE_LOG(Info, "UsdImportTool: importing asset '{}'", inputAsset);
 
-    std::string targetDirectory = argv[2];
+    std::filesystem::path targetDirectory = argv[2];
     ARKOSE_LOG(Info, "UsdImportTool: will write results to '{}'", targetDirectory);
 
-    if (!pxr::UsdStage::IsSupportedFile(inputAsset)) {
+    if (!pxr::UsdStage::IsSupportedFile(inputAsset.string())) {
         ARKOSE_LOG(Fatal, "USD can't open file '{}'.", inputAsset);
     }
+
+    FileIO::ensureDirectory(targetDirectory);
 
     pxr::UsdStageRefPtr stage;
     {
@@ -993,7 +995,7 @@ int main(int argc, char* argv[])
 
         // Defer as much loading as possible - we might not load all data and we can possibly manually multi-thread it later
         auto initialLoadSet = UsdStage::InitialLoadSet::LoadNone;
-        stage = pxr::UsdStage::Open(inputAsset, initialLoadSet);
+        stage = pxr::UsdStage::Open(inputAsset.string(), initialLoadSet);
     }
 
     if (stage) {
