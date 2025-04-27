@@ -968,27 +968,32 @@ void defineCamera(pxr::UsdPrim const& cameraPrim)
     ARKOSE_LOG(Error, "TODO: Implement defineCamera!");
 }
 
-int main()
+int main(int argc, char* argv[])
 {
-    SCOPED_PROFILE_ZONE();
+    if (argc < 3) {
+        // TODO: Add support for named command line arguments!
+        ARKOSE_LOG(Error, "UsdImportTool: must be called as\n> UsdImportTool <SourceUsdFile> <TargetDirectory>");
+        return 1;
+    }
 
-    //std::string filePath = "assets/usd/usd-assets/cornell-box/display-color/cornell-box.usda";
-    //std::string filePath = "assets/usd/usd-assets/cornell-box/usdpreviewsurface/cornell-box.usda";
-    //std::string filePath = "assets/usd/sample/UsdPreviewSurfaceExample.usda";
-    std::string filePath = "assets/usd/PKG_C_Trees/NewSponza_CypressTree_USDA_YUp.usda";
+    std::string inputAsset = argv[1];
+    ARKOSE_LOG(Info, "UsdImportTool: importing asset '{}'", inputAsset);
 
-    if (!pxr::UsdStage::IsSupportedFile(filePath)) {
-        ARKOSE_LOG(Fatal, "USD can't open file '{}'.", filePath);
+    std::string targetDirectory = argv[2];
+    ARKOSE_LOG(Info, "UsdImportTool: will write results to '{}'", targetDirectory);
+
+    if (!pxr::UsdStage::IsSupportedFile(inputAsset)) {
+        ARKOSE_LOG(Fatal, "USD can't open file '{}'.", inputAsset);
     }
 
     pxr::UsdStageRefPtr stage;
     {
         SCOPED_PROFILE_ZONE_NAMED("Load stage");
-        ARKOSE_LOG(Info, "Loading stage '{}' ...", filePath);
+        ARKOSE_LOG(Info, "Loading stage '{}' ...", inputAsset);
 
         // Defer as much loading as possible - we might not load all data and we can possibly manually multi-thread it later
         auto initialLoadSet = UsdStage::InitialLoadSet::LoadNone;
-        stage = pxr::UsdStage::Open(filePath, initialLoadSet);
+        stage = pxr::UsdStage::Open(inputAsset, initialLoadSet);
     }
 
     if (stage) {
