@@ -760,9 +760,9 @@ MaterialInput createMaterialInput(UsdPrim const& shaderPrim, MaterialAsset& mate
         }
 
     } else {
-        GfVec3f diffuseColor;
-        bool success = attribute.Get(&diffuseColor);
-        ARKOSE_ASSERT(success);
+        GfVec3f vectorValue;
+        bool success = attribute.Get(&vectorValue);
+        //ARKOSE_ASSERT(success);
 
         // TODO: Should we add a fallback value to each material input? I suppose it's more flexible than what we have now,
         // if we want to have a proper material graph implementation.
@@ -779,8 +779,11 @@ void createMaterialFromUsdPreviewSurface(MaterialAsset& materialAsset, UsdPrim c
 
     materialAsset.brdf = Brdf::Default;
 
-    int useSpecularWorkflow = readUsdAttributeValue<int>(shaderPrim, "inputs:useSpecularWorkflow");
-    ARKOSE_ASSERT(useSpecularWorkflow == 0); // For now (or maybe always?) we want to use the specular workflow
+    UsdAttribute useSpecularWorkflowAttr = shaderPrim.GetAttribute(TfToken("inputs:useSpecularWorkflow"));
+    int useSpecularWorkflow;
+    if (useSpecularWorkflowAttr.Get(&useSpecularWorkflow)) {
+        ARKOSE_ASSERT(useSpecularWorkflow == 0); // For now (or maybe always?) we want to use the specular workflow
+    }
 
     UsdAttribute diffuseColorAttr = shaderPrim.GetAttribute(TfToken("inputs:diffuseColor"));
     materialAsset.baseColor = createMaterialInput(shaderPrim, materialAsset, diffuseColorAttr);
@@ -794,26 +797,45 @@ void createMaterialFromUsdPreviewSurface(MaterialAsset& materialAsset, UsdPrim c
     // TODO: Read roughness & metallic which we need to combine into a single texture! Occlusion could also be baked into this
 
     // TODO: Move the tint out to the input, maybe? Aligns more nicely with UsdPreviewSurface and many other materials definitions as well.
-    materialAsset.colorTint = vec4(1.0f);
+    GfVec3f diffuseColorConstant;
+    if (diffuseColorAttr.Get(&diffuseColorConstant)) {
+        materialAsset.colorTint = vec4(diffuseColorConstant[0], diffuseColorConstant[1], diffuseColorConstant[1], 1.0f);
+    }
+
     // These factors are also effectively just tints of the inputs, so should probably also be inside the inputs
     materialAsset.metallicFactor = 1.0f;
     materialAsset.roughnessFactor = 1.0f;
 
+    UsdAttribute metallicAttr = shaderPrim.GetAttribute(TfToken("inputs:metallic"));
+    metallicAttr.Get(&materialAsset.metallicFactor);
+
+    UsdAttribute roughnessAttr = shaderPrim.GetAttribute(TfToken("inputs:roughness"));
+    roughnessAttr.Get(&materialAsset.roughnessFactor);
+
     // Determine blending
     {
         // TODO: Both of these can of course be connected to some other inputs, so we can't just assume constant values!
-        float opacity = readUsdAttributeValue<float>(shaderPrim, "inputs:opacity");
-        float opacityThreshold = readUsdAttributeValue<float>(shaderPrim, "inputs:opacityThreshold");
+        UsdAttribute opacityAttr = shaderPrim.GetAttribute(TfToken("inputs:opacity"));
+        UsdAttribute opacityThresholdAttr = shaderPrim.GetAttribute(TfToken("inputs:opacityThreshold"));
 
-        if (opacity == 1.0f) {
-            if (opacityThreshold == 0.0f) {
-                materialAsset.blendMode = BlendMode::Opaque;
+        float opacity;
+        if (opacityAttr.Get<float>(&opacity)) {
+
+            float opacityThreshold;
+            if (opacityThresholdAttr.Get<float>(&opacityThreshold)) {
+                if (opacityThreshold == 0.0f) {
+                    materialAsset.blendMode = BlendMode::Opaque;
+                } else {
+                    materialAsset.blendMode = BlendMode::Masked;
+                    materialAsset.maskCutoff = opacityThreshold;
+                }
             } else {
-                materialAsset.blendMode = BlendMode::Masked;
-                materialAsset.maskCutoff = opacityThreshold;
+                materialAsset.blendMode = BlendMode::Translucent;
+                materialAsset.colorTint.w = opacity;
             }
+
         } else {
-            materialAsset.blendMode = BlendMode::Translucent;
+            materialAsset.blendMode = BlendMode::Opaque;
         }
     }
 
