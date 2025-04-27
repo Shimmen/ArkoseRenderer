@@ -1,5 +1,4 @@
 
-# USD is required for all this tooling to work, as we are a "USD native" asset pipeline
 find_package(USD REQUIRED)
 
 message(STATUS "PXR_USD_LOCATION=${PXR_USD_LOCATION}")
@@ -7,53 +6,19 @@ message(STATUS "PXR_INCLUDE_DIRS=${PXR_INCLUDE_DIRS}")
 message(STATUS "PXR_LIBRARIES=${PXR_LIBRARIES}")
 
 ##################################
-######### ASSET PROCESSOR ########
+###### Command line tools ########
 ##################################
 
-add_library(AssetProcessor STATIC
-    assetprocessor/AssetIdentifier.h
-    assetprocessor/AssetProcessor.cpp
-    assetprocessor/AssetProcessor.h
-    )
-target_include_directories(AssetProcessor PUBLIC
-    assetprocessor
-    ${PXR_INCLUDE_DIRS}
-    )
-target_link_libraries(AssetProcessor PUBLIC
-    ArkoseCore
-    ${PXR_LIBRARIES}
-    mikktspace # for MikkTSpace tangent generation
-    )
+project(UsdImportTool)
+add_executable(${PROJECT_NAME} UsdImportTool.cpp)
+target_link_libraries(${PROJECT_NAME} ArkoseCore)
+set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "tools")
+set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_LIST_DIR}/bin/usd")
 
-get_target_property(ASSETPROCESSOR_SOURCES AssetProcessor SOURCES)
-source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/assetprocessor" FILES ${ASSETPROCESSOR_SOURCES})
+target_include_directories(${PROJECT_NAME} PRIVATE ${PXR_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} ${PXR_LIBRARIES})
 
-# Basic sample of the asset processor, for development purposes
-add_executable(AssetProcessorSample assetprocessor/sample/main.cpp)
-target_link_libraries(AssetProcessorSample PRIVATE AssetProcessor)
-
-add_custom_command(TARGET AssetProcessorSample POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:AssetProcessorSample> $<TARGET_RUNTIME_DLLS:AssetProcessorSample> # copy DLLs to exe
-    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PXR_USD_LOCATION}/lib/usd" "$<TARGET_FILE_DIR:AssetProcessorSample>/usd" # copy USD plugins to exe
-    COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/assets" "$<TARGET_FILE_DIR:AssetProcessorSample>/assets" # make symlinks to the assets dir
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:${PROJECT_NAME}> $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}> # copy DLLs to exe location
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${PXR_USD_LOCATION}/lib/usd" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/usd" # copy USD plugins to exe location
     COMMAND_EXPAND_LISTS )
-
-set_target_properties(AssetProcessorSample PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY "$<TARGET_FILE_DIR:AssetProcessorSample>")
-
-##################################
-########## ASSET SERVER ##########
-##################################
-#[[
-
-add_executable(AssetServer
-    assetserver/AssetServer.cpp
-    )
-target_link_libraries(AssetServer PRIVATE
-    AssetProcessor
-    )
-
-get_target_property(ASSETSERVER_SOURCES AssetServer SOURCES)
-source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/assetserver" FILES ${ASSETSERVER_SOURCES})
-
-]]
-##################################
