@@ -957,7 +957,7 @@ void defineMeshAssetAndDependencies(pxr::UsdPrim const& meshPrim,
 
         // TODO: Don't do this..
         material->writeToFile(material->name + ".arkmat", AssetStorage::Json);
-        meshSegment.setPathToMaterial(std::string(material->assetFilePath()));
+        meshSegment.setPathToMaterial(material->assetFilePath().generic_string());
     }
 
     meshAsset->writeToFile(meshAsset->name + ".arkmsh", AssetStorage::Binary);
