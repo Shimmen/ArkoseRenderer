@@ -85,6 +85,11 @@ struct tquat<T, ENABLE_STRUCT_IF_FLOATING_POINT(T)> {
     {
         return !all(vec == q.vec) || w != q.w;
     }
+
+    constexpr bool isNormalized(T epsilon = static_cast<T>(0.0001)) const
+    {
+        return std::abs(length2(*this) - static_cast<T>(1)) < epsilon;
+    }
 };
 
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
@@ -125,10 +130,36 @@ constexpr tquat<T> quatFromMatrix(const tmat4<T>& m)
     return q;
 }
 
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr T length2(const tquat<T>& q)
+{
+    return ark::length2(q.vec) + ark::square(q.w);
+}
+
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr T length(const tquat<T>& q)
+{
+    return std::sqrt(length2(q));
+}
+
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr tquat<T> normalize(const tquat<T>& q)
+{
+    tquat<T> result;
+
+    T len = length(q);
+    if (len > static_cast<T>(0)) {
+        result.vec = q.vec / len;
+        result.w = q.w / len;
+    }
+
+    return result;
+}
+
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
 constexpr tquat<T> inverse(const tquat<T>& q)
 {
-    T denominator = ark::length2(q.vec) + ark::square(q.w);
+    T denominator = ark::length2(q);
     return tquat<T>(q.vec / denominator, q.w / denominator);
 }
 
