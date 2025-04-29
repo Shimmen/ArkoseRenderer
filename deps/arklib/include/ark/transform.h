@@ -79,6 +79,7 @@ constexpr void decomposeMatrixToTranslationRotationScale(tmat4<T> m, tvec3<T>& t
 
     // Assuming no shear, matrix is now the rotation part
     orientation = quatFromMatrix(m);
+    orientation = normalize(orientation);
 }
 
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
