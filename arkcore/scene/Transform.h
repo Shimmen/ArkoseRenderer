@@ -18,7 +18,7 @@ public:
     Transform(vec3 translation, quat orientation, vec3 scale = vec3(1.0f), const Transform* parent = nullptr)
         : m_parent(parent)
         , m_translation(translation)
-        , m_orientation(orientation)
+        , m_orientation(normalize(orientation))
         , m_scale(scale)
     {
     }
@@ -29,7 +29,9 @@ public:
     }
 
     template<class Archive>
-    void serialize(Archive&);
+    void load(Archive&);
+    template<class Archive>
+    void save(Archive&) const;
 
     Transform const* parent() const { return m_parent; }
     void setParent(Transform const* parent);
@@ -67,7 +69,7 @@ public:
 
     void setOrientation(quat orientation)
     {
-        m_orientation = orientation;
+        m_orientation = normalize(orientation);
         m_matrix = {};
     }
 
@@ -178,10 +180,20 @@ public:
 #include <cereal/cereal.hpp>
 
 template<class Archive>
-void Transform::serialize(Archive& archive)
+void Transform::load(Archive& archive)
+{
+    archive(cereal::make_nvp("translation", m_translation));
+    archive(cereal::make_nvp("orientation", m_orientation));
+    archive(cereal::make_nvp("scale", m_scale));
+
+    m_orientation = normalize(m_orientation);
+}
+
+template<class Archive>
+void Transform::save(Archive& archive) const
 {
     // NOTE: Parent transform in the hierarchy is never serialized, will have to be reconstructed as load-time
     archive(cereal::make_nvp("translation", m_translation));
-    archive(cereal::make_nvp("orientation", m_orientation));
+    archive(cereal::make_nvp("orientation", normalize(m_orientation)));
     archive(cereal::make_nvp("scale", m_scale));
 }

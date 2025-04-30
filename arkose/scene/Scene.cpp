@@ -338,6 +338,7 @@ DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)
     ARKOSE_ASSERT(light);
     m_directionalLights.push_back(std::move(light));
     DirectionalLight& addedLight = *m_directionalLights.back();
+    ARKOSE_ASSERT(addedLight.transform().localOrientation().isNormalized());
     gpuScene().registerLight(addedLight);
     return addedLight;
 }
@@ -347,6 +348,7 @@ SphereLight& Scene::addLight(std::unique_ptr<SphereLight> light)
     ARKOSE_ASSERT(light);
     m_sphereLights.push_back(std::move(light));
     SphereLight& addedLight = *m_sphereLights.back();
+    ARKOSE_ASSERT(addedLight.transform().localOrientation().isNormalized());
     gpuScene().registerLight(addedLight);
     return addedLight;
 }
@@ -356,6 +358,7 @@ SpotLight& Scene::addLight(std::unique_ptr<SpotLight> light)
     ARKOSE_ASSERT(light);
     m_spotLights.push_back(std::move(light));
     SpotLight& addedLight = *m_spotLights.back();
+    ARKOSE_ASSERT(addedLight.transform().localOrientation().isNormalized());
     gpuScene().registerLight(addedLight);
     return addedLight;
 }

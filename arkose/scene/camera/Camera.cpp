@@ -13,7 +13,7 @@ class Scene;
 void Camera::setupFromCameraAsset(CameraAsset const& asset)
 {
     m_position = asset.position;
-    m_orientation = asset.orientation;
+    m_orientation = normalize(asset.orientation);
 
     m_nearClipPlane = asset.nearClipPlane;
     m_farClipPlane = asset.farClipPlane;

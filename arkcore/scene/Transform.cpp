@@ -27,6 +27,8 @@ void Transform::setPositionInWorld(vec3 worldPosition)
 
 void Transform::setOrientationInWorld(quat worldOrientation)
 {
+    worldOrientation = normalize(worldOrientation);
+
     quat newLocalOrientation = (m_parent != nullptr)
         ? ark::inverse(m_parent->orientationInWorld()) * worldOrientation
         : worldOrientation;
