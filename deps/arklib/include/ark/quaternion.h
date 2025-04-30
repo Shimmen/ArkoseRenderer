@@ -238,7 +238,7 @@ constexpr tquat<T> quatFromEulerAngles(const tvec3<T>& euler)
     T cy = std::cos(yaw * half);
     T sy = std::sin(yaw * half);
 
-    tvec3<T> q;
+    tquat<T> q;
     q.vec.x = sr * cp * cy - cr * sp * sy;
     q.vec.y = cr * sp * cy + sr * cp * sy;
     q.vec.z = cr * cp * sy - sr * sp * cy;
