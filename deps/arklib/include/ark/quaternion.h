@@ -156,6 +156,12 @@ constexpr tquat<T> normalize(const tquat<T>& q)
     return result;
 }
 
+template<typename T, ENABLE_IF_ARITHMETIC(T)>
+constexpr tquat<T> conjugate(const tquat<T>& q)
+{
+    return tquat<T>(-q.vec, q.w);
+}
+
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
 constexpr tquat<T> inverse(const tquat<T>& q)
 {
