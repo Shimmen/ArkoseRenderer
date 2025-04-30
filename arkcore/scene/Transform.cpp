@@ -30,7 +30,7 @@ void Transform::setOrientationInWorld(quat worldOrientation)
     worldOrientation = normalize(worldOrientation);
 
     quat newLocalOrientation = (m_parent != nullptr)
-        ? ark::inverse(m_parent->orientationInWorld()) * worldOrientation
+        ? conjugate(m_parent->orientationInWorld()) * worldOrientation
         : worldOrientation;
 
     setOrientation(newLocalOrientation);
