@@ -22,6 +22,7 @@ class EditorScene;
 class GpuScene;
 class LevelAsset;
 class MeshAsset;
+class SetAsset;
 class PhysicsBackend;
 class PhysicsScene;
 class SceneNode;
@@ -57,10 +58,12 @@ public:
     PhysicsScene& physicsScene() { return *m_physicsScene; }
     const PhysicsScene& physicsScene() const { return *m_physicsScene; }
 
-    // Level
+    // Level & set
 
     void addLevel(LevelAsset*);
     //void removeLevel(LevelAsset*);
+
+    void addSet(SetAsset*);
 
     // Camera
 

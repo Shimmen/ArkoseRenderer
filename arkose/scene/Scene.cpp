@@ -2,6 +2,7 @@
 
 #include "asset/LevelAsset.h"
 #include "asset/MeshAsset.h"
+#include "asset/SetAsset.h"
 #include "asset/external/CubeLUT.h"
 #include "core/Assert.h"
 #include "system/Input.h"
@@ -247,6 +248,31 @@ void Scene::addLevel(LevelAsset* levelAsset)
 
     if (levelAsset->probeGrid.has_value()) {
         setProbeGrid(levelAsset->probeGrid.value());
+    }
+}
+
+void Scene::addSet(SetAsset* setAsset)
+{
+    std::vector<NodeAsset*> nodeQueue;
+    nodeQueue.push_back(&setAsset->rootNode);
+
+    while (nodeQueue.size() > 0) {
+
+        NodeAsset* nodeAsset = nodeQueue.back();
+        nodeQueue.pop_back();
+
+        // TODO: Build & manage the hierarchy! For now we're just adding everything to the root node.
+
+        if (nodeAsset->meshIndex != NodeAsset::InvalidIndex) {
+
+            MeshAsset* meshAsset = MeshAsset::load(setAsset->meshAssets[nodeAsset->meshIndex]);
+            StaticMeshInstance& instance = addMesh(meshAsset, nodeAsset->transform);
+            instance.name = nodeAsset->name;
+        }
+
+        for (std::unique_ptr<NodeAsset> const& child : nodeAsset->children) {
+            nodeQueue.push_back(child.get());
+        }
     }
 }
 
