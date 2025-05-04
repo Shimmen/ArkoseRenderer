@@ -15,7 +15,7 @@ StaticMeshInstance::~StaticMeshInstance() = default;
 
 void StaticMeshInstance::drawGui()
 {
-    ImGui::Text("StaticMeshInstance");
+    ImGui::Text("StaticMeshInstance '%s'", name.c_str());
     ImGui::Spacing();
     ImGui::Text("Mesh: %u", m_mesh.indexOfType<u32>());
     ImGui::Spacing();
@@ -61,7 +61,7 @@ SkeletalMeshInstance::~SkeletalMeshInstance() = default;
 
 void SkeletalMeshInstance::drawGui()
 {
-    ImGui::Text("SkeletalMeshInstance");
+    ImGui::Text("SkeletalMeshInstance '%s'", name.c_str());
     ImGui::Spacing();
     ImGui::Text("Mesh: %u", m_mesh.indexOfType<u32>());
     ImGui::Spacing();
