@@ -9,6 +9,7 @@
 #include "rendering/debug/DebugDrawer.h"
 #include "rendering/RenderPipeline.h"
 #include "scene/camera/Camera.h"
+#include "scene/editor/EditorScene.h"
 #include "physics/PhysicsMesh.h"
 #include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
@@ -38,11 +39,9 @@ void Scene::update(float elapsedTime, float deltaTime)
         skeletalMeshInstance->skeleton().applyJointTransformations();
     }
 
-    if (Input::instance().wasKeyReleased(Key::Escape)) {
-        clearSelectedObject();
+    if (hasEditorScene()) { 
+        editorScene().update(elapsedTime, deltaTime);
     }
-
-    drawSceneGizmos();
 
     if (hasPhysicsScene()) {
         physicsScene().commitInstancesAwaitingAdd();
@@ -82,6 +81,10 @@ void Scene::setupFromDescription(const Description& description)
 
     if (m_currentMainCamera == nullptr) {
         addCamera("DefaultCamera", true);
+    }
+
+    if (description.createEditorScene) {
+        m_editorScene = std::make_unique<EditorScene>(*this);
     }
 }
 
@@ -471,48 +474,6 @@ void Scene::generateProbeGridFromBoundingBox()
     setProbeGrid(generatedProbeGrid);
 }
 
-void Scene::clearSelectedObject()
-{
-    m_selectedObject = nullptr;
-}
-
-void Scene::setSelectedObject(IEditorObject& editorObject)
-{
-    m_selectedObject = &editorObject;
-}
-
-void Scene::setSelectedObject(Light& light)
-{
-    // TODO: Also track type?
-    m_selectedObject = &light;
-}
-void Scene::setSelectedObject(StaticMeshInstance& meshInstance)
-{
-    // TODO: Also track type?
-    m_selectedObject = &meshInstance;
-}
-
-EditorGizmo* Scene::raycastScreenPointAgainstEditorGizmos(vec2 screenPoint)
-{
-    // `screenPoint` is a point in the output resolution but internally for
-    // everything about a scene we only care about the render resolution.
-    vec2 renderResolution = gpuScene().pipeline().renderResolution().asFloatVector();
-    vec2 outputResolution = gpuScene().pipeline().outputResolution().asFloatVector();
-    screenPoint *= renderResolution / outputResolution;
-
-    EditorGizmo* closestGizmo = nullptr;
-
-    for (EditorGizmo& gizmo : m_editorGizmos) {
-        if (gizmo.isScreenPointInside(screenPoint)) {
-            if (closestGizmo == nullptr || gizmo.distanceFromCamera() < closestGizmo->distanceFromCamera()) {
-                closestGizmo = &gizmo;
-            }
-        }
-    }
-
-    return closestGizmo;
-}
-
 void Scene::drawSettingsGui(bool includeContainingWindow)
 {
     if (includeContainingWindow) {
@@ -526,147 +487,11 @@ void Scene::drawSettingsGui(bool includeContainingWindow)
         ImGui::TreePop();
     }
 
-    if (ImGui::TreeNode("Visualisations")) {
-        ImGui::Checkbox("Draw all mesh bounding boxes", &m_shouldDrawAllInstanceBoundingBoxes);
-        ImGui::Checkbox("Draw bounding box of the selected mesh instance", &m_shouldDrawSelectedInstanceBoundingBox);
-        ImGui::Separator();
-        ImGui::Checkbox("Draw all mesh skeletons", &m_shouldDrawAllSkeletons);
-        ImGui::Checkbox("Draw skeleton of the selected mesh instance", &m_shouldDrawSelectedInstanceSkeleton);
-        ImGui::TreePop();
+    if (hasEditorScene()) { 
+        editorScene().drawGui();
     }
-
 
     if (includeContainingWindow) {
         ImGui::End();
-    }
-}
-
-void Scene::drawInstanceBoundingBox(StaticMeshInstance const& instance)
-{
-    if (StaticMesh* staticMesh = gpuScene().staticMeshForHandle(instance.mesh())) {
-        ark::aabb3 transformedAABB = staticMesh->boundingBox().transformed(instance.transform().worldMatrix());
-        DebugDrawer::get().drawBox(transformedAABB.min, transformedAABB.max, Colors::white);
-    }
-}
-
-void Scene::drawInstanceBoundingBox(SkeletalMeshInstance const& instance)
-{
-    if (SkeletalMesh* skeletalMesh = gpuScene().skeletalMeshForHandle(instance.mesh())) {
-        // TODO: Use an animated bounding box! The static one is only guaranteed to be bounding for the rest pose
-        ark::aabb3 transformedAABB = skeletalMesh->underlyingMesh().boundingBox().transformed(instance.transform().worldMatrix());
-        DebugDrawer::get().drawBox(transformedAABB.min, transformedAABB.max, Colors::white);
-    }
-}
-
-void Scene::drawInstanceSkeleton(SkeletalMeshInstance const& instance)
-{
-    DebugDrawer::get().drawSkeleton(instance.skeleton(), instance.transform().worldMatrix());
-}
-
-void Scene::drawSceneGizmos()
-{
-    // Reset "persistent" gizmos
-    m_editorGizmos.clear();
-
-    static ImGuizmo::OPERATION operation = ImGuizmo::TRANSLATE;
-    static ImGuizmo::MODE mode = ImGuizmo::WORLD;
-
-    auto& input = Input::instance();
-    if (not input.isButtonDown(Button::Right) && not input.isGuiUsingKeyboard()) {
-        if (input.wasKeyPressed(Key::W))
-            operation = ImGuizmo::TRANSLATE;
-        else if (input.wasKeyPressed(Key::E))
-            operation = ImGuizmo::ROTATE;
-        else if (input.wasKeyPressed(Key::R))
-            operation = ImGuizmo::SCALE;
-    }
-
-    if (input.wasKeyPressed(Key::Y) && not input.isGuiUsingKeyboard()) {
-        if (mode == ImGuizmo::LOCAL) {
-            mode = ImGuizmo::WORLD;
-        } else if (mode == ImGuizmo::WORLD) {
-            mode = ImGuizmo::LOCAL;
-        }
-    }
-
-    if (input.wasKeyPressed(Key::G)) {
-        m_shouldDrawGizmos = not m_shouldDrawGizmos;
-    }
-
-    if (m_shouldDrawGizmos) {
-        // Light gizmos
-        forEachLight([this](size_t idx, Light& light) {
-            Icon const& lightbulbIcon = gpuScene().iconManager().lightbulb();
-            IconBillboard iconBillboard = lightbulbIcon.asBillboard(camera(), light.transform().positionInWorld());
-            DebugDrawer::get().drawIcon(iconBillboard, light.color());
-
-            EditorGizmo gizmo { iconBillboard, light };
-            gizmo.debugName = light.name();
-            m_editorGizmos.push_back(gizmo);
-        });
-    }
-
-    if (m_shouldDrawAllInstanceBoundingBoxes) {
-        for (auto const& instance : gpuScene().staticMeshInstances()) {
-            drawInstanceBoundingBox(*instance);
-        }
-        for (auto const& instance : gpuScene().skeletalMeshInstances()) {
-            drawInstanceBoundingBox(*instance);
-        }
-    }
-    if (m_shouldDrawAllSkeletons) {
-        for (auto const& instance : gpuScene().skeletalMeshInstances()) {
-            drawInstanceSkeleton(*instance);
-        }
-    }
-
-    if (selectedObject()) {
-
-        if (m_shouldDrawSelectedInstanceBoundingBox || m_shouldDrawSelectedInstanceSkeleton) {
-            if (auto* staticInstance = dynamic_cast<StaticMeshInstance*>(selectedObject())) {
-                if (m_shouldDrawSelectedInstanceBoundingBox) {
-                    drawInstanceBoundingBox(*staticInstance);
-                }
-            } else if (auto* skeletalInstance = dynamic_cast<SkeletalMeshInstance*>(selectedObject())) {
-                if (m_shouldDrawSelectedInstanceBoundingBox) {
-                    drawInstanceBoundingBox(*skeletalInstance);
-                }
-                if (m_shouldDrawSelectedInstanceSkeleton) { 
-                    drawInstanceSkeleton(*skeletalInstance);
-                }
-            }
-        }
-
-        if (selectedObject()->shouldDrawGui()) {
-
-            constexpr float defaultWindowWidth = 480.0f;
-            vec2 windowPosition = vec2(ImGui::GetIO().DisplaySize.x - defaultWindowWidth - 16.0f, 32.0f);
-            ImGui::SetNextWindowPos(ImVec2(windowPosition.x, windowPosition.y), ImGuiCond_Appearing);
-            ImGui::SetNextWindowSize(ImVec2(defaultWindowWidth, 600.0f), ImGuiCond_Appearing);
-
-            bool open = true;
-            constexpr ImGuiWindowFlags flags = ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
-
-            if (ImGui::Begin("##SelectedObjectWindow", &open, flags)) {
-                selectedObject()->drawGui();
-            }
-            ImGui::End();
-        }
-
-        Transform& selectedTransform = selectedObject()->transform();
-
-        ImGuizmo::BeginFrame();
-        ImGuizmo::SetRect(0, 0, ImGui::GetIO().DisplaySize.x, ImGui::GetIO().DisplaySize.y);
-
-        mat4 viewMatrix = camera().viewMatrix();
-        mat4 projMatrix = camera().projectionMatrix();
-
-        // Silly stuff, since ImGuizmo doesn't seem to like my projection matrix..
-        projMatrix.y = -projMatrix.y;
-
-        mat4 matrix = selectedTransform.localMatrix();
-        if (ImGuizmo::Manipulate(value_ptr(viewMatrix), value_ptr(projMatrix), operation, mode, value_ptr(matrix))) {
-            selectedTransform.setFromMatrix(matrix);
-        }
     }
 }

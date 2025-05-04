@@ -18,6 +18,7 @@
 
 class Backend;
 class CubeLUT;
+class EditorScene;
 class GpuScene;
 class LevelAsset;
 class MeshAsset;
@@ -37,6 +38,7 @@ public:
 
     struct Description {
         std::string path {};
+        bool createEditorScene { true };
         bool withRayTracing { false };
         bool withMeshShading { false };
     };
@@ -47,6 +49,9 @@ public:
 
     GpuScene& gpuScene() { return *m_gpuScene; }
     const GpuScene& gpuScene() const { return *m_gpuScene; }
+
+    bool hasEditorScene() const { return m_editorScene != nullptr; }
+    EditorScene& editorScene() { return *m_editorScene; }
 
     bool hasPhysicsScene() const { return m_physicsScene != nullptr; }
     PhysicsScene& physicsScene() { return *m_physicsScene; }
@@ -103,23 +108,9 @@ public:
 
     void setColorGradingLUT(CubeLUT const*);
 
-    // Meta
-
-    void clearSelectedObject();
-    void setSelectedObject(IEditorObject&);
-    void setSelectedObject(Light& light);
-    void setSelectedObject(StaticMeshInstance& meshInstance);
-    IEditorObject* selectedObject() { return m_selectedObject; }
-
-    EditorGizmo* raycastScreenPointAgainstEditorGizmos(vec2 screenPoint);
-
     // GUI
 
     void drawSettingsGui(bool includeContainingWindow = false);
-    void drawInstanceBoundingBox(StaticMeshInstance const&);
-    void drawInstanceBoundingBox(SkeletalMeshInstance const&);
-    void drawInstanceSkeleton(SkeletalMeshInstance const&);
-    void drawSceneGizmos();
 
 private:
     Description m_description {};
@@ -128,6 +119,8 @@ private:
     std::unique_ptr<GpuScene> m_gpuScene {};
     // Manages all physics & collision for this scene
     std::unique_ptr<PhysicsScene> m_physicsScene {};
+    // Manages all editor specific data & logic of this scene
+    std::unique_ptr<EditorScene> m_editorScene {};
 
     Camera* m_currentMainCamera { nullptr };
     std::unordered_map<std::string, std::unique_ptr<Camera>> m_allCameras {};

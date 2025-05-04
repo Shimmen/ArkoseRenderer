@@ -17,6 +17,7 @@
 #include "rendering/nodes/TAANode.h"
 #include "rendering/output/OutputNode.h"
 #include "scene/Scene.h"
+#include "scene/editor/EditorScene.h"
 #include "scene/camera/Camera.h"
 #include "scene/lights/DirectionalLight.h"
 #include "utility/FileDialog.h"
@@ -259,7 +260,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
 
         ImGui::Checkbox("Draw bounding box", &m_drawBoundingBox);
         if (m_drawBoundingBox) {
-            m_scene->drawInstanceBoundingBox(*m_targetInstance);
+            m_scene->editorScene().drawInstanceBoundingBox(*m_targetInstance);
         }
 
         // This isn't really related to the current mesh so should probably be moved to its own panel..

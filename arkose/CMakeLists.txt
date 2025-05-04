@@ -231,6 +231,8 @@ set(ARKOSE_SOURCES
     arkose/scene/editor/EditorGizmo.cpp
     arkose/scene/editor/EditorGizmo.h
     arkose/scene/editor/EditorObject.h
+    arkose/scene/editor/EditorScene.cpp
+    arkose/scene/editor/EditorScene.h
     # lights
     arkose/scene/lights/DirectionalLight.cpp
     arkose/scene/lights/DirectionalLight.h

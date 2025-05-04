@@ -4,6 +4,7 @@
 #include "rendering/GpuScene.h"
 #include "rendering/RenderPipeline.h"
 #include "rendering/StaticMesh.h"
+#include "scene/editor/EditorScene.h"
 #include "scene/camera/CameraController.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
@@ -56,9 +57,11 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 
         if (meshSelectPick || focusDepthPick) {
 
-            if (EditorGizmo* gizmo = scene.scene().raycastScreenPointAgainstEditorGizmos(pickLocation)) {
+            EditorScene& editorScene = scene.scene().editorScene();
+
+            if (EditorGizmo* gizmo = editorScene.raycastScreenPointAgainstEditorGizmos(pickLocation)) {
                 if (meshSelectPick) {
-                    scene.scene().setSelectedObject(gizmo->editorObject());
+                    editorScene.setSelectedObject(gizmo->editorObject());
                 } else if (focusDepthPick) {
                     setFocusDepth(scene, gizmo->distanceFromCamera());
                 }
@@ -127,6 +130,8 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
 
         i32 drawIdx = 0;
         
+        EditorScene& editorScene = scene.scene().editorScene();
+
         for (auto& instance : scene.staticMeshInstances()) {
             if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
 
@@ -138,7 +143,7 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
 
                     if (drawIdx == selectedIdx) {
                         // TODO: This will break if/when we resize the instance vector
-                        scene.scene().setSelectedObject(*instance);
+                        editorScene.setSelectedObject(*instance);
                         return;
                     }
 
@@ -153,7 +158,7 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
 
                  if (drawIdx == selectedIdx) {
                      // TODO: This will break if/when we resize the instance vector
-                     scene.scene().setSelectedObject(*instance);
+                     editorScene.setSelectedObject(*instance);
                      return;
                  }
 
@@ -162,7 +167,7 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
         }
 
         // If no mesh was found, we must have clicked on the background so deselect current
-        scene.scene().clearSelectedObject();
+        editorScene.clearSelectedObject();
     }
 
     if (deferredResult.specifyFocusDepth) {
