@@ -43,7 +43,7 @@
 // In the future we should probably do the same but ensure it doesn't leak into headers.
 using namespace pxr;
 
-ARK_DISABLE_OPTIMIZATIONS
+//ARK_DISABLE_OPTIMIZATIONS
 
 struct UnindexedTriangleMesh {
     std::vector<vec3> positions;
@@ -675,6 +675,12 @@ void createMaterialFromUsdPreviewSurface(MaterialAsset& materialAsset, UsdPrim c
     materialAsset.doubleSided = false;
 }
 
+std::filesystem::path filePathForMaterial(std::filesystem::path targetDirectory, pxr::UsdPrim const& materialPrim)
+{
+    std::string materialFileName = materialPrim.GetName().GetString() + MaterialAsset::AssetFileExtension;
+    return targetDirectory / materialFileName;
+}
+
 std::unique_ptr<MaterialAsset> createMaterialAsset(pxr::UsdPrim const& materialPrim)
 {
     SCOPED_PROFILE_ZONE();
@@ -721,7 +727,7 @@ std::unique_ptr<MaterialAsset> createMaterialAsset(pxr::UsdPrim const& materialP
     return materialAsset;
 }
 
-std::unique_ptr<MeshAsset> createMeshAsset(pxr::UsdPrim const& meshPrim, pxr::UsdGeomBBoxCache& bboxCache)
+std::unique_ptr<MeshAsset> createMeshAsset(pxr::UsdPrim const& meshPrim, pxr::UsdGeomBBoxCache& bboxCache, std::filesystem::path targetDirectory)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -788,10 +794,8 @@ std::unique_ptr<MeshAsset> createMeshAsset(pxr::UsdPrim const& meshPrim, pxr::Us
         if (meshPrim.HasAPI<UsdShadeMaterialBindingAPI>() || meshPrim.GetRelationship(UsdShadeTokens->materialBinding)) {
             UsdShadeMaterialBindingAPI materialBindingAPI { meshPrim };
             pxr::UsdShadeMaterial usdShadeMaterial = materialBindingAPI.GetDirectBinding().GetMaterial();
-            std::string materialName = usdShadeMaterial.GetPrim().GetName().GetString();
-
-            std::filesystem::path importedMaterialPath = std::filesystem::path(materialName).replace_extension(MaterialAsset::AssetFileExtension);
-            meshSegment.material = importedMaterialPath.generic_string();
+            std::filesystem::path materialFilePath = filePathForMaterial(targetDirectory, usdShadeMaterial.GetPrim());
+            meshSegment.material = materialFilePath.generic_string();
         }
         // TODO: Handle basic display-color materials in some way.
         //else if (usdGeomMesh.GetDisplayColorPrimvar().IsDefined()) {
@@ -955,7 +959,7 @@ int main(int argc, char* argv[])
         if (prim.IsA<pxr::UsdGeomMesh>()) {
             ARKOSE_LOG(Info,    " - MESH     {}", prim.GetPath().GetText());
 
-            if (std::unique_ptr<MeshAsset> mesh = createMeshAsset(prim, bboxCache)) {
+            if (std::unique_ptr<MeshAsset> mesh = createMeshAsset(prim, bboxCache, targetDirectory)) {
 
                 std::string meshFileName = mesh->name + MeshAsset::AssetFileExtension;
                 std::filesystem::path meshFilePath = targetDirectory / meshFileName;
@@ -1010,9 +1014,9 @@ int main(int argc, char* argv[])
                 processImage(material->bentNormalMap, true);
                 processImage(material->materialProperties, false);
 
-                std::string materialFileName = material->name + MaterialAsset::AssetFileExtension;
-                material->writeToFile(targetDirectory / materialFileName, AssetStorage::Json); // TODO: Use binary storage!
-                outputDependencies.push_back(targetDirectory / materialFileName);
+                std::filesystem::path materialFilePath = filePathForMaterial(targetDirectory, prim);
+                material->writeToFile(materialFilePath, AssetStorage::Json); // TODO: Use binary storage!
+                outputDependencies.push_back(materialFilePath);
             } else {
                 errorCount += 1;
             }
