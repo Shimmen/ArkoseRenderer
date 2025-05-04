@@ -13,6 +13,7 @@ class IDebugDrawer {
 public:
 
     virtual void drawLine(vec3 p0, vec3 p1, Color color) = 0;
+    virtual void drawArrow(vec3 origin, vec3 direction, float length, Color color) = 0;
     virtual void drawBox(vec3 minPoint, vec3 maxPoint, Color color) = 0;
     virtual void drawSphere(vec3 center, float radius, Color color) = 0;
     virtual void drawIcon(IconBillboard const&, Color tint) = 0;
@@ -27,6 +28,7 @@ public:
     static DebugDrawer& get();
 
     virtual void drawLine(vec3 p0, vec3 p1, Color color = Colors::white) override;
+    virtual void drawArrow(vec3 origin, vec3 direction, float length, Color color = Colors::white) override;
     virtual void drawBox(vec3 minPoint, vec3 maxPoint, Color color = Colors::white) override;
     virtual void drawSphere(vec3 center, float radius, Color color = Colors::white) override;
     virtual void drawIcon(IconBillboard const&, Color tint = Colors::white) override;

@@ -22,6 +22,7 @@ public:
 
     // IDebugDrawer implementation
     virtual void drawLine(vec3 p0, vec3 p1, Color color) override;
+    virtual void drawArrow(vec3 origin, vec3 direction, float length, Color color) override;
     virtual void drawBox(vec3 minPoint, vec3 maxPoint, Color color) override;
     virtual void drawSphere(vec3 center, float radius, Color color) override;
     virtual void drawIcon(IconBillboard const&, Color tint) override;
@@ -45,6 +46,11 @@ private:
     static constexpr size_t LineVertexBufferSize = MaxNumLineSegments * 2 * sizeof(DebugDrawVertex);
     std::vector<DebugDrawVertex> m_lineVertices {};
     Buffer* m_lineVertexBuffer { nullptr };
+
+    static constexpr size_t MaxNumArrows = 128;
+    static constexpr size_t ArrowVertexBufferSize = MaxNumArrows * 2 * sizeof(DebugDrawVertex);
+    std::vector<DebugDrawVertex> m_arrowVertices {};
+    Buffer* m_arrowVertexBuffer { nullptr };
 
     struct DebugDrawTexturedVertex {
         DebugDrawTexturedVertex(vec3 inPosition, vec3 inColor, vec2 inTexCoord)

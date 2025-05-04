@@ -64,6 +64,11 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
     linesStateBuilder.writeDepth = false;
     linesStateBuilder.testDepth = false;
 
+    RenderStateBuilder arrowsStateBuilder = linesStateBuilder;
+    arrowsStateBuilder.lineWidth = 8.0f;
+    arrowsStateBuilder.writeDepth = true;
+    arrowsStateBuilder.testDepth = true;
+
     RenderStateBuilder trianglesStateBuilder { renderTarget, debugDrawShaderTextured, vertexLayoutTextured };
     trianglesStateBuilder.stateBindings().at(0, cameraBindingSet);
     trianglesStateBuilder.stateBindings().at(1, defaultTextureBindingSet);
@@ -73,15 +78,21 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
     trianglesStateBuilder.testDepth = true;
 
     RenderState& linesRenderState = reg.createRenderState(linesStateBuilder);
+    RenderState& arrowsRenderState = reg.createRenderState(arrowsStateBuilder);
     RenderState& trianglesRenderState = reg.createRenderState(trianglesStateBuilder);
 
     m_lineVertexBuffer = &reg.createBuffer(LineVertexBufferSize, Buffer::Usage::Vertex);
+    m_arrowVertexBuffer = &reg.createBuffer(ArrowVertexBufferSize, Buffer::Usage::Vertex);
     m_triangleVertexBuffer = &reg.createBuffer(TriangleVertexBufferSize, Buffer::Usage::Vertex);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
         if (m_lineVertices.size() > 0) {
             uploadBuffer.upload(m_lineVertices, *m_lineVertexBuffer);
+        }
+
+        if (m_arrowVertices.size() > 0) {
+            uploadBuffer.upload(m_arrowVertices, *m_arrowVertexBuffer);
         }
 
         if (m_triangleVertices.size() > 0) {
@@ -94,6 +105,10 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
         ARKOSE_ASSERT(numLineVertices % 2 == 0);
         m_lineVertices.clear();
 
+        uint32_t numArrowVertices = narrow_cast<u32>(m_arrowVertices.size());
+        ARKOSE_ASSERT(numArrowVertices % 2 == 0);
+        m_arrowVertices.clear();
+
         uint32_t numTriangleVertices = narrow_cast<u32>(m_triangleVertices.size());
         ARKOSE_ASSERT(numTriangleVertices % 3 == 0);
         m_triangleVertices.clear();
@@ -102,6 +117,13 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
             cmdList.beginRendering(linesRenderState);
             cmdList.bindVertexBuffer(*m_lineVertexBuffer, linesRenderState.vertexLayout().packedVertexSize(), 0);
             cmdList.draw(numLineVertices);
+            cmdList.endRendering();
+        }
+
+        if (numArrowVertices > 0) {
+            cmdList.beginRendering(arrowsRenderState);
+            cmdList.bindVertexBuffer(*m_arrowVertexBuffer, arrowsRenderState.vertexLayout().packedVertexSize(), 0);
+            cmdList.draw(numArrowVertices);
             cmdList.endRendering();
         }
 
@@ -136,6 +158,17 @@ void DebugDrawNode::drawLine(vec3 p0, vec3 p1, Color color)
 
     m_lineVertices.emplace_back(p0, color.asVec3());
     m_lineVertices.emplace_back(p1, color.asVec3());
+}
+
+void DebugDrawNode::drawArrow(vec3 origin, vec3 direction, float length, Color color)
+{
+    if (m_arrowVertices.size() + 2 > MaxNumArrows * 2) {
+        ARKOSE_LOG(Warning, "Debug draw: maximum number of arrows segments reached, will not draw all requested arrows.");
+        return;
+    }
+
+    m_arrowVertices.emplace_back(origin, color.asVec3());
+    m_arrowVertices.emplace_back(origin + length * direction, color.asVec3());
 }
 
 void DebugDrawNode::drawBox(vec3 minPoint, vec3 maxPoint, Color color)

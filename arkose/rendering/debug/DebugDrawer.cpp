@@ -16,6 +16,14 @@ void DebugDrawer::drawLine(vec3 p0, vec3 p1, Color color)
     }
 }
 
+void DebugDrawer::drawArrow(vec3 origin, vec3 direction, float length, Color color)
+{
+    validateDebugDrawersAreSetup("arrow");
+    for (IDebugDrawer* debugDrawer : m_debugDrawers) {
+        debugDrawer->drawArrow(origin, direction, length, color);
+    }
+}
+
 void DebugDrawer::drawBox(vec3 minPoint, vec3 maxPoint, Color color)
 {
     validateDebugDrawersAreSetup("box");
