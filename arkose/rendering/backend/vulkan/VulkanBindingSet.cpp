@@ -218,7 +218,6 @@ void VulkanBindingSet::updateBindings()
     std::vector<VkWriteDescriptorSet> descriptorSetWrites {};
     CapList<VkDescriptorBufferInfo> descBufferInfos { 4096 };
     CapList<VkDescriptorImageInfo> descImageInfos { 4096 };
-    CapList<VkWriteDescriptorSetAccelerationStructureNV> rtxAccelStructWrites { 10 };
     CapList<VkWriteDescriptorSetAccelerationStructureKHR> khrAccelStructWrites { 10 };
 
     for (auto& bindingInfo : shaderBindings()) {

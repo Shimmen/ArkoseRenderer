@@ -25,7 +25,7 @@
 #include <unordered_set>
 
 #if PLATFORM_LINUX
-#include <dlfcn.h>
+#include <dlfcn.h> // for dlopen & dlsym (for RenderDoc API loading)
 #endif
 
 #if defined(TRACY_ENABLE)
@@ -1671,8 +1671,7 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
         cmdList.endDebugLabel();
 
         {
-
-            // Performing explicit swapchain layout transition. This should only happen if we don't render any GUI.
+            // Transition swapchain image to present layout
 
             VkImageMemoryBarrier imageBarrier = { VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER };
             imageBarrier.oldLayout = VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL;
