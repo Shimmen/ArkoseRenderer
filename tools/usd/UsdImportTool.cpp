@@ -766,17 +766,6 @@ std::unique_ptr<MeshAsset> createMeshAsset(pxr::UsdPrim const& meshPrim, pxr::Us
 
         MeshSegmentAsset& meshSegment = lod0.meshSegments.emplace_back();
 
-        // TODO: Is this not working..? Seems to always return an identity matrix. OTOH, I'm not sure
-        // how it would know what I want, as it depends on what I consider the "root" for the mesh.
-        // Will probably have to use the static variant of the function where I supply the xform ops
-        // to it and it bakes it down to a single 4x4 matrix.
-        //pxr::GfMatrix4d localTransform;
-        //bool resetsXformStack;
-        //bool xformSuccess = usdGeomMesh.GetLocalTransformation(&localTransform, &resetsXformStack);
-        //ARKOSE_ASSERT(xformSuccess && !resetsXformStack);
-
-        pxr::GfMatrix4d worldTransform = usdGeomMesh.ComputeLocalToWorldTransform(pxr::UsdTimeCode());
-
         UnindexedTriangleMesh triangleMesh;
         triangulateMesh(usdGeomMesh, triangleMesh); // maybe always worth doing?
         // if (isSingleIndexedTriangleMesh(usdGeomMesh)) {
@@ -817,6 +806,39 @@ void defineMeshSegmentAssetAndDependencies(MeshSegmentAsset& meshSegment,
                                            pxr::UsdGeomSubset const& usdGeomSubset)
 {
     NOT_YET_IMPLEMENTED();
+}
+
+Transform createTransformFromXformable(pxr::UsdGeomXformable const& xformable)
+{
+    pxr::GfMatrix4d localTransform;
+    bool resetsXformStack;
+    bool xformSuccess = xformable.GetLocalTransformation(&localTransform, &resetsXformStack);
+    ARKOSE_ASSERT(xformSuccess && !resetsXformStack);
+
+    // Extract scale from the matrix, sort of. This is not equivalent, since we don't consider shear & not axis-dependent scaling.
+    // Let's see how far this takes us..
+    double scaleApproxNoShear = localTransform.GetDeterminant();
+
+    pxr::GfMatrix4d localTransformNoScaleShear = localTransform.RemoveScaleShear();
+    localTransformNoScaleShear.Orthonormalize();
+
+    pxr::GfVec3d translation = localTransformNoScaleShear.ExtractTranslation();
+    pxr::GfQuatd orientation = localTransformNoScaleShear.ExtractRotationQuat();
+
+    Transform transform;
+
+    transform.setTranslation(vec3(static_cast<float>(translation[0]),
+                                  static_cast<float>(translation[1]),
+                                  static_cast<float>(translation[2])));
+
+    transform.setOrientation(quat(vec3(static_cast<float>(orientation.GetImaginary()[0]),
+                                       static_cast<float>(orientation.GetImaginary()[1]),
+                                       static_cast<float>(orientation.GetImaginary()[2])),
+                                  static_cast<float>(orientation.GetReal())));
+
+    transform.setScale(static_cast<float>(scaleApproxNoShear));
+
+    return transform;
 }
 
 int main(int argc, char* argv[])
