@@ -15,6 +15,13 @@ static std::vector<nfdfilteritem_t> translateFilterItems(std::vector<FilterItem>
                                    .spec = filterItem.extensions });
     }
 
+    for (nfdfilteritem_t& filterItem : nfdFilterItems) {
+        // Skip any leading dots of the extension, as NDF doesn't want them..
+        if (filterItem.spec && filterItem.spec[0] == '.') {
+            filterItem.spec += 1;
+        }
+    }
+
     return nfdFilterItems;
 }
 
