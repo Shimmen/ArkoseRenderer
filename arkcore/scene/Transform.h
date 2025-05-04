@@ -33,6 +33,8 @@ public:
     template<class Archive>
     void save(Archive&) const;
 
+    void drawGui();
+
     Transform const* parent() const { return m_parent; }
     void setParent(Transform const* parent);
 

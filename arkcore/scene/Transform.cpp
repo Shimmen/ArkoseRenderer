@@ -1,5 +1,27 @@
 #include "Transform.h"
 
+#include <imgui.h>
+
+void Transform::drawGui()
+{
+    bool changed = false;
+
+    changed |= ImGui::DragFloat3("Translation", value_ptr(m_translation), 0.01f);
+
+    vec3 eulerAnglesDegrees = toDegrees(quatToEulerAngles(m_orientation));
+    if (ImGui::DragFloat3("Orientation", value_ptr(eulerAnglesDegrees), 1.0f)) {
+        m_orientation = normalize(quatFromEulerAngles(toRadians(eulerAnglesDegrees)));
+        changed |= true;
+    }
+
+    changed |= ImGui::DragFloat3("Scale", value_ptr(m_scale), 0.01f);
+
+    if (changed) {
+        m_matrix = {};
+        m_normalMatrix = {};
+    }
+}
+
 void Transform::setParent(Transform const* parent)
 {
     m_parent = parent;
