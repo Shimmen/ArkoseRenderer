@@ -13,6 +13,8 @@ set(ARKCORE_SOURCES
   arkcore/asset/MeshAsset.cpp
   arkcore/asset/MeshAsset.h
   arkcore/asset/SerialisationHelpers.h
+  arkcore/asset/SetAsset.cpp
+  arkcore/asset/SetAsset.h
   arkcore/asset/SkeletonAsset.cpp
   arkcore/asset/SkeletonAsset.h
   arkcore/asset/TextureCompressor.cpp
