@@ -181,18 +181,20 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
         m_meshShaderExt = std::make_unique<VulkanMeshShaderEXT>(*this, physicalDevice(), device());
     }
 
-#if WITH_DLSS
-    bool runningOnNvidiaPhysicalDevice = m_physicalDeviceProperties.vendorID == 0x10DE;
-    if (runningOnNvidiaPhysicalDevice && m_dlssHasAllRequiredExtensions && !m_renderdocAPI) {
-        m_dlss = std::make_unique<VulkanDLSS>(*this, m_instance, physicalDevice(), device());
-        if (m_dlss->isReadyToUse()) {
-            ARKOSE_LOG(Info, "VulkanBackend: DLSS is ready to use!");
-        } else {
-            ARKOSE_LOG(Info, "VulkanBackend: DLSS is not supported, but all required extensions etc. "
-                             "should be enabled by now. Is the dll placed next to the exe by the build process?");
+    #if WITH_DLSS
+    {
+        bool runningOnNvidiaPhysicalDevice = m_physicalDeviceProperties.vendorID == 0x10DE;
+        if (runningOnNvidiaPhysicalDevice && m_dlssHasAllRequiredExtensions && !m_renderdocAPI) {
+            m_dlss = std::make_unique<VulkanDLSS>(*this, m_instance, physicalDevice(), device());
+            if (m_dlss->isReadyToUse()) {
+                ARKOSE_LOG(Info, "VulkanBackend: DLSS is ready to use!");
+            } else {
+                ARKOSE_LOG(Info, "VulkanBackend: DLSS is not supported, but all required extensions etc. "
+                                 "should be enabled by now. Is the dll placed next to the exe by the build process?");
+            }
         }
     }
-#endif
+    #endif
 
     // Create empty stub descriptor set layout (useful for filling gaps as Vulkan doesn't allow having gaps)
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
@@ -234,9 +236,11 @@ VulkanBackend::~VulkanBackend()
 
     m_pipelineRegistry.reset();
 
-#if WITH_DLSS
-    m_dlss.reset();
-#endif
+    #if WITH_DLSS
+    {
+        m_dlss.reset();
+    }
+    #endif
 
     m_rayTracingKhr.reset();
 
@@ -694,11 +698,13 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
             addInstanceExtension(name);
         }
 
-#if __APPLE__
-        // Required when running Vulkan in portability mode, e.g., through MoltenVK on macOS
-        ARKOSE_ASSERT(hasSupportForInstanceExtension(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME));
-        addInstanceExtension(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-#endif
+        #if __APPLE__
+        {
+            // Required when running Vulkan in portability mode, e.g., through MoltenVK on macOS
+            ARKOSE_ASSERT(hasSupportForInstanceExtension(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME));
+            addInstanceExtension(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+        }
+        #endif
 
         // Required for checking support of complex features. It's probably fine to always require it. If it doesn't exist, we deal with it then..
         ARKOSE_ASSERT(hasSupportForInstanceExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME));
@@ -719,15 +725,17 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
             }
         }
 
-#if WITH_DLSS
-        for (VkExtensionProperties const* extension : VulkanDLSS::requiredInstanceExtensions()) {
-            if (hasSupportForInstanceExtension(extension->extensionName)) {
-                addInstanceExtension(extension->extensionName);
-            } else {
-                m_dlssHasAllRequiredExtensions = false;
+        #if WITH_DLSS
+        {
+            for (VkExtensionProperties const* extension : VulkanDLSS::requiredInstanceExtensions()) {
+                if (hasSupportForInstanceExtension(extension->extensionName)) {
+                    addInstanceExtension(extension->extensionName);
+                } else {
+                    m_dlssHasAllRequiredExtensions = false;
+                }
             }
         }
-#endif
+        #endif
     }
 
     VkValidationFeaturesEXT validationFeatures { VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT };
@@ -759,9 +767,11 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
     instanceCreateInfo.ppEnabledLayerNames = requestedLayers.data();
 
     instanceCreateInfo.flags = 0;
-#if __APPLE__
-    instanceCreateInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
-#endif
+    #if __APPLE__
+    {
+        instanceCreateInfo.flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    }
+    #endif
 
     if (debugMessengerCreateInfo) {
         instanceCreateInfo.pNext = debugMessengerCreateInfo;
@@ -825,17 +835,19 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
         addDeviceExtension(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
     #endif
 
-#if WITH_DLSS
-    if (m_dlssHasAllRequiredExtensions && !m_renderdocAPI) {
-        for (VkExtensionProperties const* extension : VulkanDLSS::requiredDeviceExtensions(m_instance, physicalDevice)) {
-            if (hasSupportForDeviceExtension(extension->extensionName)) {
-                addDeviceExtension(extension->extensionName);
-            } else {
-                m_dlssHasAllRequiredExtensions = false;
+    #if WITH_DLSS
+    {
+        if (m_dlssHasAllRequiredExtensions && !m_renderdocAPI) {
+            for (VkExtensionProperties const* extension : VulkanDLSS::requiredDeviceExtensions(m_instance, physicalDevice)) {
+                if (hasSupportForDeviceExtension(extension->extensionName)) {
+                    addDeviceExtension(extension->extensionName);
+                } else {
+                    m_dlssHasAllRequiredExtensions = false;
+                }
             }
         }
     }
-#endif
+    #endif
 
     VkPhysicalDeviceFeatures2 features2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
     VkPhysicalDeviceFeatures& vk10features = features2.features;
@@ -1716,28 +1728,29 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
     renderPipeline.timer().reportCpuTime(cpuFrameElapsedTime);
 
     #if defined(TRACY_ENABLE)
-    if (m_currentFrameIndex % TracyVulkanSubmitRate == 0) {
-        SCOPED_PROFILE_ZONE_BACKEND_NAMED("Submitting for VkTracy");
+    {
+        if (m_currentFrameIndex % TracyVulkanSubmitRate == 0) {
+            SCOPED_PROFILE_ZONE_BACKEND_NAMED("Submitting for VkTracy");
 
-        VkCommandBufferBeginInfo beginInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
-        if (vkBeginCommandBuffer(m_tracyCommandBuffer, &beginInfo) != VK_SUCCESS) {
-            ARKOSE_LOG(Fatal, "VulkanBackend: could not begin the command buffer for TracyVkCollect.");
+            VkCommandBufferBeginInfo beginInfo { VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO };
+            if (vkBeginCommandBuffer(m_tracyCommandBuffer, &beginInfo) != VK_SUCCESS) {
+                ARKOSE_LOG(Fatal, "VulkanBackend: could not begin the command buffer for TracyVkCollect.");
+            }
+
+            TracyVkCollect(m_tracyVulkanContext, m_tracyCommandBuffer);
+
+            if (vkEndCommandBuffer(m_tracyCommandBuffer) != VK_SUCCESS) {
+                ARKOSE_LOG(Fatal, "VulkanBackend: could not end the command buffer for TracyVkCollect.");
+            }
+
+            VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
+            submitInfo.commandBufferCount = 1;
+            submitInfo.pCommandBuffers = &m_tracyCommandBuffer;
+
+            if (vkQueueSubmit(m_graphicsQueue.queue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
+                ARKOSE_LOG(Fatal, "VulkanBackend: could not submit the command buffer for TracyVkCollect.");
+            }
         }
-
-        TracyVkCollect(m_tracyVulkanContext, m_tracyCommandBuffer);
-
-        if (vkEndCommandBuffer(m_tracyCommandBuffer) != VK_SUCCESS) {
-            ARKOSE_LOG(Fatal, "VulkanBackend: could not end the command buffer for TracyVkCollect.");
-        }
-
-        VkSubmitInfo submitInfo = { VK_STRUCTURE_TYPE_SUBMIT_INFO };
-        submitInfo.commandBufferCount = 1;
-        submitInfo.pCommandBuffers = &m_tracyCommandBuffer;
-
-        if (vkQueueSubmit(m_graphicsQueue.queue, 1, &submitInfo, VK_NULL_HANDLE) != VK_SUCCESS) {
-            ARKOSE_LOG(Fatal, "VulkanBackend: could not submit the command buffer for TracyVkCollect.");
-        }
-        
     }
     #endif
 
@@ -2423,23 +2436,27 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
 
 bool VulkanBackend::hasUpscalingSupport() const
 {
-#if WITH_DLSS
-    return m_dlss != nullptr && m_dlss->isReadyToUse();
-#else
-    return false;
-#endif
+    #if WITH_DLSS
+    {
+        return m_dlss && m_dlss->isReadyToUse();
+    }
+    #else
+    {
+        return false;
+    }
+    #endif
 }
 
 UpscalingPreferences VulkanBackend::queryUpscalingPreferences(UpscalingTech tech, UpscalingQuality quality, Extent2D outputRes) const
 {
     ARKOSE_ASSERT(hasUpscalingSupport());
 
-#if WITH_DLSS
+    #if WITH_DLSS
     if (tech == UpscalingTech::DLSS) {
         ARKOSE_ASSERT(hasDlssFeature());
         return m_dlss->queryOptimalSettings(outputRes, quality);
     }
-#endif
+    #endif
 
     ASSERT_NOT_REACHED();
 }

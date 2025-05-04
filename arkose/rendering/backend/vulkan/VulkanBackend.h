@@ -129,24 +129,24 @@ public:
         return *m_debugUtils;
     }
 
-#if WITH_DLSS
-    bool hasDlssFeature() const
-    {
-        return m_dlss != nullptr && m_dlss->isReadyToUse();
-    }
-    VulkanDLSS& dlssFeature()
-    {
-        ARKOSE_ASSERT(hasDlssFeature());
-        return *m_dlss;
-    }
-#endif
+    #if WITH_DLSS
+        bool hasDlssFeature() const
+        {
+            return m_dlss != nullptr && m_dlss->isReadyToUse();
+        }
+        VulkanDLSS& dlssFeature()
+        {
+            ARKOSE_ASSERT(hasDlssFeature());
+            return *m_dlss;
+        }
+    #endif
 
-#if defined(TRACY_ENABLE)
-    tracy::VkCtx* tracyVulkanContext()
-    {
-        return m_tracyVulkanContext;
-    }
-#endif
+    #if defined(TRACY_ENABLE)
+        tracy::VkCtx* tracyVulkanContext()
+        {
+            return m_tracyVulkanContext;
+        }
+    #endif
 
     ///////////////////////////////////////////////////////////////////////////
     /// Backend services
@@ -323,10 +323,10 @@ private:
 
     std::unique_ptr<VulkanDebugUtils> m_debugUtils {};
 
-#if WITH_DLSS
-    bool m_dlssHasAllRequiredExtensions { true };
-    std::unique_ptr<VulkanDLSS> m_dlss {};
-#endif
+    #if WITH_DLSS
+        bool m_dlssHasAllRequiredExtensions { true };
+        std::unique_ptr<VulkanDLSS> m_dlss {};
+    #endif
 
     ///////////////////////////////////////////////////////////////////////////
     /// Resource & resource management members
