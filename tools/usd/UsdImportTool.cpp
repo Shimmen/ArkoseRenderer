@@ -1,11 +1,10 @@
 
 #include <ark/vector.h>
 #include <asset/MeshAsset.h>
+#include <asset/SetAsset.h>
 #include <asset/TextureCompressor.h>
 #include <core/Logging.h>
 #include <utility/Profiling.h>
-
-ARK_DISABLE_OPTIMIZATIONS
 
 // token stuff
 #include <pxr/base/tf/token.h>
@@ -22,6 +21,9 @@ ARK_DISABLE_OPTIMIZATIONS
 #include <pxr/usd/usdGeom/mesh.h>
 #include <pxr/usd/usdGeom/bboxCache.h>
 #include <pxr/usd/usdGeom/xform.h>
+
+// usd light stuff
+#include <pxr/usd/usdLux/lightAPI.h>
 
 // usd camera stuff
 #include <pxr/usd/usdGeom/camera.h>
@@ -841,6 +843,20 @@ Transform createTransformFromXformable(pxr::UsdGeomXformable const& xformable)
     return transform;
 }
 
+pxr::UsdPrim findTransformableParent(pxr::UsdPrim const& prim)
+{
+    pxr::UsdPrim parent = prim.GetParent();
+    while (!parent.IsPseudoRoot() && !parent.IsA<pxr::UsdGeomXform>()) {
+        parent = parent.GetParent();
+        ARKOSE_LOG(Info, "  curent parent '{}'", parent.GetPath().GetText());
+    }
+
+    // We should be creating a NodeAsset for each transformable object, so there should always be something here
+    ARKOSE_ASSERT(parent.IsValid());
+
+    return parent;
+}
+
 int main(int argc, char* argv[])
 {
     if (argc < 3) {
@@ -880,37 +896,81 @@ int main(int argc, char* argv[])
 
     pxr::UsdGeomBBoxCache bboxCache{ pxr::UsdTimeCode(0.0f), pxr::UsdGeomImageable::GetOrderedPurposeTokens() };
 
-    //pxr::SdfLayerHandle rootLayer = stage->GetRootLayer();
+    std::unique_ptr<SetAsset> setAsset = std::make_unique<SetAsset>();
+    setAsset->name = inputAsset.stem().string();
+
+    std::unordered_map<std::string, NodeAsset*> nodeAssetMap;
+    auto createNodeAsset = [&](pxr::UsdPrim const& prim) -> NodeAsset* {
+        ARKOSE_ASSERT(prim.IsA<pxr::UsdGeomXformable>());
+        pxr::UsdGeomXformable xformable { prim };
+
+        pxr::UsdPrim parent = findTransformableParent(prim);
+
+        NodeAsset* parentNodeAsset = nullptr;
+        if (parent.IsPseudoRoot()) {
+            // The pseudo root is technically not xformable, but we treat it as such
+            // in our SetAsset hierarchy as the actual, non-psuedo root node.
+            parentNodeAsset = &setAsset->rootNode;
+        } else {
+            std::string primPath = parent.GetPath().GetString();
+            auto entry = nodeAssetMap.find(primPath);
+            ARKOSE_ASSERT(entry != nodeAssetMap.end());
+            parentNodeAsset = entry->second;
+        }
+
+        NodeAsset* nodeAsset = parentNodeAsset->createChildNode();
+        nodeAsset->name = prim.GetName().GetString();
+        nodeAsset->transform = createTransformFromXformable(xformable);
+
+        nodeAssetMap[prim.GetPath().GetString()] = nodeAsset;
+
+        return nodeAsset;
+    };
 
     std::vector<std::filesystem::path> outputDependencies;
     u32 errorCount = 0;
 
+    u32 numModels = 0;
     for (const pxr::UsdPrim& prim : stage->Traverse()) {
-        SCOPED_PROFILE_ZONE_NAMED("ForEachPrim");
 
-        //if (prim.IsGroup()) {
-        //    //ARKOSE_LOG(Info, "Found a model '{}'", prim.GetPath().GetText());
-        //    continue;
-        //}
+        if (!prim.IsActive()) {
+            ARKOSE_LOG(Verbose, "Skipping inactive prim '{}'", prim.GetPath().GetText());
+        }
 
-        //bool isComponent = pxr::UsdModelAPI(prim).IsKind(pxr::KindTokens->component);
-        //bool isSubcomponent = pxr::UsdModelAPI(prim).IsKind(pxr::KindTokens->subcomponent);
+        //ARKOSE_LOG(Info, "Found prim '{}'", prim.GetPath().GetText());
+
+        // TODO: Treat a model (UsdModelAPI) as the SetAsset, so typically we get a single SetAsset per .usd-file, but if there's
+        // metadata to indicate otherwise we can create multiple SetAssets from a single .usd-file.
+        //prim.IsGroup(), prim.IsModel(), prim.IsComponent(), prim.IsSubComponent()
+        if (prim.IsModel() && !prim.IsPseudoRoot()) {
+            ARKOSE_LOG(Verbose, "Found Usd model (UsdModelAPI) prim '{}'", prim.GetPath().GetText());
+            numModels += 1;
+        }
+
+        NodeAsset* currentNodeAsset = nullptr;
+        if (prim.IsA<pxr::UsdGeomXformable>()) {
+            currentNodeAsset = createNodeAsset(prim);
+        }
 
         if (prim.IsA<pxr::UsdGeomMesh>()) {
             ARKOSE_LOG(Info,    " - MESH     {}", prim.GetPath().GetText());
 
             if (std::unique_ptr<MeshAsset> mesh = createMeshAsset(prim, bboxCache)) {
+
                 std::string meshFileName = mesh->name + MeshAsset::AssetFileExtension;
-                mesh->writeToFile(targetDirectory / meshFileName, AssetStorage::Binary);
-                outputDependencies.push_back(targetDirectory / meshFileName);
+                std::filesystem::path meshFilePath = targetDirectory / meshFileName;
+
+                mesh->writeToFile(meshFilePath, AssetStorage::Binary);
+                outputDependencies.push_back(meshFilePath);
+
+                ARKOSE_ASSERT(currentNodeAsset);
+                currentNodeAsset->meshIndex = narrow_cast<i32>(setAsset->meshAssets.size());
+                setAsset->meshAssets.emplace_back(meshFilePath.generic_string());
+
             } else {
                 errorCount += 1;
             }
 
-        } else if (prim.IsA<pxr::UsdGeomXform>()) {
-            ARKOSE_LOG(Verbose, " - XFORM    {}", prim.GetPath().GetText());
-        } else if (prim.IsA<pxr::UsdGeomCamera>()) {
-            ARKOSE_LOG(Verbose, " - CAMERA   {}", prim.GetPath().GetText());
         } else if (prim.IsA<pxr::UsdShadeMaterial>()) {
             ARKOSE_LOG(Info,    " - MATERIAL {}", prim.GetPath().GetText());
 
@@ -957,9 +1017,32 @@ int main(int argc, char* argv[])
                 errorCount += 1;
             }
 
+        } else if (prim.IsA<pxr::UsdGeomCamera>()) {
+            ARKOSE_LOG(Info,    " - CAMERA   {}", prim.GetPath().GetText());
+
+            // TODO!
+
+        } else if (prim.HasAPI<pxr::UsdLuxLightAPI>()) { 
+            ARKOSE_LOG(Info,    " - LIGHT    {}", prim.GetPath().GetText());
+
+            // TODO!
+
         } else {
             ARKOSE_LOG(Verbose, "            {}", prim.GetPath().GetText());
         }
+    }
+
+    if (numModels == 0) { 
+        ARKOSE_LOG(Warning, "Found no models (UsdModelAPI) - interpreting the full file as a single model");
+    } else if (numModels > 1) {
+        ARKOSE_LOG(Warning, "Found more than one ({}) models (UsdModelAPI) - not yet supported, interpreting the full file as a single model", numModels);
+    }
+
+    // Write out the set asset
+    {
+        std::string setFileName = setAsset->name + SetAsset::AssetFileExtension;
+        setAsset->writeToFile(targetDirectory / setFileName, AssetStorage::Json); // TODO: Use binary storage!
+        outputDependencies.push_back(targetDirectory / setFileName);
     }
 
     // Create dependency file
@@ -977,5 +1060,9 @@ int main(int argc, char* argv[])
         FileIO::writeTextDataToFile(dependencyFile, dependencyData);
     }
 
-    return errorCount;
+    if (errorCount > 0) {
+        ARKOSE_LOG(Error, "{} errors while importing asset '{}'", errorCount, inputAsset);
+    }
+
+    return errorCount ? 1 : 0;
 }
