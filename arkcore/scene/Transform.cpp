@@ -4,6 +4,7 @@ void Transform::setParent(Transform const* parent)
 {
     m_parent = parent;
     m_matrix = {};
+    m_normalMatrix = {};
 }
 
 Transform Transform::flattened() const

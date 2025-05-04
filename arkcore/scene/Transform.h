@@ -59,6 +59,7 @@ public:
         setOrientation(orientation);
         setScale(scale);
         m_matrix = {};
+        m_normalMatrix = {};
     }
 
     void setTranslation(vec3 translation)
@@ -71,18 +72,21 @@ public:
     {
         m_orientation = normalize(orientation);
         m_matrix = {};
+        m_normalMatrix = {};
     }
 
     void setScale(vec3 scale)
     {
         m_scale = scale;
         m_matrix = {};
+        m_normalMatrix = {};
     }
 
     void setScale(float scale)
     {
         m_scale = vec3(scale);
         m_matrix = {};
+        m_normalMatrix = {};
     }
 
     void setFromMatrix(mat4 matrix)
@@ -91,6 +95,7 @@ public:
 
         // Reset matrix
         m_matrix = {};
+        m_normalMatrix = {};
     }
 
     mat4 localMatrix() const
