@@ -77,32 +77,19 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     scene.setupFromDescription(description);
 
     if (description.path.empty()) {
-        //setupCullingShowcaseScene(scene);
+        setupCullingShowcaseScene(scene);
+    } else {
+        MeshAsset* meshAsset = MeshAsset::load("assets/sample/models/CesiumMan/Cesium_Man.arkmsh");
+        SkeletonAsset* skeletonAsset = SkeletonAsset::load("assets/sample/models/CesiumMan/Armature.arkskel");
+        AnimationAsset* animationAsset = AnimationAsset::load("assets/sample/models/CesiumMan/animation0000.arkanim");
 
-        auto importTask = AssetImportTask::create("assets/sample/models/CesiumMan/CesiumMan.gltf",
-                                                  "assets/sample/models/CesiumMan/",
-                                                  AssetImporterOptions());
-        importTask->executeSynchronous();
+        Transform transform {};
+        transform.setTranslation(vec3(-7.0f, 0.0f, -0.85f));
+        transform.setOrientation(quat(vec3(0.671434045f, 0.221768513f, 0.221769705f), -0.671426296f));
+        m_skeletalMeshInstance = &scene.addSkeletalMesh(meshAsset, skeletonAsset, transform);
 
-        if (ImportResult* result = importTask->result()) {
-
-            // NOTE: While we could use the ImportResult assets directly, they are not managed by the asset system,
-            // but merely as unique_ptrs owned by the ImportResult. This way we transfer ownership to the asset system,
-            // so we don't need to manually keep hold of the unique_ptrs for them not to go out of scope.
-            MeshAsset* meshAsset = MeshAsset::manage(std::move(result->meshes[0]));
-            SkeletonAsset* skeletonAsset = SkeletonAsset::manage(std::move(result->skeletons[0]));
-            AnimationAsset* animationAsset = AnimationAsset::manage(std::move(result->animations[0]));
-
-            Transform transform {};
-            transform.setOrientation(quat(vec3(0.5f, 0.5f, 0.5f), -0.5f));
-            m_skeletalMeshInstance = &scene.addSkeletalMesh(meshAsset, skeletonAsset, transform);
-
-            m_testAnimation = Animation::bind(animationAsset, *m_skeletalMeshInstance);
-            m_testAnimation->setPlaybackMode(Animation::PlaybackMode::Looping);
-
-            Camera& camera = scene.addCamera("LookatCam", true);
-            camera.lookAt(vec3(-1.0f, 1.0f, 3.0f), vec3(0.0f, 1.0f, 0.0f));
-        }
+        m_testAnimation = Animation::bind(animationAsset, *m_skeletalMeshInstance);
+        m_testAnimation->setPlaybackMode(Animation::PlaybackMode::Looping);
     }
 
     if (scene.directionalLightCount() == 0) {
@@ -371,7 +358,7 @@ void ShowcaseApp::setupCullingShowcaseScene(Scene& scene)
     m_animatingInstances.clear();
     m_animatingInstances.reserve(NumAnimatingInstances);
 
-    MeshAsset* helmetAsset = MeshAsset::load("assets/sample/models/DamagedHelmet/DamagedHelmet.arkmsh");
+    MeshAsset* helmetAsset = MeshAsset::load("assets/sample/models/DamagedHelmet/mesh_helmet_LP_13930damagedHelmet.arkmsh");
     StaticMeshHandle helmet = scene.gpuScene().registerStaticMesh(helmetAsset);
 
     m_fpsCameraController.setMaxSpeed(35.0f);
