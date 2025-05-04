@@ -2,6 +2,7 @@
 
 #include "asset/LevelAsset.h"
 #include "rendering/backend/base/Backend.h"
+#include "rendering/debug/DebugDrawer.h"
 #include <imgui.h>
 
 SpotLight::SpotLight()
@@ -53,6 +54,8 @@ void SpotLight::drawGui()
         ImGui::SliderFloat("Slope bias", &customSlopeBias, 0.0f, 10.0f);
         ImGui::TreePop();
     }
+
+    DebugDrawer::get().drawArrow(transform().positionInWorld(), transform().forward(), 0.4f, color());
 }
 
 mat4 SpotLight::projectionMatrix() const

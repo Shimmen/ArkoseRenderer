@@ -51,9 +51,7 @@ void DirectionalLight::drawGui()
         ImGui::TreePop();
     }
 
-    // TODO: Draw arrow!
-    vec3 lightPosition = transform().positionInWorld();
-    DebugDrawer::get().drawLine(lightPosition, lightPosition + transform().forward() * 0.2f, color());
+    DebugDrawer::get().drawArrow(transform().positionInWorld(), transform().forward(), 0.4f, color());
 }
 
 mat4 DirectionalLight::projectionMatrix() const
