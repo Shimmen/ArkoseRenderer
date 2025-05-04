@@ -1,5 +1,7 @@
 #include "MeshInstance.h"
 
+#include <imgui.h>
+
 ////////////////////////////////////////////////////////////////////////////////
 // StaticMeshInstance
 
@@ -10,6 +12,16 @@ StaticMeshInstance::StaticMeshInstance(StaticMeshHandle inMesh, Transform inTran
 }
 
 StaticMeshInstance::~StaticMeshInstance() = default;
+
+void StaticMeshInstance::drawGui()
+{
+    ImGui::Text("StaticMeshInstance");
+    ImGui::Spacing();
+    ImGui::Text("Mesh: %d", m_mesh.index());
+    ImGui::Spacing();
+    ImGui::Text("Transform: ");
+    m_transform.drawGui();
+}
 
 bool StaticMeshInstance::hasDrawableHandleForSegmentIndex(size_t segmentIdx) const
 {
@@ -46,6 +58,16 @@ SkeletalMeshInstance::SkeletalMeshInstance(SkeletalMeshHandle inMesh, std::uniqu
 }
 
 SkeletalMeshInstance::~SkeletalMeshInstance() = default;
+
+void SkeletalMeshInstance::drawGui()
+{
+    ImGui::Text("SkeletalMeshInstance");
+    ImGui::Spacing();
+    ImGui::Text("Mesh: %d", m_mesh.index());
+    ImGui::Spacing();
+    ImGui::Text("Transform: ");
+    m_transform.drawGui();
+}
 
 Transform* SkeletalMeshInstance::findTransformForJoint(std::string_view jointName)
 {

@@ -20,6 +20,10 @@ struct StaticMeshInstance : public IEditorObject {
     StaticMeshHandle mesh() const { return m_mesh; }
     PhysicsInstanceHandle physicsInstance() const { return m_physicsInstance; }
 
+    // IEditorObject interface
+    bool shouldDrawGui() const override { return true; }
+    void drawGui() override;
+
     // ITransformable interface
     Transform& transform() override { return m_transform; }
     Transform const& transform() const { return m_transform; }
@@ -62,6 +66,10 @@ struct SkeletalMeshInstance : public IEditorObject {
 
     SkeletalMeshHandle mesh() const { return m_mesh; }
     //PhysicsInstanceHandle physicsInstance() const { return m_physicsInstance; }
+
+    // IEditorObject interface
+    bool shouldDrawGui() const override { return true; }
+    void drawGui() override;
 
     // ITransformable interface
     Transform& transform() override { return m_transform; }

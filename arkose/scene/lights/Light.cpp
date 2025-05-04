@@ -31,8 +31,11 @@ bool Light::shouldDrawGui() const
 void Light::drawGui()
 {
     ImGui::Text("Light");
-    ImGui::Separator();
+    ImGui::Spacing();
     ImGui::ColorEdit3("Color", m_color.asFloatPointer());
+    ImGui::Spacing();
+    ImGui::Text("Transform:");
+    m_transform.drawGui();
 }
 
 mat4 Light::lightViewMatrix() const
