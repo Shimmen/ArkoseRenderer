@@ -571,11 +571,22 @@ constexpr tvec3<T> inverseLerp(const tvec3<T>& x, const tvec3<T>& a, const tvec3
     return (x - a) / (b - a);
 }
 
-
 template<typename T, ENABLE_IF_ARITHMETIC(T)>
 constexpr tvec3<T> clamp(const tvec3<T>& x, const tvec3<T>& minEdge, const tvec3<T>& maxEdge)
 {
     return max(minEdge, min(x, maxEdge));
+}
+
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr tvec3<T> toDegrees(const tvec3<T>& radians)
+{
+    return radians / PI * static_cast<T>(180.0);
+}
+
+template<typename T, ENABLE_IF_FLOATING_POINT(T)>
+constexpr tvec3<T> toRadians(const tvec3<T>& degrees)
+{
+    return degrees / static_cast<T>(180.0) * PI;
 }
 
 using vec3 = tvec3<Float>;
