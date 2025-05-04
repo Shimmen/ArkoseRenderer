@@ -21,6 +21,9 @@
 
 Scene::Scene(Backend& backend, PhysicsBackend* physicsBackend)
 {
+    m_rootNode = m_sceneNodes.add(SceneNode(*this, Transform(), "Root"));
+    m_sceneNodes.markPersistent(m_rootNode);
+
     m_gpuScene = std::make_unique<GpuScene>(*this, backend);
 
     if (physicsBackend != nullptr) {
@@ -35,6 +38,10 @@ Scene::~Scene()
 void Scene::update(float elapsedTime, float deltaTime)
 {
     SCOPED_PROFILE_ZONE();
+
+    m_sceneNodes.processDeferredDeletes(0, 0, [](SceneNodeHandle sceneNodeHandle, SceneNode& sceneNode) {
+        // any cleanup needed?
+    });
 
     for (auto& skeletalMeshInstance : gpuScene().skeletalMeshInstances()) {
         skeletalMeshInstance->skeleton().applyJointTransformations();
@@ -251,29 +258,53 @@ void Scene::addLevel(LevelAsset* levelAsset)
     }
 }
 
-void Scene::addSet(SetAsset* setAsset)
+SceneNodeHandle Scene::addNode(Transform const& transform, std::string_view name, SceneNodeHandle parent)
 {
-    std::vector<NodeAsset*> nodeQueue;
-    nodeQueue.push_back(&setAsset->rootNode);
+    SceneNodeHandle nodeHandle = m_sceneNodes.add(SceneNode(*this, transform, name));
 
-    while (nodeQueue.size() > 0) {
+    SceneNode* newNode = node(nodeHandle);
+    newNode->setHandle(nodeHandle, {});
+    newNode->setParent(parent);
 
-        NodeAsset* nodeAsset = nodeQueue.back();
-        nodeQueue.pop_back();
+    return nodeHandle;
+}
 
-        // TODO: Build & manage the hierarchy! For now we're just adding everything to the root node.
+void Scene::removeNode(SceneNodeHandle nodeHandle)
+{
+    m_sceneNodes.removeReference(nodeHandle, 0);
+}
 
-        if (nodeAsset->meshIndex != NodeAsset::InvalidIndex) {
+SceneNodeHandle Scene::addSet(SetAsset* setAsset)
+{
+    return addNodeRecursive(setAsset, &setAsset->rootNode, m_rootNode);
+}
 
-            MeshAsset* meshAsset = MeshAsset::load(setAsset->meshAssets[nodeAsset->meshIndex]);
-            StaticMeshInstance& instance = addMesh(meshAsset, nodeAsset->transform);
-            instance.name = nodeAsset->name;
-        }
+SceneNodeHandle Scene::addSet(SetAsset* setAsset, SceneNodeHandle parent)
+{
+    return addNodeRecursive(setAsset, &setAsset->rootNode, parent);
+}
 
-        for (std::unique_ptr<NodeAsset> const& child : nodeAsset->children) {
-            nodeQueue.push_back(child.get());
-        }
+SceneNodeHandle Scene::addNodeRecursive(SetAsset* setAsset, NodeAsset* nodeAsset, SceneNodeHandle parent)
+{
+    SceneNodeHandle currentNodeHandle = addNode(nodeAsset->transform, nodeAsset->name, parent);
+
+    if (nodeAsset->meshIndex != NodeAsset::InvalidIndex) {
+        MeshAsset* meshAsset = MeshAsset::load(setAsset->meshAssets[nodeAsset->meshIndex]);
+
+        // TODO: In theory no need for a transform on the instance iself anymore now, as the node has all the transform hierarchy.
+        // But for now, let's just make the mesh's transform a direct child of the node's transform, with no local transforms.
+        Transform* attachedNodeTransform = &node(currentNodeHandle)->transform();
+        StaticMeshInstance& instance = addMesh(meshAsset, Transform(attachedNodeTransform));
+
+        // TODO: This should just be the node name now.. But for now, let's duplicate it here.
+        instance.name = nodeAsset->name;
     }
+
+    for (std::unique_ptr<NodeAsset> const& child : nodeAsset->children) {
+        addNodeRecursive(setAsset, child.get(), currentNodeHandle);
+    }
+
+    return currentNodeHandle;
 }
 
 Camera& Scene::addCamera(const std::string& name, bool makeDefault)

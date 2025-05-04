@@ -218,6 +218,8 @@ set(ARKOSE_SOURCES
   arkose/scene/MeshInstance.h
   arkose/scene/Scene.cpp
   arkose/scene/Scene.h
+  arkose/scene/SceneNode.cpp
+  arkose/scene/SceneNode.h
     # camera
     arkose/scene/camera/Camera.cpp
     arkose/scene/camera/Camera.h

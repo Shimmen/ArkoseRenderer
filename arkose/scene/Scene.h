@@ -2,6 +2,7 @@
 
 #include "asset/LevelAsset.h"
 #include "rendering/RenderPipelineNode.h"
+#include "rendering/ResourceList.h"
 #include "rendering/StaticMesh.h"
 #include "scene/camera/Camera.h"
 #include "scene/EnvironmentMap.h"
@@ -11,6 +12,7 @@
 #include "scene/lights/SphereLight.h"
 #include "scene/lights/SpotLight.h"
 #include "scene/MeshInstance.h"
+#include "scene/SceneNode.h"
 #include <memory>
 #include <optional>
 #include <string>
@@ -23,6 +25,7 @@ class GpuScene;
 class LevelAsset;
 class MeshAsset;
 class SetAsset;
+class NodeAsset;
 class PhysicsBackend;
 class PhysicsScene;
 class SceneNode;
@@ -63,7 +66,14 @@ public:
     void addLevel(LevelAsset*);
     //void removeLevel(LevelAsset*);
 
-    void addSet(SetAsset*);
+    SceneNodeHandle rootNode() const { return m_rootNode; }
+    SceneNode* node(SceneNodeHandle handle) { return handle.valid() ? &m_sceneNodes.get(handle) : nullptr; }
+
+    SceneNodeHandle addNode(Transform const&, std::string_view name, SceneNodeHandle parent);
+    void removeNode(SceneNodeHandle);
+
+    SceneNodeHandle addSet(SetAsset*);
+    SceneNodeHandle addSet(SetAsset*, SceneNodeHandle parent);
 
     // Camera
 
@@ -124,6 +134,13 @@ private:
     std::unique_ptr<PhysicsScene> m_physicsScene {};
     // Manages all editor specific data & logic of this scene
     std::unique_ptr<EditorScene> m_editorScene {};
+
+    // Scene hierarchy & nodes
+
+    ResourceList<SceneNode, SceneNodeHandle> m_sceneNodes { "Nodes", 65'536 };
+    SceneNodeHandle m_rootNode {};
+
+    SceneNodeHandle addNodeRecursive(SetAsset*, NodeAsset*, SceneNodeHandle parent);
 
     Camera* m_currentMainCamera { nullptr };
     std::unordered_map<std::string, std::unique_ptr<Camera>> m_allCameras {};
