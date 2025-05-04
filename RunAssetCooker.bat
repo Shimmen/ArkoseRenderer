@@ -30,6 +30,10 @@ cmake --build build --target ArkAssetBakeTool --config Release
 cmake --build build --target ImgAssetBakeTool --config Release
 cmake --build build --target CopyFileTool --config Release
 
+IF NOT "%PXR_USD_LOCATION%"=="" (
+    cmake --build build --target UsdImportTool --config Release
+)
+
 echo(
 echo ====================================
 echo ====== Launching AssetCooker! ======

@@ -7,6 +7,16 @@ InputFilters = [
 CommandLine = '{ Repo:Tools }GltfImportTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }"'
 DepFile = { Path = '{ Repo:Imported }{ Dir }dependencies.dep', Format = 'AssetCooker' }
 
+[[Rule]]
+Name = "Import USD asset"
+InputFilters = [ 
+    { Repo = "Assets", PathPattern = "*.usd" },
+    { Repo = "Assets", PathPattern = "*.usda" },
+    { Repo = "Assets", PathPattern = "*.usdc" },
+]
+CommandLine = '{ Repo:Tools }usd/UsdImportTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }"'
+DepFile = { Path = '{ Repo:Imported }{ Path }.dep', Format = 'AssetCooker' }
+
 #[[Rule]]
 #Name = "Convert IES profile to LUT"
 #InputFilters = [ 
