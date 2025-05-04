@@ -63,7 +63,7 @@ void SkeletalMeshInstance::drawGui()
 {
     ImGui::Text("SkeletalMeshInstance");
     ImGui::Spacing();
-    ImGui::Text("Mesh: %d", m_mesh.index());
+    ImGui::Text("Mesh: %u", m_mesh.indexOfType<u32>());
     ImGui::Spacing();
     ImGui::Text("Transform: ");
     m_transform.drawGui();
