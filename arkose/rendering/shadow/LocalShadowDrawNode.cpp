@@ -22,6 +22,13 @@ void LocalShadowDrawNode::drawGui()
 
 RenderPipelineNode::ExecuteCallback LocalShadowDrawNode::construct(GpuScene& scene, Registry& reg)
 {
+    //
+    // TODO: Move all of the shadow map atlas allocation & priority stuff to the GpuScene, or something like that.
+    // I think this should only be responsible for actually drawing. Eventually we'll also likely want to do some
+    // lights with ray traced shadows, so then we'd only want to draw the ones with shadow maps here, while the
+    // ray traced ones have its own path. And for that we need some manager which sits above us here.
+    //
+
     m_shadowMapAtlas = &reg.createTexture2D({ 4096, 4096 },
                                             Texture::Format::Depth32F,
                                             Texture::Filters::linear(),
