@@ -13,10 +13,10 @@ int main(int argc, char* argv[])
     // TODO: Add an option to run the AssetImportTask in a single thread! Makes more sense in a tool setting like this.
     TaskGraph::initialize();
 
-    std::string inputAsset = argv[1];
+    std::filesystem::path inputAsset = argv[1];
     ARKOSE_LOG(Info, "GltfImportTool: importing asset '{}'", inputAsset);
 
-    std::string targetDirectory = argv[2];
+    std::filesystem::path targetDirectory = argv[2];
     ARKOSE_LOG(Info, "GltfImportTool: will write results to '{}'", targetDirectory);
 
     AssetImporterOptions options { .alwaysMakeImageAsset = true,
@@ -35,7 +35,8 @@ int main(int argc, char* argv[])
 
     // Create dependency file
     {
-        std::string dependencyFile = targetDirectory + "dependencies.dep";
+        std::string originalExt = inputAsset.extension().string();
+        std::filesystem::path dependencyFile = targetDirectory / inputAsset.filename().replace_extension(originalExt + ".dep");
         ARKOSE_LOG(Info, "GltfImportTool: writing dependency file '{}'", dependencyFile);
 
         std::string dependencyData = "";

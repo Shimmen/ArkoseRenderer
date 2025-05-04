@@ -5,7 +5,7 @@ InputFilters = [
     { Repo = "Assets", PathPattern = "*.glb" },
 ]
 CommandLine = '{ Repo:Tools }GltfImportTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }"'
-DepFile = { Path = '{ Repo:Imported }{ Dir }dependencies.dep', Format = 'AssetCooker' }
+DepFile = { Path = '{ Repo:Imported }{ Path }.dep', Format = 'AssetCooker' }
 
 [[Rule]]
 Name = "Import USD asset"
