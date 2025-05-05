@@ -903,6 +903,22 @@ int main(int argc, char* argv[])
     std::unique_ptr<SetAsset> setAsset = std::make_unique<SetAsset>();
     setAsset->name = inputAsset.stem().string();
 
+    // Check asset up-axis and adjust accordingly
+    {
+        TfToken upAxis;
+        if (stage->GetMetadata(TfToken("upAxis"), &upAxis)) {
+            if (upAxis == UsdGeomTokens->y) {
+                ARKOSE_LOG(Verbose, "Up-axis is Y, this is already in the coordinate system we expect!");
+            } else if (upAxis == UsdGeomTokens->z) {
+                ARKOSE_LOG(Info, "Up-axis is Z, rotating root to achieve a Y-up coordinate system");
+                quat rotate90degAroundXAxis = ark::axisAngle(ark::globalX, ark::HALF_PI);
+                setAsset->rootNode.transform.setOrientation(rotate90degAroundXAxis);
+            } else {
+                ARKOSE_LOG(Error, "Up-axis is '{}', which we do not yet support", upAxis.GetString());
+            }
+        }
+    }
+
     std::unordered_map<std::string, NodeAsset*> nodeAssetMap;
     auto createNodeAsset = [&](pxr::UsdPrim const& prim) -> NodeAsset* {
         ARKOSE_ASSERT(prim.IsA<pxr::UsdGeomXformable>());
