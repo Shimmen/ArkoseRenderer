@@ -82,6 +82,41 @@ void EditorScene::drawGui()
     }
 }
 
+void EditorScene::drawSceneNodeHierarchy()
+{
+    ImGui::Begin("Scene");
+    drawSceneNodeHierarchyRecursive(m_scene.rootNode());
+    ImGui::End();
+}
+
+void EditorScene::drawSceneNodeHierarchyRecursive(SceneNodeHandle currentNode)
+{
+    SceneNode* node = m_scene.node(currentNode);
+
+    ImGuiTreeNodeFlags treeNodeFlags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+
+    if (node->children().empty()) {
+        treeNodeFlags |= ImGuiTreeNodeFlags_Leaf;
+    }
+
+    if (node == selectedObject()) {
+        treeNodeFlags |= ImGuiTreeNodeFlags_Selected;
+    }
+
+    if (ImGui::TreeNodeEx(node->name().data(), treeNodeFlags)) {
+
+        if (ImGui::IsItemClicked() && currentNode != m_scene.rootNode()) {
+            setSelectedObject(*node);
+        }
+
+        for (SceneNodeHandle child : node->children()) {
+            drawSceneNodeHierarchyRecursive(child);
+        }
+
+        ImGui::TreePop();
+    }
+}
+
 void EditorScene::drawInstanceBoundingBox(StaticMeshInstance const& instance)
 {
     if (StaticMesh* staticMesh = m_scene.gpuScene().staticMeshForHandle(instance.mesh())) {

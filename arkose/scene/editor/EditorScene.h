@@ -1,6 +1,7 @@
 #pragma once
 
 #include "scene/MeshInstance.h"
+#include "scene/SceneNode.h"
 #include "scene/editor/EditorGizmo.h"
 #include "scene/lights/Light.h"
 #include <vector>
@@ -27,6 +28,9 @@ public:
     // GUI
 
     void drawGui();
+
+    void drawSceneNodeHierarchy();
+    void drawSceneNodeHierarchyRecursive(SceneNodeHandle currentNode);
 
     void drawInstanceBoundingBox(StaticMeshInstance const&);
     void drawInstanceBoundingBox(SkeletalMeshInstance const&);

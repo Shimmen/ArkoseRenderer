@@ -15,8 +15,12 @@ public:
     SceneNode(Scene& ownerScene, Transform transform, std::string_view name);
     ~SceneNode();
 
+    std::string_view name() const { return m_name; }
+
     SceneNodeHandle parent() const { return m_parent; }
     void setParent(SceneNodeHandle parent);
+
+    std::vector<SceneNodeHandle> const& children() const { return m_children; }
 
     SceneNodeHandle handle() const { return m_handle; }
     void setHandle(SceneNodeHandle handle, Badge<Scene>) { m_handle = handle; }
