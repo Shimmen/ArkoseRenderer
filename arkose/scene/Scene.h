@@ -1,13 +1,11 @@
 #pragma once
 
 #include "asset/LevelAsset.h"
-#include "rendering/RenderPipelineNode.h"
 #include "rendering/ResourceList.h"
 #include "rendering/StaticMesh.h"
 #include "scene/camera/Camera.h"
 #include "scene/EnvironmentMap.h"
 #include "scene/ProbeGrid.h"
-#include "scene/editor/EditorGizmo.h"
 #include "scene/lights/DirectionalLight.h"
 #include "scene/lights/SphereLight.h"
 #include "scene/lights/SpotLight.h"
@@ -153,15 +151,5 @@ private:
     float m_ambientIlluminance { 0.0f };
 
     std::optional<ProbeGrid> m_probeGrid {};
-
-    IEditorObject* m_selectedObject { nullptr };
-
-    bool m_shouldDrawAllInstanceBoundingBoxes { false };
-    bool m_shouldDrawSelectedInstanceBoundingBox { false };
-    bool m_shouldDrawAllSkeletons { false };
-    bool m_shouldDrawSelectedInstanceSkeleton { false };
-
-    bool m_shouldDrawGizmos { false };
-    std::vector<EditorGizmo> m_editorGizmos {};
 
 };

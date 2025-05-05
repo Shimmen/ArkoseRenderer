@@ -3,6 +3,7 @@
 #include "core/Logging.h"
 #include <ark/handle.h>
 #include <algorithm>
+#include <span>
 #include <vector>
 
 template<typename ResourceType, typename HandleType>

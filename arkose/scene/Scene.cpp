@@ -7,7 +7,6 @@
 #include "core/Assert.h"
 #include "system/Input.h"
 #include "rendering/GpuScene.h"
-#include "rendering/debug/DebugDrawer.h"
 #include "rendering/RenderPipeline.h"
 #include "scene/camera/Camera.h"
 #include "scene/editor/EditorScene.h"
@@ -16,7 +15,6 @@
 #include "physics/backend/base/PhysicsBackend.h"
 #include "utility/FileIO.h"
 #include <imgui.h>
-#include <ImGuizmo.h>
 #include <fstream>
 
 Scene::Scene(Backend& backend, PhysicsBackend* physicsBackend)
