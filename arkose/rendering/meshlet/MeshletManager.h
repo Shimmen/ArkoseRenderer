@@ -33,8 +33,7 @@ public:
     std::vector<ShaderMeshlet> const& meshlets() const { return m_meshlets; }
     Buffer const& meshletBuffer() const { return *m_meshletBuffer; }
 
-    Buffer const& meshletPositionDataVertexBuffer() const { return *m_positionDataVertexBuffer; }
-    Buffer const& meshletNonPositionDataVertexBuffer() const { return *m_nonPositionDataVertexBuffer; }
+    Buffer const& meshletVertexIndirectionBuffer() const { return *m_vertexIndirectionBuffer; }
 
     Buffer const& meshletIndexBuffer() const { return *m_indexBuffer; }
     IndexType meshletIndexType() const { return IndexType::UInt32; }
@@ -47,24 +46,16 @@ public:
     static constexpr size_t MaxLoadedIndices = 3 * MaxLoadedTriangles;
     static constexpr size_t MaxLoadedMeshlets = MaxLoadedTriangles / 124;
 
-    static constexpr size_t MaxLoadedSkinnedVertices = 1'000'000;
-
-    static constexpr size_t UploadBufferSize = 10 * 1024 * 1024;
+    static constexpr size_t UploadBufferSize = 4 * 1024 * 1024;
 
 private:
-    const VertexLayout m_positionVertexLayout { VertexComponent::Position3F };
-    const VertexLayout m_nonPositionVertexLayout { VertexComponent::TexCoord2F,
-                                                   VertexComponent::Normal3F,
-                                                   VertexComponent::Tangent4F };
-
-    std::unique_ptr<Buffer> m_positionDataVertexBuffer { nullptr };
-    std::unique_ptr<Buffer> m_nonPositionDataVertexBuffer { nullptr };
+    std::unique_ptr<Buffer> m_vertexIndirectionBuffer { nullptr };
     std::unique_ptr<Buffer> m_indexBuffer { nullptr };
 
     std::vector<ShaderMeshlet> m_meshlets {};
     std::unique_ptr<Buffer> m_meshletBuffer { nullptr };
 
-    u32 m_nextVertexIdx { 0 };
+    u32 m_nextVertexIndirectionIdx { 0 };
     u32 m_nextIndexIdx { 0 };
     u32 m_nextMeshletIdx { 0 };
 

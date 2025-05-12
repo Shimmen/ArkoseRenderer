@@ -15,7 +15,6 @@ void MeshletDebugNode::drawGui()
 
     ImGui::Separator();
 
-    ImGui::Checkbox("Frustum cull instances", &m_frustumCullInstances);
     ImGui::Checkbox("Frustum cull meshlets", &m_frustumCullMeshlets);
 }
 
@@ -49,10 +48,14 @@ RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene,
 
 MeshletDebugNode::PassParams const& MeshletDebugNode::createVertexShaderPath(GpuScene& scene, Registry& reg, RenderTarget& renderTarget)
 {
+    BindingSet& meshletDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(scene.meshletManager().meshletVertexIndirectionBuffer()),
+                                                               ShaderBinding::storageBufferReadonly(scene.vertexManager().positionVertexBuffer()) });
+
     Shader drawIndexShader = Shader::createBasicRasterize("meshlet/meshletVisualize.vert", "meshlet/meshletVisualize.frag");
-    RenderStateBuilder renderStateBuilder(renderTarget, drawIndexShader, VertexLayout { VertexComponent::Position3F });
+    RenderStateBuilder renderStateBuilder(renderTarget, drawIndexShader, VertexLayout {});
     renderStateBuilder.cullBackfaces = false;
     renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneCameraSet"));
+    renderStateBuilder.stateBindings().at(1, meshletDataBindingSet);
 
     auto& params = reg.allocate<PassParams>();
     params.renderState = &reg.createRenderState(renderStateBuilder);
@@ -77,11 +80,13 @@ MeshletDebugNode::PassParams const& MeshletDebugNode::createMeshShaderPath(GpuSc
     Shader meshletShader = Shader::createMeshShading("meshlet/meshletVisualize.task", "meshlet/meshletVisualize.mesh", "meshlet/meshletVisualize.frag", meshletDefines);
 
     MeshletManager const& meshletManager = scene.meshletManager();
+    VertexManager const& vertexManager = scene.vertexManager();
     BindingSet& meshShaderBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(*indirectDataBuffer.buffer),
                                                               ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
                                                               ShaderBinding::storageBufferReadonly(meshletManager.meshletBuffer()),
-                                                              ShaderBinding::storageBufferReadonly(meshletManager.meshletPositionDataVertexBuffer()),
-                                                              ShaderBinding::storageBufferReadonly(meshletManager.meshletIndexBuffer()) });
+                                                              ShaderBinding::storageBufferReadonly(meshletManager.meshletIndexBuffer()),
+                                                              ShaderBinding::storageBufferReadonly(meshletManager.meshletVertexIndirectionBuffer()),
+                                                              ShaderBinding::storageBufferReadonly(vertexManager.positionVertexBuffer()) });
 
     RenderStateBuilder renderStateBuilder(renderTarget, meshletShader, VertexLayout { VertexComponent::Position3F });
     renderStateBuilder.cullBackfaces = false;
@@ -95,7 +100,6 @@ MeshletDebugNode::PassParams const& MeshletDebugNode::createMeshShaderPath(GpuSc
 void MeshletDebugNode::executeVertexShaderPath(PassParams const& params, GpuScene& scene, CommandList& cmdList, UploadBuffer& uploadBuffer) const
 {
     MeshletManager const& meshletManager = scene.meshletManager();
-    Buffer const& meshletPositionsBuffer = meshletManager.meshletPositionDataVertexBuffer();
     Buffer const& meshletIndexBuffer = meshletManager.meshletIndexBuffer();
 
     geometry::Frustum const& cameraFrustum = scene.camera().frustum();
@@ -104,8 +108,7 @@ void MeshletDebugNode::executeVertexShaderPath(PassParams const& params, GpuScen
     ark::Random rng { 12345 };
 
     cmdList.beginRendering(*params.renderState, ClearValue::blackAtMaxDepth());
-    cmdList.bindVertexBuffer(meshletPositionsBuffer, params.renderState->vertexLayout().packedVertexSize(), 0);
-    cmdList.bindIndexBuffer(meshletIndexBuffer, IndexType::UInt32);
+    cmdList.bindIndexBuffer(meshletIndexBuffer, meshletManager.meshletIndexType());
 
     // NOTE: This is obviously not optimal... just for testing!
     std::vector<ShaderMeshlet> const& meshlets = scene.meshletManager().meshlets();

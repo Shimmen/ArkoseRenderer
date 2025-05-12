@@ -13,8 +13,9 @@ layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 
 layout(set = 1, binding = 1) buffer restrict readonly InstanceBlock { ShaderDrawable instances[]; };
 layout(set = 1, binding = 2) buffer restrict readonly MeshletBlock { ShaderMeshlet meshlets[]; };
-layout(set = 1, binding = 3, scalar) buffer restrict readonly PositionsBlock { vec3 meshletPositions[]; };
-layout(set = 1, binding = 4, scalar) buffer restrict readonly IndicesBlock { uint meshletIndices[]; };
+layout(set = 1, binding = 3, scalar) buffer restrict readonly MeshletIndicesBlock { uint meshletIndices[]; };
+layout(set = 1, binding = 4, scalar) buffer restrict readonly MeshletVertIndirBlock { uint meshletVertexIndirection[]; };
+layout(set = 1, binding = 5, scalar) buffer restrict readonly PositionsBlock { vec3 positions[]; };
 
 taskPayloadSharedEXT MeshShaderInterpolants fromTaskShader;
 layout(location = 0) /*perprimitiveEXT*/ out vec3 vColor[];
@@ -47,7 +48,10 @@ void main()
         uint localVertexIdx = gl_LocalInvocationIndex + it * GROUP_SIZE;
         localVertexIdx = min(localVertexIdx, meshlet.vertexCount - 1);
 
-        vec3 localPosition = meshletPositions[meshlet.firstVertex + localVertexIdx];
+        uint meshletVertexIdx = meshlet.firstVertex + localVertexIdx;
+        uint vertexIdx = meshletVertexIndirection[meshletVertexIdx];
+
+        vec3 localPosition = positions[vertexIdx];
         gl_MeshVerticesEXT[localVertexIdx].gl_Position = projectionFromWorld * worldFromLocal * vec4(localPosition, 1.0);
 
         vColor[localVertexIdx] = meshletColor;

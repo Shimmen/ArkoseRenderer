@@ -13,24 +13,18 @@
 
 MeshletManager::MeshletManager(Backend& backend)
 {
-    ARKOSE_ASSERT(m_nonPositionVertexLayout.packedVertexSize() == sizeof(NonPositionVertex));
-    size_t positionDataBufferSize = m_positionVertexLayout.packedVertexSize() * MaxLoadedVertices;
-    size_t nonPositionDataBufferSize = m_nonPositionVertexLayout.packedVertexSize() * MaxLoadedVertices;
-    size_t loadedIndexBufferSize = sizeof(u32) * MaxLoadedIndices;
     size_t meshletBufferSize = sizeof(ShaderMeshlet) * MaxLoadedMeshlets;
+    size_t meshletIndexBufferSize = sizeof(u32) * MaxLoadedIndices;
+    size_t vertexIndirectionBufferSize = sizeof(u32) * MaxLoadedVertices;
 
-    float totalMemoryUseMb = ark::conversion::to::MB(positionDataBufferSize + nonPositionDataBufferSize + loadedIndexBufferSize + meshletBufferSize);
-    ARKOSE_LOG(Info, "MeshletManager: allocating a total of {:.1f} MB of VRAM for meshlet vertex and index data", totalMemoryUseMb);
+    float totalMemoryUseMb = ark::conversion::to::MB(vertexIndirectionBufferSize + meshletIndexBufferSize + meshletBufferSize);
+    ARKOSE_LOG(Info, "MeshletManager: allocating a total of {:.1f} MB of VRAM for meshlet data", totalMemoryUseMb);
 
-    m_positionDataVertexBuffer = backend.createBuffer(positionDataBufferSize, Buffer::Usage::Vertex);
-    m_positionDataVertexBuffer->setStride(m_positionVertexLayout.packedVertexSize());
-    m_positionDataVertexBuffer->setName("MeshletPositionVertexData");
+    m_vertexIndirectionBuffer = backend.createBuffer(vertexIndirectionBufferSize, Buffer::Usage::StorageBuffer);
+    m_vertexIndirectionBuffer->setStride(sizeof(u32));
+    m_vertexIndirectionBuffer->setName("MeshletVertexIndirectionData");
 
-    m_nonPositionDataVertexBuffer = backend.createBuffer(nonPositionDataBufferSize, Buffer::Usage::Vertex);
-    m_nonPositionDataVertexBuffer->setStride(m_nonPositionVertexLayout.packedVertexSize());
-    m_nonPositionDataVertexBuffer->setName("MeshletNonPositionVertexData");
-
-    m_indexBuffer = backend.createBuffer(loadedIndexBufferSize, Buffer::Usage::Index);
+    m_indexBuffer = backend.createBuffer(meshletIndexBufferSize, Buffer::Usage::Index);
     m_indexBuffer->setStride(sizeof(u32));
     m_indexBuffer->setName("MeshletIndexData");
 
@@ -81,7 +75,7 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
         u32 meshletCount = narrow_cast<u32>(meshletDataAsset.meshlets.size());
 
         size_t totalUploadSize =
-            vertexCount * (m_positionVertexLayout.packedVertexSize() + m_nonPositionVertexLayout.packedVertexSize())
+            vertexCount * sizeof(u32) // vertex indirection buffer
             + indexCount * sizeof(u32)
             + meshletCount * sizeof(ShaderMeshlet);
 
@@ -98,56 +92,33 @@ void MeshletManager::processMeshStreaming(CommandList& cmdList, std::unordered_s
         // Offset indices by current vertex count as we put all meshlets in a single buffer
         std::vector<u32> adjustedMeshletIndices = meshletDataAsset.meshletIndices;
         for (u32& index : adjustedMeshletIndices) {
-            index += m_nextVertexIdx;
+            index += m_nextVertexIndirectionIdx;
         }
 
         size_t indexDataOffset = m_nextIndexIdx * sizeof(u32);
         m_uploadBuffer->upload(adjustedMeshletIndices, *m_indexBuffer, indexDataOffset);
 
-        u32 startVertexIdx = m_nextVertexIdx;
+        // Offset vertex indirection by the segment's first vertex as we're referencing the global vertex buffers
+        std::vector<u32> adjustedVertexIndirection = meshletDataAsset.meshletVertexIndirection;
+        for (u32& vertexIndex : adjustedVertexIndirection) {
+            vertexIndex += meshSegment->vertexAllocation.firstVertex;
+        }
 
-        std::vector<vec3> positionsTempVector {};
-        positionsTempVector.reserve(vertexCount);
-
-        std::vector<NonPositionVertex> nonPositionsTempVector {};
-        nonPositionsTempVector.reserve(vertexCount);
+        size_t vertexIndirectionOffset = m_nextVertexIndirectionIdx * sizeof(u32);
+        m_uploadBuffer->upload(adjustedVertexIndirection, *m_vertexIndirectionBuffer, vertexIndirectionOffset);
 
         for (MeshletAsset const& meshletAsset : meshletDataAsset.meshlets) {
 
             ShaderMeshlet meshlet { .firstIndex = m_nextIndexIdx + meshletAsset.firstIndex,
                                     .triangleCount = meshletAsset.triangleCount,
-                                    .firstVertex = m_nextVertexIdx,
+                                    .firstVertex = m_nextVertexIndirectionIdx,
                                     .vertexCount = meshletAsset.vertexCount,
                                     .center = meshletAsset.center,
                                     .radius = meshletAsset.radius };
 
             m_meshlets.push_back(meshlet);
-
-            // Remap vertices
-            for (u32 i = 0; i < meshletAsset.vertexCount; ++i) {
-                u32 vertexIdx = meshletDataAsset.meshletVertexIndirection[meshletAsset.firstVertex + i];
-
-                vec3 position = meshSegment->asset->positions[vertexIdx];
-                vec2 texcoord0 = (vertexIdx < meshSegment->asset->texcoord0s.size()) ? meshSegment->asset->texcoord0s[vertexIdx] : vec2(0.0f, 0.0f);
-                vec3 normal = (vertexIdx < meshSegment->asset->normals.size()) ? meshSegment->asset->normals[vertexIdx] : vec3(0.0f, 0.0f, 1.0f);
-                vec4 tangent = (vertexIdx < meshSegment->asset->tangents.size()) ? meshSegment->asset->tangents[vertexIdx] : vec4(1.0f, 0.0f, 0.0f, 1.0f);
-
-                positionsTempVector.emplace_back(position);
-                nonPositionsTempVector.emplace_back(NonPositionVertex { .texcoord0 = texcoord0,
-                                                                        .normal = normal,
-                                                                        .tangent = tangent });
-            }
-
-            m_nextVertexIdx += meshletAsset.vertexCount;
+            m_nextVertexIndirectionIdx += meshletAsset.vertexCount;
         }
-
-        // TODO: This MAY is still too many buffer uploads.. we need to be more efficient.
-        // Additionally, keep in mind that some of these buffer copies are contiguous..?
-        size_t posDataOffset = startVertexIdx * m_positionVertexLayout.packedVertexSize();
-        m_uploadBuffer->upload(positionsTempVector, *m_positionDataVertexBuffer, posDataOffset);
-
-        size_t nonPosDataOffset = startVertexIdx * m_nonPositionVertexLayout.packedVertexSize();
-        m_uploadBuffer->upload(nonPositionsTempVector, *m_nonPositionDataVertexBuffer, nonPosDataOffset);
 
         size_t meshletDataDstOffset = m_nextMeshletIdx * sizeof(ShaderMeshlet);
         m_uploadBuffer->upload(m_meshlets.data() + m_nextMeshletIdx, meshletCount * sizeof(ShaderMeshlet), *m_meshletBuffer, meshletDataDstOffset);

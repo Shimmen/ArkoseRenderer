@@ -327,8 +327,9 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                                      ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
                                                                      ShaderBinding::storageBufferReadonly(meshletManager().meshletBuffer()),
                                                                      ShaderBinding::storageBufferReadonly(meshletManager().meshletIndexBuffer()),
-                                                                     ShaderBinding::storageBufferReadonly(meshletManager().meshletPositionDataVertexBuffer()),
-                                                                     ShaderBinding::storageBufferReadonly(meshletManager().meshletNonPositionDataVertexBuffer()) });
+                                                                     ShaderBinding::storageBufferReadonly(meshletManager().meshletVertexIndirectionBuffer()),
+                                                                     ShaderBinding::storageBufferReadonly(vertexManager().positionVertexBuffer()),
+                                                                     ShaderBinding::storageBufferReadonly(vertexManager().nonPositionVertexBuffer()) });
         reg.publish("VisibilityBufferData", visBufferDataBindingSet);
     }
 

@@ -19,7 +19,6 @@ private:
 
     RenderPath m_renderPath { RenderPath::MeshShaderIndirect };
     MeshletIndirectHelper m_meshletIndirectHelper {};
-    bool m_frustumCullInstances { false }; // Keep default off (for now!)
     bool m_frustumCullMeshlets { true };
 
     struct PassParams {

@@ -17,8 +17,9 @@ layout(set = 1, binding = 1) buffer restrict readonly InstanceBlock { ShaderDraw
 layout(set = 1, binding = 2) buffer restrict readonly MeshletBlock { ShaderMeshlet meshlets[]; };
 
 layout(set = 2, binding = 0, scalar) buffer restrict readonly IndicesBlock { uint meshletIndices[]; };
-layout(set = 2, binding = 1, scalar) buffer restrict readonly PositionsBlock { vec3 meshletPositions[]; };
-layout(set = 2, binding = 2, scalar) buffer restrict readonly NonPositionsBlock { NonPositionVertex meshletVertices[]; };
+layout(set = 2, binding = 1, scalar) buffer restrict readonly VertexIndirectionBlock { uint meshletVertexIndirection[]; };
+layout(set = 2, binding = 2, scalar) buffer restrict readonly PositionsBlock { vec3 positions[]; };
+layout(set = 2, binding = 3, scalar) buffer restrict readonly NonPositionsBlock { NonPositionVertex nonPositionVertices[]; };
 
 NAMED_UNIFORMS_STRUCT(MeshletConstants, constants)
 
@@ -56,14 +57,15 @@ void main()
         uint localVertexIdx = gl_LocalInvocationIndex + it * GROUP_SIZE;
         localVertexIdx = min(localVertexIdx, meshlet.vertexCount - 1);
 
-        uint vertexIdx = meshlet.firstVertex + localVertexIdx;
-        vec3 localPosition = meshletPositions[vertexIdx];
+        uint meshletVertexIdx = meshlet.firstVertex + localVertexIdx;
+        uint vertexIdx = meshletVertexIndirection[meshletVertexIdx];
+        vec3 localPosition = positions[vertexIdx];
 
         vec4 worldSpacePos = drawable.worldFromLocal * vec4(localPosition, 1.0);
         gl_MeshVerticesEXT[localVertexIdx].gl_Position = constants.projectionFromWorld * worldSpacePos;
 
 #if VISBUF_BLEND_MODE == BLEND_MODE_MASKED
-        NonPositionVertex vertexData = meshletVertices[vertexIdx];
+        NonPositionVertex vertexData = nonPositionVertices[vertexIdx];
         vTexCoord[localVertexIdx] = vertexData.texcoord0;
 #endif
     }

@@ -112,14 +112,16 @@ MeshletVisibilityBufferRenderNode::RenderStateWithIndirectData& MeshletVisibilit
     MeshletIndirectBuffer& indirectBuffer = m_meshletIndirectHelper.createIndirectBuffer(reg, passSettings.drawKeyMask, passSettings.maxMeshlets);
 
     MeshletManager const& meshletManager = scene.meshletManager();
+    VertexManager const& vertexManager = scene.vertexManager();
 
     BindingSet& taskShaderBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(*indirectBuffer.buffer),
                                                               ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
                                                               ShaderBinding::storageBufferReadonly(meshletManager.meshletBuffer()) });
 
     BindingSet& meshShaderBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(meshletManager.meshletIndexBuffer()),
-                                                              ShaderBinding::storageBufferReadonly(meshletManager.meshletPositionDataVertexBuffer()),
-                                                              ShaderBinding::storageBufferReadonly(meshletManager.meshletNonPositionDataVertexBuffer()) });
+                                                              ShaderBinding::storageBufferReadonly(meshletManager.meshletVertexIndirectionBuffer()),
+                                                              ShaderBinding::storageBufferReadonly(vertexManager.positionVertexBuffer()),
+                                                              ShaderBinding::storageBufferReadonly(vertexManager.nonPositionVertexBuffer()) });
 
     StateBindings& bindings = renderStateBuilder.stateBindings();
     //bindings.at(0, *reg.getBindingSet("SceneCameraSet"));
