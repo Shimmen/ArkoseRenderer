@@ -56,8 +56,8 @@ private:
     void drawMeshPhysicsPanel();
 
     void importAssetWithDialog();
-    void loadMeshWithDialog();
-    void saveMeshWithDialog();
+    void loadWithDialog();
+    void saveWithDialog();
 
     enum class BakeMode {
         None,

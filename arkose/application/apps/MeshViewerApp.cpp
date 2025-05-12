@@ -1,6 +1,7 @@
 #include "MeshViewerApp.h"
 
 #include "asset/MaterialAsset.h"
+#include "asset/SetAsset.h"
 #include "asset/import/AssetImporter.h"
 #include "system/Input.h"
 #include "physics/PhysicsScene.h"
@@ -12,6 +13,7 @@
 #include "rendering/forward/PrepassNode.h"
 #include "rendering/nodes/BloomNode.h"
 #include "rendering/nodes/DebugDrawNode.h"
+#include "rendering/nodes/PickingNode.h"
 #include "rendering/nodes/SSAONode.h"
 #include "rendering/nodes/SkyViewNode.h"
 #include "rendering/nodes/TAANode.h"
@@ -68,6 +70,8 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     ////////////////////////////////////////////////////////////////////////////
     // Render pipeline setup
 
+    pipeline.addNode<PickingNode>();
+
     pipeline.addNode<ForwardRenderNode>(ForwardRenderNode::Mode::Opaque,
                                         ForwardMeshFilter::AllMeshes,
                                         ForwardClearMode ::ClearBeforeFirstDraw);
@@ -96,6 +100,8 @@ bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
 
     ImGuiID dockspace = ImGui::DockSpaceOverViewport(nullptr, ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingInCentralNode);
     (void)dockspace;
+
+    m_scene->editorScene().drawSceneNodeHierarchy();
 
     drawMeshHierarchyPanel();
     drawMeshPhysicsPanel();
@@ -174,10 +180,10 @@ void MeshViewerApp::drawMenuBar()
                 showNewSceneModalHack = true;
             }
             if (ImGui::MenuItem("Open...", "Ctrl+O")) {
-                loadMeshWithDialog();
+                loadWithDialog();
             }
             if (ImGui::MenuItem("Save...", "Ctrl+S")) {
-                saveMeshWithDialog();
+                saveWithDialog();
             }
             ImGui::EndMenu();
         }
@@ -217,7 +223,7 @@ void MeshViewerApp::drawMenuBar()
     if (ImGui::BeginPopupModal("Create a new scene")) {
         ImGui::Text("You are about to create a scene and potentially loose any unchanged settings. Are you sure you want to proceed?");
         if (ImGui::Button("Yes")) {
-            m_scene->clearAllMeshInstances();
+            m_scene->clearScene();
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -711,31 +717,35 @@ void MeshViewerApp::importAssetWithDialog()
     }
 }
 
-void MeshViewerApp::loadMeshWithDialog()
+void MeshViewerApp::loadWithDialog()
 {
-    if (auto maybePath = FileDialog::open({ { "Arkose mesh", MeshAsset::AssetFileExtension } })) {
+    if (auto maybePath = FileDialog::open({ { "Arkose set", SetAsset::AssetFileExtension },
+                                            { "Arkose mesh", MeshAsset::AssetFileExtension } })) {
 
         std::filesystem::path openPath = maybePath.value();
-        ARKOSE_LOG(Info, "Loading mesh from file '{}'", openPath);
 
-        if (MeshAsset* meshAsset = MeshAsset::load(openPath)) {
-
-            m_scene->clearAllMeshInstances();
-
-            m_targetAsset = meshAsset;
-            m_targetInstance = &m_scene->addMesh(meshAsset);
+        if (openPath.extension() == SetAsset::AssetFileExtension) {
+            ARKOSE_LOG(Info, "Loading set from file '{}'", openPath);
+            if (SetAsset* setAsset = SetAsset::load(openPath)) {
+                m_scene->clearScene();
+                m_scene->addSet(setAsset);
+                m_targetAsset = nullptr;
+                m_targetInstance = nullptr;
+            }
+        } else if (openPath.extension() == MeshAsset::AssetFileExtension) {
+            ARKOSE_LOG(Info, "Loading mesh from file '{}'", openPath);
+            if (MeshAsset* meshAsset = MeshAsset::load(openPath)) {
+                m_scene->clearScene();
+                m_targetAsset = meshAsset;
+                m_targetInstance = &m_scene->addMesh(meshAsset);
+            }
         }
     }
 }
 
-void MeshViewerApp::saveMeshWithDialog()
+void MeshViewerApp::saveWithDialog()
 {
-    if (auto maybePath = FileDialog::save({ { "Arkose mesh", MeshAsset::AssetFileExtension } })) {
-        std::filesystem::path savePath = maybePath.value();
-        ARKOSE_LOG(Info, "Saving mesh to file '{}'", savePath);
-        // TODO: Save all(?) m_targets to savePath
-
-    }
+    // TODO: Figure out exactly what to do here.. we probably want to save whatever we got to a new SetAsset.
 }
 
 StaticMeshLOD* MeshViewerApp::selectedLOD()
