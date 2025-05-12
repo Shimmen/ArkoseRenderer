@@ -5,7 +5,6 @@
 #include "rendering/forward/PrepassNode.h"
 #include "rendering/lighting/LightingComposeNode.h"
 #include "rendering/meshlet/MeshletDebugNode.h"
-#include "rendering/meshlet/MeshletForwardRenderNode.h"
 #include "rendering/meshlet/MeshletDepthOnlyRenderNode.h"
 #include "rendering/meshlet/MeshletVisibilityBufferRenderNode.h"
 #include "rendering/meshlet/VisibilityBufferDebugNode.h"

@@ -146,8 +146,6 @@ set(ARKOSE_SOURCES
     arkose/rendering/meshlet/MeshletDebugNode.h
     arkose/rendering/meshlet/MeshletDepthOnlyRenderNode.cpp
     arkose/rendering/meshlet/MeshletDepthOnlyRenderNode.h
-    arkose/rendering/meshlet/MeshletForwardRenderNode.cpp
-    arkose/rendering/meshlet/MeshletForwardRenderNode.h
     arkose/rendering/meshlet/MeshletIndirectHelper.cpp
     arkose/rendering/meshlet/MeshletIndirectHelper.h
     arkose/rendering/meshlet/MeshletManager.cpp

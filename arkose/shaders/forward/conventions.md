@@ -1,7 +1,7 @@
 Conventions & rules for forward shaders
 =======================================
 
-These forward shaders are used by multiple passes, for example ForwardRenderNode, TranslucentNode, and MeshletForwardRenderNode, so we need to be consistent in how we assign the binding sets. Here are some brief rules/conventions to stick to:
+These forward shaders are used by multiple passes, so we need to be consistent in how we assign the binding sets. Here are some brief rules/conventions to stick to:
 
 Binding set...
 
