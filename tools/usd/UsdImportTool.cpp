@@ -903,10 +903,10 @@ int main(int argc, char* argv[])
     std::unique_ptr<SetAsset> setAsset = std::make_unique<SetAsset>();
     setAsset->name = inputAsset.stem().string();
 
-    // Check asset up-axis and adjust accordingly
+    // Check asset "upAxis" and adjust accordingly
     {
         TfToken upAxis;
-        if (stage->GetMetadata(TfToken("upAxis"), &upAxis)) {
+        if (stage->GetMetadata(UsdGeomTokens->upAxis, &upAxis)) {
             if (upAxis == UsdGeomTokens->y) {
                 ARKOSE_LOG(Verbose, "Up-axis is Y, this is already in the coordinate system we expect!");
             } else if (upAxis == UsdGeomTokens->z) {
@@ -916,6 +916,21 @@ int main(int argc, char* argv[])
             } else {
                 ARKOSE_LOG(Error, "Up-axis is '{}', which we do not yet support", upAxis.GetString());
             }
+        }
+    }
+
+    // Check asset "metersPerUnit" and adjust accordingly
+    {
+        double metersPerUnit = 0.01;
+        stage->GetMetadata(UsdGeomTokens->metersPerUnit, &metersPerUnit);
+
+        if (metersPerUnit != 1.0) {
+            ARKOSE_LOG(Info, "Asset is in {} meters per unit, scaling root to achieve a 1-meter-per-unit scale", metersPerUnit);
+
+            float rootScale = 1.0f / static_cast<float>(metersPerUnit);
+            setAsset->rootNode.transform.setScale(rootScale);
+        } else {
+            ARKOSE_LOG(Verbose, "Asset is in 1 meter per unit, this is already in the unit scale we expect!");
         }
     }
 
