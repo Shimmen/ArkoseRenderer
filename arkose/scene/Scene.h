@@ -73,6 +73,8 @@ public:
     SceneNodeHandle addSet(SetAsset*);
     SceneNodeHandle addSet(SetAsset*, SceneNodeHandle parent);
 
+    void clearScene();
+
     // Camera
 
     Camera& addCamera(const std::string& name, bool makeDefault);

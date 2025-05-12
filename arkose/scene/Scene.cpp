@@ -37,8 +37,11 @@ void Scene::update(float elapsedTime, float deltaTime)
 {
     SCOPED_PROFILE_ZONE();
 
-    m_sceneNodes.processDeferredDeletes(0, 0, [](SceneNodeHandle sceneNodeHandle, SceneNode& sceneNode) {
-        // any cleanup needed?
+    m_sceneNodes.processDeferredDeletes(0, 0, [this](SceneNodeHandle sceneNodeHandle, SceneNode& sceneNode) {
+        for (SceneNodeHandle child : sceneNode.children()) {
+            removeNode(child);
+        }
+        sceneNode.m_children.clear();
     });
 
     for (auto& skeletalMeshInstance : gpuScene().skeletalMeshInstances()) {
@@ -303,6 +306,17 @@ SceneNodeHandle Scene::addNodeRecursive(SetAsset* setAsset, NodeAsset* nodeAsset
     }
 
     return currentNodeHandle;
+}
+
+void Scene::clearScene()
+{
+    clearAllMeshInstances();
+
+    SceneNode* rootNode = node(m_rootNode);
+    for (SceneNodeHandle child : rootNode->children()) {
+        removeNode(child);
+    }
+    rootNode->m_children.clear();
 }
 
 Camera& Scene::addCamera(const std::string& name, bool makeDefault)

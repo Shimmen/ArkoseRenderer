@@ -33,6 +33,8 @@ public:
     Transform const& transform() const { return m_transform; }
 
 private:
+    friend class Scene;
+
     Transform m_transform;
     std::string m_name;
 
