@@ -927,7 +927,7 @@ int main(int argc, char* argv[])
         if (metersPerUnit != 1.0) {
             ARKOSE_LOG(Info, "Asset is in {} meters per unit, scaling root to achieve a 1-meter-per-unit scale", metersPerUnit);
 
-            float rootScale = 1.0f / static_cast<float>(metersPerUnit);
+            float rootScale = static_cast<float>(metersPerUnit);
             setAsset->rootNode.transform.setScale(rootScale);
         } else {
             ARKOSE_LOG(Verbose, "Asset is in 1 meter per unit, this is already in the unit scale we expect!");
