@@ -33,6 +33,7 @@ set(ARKCORE_SOURCES
     arkcore/asset/import/GltfLoader.h
 
   # core
+  arkcore/core/Assert.cpp
   arkcore/core/Assert.h
   arkcore/core/Badge.h
   arkcore/core/CommandLine.cpp

@@ -2,6 +2,7 @@
 
 #include <ark/compiler.h> // for ARK_FORCE_INLINE
 #include <ark/debugger.h> // for ARK_DEBUG_BREAK()
+#include <atomic> // for std::atomic_uint32_t
 #include <cstdlib> // for exit()
 #include <fmt/format.h> // for fmt::format()
 #include <core/Logging.h> // for ARKOSE_LOG()
@@ -10,20 +11,27 @@
 #include <Windows.h>
 #endif
 
+extern std::atomic_uint32_t ArkoseAssertionCounter;
+
 ARK_FORCE_INLINE void ArkoseAssertHandlerImpl(char const* assertion, char const* filename, int line, fmt::string_view format, fmt::format_args args)
 {
+    ArkoseAssertionCounter += 1;
+
     std::string optionalMessage = "";
     if (format.size() > 0) {
-        optionalMessage = fmt::vformat(format, args);
+        optionalMessage = '\n';
+        optionalMessage += fmt::vformat(format, args);
         optionalMessage += '\n';
     }
 
     std::string assertionMessage;
     if (assertion != nullptr) {
-        assertionMessage = fmt::format("Assertion failed: '{}'\nIn file {} on line {}\n{}Do you want to break?", assertion, filename, line, optionalMessage);
+        assertionMessage = fmt::format("Assertion failed: '{}'\nIn file {} on line {}{}", assertion, filename, line, optionalMessage);
     } else {
-        assertionMessage = fmt::format("Error!\nIn file {} on line {}\n{}Do you want to break?", filename, line, optionalMessage);
+        assertionMessage = fmt::format("Error!\nIn file {} on line {}{}", filename, line, optionalMessage);
     }
+
+    ARKOSE_LOG(Error, "========================================\n{}\n========================================", assertionMessage);
 
 #if defined(_MSC_VER)
     if (IsDebuggerPresent()) {
