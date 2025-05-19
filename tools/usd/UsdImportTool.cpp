@@ -699,13 +699,16 @@ std::unique_ptr<MaterialAsset> createMaterialAsset(pxr::UsdPrim const& materialP
 
     for (pxr::UsdShadeOutput const& displacementOutput : usdShadeMaterial.GetDisplacementOutputs()) {
         if (displacementOutput.HasConnectedSource()) {
-            ARKOSE_LOG(Warning, "We can't yet handle displacement, ignoring displacement output");
+            ARKOSE_LOG(Warning, "We can't yet handle displacement, ignoring displacement output '{}'", displacementOutput.GetFullName().GetString());
         }
     }
 
     std::vector<pxr::UsdShadeOutput> surfaceOutputs = usdShadeMaterial.GetSurfaceOutputs();
-    ARKOSE_ASSERT(surfaceOutputs.size() == 1); // TODO: Handle multiple outputs!
+
     pxr::UsdShadeOutput& surfaceOutput = surfaceOutputs.front();
+    if (surfaceOutputs.size() > 1) {
+        ARKOSE_LOG(Warning, "Material '{}' has multiple surface outputs, using the first one '{}'", materialPrim.GetPath().GetString(), surfaceOutput.GetFullName().GetString());
+    }
 
     if (surfaceOutput.HasConnectedSource()) {
 
