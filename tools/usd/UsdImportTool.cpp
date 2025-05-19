@@ -705,23 +705,24 @@ std::unique_ptr<MaterialAsset> createMaterialAsset(pxr::UsdPrim const& materialP
     ARKOSE_ASSERT(surfaceOutputs.size() == 1); // TODO: Handle multiple outputs!
     pxr::UsdShadeOutput& surfaceOutput = surfaceOutputs.front();
 
-    // Surely it needs something connected to be valid?
-    ARKOSE_ASSERT(surfaceOutput.HasConnectedSource());
-    ARKOSE_ASSERT(surfaceOutput.GetConnectedSources().size() == 1);
-    pxr::UsdShadeConnectionSourceInfo& sourceInfo = surfaceOutput.GetConnectedSources().front();
-    pxr::UsdShadeConnectableAPI shadeConnectableAPI = sourceInfo.source;
+    if (surfaceOutput.HasConnectedSource()) {
 
-    //ARKOSE_LOG(Info, " material is bound to shader '{}'", shadeConnectableAPI.GetPath().GetString());
-    pxr::UsdAttribute shaderInfoIdAttr = shadeConnectableAPI.GetPrim().GetAttribute(UsdShadeTokens->infoId);
-    pxr::TfToken shaderInfoIdToken;
-    if (shaderInfoIdAttr.Get<pxr::TfToken>(&shaderInfoIdToken)) {
-        //ARKOSE_LOG(Info, "  shader is of type '{}'", shaderInfoIdToken.GetString());
-    }
+        ARKOSE_ASSERT(surfaceOutput.GetConnectedSources().size() == 1);
+        pxr::UsdShadeConnectionSourceInfo& sourceInfo = surfaceOutput.GetConnectedSources().front();
+        pxr::UsdShadeConnectableAPI shadeConnectableAPI = sourceInfo.source;
 
-    if (shaderInfoIdToken == pxr::TfToken("UsdPreviewSurface")) {
-        createMaterialFromUsdPreviewSurface(*materialAsset, shadeConnectableAPI.GetPrim());
-    } else {
-        NOT_YET_IMPLEMENTED();
+        // ARKOSE_LOG(Info, " material is bound to shader '{}'", shadeConnectableAPI.GetPath().GetString());
+        pxr::UsdAttribute shaderInfoIdAttr = shadeConnectableAPI.GetPrim().GetAttribute(UsdShadeTokens->infoId);
+        pxr::TfToken shaderInfoIdToken;
+        if (shaderInfoIdAttr.Get<pxr::TfToken>(&shaderInfoIdToken)) {
+            // ARKOSE_LOG(Info, "  shader is of type '{}'", shaderInfoIdToken.GetString());
+        }
+
+        if (shaderInfoIdToken == pxr::TfToken("UsdPreviewSurface")) {
+            createMaterialFromUsdPreviewSurface(*materialAsset, shadeConnectableAPI.GetPrim());
+        } else {
+            NOT_YET_IMPLEMENTED();
+        }
     }
 
     return materialAsset;
