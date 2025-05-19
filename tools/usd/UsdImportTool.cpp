@@ -1095,6 +1095,8 @@ int main(int argc, char* argv[])
         FileIO::writeTextDataToFile(dependencyFile, dependencyData);
     }
 
+    errorCount += ArkoseAssertionCounter;
+
     if (errorCount > 0) {
         ARKOSE_LOG(Error, "{} errors while importing asset '{}'", errorCount, inputAsset);
     }
