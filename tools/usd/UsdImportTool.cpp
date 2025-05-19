@@ -586,9 +586,11 @@ MaterialInput createMaterialInput(UsdPrim const& shaderPrim, MaterialAsset& mate
         if (shaderNodeType == TfToken("UsdUVTexture")) {
             return createMaterialInputForUsdUVTexture(shaderInputPrim);
         } else if (shaderNodeType == TfToken("UsdPrimvarReader_float2")) {
-            NOT_YET_IMPLEMENTED();
+            ARKOSE_LOG(Error, "createMaterialInput: not yet handling 'UsdPrimvarReader_float2' shader node type");
+            return MaterialInput();
         } else {
-            NOT_YET_IMPLEMENTED();
+            ARKOSE_LOG(Error, "createMaterialInput: not yet handling '{}' shader node type", shaderNodeType.GetText());
+            return MaterialInput();
         }
 
     } else {
