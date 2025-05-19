@@ -60,7 +60,8 @@ inline void ArkoseAssertHandler(char const* assertion, char const* filename, int
     ArkoseAssertHandlerImpl(assertion, filename, line, format, fmt::make_format_args(args...));
 }
 
-#if defined(ARKOSE_RELEASE)
+// TODO: Re-disable asserts for release builds!
+#if 0//defined(ARKOSE_RELEASE)
 
 #define ARKOSE_ASSERT(expression) (void)(expression)
 #define ARKOSE_ASSERTM(expression, format, ...) (void)(expression)
