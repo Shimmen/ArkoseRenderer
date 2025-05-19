@@ -1017,25 +1017,31 @@ int main(int argc, char* argv[])
                         std::filesystem::path imageSourcePath = inputAsset.parent_path() / imageRelativePath;
                         std::unique_ptr<ImageAsset> imageAsset = ImageAsset::createFromSourceAsset(imageSourcePath);
 
-                        if (imageAsset->numMips() == 1) {
-                            imageAsset->generateMipmaps();
-                        }
+                        if (imageAsset) {
 
-                        if (!imageAsset->hasCompressedFormat()) {
-                            TextureCompressor textureCompressor {};
-                            if (isNormalMap) {
-                                imageAsset = textureCompressor.compressBC5(*imageAsset);
-                            } else {
-                                imageAsset = textureCompressor.compressBC7(*imageAsset);
+                            if (imageAsset->numMips() == 1) {
+                                imageAsset->generateMipmaps();
                             }
+
+                            if (!imageAsset->hasCompressedFormat()) {
+                                TextureCompressor textureCompressor {};
+                                if (isNormalMap) {
+                                    imageAsset = textureCompressor.compressBC5(*imageAsset);
+                                } else {
+                                    imageAsset = textureCompressor.compressBC7(*imageAsset);
+                                }
+                            }
+
+                            // Write out new & processed image asset
+                            std::filesystem::path imageNewRelativePath = imageRelativePath.replace_extension(ImageAsset::AssetFileExtension);
+                            imageAsset->writeToFile(targetDirectory / imageNewRelativePath, AssetStorage::Binary);
+
+                            // Re-target material input to use the new processed image
+                            materialInput->image = imageNewRelativePath.generic_string();
+                        } else {
+                            materialInput->image = "";
+                            ARKOSE_LOG(Error, "Failed to load image '{}' (attempted to search in path '{}')", materialInput->image, imageSourcePath.generic_string());
                         }
-
-                        // Write out new & processed image asset
-                        std::filesystem::path imageNewRelativePath = imageRelativePath.replace_extension(ImageAsset::AssetFileExtension);
-                        imageAsset->writeToFile(targetDirectory / imageNewRelativePath, AssetStorage::Binary);
-
-                        // Re-target material input to use the new processed image
-                        materialInput->image = imageNewRelativePath.generic_string();
                     }
                 };
 
