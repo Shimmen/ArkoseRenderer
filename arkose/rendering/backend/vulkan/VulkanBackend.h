@@ -280,6 +280,7 @@ private:
     struct SwapchainImageContext {
         VkImage image {}; // NOTE: Owned by the swapchain!
         VkImageView imageView {};
+        VkSemaphore submitSemaphore {};
     };
 
     std::vector<std::unique_ptr<SwapchainImageContext>> m_swapchainImageContexts {};
@@ -301,7 +302,6 @@ private:
     struct FrameContext {
         VkFence frameFence {};
         VkSemaphore imageAvailableSemaphore {};
-        VkSemaphore renderingFinishedSemaphore {};
 
         VkCommandBuffer commandBuffer {};
         std::unique_ptr<UploadBuffer> uploadBuffer {};

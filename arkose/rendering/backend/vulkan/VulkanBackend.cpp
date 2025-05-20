@@ -1227,6 +1227,14 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
             swapchainImageContext->imageView = swapchainImageView;
         }
 
+        // Create submit semaphore
+        {
+            VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
+            if (vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &swapchainImageContext->submitSemaphore) != VK_SUCCESS) {
+                ARKOSE_LOG(Fatal, "VulkanBackend: could not create submitSemaphore, exiting.");
+            }
+        }
+
         m_swapchainImageContexts.push_back(std::move(swapchainImageContext));
     }
 
@@ -1244,6 +1252,7 @@ void VulkanBackend::destroySwapchain()
     SCOPED_PROFILE_ZONE_BACKEND();
 
     for (auto& swapchainImageContext : m_swapchainImageContexts) {
+        vkDestroySemaphore(device(), swapchainImageContext->submitSemaphore, nullptr);
         vkDestroyImageView(device(), swapchainImageContext->imageView, nullptr);
     }
 
@@ -1306,16 +1315,12 @@ void VulkanBackend::createFrameContexts()
             }
         }
 
-        // Create semaphores
+        // Create "image available" semaphore
         {
             VkSemaphoreCreateInfo semaphoreCreateInfo = { VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO };
 
             if (vkCreateSemaphore(device(), &semaphoreCreateInfo, nullptr, &frameContext.imageAvailableSemaphore) != VK_SUCCESS) {
                 ARKOSE_LOG(Fatal, "VulkanBackend: could not create imageAvailableSemaphore, exiting.");
-            }
-
-            if (vkCreateSemaphore(device(), &semaphoreCreateInfo, nullptr, &frameContext.renderingFinishedSemaphore) != VK_SUCCESS) {
-                ARKOSE_LOG(Fatal, "VulkanBackend: could not create renderingFinishedSemaphore, exiting.");
             }
         }
 
@@ -1358,7 +1363,6 @@ void VulkanBackend::destroyFrameContexts()
         vkDestroyQueryPool(device(), frameContext->timestampQueryPool, nullptr);
         vkFreeCommandBuffers(device(), m_defaultCommandPool, 1, &frameContext->commandBuffer);
         vkDestroySemaphore(device(), frameContext->imageAvailableSemaphore, nullptr);
-        vkDestroySemaphore(device(), frameContext->renderingFinishedSemaphore, nullptr);
         vkDestroyFence(device(), frameContext->frameFence, nullptr);
         frameContext.reset();
     }
@@ -1822,7 +1826,7 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
         submitInfo.pWaitDstStageMask = waitStages;
 
         submitInfo.signalSemaphoreCount = 1;
-        submitInfo.pSignalSemaphores = &frameContext.renderingFinishedSemaphore;
+        submitInfo.pSignalSemaphores = &swapchainImageContext.submitSemaphore;
 
         if (vkResetFences(device(), 1, &frameContext.frameFence) != VK_SUCCESS) {
             ARKOSE_LOG(Error, "VulkanBackend: error resetting in-flight frame fence.");
@@ -1841,7 +1845,7 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
         VkPresentInfoKHR presentInfo = { VK_STRUCTURE_TYPE_PRESENT_INFO_KHR };
 
         presentInfo.waitSemaphoreCount = 1;
-        presentInfo.pWaitSemaphores = &frameContext.renderingFinishedSemaphore;
+        presentInfo.pWaitSemaphores = &swapchainImageContext.submitSemaphore;
 
         presentInfo.swapchainCount = 1;
         presentInfo.pSwapchains = &m_swapchain;
