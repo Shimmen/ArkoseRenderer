@@ -1,6 +1,7 @@
 #pragma once
 
 #include "rendering/backend/Resources.h"
+#include "rendering/backend/base/Sampler.h"
 #include "rendering/backend/base/UpscalingState.h"
 #include "rendering/backend/util/VramStats.h"
 #include "core/Badge.h"
@@ -87,6 +88,7 @@ public:
 
     virtual std::unique_ptr<Buffer> createBuffer(size_t, Buffer::Usage) = 0;
     virtual std::unique_ptr<RenderTarget> createRenderTarget(std::vector<RenderTarget::Attachment>) = 0;
+    virtual std::unique_ptr<Sampler> createSampler(Sampler::Description) = 0;
     virtual std::unique_ptr<Texture> createTexture(Texture::Description) = 0;
     virtual std::unique_ptr<BindingSet> createBindingSet(std::vector<ShaderBinding>) = 0;
     virtual std::unique_ptr<RenderState> createRenderState(const RenderTarget&, const std::vector<VertexLayout>&, const Shader&, const StateBindings&,

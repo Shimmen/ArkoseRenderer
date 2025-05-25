@@ -205,6 +205,8 @@ if (ARKOSE_BACKEND_VULKAN)
         arkose/rendering/backend/vulkan/VulkanComputeState.cpp
         arkose/rendering/backend/vulkan/VulkanRenderState.cpp
         arkose/rendering/backend/vulkan/VulkanRenderTarget.cpp
+        arkose/rendering/backend/vulkan/VulkanSampler.cpp
+        arkose/rendering/backend/vulkan/VulkanSampler.h
         arkose/rendering/backend/vulkan/VulkanTexture.cpp
         arkose/rendering/backend/vulkan/VulkanUpscalingState.cpp
         arkose/rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.cpp
@@ -236,6 +238,8 @@ if (ARKOSE_BACKEND_D3D12)
         arkose/rendering/backend/d3d12/D3D12DescriptorHeapAllocator.cpp
         arkose/rendering/backend/d3d12/D3D12RenderState.cpp
         arkose/rendering/backend/d3d12/D3D12RenderTarget.cpp
+        arkose/rendering/backend/d3d12/D3D12Sampler.cpp
+        arkose/rendering/backend/d3d12/D3D12Sampler.h
         arkose/rendering/backend/d3d12/D3D12Texture.cpp
         arkose/rendering/backend/shader/dxc/DxcInterface.cpp
         )

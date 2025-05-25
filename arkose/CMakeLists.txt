@@ -90,6 +90,8 @@ set(ARKOSE_SOURCES
       arkose/rendering/backend/base/RenderState.h
       arkose/rendering/backend/base/RenderTarget.cpp
       arkose/rendering/backend/base/RenderTarget.h
+      arkose/rendering/backend/base/Sampler.cpp
+      arkose/rendering/backend/base/Sampler.h
       arkose/rendering/backend/base/Texture.cpp
       arkose/rendering/backend/base/Texture.h
       arkose/rendering/backend/base/UpscalingState.cpp

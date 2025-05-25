@@ -7,6 +7,7 @@
 #include "rendering/backend/d3d12/D3D12DescriptorHeapAllocator.h"
 #include "rendering/backend/d3d12/D3D12RenderState.h"
 #include "rendering/backend/d3d12/D3D12RenderTarget.h"
+#include "rendering/backend/d3d12/D3D12Sampler.h"
 #include "rendering/backend/d3d12/D3D12Texture.h"
 #include "core/Logging.h"
 #include "rendering/AppState.h"
@@ -827,6 +828,11 @@ std::unique_ptr<Buffer> D3D12Backend::createBuffer(size_t size, Buffer::Usage us
 std::unique_ptr<RenderTarget> D3D12Backend::createRenderTarget(std::vector<RenderTarget::Attachment> attachments)
 {
     return std::make_unique<D3D12RenderTarget>(*this, attachments);
+}
+
+std::unique_ptr<Sampler> D3D12Backend::createSampler(Sampler::Description desc)
+{
+    return std::make_unique<D3D12Sampler>(*this, desc);
 }
 
 std::unique_ptr<Texture> D3D12Backend::createTexture(Texture::Description desc)

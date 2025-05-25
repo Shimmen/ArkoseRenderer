@@ -3,6 +3,7 @@
 #include "core/CommandLine.h"
 #include "rendering/backend/vulkan/VulkanCommandList.h"
 #include "rendering/backend/vulkan/VulkanResources.h"
+#include "rendering/backend/vulkan/VulkanSampler.h"
 #include "rendering/backend/vulkan/VulkanUpscalingState.h"
 #include "rendering/backend/shader/Shader.h"
 #include "rendering/backend/shader/ShaderManager.h"
@@ -536,6 +537,11 @@ std::unique_ptr<Buffer> VulkanBackend::createBuffer(size_t size, Buffer::Usage u
 std::unique_ptr<RenderTarget> VulkanBackend::createRenderTarget(std::vector<RenderTarget::Attachment> attachments)
 {
     return std::make_unique<VulkanRenderTarget>(*this, attachments);
+}
+
+std::unique_ptr<Sampler> VulkanBackend::createSampler(Sampler::Description desc)
+{
+    return std::make_unique<VulkanSampler>(*this, desc);
 }
 
 std::unique_ptr<Texture> VulkanBackend::createTexture(Texture::Description desc)
