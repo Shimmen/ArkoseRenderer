@@ -281,6 +281,17 @@ private:
     std::unique_ptr<Texture> m_magentaTexture {};
     std::unique_ptr<Texture> m_normalMapBlueTexture {};
 
+    // Common samplers that are shared across the application
+    std::unique_ptr<Sampler> m_samplerClampNearest {};
+    std::unique_ptr<Sampler> m_samplerClampBilinear {};
+    std::unique_ptr<Sampler> m_samplerClampTrilinear {};
+    std::unique_ptr<Sampler> m_samplerRepeatNearest {};
+    std::unique_ptr<Sampler> m_samplerRepeatBilinear {};
+    std::unique_ptr<Sampler> m_samplerRepeatTrilinear {};
+    std::unique_ptr<Sampler> m_samplerMirrorNearest {};
+    std::unique_ptr<Sampler> m_samplerMirrorBilinear {};
+    std::unique_ptr<Sampler> m_samplerMirrorTrilinear {};
+
     std::unique_ptr<IconManager> m_iconManager {};
 
     // GPU management

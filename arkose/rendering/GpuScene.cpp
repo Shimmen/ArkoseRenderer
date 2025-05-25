@@ -55,6 +55,34 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable, bool meshShading
     m_magentaTexture = Texture::createFromPixel(backend(), vec4(1.0f, 0.0f, 1.0f, 1.0f), true);
     m_normalMapBlueTexture = Texture::createFromPixel(backend(), vec4(0.5f, 0.5f, 1.0f, 1.0f), false);
 
+    // Create default samplers
+    {
+        Sampler::Description samplerDescNearest { .minFilter = ImageFilter::Nearest, .magFilter = ImageFilter::Nearest, .mipmap = Sampler::Mipmap::Nearest };
+        Sampler::Description samplerDescBilinear { .minFilter = ImageFilter::Linear, .magFilter = ImageFilter::Linear, .mipmap = Sampler::Mipmap::Nearest };
+        Sampler::Description samplerDescTrilinear { .minFilter = ImageFilter::Linear, .magFilter = ImageFilter::Linear, .mipmap = Sampler::Mipmap::Linear };
+
+        samplerDescNearest.wrapMode = ImageWrapModes::clampAllToEdge();
+        samplerDescBilinear.wrapMode = ImageWrapModes::clampAllToEdge();
+        samplerDescTrilinear.wrapMode = ImageWrapModes::clampAllToEdge();
+        m_samplerClampNearest = backend().createSampler(samplerDescNearest);
+        m_samplerClampBilinear = backend().createSampler(samplerDescBilinear);
+        m_samplerClampTrilinear = backend().createSampler(samplerDescTrilinear);
+
+        samplerDescNearest.wrapMode = ImageWrapModes::repeatAll();
+        samplerDescBilinear.wrapMode = ImageWrapModes::repeatAll();
+        samplerDescTrilinear.wrapMode = ImageWrapModes::repeatAll();
+        m_samplerRepeatNearest = backend().createSampler(samplerDescNearest);
+        m_samplerRepeatBilinear = backend().createSampler(samplerDescBilinear);
+        m_samplerRepeatTrilinear = backend().createSampler(samplerDescTrilinear);
+
+        samplerDescNearest.wrapMode = ImageWrapModes::mirroredRepeatAll();
+        samplerDescBilinear.wrapMode = ImageWrapModes::mirroredRepeatAll();
+        samplerDescTrilinear.wrapMode = ImageWrapModes::mirroredRepeatAll();
+        m_samplerMirrorNearest = backend().createSampler(samplerDescNearest);
+        m_samplerMirrorBilinear = backend().createSampler(samplerDescBilinear);
+        m_samplerMirrorTrilinear = backend().createSampler(samplerDescTrilinear);
+    }
+
     m_iconManager = std::make_unique<IconManager>(backend());
 
     size_t materialBufferSize = m_managedMaterials.capacity() * sizeof(ShaderMaterial);
