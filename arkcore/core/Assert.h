@@ -31,7 +31,9 @@ ARK_FORCE_INLINE void ArkoseAssertHandlerImpl(char const* assertion, char const*
         assertionMessage = fmt::format("Error!\nIn file {} on line {}{}", filename, line, optionalMessage);
     }
 
-    ARKOSE_LOG(Error, "========================================\n{}\n========================================", assertionMessage);
+    ARKOSE_LOG(Error, "========================================");
+    ARKOSE_LOG(Error, "{}", assertionMessage);
+    ARKOSE_LOG(Error, "========================================");
 
 #if defined(_MSC_VER)
     if (IsDebuggerPresent()) {
