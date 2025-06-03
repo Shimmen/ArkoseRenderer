@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ark/debugger.h>
+#include <fmt/color.h>
 #include <fmt/format.h>
 #include <fmt/std.h> // for fmtlib formatters for std types
 #include <magic_enum/magic_enum_format.hpp> // for formattable enums to strings
@@ -34,9 +35,37 @@ inline void _internal_vlog(fmt::string_view format, fmt::format_args args)
     static_assert(level > LogLevel::None && level < LogLevel::All, "Invalid log level passed to log function");
 
     if constexpr (level <= CurrentLogLevel) {
+
+        std::string message = fmt::vformat(format, args);
+
+        auto textStyle = fmt::text_style();
+        char const* severityString = "";
+
+        switch (level) {
+        case LogLevel::Fatal:
+            severityString = "FATAL";
+            textStyle = fmt::fg(fmt::color::black) | fmt::bg(fmt::color::red);
+            break;
+        case LogLevel::Error:
+            severityString = "ERROR";
+            textStyle = fmt::fg(fmt::color::red);
+            break;
+        case LogLevel::Warning:
+            severityString = "WARNING";
+            textStyle = fmt::fg(fmt::color::yellow);
+            break;
+        case LogLevel::Info:
+            severityString = "INFO";
+            textStyle = fmt::fg(fmt::color::white);
+            break;
+        case LogLevel::Verbose:
+            severityString = "VERBOSE";
+            textStyle = fmt::fg(fmt::color::light_gray);
+            break;
+        }
+
         // TODO: Maybe add some more logging context (e.g. function name)?
-        fmt::vprint(format, args);
-        fmt::print("\n");
+        fmt::print(textStyle, "[{}] {}\n", severityString, message);
     }
 }
 
