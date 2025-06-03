@@ -90,20 +90,8 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
         m_instance = createInstance(requestedLayers, &dbgMessengerCreateInfo);
 
         m_debugUtils = std::make_unique<VulkanDebugUtils>(*this, m_instance);
-
-        // NOTE: We use the debug messenger for pre-instance issues, but rely on the debug report callback after that point,
-        // as it is more powerful than the messenger, but otherwise does more or less the exact same thing.
-        //if (debugUtils().vkCreateDebugUtilsMessengerEXT(m_instance, &dbgMessengerCreateInfo, nullptr, &m_debugMessenger) != VK_SUCCESS) {
-        //    ARKOSE_LOG(Fatal, "VulkanBackend: could not create the debug messenger, exiting.");
-        //}
-
-        VkDebugReportCallbackCreateInfoEXT dbgReportCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_REPORT_CALLBACK_CREATE_INFO_EXT };
-        dbgReportCreateInfo.pfnCallback = VulkanDebugUtils::debugReportCallback;
-        dbgReportCreateInfo.flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-        dbgReportCreateInfo.pUserData = nullptr;
-
-        if (debugUtils().vkCreateDebugReportCallbackEXT(m_instance, &dbgReportCreateInfo, nullptr, &m_debugReportCallback) != VK_SUCCESS) {
-            ARKOSE_LOG(Fatal, "VulkanBackend: could not create the debug reporter, exiting.");
+        if (debugUtils().vkCreateDebugUtilsMessengerEXT(m_instance, &dbgMessengerCreateInfo, nullptr, &m_debugMessenger) != VK_SUCCESS) {
+            ARKOSE_LOG(Fatal, "VulkanBackend: could not create the debug messenger, exiting.");
         }
 
     } else {
@@ -272,7 +260,6 @@ VulkanBackend::~VulkanBackend()
 
     if constexpr (vulkanDebugMode) {
         debugUtils().vkDestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
-        debugUtils().vkDestroyDebugReportCallbackEXT(m_instance, m_debugReportCallback, nullptr);
         m_debugUtils.reset();
     }
 
@@ -720,10 +707,6 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
         if constexpr (vulkanDebugMode) {
             ARKOSE_ASSERT(hasSupportForInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME));
             addInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
-            if (hasSupportForInstanceExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME)) {
-                addInstanceExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-            }
 
             if (hasSupportForInstanceExtension(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME)) {
                 addInstanceExtension(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME);

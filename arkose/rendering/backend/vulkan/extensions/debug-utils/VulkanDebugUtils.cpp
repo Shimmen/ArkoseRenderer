@@ -18,11 +18,6 @@ VulkanDebugUtils::VulkanDebugUtils(VulkanBackend& backend, VkInstance instance)
     vkCreateDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(m_instance, "vkCreateDebugUtilsMessengerEXT"));
     vkDestroyDebugUtilsMessengerEXT = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(m_instance, "vkDestroyDebugUtilsMessengerEXT"));
     vkSubmitDebugUtilsMessageEXT = reinterpret_cast<PFN_vkSubmitDebugUtilsMessageEXT>(vkGetInstanceProcAddr(m_instance, "vkSubmitDebugUtilsMessageEXT"));
-
-    // Technically part of the VK_EXT_debug_report extention but I'll include them here
-    vkCreateDebugReportCallbackEXT = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(m_instance, "vkCreateDebugReportCallbackEXT"));
-    vkDestroyDebugReportCallbackEXT = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(vkGetInstanceProcAddr(m_instance, "vkDestroyDebugReportCallbackEXT"));
-    vkDebugReportMessageEXT = reinterpret_cast<PFN_vkDebugReportMessageEXT>(vkGetInstanceProcAddr(m_instance, "vkDebugReportMessageEXT"));
 }
 
 VkBool32 VulkanDebugUtils::debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
@@ -48,25 +43,6 @@ VkBool32 VulkanDebugUtils::debugMessageCallback(VkDebugUtilsMessageSeverityFlagB
     return VK_FALSE;
 }
 
-VkBool32 VulkanDebugUtils::debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location,
-                                               int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
-{
-    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-        ARKOSE_LOG(Error, "Vulkan debug report; {}", pMessage);
-
-    else if (flags & (VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT))
-        ARKOSE_LOG(Warning, "Vulkan debug report; {}", pMessage);
-
-    // NOTE: We treat information as verbose, as it's very spammy otherwise and the info is not very useful anyway
-    if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-        ARKOSE_LOG(Verbose, "Vulkan debug report; {}", pMessage);
-
-    if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
-        ARKOSE_LOG(Verbose, "Vulkan debug report; {}", pMessage);
-
-    return VK_FALSE;
-}
-
 VkDebugUtilsMessengerCreateInfoEXT VulkanDebugUtils::debugMessengerCreateInfo()
 {
     VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo = { VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT };
@@ -74,8 +50,9 @@ VkDebugUtilsMessengerCreateInfoEXT VulkanDebugUtils::debugMessengerCreateInfo()
     debugMessengerCreateInfo.pUserData = nullptr;
 
     debugMessengerCreateInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT; // NOLINT(hicpp-signed-bitwise)
-    if (vulkanVerboseDebugMessages)
+    if (vulkanVerboseDebugMessages) {
         debugMessengerCreateInfo.messageSeverity |= VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT;
+    }
     debugMessengerCreateInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT; // NOLINT(hicpp-signed-bitwise)
 
     return debugMessengerCreateInfo;
