@@ -20,24 +20,40 @@ VulkanDebugUtils::VulkanDebugUtils(VulkanBackend& backend, VkInstance instance)
     vkSubmitDebugUtilsMessageEXT = reinterpret_cast<PFN_vkSubmitDebugUtilsMessageEXT>(vkGetInstanceProcAddr(m_instance, "vkSubmitDebugUtilsMessageEXT"));
 }
 
-VkBool32 VulkanDebugUtils::debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-                                                const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData)
+VkBool32 VulkanDebugUtils::debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                                VkDebugUtilsMessageTypeFlagsEXT messageType,
+                                                VkDebugUtilsMessengerCallbackDataEXT const* pCallbackData,
+                                                void* pUserData)
 {
-    switch (messageSeverity) {
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-        ARKOSE_LOG(Error, "Vulkan debug message; {}", pCallbackData->pMessage);
-        break;
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-        ARKOSE_LOG(Warning, "Vulkan debug message; {}", pCallbackData->pMessage);
-        break;
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-        ARKOSE_LOG(Info, "Vulkan debug message; {}", pCallbackData->pMessage);
-        break;
-    case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-        ARKOSE_LOG(Verbose, "Vulkan debug message; {}", pCallbackData->pMessage);
-        break;
-    default:
-        ASSERT_NOT_REACHED();
+    if (messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
+        switch (messageSeverity) {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+            ARKOSE_ERROR("Vulkan validation error: ({}) {}", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+            ARKOSE_ERROR("Vulkan validation warning: ({}) {}", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+            break;
+        default:
+            // I don't think there are validation 'info' or 'verbose' messages..?
+            ASSERT_NOT_REACHED();
+        }
+    } else {
+        switch (messageSeverity) {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+            ARKOSE_LOG(Error, "Vulkan debug message; {}", pCallbackData->pMessage);
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+            ARKOSE_LOG(Warning, "Vulkan debug message; {}", pCallbackData->pMessage);
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+            ARKOSE_LOG(Info, "Vulkan debug message; {}", pCallbackData->pMessage);
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+            ARKOSE_LOG(Verbose, "Vulkan debug message; {}", pCallbackData->pMessage);
+            break;
+        default:
+            ASSERT_NOT_REACHED();
+        }
     }
 
     return VK_FALSE;

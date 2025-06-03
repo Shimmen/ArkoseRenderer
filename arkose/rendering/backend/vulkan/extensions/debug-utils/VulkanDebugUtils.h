@@ -12,8 +12,6 @@ public:
     VulkanDebugUtils(VulkanBackend&, VkInstance);
 
     static VkDebugUtilsMessengerCreateInfoEXT debugMessengerCreateInfo();
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
-                                                               const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
 
     PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT { nullptr };
     PFN_vkSetDebugUtilsObjectTagEXT vkSetDebugUtilsObjectTagEXT { nullptr };
@@ -30,4 +28,9 @@ public:
 private:
     VulkanBackend& m_backend;
     VkInstance m_instance;
+
+    static VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT,
+                                                               VkDebugUtilsMessageTypeFlagsEXT,
+                                                               VkDebugUtilsMessengerCallbackDataEXT const*,
+                                                               void* pUserData);
 };
