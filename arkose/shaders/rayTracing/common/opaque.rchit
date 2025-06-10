@@ -169,8 +169,8 @@ void main()
         vec3 ambient = constants.ambientAmount * baseColor;
         vec3 color = emissive + ambient;
 
-        for (uint i = 0; i < light_getDirectionalLightCount(); ++i) {
-            color += evaluateDirectionalLight(light_getDirectionalLight(i), V, N, baseColor, roughness, metallic);
+        if (light_hasDirectionalLight()) {
+            color += evaluateDirectionalLight(light_getDirectionalLight(), V, N, baseColor, roughness, metallic);
         }
 
         for (uint i = 0; i < light_getSphereLightCount(); ++i) {

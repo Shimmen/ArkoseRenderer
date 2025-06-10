@@ -179,8 +179,8 @@ void main()
     {
         vec3 V = -rt_WorldRayDirection;
 
-        for (uint i = 0; i < light_getDirectionalLightCount(); ++i) {
-            radiance += evaluateDirectionalLight(light_getDirectionalLight(i), V, N, baseColor, roughness, metallic);
+        if (light_hasDirectionalLight()) {
+            radiance += evaluateDirectionalLight(light_getDirectionalLight(), V, N, baseColor, roughness, metallic);
         }
 
         for (uint i = 0; i < light_getSphereLightCount(); ++i) {

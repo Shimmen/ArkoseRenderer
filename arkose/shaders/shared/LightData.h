@@ -2,7 +2,7 @@
 #define LIGHT_DATA_H
 
 struct LightMetaData {
-    uint numDirectionalLights;
+    bool hasDirectionalLight;
     uint numSphereLights;
     uint numSpotLights;
 };

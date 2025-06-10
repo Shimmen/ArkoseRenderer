@@ -275,12 +275,9 @@ void main()
     vec3 sceneColor = emissive + ambient;
     vec3 diffuseIrradiance = vec3(0.0);
 
-    for (uint i = 0; i < light_getDirectionalLightCount(); ++i) {
-        // We only have shadow for the 0th directional light as they are pre-projected. If needed we could quite easily support up to 4 shadowed directional light
-        // by storing the projected shadow in an RGBA texture with a projected shadow per channel. However, a single dir. shadow should almost always be enough.
-        bool hasShadow = i == 0;
-
-        sceneColor += evaluateDirectionalLight(light_getDirectionalLight(i), hasShadow, pixelCoord, V, N, baseColor, roughness, metallic, diffuseIrradiance);
+    if (light_hasDirectionalLight()) {
+        bool hasShadow = true; // directional light always has shadows
+        sceneColor += evaluateDirectionalLight(light_getDirectionalLight(), hasShadow, pixelCoord, V, N, baseColor, roughness, metallic, diffuseIrradiance);
     }
 
     // TODO: Use tiles or clusters to minimize number of light evaluations!

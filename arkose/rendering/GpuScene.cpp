@@ -693,6 +693,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             std::vector<SphereLightData> sphereLightData;
             std::vector<SpotLightData> spotLightData;
 
+            ARKOSE_ASSERTM(m_managedDirectionalLights.size() <= 1, "We only support 0 or 1 directional lights in a scene");
             for (const ManagedDirectionalLight& managedLight : m_managedDirectionalLights) {
 
                 if (!managedLight.light) {
@@ -754,7 +755,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             uploadBuffer.upload(sphereLightData, sphereLightDataBuffer);
             uploadBuffer.upload(spotLightData, spotLightDataBuffer);
 
-            LightMetaData metaData { .numDirectionalLights = narrow_cast<u32>(dirLightData.size()),
+            LightMetaData metaData { .hasDirectionalLight = dirLightData.size() > 0 ? true : false,
                                      .numSphereLights = narrow_cast<u32>(sphereLightData.size()),
                                      .numSpotLights = narrow_cast<u32>(spotLightData.size()) };
             uploadBuffer.upload(metaData, lightMetaDataBuffer);
@@ -975,6 +976,12 @@ Texture const& GpuScene::colorGradingLUT() const
 
 void GpuScene::registerLight(DirectionalLight& light)
 {
+    if (m_managedDirectionalLights.size() > 0) {
+        ARKOSE_LOG(Error, "Registering a directional light but there's already one present. "
+                          "We only support a single directional light, throwing out the old one.");
+        m_managedDirectionalLights.clear();
+    }
+
     ManagedDirectionalLight managedLight { .light = &light };
     m_managedDirectionalLights.push_back(managedLight);
 }
