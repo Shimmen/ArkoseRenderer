@@ -1314,6 +1314,7 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset const* materialAsset)
     TextureHandle normalMap = registerMaterialTexture(materialAsset->normalMap, ImageType::NormalMap, m_normalMapBlueTexture.get());
     TextureHandle bentNormalMap = registerMaterialTexture(materialAsset->bentNormalMap, ImageType::NormalMap, m_whiteTexture.get());
     TextureHandle metallicRoughness = registerMaterialTexture(materialAsset->materialProperties, ImageType::GenericData, m_whiteTexture.get());
+    TextureHandle occlusionMap = registerMaterialTexture(materialAsset->occlusionMap, ImageType::GenericData, m_whiteTexture.get());
 
     ShaderMaterial shaderMaterial {};
 
@@ -1322,6 +1323,7 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset const* materialAsset)
     shaderMaterial.bentNormalMap = bentNormalMap.indexOfType<int>();
     shaderMaterial.metallicRoughness = metallicRoughness.indexOfType<int>();
     shaderMaterial.emissive = emissive.indexOfType<int>();
+    shaderMaterial.occlusion = occlusionMap.indexOfType<int>();
 
     auto translateBlendModeToShaderMaterial = [](BlendMode blendMode) -> int {
         switch (blendMode) {

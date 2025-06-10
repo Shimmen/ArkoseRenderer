@@ -186,6 +186,7 @@ void AssetImportTask::importGltf()
         resolveImageFilePath(material->emissiveColor);
         resolveImageFilePath(material->normalMap);
         resolveImageFilePath(material->materialProperties);
+        resolveImageFilePath(material->occlusionMap);
 
         std::string fileName = material->name;
         if (fileName.empty()) {

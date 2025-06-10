@@ -802,6 +802,10 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
     int normalMapIdx = gltfMaterial.normalTexture.index;
     material->normalMap = toMaterialInput(normalMapIdx);
 
+    int occlusionMapIdx = gltfMaterial.occlusionTexture.index;
+    material->occlusionMap = toMaterialInput(occlusionMapIdx);
+    // TODO: Consider also supporting `gltfMaterial.occlusionTexture.strength`
+
     auto specularGlossinessMatEntry = gltfMaterial.extensions.find("KHR_materials_pbrSpecularGlossiness");
     if (specularGlossinessMatEntry != gltfMaterial.extensions.end()) {
         tinygltf::Value const& specGlossMat = specularGlossinessMatEntry->second;

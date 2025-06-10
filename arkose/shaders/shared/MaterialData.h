@@ -7,6 +7,11 @@ struct ShaderMaterial {
     int metallicRoughness;
     int emissive;
 
+    int occlusion;
+    int _unused0;
+    int _unused1;
+    int _unused2;
+
     int blendMode;
     float maskCutoff;
     float metallicFactor; // multiplied by value in texture

@@ -477,6 +477,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
             materialDidChange |= drawMaterialInputGui("Normal map", material->normalMap, shaderMaterial->normalMap);
             materialDidChange |= drawMaterialInputGui("Bent normal map", material->bentNormalMap, shaderMaterial->bentNormalMap, true);
             materialDidChange |= drawMaterialInputGui("Properties map", material->materialProperties, shaderMaterial->metallicRoughness);
+            materialDidChange |= drawMaterialInputGui("Occlusion map", material->occlusionMap, shaderMaterial->occlusion);
 
             if (!showMaterialInputTextureUI) {
                 ImGui::EndDisabled();

@@ -98,6 +98,7 @@ public:
     std::optional<MaterialInput> normalMap {};
     std::optional<MaterialInput> bentNormalMap {};
     std::optional<MaterialInput> materialProperties {};
+    std::optional<MaterialInput> occlusionMap {}; // TODO: Probably pack into `materialProperties`
 
     vec4 colorTint { vec4(1.0f, 1.0f, 1.0f, 1.0f) };
 
@@ -125,6 +126,7 @@ enum class MaterialAssetVersion : u32 {
     Initial = 0,
     AddEmissiveFactor,
     AddBentNormalMap,
+    AddOcclusionMap,
     ////////////////////////////////////////////////////////////////////////////
     // Add new versions above this delimiter
     LatestVersion
@@ -155,6 +157,11 @@ void MaterialAsset::serialize(Archive& archive, u32 version)
         bentNormalMap = {};
     }
     archive(CEREAL_NVP(materialProperties));
+    if (version > toUnderlying(MaterialAssetVersion::AddOcclusionMap)) {
+        archive(CEREAL_NVP(occlusionMap));
+    } else {
+        occlusionMap = {};
+    }
     archive(CEREAL_NVP(colorTint));
     archive(CEREAL_NVP(metallicFactor));
     archive(CEREAL_NVP(roughnessFactor));
