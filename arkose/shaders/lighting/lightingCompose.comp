@@ -32,6 +32,7 @@ NAMED_UNIFORMS(constants,
     bool includeSpecularDirectLight;
     bool includeDiffuseDirectLight;
     bool includeDiffuseGI;
+    bool withBakedOcclusion;
     bool useBentNormalDirection;
     bool withBentNormalOcclusion;
     bool withScreenSpaceOcclusion;
@@ -71,6 +72,15 @@ void main()
     float nonLinearDepth = texelFetch(sceneDepthTex, pixelCoord, 0).x;
     if (nonLinearDepth < 1.0 - 1e-6) {
 
+        vec4 materialProps = texelFetch(sceneMaterialTex, pixelCoord, 0);
+        float roughness = materialProps.r;
+        float metallic = materialProps.g;
+        float occlusion = materialProps.b;
+
+        if (constants.withBakedOcclusion) {
+            ambientOcclusion = min(ambientOcclusion, occlusion);
+        }
+
         vec3 reflectionRadiance = texelFetch(reflectionsTex, pixelCoord, 0).rgb;
         vec3 reflectionWorldDirection = texelFetch(reflectionDirectionTex, pixelCoord, 0).xyz;
 
@@ -84,10 +94,6 @@ void main()
         vec3 V = -normalize(pixelViewSpacePosition);
         vec3 N = decodeNormal(texelFetch(sceneNormalVelocityTex, pixelCoord, 0).rg);
         vec3 L = mat3(camera.viewFromWorld) * reflectionWorldDirection;
-
-        vec2 materialProps = texelFetch(sceneMaterialTex, pixelCoord, 0).rg;
-        float roughness = materialProps.r;
-        float metallic = materialProps.g;
 
         vec3 F;
         vec3 brdfSpecular = specularBRDF(L, V, N, materialBaseColor, roughness, metallic, F);

@@ -309,7 +309,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         Texture& bentNormalTexture = reg.createTexture2D(renderResolution, Texture::Format::RGBA16F, linearFilter, mipMode, wrapMode);
         reg.publish("SceneBentNormal", bentNormalTexture);
 
-        // r: roughness, g: metallic, b: unused, a: unused
+        // r: roughness, g: metallic, b: occlusion, a: unused
         Texture& materialTexture = reg.createTexture2D(renderResolution, Texture::Format::RGBA8, linearFilter, mipMode, wrapMode);
         reg.publish("SceneMaterial", materialTexture);
 

@@ -19,6 +19,7 @@ private:
     bool m_includeGlossyGI { true };
 
     bool m_includeDiffuseGI { true };
+    bool m_withBakedOcclusion { true };
     bool m_useBentNormalDirection { true };
     bool m_withBentNormalOcclusion { true };
     bool m_withScreenSpaceOcclusion { true };

@@ -165,6 +165,8 @@ void main()
     float metallic = metallicRoughness.b * material.metallicFactor;
     float roughness = metallicRoughness.g * material.roughnessFactor;
 
+    float occlusion = texture(material_getTexture(material.occlusion), vTexCoord, constants.mipBias).r;
+
     vec3 V = -normalize(vPosition);
 
     vec3 N = vNormal;
@@ -239,7 +241,7 @@ void main()
         oColor = vec4(color, 1.0);
         oNormalVelocity = vec4(encodeNormal(N), velocity);
         oBentNormal = vec4(vec3(0.0), -1.0); // TODO!
-        oMaterialProps = vec4(roughness, metallic, 0.0, 0.0);
+        oMaterialProps = vec4(roughness, metallic, occlusion, 0.0);
         oBaseColor = vec4(baseColor, 0.0);
     #else
         float alpha = inputBaseColor.a * material.colorTint.a;

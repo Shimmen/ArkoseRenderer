@@ -269,6 +269,8 @@ void main()
     float metallic = metallicRoughness.b * material.metallicFactor;
     float roughness = metallicRoughness.g * material.roughnessFactor;
 
+    float occlusion = textureGrad(material_getTexture(material.occlusion), texCoord, ddx, ddy).r;
+
     vec3 ambient = constants.ambientAmount * baseColor;
     vec3 sceneColor = emissive + ambient;
     vec3 diffuseIrradiance = vec3(0.0);
@@ -300,6 +302,6 @@ void main()
     // TODO: Eventually we probably don't want to be writing these.. this is just for the visibility buffer transition period
     imageStore(normalVelocityImg, pixelCoord, vec4(octahedralEncode(N), velocity));
     imageStore(bentNormalImg, pixelCoord, vec4(worldSpaceBentNormal, bentCone));
-    imageStore(materialPropertyImg, pixelCoord, vec4(roughness, metallic, 0.0, 0.0));
+    imageStore(materialPropertyImg, pixelCoord, vec4(roughness, metallic, occlusion, 0.0));
     imageStore(baseColorImg, pixelCoord, vec4(baseColor, 1.0));
 }

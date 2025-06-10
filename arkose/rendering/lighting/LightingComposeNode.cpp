@@ -24,6 +24,8 @@ void LightingComposeNode::drawGui()
         ImGui::BeginDisabled();
     }
 
+    ImGui::Checkbox("Include baked occlusion", &m_withBakedOcclusion);
+
     ImGui::Checkbox("Use bent normal direction (if available)", &m_useBentNormalDirection);
 
     if (!m_useBentNormalDirection) { ImGui::BeginDisabled(); }
@@ -105,6 +107,7 @@ RenderPipelineNode::ExecuteCallback LightingComposeNode::construct(GpuScene& sce
         cmdList.setNamedUniform("includeSpecularDirectLight", m_includeSpecularDirectLight);
         cmdList.setNamedUniform("includeDiffuseDirectLight", m_includeDiffuseDirectLight);
         cmdList.setNamedUniform("includeDiffuseGI", m_includeDiffuseGI);
+        cmdList.setNamedUniform("withBakedOcclusion", m_withBakedOcclusion);
         cmdList.setNamedUniform("useBentNormalDirection", m_useBentNormalDirection);
         cmdList.setNamedUniform("withBentNormalOcclusion", m_withBentNormalOcclusion);
         cmdList.setNamedUniform("withScreenSpaceOcclusion", m_withScreenSpaceOcclusion);
