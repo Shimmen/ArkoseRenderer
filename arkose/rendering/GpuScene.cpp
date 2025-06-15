@@ -1354,6 +1354,9 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset const* materialAsset)
 
     shaderMaterial.colorTint = materialAsset->colorTint;
 
+    shaderMaterial.clearcoat = materialAsset->clearcoat;
+    shaderMaterial.clearcoatRoughness = materialAsset->clearcoatRoughness;
+
     MaterialHandle handle = m_managedMaterials.add(std::move(shaderMaterial));
     m_pendingMaterialUpdates.push_back(handle);
 

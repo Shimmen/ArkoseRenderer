@@ -9,8 +9,8 @@ struct ShaderMaterial {
 
     int occlusion;
     int bentNormalMap;
-    int _unused0;
-    int _unused1;
+    float clearcoat;
+    float clearcoatRoughness;
 
     int blendMode;
     float maskCutoff;
@@ -18,7 +18,7 @@ struct ShaderMaterial {
     float roughnessFactor; // multiplied by value in texture
 
     vec3 emissiveFactor; // multiplied by value in texture
-    int _unused2;
+    int _unused0;
 
     vec4 colorTint;
 };
