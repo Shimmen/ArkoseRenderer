@@ -1,6 +1,7 @@
 #include "AssetImporter.h"
 
 #include "asset/TextureCompressor.h"
+#include "asset/SetAsset.h"
 #include "asset/import/GltfLoader.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
@@ -97,7 +98,8 @@ void AssetImportTask::importGltf()
         m_result.meshes.size() + // process meshes
         m_result.meshes.size() + // write meshes
         m_result.skeletons.size() + // write skeletons
-        m_result.animations.size(); // write animations
+        m_result.animations.size() + // write animations
+        1; // write set asset
 
     m_processedItemCount += 1;
 
@@ -308,6 +310,29 @@ void AssetImportTask::importGltf()
 
         animation->writeToFile(targetFilePath, AssetStorage::Json);
         animation->setAssetFilePath(targetFilePath);
+
+        m_processedItemCount += 1;
+    }
+
+    // Make an SetAsset for the imported asset
+    {
+        std::unique_ptr<SetAsset> setAsset = std::make_unique<SetAsset>();
+
+        std::string fileName = m_assetFilePath.filename().replace_extension("").string();
+        setAsset->name = fileName;
+
+        for (MeshInstance const& meshInstance : result.meshInstances) {
+            NodeAsset* nodeAsset = setAsset->rootNode.createChildNode();
+            nodeAsset->name = meshInstance.mesh->name;
+            nodeAsset->transform = meshInstance.transform;
+            nodeAsset->meshIndex = narrow_cast<i32>(setAsset->meshAssets.size());
+            setAsset->meshAssets.emplace_back(meshInstance.mesh->assetFilePath().generic_string());
+        }
+
+        std::filesystem::path targetFilePath = (m_targetDirectory / fileName).replace_extension(SetAsset::AssetFileExtension);
+
+        setAsset->writeToFile(targetFilePath, AssetStorage::Json);
+        setAsset->setAssetFilePath(targetFilePath);
 
         m_processedItemCount += 1;
     }
