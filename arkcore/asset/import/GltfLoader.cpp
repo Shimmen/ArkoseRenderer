@@ -9,6 +9,7 @@
 
 namespace {
 static std::vector<std::string> supportedExtensions = { "KHR_materials_pbrSpecularGlossiness", // partial support
+                                                        "KHR_materials_clearcoat", // partial support (only factor & roughness factor)
                                                         "KHR_lights_punctual",
                                                         "MSFT_texture_dds" };
 }
@@ -841,6 +842,21 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
         int metallicRoughnessIdx = gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
         material->materialProperties = toMaterialInput(metallicRoughnessIdx);
 
+    }
+
+    auto clearcoatEntry = gltfMaterial.extensions.find("KHR_materials_clearcoat");
+    if (clearcoatEntry != gltfMaterial.extensions.end()) {
+        tinygltf::Value const& clearcoatProperties = clearcoatEntry->second;
+        // Ignoring clearcoat textures for now, for intensity, roughness, and normal map.
+        // We will just have it be a simple, smooth clearcoat layer with no normal mapping etc. for the time being.
+        if (clearcoatProperties.Has("clearcoatFactor")) {
+            double clearcoatFactor = clearcoatProperties.Get("clearcoatFactor").GetNumberAsDouble();
+            material->clearcoat = static_cast<float>(clearcoatFactor);
+        }
+        if (clearcoatProperties.Has("clearcoatRoughnessFactor")) {
+            double clearcoatRoughnessFactor = clearcoatProperties.Get("clearcoatRoughnessFactor").GetNumberAsDouble();
+            material->clearcoatRoughness = static_cast<float>(clearcoatRoughnessFactor);
+        }
     }
 
     // Arkose-specific "extras"

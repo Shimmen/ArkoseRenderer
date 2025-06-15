@@ -106,6 +106,9 @@ public:
     float roughnessFactor { 0.0f };
     vec3 emissiveFactor { 0.0f, 0.0f, 0.0f };
 
+    float clearcoat { 0.0f };
+    float clearcoatRoughness { 0.0f };
+
     BlendMode blendMode { BlendMode::Opaque };
     float maskCutoff { 1.0f };
 
@@ -127,6 +130,7 @@ enum class MaterialAssetVersion : u32 {
     AddEmissiveFactor,
     AddBentNormalMap,
     AddOcclusionMap,
+    AddClearcoat,
     ////////////////////////////////////////////////////////////////////////////
     // Add new versions above this delimiter
     LatestVersion
@@ -169,6 +173,13 @@ void MaterialAsset::serialize(Archive& archive, u32 version)
         archive(CEREAL_NVP(emissiveFactor));
     } else {
         emissiveFactor = vec3(0.0f);
+    }
+    if (version > toUnderlying(MaterialAssetVersion::AddClearcoat)) {
+        archive(CEREAL_NVP(clearcoat));
+        archive(CEREAL_NVP(clearcoatRoughness));
+    } else {
+        clearcoat = 0.0f;
+        clearcoatRoughness = 0.0f;
     }
     archive(CEREAL_NVP(blendMode), CEREAL_NVP(maskCutoff));
     archive(CEREAL_NVP(doubleSided));
