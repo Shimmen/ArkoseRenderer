@@ -15,7 +15,6 @@ D3D12Buffer::D3D12Buffer(Backend& backend, size_t size, Usage usage)
     D3D12_RESOURCE_STATES initialResourceState = D3D12_RESOURCE_STATE_COMMON;
     
     D3D12MA::ALLOCATION_DESC allocDescription = {};
-    allocDescription.HeapType = D3D12_HEAP_TYPE_DEFAULT;
 
     switch (usage) {
     case Buffer::Usage::Vertex:
@@ -24,6 +23,11 @@ D3D12Buffer::D3D12Buffer(Backend& backend, size_t size, Usage usage)
     case Buffer::Usage::ConstantBuffer:
     case Buffer::Usage::StorageBuffer:
     case Buffer::Usage::IndirectBuffer:
+        if (d3d12Backend.supportsGpuUploadHeap()) {
+            allocDescription.HeapType = D3D12_HEAP_TYPE_GPU_UPLOAD;
+        } else {
+            allocDescription.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+        }
         // Initial resource state has to be common for all these or will ignored anyway.
         // Instead we transition to the required state before it's next use if needed.
         initialResourceState = D3D12_RESOURCE_STATE_COMMON;
@@ -32,10 +36,10 @@ D3D12Buffer::D3D12Buffer(Backend& backend, size_t size, Usage usage)
         // "When you create a resource together with a D3D12_HEAP_TYPE_UPLOAD heap, you must set InitialResourceState to D3D12_RESOURCE_STATE_GENERIC_READ."
         // From: https://docs.microsoft.com/en-us/windows/win32/api/d3d12/nf-d3d12-id3d12device-createcommittedresource
         initialResourceState = D3D12_RESOURCE_STATE_GENERIC_READ;
-        allocDescription.HeapType = D3D12_HEAP_TYPE_UPLOAD; // try D3D12_HEAP_TYPE_GPU_UPLOAD!
+        allocDescription.HeapType = D3D12_HEAP_TYPE_UPLOAD;
         break;
     case Buffer::Usage::Readback:
-        initialResourceState = D3D12_RESOURCE_STATE_COMMON;
+        initialResourceState = D3D12_RESOURCE_STATE_COPY_DEST;
         allocDescription.HeapType = D3D12_HEAP_TYPE_READBACK;
         break;
     default:
