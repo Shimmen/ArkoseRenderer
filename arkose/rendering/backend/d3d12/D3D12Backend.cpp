@@ -128,6 +128,16 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
         device().SetStablePowerState(true);
     }
 
+    // Query for optional device features
+
+    D3D12_FEATURE_DATA_D3D12_OPTIONS16 d3d12Options16 = {};
+    if (auto hr = m_device->CheckFeatureSupport(D3D12_FEATURE_D3D12_OPTIONS16, &d3d12Options16, sizeof(d3d12Options16)); SUCCEEDED(hr)) {
+        m_gpuUploadHeapSupported = d3d12Options16.GPUUploadHeapSupported;
+    } else {
+        ARKOSE_LOG(Warning, "D3D12Backend: failed to query for GPU upload heap support, will assume it's not available.");
+        m_gpuUploadHeapSupported = false;
+    }
+
     /////////////////////////////////
 
     D3D12MA::ALLOCATOR_DESC allocatorDesc {};

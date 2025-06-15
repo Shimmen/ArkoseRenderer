@@ -92,6 +92,9 @@ public:
     D3D12DescriptorHeapAllocator& shaderVisibleDescriptorHeapAllocator();
     D3D12DescriptorHeapAllocator& samplerDescriptorHeapAllocator();
 
+    // i.e. the system has resizeable BAR (Re-BAR) so the entire device-local memory is accessible to the CPU
+    bool supportsGpuUploadHeap() const { return m_gpuUploadHeapSupported; }
+
     #if defined(TRACY_ENABLE)
     tracy::D3D12QueueCtx* tracyD3D12Context() { return m_tracyD3D12Context; }
     #endif
@@ -107,15 +110,20 @@ private:
     void recreateSwapChain();
 
     ///////////////////////////////////////////////////////////////////////////
-    /// Window and swapchain related members
-
-    Extent2D m_windowFramebufferExtent { 0, 0 };
+    /// Device/adapter related members
 
     ComPtr<IDXGIAdapter1> m_dxgiAdapter {};
 
     ComPtr<ID3D12Device> m_device {};
     ComPtr<ID3D12DebugDevice> m_debugDevice {};
     ComPtr<ID3D12InfoQueue> m_infoQueue {};
+
+    bool m_gpuUploadHeapSupported { false };
+
+    ///////////////////////////////////////////////////////////////////////////
+    /// Window and swapchain related members
+
+    Extent2D m_windowFramebufferExtent { 0, 0 };
 
     ComPtr<ID3D12CommandQueue> m_commandQueue {};
 
