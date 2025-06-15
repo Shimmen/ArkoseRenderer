@@ -68,6 +68,11 @@ struct Handle {
         m_index = InvalidIndex;
     }
 
+    operator bool() const
+    {
+        return valid();
+    }
+
 private:
 
     IndexType m_index { InvalidIndex };
