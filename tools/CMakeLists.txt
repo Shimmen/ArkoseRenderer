@@ -34,6 +34,12 @@ target_link_libraries(${PROJECT_NAME} ArkoseCore)
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "tools")
 set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_LIST_DIR}/bin")
 
+# Ensure DLLs are copied to the tools executable directory after build
+# Use whatever tool target is created last, as they will all share their output directory
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:${PROJECT_NAME}> $<TARGET_RUNTIME_DLLS:${PROJECT_NAME}>
+    COMMAND_EXPAND_LISTS)
+
 ##################################
 ## OpenUSD-specific tooling WIP ##
 ##################################
