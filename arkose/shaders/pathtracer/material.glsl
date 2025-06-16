@@ -13,6 +13,8 @@ struct PathTraceMaterial {
     vec3 baseColor;
     float roughness;
     float metallic;
+    float clearcoat;
+    float clearcoatRoughness;
 };
 
 vec3 sampleCosineWeightedHemisphere(float r1, float r2)

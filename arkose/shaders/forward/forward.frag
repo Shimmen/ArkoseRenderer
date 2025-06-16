@@ -42,7 +42,7 @@ layout(location = 3) out vec4 oMaterialProps;
 layout(location = 4) out vec4 oBaseColor;
 #endif
 
-vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
 {
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
@@ -52,7 +52,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, vec3 V
     #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
         vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);
     #else
-        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
     #endif
 
     vec3 directLight = light.color * shadowFactor;
@@ -81,7 +81,7 @@ float evaluateLocalLightShadow(uint shadowIdx, mat4 lightProjectionFromView, vec
     return (mapDepth < posInShadowMap.z) ? 0.0 : 1.0;
 }
 
-vec3 evaluateSphereLight(SphereLightData light, bool hasShadow, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+vec3 evaluateSphereLight(SphereLightData light, bool hasShadow, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
 {
     // TODO: Support multiple sphere lights with shadows!
     vec2 sampleTexCoords = gl_FragCoord.xy * constants.invTargetSize;
@@ -102,7 +102,7 @@ vec3 evaluateSphereLight(SphereLightData light, bool hasShadow, vec3 V, vec3 N, 
     #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
         vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);
     #else
-        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
     #endif
 
     vec3 directLight = light.color * shadowFactor * distanceAttenuation;
@@ -111,7 +111,7 @@ vec3 evaluateSphereLight(SphereLightData light, bool hasShadow, vec3 V, vec3 N, 
     return brdf * LdotN * directLight;
 }
 
-vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
 {
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
@@ -129,7 +129,7 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3
     #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
         vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);
     #else
-        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
     #endif
 
     vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;
@@ -164,6 +164,9 @@ void main()
     vec4 metallicRoughness = texture(material_getTexture(material.metallicRoughness), vTexCoord, constants.mipBias);
     float metallic = metallicRoughness.b * material.metallicFactor;
     float roughness = metallicRoughness.g * material.roughnessFactor;
+
+    float clearcoat = material.clearcoat;
+    float clearcoatRoughness = material.clearcoatRoughness;
 
     float occlusion = texture(material_getTexture(material.occlusion), vTexCoord, constants.mipBias).r;
 
@@ -202,7 +205,7 @@ void main()
             bool hasShadow = true;
         #endif
 
-        color += evaluateDirectionalLight(light_getDirectionalLight(), hasShadow, V, N, baseColor, roughness, metallic);
+        color += evaluateDirectionalLight(light_getDirectionalLight(), hasShadow, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
     }
 
     // TODO: Use tiles or clusters to minimize number of light evaluations!
@@ -215,12 +218,12 @@ void main()
             #else
                 bool hasShadow = i == 0; // todo: support multple shadowed point lights!
             #endif
-            color += evaluateSphereLight(light_getSphereLight(i), hasShadow, V, N, baseColor, roughness, metallic);
+            color += evaluateSphereLight(light_getSphereLight(i), hasShadow, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
         }
 
         uint shadowIdx = 0;
         for (uint i = 0; i < light_getSpotLightCount(); ++i) {
-            color += evaluateSpotLight(light_getSpotLight(i), shadowIdx++, V, N, baseColor, roughness, metallic);
+            color += evaluateSpotLight(light_getSpotLight(i), shadowIdx++, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
         }
     }
 
@@ -236,10 +239,16 @@ void main()
     }
 
     #if FORWARD_BLEND_MODE != BLEND_MODE_TRANSLUCENT
+
+        // Encode the g-buffer so that the roughness is the closest surface, which if present would be the clearcoat.
+        // This way we can easily handle reflections etc. where we care about reflectiveness & roughness of the surface.
+        // This mostly makes sense if the clearcoat value is zero or one, but it sort of works in between as well..
+        float gbufferRoughness = mix(roughness, clearcoatRoughness, clearcoat);
+
         oColor = vec4(color, 1.0);
         oNormalVelocity = vec4(encodeNormal(N), velocity);
         oBentNormal = vec4(vec3(0.0), -1.0); // TODO!
-        oMaterialProps = vec4(roughness, metallic, occlusion, 0.0);
+        oMaterialProps = vec4(gbufferRoughness, metallic, occlusion, 0.0);
         oBaseColor = vec4(baseColor, 0.0);
     #else
         float alpha = inputBaseColor.a * material.colorTint.a;

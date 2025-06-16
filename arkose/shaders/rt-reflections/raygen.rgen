@@ -64,7 +64,7 @@ void main()
 	}
 
 	vec4 materialProps = texelFetch(sceneMaterialTex, pixelCoord, 0).rgba;
-	float roughness = materialProps.r;
+	float roughness = materialProps.r; // Includes clearcoat roughness if present!
 	float metallic = materialProps.g;
 
 	if (roughness >= noTracingRoughnessThreshold()) {

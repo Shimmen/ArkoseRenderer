@@ -21,6 +21,10 @@ float D_GGX(float NdotH, float a) {
     return x;
 }
 
+float F_Schlick(float VdotH, float f0) {
+    return f0 + (1.0 - f0) * pow(1.0 - VdotH, 5.0);
+}
+
 vec3 F_Schlick(float VdotH, vec3 f0) {
     return f0 + (vec3(1.0) - f0) * pow(1.0 - VdotH, 5.0);
 }
@@ -43,7 +47,27 @@ float V_SmithGGXCorrelated(float NdotV, float NdotL, float a) {
     return 0.5 / (GGXV + GGXL + 1e-20);
 }
 
-vec3 specularBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, out vec3 F)
+float V_Kelemen(float LdotH)
+{
+    return 0.25 / square(LdotH);
+}
+
+float clearcoatBRDF(vec3 L, vec3 V, vec3 N, float clearcoatStrength, float clearcoatRoughness, out float F)
+{
+    vec3 H = normalize(L + V);
+    float NdotH = saturate(dot(N, H));
+    float LdotH = saturate(dot(L, H));
+
+    float a = square(clamp(clearcoatRoughness, 0.1, 1.0));
+
+    float D = D_GGX(NdotH, a);
+    float V_ = V_Kelemen(LdotH);
+    F = F_Schlick(LdotH, DIELECTRIC_REFLECTANCE) * clearcoatStrength;
+
+    return D * V_ * F;
+}
+
+vec3 specularBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, /*float clearcoat, float clearcoatRoughness,*/ out vec3 F)
 {
     vec3 H = normalize(L + V);
 
@@ -52,7 +76,7 @@ vec3 specularBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float
     float NdotH = clamp(dot(N, H), 0.0, 1.0);
     float LdotH = clamp(dot(L, H), 0.0, 1.0);
 
-    // Use a which is perceptually linear for roughness
+    // Use `a` which is perceptually linear for roughness
     float a = square(roughness);
 
     vec3 f0 = mix(vec3(DIELECTRIC_REFLECTANCE), baseColor, metallic);
@@ -105,15 +129,18 @@ vec3 diffuseBRDF()
     return vec3(1.0) / vec3(PI);
 }
 
-vec3 evaluateBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+vec3 evaluateBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
 {
+    float Fc;
+    float Fr_clearcoat = clearcoatBRDF(L, V, N, clearcoat, clearcoatRoughness, Fc);
+
     vec3 F;
-    vec3 specular = specularBRDF(L, V, N, baseColor, roughness, metallic, F);
+    vec3 Fspecular = specularBRDF(L, V, N, baseColor, roughness, metallic, F);
 
     vec3 diffuseColor = vec3(1.0 - metallic) * baseColor;
-    vec3 diffuse = diffuseColor * (1.0 - F) * diffuseBRDF();
+    vec3 Fdiffuse = diffuseColor * (1.0 - F) * diffuseBRDF();
 
-    vec3 brdf = diffuse + specular;
+    vec3 brdf = (Fdiffuse + Fspecular * (1.0 - Fc)) * (1.0 - Fc) + Fr_clearcoat;
     return brdf;
 }
 

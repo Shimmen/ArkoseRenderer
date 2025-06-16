@@ -48,10 +48,10 @@ float traceShadowRay(vec3 X, vec3 L, float maxDistance)
     return shadowPayload.inShadow ? 0.0 : 1.0;
 }
 
-vec3 evaluatePathtracerBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+vec3 evaluatePathtracerBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
 {
 #if defined(PATHTRACER_BRDF_DEFAULT)
-    return evaluateBRDF(L, V, N, baseColor, roughness, metallic);
+    return evaluateBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
 #elif defined(PATHTRACER_BRDF_GLASS)
     return evaluateGlassBRDF(L, V, N, roughness);
 #else
@@ -59,7 +59,7 @@ vec3 evaluatePathtracerBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughn
 #endif
 }
 
-vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
 {
     vec3 L = -normalize(light.worldSpaceDirection.xyz);
     float LdotN = dot(L, N);
@@ -69,7 +69,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
         vec3 hitPoint = rt_WorldRayOrigin + rt_RayHitT * rt_WorldRayDirection;
         float shadowFactor = traceShadowRay(hitPoint, L, 2.0 * camera.zFar);
 
-        vec3 brdf = evaluatePathtracerBRDF(L, V, N, baseColor, roughness, metallic);
+        vec3 brdf = evaluatePathtracerBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
         vec3 directLight = light.color * shadowFactor;
 
         return brdf * LdotN * directLight;
@@ -78,7 +78,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
     return vec3(0.0);
 }
 
-vec3 evaluateSphereLight(SphereLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+vec3 evaluateSphereLight(SphereLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
 {
     vec3 hitPoint = rt_WorldRayOrigin + rt_RayHitT * rt_WorldRayDirection;
     vec3 toLight = light.worldSpacePosition.xyz - hitPoint;
@@ -92,7 +92,7 @@ vec3 evaluateSphereLight(SphereLightData light, vec3 V, vec3 N, vec3 baseColor, 
 
         float distanceAttenuation = calculateLightDistanceAttenuation(distanceToLight, light.lightSourceRadius, light.lightRadius);
 
-        vec3 brdf = evaluatePathtracerBRDF(L, V, N, baseColor, roughness, metallic);
+        vec3 brdf = evaluatePathtracerBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
         vec3 directLight = light.color * shadowFactor * distanceAttenuation;
 
         return brdf * LdotN * directLight;
@@ -101,7 +101,7 @@ vec3 evaluateSphereLight(SphereLightData light, vec3 V, vec3 N, vec3 baseColor, 
     return vec3(0.0);
 }
 
-vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic)
+vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
 {
     vec3 L = -normalize(light.worldSpaceDirection.xyz);
     float LdotN = dot(L, N);
@@ -122,7 +122,7 @@ vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, floa
                                     light.worldSpaceDirection.xyz);
         float iesValue = evaluateIESLookupTable(material_getTexture(light.iesProfileIndex), light.outerConeHalfAngle, lightViewMatrix, -normalizedToLight);
 
-        vec3 brdf = evaluatePathtracerBRDF(L, V, N, baseColor, roughness, metallic);
+        vec3 brdf = evaluatePathtracerBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
         vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;
 
         return brdf * LdotN * directLight;
@@ -173,6 +173,9 @@ void main()
     float metallic = metallicRoughness.b * material.metallicFactor;
     float roughness = metallicRoughness.g * material.roughnessFactor;
 
+    float clearcoat = material.clearcoat;
+    float clearcoatRoughness = material.clearcoatRoughness;
+
     vec3 radiance = emissive;
 
     // Direct light (analytic lights) (in world space)
@@ -180,15 +183,15 @@ void main()
         vec3 V = -rt_WorldRayDirection;
 
         if (light_hasDirectionalLight()) {
-            radiance += evaluateDirectionalLight(light_getDirectionalLight(), V, N, baseColor, roughness, metallic);
+            radiance += evaluateDirectionalLight(light_getDirectionalLight(), V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
         }
 
         for (uint i = 0; i < light_getSphereLightCount(); ++i) {
-            radiance += evaluateSphereLight(light_getSphereLight(i), V, N, baseColor, roughness, metallic);
+            radiance += evaluateSphereLight(light_getSphereLight(i), V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
         }
 
         for (uint i = 0; i < light_getSpotLightCount(); ++i) {
-            radiance += evaluateSpotLight(light_getSpotLight(i), V, N, baseColor, roughness, metallic);
+            radiance += evaluateSpotLight(light_getSpotLight(i), V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
         }
     }
 
@@ -200,6 +203,9 @@ void main()
         ptMaterial.baseColor = baseColor;
         ptMaterial.roughness = roughness;
         ptMaterial.metallic = metallic;
+        // TODO: Also handle clearcoat in the path tracing sample & evaluation!
+        ptMaterial.clearcoat = clearcoat;
+        ptMaterial.clearcoatRoughness = clearcoatRoughness;
 
         vec3 B1, B2;
         createOrthonormalBasis(N, B1, B2);
