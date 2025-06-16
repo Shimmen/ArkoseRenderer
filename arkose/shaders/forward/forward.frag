@@ -52,7 +52,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, vec3 V
     #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
         vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);
     #else
-        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
+        vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
     #endif
 
     vec3 directLight = light.color * shadowFactor;
@@ -102,7 +102,7 @@ vec3 evaluateSphereLight(SphereLightData light, bool hasShadow, vec3 V, vec3 N, 
     #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
         vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);
     #else
-        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
+        vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
     #endif
 
     vec3 directLight = light.color * shadowFactor * distanceAttenuation;
@@ -129,7 +129,7 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3
     #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
         vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);
     #else
-        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
+        vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
     #endif
 
     vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;

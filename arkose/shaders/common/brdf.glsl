@@ -129,7 +129,7 @@ vec3 diffuseBRDF()
     return vec3(1.0) / vec3(PI);
 }
 
-vec3 evaluateBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
+vec3 evaluateDefaultBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
 {
     float Fc;
     float Fr_clearcoat = clearcoatBRDF(L, V, N, clearcoat, clearcoatRoughness, Fc);

@@ -51,7 +51,7 @@ float traceShadowRay(vec3 X, vec3 L, float maxDistance)
 vec3 evaluatePathtracerBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
 {
 #if defined(PATHTRACER_BRDF_DEFAULT)
-    return evaluateBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
+    return evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
 #elif defined(PATHTRACER_BRDF_GLASS)
     return evaluateGlassBRDF(L, V, N, roughness);
 #else

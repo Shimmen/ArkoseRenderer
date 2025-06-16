@@ -44,7 +44,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, uvec2 
 
     vec3 directLight = light.color * shadowFactor;
 
-    vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
+    vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
 
     // TODO: Also handle `outDiffuseIrradiance` for subsurface scattering!
     outDiffuseIrradiance = vec3(0.0);
@@ -93,7 +93,7 @@ vec3 evaluateSphereLight(SphereLightData light, bool hasShadow, uvec2 pixelCoord
 
     vec3 directLight = light.color * shadowFactor * distanceAttenuation;
 
-    vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
+    vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
 
     // TODO: Also handle `outDiffuseIrradiance` for subsurface scattering!
     outDiffuseIrradiance = vec3(0.0);
@@ -119,7 +119,7 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 viewSpacePos, v
 
     vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;
 
-    vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
+    vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
 
     // TODO: Also handle `outDiffuseIrradiance` for subsurface scattering!
     outDiffuseIrradiance = vec3(0.0);

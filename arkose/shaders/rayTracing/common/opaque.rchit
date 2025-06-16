@@ -63,7 +63,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
         vec3 hitPoint = rt_WorldRayOrigin + rt_RayHitT * rt_WorldRayDirection;
         float shadowFactor = traceShadowRay(hitPoint, L, 2.0 * camera.zFar);
 
-        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
+        vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
         vec3 directLight = light.color * shadowFactor;
 
         return brdf * LdotN * directLight;
@@ -86,7 +86,7 @@ vec3 evaluateSphereLight(SphereLightData light, vec3 V, vec3 N, vec3 baseColor, 
 
         float distanceAttenuation = calculateLightDistanceAttenuation(distanceToLight, light.lightSourceRadius, light.lightRadius);
 
-        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
+        vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
         vec3 directLight = light.color * shadowFactor * distanceAttenuation;
 
         return brdf * LdotN * directLight;
@@ -116,7 +116,7 @@ vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, floa
                                     light.worldSpaceDirection.xyz);
         float iesValue = evaluateIESLookupTable(material_getTexture(light.iesProfileIndex), light.outerConeHalfAngle, lightViewMatrix, -normalizedToLight);
 
-        vec3 brdf = evaluateBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
+        vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
         vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;
 
         return brdf * LdotN * directLight;
