@@ -142,6 +142,7 @@ target_link_libraries(ArkoseCore PUBLIC
     bc7enc_lib # texture compression
     mikktspace # tangent space generation
     meshoptimizer # mesh optimization & meshlet generation
+    omm_sdk # opacity micro-map SDK
     )
 
 if (MSVC)
