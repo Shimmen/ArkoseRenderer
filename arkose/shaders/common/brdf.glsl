@@ -147,6 +147,29 @@ vec3 evaluateDefaultBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness
     return brdf;
 }
 
+vec3 evaluateSkinSpecularBRDF(vec3 L, vec3 V, vec3 N, vec3 albedo, float roughness, out vec3 outF)
+{
+    const float metallic = 0.0; // skin is not metallic
+
+    vec3 F_s;
+    vec3 Fr_s = specularBRDF(L, V, N, albedo, roughness, metallic, F_s);
+
+    outF = F_s;
+    return Fr_s;
+}
+
+vec3 evaluateSkinBRDF(vec3 L, vec3 V, vec3 N, vec3 albedo, float roughness)
+{
+    vec3 F_s;
+    vec3 Fr_s = evaluateSkinSpecularBRDF(L, V, N, albedo, roughness, F_s);
+
+    vec3 Fr_d = albedo * diffuseBRDF();
+
+    vec3 brdf = Fr_d * (1.0 - F_s) + Fr_s;
+
+    return brdf;
+}
+
 vec3 evaluateGlassBRDF(vec3 L, vec3 V, vec3 N, float roughness)
 {
     vec3 F;
