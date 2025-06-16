@@ -1,6 +1,10 @@
 #ifndef MATERIAL_DATA_H
 #define MATERIAL_DATA_H
 
+// NOTE: Ensure this matches the BRDF enum values in Brdf.h
+#define BRDF_DEFAULT 0
+#define BRDF_SKIN    1
+
 struct ShaderMaterial {
     int baseColor;
     int normalMap;
@@ -18,7 +22,7 @@ struct ShaderMaterial {
     float roughnessFactor; // multiplied by value in texture
 
     vec3 emissiveFactor; // multiplied by value in texture
-    int _unused0;
+    int brdf;
 
     vec4 colorTint;
 };

@@ -1345,8 +1345,21 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset const* materialAsset)
         }
     };
 
+    auto translateBrdfShaderMaterial = [](Brdf brdf) -> int {
+        switch (brdf) {
+        case Brdf::Default:
+            return BRDF_DEFAULT;
+        case Brdf::Skin:
+            return BRDF_SKIN;
+        default:
+            ASSERT_NOT_REACHED();
+        }
+    };
+
     shaderMaterial.blendMode = translateBlendModeToShaderMaterial(materialAsset->blendMode);
     shaderMaterial.maskCutoff = materialAsset->maskCutoff;
+
+    shaderMaterial.brdf = translateBrdfShaderMaterial(materialAsset->brdf);
 
     shaderMaterial.metallicFactor = materialAsset->metallicFactor;
     shaderMaterial.roughnessFactor = materialAsset->roughnessFactor;
