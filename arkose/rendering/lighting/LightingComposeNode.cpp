@@ -9,8 +9,8 @@ void LightingComposeNode::drawGui()
 {
     // TODO: This could be a really nice 2-column-checkbox layout where you select specular/diffuse for direct/indirect!
 
-    ImGui::Checkbox("Specular direct light (+emissive)", &m_includeSpecularDirectLight);
-    ImGui::Checkbox("Diffuse direct light", &m_includeDiffuseDirectLight);
+    ImGui::Checkbox("Direct light (+emissive)", &m_includeDirectLight);
+    ImGui::Checkbox("Skin diffuse light", &m_includeSkinDiffuseLight);
 
     ImGui::Separator();
 
@@ -104,8 +104,8 @@ RenderPipelineNode::ExecuteCallback LightingComposeNode::construct(GpuScene& sce
         cmdList.setComputeState(giComposeState);
 
         cmdList.setNamedUniform("targetSize", sceneColorWithGI.extent());
-        cmdList.setNamedUniform("includeSpecularDirectLight", m_includeSpecularDirectLight);
-        cmdList.setNamedUniform("includeDiffuseDirectLight", m_includeDiffuseDirectLight);
+        cmdList.setNamedUniform("includeDirectLight", m_includeDirectLight);
+        cmdList.setNamedUniform("includeSkinDiffuseLight", m_includeSkinDiffuseLight);
         cmdList.setNamedUniform("includeDiffuseGI", m_includeDiffuseGI);
         cmdList.setNamedUniform("withBakedOcclusion", m_withBakedOcclusion);
         cmdList.setNamedUniform("useBentNormalDirection", m_useBentNormalDirection);

@@ -29,8 +29,8 @@ layout(set = 1, binding = 3) uniform sampler2D ddgiVisibilityAtlas;
 
 NAMED_UNIFORMS(constants,
     uvec2 targetSize;
-    bool includeSpecularDirectLight;
-    bool includeDiffuseDirectLight;
+    bool includeDirectLight;
+    bool includeSkinDiffuseLight;
     bool includeDiffuseGI;
     bool withBakedOcclusion;
     bool useBentNormalDirection;
@@ -55,11 +55,11 @@ void main()
 
     vec4 sceneColor = vec4(0.0);
 
-    if (constants.includeSpecularDirectLight) {
+    if (constants.includeDirectLight) {
         sceneColor += texelFetch(directLightTex, pixelCoord, 0);
     }
 
-    if (constants.includeDiffuseDirectLight) {
+    if (constants.includeSkinDiffuseLight) {
         vec3 diffuseIrradiance = texelFetch(directDiffuseIrradianceTex, pixelCoord, 0).rgb;
         sceneColor.rgb += diffuseIrradiance * materialBaseColor * diffuseBRDF();
     }

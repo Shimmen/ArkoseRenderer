@@ -35,7 +35,7 @@ NAMED_UNIFORMS_STRUCT(ForwardPassConstants, constants)
 
 DeclareVisibilityBufferSamplingFunctions
 
-vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, uvec2 pixelCoord, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness, inout vec3 outDiffuseIrradiance)
+vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, uvec2 pixelCoord, int brdfType, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness, inout vec3 outSkinDiffuseIrradiance)
 {
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
@@ -44,12 +44,21 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, uvec2 
 
     vec3 directLight = light.color * shadowFactor;
 
-    vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
-
-    // TODO: Also handle `outDiffuseIrradiance` for subsurface scattering!
-    outDiffuseIrradiance = vec3(0.0);
-
     float LdotN = max(dot(L, N), 0.0);
+
+    vec3 brdf;
+    switch (brdfType) {
+    case BRDF_SKIN:
+        vec3 F_s;
+        brdf = evaluateSkinSpecularBRDF(L, V, N, baseColor, roughness, F_s);
+        outSkinDiffuseIrradiance += (1.0 - F_s) * LdotN * directLight;
+        break;
+    case BRDF_DEFAULT:
+    default:
+        brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
+        break;
+    }
+
     return brdf * LdotN * directLight;
 }
 
@@ -73,7 +82,7 @@ float evaluateLocalLightShadow(uint shadowIdx, mat4 lightProjectionFromView, vec
     return (mapDepth < posInShadowMap.z) ? 0.0 : 1.0;
 }
 
-vec3 evaluateSphereLight(SphereLightData light, bool hasShadow, uvec2 pixelCoord, vec3 viewSpacePos, vec3 V, vec3 N, vec3 geometricNormal, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness, inout vec3 outDiffuseIrradiance)
+vec3 evaluateSphereLight(SphereLightData light, bool hasShadow, uvec2 pixelCoord, int brdfType, vec3 viewSpacePos, vec3 V, vec3 N, vec3 geometricNormal, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness, inout vec3 outSkinDiffuseIrradiance)
 {
     // TODO: Support multiple sphere lights with shadows!
     vec2 sampleTexCoords = (vec2(pixelCoord) + vec2(0.5)) * constants.invTargetSize;
@@ -93,16 +102,24 @@ vec3 evaluateSphereLight(SphereLightData light, bool hasShadow, uvec2 pixelCoord
 
     vec3 directLight = light.color * shadowFactor * distanceAttenuation;
 
-    vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
-
-    // TODO: Also handle `outDiffuseIrradiance` for subsurface scattering!
-    outDiffuseIrradiance = vec3(0.0);
+    vec3 brdf;
+    switch (brdfType) {
+    case BRDF_SKIN:
+        vec3 F_s;
+        brdf = evaluateSkinSpecularBRDF(L, V, N, baseColor, roughness, F_s);
+        outSkinDiffuseIrradiance += (1.0 - F_s) * directLight;
+        break;
+    case BRDF_DEFAULT:
+    default:
+        brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
+        break;
+    }
 
     float LdotN = max(dot(L, N), 0.0);
     return brdf * LdotN * directLight;
 }
 
-vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 viewSpacePos, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness, inout vec3 outDiffuseIrradiance)
+vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, int brdfType, vec3 viewSpacePos, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness, inout vec3 outSkinDiffuseIrradiance)
 {
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
@@ -119,10 +136,18 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 viewSpacePos, v
 
     vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;
 
-    vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
-
-    // TODO: Also handle `outDiffuseIrradiance` for subsurface scattering!
-    outDiffuseIrradiance = vec3(0.0);
+    vec3 brdf;
+    switch (brdfType) {
+    case BRDF_SKIN:
+        vec3 F_s;
+        brdf = evaluateSkinSpecularBRDF(L, V, N, baseColor, roughness, F_s);
+        outSkinDiffuseIrradiance += (1.0 - F_s) * directLight;
+        break;
+    case BRDF_DEFAULT:
+    default:
+        brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
+        break;
+    }
 
     float LdotN = max(dot(L, N), 0.0);
     return brdf * LdotN * directLight;
@@ -257,28 +282,28 @@ void main()
 
     vec3 ambient = constants.ambientAmount * baseColor;
     vec3 sceneColor = emissive + ambient;
-    vec3 diffuseIrradiance = vec3(0.0);
+    vec3 diffuseSkinIrradiance = vec3(0.0);
 
     if (light_hasDirectionalLight()) {
         bool hasShadow = true; // directional light always has shadows
-        sceneColor += evaluateDirectionalLight(light_getDirectionalLight(), hasShadow, pixelCoord, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness, diffuseIrradiance);
+        sceneColor += evaluateDirectionalLight(light_getDirectionalLight(), hasShadow, pixelCoord, material.brdf, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness, diffuseSkinIrradiance);
     }
 
     // TODO: Use tiles or clusters to minimize number of light evaluations!
     {
         for (uint i = 0; i < light_getSphereLightCount(); ++i) {
             bool hasShadow = i == 0; // todo: support multiple shadowed point lights!
-            sceneColor += evaluateSphereLight(light_getSphereLight(i), hasShadow, pixelCoord, viewSpacePos, V, N, geometricNormal, baseColor, roughness, metallic, clearcoat, clearcoatRoughness, diffuseIrradiance);
+            sceneColor += evaluateSphereLight(light_getSphereLight(i), hasShadow, pixelCoord, material.brdf, viewSpacePos, V, N, geometricNormal, baseColor, roughness, metallic, clearcoat, clearcoatRoughness, diffuseSkinIrradiance);
         }
 
         uint shadowIdx = 0;
         for (uint i = 0; i < light_getSpotLightCount(); ++i) {
-            sceneColor += evaluateSpotLight(light_getSpotLight(i), shadowIdx++, viewSpacePos, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness, diffuseIrradiance);
+            sceneColor += evaluateSpotLight(light_getSpotLight(i), shadowIdx++, material.brdf, viewSpacePos, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness, diffuseSkinIrradiance);
         }
     }
 
     imageStore(sceneColorImg, pixelCoord, vec4(sceneColor, 1.0));
-    imageStore(diffuseIrradianceImg, pixelCoord, vec4(diffuseIrradiance, 1.0));
+    imageStore(diffuseIrradianceImg, pixelCoord, vec4(diffuseSkinIrradiance, 1.0));
 
     float gbufferRoughness = mix(roughness, clearcoatRoughness, clearcoat);
 
