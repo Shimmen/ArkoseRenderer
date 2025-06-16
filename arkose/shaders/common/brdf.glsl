@@ -131,16 +131,19 @@ vec3 diffuseBRDF()
 
 vec3 evaluateDefaultBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
 {
-    float Fc;
-    float Fr_clearcoat = clearcoatBRDF(L, V, N, clearcoat, clearcoatRoughness, Fc);
+    // TODO: Optimize this - there's plenty of redundant calculations here
+    // (for example, lots of overlap between clearcoat and specular BRDFs)
 
-    vec3 F;
-    vec3 Fspecular = specularBRDF(L, V, N, baseColor, roughness, metallic, F);
+    float F_c;
+    float Fr_c = clearcoatBRDF(L, V, N, clearcoat, clearcoatRoughness, F_c);
+
+    vec3 F_s;
+    vec3 Fr_s = specularBRDF(L, V, N, baseColor, roughness, metallic, F_s);
 
     vec3 diffuseColor = vec3(1.0 - metallic) * baseColor;
-    vec3 Fdiffuse = diffuseColor * (1.0 - F) * diffuseBRDF();
+    vec3 Fr_d = diffuseColor * diffuseBRDF();
 
-    vec3 brdf = (Fdiffuse + Fspecular * (1.0 - Fc)) * (1.0 - Fc) + Fr_clearcoat;
+    vec3 brdf = (Fr_d * (1.0 - F_s) + Fr_s) * (1.0 - F_c) + Fr_c;
     return brdf;
 }
 
