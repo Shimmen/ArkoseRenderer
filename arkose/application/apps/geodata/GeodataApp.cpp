@@ -275,7 +275,7 @@ void GeodataApp::createMapRegions()
             ARKOSE_LOG(Info, "    after triangulation, {} faces with {} vertices", F2.rows(), V2.rows());
 
             MeshSegmentAsset& segment = lod0.meshSegments.emplace_back();
-            segment.material = materialAsset;
+            //segment.material = materialAsset;
 
             size_t vertexCount = V2.rows();
             for (size_t vertexIdx = 0; vertexIdx < vertexCount; ++vertexIdx) {

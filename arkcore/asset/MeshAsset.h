@@ -9,7 +9,6 @@
 #include <ark/aabb.h>
 #include <string>
 #include <string_view>
-#include <variant>
 #include <vector>
 
 struct PhysicsMesh;
@@ -38,19 +37,6 @@ public:
 
     template<class Archive>
     void serialize(Archive&, u32 version);
-
-    bool hasPathToMaterial() const { return std::holds_alternative<std::string>(material); }
-    void setPathToMaterial(std::string path) { material = std::move(path); }
-    std::string_view pathToMaterial() const
-    {
-        ARKOSE_ASSERT(hasPathToMaterial());
-        return std::get<std::string>(material);
-    }
-    std::weak_ptr<MaterialAsset> dynamicMaterialAsset() const
-    {
-        ARKOSE_ASSERT(!hasPathToMaterial());
-        return std::get<std::weak_ptr<MaterialAsset>>(material);
-    }
 
     void processForImport();
 
@@ -97,8 +83,8 @@ public:
     // Meshlet data for this segment
     std::optional<MeshletDataAsset> meshletData {};
 
-    // Path to a material or a material asset directly, used for rendering this mesh segment
-    std::variant<std::string, std::weak_ptr<MaterialAsset>> material;
+    // Path to a material asset, used for rendering this mesh segment
+    std::string material;
 
     // Not serialized, can be used to store whatever intermediate you want
     int userData { -1 };
@@ -165,7 +151,6 @@ public:
 #include "utility/EnumHelpers.h"
 #include <cereal/cereal.hpp>
 #include <cereal/types/optional.hpp>
-#include <cereal/types/variant.hpp>
 #include <cereal/types/vector.hpp>
 
 enum class MeshAssetVersion : u32 {

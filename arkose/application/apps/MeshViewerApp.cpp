@@ -339,8 +339,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
             if (ImGui::TreeNode("Material")) {
 
                 // Only handle non-packaged up assets here, i.e. using a path, not a direct assets as it would be in a packed case
-                ARKOSE_ASSERT(segmentAsset->hasPathToMaterial());
-                std::string materialPath = std::string(segmentAsset->pathToMaterial());
+                std::string materialPath = std::string(segmentAsset->material);
 
                 ImGui::InputText("Material", materialPath.data(), materialPath.length(), ImGuiInputTextFlags_ReadOnly);
                 if (ImGui::IsItemHovered()) {
@@ -351,7 +350,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
                     if (auto maybePath = FileDialog::open({ { "Arkose material", MaterialAsset::AssetFileExtension } })) {
                         std::filesystem::path newMaterialPath = maybePath.value();
                         if (MaterialAsset* newMaterialAsset = MaterialAsset::load(newMaterialPath)) {
-                            segmentAsset->setPathToMaterial(newMaterialPath.generic_string()); // TODO: Avoid setting an absolute path here!
+                            segmentAsset->material = newMaterialPath.generic_string(); // TODO: Avoid setting an absolute path here!
                             selectedSegment()->setMaterial(newMaterialAsset, m_scene->gpuScene());
                         }
                     }
@@ -369,8 +368,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
     if (MeshSegmentAsset* segmentAsset = selectedSegmentAsset()) {
 
         // Only handle non-packaged up assets here, i.e. using a path, not a direct assets as it would be in a packed case
-        ARKOSE_ASSERT(segmentAsset->hasPathToMaterial());
-        std::string materialPath = std::string(segmentAsset->pathToMaterial());
+        std::string materialPath = std::string(segmentAsset->material);
 
         // NOTE: We're not actually loading it from disk every time because it's cached, but this still seems a little silly to do.
         if (MaterialAsset* material = MaterialAsset::load(materialPath)) {
@@ -388,7 +386,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
                     material->writeToFile(newMaterialPath, AssetStorage::Json);
                     // Then immediately load it and make it the material for this segment (all other segments still use the old one)
                     if (MaterialAsset* newMaterialAsset = MaterialAsset::load(newMaterialPath)) {
-                        segmentAsset->setPathToMaterial(newMaterialPath.generic_string()); // TODO: Avoid setting an absolute path here!
+                        segmentAsset->material = newMaterialPath.generic_string(); // TODO: Avoid setting an absolute path here!
                         selectedSegment()->setMaterial(newMaterialAsset, m_scene->gpuScene());
                         material = newMaterialAsset;
                     }
@@ -799,14 +797,14 @@ void MeshViewerApp::drawBakeUiIfActive()
             auto aoImage = performAmbientOcclusionBake(m_pendingBake, resolution, sampleCount);
             m_pendingBake = BakeMode::None;
 
-            std::filesystem::path materialDirectory = std::filesystem::path(selectedSegmentAsset()->pathToMaterial()).parent_path();
+            std::filesystem::path materialDirectory = std::filesystem::path(selectedSegmentAsset()->material).parent_path();
             if (auto maybePath = FileDialog::save({ { "Arkose image", ImageAsset::AssetFileExtension } }, materialDirectory, "AmbientOcclusion.arkimg")) {
                 aoImage->writeToFile(maybePath.value(), AssetStorage::Binary);
                 aoImage->setAssetFilePath(maybePath.value());
 
                 // Let's hope no other object is using this material, because now we're saving object-specific data to it :)
                 // Really though, this should only be done for non-trimsheet-style materials, but for object specific ones.
-                if (MaterialAsset* material = MaterialAsset::load(std::string(selectedSegmentAsset()->pathToMaterial()))) {
+                if (MaterialAsset* material = MaterialAsset::load(std::string(selectedSegmentAsset()->material))) {
                     material->bentNormalMap = MaterialInput(aoImage->assetFilePath().generic_string());
                     material->bentNormalMap->wrapModes = ImageWrapModes::clampAllToEdge();
                     material->writeToFile(material->assetFilePath(), AssetStorage::Json);

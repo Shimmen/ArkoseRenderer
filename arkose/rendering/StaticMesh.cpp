@@ -52,14 +52,8 @@ StaticMesh::StaticMesh(MeshAsset const* asset, MeshMaterialResolver&& materialRe
         StaticMeshLOD& lod = m_lods.emplace_back(*this, &lodAsset);
         for (auto& segmentAsset : lodAsset.meshSegments) {
 
-            MaterialAsset* materialAsset = nullptr;
-            if (segmentAsset.hasPathToMaterial()) {
-                std::string const& materialAssetPath = std::string(segmentAsset.pathToMaterial());
-                materialAsset = MaterialAsset::load(materialAssetPath);
-            } else {
-                // Dead code path! To be removed fully!
-                ASSERT_NOT_REACHED();
-            }
+            std::string const& materialAssetPath = std::string(segmentAsset.material);
+            MaterialAsset* materialAsset = MaterialAsset::load(materialAssetPath);
 
             if (materialAsset->blendMode == BlendMode::Translucent) {
                 m_hasTranslucentSegments |= true;

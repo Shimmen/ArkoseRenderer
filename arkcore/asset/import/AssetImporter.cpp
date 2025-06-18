@@ -224,7 +224,7 @@ void AssetImportTask::importGltf()
                     int gltfIdx = meshSegment.userData;
                     ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < narrow_cast<int>(result.materials.size()));
                     auto& material = result.materials[gltfIdx];
-                    meshSegment.setPathToMaterial(material->assetFilePath().generic_string());
+                    meshSegment.material = material->assetFilePath().generic_string();
                 }
             }
         }
