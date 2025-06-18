@@ -233,7 +233,7 @@ void GeodataApp::createMapRegions()
         auto meshAsset = std::make_unique<MeshAsset>();
         MeshLODAsset& lod0 = meshAsset->LODs.emplace_back();
 
-        auto& materialAsset = m_mapRegionMaterials.emplace_back(new MaterialAsset());
+        auto materialAsset = std::make_shared<MaterialAsset>();
         materialAsset->colorTint.x = rng.randomFloatInRange(0.1f, 1.0f);
         materialAsset->colorTint.y = rng.randomFloatInRange(0.1f, 1.0f);
         materialAsset->colorTint.z = rng.randomFloatInRange(0.1f, 1.0f);
@@ -275,7 +275,7 @@ void GeodataApp::createMapRegions()
             ARKOSE_LOG(Info, "    after triangulation, {} faces with {} vertices", F2.rows(), V2.rows());
 
             MeshSegmentAsset& segment = lod0.meshSegments.emplace_back();
-            //segment.material = materialAsset;
+            segment.dynamicMaterial = materialAsset;
 
             size_t vertexCount = V2.rows();
             for (size_t vertexIdx = 0; vertexIdx < vertexCount; ++vertexIdx) {

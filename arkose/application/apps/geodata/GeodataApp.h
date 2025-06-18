@@ -43,5 +43,4 @@ public:
     ImageAsset* m_worldHeightMap { nullptr };
     static constexpr float m_heightScale { 8.0f };
     std::unordered_map<std::string, std::unique_ptr<MapRegion>> m_mapRegions;
-    std::vector<std::shared_ptr<MaterialAsset>> m_mapRegionMaterials;
 };
