@@ -95,6 +95,7 @@ void AssetImportTask::importGltf()
         m_result.images.size() + // compress images
         m_result.images.size() + // writing images
         m_result.materials.size() + // writing materials
+        m_result.meshes.size() + // resolving mesh materials
         m_result.meshes.size() + // process meshes
         m_result.meshes.size() + // write meshes
         m_result.skeletons.size() + // write skeletons
@@ -209,6 +210,29 @@ void AssetImportTask::importGltf()
     }
 
     if (m_result.meshes.size() > 0) {
+        m_status = "Resolving mesh materials";
+    }
+
+    for (auto& mesh : result.meshes) {
+
+        // Resolve references (paths) to material assets
+        // (The glTF loader will use its local glTF indices while loading, since we don't yet know the file paths)
+
+        for (MeshLODAsset& lod : mesh->LODs) {
+            for (MeshSegmentAsset& meshSegment : lod.meshSegments) {
+                if (meshSegment.userData != -1) {
+                    int gltfIdx = meshSegment.userData;
+                    ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < narrow_cast<int>(result.materials.size()));
+                    auto& material = result.materials[gltfIdx];
+                    meshSegment.setPathToMaterial(material->assetFilePath().generic_string());
+                }
+            }
+        }
+
+        m_processedItemCount += 1;
+    }
+
+    if (m_result.meshes.size() > 0) {
         m_status = "Processing meshes";
     }
 
@@ -229,20 +253,6 @@ void AssetImportTask::importGltf()
 
     std::unordered_map<std::string, int> meshNameMap {};
     for (auto& mesh : result.meshes) {
-
-        // Resolve references (paths) to material assets
-        // (The glTF loader will use its local glTF indices while loading, since we don't yet know the file paths)
-
-        for (MeshLODAsset& lod : mesh->LODs) {
-            for (MeshSegmentAsset& meshSegment : lod.meshSegments) {
-                if (meshSegment.userData != -1) {
-                    int gltfIdx = meshSegment.userData;
-                    ARKOSE_ASSERT(gltfIdx >= 0 && gltfIdx < narrow_cast<int>(result.materials.size()));
-                    auto& material = result.materials[gltfIdx];
-                    meshSegment.setPathToMaterial(material->assetFilePath().generic_string());
-                }
-            }
-        }
 
         std::string fileName = mesh->name;
         if (fileName.empty()) {
