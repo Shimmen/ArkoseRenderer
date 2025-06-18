@@ -52,8 +52,14 @@ StaticMesh::StaticMesh(MeshAsset const* asset, MeshMaterialResolver&& materialRe
         StaticMeshLOD& lod = m_lods.emplace_back(*this, &lodAsset);
         for (auto& segmentAsset : lodAsset.meshSegments) {
 
-            std::string const& materialAssetPath = std::string(segmentAsset.material);
-            MaterialAsset* materialAsset = MaterialAsset::load(materialAssetPath);
+            MaterialAsset* materialAsset = nullptr;
+            if (segmentAsset.dynamicMaterial) {
+                materialAsset = segmentAsset.dynamicMaterial.get();
+            } else {
+                std::string const& materialAssetPath = std::string(segmentAsset.material);
+                materialAsset = MaterialAsset::load(materialAssetPath);
+            }
+            ARKOSE_ASSERT(materialAsset);
 
             if (materialAsset->blendMode == BlendMode::Translucent) {
                 m_hasTranslucentSegments |= true;

@@ -86,6 +86,9 @@ public:
     // Path to a material asset, used for rendering this mesh segment
     std::string material;
 
+    // Not serialized, dynamic material asset, higher priority than `material`
+    std::shared_ptr<MaterialAsset> dynamicMaterial {};
+
     // Not serialized, can be used to store whatever intermediate you want
     int userData { -1 };
 
