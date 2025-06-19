@@ -10,7 +10,7 @@ IF NOT EXIST "tools/bin/AssetCooker.exe" (
     echo AssetCooker executable not found - downloading it now...
 
     pushd "tools/bin"
-    powershell -command "Invoke-WebRequest -Uri 'https://github.com/jlaumon/AssetCooker/releases/download/v0.0.1-prealpha/AssetCooker-v0.0.1-prealpha.zip' -OutFile 'AssetCooker.zip'"
+    powershell -command "Invoke-WebRequest -Uri 'https://github.com/jlaumon/AssetCooker/releases/download/v0.0.1/AssetCooker-v0.0.1.zip' -OutFile 'AssetCooker.zip'"
     powershell -command "Expand-Archive -Path AssetCooker.zip -DestinationPath ."
     popd
 
