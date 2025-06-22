@@ -1,6 +1,7 @@
 #include "VulkanRenderTarget.h"
 
 #include "rendering/backend/vulkan/VulkanBackend.h"
+#include "rendering/backend/vulkan/VulkanTexture.h"
 #include "core/Logging.h"
 #include "utility/Profiling.h"
 

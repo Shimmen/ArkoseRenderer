@@ -1,6 +1,5 @@
 #pragma once
 
-#include "rendering/backend/vulkan/VulkanResources.h"
 #include <vulkan/vulkan.h>
 
 class VulkanBackend;

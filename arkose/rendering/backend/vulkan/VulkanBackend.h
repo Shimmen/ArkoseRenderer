@@ -4,7 +4,7 @@
 #include "rendering/backend/base/Backend.h"
 #include "rendering/backend/util/UploadBuffer.h"
 #include "rendering/backend/base/UpscalingState.h"
-#include "rendering/backend/vulkan/VulkanResources.h"
+#include "rendering/backend/vulkan/VulkanRenderTarget.h"
 #include "rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.h"
 #include "rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.h"
 #include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.h"

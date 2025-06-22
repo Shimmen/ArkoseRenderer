@@ -4,6 +4,7 @@
 #include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.h"
 #include "rendering/backend/shader/ShaderManager.h"
 #include "rendering/backend/vulkan/VulkanBackend.h"
+#include "rendering/backend/vulkan/VulkanBuffer.h"
 #include "rendering/backend/util/UploadBuffer.h"
 #include "core/Logging.h"
 

@@ -1,6 +1,7 @@
 #include "VulkanMeshShaderEXT.h"
 
 #include "rendering/backend/vulkan/extensions/VulkanProcAddress.h"
+#include "utility/Profiling.h"
 
 VulkanMeshShaderEXT::VulkanMeshShaderEXT(VulkanBackend& backend, VkPhysicalDevice physicalDevice, VkDevice device)
     : m_backend(backend)

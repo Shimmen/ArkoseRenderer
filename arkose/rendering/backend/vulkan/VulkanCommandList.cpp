@@ -3,8 +3,15 @@
 #include "core/Logging.h"
 #include "core/Types.h"
 #include "VulkanBackend.h"
-#include "VulkanResources.h"
+#include "rendering/backend/vulkan/VulkanBindingSet.h"
+#include "rendering/backend/vulkan/VulkanBuffer.h"
+#include "rendering/backend/vulkan/VulkanComputeState.h"
+#include "rendering/backend/vulkan/VulkanRenderState.h"
+#include "rendering/backend/vulkan/VulkanRenderTarget.h"
+#include "rendering/backend/vulkan/VulkanTexture.h"
 #include "rendering/backend/vulkan/VulkanUpscalingState.h"
+#include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.h"
+#include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.h"
 #include "utility/Profiling.h"
 #include <fmt/format.h>
 #include <stb_image_write.h>

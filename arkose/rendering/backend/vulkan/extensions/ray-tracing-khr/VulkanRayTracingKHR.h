@@ -1,8 +1,8 @@
 #pragma once
 
-#include "rendering/backend/vulkan/VulkanResources.h"
 #include <ark/matrix.h>
 #include <vulkan/vulkan.h>
+#include <vk_mem_alloc.h>
 
 class VulkanBackend;
 

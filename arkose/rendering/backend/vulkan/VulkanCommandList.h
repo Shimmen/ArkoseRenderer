@@ -6,6 +6,9 @@
 #include <tracy/TracyVulkan.hpp>
 #endif
 
+struct VulkanComputeState;
+struct VulkanRenderState;
+
 class VulkanCommandList final : public CommandList {
 public:
     explicit VulkanCommandList(VulkanBackend&, VkCommandBuffer);

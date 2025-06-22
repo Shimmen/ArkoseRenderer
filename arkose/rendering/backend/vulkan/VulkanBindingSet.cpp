@@ -1,6 +1,9 @@
 #include "VulkanBindingSet.h"
 
 #include "rendering/backend/vulkan/VulkanBackend.h"
+#include "rendering/backend/vulkan/VulkanBuffer.h"
+#include "rendering/backend/vulkan/VulkanTexture.h"
+#include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.h"
 #include "utility/CapList.h"
 #include "utility/Profiling.h"
 

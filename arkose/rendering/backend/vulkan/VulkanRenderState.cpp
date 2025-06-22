@@ -1,6 +1,7 @@
 #include "VulkanRenderState.h"
 
 #include "rendering/backend/vulkan/VulkanBackend.h"
+#include "rendering/backend/vulkan/VulkanBindingSet.h"
 #include "rendering/backend/shader/ShaderManager.h"
 #include "core/Logging.h"
 #include "utility/Profiling.h"
