@@ -67,7 +67,7 @@ RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Regi
                 currentStateDrawKey = &instance.drawKey;
             }
 
-            DrawCallDescription drawCall = instance.vertexAllocation.asDrawCallDescription();
+            DrawCallDescription drawCall = DrawCallDescription::fromVertexAllocation(instance.vertexAllocation);
             drawCall.firstInstance = instance.drawableIdx;
             cmdList.issueDrawCall(drawCall);
 

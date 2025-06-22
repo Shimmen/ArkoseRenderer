@@ -73,6 +73,7 @@ set(ARKCORE_SOURCES
   arkcore/rendering/Brdf.h
   arkcore/rendering/ImageFilter.h
   arkcore/rendering/ImageWrapMode.h
+  arkcore/rendering/VertexAllocation.h
 
   # scene
   arkcore/scene/EnvironmentMap.h

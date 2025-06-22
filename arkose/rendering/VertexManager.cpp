@@ -8,25 +8,6 @@
 #include "scene/MeshInstance.h"
 #include <ark/conversion.h>
 
-DrawCallDescription VertexAllocation::asDrawCallDescription() const
-{
-    DrawCallDescription drawCall {};
-
-    if (indexCount > 0) {
-        drawCall.type = DrawCallDescription::Type::Indexed;
-        drawCall.vertexOffset = firstVertex;
-        drawCall.vertexCount = vertexCount;
-        drawCall.firstIndex = firstIndex;
-        drawCall.indexCount = indexCount;
-    } else {
-        drawCall.type = DrawCallDescription::Type::NonIndexed;
-        drawCall.firstVertex = firstVertex;
-        drawCall.vertexCount = vertexCount;
-    }
-
-    return drawCall;
-}
-
 VertexManager::VertexManager(Backend& backend)
     : m_backend(&backend)
 {
@@ -206,7 +187,7 @@ std::unique_ptr<BottomLevelAS> VertexManager::createBottomLevelAccelerationStruc
 
     size_t vertexStride = positionVertexLayout().packedVertexSize();
 
-    DrawCallDescription drawCallDesc = vertexAllocation.asDrawCallDescription();
+    DrawCallDescription drawCallDesc = DrawCallDescription::fromVertexAllocation(vertexAllocation);
     ARKOSE_ASSERT(drawCallDesc.type == DrawCallDescription::Type ::Indexed);
 
     i32 indexOfFirstVertex = drawCallDesc.vertexOffset;

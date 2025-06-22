@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rendering/VertexAllocation.h"
 #include "rendering/backend/base/Buffer.h"
 #include "rendering/backend/util/IndexType.h"
 
@@ -45,6 +46,25 @@ struct DrawCallDescription {
                                        .indexCount = indexCount,
                                        .indexBuffer = &indexBuffer,
                                        .indexType = indexType };
+        return drawCall;
+    }
+
+    static DrawCallDescription fromVertexAllocation(VertexAllocation const& vertexAllocation)
+    {
+        DrawCallDescription drawCall {};
+
+        if (vertexAllocation.indexCount > 0) {
+            drawCall.type = DrawCallDescription::Type::Indexed;
+            drawCall.vertexOffset = vertexAllocation.firstVertex;
+            drawCall.vertexCount = vertexAllocation.vertexCount;
+            drawCall.firstIndex = vertexAllocation.firstIndex;
+            drawCall.indexCount = vertexAllocation.indexCount;
+        } else {
+            drawCall.type = DrawCallDescription::Type::NonIndexed;
+            drawCall.firstVertex = vertexAllocation.firstVertex;
+            drawCall.vertexCount = vertexAllocation.vertexCount;
+        }
+
         return drawCall;
     }
 };

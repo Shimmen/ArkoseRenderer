@@ -110,7 +110,7 @@ RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene
 
             u32 meshIndex = meshSegment.staticMeshHandle.indexOfType<u32>();
 
-            DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
+            DrawCallDescription drawCall = DrawCallDescription::fromVertexAllocation(meshSegment.vertexAllocation);
 
             // Bake the parameterization down so we can refer back to the triangles given a pixel
             cmdList.beginRendering(bakeParamsRenderState, ClearValue::blackAtMaxDepth(), true);

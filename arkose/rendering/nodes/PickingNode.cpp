@@ -86,7 +86,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
                     StaticMeshLOD const& lod = staticMesh->lodAtIndex(0);
 
                     for (StaticMeshSegment const& meshSegment : lod.meshSegments) {
-                        DrawCallDescription drawCall = meshSegment.vertexAllocation.asDrawCallDescription();
+                        DrawCallDescription drawCall = DrawCallDescription::fromVertexAllocation(meshSegment.vertexAllocation);
                         drawCall.firstInstance = drawIdx++;
                         cmdList.issueDrawCall(drawCall);
                     }
@@ -95,7 +95,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 
             for (auto& instance : scene.skeletalMeshInstances()) {
                 for (SkinningVertexMapping const& skinningVertexMapping : instance->skinningVertexMappings()) {
-                    DrawCallDescription drawCall = skinningVertexMapping.skinnedTarget.asDrawCallDescription();
+                    DrawCallDescription drawCall = DrawCallDescription::fromVertexAllocation(skinningVertexMapping.skinnedTarget);
                     drawCall.firstInstance = drawIdx++;
                     cmdList.issueDrawCall(drawCall);
                 }

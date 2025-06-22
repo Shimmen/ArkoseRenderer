@@ -780,7 +780,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                             u32 rtMeshIndex = narrow_cast<u32>(rayTracingMeshData.size());
 
-                            DrawCallDescription drawCallDesc = meshSegment.vertexAllocation.asDrawCallDescription();
+                            DrawCallDescription drawCallDesc = DrawCallDescription::fromVertexAllocation(meshSegment.vertexAllocation);
                             rayTracingMeshData.push_back(RTTriangleMesh { .firstVertex = drawCallDesc.vertexOffset,
                                                                           .firstIndex = static_cast<int>(drawCallDesc.firstIndex),
                                                                           .materialIndex = meshSegment.material.indexOfType<int>() });
@@ -841,7 +841,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                             u32 rtMeshIndex = narrow_cast<u32>(rayTracingMeshData.size());
 
-                            DrawCallDescription drawCallDesc = meshSegment.vertexAllocation.asDrawCallDescription();
+                            DrawCallDescription drawCallDesc = DrawCallDescription::fromVertexAllocation(meshSegment.vertexAllocation);
                             rayTracingMeshData.push_back(RTTriangleMesh { .firstVertex = drawCallDesc.vertexOffset,
                                                                             .firstIndex = static_cast<int>(drawCallDesc.firstIndex),
                                                                             .materialIndex = meshSegment.material.indexOfType<int>() });

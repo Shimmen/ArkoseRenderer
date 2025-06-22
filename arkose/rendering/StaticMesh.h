@@ -7,7 +7,7 @@
 #include "physics/HandleTypes.h"
 #include "rendering/DrawKey.h"
 #include "rendering/Material.h"
-#include "rendering/VertexManager.h"
+#include "rendering/VertexAllocation.h"
 #include "rendering/backend/base/AccelerationStructure.h"
 #include "rendering/meshlet/MeshletView.h"
 #include "scene/Vertex.h"
