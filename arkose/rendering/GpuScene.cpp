@@ -1785,10 +1785,14 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
             ImGui::Text("Using global index type %s", indexTypeToString(vertexManager().indexType()));
 
-            // TODO: Port over to the vertex manager!
-            //float allocatedSizeMB = conversion::to::MB(indexBuffer().sizeInMemory());
-            //float usedSizeMB = conversion::to::MB(m_nextFreeIndex * sizeofIndexType(vertexManager().indexType()));
-            //ImGui::Text("Using %.1f MB (%.1f MB allocated)", usedSizeMB, allocatedSizeMB);
+            u32 numAllocated = vertexManager().numAllocatedIndices();
+            u32 totalCapacity = narrow_cast<u32>(vertexManager().MaxLoadedIndices);
+            f32 percentageUsed = 100.0f * static_cast<f32>(numAllocated) / static_cast<f32>(totalCapacity);
+            ImGui::Text("Using %u / %u indices, %.1f%%", numAllocated, totalCapacity, percentageUsed);
+
+            float usedSizeMB = ark::conversion::to::MB(numAllocated * sizeofIndexType(vertexManager().indexType()));
+            float totalSizeMB = ark::conversion::to::MB(totalCapacity * sizeofIndexType(vertexManager().indexType()));
+            ImGui::Text("Using %.1f MB / %.1f MB", usedSizeMB, totalSizeMB);
 
             ImGui::EndTabItem();
         }
@@ -1798,42 +1802,58 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
             float totalAllocatedSizeMB = 0.0f;
             float totalUsedSizeMB = 0.0f;
 
-            if (ImGui::BeginTable("MeshVertexDataVramUsageTable", 3)) {
+            if (ImGui::BeginTable("MeshVertexDataVramUsageTable", 6)) {
 
                 ImGui::TableSetupColumn("Vertex layout", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Used #", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+                ImGui::TableSetupColumn("Cap. #", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+                ImGui::TableSetupColumn("%", ImGuiTableColumnFlags_WidthFixed, 35.0f);
                 ImGui::TableSetupColumn("Used size (MB)", ImGuiTableColumnFlags_WidthFixed, 100.0f);
                 ImGui::TableSetupColumn("Allocated size (MB)", ImGuiTableColumnFlags_WidthFixed, 140.0f);
 
                 ImGui::TableHeadersRow();
 
-                // TODO: Port over to the vertex manager!
-                /*
-                for (auto& [vertexLayout, buffer] : m_globalVertexBuffers) {
-
+                auto doTableRow = [&](Buffer const& vertexBuffer, VertexLayout const& vertexLayout, u32 numUsedVertices) {
                     ImGui::TableNextRow();
 
                     ImGui::TableSetColumnIndex(0);
                     std::string layoutDescription = vertexLayout.toString(false);
                     ImGui::Text(layoutDescription.c_str());
-                        
+
                     ImGui::TableSetColumnIndex(1);
-                    float usedSizeMB = conversion::to::MB(m_nextFreeVertexIndex * vertexLayout.packedVertexSize());
-                    ImGui::Text("%.2f", usedSizeMB);
+                    ImGui::Text("%u", numUsedVertices);
 
                     ImGui::TableSetColumnIndex(2);
-                    float allocatedSizeMB = conversion::to::MB(buffer->sizeInMemory());
-                    ImGui::Text("%.2f", allocatedSizeMB);
+                    u32 totalNumVertices = narrow_cast<u32>(vertexBuffer.size() / vertexLayout.packedVertexSize());
+                    ImGui::Text("%u", totalNumVertices);
+
+                    ImGui::TableSetColumnIndex(3);
+                    f32 percentageFilled = 100.0f * static_cast<f32>(numUsedVertices) / static_cast<f32>(totalNumVertices);
+                    ImGui::Text("%.1f%%", percentageFilled);
+
+                    ImGui::TableSetColumnIndex(4);
+                    float usedSizeMB = ark::conversion::to::MB(numUsedVertices * vertexLayout.packedVertexSize());
+                    ImGui::Text("%.2f MB", usedSizeMB);
+
+                    ImGui::TableSetColumnIndex(5);
+                    float allocatedSizeMB = ark::conversion::to::MB(vertexBuffer.size());
+                    ImGui::Text("%.2f MB", allocatedSizeMB);
 
                     totalAllocatedSizeMB += allocatedSizeMB;
                     totalUsedSizeMB += usedSizeMB;
-                }
-                */
+                };
+
+                VertexManager const& vm = vertexManager();
+                doTableRow(vm.positionVertexBuffer(), vm.positionVertexLayout(), vm.numAllocatedVertices());
+                doTableRow(vm.nonPositionVertexBuffer(), vm.nonPositionVertexLayout(), vm.numAllocatedVertices());
+                doTableRow(vm.skinningDataVertexBuffer(), vm.skinningDataVertexLayout(), vm.numAllocatedSkinningVertices());
+                doTableRow(vm.velocityDataVertexBuffer(), vm.velocityDataVertexLayout(), vm.numAllocatedVelocityVertices());
 
                 ImGui::EndTable();
             }
 
             ImGui::Separator();
-            ImGui::Text("Total: %.2f MB (%.2f MB allocated)", totalUsedSizeMB, totalAllocatedSizeMB);
+            ImGui::Text("Total: %.2f MB / %.2f MB", totalUsedSizeMB, totalAllocatedSizeMB);
 
             ImGui::EndTabItem();
         }

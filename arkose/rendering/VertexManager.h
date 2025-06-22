@@ -73,6 +73,11 @@ public:
     static constexpr size_t MaxLoadedTriangles        = 10'000'000;
     static constexpr size_t MaxLoadedIndices          = 3 * MaxLoadedTriangles;
 
+    u32 numAllocatedIndices() const { return m_nextFreeIndex; }
+    u32 numAllocatedVertices() const { return m_nextFreeVertexIndex; }
+    u32 numAllocatedSkinningVertices() const { return m_nextFreeSkinningVertexIndex; }
+    u32 numAllocatedVelocityVertices() const { return m_nextFreeVelocityIndex; }
+
 private:
     Backend* m_backend { nullptr };
 
