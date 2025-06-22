@@ -173,6 +173,8 @@ std::unique_ptr<ImageAsset> TextureCompressor::decompressToRGBA32F(ImageAsset co
             // TODO: Handle BC5 decompression
             break;
         }
+        default:
+            ASSERT_NOT_REACHED();
         }
 
         // Add the mip info
