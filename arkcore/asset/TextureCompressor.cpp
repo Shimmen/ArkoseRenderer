@@ -6,6 +6,7 @@
 #include "utility/Profiling.h"
 #include <fmt/format.h>
 #include <rdo_bc_encoder.h>
+#include <bc7decomp.h>
 #include <thread>
 
 static std::unique_ptr<ImageAsset> compressWithParams(ImageAsset const& inputImage, ImageFormat compressedFormat, rdo_bc::rdo_bc_params params)
@@ -91,4 +92,92 @@ std::unique_ptr<ImageAsset> TextureCompressor::compressBC5(ImageAsset const& inp
     params.m_use_hq_bc345 = true;
 
     return compressWithParams(inputImage, ImageFormat::BC5, params);
+}
+
+std::unique_ptr<ImageAsset> TextureCompressor::decompressToRGBA32F(ImageAsset const& compressedImage)
+{
+    SCOPED_PROFILE_ZONE();
+
+    ARKOSE_ASSERT(compressedImage.hasCompressedFormat());
+
+    if (compressedImage.format() != ImageFormat::BC7) {
+        ARKOSE_LOG(Error, "Unsupported compressed format for decompression: {} (TODO: Implement!)", compressedImage.format());
+        return nullptr;
+    }
+
+    std::vector<ImageMip> mips {};
+    std::vector<u8> pixelData {};
+
+    for (size_t mipIdx = 0; mipIdx < compressedImage.numMips(); ++mipIdx) {
+        // Get the compressed mip data
+        auto const& compressedMipData = compressedImage.pixelDataForMip(mipIdx);
+        auto extent = compressedImage.extentAtMip(mipIdx);
+
+        // Calculate the size of the uncompressed mip
+        size_t uncompressedMipSize = extent.width() * extent.height() * 4 * sizeof(float);
+        size_t currentOffset = pixelData.size();
+        pixelData.resize(currentOffset + uncompressedMipSize);
+
+        // Create the target buffer for this mip level
+        float* outputData = reinterpret_cast<float*>(pixelData.data() + currentOffset);
+
+        switch (compressedImage.format()) {
+        case ImageFormat::BC7: {
+            // Calculate the number of blocks in each dimension
+            // BC7 uses 4x4 pixel blocks
+            uint32_t blocksWide = (extent.width() + 3) / 4;
+            uint32_t blocksHigh = (extent.height() + 3) / 4;
+
+            for (uint32_t blockY = 0; blockY < blocksHigh; ++blockY) {
+                for (uint32_t blockX = 0; blockX < blocksWide; ++blockX) {
+                    // Calculate block index and pointer to compressed block data
+                    size_t blockIdx = blockY * blocksWide + blockX;
+                    const void* blockData = compressedMipData.data() + (blockIdx * 16); // 16 bytes per block
+
+                    // Temporary buffer for the decompressed 4x4 pixel block
+                    bc7decomp::color_rgba decompressedBlock[16];
+
+                    // Decompress this block
+                    bc7decomp::unpack_bc7(blockData, decompressedBlock);
+
+                    // Copy the decompressed pixels to the output buffer, converting to float
+                    for (uint32_t y = 0; y < 4; ++y) {
+                        for (uint32_t x = 0; x < 4; ++x) {
+                            // Calculate the pixel position in the output image
+                            uint32_t pixelX = blockX * 4 + x;
+                            uint32_t pixelY = blockY * 4 + y;
+
+                            // Skip pixels outside the actual dimensions
+                            if (pixelX >= extent.width() || pixelY >= extent.height()) {
+                                continue;
+                            }
+
+                            // Calculate the position in the output array
+                            size_t outputIdx = (pixelY * extent.width() + pixelX) * 4;
+
+                            // Get the decompressed pixel
+                            bc7decomp::color_rgba const& pixel = decompressedBlock[y * 4 + x];
+
+                            // Convert to float (0.0 to 1.0)
+                            outputData[outputIdx + 0] = pixel.r / 255.0f;
+                            outputData[outputIdx + 1] = pixel.g / 255.0f;
+                            outputData[outputIdx + 2] = pixel.b / 255.0f;
+                            outputData[outputIdx + 3] = pixel.a / 255.0f;
+                        }
+                    }
+                }
+            }
+            break;
+        }
+        case ImageFormat::BC5: {
+            // TODO: Handle BC5 decompression
+            break;
+        }
+        }
+
+        // Add the mip info
+        mips.push_back(ImageMip { .offset = currentOffset, .size = uncompressedMipSize });
+    }
+
+    return ImageAsset::createCopyWithReplacedFormat(compressedImage, ImageFormat::RGBA32F, std::move(pixelData), std::move(mips));
 }
