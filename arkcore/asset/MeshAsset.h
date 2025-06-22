@@ -30,6 +30,10 @@ struct MeshletDataAsset {
     std::vector<u32> meshletIndices {};
 };
 
+struct OpacityMicroMapDataAsset {
+    std::vector<std::byte> ommSdkSerializedData;
+};
+
 class MeshSegmentAsset {
 public:
     MeshSegmentAsset();
@@ -48,6 +52,8 @@ public:
 
     void generateMeshlets();
     void generateTangents();
+
+    void generateOpacityMicroMap();
 
     bool hasTextureCoordinates() const;
     bool hasTangents() const;
@@ -82,6 +88,9 @@ public:
 
     // Meshlet data for this segment
     std::optional<MeshletDataAsset> meshletData {};
+
+    // Opacity Micro-Map data for this segment
+    std::optional<OpacityMicroMapDataAsset> opacityMicroMapData {};
 
     // Path to a material asset, used for rendering this mesh segment
     std::string material;
@@ -158,6 +167,7 @@ public:
 
 enum class MeshAssetVersion : u32 {
     Initial = 0,
+    AddOpacityMicroMaps,
     ////////////////////////////////////////////////////////////////////////////
     // Add new versions above this delimiter
     VersionCount,
@@ -166,6 +176,7 @@ enum class MeshAssetVersion : u32 {
 
 CEREAL_CLASS_VERSION(MeshletAsset, toUnderlying(MeshAssetVersion::LatestVersion))
 CEREAL_CLASS_VERSION(MeshletDataAsset, toUnderlying(MeshAssetVersion::LatestVersion))
+CEREAL_CLASS_VERSION(OpacityMicroMapDataAsset, toUnderlying(MeshAssetVersion::LatestVersion))
 CEREAL_CLASS_VERSION(MeshSegmentAsset, toUnderlying(MeshAssetVersion::LatestVersion))
 CEREAL_CLASS_VERSION(MeshLODAsset, toUnderlying(MeshAssetVersion::LatestVersion))
 CEREAL_CLASS_VERSION(MeshAsset, toUnderlying(MeshAssetVersion::LatestVersion))
@@ -192,6 +203,12 @@ void serialize(Archive& archive, MeshletDataAsset& meshletDataAsset, u32 version
 }
 
 template<class Archive>
+void serialize(Archive& archive, OpacityMicroMapDataAsset& ommDataAsset, u32 version)
+{
+    archive(cereal::make_nvp("ommSdkSerializedData", ommDataAsset.ommSdkSerializedData));
+}
+
+template<class Archive>
 void MeshSegmentAsset::serialize(Archive& archive, u32 version)
 {
     archive(CEREAL_NVP(positions));
@@ -205,6 +222,9 @@ void MeshSegmentAsset::serialize(Archive& archive, u32 version)
     archive(CEREAL_NVP(indices));
 
     archive(CEREAL_NVP(meshletData));
+    if (version >= toUnderlying(MeshAssetVersion::AddOpacityMicroMaps)) {
+        archive(CEREAL_NVP(opacityMicroMapData));
+    }
 
     archive(CEREAL_NVP(material));
 }

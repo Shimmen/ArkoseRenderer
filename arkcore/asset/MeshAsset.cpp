@@ -1,15 +1,18 @@
 #include "MeshAsset.h"
 
 #include "asset/AssetCache.h"
+#include "asset/TextureCompressor.h"
 #include "core/Assert.h"
 #include "core/Logging.h"
 #include "physics/PhysicsMesh.h"
 #include "utility/FileIO.h"
 #include "utility/Profiling.h"
+#include <ark/defer.h>
 #include <cereal/archives/binary.hpp>
 #include <cereal/archives/json.hpp>
 #include <meshoptimizer.h>
 #include <mikktspace.h>
+#include <omm.hpp>
 
 namespace {
 AssetCache<MeshAsset> s_meshAssetCache {};
@@ -40,6 +43,12 @@ void MeshSegmentAsset::processForImport()
 
     // Generate meshlets
     generateMeshlets();
+
+    // Generate opacity micro-maps, if relevant
+    MaterialAsset* materialAsset = MaterialAsset::load(material);
+    if (materialAsset && materialAsset->blendMode == BlendMode::Masked) {
+        generateOpacityMicroMap();
+    }
 }
 
 bool MeshSegmentAsset::isIndexedMesh() const
@@ -339,6 +348,254 @@ void MeshSegmentAsset::generateTangents()
 
             tangents.emplace_back(orthogonal.x, orthogonal.y, orthogonal.z, 1.0f);
         }
+    }
+}
+
+void MeshSegmentAsset::generateOpacityMicroMap()
+{
+    static omm::Baker ommBaker;
+    if (ommBaker == nullptr) {
+        omm::BakerCreationDesc desc {};
+        desc.type = omm::BakerType::CPU;
+
+        desc.messageInterface.userArg = nullptr;
+        desc.messageInterface.messageCallback = [](omm::MessageSeverity severity, const char* message, void* userArg) {
+            ARKOSE_LOG(Info, "OMM-SDK message: [{}] {}", severity, message);
+        };
+
+        // NOTE: Will be leaked, but is hopefully not so bad..
+        omm::Result res = omm::CreateBaker(desc, &ommBaker);
+
+        if (res != omm::Result::SUCCESS) {
+            ARKOSE_LOG(Error, "Failed to create OMM baker, will not generate opacity micro-maps.");
+            return;
+        }
+    }
+
+    //
+
+    MaterialAsset* materialAsset = MaterialAsset::load(material);
+    if (!materialAsset) {
+        ARKOSE_LOG(Error, "Failed to load material asset'{}', will not generate opacity micro-map.", material);
+        return;
+    }
+
+    ARKOSE_ASSERT(materialAsset->blendMode == BlendMode::Masked);
+    ARKOSE_ASSERT(materialAsset->baseColor.has_value());
+
+    ImageAsset* baseColorImage = ImageAsset::load(materialAsset->baseColor->image);
+    if (!baseColorImage) {
+        ARKOSE_LOG(Error, "Failed to load base color image for material '{}', will not generate opacity micro-map.", materialAsset->name);
+        return;
+    }
+
+    //
+    // Create the texture
+    //
+
+    ImageAsset* alphaImageAsset = baseColorImage;
+
+    std::unique_ptr<ImageAsset> decompressedAsset;
+    if (baseColorImage->hasCompressedFormat()) {
+        TextureCompressor textureCompressor;
+        decompressedAsset = textureCompressor.decompressToRGBA32F(*baseColorImage);
+        alphaImageAsset = decompressedAsset.get();
+    }
+
+    // TODO: Use some lower mip, probably, maybe?! OMM-SDK recommends using a single, fixed mip for all ray tracing,
+    // and similarly use that exact same mip for the OMM creation, so we should probably do that.
+    static constexpr u32 mipIndex = 0;
+
+    Extent3D targetMipExtent = alphaImageAsset->extentAtMip(mipIndex);
+
+    std::vector<float> dstAlphaPixelData;
+    dstAlphaPixelData.reserve(targetMipExtent.width() * targetMipExtent.height() * targetMipExtent.depth());
+
+    switch (alphaImageAsset->format()) {
+    case ImageFormat::RGBA8: {
+        std::span<const u8> srcPixelDataU8 = alphaImageAsset->pixelDataForMip(mipIndex);
+        for (size_t i = 0; i < srcPixelDataU8.size(); i += 4) {
+            u8 a = srcPixelDataU8[i + 3];
+            dstAlphaPixelData.push_back(static_cast<float>(a) / 255.0f);
+        }
+    } break;
+    case ImageFormat::RGBA32F: {
+        std::span<const u8> srcPixelDataU8 = alphaImageAsset->pixelDataForMip(mipIndex);
+        std::span<const f32> srcPixelDataF32 = std::span<const f32>(
+            reinterpret_cast<f32 const*>(srcPixelDataU8.data()),
+            srcPixelDataU8.size() / sizeof(f32));
+        for (size_t i = 0; i < srcPixelDataF32.size(); i += 4) {
+            f32 a = srcPixelDataF32[i + 3];
+            dstAlphaPixelData.push_back(a);
+        }
+    } break;
+    default:
+        ARKOSE_LOG(Error, "Unsupported image format '{}' for baking opacity micro-maps, will not generate opacity micro-map.", baseColorImage->format());
+        return;
+    }
+
+    omm::Cpu::TextureMipDesc mipDesc;
+    mipDesc.width = targetMipExtent.width();
+    mipDesc.height = targetMipExtent.height();
+    mipDesc.textureData = dstAlphaPixelData.data();
+
+    omm::Cpu::TextureDesc texDesc;
+    texDesc.format = omm::Cpu::TextureFormat::FP32;
+    texDesc.mipCount = 1;
+    texDesc.mips = &mipDesc;
+
+    omm::Cpu::Texture ommTexture;
+    omm::Result createTexRes = omm::Cpu::CreateTexture(ommBaker, texDesc, &ommTexture);
+
+    if (createTexRes != omm::Result::SUCCESS) {
+        ARKOSE_LOG(Error, "Failed to create OMM texture, will not generate opacity micro-map.");
+        return;
+    }
+
+    ark::AtScopeExit destroyTexture([&]() {
+        omm::Result destroyRes = omm::Cpu::DestroyTexture(ommBaker, ommTexture);
+        ARKOSE_ASSERT(destroyRes == omm::Result::SUCCESS);
+    });
+
+    //
+    // Set up the baking parameters
+    //
+
+    omm::Cpu::BakeInputDesc bakeDesc {};
+
+    bakeDesc.bakeFlags = omm::Cpu::BakeFlags::None;
+    // bakeDesc.bakeFlags |= omm::Cpu::BakeFlags::EnableValidation;
+
+    bakeDesc.texture = ommTexture;
+    bakeDesc.alphaMode = omm::AlphaMode::Test;
+    bakeDesc.alphaCutoff = materialAsset->maskCutoff;
+
+    // Use mag filter here, I think that makes most sense..?
+    ImageFilter imageFilter = materialAsset->baseColor->magFilter;
+
+    switch (imageFilter) {
+    case ImageFilter::Nearest:
+        bakeDesc.runtimeSamplerDesc.filter = omm::TextureFilterMode::Nearest;
+        break;
+    case ImageFilter::Linear:
+        bakeDesc.runtimeSamplerDesc.filter = omm::TextureFilterMode::Linear;
+        break;
+    default:
+        ASSERT_NOT_REACHED();
+    }
+
+    // All/both need to be the same for this to work..
+    ARKOSE_ASSERT(materialAsset->baseColor->wrapModes.u == materialAsset->baseColor->wrapModes.v);
+    ImageWrapMode wrapMode = materialAsset->baseColor->wrapModes.u;
+
+    switch (wrapMode) {
+    case ImageWrapMode::Repeat:
+        bakeDesc.runtimeSamplerDesc.addressingMode = omm::TextureAddressMode::Wrap;
+        break;
+    case ImageWrapMode::MirroredRepeat:
+        bakeDesc.runtimeSamplerDesc.addressingMode = omm::TextureAddressMode::Mirror;
+        break;
+    case ImageWrapMode::ClampToEdge:
+        bakeDesc.runtimeSamplerDesc.addressingMode = omm::TextureAddressMode::Clamp;
+        break;
+    default:
+        ARKOSE_LOG(Error, "Unsupported wrap mode for opacity micro-map: '{}', will not generate opacity micro-map.", wrapMode);
+        return;
+    }
+
+    bakeDesc.texCoordFormat = omm::TexCoordFormat::UV32_FLOAT;
+    bakeDesc.texCoordStrideInBytes = sizeof(vec2);
+    bakeDesc.texCoords = texcoord0s.data();
+
+    bakeDesc.indexFormat = omm::IndexFormat::UINT_32;
+    bakeDesc.indexBuffer = indices.data();
+    bakeDesc.indexCount = narrow_cast<u32>(indices.size());
+
+    // Consider if we want to support other modes here.. For now, I think 2-state with force-opaque makes most sense,
+    // as we mainly want to speed up indirect rays where the exact alpha-maksed shapes of objects don't matter too much.
+    constexpr bool twoState = true;
+    if (twoState) {
+        bakeDesc.format = omm::Format::OC1_2_State;
+        bakeDesc.unknownStatePromotion = omm::UnknownStatePromotion::ForceOpaque;
+    } else {
+        bakeDesc.format = omm::Format::OC1_4_State;
+        bakeDesc.unknownStatePromotion = omm::UnknownStatePromotion::Nearest;
+    }
+
+    //
+    // Bake!
+    //
+
+    omm::Cpu::BakeResult ommBakeResult;
+    omm::Result bakeRes = omm::Cpu::Bake(ommBaker, bakeDesc, &ommBakeResult);
+
+    if (bakeRes != omm::Result::SUCCESS) {
+        ARKOSE_LOG(Error, "Failed to bake OMM, will not generate opacity micro-map.");
+        return;
+    }
+
+    ark::AtScopeExit destroyBakeResult([&]() {
+        omm::Result destroyRes = omm::Cpu::DestroyBakeResult(ommBakeResult);
+        ARKOSE_ASSERT(destroyRes == omm::Result::SUCCESS);
+    });
+
+    //
+    // Read the result from the baker
+    //
+
+    omm::Cpu::BakeResultDesc const* bakeResultDesc = nullptr;
+    omm::Result getResultRes = omm::Cpu::GetBakeResultDesc(ommBakeResult, &bakeResultDesc);
+
+    if (getResultRes != omm::Result::SUCCESS) {
+        ARKOSE_LOG(Error, "Failed to get OMM bake result description, will not be able to write out opacity micro-map.");
+        return;
+    }
+
+    //
+    // Serialize OMM results
+    //
+
+    if (bakeResultDesc) {
+
+        // Debug output from OMM-SDK that can be used to verify that things look alright.
+        // omm::Debug::SaveAsImages(ommBaker, bakeDesc, bakeResultDesc, { .path = "TestOutput", .oneFile = true });
+
+        omm::Cpu::DeserializedDesc serializeDesc {};
+        serializeDesc.flags = omm::Cpu::SerializeFlags::Compress;
+        serializeDesc.numResultDescs = 1;
+        serializeDesc.resultDescs = bakeResultDesc;
+
+        omm::Cpu::SerializedResult ommSerializedResult;
+        omm::Result serializeRes = omm::Cpu::Serialize(ommBaker, serializeDesc, &ommSerializedResult);
+
+        if (serializeRes != omm::Result::SUCCESS) {
+            ARKOSE_LOG(Error, "Failed to serialize OMM bake results, will not be able to write out opacity micro-map.");
+            return;
+        }
+
+        ark::AtScopeExit destroySerializedResult([&]() {
+            omm::Result destroyRes = omm::Cpu::DestroySerializedResult(ommSerializedResult);
+            ARKOSE_ASSERT(destroyRes == omm::Result::SUCCESS);
+        });
+
+        omm::Cpu::BlobDesc const* blobDesc;
+        omm::Result getSerializedRes = omm::Cpu::GetSerializedResultDesc(ommSerializedResult, &blobDesc);
+
+        if (getSerializedRes != omm::Result::SUCCESS) {
+            ARKOSE_LOG(Error, "Failed to get OMM serialized data, will not be able to write out opacity micro-map.");
+            return;
+        }
+
+        //
+        // "Attach" data to this mesh segment asset
+        //
+
+        std::byte const* blobDataBytes = static_cast<std::byte*>(blobDesc->data);
+
+        OpacityMicroMapDataAsset ommDataAsset {};
+        ommDataAsset.ommSdkSerializedData = std::vector<std::byte>(blobDataBytes, blobDataBytes + blobDesc->size);
+
+        this->opacityMicroMapData = ommDataAsset;
     }
 }
 
