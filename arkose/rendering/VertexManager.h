@@ -5,6 +5,7 @@
 #include "rendering/backend/util/DrawCall.h"
 #include "rendering/backend/util/IndexType.h"
 #include "scene/Vertex.h"
+#include <ark/copying.h>
 #include <memory>
 #include <optional>
 
@@ -38,6 +39,8 @@ public:
     explicit VertexManager(Backend&);
     ~VertexManager();
 
+    ARK_NON_COPYABLE(VertexManager);
+
     VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
     bool uploadMeshData(StaticMesh&, bool includeIndices, bool includeSkinningData);
 
@@ -61,6 +64,14 @@ public:
     VertexLayout const& velocityDataVertexLayout() const { return m_velocityDataVertexLayout; }
     Buffer const& velocityDataVertexBuffer() const { return *m_velocityDataVertexBuffer; }
     Buffer& velocityDataVertexBuffer() { return *m_velocityDataVertexBuffer; }
+
+    // Max that can be loaded in the GPU at any time
+    // TODO: Optimize these sizes!
+    static constexpr size_t MaxLoadedVertices         = 5'000'000;
+    static constexpr size_t MaxLoadedSkinningVertices = 10'000;
+    static constexpr size_t MaxLoadedVelocityVertices = 10'000;
+    static constexpr size_t MaxLoadedTriangles        = 10'000'000;
+    static constexpr size_t MaxLoadedIndices          = 3 * MaxLoadedTriangles;
 
 private:
     Backend* m_backend { nullptr };

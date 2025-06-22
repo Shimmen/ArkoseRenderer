@@ -39,13 +39,6 @@ public:
     IndexType meshletIndexType() const { return IndexType::UInt32; }
     u32 meshletIndexCount() const { return m_nextIndexIdx; } // TODO: Assuming no freed meshes..
 
-    // Max that can be loaded in the GPU at any time
-    // TODO: Optimize these sizes!
-    static constexpr size_t MaxLoadedVertices = 5'000'000;
-    static constexpr size_t MaxLoadedTriangles = 10'000'000;
-    static constexpr size_t MaxLoadedIndices = 3 * MaxLoadedTriangles;
-    static constexpr size_t MaxLoadedMeshlets = MaxLoadedTriangles / 124;
-
     static constexpr size_t UploadBufferSize = 4 * 1024 * 1024;
 
 private:

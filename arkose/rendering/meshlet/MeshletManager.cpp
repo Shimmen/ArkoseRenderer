@@ -3,6 +3,7 @@
 #include "asset/MeshAsset.h"
 #include "core/Logging.h"
 #include "rendering/StaticMesh.h"
+#include "rendering/VertexManager.h"
 #include "rendering/backend/base/Backend.h"
 #include "rendering/backend/base/CommandList.h"
 #include "rendering/backend/util/UploadBuffer.h"
@@ -13,9 +14,10 @@
 
 MeshletManager::MeshletManager(Backend& backend)
 {
+    static constexpr size_t MaxLoadedMeshlets = VertexManager::MaxLoadedTriangles / 124;
     size_t meshletBufferSize = sizeof(ShaderMeshlet) * MaxLoadedMeshlets;
-    size_t meshletIndexBufferSize = sizeof(u32) * MaxLoadedIndices;
-    size_t vertexIndirectionBufferSize = sizeof(u32) * MaxLoadedVertices;
+    size_t meshletIndexBufferSize = sizeof(u32) * VertexManager::MaxLoadedIndices;
+    size_t vertexIndirectionBufferSize = sizeof(u32) * VertexManager::MaxLoadedVertices;
 
     float totalMemoryUseMb = ark::conversion::to::MB(vertexIndirectionBufferSize + meshletIndexBufferSize + meshletBufferSize);
     ARKOSE_LOG(Info, "MeshletManager: allocating a total of {:.1f} MB of VRAM for meshlet data", totalMemoryUseMb);

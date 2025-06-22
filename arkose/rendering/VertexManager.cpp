@@ -6,6 +6,7 @@
 #include "rendering/backend/base/Backend.h"
 #include "rendering/backend/base/Buffer.h"
 #include "scene/MeshInstance.h"
+#include <ark/conversion.h>
 
 DrawCallDescription VertexAllocation::asDrawCallDescription() const
 {
@@ -29,29 +30,36 @@ DrawCallDescription VertexAllocation::asDrawCallDescription() const
 VertexManager::VertexManager(Backend& backend)
     : m_backend(&backend)
 {
-    const size_t initialIndexBufferSize = 100'000 * sizeofIndexType(indexType());
-    const size_t initialPostionVertexBufferSize = 50'000 * positionVertexLayout().packedVertexSize();
-    const size_t initialNonPostionVertexBufferSize = 50'000 * nonPositionVertexLayout().packedVertexSize();
-    const size_t initialSkinningDataVertexBufferSize = 10'000 * skinningDataVertexLayout().packedVertexSize();
-    const size_t initialVelocityDataVertexBufferSize = 10'000 * velocityDataVertexLayout().packedVertexSize();
+    const size_t indexBufferSize = MaxLoadedIndices * sizeofIndexType(indexType());
+    const size_t postionVertexBufferSize = MaxLoadedVertices * positionVertexLayout().packedVertexSize();
+    const size_t nonPostionVertexBufferSize = MaxLoadedVertices * nonPositionVertexLayout().packedVertexSize();
+    const size_t skinningDataVertexBufferSize = MaxLoadedSkinningVertices * skinningDataVertexLayout().packedVertexSize();
+    const size_t velocityDataVertexBufferSize = MaxLoadedVelocityVertices * velocityDataVertexLayout().packedVertexSize();
 
-    m_indexBuffer = backend.createBuffer(initialIndexBufferSize, Buffer::Usage::Index);
+    float totalMemoryUseMb = ark::conversion::to::MB(indexBufferSize
+                                                     + postionVertexBufferSize
+                                                     + nonPostionVertexBufferSize
+                                                     + skinningDataVertexBufferSize
+                                                     + velocityDataVertexBufferSize);
+    ARKOSE_LOG(Info, "VertexManager: allocating a total of {:.1f} MB of VRAM for vertex data", totalMemoryUseMb);
+
+    m_indexBuffer = backend.createBuffer(indexBufferSize, Buffer::Usage::Index);
     m_indexBuffer->setStride(sizeofIndexType(indexType()));
     m_indexBuffer->setName("SceneIndexBuffer");
 
-    m_positionOnlyVertexBuffer = backend.createBuffer(initialPostionVertexBufferSize, Buffer::Usage::Vertex);
+    m_positionOnlyVertexBuffer = backend.createBuffer(postionVertexBufferSize, Buffer::Usage::Vertex);
     m_positionOnlyVertexBuffer->setStride(positionVertexLayout().packedVertexSize());
     m_positionOnlyVertexBuffer->setName("ScenePositionOnlyVertexBuffer");
 
-    m_nonPositionVertexBuffer = backend.createBuffer(initialNonPostionVertexBufferSize, Buffer::Usage::Vertex);
+    m_nonPositionVertexBuffer = backend.createBuffer(nonPostionVertexBufferSize, Buffer::Usage::Vertex);
     m_nonPositionVertexBuffer->setStride(nonPositionVertexLayout().packedVertexSize());
     m_nonPositionVertexBuffer->setName("SceneNonPositionVertexBuffer");
 
-    m_skinningDataVertexBuffer = backend.createBuffer(initialSkinningDataVertexBufferSize, Buffer::Usage::Vertex);
+    m_skinningDataVertexBuffer = backend.createBuffer(skinningDataVertexBufferSize, Buffer::Usage::Vertex);
     m_skinningDataVertexBuffer->setStride(skinningDataVertexLayout().packedVertexSize());
     m_skinningDataVertexBuffer->setName("SceneSkinningDataVertexBuffer");
 
-    m_velocityDataVertexBuffer = backend.createBuffer(initialVelocityDataVertexBufferSize, Buffer::Usage::Vertex);
+    m_velocityDataVertexBuffer = backend.createBuffer(velocityDataVertexBufferSize, Buffer::Usage::Vertex);
     m_velocityDataVertexBuffer->setStride(velocityDataVertexLayout().packedVertexSize());
     m_velocityDataVertexBuffer->setName("SceneVelocityDataVertexBuffer");
 }
@@ -157,14 +165,14 @@ void VertexManager::uploadMeshDataForAllocation(VertexUploadJob const& uploadJob
     {
         std::vector<u8> positionOnlyVertexData = segmentAsset.assembleVertexData(m_positionOnlyVertexLayout);
         size_t positionOnlyVertexOffset = allocation.firstVertex * m_positionOnlyVertexLayout.packedVertexSize();
-        m_positionOnlyVertexBuffer->updateDataAndGrowIfRequired(positionOnlyVertexData.data(), positionOnlyVertexData.size(), positionOnlyVertexOffset);
+        m_positionOnlyVertexBuffer->updateData(positionOnlyVertexData.data(), positionOnlyVertexData.size(), positionOnlyVertexOffset);
     }
 
     // Upload non-position vertex data
     {
         std::vector<u8> nonPositionVertexData = segmentAsset.assembleVertexData(m_nonPositionVertexLayout);
         size_t nonPositionVertexOffset = allocation.firstVertex * m_nonPositionVertexLayout.packedVertexSize();
-        m_nonPositionVertexBuffer->updateDataAndGrowIfRequired(nonPositionVertexData.data(), nonPositionVertexData.size(), nonPositionVertexOffset);
+        m_nonPositionVertexBuffer->updateData(nonPositionVertexData.data(), nonPositionVertexData.size(), nonPositionVertexOffset);
     }
 
     // Upload skinning data if relevant
@@ -173,14 +181,14 @@ void VertexManager::uploadMeshDataForAllocation(VertexUploadJob const& uploadJob
         ARKOSE_ASSERT(segmentAsset.jointIndices.size() == segmentAsset.jointWeights.size());
         std::vector<u8> skinningVertexData = segmentAsset.assembleVertexData(m_skinningDataVertexLayout);
         size_t skinningDataOffset = allocation.firstSkinningVertex * m_skinningDataVertexLayout.packedVertexSize();
-        m_skinningDataVertexBuffer->updateDataAndGrowIfRequired(skinningVertexData.data(), skinningVertexData.size(), skinningDataOffset);
+        m_skinningDataVertexBuffer->updateData(skinningVertexData.data(), skinningVertexData.size(), skinningDataOffset);
     }
 
     // Upload index data if relevant
     if (allocation.indexCount > 0) {
         size_t indexSize = sizeofIndexType(indexType());
         size_t indexOffset = allocation.firstIndex * indexSize;
-        m_indexBuffer->updateDataAndGrowIfRequired(segmentAsset.indices.data(), segmentAsset.indices.size() * indexSize, indexOffset);
+        m_indexBuffer->updateData(segmentAsset.indices.data(), segmentAsset.indices.size() * indexSize, indexOffset);
     }
 
     // The data is now uploaded, indicate that it's ready to be used
