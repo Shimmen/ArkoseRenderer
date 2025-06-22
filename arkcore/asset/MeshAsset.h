@@ -87,9 +87,11 @@ public:
     std::vector<u32> indices {};
 
     // Meshlet data for this segment
+    // TODO: Ideally move this data to a separate asset, so we don't need to always load this data (e.g. redundant when running without mesh shading)
     std::optional<MeshletDataAsset> meshletData {};
 
     // Opacity Micro-Map data for this segment
+    // TODO: Ideally move this data to a separate asset, so we don't need to always load this data (e.g. redundant when running without ray tracing)
     std::optional<OpacityMicroMapDataAsset> opacityMicroMapData {};
 
     // Path to a material asset, used for rendering this mesh segment
