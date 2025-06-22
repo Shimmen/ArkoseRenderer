@@ -200,21 +200,35 @@ if (ARKOSE_BACKEND_VULKAN)
     target_compile_definitions(ArkoseCore PUBLIC WITH_VULKAN)
     target_sources(ArkoseRenderer PRIVATE
         arkose/rendering/backend/vulkan/VulkanBackend.cpp
+        arkose/rendering/backend/vulkan/VulkanBackend.h
         arkose/rendering/backend/vulkan/VulkanBindingSet.cpp
+        arkose/rendering/backend/vulkan/VulkanBindingSet.h
         arkose/rendering/backend/vulkan/VulkanBuffer.cpp
+        arkose/rendering/backend/vulkan/VulkanBuffer.h
         arkose/rendering/backend/vulkan/VulkanCommandList.cpp
+        arkose/rendering/backend/vulkan/VulkanCommandList.h
         arkose/rendering/backend/vulkan/VulkanComputeState.cpp
+        arkose/rendering/backend/vulkan/VulkanComputeState.h
         arkose/rendering/backend/vulkan/VulkanRenderState.cpp
+        arkose/rendering/backend/vulkan/VulkanRenderState.h
         arkose/rendering/backend/vulkan/VulkanRenderTarget.cpp
+        arkose/rendering/backend/vulkan/VulkanRenderTarget.h
         arkose/rendering/backend/vulkan/VulkanSampler.cpp
         arkose/rendering/backend/vulkan/VulkanSampler.h
         arkose/rendering/backend/vulkan/VulkanTexture.cpp
+        arkose/rendering/backend/vulkan/VulkanTexture.h
         arkose/rendering/backend/vulkan/VulkanUpscalingState.cpp
+        arkose/rendering/backend/vulkan/VulkanUpscalingState.h
         arkose/rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.cpp
+        arkose/rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.h
         arkose/rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.cpp
+        arkose/rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.h
         arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.cpp
+        arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.h
         arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.cpp
+        arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.h
         arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.cpp
+        arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.h
         )
 
     add_subdirectory(deps/vulkan)
@@ -232,17 +246,27 @@ if (ARKOSE_BACKEND_D3D12)
     target_compile_definitions(ArkoseCore PUBLIC WITH_D3D12)
     target_sources(ArkoseRenderer PRIVATE
         arkose/rendering/backend/d3d12/D3D12Backend.cpp
+        arkose/rendering/backend/d3d12/D3D12Backend.h
         arkose/rendering/backend/d3d12/D3D12BindingSet.cpp
+        arkose/rendering/backend/d3d12/D3D12BindingSet.h
         arkose/rendering/backend/d3d12/D3D12Buffer.cpp
+        arkose/rendering/backend/d3d12/D3D12Buffer.h
         arkose/rendering/backend/d3d12/D3D12CommandList.cpp
+        arkose/rendering/backend/d3d12/D3D12CommandList.h
         arkose/rendering/backend/d3d12/D3D12ComputeState.cpp
+        arkose/rendering/backend/d3d12/D3D12ComputeState.h
         arkose/rendering/backend/d3d12/D3D12DescriptorHeapAllocator.cpp
+        arkose/rendering/backend/d3d12/D3D12DescriptorHeapAllocator.h
         arkose/rendering/backend/d3d12/D3D12RenderState.cpp
+        arkose/rendering/backend/d3d12/D3D12RenderState.h
         arkose/rendering/backend/d3d12/D3D12RenderTarget.cpp
+        arkose/rendering/backend/d3d12/D3D12RenderTarget.h
         arkose/rendering/backend/d3d12/D3D12Sampler.cpp
         arkose/rendering/backend/d3d12/D3D12Sampler.h
         arkose/rendering/backend/d3d12/D3D12Texture.cpp
+        arkose/rendering/backend/d3d12/D3D12Texture.h
         arkose/rendering/backend/shader/dxc/DxcInterface.cpp
+        arkose/rendering/backend/shader/dxc/DxcInterface.h
         )
 
     add_subdirectory(deps/d3d12)
