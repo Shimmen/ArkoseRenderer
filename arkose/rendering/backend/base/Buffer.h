@@ -41,7 +41,6 @@ public:
     virtual bool mapData(MapMode, size_t size, size_t offset, std::function<void(std::byte*)>&& mapCallback) = 0;
 
     virtual void updateData(const std::byte* data, size_t size, size_t offset = 0) = 0;
-    virtual bool updateDataAndGrowIfRequired(const std::byte* data, size_t size, size_t offset);
 
     template<typename T>
     void updateData(const T* data, size_t size, size_t offset = 0)
@@ -56,13 +55,6 @@ public:
         auto* byteData = reinterpret_cast<const std::byte*>(vector.data());
         size_t byteSize = vector.size() * sizeof(T);
         updateData(byteData, byteSize, offset);
-    }
-
-    template<typename T>
-    bool updateDataAndGrowIfRequired(const T* data, size_t size, size_t offset = 0)
-    {
-        auto* byteData = reinterpret_cast<const std::byte*>(data);
-        return updateDataAndGrowIfRequired(byteData, size, offset);
     }
 
     enum class ReallocateStrategy {
