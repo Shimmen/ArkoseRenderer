@@ -1818,7 +1818,7 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
                     ImGui::TableSetColumnIndex(0);
                     std::string layoutDescription = vertexLayout.toString(false);
-                    ImGui::Text(layoutDescription.c_str());
+                    ImGui::Text("%s", layoutDescription.c_str());
 
                     ImGui::TableSetColumnIndex(1);
                     ImGui::Text("%u", numUsedVertices);
