@@ -96,7 +96,8 @@ enum class AnimationAssetVersion : u32 {
     Initial = 0,
     ////////////////////////////////////////////////////////////////////////////
     // Add new versions above this delimiter
-    LatestVersion
+    VersionCount,
+    LatestVersion = VersionCount - 1
 };
 
 CEREAL_CLASS_VERSION(AnimationAsset, toUnderlying(AnimationAssetVersion::LatestVersion))

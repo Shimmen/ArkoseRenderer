@@ -1,6 +1,6 @@
 {
     "material": {
-        "cereal_class_version": 1,
+        "cereal_class_version": 0,
         "brdf": "Default",
         "baseColor": {
             "nullopt": true
@@ -8,7 +8,7 @@
         "emissiveColor": {
             "nullopt": false,
             "data": {
-                "cereal_class_version": 1,
+                "cereal_class_version": 0,
                 "image": "assets/sample/models/Head/light-panel-emissive.png",
                 "wrapModes": {
                     "u": "Repeat",

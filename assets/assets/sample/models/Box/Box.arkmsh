@@ -1,13 +1,13 @@
 {
     "mesh": {
-        "cereal_class_version": 1,
+        "cereal_class_version": 0,
         "name": "Mesh",
         "LODs": [
             {
-                "cereal_class_version": 1,
+                "cereal_class_version": 0,
                 "meshSegments": [
                     {
-                        "cereal_class_version": 1,
+                        "cereal_class_version": 0,
                         "positions": [
                             {
                                 "x": -0.5,
@@ -297,10 +297,10 @@
                         "meshletData": {
                             "nullopt": false,
                             "data": {
-                                "cereal_class_version": 1,
+                                "cereal_class_version": 0,
                                 "meshlets": [
                                     {
-                                        "cereal_class_version": 1,
+                                        "cereal_class_version": 0,
                                         "firstIndex": 0,
                                         "triangleCount": 12,
                                         "firstVertex": 0,
@@ -379,10 +379,7 @@
                                 ]
                             }
                         },
-                        "material": {
-                            "index": 0,
-                            "data": "assets/sample/models/Box/Red.arkmat"
-                        }
+                        "material": "assets/sample/models/Box/Red.arkmat"
                     }
                 ]
             }

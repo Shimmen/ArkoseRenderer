@@ -133,7 +133,8 @@ enum class MaterialAssetVersion : u32 {
     AddClearcoat,
     ////////////////////////////////////////////////////////////////////////////
     // Add new versions above this delimiter
-    LatestVersion
+    VersionCount,
+    LatestVersion = VersionCount - 1
 };
 
 CEREAL_CLASS_VERSION(MaterialInput, toUnderlying(MaterialAssetVersion::LatestVersion))
@@ -155,13 +156,13 @@ void MaterialAsset::serialize(Archive& archive, u32 version)
     archive(CEREAL_NVP(baseColor));
     archive(CEREAL_NVP(emissiveColor));
     archive(CEREAL_NVP(normalMap));
-    if (version > toUnderlying(MaterialAssetVersion::AddBentNormalMap)) {
+    if (version >= toUnderlying(MaterialAssetVersion::AddBentNormalMap)) {
         archive(CEREAL_NVP(bentNormalMap));
     } else {
         bentNormalMap = {};
     }
     archive(CEREAL_NVP(materialProperties));
-    if (version > toUnderlying(MaterialAssetVersion::AddOcclusionMap)) {
+    if (version >= toUnderlying(MaterialAssetVersion::AddOcclusionMap)) {
         archive(CEREAL_NVP(occlusionMap));
     } else {
         occlusionMap = {};
@@ -169,12 +170,12 @@ void MaterialAsset::serialize(Archive& archive, u32 version)
     archive(CEREAL_NVP(colorTint));
     archive(CEREAL_NVP(metallicFactor));
     archive(CEREAL_NVP(roughnessFactor));
-    if (version > toUnderlying(MaterialAssetVersion::AddEmissiveFactor)) {
+    if (version >= toUnderlying(MaterialAssetVersion::AddEmissiveFactor)) {
         archive(CEREAL_NVP(emissiveFactor));
     } else {
         emissiveFactor = vec3(0.0f);
     }
-    if (version > toUnderlying(MaterialAssetVersion::AddClearcoat)) {
+    if (version >= toUnderlying(MaterialAssetVersion::AddClearcoat)) {
         archive(CEREAL_NVP(clearcoat));
         archive(CEREAL_NVP(clearcoatRoughness));
     } else {
