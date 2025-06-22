@@ -53,7 +53,10 @@ public:
     void generateMeshlets();
     void generateTangents();
 
+    #if PLATFORM_WINDOWS
+    // NOTE: OMM-SDK only available for Windows..
     void generateOpacityMicroMap();
+    #endif
 
     bool hasTextureCoordinates() const;
     bool hasTangents() const;

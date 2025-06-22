@@ -12,7 +12,10 @@
 #include <cereal/archives/json.hpp>
 #include <meshoptimizer.h>
 #include <mikktspace.h>
+
+#if PLATFORM_WINDOWS
 #include <omm.hpp>
+#endif
 
 namespace {
 AssetCache<MeshAsset> s_meshAssetCache {};
@@ -44,11 +47,13 @@ void MeshSegmentAsset::processForImport()
     // Generate meshlets
     generateMeshlets();
 
+    #if PLATFORM_WINDOWS
     // Generate opacity micro-maps, if relevant
     MaterialAsset* materialAsset = MaterialAsset::load(material);
     if (materialAsset && materialAsset->blendMode == BlendMode::Masked) {
         generateOpacityMicroMap();
     }
+    #endif
 }
 
 bool MeshSegmentAsset::isIndexedMesh() const
@@ -351,6 +356,7 @@ void MeshSegmentAsset::generateTangents()
     }
 }
 
+#if PLATFORM_WINDOWS
 void MeshSegmentAsset::generateOpacityMicroMap()
 {
     static omm::Baker ommBaker;
@@ -598,6 +604,7 @@ void MeshSegmentAsset::generateOpacityMicroMap()
         this->opacityMicroMapData = ommDataAsset;
     }
 }
+#endif
 
 bool MeshSegmentAsset::hasTextureCoordinates() const
 {
