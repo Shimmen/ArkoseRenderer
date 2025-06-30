@@ -266,16 +266,19 @@ std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateS
                 VertexAllocation vertexAllocation = meshSegment.vertexAllocation;
                 DrawKey drawKey = meshSegment.drawKey;
 
-                if constexpr (std::is_same_v<InstanceType, SkeletalMeshInstance>) {
-                    SkinningVertexMapping const& skinningVertexMapping = instance.skinningVertexMappingForSegmentIndex(segmentIdx);
-                    vertexAllocation = skinningVertexMapping.skinnedTarget;
-
-                    // TODO/HACK: Don't modify it on the fly like this..
-                    drawKey.setHasExplicityVelocity(true);
-                }
-
                 u32 drawableIdx = instance.drawableHandleForSegmentIndex(segmentIdx).template indexOfType<u32>();
-                meshSegmentInstances.emplace_back(vertexAllocation, drawKey, instance.transform(), drawableIdx);
+                if constexpr (std::is_same_v<InstanceType, SkeletalMeshInstance>) {
+                    if (instance.hasSkinningVertexMappingForSegmentIndex(segmentIdx)) {
+
+                        // TODO/HACK: Don't modify it on the fly like this..
+                        drawKey.setHasExplicityVelocity(true);
+
+                        SkinningVertexMapping const& skinningVertexMapping = instance.skinningVertexMappingForSegmentIndex(segmentIdx);
+                        meshSegmentInstances.emplace_back(skinningVertexMapping.skinnedTarget, drawKey, instance.transform(), drawableIdx);
+                    }
+                } else {
+                    meshSegmentInstances.emplace_back(meshSegment.vertexAllocation, drawKey, instance.transform(), drawableIdx);
+                }
             }
         }
     };

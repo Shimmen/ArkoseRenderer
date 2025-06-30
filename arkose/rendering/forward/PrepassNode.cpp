@@ -158,14 +158,15 @@ std::vector<PrepassNode::MeshSegmentInstance> PrepassNode::generateSortedDrawLis
                 bool doubleSided = meshSegment.drawKey.doubleSided().value();
                 DrawKey prepassDrawKey = DrawKey({}, blendMode, doubleSided, {});
 
-                VertexAllocation vertexAllocation = meshSegment.vertexAllocation;
-                if constexpr (std::is_same_v<InstanceType, SkeletalMeshInstance>) {
-                    SkinningVertexMapping const& skinningVertexMapping = instance.skinningVertexMappingForSegmentIndex(segmentIdx);
-                    vertexAllocation = skinningVertexMapping.skinnedTarget;
-                }
-
                 u32 drawableIdx = instance.drawableHandleForSegmentIndex(segmentIdx).template indexOfType<u32>();
-                meshSegmentInstances.emplace_back(vertexAllocation, prepassDrawKey, drawableIdx);
+                if constexpr (std::is_same_v<InstanceType, SkeletalMeshInstance>) {
+                    if (instance.hasSkinningVertexMappingForSegmentIndex(segmentIdx)) {
+                        SkinningVertexMapping const& skinningVertexMapping = instance.skinningVertexMappingForSegmentIndex(segmentIdx);
+                        meshSegmentInstances.emplace_back(skinningVertexMapping.skinnedTarget, prepassDrawKey, drawableIdx);
+                    }
+                } else {
+                    meshSegmentInstances.emplace_back(meshSegment.vertexAllocation, prepassDrawKey, drawableIdx);
+                }
             }
         }
     };
