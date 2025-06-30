@@ -104,7 +104,7 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable, bool meshShading
     auto identityLUT = CubeLUT::load("assets/engine/lut/identity.cube");
     updateColorGradingLUT(*identityLUT);
 
-    m_vertexManager = std::make_unique<VertexManager>(m_backend);
+    m_vertexManager = std::make_unique<VertexManager>(m_backend, *this);
 
     if (m_maintainRayTracingScene) {
         m_sceneTopLevelAccelerationStructure = backend().createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, {});
@@ -519,9 +519,13 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             m_pendingMaterialUpdates.clear();
         }
 
-        // Update mesh streaming (well, it's not much streaming to speak of right now, but it's the basis of something like that)
-        if (m_meshletManager != nullptr) {
-            m_meshletManager->processMeshStreaming(cmdList, m_changedStaticMeshes);
+        // Do mesh streaming
+        {
+            m_vertexManager->processMeshStreaming(cmdList, m_changedStaticMeshes);
+            
+            if (m_meshletManager != nullptr) {
+                m_meshletManager->processMeshStreaming(cmdList, m_changedStaticMeshes);
+            }
         }
 
         // Update camera data
@@ -589,6 +593,9 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 // TODO/OPTIMIZATION: Upload all instance's matrices in a single buffer once and simply offset into it!
                 uploadBuffer.upload(jointMatrices, *m_jointMatricesBuffer);
                 cmdList.executeBufferCopyOperations(uploadBuffer);
+
+                // TODO: Don't do this every frame! but.. it should be safe to do so, so let's keep it so for now
+                m_vertexManager->allocateSkeletalMeshInstance(*skeletalMeshInstance);
 
                 for (SkinningVertexMapping const& skinningVertexMapping : skeletalMeshInstance->skinningVertexMappings()) {
 
@@ -778,6 +785,11 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                     for (StaticMeshLOD& staticMeshLOD : staticMesh->LODs()) {
                         for (StaticMeshSegment& meshSegment : staticMeshLOD.meshSegments) {
 
+                            if (meshSegment.blas == nullptr) { 
+                                // Not yet loaded
+                                continue;
+                            }
+
                             u32 rtMeshIndex = narrow_cast<u32>(rayTracingMeshData.size());
 
                             DrawCallDescription drawCallDesc = DrawCallDescription::fromVertexAllocation(meshSegment.vertexAllocation);
@@ -785,19 +797,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                                           .firstIndex = static_cast<int>(drawCallDesc.firstIndex),
                                                                           .materialIndex = meshSegment.material.indexOfType<int>() });
 
-                            ARKOSE_ASSERT(meshSegment.blas != nullptr);
                             tlasBuildType = AccelerationStructureBuildType::FullBuild; // TODO: Only do a full rebuild sometimes!
-                            /*
-                            if (meshSegment.blas == nullptr) {
-                                meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment);
-
-                                m_totalNumBlas += 1;
-                                m_totalBlasVramUsage += meshSegment.blas->sizeInMemory();
-
-                                // We have new instances, a full build is needed
-                                tlasBuildType = AccelerationStructureBuildType::FullBuild;
-                            }
-                            */
 
                             uint8_t hitMask = 0x00;
                             uint32_t sbtOffset = 0;
@@ -838,6 +838,11 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                     for (StaticMeshLOD const& staticMeshLOD : staticMesh.LODs()) {
                         for (u32 segmentIdx = 0; segmentIdx < staticMeshLOD.meshSegments.size(); ++segmentIdx) {
                             StaticMeshSegment const& meshSegment = staticMeshLOD.meshSegments[segmentIdx];
+
+                            if (!instance->hasBlasForSegmentIndex(segmentIdx)) {
+                                // Not yet loaded
+                                continue;
+                            }
 
                             u32 rtMeshIndex = narrow_cast<u32>(rayTracingMeshData.size());
 
@@ -1099,45 +1104,6 @@ void GpuScene::initializeSkeletalMeshInstance(SkeletalMeshInstance& instance)
             DrawableObjectHandle handle = m_drawables.add(std::move(drawable));
             instance.setDrawableHandle(segmentIdx, handle);
         }
-
-        if (!instance.hasSkinningVertexMappingForSegmentIndex(segmentIdx)) {
-            // We don't need to allocate indices or skinning for the target. The indices will duplicate the underlying mesh
-            // as it's never changed, and skinning data will never be needed for the *target*. We do have to allocate space
-            // for velocity data, however, as it's something that's specific for the animated target vertices.
-            constexpr bool includeIndices = false;
-            constexpr bool includeSkinningData = false;
-            constexpr bool includeVelocityData = true;
-
-            VertexAllocation instanceVertexAllocation = m_vertexManager->allocateMeshDataForSegment(*meshSegment.asset,
-                                                                                                    includeIndices,
-                                                                                                    includeSkinningData,
-                                                                                                    includeVelocityData);
-            ARKOSE_ASSERT(instanceVertexAllocation.isValid());
-
-            instanceVertexAllocation.firstIndex = meshSegment.vertexAllocation.firstIndex;
-            instanceVertexAllocation.indexCount = meshSegment.vertexAllocation.indexCount;
-
-            SkinningVertexMapping skinningVertexMapping { .underlyingMesh = meshSegment.vertexAllocation,
-                                                          .skinnedTarget = instanceVertexAllocation };
-            instance.setSkinningVertexMapping(segmentIdx, skinningVertexMapping);
-        }
-
-        if (m_maintainRayTracingScene) {
-            // For now at least, this is not reentrant.
-            //  ... but we can have more than one segment instance per mesh..
-            //ARKOSE_ASSERT(instance.BLASes().size() == 0);
-
-            SkinningVertexMapping const& skinningVertexMappings = instance.skinningVertexMappingForSegmentIndex(segmentIdx);
-            ARKOSE_ASSERT(skinningVertexMappings.skinnedTarget.isValid());
-
-            // NOTE: We construct the new BLAS into its own buffers but 1) we don't have any data in there yet to build from,
-            // and 2) we don't want to build redundantly, so we pass in the existing BLAS from the underlying mesh as a BLAS
-            // copy source, which means that we copy the built BLAS into place.
-            BottomLevelAS const* sourceBlas = meshSegment.blas.get();
-
-            auto blas = m_vertexManager->createBottomLevelAccelerationStructure(skinningVertexMappings.skinnedTarget, sourceBlas);
-            instance.setBLAS(segmentIdx, std::move(blas));
-        }
     }
 }
 
@@ -1219,14 +1185,7 @@ SkeletalMeshHandle GpuScene::registerSkeletalMesh(MeshAsset const* meshAsset, Sk
     if (m_vertexManager != nullptr) {
         constexpr bool includeIndices = true;
         constexpr bool includeSkinningData = true;
-        m_vertexManager->uploadMeshData(skeletalMesh->underlyingMesh(), includeIndices, includeSkinningData);
-
-        if (m_maintainRayTracingScene) {
-            // NOTE: This isn't the most ideal memory usage as we're having this BLAS just sitting here and just being
-            // used as a copy source, but it makes things easy now. Later we can make it when the first instance is
-            // created and then let that first instance be the copy source for all other instances.
-            m_vertexManager->createBottomLevelAccelerationStructure(skeletalMesh->underlyingMesh());
-        }
+        m_vertexManager->registerForStreaming(skeletalMesh->underlyingMesh(), includeIndices, includeSkinningData);
     }
 
     SkeletalMeshHandle handle = m_managedSkeletalMeshes.add(ManagedSkeletalMesh { .meshAsset = meshAsset,
@@ -1273,13 +1232,12 @@ StaticMeshHandle GpuScene::registerStaticMesh(MeshAsset const* meshAsset)
     if (m_vertexManager != nullptr) {
         constexpr bool includeIndices = true;
         constexpr bool includeSkinningData = false;
-        m_vertexManager->uploadMeshData(*staticMesh, includeIndices, includeSkinningData);
-
-        if (m_maintainRayTracingScene) {
-            m_vertexManager->createBottomLevelAccelerationStructure(*staticMesh);
-        }
+        m_vertexManager->registerForStreaming(*staticMesh, includeIndices, includeSkinningData);
     }
 
+    // TODO: Integrate the meshlet streaming into the vertex manager
+    // We shouldn't really be streming meshlets until we have vertex data, and all that,
+    // and once the vertex streaming is async we need to integrate the meshlet streaming into that as well.
     if (m_meshletManager != nullptr) {
         m_meshletManager->allocateMeshlets(*staticMesh);
     }

@@ -5,27 +5,33 @@
 #include "rendering/backend/base/Buffer.h"
 #include "rendering/backend/util/DrawCall.h"
 #include "rendering/backend/util/IndexType.h"
+#include "rendering/StaticMesh.h"
 #include "scene/Vertex.h"
 #include <ark/copying.h>
 #include <memory>
 #include <optional>
+#include <unordered_set>
 
 class Backend;
 class BottomLevelAS;
+class CommandList;
 class MeshSegmentAsset;
-class StaticMesh;
 struct SkeletalMeshInstance;
 struct StaticMeshSegment;
 
 class VertexManager {
 public:
-    explicit VertexManager(Backend&);
+    VertexManager(Backend&, GpuScene&);
     ~VertexManager();
 
     ARK_NON_COPYABLE(VertexManager);
 
-    VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
-    bool uploadMeshData(StaticMesh&, bool includeIndices, bool includeSkinningData);
+    void registerForStreaming(StaticMesh&, bool includeIndices, bool includeSkinningData);
+    //void unregisterFromStreaming(StaticMesh&); TODO!
+
+    bool allocateSkeletalMeshInstance(SkeletalMeshInstance&);
+
+    void processMeshStreaming(CommandList&, std::unordered_set<StaticMeshHandle>& updatedMeshes);
 
     bool createBottomLevelAccelerationStructure(StaticMesh&);
     std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(VertexAllocation const&, BottomLevelAS const* copySource);
@@ -56,6 +62,8 @@ public:
     static constexpr size_t MaxLoadedTriangles        = 10'000'000;
     static constexpr size_t MaxLoadedIndices          = 3 * MaxLoadedTriangles;
 
+    static constexpr size_t UploadBufferSize          = 4 * 1024 * 1024;
+
     u32 numAllocatedIndices() const { return m_nextFreeIndex; }
     u32 numAllocatedVertices() const { return m_nextFreeVertexIndex; }
     u32 numAllocatedSkinningVertices() const { return m_nextFreeSkinningVertexIndex; }
@@ -63,6 +71,7 @@ public:
 
 private:
     Backend* m_backend { nullptr };
+    GpuScene* m_scene { nullptr };
 
     VertexLayout const m_positionOnlyVertexLayout { VertexComponent::Position3F };
     VertexLayout const m_nonPositionVertexLayout { VertexComponent::TexCoord2F,
@@ -85,11 +94,48 @@ private:
     std::unique_ptr<Buffer> m_velocityDataVertexBuffer {};
     u32 m_nextFreeVelocityIndex { 0 };
 
+    VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
+
     struct VertexUploadJob {
         MeshSegmentAsset const* asset { nullptr };
         StaticMeshSegment* target { nullptr };
         VertexAllocation allocation {};
     };
 
+    std::vector<VertexUploadJob> m_pendingUploadJobs {};
+    std::unique_ptr<UploadBuffer> m_uploadBuffer {};
+
     void uploadMeshDataForAllocation(VertexUploadJob const&);
+
+    enum class MeshStreamingState {
+        PendingAllocation = 0,
+        LoadingData,
+        // TODO:
+        //StreamingVertexData,
+        //StreamingIndexData,
+        //StreamingMeshletData,
+        CreatingBLAS,
+        // TODO:
+        //CompactingBLAS,
+        Loaded,
+    };
+
+    struct StreamingMesh {
+        StaticMesh* mesh;
+        MeshStreamingState state;
+
+        bool includeIndices { false };
+        bool includeSkinningData { false };
+        bool includeVelocityData { false };
+
+        u32 nextLOD { 0 };
+        u32 nextSegment { 0 };
+        u32 nextVertex { 0 };
+        u32 nextIndex { 0 };
+    };
+
+    // List of all streaming meshes that are not in the Loaded state
+    std::vector<StreamingMesh> m_activeStreamingMeshes {};
+    // List of all streaming meshes that are done streaming and in the Loaded state
+    std::vector<StreamingMesh> m_idleStreamingMeshes {};
 };

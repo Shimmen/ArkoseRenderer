@@ -170,6 +170,9 @@ public:
 
     // Misc.
 
+    bool maintainRayTracingScene() const { return m_maintainRayTracingScene; }
+    bool maintainMeshShadingScene() const { return m_meshShadingCapable; }
+
     bool hasPendingUploads() const;
 
     void drawStatsGui(bool includeContainingWindow = false);

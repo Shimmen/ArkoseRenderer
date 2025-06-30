@@ -1,15 +1,20 @@
 #include "VertexManager.h"
 
 #include "asset/MeshAsset.h"
+#include "rendering/GpuScene.h"
 #include "rendering/StaticMesh.h"
+#include "rendering/SkeletalMesh.h"
 #include "rendering/backend/base/AccelerationStructure.h"
 #include "rendering/backend/base/Backend.h"
 #include "rendering/backend/base/Buffer.h"
+#include "rendering/backend/base/CommandList.h"
+#include "rendering/backend/util/UploadBuffer.h"
 #include "scene/MeshInstance.h"
 #include <ark/conversion.h>
 
-VertexManager::VertexManager(Backend& backend)
+VertexManager::VertexManager(Backend& backend, GpuScene& scene)
     : m_backend(&backend)
+    , m_scene(&scene)
 {
     const size_t indexBufferSize = MaxLoadedIndices * sizeofIndexType(indexType());
     const size_t postionVertexBufferSize = MaxLoadedVertices * positionVertexLayout().packedVertexSize();
@@ -43,35 +48,211 @@ VertexManager::VertexManager(Backend& backend)
     m_velocityDataVertexBuffer = backend.createBuffer(velocityDataVertexBufferSize, Buffer::Usage::Vertex);
     m_velocityDataVertexBuffer->setStride(velocityDataVertexLayout().packedVertexSize());
     m_velocityDataVertexBuffer->setName("SceneVelocityDataVertexBuffer");
+
+    m_uploadBuffer = std::make_unique<UploadBuffer>(backend, UploadBufferSize);
 }
 
 VertexManager::~VertexManager()
 {
 }
 
-bool VertexManager::uploadMeshData(StaticMesh& staticMesh, bool includeIndices, bool includeSkinningData)
+void VertexManager::registerForStreaming(StaticMesh& mesh, bool includeIndices, bool includeSkinningData)
+{
+    // There are (currently) no cases where we have velocity data from an asset that we need to upload
+    constexpr bool includeVelocityData = false;
+
+    m_activeStreamingMeshes.push_back(StreamingMesh { .mesh = &mesh,
+                                                      .state = MeshStreamingState::PendingAllocation,
+                                                      .includeIndices = includeIndices,
+                                                      .includeSkinningData = includeSkinningData,
+                                                      .includeVelocityData = includeVelocityData });
+}
+
+void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_set<StaticMeshHandle>& updatedMeshes)
 {
     SCOPED_PROFILE_ZONE();
 
-    for (StaticMeshLOD& lod : staticMesh.LODs()) {
-        for (StaticMeshSegment& meshSegment : lod.meshSegments) {
+    m_uploadBuffer->reset();
 
-            if (meshSegment.vertexAllocation.isValid()) {
-                continue;
+    // TODO
+    //std::vector<size_t> fullyLoaded {};
+
+    for (size_t activeIdx = 0; activeIdx < m_activeStreamingMeshes.size(); ++activeIdx) {
+        StreamingMesh& streamingMesh = m_activeStreamingMeshes[activeIdx];
+
+        switch (streamingMesh.state) {
+        case MeshStreamingState::PendingAllocation: {
+
+            bool allSegmentsAllocated = true;
+
+            for (StaticMeshLOD& lod : streamingMesh.mesh->LODs()) {
+                for (StaticMeshSegment& meshSegment : lod.meshSegments) {
+
+                    if (meshSegment.vertexAllocation.isValid()) {
+                        continue;
+                    }
+
+                    VertexAllocation allocation = allocateMeshDataForSegment(*meshSegment.asset,
+                                                                             streamingMesh.includeIndices,
+                                                                             streamingMesh.includeSkinningData,
+                                                                             streamingMesh.includeVelocityData);
+                    if (allocation.isValid()) {
+                        meshSegment.vertexAllocation = allocation;
+                    } else  {
+                        // No room to allocate, hopefully temporarily, try again later
+                        allSegmentsAllocated = false;
+                    }
+                }
             }
 
-            // There are (currently) no cases where we have velocity data from an asset that we need to upload
-            constexpr bool includeVelocityData = false;
+            if (allSegmentsAllocated) {
+                streamingMesh.state = MeshStreamingState::LoadingData;
+            }
 
-            VertexAllocation allocation = allocateMeshDataForSegment(*meshSegment.asset, includeIndices, includeSkinningData, includeVelocityData);
-            if (!allocation.isValid()) {
+        } break;
+
+        case MeshStreamingState::LoadingData: {
+
+            bool allVertexDataStreamedIn = true;
+
+            for (StaticMeshLOD& lod : streamingMesh.mesh->LODs()) {
+                for (StaticMeshSegment& meshSegment : lod.meshSegments) {
+
+                    // TODO: Actually stream this in on the command list!
+                    uploadMeshDataForAllocation(VertexUploadJob { .asset = meshSegment.asset,
+                                                                  .target = &meshSegment,
+                                                                  .allocation = meshSegment.vertexAllocation });
+
+                }
+            }
+
+            if (allVertexDataStreamedIn) {
+                streamingMesh.state = MeshStreamingState::CreatingBLAS;
+            }
+
+        } break;
+
+        //case MeshStreamingState::StreamingVertexData: {
+        //
+        //    // todo!
+        //
+        //} break;
+
+        //case MeshStreamingState::StreamingIndexData: {
+        //
+        //    // todo!
+        //
+        //} break;
+
+        case MeshStreamingState::CreatingBLAS:{
+
+            bool allBLASesCreated = true;
+
+            for (StaticMeshLOD& lod : streamingMesh.mesh->LODs()) {
+                for (StaticMeshSegment& meshSegment : lod.meshSegments) {
+
+                    meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment.vertexAllocation, nullptr);
+
+                    if (!meshSegment.blas) { 
+                        // Failed to create BLAS, hopefully temporarily, try again later
+                        allBLASesCreated = false;
+                    }
+                }
+            }
+
+            if (allBLASesCreated) {
+                // TODO: Compact BLAS after creation
+                streamingMesh.state = MeshStreamingState::Loaded;
+            }
+
+        } break;
+
+        // case MeshStreamingState::CompactingBLAS: {
+        //
+        //     // todo!
+        //
+        // } break;
+
+        case MeshStreamingState::Loaded: {
+
+            // TODO: Move to idle list! Probably do before we even end up here though..
+            // fullyLoaded.push_back(activeIdx);
+
+        } break;
+        }
+    }
+}
+
+bool VertexManager::allocateSkeletalMeshInstance(SkeletalMeshInstance& instance)
+{
+    SCOPED_PROFILE_ZONE();
+
+    SkeletalMesh* skeletalMesh = m_scene->skeletalMeshForHandle(instance.mesh());
+    if (skeletalMesh == nullptr) {
+        ARKOSE_LOG(Error, "Failed to allocate skeletal mesh instance for handle {}: mesh not found", instance.mesh().index());
+        return false;
+    }
+
+    StaticMesh& underlyingMesh = skeletalMesh->underlyingMesh();
+
+    constexpr u32 lodIdx = 0;
+    StaticMeshLOD& lod = underlyingMesh.lodAtIndex(lodIdx);
+
+    for (size_t segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
+        StaticMeshSegment& meshSegment = lod.meshSegments[segmentIdx];
+
+        if (!instance.hasSkinningVertexMappingForSegmentIndex(segmentIdx)) {
+            // We don't need to allocate indices or skinning for the target. The indices will duplicate the underlying mesh
+            // as it's never changed, and skinning data will never be needed for the *target*. We do have to allocate space
+            // for velocity data, however, as it's something that's specific for the animated target vertices.
+            constexpr bool includeIndices = false;
+            constexpr bool includeSkinningData = false;
+            constexpr bool includeVelocityData = true;
+
+            VertexAllocation instanceVertexAllocation = allocateMeshDataForSegment(*meshSegment.asset,
+                                                                                   includeIndices,
+                                                                                   includeSkinningData,
+                                                                                   includeVelocityData);
+
+            if (!instanceVertexAllocation.isValid()) {
+                ARKOSE_LOG(Error, "Failed to allocate vertex data for skeletal mesh instance: no room for segment {}", segmentIdx);
                 return false;
             }
 
-            // TODO: Implement async uploading, i.e., push this vertex upload job to a queue!
-            uploadMeshDataForAllocation(VertexUploadJob { .asset = meshSegment.asset,
-                                                          .target = &meshSegment,
-                                                          .allocation = allocation });
+            instanceVertexAllocation.firstIndex = meshSegment.vertexAllocation.firstIndex;
+            instanceVertexAllocation.indexCount = meshSegment.vertexAllocation.indexCount;
+
+            SkinningVertexMapping skinningVertexMapping { .underlyingMesh = meshSegment.vertexAllocation,
+                                                          .skinnedTarget = instanceVertexAllocation };
+            instance.setSkinningVertexMapping(segmentIdx, skinningVertexMapping);
+        }
+    }
+
+    // TODO: Move to a deferred step! No need to create this this very frame
+    if (m_scene->maintainRayTracingScene()) {
+
+        for (size_t segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
+            StaticMeshSegment& meshSegment = lod.meshSegments[segmentIdx];
+
+            if (instance.hasBlasForSegmentIndex(segmentIdx)) {
+                continue;
+            }
+
+            SkinningVertexMapping const& skinningVertexMappings = instance.skinningVertexMappingForSegmentIndex(segmentIdx);
+            ARKOSE_ASSERT(skinningVertexMappings.skinnedTarget.isValid());
+
+            // NOTE: We construct the new BLAS into its own buffers but 1) we don't have any data in there yet to build from,
+            // and 2) we don't want to build redundantly, so we pass in the existing BLAS from the underlying mesh as a BLAS
+            // copy source, which means that we copy the built BLAS into place.
+            BottomLevelAS const* sourceBlas = meshSegment.blas.get();
+           
+            if (sourceBlas == nullptr) { 
+                //ARKOSE_LOG(Info, "Source BLAS not yet available, waiting...");
+                return false;
+            }
+
+            auto blas = createBottomLevelAccelerationStructure(skinningVertexMappings.skinnedTarget, sourceBlas);
+            instance.setBLAS(segmentIdx, std::move(blas));
         }
     }
 
