@@ -12,6 +12,9 @@
 #include <optional>
 #include <unordered_set>
 
+// Shader headers
+#include "shaders/shared/SceneData.h"
+
 class Backend;
 class BottomLevelAS;
 class CommandList;
@@ -54,6 +57,17 @@ public:
     Buffer const& velocityDataVertexBuffer() const { return *m_velocityDataVertexBuffer; }
     Buffer& velocityDataVertexBuffer() { return *m_velocityDataVertexBuffer; }
 
+    std::vector<ShaderMeshlet> const& meshlets() const { return m_meshlets; }
+    Buffer const& meshletBuffer() const { return *m_meshletBuffer; }
+    Buffer& meshletBuffer() { return *m_meshletBuffer; }
+
+    Buffer const& meshletVertexIndirectionBuffer() const { return *m_meshletVertexIndirectionBuffer; }
+    Buffer& meshletVertexIndirectionBuffer() { return *m_meshletVertexIndirectionBuffer; }
+
+    IndexType meshletIndexType() const { return IndexType::UInt32; }
+    Buffer const& meshletIndexBuffer() const { return *m_meshletIndexBuffer; }
+    Buffer& meshletIndexBuffer() { return *m_meshletIndexBuffer; }
+
     // Max that can be loaded in the GPU at any time
     // TODO: Optimize these sizes!
     static constexpr size_t MaxLoadedVertices         = 5'000'000;
@@ -61,6 +75,8 @@ public:
     static constexpr size_t MaxLoadedVelocityVertices = 10'000;
     static constexpr size_t MaxLoadedTriangles        = 10'000'000;
     static constexpr size_t MaxLoadedIndices          = 3 * MaxLoadedTriangles;
+
+    static constexpr size_t MaxLoadedMeshlets         = MaxLoadedTriangles / 124;
 
     static constexpr size_t UploadBufferSize          = 4 * 1024 * 1024;
 
@@ -94,6 +110,16 @@ private:
     std::unique_ptr<Buffer> m_velocityDataVertexBuffer {};
     u32 m_nextFreeVelocityIndex { 0 };
 
+    std::unique_ptr<Buffer> m_meshletVertexIndirectionBuffer {};
+    u32 m_nextFreeMeshletIndirIndex { 0 };
+
+    std::unique_ptr<Buffer> m_meshletIndexBuffer {};
+    u32 m_nextFreeMeshletIndexBufferIndex { 0 };
+
+    std::vector<ShaderMeshlet> m_meshlets {};
+    std::unique_ptr<Buffer> m_meshletBuffer {};
+    u32 m_nextFreeMeshletIndex { 0 };
+
     bool allocateVertexDataForMesh(StaticMesh&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
     VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
 
@@ -103,10 +129,12 @@ private:
         VertexAllocation allocation {};
     };
 
-    std::vector<VertexUploadJob> m_pendingUploadJobs {};
     std::unique_ptr<UploadBuffer> m_uploadBuffer {};
 
     void uploadMeshDataForAllocation(VertexUploadJob const&);
+
+    bool streamMeshletData(StaticMesh&, std::unordered_set<StaticMeshHandle>& updatedMeshes);
+    std::optional<MeshletView> streamMeshletDataForSegment(StaticMeshSegment const&);
 
     enum class MeshStreamingState {
         PendingAllocation = 0,
@@ -114,7 +142,7 @@ private:
         // TODO:
         //StreamingVertexData,
         //StreamingIndexData,
-        //StreamingMeshletData,
+        StreamingMeshletData,
         CreatingBLAS,
         // TODO:
         //CompactingBLAS,

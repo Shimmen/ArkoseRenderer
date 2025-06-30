@@ -9,6 +9,7 @@
 #include "rendering/backend/base/Buffer.h"
 #include "rendering/backend/base/CommandList.h"
 #include "rendering/backend/util/UploadBuffer.h"
+#include "rendering/meshlet/MeshletView.h"
 #include "scene/MeshInstance.h"
 #include <ark/conversion.h>
 
@@ -48,6 +49,28 @@ VertexManager::VertexManager(Backend& backend, GpuScene& scene)
     m_velocityDataVertexBuffer = backend.createBuffer(velocityDataVertexBufferSize, Buffer::Usage::Vertex);
     m_velocityDataVertexBuffer->setStride(velocityDataVertexLayout().packedVertexSize());
     m_velocityDataVertexBuffer->setName("SceneVelocityDataVertexBuffer");
+
+    if (m_scene->maintainMeshShadingScene()) {
+
+        size_t vertexIndirectionBufferSize = sizeof(u32) * VertexManager::MaxLoadedVertices;
+        size_t meshletIndexBufferSize = sizeof(u32) * VertexManager::MaxLoadedIndices;
+        size_t meshletBufferSize = sizeof(ShaderMeshlet) * MaxLoadedMeshlets;
+
+        float totalMeshletMemoryUseMb = ark::conversion::to::MB(vertexIndirectionBufferSize + meshletIndexBufferSize + meshletBufferSize);
+        ARKOSE_LOG(Info, "VertexManager: allocating a total of {:.1f} MB of VRAM for meshlet data", totalMeshletMemoryUseMb);
+
+        m_meshletVertexIndirectionBuffer = backend.createBuffer(vertexIndirectionBufferSize, Buffer::Usage::StorageBuffer);
+        m_meshletVertexIndirectionBuffer->setStride(sizeof(u32));
+        m_meshletVertexIndirectionBuffer->setName("SceneMeshletVertexIndirectionData");
+
+        m_meshletIndexBuffer = backend.createBuffer(meshletIndexBufferSize, Buffer::Usage::Index);
+        m_meshletIndexBuffer->setStride(sizeof(u32));
+        m_meshletIndexBuffer->setName("SceneMeshletIndexData");
+
+        m_meshletBuffer = backend.createBuffer(meshletBufferSize, Buffer::Usage::StorageBuffer);
+        m_meshletBuffer->setStride(sizeof(ShaderMeshlet));
+        m_meshletBuffer->setName("SceneMeshletData");
+    }
 
     m_uploadBuffer = std::make_unique<UploadBuffer>(backend, UploadBufferSize);
 }
@@ -110,7 +133,13 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
             }
 
             if (allVertexDataStreamedIn) {
-                streamingMesh.state = MeshStreamingState::CreatingBLAS;
+                if ( m_scene->maintainMeshShadingScene() ) {
+                    streamingMesh.state = MeshStreamingState::StreamingMeshletData;
+                } else if (m_scene->maintainRayTracingScene()) {
+                    streamingMesh.state = MeshStreamingState::CreatingBLAS;
+                } else {
+                    streamingMesh.state = MeshStreamingState::Loaded;
+                }
             }
 
         } break;
@@ -127,7 +156,23 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
         //
         //} break;
 
-        case MeshStreamingState::CreatingBLAS:{
+        case MeshStreamingState::StreamingMeshletData: {
+
+            ARKOSE_ASSERT(m_scene->maintainMeshShadingScene());
+
+            bool allMeshletDataStreamedIn = streamMeshletData(*streamingMesh.mesh, updatedMeshes);
+
+            if (allMeshletDataStreamedIn) {
+                if (m_scene->maintainRayTracingScene()) {
+                    streamingMesh.state = MeshStreamingState::CreatingBLAS;
+                } else {
+                    streamingMesh.state = MeshStreamingState::Loaded;
+                }
+            }
+
+        } break;
+
+        case MeshStreamingState::CreatingBLAS: {
 
             bool allBLASesCreated = true;
 
@@ -163,6 +208,10 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
 
         } break;
         }
+    }
+
+    if (m_uploadBuffer->peekPendingOperations().size() > 0) {
+        cmdList.executeBufferCopyOperations(*m_uploadBuffer);
     }
 }
 
@@ -364,8 +413,99 @@ void VertexManager::uploadMeshDataForAllocation(VertexUploadJob const& uploadJob
     }
 
     // The data is now uploaded, indicate that it's ready to be used
-    // TODO: When we're async this will be a race condition! We might wanna do like the MeshletManager for signalling back.
+    // TODO: When we're async this will be a race condition! We might wanna do like the `updatedMeshes` trick for signalling back.
     uploadJob.target->vertexAllocation = allocation;
+}
+
+bool VertexManager::streamMeshletData(StaticMesh& staticMesh, std::unordered_set<StaticMeshHandle>& updatedMeshes)
+{
+    bool success = true;
+
+    for (StaticMeshLOD& lod : staticMesh.LODs()) {
+        for (StaticMeshSegment& meshSegment : lod.meshSegments) {
+
+            if (meshSegment.meshletView) {
+                continue;
+            }
+
+            meshSegment.meshletView = streamMeshletDataForSegment(meshSegment);
+
+            if (meshSegment.meshletView) {
+                // Signal to the caller that the mesh has changed
+                updatedMeshes.insert(meshSegment.staticMeshHandle);
+            } else {
+                success = false;
+            }
+        }
+    }
+
+    return success;
+}
+
+std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StaticMeshSegment const& meshSegment)
+{
+    MeshSegmentAsset const& meshSegmentAsset = *meshSegment.asset;
+    MeshletDataAsset const& meshletDataAsset = meshSegmentAsset.meshletData.value();
+
+    u32 vertexCount = narrow_cast<u32>(meshletDataAsset.meshletVertexIndirection.size());
+    u32 indexCount = narrow_cast<u32>(meshletDataAsset.meshletIndices.size());
+    u32 meshletCount = narrow_cast<u32>(meshletDataAsset.meshlets.size());
+
+    size_t totalUploadSize = vertexCount * sizeof(u32) // vertex indirection buffer
+        + indexCount * sizeof(u32) // index buffer
+        + meshletCount * sizeof(ShaderMeshlet); // meshlet buffer
+
+    // TODO: There are instances where segments are massive, so we need to allow uploading with a finer granularity.
+    if (totalUploadSize > m_uploadBuffer->remainingSize()) {
+        if (totalUploadSize > UploadBufferSize) {
+            ARKOSE_LOG(Fatal, "Static mesh segment is {:.2f} MB but the meshlet upload budget is only {:.2f} MB. "
+                              "The budget must be increased if we want to be able to load this asset.",
+                       ark::conversion::to::MB(totalUploadSize), ark::conversion::to::MB(UploadBufferSize));
+        }
+        return std::nullopt;
+    }
+
+    // Offset indices by current vertex count as we put all meshlets in a single buffer
+    std::vector<u32> adjustedMeshletIndices = meshletDataAsset.meshletIndices;
+    for (u32& index : adjustedMeshletIndices) {
+        index += m_nextFreeMeshletIndirIndex;
+    }
+
+    size_t indexDataOffset = m_nextFreeMeshletIndexBufferIndex * sizeof(u32);
+    m_uploadBuffer->upload(adjustedMeshletIndices, *m_meshletIndexBuffer, indexDataOffset);
+
+    // Offset vertex indirection by the segment's first vertex as we're referencing the global vertex buffers
+    std::vector<u32> adjustedVertexIndirection = meshletDataAsset.meshletVertexIndirection;
+    for (u32& vertexIndex : adjustedVertexIndirection) {
+        vertexIndex += meshSegment.vertexAllocation.firstVertex;
+    }
+
+    size_t vertexIndirectionOffset = m_nextFreeMeshletIndirIndex * sizeof(u32);
+    m_uploadBuffer->upload(adjustedVertexIndirection, *m_meshletVertexIndirectionBuffer, vertexIndirectionOffset);
+
+    for (MeshletAsset const& meshletAsset : meshletDataAsset.meshlets) {
+
+        ShaderMeshlet meshlet { .firstIndex = m_nextFreeMeshletIndexBufferIndex + meshletAsset.firstIndex,
+                                .triangleCount = meshletAsset.triangleCount,
+                                .firstVertex = m_nextFreeMeshletIndirIndex,
+                                .vertexCount = meshletAsset.vertexCount,
+                                .center = meshletAsset.center,
+                                .radius = meshletAsset.radius };
+
+        m_meshlets.push_back(meshlet);
+        m_nextFreeMeshletIndirIndex += meshletAsset.vertexCount;
+    }
+
+    size_t meshletDataDstOffset = m_nextFreeMeshletIndex * sizeof(ShaderMeshlet);
+    m_uploadBuffer->upload(m_meshlets.data() + m_nextFreeMeshletIndex, meshletCount * sizeof(ShaderMeshlet), *m_meshletBuffer, meshletDataDstOffset);
+
+    MeshletView meshletView = { .firstMeshlet = m_nextFreeMeshletIndex,
+                                .meshletCount = meshletCount };
+
+    m_nextFreeMeshletIndexBufferIndex += indexCount;
+    m_nextFreeMeshletIndex += meshletCount;
+
+    return meshletView;
 }
 
 std::unique_ptr<BottomLevelAS> VertexManager::createBottomLevelAccelerationStructure(VertexAllocation const& vertexAllocation, BottomLevelAS const* copySource)

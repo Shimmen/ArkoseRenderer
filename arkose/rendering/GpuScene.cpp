@@ -109,10 +109,6 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable, bool meshShading
     if (m_maintainRayTracingScene) {
         m_sceneTopLevelAccelerationStructure = backend().createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, {});
     }
-
-    if (m_meshShadingCapable) {
-        m_meshletManager = std::make_unique<MeshletManager>(m_backend);
-    }
 }
 
 void GpuScene::preRender()
@@ -353,9 +349,9 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         BindingSet& visBufferDataBindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(instanceVisibilityTexture),
                                                                      ShaderBinding::sampledTexture(triangleVisibilityTexture),
                                                                      ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
-                                                                     ShaderBinding::storageBufferReadonly(meshletManager().meshletBuffer()),
-                                                                     ShaderBinding::storageBufferReadonly(meshletManager().meshletIndexBuffer()),
-                                                                     ShaderBinding::storageBufferReadonly(meshletManager().meshletVertexIndirectionBuffer()),
+                                                                     ShaderBinding::storageBufferReadonly(vertexManager().meshletBuffer()),
+                                                                     ShaderBinding::storageBufferReadonly(vertexManager().meshletIndexBuffer()),
+                                                                     ShaderBinding::storageBufferReadonly(vertexManager().meshletVertexIndirectionBuffer()),
                                                                      ShaderBinding::storageBufferReadonly(vertexManager().positionVertexBuffer()),
                                                                      ShaderBinding::storageBufferReadonly(vertexManager().nonPositionVertexBuffer()) });
         reg.publish("VisibilityBufferData", visBufferDataBindingSet);
@@ -522,10 +518,6 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         // Do mesh streaming
         {
             m_vertexManager->processMeshStreaming(cmdList, m_changedStaticMeshes);
-            
-            if (m_meshletManager != nullptr) {
-                m_meshletManager->processMeshStreaming(cmdList, m_changedStaticMeshes);
-            }
         }
 
         // Update camera data
@@ -1235,13 +1227,6 @@ StaticMeshHandle GpuScene::registerStaticMesh(MeshAsset const* meshAsset)
         m_vertexManager->registerForStreaming(*staticMesh, includeIndices, includeSkinningData);
     }
 
-    // TODO: Integrate the meshlet streaming into the vertex manager
-    // We shouldn't really be streming meshlets until we have vertex data, and all that,
-    // and once the vertex streaming is async we need to integrate the meshlet streaming into that as well.
-    if (m_meshletManager != nullptr) {
-        m_meshletManager->allocateMeshlets(*staticMesh);
-    }
-
     StaticMeshHandle handle = m_managedStaticMeshes.add(ManagedStaticMesh { .meshAsset = meshAsset,
                                                                             .staticMesh = std::move(staticMesh) });
 
@@ -1543,9 +1528,8 @@ void GpuScene::processDeferredDeletions()
             }
         }
 
-        if (m_meshletManager != nullptr) {
-            m_meshletManager->freeMeshlets(*managedStaticMesh.staticMesh);
-        }
+        // TODO!
+        //m_vertexManager->unregisterFromStreaming(*managedStaticMesh.staticMesh);
 
         managedStaticMesh.meshAsset = nullptr;
         managedStaticMesh.staticMesh.reset();
@@ -1597,12 +1581,6 @@ VertexManager const& GpuScene::vertexManager() const
 {
     ARKOSE_ASSERT(m_vertexManager != nullptr);
     return *m_vertexManager;
-}
-
-MeshletManager const& GpuScene::meshletManager() const
-{
-    ARKOSE_ASSERT(m_meshletManager != nullptr);
-    return *m_meshletManager;
 }
 
 bool GpuScene::hasPendingUploads() const

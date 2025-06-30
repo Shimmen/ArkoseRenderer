@@ -48,7 +48,7 @@ RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene,
 
 MeshletDebugNode::PassParams const& MeshletDebugNode::createVertexShaderPath(GpuScene& scene, Registry& reg, RenderTarget& renderTarget)
 {
-    BindingSet& meshletDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(scene.meshletManager().meshletVertexIndirectionBuffer()),
+    BindingSet& meshletDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(scene.vertexManager().meshletVertexIndirectionBuffer()),
                                                                ShaderBinding::storageBufferReadonly(scene.vertexManager().positionVertexBuffer()) });
 
     Shader drawIndexShader = Shader::createBasicRasterize("meshlet/meshletVisualize.vert", "meshlet/meshletVisualize.frag");
@@ -79,13 +79,12 @@ MeshletDebugNode::PassParams const& MeshletDebugNode::createMeshShaderPath(GpuSc
                             
     Shader meshletShader = Shader::createMeshShading("meshlet/meshletVisualize.task", "meshlet/meshletVisualize.mesh", "meshlet/meshletVisualize.frag", meshletDefines);
 
-    MeshletManager const& meshletManager = scene.meshletManager();
     VertexManager const& vertexManager = scene.vertexManager();
     BindingSet& meshShaderBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(*indirectDataBuffer.buffer),
                                                               ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
-                                                              ShaderBinding::storageBufferReadonly(meshletManager.meshletBuffer()),
-                                                              ShaderBinding::storageBufferReadonly(meshletManager.meshletIndexBuffer()),
-                                                              ShaderBinding::storageBufferReadonly(meshletManager.meshletVertexIndirectionBuffer()),
+                                                              ShaderBinding::storageBufferReadonly(vertexManager.meshletBuffer()),
+                                                              ShaderBinding::storageBufferReadonly(vertexManager.meshletIndexBuffer()),
+                                                              ShaderBinding::storageBufferReadonly(vertexManager.meshletVertexIndirectionBuffer()),
                                                               ShaderBinding::storageBufferReadonly(vertexManager.positionVertexBuffer()) });
 
     RenderStateBuilder renderStateBuilder(renderTarget, meshletShader, VertexLayout { VertexComponent::Position3F });
@@ -99,8 +98,8 @@ MeshletDebugNode::PassParams const& MeshletDebugNode::createMeshShaderPath(GpuSc
 
 void MeshletDebugNode::executeVertexShaderPath(PassParams const& params, GpuScene& scene, CommandList& cmdList, UploadBuffer& uploadBuffer) const
 {
-    MeshletManager const& meshletManager = scene.meshletManager();
-    Buffer const& meshletIndexBuffer = meshletManager.meshletIndexBuffer();
+    VertexManager const& vertexManager = scene.vertexManager();
+    Buffer const& meshletIndexBuffer = vertexManager.meshletIndexBuffer();
 
     geometry::Frustum const& cameraFrustum = scene.camera().frustum();
 
@@ -108,10 +107,10 @@ void MeshletDebugNode::executeVertexShaderPath(PassParams const& params, GpuScen
     ark::Random rng { 12345 };
 
     cmdList.beginRendering(*params.renderState, ClearValue::blackAtMaxDepth());
-    cmdList.bindIndexBuffer(meshletIndexBuffer, meshletManager.meshletIndexType());
+    cmdList.bindIndexBuffer(meshletIndexBuffer, vertexManager.meshletIndexType());
 
     // NOTE: This is obviously not optimal... just for testing!
-    std::vector<ShaderMeshlet> const& meshlets = scene.meshletManager().meshlets();
+    std::vector<ShaderMeshlet> const& meshlets = vertexManager.meshlets();
     for (auto const& instance : scene.staticMeshInstances()) {
 
         cmdList.setNamedUniform("worldFromLocal", instance->transform().worldMatrix());

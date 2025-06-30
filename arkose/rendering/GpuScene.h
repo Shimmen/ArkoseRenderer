@@ -3,7 +3,6 @@
 #include <ark/handle.h>
 #include "core/Types.h"
 #include "core/parallel/TaskGraph.h"
-#include "rendering/meshlet/MeshletManager.h"
 #include "rendering/Drawable.h"
 #include "rendering/IconManager.h"
 #include "rendering/RenderPipelineNode.h"
@@ -164,10 +163,6 @@ public:
 
     VertexManager const& vertexManager() const;
 
-    // Meshlet / mesh shading related
-
-    MeshletManager const& meshletManager() const;
-
     // Misc.
 
     bool maintainRayTracingScene() const { return m_maintainRayTracingScene; }
@@ -220,7 +215,6 @@ private:
     ResourceList<ShaderDrawable, DrawableObjectHandle> m_drawables { "Drawables", 65'536 };
 
     std::unique_ptr<VertexManager> m_vertexManager {};
-    std::unique_ptr<MeshletManager> m_meshletManager {};
 
     struct ManagedDirectionalLight {
         DirectionalLight* light {};
