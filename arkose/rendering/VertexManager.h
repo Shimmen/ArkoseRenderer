@@ -94,6 +94,7 @@ private:
     std::unique_ptr<Buffer> m_velocityDataVertexBuffer {};
     u32 m_nextFreeVelocityIndex { 0 };
 
+    bool allocateVertexDataForMesh(StaticMesh&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
     VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
 
     struct VertexUploadJob {

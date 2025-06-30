@@ -83,29 +83,12 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
         switch (streamingMesh.state) {
         case MeshStreamingState::PendingAllocation: {
 
-            bool allSegmentsAllocated = true;
+            bool allocSuccess = allocateVertexDataForMesh(*streamingMesh.mesh,
+                                                          streamingMesh.includeIndices,
+                                                          streamingMesh.includeSkinningData,
+                                                          streamingMesh.includeVelocityData);
 
-            for (StaticMeshLOD& lod : streamingMesh.mesh->LODs()) {
-                for (StaticMeshSegment& meshSegment : lod.meshSegments) {
-
-                    if (meshSegment.vertexAllocation.isValid()) {
-                        continue;
-                    }
-
-                    VertexAllocation allocation = allocateMeshDataForSegment(*meshSegment.asset,
-                                                                             streamingMesh.includeIndices,
-                                                                             streamingMesh.includeSkinningData,
-                                                                             streamingMesh.includeVelocityData);
-                    if (allocation.isValid()) {
-                        meshSegment.vertexAllocation = allocation;
-                    } else  {
-                        // No room to allocate, hopefully temporarily, try again later
-                        allSegmentsAllocated = false;
-                    }
-                }
-            }
-
-            if (allSegmentsAllocated) {
+            if (allocSuccess) {
                 streamingMesh.state = MeshStreamingState::LoadingData;
             }
 
@@ -271,6 +254,33 @@ bool VertexManager::createBottomLevelAccelerationStructure(StaticMesh& staticMes
     }
 
     return true;
+}
+
+bool VertexManager::allocateVertexDataForMesh(StaticMesh& staticMesh, bool includeIndices, bool includeSkinningData, bool includeVelocityData)
+{
+    bool success = true;
+
+    for (StaticMeshLOD& lod : staticMesh.LODs()) {
+        for (StaticMeshSegment& meshSegment : lod.meshSegments) {
+
+            if (meshSegment.vertexAllocation.isValid()) {
+                continue;
+            }
+
+            VertexAllocation allocation = allocateMeshDataForSegment(*meshSegment.asset,
+                                                                     includeIndices,
+                                                                     includeSkinningData,
+                                                                     includeVelocityData);
+            if (allocation.isValid()) {
+                meshSegment.vertexAllocation = allocation;
+            } else {
+                // No room to allocate, hopefully temporarily, try again later
+                success = false;
+            }
+        }
+    }
+
+    return success;
 }
 
 VertexAllocation VertexManager::allocateMeshDataForSegment(MeshSegmentAsset const& segmentAsset, bool includeIndices, bool includeSkinningData, bool includeVelocityData)
