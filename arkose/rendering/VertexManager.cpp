@@ -128,12 +128,23 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
         switch (streamingMesh.state) {
         case MeshStreamingState::PendingAllocation: {
 
-            bool allocSuccess = allocateVertexDataForMesh(*streamingMesh.mesh,
-                                                          streamingMesh.includeIndices,
-                                                          streamingMesh.includeSkinningData,
-                                                          streamingMesh.includeVelocityData);
+            bool stateDone = processStreamingMeshState(streamingMesh, [&](StaticMeshSegment& meshSegment) -> bool {
+                VertexAllocation allocation = allocateMeshDataForSegment(*meshSegment.asset,
+                                                                         streamingMesh.includeIndices,
+                                                                         streamingMesh.includeSkinningData,
+                                                                         streamingMesh.includeVelocityData);
+                if (allocation.isValid()) {
+                    // TODO: Consider if we want to hold off on assigning this until we have a mesh that can actually be drawn to.
+                    // It's currently allocated for, but nothing is actually streamed in, so it's a bit of a dud for the moment.
+                    meshSegment.vertexAllocation = allocation;
+                    return true;
+                } else {
+                    // No room to allocate, hopefully temporarily, try again later
+                    return false;
+                }
+            });
 
-            if (allocSuccess) {
+            if (stateDone) {
                 streamingMesh.setNextState(MeshStreamingState::LoadingData);
             }
 
@@ -180,9 +191,19 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
 
             ARKOSE_ASSERT(m_scene->maintainMeshShadingScene());
 
-            bool allMeshletDataStreamedIn = streamMeshletData(*streamingMesh.mesh, updatedMeshes);
+            bool stateDone = processStreamingMeshState(streamingMesh, [&](StaticMeshSegment& meshSegment) -> bool {
+                meshSegment.meshletView = streamMeshletDataForSegment(meshSegment);
 
-            if (allMeshletDataStreamedIn) {
+                if (meshSegment.meshletView) {
+                    // Signal to the caller that the mesh has changed
+                    updatedMeshes.insert(meshSegment.staticMeshHandle);
+                    return true;
+                } else {
+                    return false;
+                }
+            });
+
+            if (stateDone) {
                 if (m_scene->maintainRayTracingScene()) {
                     streamingMesh.setNextState(MeshStreamingState::CreatingBLAS);
                 } else {
@@ -325,33 +346,6 @@ bool VertexManager::createBottomLevelAccelerationStructure(StaticMesh& staticMes
     return true;
 }
 
-bool VertexManager::allocateVertexDataForMesh(StaticMesh& staticMesh, bool includeIndices, bool includeSkinningData, bool includeVelocityData)
-{
-    bool success = true;
-
-    for (StaticMeshLOD& lod : staticMesh.LODs()) {
-        for (StaticMeshSegment& meshSegment : lod.meshSegments) {
-
-            if (meshSegment.vertexAllocation.isValid()) {
-                continue;
-            }
-
-            VertexAllocation allocation = allocateMeshDataForSegment(*meshSegment.asset,
-                                                                     includeIndices,
-                                                                     includeSkinningData,
-                                                                     includeVelocityData);
-            if (allocation.isValid()) {
-                meshSegment.vertexAllocation = allocation;
-            } else {
-                // No room to allocate, hopefully temporarily, try again later
-                success = false;
-            }
-        }
-    }
-
-    return success;
-}
-
 VertexAllocation VertexManager::allocateMeshDataForSegment(MeshSegmentAsset const& segmentAsset, bool includeIndices, bool includeSkinningData, bool includeVelocityData)
 {
     SCOPED_PROFILE_ZONE();
@@ -428,31 +422,6 @@ void VertexManager::uploadMeshDataForAllocation(MeshSegmentAsset const& segmentA
         size_t indexOffset = allocation.firstIndex * indexSize;
         m_indexBuffer->updateData(segmentAsset.indices.data(), segmentAsset.indices.size() * indexSize, indexOffset);
     }
-}
-
-bool VertexManager::streamMeshletData(StaticMesh& staticMesh, std::unordered_set<StaticMeshHandle>& updatedMeshes)
-{
-    bool success = true;
-
-    for (StaticMeshLOD& lod : staticMesh.LODs()) {
-        for (StaticMeshSegment& meshSegment : lod.meshSegments) {
-
-            if (meshSegment.meshletView) {
-                continue;
-            }
-
-            meshSegment.meshletView = streamMeshletDataForSegment(meshSegment);
-
-            if (meshSegment.meshletView) {
-                // Signal to the caller that the mesh has changed
-                updatedMeshes.insert(meshSegment.staticMeshHandle);
-            } else {
-                success = false;
-            }
-        }
-    }
-
-    return success;
 }
 
 std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StaticMeshSegment const& meshSegment)

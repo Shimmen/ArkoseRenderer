@@ -120,14 +120,12 @@ private:
     std::unique_ptr<Buffer> m_meshletBuffer {};
     u32 m_nextFreeMeshletIndex { 0 };
 
-    bool allocateVertexDataForMesh(StaticMesh&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
     VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
 
     std::unique_ptr<UploadBuffer> m_uploadBuffer {};
 
     void uploadMeshDataForAllocation(MeshSegmentAsset const&, VertexAllocation const&);
 
-    bool streamMeshletData(StaticMesh&, std::unordered_set<StaticMeshHandle>& updatedMeshes);
     std::optional<MeshletView> streamMeshletDataForSegment(StaticMeshSegment const&);
 
     enum class MeshStreamingState {
