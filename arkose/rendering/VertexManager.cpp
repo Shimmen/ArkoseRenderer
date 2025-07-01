@@ -91,6 +91,28 @@ void VertexManager::registerForStreaming(StaticMesh& mesh, bool includeIndices, 
                                                       .includeVelocityData = includeVelocityData });
 }
 
+template<typename F>
+bool processStreamingMeshState(VertexManager::StreamingMesh& streamingMesh, F&& processSegmentCallback)
+{
+    StaticMesh* mesh = streamingMesh.mesh;
+
+    for (; streamingMesh.nextLOD < mesh->LODs().size(); streamingMesh.nextLOD++) {
+        StaticMeshLOD& lod = mesh->lodAtIndex(streamingMesh.nextLOD);
+
+        for (; streamingMesh.nextSegment < lod.meshSegments.size(); streamingMesh.nextSegment++) {
+            StaticMeshSegment& meshSegment = lod.meshSegments[streamingMesh.nextSegment];
+
+            bool success = processSegmentCallback(meshSegment);
+
+            if (!success) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_set<StaticMeshHandle>& updatedMeshes)
 {
     SCOPED_PROFILE_ZONE();
@@ -112,7 +134,7 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
                                                           streamingMesh.includeVelocityData);
 
             if (allocSuccess) {
-                streamingMesh.state = MeshStreamingState::LoadingData;
+                streamingMesh.setNextState(MeshStreamingState::LoadingData);
             }
 
         } break;
@@ -132,11 +154,11 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
 
             if (allVertexDataStreamedIn) {
                 if ( m_scene->maintainMeshShadingScene() ) {
-                    streamingMesh.state = MeshStreamingState::StreamingMeshletData;
+                    streamingMesh.setNextState(MeshStreamingState::StreamingMeshletData);
                 } else if (m_scene->maintainRayTracingScene()) {
-                    streamingMesh.state = MeshStreamingState::CreatingBLAS;
+                    streamingMesh.setNextState(MeshStreamingState::CreatingBLAS);
                 } else {
-                    streamingMesh.state = MeshStreamingState::Loaded;
+                    streamingMesh.setNextState(MeshStreamingState::Loaded);
                 }
             }
 
@@ -162,9 +184,9 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
 
             if (allMeshletDataStreamedIn) {
                 if (m_scene->maintainRayTracingScene()) {
-                    streamingMesh.state = MeshStreamingState::CreatingBLAS;
+                    streamingMesh.setNextState(MeshStreamingState::CreatingBLAS);
                 } else {
-                    streamingMesh.state = MeshStreamingState::Loaded;
+                    streamingMesh.setNextState(MeshStreamingState::Loaded);
                 }
             }
 
@@ -188,7 +210,7 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
 
             if (allBLASesCreated) {
                 // TODO: Compact BLAS after creation
-                streamingMesh.state = MeshStreamingState::Loaded;
+                streamingMesh.setNextState(MeshStreamingState::Loaded);
             }
 
         } break;

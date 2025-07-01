@@ -153,8 +153,23 @@ private:
 
         u32 nextLOD { 0 };
         u32 nextSegment { 0 };
+        u32 nextMeshlet { 0 };
         u32 nextVertex { 0 };
         u32 nextIndex { 0 };
+
+        void setNextState(MeshStreamingState nextState)
+        {
+            state = nextState;
+
+            nextLOD = 0;
+            nextSegment = 0;
+            nextMeshlet = 0;
+            nextVertex = 0;
+            nextIndex = 0;
+        }
+
+    private:
+
     };
 
     // List of all streaming meshes that are not in the Loaded state
