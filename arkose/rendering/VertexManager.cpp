@@ -215,21 +215,12 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
 
         case MeshStreamingState::CreatingBLAS: {
 
-            bool allBLASesCreated = true;
+            bool stateDone = processStreamingMeshState(streamingMesh, [&](StaticMeshSegment& meshSegment) -> bool {
+                meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment.vertexAllocation, nullptr);
+                return meshSegment.blas != nullptr;
+            });
 
-            for (StaticMeshLOD& lod : streamingMesh.mesh->LODs()) {
-                for (StaticMeshSegment& meshSegment : lod.meshSegments) {
-
-                    meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment.vertexAllocation, nullptr);
-
-                    if (!meshSegment.blas) { 
-                        // Failed to create BLAS, hopefully temporarily, try again later
-                        allBLASesCreated = false;
-                    }
-                }
-            }
-
-            if (allBLASesCreated) {
+            if (stateDone) {
                 // TODO: Compact BLAS after creation
                 streamingMesh.setNextState(MeshStreamingState::Loaded);
             }
