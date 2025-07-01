@@ -165,10 +165,10 @@ private:
             nextVertex = 0;
             nextIndex = 0;
         }
-
-    private:
-
     };
+
+    template<typename F>
+    bool processStreamingMeshState(VertexManager::StreamingMesh& streamingMesh, F&& processSegmentCallback);
 
     // List of all streaming meshes that are not in the Loaded state
     std::vector<StreamingMesh> m_activeStreamingMeshes {};

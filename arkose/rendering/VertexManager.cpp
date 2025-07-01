@@ -92,7 +92,7 @@ void VertexManager::registerForStreaming(StaticMesh& mesh, bool includeIndices, 
 }
 
 template<typename F>
-bool processStreamingMeshState(VertexManager::StreamingMesh& streamingMesh, F&& processSegmentCallback)
+bool VertexManager::processStreamingMeshState(StreamingMesh& streamingMesh, F&& processSegmentCallback)
 {
     StaticMesh* mesh = streamingMesh.mesh;
 
