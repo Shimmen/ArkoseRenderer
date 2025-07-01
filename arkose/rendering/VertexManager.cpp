@@ -125,9 +125,7 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
                 for (StaticMeshSegment& meshSegment : lod.meshSegments) {
 
                     // TODO: Actually stream this in on the command list!
-                    uploadMeshDataForAllocation(VertexUploadJob { .asset = meshSegment.asset,
-                                                                  .target = &meshSegment,
-                                                                  .allocation = meshSegment.vertexAllocation });
+                    uploadMeshDataForAllocation(*meshSegment.asset, meshSegment.vertexAllocation);
 
                 }
             }
@@ -369,12 +367,9 @@ VertexAllocation VertexManager::allocateMeshDataForSegment(MeshSegmentAsset cons
     return allocation;
 }
 
-void VertexManager::uploadMeshDataForAllocation(VertexUploadJob const& uploadJob)
+void VertexManager::uploadMeshDataForAllocation(MeshSegmentAsset const& segmentAsset, VertexAllocation const& allocation)
 {
     SCOPED_PROFILE_ZONE();
-
-    MeshSegmentAsset const& segmentAsset = *uploadJob.asset;
-    VertexAllocation const& allocation = uploadJob.allocation;
 
     ARKOSE_ASSERT(allocation.vertexCount > 0);
     ARKOSE_ASSERT(allocation.vertexCount == segmentAsset.vertexCount());
@@ -411,10 +406,6 @@ void VertexManager::uploadMeshDataForAllocation(VertexUploadJob const& uploadJob
         size_t indexOffset = allocation.firstIndex * indexSize;
         m_indexBuffer->updateData(segmentAsset.indices.data(), segmentAsset.indices.size() * indexSize, indexOffset);
     }
-
-    // The data is now uploaded, indicate that it's ready to be used
-    // TODO: When we're async this will be a race condition! We might wanna do like the `updatedMeshes` trick for signalling back.
-    uploadJob.target->vertexAllocation = allocation;
 }
 
 bool VertexManager::streamMeshletData(StaticMesh& staticMesh, std::unordered_set<StaticMeshHandle>& updatedMeshes)

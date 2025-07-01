@@ -123,15 +123,9 @@ private:
     bool allocateVertexDataForMesh(StaticMesh&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
     VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
 
-    struct VertexUploadJob {
-        MeshSegmentAsset const* asset { nullptr };
-        StaticMeshSegment* target { nullptr };
-        VertexAllocation allocation {};
-    };
-
     std::unique_ptr<UploadBuffer> m_uploadBuffer {};
 
-    void uploadMeshDataForAllocation(VertexUploadJob const&);
+    void uploadMeshDataForAllocation(MeshSegmentAsset const&, VertexAllocation const&);
 
     bool streamMeshletData(StaticMesh&, std::unordered_set<StaticMeshHandle>& updatedMeshes);
     std::optional<MeshletView> streamMeshletDataForSegment(StaticMeshSegment const&);
