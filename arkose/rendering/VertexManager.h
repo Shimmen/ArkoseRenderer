@@ -120,13 +120,10 @@ private:
     std::unique_ptr<Buffer> m_meshletBuffer {};
     u32 m_nextFreeMeshletIndex { 0 };
 
-    VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
-
     std::unique_ptr<UploadBuffer> m_uploadBuffer {};
 
+    // TODO: Remove me / rewrite for streaming
     void uploadMeshDataForAllocation(MeshSegmentAsset const&, VertexAllocation const&);
-
-    std::optional<MeshletView> streamMeshletDataForSegment(StaticMeshSegment const&);
 
     enum class MeshStreamingState {
         PendingAllocation = 0,
@@ -174,4 +171,7 @@ private:
     std::vector<StreamingMesh> m_activeStreamingMeshes {};
     // List of all streaming meshes that are done streaming and in the Loaded state
     std::vector<StreamingMesh> m_idleStreamingMeshes {};
+
+    VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
+    std::optional<MeshletView> streamMeshletDataForSegment(StreamingMesh& streamingMesh, StaticMeshSegment const&);
 };

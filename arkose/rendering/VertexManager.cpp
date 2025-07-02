@@ -192,7 +192,7 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
             ARKOSE_ASSERT(m_scene->maintainMeshShadingScene());
 
             bool stateDone = processStreamingMeshState(streamingMesh, [&](StaticMeshSegment& meshSegment) -> bool {
-                meshSegment.meshletView = streamMeshletDataForSegment(meshSegment);
+                meshSegment.meshletView = streamMeshletDataForSegment(streamingMesh, meshSegment);
 
                 if (meshSegment.meshletView) {
                     // Signal to the caller that the mesh has changed
@@ -415,10 +415,14 @@ void VertexManager::uploadMeshDataForAllocation(MeshSegmentAsset const& segmentA
     }
 }
 
-std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StaticMeshSegment const& meshSegment)
+std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StreamingMesh& streamingMesh, StaticMeshSegment const& meshSegment)
 {
     MeshSegmentAsset const& meshSegmentAsset = *meshSegment.asset;
     MeshletDataAsset const& meshletDataAsset = meshSegmentAsset.meshletData.value();
+
+    //
+    // Test stuff (should not be needed, remove me)
+    //
 
     u32 vertexCount = narrow_cast<u32>(meshletDataAsset.meshletVertexIndirection.size());
     u32 indexCount = narrow_cast<u32>(meshletDataAsset.meshletIndices.size());
@@ -438,14 +442,15 @@ std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StaticMesh
         return std::nullopt;
     }
 
+    //
+    // Initial data prep
+    //
+
     // Offset indices by current vertex count as we put all meshlets in a single buffer
     std::vector<u32> adjustedMeshletIndices = meshletDataAsset.meshletIndices;
     for (u32& index : adjustedMeshletIndices) {
         index += m_nextFreeMeshletIndirIndex;
     }
-
-    size_t indexDataOffset = m_nextFreeMeshletIndexBufferIndex * sizeof(u32);
-    m_uploadBuffer->upload(adjustedMeshletIndices, *m_meshletIndexBuffer, indexDataOffset);
 
     // Offset vertex indirection by the segment's first vertex as we're referencing the global vertex buffers
     std::vector<u32> adjustedVertexIndirection = meshletDataAsset.meshletVertexIndirection;
@@ -453,8 +458,23 @@ std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StaticMesh
         vertexIndex += meshSegment.vertexAllocation.firstVertex;
     }
 
+    //
+    // Stream meshlet vertex indirection data
+    //
+
     size_t vertexIndirectionOffset = m_nextFreeMeshletIndirIndex * sizeof(u32);
     m_uploadBuffer->upload(adjustedVertexIndirection, *m_meshletVertexIndirectionBuffer, vertexIndirectionOffset);
+
+    //
+    // Stream meshlet index data
+    //
+
+    size_t indexDataOffset = m_nextFreeMeshletIndexBufferIndex * sizeof(u32);
+    m_uploadBuffer->upload(adjustedMeshletIndices, *m_meshletIndexBuffer, indexDataOffset);
+
+    //
+    // Stream meshlet data
+    //
 
     for (MeshletAsset const& meshletAsset : meshletDataAsset.meshlets) {
 
@@ -471,6 +491,10 @@ std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StaticMesh
 
     size_t meshletDataDstOffset = m_nextFreeMeshletIndex * sizeof(ShaderMeshlet);
     m_uploadBuffer->upload(m_meshlets.data() + m_nextFreeMeshletIndex, meshletCount * sizeof(ShaderMeshlet), *m_meshletBuffer, meshletDataDstOffset);
+
+    //
+    // Finalize
+    //
 
     MeshletView meshletView = { .firstMeshlet = m_nextFreeMeshletIndex,
                                 .meshletCount = meshletCount };
