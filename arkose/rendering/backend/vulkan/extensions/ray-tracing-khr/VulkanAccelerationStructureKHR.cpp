@@ -8,7 +8,7 @@
 #include "rendering/backend/util/UploadBuffer.h"
 #include "core/Logging.h"
 
-VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceCount, std::vector<RTGeometryInstance> initialInstances)
+VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceCount)
     : TopLevelAS(backend, maxInstanceCount)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
@@ -78,24 +78,6 @@ VulkanTopLevelASKHR::VulkanTopLevelASKHR(Backend& backend, uint32_t maxInstanceC
         bufferDeviceAddressInfo.buffer = scratchBufferAndAllocation.first;
         scratchBufferAddress = vkGetBufferDeviceAddress(vulkanBackend.device(), &bufferDeviceAddressInfo);
         scratchBufferAddress = ark::alignUp(scratchBufferAddress, minScratchBufferAlignment);
-    }
-
-    if (initialInstances.size() > 0) {
-        updateCurrentInstanceCount(static_cast<uint32_t>(initialInstances.size()));
-
-        auto initialInstanceData = createInstanceData(initialInstances);
-        instanceBuffer->updateData(initialInstanceData);
-
-        VkAccelerationStructureDeviceAddressInfoKHR accelerationStructureDeviceAddressInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
-        accelerationStructureDeviceAddressInfo.accelerationStructure = accelerationStructure;
-        accelerationStructureDeviceAddress = vulkanBackend.rayTracingKHR().vkGetAccelerationStructureDeviceAddressKHR(vulkanBackend.device(), &accelerationStructureDeviceAddressInfo);
-
-        bool buildSuccess = vulkanBackend.issueSingleTimeCommand([&](VkCommandBuffer cmdBuffer) {
-            build(cmdBuffer, AccelerationStructureBuildType::FullBuild);
-        });
-        if (!buildSuccess) {
-            ARKOSE_LOG(Fatal, "Error trying to build top level acceleration structure (initial build)");
-        }
     }
 }
 

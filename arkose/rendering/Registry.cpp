@@ -257,9 +257,9 @@ BottomLevelAS& Registry::createBottomLevelAccelerationStructure(std::vector<RTGe
     return *m_bottomLevelAS.back();
 }
 
-TopLevelAS& Registry::createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance> initialInstances)
+TopLevelAS& Registry::createTopLevelAccelerationStructure(uint32_t maxInstanceCount)
 {
-    auto tlas = backend().createTopLevelAccelerationStructure(maxInstanceCount, initialInstances);
+    auto tlas = backend().createTopLevelAccelerationStructure(maxInstanceCount);
     tlas->setOwningRegistry({}, this);
 
     m_topLevelAS.push_back(std::move(tlas));

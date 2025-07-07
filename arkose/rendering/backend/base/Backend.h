@@ -94,7 +94,7 @@ public:
     virtual std::unique_ptr<RenderState> createRenderState(const RenderTarget&, const std::vector<VertexLayout>&, const Shader&, const StateBindings&,
                                                            const RasterState&, const DepthState&, const StencilState&) = 0;
     virtual std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(std::vector<RTGeometry>) = 0;
-    virtual std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance>) = 0;
+    virtual std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(uint32_t maxInstanceCount) = 0;
     virtual std::unique_ptr<RayTracingState> createRayTracingState(ShaderBindingTable& sbt, const StateBindings&, uint32_t maxRecursionDepth) = 0;
     virtual std::unique_ptr<ComputeState> createComputeState(Shader const&, StateBindings const&) = 0;
     virtual std::unique_ptr<UpscalingState> createUpscalingState(UpscalingTech, UpscalingQuality, Extent2D renderRes, Extent2D outputDisplayRes) = 0;

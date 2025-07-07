@@ -8,7 +8,7 @@
 
 struct VulkanTopLevelASKHR final : public TopLevelAS {
 public:
-    VulkanTopLevelASKHR(Backend&, uint32_t maxInstanceCount, std::vector<RTGeometryInstance>);
+    VulkanTopLevelASKHR(Backend&, uint32_t maxInstanceCount);
     virtual ~VulkanTopLevelASKHR() override;
 
     virtual void setName(const std::string& name) override;

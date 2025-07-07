@@ -872,7 +872,7 @@ std::unique_ptr<BottomLevelAS> D3D12Backend::createBottomLevelAccelerationStruct
     return nullptr;
 }
 
-std::unique_ptr<TopLevelAS> D3D12Backend::createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance> initialInstances)
+std::unique_ptr<TopLevelAS> D3D12Backend::createTopLevelAccelerationStructure(uint32_t maxInstanceCount)
 {
     return nullptr;
 }

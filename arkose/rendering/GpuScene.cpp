@@ -107,7 +107,7 @@ void GpuScene::initialize(Badge<Scene>, bool rayTracingCapable, bool meshShading
     m_vertexManager = std::make_unique<VertexManager>(m_backend, *this);
 
     if (m_maintainRayTracingScene) {
-        m_sceneTopLevelAccelerationStructure = backend().createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount, {});
+        m_sceneTopLevelAccelerationStructure = backend().createTopLevelAccelerationStructure(InitialMaxRayTracingGeometryInstanceCount);
     }
 }
 

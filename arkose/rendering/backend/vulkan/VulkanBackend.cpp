@@ -561,10 +561,10 @@ std::unique_ptr<BottomLevelAS> VulkanBackend::createBottomLevelAccelerationStruc
     return std::make_unique<VulkanBottomLevelASKHR>(*this, geometries);
 }
 
-std::unique_ptr<TopLevelAS> VulkanBackend::createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance> initialInstances)
+std::unique_ptr<TopLevelAS> VulkanBackend::createTopLevelAccelerationStructure(uint32_t maxInstanceCount)
 {
     ARKOSE_ASSERT(hasRayTracingSupport());
-    return std::make_unique<VulkanTopLevelASKHR>(*this, maxInstanceCount, initialInstances);
+    return std::make_unique<VulkanTopLevelASKHR>(*this, maxInstanceCount);
 }
 
 std::unique_ptr<RayTracingState> VulkanBackend::createRayTracingState(ShaderBindingTable& sbt, const StateBindings& stateBindings, uint32_t maxRecursionDepth)
