@@ -56,6 +56,7 @@ public:
 
     void buildTopLevelAcceratationStructure(TopLevelAS&, AccelerationStructureBuildType) override;
     void buildBottomLevelAcceratationStructure(BottomLevelAS&, AccelerationStructureBuildType) override;
+    void copyBottomLevelAcceratationStructure(BottomLevelAS& dst, BottomLevelAS const& src) override;
     void traceRays(Extent2D) override;
 
     void dispatch(uint32_t x, uint32_t y, uint32_t z = 1) override;

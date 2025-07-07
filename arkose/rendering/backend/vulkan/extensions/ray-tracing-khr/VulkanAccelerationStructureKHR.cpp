@@ -502,3 +502,15 @@ void VulkanBottomLevelASKHR::build(VkCommandBuffer commandBuffer, AccelerationSt
     VkAccelerationStructureBuildRangeInfoKHR* rangeInfosData = rangeInfos.data();
     vulkanBackend.rayTracingKHR().vkCmdBuildAccelerationStructuresKHR(commandBuffer, 1, &buildInfo, &rangeInfosData);
 }
+
+void VulkanBottomLevelASKHR::copyFrom(VkCommandBuffer commandBuffer, VulkanBottomLevelASKHR const& copySource)
+{
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+
+    VkCopyAccelerationStructureInfoKHR copyInfo { VK_STRUCTURE_TYPE_COPY_ACCELERATION_STRUCTURE_INFO_KHR };
+    copyInfo.mode = VK_COPY_ACCELERATION_STRUCTURE_MODE_CLONE_KHR;
+    copyInfo.src = static_cast<VulkanBottomLevelASKHR const&>(copySource).accelerationStructure;
+    copyInfo.dst = accelerationStructure;
+
+    vulkanBackend.rayTracingKHR().vkCmdCopyAccelerationStructureKHR(commandBuffer, &copyInfo);
+}

@@ -38,6 +38,7 @@ public:
     virtual void setName(const std::string& name) override;
 
     void build(VkCommandBuffer, AccelerationStructureBuildType);
+    void copyFrom(VkCommandBuffer, VulkanBottomLevelASKHR const&);
 
     VkAccelerationStructureKHR accelerationStructure;
     VkDeviceAddress accelerationStructureDeviceAddress;

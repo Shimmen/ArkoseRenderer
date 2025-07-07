@@ -545,6 +545,13 @@ void D3D12CommandList::buildBottomLevelAcceratationStructure(BottomLevelAS& blas
     NOT_YET_IMPLEMENTED();
 }
 
+void D3D12CommandList::copyBottomLevelAcceratationStructure(BottomLevelAS& dst, BottomLevelAS const& src)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
+}
+
 void D3D12CommandList::traceRays(Extent2D extent)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
