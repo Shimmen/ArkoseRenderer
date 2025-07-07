@@ -32,12 +32,12 @@ public:
     void registerForStreaming(StaticMesh&, bool includeIndices, bool includeSkinningData);
     //void unregisterFromStreaming(StaticMesh&); TODO!
 
-    bool allocateSkeletalMeshInstance(SkeletalMeshInstance&);
+    bool allocateSkeletalMeshInstance(SkeletalMeshInstance&, CommandList&);
 
     void processMeshStreaming(CommandList&, std::unordered_set<StaticMeshHandle>& updatedMeshes);
 
     bool createBottomLevelAccelerationStructure(StaticMesh&);
-    std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(VertexAllocation const&, BottomLevelAS const* copySource);
+    std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(VertexAllocation const&);
 
     IndexType indexType() const { return IndexType::UInt32; }
     Buffer const& indexBuffer() const { return *m_indexBuffer; }

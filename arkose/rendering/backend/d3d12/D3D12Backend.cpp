@@ -867,7 +867,7 @@ std::unique_ptr<ComputeState> D3D12Backend::createComputeState(Shader const& sha
     return std::make_unique<D3D12ComputeState>(*this, shader, stateBindings);
 }
 
-std::unique_ptr<BottomLevelAS> D3D12Backend::createBottomLevelAccelerationStructure(std::vector<RTGeometry> geometries, BottomLevelAS const* copySource)
+std::unique_ptr<BottomLevelAS> D3D12Backend::createBottomLevelAccelerationStructure(std::vector<RTGeometry> geometries)
 {
     return nullptr;
 }

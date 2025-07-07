@@ -555,10 +555,10 @@ std::unique_ptr<RenderState> VulkanBackend::createRenderState(const RenderTarget
     return std::make_unique<VulkanRenderState>(*this, renderTarget, vertexLayouts, shader, stateBindings, rasterState, depthState, stencilState);
 }
 
-std::unique_ptr<BottomLevelAS> VulkanBackend::createBottomLevelAccelerationStructure(std::vector<RTGeometry> geometries, BottomLevelAS const* copySource)
+std::unique_ptr<BottomLevelAS> VulkanBackend::createBottomLevelAccelerationStructure(std::vector<RTGeometry> geometries)
 {
     ARKOSE_ASSERT(hasRayTracingSupport());
-    return std::make_unique<VulkanBottomLevelASKHR>(*this, geometries, copySource);
+    return std::make_unique<VulkanBottomLevelASKHR>(*this, geometries);
 }
 
 std::unique_ptr<TopLevelAS> VulkanBackend::createTopLevelAccelerationStructure(uint32_t maxInstanceCount, std::vector<RTGeometryInstance> initialInstances)

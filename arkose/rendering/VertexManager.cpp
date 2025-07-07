@@ -216,8 +216,13 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
         case MeshStreamingState::CreatingBLAS: {
 
             bool stateDone = processStreamingMeshState(streamingMesh, [&](StaticMeshSegment& meshSegment) -> bool {
-                meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment.vertexAllocation, nullptr);
-                return meshSegment.blas != nullptr;
+                meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment.vertexAllocation);
+                if (meshSegment.blas != nullptr) {
+                    cmdList.buildBottomLevelAcceratationStructure(*meshSegment.blas, AccelerationStructureBuildType::FullBuild);
+                    return true;
+                } else {
+                    return false;
+                }
             });
 
             if (stateDone) {
@@ -247,7 +252,7 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
     }
 }
 
-bool VertexManager::allocateSkeletalMeshInstance(SkeletalMeshInstance& instance)
+bool VertexManager::allocateSkeletalMeshInstance(SkeletalMeshInstance& instance, CommandList& cmdList)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -309,14 +314,21 @@ bool VertexManager::allocateSkeletalMeshInstance(SkeletalMeshInstance& instance)
             // and 2) we don't want to build redundantly, so we pass in the existing BLAS from the underlying mesh as a BLAS
             // copy source, which means that we copy the built BLAS into place.
             BottomLevelAS const* sourceBlas = meshSegment.blas.get();
-           
+
             if (sourceBlas == nullptr) { 
                 //ARKOSE_LOG(Info, "Source BLAS not yet available, waiting...");
                 return false;
             }
 
-            auto blas = createBottomLevelAccelerationStructure(skinningVertexMappings.skinnedTarget, sourceBlas);
-            instance.setBLAS(segmentIdx, std::move(blas));
+            auto blas = createBottomLevelAccelerationStructure(skinningVertexMappings.skinnedTarget);
+
+            if (blas) {
+                cmdList.copyBottomLevelAcceratationStructure(*blas, *sourceBlas);
+                instance.setBLAS(segmentIdx, std::move(blas));
+            } else {
+                ARKOSE_LOG(Info, "Failed to create BLAS for skeletal mesh");
+                return false;
+            }
         }
     }
 
@@ -330,7 +342,7 @@ bool VertexManager::createBottomLevelAccelerationStructure(StaticMesh& staticMes
     for (StaticMeshLOD& lod : staticMesh.LODs()) {
         for (StaticMeshSegment& meshSegment : lod.meshSegments) {
             ARKOSE_ASSERT(meshSegment.vertexAllocation.isValid());
-            meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment.vertexAllocation, nullptr);
+            meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment.vertexAllocation);
         }
     }
 
@@ -505,7 +517,7 @@ std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StreamingM
     return meshletView;
 }
 
-std::unique_ptr<BottomLevelAS> VertexManager::createBottomLevelAccelerationStructure(VertexAllocation const& vertexAllocation, BottomLevelAS const* copySource)
+std::unique_ptr<BottomLevelAS> VertexManager::createBottomLevelAccelerationStructure(VertexAllocation const& vertexAllocation)
 {
     // TODO: Create a geometry per mesh (or rather, per LOD) and use the SBT to lookup material.
     // For now we create one per segment so we can ensure one material per "draw"
@@ -535,5 +547,5 @@ std::unique_ptr<BottomLevelAS> VertexManager::createBottomLevelAccelerationStruc
                                   .indexType = indexType(),
                                   .transform = mat4(1.0f) };
 
-    return m_backend->createBottomLevelAccelerationStructure({ geometry }, copySource);
+    return m_backend->createBottomLevelAccelerationStructure({ geometry });
 }

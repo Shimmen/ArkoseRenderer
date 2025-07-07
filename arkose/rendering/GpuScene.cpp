@@ -587,7 +587,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 cmdList.executeBufferCopyOperations(uploadBuffer);
 
                 // TODO: Don't do this every frame! but.. it should be safe to do so, so let's keep it so for now
-                m_vertexManager->allocateSkeletalMeshInstance(*skeletalMeshInstance);
+                m_vertexManager->allocateSkeletalMeshInstance(*skeletalMeshInstance, cmdList);
 
                 for (SkinningVertexMapping const& skinningVertexMapping : skeletalMeshInstance->skinningVertexMappings()) {
 
