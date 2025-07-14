@@ -70,10 +70,9 @@ FetchContent_Declare(libigl
     GIT_REPOSITORY https://github.com/libigl/libigl.git
     GIT_TAG        "v2.5.0")
 
-# TODO: Change to https://github.com/sebbbi/OffsetAllocator if my changes are merged up
 FetchContent_Declare(offset-allocator
     GIT_REPOSITORY https://github.com/Shimmen/OffsetAllocator.git
-    GIT_TAG        "1d23609fced94c6b9dc2c962fe086fd4b5ca5994") # (latest commit, with fixed cmake script)
+    GIT_TAG        "f67c05012310c1577205d5795a9302f1daebddf0") # (latest commit at the time of writing)
 
 ##################################
 # FetchContent dependencies without cmake files

@@ -2,7 +2,7 @@
 
 #include "core/Types.h"
 #include "rendering/backend/d3d12/D3D12Common.h"
-#include <offsetAllocator.hpp>
+#include <offsetAllocator/offsetAllocator.hpp>
 
 struct D3D12DescriptorAllocation {
     D3D12_CPU_DESCRIPTOR_HANDLE firstCpuDescriptor {};
@@ -14,7 +14,7 @@ struct D3D12DescriptorAllocation {
 
     OffsetAllocator::Allocation internalAllocation {};
 
-    bool valid() const { return count > 0 && internalAllocation.offset != OffsetAllocator::Allocation::NO_SPACE; }
+    bool valid() const { return count > 0 && internalAllocation.isValid(); }
 
     D3D12_CPU_DESCRIPTOR_HANDLE cpuDescriptorAt(u32 idx);
     D3D12_GPU_DESCRIPTOR_HANDLE gpuDescriptorAt(u32 idx);
