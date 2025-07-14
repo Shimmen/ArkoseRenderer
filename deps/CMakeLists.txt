@@ -72,7 +72,7 @@ FetchContent_Declare(libigl
 
 FetchContent_Declare(offset-allocator
     GIT_REPOSITORY https://github.com/Shimmen/OffsetAllocator.git
-    GIT_TAG        "f67c05012310c1577205d5795a9302f1daebddf0") # (latest commit at the time of writing)
+    GIT_TAG        "v0.0.1")
 
 ##################################
 # FetchContent dependencies without cmake files
