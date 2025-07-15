@@ -222,6 +222,8 @@ if (ARKOSE_BACKEND_VULKAN)
         arkose/rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.cpp
         arkose/rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.h
         arkose/rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.cpp
+        arkose/rendering/backend/vulkan/extensions/opacity-micromap-ext/VulkanOpacityMicromapEXT.cpp
+        arkose/rendering/backend/vulkan/extensions/opacity-micromap-ext/VulkanOpacityMicromapEXT.h
         arkose/rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.h
         arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.cpp
         arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.h

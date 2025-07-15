@@ -9,6 +9,7 @@
 #include "rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.h"
 #include "rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.h"
 #include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingKHR.h"
+#include "rendering/backend/vulkan/extensions/opacity-micromap-ext/VulkanOpacityMicromapEXT.h"
 #include "utility/AvgElapsedTimer.h"
 #include <array>
 #include <optional>
@@ -122,6 +123,13 @@ public:
     {
         ARKOSE_ASSERT(hasMeshShadingSupport());
         return *m_meshShaderExt;
+    }
+
+    bool hasOpacityMicromapSupport() const { return m_opacityMicromapExt != nullptr; }
+    VulkanOpacityMicromapEXT& opacityMicromapEXT()
+    {
+        ARKOSE_ASSERT(hasOpacityMicromapSupport());
+        return *m_opacityMicromapExt;
     }
 
     bool hasDebugUtilsSupport() const { return m_debugUtils != nullptr; }
@@ -321,6 +329,8 @@ private:
     std::unique_ptr<VulkanRayTracingKHR> m_rayTracingKhr {};
 
     std::unique_ptr<VulkanMeshShaderEXT> m_meshShaderExt {};
+
+    std::unique_ptr<VulkanOpacityMicromapEXT> m_opacityMicromapExt {};
 
     std::unique_ptr<VulkanDebugUtils> m_debugUtils {};
 

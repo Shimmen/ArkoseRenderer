@@ -169,6 +169,12 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
     if (hasActiveCapability(Backend::Capability::RayTracing)) {
         m_rayTracingKhr = std::make_unique<VulkanRayTracingKHR>(*this, physicalDevice(), device());
         ARKOSE_LOG(Info, "VulkanBackend: with ray tracing");
+        if (hasSupportForDeviceExtension(VK_EXT_OPACITY_MICROMAP_EXTENSION_NAME)) {
+            m_opacityMicromapExt = std::make_unique<VulkanOpacityMicromapEXT>(*this, physicalDevice(), device());
+            ARKOSE_LOG(Info, "VulkanBackend: with opacity micromaps");
+        } else {
+            ARKOSE_LOG(Info, "VulkanBackend: without opacity micromaps");
+        }
     } else {
         ARKOSE_LOG(Info, "VulkanBackend: no ray tracing");
     }
@@ -355,6 +361,9 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
     VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR fragmentShaderBarycentricFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR };
     meshShaderFeatures.pNext = &fragmentShaderBarycentricFeatures;
 
+    VkPhysicalDeviceOpacityMicromapFeaturesEXT opacityMicromapFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_OPACITY_MICROMAP_FEATURES_EXT };
+    fragmentShaderBarycentricFeatures.pNext = &opacityMicromapFeatures;
+
     vkGetPhysicalDeviceFeatures2(physicalDevice(), &features2);
 
     auto isSupported = [&](Capability capability) -> bool {
@@ -380,6 +389,14 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
             if (nvidiaRayTracingSupport && !khrRayTracingSupport) {
                 ARKOSE_LOG(Warning, "The VK_NV_ray_tracing extension is supported but the modern KHR-variants are not. "
                                     "Try updating your graphics drivers (it probably is supported on the latest drivers).");
+            }
+
+            bool opacityMicromapSupport = hasSupportForDeviceExtension(VK_EXT_OPACITY_MICROMAP_EXTENSION_NAME)
+                && opacityMicromapFeatures.micromap;
+
+            if (khrRayTracingSupport && !opacityMicromapSupport) {
+                ARKOSE_LOG(Info, "VulkanBackend: ray tracing is supported but opacity micromaps are not. "
+                                 "Support is not required, but it will improve performance if available.");
             }
 
             return khrRayTracingSupport;
