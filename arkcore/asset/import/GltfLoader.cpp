@@ -10,6 +10,7 @@
 namespace {
 static std::vector<std::string> supportedExtensions = { "KHR_materials_pbrSpecularGlossiness", // partial support
                                                         "KHR_materials_clearcoat", // partial support (only factor & roughness factor)
+                                                        "KHR_materials_ior",
                                                         "KHR_lights_punctual",
                                                         "MSFT_texture_dds" };
 }
@@ -842,6 +843,12 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
         int metallicRoughnessIdx = gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
         material->materialProperties = toMaterialInput(metallicRoughnessIdx);
 
+    }
+
+    auto iorEntry = gltfMaterial.extensions.find("KHR_materials_ior");
+    if (iorEntry != gltfMaterial.extensions.end()) {
+        tinygltf::Value const& iorProperties = iorEntry->second;
+        material->indexOfRefraction = static_cast<float>(iorProperties.Get("ior").GetNumberAsDouble());
     }
 
     auto clearcoatEntry = gltfMaterial.extensions.find("KHR_materials_clearcoat");

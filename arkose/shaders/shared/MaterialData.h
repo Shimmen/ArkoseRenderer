@@ -24,6 +24,11 @@ struct ShaderMaterial {
     vec3 emissiveFactor; // multiplied by value in texture
     int brdf;
 
+    float dielectricReflectance; // F0
+    float _unused0;
+    float _unused1;
+    float _unused2;
+
     vec4 colorTint;
 };
 

@@ -109,6 +109,9 @@ public:
     float clearcoat { 0.0f };
     float clearcoatRoughness { 0.0f };
 
+    float indexOfRefraction { 1.5f };
+    float calculateDielectricReflectance(float interfaceIOR = 1.0f) const;
+
     BlendMode blendMode { BlendMode::Opaque };
     float maskCutoff { 1.0f };
 
@@ -131,6 +134,7 @@ enum class MaterialAssetVersion : u32 {
     AddBentNormalMap,
     AddOcclusionMap,
     AddClearcoat,
+    AddIndexOfRefraction,
     ////////////////////////////////////////////////////////////////////////////
     // Add new versions above this delimiter
     VersionCount,
@@ -181,6 +185,11 @@ void MaterialAsset::serialize(Archive& archive, u32 version)
     } else {
         clearcoat = 0.0f;
         clearcoatRoughness = 0.0f;
+    }
+    if (version >= toUnderlying(MaterialAssetVersion::AddIndexOfRefraction)) {
+        archive(CEREAL_NVP(indexOfRefraction));
+    } else {
+        indexOfRefraction = 1.5f;
     }
     archive(CEREAL_NVP(blendMode), CEREAL_NVP(maskCutoff));
     archive(CEREAL_NVP(doubleSided));

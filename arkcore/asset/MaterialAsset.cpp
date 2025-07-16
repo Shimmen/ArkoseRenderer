@@ -114,3 +114,11 @@ bool MaterialAsset::writeToFile(std::filesystem::path const& filePath, AssetStor
     fileStream.close();
     return true;
 }
+
+float MaterialAsset::calculateDielectricReflectance(float interfaceIOR) const
+{
+    const float n1 = indexOfRefraction;
+    const float n2 = interfaceIOR;
+
+    return ark::square((n1 - n2) / (n1 + n2));
+}

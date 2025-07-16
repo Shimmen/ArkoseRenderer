@@ -1313,6 +1313,8 @@ MaterialHandle GpuScene::registerMaterial(MaterialAsset const* materialAsset)
     shaderMaterial.clearcoat = materialAsset->clearcoat;
     shaderMaterial.clearcoatRoughness = materialAsset->clearcoatRoughness;
 
+    shaderMaterial.dielectricReflectance = materialAsset->calculateDielectricReflectance();
+
     MaterialHandle handle = m_managedMaterials.add(std::move(shaderMaterial));
     m_pendingMaterialUpdates.push_back(handle);
 
