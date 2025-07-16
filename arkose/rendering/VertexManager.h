@@ -33,6 +33,7 @@ public:
     //void unregisterFromStreaming(StaticMesh&); TODO!
 
     bool allocateSkeletalMeshInstance(SkeletalMeshInstance&, CommandList&);
+    //void deallocateSkeletalMeshInstance(SkeletalMeshInstance&); // TODO!
 
     void processMeshStreaming(CommandList&, std::unordered_set<StaticMeshHandle>& updatedMeshes);
 
@@ -183,6 +184,11 @@ private:
         }
     };
 
+    struct StreamingSkeletalMesh {
+        SkeletalMeshInstance* skeletalMeshInstance;
+        std::vector<VertexAllocation::Internal> owningAllocations;
+    };
+
     template<typename F>
     bool processStreamingMeshState(VertexManager::StreamingMesh& streamingMesh, F&& processSegmentCallback);
 
@@ -190,6 +196,8 @@ private:
     std::vector<StreamingMesh> m_activeStreamingMeshes {};
     // List of all streaming meshes that are done streaming and in the Loaded state
     std::vector<StreamingMesh> m_idleStreamingMeshes {};
+
+    std::vector<StreamingSkeletalMesh> m_streamingSkeletalMeshes {};
 
     VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
     std::optional<MeshletView> streamMeshletDataForSegment(StreamingMesh& streamingMesh, StaticMeshSegment const&);

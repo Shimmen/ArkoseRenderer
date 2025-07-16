@@ -262,6 +262,9 @@ bool VertexManager::allocateSkeletalMeshInstance(SkeletalMeshInstance& instance,
         return false;
     }
 
+    StreamingSkeletalMesh& streamingSkeletalMesh = m_streamingSkeletalMeshes.emplace_back();
+    streamingSkeletalMesh.skeletalMeshInstance = &instance;
+
     StaticMesh& underlyingMesh = skeletalMesh->underlyingMesh();
 
     constexpr u32 lodIdx = 0;
@@ -295,6 +298,9 @@ bool VertexManager::allocateSkeletalMeshInstance(SkeletalMeshInstance& instance,
             SkinningVertexMapping skinningVertexMapping { .underlyingMesh = meshSegment.vertexAllocation,
                                                           .skinnedTarget = instanceVertexAllocation };
             instance.setSkinningVertexMapping(segmentIdx, skinningVertexMapping);
+
+            // Track owning allocations so we can free them later
+            streamingSkeletalMesh.owningAllocations.push_back(instanceVertexAllocation.internalAllocations);
         }
     }
 
