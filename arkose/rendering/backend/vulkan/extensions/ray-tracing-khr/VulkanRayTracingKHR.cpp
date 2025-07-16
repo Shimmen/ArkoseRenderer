@@ -27,6 +27,10 @@ VulkanRayTracingKHR::VulkanRayTracingKHR(VulkanBackend& backend, VkPhysicalDevic
         AssignProcAddr(vkCmdCopyAccelerationStructureKHR);
         AssignProcAddr(vkCmdCopyAccelerationStructureToMemoryKHR);
         AssignProcAddr(vkCmdCopyMemoryToAccelerationStructureKHR);
+        AssignProcAddr(vkCmdWriteAccelerationStructuresPropertiesKHR);
+        AssignProcAddr(vkCopyAccelerationStructureKHR);
+        AssignProcAddr(vkCopyAccelerationStructureToMemoryKHR);
+        AssignProcAddr(vkCopyMemoryToAccelerationStructureKHR);
         AssignProcAddr(vkCreateAccelerationStructureKHR);
         AssignProcAddr(vkDestroyAccelerationStructureKHR);
         AssignProcAddr(vkGetAccelerationStructureBuildSizesKHR);
