@@ -80,10 +80,29 @@ public:
 
     static constexpr size_t UploadBufferSize          = 4 * 1024 * 1024;
 
-    u32 numAllocatedIndices() const { return m_nextFreeIndex; }
-    u32 numAllocatedVertices() const { return m_nextFreeVertexIndex; }
-    u32 numAllocatedSkinningVertices() const { return m_nextFreeSkinningVertexIndex; }
-    u32 numAllocatedVelocityVertices() const { return m_nextFreeVelocityIndex; }
+    u32 numAllocatedIndices() const
+    {
+        OffsetAllocator::StorageReport report = m_indexAllocator.storageReport();
+        return MaxLoadedIndices - report.totalFreeSpace;
+    }
+
+    u32 numAllocatedVertices() const
+    {
+        OffsetAllocator::StorageReport report = m_vertexAllocator.storageReport();
+        return MaxLoadedVertices - report.totalFreeSpace;
+    }
+
+    u32 numAllocatedSkinningVertices() const
+    {
+        OffsetAllocator::StorageReport report = m_skinningVertexAllocator.storageReport();
+        return MaxLoadedSkinningVertices - report.totalFreeSpace;
+    }
+
+    u32 numAllocatedVelocityVertices() const
+    {
+        OffsetAllocator::StorageReport report = m_velocityVertexAllocator.storageReport();
+        return MaxLoadedSkinningVertices - report.totalFreeSpace;
+    }
 
 private:
     Backend* m_backend { nullptr };
@@ -98,17 +117,17 @@ private:
     VertexLayout const m_velocityDataVertexLayout { VertexComponent::Velocity3F };
 
     std::unique_ptr<Buffer> m_indexBuffer { nullptr };
-    u32 m_nextFreeIndex { 0 };
+    OffsetAllocator::Allocator m_indexAllocator { MaxLoadedIndices };
 
     std::unique_ptr<Buffer> m_positionOnlyVertexBuffer {};
     std::unique_ptr<Buffer> m_nonPositionVertexBuffer {};
-    u32 m_nextFreeVertexIndex { 0 };
+    OffsetAllocator::Allocator m_vertexAllocator { MaxLoadedVertices };
 
     std::unique_ptr<Buffer> m_skinningDataVertexBuffer {};
-    u32 m_nextFreeSkinningVertexIndex { 0 };
+    OffsetAllocator::Allocator m_skinningVertexAllocator { MaxLoadedSkinningVertices };
 
     std::unique_ptr<Buffer> m_velocityDataVertexBuffer {};
-    u32 m_nextFreeVelocityIndex { 0 };
+    OffsetAllocator::Allocator m_velocityVertexAllocator { MaxLoadedVelocityVertices };
 
     std::unique_ptr<Buffer> m_meshletVertexIndirectionBuffer {};
     u32 m_nextFreeMeshletIndirIndex { 0 };

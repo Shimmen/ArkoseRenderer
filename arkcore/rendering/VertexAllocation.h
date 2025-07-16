@@ -1,6 +1,7 @@
 #pragma once
 
 #include "core/Types.h"
+#include <offsetAllocator/offsetAllocator.hpp>
 
 struct VertexAllocation {
     u32 firstVertex { 0 };
@@ -16,4 +17,14 @@ struct VertexAllocation {
 
     bool isValid() const { return vertexCount > 0; }
     bool hasIndices() const { return indexCount > 0; }
+
+    struct Internal {
+        OffsetAllocator::Allocation vertexAlloc {};
+        OffsetAllocator::Allocation indexAlloc {};
+        OffsetAllocator::Allocation skinningVertAlloc {};
+        OffsetAllocator::Allocation velocityVertAlloc {};
+    };
+
+    // For managing owned allocations to free when this is destroyed
+    Internal internalAllocations;
 };

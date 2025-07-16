@@ -288,6 +288,7 @@ bool VertexManager::allocateSkeletalMeshInstance(SkeletalMeshInstance& instance,
                 return false;
             }
 
+            // Indices not included in allocation as the data is static; simply use the underlying mesh indices
             instanceVertexAllocation.firstIndex = meshSegment.vertexAllocation.firstIndex;
             instanceVertexAllocation.indexCount = meshSegment.vertexAllocation.indexCount;
 
@@ -356,30 +357,61 @@ VertexAllocation VertexManager::allocateMeshDataForSegment(MeshSegmentAsset cons
     u32 vertexCount = narrow_cast<u32>(segmentAsset.vertexCount());
     u32 indexCount = narrow_cast<u32>(segmentAsset.indices.size());
 
-    VertexAllocation allocation {};
+    // Allocate all the vertex data...
 
-    // TODO: Validate that it will fit!
-    allocation.firstVertex = m_nextFreeVertexIndex;
-    allocation.vertexCount = vertexCount;
-    m_nextFreeVertexIndex += vertexCount;
+    VertexAllocation::Internal allocs;
+
+    allocs.vertexAlloc = m_vertexAllocator.allocate(vertexCount);
+    if (!allocs.vertexAlloc.isValid()) {
+        return {};
+    }
 
     if (indexCount > 0 && includeIndices) {
-        // TODO: Validate that it will fit!
-        allocation.firstIndex = m_nextFreeIndex;
-        allocation.indexCount = indexCount;
-        m_nextFreeIndex += indexCount;
+        allocs.indexAlloc = m_indexAllocator.allocate(indexCount);
+        if (!allocs.indexAlloc.isValid()) {
+            if (allocs.vertexAlloc.isValid()) m_vertexAllocator.free(allocs.vertexAlloc);
+            return {};
+        }
     }
 
     if (segmentAsset.hasSkinningData() && includeSkinningData) {
-        // TODO: Validate that it will fit!
-        allocation.firstSkinningVertex = m_nextFreeSkinningVertexIndex;
-        m_nextFreeSkinningVertexIndex += vertexCount;
+        allocs.skinningVertAlloc = m_skinningVertexAllocator.allocate(vertexCount);
+        if (!allocs.skinningVertAlloc.isValid()) {
+            if (allocs.vertexAlloc.isValid()) m_vertexAllocator.free(allocs.vertexAlloc);
+            if (allocs.indexAlloc.isValid()) m_indexAllocator.free(allocs.indexAlloc);
+            return {};
+        }
     }
 
     if (includeVelocityData) {
-        // TODO: Validate that it will fit!
-        allocation.firstVelocityVertex = m_nextFreeVelocityIndex;
-        m_nextFreeVelocityIndex += vertexCount;
+        allocs.velocityVertAlloc = m_velocityVertexAllocator.allocate(vertexCount);
+        if (!allocs.velocityVertAlloc.isValid()) {
+            if (allocs.vertexAlloc.isValid()) m_vertexAllocator.free(allocs.vertexAlloc);
+            if (allocs.indexAlloc.isValid()) m_indexAllocator.free(allocs.indexAlloc);
+            if (allocs.skinningVertAlloc.isValid()) m_skinningVertexAllocator.free(allocs.skinningVertAlloc);
+            return {};
+        }
+    }
+
+    // If all requested allocations succeeded, return the VertexAllocation for the segment
+
+    VertexAllocation allocation {};
+    allocation.internalAllocations = allocs;
+
+    allocation.firstVertex = allocs.vertexAlloc.offset;
+    allocation.vertexCount = vertexCount;
+
+    if (indexCount > 0 && includeIndices) {
+        allocation.firstIndex = allocs.indexAlloc.offset;
+        allocation.indexCount = indexCount;
+    }
+
+    if (segmentAsset.hasSkinningData() && includeSkinningData) {
+        allocation.firstSkinningVertex = allocs.skinningVertAlloc.offset;
+    }
+
+    if (includeVelocityData) {
+        allocation.firstVelocityVertex = allocs.velocityVertAlloc.offset;
     }
 
     ARKOSE_ASSERT(allocation.isValid());
@@ -411,7 +443,7 @@ void VertexManager::uploadMeshDataForAllocation(MeshSegmentAsset const& segmentA
     }
 
     // Upload skinning data if relevant
-    if (allocation.firstSkinningVertex >= 0) {
+    if (allocation.hasSkinningData()) {
         ARKOSE_ASSERT(segmentAsset.hasSkinningData());
         ARKOSE_ASSERT(segmentAsset.jointIndices.size() == segmentAsset.jointWeights.size());
         std::vector<u8> skinningVertexData = segmentAsset.assembleVertexData(m_skinningDataVertexLayout);
@@ -420,7 +452,7 @@ void VertexManager::uploadMeshDataForAllocation(MeshSegmentAsset const& segmentA
     }
 
     // Upload index data if relevant
-    if (allocation.indexCount > 0) {
+    if (allocation.hasIndices()) {
         size_t indexSize = sizeofIndexType(indexType());
         size_t indexOffset = allocation.firstIndex * indexSize;
         m_indexBuffer->updateData(segmentAsset.indices.data(), segmentAsset.indices.size() * indexSize, indexOffset);
