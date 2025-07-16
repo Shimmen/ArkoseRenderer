@@ -213,7 +213,6 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
     }
 
     // TODO: Probably don't have a single buffer per transform. It's easy enough to manage a shared one for this.
-    std::pair<VkBuffer, VmaAllocation> transformBufferAndAllocation;
     constexpr size_t singleTransformSize = 3 * 4 * sizeof(float);
     if (isTriangleBLAS) {
         std::vector<ark::mat3x4> transforms {};
@@ -358,11 +357,11 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
     vulkanBackend.rayTracingKHR().vkGetAccelerationStructureBuildSizesKHR(vulkanBackend.device(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &previewBuildInfo, maxPrimitiveCounts.data(), &buildSizesInfo);
 
     VkDeviceSize accelerationStructureBufferSize = buildSizesInfo.accelerationStructureSize; // (use min required size)
-    auto accelerationStructureBufferAndAllocation = vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(accelerationStructureBufferSize, true, false);
-    VkBuffer accelerationStructureBuffer = accelerationStructureBufferAndAllocation.first;
+    blasBufferAndAllocation = vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(accelerationStructureBufferSize, true, false);
+    VkBuffer accelerationStructureBuffer = blasBufferAndAllocation.first;
 
     VmaAllocationInfo allocationInfo {};
-    vmaGetAllocationInfo(vulkanBackend.globalAllocator(), accelerationStructureBufferAndAllocation.second, &allocationInfo);
+    vmaGetAllocationInfo(vulkanBackend.globalAllocator(), blasBufferAndAllocation.second, &allocationInfo);
     m_sizeInMemory += allocationInfo.size;
 
     VkAccelerationStructureCreateInfoKHR accelerationStructureCreateInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
@@ -386,17 +385,12 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
 
         // NOTE: The update scratch size will generally be much smaller than the build scratch size, so we're wasting a lot by this!
         VkDeviceSize scratchBufferMinSize = ark::alignUp(std::max(buildSizesInfo.buildScratchSize, buildSizesInfo.updateScratchSize), minScratchBufferAlignment);
-        associatedBuffers.push_back(vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(scratchBufferMinSize, true, false));
+        scratchBufferAndAllocation = vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(scratchBufferMinSize, true, false);
 
         VkBufferDeviceAddressInfo bufferDeviceAddressInfo { VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO };
-        bufferDeviceAddressInfo.buffer = associatedBuffers.back().first;
+        bufferDeviceAddressInfo.buffer = scratchBufferAndAllocation.first;
         scratchBufferAddress = vkGetBufferDeviceAddress(vulkanBackend.device(), &bufferDeviceAddressInfo);
         scratchBufferAddress = ark::alignUp(scratchBufferAddress, minScratchBufferAlignment);
-    }
-
-    associatedBuffers.push_back(accelerationStructureBufferAndAllocation);
-    if (isTriangleBLAS) {
-        associatedBuffers.push_back(transformBufferAndAllocation);
     }
 }
 
@@ -408,9 +402,9 @@ VulkanBottomLevelASKHR::~VulkanBottomLevelASKHR()
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vulkanBackend.rayTracingKHR().vkDestroyAccelerationStructureKHR(vulkanBackend.device(), accelerationStructure, nullptr);
 
-    for (auto& [buffer, allocation] : associatedBuffers) {
-        vmaDestroyBuffer(vulkanBackend.globalAllocator(), buffer, allocation);
-    }
+    vmaDestroyBuffer(vulkanBackend.globalAllocator(), blasBufferAndAllocation.first, blasBufferAndAllocation.second);
+    vmaDestroyBuffer(vulkanBackend.globalAllocator(), scratchBufferAndAllocation.first, scratchBufferAndAllocation.second);
+    vmaDestroyBuffer(vulkanBackend.globalAllocator(), transformBufferAndAllocation.first, transformBufferAndAllocation.second);
 }
 
 void VulkanBottomLevelASKHR::setName(const std::string& name)

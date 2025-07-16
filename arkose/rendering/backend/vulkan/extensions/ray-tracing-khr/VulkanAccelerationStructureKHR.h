@@ -44,7 +44,9 @@ public:
     VkDeviceAddress accelerationStructureDeviceAddress;
     VkDeviceAddress scratchBufferAddress;
 
-    std::vector<std::pair<VkBuffer, VmaAllocation>> associatedBuffers;
+    std::pair<VkBuffer, VmaAllocation> blasBufferAndAllocation {};
+    std::pair<VkBuffer, VmaAllocation> scratchBufferAndAllocation {};
+    std::pair<VkBuffer, VmaAllocation> transformBufferAndAllocation {};
 
     // Store for rebuilding purposes
     std::vector<VkAccelerationStructureGeometryKHR> vkGeometries {};
