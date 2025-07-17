@@ -67,7 +67,7 @@ float clearcoatBRDF(vec3 L, vec3 V, vec3 N, float clearcoatStrength, float clear
     return D * V_ * F;
 }
 
-vec3 specularBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, /*float clearcoat, float clearcoatRoughness,*/ out vec3 F)
+vec3 specularBRDF(vec3 L, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, out vec3 F)
 {
     vec3 H = normalize(L + V);
 
