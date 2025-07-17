@@ -347,20 +347,6 @@ bool VertexManager::allocateSkeletalMeshInstance(SkeletalMeshInstance& instance,
     return true;
 }
 
-bool VertexManager::createBottomLevelAccelerationStructure(StaticMesh& staticMesh)
-{
-    SCOPED_PROFILE_ZONE();
-
-    for (StaticMeshLOD& lod : staticMesh.LODs()) {
-        for (StaticMeshSegment& meshSegment : lod.meshSegments) {
-            ARKOSE_ASSERT(meshSegment.vertexAllocation.isValid());
-            meshSegment.blas = createBottomLevelAccelerationStructure(meshSegment.vertexAllocation);
-        }
-    }
-
-    return true;
-}
-
 VertexAllocation VertexManager::allocateMeshDataForSegment(MeshSegmentAsset const& segmentAsset, bool includeIndices, bool includeSkinningData, bool includeVelocityData)
 {
     SCOPED_PROFILE_ZONE();

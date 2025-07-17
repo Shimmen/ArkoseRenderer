@@ -37,9 +37,6 @@ public:
 
     void processMeshStreaming(CommandList&, std::unordered_set<StaticMeshHandle>& updatedMeshes);
 
-    bool createBottomLevelAccelerationStructure(StaticMesh&);
-    std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(VertexAllocation const&);
-
     IndexType indexType() const { return IndexType::UInt32; }
     Buffer const& indexBuffer() const { return *m_indexBuffer; }
 
@@ -200,4 +197,5 @@ private:
 
     VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
     std::optional<MeshletView> streamMeshletDataForSegment(StreamingMesh& streamingMesh, StaticMeshSegment const&);
+    std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(VertexAllocation const&);
 };
