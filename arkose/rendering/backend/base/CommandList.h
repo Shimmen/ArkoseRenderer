@@ -57,6 +57,7 @@ public:
     virtual void buildTopLevelAcceratationStructure(TopLevelAS&, AccelerationStructureBuildType) = 0;
     virtual void buildBottomLevelAcceratationStructure(BottomLevelAS&, AccelerationStructureBuildType) = 0;
     virtual void copyBottomLevelAcceratationStructure(BottomLevelAS& dst, BottomLevelAS const& src) = 0;
+    virtual bool compactBottomLevelAcceratationStructure(BottomLevelAS&) = 0;
     virtual void traceRays(Extent2D) = 0;
 
     void dispatch(Extent3D globalSize, Extent3D localSize);

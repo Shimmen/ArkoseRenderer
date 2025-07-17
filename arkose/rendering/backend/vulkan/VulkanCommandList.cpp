@@ -1360,6 +1360,21 @@ void VulkanCommandList::copyBottomLevelAcceratationStructure(BottomLevelAS& dst,
     endDebugLabel();
 }
 
+bool VulkanCommandList::compactBottomLevelAcceratationStructure(BottomLevelAS& blas)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    if (!backend().hasRayTracingSupport())
+        ARKOSE_LOG(Fatal, "Trying to compact a bottom level acceleration structure but there is no ray tracing support!");
+
+    beginDebugLabel("Compact BLAS");
+    auto& khrBlas = static_cast<VulkanBottomLevelASKHR&>(blas);
+    bool completed = khrBlas.compact(m_commandBuffer);
+    endDebugLabel();
+
+    return completed;
+}
+
 void VulkanCommandList::traceRays(Extent2D extent)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
