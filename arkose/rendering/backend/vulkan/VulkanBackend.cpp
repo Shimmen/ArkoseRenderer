@@ -1545,6 +1545,28 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
     // NOTE: We're ignoring any time spent waiting for the fence, as that would factor e.g. GPU time & sync into the CPU time
     double cpuFrameStartTime = System::get().timeSinceStartup();
 
+    // Processing deferred deletions
+    {
+        SCOPED_PROFILE_ZONE_BACKEND_NAMED("Processing deferred deletions");
+
+        std::vector<DeleteRequest> const& deleteRequests = m_pendingDeletes[frameContextIndex];
+
+        for (DeleteRequest const& request : deleteRequests) {
+            switch (request.type) {
+            case VK_OBJECT_TYPE_BUFFER:
+                vmaDestroyBuffer(globalAllocator(), static_cast<VkBuffer>(request.vulkanObject), request.allocation);
+                break;
+            case VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR:
+                rayTracingKHR().vkDestroyAccelerationStructureKHR(device(), static_cast<VkAccelerationStructureKHR>(request.vulkanObject), nullptr);
+                break;
+            default:
+                ARKOSE_ERROR("VulkanBackend: unsupported delete request type {}, ignoring", request.type);
+            }
+        }
+
+        m_pendingDeletes[frameContextIndex].clear();
+    }
+
     uint32_t swapchainImageIndex;
     VkResult acquireResult;
     {
@@ -2449,6 +2471,15 @@ std::vector<VulkanBackend::PushConstantInfo> VulkanBackend::identifyAllPushConst
     }
 
     return infos;
+}
+
+void VulkanBackend::enqueueForDeletion(VkObjectType type, void* vulkanObject, VmaAllocation allocation)
+{
+    DeleteRequest deleteRequest { .type = type,
+                                  .vulkanObject = vulkanObject,
+                                  .allocation = allocation };
+
+    m_pendingDeletes[m_currentFrameIndex % NumInFlightFrames].push_back(deleteRequest);
 }
 
 bool VulkanBackend::hasUpscalingSupport() const

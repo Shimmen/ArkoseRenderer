@@ -184,6 +184,8 @@ public:
     };
     std::vector<PushConstantInfo> identifyAllPushConstants(const Shader&) const;
 
+    void enqueueForDeletion(VkObjectType type, void* vulkanObject, VmaAllocation allocation);
+
 private:
     ///////////////////////////////////////////////////////////////////////////
     /// Capability query metadata & utilities
@@ -353,6 +355,13 @@ private:
     VkCommandPool m_transientCommandPool {};
 
     VkDescriptorSetLayout m_emptyDescriptorSetLayout {};
+
+    struct DeleteRequest {
+        VkObjectType type;
+        void* vulkanObject;
+        VmaAllocation allocation;
+    };
+    std::array<std::vector<DeleteRequest>, NumInFlightFrames> m_pendingDeletes {};
 
     #if defined(TRACY_ENABLE)
         static constexpr uint32_t TracyVulkanSubmitRate = 10;
