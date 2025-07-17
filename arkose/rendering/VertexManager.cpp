@@ -226,17 +226,22 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
             });
 
             if (stateDone) {
-                // TODO: Compact BLAS after creation
-                streamingMesh.setNextState(MeshStreamingState::Loaded);
+                streamingMesh.setNextState(MeshStreamingState::CompactingBLAS);
             }
 
         } break;
 
-        // case MeshStreamingState::CompactingBLAS: {
-        //
-        //     // todo!
-        //
-        // } break;
+        case MeshStreamingState::CompactingBLAS: {
+
+            bool stateDone = processStreamingMeshState(streamingMesh, [&](StaticMeshSegment& meshSegment) -> bool {
+                return cmdList.compactBottomLevelAcceratationStructure(*meshSegment.blas);
+            });
+
+            if (stateDone) { 
+                streamingMesh.setNextState(MeshStreamingState::Loaded);
+            }
+
+        } break;
 
         case MeshStreamingState::Loaded: {
 

@@ -153,8 +153,7 @@ private:
         //StreamingIndexData,
         StreamingMeshletData,
         CreatingBLAS,
-        // TODO:
-        //CompactingBLAS,
+        CompactingBLAS,
         Loaded,
     };
 
