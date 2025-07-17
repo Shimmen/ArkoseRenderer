@@ -39,6 +39,7 @@ public:
 
     void build(VkCommandBuffer, AccelerationStructureBuildType);
     void copyFrom(VkCommandBuffer, VulkanBottomLevelASKHR const&);
+    bool compact(VkCommandBuffer);
 
     VkAccelerationStructureKHR accelerationStructure;
     VkDeviceAddress accelerationStructureDeviceAddress;
@@ -52,4 +53,13 @@ public:
     std::vector<VkAccelerationStructureGeometryKHR> vkGeometries {};
     VkAccelerationStructureBuildGeometryInfoKHR previewBuildInfo {};
     std::vector<VkAccelerationStructureBuildRangeInfoKHR> rangeInfos {};
+
+    enum class CompactionState {
+        NotCompacted,
+        CompactSizeRequested,
+        Compacted,
+    };
+
+    CompactionState compactionState { CompactionState::NotCompacted };
+    VkQueryPool compactionQueryPool {};
 };

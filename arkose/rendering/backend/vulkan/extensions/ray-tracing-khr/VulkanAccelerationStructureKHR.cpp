@@ -353,6 +353,10 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
         previewBuildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR;
     }
 
+    if (compactionState == CompactionState::NotCompacted) {
+        previewBuildInfo.flags |= VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
+    }
+
     VkAccelerationStructureBuildSizesInfoKHR buildSizesInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR };
     vulkanBackend.rayTracingKHR().vkGetAccelerationStructureBuildSizesKHR(vulkanBackend.device(), VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR, &previewBuildInfo, maxPrimitiveCounts.data(), &buildSizesInfo);
 
@@ -378,6 +382,16 @@ VulkanBottomLevelASKHR::VulkanBottomLevelASKHR(Backend& backend, std::vector<RTG
     accelerationStructureDeviceAddressInfo.accelerationStructure = accelerationStructure;
     accelerationStructureDeviceAddress = vulkanBackend.rayTracingKHR().vkGetAccelerationStructureDeviceAddressKHR(vulkanBackend.device(), &accelerationStructureDeviceAddressInfo);
 
+    // Create query pool for compacted size
+    {
+        VkQueryPoolCreateInfo compactionQueryPoolCreateInfo { VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO };
+        compactionQueryPoolCreateInfo.queryType = VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR;
+        compactionQueryPoolCreateInfo.queryCount = 1;
+        if (vkCreateQueryPool(vulkanBackend.device(), &compactionQueryPoolCreateInfo, nullptr, &compactionQueryPool) != VK_SUCCESS) {
+            ARKOSE_LOG(Warning, "Error trying to create query pool for BLAS compaction size, ignoring");
+        }
+    }
+
     // Create scratch buffer
     // TODO: Don't create a scratch buffer per BLAS! If we can guarantee they don't build/update at the same time a single buffer can be reused.
     {
@@ -400,6 +414,8 @@ VulkanBottomLevelASKHR::~VulkanBottomLevelASKHR()
         return;
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+
+    vkDestroyQueryPool(vulkanBackend.device(), compactionQueryPool, nullptr);
     vulkanBackend.rayTracingKHR().vkDestroyAccelerationStructureKHR(vulkanBackend.device(), accelerationStructure, nullptr);
 
     vmaDestroyBuffer(vulkanBackend.globalAllocator(), blasBufferAndAllocation.first, blasBufferAndAllocation.second);
@@ -449,6 +465,16 @@ void VulkanBottomLevelASKHR::build(VkCommandBuffer commandBuffer, AccelerationSt
 
     VkAccelerationStructureBuildRangeInfoKHR* rangeInfosData = rangeInfos.data();
     vulkanBackend.rayTracingKHR().vkCmdBuildAccelerationStructuresKHR(commandBuffer, 1, &buildInfo, &rangeInfosData);
+
+    bool allowCompaction = previewBuildInfo.flags & VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
+    if (allowCompaction && compactionQueryPool && compactionState == CompactionState::NotCompacted) {
+        vkCmdResetQueryPool(commandBuffer, compactionQueryPool, 0, 1);
+        vulkanBackend.rayTracingKHR().vkCmdWriteAccelerationStructuresPropertiesKHR(commandBuffer,
+                                                                                    1, &accelerationStructure,
+                                                                                    VK_QUERY_TYPE_ACCELERATION_STRUCTURE_COMPACTED_SIZE_KHR,
+                                                                                    compactionQueryPool, 0);
+        compactionState = CompactionState::CompactSizeRequested;
+    }
 }
 
 void VulkanBottomLevelASKHR::copyFrom(VkCommandBuffer commandBuffer, VulkanBottomLevelASKHR const& copySource)
@@ -461,4 +487,86 @@ void VulkanBottomLevelASKHR::copyFrom(VkCommandBuffer commandBuffer, VulkanBotto
     copyInfo.dst = accelerationStructure;
 
     vulkanBackend.rayTracingKHR().vkCmdCopyAccelerationStructureKHR(commandBuffer, &copyInfo);
+}
+
+bool VulkanBottomLevelASKHR::compact(VkCommandBuffer commandBuffer)
+{
+    ARKOSE_ASSERT(compactionQueryPool != VK_NULL_HANDLE);
+    ARKOSE_ASSERT(compactionState == CompactionState::CompactSizeRequested);
+
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+
+    //
+    // Read compacted size
+    //
+
+    u32 compactBlasSize;
+    VkResult result = vkGetQueryPoolResults(vulkanBackend.device(), compactionQueryPool, 0, 1, sizeof(compactBlasSize), &compactBlasSize, sizeof(compactBlasSize), 0);
+
+    if (result == VK_SUCCESS) {
+        //f32 compactionPercentage = 100.0f * static_cast<f32>(compactBlasSize) / static_cast<f32>(sizeInMemory());
+        //ARKOSE_LOG(Info, "Will compact BLAS to {:.1f} of its original size", compactionPercentage);
+    } else if (result == VK_NOT_READY) {
+        //ARKOSE_LOG(Info, "BLAS compaction not yet ready!");
+        return false;
+    } else {
+        ARKOSE_LOG(Error, "Failed to read BLAS compaction size from the query pool, now sure how this could have happened...");
+        return false;
+    }
+
+    //
+    // Make smaller acceleration structure to compact into
+    //
+
+    auto compactBlasBufferAndAllocation = vulkanBackend.rayTracingKHR().createAccelerationStructureBuffer(compactBlasSize, true, false);
+    VkBuffer compactBlasBuffer = compactBlasBufferAndAllocation.first;
+
+    VkAccelerationStructureCreateInfoKHR compactBlasStructureCreateInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR };
+    compactBlasStructureCreateInfo.type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR;
+    compactBlasStructureCreateInfo.buffer = compactBlasBuffer;
+    compactBlasStructureCreateInfo.size = compactBlasSize;
+    compactBlasStructureCreateInfo.offset = 0;
+
+    VkAccelerationStructureKHR compactAccelerationStructure;
+    if (vulkanBackend.rayTracingKHR().vkCreateAccelerationStructureKHR(vulkanBackend.device(), &compactBlasStructureCreateInfo, nullptr, &compactAccelerationStructure) != VK_SUCCESS) {
+        ARKOSE_LOG(Error, "Error trying to create compact bottom level acceleration structure");
+        vmaDestroyBuffer(vulkanBackend.globalAllocator(), compactBlasBufferAndAllocation.first, compactBlasBufferAndAllocation.second);
+        return false;
+    }
+
+    //
+    // Do compaction
+    //
+
+    VkCopyAccelerationStructureInfoKHR copyInfo { VK_STRUCTURE_TYPE_COPY_ACCELERATION_STRUCTURE_INFO_KHR };
+    copyInfo.mode = VK_COPY_ACCELERATION_STRUCTURE_MODE_COMPACT_KHR;
+    copyInfo.src = accelerationStructure;
+    copyInfo.dst = compactAccelerationStructure;
+
+    vulkanBackend.rayTracingKHR().vkCmdCopyAccelerationStructureKHR(commandBuffer, &copyInfo);
+
+    //
+    // Enqueue old, uncompacted BLAS for deletion
+    //
+
+    VkAccelerationStructureKHR blasToDestroy = accelerationStructure;
+    std::pair<VkBuffer, VmaAllocation> blasBufferAndAllocationToFree = blasBufferAndAllocation;
+
+    vulkanBackend.enqueueForDeletion(VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR, blasToDestroy, VK_NULL_HANDLE);
+    vulkanBackend.enqueueForDeletion(VK_OBJECT_TYPE_BUFFER, blasBufferAndAllocationToFree.first, blasBufferAndAllocationToFree.second);
+
+    //
+    // Swap BLASs
+    //
+
+    accelerationStructure = compactAccelerationStructure;
+    blasBufferAndAllocation = compactBlasBufferAndAllocation;
+
+    VkAccelerationStructureDeviceAddressInfoKHR blasDeviceAddressInfo { VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR };
+    blasDeviceAddressInfo.accelerationStructure = accelerationStructure;
+    accelerationStructureDeviceAddress = vulkanBackend.rayTracingKHR().vkGetAccelerationStructureDeviceAddressKHR(vulkanBackend.device(), &blasDeviceAddressInfo);
+
+    compactionState = CompactionState::Compacted;
+
+    return true;
 }
