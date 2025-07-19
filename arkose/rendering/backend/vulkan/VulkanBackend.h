@@ -264,6 +264,9 @@ private:
     VkPhysicalDeviceProperties m_physicalDeviceProperties {};
     VkPhysicalDeviceMemoryProperties m_physicalDeviceMemoryProperties {};
 
+    bool checkForResizableBARSupport() const;
+    bool m_supportsResizableBAR { false };
+
     VkDevice m_device {};
 
     VkPipelineCache m_pipelineCache {};

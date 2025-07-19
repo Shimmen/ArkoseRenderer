@@ -114,6 +114,13 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
     auto deviceName = std::string(m_physicalDeviceProperties.deviceName);
     ARKOSE_LOG(Info, "VulkanBackend: using physical device '{}'", deviceName);
 
+    m_supportsResizableBAR = checkForResizableBARSupport();
+    if (m_supportsResizableBAR) {
+        ARKOSE_LOG(Info, "VulkanBackend: Resizable BAR (ReBAR) supported - will avoid staging buffers where applicable");
+    } else {
+        ARKOSE_LOG(Info, "VulkanBackend: Resizable BAR (ReBAR) not supported");
+    }
+
     findQueueFamilyIndices(m_physicalDevice, m_surface);
 
     {
@@ -1014,6 +1021,35 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
         ARKOSE_LOG(Fatal, "VulkanBackend: could not create a device, exiting.");
 
     return device;
+}
+
+bool VulkanBackend::checkForResizableBARSupport() const
+{
+    // Find the largest heap of device-local memory
+    u32 largestDeviceLocalMemoryHeapIndex = 0;
+    VkMemoryHeap largestDeviceLocalHeap = { .size = 0 };
+    for (u32 heapIdx = 0; heapIdx < m_physicalDeviceMemoryProperties.memoryHeapCount; ++heapIdx) {
+        if (m_physicalDeviceMemoryProperties.memoryHeaps[heapIdx].flags & VK_MEMORY_HEAP_DEVICE_LOCAL_BIT) {
+            VkMemoryHeap const& heap = m_physicalDeviceMemoryProperties.memoryHeaps[heapIdx];
+            if (heap.size > largestDeviceLocalHeap.size) {
+                largestDeviceLocalHeap = heap;
+                largestDeviceLocalMemoryHeapIndex = heapIdx;
+            }
+        }
+    }
+
+    // See if we can find a memory type which is both device-local and host-visible, and which belongs to the largest device-local heap
+    // If so, that indicates we support Resizable BAR (Re-BAR) and can use it to avoid staging buffers where applicable.
+    for (u32 typeIdx = 0; typeIdx < m_physicalDeviceMemoryProperties.memoryTypeCount; ++typeIdx) {
+        VkMemoryType memoryType = m_physicalDeviceMemoryProperties.memoryTypes[typeIdx];
+        if ((memoryType.propertyFlags & VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT) && (memoryType.propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT)) {
+            if (memoryType.heapIndex == largestDeviceLocalMemoryHeapIndex) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 void VulkanBackend::findQueueFamilyIndices(VkPhysicalDevice physicalDevice, VkSurfaceKHR surface)
