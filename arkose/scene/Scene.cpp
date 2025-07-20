@@ -317,6 +317,10 @@ void Scene::clearScene()
         removeNode(child);
     }
     rootNode->m_children.clear();
+
+    if (hasEditorScene()) {
+        editorScene().clearSelectedObject();
+    }
 }
 
 Camera& Scene::addCamera(const std::string& name, bool makeDefault)
