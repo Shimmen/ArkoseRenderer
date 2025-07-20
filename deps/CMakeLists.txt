@@ -112,22 +112,11 @@ if(NOT bc7enc_rdo_fetch_POPULATED)
 
 endif()
 
-# Eigen does come with a CMakeLists.txt but it's not intended for library use
-FetchContent_Declare(eigen_fetch
-    GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
-    GIT_TAG        "3.4.0")
-FetchContent_GetProperties(eigen_fetch)
-if(NOT eigen_fetch_POPULATED)
-    FetchContent_Populate(eigen_fetch)
-
-    add_library(eigen INTERFACE)
-    target_include_directories(eigen INTERFACE ${eigen_fetch_SOURCE_DIR})
-endif()
-
 ##################################
 # Custom built dependencies that either:
 #  1. can't becompiled as-is, e.g. needs additional files (header-only libs needing a cpp for making a static lib)
 #  2. can't easily be downloaded using FetchContent or need some files to be copied around
+#  3. do not have a CMakeLists.txt file, or need a custom one to work nicely with Arkose
 
 add_subdirectory(stb_image)
 add_subdirectory(tiny_gltf)
@@ -138,6 +127,7 @@ add_subdirectory(omm_sdk)
 add_subdirectory(renderdoc)
 add_subdirectory(imgui)
 add_subdirectory(mikktspace)
+add_subdirectory(eigen)
 
 ##################################
 # Finalize FetchContent dependencies
