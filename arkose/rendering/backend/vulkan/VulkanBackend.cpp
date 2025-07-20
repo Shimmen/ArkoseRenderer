@@ -1247,11 +1247,28 @@ void VulkanBackend::createSwapchain(VkPhysicalDevice physicalDevice, VkDevice de
 
     createInfo.clipped = VK_TRUE; // clip pixels obscured by other windows etc.
 
-    createInfo.oldSwapchain = VK_NULL_HANDLE;
+    createInfo.oldSwapchain = m_swapchain;
+    m_swapchain = nullptr;
 
     if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &m_swapchain) != VK_SUCCESS) {
         ARKOSE_LOG(Fatal, "VulkanBackend: could not create swapchain, exiting.");
     }
+
+    // Destroy old swapchain & associated data
+
+    if (createInfo.oldSwapchain) {
+        for (auto& swapchainImageContext : m_swapchainImageContexts) {
+            vkDestroySemaphore(device, swapchainImageContext->submitSemaphore, nullptr);
+            vkDestroyImageView(device, swapchainImageContext->imageView, nullptr);
+        }
+        m_swapchainImageContexts.clear();
+
+        vkDestroySwapchainKHR(device, createInfo.oldSwapchain, nullptr);
+    }
+
+    // Create associated data
+
+    ARKOSE_ASSERT(m_swapchainImageContexts.size() == 0);
 
     uint32_t numSwapchainImages;
     vkGetSwapchainImagesKHR(device, m_swapchain, &numSwapchainImages, nullptr);
@@ -1345,8 +1362,6 @@ Extent2D VulkanBackend::recreateSwapchain()
     }
 
     vkDeviceWaitIdle(device());
-
-    destroySwapchain();
     createSwapchain(physicalDevice(), device(), m_surface);
 
     // Re-create the ImGui render target with the new placeholder texture
