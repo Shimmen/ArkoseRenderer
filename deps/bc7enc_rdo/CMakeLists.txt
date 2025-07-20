@@ -14,7 +14,7 @@ if(NOT bc7enc_rdo_fetch_POPULATED)
 
     # TODO: Optionally make use of the ISPC bc7e.ispc file in place of bc7enc.cpp
 
-    add_library(bc7enc_lib
+    add_library(bc7enc_rdo
         "${bc7enc_rdo_fetch_SOURCE_DIR}/rgbcx.cpp"  # for BC1-5
         "${bc7enc_rdo_fetch_SOURCE_DIR}/bc7enc.cpp" # for BC7
         "${bc7enc_rdo_fetch_SOURCE_DIR}/ert.cpp"    # for RDO post-processing
@@ -28,11 +28,14 @@ if(NOT bc7enc_rdo_fetch_POPULATED)
         "${bc7enc_rdo_fetch_SOURCE_DIR}/bc7decomp_ref.cpp"
         "${bc7enc_rdo_fetch_SOURCE_DIR}/lodepng.cpp"
         )
-    target_include_directories(bc7enc_lib INTERFACE ${bc7enc_rdo_fetch_SOURCE_DIR})
+    target_include_directories(bc7enc_rdo INTERFACE ${bc7enc_rdo_fetch_SOURCE_DIR})
 
     find_package(OpenMP)
     if(OPENMP_FOUND)
-        target_link_libraries(bc7enc_lib PRIVATE OpenMP::OpenMP_CXX)
+        message(STATUS "bc7enc_rdo: found OpenMP, enabling OpenMP parallelization in bc7enc_rdo")
+        target_link_libraries(bc7enc_rdo PRIVATE OpenMP::OpenMP_CXX)
+    else()
+        message(STATUS "bc7enc_rdo: OpenMP not found, will not use OpenMP parallelization in bc7enc_rdo")
     endif()
 
 endif()
