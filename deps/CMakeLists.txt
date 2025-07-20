@@ -112,21 +112,6 @@ if(NOT bc7enc_rdo_fetch_POPULATED)
 
 endif()
 
-FetchContent_Declare(mikktspace_fetch
-    GIT_REPOSITORY https://github.com/mmikk/MikkTSpace.git
-    GIT_TAG        3e895b49d05ea07e4c2133156cfa94369e19e409)
-FetchContent_GetProperties(mikktspace_fetch)
-if(NOT mikktspace_fetch_POPULATED)
-    FetchContent_Populate(mikktspace_fetch)
-
-    add_library(mikktspace
-        "${mikktspace_fetch_SOURCE_DIR}/mikktspace.c"
-        "${mikktspace_fetch_SOURCE_DIR}/mikktspace.h"
-        )
-    target_include_directories(mikktspace PUBLIC ${mikktspace_fetch_SOURCE_DIR})
-
-endif()
-
 # Eigen does come with a CMakeLists.txt but it's not intended for library use
 FetchContent_Declare(eigen_fetch
     GIT_REPOSITORY https://gitlab.com/libeigen/eigen.git
@@ -152,6 +137,7 @@ add_subdirectory(mimalloc)
 add_subdirectory(omm_sdk)
 add_subdirectory(renderdoc)
 add_subdirectory(imgui)
+add_subdirectory(mikktspace)
 
 ##################################
 # Finalize FetchContent dependencies
