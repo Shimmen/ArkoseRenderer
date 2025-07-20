@@ -75,44 +75,6 @@ FetchContent_Declare(offset-allocator
     GIT_TAG        "v0.0.1")
 
 ##################################
-# FetchContent dependencies without cmake files
-
-# Temporarily(TM) switch out the repo to a fork which adds a missing include of cstdint. Hopefully it will be upstreamed at some point.
-FetchContent_Declare(bc7enc_rdo_fetch
-    GIT_REPOSITORY https://github.com/Sewer56/bc7enc_rdo
-    GIT_TAG        ba0b7de9843e467ef804557ac228fe7d2a39cdb0)
-    #GIT_REPOSITORY https://github.com/richgel999/bc7enc_rdo.git
-    #GIT_TAG        "e6990bc11829c072d9f9e37296f3335072aab4e4")
-FetchContent_GetProperties(bc7enc_rdo_fetch)
-if(NOT bc7enc_rdo_fetch_POPULATED)
-    FetchContent_Populate(bc7enc_rdo_fetch)
-
-    # TODO: Optionally make use of the ISPC bc7e.ispc file in place of bc7enc.cpp
-
-    add_library(bc7enc_lib
-        "${bc7enc_rdo_fetch_SOURCE_DIR}/rgbcx.cpp"  # for BC1-5
-        "${bc7enc_rdo_fetch_SOURCE_DIR}/bc7enc.cpp" # for BC7
-        "${bc7enc_rdo_fetch_SOURCE_DIR}/ert.cpp"    # for RDO post-processing
-
-        # Nice interface wrapping all the above
-        "${bc7enc_rdo_fetch_SOURCE_DIR}/rdo_bc_encoder.cpp"
-
-        # Dependencies for rdo_bc_encoder
-        "${bc7enc_rdo_fetch_SOURCE_DIR}/utils.cpp"
-        "${bc7enc_rdo_fetch_SOURCE_DIR}/bc7decomp.cpp"
-        "${bc7enc_rdo_fetch_SOURCE_DIR}/bc7decomp_ref.cpp"
-        "${bc7enc_rdo_fetch_SOURCE_DIR}/lodepng.cpp"
-        )
-    target_include_directories(bc7enc_lib INTERFACE ${bc7enc_rdo_fetch_SOURCE_DIR})
-
-    find_package(OpenMP)
-    if(OPENMP_FOUND)
-        target_link_libraries(bc7enc_lib PRIVATE OpenMP::OpenMP_CXX)
-    endif()
-
-endif()
-
-##################################
 # Custom built dependencies that either:
 #  1. can't becompiled as-is, e.g. needs additional files (header-only libs needing a cpp for making a static lib)
 #  2. can't easily be downloaded using FetchContent or need some files to be copied around
@@ -128,6 +90,7 @@ add_subdirectory(renderdoc)
 add_subdirectory(imgui)
 add_subdirectory(mikktspace)
 add_subdirectory(eigen)
+add_subdirectory(bc7enc_rdo)
 
 ##################################
 # Finalize FetchContent dependencies
