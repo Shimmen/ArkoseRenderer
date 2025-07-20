@@ -108,8 +108,8 @@ void BootstrappingApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBa
 {
     AppBase::setup(graphicsBackend, physicsBackend);
 
-    scene().setupFromDescription({ .withRayTracing = false,
-                                 .withMeshShading = false });
+    mainScene().setupFromDescription({ .withRayTracing = false,
+                                       .withMeshShading = false });
 
     mainRenderPipeline().addNode<DrawTriangleNode>();
 

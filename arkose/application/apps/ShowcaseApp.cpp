@@ -67,7 +67,7 @@ void ShowcaseApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend
     SCOPED_PROFILE_ZONE();
 
     AppBase::setup(graphicsBackend, physicsBackend);
-    Scene& scene = *m_scene;
+    Scene& scene = mainScene();
 
     Scene::Description description { .withRayTracing = withRayTracing,
                                      .withMeshShading = true };
@@ -208,9 +208,9 @@ bool ShowcaseApp::update(float elapsedTime, float deltaTime)
     AppBase::update(elapsedTime, deltaTime);
 
     Input const& input = Input::instance();
-    Scene& scene = *m_scene;
+    Scene& scene = mainScene();
 
-    scene.camera().setTargetWindowSize(m_renderPipeline->outputResolution());
+    scene.camera().setTargetWindowSize(mainRenderPipeline().outputResolution());
 
     // Toggle GUI with the ` key
     if (input.wasKeyReleased(Key::GraveAccent)) {
@@ -335,9 +335,9 @@ bool ShowcaseApp::drawGui(Scene& scene)
         ImGui::End();
     }
 
-    if (m_renderPipeline && showRenderPipelineGui) {
+    if (showRenderPipelineGui) {
         if (ImGui::Begin("Render Pipeline", &showRenderPipelineGui)) {
-            m_renderPipeline->drawGui();
+            mainRenderPipeline().drawGui();
         }
         ImGui::End();
     }

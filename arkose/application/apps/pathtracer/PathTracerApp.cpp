@@ -23,20 +23,21 @@ void PathTracerApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBacke
     SCOPED_PROFILE_ZONE();
 
     AppBase::setup(graphicsBackend, physicsBackend);
+    Scene& scene = mainScene();
 
     Scene::Description description { .withRayTracing = true };
     // NOTE: Scene not under "assets/sample/" will not be available in the Git-repo, either due to file size or license or both!
     //description.path = "assets/PicaPica/PicaPicaMiniDiorama.arklvl";
     //description.path = "assets/sample/levels/Sponza.arklvl";
     description.path = "assets/sample/levels/CornellBox.arklvl";
-    scene().setupFromDescription(description);
+    scene.setupFromDescription(description);
 
-    if (scene().directionalLightCount() == 0) {
-        DirectionalLight& sun = scene().addLight(std::make_unique<DirectionalLight>(Colors::white, 90'000.0f, normalize(vec3(0.5f, -1.0f, 0.2f))));
+    if (scene.directionalLightCount() == 0) {
+        DirectionalLight& sun = scene.addLight(std::make_unique<DirectionalLight>(Colors::white, 90'000.0f, normalize(vec3(0.5f, -1.0f, 0.2f))));
         sun.transform().setTranslation({ 0.0f, 2.5f, 0.0f });
     }
 
-    Camera& camera = scene().camera();
+    Camera& camera = scene.camera();
     m_fpsCameraController.takeControlOfCamera(camera);
 
     RenderPipeline& pipeline = mainRenderPipeline();
@@ -73,9 +74,9 @@ bool PathTracerApp::update(float elapsedTime, float deltaTime)
 
     if (m_guiEnabled) {
         static bool showRenderPipelineGui = true;
-        if (m_renderPipeline && showRenderPipelineGui) {
+        if (showRenderPipelineGui) {
             if (ImGui::Begin("Render Pipeline", &showRenderPipelineGui)) {
-                m_renderPipeline->drawGui();
+                mainRenderPipeline().drawGui();
             }
             ImGui::End();
         }

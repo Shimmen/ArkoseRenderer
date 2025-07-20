@@ -39,7 +39,7 @@ void SSSDemo::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend)
     SCOPED_PROFILE_ZONE();
 
     AppBase::setup(graphicsBackend, physicsBackend);
-    Scene& scene = *m_scene;
+    Scene& scene = mainScene();
 
     scene.setupFromDescription({ .path = "assets/sample/levels/SSSDemo/SSSDemo.arklvl",
                                  .withRayTracing = true,
@@ -160,7 +160,7 @@ bool SSSDemo::update(float elapsedTime, float deltaTime)
 
     if (m_guiEnabled) {
         if (ImGui::Begin("Render Pipeline")) {
-            m_renderPipeline->drawGui();
+            mainRenderPipeline().drawGui();
         }
         ImGui::End();
     }
@@ -171,7 +171,7 @@ bool SSSDemo::update(float elapsedTime, float deltaTime)
     sunRotation -= input.isKeyDown(Key::Left) ? 1.0f : 0.0f;
     sunRotation += input.isKeyDown(Key::Right) ? 1.0f : 0.0f;
     quat rotation = axisAngle(ark::globalRight, sunRotation * deltaTime * 0.35f);
-    if (DirectionalLight* sun = scene().firstDirectionalLight()) {
+    if (DirectionalLight* sun = mainScene().firstDirectionalLight()) {
         sun->transform().setOrientation(rotation * sun->transform().localOrientation());
     }
 

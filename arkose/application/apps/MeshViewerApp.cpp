@@ -44,14 +44,14 @@ void MeshViewerApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBacke
     // Scene setup
 
     AppBase::setup(graphicsBackend, physicsBackend);
-    Scene& scene = *m_scene;
+    Scene& scene = mainScene();
 
     scene.setupFromDescription({ .withRayTracing = false,
                                  .withMeshShading = false });
 
     if (MeshAsset* defaultMeshAsset = MeshAsset::load("assets/sample/models/Box/Box.arkmsh")) {
         m_targetAsset = defaultMeshAsset;
-        m_targetInstance = &m_scene->addMesh(defaultMeshAsset);
+        m_targetInstance = &scene.addMesh(defaultMeshAsset);
         m_targetInstance->transform().setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(30.0f)));
     }
 
@@ -106,7 +106,7 @@ bool MeshViewerApp::update(float elapsedTime, float deltaTime)
     ImGuiID dockspace = ImGui::DockSpaceOverViewport(nullptr, ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingInCentralNode);
     (void)dockspace;
 
-    m_scene->editorScene().drawSceneNodeHierarchy();
+    mainScene().editorScene().drawSceneNodeHierarchy();
 
     drawMeshHierarchyPanel();
     drawMeshPhysicsPanel();
@@ -177,7 +177,7 @@ void MeshViewerApp::drawMenuBar()
     static bool showGpuSceneGui = false;
     if (showGpuSceneGui) {
         if (ImGui::Begin("GPU scene stats", &showGpuSceneGui, ImGuiWindowFlags_NoCollapse)) {
-            m_scene->gpuScene().drawStatsGui();
+            mainScene().gpuScene().drawStatsGui();
         }
         ImGui::End();
     }
@@ -233,7 +233,7 @@ void MeshViewerApp::drawMenuBar()
     if (ImGui::BeginPopupModal("Create a new scene")) {
         ImGui::Text("You are about to create a scene and potentially loose any unchanged settings. Are you sure you want to proceed?");
         if (ImGui::Button("Yes")) {
-            m_scene->clearScene();
+            mainScene().clearScene();
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -247,6 +247,8 @@ void MeshViewerApp::drawMenuBar()
 
 void MeshViewerApp::drawMeshHierarchyPanel()
 {
+    Scene& scene = mainScene();
+
     // TODO: Make the "Hierarchy" window just be a tree of the currently loaded set,
     // and then have another window for the Mesh, just like we do for the Material etc.
     ImGui::Begin("Hierarchy");
@@ -276,7 +278,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
 
         ImGui::Checkbox("Draw bounding box", &m_drawBoundingBox);
         if (m_drawBoundingBox) {
-            m_scene->editorScene().drawInstanceBoundingBox(*m_targetInstance);
+            scene.editorScene().drawInstanceBoundingBox(*m_targetInstance);
         }
 
         // This isn't really related to the current mesh so should probably be moved to its own panel..
@@ -361,7 +363,7 @@ void MeshViewerApp::drawMeshHierarchyPanel()
                         std::filesystem::path newMaterialPath = maybePath.value();
                         if (MaterialAsset* newMaterialAsset = MaterialAsset::load(newMaterialPath)) {
                             segmentAsset->material = newMaterialPath.generic_string(); // TODO: Avoid setting an absolute path here!
-                            selectedSegment()->setMaterial(newMaterialAsset, m_scene->gpuScene());
+                            selectedSegment()->setMaterial(newMaterialAsset, scene.gpuScene());
                         }
                     }
                 }
@@ -374,6 +376,8 @@ void MeshViewerApp::drawMeshHierarchyPanel()
 
 void MeshViewerApp::drawMeshMaterialPanel()
 {
+    Scene& scene = mainScene();
+
     ImGui::Begin("Material");
     if (MeshSegmentAsset* segmentAsset = selectedSegmentAsset()) {
 
@@ -397,7 +401,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
                     // Then immediately load it and make it the material for this segment (all other segments still use the old one)
                     if (MaterialAsset* newMaterialAsset = MaterialAsset::load(newMaterialPath)) {
                         segmentAsset->material = newMaterialPath.generic_string(); // TODO: Avoid setting an absolute path here!
-                        selectedSegment()->setMaterial(newMaterialAsset, m_scene->gpuScene());
+                        selectedSegment()->setMaterial(newMaterialAsset, scene.gpuScene());
                         material = newMaterialAsset;
                     }
                 }
@@ -424,7 +428,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
                             }
                         };
 
-                        if (Texture const* texture = m_scene->gpuScene().textureForHandle(TextureHandle(textureIndex))) {
+                        if (Texture const* texture = scene.gpuScene().textureForHandle(TextureHandle(textureIndex))) {
                             ImTextureID textureId = const_cast<Texture*>(texture)->asImTextureID(); // HACK: const_cast
                             if (ImGui::ImageButton(textureId, ImVec2(512.0f * texture->extent().aspectRatio(), 512.0f))) { 
                                 imageSelectDialog();
@@ -479,7 +483,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
                 ImGui::Text("No texture coordinates for this mesh segment - hiding material inputs");
             }
 
-            ShaderMaterial const* shaderMaterial = m_scene->gpuScene().materialForHandle(selectedSegment()->material);
+            ShaderMaterial const* shaderMaterial = scene.gpuScene().materialForHandle(selectedSegment()->material);
             materialDidChange |= drawMaterialInputGui("Base color", material->baseColor, shaderMaterial->baseColor);
             materialDidChange |= drawMaterialInputGui("Emissive color", material->emissiveColor, shaderMaterial->emissive);
             materialDidChange |= drawMaterialInputGui("Normal map", material->normalMap, shaderMaterial->normalMap);
@@ -503,7 +507,7 @@ void MeshViewerApp::drawMeshMaterialPanel()
             }
 
             if (materialDidChange) {
-                selectedSegment()->setMaterial(material, m_scene->gpuScene());
+                selectedSegment()->setMaterial(material, scene.gpuScene());
             }
         }
     }
@@ -681,6 +685,8 @@ bool MeshViewerApp::drawImageFilterSelectorGui(const char* id, ImageFilter& imag
 
 void MeshViewerApp::drawMeshPhysicsPanel()
 {
+    Scene& scene = mainScene();
+
     ImGui::Begin("Physics");
     if (m_targetAsset != nullptr) {
         if (ImGui::BeginTabBar("PhysicsTabBar")) {
@@ -695,7 +701,7 @@ void MeshViewerApp::drawMeshPhysicsPanel()
 
                     constexpr int lodForPhysics = 0;
                     std::vector<PhysicsMesh> physicsMeshes = m_targetAsset->createPhysicsMeshes(lodForPhysics);
-                    PhysicsShapeHandle shapeHandle = m_scene->physicsScene().backend().createPhysicsShapeForTriangleMeshes(physicsMeshes);
+                    PhysicsShapeHandle shapeHandle = scene.physicsScene().backend().createPhysicsShapeForTriangleMeshes(physicsMeshes);
 
                     // TODO: Add the shape (in Jolt's binary format) to the mesh asset
 
@@ -728,6 +734,8 @@ void MeshViewerApp::importAssetWithDialog()
 
 void MeshViewerApp::loadWithDialog()
 {
+    Scene& scene = mainScene();
+
     if (auto maybePath = FileDialog::open({ { "Arkose set", SetAsset::AssetFileExtension },
                                             { "Arkose mesh", MeshAsset::AssetFileExtension } })) {
 
@@ -736,17 +744,17 @@ void MeshViewerApp::loadWithDialog()
         if (openPath.extension() == SetAsset::AssetFileExtension) {
             ARKOSE_LOG(Info, "Loading set from file '{}'", openPath);
             if (SetAsset* setAsset = SetAsset::load(openPath)) {
-                m_scene->clearScene();
-                m_scene->addSet(setAsset);
+                scene.clearScene();
+                scene.addSet(setAsset);
                 m_targetAsset = nullptr;
                 m_targetInstance = nullptr;
             }
         } else if (openPath.extension() == MeshAsset::AssetFileExtension) {
             ARKOSE_LOG(Info, "Loading mesh from file '{}'", openPath);
             if (MeshAsset* meshAsset = MeshAsset::load(openPath)) {
-                m_scene->clearScene();
+                scene.clearScene();
                 m_targetAsset = meshAsset;
-                m_targetInstance = &m_scene->addMesh(meshAsset);
+                m_targetInstance = &scene.addMesh(meshAsset);
             }
         }
     }
@@ -760,7 +768,7 @@ void MeshViewerApp::saveWithDialog()
 StaticMeshLOD* MeshViewerApp::selectedLOD()
 {
     if (m_targetInstance) {
-        if (StaticMesh* staticMesh = m_scene->gpuScene().staticMeshForHandle(m_targetInstance->mesh())) {
+        if (StaticMesh* staticMesh = mainScene().gpuScene().staticMeshForHandle(m_targetInstance->mesh())) {
             return &staticMesh->LODs()[m_selectedLodIdx];
         }
     }
@@ -819,7 +827,7 @@ void MeshViewerApp::drawBakeUiIfActive()
                     material->bentNormalMap->wrapModes = ImageWrapModes::clampAllToEdge();
                     material->writeToFile(material->assetFilePath(), AssetStorage::Json);
                     // Re-register the material for the segment
-                    selectedSegment()->setMaterial(material, m_scene->gpuScene());
+                    selectedSegment()->setMaterial(material, mainScene().gpuScene());
                 }
             }
 
