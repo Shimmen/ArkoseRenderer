@@ -251,16 +251,20 @@ bool ShowcaseApp::update(float elapsedTime, float deltaTime)
 
         static MeshAsset* redCube = nullptr;
         static PhysicsShapeHandle cubeShapeHandle {};
-        if (not redCube) {
+        if (redCube == nullptr) {
             redCube = MeshAsset::load("assets/sample/models/Box/Box.arkmsh");
 
-            vec3 scaledHalfExtent = 0.5f * (redCube->boundingBox.max - redCube->boundingBox.min) * scale;
-            cubeShapeHandle = scene.physicsScene().backend().createPhysicsShapeForBox(scaledHalfExtent);
+            if (scene.hasPhysicsScene()) {
+                vec3 scaledHalfExtent = 0.5f * (redCube->boundingBox.max - redCube->boundingBox.min) * scale;
+                cubeShapeHandle = scene.physicsScene().backend().createPhysicsShapeForBox(scaledHalfExtent);
+            }
         }
 
         StaticMeshInstance& staticMeshInstance = scene.addMesh(redCube, xform);
-        PhysicsInstanceHandle physicsInstanceHandle = scene.physicsScene().createDynamicInstance(cubeShapeHandle, staticMeshInstance.transform());
-        scene.physicsScene().backend().applyImpulse(physicsInstanceHandle, 175.0f * spawnDirection);
+        if (scene.hasPhysicsScene()) {
+            PhysicsInstanceHandle physicsInstanceHandle = scene.physicsScene().createDynamicInstance(cubeShapeHandle, staticMeshInstance.transform());
+            scene.physicsScene().backend().applyImpulse(physicsInstanceHandle, 175.0f * spawnDirection);
+        }
     }
 
     if (m_testAnimation != nullptr) {
