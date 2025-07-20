@@ -74,6 +74,22 @@ FetchContent_Declare(offset-allocator
     GIT_REPOSITORY https://github.com/Shimmen/OffsetAllocator.git
     GIT_TAG        "v0.0.1")
 
+# Finalize FetchContent dependencies
+FetchContent_MakeAvailable(
+    magic_enum
+    json
+    cereal
+    fmt
+    glfw
+    nativefiledialog-extended
+    meshoptimizer
+    jolt-physics
+    lz4
+    concurrentqueue
+    tracy
+    libigl
+    offset-allocator)
+
 ##################################
 # Custom built dependencies that either:
 #  1. can't becompiled as-is, e.g. needs additional files (header-only libs needing a cpp for making a static lib)
@@ -93,22 +109,7 @@ add_subdirectory(eigen)
 add_subdirectory(bc7enc_rdo)
 
 ##################################
-# Finalize FetchContent dependencies
-
-FetchContent_MakeAvailable(
-    magic_enum
-    json
-    cereal
-    fmt
-    glfw
-    nativefiledialog-extended
-    meshoptimizer
-    jolt-physics
-    lz4
-    concurrentqueue
-    tracy
-    libigl
-    offset-allocator)
-
 # Final dependency build setup
+
+# For libigl, specifically include the triangle module
 igl_include(restricted triangle)
