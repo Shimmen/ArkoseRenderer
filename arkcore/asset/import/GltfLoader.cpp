@@ -720,7 +720,7 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
 
         input->wrapModes = ImageWrapModes(wrapModeFromTinyGltf(gltfSampler.wrapS),
                                           wrapModeFromTinyGltf(gltfSampler.wrapT),
-                                          wrapModeFromTinyGltf(gltfSampler.wrapR));
+                                          wrapModeFromTinyGltf(gltfSampler.wrapS)); // not a typo! glTF does not define wrapR, so we reuse S for it
 
         switch (gltfSampler.minFilter) {
         case TINYGLTF_TEXTURE_FILTER_NEAREST:
