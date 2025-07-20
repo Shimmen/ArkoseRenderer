@@ -8,12 +8,12 @@ VulkanBuffer::VulkanBuffer(Backend& backend, size_t size, Usage usage)
     : Buffer(backend, size, usage)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
-    createInternal(size, buffer, allocation);
+    createInternal(size, buffer, allocation, allocationInfo);
 }
 
 VulkanBuffer::~VulkanBuffer()
 {
-    destroyInternal(buffer, allocation);
+    destroyInternal(buffer, allocation, allocationInfo);
 }
 
 void VulkanBuffer::setName(const std::string& name)
@@ -61,8 +61,6 @@ bool VulkanBuffer::mapData(MapMode mapMode, size_t size, size_t offset, std::fun
 
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
 
-    VmaAllocationInfo allocationInfo;
-    vmaGetAllocationInfo(vulkanBackend.globalAllocator(), allocation, &allocationInfo);
     ARKOSE_ASSERT(allocationInfo.pMappedData != nullptr); // should be persistently mapped!
 
     std::byte* baseAddress = reinterpret_cast<std::byte*>(allocationInfo.pMappedData);
@@ -144,8 +142,8 @@ void VulkanBuffer::reallocateWithSize(size_t newSize, ReallocateStrategy strateg
     switch (strategy) {
     case ReallocateStrategy::DiscardExistingData:
 
-        destroyInternal(buffer, allocation);
-        createInternal(newSize, buffer, allocation);
+        destroyInternal(buffer, allocation, allocationInfo);
+        createInternal(newSize, buffer, allocation, allocationInfo);
         this->m_size = newSize;
 
         break;
@@ -154,12 +152,12 @@ void VulkanBuffer::reallocateWithSize(size_t newSize, ReallocateStrategy strateg
 
         VkBuffer newBuffer;
         VmaAllocation newAllocation;
-        createInternal(newSize, newBuffer, newAllocation);
+        createInternal(newSize, newBuffer, newAllocation, allocationInfo);
 
         auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
         vulkanBackend.copyBuffer(buffer, newBuffer, size());
 
-        destroyInternal(buffer, allocation);
+        destroyInternal(buffer, allocation, allocationInfo);
 
         buffer = newBuffer;
         allocation = newAllocation;
@@ -173,7 +171,7 @@ void VulkanBuffer::reallocateWithSize(size_t newSize, ReallocateStrategy strateg
         setName(name());
 }
 
-void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocation& outAllocation)
+void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocation& outAllocation, VmaAllocationInfo& outAllocationInfo)
 {
     SCOPED_PROFILE_ZONE_GPURESOURCE();
 
@@ -258,18 +256,18 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
 
     auto& allocator = static_cast<VulkanBackend&>(backend()).globalAllocator();
 
-    VmaAllocationInfo allocationInfo;
-    if (vmaCreateBuffer(allocator, &bufferCreateInfo, &allocCreateInfo, &outBuffer, &outAllocation, &allocationInfo) != VK_SUCCESS) {
+    if (vmaCreateBuffer(allocator, &bufferCreateInfo, &allocCreateInfo, &outBuffer, &outAllocation, &outAllocationInfo) != VK_SUCCESS) {
         ARKOSE_LOG(Fatal, "Could not create buffer of size {}.", size);
     }
 
     m_sizeInMemory = allocationInfo.size;
 }
 
-void VulkanBuffer::destroyInternal(VkBuffer inBuffer, VmaAllocation inAllocation)
+void VulkanBuffer::destroyInternal(VkBuffer inBuffer, VmaAllocation inAllocation, VmaAllocationInfo& inAllocationInfo)
 {
     if (!hasBackend())
         return;
     auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
     vmaDestroyBuffer(vulkanBackend.globalAllocator(), inBuffer, inAllocation);
+    inAllocationInfo = {};
 }
