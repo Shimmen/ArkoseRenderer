@@ -210,8 +210,6 @@ bool ShowcaseApp::update(float elapsedTime, float deltaTime)
     Input const& input = Input::instance();
     Scene& scene = mainScene();
 
-    scene.camera().setTargetWindowSize(mainRenderPipeline().outputResolution());
-
     // Toggle GUI with the ` key
     if (input.wasKeyReleased(Key::GraveAccent)) {
         m_guiEnabled = !m_guiEnabled;
