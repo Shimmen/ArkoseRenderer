@@ -1,6 +1,6 @@
 #pragma once
 
-#include "application/apps/App.h"
+#include "application/apps/AppBase.h"
 #include "asset/MeshAsset.h"
 #include "asset/import/AssetImporter.h"
 #include "scene/camera/FpsCameraController.h"
@@ -11,10 +11,11 @@
 
 class EditorGridRenderNode;
 
-class MeshViewerApp : public App {
+class MeshViewerApp : public AppBase {
 public:
-    void setup(Scene&, RenderPipeline&) override;
-    bool update(Scene&, float elapsedTime, float deltaTime) override;
+    void setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend) override;
+    bool update(float elapsedTime, float deltaTime) override;
+    void render(Backend&, float elapsedTime, float deltaTime) override;
 
     std::vector<Backend::Capability> optionalCapabilities() override;
 
@@ -22,7 +23,6 @@ public:
     FpsCameraController m_fpsCameraController {};
 
 private:
-    Scene* m_scene { nullptr };
     EditorGridRenderNode* m_editorGrid { nullptr };
 
     // The mesh we're currently viewing & editing

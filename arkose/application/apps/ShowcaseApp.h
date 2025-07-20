@@ -1,16 +1,17 @@
 #pragma once
 
-#include "application/apps/App.h"
+#include "application/apps/AppBase.h"
 #include "scene/camera/FpsCameraController.h"
 
 // For animation & skinning tests
 #include "animation/Animation.h"
 
-class ShowcaseApp : public App {
+class ShowcaseApp : public AppBase {
 public:
     std::vector<Backend::Capability> requiredCapabilities() override;
-    void setup(Scene&, RenderPipeline&) override;
-    bool update(Scene&, float elapsedTime, float deltaTime) override;
+    void setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend) override;
+    bool update(float elapsedTime, float deltaTime) override;
+    void render(Backend&, float elapsedTime, float deltaTime) override;
 
     bool drawGui(Scene&);
 
@@ -20,7 +21,6 @@ public:
     };
 
     bool m_guiEnabled { true };
-    RenderPipeline* m_renderPipeline { nullptr };
     FpsCameraController m_fpsCameraController {};
 
     // TODO: Remove me, only for testing skeletal mesh animations 

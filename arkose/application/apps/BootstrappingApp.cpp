@@ -104,19 +104,23 @@ private:
 
 //
 
-void BootstrappingApp::setup(Scene& scene, RenderPipeline& pipeline)
+void BootstrappingApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend)
 {
-    m_pipeline = &pipeline;
+    AppBase::setup(graphicsBackend, physicsBackend);
 
-    scene.setupFromDescription({ .withRayTracing = false,
+    scene().setupFromDescription({ .withRayTracing = false,
                                  .withMeshShading = false });
 
-    pipeline.addNode<DrawTriangleNode>();
+    mainRenderPipeline().addNode<DrawTriangleNode>();
 
 }
 
-bool BootstrappingApp::update(Scene&, float elapsedTime, float deltaTime)
+bool BootstrappingApp::update(float elapsedTime, float deltaTime)
 {
-    m_pipeline->drawGui();
-    return true;
+    return AppBase::update(elapsedTime, deltaTime);
+}
+
+void BootstrappingApp::render(Backend& graphicsBackend, float elapsedTime, float deltaTime)
+{
+    AppBase::render(graphicsBackend, elapsedTime, deltaTime);
 }

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "application/apps/App.h"
+#include "application/apps/AppBase.h"
 #include "scene/camera/FpsCameraController.h"
 #include "scene/camera/MapCameraController.h"
 
@@ -18,11 +18,13 @@ struct MapRegion {
     std::vector<MapCity> cities;
 };
 
-class GeodataApp : public App {
+class GeodataApp : public AppBase {
 public:
     std::vector<Backend::Capability> requiredCapabilities() override;
-    void setup(Scene&, RenderPipeline&) override;
-    bool update(Scene&, float elapsedTime, float deltaTime) override;
+
+    void setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend) override;
+    bool update(float elapsedTime, float deltaTime) override;
+    void render(Backend&, float elapsedTime, float deltaTime) override;
 
     void loadHeightmap();
     float sampleHeightmap(vec2 latlong) const;
@@ -31,7 +33,6 @@ public:
     void createCities();
 
     bool m_guiEnabled { true };
-    RenderPipeline* m_renderPipeline { nullptr };
 
     CameraController* m_cameraController { nullptr };
     MapCameraController m_mapCameraController {};

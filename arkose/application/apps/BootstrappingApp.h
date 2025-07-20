@@ -1,12 +1,10 @@
 #pragma once
 
-#include "application/apps/App.h"
+#include "application/apps/AppBase.h"
 
-class BootstrappingApp : public App {
+class BootstrappingApp : public AppBase {
 public:
-    void setup(Scene&, RenderPipeline&) override;
-    bool update(Scene&, float elapsedTime, float deltaTime) override;
-
-private:
-    RenderPipeline* m_pipeline { nullptr };
+    void setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend) override;
+    bool update(float elapsedTime, float deltaTime) override;
+    void render(Backend&, float elapsedTime, float deltaTime) override;
 };

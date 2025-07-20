@@ -1,15 +1,16 @@
 #pragma once
 
-#include "application/apps/App.h"
+#include "application/apps/AppBase.h"
 #include "scene/camera/FpsCameraController.h"
 
-class SSSDemo : public App {
+class SSSDemo : public AppBase {
 public:
     std::vector<Backend::Capability> requiredCapabilities() override;
-    void setup(Scene&, RenderPipeline&) override;
-    bool update(Scene&, float elapsedTime, float deltaTime) override;
+
+    void setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend) override;
+    bool update(float elapsedTime, float deltaTime) override;
+    void render(Backend&, float elapsedTime, float deltaTime) override;
 
     bool m_guiEnabled { true };
-    RenderPipeline* m_renderPipeline { nullptr };
     FpsCameraController m_cameraController {};
 };

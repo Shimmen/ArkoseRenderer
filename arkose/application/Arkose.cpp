@@ -4,7 +4,6 @@
 #include "core/Logging.h"
 #include "core/memory/MemoryManager.h"
 #include "core/parallel/TaskGraph.h"
-#include "physics/PhysicsScene.h"
 #include "physics/backend/base/PhysicsBackend.h"
 #include "rendering/backend/base/Backend.h"
 #include "rendering/backend/shader/ShaderManager.h"
@@ -116,17 +115,16 @@ int Arkose::runArkoseApplication(int argc, char** argv)
     Backend& graphicsBackend = Backend::create(appSpec);
     PhysicsBackend* physicsBackend = PhysicsBackend::create();
 
-    // Create the scene
-    auto scene = std::make_unique<Scene>(graphicsBackend, physicsBackend);
+    // Initialize the application
+    app->setup(graphicsBackend, physicsBackend);
 
-    // Let the app define the render pipeline and push it to the graphics backend
-    auto renderPipeline = std::make_unique<RenderPipeline>(&scene->gpuScene());
-    renderPipeline->setOutputResolution(system.windowFramebufferSize());
-    renderPipeline->setRenderResolution(system.windowFramebufferSize());
-    app->setup(*scene, *renderPipeline);
-    graphicsBackend.renderPipelineDidChange(*renderPipeline);
-    scene->camera().setTargetWindowSize(system.windowFramebufferSize());
+    // Initialize the main/output render pipeline
+    RenderPipeline& appMainRenderPipeline = app->mainRenderPipeline();
+    appMainRenderPipeline.setOutputResolution(system.windowFramebufferSize());
+    appMainRenderPipeline.setRenderResolution(system.windowFramebufferSize());
+    graphicsBackend.renderPipelineDidChange(appMainRenderPipeline);
 
+    // TODO: Replace with a more generic asset file watching system
     initializeShaderFileWatching();
 
     ARKOSE_LOG(Info, "main loop begin.");
@@ -137,17 +135,14 @@ int Arkose::runArkoseApplication(int argc, char** argv)
     while (!exitRequested) {
 
         checkOnShaderFileWatching([&](std::vector<std::filesystem::path> const& modifiedShaderFiles) {
-            graphicsBackend.shadersDidRecompile(modifiedShaderFiles, *renderPipeline);
+            graphicsBackend.shadersDidRecompile(modifiedShaderFiles, appMainRenderPipeline);
         });
 
         bool windowSizeDidChange = system.newFrame();
 
         if (windowSizeDidChange) {
             Extent2D viewportSize = system.windowFramebufferSize();
-            renderPipeline->setOutputResolution(viewportSize);
-
-            Extent2D windowSize = system.windowSize();
-            scene->camera().setTargetWindowSize(windowSize);
+            appMainRenderPipeline.setOutputResolution(viewportSize);
         }
 
         // Update & render the frame
@@ -158,23 +153,14 @@ int Arkose::runArkoseApplication(int argc, char** argv)
         float deltaTime = elapsedTime - lastTime;
         lastTime = elapsedTime;
 
-        bool keepRunning = app->update(*scene, elapsedTime, deltaTime);
+        bool keepRunning = app->update(elapsedTime, deltaTime);
         exitRequested = !keepRunning || system.exitRequested();
-
-        scene->update(elapsedTime, deltaTime);
 
         if (physicsBackend) {
             physicsBackend->update(elapsedTime, deltaTime);
         }
 
-        scene->preRender();
-
-        bool frameExecuted = false;
-        while (!frameExecuted) {
-            frameExecuted = graphicsBackend.executeFrame(*renderPipeline, elapsedTime, deltaTime);
-        }
-
-        scene->postRender();
+        app->render(graphicsBackend, elapsedTime, deltaTime);
 
         END_OF_FRAME_PROFILE_MARKER();
     }
@@ -183,10 +169,9 @@ int Arkose::runArkoseApplication(int argc, char** argv)
 
     stopShaderFileWatching();
 
-    // Destroy the scene (ensure that all GPU stuff are completed first)
+    // Destroy the app (ensure that all GPU stuff are completed first)
     graphicsBackend.completePendingOperations();
-    renderPipeline.reset();
-    scene.reset();
+    app.reset();
 
     // Destroy backends
     Backend::destroy();

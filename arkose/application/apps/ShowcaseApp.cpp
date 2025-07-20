@@ -62,9 +62,12 @@ std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
     return capabilities;
 }
 
-void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
+void ShowcaseApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend)
 {
     SCOPED_PROFILE_ZONE();
+
+    AppBase::setup(graphicsBackend, physicsBackend);
+    Scene& scene = *m_scene;
 
     Scene::Description description { .withRayTracing = withRayTracing,
                                      .withMeshShading = true };
@@ -98,6 +101,8 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     Camera& camera = scene.camera();
     m_fpsCameraController.takeControlOfCamera(camera);
+
+    RenderPipeline& pipeline = mainRenderPipeline();
 
     pipeline.addNode<PickingNode>();
 
@@ -194,16 +199,18 @@ void ShowcaseApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<OutputNode>(sceneTexture);
 
     pipeline.addNode<DebugDrawNode>();
-
-    // Save reference to the render pipeline for GUI purposes
-    m_renderPipeline = &pipeline;
 }
 
-bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
+bool ShowcaseApp::update(float elapsedTime, float deltaTime)
 {
     SCOPED_PROFILE_ZONE();
 
-    const Input& input = Input::instance();
+    AppBase::update(elapsedTime, deltaTime);
+
+    Input const& input = Input::instance();
+    Scene& scene = *m_scene;
+
+    scene.camera().setTargetWindowSize(m_renderPipeline->outputResolution());
 
     // Toggle GUI with the ` key
     if (input.wasKeyReleased(Key::GraveAccent)) {
@@ -266,6 +273,11 @@ bool ShowcaseApp::update(Scene& scene, float elapsedTime, float deltaTime)
     }
 
     return !exitRequested;
+}
+
+void ShowcaseApp::render(Backend& backend, float elapsedTime, float deltaTime)
+{
+    AppBase::render(backend, elapsedTime, deltaTime);
 }
 
 bool ShowcaseApp::drawGui(Scene& scene)

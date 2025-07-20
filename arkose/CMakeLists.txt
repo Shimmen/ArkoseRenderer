@@ -10,6 +10,8 @@ set(ARKOSE_SOURCES
   arkose/application/Arkose.h
     # apps
     arkose/application/apps/App.h
+    arkose/application/apps/AppBase.cpp
+    arkose/application/apps/AppBase.h
     arkose/application/apps/BootstrappingApp.cpp
     arkose/application/apps/BootstrappingApp.h
     arkose/application/apps/MeshViewerApp.cpp

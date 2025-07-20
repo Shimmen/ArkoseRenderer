@@ -34,9 +34,12 @@ std::vector<Backend::Capability> SSSDemo::requiredCapabilities()
     return { Backend::Capability::RayTracing, Backend::Capability::MeshShading };
 }
 
-void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
+void SSSDemo::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend)
 {
     SCOPED_PROFILE_ZONE();
+
+    AppBase::setup(graphicsBackend, physicsBackend);
+    Scene& scene = *m_scene;
 
     scene.setupFromDescription({ .path = "assets/sample/levels/SSSDemo/SSSDemo.arklvl",
                                  .withRayTracing = true,
@@ -100,6 +103,8 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
     m_cameraController.takeControlOfCamera(scene.camera());
     m_cameraController.setMaxSpeed(0.5f);
 
+    RenderPipeline& pipeline = mainRenderPipeline();
+
     pipeline.addNode<PickingNode>();
 
     pipeline.addNode<DDGINode>();
@@ -138,13 +143,13 @@ void SSSDemo::setup(Scene& scene, RenderPipeline& pipeline)
     outputNode.setRenderFilmGrain(false);
 
     pipeline.addNode<DebugDrawNode>();
-
-    m_renderPipeline = &pipeline;
 }
 
-bool SSSDemo::update(Scene& scene, float elapsedTime, float deltaTime)
+bool SSSDemo::update(float elapsedTime, float deltaTime)
 {
     SCOPED_PROFILE_ZONE();
+
+    AppBase::update(elapsedTime, deltaTime);
 
     const Input& input = Input::instance();
 
@@ -166,9 +171,14 @@ bool SSSDemo::update(Scene& scene, float elapsedTime, float deltaTime)
     sunRotation -= input.isKeyDown(Key::Left) ? 1.0f : 0.0f;
     sunRotation += input.isKeyDown(Key::Right) ? 1.0f : 0.0f;
     quat rotation = axisAngle(ark::globalRight, sunRotation * deltaTime * 0.35f);
-    if (DirectionalLight* sun = scene.firstDirectionalLight()) {
+    if (DirectionalLight* sun = scene().firstDirectionalLight()) {
         sun->transform().setOrientation(rotation * sun->transform().localOrientation());
     }
 
     return true;
+}
+
+void SSSDemo::render(Backend& backend, float elapsedTime, float deltaTime)
+{
+    AppBase::render(backend, elapsedTime, deltaTime);
 }

@@ -44,9 +44,12 @@ std::vector<Backend::Capability> GeodataApp::requiredCapabilities()
     return { Backend::Capability::MeshShading };
 }
 
-void GeodataApp::setup(Scene& scene, RenderPipeline& pipeline)
+void GeodataApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend)
 {
     SCOPED_PROFILE_ZONE();
+
+    AppBase::setup(graphicsBackend, physicsBackend);
+    Scene& scene = *m_scene;
 
     // Bootstrap: load geodata here - later, make it a proper asset type that is generated beforehand
     loadHeightmap();
@@ -86,6 +89,8 @@ void GeodataApp::setup(Scene& scene, RenderPipeline& pipeline)
 
     //
 
+    RenderPipeline& pipeline = mainRenderPipeline();
+
     pipeline.addNode<PickingNode>();
 
     pipeline.addNode<MeshletVisibilityBufferRenderNode>();
@@ -121,13 +126,13 @@ void GeodataApp::setup(Scene& scene, RenderPipeline& pipeline)
     outputNode.setRenderFilmGrain(false);
 
     pipeline.addNode<DebugDrawNode>();
-
-    m_renderPipeline = &pipeline;
 }
 
-bool GeodataApp::update(Scene& scene, float elapsedTime, float deltaTime)
+bool GeodataApp::update(float elapsedTime, float deltaTime)
 {
     SCOPED_PROFILE_ZONE();
+
+    AppBase::update(elapsedTime, deltaTime);
 
     Input const& input = Input::instance();
 
@@ -146,21 +151,26 @@ bool GeodataApp::update(Scene& scene, float elapsedTime, float deltaTime)
         ARKOSE_ASSERT(m_cameraController != nullptr);
         if (m_cameraController == &m_mapCameraController) {
             ARKOSE_ASSERT(m_mapCameraController.isCurrentlyControllingCamera());
-            m_debugCameraController.takeControlOfCamera(scene.camera());
+            m_debugCameraController.takeControlOfCamera(scene().camera());
             m_debugCameraController.setMaxSpeed(m_mapCameraController.maxSpeed());
             m_cameraController = &m_debugCameraController;
         } else {
             ARKOSE_ASSERT(m_debugCameraController.isCurrentlyControllingCamera());
-            m_mapCameraController.takeControlOfCamera(scene.camera());
+            m_mapCameraController.takeControlOfCamera(scene().camera());
             m_mapCameraController.setMaxSpeed(m_debugCameraController.maxSpeed());
             m_cameraController = &m_mapCameraController;
         }
     }
     m_cameraController->update(input, deltaTime);
 
-    controlSunOrientation(scene, input, deltaTime);
+    controlSunOrientation(scene(), input, deltaTime);
 
     return true;
+}
+
+void GeodataApp::render(Backend& backend, float elapsedTime, float deltaTime)
+{
+    AppBase::render(backend, elapsedTime, deltaTime);
 }
 
 void GeodataApp::loadHeightmap()

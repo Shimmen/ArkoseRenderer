@@ -36,14 +36,15 @@ std::vector<Backend::Capability> MeshViewerApp::optionalCapabilities()
     return { Backend::Capability::RayTracing, Backend::Capability::ShaderBarycentrics };
 }
 
-void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
+void MeshViewerApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend)
 {
     SCOPED_PROFILE_ZONE();
 
     ////////////////////////////////////////////////////////////////////////////
     // Scene setup
-    
-    m_scene = &scene;
+
+    AppBase::setup(graphicsBackend, physicsBackend);
+    Scene& scene = *m_scene;
 
     scene.setupFromDescription({ .withRayTracing = false,
                                  .withMeshShading = false });
@@ -70,6 +71,8 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     ////////////////////////////////////////////////////////////////////////////
     // Render pipeline setup
 
+    RenderPipeline& pipeline = mainRenderPipeline();
+
     pipeline.addNode<PickingNode>();
 
     pipeline.addNode<ForwardRenderNode>(ForwardRenderNode::Mode::Opaque,
@@ -94,8 +97,10 @@ void MeshViewerApp::setup(Scene& scene, RenderPipeline& pipeline)
     pipeline.addNode<DebugDrawNode>();
 }
 
-bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
+bool MeshViewerApp::update(float elapsedTime, float deltaTime)
 {
+    AppBase::update(elapsedTime, deltaTime);
+
     drawMenuBar();
 
     ImGuiID dockspace = ImGui::DockSpaceOverViewport(nullptr, ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_NoDockingInCentralNode);
@@ -160,6 +165,11 @@ bool MeshViewerApp::update(Scene& scene, float elapsedTime, float deltaTime)
 
     m_fpsCameraController.update(Input::instance(), deltaTime);
     return true;
+}
+
+void MeshViewerApp::render(Backend& backend, float elapsedTime, float deltaTime)
+{
+    AppBase::render(backend, elapsedTime, deltaTime);
 }
 
 void MeshViewerApp::drawMenuBar()
