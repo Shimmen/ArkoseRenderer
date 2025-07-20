@@ -1,6 +1,8 @@
 #
 # ImGui and related dependencies
 #
+# NOTE: Requires glfw, and either Vulkan or D3D12 dependencies to have been declared before this.
+#
 
 FetchContent_Declare(dearimgui_fetch
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
@@ -26,7 +28,6 @@ if(NOT dearimgui_fetch_POPULATED)
         target_link_libraries(dear_imgui PRIVATE d3d12 dxgi)
     endif()
 
-    target_compile_features(dear_imgui PRIVATE cxx_std_17)
     target_include_directories(dear_imgui PUBLIC ${dearimgui_fetch_SOURCE_DIR})
 
     target_link_libraries(dear_imgui PRIVATE glfw)
@@ -45,7 +46,6 @@ if(NOT imguizmo_fetch_POPULATED)
         # NOTE: More files are available part of this repo
         )
 
-    target_compile_features(imguizmo PRIVATE cxx_std_17)
     target_include_directories(imguizmo PUBLIC ${imguizmo_fetch_SOURCE_DIR})
     target_link_libraries(imguizmo PRIVATE dear_imgui)
 
@@ -64,7 +64,6 @@ if(NOT implot_fetch_POPULATED)
         "${implot_fetch_SOURCE_DIR}/implot_items.cpp"
         )
 
-    target_compile_features(implot PRIVATE cxx_std_20)
     target_include_directories(implot PUBLIC ${implot_fetch_SOURCE_DIR})
     target_link_libraries(implot PRIVATE dear_imgui)
 
