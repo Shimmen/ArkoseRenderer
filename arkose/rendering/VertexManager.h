@@ -37,6 +37,8 @@ public:
 
     void processMeshStreaming(CommandList&, std::unordered_set<StaticMeshHandle>& updatedMeshes);
 
+    void drawUI() const;
+
     IndexType indexType() const { return IndexType::UInt32; }
     Buffer const& indexBuffer() const { return *m_indexBuffer; }
 

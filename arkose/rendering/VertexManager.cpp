@@ -257,6 +257,193 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
     }
 }
 
+void VertexManager::drawUI() const
+{
+    if (ImGui::BeginTabBar("VertexManagerTabBar")) {
+
+        if (ImGui::BeginTabItem("Streaming meshes")) {
+            if (ImGui::BeginTable("StreamingMeshesTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+                ImGui::TableSetupColumn("Streaming mesh", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+                ImGui::TableHeadersRow();
+                for (const StreamingMesh& streamingMesh : m_activeStreamingMeshes) {
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%s", streamingMesh.mesh->name().data());
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%s", magic_enum::enum_name(streamingMesh.state).data());
+                }
+                ImGui::EndTable();
+            }
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Vertex allocations")) {
+            float totalAllocatedSizeMB = 0.0f;
+            float totalUsedSizeMB = 0.0f;
+
+            if (ImGui::BeginTable("MeshIndexDataVramUsageTable", 6)) {
+
+                ImGui::TableSetupColumn("Index type", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Used #", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+                ImGui::TableSetupColumn("Cap. #", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+                ImGui::TableSetupColumn("%", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+                ImGui::TableSetupColumn("Used size (MB)", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+                ImGui::TableSetupColumn("Allocated size (MB)", ImGuiTableColumnFlags_WidthFixed, 140.0f);
+
+                ImGui::TableHeadersRow();
+
+                auto doTableRow = [&](Buffer const& indexBuffer, IndexType indexType, u32 numUsedIndices) {
+                    ImGui::TableNextRow();
+
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::Text("%s", indexTypeToString(indexType));
+
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::Text("%u", numUsedIndices);
+
+                    ImGui::TableSetColumnIndex(2);
+                    u32 totalNumVertices = narrow_cast<u32>(indexBuffer.size() / sizeofIndexType(indexType));
+                    ImGui::Text("%u", totalNumVertices);
+
+                    ImGui::TableSetColumnIndex(3);
+                    f32 percentageFilled = 100.0f * static_cast<f32>(numUsedIndices) / static_cast<f32>(totalNumVertices);
+                    ImGui::Text("%.1f%%", percentageFilled);
+
+                    ImGui::TableSetColumnIndex(4);
+                    float usedSizeMB = ark::conversion::to::MB(numUsedIndices * sizeofIndexType(indexType));
+                    ImGui::Text("%.2f MB", usedSizeMB);
+
+                    ImGui::TableSetColumnIndex(5);
+                    float allocatedSizeMB = ark::conversion::to::MB(indexBuffer.size());
+                    ImGui::Text("%.2f MB", allocatedSizeMB);
+
+                    totalAllocatedSizeMB += allocatedSizeMB;
+                    totalUsedSizeMB += usedSizeMB;
+                };
+
+                doTableRow(indexBuffer(), indexType(), numAllocatedIndices());
+
+                ImGui::EndTable();
+            }
+
+            ImGui::Spacing();
+
+            if (ImGui::BeginTable("MeshVertexDataVramUsageTable", 6)) {
+
+                ImGui::TableSetupColumn("Vertex layout", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("Used #", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+                ImGui::TableSetupColumn("Cap. #", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+                ImGui::TableSetupColumn("%", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+                ImGui::TableSetupColumn("Used size (MB)", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+                ImGui::TableSetupColumn("Allocated size (MB)", ImGuiTableColumnFlags_WidthFixed, 140.0f);
+
+                ImGui::TableHeadersRow();
+
+                auto doTableRow = [&](Buffer const& vertexBuffer, VertexLayout const& vertexLayout, u32 numUsedVertices) {
+                    ImGui::TableNextRow();
+
+                    ImGui::TableSetColumnIndex(0);
+                    std::string layoutDescription = vertexLayout.toString(false);
+                    ImGui::Text("%s", layoutDescription.c_str());
+
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::Text("%u", numUsedVertices);
+
+                    ImGui::TableSetColumnIndex(2);
+                    u32 totalNumVertices = narrow_cast<u32>(vertexBuffer.size() / vertexLayout.packedVertexSize());
+                    ImGui::Text("%u", totalNumVertices);
+
+                    ImGui::TableSetColumnIndex(3);
+                    f32 percentageFilled = 100.0f * static_cast<f32>(numUsedVertices) / static_cast<f32>(totalNumVertices);
+                    ImGui::Text("%.1f%%", percentageFilled);
+
+                    ImGui::TableSetColumnIndex(4);
+                    float usedSizeMB = ark::conversion::to::MB(numUsedVertices * vertexLayout.packedVertexSize());
+                    ImGui::Text("%.2f MB", usedSizeMB);
+
+                    ImGui::TableSetColumnIndex(5);
+                    float allocatedSizeMB = ark::conversion::to::MB(vertexBuffer.size());
+                    ImGui::Text("%.2f MB", allocatedSizeMB);
+
+                    totalAllocatedSizeMB += allocatedSizeMB;
+                    totalUsedSizeMB += usedSizeMB;
+                };
+
+                doTableRow(positionVertexBuffer(), positionVertexLayout(), numAllocatedVertices());
+                doTableRow(nonPositionVertexBuffer(), nonPositionVertexLayout(), numAllocatedVertices());
+                doTableRow(skinningDataVertexBuffer(), skinningDataVertexLayout(), numAllocatedSkinningVertices());
+                doTableRow(velocityDataVertexBuffer(), velocityDataVertexLayout(), numAllocatedVelocityVertices());
+
+                ImGui::EndTable();
+            }
+
+            ImGui::Spacing();
+
+            float totalAllocatedMeshletSizeMB = 0.0f;
+            float totalUsedMeshletSizeMB = 0.0f;
+            if (m_scene->maintainMeshShadingScene()) {
+                if (ImGui::BeginTable("MeshletDataVramUsageTable", 6)) {
+
+                    ImGui::TableSetupColumn("Meshlet data", ImGuiTableColumnFlags_WidthStretch);
+                    ImGui::TableSetupColumn("Used #", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+                    ImGui::TableSetupColumn("Cap. #", ImGuiTableColumnFlags_WidthFixed, 70.0f);
+                    ImGui::TableSetupColumn("%", ImGuiTableColumnFlags_WidthFixed, 40.0f);
+                    ImGui::TableSetupColumn("Used size (MB)", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+                    ImGui::TableSetupColumn("Allocated size (MB)", ImGuiTableColumnFlags_WidthFixed, 140.0f);
+
+                    ImGui::TableHeadersRow();
+
+                    auto doTableRow = [&](char const* label, Buffer const& buffer, u32 numUsed) {
+                        ImGui::TableNextRow();
+
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::Text("%s", label);
+
+                        ImGui::TableSetColumnIndex(1);
+                        ImGui::Text("%u", numUsed);
+
+                        ImGui::TableSetColumnIndex(2);
+                        u32 totalNum = narrow_cast<u32>(buffer.size() / buffer.stride());
+                        ImGui::Text("%u", totalNum);
+
+                        ImGui::TableSetColumnIndex(3);
+                        f32 percentageFilled = 100.0f * static_cast<f32>(numUsed) / static_cast<f32>(totalNum);
+                        ImGui::Text("%.1f%%", percentageFilled);
+
+                        ImGui::TableSetColumnIndex(4);
+                        float usedSizeMB = ark::conversion::to::MB(numUsed * buffer.stride());
+                        ImGui::Text("%.2f MB", usedSizeMB);
+
+                        ImGui::TableSetColumnIndex(5);
+                        float allocatedSizeMB = ark::conversion::to::MB(buffer.size());
+                        ImGui::Text("%.2f MB", allocatedSizeMB);
+
+                        totalAllocatedMeshletSizeMB += allocatedSizeMB;
+                        totalUsedMeshletSizeMB += usedSizeMB;
+                    };
+
+                    doTableRow("Meshlets", *m_meshletBuffer, m_nextFreeMeshletIndex);
+                    doTableRow("Meshlet vertex indirection", *m_meshletVertexIndirectionBuffer, m_nextFreeMeshletIndirIndex);
+                    doTableRow("Meshlet indices", *m_meshletIndexBuffer, m_nextFreeMeshletIndexBufferIndex);
+
+                    ImGui::EndTable();
+                }
+            }
+
+            ImGui::Separator();
+            ImGui::Text("Total index + vertex: %.2f MB / %.2f MB", totalUsedSizeMB, totalAllocatedSizeMB);
+            if (m_scene->maintainMeshShadingScene()) {
+                ImGui::Text("Total meshlet:        %.2f MB / %.2f MB", totalUsedMeshletSizeMB, totalAllocatedMeshletSizeMB);
+            }
+
+            ImGui::EndTabItem();
+        }
+
+        ImGui::EndTabBar();
+    }
+}
+
 bool VertexManager::allocateSkeletalMeshInstance(SkeletalMeshInstance& instance, CommandList& cmdList)
 {
     SCOPED_PROFILE_ZONE();
