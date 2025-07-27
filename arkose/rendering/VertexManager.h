@@ -190,11 +190,7 @@ private:
     template<typename F>
     bool processStreamingMeshState(VertexManager::StreamingMesh& streamingMesh, F&& processSegmentCallback);
 
-    // List of all streaming meshes that are not in the Loaded state
-    std::vector<StreamingMesh> m_activeStreamingMeshes {};
-    // List of all streaming meshes that are done streaming and in the Loaded state
-    std::vector<StreamingMesh> m_idleStreamingMeshes {};
-
+    std::vector<StreamingMesh> m_streamingMeshes {};
     std::vector<StreamingSkeletalMesh> m_streamingSkeletalMeshes {};
 
     VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);

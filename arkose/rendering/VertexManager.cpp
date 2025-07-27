@@ -84,11 +84,11 @@ void VertexManager::registerForStreaming(StaticMesh& mesh, bool includeIndices, 
     // There are (currently) no cases where we have velocity data from an asset that we need to upload
     constexpr bool includeVelocityData = false;
 
-    m_activeStreamingMeshes.push_back(StreamingMesh { .mesh = &mesh,
-                                                      .state = MeshStreamingState::PendingAllocation,
-                                                      .includeIndices = includeIndices,
-                                                      .includeSkinningData = includeSkinningData,
-                                                      .includeVelocityData = includeVelocityData });
+    m_streamingMeshes.push_back(StreamingMesh { .mesh = &mesh,
+                                                .state = MeshStreamingState::PendingAllocation,
+                                                .includeIndices = includeIndices,
+                                                .includeSkinningData = includeSkinningData,
+                                                .includeVelocityData = includeVelocityData });
 }
 
 template<typename F>
@@ -119,11 +119,8 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
 
     m_uploadBuffer->reset();
 
-    // TODO
-    //std::vector<size_t> fullyLoaded {};
-
-    for (size_t activeIdx = 0; activeIdx < m_activeStreamingMeshes.size(); ++activeIdx) {
-        StreamingMesh& streamingMesh = m_activeStreamingMeshes[activeIdx];
+    for (size_t activeIdx = 0; activeIdx < m_streamingMeshes.size(); ++activeIdx) {
+        StreamingMesh& streamingMesh = m_streamingMeshes[activeIdx];
 
         switch (streamingMesh.state) {
         case MeshStreamingState::PendingAllocation: {
@@ -245,8 +242,7 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
 
         case MeshStreamingState::Loaded: {
 
-            // TODO: Move to idle list! Probably do before we even end up here though..
-            // fullyLoaded.push_back(activeIdx);
+            // Nothing to do here...
 
         } break;
         }
@@ -266,7 +262,7 @@ void VertexManager::drawUI() const
                 ImGui::TableSetupColumn("Streaming mesh", ImGuiTableColumnFlags_WidthStretch);
                 ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed, 100.0f);
                 ImGui::TableHeadersRow();
-                for (const StreamingMesh& streamingMesh : m_activeStreamingMeshes) {
+                for (StreamingMesh const& streamingMesh : m_streamingMeshes) {
                     ImGui::TableNextRow();
                     ImGui::TableNextColumn();
                     ImGui::Text("%s", streamingMesh.mesh->name().data());
