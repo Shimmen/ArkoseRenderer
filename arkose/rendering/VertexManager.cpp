@@ -441,6 +441,70 @@ void VertexManager::drawUI() const
             ImGui::EndTabItem();
         }
 
+        if (m_scene->maintainRayTracingScene() && ImGui::BeginTabItem("BLAS")) {
+            ImGui::BeginChild("BLASChild");
+
+            float totalBlasSizeMB = 0.0f;
+            for (StreamingMesh const& streamingMesh : m_streamingMeshes) {
+                StaticMesh const& mesh = *streamingMesh.mesh;
+
+                if (ImGui::TreeNodeEx(mesh.name().data(), ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet)
+                    && ImGui::BeginTable("MeshBLASTable", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+
+                    ImGui::TableSetupColumn("LOD", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+                    ImGui::TableSetupColumn("Segment", ImGuiTableColumnFlags_WidthFixed, 50.0f);
+                    ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed, 85.0f);
+                    ImGui::TableSetupColumn("Size (MB)", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+
+                    ImGui::TableHeadersRow();
+
+                    float meshBlasSizeMB = 0.0f;
+
+                    for (u32 lodIdx = 0; lodIdx < mesh.numLODs(); ++lodIdx) {
+                        StaticMeshLOD const& lod = mesh.lodAtIndex(lodIdx);
+                        for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
+                            StaticMeshSegment const& segment = lod.meshSegments[segmentIdx];
+
+                            ImGui::TableNextRow();
+
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%u", lodIdx);
+
+                            ImGui::TableNextColumn();
+                            ImGui::Text("%u", segmentIdx);
+
+                            ImGui::TableNextColumn();
+                            if (streamingMesh.state <= MeshStreamingState::CreatingBLAS) {
+                                ImGui::Text("Pending");
+                            } else if (streamingMesh.state <= MeshStreamingState::CompactingBLAS) {
+                                ImGui::Text("Built");
+                            } else {
+                                ImGui::Text("Compacted");
+                            }
+
+                            ImGui::TableNextColumn();
+                            float sizeMB = ark::conversion::to::MB(segment.blas->sizeInMemory());
+                            ImGui::Text("%.2f MB", sizeMB);
+
+                            meshBlasSizeMB += sizeMB;
+                            totalBlasSizeMB += sizeMB;
+                        }
+                    }
+                    ImGui::EndTable();
+
+                    ImGui::Text("All LODs & segments: %.2f MB", meshBlasSizeMB);
+                    ImGui::TreePop();
+                    ImGui::Spacing();
+                }
+            }
+
+            ImGui::Separator();
+            ImGui::Text("Total BLAS: %.2f MB", totalBlasSizeMB);
+
+            ImGui::EndChild();
+            ImGui::EndTabItem();
+        }
+
         ImGui::EndTabBar();
     }
 }
