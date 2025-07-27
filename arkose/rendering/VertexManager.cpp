@@ -258,6 +258,7 @@ void VertexManager::drawUI() const
     if (ImGui::BeginTabBar("VertexManagerTabBar")) {
 
         if (ImGui::BeginTabItem("Streaming meshes")) {
+            ImGui::BeginChild("StreamingMeshesChild");
             if (ImGui::BeginTable("StreamingMeshesTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
                 ImGui::TableSetupColumn("Streaming mesh", ImGuiTableColumnFlags_WidthStretch);
                 ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed, 100.0f);
@@ -271,10 +272,13 @@ void VertexManager::drawUI() const
                 }
                 ImGui::EndTable();
             }
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
 
         if (ImGui::BeginTabItem("Vertex allocations")) {
+            ImGui::BeginChild("VertexAllocationsChild");
+
             float totalAllocatedSizeMB = 0.0f;
             float totalUsedSizeMB = 0.0f;
 
@@ -433,6 +437,7 @@ void VertexManager::drawUI() const
                 ImGui::Text("Total meshlet:        %.2f MB / %.2f MB", totalUsedMeshletSizeMB, totalAllocatedMeshletSizeMB);
             }
 
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
 
