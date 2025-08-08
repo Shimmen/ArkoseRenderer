@@ -337,6 +337,7 @@ endif()
 
 add_custom_command(TARGET ArkoseRenderer POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy -t $<TARGET_FILE_DIR:ArkoseRenderer> $<TARGET_RUNTIME_DLLS:ArkoseRenderer>
+    COMMENT "Copying runtime DLLs to the executable location"
     COMMAND_EXPAND_LISTS
 )
 
@@ -351,11 +352,12 @@ endif()
 
 # Make assets & shaders accessible in runtime relative to the exe-location
 
-add_custom_command(TARGET ArkoseRenderer PRE_BUILD
+add_custom_command(TARGET ArkoseRenderer POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/assets/imported" "$<TARGET_FILE_DIR:ArkoseRenderer>/assets"
     COMMAND ${CMAKE_COMMAND} -E create_symlink "${CMAKE_SOURCE_DIR}/arkose/shaders" "$<TARGET_FILE_DIR:ArkoseRenderer>/shaders"
     COMMENT "Creating symlinks to the assets and shaders so they will be locatable relative to the executable"
-    VERBATIM)
+    COMMAND_EXPAND_LISTS
+)
 
 ##################################
 ### PRETTIFY THE PROJECT FILES ###
