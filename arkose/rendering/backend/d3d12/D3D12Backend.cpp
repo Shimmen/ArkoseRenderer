@@ -312,6 +312,8 @@ void D3D12Backend::newFrame()
 
 bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTime, float deltaTime)
 {
+    SCOPED_PROFILE_ZONE_BACKEND();
+
     bool isRelativeFirstFrame = m_relativeFrameIndex < m_frameContexts.size();
     AppState appState { m_windowFramebufferExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
 
@@ -414,9 +416,13 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
 
         commandList->Close();
 
-        // Execute our commands (i.e. submit)
-        ID3D12CommandList* commandLists[] = { commandList };
-        commandQueue().ExecuteCommandLists(std::extent<decltype(commandLists)>::value, commandLists);
+        {
+            SCOPED_PROFILE_ZONE_BACKEND_NAMED("Submitting for queue");
+
+            // Execute our commands (i.e. submit)
+            ID3D12CommandList* commandLists[] = { commandList };
+            commandQueue().ExecuteCommandLists(std::extent<decltype(commandLists)>::value, commandLists);
+        }
     }
 
     // NOTE: We're ignoring any time relating to submitting & presenting, as that would factor e.g. GPU time & sync into the CPU time
@@ -428,6 +434,8 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
 
     // Present
     {
+        SCOPED_PROFILE_ZONE_BACKEND_NAMED("Presenting swapchain");
+
         UINT syncInterval = 1; // i.e. normal vsync
         UINT presentFlags = 0;
         swapChain().Present(syncInterval, presentFlags);
