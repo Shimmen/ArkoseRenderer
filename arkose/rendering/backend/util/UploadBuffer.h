@@ -39,7 +39,7 @@ public:
     const std::vector<BufferCopyOperation>& peekPendingOperations() const { return m_pendingOperations; }
 
     size_t size() const { return m_buffer->size(); }
-    size_t remainingSize() const { return size() - m_cursor; }
+    size_t unalignedRemainingSize() const { return size() - m_cursor; }
 
     void reset();
 
