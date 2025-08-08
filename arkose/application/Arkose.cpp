@@ -138,6 +138,8 @@ int Arkose::runArkoseApplication(int argc, char** argv)
             graphicsBackend.shadersDidRecompile(modifiedShaderFiles, appMainRenderPipeline);
         });
 
+        graphicsBackend.waitForFrameReady();
+
         bool windowSizeDidChange = system.newFrame();
 
         if (windowSizeDidChange) {

@@ -70,6 +70,7 @@ public:
     virtual void renderPipelineDidChange(RenderPipeline&) = 0;
     virtual void shadersDidRecompile(const std::vector<std::filesystem::path>& shaderNames, RenderPipeline&) = 0;
 
+    virtual void waitForFrameReady() = 0;
     virtual void newFrame() = 0;
     virtual bool executeFrame(RenderPipeline&, float elapsedTime, float deltaTime) = 0;
 

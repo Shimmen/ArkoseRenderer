@@ -305,6 +305,16 @@ void D3D12Backend::shadersDidRecompile(const std::vector<std::filesystem::path>&
     }
 }
 
+void D3D12Backend::waitForFrameReady()
+{
+    SCOPED_PROFILE_ZONE_BACKEND();
+
+    uint32_t frameContextIndex = m_nextSwapchainBufferIndex % m_frameContexts.size();
+    FrameContext& frameContext = *m_frameContexts[frameContextIndex];
+
+    waitForFence(frameContext.frameFence.Get(), frameContext.frameFenceValue, frameContext.frameFenceEvent);
+}
+
 void D3D12Backend::newFrame()
 {
     ImGui_ImplDX12_NewFrame();
@@ -322,11 +332,6 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
 
     // Can we not have separate frame context index from swapchain image index? Or am I just mixing up things?
     uint32_t backBufferIndex = frameContextIndex;
-
-    {
-        SCOPED_PROFILE_ZONE_BACKEND_NAMED("Waiting for fence");
-        waitForFence(frameContext.frameFence.Get(), frameContext.frameFenceValue, frameContext.frameFenceEvent);
-    }
 
     // NOTE: We're ignoring any time spent waiting for the fence, as that would factor e.g. GPU time & sync into the CPU time
     double cpuFrameStartTime = System::get().timeSinceStartup();

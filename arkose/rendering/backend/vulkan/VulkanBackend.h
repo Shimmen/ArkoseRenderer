@@ -60,6 +60,7 @@ public:
 
     void completePendingOperations() override;
 
+    void waitForFrameReady() override;
     void newFrame() override;
     bool executeFrame(RenderPipeline&, float elapsedTime, float deltaTime) override;
 

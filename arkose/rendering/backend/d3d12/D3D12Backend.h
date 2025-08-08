@@ -35,6 +35,7 @@ public:
     void renderPipelineDidChange(RenderPipeline&) override;
     void shadersDidRecompile(std::vector<std::filesystem::path> const& shaderNames, RenderPipeline&) override;
 
+    void waitForFrameReady() override;
     void newFrame() override;
     bool executeFrame(RenderPipeline&, float elapsedTime, float deltaTime) override;
 

@@ -1581,6 +1581,27 @@ void VulkanBackend::renderDearImguiFrame(VkCommandBuffer commandBuffer, FrameCon
     vkCmdEndRenderPass(commandBuffer);
 }
 
+void VulkanBackend::waitForFrameReady()
+{
+    SCOPED_PROFILE_ZONE_BACKEND();
+
+    uint32_t frameContextIndex = m_currentFrameIndex % m_frameContexts.size();
+    FrameContext& frameContext = *m_frameContexts[frameContextIndex];
+
+    // Wait indefinitely, or as long as the drivers will allow
+    uint64_t timeout = UINT64_MAX;
+
+    VkResult result = vkWaitForFences(device(), 1, &frameContext.frameFence, VK_TRUE, timeout);
+
+    if (result == VK_ERROR_DEVICE_LOST) {
+        ARKOSE_LOG(Fatal, "VulkanBackend: device was lost while waiting for frame fence (frame {}).", m_currentFrameIndex);
+    }
+
+    if (vkResetFences(device(), 1, &frameContext.frameFence) != VK_SUCCESS) {
+        ARKOSE_LOG(Error, "VulkanBackend: error resetting frame fence.");
+    }
+}
+
 void VulkanBackend::newFrame()
 {
     SCOPED_PROFILE_ZONE_BACKEND();
@@ -1597,23 +1618,6 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
 
     uint32_t frameContextIndex = m_currentFrameIndex % m_frameContexts.size();
     FrameContext& frameContext = *m_frameContexts[frameContextIndex];
-
-    {
-        SCOPED_PROFILE_ZONE_BACKEND_NAMED("Waiting for fence");
-
-        // Wait indefinitely, or as long as the drivers will allow
-        uint64_t timeout = UINT64_MAX;
-
-        VkResult result = vkWaitForFences(device(), 1, &frameContext.frameFence, VK_TRUE, timeout);
-
-        if (result == VK_ERROR_DEVICE_LOST) {
-            ARKOSE_LOG(Fatal, "VulkanBackend: device was lost while waiting for frame fence (frame {}).", m_currentFrameIndex);
-        }
-    
-        if (vkResetFences(device(), 1, &frameContext.frameFence) != VK_SUCCESS) {
-            ARKOSE_LOG(Error, "VulkanBackend: error resetting frame frame fence.");
-        }
-    }
 
     // NOTE: We're ignoring any time spent waiting for the fence, as that would factor e.g. GPU time & sync into the CPU time
     double cpuFrameStartTime = System::get().timeSinceStartup();
