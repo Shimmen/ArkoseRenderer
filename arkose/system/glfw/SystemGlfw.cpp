@@ -32,6 +32,10 @@ SystemGlfw::SystemGlfw()
 {
     SCOPED_PROFILE_ZONE_SYSTEM();
 
+    glfwSetErrorCallback([](int errorCode, const char* description) -> void {
+        ARKOSE_ERROR("SystemGlfw: glfw error {} '{}'", errorCode, description);
+    });
+
     if (!glfwInit()) {
         ARKOSE_LOG(Fatal, "SystemGlfw: could not initialize glfw, exiting.");
     }
