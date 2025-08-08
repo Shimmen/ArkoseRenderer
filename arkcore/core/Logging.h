@@ -92,3 +92,83 @@ inline std::enable_if_t<level != LogLevel::Fatal> _internal_log(fmt::format_stri
 #define MAKE_QUALIFIED_LOG_LEVEL(level) Logging::LogLevel::level
 
 #define ARKOSE_LOG(logLevel, format, ...) Logging::_internal_log<MAKE_QUALIFIED_LOG_LEVEL(logLevel)>(FMT_STRING(format) __VA_OPT__(,) __VA_ARGS__)
+
+// Custom fmtlib formatters
+
+#include <ark/vector.h>
+#include <ark/matrix.h>
+
+template<>
+struct fmt::formatter<vec3> {
+    fmt::formatter<float> m_floatFormatter;
+
+    constexpr auto parse(fmt::format_parse_context& ctx)
+    {
+        return m_floatFormatter.parse(ctx);
+    }
+
+    template<typename FormatContext>
+    auto format(vec3 const& v, FormatContext& ctx) const
+    {
+        auto out = ctx.out();
+        out = fmt::format_to(out, "{{ ");
+        out = m_floatFormatter.format(v.x, ctx);
+        out = fmt::format_to(out, ", ");
+        out = m_floatFormatter.format(v.y, ctx);
+        out = fmt::format_to(out, ", ");
+        out = m_floatFormatter.format(v.z, ctx);
+        out = fmt::format_to(out, " }}");
+        return out;
+    }
+};
+
+template<>
+struct fmt::formatter<vec4> {
+    fmt::formatter<float> m_floatFormatter;
+
+    constexpr auto parse(fmt::format_parse_context& ctx)
+    {
+        return m_floatFormatter.parse(ctx);
+    }
+
+    template<typename FormatContext>
+    auto format(vec4 const& v, FormatContext& ctx) const
+    {
+        auto out = ctx.out();
+        out = fmt::format_to(out, "{{ ");
+        out = m_floatFormatter.format(v.x, ctx);
+        out = fmt::format_to(out, ", ");
+        out = m_floatFormatter.format(v.y, ctx);
+        out = fmt::format_to(out, ", ");
+        out = m_floatFormatter.format(v.z, ctx);
+        out = fmt::format_to(out, ", ");
+        out = m_floatFormatter.format(v.w, ctx);
+        out = fmt::format_to(out, " }}");
+        return out;
+    }
+};
+
+template<>
+struct fmt::formatter<mat4> {
+    fmt::formatter<vec4> m_vec4Formatter;
+
+    constexpr auto parse(fmt::format_parse_context& ctx)
+    {
+        return m_vec4Formatter.parse(ctx);
+    }
+
+    template<typename FormatContext>
+    auto format(mat4 const& m, FormatContext& ctx) const
+    {
+        auto out = ctx.out();
+        out = fmt::format_to(out, "{{ ");
+        for (int i = 0; i < 4; ++i) {
+            m_vec4Formatter.format(m[i], ctx);
+            if (i < 3) {
+                out = fmt::format_to(out, ", ");
+            }
+        }
+        out = fmt::format_to(out, " }}");
+        return out;
+    }
+};
