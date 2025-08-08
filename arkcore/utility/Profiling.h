@@ -24,6 +24,9 @@ inline void setNameForActiveThread(const char* name);
 #define SCOPED_PROFILE_ZONE_BACKEND() ZoneScopedC(0x00ff00);
 #define SCOPED_PROFILE_ZONE_BACKEND_NAMED(name) ZoneScopedNC(name, 0x00ff00);
 
+#define SCOPED_PROFILE_ZONE_SYSTEM() ZoneScopedC(0xeeee44);
+#define SCOPED_PROFILE_ZONE_SYSTEM_NAMED(name) ZoneScopedNC(name, 0xeeee44);
+
 #define SCOPED_PROFILE_ZONE_PHYSICS() ZoneScopedC(0xdddddd);
 #define SCOPED_PROFILE_ZONE_PHYSICS_NAMED(name) ZoneScopedNC(name, 0xdddddd);
 

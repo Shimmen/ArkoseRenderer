@@ -30,7 +30,7 @@ std::array<GLFWgamepadstate, MaxJoystickCount> lastGamepadStates;
 
 SystemGlfw::SystemGlfw()
 {
-    SCOPED_PROFILE_ZONE();
+    SCOPED_PROFILE_ZONE_SYSTEM();
 
     if (!glfwInit()) {
         ARKOSE_LOG(Fatal, "SystemGlfw: could not initialize glfw, exiting.");
@@ -52,7 +52,7 @@ SystemGlfw::~SystemGlfw()
 
 bool SystemGlfw::createWindow(WindowType windowType, Extent2D const& requestedWindowSize, std::optional<u32> preferredMonitor)
 {
-    SCOPED_PROFILE_ZONE();
+    SCOPED_PROFILE_ZONE_SYSTEM();
 
     // NOTE: This is valid as long as we don't want an OpenGL or OpenGLES context (we support neither)
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -162,11 +162,17 @@ bool SystemGlfw::windowIsFullscreen()
 
 bool SystemGlfw::newFrame()
 {
-    Input::mutableInstance().preEventPoll();
-    glfwPollEvents(); // will trigger calls to the event callbacks immediately
+    SCOPED_PROFILE_ZONE_SYSTEM();
 
-    // glfw doesn't use callbacks for joysticks / gamepads, needs to be polled manually
-    collectGamepadState();
+    {
+        SCOPED_PROFILE_ZONE_SYSTEM_NAMED("Poll events");
+
+        Input::mutableInstance().preEventPoll();
+        glfwPollEvents(); // will trigger calls to the event callbacks immediately
+
+        // glfw doesn't use callbacks for joysticks / gamepads, needs to be polled manually
+        collectGamepadState();
+    }
 
     Extent2D currentWindowSize = windowSize();
     bool windowSizeDidChange = currentWindowSize != m_lastWindowSize;
