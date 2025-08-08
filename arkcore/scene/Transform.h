@@ -64,31 +64,35 @@ public:
         m_normalMatrix = {};
     }
 
-    void setTranslation(vec3 translation)
+    Transform& setTranslation(vec3 translation)
     {
         m_translation = translation;
         m_matrix = {};
+        return *this;
     }
 
-    void setOrientation(quat orientation)
+    Transform& setOrientation(quat orientation)
     {
         m_orientation = normalize(orientation);
         m_matrix = {};
         m_normalMatrix = {};
+        return *this;
     }
 
-    void setScale(vec3 scale)
+    Transform& setScale(vec3 scale)
     {
         m_scale = scale;
         m_matrix = {};
         m_normalMatrix = {};
+        return *this;
     }
 
-    void setScale(float scale)
+    Transform& setScale(float scale)
     {
         m_scale = vec3(scale);
         m_matrix = {};
         m_normalMatrix = {};
+        return *this;
     }
 
     void setFromMatrix(mat4 matrix)
