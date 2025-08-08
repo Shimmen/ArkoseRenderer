@@ -1,5 +1,6 @@
 #include "ShowcaseApp.h"
 
+#include "asset/SetAsset.h"
 #include "system/Input.h"
 #include "rendering/forward/ForwardRenderNode.h"
 #include "rendering/forward/PrepassNode.h"
@@ -81,6 +82,15 @@ void ShowcaseApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend
     if (description.path.empty()) {
         setupCullingShowcaseScene(scene);
     } else {
+
+        // Add clearcoat test asset
+        SetAsset* clearcoatSetAsset = SetAsset::load("assets/engine/test/material/clearcoat/CompareClearcoat.arkset");
+        SceneNodeHandle clearcoatSet = scene.addSet(clearcoatSetAsset);
+        scene.node(clearcoatSet)->transform()
+            .setTranslation(vec3(5.0f, 1.0f, 0.0f))
+            .setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(90.0f)))
+            .setScale(0.75f);
+
         MeshAsset* meshAsset = MeshAsset::load("assets/sample/models/CesiumMan/Cesium_Man.arkmsh");
         SkeletonAsset* skeletonAsset = SkeletonAsset::load("assets/sample/models/CesiumMan/Armature.arkskel");
         AnimationAsset* animationAsset = AnimationAsset::load("assets/sample/models/CesiumMan/animation0000.arkanim");
