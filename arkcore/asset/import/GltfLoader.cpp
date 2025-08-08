@@ -34,6 +34,19 @@ ImportResult GltfLoader::load(std::filesystem::path const& gltfFilePath)
     m_gltfFilePath = gltfFilePath;
 
     tinygltf::TinyGLTF loader {};
+    loader.SetImageLoader(
+        [](tinygltf::Image* image,
+           const int imageIdx,
+           std::string* err, std::string* warn,
+           int reqWidth, int reqHeight,
+           const unsigned char* bytes, int size,
+           void* user_data) -> bool {
+            // Do nothing, we will load the image after the fact.
+            // (but having this function return true is required for the loader to consider it a success)
+            return true;
+        },
+        nullptr);
+
     tinygltf::Model gltfModel {};
 
     std::string error;
