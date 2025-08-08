@@ -38,8 +38,13 @@ public:
     std::vector<BufferCopyOperation> popPendingOperations();
     const std::vector<BufferCopyOperation>& peekPendingOperations() const { return m_pendingOperations; }
 
+    // TODO: Figure out the optimal alignment! 256 bytes is likely safe for everything,
+    // but we should probably query the real value per platform to avoid wasting memory.
+    size_t uploadAlignment() const { return 256; }
+
     size_t size() const { return m_buffer->size(); }
     size_t unalignedRemainingSize() const { return size() - m_cursor; }
+    size_t alignedRemainingSize(size_t numUploads) const;
 
     void reset();
 

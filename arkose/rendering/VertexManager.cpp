@@ -721,12 +721,13 @@ std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StreamingM
     u32 indexCount = narrow_cast<u32>(meshletDataAsset.meshletIndices.size());
     u32 meshletCount = narrow_cast<u32>(meshletDataAsset.meshlets.size());
 
+    size_t numUploads = 3;
     size_t totalUploadSize = vertexCount * sizeof(u32) // vertex indirection buffer
         + indexCount * sizeof(u32) // index buffer
         + meshletCount * sizeof(ShaderMeshlet); // meshlet buffer
 
     // TODO: There are instances where segments are massive, so we need to allow uploading with a finer granularity.
-    if (totalUploadSize > m_uploadBuffer->unalignedRemainingSize()) {
+    if (totalUploadSize > m_uploadBuffer->alignedRemainingSize(numUploads)) {
         if (totalUploadSize > UploadBufferSize) {
             ARKOSE_LOG(Fatal, "Static mesh segment is {:.2f} MB but the meshlet upload budget is only {:.2f} MB. "
                               "The budget must be increased if we want to be able to load this asset.",

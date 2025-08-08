@@ -15,6 +15,16 @@ std::vector<BufferCopyOperation> UploadBuffer::popPendingOperations()
     return pending;
 }
 
+size_t UploadBuffer::alignedRemainingSize(size_t numUploads) const
+{
+    size_t worstCaseAlignmentLoss = numUploads * uploadAlignment();
+    if (unalignedRemainingSize() > worstCaseAlignmentLoss) {
+        return unalignedRemainingSize() - worstCaseAlignmentLoss;
+    } else {
+        return 0;
+    }
+}
+
 void UploadBuffer::reset()
 {
     m_cursor = 0;
@@ -41,13 +51,11 @@ bool UploadBuffer::upload(const void* data, size_t size, std::variant<BufferCopy
         }
     }
 
-    // TODO: Figure out what this is for the dst item! 16 bytes is likely safe for most cases, but we should probably query the real value.
-    size_t requiredAlignment = 16;
-
-    size_t alignedCursor = ark::alignUp(m_cursor, requiredAlignment);
+    size_t alignedCursor = ark::alignUp(m_cursor, uploadAlignment());
     size_t requiredSize = alignedCursor + size;
     if (requiredSize > m_buffer->size()) {
-        ARKOSE_LOG(Error, "UploadBuffer: not enough space for all requested uploads");
+        size_t missingBytes = requiredSize - m_buffer->size();
+        ARKOSE_LOG(Error, "UploadBuffer: not enough space for all requested uploads. Missing {} bytes.", missingBytes);
         return false;
     }
 
