@@ -1609,6 +1609,10 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
         if (result == VK_ERROR_DEVICE_LOST) {
             ARKOSE_LOG(Fatal, "VulkanBackend: device was lost while waiting for frame fence (frame {}).", m_currentFrameIndex);
         }
+    
+        if (vkResetFences(device(), 1, &frameContext.frameFence) != VK_SUCCESS) {
+            ARKOSE_LOG(Error, "VulkanBackend: error resetting frame frame fence.");
+        }
     }
 
     // NOTE: We're ignoring any time spent waiting for the fence, as that would factor e.g. GPU time & sync into the CPU time
@@ -1931,10 +1935,6 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
 
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = &swapchainImageContext.submitSemaphore;
-
-        if (vkResetFences(device(), 1, &frameContext.frameFence) != VK_SUCCESS) {
-            ARKOSE_LOG(Error, "VulkanBackend: error resetting in-flight frame fence.");
-        }
 
         VkResult submitStatus = vkQueueSubmit(m_graphicsQueue.queue, 1, &submitInfo, frameContext.frameFence);
         if (submitStatus != VK_SUCCESS) {
