@@ -65,7 +65,7 @@ public:
     bool hasSkinningData() const;
 
     size_t vertexCount() const;
-    std::vector<u8> assembleVertexData(const VertexLayout&) const;
+    std::vector<u8> assembleVertexData(VertexLayout const&, size_t firstVertex = 0, size_t numVertices = 0) const;
 
     // Position vertex data for mesh segment
     std::vector<vec3> positions {};

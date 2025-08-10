@@ -645,12 +645,22 @@ size_t MeshSegmentAsset::vertexCount() const
     return count;
 }
 
-std::vector<u8> MeshSegmentAsset::assembleVertexData(const VertexLayout& layout) const
+std::vector<u8> MeshSegmentAsset::assembleVertexData(VertexLayout const& layout, size_t firstVertex, size_t numVertices) const
 {
     SCOPED_PROFILE_ZONE();
 
+    if (numVertices == 0) {
+        numVertices = vertexCount();
+        if (firstVertex > 0) {
+            ARKOSE_ASSERT(numVertices > firstVertex);
+            numVertices -= firstVertex;
+        }
+    }
+
+    ARKOSE_ASSERT(firstVertex + numVertices <= vertexCount());
+
     size_t packedVertexSize = layout.packedVertexSize();
-    size_t bufferSize = vertexCount() * packedVertexSize;
+    size_t bufferSize = numVertices * packedVertexSize;
 
     std::vector<u8> dataVector {};
     dataVector.resize(bufferSize);
@@ -664,8 +674,9 @@ std::vector<u8> MeshSegmentAsset::assembleVertexData(const VertexLayout& layout)
 
     auto copyComponentData = [&](u8 const* input, size_t inputCount, VertexComponent component) {
         size_t componentSize = vertexComponentSize(component);
-        for (size_t vertexIdx = 0, count = vertexCount(); vertexIdx < count; ++vertexIdx) {
-            u8* destination = data + offsetInFirstVertex + vertexIdx * packedVertexSize;
+        for (size_t vertexIdx = firstVertex; vertexIdx < firstVertex + numVertices; ++vertexIdx) {
+            size_t dstIdx = vertexIdx - firstVertex;
+            u8* destination = data + offsetInFirstVertex + dstIdx * packedVertexSize;
             const u8* source = (vertexIdx < inputCount)
                 ? &input[vertexIdx * componentSize]
                 : (u8*)floatOnes.data();
