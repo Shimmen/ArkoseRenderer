@@ -29,6 +29,8 @@ public:
     bool hasIesProfile() const { return true; }
     const IESProfile& iesProfile() const { return m_iesProfile; }
 
+    float lightSourceRadius() const { return m_lightSourceRadius; }
+
 private:
 
     IESProfile m_iesProfile {};
@@ -37,6 +39,9 @@ private:
     // Light luminous intensity (candelas)
     // TODO: Actually use physically based units!
     float m_luminousIntensity { 1.0f };
+
+    // Radius of the light source (sphere)
+    float m_lightSourceRadius { 0.025f };
 
     // This will scale the IES profile so that it fits within the given angle
     float m_outerConeAngle { ark::toRadians(120.0f) };

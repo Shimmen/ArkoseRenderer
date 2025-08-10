@@ -47,6 +47,11 @@ void SpotLight::drawGui()
     std::string coneAngleDeg = fmt::format("{:.1f} degrees", ark::toDegrees(m_outerConeAngle));
     ImGui::SliderFloat("Max cone angle", &m_outerConeAngle, ark::toRadians(1.0f), ark::toRadians(179.0f), coneAngleDeg.c_str());
 
+    ImGui::SliderFloat("Light source radius", &m_lightSourceRadius, 0.005f, 0.5f, "%.3f m", ImGuiSliderFlags_None);
+    if (ImGui::IsItemHovered() || ImGui::IsItemActive()) {
+        DebugDrawer::get().drawSphere(transform().positionInWorld(), m_lightSourceRadius);
+    }
+
     ImGui::Separator();
 
     if (ImGui::TreeNode("Shadow mapping controls")) {
