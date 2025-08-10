@@ -54,6 +54,21 @@ void DirectionalLight::drawGui()
     DebugDrawer::get().drawArrow(transform().positionInWorld(), transform().forward(), 0.4f, color());
 }
 
+bool DirectionalLight::supportsShadowMode(ShadowMode shadowMode) const
+{
+    switch (shadowMode) {
+    case ShadowMode::None:
+        return false; // well.. :)
+    case ShadowMode::ShadowMapped:
+        return true;
+    case ShadowMode::RayTraced:
+        return false;
+    default:
+        ARKOSE_ERROR("Unsupported shadow mode for DirectionalLight: {}", shadowMode);
+        return false;
+    }
+}
+
 mat4 DirectionalLight::projectionMatrix() const
 {
     return ark::orthographicProjectionToVulkanClipSpace(shadowMapWorldExtent, -0.5f * shadowMapWorldExtent, 0.5f * shadowMapWorldExtent);

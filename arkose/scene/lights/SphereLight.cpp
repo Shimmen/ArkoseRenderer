@@ -40,6 +40,21 @@ float SphereLight::intensityValue() const
     return m_luminousPower / (4.0f * ark::PI);
 }
 
+bool SphereLight::supportsShadowMode(ShadowMode shadowMode) const
+{
+    switch (shadowMode) {
+    case ShadowMode::None:
+        return true;
+    case ShadowMode::ShadowMapped:
+        return false;
+    case ShadowMode::RayTraced:
+        return true;
+    default:
+        ARKOSE_ERROR("Unsupported shadow mode for SphereLight: {}", shadowMode);
+        return false;
+    }
+}
+
 void SphereLight::drawGui()
 {
     Light::drawGui();

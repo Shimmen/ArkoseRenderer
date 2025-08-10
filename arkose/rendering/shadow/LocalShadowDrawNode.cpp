@@ -116,8 +116,8 @@ std::vector<LocalShadowDrawNode::ShadowMapAtlasAllocation> LocalShadowDrawNode::
     SCOPED_PROFILE_ZONE();
 
     std::vector<const Light*> shadowCastingLights {};
-    scene.forEachShadowCastingLight([&](size_t, const Light& light) {
-        if (light.castsShadows() && light.type() != Light::Type::DirectionalLight) {
+    scene.forEachLocalLight([&](size_t, const Light& light) {
+        if (light.shadowMode() == ShadowMode::ShadowMapped) {
             shadowCastingLights.push_back(&light);
         }
     });

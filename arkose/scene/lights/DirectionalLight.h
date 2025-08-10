@@ -20,6 +20,8 @@ public:
 
     float intensityValue() const final { return illuminance(); }
 
+    virtual bool supportsShadowMode(ShadowMode) const override;
+
     mat4 projectionMatrix() const final;
     virtual float constantBias() const override;
     virtual float slopeBias() const override;

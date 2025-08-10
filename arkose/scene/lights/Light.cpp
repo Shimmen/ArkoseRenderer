@@ -18,7 +18,7 @@ Light::Light(Type type, LightAsset const& asset)
     , m_color(Color::fromNonLinearSRGB(asset.color))
     , m_transform(asset.transform)
 {
-    m_castsShadows = asset.castsShadows;
+    m_shadowMode = asset.castsShadows ? ShadowMode::ShadowMapped : ShadowMode::None;
     customConstantBias = asset.customConstantBias;
     customSlopeBias = asset.customSlopeBias;
 }
@@ -33,7 +33,36 @@ void Light::drawGui()
     ImGui::Text("Light");
     ImGui::Spacing();
     ImGui::ColorEdit3("Color", m_color.asFloatPointer());
+
     ImGui::Spacing();
+
+    ImGui::Text("Shadow mode:");
+    {
+        ImGui::BeginDisabled(!supportsShadowMode(ShadowMode::None));
+        if (ImGui::RadioButton("None", m_shadowMode == ShadowMode::None)) {
+            m_shadowMode = ShadowMode::None;
+        }
+        ImGui::EndDisabled();
+    }
+    ImGui::SameLine();
+    {
+        ImGui::BeginDisabled(!supportsShadowMode(ShadowMode::ShadowMapped));
+        if (ImGui::RadioButton("Shadow mapped", m_shadowMode == ShadowMode::ShadowMapped)) {
+            m_shadowMode = ShadowMode::ShadowMapped;
+        }
+        ImGui::EndDisabled();
+    }
+    ImGui::SameLine();
+    {
+        ImGui::BeginDisabled(!supportsShadowMode(ShadowMode::RayTraced));
+        if (ImGui::RadioButton("Ray traced", m_shadowMode == ShadowMode::RayTraced)) {
+            m_shadowMode = ShadowMode::RayTraced;
+        }
+        ImGui::EndDisabled();
+    }
+
+    ImGui::Spacing();
+
     ImGui::Text("Transform:");
     m_transform.drawGui();
 }

@@ -7,6 +7,12 @@
 
 class LightAsset;
 
+enum class ShadowMode {
+    None,
+    ShadowMapped,
+    RayTraced,
+};
+
 class Light : public IEditorObject {
 public:
 
@@ -48,14 +54,17 @@ public:
     virtual float constantBias() const = 0;
     virtual float slopeBias() const = 0;
 
-    bool castsShadows() const { return m_castsShadows; }
+    virtual bool supportsShadowMode(ShadowMode) const = 0;
+
+    ShadowMode shadowMode() const { return m_shadowMode; }
+    bool castsShadows() const { return shadowMode() != ShadowMode::None; }
 
     void setName(std::string name) { m_name = std::move(name); }
     const std::string& name() const { return m_name; }
 
 private:
     Type m_type { Type::DirectionalLight };
-    bool m_castsShadows { true };
+    ShadowMode m_shadowMode { ShadowMode::ShadowMapped };
     std::string m_name {};
 
     Color m_color { Colors::white };

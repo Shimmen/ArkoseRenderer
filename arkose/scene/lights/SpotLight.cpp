@@ -58,6 +58,21 @@ void SpotLight::drawGui()
     DebugDrawer::get().drawArrow(transform().positionInWorld(), transform().forward(), 0.4f, color());
 }
 
+bool SpotLight::supportsShadowMode(ShadowMode shadowMode) const
+{
+    switch (shadowMode) {
+    case ShadowMode::None:
+        return true;
+    case ShadowMode::ShadowMapped:
+        return true;
+    case ShadowMode::RayTraced:
+        return false; // TODO!
+    default:
+        ARKOSE_ERROR("Unsupported shadow mode for SpotLight: {}", shadowMode);
+        return false;
+    }
+}
+
 mat4 SpotLight::projectionMatrix() const
 {
     return ark::perspectiveProjectionToVulkanClipSpace(m_outerConeAngle, 1.0f, m_zNear, m_zFar);

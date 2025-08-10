@@ -18,6 +18,8 @@ public:
 
     float intensityValue() const final { return m_luminousIntensity; }
 
+    virtual bool supportsShadowMode(ShadowMode) const override;
+
     float outerConeAngle() const { return m_outerConeAngle; }
 
     mat4 projectionMatrix() const final;

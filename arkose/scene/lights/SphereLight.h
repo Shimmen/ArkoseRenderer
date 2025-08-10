@@ -17,6 +17,8 @@ public:
 
     virtual float intensityValue() const final;
 
+    virtual bool supportsShadowMode(ShadowMode) const override;
+
     float lightRadius() const { return m_lightRadius; }
     float lightSourceRadius() const { return m_lightSourceRadius; }
 
