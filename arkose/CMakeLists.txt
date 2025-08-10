@@ -174,8 +174,6 @@ set(ARKOSE_SOURCES
     arkose/rendering/nodes/PickingNode.h
     arkose/rendering/nodes/RTReflectionsNode.cpp
     arkose/rendering/nodes/RTReflectionsNode.h
-    arkose/rendering/nodes/RTSphereLightShadowNode.cpp
-    arkose/rendering/nodes/RTSphereLightShadowNode.h
     arkose/rendering/nodes/RTVisualisationNode.cpp
     arkose/rendering/nodes/RTVisualisationNode.h
     arkose/rendering/nodes/SkyViewNode.cpp
@@ -206,6 +204,8 @@ set(ARKOSE_SOURCES
     arkose/rendering/shadow/DirectionalShadowProjectNode.h
     arkose/rendering/shadow/LocalShadowDrawNode.cpp
     arkose/rendering/shadow/LocalShadowDrawNode.h
+    arkose/rendering/shadow/RTSphereLightShadowNode.cpp
+    arkose/rendering/shadow/RTSphereLightShadowNode.h
     # upscaling
     arkose/rendering/upscaling/UpscalingNode.cpp
     arkose/rendering/upscaling/UpscalingNode.h
