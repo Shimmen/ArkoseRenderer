@@ -104,7 +104,11 @@ bool VertexManager::processStreamingMeshState(StreamingMesh& streamingMesh, F&& 
 
             bool success = processSegmentCallback(meshSegment);
 
-            if (!success) {
+            if (success) {
+                streamingMesh.nextMeshlet = 0;
+                streamingMesh.nextVertex = 0;
+                streamingMesh.nextIndex = 0;
+            } else {
                 return false;
             }
         }
@@ -143,6 +147,7 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
 
             if (stateDone) {
                 streamingMesh.setNextState(MeshStreamingState::LoadingData);
+                //streamingMesh.setNextState(MeshStreamingState::StreamingVertexData); // TODO: Stream!
             }
 
         } break;
@@ -161,7 +166,7 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
             }
 
             if (allVertexDataStreamedIn) {
-                if ( m_scene->maintainMeshShadingScene() ) {
+                if (m_scene->maintainMeshShadingScene()) {
                     streamingMesh.setNextState(MeshStreamingState::StreamingMeshletData);
                 } else if (m_scene->maintainRayTracingScene()) {
                     streamingMesh.setNextState(MeshStreamingState::CreatingBLAS);
@@ -172,17 +177,35 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
 
         } break;
 
-        //case MeshStreamingState::StreamingVertexData: {
-        //
-        //    // todo!
-        //
-        //} break;
+        case MeshStreamingState::StreamingVertexData: {
+        
+            bool stateDone = processStreamingMeshState(streamingMesh, [&](StaticMeshSegment& meshSegment) -> bool {
+                return streamVertexData(streamingMesh, meshSegment);
+            });
 
-        //case MeshStreamingState::StreamingIndexData: {
-        //
-        //    // todo!
-        //
-        //} break;
+            if (stateDone) {
+                streamingMesh.setNextState(MeshStreamingState::StreamingIndexData);
+            }
+        
+        } break;
+
+        case MeshStreamingState::StreamingIndexData: {
+        
+            bool stateDone = processStreamingMeshState(streamingMesh, [&](StaticMeshSegment& meshSegment) -> bool {
+                return streamIndexData(streamingMesh, meshSegment);
+            });
+
+            if (stateDone) {
+                if (m_scene->maintainMeshShadingScene()) {
+                    streamingMesh.setNextState(MeshStreamingState::StreamingMeshletData);
+                } else if (m_scene->maintainRayTracingScene()) {
+                    streamingMesh.setNextState(MeshStreamingState::CreatingBLAS);
+                } else {
+                    streamingMesh.setNextState(MeshStreamingState::Loaded);
+                }
+            }
+
+        } break;
 
         case MeshStreamingState::StreamingMeshletData: {
 
@@ -706,6 +729,124 @@ void VertexManager::uploadMeshDataForAllocation(MeshSegmentAsset const& segmentA
         size_t indexOffset = allocation.firstIndex * indexSize;
         m_indexBuffer->updateData(segmentAsset.indices.data(), segmentAsset.indices.size() * indexSize, indexOffset);
     }
+}
+
+bool VertexManager::streamVertexData(StreamingMesh& streamingMesh, StaticMeshSegment const& meshSegment)
+{
+    SCOPED_PROFILE_ZONE();
+
+    MeshSegmentAsset const& segmentAsset = *meshSegment.asset;
+    VertexAllocation const& allocation = meshSegment.vertexAllocation;
+
+    ARKOSE_ASSERT(allocation.vertexCount > 0);
+    ARKOSE_ASSERT(allocation.vertexCount == segmentAsset.vertexCount());
+    ARKOSE_ASSERT(streamingMesh.nextVertex < allocation.vertexCount);
+
+    u32 sizePerVert = narrow_cast<u32>(m_positionOnlyVertexLayout.packedVertexSize() + m_nonPositionVertexLayout.packedVertexSize());
+    if (allocation.hasSkinningData()) {
+        sizePerVert += narrow_cast<u32>(m_skinningDataVertexLayout.packedVertexSize());
+    }
+
+    u32 remainingCount = allocation.vertexCount - streamingMesh.nextVertex;
+    ARKOSE_ASSERT(remainingCount > 0);
+
+    size_t numUploads = allocation.hasSkinningData() ? 3 : 2;
+    u32 remainingBudgetSize = narrow_cast<u32>(m_uploadBuffer->alignedRemainingSize(numUploads));
+    u32 remainingBudgetCount = remainingBudgetSize / sizePerVert;
+
+    u32 firstVertToUpload = streamingMesh.nextVertex;
+    u32 numVertsToUpload = std::min(remainingCount, remainingBudgetCount);
+
+    //ARKOSE_LOG(Info, "Stream {} verts, first vert {}", numVertsToUpload, firstVertToUpload);
+
+    if (numVertsToUpload == 0) {
+        // Not able to upload right now
+        return false;
+    }
+
+    // Position data
+    {
+        std::vector<u8> positionOnlyVertexData = segmentAsset.assembleVertexData(m_positionOnlyVertexLayout, firstVertToUpload, numVertsToUpload);
+        size_t positionOnlyVertexOffset = (allocation.firstVertex + firstVertToUpload) * m_positionOnlyVertexLayout.packedVertexSize();
+        bool success = m_uploadBuffer->upload(positionOnlyVertexData.data(), positionOnlyVertexData.size(), *m_positionOnlyVertexBuffer, positionOnlyVertexOffset);
+
+        if (!success) {
+            ARKOSE_ERROR("VertexManager: position upload failed, which should be impossible as we've checked the remaining size beforehand! Something is wrong");
+            return false;
+        }
+    }
+
+    // Non-position data
+    {
+        std::vector<u8> nonPositionVertexData = segmentAsset.assembleVertexData(m_nonPositionVertexLayout, firstVertToUpload, numVertsToUpload);
+        size_t nonPositionVertexOffset = (allocation.firstVertex + firstVertToUpload) * m_nonPositionVertexLayout.packedVertexSize();
+        bool success = m_uploadBuffer->upload(nonPositionVertexData.data(), nonPositionVertexData.size(), *m_nonPositionVertexBuffer, nonPositionVertexOffset);
+
+        if (!success) {
+            ARKOSE_ERROR("VertexManager: non-position upload failed, which should be impossible as we've checked the remaining size beforehand! Something is wrong");
+            return false;
+        }
+    }
+
+    // Optional skinning data
+    if (allocation.hasSkinningData()) {
+
+        std::vector<u8> skinningVertexData = segmentAsset.assembleVertexData(m_skinningDataVertexLayout, firstVertToUpload, numVertsToUpload);
+        size_t skinningDataOffset = (allocation.firstSkinningVertex + firstVertToUpload) * m_skinningDataVertexLayout.packedVertexSize();
+        bool success = m_uploadBuffer->upload(skinningVertexData.data(), skinningVertexData.size(), *m_skinningDataVertexBuffer, skinningDataOffset);
+
+        if (!success) {
+            ARKOSE_ERROR("VertexManager: skinning data upload failed, which should be impossible as we've checked the remaining size beforehand! Something is wrong");
+            return false;
+        }
+    }
+
+    streamingMesh.nextVertex += numVertsToUpload;
+    ARKOSE_ASSERT(streamingMesh.nextVertex <= allocation.vertexCount);
+    return streamingMesh.nextVertex == allocation.vertexCount;
+}
+
+bool VertexManager::streamIndexData(StreamingMesh& streamingMesh, StaticMeshSegment const& meshSegment)
+{
+    SCOPED_PROFILE_ZONE();
+
+    MeshSegmentAsset const& segmentAsset = *meshSegment.asset;
+    VertexAllocation const& allocation = meshSegment.vertexAllocation;
+
+    if (!allocation.hasIndices()) {
+        // Done, nothing to do
+        return true;
+    }
+
+    u32 remainingCount = allocation.indexCount - streamingMesh.nextIndex;
+    ARKOSE_ASSERT(remainingCount > 0);
+
+    u32 indexSize = narrow_cast<u32>(sizeofIndexType(indexType()));
+
+    u32 remainingBudgetSize = narrow_cast<u32>(m_uploadBuffer->alignedRemainingSize(1));
+    u32 remainingBudgetCount = remainingBudgetSize / indexSize;
+
+    u32 firstIndexToUpload = streamingMesh.nextIndex;
+    u32 numIndicesToUpload = std::min(remainingCount, remainingBudgetCount);
+
+    //ARKOSE_LOG(Info, "Stream {} indices, first index {}", numIndicesToUpload, firstIndexToUpload);
+
+    if (numIndicesToUpload == 0) {
+        // Not able to upload right now
+        return false;
+    }
+
+    size_t indexOffset = (allocation.firstIndex + firstIndexToUpload) * indexSize;
+    bool success = m_uploadBuffer->upload(segmentAsset.indices.data() + firstIndexToUpload, numIndicesToUpload * indexSize, *m_indexBuffer, indexOffset);
+
+    if (!success) {
+        ARKOSE_ERROR("VertexManager: index upload failed, which should be impossible as we've checked the remaining size beforehand! Something is wrong");
+        return false;
+    }
+
+    streamingMesh.nextIndex += numIndicesToUpload;
+    ARKOSE_ASSERT(streamingMesh.nextIndex <= allocation.indexCount);
+    return streamingMesh.nextIndex == allocation.indexCount;
 }
 
 std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StreamingMesh& streamingMesh, StaticMeshSegment const& meshSegment)

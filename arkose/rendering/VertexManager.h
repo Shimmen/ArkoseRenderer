@@ -146,10 +146,9 @@ private:
 
     enum class MeshStreamingState {
         PendingAllocation = 0,
-        LoadingData,
-        // TODO:
-        //StreamingVertexData,
-        //StreamingIndexData,
+        LoadingData, // TODO: Remove this non-streaming variant!
+        StreamingVertexData,
+        StreamingIndexData,
         StreamingMeshletData,
         CreatingBLAS,
         CompactingBLAS,
@@ -194,6 +193,8 @@ private:
     std::vector<StreamingSkeletalMesh> m_streamingSkeletalMeshes {};
 
     VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
+    bool streamVertexData(StreamingMesh&, StaticMeshSegment const&);
+    bool streamIndexData(StreamingMesh&, StaticMeshSegment const&);
     std::optional<MeshletView> streamMeshletDataForSegment(StreamingMesh& streamingMesh, StaticMeshSegment const&);
     std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(VertexAllocation const&);
 };
