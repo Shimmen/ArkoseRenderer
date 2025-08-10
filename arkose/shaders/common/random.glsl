@@ -65,6 +65,16 @@ vec3 randomPointOnSphere()
     );
 }
 
+vec2 randomPointInDisk()
+{
+    float theta = TWO_PI * randomFloat();
+    float r = sqrt(randomFloat());
+    return vec2(
+        r * cos(theta),
+        r * sin(theta)
+    );
+}
+
 vec3 randomOrthogonal(vec3 reference)
 {
     float dotProduct;
