@@ -73,6 +73,8 @@ set(ARKCORE_SOURCES
   arkcore/rendering/Brdf.h
   arkcore/rendering/ImageFilter.h
   arkcore/rendering/ImageWrapMode.h
+  arkcore/rendering/Vertex.cpp
+  arkcore/rendering/Vertex.h
   arkcore/rendering/VertexAllocation.h
 
   # scene
@@ -81,8 +83,6 @@ set(ARKCORE_SOURCES
   arkcore/scene/ProbeGrid.h
   arkcore/scene/Transform.cpp
   arkcore/scene/Transform.h
-  arkcore/scene/Vertex.cpp
-  arkcore/scene/Vertex.h
 
   # utility
   arkcore/utility/EnumHelpers.h

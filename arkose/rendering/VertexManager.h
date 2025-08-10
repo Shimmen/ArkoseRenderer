@@ -6,7 +6,7 @@
 #include "rendering/backend/util/DrawCall.h"
 #include "rendering/backend/util/IndexType.h"
 #include "rendering/StaticMesh.h"
-#include "scene/Vertex.h"
+#include "rendering/Vertex.h"
 #include <ark/copying.h>
 #include <memory>
 #include <optional>

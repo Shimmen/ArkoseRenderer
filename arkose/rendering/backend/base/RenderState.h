@@ -7,7 +7,7 @@
 #include "rendering/backend/util/StateBindings.h"
 
 // TODO: Clean up: shouln't refer to frontend from backend!
-#include "scene/Vertex.h"
+#include "rendering/Vertex.h"
 
 enum class DepthCompareOp {
     Less,

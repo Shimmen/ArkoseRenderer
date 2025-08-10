@@ -5,7 +5,7 @@
 #include "core/Types.h"
 #include "core/math/Sphere.h"
 #include "physics/PhysicsMesh.h"
-#include "scene/Vertex.h"
+#include "rendering/Vertex.h"
 #include <ark/aabb.h>
 #include <string>
 #include <string_view>

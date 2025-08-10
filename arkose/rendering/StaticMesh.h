@@ -10,7 +10,7 @@
 #include "rendering/VertexAllocation.h"
 #include "rendering/backend/base/AccelerationStructure.h"
 #include "rendering/meshlet/MeshletView.h"
-#include "scene/Vertex.h"
+#include "rendering/Vertex.h"
 #include <ark/aabb.h>
 #include <ark/vector.h>
 #include <string>
