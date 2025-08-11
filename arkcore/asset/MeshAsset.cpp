@@ -359,24 +359,28 @@ void MeshSegmentAsset::generateTangents()
 #if PLATFORM_WINDOWS
 void MeshSegmentAsset::generateOpacityMicroMap()
 {
-    static omm::Baker ommBaker;
-    if (ommBaker == nullptr) {
-        omm::BakerCreationDesc desc {};
-        desc.type = omm::BakerType::CPU;
+    SCOPED_PROFILE_ZONE();
 
-        desc.messageInterface.userArg = nullptr;
-        desc.messageInterface.messageCallback = [](omm::MessageSeverity severity, const char* message, void* userArg) {
-            ARKOSE_LOG(Info, "OMM-SDK message: [{}] {}", severity, message);
-        };
+    omm::BakerCreationDesc desc {};
+    desc.type = omm::BakerType::CPU;
 
-        // NOTE: Will be leaked, but is hopefully not so bad..
-        omm::Result res = omm::CreateBaker(desc, &ommBaker);
+    desc.messageInterface.userArg = nullptr;
+    desc.messageInterface.messageCallback = [](omm::MessageSeverity severity, const char* message, void* userArg) {
+        ARKOSE_LOG(Info, "OMM-SDK message: [{}] {}", severity, message);
+    };
 
-        if (res != omm::Result::SUCCESS) {
-            ARKOSE_LOG(Error, "Failed to create OMM baker, will not generate opacity micro-maps.");
-            return;
-        }
+    omm::Baker ommBaker;
+    omm::Result res = omm::CreateBaker(desc, &ommBaker);
+
+    if (res != omm::Result::SUCCESS) {
+        ARKOSE_LOG(Error, "Failed to create OMM baker, will not generate opacity micro-maps.");
+        return;
     }
+
+    ark::AtScopeExit destroyBaker([&]() {
+        omm::Result destroyRes = omm::DestroyBaker(ommBaker);
+        ARKOSE_ASSERT(destroyRes == omm::Result::SUCCESS);
+    });
 
     //
 
