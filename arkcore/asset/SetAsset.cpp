@@ -28,18 +28,14 @@ SetAsset* SetAsset::load(std::filesystem::path const& filePath)
         ARKOSE_LOG(Warning, "Trying to load set asset with invalid file extension: '{}'", filePath);
     }
 
-    if (SetAsset* cachedAsset = s_setAssetCache.get(filePath)) {
-        return cachedAsset;
-    }
-
-    auto newSetAsset = std::make_unique<SetAsset>();
-    bool success = newSetAsset->readFromFile(filePath);
-
-    if (!success) {
-        return nullptr;
-    }
-
-    return s_setAssetCache.put(filePath, std::move(newSetAsset));
+    return s_setAssetCache.getOrCreate(filePath, [&]() {
+        auto newSetAsset = std::make_unique<SetAsset>();
+        if (newSetAsset->readFromFile(filePath)) {
+            return newSetAsset;
+        } else {
+            return std::unique_ptr<SetAsset>();
+        }
+    });
 }
 
 bool SetAsset::readFromFile(std::filesystem::path const& filePath)

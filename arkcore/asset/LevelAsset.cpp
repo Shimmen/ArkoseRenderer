@@ -18,22 +18,18 @@ LevelAsset* LevelAsset::load(std::filesystem::path const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not isValidAssetPath(filePath)) {
+    if (!isValidAssetPath(filePath)) {
         ARKOSE_LOG(Warning, "Trying to load level asset with invalid file extension: '{}'", filePath);
     }
 
-    if (LevelAsset* cachedAsset = s_levelAssetCache.get(filePath)) {
-        return cachedAsset;
-    }
-
-    auto newLevelAsset = std::make_unique<LevelAsset>();
-    bool success = newLevelAsset->readFromFile(filePath);
-
-    if (!success) {
-        return nullptr;
-    }
-
-    return s_levelAssetCache.put(filePath, std::move(newLevelAsset));
+    return s_levelAssetCache.getOrCreate(filePath, [&]() {
+        auto newLevelAsset = std::make_unique<LevelAsset>();
+        if (newLevelAsset->readFromFile(filePath)) {
+            return newLevelAsset;
+        } else {
+            return std::unique_ptr<LevelAsset>();
+        }
+    });
 }
 
 std::unique_ptr<LevelAsset> LevelAsset::createFromAssetImportResult(ImportResult const& result)

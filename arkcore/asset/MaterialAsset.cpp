@@ -23,22 +23,18 @@ MaterialAsset* MaterialAsset::load(std::filesystem::path const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not isValidAssetPath(filePath)) {
+    if (!isValidAssetPath(filePath)) {
         ARKOSE_LOG(Warning, "Trying to load material asset with invalid file extension: '{}'", filePath);
     }
 
-    if (MaterialAsset* cachedAsset = s_materialAssetCache.get(filePath)) {
-        return cachedAsset;
-    }
-
-    auto newMaterialAsset = std::make_unique<MaterialAsset>();
-    bool success = newMaterialAsset->readFromFile(filePath);
-
-    if (!success) {
-        return nullptr;
-    }
-
-    return s_materialAssetCache.put(filePath, std::move(newMaterialAsset));
+    return s_materialAssetCache.getOrCreate(filePath, [&]() {
+        auto newMaterialAsset = std::make_unique<MaterialAsset>();
+        if (newMaterialAsset->readFromFile(filePath)) {
+            return newMaterialAsset;
+        } else {
+            return std::unique_ptr<MaterialAsset>();
+        }
+    });
 }
 
 MaterialAsset* MaterialAsset::manage(std::unique_ptr<MaterialAsset>&& materialAsset)

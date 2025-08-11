@@ -215,22 +215,18 @@ ImageAsset* ImageAsset::load(std::filesystem::path const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not isValidAssetPath(filePath)) {
+    if (!isValidAssetPath(filePath)) {
         ARKOSE_LOG(Warning, "Trying to load image asset with invalid file extension: '{}'", filePath);
     }
 
-    if (ImageAsset* cachedAsset = s_imageAssetCache.get(filePath)) {
-        return cachedAsset;
-    }
-
-    auto newImageAsset = std::make_unique<ImageAsset>();
-    bool success = newImageAsset->readFromFile(filePath);
-
-    if (!success) {
-        return nullptr;
-    }
-
-    return s_imageAssetCache.put(filePath, std::move(newImageAsset));
+    return s_imageAssetCache.getOrCreate(filePath, [&]() {
+        auto newImageAsset = std::make_unique<ImageAsset>();
+        if (newImageAsset->readFromFile(filePath)) {
+            return newImageAsset;
+        } else {
+            return std::unique_ptr<ImageAsset>();
+        }
+    });
 }
 
 ImageAsset* ImageAsset::manage(std::unique_ptr<ImageAsset>&& imageAsset)
@@ -245,18 +241,15 @@ ImageAsset* ImageAsset::loadOrCreate(std::filesystem::path const& filePath)
         return load(filePath);
     } else {
 
-        if (ImageAsset* cachedAsset = s_imageAssetCache.get(filePath)) {
-            return cachedAsset;
-        }
-
-        std::unique_ptr<ImageAsset> newImageAsset = createFromSourceAsset(filePath);
-        if (not newImageAsset) {
-            return nullptr;
-        }
-
-        newImageAsset->setAssetFilePath(filePath);
-
-        return s_imageAssetCache.put(filePath, std::move(newImageAsset));
+        return s_imageAssetCache.getOrCreate(filePath, [&]() {
+            auto newImageAsset = createFromSourceAsset(filePath);
+            if (newImageAsset) {
+                newImageAsset->setAssetFilePath(filePath);
+                return newImageAsset;
+            } else {
+                return std::unique_ptr<ImageAsset>();
+            }
+        });
     }
 }
 

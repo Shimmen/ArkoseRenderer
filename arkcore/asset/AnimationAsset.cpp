@@ -20,22 +20,18 @@ AnimationAsset* AnimationAsset::load(std::filesystem::path const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not isValidAssetPath(filePath)) {
+    if (!isValidAssetPath(filePath)) {
         ARKOSE_LOG(Warning, "Trying to load animation asset with invalid file extension: '{}'", filePath);
     }
 
-    if (AnimationAsset* cachedAsset = s_animationAssetCache.get(filePath)) {
-        return cachedAsset;
-    }
-
-    auto newAnimationAsset = std::make_unique<AnimationAsset>();
-    bool success = newAnimationAsset->readFromFile(filePath);
-
-    if (!success) {
-        return nullptr;
-    }
-
-    return s_animationAssetCache.put(filePath, std::move(newAnimationAsset));
+    return s_animationAssetCache.getOrCreate(filePath, [&]() {
+        auto newAnimationAsset = std::make_unique<AnimationAsset>();
+        if (newAnimationAsset->readFromFile(filePath)) {
+            return newAnimationAsset;
+        } else {
+            return std::unique_ptr<AnimationAsset>();
+        }
+    });
 }
 
 AnimationAsset* AnimationAsset::manage(std::unique_ptr<AnimationAsset>&& animationAsset)

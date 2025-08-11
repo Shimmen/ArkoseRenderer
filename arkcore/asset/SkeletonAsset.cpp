@@ -16,22 +16,18 @@ SkeletonAsset* SkeletonAsset::load(std::filesystem::path const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not isValidAssetPath(filePath)) {
+    if (!isValidAssetPath(filePath)) {
         ARKOSE_LOG(Warning, "Trying to load skeleton asset with invalid file extension: '{}'", filePath);
     }
 
-    if (SkeletonAsset* cachedAsset = s_skeletonAssetCache.get(filePath)) {
-        return cachedAsset;
-    }
-
-    auto newSkeletonAsset = std::make_unique<SkeletonAsset>();
-    bool success = newSkeletonAsset->readFromFile(filePath);
-
-    if (!success) {
-        return nullptr;
-    }
-
-    return s_skeletonAssetCache.put(filePath, std::move(newSkeletonAsset));
+    return s_skeletonAssetCache.getOrCreate(filePath, [&]() {
+        auto newSkeletonAsset = std::make_unique<SkeletonAsset>();
+        if (newSkeletonAsset->readFromFile(filePath)) {
+            return newSkeletonAsset;
+        } else {
+            return std::unique_ptr<SkeletonAsset>();
+        }
+    });
 }
 
 SkeletonAsset* SkeletonAsset::manage(std::unique_ptr<SkeletonAsset>&& skeletonAsset)

@@ -742,22 +742,18 @@ MeshAsset* MeshAsset::load(std::filesystem::path const& filePath)
 {
     SCOPED_PROFILE_ZONE();
 
-    if (not isValidAssetPath(filePath)) {
+    if (!isValidAssetPath(filePath)) {
         ARKOSE_LOG(Warning, "Trying to load mesh asset with invalid file extension: '{}'", filePath);
     }
 
-    if (MeshAsset* cachedAsset = s_meshAssetCache.get(filePath)) {
-        return cachedAsset;
-    }
-
-    auto newMeshAsset = std::make_unique<MeshAsset>();
-    bool success = newMeshAsset->readFromFile(filePath);
-
-    if (!success) {
-        return nullptr;
-    }
-
-    return s_meshAssetCache.put(filePath, std::move(newMeshAsset));
+    return s_meshAssetCache.getOrCreate(filePath, [&]() {
+        auto newMeshAsset = std::make_unique<MeshAsset>();
+        if (newMeshAsset->readFromFile(filePath)) {
+            return newMeshAsset;
+        } else {
+            return std::unique_ptr<MeshAsset>();
+        }
+    });
 }
 
 MeshAsset* MeshAsset::manage(std::unique_ptr<MeshAsset>&& meshAsset)
