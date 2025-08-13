@@ -204,6 +204,8 @@ set(ARKOSE_SOURCES
     arkose/rendering/shadow/DirectionalShadowProjectNode.h
     arkose/rendering/shadow/LocalShadowDrawNode.cpp
     arkose/rendering/shadow/LocalShadowDrawNode.h
+    arkose/rendering/shadow/RTLocalShadowNode.cpp
+    arkose/rendering/shadow/RTLocalShadowNode.h
     # upscaling
     arkose/rendering/upscaling/UpscalingNode.cpp
     arkose/rendering/upscaling/UpscalingNode.h

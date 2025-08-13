@@ -33,6 +33,7 @@ struct RayTracingPushConstants {
     float parameter2;
     float parameter3;
     float parameter4;
+    float parameter5;
 };
 
 #endif // RAYTRACING_COMMON_GLSL

@@ -27,6 +27,7 @@
 #include "rendering/shadow/DirectionalShadowDrawNode.h"
 #include "rendering/shadow/DirectionalShadowProjectNode.h"
 #include "rendering/shadow/LocalShadowDrawNode.h"
+#include "rendering/shadow/RTLocalShadowNode.h"
 #include "rendering/upscaling/UpscalingNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
@@ -130,6 +131,9 @@ void ShowcaseApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend
         pipeline.addNode<PrepassNode>();
     }
 
+    if constexpr (withRayTracing) {
+        pipeline.addNode<RTLocalShadowNode>();
+    }
     pipeline.addNode<DirectionalShadowDrawNode>();
     pipeline.addNode<DirectionalShadowProjectNode>();
     pipeline.addNode<LocalShadowDrawNode>();

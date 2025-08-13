@@ -71,7 +71,7 @@ bool SpotLight::supportsShadowMode(ShadowMode shadowMode) const
     case ShadowMode::ShadowMapped:
         return true;
     case ShadowMode::RayTraced:
-        return false; // TODO!
+        return true;
     default:
         ARKOSE_ERROR("Unsupported shadow mode for SpotLight: {}", shadowMode);
         return false;

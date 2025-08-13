@@ -1,6 +1,7 @@
 #version 460
 
 #include <common/namedUniforms.glsl>
+#include <common/random.glsl>
 #include <rayTracing/common/common.glsl>
 #include <shared/CameraState.h>
 
@@ -12,8 +13,20 @@ layout(set = 0, binding = 3, r8) uniform image2D shadowImg;
 NAMED_UNIFORMS_STRUCT(RayTracingPushConstants, constants)
 vec3 lightPosition() { return vec3(constants.parameter1, constants.parameter2, constants.parameter3); }
 float lightSourceRadius() { return constants.parameter4; }
+uint frameIndex() { return uint(round(constants.parameter5)); }
 
 layout(location = 0) rayPayload RayPayloadShadow payload;
+
+vec3 samplePositionOnLightDisc(vec3 shadingPoint)
+{
+    vec3 toLightCenter = normalize(lightPosition() - shadingPoint);
+
+    vec3 b1, b2;
+    createOrthonormalBasis(toLightCenter, b1, b2);
+
+    vec2 lightDisk = randomPointInDisk() * lightSourceRadius();
+    return lightPosition() + lightDisk.x * b1 + lightDisk.y * b2;
+}
 
 void main()
 {
@@ -29,8 +42,11 @@ void main()
     vec4 shadingPoint = camera.worldFromView * camera.viewFromProjection * vec4(pixelUv * 2.0 - 1.0, nonLinearDepth, 1.0);
     shadingPoint.xyz /= shadingPoint.w;
 
-    // TODO: Sample position on light disk/sphere
-    vec3 toLight = lightPosition() - shadingPoint.xyz;
+    // Sample a position on the light source
+    // TODO: Blue noise here should give us a nicer visual noise to denoise
+    seedRandom((frameIndex() + 1) * (pixelCoord.x + pixelCoord.y * 4000));
+    vec3 lightSamplePos = samplePositionOnLightDisc(shadingPoint.xyz);
+    vec3 toLight = lightSamplePos - shadingPoint.xyz;
     float distToLight = length(toLight);
     vec3 L = toLight / distToLight;
 
