@@ -72,29 +72,6 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 N, vec3 b
     return vec3(0.0);
 }
 
-vec3 evaluateSphereLight(SphereLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
-{
-    vec3 hitPoint = rt_WorldRayOrigin + rt_RayHitT * rt_WorldRayDirection;
-    vec3 toLight = light.worldSpacePosition.xyz - hitPoint;
-    vec3 L = normalize(toLight);
-    float LdotN = dot(L, N);
-
-    if (LdotN > 0.0) {
-
-        float distanceToLight = length(toLight);
-        float shadowFactor = traceShadowRay(hitPoint, L, distanceToLight - 0.001);
-
-        float distanceAttenuation = calculateLightDistanceAttenuation(distanceToLight, light.lightSourceRadius, light.lightRadius);
-
-        vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
-        vec3 directLight = light.color * shadowFactor * distanceAttenuation;
-
-        return brdf * LdotN * directLight;
-    }
-
-    return vec3(0.0);
-}
-
 vec3 evaluateSpotLight(SpotLightData light, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
 {
     vec3 L = -normalize(light.worldSpaceDirection.xyz);
@@ -174,10 +151,6 @@ void main()
 
         if (light_hasDirectionalLight()) {
             color += evaluateDirectionalLight(light_getDirectionalLight(), V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
-        }
-
-        for (uint i = 0; i < light_getSphereLightCount(); ++i) {
-            color += evaluateSphereLight(light_getSphereLight(i), V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
         }
 
         for (uint i = 0; i < light_getSpotLightCount(); ++i) {

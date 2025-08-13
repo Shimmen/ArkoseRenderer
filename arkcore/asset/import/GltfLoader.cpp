@@ -674,7 +674,7 @@ std::unique_ptr<LightAsset> GltfLoader::createLight(tinygltf::Model const& gltfM
         light->type = "SpotLight";
         NOT_YET_IMPLEMENTED();
     } else if (lightType == "point") {
-        light->type = "SphereLight";
+        light->type = "SpotLight"; // todo: will be LocalLight eventually
         NOT_YET_IMPLEMENTED();
     } else {
         ASSERT_NOT_REACHED();

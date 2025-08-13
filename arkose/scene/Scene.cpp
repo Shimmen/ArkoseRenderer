@@ -234,8 +234,6 @@ void Scene::addLevel(LevelAsset* levelAsset)
     for (LightAsset const& lightAsset : levelAsset->lights) {
         if (lightAsset.type == "DirectionalLight") {
             addLight(std::make_unique<DirectionalLight>(lightAsset));
-        } else if (lightAsset.type == "SphereLight") {
-            addLight(std::make_unique<SphereLight>(lightAsset));
         } else if (lightAsset.type == "SpotLight") {
             addLight(std::make_unique<SpotLight>(lightAsset));
         } else {
@@ -398,11 +396,6 @@ void Scene::addLight(std::unique_ptr<Light> light)
         addLight(std::unique_ptr<SpotLight>(spotLightPtr));
     } break;
 
-    case Light::Type::SphereLight: {
-        SphereLight* sphereLightPtr = static_cast<SphereLight*>(light.release());
-        addLight(std::unique_ptr<SphereLight>(sphereLightPtr));
-    } break;
-
     default:
         ASSERT_NOT_REACHED();
         break;
@@ -414,16 +407,6 @@ DirectionalLight& Scene::addLight(std::unique_ptr<DirectionalLight> light)
     ARKOSE_ASSERT(light);
     m_directionalLights.push_back(std::move(light));
     DirectionalLight& addedLight = *m_directionalLights.back();
-    ARKOSE_ASSERT(addedLight.transform().localOrientation().isNormalized());
-    gpuScene().registerLight(addedLight);
-    return addedLight;
-}
-
-SphereLight& Scene::addLight(std::unique_ptr<SphereLight> light)
-{
-    ARKOSE_ASSERT(light);
-    m_sphereLights.push_back(std::move(light));
-    SphereLight& addedLight = *m_sphereLights.back();
     ARKOSE_ASSERT(addedLight.transform().localOrientation().isNormalized());
     gpuScene().registerLight(addedLight);
     return addedLight;
@@ -452,9 +435,6 @@ size_t Scene::forEachLight(std::function<void(size_t, const Light&)> callback) c
     for (const auto& light : m_directionalLights) {
         callback(nextIndex++, *light);
     }
-    for (auto& light : m_sphereLights) {
-        callback(nextIndex++, *light);
-    }
     for (const auto& light : m_spotLights) {
         callback(nextIndex++, *light);
     }
@@ -465,9 +445,6 @@ size_t Scene::forEachLight(std::function<void(size_t, Light&)> callback)
 {
     size_t nextIndex = 0;
     for (auto& light : m_directionalLights) {
-        callback(nextIndex++, *light);
-    }
-    for (auto& light : m_sphereLights) {
         callback(nextIndex++, *light);
     }
     for (auto& light : m_spotLights) {

@@ -8,15 +8,12 @@
 #define DeclareCommonBindingSet_Light(index)                                                                              \
     layout(set = index, binding = 0) uniform         LightMetaDataBlock   { LightMetaData        _lightMeta; };           \
     layout(set = index, binding = 1) buffer readonly DirLightDataBlock    { DirectionalLightData _directionalLight; };    \
-    layout(set = index, binding = 2) buffer readonly SphereLightDataBlock { SphereLightData      _sphereLights[]; };       \
-    layout(set = index, binding = 3) buffer readonly SpotLightDataBlock   { SpotLightData        _spotLights[]; };
+    layout(set = index, binding = 2) buffer readonly SpotLightDataBlock   { SpotLightData        _spotLights[]; };
 
 #define light_hasDirectionalLight() _lightMeta.hasDirectionalLight
-#define light_getSphereLightCount() _lightMeta.numSphereLights
 #define light_getSpotLightCount() _lightMeta.numSpotLights
 
 #define light_getDirectionalLight() _directionalLight
-#define light_getSphereLight(index) _sphereLights[index]
 #define light_getSpotLight(index) _spotLights[index]
 
 

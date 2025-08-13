@@ -3,7 +3,6 @@
 
 struct LightMetaData {
     bool hasDirectionalLight;
-    uint numSphereLights;
     uint numSpotLights;
 };
 
@@ -16,19 +15,6 @@ struct DirectionalLightData {
     vec4 viewSpaceDirection;
     mat4 lightProjectionFromWorld;
     mat4 lightProjectionFromView;
-};
-
-struct SphereLightData {
-
-    vec3 color;
-    float exposure;
-
-    vec4 worldSpacePosition;
-    vec4 viewSpacePosition;
-
-    vec2 _pad0;
-    float lightRadius;
-    float lightSourceRadius;
 };
 
 struct SpotLightData {

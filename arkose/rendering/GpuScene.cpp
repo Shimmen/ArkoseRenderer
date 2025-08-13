@@ -180,7 +180,7 @@ Texture const* GpuScene::textureForHandle(TextureHandle handle) const
 
 size_t GpuScene::lightCount() const
 {
-    return m_managedDirectionalLights.size() + m_managedSphereLights.size() + m_managedSpotLights.size();
+    return m_managedDirectionalLights.size() + m_managedSpotLights.size();
 }
 
 size_t GpuScene::shadowCastingLightCount() const
@@ -196,10 +196,6 @@ size_t GpuScene::forEachShadowCastingLight(std::function<void(size_t, Light&)> c
         if (managedLight.light->castsShadows())
             callback(nextIndex++, *managedLight.light);
     }
-    for (auto& managedLight : m_managedSphereLights) {
-        if (managedLight.light->castsShadows())
-            callback(nextIndex++, *managedLight.light);
-    }
     for (auto& managedLight : m_managedSpotLights) {
         if (managedLight.light->castsShadows())
             callback(nextIndex++, *managedLight.light);
@@ -211,10 +207,6 @@ size_t GpuScene::forEachShadowCastingLight(std::function<void(size_t, const Ligh
 {
     size_t nextIndex = 0;
     for (auto& managedLight : m_managedDirectionalLights) {
-        if (managedLight.light->castsShadows())
-            callback(nextIndex++, *managedLight.light);
-    }
-    for (auto& managedLight : m_managedSphereLights) {
         if (managedLight.light->castsShadows())
             callback(nextIndex++, *managedLight.light);
     }
@@ -384,16 +376,12 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     Buffer& dirLightDataBuffer = reg.createBuffer(sizeof(DirectionalLightData), Buffer::Usage::StorageBuffer);
     dirLightDataBuffer.setStride(sizeof(DirectionalLightData));
     dirLightDataBuffer.setName("SceneDirectionalLightData");
-    Buffer& sphereLightDataBuffer = reg.createBuffer(10 * sizeof(SphereLightData), Buffer::Usage::StorageBuffer);
-    sphereLightDataBuffer.setStride(sizeof(SphereLightData));
-    sphereLightDataBuffer.setName("SceneSphereLightData");
     Buffer& spotLightDataBuffer = reg.createBuffer(10 * sizeof(SpotLightData), Buffer::Usage::StorageBuffer);
     spotLightDataBuffer.setStride(sizeof(SpotLightData));
     spotLightDataBuffer.setName("SceneSpotLightData");
 
     BindingSet& lightBindingSet = reg.createBindingSet({ ShaderBinding::constantBuffer(lightMetaDataBuffer),
                                                          ShaderBinding::storageBufferReadonly(dirLightDataBuffer),
-                                                         ShaderBinding::storageBufferReadonly(sphereLightDataBuffer),
                                                          ShaderBinding::storageBufferReadonly(spotLightDataBuffer) });
     reg.publish("SceneLightSet", lightBindingSet);
 
@@ -689,7 +677,6 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             mat4 worldFromView = inverse(viewFromWorld);
 
             std::vector<DirectionalLightData> dirLightData;
-            std::vector<SphereLightData> sphereLightData;
             std::vector<SpotLightData> spotLightData;
 
             ARKOSE_ASSERTM(m_managedDirectionalLights.size() <= 1, "We only support 0 or 1 directional lights in a scene");
@@ -707,22 +694,6 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                                  .viewSpaceDirection = viewFromWorld * vec4(light.transform().forward(), 0.0),
                                                                  .lightProjectionFromWorld = light.viewProjection(),
                                                                  .lightProjectionFromView = light.viewProjection() * worldFromView });
-            }
-
-            for (const ManagedSphereLight& managedLight : m_managedSphereLights) {
-
-                if (!managedLight.light) {
-                    continue;
-                }
-
-                const SphereLight& light = *managedLight.light;
-
-                sphereLightData.emplace_back(SphereLightData { .color = light.color().asVec3() * light.intensityValue() * lightPreExposure(),
-                                                               .exposure = lightPreExposure(),
-                                                               .worldSpacePosition = vec4(light.transform().positionInWorld(), 0.0f),
-                                                               .viewSpacePosition = viewFromWorld * vec4(light.transform().positionInWorld(), 1.0f),
-                                                               .lightRadius = light.lightRadius(),
-                                                               .lightSourceRadius = light.lightSourceRadius() });
             }
 
             for (const ManagedSpotLight& managedLight : m_managedSpotLights) {
@@ -751,11 +722,9 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             }
 
             uploadBuffer.upload(dirLightData, dirLightDataBuffer);
-            uploadBuffer.upload(sphereLightData, sphereLightDataBuffer);
             uploadBuffer.upload(spotLightData, spotLightDataBuffer);
 
             LightMetaData metaData { .hasDirectionalLight = dirLightData.size() > 0 ? true : false,
-                                     .numSphereLights = narrow_cast<u32>(sphereLightData.size()),
                                      .numSpotLights = narrow_cast<u32>(spotLightData.size()) };
             uploadBuffer.upload(metaData, lightMetaDataBuffer);
         }
@@ -981,12 +950,6 @@ void GpuScene::registerLight(DirectionalLight& light)
 
     ManagedDirectionalLight managedLight { .light = &light };
     m_managedDirectionalLights.push_back(managedLight);
-}
-
-void GpuScene::registerLight(SphereLight& light)
-{
-    ManagedSphereLight managedLight { .light = &light };
-    m_managedSphereLights.push_back(managedLight);
 }
 
 void GpuScene::registerLight(SpotLight& light)

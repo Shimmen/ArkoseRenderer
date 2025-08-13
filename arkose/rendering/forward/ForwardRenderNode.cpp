@@ -194,23 +194,20 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
     }
 
     Texture* dirLightProjectedShadow = reg.getTexture("DirectionalLightProjectedShadow");
-    Texture* sphereLightProjectedShadow = reg.getTexture("SphereLightProjectedShadow");
     Texture* localLightShadowMapAtlas = reg.getTexture("LocalLightShadowMapAtlas");
     Buffer* localLightShadowAllocations = reg.getBuffer("LocalLightShadowAllocations");
 
     // Allow rendering without shadows
-    if (!dirLightProjectedShadow || !sphereLightProjectedShadow || !localLightShadowMapAtlas || !localLightShadowAllocations) {
+    if (!dirLightProjectedShadow || !localLightShadowMapAtlas || !localLightShadowAllocations) {
         Texture& placeholderTex = reg.createPixelTexture(vec4(1.0f), false);
         Buffer& placeholderBuffer = reg.createBufferForData(std::vector<int>(0), Buffer::Usage::StorageBuffer);
         placeholderBuffer.setStride(1); // add some non-zero stride just so that it won't complain, but it will likely generate some error on D3D12
         dirLightProjectedShadow = dirLightProjectedShadow ? dirLightProjectedShadow : &placeholderTex;
-        sphereLightProjectedShadow = sphereLightProjectedShadow ? sphereLightProjectedShadow : &placeholderTex;
         localLightShadowMapAtlas = localLightShadowMapAtlas ? localLightShadowMapAtlas : &placeholderTex;
         localLightShadowAllocations = localLightShadowAllocations ? localLightShadowAllocations : &placeholderBuffer;
     }
 
     BindingSet& shadowBindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(*dirLightProjectedShadow),
-                                                          ShaderBinding::sampledTexture(*sphereLightProjectedShadow),
                                                           ShaderBinding::sampledTexture(*localLightShadowMapAtlas),
                                                           ShaderBinding::storageBuffer(*localLightShadowAllocations) });
 

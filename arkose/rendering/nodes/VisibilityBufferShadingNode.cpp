@@ -34,19 +34,16 @@ RenderPipelineNode::ExecuteCallback VisibilityBufferShadingNode::construct(GpuSc
     BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");
 
     Texture* dirLightProjectedShadow = reg.getTexture("DirectionalLightProjectedShadow");
-    Texture* sphereLightProjectedShadow = reg.getTexture("SphereLightProjectedShadow");
     Texture* localLightShadowMapAtlas = reg.getTexture("LocalLightShadowMapAtlas");
     Buffer* localLightShadowAllocations = reg.getBuffer("LocalLightShadowAllocations");
-    if (!dirLightProjectedShadow || !sphereLightProjectedShadow || !localLightShadowMapAtlas || !localLightShadowAllocations) {
+    if (!dirLightProjectedShadow || !localLightShadowMapAtlas || !localLightShadowAllocations) {
         Texture& placeholderTex = reg.createPixelTexture(vec4(1.0f), false);
         Buffer& placeholderBuffer = reg.createBufferForData(std::vector<int>(0), Buffer::Usage::StorageBuffer);
         dirLightProjectedShadow = dirLightProjectedShadow ? dirLightProjectedShadow : &placeholderTex;
-        sphereLightProjectedShadow = sphereLightProjectedShadow ? sphereLightProjectedShadow : &placeholderTex;
         localLightShadowMapAtlas = localLightShadowMapAtlas ? localLightShadowMapAtlas : &placeholderTex;
         localLightShadowAllocations = localLightShadowAllocations ? localLightShadowAllocations : &placeholderBuffer;
     }
     BindingSet& shadowBindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(*dirLightProjectedShadow),
-                                                          ShaderBinding::sampledTexture(*sphereLightProjectedShadow),
                                                           ShaderBinding::sampledTexture(*localLightShadowMapAtlas),
                                                           ShaderBinding::storageBuffer(*localLightShadowAllocations) });
 

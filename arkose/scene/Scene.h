@@ -7,7 +7,6 @@
 #include "scene/EnvironmentMap.h"
 #include "scene/ProbeGrid.h"
 #include "scene/lights/DirectionalLight.h"
-#include "scene/lights/SphereLight.h"
 #include "scene/lights/SpotLight.h"
 #include "scene/MeshInstance.h"
 #include "scene/SceneNode.h"
@@ -97,7 +96,6 @@ public:
 
     void addLight(std::unique_ptr<Light>);
     DirectionalLight& addLight(std::unique_ptr<DirectionalLight>);
-    SphereLight& addLight(std::unique_ptr<SphereLight>);
     SpotLight& addLight(std::unique_ptr<SpotLight>);
 
     size_t spotLightCount() const { return m_spotLights.size(); }
@@ -146,7 +144,6 @@ private:
     std::unordered_map<std::string, std::unique_ptr<Camera>> m_allCameras {};
 
     std::vector<std::unique_ptr<DirectionalLight>> m_directionalLights {};
-    std::vector<std::unique_ptr<SphereLight>> m_sphereLights {};
     std::vector<std::unique_ptr<SpotLight>> m_spotLights {};
 
     EnvironmentMap m_environmentMap { .brightnessFactor = 2500.0f };

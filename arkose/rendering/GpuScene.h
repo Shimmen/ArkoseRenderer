@@ -86,7 +86,6 @@ public:
     // GPU data registration
 
     void registerLight(DirectionalLight&);
-    void registerLight(SphereLight&);
     void registerLight(SpotLight&);
     // TODO: Unregister light!
 
@@ -220,11 +219,6 @@ private:
         DirectionalLight* light {};
     };
     std::vector<ManagedDirectionalLight> m_managedDirectionalLights {};
-
-    struct ManagedSphereLight {
-        SphereLight* light {};
-    };
-    std::vector<ManagedSphereLight> m_managedSphereLights {};
 
     struct ManagedSpotLight {
         SpotLight* light {};
