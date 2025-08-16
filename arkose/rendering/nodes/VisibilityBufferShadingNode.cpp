@@ -33,7 +33,7 @@ RenderPipelineNode::ExecuteCallback VisibilityBufferShadingNode::construct(GpuSc
     BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
     BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");
 
-    Texture* dirLightProjectedShadow = reg.getTexture("DirectionalLightProjectedShadow");
+    Texture* dirLightProjectedShadow = reg.getTexture("DirectionalLightShadowMask");
     Texture* localLightShadowMapAtlas = reg.getTexture("LocalLightShadowMapAtlas");
     Buffer* localLightShadowAllocations = reg.getBuffer("LocalLightShadowAllocations");
     if (!dirLightProjectedShadow || !localLightShadowMapAtlas || !localLightShadowAllocations) {

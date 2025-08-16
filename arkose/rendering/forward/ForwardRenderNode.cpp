@@ -193,7 +193,7 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
         }
     }
 
-    Texture* dirLightProjectedShadow = reg.getTexture("DirectionalLightProjectedShadow");
+    Texture* dirLightProjectedShadow = reg.getTexture("DirectionalLightShadowMask");
     Texture* localLightShadowMapAtlas = reg.getTexture("LocalLightShadowMapAtlas");
     Buffer* localLightShadowAllocations = reg.getBuffer("LocalLightShadowAllocations");
 

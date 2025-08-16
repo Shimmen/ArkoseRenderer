@@ -385,6 +385,10 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                          ShaderBinding::storageBufferReadonly(spotLightDataBuffer) });
     reg.publish("SceneLightSet", lightBindingSet);
 
+    // Shadow resources
+    Texture& directionalShadowMask = reg.createTexture2D(renderResolution, Texture::Format::R8);
+    reg.publish("DirectionalLightShadowMask", directionalShadowMask);
+
     // Misc. data
     Texture& blueNoiseTextureArray = reg.loadTextureArrayFromFileSequence("assets/engine/blue-noise/64_64/HDR_RGBA_{}.dds", false, false);
     reg.publish("BlueNoise", blueNoiseTextureArray);

@@ -12,12 +12,13 @@
 void DirectionalShadowProjectNode::drawGui()
 {
     ImGui::SliderFloat("Light disc radius", &m_lightDiscRadius, 0.0f, 5.0f);
-    drawTextureVisualizeGui(*m_projectedShadow);
+    drawTextureVisualizeGui(*m_shadowMask);
 }
 
 RenderPipelineNode::ExecuteCallback DirectionalShadowProjectNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& shadowMap = *reg.getTexture("DirectionalLightShadowMap");
+    m_shadowMask = reg.getTexture("DirectionalLightShadowMask");
 
     //
     // NOTE: We shouldn't rely on TAA to clean up the noise produced by this as the noise messes with history samples.
@@ -28,11 +29,8 @@ RenderPipelineNode::ExecuteCallback DirectionalShadowProjectNode::construct(GpuS
     Buffer& cameraDataBuffer = *reg.getBuffer("SceneCameraData");
     Texture& blueNoiseTexArray = *reg.getTexture("BlueNoise");
 
-    m_projectedShadow = &reg.createTexture2D(pipeline().renderResolution(), Texture::Format::R8);
-    reg.publish("DirectionalLightProjectedShadow", *m_projectedShadow);
-
     Shader shadowProjectionShader = Shader::createCompute("shadow/projectShadow.comp");
-    BindingSet& shadowProjectionBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(*m_projectedShadow, ShaderStage::Compute),
+    BindingSet& shadowProjectionBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(*m_shadowMask, ShaderStage::Compute),
                                                                     ShaderBinding::sampledTexture(shadowMap, ShaderStage::Compute),
                                                                     ShaderBinding::sampledTexture(sceneDepth, ShaderStage::Compute),
                                                                     ShaderBinding::constantBuffer(cameraDataBuffer, ShaderStage::Compute),
@@ -56,6 +54,6 @@ RenderPipelineNode::ExecuteCallback DirectionalShadowProjectNode::construct(GpuS
         cmdList.setNamedUniform<mat4>("lightProjectionFromView", lightProjectionFromView);
         cmdList.setNamedUniform<vec2>("lightDiscRadiusInShadowMapUVs", radiusInShadowMapUVs);
         cmdList.setNamedUniform<int>("frameIndexMod8", appState.frameIndex() % 8);
-        cmdList.dispatch(m_projectedShadow->extent3D(), { 16, 16, 1 });
+        cmdList.dispatch(m_shadowMask->extent3D(), { 16, 16, 1 });
     };
 }

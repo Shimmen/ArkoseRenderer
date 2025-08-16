@@ -12,5 +12,5 @@ public:
 private:
     // NOTE: No physical unit to this right now..
     float m_lightDiscRadius = 2.4f;
-    Texture* m_projectedShadow { nullptr };
+    Texture* m_shadowMask { nullptr };
 };
