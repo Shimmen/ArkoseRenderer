@@ -176,8 +176,8 @@ void MeshViewerApp::drawMenuBar()
 {
     static bool showGpuSceneGui = false;
     if (showGpuSceneGui) {
-        if (ImGui::Begin("GPU scene stats", &showGpuSceneGui, ImGuiWindowFlags_NoCollapse)) {
-            mainScene().gpuScene().drawStatsGui();
+        if (ImGui::Begin("GPU resources", &showGpuSceneGui, ImGuiWindowFlags_NoCollapse)) {
+            mainScene().gpuScene().drawResourceUI();
         }
         ImGui::End();
     }

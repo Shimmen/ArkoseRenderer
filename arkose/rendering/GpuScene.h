@@ -169,8 +169,7 @@ public:
 
     bool hasPendingUploads() const;
 
-    void drawStatsGui(bool includeContainingWindow = false);
-    void drawVramUsageGui(bool includeContainingWindow = false);
+    void drawResourceUI();
 
     size_t drawableCountForFrame() const { return m_drawableCountForFrame; }
 

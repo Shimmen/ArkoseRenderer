@@ -1554,32 +1554,8 @@ bool GpuScene::hasPendingUploads() const
     return m_asyncLoadedImages.size() > 0 || m_pendingTextureUpdates.size() > 0 || m_pendingMaterialUpdates.size() > 0;
 }
 
-void GpuScene::drawStatsGui(bool includeContainingWindow)
+void GpuScene::drawResourceUI()
 {
-    if (includeContainingWindow) {
-        ImGui::Begin("GPU Scene");
-    }
-
-    ImGui::Text("Number of managed resources:");
-    ImGui::Columns(3);
-    ImGui::Text("static meshes: %u", narrow_cast<int>(m_managedStaticMeshes.size()));
-    ImGui::NextColumn();
-    ImGui::Text("materials: %u", narrow_cast<int>(m_managedMaterials.size()));
-    ImGui::NextColumn();
-    ImGui::Text("textures: %u", narrow_cast<int>(m_managedTextures.size()));
-    ImGui::Columns(1);
-
-    if (includeContainingWindow) {
-        ImGui::End();
-    }
-}
-
-void GpuScene::drawVramUsageGui(bool includeContainingWindow)
-{
-    if (includeContainingWindow) {
-        ImGui::Begin("VRAM usage");
-    }
-
     if (backend().vramStatsReportRate() > 0 && backend().vramStats().has_value()) {
 
         VramStats stats = backend().vramStats().value();
@@ -1670,6 +1646,19 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
 
     ImGui::Separator();
 
+    ImGui::Text("Managed resources:");
+    ImGui::Columns(4);
+    ImGui::Text("static meshes: %u", narrow_cast<i32>(m_managedStaticMeshes.size()));
+    ImGui::NextColumn();
+    ImGui::Text("skeletal meshes: %u", narrow_cast<i32>(m_managedSkeletalMeshes.size()));
+    ImGui::NextColumn();
+    ImGui::Text("materials: %u", narrow_cast<i32>(m_managedMaterials.size()));
+    ImGui::NextColumn();
+    ImGui::Text("textures: %u", narrow_cast<i32>(m_managedTextures.size()));
+    ImGui::Columns(1);
+
+    ImGui::Separator();
+
     if (ImGui::BeginTabBar("VramUsageBreakdown")) {
 
         if (ImGui::BeginTabItem("Vertex manager")) {
@@ -1688,10 +1677,6 @@ void GpuScene::drawVramUsageGui(bool includeContainingWindow)
         }
 
         ImGui::EndTabBar();
-    }
-
-    if (includeContainingWindow) {
-        ImGui::End();
     }
 }
 

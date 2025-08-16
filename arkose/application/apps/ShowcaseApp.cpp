@@ -299,8 +299,7 @@ bool ShowcaseApp::drawGui(Scene& scene)
     static bool showAbout = false;
     static bool showCameraGui = true;
     static bool showSceneGui = true;
-    static bool showGpuSceneGui = false;
-    static bool showVramUsageGui = false;
+    static bool showGpuSceneResourceUI = false;
     static bool showRenderPipelineGui = true;
 
     if (showAbout) {
@@ -328,17 +327,10 @@ bool ShowcaseApp::drawGui(Scene& scene)
         }
         ImGui::End();
     }
-    
-    if (showGpuSceneGui) { 
-        if (ImGui::Begin("GPU scene stats", &showGpuSceneGui, ImGuiWindowFlags_NoCollapse)) {
-            scene.gpuScene().drawStatsGui();
-        }
-        ImGui::End();
-    }
 
-    if (showVramUsageGui) {
-        if (ImGui::Begin("VRAM usage", &showVramUsageGui, ImGuiWindowFlags_NoCollapse)) {
-            scene.gpuScene().drawVramUsageGui();
+    if (showGpuSceneResourceUI) {
+        if (ImGui::Begin("GPU resources", &showGpuSceneResourceUI, ImGuiWindowFlags_NoCollapse)) {
+            scene.gpuScene().drawResourceUI();
         }
         ImGui::End();
     }
@@ -364,8 +356,7 @@ bool ShowcaseApp::drawGui(Scene& scene)
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Stats")) {
-            ImGui::MenuItem("GPU scene stats", nullptr, &showGpuSceneGui);
-            ImGui::MenuItem("VRAM usage stats", nullptr, &showVramUsageGui);
+            ImGui::MenuItem("GPU resources", nullptr, &showGpuSceneResourceUI);
             ImGui::EndMenu();
         }
         ImGui::EndMainMenuBar();
