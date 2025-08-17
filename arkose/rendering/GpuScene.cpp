@@ -246,8 +246,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     // VRAM by creating smaller textures, but that makes it harder to easily change quality
     // or technique for upscaling, so this is the easier approach. It's also suitable for if
     // we want to implement dynamic resolution scaling in the future.
-    Extent2D outputResolution = pipeline().outputResolution();
-    Extent2D renderResolution = outputResolution;
+    Extent2D const& outputResolution = reg.allocate<Extent2D>(pipeline().outputResolution());
+    Extent2D& renderResolution = reg.allocate<Extent2D>(outputResolution);
 
     u32 numNodesAffectingRenderResolution = 0;
     for (RenderPipelineNode const* node : pipeline().nodes()) {
@@ -515,8 +515,6 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         // Update camera data
         {
             Camera const& camera = this->camera();
-            Extent2D renderResolution = pipeline().renderResolution();
-            Extent2D outputResolution = pipeline().outputResolution();
 
             mat4 renderPixelFromView = camera.pixelProjectionMatrix(renderResolution.width(), renderResolution.height());
             //mat4 outputPixelFromView = camera.pixelProjectionMatrix(outputResolution.width(), outputResolution.height());
