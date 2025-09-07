@@ -1025,6 +1025,11 @@ void VulkanCommandList::evaluateExternalFeature(ExternalFeature const& externalF
             ASSERT_NOT_REACHED();
         #endif
     } break;
+    case ExternalFeatureType::NRD_SigmaShadow: {
+        auto const& vulkanNrdSigmaShadowExternalFeature = static_cast<VulkanNRDSigmaShadowExternalFeature const&>(externalFeature);
+        auto const& nrdSigmaShadowEvalParams = *reinterpret_cast<ExternalFeatureEvaluateParamsNRDSigmaShadow*>(externalFeatureEvaluateParams);
+        vulkanNrdSigmaShadowExternalFeature.evaluate(nrdSigmaShadowEvalParams);
+    } break;
     }
 }
 

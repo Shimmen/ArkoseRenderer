@@ -237,6 +237,8 @@ if (ARKOSE_BACKEND_VULKAN)
         arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.h
         arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.cpp
         arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.h
+        arkose/rendering/backend/vulkan/features/nrd/VulkanNRD.cpp
+        arkose/rendering/backend/vulkan/features/nrd/VulkanNRD.h
         )
 
     add_subdirectory(deps/vulkan)

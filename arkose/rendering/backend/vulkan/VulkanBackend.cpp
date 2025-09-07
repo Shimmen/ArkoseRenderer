@@ -204,7 +204,12 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
     }
     #endif
 
-    m_nrd = std::make_unique<VulkanNRD>(*this, m_instance, physicalDevice(), device());
+    m_nrd = std::make_unique<VulkanNRD>(*this);
+    if (m_nrd->isReadyToUse()) {
+        ARKOSE_LOG(Info, "VulkanBackend: NVIDIA Real-time Denoising (NRD) is ready to use!");
+    } else {
+        ARKOSE_LOG(Info, "VulkanBackend: NVIDIA Real-time Denoising (NRD) is not available.");
+    }
 
     // Create empty stub descriptor set layout (useful for filling gaps as Vulkan doesn't allow having gaps)
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
@@ -611,12 +616,21 @@ std::unique_ptr<ExternalFeature> VulkanBackend::createExternalFeature(ExternalFe
     case ExternalFeatureType::DLSS: {
         #if WITH_DLSS
         if (m_dlss && m_dlss->isReadyToUse()) {
-            ExternalFeatureCreateParamsDLSS const& dlssParams = *static_cast<ExternalFeatureCreateParamsDLSS const*>(externalFeatureParameters);
+            auto const& dlssParams = *static_cast<ExternalFeatureCreateParamsDLSS const*>(externalFeatureParameters);
             return std::make_unique<VulkanDLSSExternalFeature>(*this, dlssParams);
         } else
         #endif
         {
             ARKOSE_LOG(Error, "VulkanBackend: cannot create DLSS external feature, not supported!");
+            return nullptr;
+        }
+    }
+    case ExternalFeatureType::NRD_SigmaShadow: {
+        if (m_nrd && m_nrd->isReadyToUse()) {
+            auto const& nrdSigmaShadowParams = *static_cast<ExternalFeatureCreateParamsNRDSigmaShadow const*>(externalFeatureParameters);
+            return std::make_unique<VulkanNRDSigmaShadowExternalFeature>(*this, *m_nrd, nrdSigmaShadowParams);
+        } else {
+            ARKOSE_LOG(Error, "VulkanBackend: cannot create NRD_SigmaShadow external feature, not supported!");
             return nullptr;
         }
     }

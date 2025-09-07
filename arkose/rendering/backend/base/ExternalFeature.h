@@ -5,6 +5,7 @@
 #include "utility/Extent.h"
 
 class Backend;
+class Camera;
 class Texture;
 
 enum class ExternalFeatureType {
@@ -12,6 +13,8 @@ enum class ExternalFeatureType {
 
     // Upscaling features
     DLSS,
+    // Denoising features
+    NRD_SigmaShadow,
 };
 
 enum class ExternalFeatureParameter {
@@ -58,4 +61,18 @@ struct ExternalFeatureEvaluateParamsDLSS {
     float sharpness {};
 
     bool resetAccumulation { false };
+};
+
+struct ExternalFeatureCreateParamsNRDSigmaShadow {
+    // ..
+};
+
+struct ExternalFeatureEvaluateParamsNRDSigmaShadow {
+    Camera* mainCamera {};
+
+    u32 frameIndex { 0 };
+    bool resetAccumulation { false };
+
+    Texture* inputShadowMask {};
+    Texture* denoisedShadowMask {};
 };

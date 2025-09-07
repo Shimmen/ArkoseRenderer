@@ -23,6 +23,7 @@
 #if WITH_DLSS
 #include "rendering/backend/vulkan/features/dlss/VulkanDLSS.h"
 #endif
+#include "rendering/backend/vulkan/features/nrd/VulkanNRD.h"
 
 #if defined(TRACY_ENABLE)
 #include <tracy/TracyVulkan.hpp>
@@ -343,6 +344,8 @@ private:
         bool m_dlssHasAllRequiredExtensions { true };
         std::unique_ptr<VulkanDLSS> m_dlss {};
     #endif
+
+    std::unique_ptr<VulkanNRD> m_nrd {};
 
     ///////////////////////////////////////////////////////////////////////////
     /// Resource & resource management members
