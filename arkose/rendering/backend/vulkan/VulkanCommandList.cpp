@@ -1019,7 +1019,7 @@ void VulkanCommandList::evaluateExternalFeature(ExternalFeature const& externalF
         #if WITH_DLSS
             auto const& vulkanDlssExternalFeature = static_cast<VulkanDLSSExternalFeature const&>(externalFeature);
             auto const& dlssEvalParams = *reinterpret_cast<ExternalFeatureEvaluateParamsDLSS*>(externalFeatureEvaluateParams);
-            backend().dlssFeature().evaluate(m_commandBuffer, vulkanDlssExternalFeature.dlssFeatureHandle, dlssEvalParams);
+            backend().dlssFeature().evaluate(m_commandBuffer, vulkanDlssExternalFeature.m_dlssFeatureHandle, dlssEvalParams);
         #else
             // It shouldn't be possible to create a DLSS external feature if we don't have DLSS support!
             ASSERT_NOT_REACHED();

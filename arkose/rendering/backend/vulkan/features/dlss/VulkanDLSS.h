@@ -57,12 +57,13 @@ private:
 class VulkanDLSSExternalFeature final : public ExternalFeature {
 public:
     VulkanDLSSExternalFeature(Backend&, ExternalFeatureCreateParamsDLSS const&);
+    ~VulkanDLSSExternalFeature();
 
     float queryParameterF(ExternalFeatureParameter) override;
 
     float m_optimalSharpness { 0.0f };
     float m_optimalMipBias { 0.0f };
-    NVSDK_NGX_Handle* dlssFeatureHandle { nullptr };
+    NVSDK_NGX_Handle* m_dlssFeatureHandle { nullptr };
 };
 
 #endif // WITH_DLSS

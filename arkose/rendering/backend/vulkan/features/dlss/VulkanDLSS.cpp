@@ -110,7 +110,7 @@ DLSSPreferences VulkanDLSS::queryOptimalSettings(Extent2D targetResolution, Upsc
     recommendedSharpness = 0.0f;
 
     return DLSSPreferences { .preferredRenderResolution = { optimalRenderWidth, optimalRenderHeight },
-                                  .preferredSharpening = recommendedSharpness };
+                             .preferredSharpening = recommendedSharpness };
 }
 
 NVSDK_NGX_Handle* VulkanDLSS::createWithSettings(Extent2D renderResolution, Extent2D targetResolution, UpscalingQuality quality, bool inputIsHDR)
@@ -396,7 +396,17 @@ VulkanDLSSExternalFeature::VulkanDLSSExternalFeature(Backend& backend, ExternalF
     m_optimalMipBias = std::log2(renderResolutionX / outputResolutionX) - 1.0f;
 
     constexpr bool inputIsHDR = true;
-    dlssFeatureHandle = vulkanDlss.createWithSettings(params.renderResolution, params.outputResolution, params.quality, inputIsHDR);
+    m_dlssFeatureHandle = vulkanDlss.createWithSettings(params.renderResolution, params.outputResolution, params.quality, inputIsHDR);
+}
+
+VulkanDLSSExternalFeature::~VulkanDLSSExternalFeature()
+{
+    if (m_dlssFeatureHandle != nullptr) {
+        NVSDK_NGX_Result destroyDlssFeatureResult = NVSDK_NGX_VULKAN_ReleaseFeature(m_dlssFeatureHandle);
+        if (NVSDK_NGX_FAILED(destroyDlssFeatureResult)) {
+            ARKOSE_LOG(Error, "Failed to destroy NVSDK NGX DLSS feature");
+        }
+    }
 }
 
 float VulkanDLSSExternalFeature::queryParameterF(ExternalFeatureParameter param)
