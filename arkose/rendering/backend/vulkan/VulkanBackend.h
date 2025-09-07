@@ -70,8 +70,8 @@ public:
     int vramStatsReportRate() const override { return VramStatsQueryRate; }
     std::optional<VramStats> vramStats() override;
 
-    bool hasUpscalingSupport() const override;
-    UpscalingPreferences queryUpscalingPreferences(UpscalingTech, UpscalingQuality, Extent2D outputRes) const override;
+    bool hasDLSSSupport() const override;
+    Extent2D queryDLSSRenderResolution(Extent2D outputResolution, UpscalingQuality) const override;
 
     SwapchainTransferFunction swapchainTransferFunction() const override;
 

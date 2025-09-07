@@ -259,11 +259,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 continue; // let's just listen to whatever the first node said
             }
 
-            UpscalingTech tech = node->upscalingTech();
-            UpscalingQuality quality = node->upscalingQuality();
-            UpscalingPreferences preferences = backend().queryUpscalingPreferences(tech, quality, outputResolution);
-
-            renderResolution = preferences.preferredRenderResolution;
+            renderResolution = node->idealRenderResolution(outputResolution);
             break;
         }
     }

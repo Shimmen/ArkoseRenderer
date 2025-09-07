@@ -82,9 +82,9 @@ NVSDK_NGX_PerfQuality_Value VulkanDLSS::dlssQualityForUpscalingQuality(Upscaling
     }
 }
 
-UpscalingPreferences VulkanDLSS::queryOptimalSettings(Extent2D targetResolution, UpscalingQuality quality)
+DLSSPreferences VulkanDLSS::queryOptimalSettings(Extent2D targetResolution, UpscalingQuality quality)
 {
-    UpscalingPreferences preferences {};
+    DLSSPreferences preferences {};
 
     u32 optimalRenderWidth, optimalRenderHeight;
     float recommendedSharpness;
@@ -109,7 +109,7 @@ UpscalingPreferences VulkanDLSS::queryOptimalSettings(Extent2D targetResolution,
     // DLSS sharpening is deprecated & disabled in the API
     recommendedSharpness = 0.0f;
 
-    return UpscalingPreferences { .preferredRenderResolution = { optimalRenderWidth, optimalRenderHeight },
+    return DLSSPreferences { .preferredRenderResolution = { optimalRenderWidth, optimalRenderHeight },
                                   .preferredSharpening = recommendedSharpness };
 }
 
@@ -183,7 +183,7 @@ NVSDK_NGX_Handle* VulkanDLSS::createWithSettings(Extent2D renderResolution, Exte
     }
 }
 
-bool VulkanDLSS::evaluate(VkCommandBuffer commandBuffer, NVSDK_NGX_Handle* dlssFeatureHandle, UpscalingParameters const& parameters)
+bool VulkanDLSS::evaluate(VkCommandBuffer commandBuffer, NVSDK_NGX_Handle* dlssFeatureHandle, ExternalFeatureEvaluateParamsDLSS const& parameters)
 {
     // Ensure the upscaled texture is in the expected image layout for DLSS
     VulkanTexture& upscaledTexture = static_cast<VulkanTexture&>(*parameters.upscaledColor);
@@ -387,7 +387,7 @@ VulkanDLSSExternalFeature::VulkanDLSSExternalFeature(Backend& backend, ExternalF
     ARKOSE_ASSERT(vulkanBackend.hasDlssFeature()); // TODO: Handle error!
     VulkanDLSS& vulkanDlss = vulkanBackend.dlssFeature();
 
-    UpscalingPreferences preferences = vulkanDlss.queryOptimalSettings(params.outputResolution, params.quality);
+    DLSSPreferences preferences = vulkanDlss.queryOptimalSettings(params.outputResolution, params.quality);
     ARKOSE_ASSERT(preferences.preferredRenderResolution == params.renderResolution);
     m_optimalSharpness = preferences.preferredSharpening;
 

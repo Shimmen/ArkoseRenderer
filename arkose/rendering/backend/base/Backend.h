@@ -88,8 +88,8 @@ public:
     virtual int vramStatsReportRate() const { return 0; }
     virtual std::optional<VramStats> vramStats() { return {}; }
 
-    virtual bool hasUpscalingSupport() const = 0;
-    virtual UpscalingPreferences queryUpscalingPreferences(UpscalingTech, UpscalingQuality, Extent2D outputRes) const { return UpscalingPreferences(); }
+    virtual bool hasDLSSSupport() const { return false; }
+    virtual Extent2D queryDLSSRenderResolution(Extent2D outputResolution, UpscalingQuality) const { return outputResolution; }
 
     virtual SwapchainTransferFunction swapchainTransferFunction() const = 0;
     virtual bool hasSrgbTransferFunction() const { return swapchainTransferFunction() == SwapchainTransferFunction::sRGB_nonLinear; }

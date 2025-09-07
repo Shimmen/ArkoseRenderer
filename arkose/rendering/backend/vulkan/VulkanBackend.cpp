@@ -2155,6 +2155,28 @@ std::optional<VramStats> VulkanBackend::vramStats()
     return m_lastQueriedVramStats;
 }
 
+bool VulkanBackend::hasDLSSSupport() const
+{
+#if WITH_DLSS
+    return m_dlss != nullptr && m_dlss->isReadyToUse();
+#else
+    return false;
+#endif
+}
+
+Extent2D VulkanBackend::queryDLSSRenderResolution(Extent2D outputResolution, UpscalingQuality upscalingQuality) const
+{
+#if WITH_DLSS
+    if (m_dlss && m_dlss->isReadyToUse()) {
+        DLSSPreferences dlssPreferences = m_dlss->queryOptimalSettings(outputResolution, upscalingQuality);
+        return dlssPreferences.preferredRenderResolution;
+    }
+#endif
+
+    ARKOSE_LOG(Error, "VulkanBackend: cannot query DLSS render resolution when DLSS is not available, returning output resolution as-is.");
+    return outputResolution;
+}
+
 void VulkanBackend::renderPipelineDidChange(RenderPipeline& renderPipeline)
 {
     reconstructRenderPipelineResources(renderPipeline);
@@ -2572,33 +2594,6 @@ void VulkanBackend::enqueueForDeletion(VkObjectType type, void* vulkanObject, Vm
                                   .allocation = allocation };
 
     m_pendingDeletes[m_currentFrameIndex % NumInFlightFrames].push_back(deleteRequest);
-}
-
-bool VulkanBackend::hasUpscalingSupport() const
-{
-    #if WITH_DLSS
-    {
-        return m_dlss && m_dlss->isReadyToUse();
-    }
-    #else
-    {
-        return false;
-    }
-    #endif
-}
-
-UpscalingPreferences VulkanBackend::queryUpscalingPreferences(UpscalingTech tech, UpscalingQuality quality, Extent2D outputRes) const
-{
-    ARKOSE_ASSERT(hasUpscalingSupport());
-
-    #if WITH_DLSS
-    if (tech == UpscalingTech::DLSS) {
-        ARKOSE_ASSERT(hasDlssFeature());
-        return m_dlss->queryOptimalSettings(outputRes, quality);
-    }
-    #endif
-
-    ASSERT_NOT_REACHED();
 }
 
 Backend::SwapchainTransferFunction VulkanBackend::swapchainTransferFunction() const

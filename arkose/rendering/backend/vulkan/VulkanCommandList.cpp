@@ -1018,12 +1018,8 @@ void VulkanCommandList::evaluateExternalFeature(ExternalFeature const& externalF
     case ExternalFeatureType::DLSS: {
         #if WITH_DLSS
             auto const& vulkanDlssExternalFeature = static_cast<VulkanDLSSExternalFeature const&>(externalFeature);
-            NVSDK_NGX_Handle* dlssFeatureHandle = vulkanDlssExternalFeature.dlssFeatureHandle;
-
-            // THIS IS NOT ACTUALLY THE CORRECT UNDERLYING TYPE! Will need to fix this after the UpscalingState stuff are removed..
-            UpscalingParameters const& upscalingParamsHACK = *reinterpret_cast<UpscalingParameters*>(externalFeatureEvaluateParams);
-
-            backend().dlssFeature().evaluate(m_commandBuffer, dlssFeatureHandle, upscalingParamsHACK);
+            auto const& dlssEvalParams = *reinterpret_cast<ExternalFeatureEvaluateParamsDLSS*>(externalFeatureEvaluateParams);
+            backend().dlssFeature().evaluate(m_commandBuffer, vulkanDlssExternalFeature.dlssFeatureHandle, dlssEvalParams);
         #else
             // It shouldn't be possible to create a DLSS external feature if we don't have DLSS support!
             ASSERT_NOT_REACHED();

@@ -29,9 +29,9 @@ public:
 
     [[nodiscard]] virtual std::string name() const = 0;
 
-    virtual UpscalingTech upscalingTech() const { return UpscalingTech::None; }
-    virtual UpscalingQuality upscalingQuality() const { return UpscalingQuality::Balanced; }
-    virtual bool isUpscalingNode() const final { return upscalingTech() != UpscalingTech::None; }
+    // Upscaling related functions, for nodes that do upscaling
+    virtual bool isUpscalingNode() const { return false; }
+    virtual Extent2D idealRenderResolution(Extent2D outputResolution) const { return outputResolution; }
 
     virtual ExecuteCallback construct(GpuScene&, Registry&) = 0;
 

@@ -14,8 +14,8 @@ public:
     std::string name() const override { return "DLSS"; }
     void drawGui() override;
 
-    virtual UpscalingTech upscalingTech() const override { return UpscalingTech::DLSS; }
-    virtual UpscalingQuality upscalingQuality() const override { return m_upscalingQuality; }
+    virtual bool isUpscalingNode() const override { return true; }
+    virtual Extent2D idealRenderResolution(Extent2D outputResolution) const override;
 
     ExecuteCallback construct(GpuScene&, Registry&) override;
 

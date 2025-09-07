@@ -7,8 +7,7 @@
 
 bool DLSSNode::isSupported()
 {
-    // TODO: Query specifically for DLSS support! Will need to get rid of the old upscaling stuff though to refactor..
-    return Backend::get().hasUpscalingSupport();
+    return Backend::get().hasDLSSSupport();
 }
 
 DLSSNode::DLSSNode(UpscalingQuality quality)
@@ -46,6 +45,11 @@ void DLSSNode::drawGui()
     }
 }
 
+Extent2D DLSSNode::idealRenderResolution(Extent2D outputResolution) const
+{
+    return Backend::get().queryDLSSRenderResolution(outputResolution, m_upscalingQuality);
+}
+
 RenderPipelineNode::ExecuteCallback DLSSNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& sceneColorTex = *reg.getTexture("SceneColor");
@@ -55,7 +59,7 @@ RenderPipelineNode::ExecuteCallback DLSSNode::construct(GpuScene& scene, Registr
     reg.publish("SceneColorUpscaled", upscaledSceneColorTex);
 
     ExternalFeatureCreateParamsDLSS dlssCreateParams;
-    dlssCreateParams.quality = UpscalingQuality::NativeResolution;
+    dlssCreateParams.quality = m_upscalingQuality;
     dlssCreateParams.renderResolution = pipeline().renderResolution();
     dlssCreateParams.outputResolution = pipeline().outputResolution();
 

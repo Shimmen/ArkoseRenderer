@@ -15,6 +15,11 @@
 class VulkanBackend;
 struct VulkanTexture;
 
+struct DLSSPreferences {
+    Extent2D preferredRenderResolution {};
+    float preferredSharpening { 0.0f };
+};
+
 class VulkanDLSS {
 public:
     VulkanDLSS(VulkanBackend&, VkInstance, VkPhysicalDevice, VkDevice);
@@ -23,9 +28,9 @@ public:
     // Is DLSS supported and the feature is ready to use?
     bool isReadyToUse() const { return m_dlssSupported; }
 
-    UpscalingPreferences queryOptimalSettings(Extent2D targetResolution, UpscalingQuality);
+    DLSSPreferences queryOptimalSettings(Extent2D targetResolution, UpscalingQuality);
     NVSDK_NGX_Handle* createWithSettings(Extent2D inputResolution, Extent2D outputResolution, UpscalingQuality, bool inputIsHDR);
-    bool evaluate(VkCommandBuffer, NVSDK_NGX_Handle* dlssFeatureHandle, UpscalingParameters const&);
+    bool evaluate(VkCommandBuffer, NVSDK_NGX_Handle* dlssFeatureHandle, ExternalFeatureEvaluateParamsDLSS const&);
 
     static NVSDK_NGX_PerfQuality_Value dlssQualityForUpscalingQuality(UpscalingQuality);
 
