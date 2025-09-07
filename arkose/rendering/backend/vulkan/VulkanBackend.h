@@ -91,6 +91,7 @@ public:
     std::unique_ptr<RayTracingState> createRayTracingState(ShaderBindingTable& sbt, const StateBindings&, uint32_t maxRecursionDepth) override;
     std::unique_ptr<ComputeState> createComputeState(Shader const&, StateBindings const&) override;
     std::unique_ptr<UpscalingState> createUpscalingState(UpscalingTech, UpscalingQuality, Extent2D renderRes, Extent2D outputDisplayRes) override;
+    std::unique_ptr<ExternalFeature> createExternalFeature(ExternalFeatureType, void* externalFeatureParameters) override;
 
     ///////////////////////////////////////////////////////////////////////////
     /// Utilities

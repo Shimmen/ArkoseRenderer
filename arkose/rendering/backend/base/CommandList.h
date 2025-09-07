@@ -27,6 +27,8 @@ public:
 
     virtual void evaluateUpscaling(UpscalingState const&, UpscalingParameters) = 0;
 
+    virtual void evaluateExternalFeature(ExternalFeature const&, void* externalFeatureEvaluateParams) = 0;
+
     // In general we don't want to be rebinding a bunch of textures while rendering, as we support bindless
     // throughout, but there are some cases where being able to just bind a texture directly is very useful.
     // This function allows you to bind a binding set consisting of only sampled textures, with a layout

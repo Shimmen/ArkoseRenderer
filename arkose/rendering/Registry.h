@@ -59,6 +59,7 @@ public:
     [[nodiscard]] ComputeState& createComputeState(Shader const&, StateBindings const&);
 
     [[nodiscard]] UpscalingState& createUpscalingState(UpscalingTech, UpscalingQuality, Extent2D renderRes, Extent2D outputDisplayRes);
+    [[nodiscard]] ExternalFeature& createExternalFeature(ExternalFeatureType, void* externalFeatureParams);
 
     template<typename T, typename... Args>
     [[nodiscard]] T& allocate(Args&&...);
@@ -119,6 +120,7 @@ private:
     std::vector<std::unique_ptr<RayTracingState>> m_rayTracingStates;
     std::vector<std::unique_ptr<ComputeState>> m_computeStates;
     std::vector<std::unique_ptr<UpscalingState>> m_upscalingStates;
+    std::vector<std::unique_ptr<ExternalFeature>> m_externalFeatures;
 
     static constexpr size_t PersistentBufferSize = 10 * ark::conversion::constants::BytesToKilobytes;
     BumpAllocator m_persistentBuffer { PersistentBufferSize };

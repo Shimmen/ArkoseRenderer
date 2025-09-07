@@ -86,6 +86,8 @@ set(ARKOSE_SOURCES
       arkose/rendering/backend/base/CommandList.h
       arkose/rendering/backend/base/ComputeState.cpp
       arkose/rendering/backend/base/ComputeState.h
+      arkose/rendering/backend/base/ExternalFeature.cpp
+      arkose/rendering/backend/base/ExternalFeature.h
       arkose/rendering/backend/base/RayTracingState.cpp
       arkose/rendering/backend/base/RayTracingState.h
       arkose/rendering/backend/base/RenderState.cpp
@@ -207,6 +209,8 @@ set(ARKOSE_SOURCES
     arkose/rendering/shadow/RTLocalShadowNode.cpp
     arkose/rendering/shadow/RTLocalShadowNode.h
     # upscaling
+    arkose/rendering/upscaling/DLSSNode.cpp
+    arkose/rendering/upscaling/DLSSNode.h
     arkose/rendering/upscaling/UpscalingNode.cpp
     arkose/rendering/upscaling/UpscalingNode.h
     # util

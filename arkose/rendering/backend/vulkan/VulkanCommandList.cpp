@@ -12,6 +12,7 @@
 #include "rendering/backend/vulkan/VulkanUpscalingState.h"
 #include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.h"
 #include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.h"
+#include "rendering/backend/vulkan/features/dlss/VulkanDLSS.h"
 #include "utility/Profiling.h"
 #include <fmt/format.h>
 #include <stb_image_write.h>
@@ -1020,6 +1021,31 @@ void VulkanCommandList::evaluateUpscaling(UpscalingState const& upscalingState, 
     {
 #endif
         ASSERT_NOT_REACHED();
+    }
+}
+
+void VulkanCommandList::evaluateExternalFeature(ExternalFeature const& externalFeature, void* externalFeatureEvaluateParams)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    switch (externalFeature.type()) {
+    case ExternalFeatureType::None:
+        ARKOSE_LOG(Fatal, "Trying to evaluate an external feature of type None, which shouldn't be created in the first place.");
+        break;
+    case ExternalFeatureType::DLSS: {
+        #if WITH_DLSS
+            auto const& vulkanDlssExternalFeature = static_cast<VulkanDLSSExternalFeature const&>(externalFeature);
+            NVSDK_NGX_Handle* dlssFeatureHandle = vulkanDlssExternalFeature.dlssFeatureHandle;
+
+            // THIS IS NOT ACTUALLY THE CORRECT UNDERLYING TYPE! Will need to fix this after the UpscalingState stuff are removed..
+            UpscalingParameters const& upscalingParamsHACK = *reinterpret_cast<UpscalingParameters*>(externalFeatureEvaluateParams);
+
+            backend().dlssFeature().evaluate(m_commandBuffer, dlssFeatureHandle, upscalingParamsHACK);
+        #else
+            // It shouldn't be possible to create a DLSS external feature if we don't have DLSS support!
+            ASSERT_NOT_REACHED();
+        #endif
+    } break;
     }
 }
 

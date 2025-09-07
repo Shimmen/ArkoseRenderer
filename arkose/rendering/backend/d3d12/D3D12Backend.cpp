@@ -899,3 +899,8 @@ std::unique_ptr<UpscalingState> D3D12Backend::createUpscalingState(UpscalingTech
 {
     return nullptr;
 }
+
+std::unique_ptr<ExternalFeature> D3D12Backend::createExternalFeature(ExternalFeatureType type, void* externalFeatureParameters)
+{
+    return nullptr;
+}

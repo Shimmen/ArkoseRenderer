@@ -293,6 +293,15 @@ UpscalingState& Registry::createUpscalingState(UpscalingTech tech, UpscalingQual
     return *m_upscalingStates.back();
 }
 
+ExternalFeature& Registry::createExternalFeature(ExternalFeatureType type, void* externalFeatureParams)
+{
+    auto externalFeature = backend().createExternalFeature(type, externalFeatureParams);
+    externalFeature->setOwningRegistry({}, this);
+
+    m_externalFeatures.push_back(std::move(externalFeature));
+    return *m_externalFeatures.back();
+}
+
 bool Registry::hasPreviousNode(const std::string& name) const
 {
     auto entry = std::find(m_allNodeNames.begin(), m_allNodeNames.end(), name);

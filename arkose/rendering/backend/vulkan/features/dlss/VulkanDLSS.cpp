@@ -380,4 +380,35 @@ wchar_t const* VulkanDLSS::applicationDataPath()
     return path;
 }
 
+VulkanDLSSExternalFeature::VulkanDLSSExternalFeature(Backend& backend, ExternalFeatureCreateParamsDLSS const& params)
+    : ExternalFeature(backend, ExternalFeatureType::DLSS)
+{
+    VulkanBackend& vulkanBackend = static_cast<VulkanBackend&>(backend);
+    ARKOSE_ASSERT(vulkanBackend.hasDlssFeature()); // TODO: Handle error!
+    VulkanDLSS& vulkanDlss = vulkanBackend.dlssFeature();
+
+    UpscalingPreferences preferences = vulkanDlss.queryOptimalSettings(params.outputResolution, params.quality);
+    ARKOSE_ASSERT(preferences.preferredRenderResolution == params.renderResolution);
+    m_optimalSharpness = preferences.preferredSharpening;
+
+    float renderResolutionX = static_cast<float>(params.renderResolution.width());
+    float outputResolutionX = static_cast<float>(params.outputResolution.width());
+    m_optimalMipBias = std::log2(renderResolutionX / outputResolutionX) - 1.0f;
+
+    constexpr bool inputIsHDR = true;
+    dlssFeatureHandle = vulkanDlss.createWithSettings(params.renderResolution, params.outputResolution, params.quality, inputIsHDR);
+}
+
+float VulkanDLSSExternalFeature::queryParameterF(ExternalFeatureParameter param)
+{
+    switch (param) {
+    case ExternalFeatureParameter::DLSS_OptimalMipBias:
+        return m_optimalMipBias;
+    case ExternalFeatureParameter::DLSS_OptimalSharpness:
+        return m_optimalSharpness;
+    }
+
+    return ExternalFeature::queryParameterF(param);
+}
+
 #endif // WITH_DLSS

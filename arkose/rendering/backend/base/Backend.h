@@ -1,6 +1,14 @@
 #pragma once
 
-#include "rendering/backend/Resources.h"
+#include "rendering/backend/base/AccelerationStructure.h"
+#include "rendering/backend/base/BindingSet.h"
+#include "rendering/backend/base/Buffer.h"
+#include "rendering/backend/base/ComputeState.h"
+#include "rendering/backend/base/ExternalFeature.h"
+#include "rendering/backend/base/RayTracingState.h"
+#include "rendering/backend/base/RenderState.h"
+#include "rendering/backend/base/RenderTarget.h"
+#include "rendering/backend/base/Texture.h"
 #include "rendering/backend/base/Sampler.h"
 #include "rendering/backend/base/UpscalingState.h"
 #include "rendering/backend/util/VramStats.h"
@@ -99,6 +107,7 @@ public:
     virtual std::unique_ptr<RayTracingState> createRayTracingState(ShaderBindingTable& sbt, const StateBindings&, uint32_t maxRecursionDepth) = 0;
     virtual std::unique_ptr<ComputeState> createComputeState(Shader const&, StateBindings const&) = 0;
     virtual std::unique_ptr<UpscalingState> createUpscalingState(UpscalingTech, UpscalingQuality, Extent2D renderRes, Extent2D outputDisplayRes) = 0;
+    virtual std::unique_ptr<ExternalFeature> createExternalFeature(ExternalFeatureType, void* externalFeatureParameters) = 0;
 
 protected:
     Badge<Backend> badge() const { return {}; }

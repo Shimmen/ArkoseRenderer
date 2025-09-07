@@ -4,6 +4,7 @@
 
 #include "utility/Extent.h"
 #include "rendering/UpscalingParameters.h"
+#include "rendering/backend/base/ExternalFeature.h"
 #include <ark/vector.h>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -46,6 +47,17 @@ private:
 
     std::unordered_map<VulkanTexture const*, VkImageView> m_customRemappedImageViews {};
 
+};
+
+class VulkanDLSSExternalFeature final : public ExternalFeature {
+public:
+    VulkanDLSSExternalFeature(Backend&, ExternalFeatureCreateParamsDLSS const&);
+
+    float queryParameterF(ExternalFeatureParameter) override;
+
+    float m_optimalSharpness { 0.0f };
+    float m_optimalMipBias { 0.0f };
+    NVSDK_NGX_Handle* dlssFeatureHandle { nullptr };
 };
 
 #endif // WITH_DLSS

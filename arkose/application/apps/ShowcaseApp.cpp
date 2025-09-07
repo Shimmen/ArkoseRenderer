@@ -28,7 +28,7 @@
 #include "rendering/shadow/DirectionalShadowProjectNode.h"
 #include "rendering/shadow/LocalShadowDrawNode.h"
 #include "rendering/shadow/RTLocalShadowNode.h"
-#include "rendering/upscaling/UpscalingNode.h"
+#include "rendering/upscaling/DLSSNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
 #include "scene/lights/DirectionalLight.h"
@@ -191,11 +191,11 @@ void ShowcaseApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend
 
 #if WITH_DLSS
     if constexpr (withUpscaling) {
-        if (Backend::get().hasUpscalingSupport()) {
+        if (DLSSNode::isSupported()) {
             UpscalingQuality quality = pipeline.outputResolution() < Extent2D(2560, 1440)
                 ? UpscalingQuality::NativeResolution
                 : UpscalingQuality::GoodQuality;
-            pipeline.addNode<UpscalingNode>(UpscalingTech::DLSS, quality);
+            pipeline.addNode<DLSSNode>(quality);
             antiAliasingMode = AntiAliasing::None;
             sceneTexture = "SceneColorUpscaled";
         }

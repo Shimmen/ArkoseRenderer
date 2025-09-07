@@ -205,6 +205,8 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
     }
     #endif
 
+    m_nrd = std::make_unique<VulkanNRD>(*this, m_instance, physicalDevice(), device());
+
     // Create empty stub descriptor set layout (useful for filling gaps as Vulkan doesn't allow having gaps)
     VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo = { VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO };
     descriptorSetLayoutCreateInfo.bindingCount = 0;
@@ -605,6 +607,29 @@ std::unique_ptr<ComputeState> VulkanBackend::createComputeState(Shader const& sh
 std::unique_ptr<UpscalingState> VulkanBackend::createUpscalingState(UpscalingTech tech, UpscalingQuality quality, Extent2D renderRes, Extent2D outputDisplayRes)
 {
     return std::make_unique<VulkanUpscalingState>(*this, tech, quality, renderRes, outputDisplayRes);
+}
+
+std::unique_ptr<ExternalFeature> VulkanBackend::createExternalFeature(ExternalFeatureType type, void* externalFeatureParameters)
+{
+    switch (type) {
+    case ExternalFeatureType::None:
+        ASSERT_NOT_REACHED();
+    case ExternalFeatureType::DLSS: {
+        #if WITH_DLSS
+        if (m_dlss && m_dlss->isReadyToUse()) {
+            ExternalFeatureCreateParamsDLSS const& dlssParams = *static_cast<ExternalFeatureCreateParamsDLSS const*>(externalFeatureParameters);
+            return std::make_unique<VulkanDLSSExternalFeature>(*this, dlssParams);
+        } else
+        #endif
+        {
+            ARKOSE_LOG(Error, "VulkanBackend: cannot create DLSS external feature, not supported!");
+            return nullptr;
+        }
+    }
+    default:
+        ARKOSE_LOG(Error, "VulkanBackend: cannot create external feature of unknown type {}", type);
+        return nullptr;
+    }
 }
 
 VkSurfaceFormatKHR VulkanBackend::pickBestSurfaceFormat() const

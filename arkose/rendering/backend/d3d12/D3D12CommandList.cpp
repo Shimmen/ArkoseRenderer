@@ -335,6 +335,13 @@ void D3D12CommandList::evaluateUpscaling(UpscalingState const&, UpscalingParamet
     NOT_YET_IMPLEMENTED();
 }
 
+void D3D12CommandList::evaluateExternalFeature(ExternalFeature const&, void* externalFeatureEvaluateParams)
+{
+    SCOPED_PROFILE_ZONE_GPUCOMMAND();
+
+    NOT_YET_IMPLEMENTED();
+}
+
 void D3D12CommandList::bindTextureSet(BindingSet&, u32 index)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
