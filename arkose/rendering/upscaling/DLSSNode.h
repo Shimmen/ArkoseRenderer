@@ -3,7 +3,7 @@
 #if WITH_DLSS
 
 #include "rendering/RenderPipelineNode.h"
-#include "rendering/UpscalingParameters.h"
+#include "rendering/UpscalingQuality.h"
 
 class DLSSNode final : public RenderPipelineNode {
 public:

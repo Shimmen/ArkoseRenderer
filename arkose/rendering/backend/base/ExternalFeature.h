@@ -1,7 +1,7 @@
 #pragma once
 
 #include "rendering/backend/Resource.h"
-#include "rendering/UpscalingParameters.h"
+#include "rendering/UpscalingQuality.h"
 #include "utility/Extent.h"
 
 class Backend;

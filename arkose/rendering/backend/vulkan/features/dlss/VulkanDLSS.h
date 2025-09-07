@@ -3,7 +3,7 @@
 #if WITH_DLSS
 
 #include "utility/Extent.h"
-#include "rendering/UpscalingParameters.h"
+#include "rendering/UpscalingQuality.h"
 #include "rendering/backend/base/ExternalFeature.h"
 #include <ark/vector.h>
 #include <vector>

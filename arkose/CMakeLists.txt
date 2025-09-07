@@ -67,7 +67,7 @@ set(ARKOSE_SOURCES
   arkose/rendering/Skeleton.h
   arkose/rendering/StaticMesh.cpp
   arkose/rendering/StaticMesh.h
-  arkose/rendering/UpscalingParameters.h
+  arkose/rendering/UpscalingQuality.h
   arkose/rendering/VertexManager.cpp
   arkose/rendering/VertexManager.h
     # backend
