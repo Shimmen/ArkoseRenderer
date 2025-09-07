@@ -325,6 +325,9 @@ endif()
 target_link_libraries(ArkoseRenderer PRIVATE
     ArkoseCore # core arkose library
 
+    # Graphics & rendering related
+    NRD # NVIDIA Real-time Denoising (NRD) library
+
     # Debug tools
     renderdoc_api
 
