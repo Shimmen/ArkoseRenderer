@@ -991,6 +991,12 @@ void GpuScene::registerLight(DirectionalLight& light)
 
 void GpuScene::registerLight(SpotLight& light)
 {
+    // Default to using ray traced shadows if possible, for nice soft shadows :)
+    if (m_maintainRayTracingScene && light.shadowMode() != ShadowMode::None) {
+        light.setShadowMode(ShadowMode::RayTraced);
+        light.setLightSourceRadius(0.175f);
+    }
+
     TextureHandle iesLutHandle {};
     if (light.hasIesProfile()) {
         IESProfile const& iesProfile = light.iesProfile();

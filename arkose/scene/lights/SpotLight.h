@@ -30,6 +30,7 @@ public:
     const IESProfile& iesProfile() const { return m_iesProfile; }
 
     float lightSourceRadius() const { return m_lightSourceRadius; }
+    void setLightSourceRadius(float radius) { m_lightSourceRadius = radius; }
 
 private:
 

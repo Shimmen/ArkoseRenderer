@@ -56,6 +56,7 @@ public:
     virtual bool supportsShadowMode(ShadowMode) const = 0;
 
     ShadowMode shadowMode() const { return m_shadowMode; }
+    void setShadowMode(ShadowMode shadowMode) { m_shadowMode = shadowMode; }
     bool castsShadows() const { return shadowMode() != ShadowMode::None; }
 
     void setName(std::string name) { m_name = std::move(name); }
