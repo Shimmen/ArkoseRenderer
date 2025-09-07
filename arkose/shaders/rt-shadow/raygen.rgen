@@ -12,8 +12,10 @@ layout(set = 0, binding = 3, r8) uniform image2D shadowImg;
 
 NAMED_UNIFORMS_STRUCT(RayTracingPushConstants, constants)
 vec3 lightPosition() { return vec3(constants.parameter1, constants.parameter2, constants.parameter3); }
-float lightSourceRadius() { return constants.parameter4; }
-uint frameIndex() { return uint(round(constants.parameter5)); }
+vec3 lightDirection() { return vec3(constants.parameter4, constants.parameter5, constants.parameter6); }
+float lightOuterConeAngleCos() { return constants.parameter7; }
+float lightSourceRadius() { return constants.parameter8; }
+uint frameIndex() { return uint(round(constants.parameter9)); }
 
 layout(location = 0) rayPayload RayPayloadShadow payload;
 
@@ -49,6 +51,12 @@ void main()
     vec3 toLight = lightSamplePos - shadingPoint.xyz;
     float distToLight = length(toLight);
     vec3 L = toLight / distToLight;
+
+    // Cull rays outside of the spotlight cone, if possible
+    if (dot(-L, lightDirection()) < lightOuterConeAngleCos()) {
+        imageStore(shadowImg, pixelCoord, vec4(0.0, 0.0, 0.0, 0.0));
+        return;
+    }
 
     const float tmin = 0.025; // arbitrary small number
     const float tmax = distToLight; // for the sake of shadow, treat as point light source

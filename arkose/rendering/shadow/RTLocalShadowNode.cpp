@@ -65,13 +65,18 @@ RenderPipelineNode::ExecuteCallback RTLocalShadowNode::construct(GpuScene& scene
             cmdList.setRayTracingState(rtState);
 
             vec3 lightPosition = light.transform().positionInWorld();
+            vec3 lightDirection = light.transform().forward();
             u32 frameIdxModulus = appState.frameIndex() % 8;
 
             cmdList.setNamedUniform("parameter1", lightPosition.x);
             cmdList.setNamedUniform("parameter2", lightPosition.y);
             cmdList.setNamedUniform("parameter3", lightPosition.z);
-            cmdList.setNamedUniform("parameter4", spotLight.lightSourceRadius());
-            cmdList.setNamedUniform("parameter5", static_cast<f32>(frameIdxModulus));
+            cmdList.setNamedUniform("parameter4", lightDirection.x);
+            cmdList.setNamedUniform("parameter5", lightDirection.y);
+            cmdList.setNamedUniform("parameter6", lightDirection.z);
+            cmdList.setNamedUniform("parameter7", std::cos(spotLight.outerConeAngle() / 2.0f));
+            cmdList.setNamedUniform("parameter8", spotLight.lightSourceRadius());
+            cmdList.setNamedUniform("parameter9", static_cast<f32>(frameIdxModulus));
 
             // TODO: Limit to the radius/influence of the light source onto the world
             cmdList.traceRays(appState.windowExtent());
