@@ -84,7 +84,13 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3
 {
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
-    float shadowFactor = evaluateLocalLightShadow(shadowIdx, light.lightProjectionFromView, vPosition);
+    float shadowFactor = 1.0;
+    if (light.rtShadowMaskIndex >= 0) {
+        vec2 sampleTexCoords = gl_FragCoord.xy * constants.invTargetSize;
+        shadowFactor = textureLod(material_getTexture(light.rtShadowMaskIndex), sampleTexCoords, 0).r;
+    } else {
+        shadowFactor = evaluateLocalLightShadow(shadowIdx, light.lightProjectionFromView, vPosition);
+    }
 
     vec3 toLight = light.viewSpacePosition.xyz - vPosition;
     float dist = length(toLight);

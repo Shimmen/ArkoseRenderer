@@ -37,7 +37,8 @@ struct SpotLightData {
 
     float outerConeHalfAngle;
     int iesProfileIndex;
-    vec2 _pad0;
+    int rtShadowMaskIndex;
+    int _pad0;
 };
 
 #endif // LIGHT_DATA_H

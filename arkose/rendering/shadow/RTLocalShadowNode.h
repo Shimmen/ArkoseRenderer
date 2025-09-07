@@ -12,5 +12,6 @@ public:
     ExecuteCallback construct(GpuScene&, Registry&) override;
 
 private:
+    GpuScene* m_scene { nullptr };
     Texture* m_shadowTex { nullptr };
 };

@@ -75,6 +75,7 @@ public:
     size_t forEachShadowCastingLight(std::function<void(size_t, const Light&)>) const;
     size_t forEachLocalLight(std::function<void(size_t, Light&)>);
     size_t forEachLocalLight(std::function<void(size_t, const Light&)>) const;
+    size_t forEachLocalRTShadow(std::function<void(size_t, Light const&, Texture& shadowMask)>) const;
 
     // RenderPipelineNode interface
 
@@ -222,6 +223,9 @@ private:
     struct ManagedSpotLight {
         SpotLight* light {};
         TextureHandle iesLut {};
+
+        Texture* shadowMaskTexture { nullptr };
+        TextureHandle shadowMaskHandle {};
     };
     std::vector<ManagedSpotLight> m_managedSpotLights {};
 

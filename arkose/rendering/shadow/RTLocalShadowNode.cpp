@@ -10,11 +10,17 @@
 
 void RTLocalShadowNode::drawGui()
 {
-    drawTextureVisualizeGui(*m_shadowTex);
+    m_scene->forEachLocalRTShadow([this](size_t lightIdx, Light const& light, Texture& shadowMaskTex) {
+        ImGui::Text("%s", light.name().c_str());
+        drawTextureVisualizeGui(shadowMaskTex);
+        ImGui::Separator();
+    });
 }
 
 RenderPipelineNode::ExecuteCallback RTLocalShadowNode::construct(GpuScene& scene, Registry& reg)
 {
+    m_scene = &scene;
+
     Texture& sceneDepth = *reg.getTexture("SceneDepth");
     Buffer& cameraDataBuffer = *reg.getBuffer("SceneCameraData");
     // Texture& blueNoiseTexArray = *reg.getTexture("BlueNoise");
@@ -43,10 +49,7 @@ RenderPipelineNode::ExecuteCallback RTLocalShadowNode::construct(GpuScene& scene
 
         // geometry::Frustum const& cameraFrustum = scene.camera().frustum();
 
-        scene.forEachLocalLight([&](size_t lightIdx, Light const& light) {
-            if (light.shadowMode() != ShadowMode::RayTraced) {
-                return;
-            }
+        scene.forEachLocalRTShadow([&](size_t lightIdx, Light const& light, Texture& shadowMaskTex) {
 
             // TODO: Define a radius for the light falloff!
             // if (!light.castLightsIntoFrustum(cameraFrustum)) {
@@ -72,6 +75,12 @@ RenderPipelineNode::ExecuteCallback RTLocalShadowNode::construct(GpuScene& scene
 
             // TODO: Limit to the radius/influence of the light source onto the world
             cmdList.traceRays(appState.windowExtent());
+
+            // Denoise
+
+            // For now, just copy the shadow mask over
+            cmdList.copyTexture(*m_shadowTex, shadowMaskTex);
+            //shadowMaskTex.ensureThisTextureIsAvailableToSampleInAShader() // TODO!
         });
     };
 }

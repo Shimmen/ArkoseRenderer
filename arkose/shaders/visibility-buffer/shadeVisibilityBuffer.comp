@@ -81,11 +81,17 @@ float evaluateLocalLightShadow(uint shadowIdx, mat4 lightProjectionFromView, vec
     return (mapDepth < posInShadowMap.z) ? 0.0 : 1.0;
 }
 
-vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, int brdfType, vec3 viewSpacePos, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness, inout vec3 outSkinDiffuseIrradiance)
+vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, uvec2 pixelCoord, int brdfType, vec3 viewSpacePos, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness, inout vec3 outSkinDiffuseIrradiance)
 {
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
-    float shadowFactor = evaluateLocalLightShadow(shadowIdx, light.lightProjectionFromView, viewSpacePos);
+    float shadowFactor = 1.0;
+    if (light.rtShadowMaskIndex >= 0) {
+        vec2 sampleTexCoords = (vec2(pixelCoord) + vec2(0.5)) * constants.invTargetSize;
+        shadowFactor = textureLod(material_getTexture(light.rtShadowMaskIndex), sampleTexCoords, 0).r;
+    } else {
+        shadowFactor = evaluateLocalLightShadow(shadowIdx, light.lightProjectionFromView, viewSpacePos);
+    }
 
     vec3 toLight = light.viewSpacePosition.xyz - viewSpacePos;
     float dist = length(toLight);
@@ -255,7 +261,7 @@ void main()
     {
         uint shadowIdx = 0;
         for (uint i = 0; i < light_getSpotLightCount(); ++i) {
-            sceneColor += evaluateSpotLight(light_getSpotLight(i), shadowIdx++, material.brdf, viewSpacePos, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness, diffuseSkinIrradiance);
+            sceneColor += evaluateSpotLight(light_getSpotLight(i), shadowIdx++, pixelCoord, material.brdf, viewSpacePos, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness, diffuseSkinIrradiance);
         }
     }
 

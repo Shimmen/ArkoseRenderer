@@ -234,6 +234,17 @@ size_t GpuScene::forEachLocalLight(std::function<void(size_t, const Light&)> cal
     return nextIndex;
 }
 
+size_t GpuScene::forEachLocalRTShadow(std::function<void(size_t, Light const&, Texture& shadowMask)> callback) const
+{
+    size_t nextIndex = 0;
+    for (auto& managedLight : m_managedSpotLights) {
+        if (managedLight.light->shadowMode() == ShadowMode::RayTraced && managedLight.shadowMaskTexture) {
+            callback(nextIndex++, *managedLight.light, *managedLight.shadowMaskTexture);
+        }
+    }
+    return nextIndex;
+}
+
 void GpuScene::drawGui()
 {
     ImGui::SliderFloat("Global mip bias", &m_globalMipBias, -10.0f, +10.0f);
@@ -384,6 +395,16 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     // Shadow resources
     Texture& directionalShadowMask = reg.createTexture2D(renderResolution, Texture::Format::R8);
     reg.publish("DirectionalLightShadowMask", directionalShadowMask);
+
+    for (ManagedSpotLight& managedLight : m_managedSpotLights) {
+        // Reset any shadow mask textures that might be set on lights, as they are no longer valid
+        // (they are owned by the registry, so are reset whenever we reconstruct the pipeline)
+        managedLight.shadowMaskTexture = nullptr;
+        if (managedLight.shadowMaskHandle) {
+            unregisterTexture(managedLight.shadowMaskHandle);
+            managedLight.shadowMaskHandle.invalidate();
+        }
+    }
 
     // Misc. data
     Texture& blueNoiseTextureArray = reg.loadTextureArrayFromFileSequence("assets/engine/blue-noise/64_64/HDR_RGBA_{}.dds", false, false);
@@ -694,13 +715,30 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                                  .lightProjectionFromView = light.viewProjection() * worldFromView });
             }
 
-            for (const ManagedSpotLight& managedLight : m_managedSpotLights) {
+            for (ManagedSpotLight& managedLight : m_managedSpotLights) {
 
                 if (!managedLight.light) {
                     continue;
                 }
 
-                const SpotLight& light = *managedLight.light;
+                SpotLight const& light = *managedLight.light;
+
+                i32 rtShadowMaskIndexIfActive = -1;
+                if (m_maintainRayTracingScene && light.shadowMode() == ShadowMode::RayTraced) {
+
+                    // NOTE: If you change a light from RT to shadow-mapped, we currently leak the texture!
+                    // As it's managed by the Registry, it will get cleaned up when we reconstruct or destroy the pipeline,
+                    // but never outside of that. Not a massive deal, but worth keeping in mind! Ideally we'd keep a pool
+                    // of them or maybe just delete it right away.
+                    if (managedLight.shadowMaskTexture == nullptr) {
+                        managedLight.shadowMaskTexture = &reg.createTexture2D(renderResolution, Texture::Format::R8);
+
+                        managedLight.shadowMaskHandle = registerTextureSlot();
+                        updateTextureUnowned(managedLight.shadowMaskHandle, managedLight.shadowMaskTexture);
+                    }
+
+                    rtShadowMaskIndexIfActive = managedLight.shadowMaskHandle.indexOfType<int>();
+                }
 
                 spotLightData.emplace_back(SpotLightData { .color = light.color().asVec3() * light.intensityValue() * lightPreExposure(),
                                                            .exposure = lightPreExposure(),
@@ -716,7 +754,8 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                                                            .viewSpacePosition = viewFromWorld * vec4(light.transform().positionInWorld(), 1.0f),
                                                            .outerConeHalfAngle = light.outerConeAngle() / 2.0f,
                                                            .iesProfileIndex = managedLight.iesLut.indexOfType<int>(),
-                                                           ._pad0 = vec2() });
+                                                           .rtShadowMaskIndex = rtShadowMaskIndexIfActive,
+                                                           ._pad0 = 0 });
             }
 
             uploadBuffer.upload(dirLightData, dirLightDataBuffer);
