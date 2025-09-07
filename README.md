@@ -23,8 +23,8 @@ This list is not complete, it's just a showcase of various features that are imp
 
 ### Engine features
 
- - Async asset loading (for some resource types)
  - Custom asset system for all common asset types
+ - Async asset loading, for some resource types
  - Offline image block compression (BC5 & BC7)
  - Simple animation engine for e.g. skeletal meshes
  - Custom task graph implementation (work/job system)
@@ -39,8 +39,8 @@ This list is not complete, it's just a showcase of various features that are imp
  - Real-time ray tracing
  - Bindless texture support
  - Skeletal mesh skinning and rendering
- - Meshlet based visibility buffer rendering with meshlet culling (using mesh shaders)
- - GPU driven rendering, with object-level culling (still supported as part of the old path, but visibility buffer is now the main rendering path)
+ - GPU driven meshlet based visibility buffer rendering with meshlet culling (using mesh shaders)
+ - Ray traced and/or shadow mapped local (spot/point/sphere) lights
  - A realistic camera model, with focus and exposure controls that will be familiar to photographers
  - Depth of field, respecting the realistic camera model paramer such as aperture size and focal length
  - Dynamic Diffuse Global Illumination (DDGI) – a probe based global illumination solution with infinite light bounces.
@@ -49,6 +49,7 @@ This list is not complete, it's just a showcase of various features that are imp
  - Ray traced reflections with denoising
  - Temporal Anti-Aliasing (TAA)
  - DLSS 3 integration
+ - HDR display output support
 
  > **DISCLAIMER:** There is still a long list of features to add, many of them quite basic. The philosophy with this project has always been to work on whatever I feel like at that point in time, so there is no real concept of natural order here or minimum viable product. We're not in production after all :^) Some of these obvious basic features that I can think of right now are: light culling to make the rendering tiled or clustered and proper support for transparent objects.
 
@@ -58,28 +59,26 @@ This list is not complete, it's just a showcase of various features that are imp
 
 ```
 Arkose
-|-- arkcore         # all reusable arkose code
-|   |-- asset       # asset types, serialization, and importing
-|   |-- core        # various core features: maths, task graph, etc.
-|   |-- physics     # physics definitions
-|   |-- rendering   # rendering definitions
-|   `-- scene       # scene definitions
-|-- arkose          # all arkose engine & runtime code
-|   | main.cpp      # application entry point (for most platforms)
-|   |-- application # everything related to application startup, main loop, and shutdown
-|   |   `-- apps    # apps, e.g. a game or a graphics showcase
-|   |-- physics     # root for physics code
-|   |-- rendering   # root for rendering code
-|   |   |-- backend # rendering backend code (RHI) for interfacing with graphics APIs
-|   |   `-- nodes   # rendering techniques and features (API agnostic)
-|   |-- scene       # scene representation, e.g. scene, camera, lights
-|   |-- shaders     # all shader code used by arkose in run-time
-|   `-- system      # system (platform) specifics
-|-- assets          # all assets used by the engine & apps
-`-- deps            # root for in-tree code dependencies
+├── arkcore         # all reusable arkose code
+|   ├── asset       # asset types, serialization, and importing
+|   ├── core        # various core features: maths, task graph, etc.
+|   ├── physics     # physics definitions
+|   ├── rendering   # rendering definitions
+|   └── scene       # scene definitions
+├── arkose          # all arkose engine & runtime code
+|   ├── main.cpp    # application entry point (for most platforms)
+|   ├── application # everything related to application startup, main loop, and shutdown
+|   |   └── apps    # apps, e.g. a game or a graphics showcase
+|   ├── physics     # root for physics code
+|   ├── rendering   # root for rendering code
+|   |   ├── backend # rendering backend code (RHI) for interfacing with graphics APIs
+|   |   └── nodes   # rendering techniques and features (API agnostic)
+|   ├── scene       # scene representation, e.g. scene, camera, lights
+|   ├── shaders     # all shader code used by arkose in run-time
+|   └── system      # system (platform) specifics
+├── assets          # all assets used by the engine & apps
+└── deps            # root for in-tree code dependencies
 ```
-
-Note that some details are omitted for brevity.
 
 ## Prerequisites
 
