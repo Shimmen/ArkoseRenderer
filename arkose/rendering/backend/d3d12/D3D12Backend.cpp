@@ -895,11 +895,6 @@ std::unique_ptr<RayTracingState> D3D12Backend::createRayTracingState(ShaderBindi
     return nullptr;
 }
 
-std::unique_ptr<UpscalingState> D3D12Backend::createUpscalingState(UpscalingTech, UpscalingQuality, Extent2D renderRes, Extent2D outputDisplayRes)
-{
-    return nullptr;
-}
-
 std::unique_ptr<ExternalFeature> D3D12Backend::createExternalFeature(ExternalFeatureType type, void* externalFeatureParameters)
 {
     return nullptr;

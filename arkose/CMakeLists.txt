@@ -98,8 +98,6 @@ set(ARKOSE_SOURCES
       arkose/rendering/backend/base/Sampler.h
       arkose/rendering/backend/base/Texture.cpp
       arkose/rendering/backend/base/Texture.h
-      arkose/rendering/backend/base/UpscalingState.cpp
-      arkose/rendering/backend/base/UpscalingState.h
       # d3d12
       # (added separately)
       # shader
@@ -211,8 +209,6 @@ set(ARKOSE_SOURCES
     # upscaling
     arkose/rendering/upscaling/DLSSNode.cpp
     arkose/rendering/upscaling/DLSSNode.h
-    arkose/rendering/upscaling/UpscalingNode.cpp
-    arkose/rendering/upscaling/UpscalingNode.h
     # util
     arkose/rendering/util/BlendModeUtil.h
     arkose/rendering/util/ScopedDebugZone.h

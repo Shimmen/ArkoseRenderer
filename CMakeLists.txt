@@ -217,8 +217,6 @@ if (ARKOSE_BACKEND_VULKAN)
         arkose/rendering/backend/vulkan/VulkanSampler.h
         arkose/rendering/backend/vulkan/VulkanTexture.cpp
         arkose/rendering/backend/vulkan/VulkanTexture.h
-        arkose/rendering/backend/vulkan/VulkanUpscalingState.cpp
-        arkose/rendering/backend/vulkan/VulkanUpscalingState.h
         arkose/rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.cpp
         arkose/rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.h
         arkose/rendering/backend/vulkan/extensions/mesh-shader-ext/VulkanMeshShaderEXT.cpp

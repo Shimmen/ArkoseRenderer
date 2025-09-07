@@ -3,7 +3,6 @@
 #include "rendering/backend/Resources.h"
 #include "rendering/backend/base/Backend.h"
 #include "rendering/backend/util/UploadBuffer.h"
-#include "rendering/backend/base/UpscalingState.h"
 #include "rendering/backend/vulkan/VulkanRenderTarget.h"
 #include "rendering/backend/vulkan/VulkanTexture.h"
 #include "rendering/backend/vulkan/extensions/debug-utils/VulkanDebugUtils.h"
@@ -90,7 +89,6 @@ public:
     std::unique_ptr<TopLevelAS> createTopLevelAccelerationStructure(uint32_t maxInstanceCount) override;
     std::unique_ptr<RayTracingState> createRayTracingState(ShaderBindingTable& sbt, const StateBindings&, uint32_t maxRecursionDepth) override;
     std::unique_ptr<ComputeState> createComputeState(Shader const&, StateBindings const&) override;
-    std::unique_ptr<UpscalingState> createUpscalingState(UpscalingTech, UpscalingQuality, Extent2D renderRes, Extent2D outputDisplayRes) override;
     std::unique_ptr<ExternalFeature> createExternalFeature(ExternalFeatureType, void* externalFeatureParameters) override;
 
     ///////////////////////////////////////////////////////////////////////////

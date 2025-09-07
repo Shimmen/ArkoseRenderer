@@ -25,8 +25,6 @@ public:
     virtual void setRayTracingState(const RayTracingState&) = 0;
     virtual void setComputeState(const ComputeState&) = 0;
 
-    virtual void evaluateUpscaling(UpscalingState const&, UpscalingParameters) = 0;
-
     virtual void evaluateExternalFeature(ExternalFeature const&, void* externalFeatureEvaluateParams) = 0;
 
     // In general we don't want to be rebinding a bunch of textures while rendering, as we support bindless

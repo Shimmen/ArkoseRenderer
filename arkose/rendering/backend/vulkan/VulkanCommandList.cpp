@@ -9,7 +9,6 @@
 #include "rendering/backend/vulkan/VulkanRenderState.h"
 #include "rendering/backend/vulkan/VulkanRenderTarget.h"
 #include "rendering/backend/vulkan/VulkanTexture.h"
-#include "rendering/backend/vulkan/VulkanUpscalingState.h"
 #include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.h"
 #include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.h"
 #include "rendering/backend/vulkan/features/dlss/VulkanDLSS.h"
@@ -1006,22 +1005,6 @@ void VulkanCommandList::setComputeState(const ComputeState& genComputeState)
     computeState.stateBindings().forEachBindingSet([this](u32 setIndex, BindingSet& bindingSet) {
         bindSet(bindingSet, setIndex);
     });
-}
-
-void VulkanCommandList::evaluateUpscaling(UpscalingState const& upscalingState, UpscalingParameters parameters)
-{
-    SCOPED_PROFILE_ZONE_GPUCOMMAND();
-
-#if WITH_DLSS
-    if (upscalingState.upscalingTech() == UpscalingTech::DLSS) {
-        auto const& vulkanUpscalingState = static_cast<VulkanUpscalingState const&>(upscalingState);
-        backend().dlssFeature().evaluate(m_commandBuffer, vulkanUpscalingState.dlssFeatureHandle, parameters);
-    } else {
-#else
-    {
-#endif
-        ASSERT_NOT_REACHED();
-    }
 }
 
 void VulkanCommandList::evaluateExternalFeature(ExternalFeature const& externalFeature, void* externalFeatureEvaluateParams)

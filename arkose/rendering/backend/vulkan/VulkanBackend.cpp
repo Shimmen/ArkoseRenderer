@@ -9,7 +9,6 @@
 #include "rendering/backend/vulkan/VulkanRenderTarget.h"
 #include "rendering/backend/vulkan/VulkanSampler.h"
 #include "rendering/backend/vulkan/VulkanTexture.h"
-#include "rendering/backend/vulkan/VulkanUpscalingState.h"
 #include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.h"
 #include "rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.h"
 #include "rendering/backend/shader/Shader.h"
@@ -602,11 +601,6 @@ std::unique_ptr<RayTracingState> VulkanBackend::createRayTracingState(ShaderBind
 std::unique_ptr<ComputeState> VulkanBackend::createComputeState(Shader const& shader, StateBindings const& stateBindings)
 {
     return std::make_unique<VulkanComputeState>(*this, shader, stateBindings);
-}
-
-std::unique_ptr<UpscalingState> VulkanBackend::createUpscalingState(UpscalingTech tech, UpscalingQuality quality, Extent2D renderRes, Extent2D outputDisplayRes)
-{
-    return std::make_unique<VulkanUpscalingState>(*this, tech, quality, renderRes, outputDisplayRes);
 }
 
 std::unique_ptr<ExternalFeature> VulkanBackend::createExternalFeature(ExternalFeatureType type, void* externalFeatureParameters)

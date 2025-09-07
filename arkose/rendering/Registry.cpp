@@ -284,15 +284,6 @@ ComputeState& Registry::createComputeState(Shader const& shader, StateBindings c
     return *m_computeStates.back();
 }
 
-UpscalingState& Registry::createUpscalingState(UpscalingTech tech, UpscalingQuality quality, Extent2D renderRes, Extent2D outputDisplayRes)
-{
-    auto upscalingState = backend().createUpscalingState(tech, quality, renderRes, outputDisplayRes);
-    upscalingState->setOwningRegistry({}, this);
-
-    m_upscalingStates.push_back(std::move(upscalingState));
-    return *m_upscalingStates.back();
-}
-
 ExternalFeature& Registry::createExternalFeature(ExternalFeatureType type, void* externalFeatureParams)
 {
     auto externalFeature = backend().createExternalFeature(type, externalFeatureParams);

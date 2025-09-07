@@ -328,13 +328,6 @@ void D3D12CommandList::setComputeState(const ComputeState& genComputeState)
     });
 }
 
-void D3D12CommandList::evaluateUpscaling(UpscalingState const&, UpscalingParameters)
-{
-    SCOPED_PROFILE_ZONE_GPUCOMMAND();
-
-    NOT_YET_IMPLEMENTED();
-}
-
 void D3D12CommandList::evaluateExternalFeature(ExternalFeature const&, void* externalFeatureEvaluateParams)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();

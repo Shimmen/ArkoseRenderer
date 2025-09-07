@@ -33,7 +33,6 @@ public:
     void setRayTracingState(const RayTracingState&) override;
     void setComputeState(const ComputeState&) override;
 
-    void evaluateUpscaling(UpscalingState const&, UpscalingParameters) override;
     void evaluateExternalFeature(ExternalFeature const&, void* externalFeatureEvaluateParams) override;
 
     void bindTextureSet(BindingSet&, u32 index) override;
