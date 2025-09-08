@@ -16,7 +16,7 @@ set(CMAKE_CONFIGURATION_TYPES "Debug;Develop;Release")
 
 # Set default compiler & linker flags
 if (MSVC)
-    set(ARKOSE_CXX_FLAGS "/Zc:preprocessor")
+    set(ARKOSE_CXX_FLAGS "/Zc:preprocessor /permissive-")
 
     # Disable warnings from external dependencies' headers which are included into our source file
     # TODO: See if CMake can use the `/external:I /external:W0` and similar for GCC/Clang to avoid this!
