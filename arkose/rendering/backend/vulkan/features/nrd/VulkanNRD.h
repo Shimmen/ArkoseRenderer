@@ -1,5 +1,7 @@
 #pragma once
 
+#if WITH_NRD
+
 #include "rendering/backend/base/ExternalFeature.h"
 #include <vulkan/vulkan.h>
 
@@ -33,3 +35,5 @@ public:
 private:
     VulkanNRD& m_nrd;
 };
+
+#endif // WITH_NRD

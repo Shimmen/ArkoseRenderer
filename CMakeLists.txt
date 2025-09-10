@@ -237,8 +237,6 @@ if (ARKOSE_BACKEND_VULKAN)
         arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanAccelerationStructureKHR.h
         arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.cpp
         arkose/rendering/backend/vulkan/extensions/ray-tracing-khr/VulkanRayTracingStateKHR.h
-        arkose/rendering/backend/vulkan/features/nrd/VulkanNRD.cpp
-        arkose/rendering/backend/vulkan/features/nrd/VulkanNRD.h
         )
 
     add_subdirectory(deps/vulkan)
@@ -327,9 +325,6 @@ endif()
 target_link_libraries(ArkoseRenderer PRIVATE
     ArkoseCore # core arkose library
 
-    # Graphics & rendering related
-    NRD # NVIDIA Real-time Denoising (NRD) library
-
     # Debug tools
     renderdoc_api
 
@@ -345,6 +340,18 @@ if(DLSS_AVAILABLE)
                                           arkose/rendering/backend/vulkan/features/dlss/VulkanDLSS.h)
 else()
     message(STATUS "ArkoseRenderer: building without DLSS support")
+endif()
+
+# NOTE: NRD should build just fine on most platforms, but there's some issue with it's ShaderMake dependency
+# which I don't want to deal with now, so let's just not support NRD on anything but Windows at the moment.
+if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
+    message(STATUS "ArkoseRenderer: building with NVIDIA Real-time Denoising (NRD) support")
+    target_link_libraries(ArkoseRenderer PRIVATE NRD)
+    target_compile_definitions(ArkoseRenderer PUBLIC WITH_NRD=1)
+    target_sources(ArkoseRenderer PRIVATE arkose/rendering/backend/vulkan/features/nrd/VulkanNRD.cpp
+                                          arkose/rendering/backend/vulkan/features/nrd/VulkanNRD.h)
+else()
+    message(STATUS "ArkoseRenderer: building without NVIDIA Real-time Denoising (NRD) support")
 endif()
 
 add_custom_command(TARGET ArkoseRenderer POST_BUILD

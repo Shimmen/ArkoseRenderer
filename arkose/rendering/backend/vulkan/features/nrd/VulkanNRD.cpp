@@ -1,5 +1,7 @@
 #include "VulkanNRD.h"
 
+#if WITH_NRD
+
 #include "core/Types.h"
 #include "core/Logging.h"
 #include "rendering/backend/vulkan/VulkanBackend.h"
@@ -139,3 +141,5 @@ void VulkanNRDSigmaShadowExternalFeature::evaluate(ExternalFeatureEvaluateParams
         (void)dispatchDesc;
     }
 }
+
+#endif // WITH_NRD

@@ -204,10 +204,14 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
     }
     #endif
 
+    #if WITH_NRD
     m_nrd = std::make_unique<VulkanNRD>(*this);
     if (m_nrd->isReadyToUse()) {
         ARKOSE_LOG(Info, "VulkanBackend: NVIDIA Real-time Denoising (NRD) is ready to use!");
-    } else {
+    }
+    else
+    #endif
+    {
         ARKOSE_LOG(Info, "VulkanBackend: NVIDIA Real-time Denoising (NRD) is not available.");
     }
 
@@ -626,10 +630,13 @@ std::unique_ptr<ExternalFeature> VulkanBackend::createExternalFeature(ExternalFe
         }
     }
     case ExternalFeatureType::NRD_SigmaShadow: {
+        #if WITH_NRD
         if (m_nrd && m_nrd->isReadyToUse()) {
             auto const& nrdSigmaShadowParams = *static_cast<ExternalFeatureCreateParamsNRDSigmaShadow const*>(externalFeatureParameters);
             return std::make_unique<VulkanNRDSigmaShadowExternalFeature>(*this, *m_nrd, nrdSigmaShadowParams);
-        } else {
+        } else
+        #endif
+        {
             ARKOSE_LOG(Error, "VulkanBackend: cannot create NRD_SigmaShadow external feature, not supported!");
             return nullptr;
         }
