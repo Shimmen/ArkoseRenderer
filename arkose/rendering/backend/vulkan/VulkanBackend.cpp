@@ -194,15 +194,19 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
         bool runningOnNvidiaPhysicalDevice = m_physicalDeviceProperties.vendorID == 0x10DE;
         if (runningOnNvidiaPhysicalDevice && m_dlssHasAllRequiredExtensions && !m_renderdocAPI) {
             m_dlss = std::make_unique<VulkanDLSS>(*this, m_instance, physicalDevice(), device());
-            if (m_dlss->isReadyToUse()) {
-                ARKOSE_LOG(Info, "VulkanBackend: DLSS is ready to use!");
-            } else {
-                ARKOSE_LOG(Info, "VulkanBackend: DLSS is not supported, but all required extensions etc. "
-                                 "should be enabled by now. Is the dll placed next to the exe by the build process?");
+            if (!m_dlss->isReadyToUse()) {
+                ARKOSE_LOG(Warning, "VulkanBackend: DLSS is not supported, but all required extensions etc. "
+                                    "should be enabled by now. Is the dll placed next to the exe by the build process?");
             }
         }
     }
+    if (m_dlss->isReadyToUse()) {
+        ARKOSE_LOG(Info, "VulkanBackend: DLSS is ready to use!");
+    } else
     #endif
+    {
+        ARKOSE_LOG(Info, "VulkanBackend: DLSS is not available.");
+    }
 
     #if WITH_NRD
     m_nrd = std::make_unique<VulkanNRD>(*this);
