@@ -1026,9 +1026,14 @@ void VulkanCommandList::evaluateExternalFeature(ExternalFeature const& externalF
         #endif
     } break;
     case ExternalFeatureType::NRD_SigmaShadow: {
-        auto const& vulkanNrdSigmaShadowExternalFeature = static_cast<VulkanNRDSigmaShadowExternalFeature const&>(externalFeature);
-        auto const& nrdSigmaShadowEvalParams = *reinterpret_cast<ExternalFeatureEvaluateParamsNRDSigmaShadow*>(externalFeatureEvaluateParams);
-        vulkanNrdSigmaShadowExternalFeature.evaluate(nrdSigmaShadowEvalParams);
+        #if WITH_NRD
+            auto const& vulkanNrdSigmaShadowExternalFeature = static_cast<VulkanNRDSigmaShadowExternalFeature const&>(externalFeature);
+            auto const& nrdSigmaShadowEvalParams = *reinterpret_cast<ExternalFeatureEvaluateParamsNRDSigmaShadow*>(externalFeatureEvaluateParams);
+            vulkanNrdSigmaShadowExternalFeature.evaluate(nrdSigmaShadowEvalParams);
+        #else
+            // It shouldn't be possible to create a NRD external feature if we don't have NRD support!
+            ASSERT_NOT_REACHED();
+        #endif
     } break;
     }
 }
