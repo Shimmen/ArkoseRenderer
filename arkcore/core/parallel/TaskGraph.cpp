@@ -38,6 +38,11 @@ void TaskGraph::shutdown()
     Task::shutdownTasks();
 }
 
+bool TaskGraph::isInitialized()
+{
+    return g_taskGraphInstance != nullptr;
+}
+
 TaskGraph& TaskGraph::get()
 {
     ARKOSE_ASSERT(g_taskGraphInstance != nullptr);

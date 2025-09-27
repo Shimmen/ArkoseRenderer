@@ -10,9 +10,6 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    // TODO: Add an option to run the AssetImportTask in a single thread! Makes more sense in a tool setting like this.
-    TaskGraph::initialize();
-
     std::filesystem::path inputAsset = argv[1];
     ARKOSE_LOG(Info, "GltfImportTool: importing asset '{}'", inputAsset);
 
@@ -74,6 +71,5 @@ int main(int argc, char* argv[])
         FileIO::writeTextDataToFile(dependencyFile, dependencyData);
     }
 
-    TaskGraph::shutdown();
     return 0;
 }

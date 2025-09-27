@@ -21,8 +21,7 @@ void ParallelFor(size_t count, Function&& body, bool singleThreaded = false)
         ARKOSE_LOG(Warning, "ParallelFor with large count ({}), consider using ParallelForBatched to reduce task enqueue overhead.", count);
     }
 
-    // (For debugging purposes)
-    if (singleThreaded) {
+    if (singleThreaded || !TaskGraph::isInitialized()) {
         for (size_t i = 0; i < count; ++i) {
             body(i);
         }
@@ -61,7 +60,7 @@ void ParallelForBatched(size_t count, size_t batchSize, Function&& body, bool si
         return ParallelFor(count, std::move(body), singleThreaded);
     }
 
-    if (count <= batchSize) {
+    if (count <= batchSize || singleThreaded || !TaskGraph::isInitialized()) {
         for (size_t idx = 0; idx < count; ++idx) {
             body(idx);
         }
@@ -78,6 +77,5 @@ void ParallelForBatched(size_t count, size_t batchSize, Function&& body, bool si
             body(idx);
         }
 
-    },
-    singleThreaded);
+    });
 }

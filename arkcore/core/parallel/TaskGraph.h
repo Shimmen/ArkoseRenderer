@@ -32,6 +32,8 @@ public:
     static void initialize();
     static void shutdown();
 
+    static bool isInitialized();
+
     static TaskGraph& get();
 
     void scheduleTask(Task&, QueueType = QueueType::Default);
