@@ -15,5 +15,6 @@ imgui.ini
 # Nsight graphics projects
 *.ngfx-proj
 
-# Imported assets
-imported/
+# Derived asset data
+assets/imported/
+assets/temp/

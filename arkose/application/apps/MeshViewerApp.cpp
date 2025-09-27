@@ -210,7 +210,6 @@ void MeshViewerApp::drawMenuBar()
             }
             ImGui::Separator();
             if (ImGui::BeginMenu("Import options")) {
-                ImGui::MenuItem("Always make image assets", nullptr, &m_importOptions.alwaysMakeImageAsset);
                 ImGui::MenuItem("Compress images", nullptr, &m_importOptions.blockCompressImages);
                 ImGui::MenuItem("Generate mipmaps", nullptr, &m_importOptions.generateMipmaps);
                 ImGui::MenuItem("Save meshes as json", nullptr, &m_importOptions.saveMeshesInTextualFormat);
@@ -726,8 +725,9 @@ void MeshViewerApp::importAssetWithDialog()
 
         std::filesystem::path importFileDir = importFilePath.parent_path();
         std::filesystem::path targetDirectory = std::filesystem::absolute(importFileDir);
+        std::filesystem::path tempDirectory = std::filesystem::absolute(importFileDir); // todo - but it works for now..
 
-        m_currentImportTask = AssetImportTask::create(importFilePath, targetDirectory, m_importOptions);
+        m_currentImportTask = AssetImportTask::create(importFilePath, targetDirectory, tempDirectory, m_importOptions);
         TaskGraph::get().scheduleTask(*m_currentImportTask);
     }
 }

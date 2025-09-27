@@ -31,6 +31,9 @@ set(ARKCORE_SOURCES
     arkcore/asset/import/AssetImporter.h
     arkcore/asset/import/GltfLoader.cpp
     arkcore/asset/import/GltfLoader.h
+    # misc
+    arkcore/asset/misc/ImageBakeSpec.cpp
+    arkcore/asset/misc/ImageBakeSpec.h
 
   # core
   arkcore/core/Assert.cpp

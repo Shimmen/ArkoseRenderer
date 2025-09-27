@@ -47,7 +47,12 @@ void MeshSegmentAsset::processForImport()
     // Generate meshlets
     generateMeshlets();
 
-    #if PLATFORM_WINDOWS
+    // Disable for now - these maps should ideally operate on the compressed images,
+    // which makes the deferred compression a little tricky.. but later we can perhaps
+    // compress the image in-line with the mesh import specifically for meshes with
+    // materials with masked blend mode. A little complex, but should work.
+    // Either way, OMMs aren't fully implemented yet, so this is a waste of time.
+    #if 0//PLATFORM_WINDOWS
     // Generate opacity micro-maps, if relevant
     MaterialAsset* materialAsset = MaterialAsset::load(material);
     if (materialAsset && materialAsset->blendMode == BlendMode::Masked) {

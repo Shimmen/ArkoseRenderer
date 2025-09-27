@@ -871,7 +871,7 @@ int main(int argc, char* argv[])
 {
     if (argc < 3) {
         // TODO: Add support for named command line arguments!
-        ARKOSE_LOG(Error, "UsdImportTool: must be called as\n> UsdImportTool <SourceUsdFile> <TargetDirectory>");
+        ARKOSE_LOG(Error, "UsdImportTool: must be called as\n> UsdImportTool <SourceUsdFile> <TargetDirectory> <TempDirectory>");
         return 1;
     }
 
@@ -881,12 +881,16 @@ int main(int argc, char* argv[])
     std::filesystem::path targetDirectory = argv[2];
     ARKOSE_LOG(Info, "UsdImportTool: will write results to '{}'", targetDirectory);
 
+    std::filesystem::path tempDirectory = argv[3];
+    ARKOSE_LOG(Info, "UsdImportTool: will write temp files to '{}'", tempDirectory);
+
     if (!pxr::UsdStage::IsSupportedFile(inputAsset.string())) {
         ARKOSE_LOG(Error, "USD can't open file '{}'.", inputAsset);
         return 1;
     }
 
     FileIO::ensureDirectory(targetDirectory);
+    FileIO::ensureDirectory(tempDirectory);
 
     pxr::UsdStageRefPtr stage;
     {
@@ -1095,7 +1099,7 @@ int main(int argc, char* argv[])
     // Create dependency file
     {
         std::string originalExt = inputAsset.extension().string();
-        std::filesystem::path dependencyFile = targetDirectory / inputAsset.filename().replace_extension(originalExt + ".dep");
+        std::filesystem::path dependencyFile = tempDirectory / inputAsset.filename().replace_extension(originalExt + ".dep");
         ARKOSE_LOG(Info, "UsdImportTool: writing dependency file '{}'", dependencyFile);
 
         std::string dependencyData = "";

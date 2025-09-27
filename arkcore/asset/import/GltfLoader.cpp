@@ -672,10 +672,10 @@ std::unique_ptr<LightAsset> GltfLoader::createLight(tinygltf::Model const& gltfM
 
     } else if (lightType == "spot") {
         light->type = "SpotLight";
-        NOT_YET_IMPLEMENTED();
+        ARKOSE_LOG(Warning, "glTF loader: asset has 'SpotLight' which we don't support loading yet, ignoring");
     } else if (lightType == "point") {
         light->type = "SpotLight"; // todo: will be LocalLight eventually
-        NOT_YET_IMPLEMENTED();
+        ARKOSE_LOG(Warning, "glTF loader: asset has 'SpotLight' which we don't support loading yet, ignoring");
     } else {
         ASSERT_NOT_REACHED();
     }

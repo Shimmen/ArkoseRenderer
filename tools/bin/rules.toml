@@ -4,8 +4,9 @@ InputFilters = [
     { Repo = "Assets", PathPattern = "*.gltf" },
     { Repo = "Assets", PathPattern = "*.glb" },
 ]
-CommandLine = '{ Repo:Tools }GltfImportTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }"'
-DepFile = { Path = '{ Repo:Imported }{ Path }.dep', Format = 'AssetCooker' }
+CommandLine = '{ Repo:Tools }GltfImportTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }" "{ Repo:Temp }{ Dir }"'
+DepFile = { Path = '{ Repo:Temp }{ Path }.dep', Format = 'AssetCooker' }
+Priority = 0
 
 [[Rule]]
 Name = "Import USD asset"
@@ -14,8 +15,18 @@ InputFilters = [
     { Repo = "Assets", PathPattern = "*.usda" },
     { Repo = "Assets", PathPattern = "*.usdc" },
 ]
-CommandLine = '{ Repo:Tools }usd/UsdImportTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }"'
-DepFile = { Path = '{ Repo:Imported }{ Path }.dep', Format = 'AssetCooker' }
+CommandLine = '{ Repo:Tools }usd/UsdImportTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }" "{ Repo:Temp }{ Dir }"'
+DepFile = { Path = '{ Repo:Temp }{ Path }.dep', Format = 'AssetCooker' }
+Priority = 0
+
+[[Rule]]
+Name = "Bake image assets (imgspec)"
+InputFilters = [ 
+    { Repo = "Temp", PathPattern = "*.imgspec" },
+]
+CommandLine = '{ Repo:Tools }ImgAssetBakeTool.exe "{ Repo:Temp }{ Path }"'
+DepFile = { Path = '{ Repo:Temp }{ Path }.dep', Format = 'AssetCooker' }
+Priority = 1 # ensure producers of imgspec files run first (the asset importers)
 
 #[[Rule]]
 #Name = "Convert IES profile to LUT"
@@ -24,6 +35,7 @@ DepFile = { Path = '{ Repo:Imported }{ Path }.dep', Format = 'AssetCooker' }
 #]
 #CommandLine = '{ Repo:Tools }IESConvertTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }{ File }{ Ext }.dds"'
 #OutputPaths = [ '{ Repo:Imported }{ Dir }{ File }{ Ext }.dds' ]
+#Priority = 2
 
 [[Rule]]
 Name = "Copy IES profiles (TODO: Use the converted DDS LUTs!)"
@@ -32,6 +44,7 @@ InputFilters = [
 ]
 CommandLine = '{ Repo:Tools }CopyFileTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Path }"'
 OutputPaths = [ '{ Repo:Imported }{ Path }' ]
+Priority = 2
 
 [[Rule]]
 Name = "Bake Arkose asset"
@@ -44,9 +57,10 @@ InputFilters = [
 ]
 CommandLine = '{ Repo:Tools }ArkAssetBakeTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Path }"'
 OutputPaths = [ '{ Repo:Imported }{ Path }' ]
+Priority = 2
 
 [[Rule]]
-Name = "Bake image assets"
+Name = "Bake image assets (direct)"
 InputFilters = [ 
     { Repo = "Assets", PathPattern = "*.hdr" },
     { Repo = "Assets", PathPattern = "engine/icons/*.png" },
@@ -55,6 +69,7 @@ InputFilters = [
 ]
 CommandLine = '{ Repo:Tools }ImgAssetBakeTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }{ File }.dds"'
 OutputPaths = [ '{ Repo:Imported }{ Dir }{ File }.dds' ]
+Priority = 2
 
 [[Rule]]
 Name = "Copy .cube LUTs"
@@ -63,4 +78,4 @@ InputFilters = [
 ]
 CommandLine = '{ Repo:Tools }CopyFileTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Path }"'
 OutputPaths = [ '{ Repo:Imported }{ Path }' ]
-
+Priority = 2

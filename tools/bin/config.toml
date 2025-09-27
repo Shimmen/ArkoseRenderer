@@ -12,6 +12,10 @@ Name = "Assets"
 Path = '../../assets/assets/'
 
 [[Repo]]
+Name = "Temp"
+Path = '../../assets/temp/'
+
+[[Repo]]
 Name = "Imported"
 Path = '../../assets/imported/'
 

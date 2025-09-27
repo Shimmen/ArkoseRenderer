@@ -5,7 +5,9 @@
 #include "asset/LevelAsset.h"
 #include "asset/MaterialAsset.h"
 #include "asset/MeshAsset.h"
+#include "asset/SetAsset.h"
 #include "asset/SkeletonAsset.h"
+#include "asset/misc/ImageBakeSpec.h"
 #include "core/parallel/PollableTask.h"
 #include <atomic>
 #include <string_view>
@@ -26,10 +28,14 @@ struct ImportedCamera {
 
 struct ImportResult {
     std::vector<std::unique_ptr<ImageAsset>> images {};
+    std::vector<std::unique_ptr<ImageBakeSpec>> imageSpecs {};
+
     std::vector<std::unique_ptr<MaterialAsset>> materials {};
     std::vector<std::unique_ptr<MeshAsset>> meshes {};
     std::vector<std::unique_ptr<SkeletonAsset>> skeletons {};
     std::vector<std::unique_ptr<AnimationAsset>> animations {};
+
+    std::unique_ptr<SetAsset> set {};
 
     std::vector<std::unique_ptr<LightAsset>> lights {};
     std::vector<ImportedCamera> cameras {};
@@ -38,12 +44,12 @@ struct ImportResult {
 };
 
 struct AssetImporterOptions {
-    // By default we keep png/jpeg/etc. in their source formats. Set this to true to import all images as asset types.
-    bool alwaysMakeImageAsset { false };
-    // Generate mipmaps when importing image assets? Only supported when making image assets
+    // Generate mipmaps when importing image assets?
     bool generateMipmaps { false };
     // Compress images in BC5 format for normal maps and BC7 for all other textures.
     bool blockCompressImages { false };
+    // Generate iamge specs instead of image assets (so they can be procesed separately)
+    bool generateImageSpecs { false };
     // Save imported meshes in textual format
     bool saveMeshesInTextualFormat { false };
 };
@@ -53,7 +59,10 @@ struct AssetImporterOptions {
 // If you wish to import synchronously, simply create an AssetImportTask and call `executeSynchronous()` on it. 
 class AssetImportTask : public PollableTask {
 public:
-    static std::unique_ptr<AssetImportTask> create(std::filesystem::path const& assetFilePath, std::filesystem::path const& targetDirectory, AssetImporterOptions);
+    static std::unique_ptr<AssetImportTask> create(std::filesystem::path const& assetFilePath,
+                                                   std::filesystem::path const& targetDirectory,
+                                                   std::filesystem::path const& tempDirectory,
+                                                   AssetImporterOptions);
 
     bool success() const;
     ImportResult* result();
@@ -62,13 +71,17 @@ public:
     virtual std::string status() const override;
 
 private:
-    AssetImportTask(std::filesystem::path const& assetFilePath, std::filesystem::path const& targetDirectory, AssetImporterOptions);
+    AssetImportTask(std::filesystem::path const& assetFilePath,
+                    std::filesystem::path const& targetDirectory,
+                    std::filesystem::path const& tempDirectory,
+                    AssetImporterOptions);
 
     void importAsset();
     void importGltf();
 
     std::filesystem::path m_assetFilePath {};
     std::filesystem::path m_targetDirectory {};
+    std::filesystem::path m_tempDirectory {};
     AssetImporterOptions m_options {};
 
     ImportResult m_result {};

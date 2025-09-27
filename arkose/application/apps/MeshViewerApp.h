@@ -70,8 +70,7 @@ private:
 
     std::unique_ptr<ImageAsset> performAmbientOcclusionBake(BakeMode, u32 resolution, u32 sampleCount);
 
-    AssetImporterOptions m_importOptions { .alwaysMakeImageAsset = false,
-                                           .generateMipmaps = true,
+    AssetImporterOptions m_importOptions { .generateMipmaps = true,
                                            .blockCompressImages = true,
                                            .saveMeshesInTextualFormat = false };
 
