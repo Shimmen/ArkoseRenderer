@@ -31,6 +31,7 @@
 #include "rendering/upscaling/DLSSNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
+#include "scene/editor/EditorScene.h"
 #include "scene/lights/DirectionalLight.h"
 #include "utility/Profiling.h"
 #include <ark/random.h>
@@ -299,6 +300,7 @@ bool ShowcaseApp::drawGui(Scene& scene)
     static bool showAbout = false;
     static bool showCameraGui = true;
     static bool showSceneGui = true;
+    static bool showSceneHierarchyUI = true;
     static bool showGpuSceneResourceUI = false;
     static bool showRenderPipelineGui = true;
 
@@ -328,6 +330,10 @@ bool ShowcaseApp::drawGui(Scene& scene)
         ImGui::End();
     }
 
+    if (showSceneHierarchyUI) {
+        scene.editorScene().drawSceneNodeHierarchy();
+    }
+
     if (showGpuSceneResourceUI) {
         if (ImGui::Begin("GPU resources", &showGpuSceneResourceUI, ImGuiWindowFlags_NoCollapse)) {
             scene.gpuScene().drawResourceUI();
@@ -350,6 +356,7 @@ bool ShowcaseApp::drawGui(Scene& scene)
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("View")) {
+            ImGui::MenuItem("Scene hierarchy", nullptr, &showSceneHierarchyUI);
             ImGui::MenuItem("Scene settings", nullptr, &showSceneGui);
             ImGui::MenuItem("Render pipeline", nullptr, &showRenderPipelineGui);
             ImGui::MenuItem("Camera", nullptr, &showCameraGui);
