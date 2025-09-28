@@ -1,5 +1,5 @@
 [[Rule]]
-Name = "Import glTF model"
+Name = "Import glTF"
 InputFilters = [ 
     { Repo = "Assets", PathPattern = "*.gltf" },
     { Repo = "Assets", PathPattern = "*.glb" },
@@ -9,7 +9,7 @@ DepFile = { Path = '{ Repo:Temp }{ Path }.dep', Format = 'AssetCooker' }
 Priority = 0
 
 [[Rule]]
-Name = "Import USD asset"
+Name = "Import USD"
 InputFilters = [ 
     { Repo = "Assets", PathPattern = "*.usd" },
     { Repo = "Assets", PathPattern = "*.usda" },
@@ -20,7 +20,7 @@ DepFile = { Path = '{ Repo:Temp }{ Path }.dep', Format = 'AssetCooker' }
 Priority = 0
 
 [[Rule]]
-Name = "Bake image assets (imgspec)"
+Name = "Bake imgspec"
 InputFilters = [ 
     { Repo = "Temp", PathPattern = "*.imgspec" },
 ]
@@ -38,7 +38,7 @@ Priority = 1 # ensure producers of imgspec files run first (the asset importers)
 #Priority = 2
 
 [[Rule]]
-Name = "Copy IES profiles (TODO: Use the converted DDS LUTs!)"
+Name = "Copy IES" # TODO: Use the converted DDS LUTs!
 InputFilters = [
     { Repo = "Assets", PathPattern = "*.ies" },
 ]
@@ -47,7 +47,7 @@ OutputPaths = [ '{ Repo:Imported }{ Path }' ]
 Priority = 2
 
 [[Rule]]
-Name = "Bake Arkose asset"
+Name = "Bake asset"
 InputFilters = [ 
     { Repo = "Assets", PathPattern = "*.arkanim" },
     { Repo = "Assets", PathPattern = "*.arklvl" },
@@ -60,7 +60,7 @@ OutputPaths = [ '{ Repo:Imported }{ Path }' ]
 Priority = 2
 
 [[Rule]]
-Name = "Bake image assets (direct)"
+Name = "Bake image"
 InputFilters = [ 
     { Repo = "Assets", PathPattern = "*.hdr" },
     { Repo = "Assets", PathPattern = "engine/icons/*.png" },
@@ -72,7 +72,7 @@ OutputPaths = [ '{ Repo:Imported }{ Dir }{ File }.dds' ]
 Priority = 2
 
 [[Rule]]
-Name = "Copy .cube LUTs"
+Name = "Copy .cube LUT"
 InputFilters = [ 
    { Repo = "Assets", PathPattern = "*.cube" },
 ]
