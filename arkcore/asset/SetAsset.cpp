@@ -42,6 +42,7 @@ bool SetAsset::readFromFile(std::filesystem::path const& filePath)
 {
     std::ifstream fileStream(filePath, std::ios::binary);
     if (!fileStream.is_open()) {
+        ARKOSE_LOG(Error, "Failed to load set asset at path '{}'", filePath);
         return false;
     }
 

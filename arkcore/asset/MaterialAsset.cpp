@@ -46,7 +46,8 @@ MaterialAsset* MaterialAsset::manage(std::unique_ptr<MaterialAsset>&& materialAs
 bool MaterialAsset::readFromFile(std::filesystem::path const& filePath)
 {
     std::ifstream fileStream(filePath, std::ios::binary);
-    if (not fileStream.is_open()) {
+    if (!fileStream.is_open()) {
+        ARKOSE_LOG(Error, "Failed to load material asset at path '{}'", filePath);
         return false;
     }
 

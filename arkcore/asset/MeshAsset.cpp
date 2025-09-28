@@ -770,7 +770,8 @@ MeshAsset* MeshAsset::manage(std::unique_ptr<MeshAsset>&& meshAsset)
 bool MeshAsset::readFromFile(std::filesystem::path const& filePath)
 {
     std::ifstream fileStream(filePath, std::ios::binary);
-    if (not fileStream.is_open()) {
+    if (!fileStream.is_open()) {
+        ARKOSE_LOG(Error, "Failed to load mesh asset at path '{}'", filePath);
         return false;
     }
 
