@@ -284,6 +284,7 @@ void Scene::removeNode(SceneNodeHandle nodeHandle)
 
 SceneNodeHandle Scene::addSet(SetAsset* setAsset)
 {
+    setAsset->rootNode.name = setAsset->name;
     return addNodeRecursive(setAsset, &setAsset->rootNode, m_rootNode);
 }
 
