@@ -9,6 +9,7 @@
 
 namespace {
 static std::vector<std::string> supportedExtensions = { "KHR_materials_pbrSpecularGlossiness", // partial support
+                                                        "KHR_materials_transmission", // not properly supported, but we pretend it is..
                                                         "KHR_materials_clearcoat", // partial support (only factor & roughness factor)
                                                         "KHR_materials_ior",
                                                         "KHR_lights_punctual",
@@ -122,6 +123,12 @@ ImportResult GltfLoader::load(std::filesystem::path const& gltfFilePath)
         } else {
             imageTypeBestGuess[gltfMaterial.pbrMetallicRoughness.baseColorTexture.index] = ImageType::sRGBColor;
             imageTypeBestGuess[gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index] = ImageType::GenericData;
+        }
+
+        auto transmissionMatEntry = gltfMaterial.extensions.find("KHR_materials_transmission");
+        if (transmissionMatEntry != gltfMaterial.extensions.end()) {
+            tinygltf::Value const& transmissionMat = transmissionMatEntry->second;
+            imageTypeBestGuess[transmissionMat.Get("transmissionTexture").Get("index").GetNumberAsInt()] = ImageType::sRGBColor;
         }
     }
 
@@ -857,6 +864,24 @@ std::unique_ptr<MaterialAsset> GltfLoader::createMaterial(const tinygltf::Model&
         int metallicRoughnessIdx = gltfMaterial.pbrMetallicRoughness.metallicRoughnessTexture.index;
         material->materialProperties = toMaterialInput(metallicRoughnessIdx);
 
+    }
+
+    auto transmissionMatEntry = gltfMaterial.extensions.find("KHR_materials_transmission");
+    if (transmissionMatEntry != gltfMaterial.extensions.end()) {
+        tinygltf::Value const& transmissionMat = transmissionMatEntry->second;
+
+        // According to the spec (https://github.com/KhronosGroup/glTF/tree/main/extensions/2.0/Khronos/KHR_materials_transmission)
+        // these materials will be set to "OPAQUE", as the "BLEND" alpha mode should be seen as a alpha-coverage blend mode. However,
+        // we don't distinguish between these - at least not for now - so mark it as translucent so it's not considered opaque.
+        material->blendMode = BlendMode::Translucent;
+
+        if (transmissionMat.Has("transmissionFactor")) {
+            material->transmissionFactor = (float)transmissionMat.Get("transmissionFactor").GetNumberAsDouble();
+        }
+        if (transmissionMat.Has("transmissionTexture")) {
+            int transmissionMapIdx = transmissionMat.Get("transmissionTexture").Get("index").GetNumberAsInt();
+            material->transmissionMap = toMaterialInput(transmissionMapIdx);
+        }
     }
 
     auto iorEntry = gltfMaterial.extensions.find("KHR_materials_ior");

@@ -112,6 +112,9 @@ public:
     float indexOfRefraction { 1.5f };
     float calculateDielectricReflectance(float interfaceIOR = 1.0f) const;
 
+    float transmissionFactor { 0.0f };
+    std::optional<MaterialInput> transmissionMap {};
+
     BlendMode blendMode { BlendMode::Opaque };
     float maskCutoff { 1.0f };
 
@@ -135,6 +138,7 @@ enum class MaterialAssetVersion : u32 {
     AddOcclusionMap,
     AddClearcoat,
     AddIndexOfRefraction,
+    AddTransmission,
     ////////////////////////////////////////////////////////////////////////////
     // Add new versions above this delimiter
     VersionCount,
@@ -190,6 +194,13 @@ void MaterialAsset::serialize(Archive& archive, u32 version)
         archive(CEREAL_NVP(indexOfRefraction));
     } else {
         indexOfRefraction = 1.5f;
+    }
+    if (version >= toUnderlying(MaterialAssetVersion::AddTransmission)) {
+        archive(CEREAL_NVP(transmissionFactor));
+        archive(CEREAL_NVP(transmissionMap));
+    } else {
+        transmissionFactor = 0.0f;
+        transmissionMap = {};
     }
     archive(CEREAL_NVP(blendMode), CEREAL_NVP(maskCutoff));
     archive(CEREAL_NVP(doubleSided));
