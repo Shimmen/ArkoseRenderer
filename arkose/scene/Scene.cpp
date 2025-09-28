@@ -222,12 +222,21 @@ void Scene::addLevel(LevelAsset* levelAsset)
 
     for (SceneObjectAsset const& sceneObjectAsset : levelAsset->objects) {
 
-        // TODO: Handle non-path indirection
-        std::string const& meshAssetPath = std::string(sceneObjectAsset.pathToMesh());
-        MeshAsset* meshAsset = MeshAsset::load(meshAssetPath);
+        if (!sceneObjectAsset.set.empty()) {
 
-        StaticMeshInstance& instance = addMesh(meshAsset, sceneObjectAsset.transform);
-        instance.name = sceneObjectAsset.name;
+            SetAsset* setAsset = SetAsset::load(sceneObjectAsset.set);
+            SceneNodeHandle setHandle = addSet(setAsset);
+            (void)setHandle;
+
+        } else {
+
+            // TODO: Handle non-path indirection
+            std::string const& meshAssetPath = std::string(sceneObjectAsset.pathToMesh());
+            MeshAsset* meshAsset = MeshAsset::load(meshAssetPath);
+
+            StaticMeshInstance& instance = addMesh(meshAsset, sceneObjectAsset.transform);
+            instance.name = sceneObjectAsset.name;
+        }
 
     }
 

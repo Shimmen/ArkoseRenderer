@@ -25,7 +25,8 @@
                 "mesh": {
                     "index": 0,
                     "data": "assets/sample/models/Head/head.arkmsh"
-                }
+                },
+                "set": ""
             }
         ],
         "lights": [

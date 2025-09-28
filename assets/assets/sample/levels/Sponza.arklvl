@@ -25,7 +25,8 @@
                 "mesh": {
                     "index": 0,
                     "data": "assets/sample/models/Sponza/mesh0000.arkmsh"
-                }
+                },
+                "set": ""
             },
             {
                 "name": "helmet",
@@ -50,7 +51,8 @@
                 "mesh": {
                     "index": 0,
                     "data": "assets/sample/models/DamagedHelmet/mesh_helmet_LP_13930damagedHelmet.arkmsh"
-                }
+                },
+                "set": ""
             }
         ],
         "lights": [

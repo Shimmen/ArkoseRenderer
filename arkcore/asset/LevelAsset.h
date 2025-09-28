@@ -31,6 +31,8 @@ public:
     // TODO: Convert static mesh asset!
     // std::variant<std::string, std::weak_ptr<MeshAsset>> mesh;
     std::variant<std::string, int> mesh;
+
+    std::string set;
 };
 
 class CameraAsset {
@@ -236,6 +238,7 @@ void SceneObjectAsset::serialize(Archive& archive)
     archive(cereal::make_nvp("name", name));
     archive(cereal::make_nvp("transform", transform));
     archive(cereal::make_nvp("mesh", mesh));
+    archive(cereal::make_nvp("set", set));
 }
 
 template<class Archive>
