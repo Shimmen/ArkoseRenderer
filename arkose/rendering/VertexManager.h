@@ -69,16 +69,18 @@ public:
     Buffer& meshletIndexBuffer() { return *m_meshletIndexBuffer; }
 
     // Max that can be loaded in the GPU at any time
-    // TODO: Optimize these sizes!
-    static constexpr size_t MaxLoadedVertices         = 5'000'000;
+    static constexpr size_t MaxLoadedVertices         = 12'000'000;
     static constexpr size_t MaxLoadedSkinningVertices = 10'000;
     static constexpr size_t MaxLoadedVelocityVertices = 10'000;
-    static constexpr size_t MaxLoadedTriangles        = 10'000'000;
+    static constexpr size_t MaxLoadedTriangles        = 16'000'000;
     static constexpr size_t MaxLoadedIndices          = 3 * MaxLoadedTriangles;
 
-    static constexpr size_t MaxLoadedMeshlets         = MaxLoadedTriangles / 124;
+    // If there were exactly 124 triangles per meshlet it'd be trivial, but not every meshlet will be filled.
+    // Here we add a factor of 2 to allow for a worst case where every meshlet is only half-full.
+    static constexpr size_t MaxLoadedMeshlets         = MaxLoadedTriangles / 124 * 2;
 
-    static constexpr size_t UploadBufferSize          = 4 * 1024 * 1024;
+    // TODO: Make this smaller again, once we stream meshlets in a finer granularity
+    static constexpr size_t UploadBufferSize          = 100 * 1024 * 1024;
 
     u32 numAllocatedIndices() const
     {

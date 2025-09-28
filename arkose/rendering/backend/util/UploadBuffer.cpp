@@ -45,8 +45,13 @@ bool UploadBuffer::upload(const void* data, size_t size, Texture& dstTexture, si
 bool UploadBuffer::upload(const void* data, size_t size, std::variant<BufferCopyOperation::BufferDestination, BufferCopyOperation::TextureDestination>&& destination)
 {
     if (std::holds_alternative<BufferCopyOperation::BufferDestination>(destination)) {
-        auto const& copyDestination = std::get<BufferCopyOperation::BufferDestination>(destination).buffer;
-        if (copyDestination->usage() == Buffer::Usage::Upload) {
+        auto const& bufferCopyDestination = std::get<BufferCopyOperation::BufferDestination>(destination);
+
+        if (bufferCopyDestination.offset + size > bufferCopyDestination.buffer->size()) {
+            ARKOSE_LOG(Fatal, "Using UploadBuffer to copy to out-of-bounds of the destination buffer '{}', exiting.", bufferCopyDestination.buffer->name());
+        }
+
+        if (bufferCopyDestination.buffer->usage() == Buffer::Usage::Upload) {
             ARKOSE_LOG(Fatal, "Trying to use the upload buffer to upload to an upload buffer, which is not allowed, exiting.");
         }
     }

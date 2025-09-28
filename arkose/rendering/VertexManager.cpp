@@ -862,6 +862,11 @@ std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StreamingM
     u32 indexCount = narrow_cast<u32>(meshletDataAsset.meshletIndices.size());
     u32 meshletCount = narrow_cast<u32>(meshletDataAsset.meshlets.size());
 
+    // TODO: Use allocations for this path as well! Not just a few incrementing u32s...
+    ARKOSE_ASSERT(m_nextFreeMeshletIndirIndex + vertexCount < VertexManager::MaxLoadedVertices);
+    ARKOSE_ASSERT(m_nextFreeMeshletIndexBufferIndex + indexCount < VertexManager::MaxLoadedIndices);
+    ARKOSE_ASSERT(m_nextFreeMeshletIndex + meshletCount < VertexManager::MaxLoadedMeshlets);
+
     size_t numUploads = 3;
     size_t totalUploadSize = vertexCount * sizeof(u32) // vertex indirection buffer
         + indexCount * sizeof(u32) // index buffer
