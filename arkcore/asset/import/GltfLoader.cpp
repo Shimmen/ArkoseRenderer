@@ -679,11 +679,46 @@ std::unique_ptr<LightAsset> GltfLoader::createLight(tinygltf::Model const& gltfM
         light->data = dirLightData;
 
     } else if (lightType == "spot") {
+
         light->type = "SpotLight";
-        ARKOSE_LOG(Warning, "glTF loader: asset has 'SpotLight' which we don't support loading yet, ignoring");
+
+        light->castsShadows = true;
+        light->customConstantBias = 0.0f;
+        light->customSlopeBias = 0.0f;
+
+        SpotLightAssetData spotLightData;
+
+        spotLightData.iesProfilePath = "";
+
+        float intensity = static_cast<float>(gltfLight.Get("intensity").GetNumberAsDouble());
+        spotLightData.luminousIntensity = intensity;
+
+        float innerConeAngle = static_cast<float>(gltfLight.Get("innerConeAngle").GetNumberAsDouble());
+        float outerConeAngle = static_cast<float>(gltfLight.Get("outerConeAngle").GetNumberAsDouble());
+        (void)innerConeAngle; // we use IES profiles instead!
+        spotLightData.outerConeAngle = outerConeAngle;
+
+        light->data = spotLightData;
+
     } else if (lightType == "point") {
-        light->type = "SpotLight"; // todo: will be LocalLight eventually
-        ARKOSE_LOG(Warning, "glTF loader: asset has 'SpotLight' which we don't support loading yet, ignoring");
+
+        light->type = "SpotLight"; // todo: will be LocalLight eventually, then this makes more sense..
+
+        light->castsShadows = true;
+        light->customConstantBias = 0.0f;
+        light->customSlopeBias = 0.0f;
+
+        SpotLightAssetData spotLightData;
+
+        spotLightData.iesProfilePath = "";
+
+        float intensity = static_cast<float>(gltfLight.Get("intensity").GetNumberAsDouble());
+        spotLightData.luminousIntensity = intensity;
+
+        spotLightData.outerConeAngle = ark::TWO_PI; // hack
+
+        light->data = spotLightData;
+
     } else {
         ASSERT_NOT_REACHED();
     }
