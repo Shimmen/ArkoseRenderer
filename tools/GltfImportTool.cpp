@@ -1,6 +1,7 @@
 #include <asset/import/AssetImporter.h>
 #include <core/Logging.h>
 #include <core/parallel/TaskGraph.h>
+#include <utility/ToolUtilities.h>
 
 int main(int argc, char* argv[])
 {
@@ -90,5 +91,5 @@ int main(int argc, char* argv[])
         FileIO::writeTextDataToFile(dependencyFilePath, dependencyData);
     }
 
-    return 0;
+    return toolReturnCode();
 }

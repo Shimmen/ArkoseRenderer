@@ -3,6 +3,7 @@
 #include <asset/external/IESProfile.h>
 #include <core/Logging.h>
 #include <utility/FileIO.h>
+#include <utility/ToolUtilities.h>
 
 int main(int argc, char* argv[])
 {
@@ -40,5 +41,5 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    return 0;
+    return toolReturnCode();
 }

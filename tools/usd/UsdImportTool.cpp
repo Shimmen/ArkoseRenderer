@@ -5,6 +5,7 @@
 #include <asset/TextureCompressor.h>
 #include <core/Logging.h>
 #include <utility/Profiling.h>
+#include <utility/ToolUtilities.h>
 
 // token stuff
 #include <pxr/base/tf/token.h>
@@ -973,7 +974,6 @@ int main(int argc, char* argv[])
     };
 
     std::vector<std::filesystem::path> outputDependencies;
-    u32 errorCount = 0;
 
     u32 numModels = 0;
     for (const pxr::UsdPrim& prim : stage->Traverse()) {
@@ -1013,7 +1013,7 @@ int main(int argc, char* argv[])
                 setAsset->meshAssets.emplace_back(meshFilePath.generic_string());
 
             } else {
-                errorCount += 1;
+                ARKOSE_LOG(Error, "Failed to create mesh asset for UsdGeomMesh");
             }
 
         } else if (prim.IsA<pxr::UsdShadeMaterial>()) {
@@ -1065,7 +1065,7 @@ int main(int argc, char* argv[])
                 material->writeToFile(materialFilePath, AssetStorage::Json); // TODO: Use binary storage!
                 outputDependencies.push_back(materialFilePath);
             } else {
-                errorCount += 1;
+                ARKOSE_LOG(Error, "Failed to create material asset for UsdShadeMaterial");
             }
 
         } else if (prim.IsA<pxr::UsdGeomCamera>()) {
@@ -1111,11 +1111,5 @@ int main(int argc, char* argv[])
         FileIO::writeTextDataToFile(dependencyFile, dependencyData);
     }
 
-    errorCount += ArkoseAssertionCounter;
-
-    if (errorCount > 0) {
-        ARKOSE_LOG(Error, "{} errors while importing asset '{}'", errorCount, inputAsset);
-    }
-
-    return errorCount ? 1 : 0;
+    return toolReturnCode();
 }

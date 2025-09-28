@@ -6,6 +6,7 @@
 #include <asset/SkeletonAsset.h>
 #include <core/Logging.h>
 #include <utility/FileIO.h>
+#include <utility/ToolUtilities.h>
 
 int main(int argc, char* argv[])
 {
@@ -23,7 +24,6 @@ int main(int argc, char* argv[])
 
     if (!inputFile.has_extension()) {
         ARKOSE_LOG(Error, "ArkAssetBakeTool: input file has no extension so we can't derive the asset type");
-        return 1;
     }
 
     std::filesystem::path extension = inputFile.extension();
@@ -60,8 +60,7 @@ int main(int argc, char* argv[])
 
     } else {
         ARKOSE_LOG(Error, "ArkAssetBakeTool: unknown arkose asset type '{}'", extension);
-        return 1;
     }
 
-    return 0;
+    return toolReturnCode();
 }

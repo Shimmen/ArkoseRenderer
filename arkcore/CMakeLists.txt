@@ -100,6 +100,7 @@ set(ARKCORE_SOURCES
   arkcore/utility/ParseContext.h
   arkcore/utility/Profiling.h
   arkcore/utility/StringHelpers.h
+  arkcore/utility/ToolUtilities.h
 
   PARENT_SCOPE
   )
