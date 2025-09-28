@@ -351,9 +351,7 @@ else()
     message(STATUS "ArkoseRenderer: building without DLSS support")
 endif()
 
-# NOTE: NRD should build just fine on most platforms, but there's some issue with it's ShaderMake dependency
-# which I don't want to deal with now, so let's just not support NRD on anything but Windows at the moment.
-if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
+if(NRD_AVAILABLE)
     message(STATUS "ArkoseRenderer: building with NVIDIA Real-time Denoising (NRD) support")
     target_link_libraries(ArkoseRenderer PRIVATE NRD)
     target_compile_definitions(ArkoseRenderer PUBLIC WITH_NRD=1)
