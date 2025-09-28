@@ -41,6 +41,7 @@ set(ARKCORE_SOURCES
   arkcore/core/Badge.h
   arkcore/core/CommandLine.cpp
   arkcore/core/CommandLine.h
+  arkcore/core/Logging.cpp
   arkcore/core/Logging.h
   arkcore/core/Types.h
     # math

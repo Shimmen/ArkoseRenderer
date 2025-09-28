@@ -9,6 +9,9 @@
 
 namespace Logging {
 
+extern std::atomic_uint32_t LogWarningCounter;
+extern std::atomic_uint32_t LogErrorCounter;
+
 enum class LogLevel {
     None = 0,
     Fatal,
@@ -45,14 +48,17 @@ inline void _internal_vlog(fmt::string_view format, fmt::format_args args)
         case LogLevel::Fatal:
             severityString = "FATAL";
             textStyle = fmt::fg(fmt::color::black) | fmt::bg(fmt::color::red);
+            LogErrorCounter += 1;
             break;
         case LogLevel::Error:
             severityString = "ERROR";
             textStyle = fmt::fg(fmt::color::red);
+            LogErrorCounter += 1;
             break;
         case LogLevel::Warning:
             severityString = "WARNING";
             textStyle = fmt::fg(fmt::color::yellow);
+            LogWarningCounter += 1;
             break;
         case LogLevel::Info:
             severityString = "INFO";
