@@ -304,7 +304,7 @@ bool VulkanDLSS::evaluate(VkCommandBuffer commandBuffer, NVSDK_NGX_Handle* dlssF
     NVSDK_NGX_Result evaluateResult = NGX_VULKAN_EVALUATE_DLSS_EXT(commandBuffer, dlssFeatureHandle, m_ngxParameters, &dlssEvalParams);
 
     if (NVSDK_NGX_FAILED(evaluateResult)) {
-        ARKOSE_LOG(Fatal, "Failed to evaluate DLSS, exiting.");
+        ARKOSE_LOG(Error, "Failed to evaluate DLSS");
     }
 
     return true;
