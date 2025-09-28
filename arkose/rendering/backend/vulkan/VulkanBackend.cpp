@@ -39,14 +39,14 @@
 #include "GFSDK_Aftermath.h"
 #include "GFSDK_Aftermath_GpuCrashDump.h"
 static bool AftermathCrashDumpCollectionActive = false;
-void AftermathGpuCrashCallback(void const* gpuCrashDump, u32 gpuCrashDumpSize, void* userData)
+static void AftermathGpuCrashCallback(void const* gpuCrashDump, u32 gpuCrashDumpSize, void* userData)
 {
     std::filesystem::path gpuCrashDumpPath = "Logs/ArkoseGPUCrash.nv-gpudmp";
 
     ARKOSE_LOG(Info, "VulkanBackend: NVIDIA Nsight Aftermath detected a GPU crash, writing dump to disk at '{}'", gpuCrashDumpPath);
     FileIO::writeBinaryDataToFile(gpuCrashDumpPath, reinterpret_cast<std::byte const*>(gpuCrashDump), gpuCrashDumpSize);
 }
-void AftermathGpuCrashShaderInfoCallback(void const* shaderDebugInfo, u32 shaderDebugInfoSize, void* userData)
+static void AftermathGpuCrashShaderInfoCallback(void const* shaderDebugInfo, u32 shaderDebugInfoSize, void* userData)
 {
     std::filesystem::path shaderDebugInfoPath = "Logs/ArkoseGPUCrash.nv-debuginfo";
 
