@@ -332,12 +332,18 @@ std::unique_ptr<Texture> Texture::createFromImagePathSequence(Backend& backend, 
     std::vector<ImageAsset*> imageAssets;
     for (size_t idx = 0;; ++idx) {
         std::string imagePath = fmt::vformat(imagePathSequencePattern, fmt::make_format_args(idx));
-        ImageAsset* imageAsset = ImageAsset::loadOrCreate(imagePath);
-        if (!imageAsset)
+        bool fileExist = FileIO::fileReadable(imagePath);
+
+        if (fileExist) {
+            ImageAsset* imageAsset = ImageAsset::loadOrCreate(imagePath);
+            imageAssets.push_back(imageAsset);
+        } else {
             break;
+        }
+
         // TODO: Support multiple mips!
         //totalRequiredSize += imageAsset->pixelDataForMip(0).size();
-        imageAssets.push_back(imageAsset);
+
     }
 
     if (imageAssets.size() == 0) {
