@@ -32,6 +32,7 @@ This list is not complete, it's just a showcase of various features that are imp
  - Suite of editor tools, gizmos, and debug rendering
  - Tight integration with CPU & GPU profiling tools
  - A tools pipeline built upon [AssetCooker](https://github.com/jlaumon/AssetCooker)
+ - [NVIDIA Nsight Aftermath SDK](https://developer.nvidia.com/nsight-aftermath) integration, for GPU crash dumps
  - Physics (work-in-progress)
 
 ### Rendering features & techniques

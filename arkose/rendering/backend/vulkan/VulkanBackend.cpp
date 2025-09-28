@@ -35,6 +35,26 @@
 #include <dlfcn.h> // for dlopen & dlsym (for RenderDoc API loading)
 #endif
 
+#if defined(WITH_AFTERMATH_SDK)
+#include "GFSDK_Aftermath.h"
+#include "GFSDK_Aftermath_GpuCrashDump.h"
+static bool AftermathCrashDumpCollectionActive = false;
+void AftermathGpuCrashCallback(void const* gpuCrashDump, u32 gpuCrashDumpSize, void* userData)
+{
+    std::filesystem::path gpuCrashDumpPath = "Logs/ArkoseGPUCrash.nv-gpudmp";
+
+    ARKOSE_LOG(Info, "VulkanBackend: NVIDIA Nsight Aftermath detected a GPU crash, writing dump to disk at '{}'", gpuCrashDumpPath);
+    FileIO::writeBinaryDataToFile(gpuCrashDumpPath, reinterpret_cast<std::byte const*>(gpuCrashDump), gpuCrashDumpSize);
+}
+void AftermathGpuCrashShaderInfoCallback(void const* shaderDebugInfo, u32 shaderDebugInfoSize, void* userData)
+{
+    std::filesystem::path shaderDebugInfoPath = "Logs/ArkoseGPUCrash.nv-debuginfo";
+
+    ARKOSE_LOG(Info, "VulkanBackend: NVIDIA Nsight Aftermath detected a GPU crash, writing shader info to disk at '{}'", shaderDebugInfoPath);
+    FileIO::writeBinaryDataToFile(shaderDebugInfoPath, reinterpret_cast<std::byte const*>(shaderDebugInfo), shaderDebugInfoSize);
+}
+#endif
+
 #if defined(TRACY_ENABLE)
 #define SCOPED_PROFILE_ZONE_GPU(commandBuffer, nameLiteral) TracyVkZone(m_tracyVulkanContext, commandBuffer, nameLiteral);
 #define SCOPED_PROFILE_ZONE_GPU_DYNAMIC(commandBuffer, nameString) TracyVkZoneTransient(m_tracyVulkanContext, TracyConcat(ScopedProfileZone, nameString), commandBuffer, nameString.c_str(), nameString.size());
@@ -288,6 +308,12 @@ VulkanBackend::~VulkanBackend()
     vkDestroyCommandPool(device(), m_transientCommandPool, nullptr);
 
     vmaDestroyAllocator(m_memoryAllocator);
+
+    #if defined(WITH_AFTERMATH_SDK)
+    if (AftermathCrashDumpCollectionActive) {
+        GFSDK_Aftermath_DisableGpuCrashDumps();
+    }
+    #endif
 
     vkDestroyDevice(m_device, nullptr);
     vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
@@ -926,6 +952,9 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
     VkPhysicalDeviceMeshShaderFeaturesEXT meshShaderFeatures { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT };
     VkPhysicalDeviceFragmentShaderBarycentricFeaturesKHR fragmentShaderBarycentricFeatures = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADER_BARYCENTRIC_FEATURES_KHR };
 
+    VkPhysicalDeviceDiagnosticsConfigFeaturesNV nvDeviceDiagnosticsFeatues = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DIAGNOSTICS_CONFIG_FEATURES_NV };
+    VkDeviceDiagnosticsConfigCreateInfoNV nvDeviceDiagnosticsCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_DIAGNOSTICS_CONFIG_CREATE_INFO_NV };
+
     // Enable some very basic common features expected by everyone to exist
     vk10features.samplerAnisotropy = VK_TRUE;
     vk10features.fillModeNonSolid = VK_TRUE;
@@ -1042,6 +1071,41 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
             ASSERT_NOT_REACHED();
         }
     }
+
+    #if WITH_AFTERMATH_SDK
+    if (vulkanDebugMode && !m_renderdocAPI) {
+        if (hasSupportForDeviceExtension(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME)
+            && hasSupportForDeviceExtension(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME)) {
+
+            addDeviceExtension(VK_NV_DEVICE_DIAGNOSTICS_CONFIG_EXTENSION_NAME);
+            addDeviceExtension(VK_NV_DEVICE_DIAGNOSTIC_CHECKPOINTS_EXTENSION_NAME);
+
+            appendToNextChain(nvDeviceDiagnosticsFeatues);
+            nvDeviceDiagnosticsFeatues.diagnosticsConfig = VK_TRUE;
+
+            appendToNextChain(nvDeviceDiagnosticsCreateInfo);
+            nvDeviceDiagnosticsCreateInfo.flags |= VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_DEBUG_INFO_BIT_NV;
+            nvDeviceDiagnosticsCreateInfo.flags |= VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_RESOURCE_TRACKING_BIT_NV;
+            nvDeviceDiagnosticsCreateInfo.flags |= VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_AUTOMATIC_CHECKPOINTS_BIT_NV;
+            nvDeviceDiagnosticsCreateInfo.flags |= VK_DEVICE_DIAGNOSTICS_CONFIG_ENABLE_SHADER_ERROR_REPORTING_BIT_NV;
+
+            GFSDK_Aftermath_Result aftermathEnableRes = GFSDK_Aftermath_EnableGpuCrashDumps(
+                GFSDK_Aftermath_Version_API,
+                GFSDK_Aftermath_GpuCrashDumpWatchedApiFlags_Vulkan,
+                GFSDK_Aftermath_GpuCrashDumpFeatureFlags_Default,
+                AftermathGpuCrashCallback,
+                AftermathGpuCrashShaderInfoCallback,
+                nullptr,
+                nullptr,
+                nullptr);
+
+            if (aftermathEnableRes == GFSDK_Aftermath_Result_Success) {
+                ARKOSE_LOG(Info, "VulkanBackend: NVIDIA Nsight Aftermath armed & waiting");
+                AftermathCrashDumpCollectionActive = true;
+            }
+        }
+    }
+    #endif
 
     VkDeviceCreateInfo deviceCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO };
 
@@ -1638,7 +1702,34 @@ void VulkanBackend::waitForFrameReady()
     VkResult result = vkWaitForFences(device(), 1, &frameContext.frameFence, VK_TRUE, timeout);
 
     if (result == VK_ERROR_DEVICE_LOST) {
-        ARKOSE_LOG(Fatal, "VulkanBackend: device was lost while waiting for frame fence (frame {}).", m_currentFrameIndex);
+
+        #if defined(WITH_AFTERMATH_SDK)
+        if (AftermathCrashDumpCollectionActive) {
+            ARKOSE_LOG(Warning, "VulkanBackend: device was lost, waiting for Aftermath to collect data...");
+
+            GFSDK_Aftermath_CrashDump_Status status = GFSDK_Aftermath_CrashDump_Status_Unknown;
+            GFSDK_Aftermath_GetCrashDumpStatus(&status);
+
+            while (status != GFSDK_Aftermath_CrashDump_Status_CollectingDataFailed && status != GFSDK_Aftermath_CrashDump_Status_Finished) {
+                ARKOSE_LOG(Warning, "VulkanBackend: waiting for Aftermath...");
+
+                using namespace std::chrono_literals;
+                std::this_thread::sleep_for(50ms);
+
+                GFSDK_Aftermath_GetCrashDumpStatus(&status);
+            }
+
+            if (status == GFSDK_Aftermath_CrashDump_Status_Finished) {
+                ARKOSE_LOG(Warning, "VulkanBackend: Aftermath has written a GPU crash dump, exiting");
+            }
+
+            // TODO: See if we can recover!
+            exit(1);
+        } else
+        #endif
+        {
+            ARKOSE_LOG(Fatal, "VulkanBackend: device was lost while waiting for frame fence (frame {}).", m_currentFrameIndex);
+        }
     }
 
     if (vkResetFences(device(), 1, &frameContext.frameFence) != VK_SUCCESS) {
