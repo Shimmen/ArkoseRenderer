@@ -220,7 +220,7 @@ VulkanBackend::VulkanBackend(Badge<Backend>, const AppSpecification& appSpecific
             }
         }
     }
-    if (m_dlss->isReadyToUse()) {
+    if (m_dlss && m_dlss->isReadyToUse()) {
         ARKOSE_LOG(Info, "VulkanBackend: DLSS is ready to use!");
     } else
     #endif
