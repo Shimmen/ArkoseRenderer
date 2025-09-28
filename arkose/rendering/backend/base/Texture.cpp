@@ -23,6 +23,18 @@ Texture::Texture(Backend& backend, Description desc)
     ARKOSE_ASSERT(arrayCount() > 0);
 }
 
+bool Texture::hasBlockCompressedFormat() const
+{
+    switch (format()) {
+    case Texture::Format::BC5:
+    case Texture::Format::BC7:
+    case Texture::Format::BC7sRGB:
+        return true;
+    default:
+        return false;
+    }
+}
+
 bool Texture::hasFloatingPointDataFormat() const
 {
     switch (format()) {

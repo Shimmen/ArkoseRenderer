@@ -296,10 +296,6 @@ private:
     std::vector<VramUsageAvgAccumulatorType> m_vramUsageHistoryPerHeap {};
 
     size_t m_drawableCountForFrame { 0 };
-
-    size_t m_managedTexturesVramUsage { 0 };
-    //size_t m_totalBlasVramUsage { 0 };
-    //size_t m_totalNumBlas { 0 };
 };
 
 #if defined(PLATFORM_WINDOWS)

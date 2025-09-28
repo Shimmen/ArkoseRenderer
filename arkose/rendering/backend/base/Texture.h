@@ -153,6 +153,7 @@ public:
     // TODO: Remove me, instead just load as an ImageAsset with multiple layers (i.e. depth > 1)
     static std::unique_ptr<Texture> createFromImagePathSequence(Backend&, const std::string& imagePathSequencePattern, bool sRGB, bool generateMipmaps, ImageWrapModes);
 
+    bool hasBlockCompressedFormat() const;
     bool hasFloatingPointDataFormat() const;
     virtual bool storageCapable() const = 0;
 

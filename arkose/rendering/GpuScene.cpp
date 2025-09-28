@@ -486,7 +486,6 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                     }
                 }
 
-                m_managedTexturesVramUsage += texture->sizeInMemory();
                 updateTexture(loadedImageForTex.textureHandle, std::move(texture));
 
                 numUploadedTextures += 1;
@@ -1440,7 +1439,6 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
                     }
                 }
 
-                m_managedTexturesVramUsage += texture->sizeInMemory();
                 updateTexture(handle, std::move(texture));
             } else {
                 updateTextureUnowned(handle, fallback);
@@ -1465,8 +1463,6 @@ TextureHandle GpuScene::registerMaterialTexture(std::optional<MaterialInput> con
 TextureHandle GpuScene::registerTexture(std::unique_ptr<Texture>&& texture)
 {
     SCOPED_PROFILE_ZONE();
-
-    m_managedTexturesVramUsage += texture->sizeInMemory();
 
     TextureHandle handle = registerTextureSlot();
     updateTexture(handle, std::move(texture));
@@ -1559,9 +1555,6 @@ void GpuScene::processDeferredDeletions()
         // NOTE: Currently we can put null textures in the list if there is no texture, meaning we still reserve a texture slot and we have to handle that here.
         // TODO: Perhaps this isn't ideal? Consider if we can avoid reserving one altogether..
         if (texture != nullptr) {
-            ARKOSE_ASSERT(m_managedTexturesVramUsage >= texture->sizeInMemory());
-            m_managedTexturesVramUsage -= texture->sizeInMemory();
-
             // TODO: Intelligently remove from cache when we remove it from the resource list, don't just clear all!
             //m_materialTextureCache.erase ..
             m_materialTextureCache.clear();
@@ -1713,8 +1706,24 @@ void GpuScene::drawResourceUI()
 
             ImGui::Text("Number of managed textures: %u", narrow_cast<int>(m_managedTextures.size()));
 
-            float managedTexturesTotalGB = ark::conversion::to::GB(m_managedTexturesVramUsage);
+            size_t compressedTotalVRAM = 0;
+            size_t uncompressedTotalVRAM = 0;
+
+            m_managedTextures.forEachResource([&](std::unique_ptr<Texture> const& texture) {
+                if (texture) {
+                    if (texture->hasBlockCompressedFormat()) {
+                        compressedTotalVRAM += texture->sizeInMemory();
+                    } else {
+                        uncompressedTotalVRAM += texture->sizeInMemory();
+                    }
+                }
+            });
+
+            float managedTexturesTotalGB = ark::conversion::to::GB(compressedTotalVRAM + uncompressedTotalVRAM);
             ImGui::Text("Using %.2f GB", managedTexturesTotalGB);
+
+            ImGui::Text("Compressed:   %.2f GB", ark::conversion::to::GB(compressedTotalVRAM));
+            ImGui::Text("Uncompressed: %.2f GB", ark::conversion::to::GB(uncompressedTotalVRAM));
 
             ImGui::EndTabItem();
         }
