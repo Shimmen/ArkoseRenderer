@@ -112,6 +112,7 @@ ImportResult GltfLoader::load(std::filesystem::path const& gltfFilePath)
 
         imageTypeBestGuess[gltfMaterial.emissiveTexture.index] = ImageType::sRGBColor;
         imageTypeBestGuess[gltfMaterial.normalTexture.index] = ImageType::NormalMap;
+        imageTypeBestGuess[gltfMaterial.occlusionTexture.index] = ImageType::GenericData;
 
         auto specularGlossinessMatEntry = gltfMaterial.extensions.find("KHR_materials_pbrSpecularGlossiness");
         if (specularGlossinessMatEntry != gltfMaterial.extensions.end()) {
