@@ -79,7 +79,7 @@ RenderPipelineNode::ExecuteCallback RTLocalShadowNode::construct(GpuScene& scene
             cmdList.setNamedUniform("parameter9", static_cast<f32>(frameIdxModulus));
 
             // TODO: Limit to the radius/influence of the light source onto the world
-            cmdList.traceRays(appState.windowExtent());
+            cmdList.traceRays(pipeline().renderResolution());
 
             // Denoise
 
