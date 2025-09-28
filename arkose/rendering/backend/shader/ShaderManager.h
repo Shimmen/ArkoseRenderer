@@ -56,7 +56,7 @@ public:
 
 private:
     explicit ShaderManager(std::filesystem::path basePath);
-    ~ShaderManager() = default;
+    ~ShaderManager();
 
     struct CompiledShader {
         CompiledShader(ShaderManager&, const ShaderFile&, std::filesystem::path resolvedPath);

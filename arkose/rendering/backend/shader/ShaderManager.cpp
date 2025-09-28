@@ -30,6 +30,11 @@ ShaderManager::ShaderManager(std::filesystem::path basePath)
 {
 }
 
+ShaderManager::~ShaderManager()
+{
+    stopFileWatching();
+}
+
 void ShaderManager::startFileWatching(unsigned msBetweenPolls, FilesChangedCallback filesChangedCallback)
 {
     if (m_fileWatcherThread != nullptr || m_fileWatchingActive)
