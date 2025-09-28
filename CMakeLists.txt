@@ -332,6 +332,14 @@ target_link_libraries(ArkoseRenderer PRIVATE
     Jolt
     )
 
+if(AFTERMATH_SDK_SUPPORTED)
+    message(STATUS "ArkoseRenderer: building with NVIDIA Nsight Aftermath SDK support")
+    target_link_libraries(ArkoseRenderer PRIVATE aftermath_sdk)
+    target_compile_definitions(ArkoseRenderer PUBLIC WITH_AFTERMATH_SDK=1)
+else()
+    message(STATUS "ArkoseRenderer: building without NVIDIA Nsight Aftermath SDK support")
+endif()
+
 if(DLSS_AVAILABLE)
     message(STATUS "ArkoseRenderer: building with DLSS support")
     target_link_libraries(ArkoseRenderer PRIVATE dlss)

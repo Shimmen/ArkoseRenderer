@@ -96,6 +96,7 @@ FetchContent_MakeAvailable(
 #  2. can't easily be downloaded using FetchContent or need some files to be copied around
 #  3. do not have a CMakeLists.txt file, or need a custom one to work nicely with Arkose
 
+add_subdirectory(aftermath_sdk)
 add_subdirectory(stb_image)
 add_subdirectory(tiny_gltf)
 add_subdirectory(half)
