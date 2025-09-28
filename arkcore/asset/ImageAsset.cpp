@@ -348,11 +348,6 @@ bool ImageAsset::generateMipmaps()
         return false;
     }
 
-    if (width() != height()) {
-        // TODO: Implement non-square texture mipmap generation
-        return false;
-    }
-
     // TODO: Support more formats!
     ARKOSE_ASSERT(m_format == ImageFormat::RGBA8);
 
@@ -369,14 +364,15 @@ bool ImageAsset::generateMipmaps()
         ImageMip previousMip = m_mips[previousMipLevel];
         std::vector<rgba8> previousMipPixels = pixelDataAsRGBA8(level - 1);
 
-        ImageMip& thisMip = m_mips.emplace_back();
-        thisMip.offset = previousMip.offset + previousMip.size;
-        thisMip.size = previousMip.size / 4; // half size per 2D side
-
-        m_pixelData.reserve(thisMip.offset + thisMip.size);
-
         u32 thisMipHeight = std::max(mipHeight / 2, 1u);
         u32 thisMipWidth = std::max(mipWidth / 2, 1u);
+        u32 sizeRatio = (mipWidth / thisMipWidth) * (mipHeight / thisMipHeight);
+
+        ImageMip& thisMip = m_mips.emplace_back();
+        thisMip.offset = previousMip.offset + previousMip.size;
+        thisMip.size = previousMip.size / sizeRatio;
+
+        m_pixelData.reserve(thisMip.offset + thisMip.size);
 
         for (u32 y = 0; y < thisMipHeight; ++y) {
             for (u32 x = 0; x < thisMipWidth; ++x) {
