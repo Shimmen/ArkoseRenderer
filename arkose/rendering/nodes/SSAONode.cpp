@@ -51,7 +51,7 @@ RenderPipelineNode::ExecuteCallback SSAONode::construct(GpuScene& scene, Registr
 
         cmdList.setComputeState(ssaoComputeState);
 
-        cmdList.setNamedUniform("targetSize", appState.windowExtent());
+        cmdList.setNamedUniform("targetSize", pipeline().renderResolution());
         cmdList.setNamedUniform("kernelRadius", m_kernelRadius);
         cmdList.setNamedUniform("kernelExponent", m_kernelExponent);
         cmdList.setNamedUniform("kernelSampleCount", KernelSampleCount);

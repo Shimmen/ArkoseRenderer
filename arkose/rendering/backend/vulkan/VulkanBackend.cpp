@@ -1749,7 +1749,7 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
     SCOPED_PROFILE_ZONE_BACKEND();
 
     bool isRelativeFirstFrame = m_relativeFrameIndex < m_frameContexts.size();
-    AppState appState { m_swapchainExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
+    AppState appState { deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
 
     uint32_t frameContextIndex = m_currentFrameIndex % m_frameContexts.size();
     FrameContext& frameContext = *m_frameContexts[frameContextIndex];
@@ -1790,7 +1790,6 @@ bool VulkanBackend::executeFrame(RenderPipeline& renderPipeline, float elapsedTi
         if (acquireResult == VK_ERROR_OUT_OF_DATE_KHR) {
             // Since we couldn't acquire an image to draw to, recreate the swapchain and report that it didn't work
             Extent2D newWindowExtent = recreateSwapchain();
-            appState = appState.updateWindowExtent(newWindowExtent);
             reconstructRenderPipelineResources(renderPipeline);
             return false;
         }
@@ -2140,7 +2139,7 @@ std::optional<Backend::SubmitStatus> VulkanBackend::submitRenderPipeline(RenderP
 
     VulkanCommandList cmdList { *this, commandBuffer };
 
-    AppState hackAppState { renderPipeline.renderResolution(), 1.0f / 60.0f, 0.0f, 0, true };
+    AppState hackAppState { 1.0f / 60.0f, 0.0f, 0, true };
 
     {
         std::string pipelineLabel;

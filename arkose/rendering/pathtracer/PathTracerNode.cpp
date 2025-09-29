@@ -87,7 +87,7 @@ RenderPipelineNode::ExecuteCallback PathTracerNode::construct(GpuScene& scene, R
             cmdList.setRayTracingState(rtState);
             cmdList.setNamedUniform("environmentMultiplier", scene.preExposedEnvironmentBrightnessFactor());
             cmdList.setNamedUniform("frameIndex", appState.frameIndex());
-            cmdList.traceRays(appState.windowExtent());
+            cmdList.traceRays(pipeline().renderResolution());
         }
 
         if (imageShouldAccumulate) {

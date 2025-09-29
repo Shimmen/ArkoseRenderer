@@ -325,7 +325,7 @@ bool D3D12Backend::executeFrame(RenderPipeline& renderPipeline, float elapsedTim
     SCOPED_PROFILE_ZONE_BACKEND();
 
     bool isRelativeFirstFrame = m_relativeFrameIndex < m_frameContexts.size();
-    AppState appState { m_windowFramebufferExtent, deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
+    AppState appState { deltaTime, elapsedTime, m_currentFrameIndex, isRelativeFirstFrame };
 
     uint32_t frameContextIndex = m_nextSwapchainBufferIndex % m_frameContexts.size();
     FrameContext& frameContext = *m_frameContexts[frameContextIndex];

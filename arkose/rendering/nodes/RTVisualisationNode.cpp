@@ -54,6 +54,6 @@ RenderPipelineNode::ExecuteCallback RTVisualisationNode::construct(GpuScene& sce
         cmdList.setRayTracingState(rtState);
         cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
         cmdList.setNamedUniform("environmentMultiplier", scene.preExposedEnvironmentBrightnessFactor());
-        cmdList.traceRays(appState.windowExtent());
+        cmdList.traceRays(pipeline().renderResolution());
     };
 }

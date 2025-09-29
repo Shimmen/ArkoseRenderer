@@ -1,6 +1,7 @@
 #include "VisibilityBufferShadingNode.h"
 
 #include "rendering/GpuScene.h"
+#include "rendering/RenderPipeline.h"
 #include <imgui.h>
 
 void VisibilityBufferShadingNode::drawGui()
@@ -73,7 +74,7 @@ RenderPipelineNode::ExecuteCallback VisibilityBufferShadingNode::construct(GpuSc
         float lodBiasGradientFactor = std::exp2f(scene.globalMipBias());
         cmdList.setNamedUniform("mipBias", lodBiasGradientFactor);
 
-        cmdList.dispatch({ appState.windowExtent(), 1 }, { 8, 8, 1 });
+        cmdList.dispatch({ pipeline().renderResolution(), 1 }, { 8, 8, 1 });
 
     };
 }
