@@ -27,9 +27,10 @@ layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 DeclareCommonBindingSet_Material(3)
 DeclareCommonBindingSet_Light(4)
 
-layout(set = 5, binding = 0) uniform sampler2D directionalLightProjectedShadowTex;
-layout(set = 5, binding = 1) uniform sampler2D localLightShadowMapAtlasTex;
-layout(set = 5, binding = 2) buffer readonly ShadowMapViewportBlock { vec4 localLightShadowMapViewports[]; };
+layout(set = 5, binding = 0) uniform sampler2D directionalLightShadowMapTex;
+layout(set = 5, binding = 1) uniform sampler2D directionalLightProjectedShadowTex;
+layout(set = 5, binding = 2) uniform sampler2D localLightShadowMapAtlasTex;
+layout(set = 5, binding = 3) buffer readonly ShadowMapViewportBlock { vec4 localLightShadowMapViewports[]; };
 
 NAMED_UNIFORMS_STRUCT(ForwardPassConstants, constants)
 
@@ -41,12 +42,28 @@ layout(location = 3) out vec4 oMaterialProps;
 layout(location = 4) out vec4 oBaseColor;
 #endif
 
-vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
+float evaluateDirectionalLightShadow(mat4 lightProjectionFromView, vec3 viewSpacePos)
+{
+    vec4 posInShadowMap = lightProjectionFromView * vec4(viewSpacePos, 1.0);
+    posInShadowMap.xyz /= posInShadowMap.w;
+
+    vec2 shadowMapUv = (posInShadowMap.xy * 0.5 + 0.5);
+
+    float mapDepth = texture(directionalLightShadowMapTex, shadowMapUv).x;
+    return (mapDepth < posInShadowMap.z) ? 0.0 : 1.0;
+}
+
+vec3 evaluateDirectionalLight(DirectionalLightData light, bool useShadowMask, vec3 V, vec3 N, vec3 baseColor, float roughness, float metallic, float clearcoat, float clearcoatRoughness)
 {
     vec3 L = -normalize(light.viewSpaceDirection.xyz);
 
-    vec2 sampleTexCoords = gl_FragCoord.xy * constants.invTargetSize;
-    float shadowFactor = hasShadow ? texture(directionalLightProjectedShadowTex, sampleTexCoords).r : 1.0;
+    float shadowFactor;
+    if (useShadowMask) {
+        vec2 sampleTexCoords = gl_FragCoord.xy * constants.invTargetSize;
+        shadowFactor = texture(directionalLightProjectedShadowTex, sampleTexCoords).r;
+    } else {
+        shadowFactor = evaluateDirectionalLightShadow(light.lightProjectionFromView, vPosition);
+    }
 
     vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
 
@@ -164,15 +181,14 @@ void main()
 
     if (light_hasDirectionalLight()) {
 
+        // Pre-filtered shadow mask is cheaper & nicer looking, but only works for opaque surfaces that write to the depth buffer.
         #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
-            // NOTE: Since the shadow is pre-projected we can't use it for geometry that doesn't write to the depth buffer in the prepass
-            // TODO: Move to using only ray traced translucency, so we don't have to worry about these cases.
-            bool hasShadow = false;
+            bool useShadowMask = false;
         #else
-            bool hasShadow = true;
+            bool useShadowMask = true;
         #endif
 
-        color += evaluateDirectionalLight(light_getDirectionalLight(), hasShadow, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
+        color += evaluateDirectionalLight(light_getDirectionalLight(), useShadowMask, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
     }
 
     // TODO: Use tiles or clusters to minimize number of light evaluations!
