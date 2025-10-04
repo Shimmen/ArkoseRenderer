@@ -73,9 +73,10 @@ D3D12Backend::D3D12Backend(Badge<Backend>, const AppSpecification& appSpecificat
     }
 
     // Enable "experimental" feature of shader model 6
-    if (auto hr = D3D12EnableExperimentalFeatures(1, &D3D12ExperimentalShaderModels, nullptr, 0); FAILED(hr)) {
-        ARKOSE_LOG(Fatal, "D3D12Backend: could not enable shader model 6 support, exiting.");
-    }
+    // Fails on AgilitySDK version 1.618. No longer considered experimental perhaps?
+    //if (auto hr = D3D12EnableExperimentalFeatures(1, &D3D12ExperimentalShaderModels, nullptr, 0); FAILED(hr)) {
+    //    ARKOSE_LOG(Fatal, "D3D12Backend: could not enable shader model 6 support, exiting.");
+    //}
 
     /////////////////////////////////
 
