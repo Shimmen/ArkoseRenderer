@@ -48,11 +48,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, bool hasShadow, vec3 V
     vec2 sampleTexCoords = gl_FragCoord.xy * constants.invTargetSize;
     float shadowFactor = hasShadow ? texture(directionalLightProjectedShadowTex, sampleTexCoords).r : 1.0;
 
-    #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
-        vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);
-    #else
-        vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
-    #endif
+    vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
 
     vec3 directLight = light.color * shadowFactor;
 
@@ -101,11 +97,7 @@ vec3 evaluateSpotLight(SpotLightData light, uint shadowIdx, vec3 V, vec3 N, vec3
                                 light.viewSpaceDirection.xyz);
     float iesValue = evaluateIESLookupTable(material_getTexture(light.iesProfileIndex), light.outerConeHalfAngle, lightViewMatrix, -toLight / dist);
 
-    #if FORWARD_BLEND_MODE == BLEND_MODE_TRANSLUCENT
-        vec3 brdf = evaluateGlassBRDF(L, V, N, roughness);
-    #else
-        vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
-    #endif
+    vec3 brdf = evaluateDefaultBRDF(L, V, N, baseColor, roughness, metallic, clearcoat, clearcoatRoughness);
 
     vec3 directLight = light.color * shadowFactor * distanceAttenuation * iesValue;
 
