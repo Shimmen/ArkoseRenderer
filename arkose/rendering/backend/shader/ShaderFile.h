@@ -1,6 +1,6 @@
 #pragma once
 
-#include "rendering/backend/shader/ShaderStage.h"
+#include "rendering/ShaderStage.h"
 #include <filesystem>
 #include <vector>
 #include <string>

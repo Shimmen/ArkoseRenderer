@@ -1,7 +1,7 @@
 #pragma once
 
 #include "core/Types.h"
-#include "rendering/backend/shader/ShaderStage.h"
+#include "rendering/ShaderStage.h"
 #include <string>
 
 struct NamedConstant {

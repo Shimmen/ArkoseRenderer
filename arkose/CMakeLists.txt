@@ -111,7 +111,6 @@ set(ARKOSE_SOURCES
       arkose/rendering/backend/shader/ShaderFile.h
       arkose/rendering/backend/shader/ShaderManager.cpp
       arkose/rendering/backend/shader/ShaderManager.h
-      arkose/rendering/backend/shader/ShaderStage.h
         # dxc
         # (added separately)
         # shaderc
