@@ -27,6 +27,13 @@ target_link_libraries(${PROJECT_NAME} ArkoseCore)
 set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "tools")
 set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_LIST_DIR}/bin")
 
+project(ShaderCompilerTool)
+add_executable(${PROJECT_NAME} ShaderCompilerTool.cpp)
+target_link_libraries(${PROJECT_NAME} ArkoseCore)
+target_link_libraries(${PROJECT_NAME} slang_custom)
+set_target_properties(${PROJECT_NAME} PROPERTIES FOLDER "tools")
+set_target_properties(${PROJECT_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_LIST_DIR}/bin")
+
 # Ensure DLLs are copied to the tools executable directory after build
 # Use whatever tool target is created last, as they will all share their output directory
 add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
