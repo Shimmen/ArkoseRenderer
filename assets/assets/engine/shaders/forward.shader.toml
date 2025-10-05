@@ -1,0 +1,7 @@
+shader = "forward"
+
+option.blendMode = { symbol = "FORWARD_BLEND_MODE", type = "enum", enum = "BlendMode" }
+option.doubleSided = { symbol = "FORWARD_DOUBLE_SIDED", type = "bool" }
+
+file.vertex   = "forward/forward.vert"
+file.fragment = "forward/forward.frag"

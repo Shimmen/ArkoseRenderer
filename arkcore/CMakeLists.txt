@@ -34,6 +34,8 @@ set(ARKCORE_SOURCES
     # misc
     arkcore/asset/misc/ImageBakeSpec.cpp
     arkcore/asset/misc/ImageBakeSpec.h
+    arkcore/asset/misc/ShaderCompileSpec.cpp
+    arkcore/asset/misc/ShaderCompileSpec.h
 
   # core
   arkcore/core/Assert.cpp
