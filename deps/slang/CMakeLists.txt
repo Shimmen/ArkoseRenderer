@@ -19,6 +19,7 @@ if(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Windows")
     set_property(TARGET slang_custom PROPERTY IMPORTED_LOCATION "${slang_fetch_SOURCE_DIR}/bin/slang.dll"
                                                                 "${slang_fetch_SOURCE_DIR}/bin/slang-glsl-module.dll")
 elseif(${CMAKE_HOST_SYSTEM_NAME} MATCHES "Linux")
-    set_property(TARGET slang_custom PROPERTY IMPORTED_LOCATION "${slang_fetch_SOURCE_DIR}/lib/libslang.so"
-                                                                "${slang_fetch_SOURCE_DIR}/lib/libslang-glsl-module.so")
+    set_property(TARGET slang_custom PROPERTY IMPORTED_LOCATION "${slang_fetch_SOURCE_DIR}/lib/libslang.so")
+                                                                # TODO! looks like gcc & clang don't like multiple IMPORTED_LOCATION
+                                                                #"${slang_fetch_SOURCE_DIR}/lib/libslang-glsl-module.so")
 endif()
