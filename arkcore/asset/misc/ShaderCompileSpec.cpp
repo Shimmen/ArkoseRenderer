@@ -59,25 +59,29 @@ std::unique_ptr<ShaderCompileSpec> ShaderCompileSpec::loadFromFile(std::filesyst
         ARKOSE_LOG(Info, "ShaderCompileSpec:  {} shader '{}'", fileType, filePath);
 
         if (fileType == "vertex"sv) {
-            compileSpec->vertexShaderFile = filePath;
+            compileSpec->shaderFiles.push_back({ ShaderStage::Vertex, filePath });
         } else if (fileType == "fragment"sv) {
-            compileSpec->fragmentShaderFile = filePath;
+            compileSpec->shaderFiles.push_back({ ShaderStage::Fragment, filePath });
         } else if (fileType == "compute"sv) {
-            compileSpec->computeShaderFile = filePath;
+            compileSpec->shaderFiles.push_back({ ShaderStage::Compute, filePath });
         } else if (fileType == "raygen"sv) {
-            compileSpec->raygenShaderFile = filePath;
+            compileSpec->shaderFiles.push_back({ ShaderStage::RTRayGen, filePath });
         } else if (fileType == "closesthit"sv) {
             // TODO: Parse an array!
-            compileSpec->closestHitShaderFiles.push_back(filePath);
+            compileSpec->shaderFiles.push_back({ ShaderStage::RTClosestHit, filePath });
         } else if (fileType == "anyhit"sv) {
             // TODO: Parse an array!
-            compileSpec->anyHitShaderFiles.push_back(filePath);
+            compileSpec->shaderFiles.push_back({ ShaderStage::RTAnyHit, filePath });
         } else if (fileType == "miss"sv) {
             // TODO: Parse an array!
-            compileSpec->missShaderFiles.push_back(filePath);
+            compileSpec->shaderFiles.push_back({ ShaderStage::RTMiss, filePath });
         } else if (fileType == "intersection"sv) {
             // TODO: Parse an array!
-            compileSpec->intersectionShaderFiles.push_back(filePath);
+            compileSpec->shaderFiles.push_back({ ShaderStage::RTIntersection, filePath });
+        } else if (fileType == "task"sv) {
+            compileSpec->shaderFiles.push_back({ ShaderStage::Task, filePath });
+        } else if (fileType == "mesh"sv) {
+            compileSpec->shaderFiles.push_back({ ShaderStage::Mesh, filePath });
         } else {
             ARKOSE_LOG(Warning, "ShaderCompileSpec:   unknown shader type '{}', skipping", fileType);
         }
@@ -146,8 +150,6 @@ std::unique_ptr<ShaderCompileSpec> ShaderCompileSpec::loadFromFile(std::filesyst
     for (ShaderOption const& shaderOption : shaderOptions) {
         numPermutations *= shaderOption.values.size();
     }
-
-    ARKOSE_LOG(Info, "ShaderCompileSpec: will compile a total of {} permutations", numPermutations);
 
     // Expand each option into a list of (symbol, value) pairs
 
