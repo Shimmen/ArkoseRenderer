@@ -439,6 +439,52 @@ std::unique_ptr<MeshAsset> GltfLoader::createMesh(const tinygltf::Model& gltfMod
             meshSegment.jointWeights = std::vector<vec4>(firstJointWeight, firstJointWeight + accessor->count);
         }
 
+        // Assemble morph target data if present
+        if (gltfPrimitive.targets.size() > 0) {
+            for (std::map<std::string, int> const& morphTargetMap : gltfPrimitive.targets) {
+
+                MorphTargetAsset& morphTarget = meshSegment.morphTargets.emplace_back();
+
+                auto findAccessorForMorph = [&](const char* name) -> tinygltf::Accessor const* {
+                    auto entry = morphTargetMap.find(name);
+                    if (entry == morphTargetMap.end()) {
+                        return nullptr;
+                    }
+                    return &gltfModel.accessors[entry->second];
+                };
+
+                if (tinygltf::Accessor const* morphPositionAccessor = findAccessorForMorph("POSITION")) {
+                    SCOPED_PROFILE_ZONE_NAMED("Copy position morph data");
+
+                    ARKOSE_ASSERT(morphPositionAccessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                    ARKOSE_ASSERT(morphPositionAccessor->type == TINYGLTF_TYPE_VEC3);
+
+                    const vec3* firstMorphPosition = getTypedMemoryBufferForAccessor<vec3>(gltfModel, *morphPositionAccessor);
+                    morphTarget.positions = std::vector<vec3>(firstMorphPosition, firstMorphPosition + morphPositionAccessor->count);
+                }
+
+                if (tinygltf::Accessor const* morphNormalAccessor = findAccessorForMorph("NORMAL")) {
+                    SCOPED_PROFILE_ZONE_NAMED("Copy morph normal data");
+
+                    ARKOSE_ASSERT(morphNormalAccessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                    ARKOSE_ASSERT(morphNormalAccessor->type == TINYGLTF_TYPE_VEC3);
+
+                    const vec3* firstMorphNormal = getTypedMemoryBufferForAccessor<vec3>(gltfModel, *morphNormalAccessor);
+                    morphTarget.normals = std::vector<vec3>(firstMorphNormal, firstMorphNormal + morphNormalAccessor->count);
+                }
+
+                if (tinygltf::Accessor const* morphTangentAccessor = findAccessorForMorph("TANGENT")) {
+                    SCOPED_PROFILE_ZONE_NAMED("Copy morph tangent data");
+
+                    ARKOSE_ASSERT(morphTangentAccessor->componentType == TINYGLTF_COMPONENT_TYPE_FLOAT);
+                    ARKOSE_ASSERT(morphTangentAccessor->type == TINYGLTF_TYPE_VEC3);
+
+                    const vec3* firstMorphTangent = getTypedMemoryBufferForAccessor<vec3>(gltfModel, *morphTangentAccessor);
+                    morphTarget.tangents = std::vector<vec3>(firstMorphTangent, firstMorphTangent + morphTangentAccessor->count);
+                }
+            }
+        }
+
         if (gltfPrimitive.indices != -1) {
 
             const tinygltf::Accessor& accessor = gltfModel.accessors[gltfPrimitive.indices];
@@ -510,7 +556,7 @@ std::unique_ptr<AnimationAsset> GltfLoader::createAnimation(tinygltf::Model cons
         } else if (gltfAnimationChannel.target_path == "scale") {
             targetProperty = AnimationTargetProperty::Scale;
         } else if (gltfAnimationChannel.target_path == "weights") {
-            NOT_YET_IMPLEMENTED();
+            targetProperty = AnimationTargetProperty::Weights;
         } else {
             ASSERT_NOT_REACHED();
         }

@@ -24,9 +24,11 @@ enum class AnimationTargetProperty {
     Translation,
     Rotation,
     Scale,
+    Weights,
 };
 
-constexpr std::array<const char*, 3> AnimationTargetPropertyNames = { "Translation", "Rotation", "Scale" };
+// TODO: Use magic_enum instead!
+constexpr std::array<const char*, 4> AnimationTargetPropertyNames = { "Translation", "Rotation", "Scale", "Weights" };
 inline const char* AnimationTargetPropertyName(AnimationTargetProperty targetProperty)
 {
     size_t idx = static_cast<size_t>(targetProperty);
@@ -117,6 +119,8 @@ void load_minimal(Archive const&, AnimationTargetProperty& targetProperty, std::
         targetProperty = AnimationTargetProperty::Rotation;
     } else if (value == AnimationTargetPropertyName(AnimationTargetProperty::Scale)) {
         targetProperty = AnimationTargetProperty::Scale;
+    } else if (value == AnimationTargetPropertyName(AnimationTargetProperty::Weights)) {
+        targetProperty = AnimationTargetProperty::Weights;
     } else {
         ASSERT_NOT_REACHED();
     }
