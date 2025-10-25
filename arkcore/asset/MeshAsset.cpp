@@ -87,7 +87,7 @@ void MeshSegmentAsset::flattenToNonIndexedMesh()
     for (u32 index : indices) {
         newPositions.push_back(positions[index]);
         if (hasNormals()) {
-        newNormals.push_back(normals[index]);
+            newNormals.push_back(normals[index]);
         }
         if (hasTextureCoordinates()) {
             newTexcoord0s.push_back(texcoord0s[index]);
@@ -107,6 +107,27 @@ void MeshSegmentAsset::flattenToNonIndexedMesh()
     tangents = std::move(newTangents);
     jointIndices = std::move(newJointIndices);
     jointWeights = std::move(newJointWeights);
+
+    if (hasMorphTargets()) {
+        std::vector<MorphTargetAsset> newMorphTargets {};
+        newMorphTargets.reserve(morphTargets.size());
+
+        for (MorphTargetAsset& morphTarget : morphTargets) {
+            MorphTargetAsset& newMorphTarget = newMorphTargets.emplace_back();
+
+            for (u32 index : indices) {
+                newMorphTarget.positions.push_back(morphTarget.positions[index]);
+                if (morphTarget.normals.size() > 0) {
+                    newMorphTarget.normals.push_back(morphTarget.normals[index]);
+                }
+                if (morphTarget.tangents.size() > 0) {
+                    newMorphTarget.tangents.push_back(morphTarget.tangents[index]);
+                }
+            }
+        }
+
+        morphTargets = std::move(newMorphTargets);
+    }
 
     indices.clear();
 
@@ -134,6 +155,17 @@ void MeshSegmentAsset::convertToIndexedMesh()
     if (hasSkinningData()) {
         APPEND_STREAM(jointIndices);
         APPEND_STREAM(jointWeights);
+    }
+    if (hasMorphTargets()) {
+        for (MorphTargetAsset& morphTarget : morphTargets) {
+            APPEND_STREAM(morphTarget.positions);
+            if (morphTarget.normals.size() > 0) {
+                APPEND_STREAM(morphTarget.normals);
+            }
+            if (morphTarget.tangents.size() > 0) {
+                APPEND_STREAM(morphTarget.tangents);
+            }
+        }
     }
 
 #undef APPEND_STREAM
@@ -205,6 +237,19 @@ void MeshSegmentAsset::remapVertexData(std::vector<u32> const& remapTable, size_
     if (jointWeights.size() > 0) {
         meshopt_remapVertexBuffer(jointWeights.data(), jointWeights.data(), jointWeights.size(), sizeof(decltype(jointWeights[0])), remapTable.data());
         jointWeights.resize(newVertexCount);
+    }
+
+    for (MorphTargetAsset& morphTarget : morphTargets) {
+        meshopt_remapVertexBuffer(morphTarget.positions.data(), morphTarget.positions.data(), morphTarget.positions.size(), sizeof(decltype(morphTarget.positions[0])), remapTable.data());
+        morphTarget.positions.resize(newVertexCount);
+        if (morphTarget.normals.size() > 0) {
+            meshopt_remapVertexBuffer(morphTarget.normals.data(), morphTarget.normals.data(), morphTarget.normals.size(), sizeof(decltype(morphTarget.normals[0])), remapTable.data());
+            morphTarget.normals.resize(newVertexCount);
+        }
+        if (morphTarget.tangents.size() > 0) {
+            meshopt_remapVertexBuffer(morphTarget.tangents.data(), morphTarget.tangents.data(), morphTarget.tangents.size(), sizeof(decltype(morphTarget.tangents[0])), remapTable.data());
+            morphTarget.tangents.resize(newVertexCount);
+        }
     }
 }
 
@@ -668,6 +713,11 @@ bool MeshSegmentAsset::hasSkinningData() const
     return jointIndices.size() == jointWeights.size() && jointIndices.size() == vertexCount();
 }
 
+bool MeshSegmentAsset::hasMorphTargets() const
+{
+    return morphTargets.size() > 0;
+}
+
 size_t MeshSegmentAsset::vertexCount() const
 {
     size_t count = positions.size();
@@ -680,6 +730,14 @@ size_t MeshSegmentAsset::vertexCount() const
     if (jointIndices.size() > 0 || jointWeights.size() > 0) {
         ARKOSE_ASSERT(jointIndices.size() == jointWeights.size());
         ARKOSE_ASSERT(jointIndices.size() == count);
+    }
+
+    if (hasMorphTargets()) {
+        for (MorphTargetAsset const& morphTarget : morphTargets) {
+            ARKOSE_ASSERT(morphTarget.positions.size() == count);
+            ARKOSE_ASSERT(morphTarget.normals.size() == 0 || morphTarget.normals.size() == count);
+            ARKOSE_ASSERT(morphTarget.tangents.size() == 0 || morphTarget.tangents.size() == count);
+        }
     }
 
     return count;

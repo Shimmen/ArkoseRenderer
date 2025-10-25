@@ -34,6 +34,13 @@ struct OpacityMicroMapDataAsset {
     std::vector<std::byte> ommSdkSerializedData;
 };
 
+struct MorphTargetAsset {
+    // TODO: Allow a sparse encoding, so this data starts at some vertex offset & has a limited length.
+    std::vector<vec3> positions;
+    std::vector<vec3> normals;
+    std::vector<vec3> tangents;
+};
+
 class MeshSegmentAsset {
 public:
     MeshSegmentAsset();
@@ -66,6 +73,9 @@ public:
     // Returns true if this segment contains skinning data and thus can be used to create a skeletal mesh
     bool hasSkinningData() const;
 
+    // Returns true if this segment contains morph targets (and thus can also be used to create a skeletal mesh)
+    bool hasMorphTargets() const;
+
     size_t vertexCount() const;
     std::vector<u8> assembleVertexData(VertexLayout const&, size_t firstVertex = 0, size_t numVertices = 0) const;
 
@@ -86,6 +96,9 @@ public:
 
     // Joint weight vertex data for mesh segment (only for skinned meshes)
     std::vector<vec4> jointWeights {};
+
+    // Data for one or more morph targets
+    std::vector<MorphTargetAsset> morphTargets {};
 
     // Indices used for indexed meshes (only needed for indexed meshes). For all vertex data types
     // the arrays must either be empty or have as many entries as the largest index in this array.
@@ -175,6 +188,7 @@ public:
 enum class MeshAssetVersion : u32 {
     Initial = 0,
     AddOpacityMicroMaps,
+    AddMorphTargets,
     ////////////////////////////////////////////////////////////////////////////
     // Add new versions above this delimiter
     VersionCount,
@@ -184,6 +198,7 @@ enum class MeshAssetVersion : u32 {
 CEREAL_CLASS_VERSION(MeshletAsset, toUnderlying(MeshAssetVersion::LatestVersion))
 CEREAL_CLASS_VERSION(MeshletDataAsset, toUnderlying(MeshAssetVersion::LatestVersion))
 CEREAL_CLASS_VERSION(OpacityMicroMapDataAsset, toUnderlying(MeshAssetVersion::LatestVersion))
+CEREAL_CLASS_VERSION(MorphTargetAsset, toUnderlying(MeshAssetVersion::LatestVersion))
 CEREAL_CLASS_VERSION(MeshSegmentAsset, toUnderlying(MeshAssetVersion::LatestVersion))
 CEREAL_CLASS_VERSION(MeshLODAsset, toUnderlying(MeshAssetVersion::LatestVersion))
 CEREAL_CLASS_VERSION(MeshAsset, toUnderlying(MeshAssetVersion::LatestVersion))
@@ -216,6 +231,14 @@ void serialize(Archive& archive, OpacityMicroMapDataAsset& ommDataAsset, u32 ver
 }
 
 template<class Archive>
+void serialize(Archive& archive, MorphTargetAsset& morphTargetAsset, u32 version)
+{
+    archive(cereal::make_nvp("positions", morphTargetAsset.positions));
+    archive(cereal::make_nvp("normals", morphTargetAsset.normals));
+    archive(cereal::make_nvp("tangents", morphTargetAsset.tangents));
+}
+
+template<class Archive>
 void MeshSegmentAsset::serialize(Archive& archive, u32 version)
 {
     archive(CEREAL_NVP(positions));
@@ -225,6 +248,10 @@ void MeshSegmentAsset::serialize(Archive& archive, u32 version)
 
     archive(CEREAL_NVP(jointIndices));
     archive(CEREAL_NVP(jointWeights));
+
+    if (version >= toUnderlying(MeshAssetVersion::AddMorphTargets)) {
+        archive(CEREAL_NVP(morphTargets));
+    }
 
     archive(CEREAL_NVP(indices));
 
