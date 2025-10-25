@@ -51,6 +51,7 @@ public:
     void optimize();
 
     void generateMeshlets();
+    void generateFlatNormals();
     void generateTangents();
 
     #if PLATFORM_WINDOWS
@@ -59,6 +60,7 @@ public:
     #endif
 
     bool hasTextureCoordinates() const;
+    bool hasNormals() const;
     bool hasTangents() const;
 
     // Returns true if this segment contains skinning data and thus can be used to create a skeletal mesh

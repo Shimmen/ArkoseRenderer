@@ -35,6 +35,11 @@ void MeshSegmentAsset::processForImport()
         flattenToNonIndexedMesh();
     }
 
+    // Generate flat normals if none are available
+    if (!hasNormals()) {
+        generateFlatNormals();
+    }
+
     // Generate the tangents
     generateTangents();
 
@@ -81,7 +86,9 @@ void MeshSegmentAsset::flattenToNonIndexedMesh()
 
     for (u32 index : indices) {
         newPositions.push_back(positions[index]);
+        if (hasNormals()) {
         newNormals.push_back(normals[index]);
+        }
         if (hasTextureCoordinates()) {
             newTexcoord0s.push_back(texcoord0s[index]);
         }
@@ -256,6 +263,29 @@ void MeshSegmentAsset::generateMeshlets()
                                                        .vertexCount = meshlet.vertex_count,
                                                        .center = vec3(bounds.center[0], bounds.center[1], bounds.center[2]),
                                                        .radius = bounds.radius });
+    }
+}
+
+void MeshSegmentAsset::generateFlatNormals()
+{
+    ARKOSE_ASSERT(!isIndexedMesh());
+    ARKOSE_ASSERT(normals.size() == 0);
+    ARKOSE_ASSERT(positions.size() % 3 == 0);
+
+    normals.reserve(positions.size());
+
+    for (size_t idx = 0; idx < positions.size(); idx += 3) {
+        size_t idx0 = idx + 0;
+        size_t idx1 = idx + 1;
+        size_t idx2 = idx + 2;
+
+        vec3 v1 = positions[idx1] - positions[idx0];
+        vec3 v2 = positions[idx2] - positions[idx0];
+        vec3 normal = normalize(cross(v1, v2));
+
+        normals.push_back(normal);
+        normals.push_back(normal);
+        normals.push_back(normal);
     }
 }
 
@@ -621,10 +651,15 @@ bool MeshSegmentAsset::hasTextureCoordinates() const
     return texcoord0s.size() > 0;
 }
 
+bool MeshSegmentAsset::hasNormals() const
+{
+    ARKOSE_ASSERT(normals.size() == 0 || normals.size() == positions.size());
+    return normals.size() > 0;
+}
+
 bool MeshSegmentAsset::hasTangents() const
 {
     ARKOSE_ASSERT(tangents.size() == 0 || tangents.size() == positions.size());
-    //ARKOSE_ASSERT(tangents.size() == 0 || tangents.size() == texcoord0s.size());
     return tangents.size() > 0;
 }
 
@@ -637,13 +672,9 @@ size_t MeshSegmentAsset::vertexCount() const
 {
     size_t count = positions.size();
 
-    ARKOSE_ASSERT(normals.size() == count);
-    if (texcoord0s.size() > 0) {
-        ARKOSE_ASSERT(texcoord0s.size() == count);
-
-        // Ensure we have tangents whenever we have texcoords
-        //ARKOSE_ASSERT(tangents.size() == count);
-    }
+    ARKOSE_ASSERT(texcoord0s.size() == 0 || texcoord0s.size() == count);
+    ARKOSE_ASSERT(normals.size() == 0 || normals.size() == count);
+    ARKOSE_ASSERT(tangents.size() == 0 || tangents.size() == count);
 
     // Ensure if we have any kind of skinning data, it all adds up
     if (jointIndices.size() > 0 || jointWeights.size() > 0) {
