@@ -604,11 +604,11 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                     cmdList.setNamedUniform<u32>("firstSrcVertexIdx", skinningVertexMapping.underlyingMesh.firstVertex);
                     cmdList.setNamedUniform<u32>("firstDstVertexIdx", skinningVertexMapping.skinnedTarget.firstVertex);
-                    cmdList.setNamedUniform<u32>("firstSkinningVertexIdx", static_cast<u32>(skinningVertexMapping.underlyingMesh.firstSkinningVertex));
+                    cmdList.setNamedUniform<i32>("firstSkinningVertexIdx", skinningVertexMapping.underlyingMesh.firstSkinningVertex);
                     cmdList.setNamedUniform<u32>("firstVelocityVertexIdx", static_cast<u32>(skinningVertexMapping.skinnedTarget.firstVelocityVertex));
                     cmdList.setNamedUniform<u32>("vertexCount", skinningVertexMapping.underlyingMesh.vertexCount);
 
-                    constexpr u32 localSize = 32;
+                    constexpr u32 localSize = 64;
                     cmdList.dispatch({ vertexCount, 1, 1 }, { localSize, 1, 1 });
                 }
 

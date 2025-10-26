@@ -15,12 +15,12 @@ layout(set = 0, binding = 4) buffer restrict readonly JointMatricesBlock { mat4 
 NAMED_UNIFORMS(constants,
     uint firstSrcVertexIdx;
     uint firstDstVertexIdx;
-    uint firstSkinningVertexIdx;
+    int  firstSkinningVertexIdx;
     uint firstVelocityVertexIdx;
     uint vertexCount;
 )
 
-layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
 void main()
 {
     uint localVertexIdx = gl_GlobalInvocationID.x;
@@ -28,27 +28,46 @@ void main()
         return;
     }
 
-    uint jointVertexIdx = constants.firstSkinningVertexIdx + localVertexIdx;
-    SkinningVertex skinningVertex = skinningVertexData[jointVertexIdx];
-    mat4 animatedFromLocal = jointMatrices[skinningVertex.jointIndices.x] * skinningVertex.jointWeights.x +
-                             jointMatrices[skinningVertex.jointIndices.y] * skinningVertex.jointWeights.y +
-                             jointMatrices[skinningVertex.jointIndices.z] * skinningVertex.jointWeights.z +
-                             jointMatrices[skinningVertex.jointIndices.w] * skinningVertex.jointWeights.w;
+    // Read in source vertex data
 
     uint srcVertexIdx = constants.firstSrcVertexIdx + localVertexIdx;
-    uint dstVertexIdx = constants.firstDstVertexIdx + localVertexIdx;
-    uint dstVelocityVertexIdx = constants.firstVelocityVertexIdx + localVertexIdx;
 
-    vec3 newPosition = vec3(animatedFromLocal * vec4(positions[srcVertexIdx], 1.0));
-    vec3 velocity = newPosition - positions[dstVertexIdx];
-    velocities[dstVelocityVertexIdx] = velocity;
-    positions[dstVertexIdx] = newPosition;
-
-    // TODO: Upload instead of computing for every vertex!
-    mat3 animatedFromTangent = transpose(inverse(mat3(animatedFromLocal)));
+    vec3 originalPosition = positions[srcVertexIdx];
+    vec3 position = originalPosition;
 
     NonPositionVertex vertex = nonPositionVertexData[srcVertexIdx];
-    vertex.normal = animatedFromTangent * vertex.normal;
-    vertex.tangent.xyz = animatedFromTangent * vertex.tangent.xyz;
+
+    // Do morph target blending
+
+    // TODO!
+
+    // Do skeletal/skinned animation
+
+    if (constants.firstSkinningVertexIdx >= 0) {
+
+        uint jointVertexIdx = constants.firstSkinningVertexIdx + localVertexIdx;
+        SkinningVertex skinningVertex = skinningVertexData[jointVertexIdx];
+
+        mat4 animatedFromLocal = jointMatrices[skinningVertex.jointIndices.x] * skinningVertex.jointWeights.x +
+                                 jointMatrices[skinningVertex.jointIndices.y] * skinningVertex.jointWeights.y +
+                                 jointMatrices[skinningVertex.jointIndices.z] * skinningVertex.jointWeights.z +
+                                 jointMatrices[skinningVertex.jointIndices.w] * skinningVertex.jointWeights.w;
+
+        position = vec3(animatedFromLocal * vec4(position, 1.0));
+
+        mat3 animatedFromTangent = transpose(inverse(mat3(animatedFromLocal)));
+        vertex.normal = animatedFromTangent * vertex.normal;
+        vertex.tangent.xyz = animatedFromTangent * vertex.tangent.xyz;
+
+    }
+
+    // Write out morphed & skinned data
+
+    uint dstVertexIdx = constants.firstDstVertexIdx + localVertexIdx;
+
+    positions[dstVertexIdx] = position;
     nonPositionVertexData[dstVertexIdx] = vertex;
+
+    uint dstVelocityVertexIdx = constants.firstVelocityVertexIdx + localVertexIdx;
+    velocities[dstVelocityVertexIdx] = position - originalPosition;
 }
