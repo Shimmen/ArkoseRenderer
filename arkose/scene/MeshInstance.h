@@ -75,6 +75,7 @@ struct SkeletalMeshInstance : public IEditorObject {
     Transform& transform() override { return m_transform; }
     Transform const& transform() const { return m_transform; }
 
+    bool hasSkeleton() const { return m_skeleton != nullptr; }
     Skeleton const& skeleton() const { return *m_skeleton; }
     Skeleton& skeleton() { return *m_skeleton; }
 

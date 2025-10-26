@@ -45,7 +45,9 @@ void Scene::update(float elapsedTime, float deltaTime)
     });
 
     for (auto& skeletalMeshInstance : gpuScene().skeletalMeshInstances()) {
-        skeletalMeshInstance->skeleton().applyJointTransformations();
+        if (skeletalMeshInstance->hasSkeleton()) {
+            skeletalMeshInstance->skeleton().applyJointTransformations();
+        }
     }
 
     if (hasEditorScene()) { 
@@ -345,7 +347,6 @@ Camera& Scene::addCamera(const std::string& name, bool makeDefault)
 SkeletalMeshInstance& Scene::addSkeletalMesh(MeshAsset* meshAsset, SkeletonAsset* skeletonAsset, Transform transform)
 {
     ARKOSE_ASSERT(meshAsset != nullptr);
-    ARKOSE_ASSERT(skeletonAsset != nullptr);
 
     SkeletalMeshHandle skeletalMeshHandle = gpuScene().registerSkeletalMesh(meshAsset, skeletonAsset);
     SkeletalMeshInstance& instance = createSkeletalMeshInstance(skeletalMeshHandle, transform);

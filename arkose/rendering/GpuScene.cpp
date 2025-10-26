@@ -585,11 +585,16 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
             for (auto const& skeletalMeshInstance : m_skeletalMeshInstances) {
 
-                std::vector<mat4> const& jointMatrices = skeletalMeshInstance->skeleton().appliedJointMatrices();
-                // std::vector<mat3> const& jointTangentMatrices = skeletalMeshInstance->skeleton().appliedJointTangentMatrices();
+                bool hasSkeleton = skeletalMeshInstance->hasSkeleton();
 
-                // TODO/OPTIMIZATION: Upload all instance's matrices in a single buffer once and simply offset into it!
-                uploadBuffer.upload(jointMatrices, *m_jointMatricesBuffer);
+                if (hasSkeleton) {
+                    std::vector<mat4> const& jointMatrices = skeletalMeshInstance->skeleton().appliedJointMatrices();
+                    // std::vector<mat3> const& jointTangentMatrices = skeletalMeshInstance->skeleton().appliedJointTangentMatrices();
+
+                    // TODO/OPTIMIZATION: Upload all instance's matrices in a single buffer once and simply offset into it!
+                    uploadBuffer.upload(jointMatrices, *m_jointMatricesBuffer);
+                }
+
                 cmdList.executeBufferCopyOperations(uploadBuffer);
 
                 // TODO: Don't do this every frame! but.. it should be safe to do so, so let's keep it so for now
@@ -597,14 +602,14 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
                 for (SkinningVertexMapping const& skinningVertexMapping : skeletalMeshInstance->skinningVertexMappings()) {
 
-                    ARKOSE_ASSERT(skinningVertexMapping.underlyingMesh.hasSkinningData());
+                    //ARKOSE_ASSERT(skinningVertexMapping.underlyingMesh.hasSkinningData());
                     ARKOSE_ASSERT(skinningVertexMapping.skinnedTarget.hasVelocityData());
                     ARKOSE_ASSERT(skinningVertexMapping.underlyingMesh.vertexCount == skinningVertexMapping.skinnedTarget.vertexCount);
                     u32 vertexCount = skinningVertexMapping.underlyingMesh.vertexCount;
 
                     cmdList.setNamedUniform<u32>("firstSrcVertexIdx", skinningVertexMapping.underlyingMesh.firstVertex);
                     cmdList.setNamedUniform<u32>("firstDstVertexIdx", skinningVertexMapping.skinnedTarget.firstVertex);
-                    cmdList.setNamedUniform<i32>("firstSkinningVertexIdx", skinningVertexMapping.underlyingMesh.firstSkinningVertex);
+                    cmdList.setNamedUniform<i32>("firstSkinningVertexIdx", hasSkeleton ? skinningVertexMapping.underlyingMesh.firstSkinningVertex : -1);
                     cmdList.setNamedUniform<u32>("firstVelocityVertexIdx", static_cast<u32>(skinningVertexMapping.skinnedTarget.firstVelocityVertex));
                     cmdList.setNamedUniform<u32>("vertexCount", skinningVertexMapping.underlyingMesh.vertexCount);
 
@@ -1048,7 +1053,7 @@ SkeletalMeshInstance& GpuScene::createSkeletalMeshInstance(SkeletalMeshHandle sk
     // m_managedSkeletalMeshes.addReference(skeletalMeshHandle);
 
     ManagedSkeletalMesh& managedSkeletalMesh = m_managedSkeletalMeshes.get(skeletalMeshHandle);
-    auto skeleton = std::make_unique<Skeleton>(managedSkeletalMesh.skeletonAsset);
+    auto skeleton = managedSkeletalMesh.skeletonAsset ? std::make_unique<Skeleton>(managedSkeletalMesh.skeletonAsset) : nullptr;
 
     m_skeletalMeshInstances.push_back(std::make_unique<SkeletalMeshInstance>(skeletalMeshHandle, std::move(skeleton), transform));
     SkeletalMeshInstance& instance = *m_skeletalMeshInstances.back();
@@ -1164,7 +1169,7 @@ SkeletalMeshHandle GpuScene::registerSkeletalMesh(MeshAsset const* meshAsset, Sk
 {
     SCOPED_PROFILE_ZONE();
 
-    if (meshAsset == nullptr || skeletonAsset == nullptr) {
+    if (meshAsset == nullptr) {
         return SkeletalMeshHandle();
     }
 

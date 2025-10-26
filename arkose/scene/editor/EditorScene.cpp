@@ -136,7 +136,9 @@ void EditorScene::drawInstanceBoundingBox(SkeletalMeshInstance const& instance)
 
 void EditorScene::drawInstanceSkeleton(SkeletalMeshInstance const& instance)
 {
-    DebugDrawer::get().drawSkeleton(instance.skeleton(), instance.transform().worldMatrix());
+    if (instance.hasSkeleton()) {
+        DebugDrawer::get().drawSkeleton(instance.skeleton(), instance.transform().worldMatrix());
+    }
 }
 
 void EditorScene::drawSceneGizmos()
