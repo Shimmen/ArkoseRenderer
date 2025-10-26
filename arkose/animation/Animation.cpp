@@ -60,6 +60,9 @@ void Animation::tick(float deltaTime)
             } else if (channel.targetProperty == AnimationTargetProperty::Scale) {
                 transform->setScale(value);
             }
+        } else {
+            ARKOSE_LOG(Warning, "Animation '{}' failed to find transform for target '{}', will not apply animation.",
+                       m_asset->assetFilePath().generic_string(), channel.targetReference);
         }
     }
 
