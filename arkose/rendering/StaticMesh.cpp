@@ -48,6 +48,9 @@ StaticMesh::StaticMesh(MeshAsset const* asset, MeshMaterialResolver&& materialRe
     , m_boundingBox(asset->boundingBox)
     , m_boundingSphere(asset->boundingSphere)
 {
+    static MaterialAsset* defaultMaterialAsset = MaterialAsset::load("assets/engine/default/DefaultMaterial.arkmat");
+    ARKOSE_ASSERTM(defaultMaterialAsset != nullptr, "Failed to resolve the default engine material");
+
     for (MeshLODAsset const& lodAsset : asset->LODs) {
         StaticMeshLOD& lod = m_lods.emplace_back(*this, &lodAsset);
         for (auto& segmentAsset : lodAsset.meshSegments) {
@@ -55,11 +58,18 @@ StaticMesh::StaticMesh(MeshAsset const* asset, MeshMaterialResolver&& materialRe
             MaterialAsset* materialAsset = nullptr;
             if (segmentAsset.dynamicMaterial) {
                 materialAsset = segmentAsset.dynamicMaterial.get();
-            } else {
+            } else if (segmentAsset.material.size() > 0) {
                 std::string const& materialAssetPath = std::string(segmentAsset.material);
                 materialAsset = MaterialAsset::load(materialAssetPath);
+            } else {
+                ARKOSE_LOG(Warning, "Mesh segment from asset '{}' with no material, assigning default material", asset->assetFilePath());
+                materialAsset = defaultMaterialAsset;
             }
-            ARKOSE_ASSERT(materialAsset);
+
+            if (materialAsset == nullptr) {
+                ARKOSE_LOG(Warning, "Mesh segment from asset '{}' failed to resolve a material, assigning default material instead", asset->assetFilePath());
+                materialAsset = defaultMaterialAsset;
+            }
 
             if (materialAsset->blendMode == BlendMode::Translucent) {
                 m_hasTranslucentSegments |= true;
