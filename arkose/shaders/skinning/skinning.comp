@@ -10,7 +10,9 @@ layout(set = 0, binding = 0, scalar) buffer restrict PositionVertexBlock { vec3 
 layout(set = 0, binding = 1, scalar) buffer restrict VelocityVertexBlock { vec3 velocities[]; };
 layout(set = 0, binding = 2, scalar) buffer restrict NonPositionVertexBlock { NonPositionVertex nonPositionVertexData[]; };
 layout(set = 0, binding = 3, scalar) buffer restrict readonly SkinningVertexBlock { SkinningVertex skinningVertexData[]; };
-layout(set = 0, binding = 4) buffer restrict readonly JointMatricesBlock { mat4 jointMatrices[]; };
+layout(set = 0, binding = 4, scalar) buffer restrict readonly MorphTargetVertexBlock { MorphTargetVertex morphTargetVertexData[]; };
+layout(set = 0, binding = 5) buffer restrict readonly JointMatricesBlock { mat4 jointMatrices[]; };
+layout(set = 0, binding = 6) buffer restrict readonly MorphTargetMetaBlock { vec2 morphTargetMetadata[]; };
 
 NAMED_UNIFORMS(constants,
     uint firstSrcVertexIdx;
@@ -18,6 +20,7 @@ NAMED_UNIFORMS(constants,
     int  firstSkinningVertexIdx;
     uint firstVelocityVertexIdx;
     uint vertexCount;
+    uint morphTargetCount;
 )
 
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
@@ -39,7 +42,26 @@ void main()
 
     // Do morph target blending
 
-    // TODO!
+    if (constants.morphTargetCount > 0) {
+
+        for (uint idx = 0; idx < constants.morphTargetCount; ++idx) {
+            vec2 morphTargetMeta = morphTargetMetadata[idx];
+
+            uint morphVertexIdx = uint(morphTargetMeta.x) + localVertexIdx;
+            MorphTargetVertex morphTargetVertex = morphTargetVertexData[morphVertexIdx];
+
+            float morphTargetWeight = morphTargetMeta.y;
+            position += morphTargetVertex.position * morphTargetWeight;
+            vertex.normal += morphTargetVertex.normal * morphTargetWeight;
+            vertex.tangent.xyz += morphTargetVertex.tangent * morphTargetWeight;
+        }
+
+        // Re-normalize & re-orthogonalize normals and tangents
+        vertex.normal = normalize(vertex.normal);
+        vertex.tangent.xyz = normalize(vertex.tangent.xyz);
+        vertex.tangent.xyz = normalize(vertex.tangent.xyz - vertex.normal * dot(vertex.normal, vertex.tangent.xyz));
+
+    }
 
     // Do skeletal/skinned animation
 

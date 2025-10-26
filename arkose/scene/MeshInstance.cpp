@@ -67,6 +67,16 @@ void SkeletalMeshInstance::drawGui()
     ImGui::Spacing();
     ImGui::Text("Transform: ");
     m_transform.drawGui();
+
+    if (m_morphTargets.size() > 0) {
+        ImGui::Spacing();
+        ImGui::Text("Morph targets");
+        for (size_t segmentIdx = 0; segmentIdx < m_morphTargets.size(); ++segmentIdx) {
+            for (MorphTarget& morphTarget : morphTargetsForSegment(segmentIdx)) {
+                ImGui::SliderFloat(morphTarget.name().c_str(), &morphTarget.weight, -1.0f, 1.0f, "%.3f");
+            }
+        }
+    }
 }
 
 Transform* SkeletalMeshInstance::findTransformForJoint(std::string_view jointName)
@@ -91,7 +101,7 @@ void SkeletalMeshInstance::resetDrawableHandles()
 
 void SkeletalMeshInstance::setDrawableHandle(size_t segmentIdx, DrawableObjectHandle drawableHandle)
 {
-    if (not hasDrawableHandleForSegmentIndex(segmentIdx)) {
+    if (!hasDrawableHandleForSegmentIndex(segmentIdx)) {
         m_drawableHandles.resize(segmentIdx + 1, DrawableObjectHandle());
     }
 
@@ -115,11 +125,19 @@ void SkeletalMeshInstance::resetSkinningVertexMappings()
 
 void SkeletalMeshInstance::setSkinningVertexMapping(size_t segmentIdx, SkinningVertexMapping skinningVertexMapping)
 {
-    if (not hasSkinningVertexMappingForSegmentIndex(segmentIdx)) {
+    if (!hasSkinningVertexMappingForSegmentIndex(segmentIdx)) {
         m_skinningVertexMappings.resize(segmentIdx + 1);
     }
 
     m_skinningVertexMappings[segmentIdx] = skinningVertexMapping;
+}
+
+void SkeletalMeshInstance::pushMorphTarget(size_t segmentIdx, std::string_view morphTargetName)
+{
+    if (segmentIdx >= m_morphTargets.size()) {
+        m_morphTargets.resize(segmentIdx + 1);
+    }
+    m_morphTargets[segmentIdx].emplace_back(morphTargetName);
 }
 
 bool SkeletalMeshInstance::hasBlasForSegmentIndex(size_t segmentIdx) const

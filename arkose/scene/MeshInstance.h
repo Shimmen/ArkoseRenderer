@@ -3,6 +3,7 @@
 #include <ark/handle.h>
 #include <ark/copying.h>
 #include "rendering/Drawable.h"
+#include "rendering/MorphTarget.h"
 #include "rendering/SkeletalMesh.h"
 #include "rendering/Skeleton.h"
 #include "rendering/StaticMesh.h"
@@ -95,6 +96,9 @@ struct SkeletalMeshInstance : public IEditorObject {
     void resetSkinningVertexMappings();
     void setSkinningVertexMapping(size_t segmentIdx, SkinningVertexMapping);
 
+    void pushMorphTarget(size_t segmentIdx, std::string_view morphTargetName);
+    std::vector<MorphTarget>& morphTargetsForSegment(size_t segmentIdx) { return m_morphTargets[segmentIdx]; }
+
     bool hasBlasForSegmentIndex(size_t segmentIdx) const;
     std::unique_ptr<BottomLevelAS> const& blasForSegmentIndex(size_t segmentIdx) const;
     std::vector<std::unique_ptr<BottomLevelAS>>& BLASes() { return m_blases; }
@@ -112,6 +116,9 @@ private:
 
     // Optional; only needed if you want physics
     //PhysicsInstanceHandle m_physicsInstance;
+
+    // Blend weights for morph targets
+    std::vector<std::vector<MorphTarget>> m_morphTargets {};
 
     // Handle for the drawables for the current underlying drawable object(s) (e.g. static mesh segments).
     // Can e.g. be used to get an index to the shader data for this segment.

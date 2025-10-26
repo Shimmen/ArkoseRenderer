@@ -53,6 +53,8 @@ set(ARKOSE_SOURCES
   arkose/rendering/IconManager.cpp
   arkose/rendering/IconManager.h
   arkose/rendering/Material.h
+  arkose/rendering/MorphTarget.cpp
+  arkose/rendering/MorphTarget.h
   arkose/rendering/NodeDependency.h
   arkose/rendering/Registry.cpp
   arkose/rendering/Registry.h

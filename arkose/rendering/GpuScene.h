@@ -261,8 +261,9 @@ private:
     std::unique_ptr<Texture> m_environmentMapTexture {};
     std::unique_ptr<Texture> m_colorGradingLutTexture {};
 
-    // Skinning related data
+    // Skinning & morph target related data
     std::unique_ptr<Buffer> m_jointMatricesBuffer {};
+    std::unique_ptr<Buffer> m_morphTargetMetadataBuffer {};
 
     // Common buffers that can be used
     std::unique_ptr<Buffer> m_emptyVertexBuffer {};

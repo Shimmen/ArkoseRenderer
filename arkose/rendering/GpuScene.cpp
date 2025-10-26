@@ -410,16 +410,21 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     Texture& blueNoiseTextureArray = reg.loadTextureArrayFromFileSequence("assets/engine/blue-noise/64_64/HDR_RGBA_{}.dds", false, false);
     reg.publish("BlueNoise", blueNoiseTextureArray);
 
-    // Skinning related
+    // Skinning & morph target related
     m_jointMatricesBuffer = backend().createBuffer(1024 * sizeof(mat4), Buffer::Usage::StorageBuffer);
     m_jointMatricesBuffer->setStride(sizeof(mat4));
     m_jointMatricesBuffer->setName("JointMatrixData");
+    m_morphTargetMetadataBuffer = backend().createBuffer(128 * sizeof(vec2), Buffer::Usage::StorageBuffer);
+    m_morphTargetMetadataBuffer->setStride(sizeof(vec2));
+    m_morphTargetMetadataBuffer->setName("MorphTargetMetaData");
     Shader skinningShader = Shader::createCompute("skinning/skinning.comp");
     BindingSet& skinningBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(m_vertexManager->positionVertexBuffer()),
                                                             ShaderBinding::storageBuffer(m_vertexManager->velocityDataVertexBuffer()),
                                                             ShaderBinding::storageBuffer(m_vertexManager->nonPositionVertexBuffer()),
                                                             ShaderBinding::storageBufferReadonly(m_vertexManager->skinningDataVertexBuffer()),
-                                                            ShaderBinding::storageBufferReadonly(*m_jointMatricesBuffer) });
+                                                            ShaderBinding::storageBufferReadonly(m_vertexManager->morphTargetVertexBuffer()),
+                                                            ShaderBinding::storageBufferReadonly(*m_jointMatricesBuffer),
+                                                            ShaderBinding::storageBufferReadonly(*m_morphTargetMetadataBuffer) });
     StateBindings skinningStateBindings;
     skinningStateBindings.at(0, skinningBindingSet);
     ComputeState& skinningComputeState = reg.createComputeState(skinningShader, skinningStateBindings);
@@ -596,22 +601,43 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 }
 
                 cmdList.executeBufferCopyOperations(uploadBuffer);
+                cmdList.bufferWriteBarrier({ m_jointMatricesBuffer.get() });
 
                 // TODO: Don't do this every frame! but.. it should be safe to do so, so let's keep it so for now
                 m_vertexManager->allocateSkeletalMeshInstance(*skeletalMeshInstance, cmdList);
 
-                for (SkinningVertexMapping const& skinningVertexMapping : skeletalMeshInstance->skinningVertexMappings()) {
+                // This is all getting very hacky.. we need a clean way of specifying per-segment data on an instance
+                // which will also work across multiple different LODs.
+                size_t numSegments = skeletalMeshInstance->skinningVertexMappings().size();
+                for (size_t segmentIdx = 0; segmentIdx < numSegments; ++segmentIdx) {
+
+                    SkinningVertexMapping const& skinningVertexMapping = skeletalMeshInstance->skinningVertexMappingForSegmentIndex(segmentIdx);
+                    std::vector<MorphTarget> const& morphTargets = skeletalMeshInstance->morphTargetsForSegment(segmentIdx);
 
                     //ARKOSE_ASSERT(skinningVertexMapping.underlyingMesh.hasSkinningData());
                     ARKOSE_ASSERT(skinningVertexMapping.skinnedTarget.hasVelocityData());
                     ARKOSE_ASSERT(skinningVertexMapping.underlyingMesh.vertexCount == skinningVertexMapping.skinnedTarget.vertexCount);
                     u32 vertexCount = skinningVertexMapping.underlyingMesh.vertexCount;
 
+                    if (morphTargets.size() > 0) {
+                        std::vector<vec2> morphTargetMetaData {};
+                        for (size_t morphTargetIdx = 0; morphTargetIdx < morphTargets.size(); ++morphTargetIdx) {
+                            i32 firstMorphTargetVertex = skinningVertexMapping.underlyingMesh.firstMorphTargetVertices[morphTargetIdx];
+                            f32 morphTargetWeight = morphTargets[morphTargetIdx].weight;
+                            morphTargetMetaData.emplace_back(static_cast<f32>(firstMorphTargetVertex), morphTargetWeight);
+                        }
+
+                        uploadBuffer.upload(morphTargetMetaData, *m_morphTargetMetadataBuffer);
+                        cmdList.executeBufferCopyOperations(uploadBuffer);
+                        cmdList.bufferWriteBarrier({ m_morphTargetMetadataBuffer.get() });
+                    }
+
                     cmdList.setNamedUniform<u32>("firstSrcVertexIdx", skinningVertexMapping.underlyingMesh.firstVertex);
                     cmdList.setNamedUniform<u32>("firstDstVertexIdx", skinningVertexMapping.skinnedTarget.firstVertex);
                     cmdList.setNamedUniform<i32>("firstSkinningVertexIdx", hasSkeleton ? skinningVertexMapping.underlyingMesh.firstSkinningVertex : -1);
                     cmdList.setNamedUniform<u32>("firstVelocityVertexIdx", static_cast<u32>(skinningVertexMapping.skinnedTarget.firstVelocityVertex));
                     cmdList.setNamedUniform<u32>("vertexCount", skinningVertexMapping.underlyingMesh.vertexCount);
+                    cmdList.setNamedUniform<u32>("morphTargetCount", narrow_cast<u32>(morphTargets.size()));
 
                     constexpr u32 localSize = 64;
                     cmdList.dispatch({ vertexCount, 1, 1 }, { localSize, 1, 1 });
@@ -1187,7 +1213,8 @@ SkeletalMeshHandle GpuScene::registerSkeletalMesh(MeshAsset const* meshAsset, Sk
     if (m_vertexManager != nullptr) {
         constexpr bool includeIndices = true;
         constexpr bool includeSkinningData = true;
-        m_vertexManager->registerForStreaming(skeletalMesh->underlyingMesh(), includeIndices, includeSkinningData);
+        constexpr bool includeMorphData = true;
+        m_vertexManager->registerForStreaming(skeletalMesh->underlyingMesh(), includeIndices, includeSkinningData, includeMorphData);
     }
 
     SkeletalMeshHandle handle = m_managedSkeletalMeshes.add(ManagedSkeletalMesh { .meshAsset = meshAsset,
@@ -1234,7 +1261,8 @@ StaticMeshHandle GpuScene::registerStaticMesh(MeshAsset const* meshAsset)
     if (m_vertexManager != nullptr) {
         constexpr bool includeIndices = true;
         constexpr bool includeSkinningData = false;
-        m_vertexManager->registerForStreaming(*staticMesh, includeIndices, includeSkinningData);
+        constexpr bool includeMorphData = false;
+        m_vertexManager->registerForStreaming(*staticMesh, includeIndices, includeSkinningData, includeMorphData);
     }
 
     StaticMeshHandle handle = m_managedStaticMeshes.add(ManagedStaticMesh { .meshAsset = meshAsset,

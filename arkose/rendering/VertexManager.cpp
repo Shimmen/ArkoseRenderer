@@ -590,6 +590,14 @@ bool VertexManager::allocateSkeletalMeshInstance(SkeletalMeshInstance& instance,
                                                           .skinnedTarget = instanceVertexAllocation };
             instance.setSkinningVertexMapping(segmentIdx, skinningVertexMapping);
 
+            if (meshSegment.vertexAllocation.hasMorphTargetData()) {
+                size_t numMorphTargets = meshSegment.asset->morphTargets.size();
+                for (size_t morphTargetIdx = 0; morphTargetIdx < numMorphTargets; ++morphTargetIdx) {
+                    std::string morphTargetName = fmt::format("MorphTarget{}", morphTargetIdx);
+                    instance.pushMorphTarget(segmentIdx, morphTargetName);
+                }
+            }
+
             // Track owning allocations so we can free them later
             streamingSkeletalMesh.owningAllocations.push_back(instanceVertexAllocation.internalAllocations);
         }
