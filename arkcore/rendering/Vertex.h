@@ -10,6 +10,7 @@ enum class VertexComponent : int {
     Position3F,
     Normal3F,
     TexCoord2F,
+    Tangent3F,
     Tangent4F,
     Color3F,
     JointIdx4U32,
@@ -28,6 +29,7 @@ static constexpr size_t vertexComponentSize(VertexComponent component)
     case VertexComponent::Normal3F:
     case VertexComponent::Color3F:
     case VertexComponent::Velocity3F:
+    case VertexComponent::Tangent3F:
         return 3 * sizeof(float);
     case VertexComponent::Position2F:
     case VertexComponent::TexCoord2F:
@@ -61,6 +63,8 @@ static constexpr const char* vertexComponentToString(VertexComponent component)
         return "Position2F";
     case VertexComponent::TexCoord2F:
         return "TexCoord2F";
+    case VertexComponent::Tangent3F:
+        return "Tangent3F";
     case VertexComponent::Tangent4F:
         return "Tangent4F";
     case VertexComponent::Color3F:

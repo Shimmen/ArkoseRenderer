@@ -12,6 +12,9 @@ struct VertexAllocation {
     i32 firstSkinningVertex { -1 };
     bool hasSkinningData() const { return firstSkinningVertex >= 0; }
 
+    std::vector<i32> firstMorphTargetVertices {};
+    bool hasMorphTargetData() const { return firstMorphTargetVertices.size() > 0; }
+
     i32 firstVelocityVertex { -1 };
     bool hasVelocityData() const { return firstVelocityVertex >= 0; }
 
@@ -23,6 +26,7 @@ struct VertexAllocation {
         OffsetAllocator::Allocation indexAlloc {};
         OffsetAllocator::Allocation skinningVertAlloc {};
         OffsetAllocator::Allocation velocityVertAlloc {};
+        std::vector<OffsetAllocator::Allocation> morphTargetVertAllocs {};
     };
 
     // For managing owned allocations to free when this is destroyed

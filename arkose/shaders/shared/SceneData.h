@@ -33,4 +33,10 @@ struct SkinningVertex {
     vec4 jointWeights;
 };
 
+struct MorphTargetVertex {
+    vec3 position;
+    vec3 normal;
+    vec3 tangent;
+};
+
 #endif // SCENE_DATA_H

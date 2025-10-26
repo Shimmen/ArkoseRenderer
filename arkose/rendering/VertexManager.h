@@ -29,7 +29,7 @@ public:
 
     ARK_NON_COPYABLE(VertexManager);
 
-    void registerForStreaming(StaticMesh&, bool includeIndices, bool includeSkinningData);
+    void registerForStreaming(StaticMesh&, bool includeIndices, bool includeSkinningData, bool includeMorphData);
     //void unregisterFromStreaming(StaticMesh&); TODO!
 
     bool allocateSkeletalMeshInstance(SkeletalMeshInstance&, CommandList&);
@@ -57,6 +57,10 @@ public:
     Buffer const& velocityDataVertexBuffer() const { return *m_velocityDataVertexBuffer; }
     Buffer& velocityDataVertexBuffer() { return *m_velocityDataVertexBuffer; }
 
+    VertexLayout const& morphTargetVertexLayout() const { return m_morphTargetVertexLayout; }
+    Buffer const& morphTargetVertexBuffer() const { return *m_morphTargetVertexBuffer; }
+    Buffer& morphTargetVertexBuffer() { return *m_morphTargetVertexBuffer; }
+
     std::vector<ShaderMeshlet> const& meshlets() const { return m_meshlets; }
     Buffer const& meshletBuffer() const { return *m_meshletBuffer; }
     Buffer& meshletBuffer() { return *m_meshletBuffer; }
@@ -72,6 +76,7 @@ public:
     static constexpr size_t MaxLoadedVertices         = 12'000'000;
     static constexpr size_t MaxLoadedSkinningVertices = 10'000;
     static constexpr size_t MaxLoadedVelocityVertices = 10'000;
+    static constexpr size_t MaxLoadedMorphTargetVertices = 10'000;
     static constexpr size_t MaxLoadedTriangles        = 16'000'000;
     static constexpr size_t MaxLoadedIndices          = 3 * MaxLoadedTriangles;
 
@@ -106,6 +111,12 @@ public:
         return MaxLoadedSkinningVertices - report.totalFreeSpace;
     }
 
+    u32 numAllocatedMorphTargetVertices() const
+    {
+        OffsetAllocator::StorageReport report = m_morphTargetVertexAllocator.storageReport();
+        return MaxLoadedMorphTargetVertices - report.totalFreeSpace;
+    }
+
 private:
     Backend* m_backend { nullptr };
     GpuScene* m_scene { nullptr };
@@ -117,6 +128,9 @@ private:
     VertexLayout const m_skinningDataVertexLayout { VertexComponent::JointIdx4U32,
                                                     VertexComponent::JointWeight4F };
     VertexLayout const m_velocityDataVertexLayout { VertexComponent::Velocity3F };
+    VertexLayout const m_morphTargetVertexLayout { VertexComponent::Position3F,
+                                                   VertexComponent::Normal3F,
+                                                   VertexComponent::Tangent3F };
 
     std::unique_ptr<Buffer> m_indexBuffer { nullptr };
     OffsetAllocator::Allocator m_indexAllocator { MaxLoadedIndices };
@@ -130,6 +144,9 @@ private:
 
     std::unique_ptr<Buffer> m_velocityDataVertexBuffer {};
     OffsetAllocator::Allocator m_velocityVertexAllocator { MaxLoadedVelocityVertices };
+
+    std::unique_ptr<Buffer> m_morphTargetVertexBuffer {};
+    OffsetAllocator::Allocator m_morphTargetVertexAllocator { MaxLoadedMorphTargetVertices };
 
     std::unique_ptr<Buffer> m_meshletVertexIndirectionBuffer {};
     u32 m_nextFreeMeshletIndirIndex { 0 };
@@ -150,6 +167,7 @@ private:
         PendingAllocation = 0,
         LoadingData, // TODO: Remove this non-streaming variant!
         StreamingVertexData,
+        //StreamingMorphTargetData, // TODO: Implement!
         StreamingIndexData,
         StreamingMeshletData,
         CreatingBLAS,
@@ -163,6 +181,7 @@ private:
 
         bool includeIndices { false };
         bool includeSkinningData { false };
+        bool includeMorphTargetData { false };
         bool includeVelocityData { false };
 
         u32 nextLOD { 0 };
@@ -194,7 +213,7 @@ private:
     std::vector<StreamingMesh> m_streamingMeshes {};
     std::vector<StreamingSkeletalMesh> m_streamingSkeletalMeshes {};
 
-    VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeVelocityData);
+    VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeMorphData, bool includeVelocityData);
     bool streamVertexData(StreamingMesh&, StaticMeshSegment const&);
     bool streamIndexData(StreamingMesh&, StaticMeshSegment const&);
     std::optional<MeshletView> streamMeshletDataForSegment(StreamingMesh& streamingMesh, StaticMeshSegment const&);

@@ -22,6 +22,7 @@ VertexManager::VertexManager(Backend& backend, GpuScene& scene)
     const size_t nonPostionVertexBufferSize = MaxLoadedVertices * nonPositionVertexLayout().packedVertexSize();
     const size_t skinningDataVertexBufferSize = MaxLoadedSkinningVertices * skinningDataVertexLayout().packedVertexSize();
     const size_t velocityDataVertexBufferSize = MaxLoadedVelocityVertices * velocityDataVertexLayout().packedVertexSize();
+    const size_t morphTargetVertexBufferSize = MaxLoadedMorphTargetVertices * morphTargetVertexLayout().packedVertexSize();
 
     float totalMemoryUseMb = ark::conversion::to::MB(indexBufferSize
                                                      + postionVertexBufferSize
@@ -49,6 +50,10 @@ VertexManager::VertexManager(Backend& backend, GpuScene& scene)
     m_velocityDataVertexBuffer = backend.createBuffer(velocityDataVertexBufferSize, Buffer::Usage::Vertex);
     m_velocityDataVertexBuffer->setStride(velocityDataVertexLayout().packedVertexSize());
     m_velocityDataVertexBuffer->setName("SceneVelocityDataVertexBuffer");
+
+    m_morphTargetVertexBuffer = backend.createBuffer(morphTargetVertexBufferSize, Buffer::Usage::Vertex);
+    m_morphTargetVertexBuffer->setStride(morphTargetVertexLayout().packedVertexSize());
+    m_morphTargetVertexBuffer->setName("SceneMorphTargetVertexBuffer");
 
     if (m_scene->maintainMeshShadingScene()) {
 
@@ -79,7 +84,7 @@ VertexManager::~VertexManager()
 {
 }
 
-void VertexManager::registerForStreaming(StaticMesh& mesh, bool includeIndices, bool includeSkinningData)
+void VertexManager::registerForStreaming(StaticMesh& mesh, bool includeIndices, bool includeSkinningData, bool includeMorphTargetData)
 {
     // There are (currently) no cases where we have velocity data from an asset that we need to upload
     constexpr bool includeVelocityData = false;
@@ -88,6 +93,7 @@ void VertexManager::registerForStreaming(StaticMesh& mesh, bool includeIndices, 
                                                 .state = MeshStreamingState::PendingAllocation,
                                                 .includeIndices = includeIndices,
                                                 .includeSkinningData = includeSkinningData,
+                                                .includeMorphTargetData = includeMorphTargetData,
                                                 .includeVelocityData = includeVelocityData });
 }
 
@@ -133,6 +139,7 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
                 VertexAllocation allocation = allocateMeshDataForSegment(*meshSegment.asset,
                                                                          streamingMesh.includeIndices,
                                                                          streamingMesh.includeSkinningData,
+                                                                         streamingMesh.includeMorphTargetData,
                                                                          streamingMesh.includeVelocityData);
                 if (allocation.isValid()) {
                     // TODO: Consider if we want to hold off on assigning this until we have a mesh that can actually be drawn to.
@@ -184,6 +191,7 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
             });
 
             if (stateDone) {
+                // TODO: Implement morph target streaming and do that before index data, if relevant.
                 streamingMesh.setNextState(MeshStreamingState::StreamingIndexData);
             }
         
@@ -397,6 +405,7 @@ void VertexManager::drawUI() const
                 doTableRow(nonPositionVertexBuffer(), nonPositionVertexLayout(), numAllocatedVertices());
                 doTableRow(skinningDataVertexBuffer(), skinningDataVertexLayout(), numAllocatedSkinningVertices());
                 doTableRow(velocityDataVertexBuffer(), velocityDataVertexLayout(), numAllocatedVelocityVertices());
+                doTableRow(morphTargetVertexBuffer(), morphTargetVertexLayout(), numAllocatedMorphTargetVertices());
 
                 ImGui::EndTable();
             }
@@ -559,11 +568,13 @@ bool VertexManager::allocateSkeletalMeshInstance(SkeletalMeshInstance& instance,
             // for velocity data, however, as it's something that's specific for the animated target vertices.
             constexpr bool includeIndices = false;
             constexpr bool includeSkinningData = false;
+            constexpr bool includeMorphTargetData = false;
             constexpr bool includeVelocityData = true;
 
             VertexAllocation instanceVertexAllocation = allocateMeshDataForSegment(*meshSegment.asset,
                                                                                    includeIndices,
                                                                                    includeSkinningData,
+                                                                                   includeMorphTargetData,
                                                                                    includeVelocityData);
 
             if (!instanceVertexAllocation.isValid()) {
@@ -622,7 +633,11 @@ bool VertexManager::allocateSkeletalMeshInstance(SkeletalMeshInstance& instance,
     return true;
 }
 
-VertexAllocation VertexManager::allocateMeshDataForSegment(MeshSegmentAsset const& segmentAsset, bool includeIndices, bool includeSkinningData, bool includeVelocityData)
+VertexAllocation VertexManager::allocateMeshDataForSegment(MeshSegmentAsset const& segmentAsset,
+                                                           bool includeIndices,
+                                                           bool includeSkinningData,
+                                                           bool includeMorphTargetData,
+                                                           bool includeVelocityData)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -665,6 +680,29 @@ VertexAllocation VertexManager::allocateMeshDataForSegment(MeshSegmentAsset cons
         }
     }
 
+    if (segmentAsset.hasMorphTargets() && includeMorphTargetData) {
+        for (MorphTargetAsset const& morphTarget : segmentAsset.morphTargets) { 
+            ARKOSE_ASSERT(morphTarget.positions.size() == vertexCount);
+            ARKOSE_ASSERT(morphTarget.normals.size() == 0 || morphTarget.normals.size() == vertexCount);
+            ARKOSE_ASSERT(morphTarget.tangents.size() == 0 || morphTarget.tangents.size() == vertexCount);
+
+            OffsetAllocator::Allocation morphAlloc = m_morphTargetVertexAllocator.allocate(vertexCount);
+            if (morphAlloc.isValid()) {
+                allocs.morphTargetVertAllocs.push_back(morphAlloc);
+            } else {
+                if (allocs.vertexAlloc.isValid()) m_vertexAllocator.free(allocs.vertexAlloc);
+                if (allocs.indexAlloc.isValid()) m_indexAllocator.free(allocs.indexAlloc);
+                if (allocs.skinningVertAlloc.isValid()) m_skinningVertexAllocator.free(allocs.skinningVertAlloc);
+                if (allocs.velocityVertAlloc.isValid()) m_velocityVertexAllocator.free(allocs.velocityVertAlloc);
+                while (!allocs.morphTargetVertAllocs.empty()) {
+                    m_morphTargetVertexAllocator.free(allocs.morphTargetVertAllocs.back());
+                    allocs.morphTargetVertAllocs.pop_back();
+                }
+                return {};
+            }
+        }
+    }
+
     // If all requested allocations succeeded, return the VertexAllocation for the segment
 
     VertexAllocation allocation {};
@@ -680,6 +718,12 @@ VertexAllocation VertexManager::allocateMeshDataForSegment(MeshSegmentAsset cons
 
     if (segmentAsset.hasSkinningData() && includeSkinningData) {
         allocation.firstSkinningVertex = allocs.skinningVertAlloc.offset;
+    }
+
+    if (segmentAsset.hasMorphTargets() && includeMorphTargetData) {
+        for (OffsetAllocator::Allocation const& morphAlloc : allocs.morphTargetVertAllocs) {
+            allocation.firstMorphTargetVertices.push_back(morphAlloc.offset);
+        }
     }
 
     if (includeVelocityData) {
@@ -721,6 +765,39 @@ void VertexManager::uploadMeshDataForAllocation(MeshSegmentAsset const& segmentA
         std::vector<u8> skinningVertexData = segmentAsset.assembleVertexData(m_skinningDataVertexLayout);
         size_t skinningDataOffset = allocation.firstSkinningVertex * m_skinningDataVertexLayout.packedVertexSize();
         m_skinningDataVertexBuffer->updateData(skinningVertexData.data(), skinningVertexData.size(), skinningDataOffset);
+    }
+
+    if (allocation.hasMorphTargetData()) {
+        ARKOSE_ASSERT(segmentAsset.hasMorphTargets());
+        ARKOSE_ASSERT(allocation.firstMorphTargetVertices.size() == segmentAsset.morphTargets.size());
+        for (size_t morphTargetIdx = 0; morphTargetIdx < segmentAsset.morphTargets.size(); ++morphTargetIdx) {
+            MorphTargetAsset const& morphTarget = segmentAsset.morphTargets[morphTargetIdx];
+
+            i32 firstMorphTargetVertex = allocation.firstMorphTargetVertices[morphTargetIdx];
+            u32 morphTargetVertexCount = allocation.vertexCount;
+
+            ARKOSE_ASSERT(morphTarget.positions.size() > 0);
+            bool hasMorphNormals = morphTarget.normals.size();
+            bool hasMorphTangents = morphTarget.tangents.size();
+
+            std::vector<MorphTargetVertex> morphTargetVertices;
+            morphTargetVertices.resize(morphTargetVertexCount);
+
+            for (size_t idx = 0; idx < morphTargetVertexCount; ++idx) {
+                MorphTargetVertex& vertex = morphTargetVertices[idx];
+                vertex.position = morphTarget.positions[idx];
+                if (hasMorphNormals) {
+                    vertex.normal = morphTarget.normals[idx];
+                }
+                if (hasMorphTangents) {
+                    vertex.tangent = morphTarget.tangents[idx];
+                }
+            }
+
+            size_t morphTargetDataSize = morphTargetVertexCount * m_morphTargetVertexLayout.packedVertexSize();
+            size_t morphTargetDataOffset = firstMorphTargetVertex * m_morphTargetVertexLayout.packedVertexSize();
+            m_morphTargetVertexBuffer->updateData(morphTargetVertices.data(), morphTargetDataSize, morphTargetDataOffset);
+        }
     }
 
     // Upload index data if relevant
