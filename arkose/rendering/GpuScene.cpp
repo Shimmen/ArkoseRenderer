@@ -1199,6 +1199,21 @@ SkeletalMeshHandle GpuScene::registerSkeletalMesh(MeshAsset const* meshAsset, Sk
         return SkeletalMeshHandle();
     }
 
+    if (skeletonAsset == nullptr) {
+        bool hasAnyMorphTargets = false;
+        for (MeshLODAsset const& lod : meshAsset->LODs) {
+            for (MeshSegmentAsset const& segment : lod.meshSegments) {
+                hasAnyMorphTargets |= segment.hasMorphTargets();
+            }
+        }
+
+        if (!hasAnyMorphTargets) {
+            ARKOSE_LOG(Warning, "Registering mesh '{}' as a skeletal mesh but with no skeleton and no morph targets. "
+                                "Is this intentional? This mesh could likely be registered as a static mesh instead.",
+                       meshAsset->name);
+        }
+    }
+
     // TODO: Maybe do some kind of caching here, similar to how we do it for static meshes?
     //  Also, if this skeletal mesh has been registered as a static mesh it should also be valid..?
 
