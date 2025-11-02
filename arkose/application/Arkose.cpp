@@ -76,18 +76,19 @@ void createWindow(System& system)
 {
     auto windowType = System::WindowType::Windowed;
     Extent2D windowExtents = Extent2D(1920, 1080);
-    std::optional<int> preferredMonitor = std::nullopt;
 
     if (CommandLine::hasArgument("-fullscreen")) {
         windowType = System::WindowType::Fullscreen;
+    } else {
+        if (std::optional<u32> resolutionX = CommandLine::namedArgumentValue<u32>("-resolutionX")) {
+            windowExtents = Extent2D(*resolutionX, windowExtents.height());
+        }
+        if (std::optional<u32> resolutionY = CommandLine::namedArgumentValue<u32>("-resolutionY")) {
+            windowExtents = Extent2D(windowExtents.width(), *resolutionY);
+        }
     }
 
-    // TODO: Implement `-name value` style command line argument
-    if (CommandLine::hasArgument("-monitor0")) {
-        preferredMonitor = 0;
-    } else if (CommandLine::hasArgument("-monitor1")) {
-        preferredMonitor = 1;
-    }
+    std::optional<int> preferredMonitor = CommandLine::namedArgumentValue<int>("-monitor");
 
     system.createWindow(windowType, windowExtents, preferredMonitor);
 }
