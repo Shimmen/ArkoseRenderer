@@ -18,6 +18,9 @@ set(CMAKE_CONFIGURATION_TYPES "Debug;Develop;Release")
 if (MSVC)
     set(ARKOSE_CXX_FLAGS "/Zc:preprocessor /permissive-")
 
+    # To run with Address Sanitizer (asan) globally, simply uncomment this line:
+    #add_compile_options(/fsanitize=address)
+
     # Disable warnings from external dependencies' headers which are included into our source file
     # TODO: See if CMake can use the `/external:I /external:W0` and similar for GCC/Clang to avoid this!
     set(ARKOSE_CXX_FLAGS "${ARKOSE_CXX_FLAGS} /wd4100") # 'identifier' : unreferenced formal parameter (we break this a lot ourselves - consider tidying this up)
