@@ -35,9 +35,25 @@ constexpr u32 narrow_cast(u64 wideValue)
 }
 
 template<>
+constexpr u32 narrow_cast(i64 wideValue)
+{
+    ARKOSE_ASSERT(wideValue >= 0);
+    ARKOSE_ASSERT(wideValue <= static_cast<i64>(UINT32_MAX));
+    return static_cast<u32>(wideValue);
+}
+
+template<>
 constexpr i32 narrow_cast(u64 wideValue)
 {
     ARKOSE_ASSERT(wideValue <= static_cast<u64>(INT32_MAX));
+    return static_cast<i32>(wideValue);
+}
+
+template<>
+constexpr i32 narrow_cast(i64 wideValue)
+{
+    ARKOSE_ASSERT(wideValue <= static_cast<i64>(INT32_MAX));
+    ARKOSE_ASSERT(wideValue >= static_cast<i64>(INT32_MIN));
     return static_cast<i32>(wideValue);
 }
 
