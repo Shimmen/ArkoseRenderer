@@ -37,6 +37,7 @@ void Scene::update(float elapsedTime, float deltaTime)
 {
     SCOPED_PROFILE_ZONE();
 
+    // Consider moving to some kind of end-of-frame processing step.
     m_sceneNodes.processDeferredDeletes(0, 0, [this](SceneNodeHandle sceneNodeHandle, SceneNode& sceneNode) {
         for (SceneNodeHandle child : sceneNode.children()) {
             removeNode(child);
@@ -44,11 +45,23 @@ void Scene::update(float elapsedTime, float deltaTime)
         sceneNode.m_children.clear();
     });
 
+    // Update animations
+
+    for (auto& animation : m_animations) { 
+        // TODO: Remove from list when finished, but that's an issue for later. Need to actually
+        // have a proper animation system before we start thinking about such things.
+        animation->tick(deltaTime);
+    }
+
+    // Apply skeletal mesh joint transformations
+
     for (auto& skeletalMeshInstance : gpuScene().skeletalMeshInstances()) {
         if (skeletalMeshInstance->hasSkeleton()) {
             skeletalMeshInstance->skeleton().applyJointTransformations();
         }
     }
+
+    // Misc.
 
     if (hasEditorScene()) { 
         editorScene().update(elapsedTime, deltaTime);
@@ -384,6 +397,14 @@ StaticMeshInstance& Scene::createStaticMeshInstance(StaticMeshHandle staticMeshH
     }
 
     return instance;
+}
+
+void Scene::playAnimation(AnimationAsset* animationAsset, SkeletalMeshInstance& skeletalMeshInstance, Animation::PlaybackMode playbackMode)
+{
+    auto animation = Animation::bind(animationAsset, skeletalMeshInstance);
+    animation->setPlaybackMode(playbackMode);
+
+    m_animations.push_back(std::move(animation));
 }
 
 void Scene::clearAllMeshInstances()

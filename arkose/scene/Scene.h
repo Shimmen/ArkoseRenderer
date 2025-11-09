@@ -1,6 +1,7 @@
 #pragma once
 
 #include "asset/LevelAsset.h"
+#include "animation/Animation.h"
 #include "rendering/ResourceList.h"
 #include "rendering/StaticMesh.h"
 #include "scene/camera/Camera.h"
@@ -92,6 +93,10 @@ public:
     // NOTE: This is more of a utility for now to clear out the current level
     void clearAllMeshInstances();
 
+    // Animations
+
+    void playAnimation(AnimationAsset*, SkeletalMeshInstance&, Animation::PlaybackMode);
+
     // Lighting - direct & indirect
 
     void addLight(std::unique_ptr<Light>);
@@ -142,6 +147,8 @@ private:
 
     Camera* m_currentMainCamera { nullptr };
     std::unordered_map<std::string, std::unique_ptr<Camera>> m_allCameras {};
+
+    std::vector<std::unique_ptr<Animation>> m_animations {};
 
     std::vector<std::unique_ptr<DirectionalLight>> m_directionalLights {};
     std::vector<std::unique_ptr<SpotLight>> m_spotLights {};
