@@ -765,58 +765,47 @@ std::vector<u8> MeshSegmentAsset::assembleVertexData(VertexLayout const& layout,
     dataVector.resize(bufferSize);
     u8* data = dataVector.data();
 
-    // TODO: We should really be more strict about mismatching vertex counts and instead handle it at asset-level!
-    // FIXME: This only really works for float components. However, for now we only have floating point components.
-    constexpr std::array<float, 4> floatOnes { 1, 1, 1, 1 };
-
     size_t offsetInFirstVertex = 0u;
 
-    auto copyComponentData = [&](u8 const* input, size_t inputCount, VertexComponent component) {
-        size_t componentSize = vertexComponentSize(component);
+    auto copyComponentData = [&]<typename T>(std::vector<T> const& input, T defaultValue, VertexComponent component) {
+        ARKOSE_ASSERT(sizeof(T) == vertexComponentSize(component));
+
         for (size_t vertexIdx = firstVertex; vertexIdx < firstVertex + numVertices; ++vertexIdx) {
             size_t dstIdx = vertexIdx - firstVertex;
             u8* destination = data + offsetInFirstVertex + dstIdx * packedVertexSize;
-            const u8* source = (vertexIdx < inputCount)
-                ? &input[vertexIdx * componentSize]
-                : (u8*)floatOnes.data();
-            std::memcpy(destination, source, componentSize);
+            T const* source = (vertexIdx < input.size()) ? &input[vertexIdx] : &defaultValue;
+            std::memcpy(destination, source, sizeof(T));
         }
-        return componentSize;
+        return sizeof(T);
     };
 
     for (VertexComponent component : layout.components()) {
         switch (component) {
         case VertexComponent::Position3F: {
-            auto* inputData = reinterpret_cast<u8 const*>(value_ptr(*positions.data()));
-            offsetInFirstVertex += copyComponentData(inputData, positions.size(), component);
+            offsetInFirstVertex += copyComponentData(positions, vec3(0.0f), component);
         } break;
         case VertexComponent::Normal3F: {
-            auto* inputData = reinterpret_cast<u8 const*>(value_ptr(*normals.data()));
-            offsetInFirstVertex += copyComponentData(inputData, normals.size(), component);
+            offsetInFirstVertex += copyComponentData(normals, vec3(0.0f, 0.0f, 1.0f), component);
         } break;
         case VertexComponent::TexCoord2F: {
-            auto* inputData = reinterpret_cast<u8 const*>(value_ptr(*texcoord0s.data()));
-            offsetInFirstVertex += copyComponentData(inputData, texcoord0s.size(), component);
+            offsetInFirstVertex += copyComponentData(texcoord0s, vec2(0.0f), component);
         } break;
         case VertexComponent::Tangent4F: {
-            auto* inputData = reinterpret_cast<u8 const*>(value_ptr(*tangents.data()));
-            offsetInFirstVertex += copyComponentData(inputData, tangents.size(), component);
+            offsetInFirstVertex += copyComponentData(tangents, vec4(1.0f, 0.0f, 0.0f, 1.0f), component);
         } break;
         case VertexComponent::JointWeight4F: {
-            auto* inputData = reinterpret_cast<u8 const*>(value_ptr(*jointWeights.data()));
-            offsetInFirstVertex += copyComponentData(inputData, jointWeights.size(), component);
+            offsetInFirstVertex += copyComponentData(jointWeights, vec4(0.0f), component);
         } break;
         case VertexComponent::JointIdx4U32: {
-            std::vector<u32> jointIndicesU32;
-            jointIndicesU32.reserve(jointIndices.size() * 4);
+            std::vector<uvec4> jointIndicesU32;
+            jointIndicesU32.reserve(jointIndices.size());
             for (ark::tvec4<u16> idxU16 : jointIndices) {
-                jointIndicesU32.emplace_back(static_cast<u32>(idxU16.x));
-                jointIndicesU32.emplace_back(static_cast<u32>(idxU16.y));
-                jointIndicesU32.emplace_back(static_cast<u32>(idxU16.z));
-                jointIndicesU32.emplace_back(static_cast<u32>(idxU16.w));
+                jointIndicesU32.emplace_back(static_cast<u32>(idxU16.x),
+                                             static_cast<u32>(idxU16.y),
+                                             static_cast<u32>(idxU16.z),
+                                             static_cast<u32>(idxU16.w));
             }
-            auto* inputData = reinterpret_cast<u8 const*>(jointIndicesU32.data());
-            offsetInFirstVertex += copyComponentData(inputData, jointIndicesU32.size(), component);
+            offsetInFirstVertex += copyComponentData(jointIndicesU32, uvec4(0), component);
         } break;
         default: {
             ARKOSE_LOG(Fatal, "Unable to assemble vertex data for unknown VertexComponent: '{}'", vertexComponentToString(component));
