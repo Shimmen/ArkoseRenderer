@@ -30,22 +30,29 @@ static constexpr size_t vertexComponentSize(VertexComponent component)
     case VertexComponent::Color3F:
     case VertexComponent::Velocity3F:
     case VertexComponent::Tangent3F:
-        return 3 * sizeof(float);
+        static_assert(sizeof(vec3) == 3 * sizeof(float));
+        return sizeof(vec3);
     case VertexComponent::Position2F:
     case VertexComponent::TexCoord2F:
-        return 2 * sizeof(float);
+        static_assert(sizeof(vec2) == 2 * sizeof(float));
+        return sizeof(vec2);
     case VertexComponent::Tangent4F:
     case VertexComponent::JointWeight4F:
-        return 4 * sizeof(float);
+        static_assert(sizeof(vec4) == 4 * sizeof(float));
+        return sizeof(vec4);
     case VertexComponent::JointIdx4U32:
-        return 4 * sizeof(u32);
+        static_assert(sizeof(uvec4) == 4 * sizeof(u32));
+        return sizeof(uvec4);
 
     case VertexComponent::Padding2F:
-        return 2 * sizeof(float);
+        static_assert(sizeof(vec2) == 2 * sizeof(float));
+        return sizeof(vec2);
     case VertexComponent::Padding3F:
-        return 3 * sizeof(float);
+        static_assert(sizeof(vec3) == 3 * sizeof(float));
+        return sizeof(vec3);
     case VertexComponent::Padding4F:
-        return 4 * sizeof(float);
+        static_assert(sizeof(vec4) == 4 * sizeof(float));
+        return sizeof(vec4);
 
     default:
         ASSERT_NOT_REACHED();

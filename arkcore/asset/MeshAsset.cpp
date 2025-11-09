@@ -767,9 +767,7 @@ std::vector<u8> MeshSegmentAsset::assembleVertexData(VertexLayout const& layout,
 
     size_t offsetInFirstVertex = 0u;
 
-    auto copyComponentData = [&]<typename T>(std::vector<T> const& input, T defaultValue, VertexComponent component) {
-        ARKOSE_ASSERT(sizeof(T) == vertexComponentSize(component));
-
+    auto copyComponentData = [&]<typename T>(std::vector<T> const& input, T defaultValue) {
         for (size_t vertexIdx = firstVertex; vertexIdx < firstVertex + numVertices; ++vertexIdx) {
             size_t dstIdx = vertexIdx - firstVertex;
             u8* destination = data + offsetInFirstVertex + dstIdx * packedVertexSize;
@@ -782,19 +780,19 @@ std::vector<u8> MeshSegmentAsset::assembleVertexData(VertexLayout const& layout,
     for (VertexComponent component : layout.components()) {
         switch (component) {
         case VertexComponent::Position3F: {
-            offsetInFirstVertex += copyComponentData(positions, vec3(0.0f), component);
+            offsetInFirstVertex += copyComponentData(positions, vec3(0.0f));
         } break;
         case VertexComponent::Normal3F: {
-            offsetInFirstVertex += copyComponentData(normals, vec3(0.0f, 0.0f, 1.0f), component);
+            offsetInFirstVertex += copyComponentData(normals, vec3(0.0f, 0.0f, 1.0f));
         } break;
         case VertexComponent::TexCoord2F: {
-            offsetInFirstVertex += copyComponentData(texcoord0s, vec2(0.0f), component);
+            offsetInFirstVertex += copyComponentData(texcoord0s, vec2(0.0f));
         } break;
         case VertexComponent::Tangent4F: {
-            offsetInFirstVertex += copyComponentData(tangents, vec4(1.0f, 0.0f, 0.0f, 1.0f), component);
+            offsetInFirstVertex += copyComponentData(tangents, vec4(1.0f, 0.0f, 0.0f, 1.0f));
         } break;
         case VertexComponent::JointWeight4F: {
-            offsetInFirstVertex += copyComponentData(jointWeights, vec4(0.0f), component);
+            offsetInFirstVertex += copyComponentData(jointWeights, vec4(0.0f));
         } break;
         case VertexComponent::JointIdx4U32: {
             std::vector<uvec4> jointIndicesU32;
@@ -805,7 +803,7 @@ std::vector<u8> MeshSegmentAsset::assembleVertexData(VertexLayout const& layout,
                                              static_cast<u32>(idxU16.z),
                                              static_cast<u32>(idxU16.w));
             }
-            offsetInFirstVertex += copyComponentData(jointIndicesU32, uvec4(0), component);
+            offsetInFirstVertex += copyComponentData(jointIndicesU32, uvec4(0));
         } break;
         default: {
             ARKOSE_LOG(Fatal, "Unable to assemble vertex data for unknown VertexComponent: '{}'", vertexComponentToString(component));
