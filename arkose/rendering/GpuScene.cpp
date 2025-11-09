@@ -612,14 +612,17 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 for (size_t segmentIdx = 0; segmentIdx < numSegments; ++segmentIdx) {
 
                     SkinningVertexMapping const& skinningVertexMapping = skeletalMeshInstance->skinningVertexMappingForSegmentIndex(segmentIdx);
-                    std::vector<MorphTarget> const& morphTargets = skeletalMeshInstance->morphTargetsForSegment(segmentIdx);
 
                     //ARKOSE_ASSERT(skinningVertexMapping.underlyingMesh.hasSkinningData());
                     ARKOSE_ASSERT(skinningVertexMapping.skinnedTarget.hasVelocityData());
                     ARKOSE_ASSERT(skinningVertexMapping.underlyingMesh.vertexCount == skinningVertexMapping.skinnedTarget.vertexCount);
                     u32 vertexCount = skinningVertexMapping.underlyingMesh.vertexCount;
 
-                    if (morphTargets.size() > 0) {
+                    u32 morphTargetCount = 0;
+                    if (skeletalMeshInstance->hasMorphTargetsForSegment(segmentIdx)) {
+                        std::vector<MorphTarget> const& morphTargets = skeletalMeshInstance->morphTargetsForSegment(segmentIdx);
+                        morphTargetCount = narrow_cast<u32>(morphTargets.size());
+
                         std::vector<vec2> morphTargetMetaData {};
                         for (size_t morphTargetIdx = 0; morphTargetIdx < morphTargets.size(); ++morphTargetIdx) {
                             i32 firstMorphTargetVertex = skinningVertexMapping.underlyingMesh.firstMorphTargetVertices[morphTargetIdx];
@@ -637,7 +640,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                     cmdList.setNamedUniform<i32>("firstSkinningVertexIdx", hasSkeleton ? skinningVertexMapping.underlyingMesh.firstSkinningVertex : -1);
                     cmdList.setNamedUniform<u32>("firstVelocityVertexIdx", static_cast<u32>(skinningVertexMapping.skinnedTarget.firstVelocityVertex));
                     cmdList.setNamedUniform<u32>("vertexCount", skinningVertexMapping.underlyingMesh.vertexCount);
-                    cmdList.setNamedUniform<u32>("morphTargetCount", narrow_cast<u32>(morphTargets.size()));
+                    cmdList.setNamedUniform<u32>("morphTargetCount", morphTargetCount);
 
                     constexpr u32 localSize = 64;
                     cmdList.dispatch({ vertexCount, 1, 1 }, { localSize, 1, 1 });

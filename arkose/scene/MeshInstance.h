@@ -98,6 +98,7 @@ struct SkeletalMeshInstance : public IEditorObject {
 
     void pushMorphTarget(size_t segmentIdx, std::string_view morphTargetName);
     bool hasMorphTargets() const { return m_morphTargets.size() > 0; }
+    bool hasMorphTargetsForSegment(size_t segmentIdx) const { return segmentIdx < m_morphTargets.size(); }
     std::vector<MorphTarget>& morphTargetsForSegment(size_t segmentIdx) { return m_morphTargets[segmentIdx]; }
 
     bool hasBlasForSegmentIndex(size_t segmentIdx) const;
