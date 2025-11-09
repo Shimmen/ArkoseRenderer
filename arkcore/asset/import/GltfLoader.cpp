@@ -480,6 +480,9 @@ std::unique_ptr<MeshAsset> GltfLoader::createMesh(const tinygltf::Model& gltfMod
                     const vec3* firstMorphPosition = getTypedMemoryBufferForAccessor<vec3>(gltfModel, *morphPositionAccessor);
                     morphTarget.positions = std::vector<vec3>(firstMorphPosition, firstMorphPosition + morphPositionAccessor->count);
 
+                    mesh->boundingBox.expandWithPoint(mesh->boundingBox.min + createVec3(morphPositionAccessor->minValues));
+                    mesh->boundingBox.expandWithPoint(mesh->boundingBox.max + createVec3(morphPositionAccessor->maxValues));
+
                     if (morphTarget.name.empty()) {
                         // Fallback morph target name: grab name of morph target's position accessor
                         if (!morphPositionAccessor->name.empty()) {
