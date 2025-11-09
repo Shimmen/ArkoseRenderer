@@ -47,8 +47,7 @@
 constexpr bool keepRenderDocCompatible = false;
 
 constexpr bool withUpscaling = true && !keepRenderDocCompatible;
-constexpr bool withRayTracing = true && !keepRenderDocCompatible;
-
+constexpr bool withRayTracing = true;
 constexpr bool withVisibilityBuffer = true;
 
 std::vector<Backend::Capability> ShowcaseApp::requiredCapabilities()
