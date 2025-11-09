@@ -44,9 +44,6 @@
 // For animation & skinning tests
 #include "asset/import/AssetImporter.h"
 
-constexpr bool keepRenderDocCompatible = false;
-
-constexpr bool withUpscaling = true && !keepRenderDocCompatible;
 constexpr bool withRayTracing = true;
 constexpr bool withVisibilityBuffer = true;
 
@@ -205,15 +202,13 @@ void ShowcaseApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend
     }
 
 #if WITH_DLSS
-    if constexpr (withUpscaling) {
-        if (DLSSNode::isSupported()) {
-            UpscalingQuality quality = pipeline.outputResolution() < Extent2D(2560, 1440)
-                ? UpscalingQuality::GoodQuality
-                : UpscalingQuality::Balanced;
-            pipeline.addNode<DLSSNode>(quality);
-            antiAliasingMode = AntiAliasing::None;
-            sceneTexture = "SceneColorUpscaled";
-        }
+    if (DLSSNode::isSupported()) {
+        UpscalingQuality quality = pipeline.outputResolution() < Extent2D(2560, 1440)
+            ? UpscalingQuality::GoodQuality
+            : UpscalingQuality::Balanced;
+        pipeline.addNode<DLSSNode>(quality);
+        antiAliasingMode = AntiAliasing::None;
+        sceneTexture = "SceneColorUpscaled";
     }
 #endif
 
