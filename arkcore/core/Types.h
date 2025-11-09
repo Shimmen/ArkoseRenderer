@@ -86,6 +86,23 @@ constexpr u8 narrow_cast(u32 wideValue)
     return static_cast<u8>(wideValue);
 }
 
+#if defined(__clang__) || defined(__GNUC__)
+template<>
+constexpr u32 narrow_cast(long long int wideValue)
+{
+    ARKOSE_ASSERT(wideValue >= 0);
+    ARKOSE_ASSERT(wideValue <= static_cast<long long int>(UINT32_MAX));
+    return static_cast<u32>(wideValue);
+}
+template<>
+constexpr i32 narrow_cast(long long int wideValue)
+{
+    ARKOSE_ASSERT(wideValue >= static_cast<long long int>(INT32_MIN));
+    ARKOSE_ASSERT(wideValue <= static_cast<long long int>(INT32_MAX));
+    return static_cast<i32>(wideValue);
+}
+#endif
+
 #if defined(__clang__) && 0 // NOTE: Had to define this for it to compile on macOS, so might need some more specifiers.
 template<>
 constexpr u32 narrow_cast(size_t wideValue)
