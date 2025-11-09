@@ -92,17 +92,32 @@ void ShowcaseApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend
             .setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(90.0f)))
             .setScale(0.75f);
 
-        MeshAsset* meshAsset = MeshAsset::load("assets/sample/models/CesiumMan/Cesium_Man.arkmsh");
-        SkeletonAsset* skeletonAsset = SkeletonAsset::load("assets/sample/models/CesiumMan/Armature.arkskel");
-        AnimationAsset* animationAsset = AnimationAsset::load("assets/sample/models/CesiumMan/animation0000.arkanim");
+        constexpr bool addMorphTargetTest = true;
+        if constexpr (addMorphTargetTest) {
+            MeshAsset* meshAsset = MeshAsset::load("assets/engine/test/morph/SimpleMorph/mesh0000.arkmsh");
+            AnimationAsset* animationAsset = AnimationAsset::load("assets/engine/test/morph/SimpleMorph/animation0000.arkanim");
 
-        Transform transform {};
-        transform.setTranslation(vec3(-7.0f, 0.0f, -0.85f));
-        transform.setOrientation(quat(vec3(0.671434045f, 0.221768513f, 0.221769705f), -0.671426296f));
-        m_skeletalMeshInstance = &scene.addSkeletalMesh(meshAsset, skeletonAsset, transform);
+            Transform transform {};
+            transform.setTranslation(vec3(2.0f, 1.0f, 0.0f));
+            transform.setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(90.0f)));
+            SkeletalMeshInstance& morphMeshInstance = scene.addSkeletalMesh(meshAsset, nullptr, transform);
 
-        m_testAnimation = Animation::bind(animationAsset, *m_skeletalMeshInstance);
-        m_testAnimation->setPlaybackMode(Animation::PlaybackMode::Looping);
+            scene.playAnimation(animationAsset, morphMeshInstance, Animation::PlaybackMode::Looping);
+        }
+
+        constexpr bool addSkeletalMeshTest = true;
+        if constexpr (addSkeletalMeshTest) {
+            MeshAsset* meshAsset = MeshAsset::load("assets/sample/models/CesiumMan/Cesium_Man.arkmsh");
+            SkeletonAsset* skeletonAsset = SkeletonAsset::load("assets/sample/models/CesiumMan/Armature.arkskel");
+            AnimationAsset* animationAsset = AnimationAsset::load("assets/sample/models/CesiumMan/animation0000.arkanim");
+
+            Transform transform {};
+            transform.setTranslation(vec3(-7.0f, 0.0f, -0.85f));
+            transform.setOrientation(quat(vec3(0.671434045f, 0.221768513f, 0.221769705f), -0.671426296f));
+            SkeletalMeshInstance& skeletalMeshInstance = scene.addSkeletalMesh(meshAsset, skeletonAsset, transform);
+
+            scene.playAnimation(animationAsset, skeletalMeshInstance, Animation::PlaybackMode::Looping);
+        }
     }
 
     if (scene.directionalLightCount() == 0) {
@@ -274,15 +289,6 @@ bool ShowcaseApp::update(float elapsedTime, float deltaTime)
             PhysicsInstanceHandle physicsInstanceHandle = scene.physicsScene().createDynamicInstance(cubeShapeHandle, staticMeshInstance.transform());
             scene.physicsScene().backend().applyImpulse(physicsInstanceHandle, 175.0f * spawnDirection);
         }
-    }
-
-    if (m_testAnimation != nullptr) {
-        if (input.wasKeyPressed(Key::R)) {
-            m_testAnimation->reset();
-        }
-
-        //m_skeletalMeshInstance->skeleton().debugPrintState();
-        m_testAnimation->tick(deltaTime);
     }
 
     return !exitRequested;

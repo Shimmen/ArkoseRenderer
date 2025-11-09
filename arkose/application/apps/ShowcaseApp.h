@@ -23,11 +23,6 @@ public:
     bool m_guiEnabled { true };
     FpsCameraController m_fpsCameraController {};
 
-    // TODO: Remove me, only for testing skeletal mesh animations 
-    // TODO: In fact, we should make this into a test at some point..
-    SkeletalMeshInstance* m_skeletalMeshInstance { nullptr };
-    std::unique_ptr<Animation> m_testAnimation { nullptr };
-
     // Demo scene
     void setupCullingShowcaseScene(Scene&);
     struct AnimatingInstance {
