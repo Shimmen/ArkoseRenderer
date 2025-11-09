@@ -114,6 +114,7 @@ void MeshSegmentAsset::flattenToNonIndexedMesh()
 
         for (MorphTargetAsset& morphTarget : morphTargets) {
             MorphTargetAsset& newMorphTarget = newMorphTargets.emplace_back();
+            newMorphTarget.name = morphTarget.name;
 
             for (u32 index : indices) {
                 newMorphTarget.positions.push_back(morphTarget.positions[index]);

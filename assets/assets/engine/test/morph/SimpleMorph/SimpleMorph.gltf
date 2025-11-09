@@ -27,7 +27,13 @@
               "POSITION":3
             }
           ],
-          "indices":0
+          "indices":0,
+          "extras": {
+            "targetNames": [
+              "TestTargetX",
+              "TestTargetY"
+            ]
+          }
         }
       ],
       "weights":[

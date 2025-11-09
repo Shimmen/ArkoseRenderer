@@ -35,6 +35,7 @@ struct OpacityMicroMapDataAsset {
 };
 
 struct MorphTargetAsset {
+    std::string name;
     // TODO: Allow a sparse encoding, so this data starts at some vertex offset & has a limited length.
     std::vector<vec3> positions;
     std::vector<vec3> normals;
@@ -189,6 +190,7 @@ enum class MeshAssetVersion : u32 {
     Initial = 0,
     AddOpacityMicroMaps,
     AddMorphTargets,
+    AddMorphTargetNames,
     ////////////////////////////////////////////////////////////////////////////
     // Add new versions above this delimiter
     VersionCount,
@@ -233,6 +235,9 @@ void serialize(Archive& archive, OpacityMicroMapDataAsset& ommDataAsset, u32 ver
 template<class Archive>
 void serialize(Archive& archive, MorphTargetAsset& morphTargetAsset, u32 version)
 {
+    if (version >= toUnderlying(MeshAssetVersion::AddMorphTargetNames)) {
+        archive(cereal::make_nvp("name", morphTargetAsset.name));
+    }
     archive(cereal::make_nvp("positions", morphTargetAsset.positions));
     archive(cereal::make_nvp("normals", morphTargetAsset.normals));
     archive(cereal::make_nvp("tangents", morphTargetAsset.tangents));

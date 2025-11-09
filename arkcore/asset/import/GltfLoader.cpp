@@ -441,9 +441,27 @@ std::unique_ptr<MeshAsset> GltfLoader::createMesh(const tinygltf::Model& gltfMod
 
         // Assemble morph target data if present
         if (gltfPrimitive.targets.size() > 0) {
-            for (std::map<std::string, int> const& morphTargetMap : gltfPrimitive.targets) {
+
+            // Default morph target name source (non-standard but de-facto).
+            // See https://github.com/BabylonJS/Babylon.js/pull/6904/.
+            std::vector<std::string> morphTargetNames {};
+            if (gltfPrimitive.extras.Has("targetNames")) {
+                tinygltf::Value const& gltfTargetNames = gltfPrimitive.extras.Get("targetNames");
+                if (gltfTargetNames.IsArray()) {
+                    for (tinygltf::Value const& name : gltfTargetNames.Get<tinygltf::Value::Array>()) {
+                        morphTargetNames.push_back(name.Get<std::string>());
+                    }
+                }
+            }
+
+            for (size_t morphTargetIdx = 0; morphTargetIdx < gltfPrimitive.targets.size(); ++morphTargetIdx) {
+                std::map<std::string, int> const& morphTargetMap = gltfPrimitive.targets[morphTargetIdx];
 
                 MorphTargetAsset& morphTarget = meshSegment.morphTargets.emplace_back();
+
+                if (morphTargetIdx < morphTargetNames.size()) {
+                    morphTarget.name = morphTargetNames[morphTargetIdx];
+                }
 
                 auto findAccessorForMorph = [&](const char* name) -> tinygltf::Accessor const* {
                     auto entry = morphTargetMap.find(name);
@@ -461,6 +479,16 @@ std::unique_ptr<MeshAsset> GltfLoader::createMesh(const tinygltf::Model& gltfMod
 
                     const vec3* firstMorphPosition = getTypedMemoryBufferForAccessor<vec3>(gltfModel, *morphPositionAccessor);
                     morphTarget.positions = std::vector<vec3>(firstMorphPosition, firstMorphPosition + morphPositionAccessor->count);
+
+                    if (morphTarget.name.empty()) {
+                        // Fallback morph target name: grab name of morph target's position accessor
+                        if (!morphPositionAccessor->name.empty()) {
+                            morphTarget.name = morphPositionAccessor->name;
+                        } else {
+                            static u32 nextMorphTargetIdx = 0;
+                            morphTarget.name = fmt::format("MorphTarget{}", nextMorphTargetIdx++);
+                        }
+                    }
                 }
 
                 if (tinygltf::Accessor const* morphNormalAccessor = findAccessorForMorph("NORMAL")) {

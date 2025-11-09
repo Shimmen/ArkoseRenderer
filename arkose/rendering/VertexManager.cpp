@@ -591,10 +591,8 @@ bool VertexManager::allocateSkeletalMeshInstance(SkeletalMeshInstance& instance,
             instance.setSkinningVertexMapping(segmentIdx, skinningVertexMapping);
 
             if (meshSegment.vertexAllocation.hasMorphTargetData()) {
-                size_t numMorphTargets = meshSegment.asset->morphTargets.size();
-                for (size_t morphTargetIdx = 0; morphTargetIdx < numMorphTargets; ++morphTargetIdx) {
-                    std::string morphTargetName = fmt::format("MorphTarget{}", morphTargetIdx);
-                    instance.pushMorphTarget(segmentIdx, morphTargetName);
+                for (MorphTargetAsset const& morphTargetAsset : meshSegment.asset->morphTargets) {
+                    instance.pushMorphTarget(segmentIdx, morphTargetAsset.name);
                 }
             }
 
