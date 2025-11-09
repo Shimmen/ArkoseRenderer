@@ -1,0 +1,153 @@
+{
+    "level": {
+        "name": "Intel Sponza (full)",
+        "objects": [
+            {
+                "name": "main_sponza",
+                "transform": {
+                    "translation": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0
+                    },
+                    "orientation": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0,
+                        "w": 1.0
+                    },
+                    "scale": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    }
+                },
+                "mesh": {
+                    "index": 0,
+                    "data": ""
+                },
+                "set": "assets/sample/models/IntelSponza/main_sponza/NewSponza_Main_glTF_002.arkset"
+            },
+            {
+                "name": "sponza_curtains",
+                "transform": {
+                    "translation": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0
+                    },
+                    "orientation": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0,
+                        "w": 1.0
+                    },
+                    "scale": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    }
+                },
+                "mesh": {
+                    "index": 0,
+                    "data": ""
+                },
+                "set": "assets/sample/models/IntelSponza/PKG_A_Curtains/NewSponza_Curtains_glTF.arkset"
+            },
+            {
+                "name": "sponza_ivy",
+                "transform": {
+                    "translation": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0
+                    },
+                    "orientation": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0,
+                        "w": 1.0
+                    },
+                    "scale": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    }
+                },
+                "mesh": {
+                    "index": 0,
+                    "data": ""
+                },
+                "set": "assets/sample/models/IntelSponza/PKG_B_Ivy/NewSponza_IvyGrowth_glTF.arkset"
+            },
+            {
+                "name": "sponza_tree",
+                "transform": {
+                    "translation": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0
+                    },
+                    "orientation": {
+                        "x": 0.0,
+                        "y": 0.0,
+                        "z": 0.0,
+                        "w": 1.0
+                    },
+                    "scale": {
+                        "x": 1.0,
+                        "y": 1.0,
+                        "z": 1.0
+                    }
+                },
+                "mesh": {
+                    "index": 0,
+                    "data": ""
+                },
+                "set": "assets/sample/models/IntelSponza/PKG_C.1_Trees/NewSponza_CypressTree_glTF.arkset"
+            }
+        ],
+        "lights": [
+        ],
+        "cameras": [
+            {
+                "position": {
+                    "x": 8.84,
+                    "y": 5.11,
+                    "z": -0.83
+                },
+                "orientation": {
+                    "x": -0.059595,
+                    "y": 0.696774,
+                    "z": 0.05789,
+                    "w": 0.707534
+                },
+                "nearClipPlane": 0.25,
+                "farClipPlane": 10000.0,
+                "focusMode": "Manual",
+                "focalLength": 30.0,
+                "focusDepth": 5.0,
+                "sensorSize": {
+                    "x": 36.0,
+                    "y": 24.0
+                },
+                "exposureMode": "Manual",
+                "fNumber": 11.0,
+                "iso": 400.0,
+                "shutterSpeed": 0.008,
+                "exposureCompensation": 0.0,
+                "adaptionRate": 0.0017999999690800906
+            }
+        ],
+        "environmentMap": {
+            "nullopt": false,
+            "data": {
+                "assetPath": "assets/sample/hdri/tiergarten_2k.dds",
+                "brightnessFactor": 2000.0
+            }
+        },
+        "probeGrid": {
+            "nullopt": true
+        }
+    }
+}
