@@ -37,10 +37,25 @@ void Animation::tick(float deltaTime)
         sampledInputTracks[idx] = evaluateInputTrack(idx, inputTrack);
     }
 
-    //for (AnimationChannelAsset<f32> const& channel : m_asset->floatPropertyChannels) {
-    //    // We don't yet have any float properties that can be animated!
-    //    NOT_YET_IMPLEMENTED();
-    //}
+    for (AnimationChannelAsset<f32> const& channel : m_asset->floatPropertyChannels) {
+        ARKOSE_ASSERT(channel.targetProperty == AnimationTargetProperty::Weights);
+
+        SampledInputTrack const& sampledInput = sampledInputTracks[channel.sampler.inputTrackIdx];
+
+        if (channel.targetProperty == AnimationTargetProperty::Weights) {
+            if (m_skeletalMeshInstance && m_skeletalMeshInstance->hasMorphTargets()) {
+                // TODO: This is a hack! We need to properly map the targetReference to the correct morph target(s)!
+                // but for that we also need a more complete asset to really stress this. For now, this will have to do.
+                std::vector<MorphTarget>& morphTargetsForSegment = m_skeletalMeshInstance->morphTargetsForSegment(0);
+
+                size_t numMorphTargets = morphTargetsForSegment.size();
+                for (size_t targetIdx = 0; targetIdx < numMorphTargets; ++targetIdx) {
+                    float value = evaluateAnimationChannel(sampledInput, channel, targetIdx, numMorphTargets);
+                    morphTargetsForSegment[targetIdx].weight = value;
+                }
+            }
+        }
+    }
 
     //for (AnimationChannelAsset<vec2> const& channel : m_asset->float2PropertyChannels) {
     //    // We don't yet have any float2 properties that can be animated!
@@ -48,7 +63,6 @@ void Animation::tick(float deltaTime)
     //}
 
     for (AnimationChannelAsset<vec3> const& channel : m_asset->float3PropertyChannels) {
-        // NOTE: Float3 properties can only be used for translation and scale, possibly also rotation using euler angles
         ARKOSE_ASSERT(channel.targetProperty == AnimationTargetProperty::Translation || channel.targetProperty == AnimationTargetProperty::Scale);
 
         SampledInputTrack const& sampledInput = sampledInputTracks[channel.sampler.inputTrackIdx];
@@ -67,7 +81,6 @@ void Animation::tick(float deltaTime)
     }
 
     for (AnimationChannelAsset<vec4> const& channel : m_asset->float4PropertyChannels) {
-        // NOTE: Float4 properties can only be used for orientation/rotation
         ARKOSE_ASSERT(channel.targetProperty == AnimationTargetProperty::Rotation);
 
         SampledInputTrack const& sampledInput = sampledInputTracks[channel.sampler.inputTrackIdx];

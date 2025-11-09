@@ -39,7 +39,7 @@ This list is not complete, it's just a showcase of various features that are imp
 
  - Real-time ray tracing
  - Bindless texture support
- - Skeletal mesh skinning and rendering
+ - Skeletal mesh skinning and rendering, with support for morph targets
  - GPU driven meshlet based visibility buffer rendering with meshlet culling (using mesh shaders)
  - Ray traced and/or shadow mapped local (spot/point/sphere) lights
  - A realistic camera model, with focus and exposure controls that will be familiar to photographers

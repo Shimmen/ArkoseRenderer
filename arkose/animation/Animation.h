@@ -44,7 +44,7 @@ private:
     SampledInputTrack evaluateInputTrack(size_t inputTrackIdx, std::vector<float> const& inputTrack);
 
     template<typename PropertyType>
-    PropertyType evaluateAnimationChannel(SampledInputTrack const&, AnimationChannelAsset<PropertyType> const&);
+    PropertyType evaluateAnimationChannel(SampledInputTrack const&, AnimationChannelAsset<PropertyType> const&, size_t offset = 0, size_t stride = 1);
 
     Transform* findTransformForTarget(std::string const& targetReference);
 
@@ -63,15 +63,17 @@ private:
 };
 
 template<typename PropertyType>
-PropertyType Animation::evaluateAnimationChannel(SampledInputTrack const& sampledInput, AnimationChannelAsset<PropertyType> const& channel)
+PropertyType Animation::evaluateAnimationChannel(SampledInputTrack const& sampledInput,
+                                                 AnimationChannelAsset<PropertyType> const& channel,
+                                                 size_t offset, size_t stride)
 {
     if (sampledInput.idx1 == -1) {
         ARKOSE_ASSERT(sampledInput.idx0 != -1);
         return channel.sampler.outputValues[sampledInput.idx0];
     }
 
-    PropertyType v0 = channel.sampler.outputValues[sampledInput.idx0];
-    PropertyType v1 = channel.sampler.outputValues[sampledInput.idx1];
+    PropertyType v0 = channel.sampler.outputValues[sampledInput.idx0 * stride + offset];
+    PropertyType v1 = channel.sampler.outputValues[sampledInput.idx1 * stride + offset];
 
     PropertyType value = v0;
     switch (channel.sampler.interpolation) {

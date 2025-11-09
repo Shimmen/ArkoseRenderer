@@ -97,6 +97,7 @@ struct SkeletalMeshInstance : public IEditorObject {
     void setSkinningVertexMapping(size_t segmentIdx, SkinningVertexMapping);
 
     void pushMorphTarget(size_t segmentIdx, std::string_view morphTargetName);
+    bool hasMorphTargets() const { return m_morphTargets.size() > 0; }
     std::vector<MorphTarget>& morphTargetsForSegment(size_t segmentIdx) { return m_morphTargets[segmentIdx]; }
 
     bool hasBlasForSegmentIndex(size_t segmentIdx) const;
