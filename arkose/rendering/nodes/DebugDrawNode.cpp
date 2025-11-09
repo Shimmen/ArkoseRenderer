@@ -3,6 +3,7 @@
 #include "core/Logging.h"
 #include "rendering/GpuScene.h"
 #include "rendering/Icon.h"
+#include "rendering/RenderPipeline.h"
 #include "rendering/Skeleton.h"
 #include "rendering/debug/DebugDrawer.h"
 #include <ark/core.h>
@@ -41,21 +42,23 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
 
     BindingSet& cameraBindingSet = *reg.getBindingSet("SceneCameraSet");
 
-    Texture* targetTex = reg.outputTexture();
-    Texture* sceneDepthTex = reg.getTexture("SceneDepth");
+    Texture& targetTex = *reg.outputTexture();
+    Texture& sceneDepthTex = *reg.getTexture("SceneDepth");
 
-    std::vector<RenderTarget::Attachment> attachments;
-    attachments.push_back({ RenderTarget::AttachmentType::Color0, targetTex, LoadOp::Load, StoreOp::Store });
-    if (sceneDepthTex->extent() == targetTex->extent()) {
-        attachments.push_back({ RenderTarget::AttachmentType::Depth, sceneDepthTex, LoadOp::Load, StoreOp::Store });
-    } else {
-        // TODO: Create an appropriate depth texture, and upscale the depth to that target with a simple nearest-neighbor upscale
-        ARKOSE_LOG(Error, "DEBUG DRAWING UPSCALING HACK: Since the debug drawing needs to depth write it can't use the non-upscaled "
-                          "depth texture. For now, when using upscaling, we will simply not do any depth testing. This can be fixed "
-                          "by copying the depth over to an upscaled texture (nearest sampling) and using that instead. Since it's just"
-                          "for debug drawing, nothing else will need this texture afterwards, so it makes sense to do it just here");
-    }
-    RenderTarget& renderTarget = reg.createRenderTarget(attachments);
+    auto createUpscaledDepthTextureIfNeeded = [&]() -> Texture& {
+        if (sceneDepthTex.extent() == targetTex.extent()) {
+            return sceneDepthTex;
+        } else {
+            Texture::Description upscaledSceneDepthTexDesc = sceneDepthTex.description();
+            upscaledSceneDepthTexDesc.extent = pipeline().outputResolution();
+            return reg.createTexture(upscaledSceneDepthTexDesc);
+        }
+    };
+
+    Texture& depthTex = createUpscaledDepthTextureIfNeeded();
+
+    RenderTarget& renderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &targetTex, LoadOp::Load, StoreOp::Store },
+                                                          { RenderTarget::AttachmentType::Depth, &depthTex, LoadOp::Load, StoreOp::Store } });
 
     RenderStateBuilder linesStateBuilder { renderTarget, debugDrawShader, vertexLayout };
     linesStateBuilder.stateBindings().at(0, cameraBindingSet);
@@ -86,6 +89,12 @@ RenderPipelineNode::ExecuteCallback DebugDrawNode::construct(GpuScene& scene, Re
     m_triangleVertexBuffer = &reg.createBuffer(TriangleVertexBufferSize, Buffer::Usage::Vertex);
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
+
+        if (pipeline().outputResolution() != pipeline().renderResolution()) {
+            // Upscale the depth buffer to match the output resolution, using nearest neighbor filtering.
+            // This is what e.g. Nvidia/DLSS recommends for depth buffers when needed at the output resolution.
+            cmdList.copyTexture(sceneDepthTex, depthTex, ImageFilter::Nearest, 0, 0);
+        }
 
         if (m_lineVertices.size() > 0) {
             uploadBuffer.upload(m_lineVertices, *m_lineVertexBuffer);
