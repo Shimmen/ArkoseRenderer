@@ -767,14 +767,18 @@ std::vector<u8> MeshSegmentAsset::assembleVertexData(VertexLayout const& layout,
 
     size_t offsetInFirstVertex = 0u;
 
-    auto copyComponentData = [&]<typename T>(std::vector<T> const& input, T defaultValue) {
+    auto copyComponentDataWithTransformation = [&]<typename SrcT, typename DstT, typename Func>(std::vector<SrcT> const& input, DstT defaultValue, Func&& transformer) {
         for (size_t vertexIdx = firstVertex; vertexIdx < firstVertex + numVertices; ++vertexIdx) {
             size_t dstIdx = vertexIdx - firstVertex;
             u8* destination = data + offsetInFirstVertex + dstIdx * packedVertexSize;
-            T const* source = (vertexIdx < input.size()) ? &input[vertexIdx] : &defaultValue;
-            std::memcpy(destination, source, sizeof(T));
+            DstT source = (vertexIdx < input.size()) ? transformer(input[vertexIdx]) : defaultValue;
+            std::memcpy(destination, &source, sizeof(DstT));
         }
-        return sizeof(T);
+        return sizeof(DstT);
+    };
+
+    auto copyComponentData = [&]<typename T>(std::vector<T> const& input, T defaultValue) {
+        return copyComponentDataWithTransformation(input, defaultValue, [](T value) { return value; });
     };
 
     for (VertexComponent component : layout.components()) {
@@ -795,15 +799,13 @@ std::vector<u8> MeshSegmentAsset::assembleVertexData(VertexLayout const& layout,
             offsetInFirstVertex += copyComponentData(jointWeights, vec4(0.0f));
         } break;
         case VertexComponent::JointIdx4U32: {
-            std::vector<uvec4> jointIndicesU32;
-            jointIndicesU32.reserve(jointIndices.size());
-            for (ark::tvec4<u16> idxU16 : jointIndices) {
-                jointIndicesU32.emplace_back(static_cast<u32>(idxU16.x),
-                                             static_cast<u32>(idxU16.y),
-                                             static_cast<u32>(idxU16.z),
-                                             static_cast<u32>(idxU16.w));
-            }
-            offsetInFirstVertex += copyComponentData(jointIndicesU32, uvec4(0));
+            auto transformJointIdxToU32 = [](ark::tvec4<u16> idxU16) -> uvec4 {
+                return uvec4(static_cast<u32>(idxU16.x),
+                             static_cast<u32>(idxU16.y),
+                             static_cast<u32>(idxU16.z),
+                             static_cast<u32>(idxU16.w));
+            };
+            offsetInFirstVertex += copyComponentDataWithTransformation(jointIndices, uvec4(0), transformJointIdxToU32);
         } break;
         default: {
             ARKOSE_LOG(Fatal, "Unable to assemble vertex data for unknown VertexComponent: '{}'", vertexComponentToString(component));
