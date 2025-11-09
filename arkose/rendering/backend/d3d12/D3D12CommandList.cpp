@@ -32,7 +32,7 @@ void D3D12CommandList::clearTexture(Texture& genColorTexture, ClearValue clearVa
     NOT_YET_IMPLEMENTED();
 }
 
-void D3D12CommandList::copyTexture(Texture& srcTexture, Texture& dstTexture, u32 srcMip, u32 dstMip)
+void D3D12CommandList::copyTexture(Texture& srcTexture, Texture& dstTexture, ImageFilter filter, u32 srcMip, u32 dstMip)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
@@ -92,7 +92,7 @@ void D3D12CommandList::generateMipmaps(Texture& genTexture)
     u32 mipLevels = texture.mipLevels();
     for (u32 targetMipLevel = 1; targetMipLevel < mipLevels; ++targetMipLevel) {
         u32 sourceMipLevel = targetMipLevel - 1;
-        copyTexture(texture, texture, sourceMipLevel, targetMipLevel);
+        copyTexture(texture, texture, ImageFilter::Linear, sourceMipLevel, targetMipLevel);
     }
 
     endDebugLabel();

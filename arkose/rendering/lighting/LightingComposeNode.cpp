@@ -118,7 +118,7 @@ RenderPipelineNode::ExecuteCallback LightingComposeNode::construct(GpuScene& sce
 
         // TODO: Figure out a good way of actually chaining these calls & reusing textures etc.
         cmdList.textureWriteBarrier(sceneColorWithGI);
-        cmdList.copyTexture(sceneColorWithGI, sceneColor);
+        cmdList.copyTexture(sceneColorWithGI, sceneColor, ImageFilter::Nearest);
 
     };
 }

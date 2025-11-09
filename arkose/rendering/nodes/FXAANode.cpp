@@ -51,7 +51,7 @@ RenderPipelineNode::ExecuteCallback FXAANode::construct(GpuScene& scene, Registr
             // TODO: This is stupid.. we should have a way to "replace" textures of a name so we can maintain these chains of textures..
             // Well maybe not. Usually we have a compute pass which can have a RW-image for input+output, but the FXAA source doesn't
             // support that, it needs a texture sampler to read from. So this might be quite a special case..
-            cmdList.copyTexture(replaceTex, ldrTexture);
+            cmdList.copyTexture(replaceTex, ldrTexture, ImageFilter::Nearest);
         }
     };
 }

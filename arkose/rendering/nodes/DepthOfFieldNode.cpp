@@ -77,10 +77,10 @@ RenderPipelineNode::ExecuteCallback DepthOfFieldNode::construct(GpuScene& scene,
 
         // TODO: Don't copy, instead use some smart system to point the next "SceneColor" to this
         cmdList.textureWriteBarrier(depthOfFieldTex);
-        cmdList.copyTexture(depthOfFieldTex, sceneColor);
+        cmdList.copyTexture(depthOfFieldTex, sceneColor, ImageFilter::Nearest);
 
         if (m_debugShowCircleOfConfusion) {
-            cmdList.copyTexture(circleOfConfusionTex, sceneColor);
+            cmdList.copyTexture(circleOfConfusionTex, sceneColor, ImageFilter::Nearest);
         }
     };
 }

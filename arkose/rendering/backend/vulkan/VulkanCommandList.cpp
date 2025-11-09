@@ -141,7 +141,7 @@ void VulkanCommandList::clearTexture(Texture& genTexture, ClearValue clearValue)
     }
 }
 
-void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t srcMip, uint32_t dstMip)
+void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst, ImageFilter filter, uint32_t srcMip, uint32_t dstMip)
 {
     SCOPED_PROFILE_ZONE_GPUCOMMAND();
 
@@ -234,11 +234,24 @@ void VulkanCommandList::copyTexture(Texture& genSrc, Texture& genDst, uint32_t s
         blit.dstSubresource.baseArrayLayer = 0;
         blit.dstSubresource.layerCount = 1;
 
+        VkFilter blitFilter;
+        switch (filter) {
+        case ImageFilter::Nearest:
+            blitFilter = VK_FILTER_NEAREST;
+            break;
+        case ImageFilter::Linear:
+            blitFilter = VK_FILTER_LINEAR;
+            break;
+        default:
+            blitFilter = VK_FILTER_NEAREST;
+            break;
+        }
+
         vkCmdBlitImage(m_commandBuffer,
                        src.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
                        dst.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                        1, &blit,
-                       VK_FILTER_LINEAR);
+                       blitFilter);
     }
 
     {

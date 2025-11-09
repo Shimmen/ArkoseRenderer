@@ -58,13 +58,13 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(GpuScene& scene, Registry
         const bool firstFrame = appState.isRelativeFirstFrame() || wasEnabledThisFrame;
 
         if (firstFrame) {
-            cmdList.copyTexture(currentFrameTexture, accumulationTexture);
+            cmdList.copyTexture(currentFrameTexture, accumulationTexture, ImageFilter::Nearest);
             return;
         }
 
         // Grab a copy of the current state of the accumulation texture; this is our history for this frame and we overwrite/accumulate in the accumulation texture
         ARKOSE_ASSERT(accumulationTexture.extent() == historyTexture.extent());
-        cmdList.copyTexture(accumulationTexture, historyTexture);
+        cmdList.copyTexture(accumulationTexture, historyTexture, ImageFilter::Nearest);
 
         cmdList.setComputeState(taaComputeState);
 
@@ -75,6 +75,6 @@ RenderPipelineNode::ExecuteCallback TAANode::construct(GpuScene& scene, Registry
 
         // TODO: Noooo.. we don't want to have to do this :(
         // There might be some clever way to avoid all these copies.
-        cmdList.copyTexture(accumulationTexture, currentFrameTexture);
+        cmdList.copyTexture(accumulationTexture, currentFrameTexture, ImageFilter::Nearest);
     };
 }

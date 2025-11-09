@@ -15,7 +15,7 @@ public:
 
     void fillBuffer(Buffer&, u32 fillValue) override;
     void clearTexture(Texture&, ClearValue) override;
-    void copyTexture(Texture& src, Texture& dst, uint32_t srcMip = 0, uint32_t dstMip = 0) override;
+    void copyTexture(Texture& src, Texture& dst, ImageFilter filter, uint32_t srcMip = 0, uint32_t dstMip = 0) override;
     void generateMipmaps(Texture&) override;
 
     void executeBufferCopyOperations(std::vector<BufferCopyOperation>) override;

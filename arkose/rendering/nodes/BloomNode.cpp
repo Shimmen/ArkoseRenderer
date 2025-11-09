@@ -62,7 +62,7 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
         constexpr Extent3D localSizeForComp { 16, 16, 1 };
 
         // Copy image to the top level of the downsample stack
-        cmdList.copyTexture(mainTexture, downsampleTex, 0);
+        cmdList.copyTexture(mainTexture, downsampleTex, ImageFilter::Linear, 0, 0);
 
         // Iteratively downsample the stack
         for (uint32_t targetMip = 1; targetMip < NumMipLevels; ++targetMip) {
@@ -79,7 +79,7 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
         }
 
         // Copy from (the bottom level of) the downsample stack to the upsample stack
-        cmdList.copyTexture(downsampleTex, upsampleTex, BottomMipLevel, BottomMipLevel);
+        cmdList.copyTexture(downsampleTex, upsampleTex, ImageFilter::Linear, BottomMipLevel, BottomMipLevel);
 
         // Iteratively upsample the stack
         for (int targetMip = NumMipLevels - 2; targetMip >= 0; --targetMip) {

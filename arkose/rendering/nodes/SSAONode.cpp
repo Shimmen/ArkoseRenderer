@@ -63,7 +63,7 @@ RenderPipelineNode::ExecuteCallback SSAONode::construct(GpuScene& scene, Registr
         //if (applyBlur) {
         //    cmdList.setComputeState(blurComputeState);
         //    cmdList.dispatch({ resolution, 1 }, { 16, 16, 1 });
-        //    cmdList.copyTexture(blurredAmbientOcclusionTex, ambientOcclusionTex);
+        //    cmdList.copyTexture(blurredAmbientOcclusionTex, ambientOcclusionTex, ImageFilter::Nearest);
         //    cmdList.textureWriteBarrier(blurredAmbientOcclusionTex);
         //}
 

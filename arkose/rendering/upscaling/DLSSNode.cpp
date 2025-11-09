@@ -76,7 +76,7 @@ RenderPipelineNode::ExecuteCallback DLSSNode::construct(GpuScene& scene, Registr
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
         if (!m_enabled) {
             scene.camera().setFrustumJitteringEnabled(false);
-            cmdList.copyTexture(sceneColorTex, upscaledSceneColorTex);
+            cmdList.copyTexture(sceneColorTex, upscaledSceneColorTex, ImageFilter::Nearest);
             cmdList.textureWriteBarrier(*params.upscaledColor);
             return;
         }

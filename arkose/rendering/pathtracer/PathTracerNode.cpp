@@ -97,7 +97,7 @@ RenderPipelineNode::ExecuteCallback PathTracerNode::construct(GpuScene& scene, R
             cmdList.dispatch(pathTraceImage.extent3D(), { 8, 8, 1 });
             m_currentAccumulatedFrames += 1;
         } else if (imageShouldReset) {
-            cmdList.copyTexture(pathTraceImage, pathTraceAccumImage);
+            cmdList.copyTexture(pathTraceImage, pathTraceAccumImage, ImageFilter::Nearest);
             m_currentAccumulatedFrames = 1;
         }
     };

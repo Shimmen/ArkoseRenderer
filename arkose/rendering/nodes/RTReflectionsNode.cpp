@@ -134,7 +134,7 @@ RenderPipelineNode::ExecuteCallback RTReflectionsNode::construct(GpuScene& scene
         } else {
 
             // Copy raw results over to the denoised result
-            cmdList.copyTexture(*m_radianceTex, *m_resolvedRadianceAndVarianceTex);
+            cmdList.copyTexture(*m_radianceTex, *m_resolvedRadianceAndVarianceTex, ImageFilter::Nearest);
 
         }
     };

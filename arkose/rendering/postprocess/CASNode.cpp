@@ -43,6 +43,6 @@ RenderPipelineNode::ExecuteCallback CASNode::construct(GpuScene& scene, Registry
 
         // TODO: Don't copy, instead use some smart system to point the next `inputColorTex` to this
         cmdList.textureWriteBarrier(sharpenedTex);
-        cmdList.copyTexture(sharpenedTex, inputColorTex);
+        cmdList.copyTexture(sharpenedTex, inputColorTex, ImageFilter::Nearest);
     };
 }

@@ -84,7 +84,7 @@ RenderPipelineNode::ExecuteCallback RTLocalShadowNode::construct(GpuScene& scene
             // Denoise
 
             // For now, just copy the shadow mask over
-            cmdList.copyTexture(*m_shadowTex, shadowMaskTex);
+            cmdList.copyTexture(*m_shadowTex, shadowMaskTex, ImageFilter::Nearest);
             //shadowMaskTex.ensureThisTextureIsAvailableToSampleInAShader() // TODO!
         });
     };

@@ -105,7 +105,7 @@ RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registr
 
         // TODO: Don't copy, instead use some smart system to point the next "SceneDiffuseIrradiance" to this
         cmdList.textureWriteBarrier(ssssTex);
-        cmdList.copyTexture(ssssTex, diffuseIrradiance);
+        cmdList.copyTexture(ssssTex, diffuseIrradiance, ImageFilter::Nearest);
     };
 }
 
