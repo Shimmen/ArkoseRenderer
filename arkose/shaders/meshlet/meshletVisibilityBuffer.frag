@@ -1,7 +1,7 @@
 #version 460
 
+#extension GL_EXT_mesh_shader : require
 #extension GL_EXT_nonuniform_qualifier : require
-#extension GL_EXT_shader_explicit_arithmetic_types_int8 : require
 
 #include <common/material.glsl>
 #include <common/namedUniforms.glsl>
@@ -10,12 +10,12 @@
 #include <shared/ShaderBlendMode.h>
 
 #ifndef VISBUF_DEPTH_ONLY
-layout(location = 0) flat in uint vDrawableIdx;
-layout(location = 1) flat in uint vMeshletIdx;
-layout(location = 2) flat in meshlet_rel_idx_t vPrimitiveIdx;
+layout(location = 0) perprimitiveEXT flat in uint vDrawableIdx;
+layout(location = 1) perprimitiveEXT flat in uint vMeshletIdx;
+layout(location = 2) perprimitiveEXT flat in uint vPrimitiveIdx;
 #endif
 #if VISBUF_BLEND_MODE == BLEND_MODE_MASKED
-layout(location = 3) flat in uint vMaterialIdx;
+layout(location = 3) perprimitiveEXT flat in uint vMaterialIdx;
 layout(location = 4) in vec2 vTexCoord;
 #endif
 
@@ -41,6 +41,6 @@ void main()
 
 #ifndef VISBUF_DEPTH_ONLY
     oInstanceVisibilityData = vDrawableIdx + 1;
-    oTriangleVisibilityData = ((vMeshletIdx + 1) << 8) | uint(vPrimitiveIdx);
+    oTriangleVisibilityData = ((vMeshletIdx + 1) << 8) | (vPrimitiveIdx & 0xFFu);
 #endif
 }

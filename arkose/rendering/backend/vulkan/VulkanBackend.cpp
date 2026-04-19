@@ -460,12 +460,15 @@ bool VulkanBackend::collectAndVerifyCapabilitySupport(const AppSpecification& ap
             // this feature to be available if you use mesh shading (in practice, it will almost certainly be if mesh shading is).
             bool supportsShaderUint8 = vk12features.shaderInt8;
 
+            // NOTE: This is apparently required, according to the validation layers..?
+            bool supportHelperDemote = vk13features.shaderDemoteToHelperInvocation;
+
             if (!supportsExtExtension && hasSupportForDeviceExtension(VK_NV_MESH_SHADER_EXTENSION_NAME)) {
                 ARKOSE_LOG(Error, "VulkanBackend: no support for mesh shading, but the Nvidia-specific extension is supported!"
                                   "If you update your drivers now it's possible that it will then be supported.");
             }
 
-            return extMeshShaderSupport && supportsShaderUint8;
+            return extMeshShaderSupport && supportsShaderUint8 && supportHelperDemote;
         }
         case Capability::Shader16BitFloat:
             return vk11features.storageBuffer16BitAccess
@@ -929,20 +932,6 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
         addDeviceExtension(VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME);
     #endif
 
-    #if WITH_DLSS
-    {
-        if (m_dlssHasAllRequiredExtensions && !m_renderdocAPI) {
-            for (VkExtensionProperties const* extension : VulkanDLSS::requiredDeviceExtensions(m_instance, physicalDevice)) {
-                if (hasSupportForDeviceExtension(extension->extensionName)) {
-                    addDeviceExtension(extension->extensionName);
-                } else {
-                    m_dlssHasAllRequiredExtensions = false;
-                }
-            }
-        }
-    }
-    #endif
-
     VkPhysicalDeviceFeatures2 features2 = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2 };
     VkPhysicalDeviceFeatures& vk10features = features2.features;
     VkPhysicalDeviceVulkan11Features vk11features = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_1_1_FEATURES };
@@ -958,6 +947,24 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
 
     VkPhysicalDeviceDiagnosticsConfigFeaturesNV nvDeviceDiagnosticsFeatues = { VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DIAGNOSTICS_CONFIG_FEATURES_NV };
     VkDeviceDiagnosticsConfigCreateInfoNV nvDeviceDiagnosticsCreateInfo = { VK_STRUCTURE_TYPE_DEVICE_DIAGNOSTICS_CONFIG_CREATE_INFO_NV };
+
+    #if WITH_DLSS
+    {
+        if (m_dlssHasAllRequiredExtensions && !m_renderdocAPI) {
+            for (VkExtensionProperties const* extension : VulkanDLSS::requiredDeviceExtensions(m_instance, physicalDevice)) {
+                if (hasSupportForDeviceExtension(extension->extensionName)) {
+                    addDeviceExtension(extension->extensionName);
+                } else {
+                    m_dlssHasAllRequiredExtensions = false;
+                }
+            }
+
+            // DLSS requires the extension, and according to the spec,
+            // if the extension is enabled, then the push feature must be too.
+            vk14features.pushDescriptor = VK_TRUE;
+        }
+    }
+    #endif
 
     // Enable some very basic common features expected by everyone to exist
     vk10features.samplerAnisotropy = VK_TRUE;
@@ -1058,6 +1065,7 @@ VkDevice VulkanBackend::createDevice(const std::vector<const char*>& requestedLa
             meshShaderFeatures.taskShader = VK_TRUE;
             meshShaderFeatures.meshShader = VK_TRUE;
             vk12features.shaderInt8 = VK_TRUE;
+            vk13features.shaderDemoteToHelperInvocation = VK_TRUE;
             break;
         case Capability::Shader16BitFloat:
             vk11features.storageBuffer16BitAccess = VK_TRUE;
