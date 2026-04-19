@@ -163,7 +163,7 @@ private:
         PendingAllocation = 0,
         LoadingData, // TODO: Remove this non-streaming variant!
         StreamingVertexData,
-        //StreamingMorphTargetData, // TODO: Implement!
+        StreamingMorphTargetData,
         StreamingIndexData,
         StreamingMeshletData,
         CreatingBLAS,
@@ -183,6 +183,7 @@ private:
         u32 nextLOD { 0 };
         u32 nextSegment { 0 };
         u32 nextMeshlet { 0 };
+        u32 nextMorphTarget { 0 };
         u32 nextVertex { 0 };
         u32 nextIndex { 0 };
 
@@ -193,6 +194,7 @@ private:
             nextLOD = 0;
             nextSegment = 0;
             nextMeshlet = 0;
+            nextMorphTarget = 0;
             nextVertex = 0;
             nextIndex = 0;
         }
@@ -211,6 +213,7 @@ private:
 
     VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeMorphData, bool includeVelocityData);
     bool streamVertexData(StreamingMesh&, StaticMeshSegment const&, UploadBuffer&);
+    bool streamMorphTargetData(StreamingMesh&, StaticMeshSegment const&, UploadBuffer&);
     bool streamIndexData(StreamingMesh&, StaticMeshSegment const&, UploadBuffer&);
     std::optional<MeshletView> streamMeshletDataForSegment(StreamingMesh& streamingMesh, StaticMeshSegment const&, UploadBuffer&);
     std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(VertexAllocation const&);

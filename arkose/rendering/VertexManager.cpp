@@ -110,6 +110,7 @@ bool VertexManager::processStreamingMeshState(StreamingMesh& streamingMesh, F&& 
 
             if (success) {
                 streamingMesh.nextMeshlet = 0;
+                streamingMesh.nextMorphTarget = 0;
                 streamingMesh.nextVertex = 0;
                 streamingMesh.nextIndex = 0;
             } else {
@@ -191,10 +192,25 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, UploadBuffer& upl
             });
 
             if (stateDone) {
-                // TODO: Implement morph target streaming and do that before index data, if relevant.
-                streamingMesh.setNextState(MeshStreamingState::StreamingIndexData);
+                if (streamingMesh.includeMorphTargetData) {
+                    streamingMesh.setNextState(MeshStreamingState::StreamingMorphTargetData);
+                } else {
+                    streamingMesh.setNextState(MeshStreamingState::StreamingIndexData);
+                }
             }
         
+        } break;
+
+        case MeshStreamingState::StreamingMorphTargetData: {
+
+            bool stateDone = processStreamingMeshState(streamingMesh, [&](StaticMeshSegment& meshSegment) -> bool {
+                return streamMorphTargetData(streamingMesh, meshSegment, uploadBuffer);
+            });
+
+            if (stateDone) {
+                streamingMesh.setNextState(MeshStreamingState::StreamingIndexData);
+            }
+
         } break;
 
         case MeshStreamingState::StreamingIndexData: {
@@ -883,6 +899,85 @@ bool VertexManager::streamVertexData(StreamingMesh& streamingMesh, StaticMeshSeg
     streamingMesh.nextVertex += numVertsToUpload;
     ARKOSE_ASSERT(streamingMesh.nextVertex <= allocation.vertexCount);
     return streamingMesh.nextVertex == allocation.vertexCount;
+}
+
+bool VertexManager::streamMorphTargetData(StreamingMesh& streamingMesh, StaticMeshSegment const& meshSegment, UploadBuffer& uploadBuffer)
+{
+    SCOPED_PROFILE_ZONE();
+
+    MeshSegmentAsset const& segmentAsset = *meshSegment.asset;
+    VertexAllocation const& allocation = meshSegment.vertexAllocation;
+
+    // Not all segments of a mesh with morph targets carry morph data, so treat a missing/empty morph set as "already done"
+    if (!allocation.hasMorphTargetData() || !segmentAsset.hasMorphTargets()) {
+        return true;
+    }
+
+    ARKOSE_ASSERT(allocation.firstMorphTargetVertices.size() == segmentAsset.morphTargets.size());
+
+    u32 sizePerMorphVert = narrow_cast<u32>(m_morphTargetVertexLayout.packedVertexSize());
+    u32 morphTargetVertexCount = allocation.vertexCount;
+    u32 numMorphTargets = narrow_cast<u32>(segmentAsset.morphTargets.size());
+
+    // Upload in chunks of vertices within the current morph target; when a morph target is
+    // exhausted we advance `nextMorphTarget` and start over at vertex 0 for the next one.
+    while (streamingMesh.nextMorphTarget < numMorphTargets) {
+
+        u32 morphTargetIdx = streamingMesh.nextMorphTarget;
+        MorphTargetAsset const& morphTarget = segmentAsset.morphTargets[morphTargetIdx];
+
+        ARKOSE_ASSERT(morphTarget.positions.size() == morphTargetVertexCount);
+
+        bool hasMorphNormals = morphTarget.normals.size() > 0;
+        bool hasMorphTangents = morphTarget.tangents.size() > 0;
+        ARKOSE_ASSERT(!hasMorphNormals || morphTarget.normals.size() == morphTargetVertexCount);
+        ARKOSE_ASSERT(!hasMorphTangents || morphTarget.tangents.size() == morphTargetVertexCount);
+
+        u32 remainingCount = morphTargetVertexCount - streamingMesh.nextVertex;
+        ARKOSE_ASSERT(remainingCount > 0);
+
+        u32 remainingBudgetSize = narrow_cast<u32>(uploadBuffer.alignedRemainingSize(1));
+        u32 remainingBudgetCount = remainingBudgetSize / sizePerMorphVert;
+
+        u32 firstVertToUpload = streamingMesh.nextVertex;
+        u32 numVertsToUpload = std::min(remainingCount, remainingBudgetCount);
+
+        if (numVertsToUpload == 0) {
+            // Not able to upload any more right now; resume this morph target next frame.
+            return false;
+        }
+
+        std::vector<MorphTargetVertex> morphTargetVertices(numVertsToUpload);
+        for (u32 i = 0; i < numVertsToUpload; ++i) {
+            u32 srcIdx = firstVertToUpload + i;
+            MorphTargetVertex& vertex = morphTargetVertices[i];
+            vertex.position = morphTarget.positions[srcIdx];
+            vertex.normal = hasMorphNormals ? morphTarget.normals[srcIdx] : vec3(0.0f);
+            vertex.tangent = hasMorphTangents ? morphTarget.tangents[srcIdx] : vec3(0.0f);
+        }
+
+        size_t bufferOffset = (allocation.firstMorphTargetVertices[morphTargetIdx] + firstVertToUpload) * sizePerMorphVert;
+        size_t bytesToUpload = static_cast<size_t>(numVertsToUpload) * sizePerMorphVert;
+        bool success = uploadBuffer.upload(morphTargetVertices.data(), bytesToUpload, *m_morphTargetVertexBuffer, bufferOffset);
+
+        if (!success) {
+            ARKOSE_ERROR("VertexManager: morph target upload failed, which should be impossible as we've checked the remaining size beforehand! Something is wrong");
+            return false;
+        }
+
+        streamingMesh.nextVertex += numVertsToUpload;
+        ARKOSE_ASSERT(streamingMesh.nextVertex <= morphTargetVertexCount);
+
+        if (streamingMesh.nextVertex == morphTargetVertexCount) {
+            streamingMesh.nextMorphTarget += 1;
+            streamingMesh.nextVertex = 0;
+        } else {
+            // Ran out of budget mid morph target, resume on the same target next frame.
+            return false;
+        }
+    }
+
+    return true;
 }
 
 bool VertexManager::streamIndexData(StreamingMesh& streamingMesh, StaticMeshSegment const& meshSegment, UploadBuffer& uploadBuffer)
