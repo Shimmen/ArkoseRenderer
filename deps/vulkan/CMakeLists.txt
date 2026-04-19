@@ -11,11 +11,11 @@ set(SPIRV_CROSS_ENABLE_TESTS OFF CACHE INTERNAL "")
 set(SPIRV_CROSS_CLI OFF CACHE INTERNAL "")
 FetchContent_Declare(spirv-cross
     GIT_REPOSITORY https://github.com/KhronosGroup/SPIRV-Cross.git
-    GIT_TAG        "sdk-1.3.243.0")
+    GIT_TAG        "vulkan-sdk-1.4.341.0")
 
 FetchContent_Declare(vulkan_memory_allocator
     GIT_REPOSITORY https://github.com/GPUOpen-LibrariesAndSDKs/VulkanMemoryAllocator.git
-    GIT_TAG        "v3.2.1")
+    GIT_TAG        "v3.3.0")
 
 FetchContent_MakeAvailable(
     spirv-cross

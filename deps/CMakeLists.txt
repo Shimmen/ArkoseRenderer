@@ -46,14 +46,14 @@ set(TARGET_SAMPLES OFF)
 set(TARGET_VIEWER OFF)
 FetchContent_Declare(jolt-physics
     GIT_REPOSITORY https://github.com/jrouwe/JoltPhysics.git
-    GIT_TAG        "v5.1.0"
+    GIT_TAG        "v5.5.0"
     SOURCE_SUBDIR  "Build")
 
 set(LZ4_BUILD_CLI OFF)
 set(LZ4_BUILD_LEGACY_LZ4C OFF)
 FetchContent_Declare(lz4
     GIT_REPOSITORY https://github.com/lz4/lz4.git
-    GIT_TAG        "v1.9.4"
+    GIT_TAG        "v1.10.0"
     SOURCE_SUBDIR  "build/cmake")
 
 FetchContent_Declare(concurrentqueue
@@ -68,7 +68,7 @@ FetchContent_Declare(tracy
 
 FetchContent_Declare(libigl
     GIT_REPOSITORY https://github.com/libigl/libigl.git
-    GIT_TAG        "v2.5.0")
+    GIT_TAG        "v2.6.0")
 
 FetchContent_Declare(offset-allocator
     GIT_REPOSITORY https://github.com/Shimmen/OffsetAllocator.git

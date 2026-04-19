@@ -4,6 +4,10 @@ cmake_minimum_required(VERSION 3.7 FATAL_ERROR)
 # See https://cmake.org/cmake/help/latest/policy/CMP0091.html
 cmake_policy(SET CMP0091 NEW)
 
+# Use more robust timestamp tracking of downloaded dependencies
+# See https://cmake.org/cmake/help/latest/policy/CMP0135.html
+cmake_policy(SET CMP0135 NEW)
+
 project(Arkose)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})

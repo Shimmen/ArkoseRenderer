@@ -1,3 +1,8 @@
+
+// NOTE: spirv_cross.hpp must be included before any Arkose header that declares a global `ImageFormat` (e.g. ImageAsset.h),
+// as spirv_cross.hpp does a `using namespace spv;` inside its own namespace, which makes `spv::ImageFormat` reachable via unqualified lookup.
+#include <spirv_cross.hpp>
+
 #include "VulkanBackend.h"
 
 #include "core/CommandLine.h"
@@ -27,7 +32,6 @@
 #include <implot.h>
 #include <ark/conversion.h>
 #include <backends/imgui_impl_vulkan.h>
-#include <spirv_cross.hpp>
 #include <unordered_map>
 #include <unordered_set>
 
