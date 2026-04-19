@@ -557,6 +557,17 @@ bool VulkanBottomLevelASKHR::compact(VkCommandBuffer commandBuffer)
 
     vulkanBackend.rayTracingKHR().vkCmdCopyAccelerationStructureKHR(commandBuffer, &copyInfo);
 
+    VkMemoryBarrier compactCopyBarrier { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
+    compactCopyBarrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+    compactCopyBarrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+    vkCmdPipelineBarrier(commandBuffer,
+                         VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+                         VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR | VK_PIPELINE_STAGE_RAY_TRACING_SHADER_BIT_KHR,
+                         0,
+                         1, &compactCopyBarrier,
+                         0, nullptr,
+                         0, nullptr);
+
     //
     // Enqueue old, uncompacted BLAS for deletion
     //
@@ -566,6 +577,14 @@ bool VulkanBottomLevelASKHR::compact(VkCommandBuffer commandBuffer)
 
     vulkanBackend.enqueueForDeletion(VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR, blasToDestroy, VK_NULL_HANDLE);
     vulkanBackend.enqueueForDeletion(VK_OBJECT_TYPE_BUFFER, blasBufferAndAllocationToFree.first, blasBufferAndAllocationToFree.second);
+
+    // The scratch buffer is only needed for build/update, and a compacted AS supports neither, so we can reclaim that memory now
+    vulkanBackend.enqueueForDeletion(VK_OBJECT_TYPE_BUFFER, scratchBufferAndAllocation.first, scratchBufferAndAllocation.second);
+    scratchBufferAndAllocation = { VK_NULL_HANDLE, VK_NULL_HANDLE };
+    scratchBufferAddress = 0;
+
+    vkDestroyQueryPool(vulkanBackend.device(), compactionQueryPool, nullptr);
+    compactionQueryPool = VK_NULL_HANDLE;
 
     //
     // Swap BLASs
