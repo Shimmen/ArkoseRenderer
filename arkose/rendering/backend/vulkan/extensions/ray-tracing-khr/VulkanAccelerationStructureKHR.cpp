@@ -468,6 +468,18 @@ void VulkanBottomLevelASKHR::build(VkCommandBuffer commandBuffer, AccelerationSt
 
     bool allowCompaction = previewBuildInfo.flags & VK_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION_BIT_KHR;
     if (allowCompaction && compactionQueryPool && compactionState == CompactionState::NotCompacted) {
+
+        VkMemoryBarrier blasBuildToReadBarrier { VK_STRUCTURE_TYPE_MEMORY_BARRIER };
+        blasBuildToReadBarrier.srcAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_WRITE_BIT_KHR;
+        blasBuildToReadBarrier.dstAccessMask = VK_ACCESS_ACCELERATION_STRUCTURE_READ_BIT_KHR;
+        vkCmdPipelineBarrier(commandBuffer,
+                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+                             VK_PIPELINE_STAGE_ACCELERATION_STRUCTURE_BUILD_BIT_KHR,
+                             0,
+                             1, &blasBuildToReadBarrier,
+                             0, nullptr,
+                             0, nullptr);
+
         vkCmdResetQueryPool(commandBuffer, compactionQueryPool, 0, 1);
         vulkanBackend.rayTracingKHR().vkCmdWriteAccelerationStructuresPropertiesKHR(commandBuffer,
                                                                                     1, &accelerationStructure,
