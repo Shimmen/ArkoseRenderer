@@ -530,7 +530,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
         // Do mesh streaming
         {
-            m_vertexManager->processMeshStreaming(cmdList, m_changedStaticMeshes);
+            m_vertexManager->processMeshStreaming(cmdList, uploadBuffer, m_changedStaticMeshes);
         }
 
         // Update camera data

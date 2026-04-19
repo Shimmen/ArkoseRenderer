@@ -76,8 +76,6 @@ VertexManager::VertexManager(Backend& backend, GpuScene& scene)
         m_meshletBuffer->setStride(sizeof(ShaderMeshlet));
         m_meshletBuffer->setName("SceneMeshletData");
     }
-
-    m_uploadBuffer = std::make_unique<UploadBuffer>(backend, UploadBufferSize);
 }
 
 VertexManager::~VertexManager()
@@ -118,16 +116,18 @@ bool VertexManager::processStreamingMeshState(StreamingMesh& streamingMesh, F&& 
                 return false;
             }
         }
+
+        // Reset segment-level cursor before stepping into the next LOD;
+        // otherwise we'd start indexing past-the-end of LOD N+1's segments.
+        streamingMesh.nextSegment = 0;
     }
 
     return true;
 }
 
-void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_set<StaticMeshHandle>& updatedMeshes)
+void VertexManager::processMeshStreaming(CommandList& cmdList, UploadBuffer& uploadBuffer, std::unordered_set<StaticMeshHandle>& updatedMeshes)
 {
     SCOPED_PROFILE_ZONE();
-
-    m_uploadBuffer->reset();
 
     for (size_t activeIdx = 0; activeIdx < m_streamingMeshes.size(); ++activeIdx) {
         StreamingMesh& streamingMesh = m_streamingMeshes[activeIdx];
@@ -153,8 +153,8 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
             });
 
             if (stateDone) {
-                streamingMesh.setNextState(MeshStreamingState::LoadingData);
-                //streamingMesh.setNextState(MeshStreamingState::StreamingVertexData); // TODO: Stream!
+                //streamingMesh.setNextState(MeshStreamingState::LoadingData);
+                streamingMesh.setNextState(MeshStreamingState::StreamingVertexData); // TODO: Stream!
             }
 
         } break;
@@ -187,7 +187,7 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
         case MeshStreamingState::StreamingVertexData: {
         
             bool stateDone = processStreamingMeshState(streamingMesh, [&](StaticMeshSegment& meshSegment) -> bool {
-                return streamVertexData(streamingMesh, meshSegment);
+                return streamVertexData(streamingMesh, meshSegment, uploadBuffer);
             });
 
             if (stateDone) {
@@ -200,7 +200,7 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
         case MeshStreamingState::StreamingIndexData: {
         
             bool stateDone = processStreamingMeshState(streamingMesh, [&](StaticMeshSegment& meshSegment) -> bool {
-                return streamIndexData(streamingMesh, meshSegment);
+                return streamIndexData(streamingMesh, meshSegment, uploadBuffer);
             });
 
             if (stateDone) {
@@ -220,7 +220,7 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
             ARKOSE_ASSERT(m_scene->maintainMeshShadingScene());
 
             bool stateDone = processStreamingMeshState(streamingMesh, [&](StaticMeshSegment& meshSegment) -> bool {
-                meshSegment.meshletView = streamMeshletDataForSegment(streamingMesh, meshSegment);
+                meshSegment.meshletView = streamMeshletDataForSegment(streamingMesh, meshSegment, uploadBuffer);
 
                 if (meshSegment.meshletView) {
                     // Signal to the caller that the mesh has changed
@@ -277,10 +277,6 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, std::unordered_se
 
         } break;
         }
-    }
-
-    if (m_uploadBuffer->peekPendingOperations().size() > 0) {
-        cmdList.executeBufferCopyOperations(*m_uploadBuffer);
     }
 }
 
@@ -814,7 +810,7 @@ void VertexManager::uploadMeshDataForAllocation(MeshSegmentAsset const& segmentA
     }
 }
 
-bool VertexManager::streamVertexData(StreamingMesh& streamingMesh, StaticMeshSegment const& meshSegment)
+bool VertexManager::streamVertexData(StreamingMesh& streamingMesh, StaticMeshSegment const& meshSegment, UploadBuffer& uploadBuffer)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -834,7 +830,7 @@ bool VertexManager::streamVertexData(StreamingMesh& streamingMesh, StaticMeshSeg
     ARKOSE_ASSERT(remainingCount > 0);
 
     size_t numUploads = allocation.hasSkinningData() ? 3 : 2;
-    u32 remainingBudgetSize = narrow_cast<u32>(m_uploadBuffer->alignedRemainingSize(numUploads));
+    u32 remainingBudgetSize = narrow_cast<u32>(uploadBuffer.alignedRemainingSize(numUploads));
     u32 remainingBudgetCount = remainingBudgetSize / sizePerVert;
 
     u32 firstVertToUpload = streamingMesh.nextVertex;
@@ -851,7 +847,7 @@ bool VertexManager::streamVertexData(StreamingMesh& streamingMesh, StaticMeshSeg
     {
         std::vector<u8> positionOnlyVertexData = segmentAsset.assembleVertexData(m_positionOnlyVertexLayout, firstVertToUpload, numVertsToUpload);
         size_t positionOnlyVertexOffset = (allocation.firstVertex + firstVertToUpload) * m_positionOnlyVertexLayout.packedVertexSize();
-        bool success = m_uploadBuffer->upload(positionOnlyVertexData.data(), positionOnlyVertexData.size(), *m_positionOnlyVertexBuffer, positionOnlyVertexOffset);
+        bool success = uploadBuffer.upload(positionOnlyVertexData.data(), positionOnlyVertexData.size(), *m_positionOnlyVertexBuffer, positionOnlyVertexOffset);
 
         if (!success) {
             ARKOSE_ERROR("VertexManager: position upload failed, which should be impossible as we've checked the remaining size beforehand! Something is wrong");
@@ -863,7 +859,7 @@ bool VertexManager::streamVertexData(StreamingMesh& streamingMesh, StaticMeshSeg
     {
         std::vector<u8> nonPositionVertexData = segmentAsset.assembleVertexData(m_nonPositionVertexLayout, firstVertToUpload, numVertsToUpload);
         size_t nonPositionVertexOffset = (allocation.firstVertex + firstVertToUpload) * m_nonPositionVertexLayout.packedVertexSize();
-        bool success = m_uploadBuffer->upload(nonPositionVertexData.data(), nonPositionVertexData.size(), *m_nonPositionVertexBuffer, nonPositionVertexOffset);
+        bool success = uploadBuffer.upload(nonPositionVertexData.data(), nonPositionVertexData.size(), *m_nonPositionVertexBuffer, nonPositionVertexOffset);
 
         if (!success) {
             ARKOSE_ERROR("VertexManager: non-position upload failed, which should be impossible as we've checked the remaining size beforehand! Something is wrong");
@@ -876,7 +872,7 @@ bool VertexManager::streamVertexData(StreamingMesh& streamingMesh, StaticMeshSeg
 
         std::vector<u8> skinningVertexData = segmentAsset.assembleVertexData(m_skinningDataVertexLayout, firstVertToUpload, numVertsToUpload);
         size_t skinningDataOffset = (allocation.firstSkinningVertex + firstVertToUpload) * m_skinningDataVertexLayout.packedVertexSize();
-        bool success = m_uploadBuffer->upload(skinningVertexData.data(), skinningVertexData.size(), *m_skinningDataVertexBuffer, skinningDataOffset);
+        bool success = uploadBuffer.upload(skinningVertexData.data(), skinningVertexData.size(), *m_skinningDataVertexBuffer, skinningDataOffset);
 
         if (!success) {
             ARKOSE_ERROR("VertexManager: skinning data upload failed, which should be impossible as we've checked the remaining size beforehand! Something is wrong");
@@ -889,7 +885,7 @@ bool VertexManager::streamVertexData(StreamingMesh& streamingMesh, StaticMeshSeg
     return streamingMesh.nextVertex == allocation.vertexCount;
 }
 
-bool VertexManager::streamIndexData(StreamingMesh& streamingMesh, StaticMeshSegment const& meshSegment)
+bool VertexManager::streamIndexData(StreamingMesh& streamingMesh, StaticMeshSegment const& meshSegment, UploadBuffer& uploadBuffer)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -906,7 +902,7 @@ bool VertexManager::streamIndexData(StreamingMesh& streamingMesh, StaticMeshSegm
 
     u32 indexSize = narrow_cast<u32>(sizeofIndexType(indexType()));
 
-    u32 remainingBudgetSize = narrow_cast<u32>(m_uploadBuffer->alignedRemainingSize(1));
+    u32 remainingBudgetSize = narrow_cast<u32>(uploadBuffer.alignedRemainingSize(1));
     u32 remainingBudgetCount = remainingBudgetSize / indexSize;
 
     u32 firstIndexToUpload = streamingMesh.nextIndex;
@@ -920,7 +916,7 @@ bool VertexManager::streamIndexData(StreamingMesh& streamingMesh, StaticMeshSegm
     }
 
     size_t indexOffset = (allocation.firstIndex + firstIndexToUpload) * indexSize;
-    bool success = m_uploadBuffer->upload(segmentAsset.indices.data() + firstIndexToUpload, numIndicesToUpload * indexSize, *m_indexBuffer, indexOffset);
+    bool success = uploadBuffer.upload(segmentAsset.indices.data() + firstIndexToUpload, numIndicesToUpload * indexSize, *m_indexBuffer, indexOffset);
 
     if (!success) {
         ARKOSE_ERROR("VertexManager: index upload failed, which should be impossible as we've checked the remaining size beforehand! Something is wrong");
@@ -932,7 +928,7 @@ bool VertexManager::streamIndexData(StreamingMesh& streamingMesh, StaticMeshSegm
     return streamingMesh.nextIndex == allocation.indexCount;
 }
 
-std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StreamingMesh& streamingMesh, StaticMeshSegment const& meshSegment)
+std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StreamingMesh& streamingMesh, StaticMeshSegment const& meshSegment, UploadBuffer& uploadBuffer)
 {
     MeshSegmentAsset const& meshSegmentAsset = *meshSegment.asset;
     MeshletDataAsset const& meshletDataAsset = meshSegmentAsset.meshletData.value();
@@ -956,11 +952,11 @@ std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StreamingM
         + meshletCount * sizeof(ShaderMeshlet); // meshlet buffer
 
     // TODO: There are instances where segments are massive, so we need to allow uploading with a finer granularity.
-    if (totalUploadSize > m_uploadBuffer->alignedRemainingSize(numUploads)) {
-        if (totalUploadSize > UploadBufferSize) {
+    if (totalUploadSize > uploadBuffer.alignedRemainingSize(numUploads)) {
+        if (totalUploadSize > uploadBuffer.size()) {
             ARKOSE_LOG(Fatal, "Static mesh segment is {:.2f} MB but the meshlet upload budget is only {:.2f} MB. "
                               "The budget must be increased if we want to be able to load this asset.",
-                       ark::conversion::to::MB(totalUploadSize), ark::conversion::to::MB(UploadBufferSize));
+                       ark::conversion::to::MB(totalUploadSize), ark::conversion::to::MB(uploadBuffer.size()));
         }
         return std::nullopt;
     }
@@ -986,14 +982,14 @@ std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StreamingM
     //
 
     size_t vertexIndirectionOffset = m_nextFreeMeshletIndirIndex * sizeof(u32);
-    m_uploadBuffer->upload(adjustedVertexIndirection, *m_meshletVertexIndirectionBuffer, vertexIndirectionOffset);
+    uploadBuffer.upload(adjustedVertexIndirection, *m_meshletVertexIndirectionBuffer, vertexIndirectionOffset);
 
     //
     // Stream meshlet index data
     //
 
     size_t indexDataOffset = m_nextFreeMeshletIndexBufferIndex * sizeof(u32);
-    m_uploadBuffer->upload(adjustedMeshletIndices, *m_meshletIndexBuffer, indexDataOffset);
+    uploadBuffer.upload(adjustedMeshletIndices, *m_meshletIndexBuffer, indexDataOffset);
 
     //
     // Stream meshlet data
@@ -1013,7 +1009,7 @@ std::optional<MeshletView> VertexManager::streamMeshletDataForSegment(StreamingM
     }
 
     size_t meshletDataDstOffset = m_nextFreeMeshletIndex * sizeof(ShaderMeshlet);
-    m_uploadBuffer->upload(m_meshlets.data() + m_nextFreeMeshletIndex, meshletCount * sizeof(ShaderMeshlet), *m_meshletBuffer, meshletDataDstOffset);
+    uploadBuffer.upload(m_meshlets.data() + m_nextFreeMeshletIndex, meshletCount * sizeof(ShaderMeshlet), *m_meshletBuffer, meshletDataDstOffset);
 
     //
     // Finalize

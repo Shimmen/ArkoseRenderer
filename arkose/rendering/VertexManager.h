@@ -19,6 +19,7 @@ class Backend;
 class BottomLevelAS;
 class CommandList;
 class MeshSegmentAsset;
+class UploadBuffer;
 struct SkeletalMeshInstance;
 struct StaticMeshSegment;
 
@@ -35,7 +36,7 @@ public:
     bool allocateSkeletalMeshInstance(SkeletalMeshInstance&, CommandList&);
     //void deallocateSkeletalMeshInstance(SkeletalMeshInstance&); // TODO!
 
-    void processMeshStreaming(CommandList&, std::unordered_set<StaticMeshHandle>& updatedMeshes);
+    void processMeshStreaming(CommandList&, UploadBuffer&, std::unordered_set<StaticMeshHandle>& updatedMeshes);
 
     void drawUI() const;
 
@@ -83,9 +84,6 @@ public:
     // If there were exactly 124 triangles per meshlet it'd be trivial, but not every meshlet will be filled.
     // Here we add a factor of 2 to allow for a worst case where every meshlet is only half-full.
     static constexpr size_t MaxLoadedMeshlets         = MaxLoadedTriangles / 124 * 2;
-
-    // TODO: Make this smaller again, once we stream meshlets in a finer granularity
-    static constexpr size_t UploadBufferSize          = 100 * 1024 * 1024;
 
     u32 numAllocatedIndices() const
     {
@@ -158,8 +156,6 @@ private:
     std::unique_ptr<Buffer> m_meshletBuffer {};
     u32 m_nextFreeMeshletIndex { 0 };
 
-    std::unique_ptr<UploadBuffer> m_uploadBuffer {};
-
     // TODO: Remove me / rewrite for streaming
     void uploadMeshDataForAllocation(MeshSegmentAsset const&, VertexAllocation const&);
 
@@ -214,8 +210,8 @@ private:
     std::vector<StreamingSkeletalMesh> m_streamingSkeletalMeshes {};
 
     VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeMorphData, bool includeVelocityData);
-    bool streamVertexData(StreamingMesh&, StaticMeshSegment const&);
-    bool streamIndexData(StreamingMesh&, StaticMeshSegment const&);
-    std::optional<MeshletView> streamMeshletDataForSegment(StreamingMesh& streamingMesh, StaticMeshSegment const&);
+    bool streamVertexData(StreamingMesh&, StaticMeshSegment const&, UploadBuffer&);
+    bool streamIndexData(StreamingMesh&, StaticMeshSegment const&, UploadBuffer&);
+    std::optional<MeshletView> streamMeshletDataForSegment(StreamingMesh& streamingMesh, StaticMeshSegment const&, UploadBuffer&);
     std::unique_ptr<BottomLevelAS> createBottomLevelAccelerationStructure(VertexAllocation const&);
 };
