@@ -708,11 +708,21 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
 
             for (auto& skeletalMeshInstance : m_skeletalMeshInstances) {
 
-                for (DrawableObjectHandle drawableHandle : skeletalMeshInstance->drawableHandles()) {
+                std::vector<DrawableObjectHandle> const& drawableHandles = skeletalMeshInstance->drawableHandles();
+                for (size_t segmentIdx = 0; segmentIdx < drawableHandles.size(); ++segmentIdx) {
+                    DrawableObjectHandle drawableHandle = drawableHandles[segmentIdx];
+
                     ShaderDrawable& drawable = m_drawables.get(drawableHandle);
                     drawable.worldFromLocal = skeletalMeshInstance->transform().worldMatrix();
                     drawable.worldFromTangent = mat4(skeletalMeshInstance->transform().worldNormalMatrix());
                     drawable.previousFrameWorldFromLocal = skeletalMeshInstance->transform().previousFrameWorldMatrix();
+
+                    if (skeletalMeshInstance->hasSkinningVertexMappingForSegmentIndex(segmentIdx)) {
+                        SkinningVertexMapping const& mapping = skeletalMeshInstance->skinningVertexMappingForSegmentIndex(segmentIdx);
+                        if (mapping.skinnedTarget.hasVelocityData()) {
+                            drawable.relativeVelocityVertex = mapping.skinnedTarget.firstVelocityVertex - mapping.skinnedTarget.firstVertex;
+                        }
+                    }
                 }
 
                 drawableCount += skeletalMeshInstance->drawableHandles().size();
@@ -1131,6 +1141,10 @@ void GpuScene::initializeSkeletalMeshInstance(SkeletalMeshInstance& instance)
         drawable.firstMeshlet = 0;
         drawable.meshletCount = 0;
 
+        // Placeholder; the real offset is written in the per-frame skeletal drawable update below
+        // once the skinning vertex mapping has been allocated by VertexManager.
+        drawable.relativeVelocityVertex = 0;
+
         if (instance.hasDrawableHandleForSegmentIndex(segmentIdx)) {
             DrawableObjectHandle handle = instance.drawableHandleForSegmentIndex(segmentIdx);
             m_drawables.set(handle, std::move(drawable));
@@ -1186,6 +1200,9 @@ void GpuScene::initializeStaticMeshInstance(StaticMeshInstance& instance)
             drawable.firstMeshlet = 0;
             drawable.meshletCount = 0;
         }
+
+        // Not relevant for static meshes
+        drawable.relativeVelocityVertex = 0;
 
         if (instance.hasDrawableHandleForSegmentIndex(segmentIdx)) {
             DrawableObjectHandle handle = instance.drawableHandleForSegmentIndex(segmentIdx);

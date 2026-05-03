@@ -10,6 +10,8 @@ struct ShaderDrawable {
     uint drawKey;
     uint firstMeshlet;
     uint meshletCount;
+    int relativeVelocityVertex;
+    int _pad0, _pad1, _pad2;
 };
 
 struct ShaderMeshlet {

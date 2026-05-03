@@ -168,6 +168,9 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
     bool doubleSided = drawKey.doubleSided().value();
     shaderDefines.push_back(ShaderDefine::makeBool("FORWARD_DOUBLE_SIDED", doubleSided));
 
+    bool hasExplicitVelocity = drawKey.hasExplicityVelocity().value();
+    shaderDefines.push_back(ShaderDefine::makeBool("HAS_EXPLICIT_VELOCITY", hasExplicitVelocity));
+
     Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", shaderDefines);
 
     VertexLayout vertexLayoutPos = scene.vertexManager().positionVertexLayout();
@@ -214,12 +217,15 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
                                                           ShaderBinding::sampledTexture(*localLightShadowMapAtlas),
                                                           ShaderBinding::storageBuffer(*localLightShadowAllocations) });
 
+    BindingSet& velocityBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(scene.vertexManager().velocityDataVertexBuffer(), ShaderStage::Vertex) });
+
     StateBindings& bindings = renderStateBuilder.stateBindings();
     bindings.at(0, *reg.getBindingSet("SceneCameraSet"));
     bindings.at(2, *reg.getBindingSet("SceneObjectSet"));
     bindings.at(3, scene.globalMaterialBindingSet());
     bindings.at(4, *reg.getBindingSet("SceneLightSet"));
     bindings.at(5, shadowBindingSet);
+    bindings.at(6, velocityBindingSet);
 
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
     renderState.setName(fmt::format("Forward{}{}[doublesided={}][explicitvelocity={}]",
