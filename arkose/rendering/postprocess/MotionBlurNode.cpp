@@ -1,5 +1,6 @@
 #include "MotionBlurNode.h"
 
+#include "rendering/GpuScene.h"
 #include "rendering/RenderPipeline.h"
 #include "rendering/backend/base/Texture.h"
 #include "rendering/backend/shader/Shader.h"
@@ -10,14 +11,12 @@ void MotionBlurNode::drawGui()
 {
     ImGui::Checkbox("Enabled", &m_enabled);
 
-    ImGui::SliderFloat("Shutter angle", &m_shutterAngleDegrees, 0.0f, 360.0f, "%.0f deg");
-
     ImGui::SliderInt("Max blur radius (px)", reinterpret_cast<int*>(&m_maxBlurRadiusPixels), 4, TileSize);
     ImGui::SliderInt("Sample count", reinterpret_cast<int*>(&m_sampleCount), 1, 33);
     ImGui::SliderFloat("Soft Z extent (m)", &m_softZExtent, 1e-3f, 0.1f, "%.3f", ImGuiSliderFlags_Logarithmic);
 }
 
-RenderPipelineNode::ExecuteCallback MotionBlurNode::construct(GpuScene&, Registry& reg)
+RenderPipelineNode::ExecuteCallback MotionBlurNode::construct(GpuScene& scene, Registry& reg)
 {
     Texture& sceneColorTex = *reg.getTexture("SceneColor");
     Texture& sceneNormalVelocityTex = *reg.getTexture("SceneNormalVelocity");
@@ -58,6 +57,19 @@ RenderPipelineNode::ExecuteCallback MotionBlurNode::construct(GpuScene&, Registr
             return;
         }
 
+        Camera const& camera = scene.camera();
+
+        float shutterScale;
+        if (camera.useManualShutterSpeedForMotionBlur()) {
+            shutterScale = camera.shutterSpeed() / appState.deltaTime();
+        } else {
+            shutterScale = camera.motionBlurShutterAngle() / 360.0f;
+        }
+
+        if (shutterScale <= 0.01f) {
+            return;
+        }
+
         Extent2D velocityTexSize = sceneColorTex.extent();
         Extent2D tileTexSize = tileMaxTex.extent();
 
@@ -85,10 +97,6 @@ RenderPipelineNode::ExecuteCallback MotionBlurNode::construct(GpuScene&, Registr
         //
 
         cmdList.setComputeState(motionBlurState);
-
-        // TODO: Add option to drive the shutter scale instead by our exposure settings,
-        // where we pretend the frame rate is fixed and the shutter speed is our manual value.
-        float shutterScale = m_shutterAngleDegrees / 360.0f;
 
         // Sample count should be odd, to ensure there is a center sample
         u32 sampleCount = m_sampleCount | 1;

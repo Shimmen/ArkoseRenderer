@@ -312,6 +312,17 @@ float Camera::filmGrainGain() const
     return k * ISO() + m;
 }
 
+bool Camera::useManualShutterSpeedForMotionBlur() const
+{
+    // There's no obvious way to know the shutter speed if we're in auto (unless we control that behind the scenes..)
+    return m_useManualShutterSpeedForMotionBlur && m_exposureMode != ExposureMode::Auto;
+}
+
+float Camera::motionBlurShutterAngle() const
+{
+    return m_motionBlurShutterAngleDegrees;
+}
+
 void Camera::moveBy(vec3 translation)
 {
     if (length2(translation) > 1e-6f) {
@@ -433,6 +444,22 @@ void Camera::drawGui(bool includeContainingWindow)
         ImGui::TreePop();
     }
 
+    if (ImGui::TreeNode("Motion blur controls")) {
+        ImGui::Checkbox("Use manual shutter speed for motion blur", &m_useManualShutterSpeedForMotionBlur);
+
+        if (useManualShutterSpeedForMotionBlur()) { ImGui::BeginDisabled(); }
+        ImGui::SliderFloat("Shutter angle (degrees)", &m_motionBlurShutterAngleDegrees, 1.0f, 360.0f);
+        if (useManualShutterSpeedForMotionBlur()) { ImGui::EndDisabled(); }
+
+        float motionBlurShutterSpeed = useManualShutterSpeedForMotionBlur()
+            ? shutterSpeed()
+            : (motionBlurShutterAngle() / 360.0f) * m_deltaTimeForShutterEstimation;
+        int motionBlurShutterSpeedRatio = static_cast<int>(std::roundf(1.0f / motionBlurShutterSpeed));
+        ImGui::Text("Actual shutter speed used for motion blur: %.3fs or 1/%d", motionBlurShutterSpeed, motionBlurShutterSpeedRatio);
+
+        ImGui::TreePop();
+    }
+
     if (ImGui::TreeNode("Film gain control")) {
         ImGui::SliderFloat("Film grain at ISO100", &m_filmGrainAtISO100, 0.0f, m_filmGrainAtISO3200 - 1e-4f);
         ImGui::SliderFloat("Film grain at ISO3200", &m_filmGrainAtISO3200, m_filmGrainAtISO100 + 1e-4f, 0.25f);
@@ -442,9 +469,9 @@ void Camera::drawGui(bool includeContainingWindow)
     if (ImGui::TreeNode("Culling debug")) {
         ImGui::Checkbox("Freeze camera", &m_debugFreezeCamera);
 
-        if (not m_debugFreezeCamera) { ImGui::BeginDisabled(); }
+        if (!m_debugFreezeCamera) { ImGui::BeginDisabled(); }
         ImGui::Checkbox("Render frustum", &m_debugRenderCullingFrustum);
-        if (not m_debugFreezeCamera) { ImGui::EndDisabled(); }
+        if (!m_debugFreezeCamera) { ImGui::EndDisabled(); }
 
         ImGui::TreePop();
     }

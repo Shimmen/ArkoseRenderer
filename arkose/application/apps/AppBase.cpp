@@ -11,6 +11,7 @@ bool AppBase::update(float elapsedTime, float deltaTime)
     SCOPED_PROFILE_ZONE();
 
     mainScene().camera().setTargetWindowSize(mainRenderPipeline().outputResolution());
+    mainScene().camera().setDeltaTimeForShutterEstimation(deltaTime);
 
     mainScene().update(elapsedTime, deltaTime);
 

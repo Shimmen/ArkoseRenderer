@@ -16,8 +16,6 @@ public:
 private:
     bool m_enabled { true };
 
-    float m_shutterAngleDegrees { 180.0f };
-
     u32 m_maxBlurRadiusPixels { TileSize };
     u32 m_sampleCount { 15 };
     float m_softZExtent { 0.02f };

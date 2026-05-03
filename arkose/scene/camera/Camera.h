@@ -84,6 +84,10 @@ public:
 
     float filmGrainGain() const;
 
+    bool useManualShutterSpeedForMotionBlur() const;
+    float motionBlurShutterAngle() const;
+    void setDeltaTimeForShutterEstimation(float deltaTime) { m_deltaTimeForShutterEstimation = deltaTime; }
+
     vec3 position() const { return m_position; }
     void setPosition(vec3);
     void moveBy(vec3);
@@ -192,6 +196,18 @@ private:
     // Not very physically based, but hopefully a bit plausible..
     float m_filmGrainAtISO100 { 0.01f };
     float m_filmGrainAtISO3200 { 0.15f };
+
+    ////////////////////////////////////////////////////////////////////////////
+    // Shutter control
+
+    // If true, we use the shutter speed set in `m_shutterSpeed` for motion blur as is.
+    // If false, the motion blur will instead correspond to the frame rate.
+    bool m_useManualShutterSpeedForMotionBlur { false };
+
+    // 180 degree shutter angle means the motion blur corresponds to half of the frame time
+    float m_motionBlurShutterAngleDegrees { 180.0f };
+
+    float m_deltaTimeForShutterEstimation { 1.0f / 60.0f };
 
     ////////////////////////////////////////////////////////////////////////////
     // Culling
