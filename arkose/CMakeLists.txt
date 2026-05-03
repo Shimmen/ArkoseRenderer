@@ -196,6 +196,8 @@ set(ARKOSE_SOURCES
     arkose/rendering/postprocess/CASNode.h
     arkose/rendering/postprocess/FogNode.cpp
     arkose/rendering/postprocess/FogNode.h
+    arkose/rendering/postprocess/MotionBlurNode.cpp
+    arkose/rendering/postprocess/MotionBlurNode.h
     arkose/rendering/postprocess/SSSSNode.cpp
     arkose/rendering/postprocess/SSSSNode.h
     # shadow

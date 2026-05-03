@@ -1,0 +1,125 @@
+#version 460
+
+//
+// Per-pixel motion blur, mainly based on the paper "A Reconstruction Filter for Plausible Motion Blur" by McGuire et al.
+// See: https://casual-effects.com/research/McGuire2012Blur/McGuire12Blur.pdf
+//
+
+#include <common.glsl>
+#include <common/camera.glsl>
+#include <common/namedUniforms.glsl>
+
+layout(set = 0, binding = 0, rgba16f) uniform writeonly image2D resultImage;
+layout(set = 0, binding = 1) uniform sampler2D sceneColorTex;
+layout(set = 0, binding = 2) uniform sampler2D sceneNormalVelocityTex;
+layout(set = 0, binding = 3) uniform sampler2D sceneDepthTex;
+layout(set = 0, binding = 4) uniform sampler2D tileTex;
+
+layout(set = 1, binding = 0) uniform CameraStateBlock { CameraState camera; };
+
+NAMED_UNIFORMS(constants,
+    float shutterScale;
+    uint maxBlurRadiusPixels;
+    uint sampleCount;
+    float softZExtent;
+    uvec2 targetSize;
+    uint frameIndex;
+)
+
+float cone(float distancePx, float velocityMagnitudePx)
+{
+    return clamp(1.0 - distancePx / max(velocityMagnitudePx, 1e-4), 0.0, 1.0);
+}
+
+float cylinder(float distancePx, float velocityMagnitudePx)
+{
+    return 1.0 - smoothstep(0.95 * velocityMagnitudePx, 1.05 * velocityMagnitudePx, distancePx);
+}
+
+float softDepthCompare(float za, float zb, float softExtent)
+{
+    return clamp(1.0 - (za - zb) / max(softExtent, 1e-6), 0.0, 1.0);
+}
+
+layout(local_size_x = 8, local_size_y = 8) in;
+void main()
+{
+    ivec2 pixelCoord = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 imgSize = ivec2(constants.targetSize);
+
+    if (any(greaterThanEqual(pixelCoord, imgSize))) {
+        return;
+    }
+
+    vec3 centerColor = texelFetch(sceneColorTex, pixelCoord, 0).rgb;
+    float centerDepth = calculateLinearDepth(texelFetch(sceneDepthTex, pixelCoord, 0).r, camera);
+
+    ivec2 tileCoord = pixelCoord / ivec2(TILE_SIZE);
+    vec2 tileVelocity = texelFetch(tileTex, tileCoord, 0).xy;
+
+    vec2 blurVectorPx = tileVelocity * vec2(imgSize) * constants.shutterScale;
+    float blurLengthPx = length(blurVectorPx);
+
+    if (blurLengthPx < 0.5) {
+        imageStore(resultImage, pixelCoord, vec4(centerColor, 1.0));
+        return;
+    }
+
+    vec2 blurDirection = blurVectorPx / blurLengthPx;
+    blurVectorPx = blurDirection * min(blurLengthPx, float(constants.maxBlurRadiusPixels));
+
+    vec2 centerVelocity = texelFetch(sceneNormalVelocityTex, pixelCoord, 0).zw;
+    float centerVelocityMagPx = length(centerVelocity * vec2(imgSize) * constants.shutterScale);
+
+    float accumulatedWeight = 1.0 / max(centerVelocityMagPx, 1e-2);
+    vec3 accumulatedColor = centerColor * accumulatedWeight;
+
+    float jitter = interleavedGradientNoise(vec2(pixelCoord), constants.frameIndex);
+    for (int i = 0; i < constants.sampleCount; ++i) {
+
+        // Skip the center sample (sample count is guaranteed to be odd)
+        if (i * 2 == (constants.sampleCount - 1)) {
+            continue;
+        }
+
+        float t = mix(-1.0, 1.0, (i + jitter + 1.0) / (constants.sampleCount + 1.0));
+        vec2 sampleOffsetPx = blurVectorPx * t;
+
+        ivec2 sampleCoord = ivec2(round(vec2(pixelCoord) + sampleOffsetPx));
+        sampleCoord = clamp(sampleCoord, ivec2(0), imgSize - ivec2(1));
+
+        // Skip any redundant samples, if the step is small
+        if (sampleCoord == pixelCoord) {
+            continue;
+        }
+
+        float offsetDistancePx = length(sampleOffsetPx);
+
+        vec3 sampleColor = texelFetch(sceneColorTex, sampleCoord, 0).rgb;
+        float sampleDepth = calculateLinearDepth(texelFetch(sceneDepthTex, sampleCoord, 0).r, camera);
+
+        vec2 sampleVelocity = texelFetch(sceneNormalVelocityTex, sampleCoord, 0).zw;
+        float sampleVelocityMagPx = length(sampleVelocity * vec2(imgSize) * constants.shutterScale);
+
+        // Naming convention from McGuire et. al:  X = center, Y = sample
+
+        // Fore- vs. background classification of Y to X
+        float f = softDepthCompare(centerDepth, sampleDepth, constants.softZExtent);
+        float b = softDepthCompare(sampleDepth, centerDepth, constants.softZExtent);
+
+        float weight =
+            // Case 1: Blurry Y in front of any X
+            f * cone(offsetDistancePx, sampleVelocityMagPx) +
+            // Case 2: Any Y behind blurry X; estimate background
+            b * cone(offsetDistancePx, centerVelocityMagPx) +
+            // Case 3: Simultaneously blurry X and Y
+            cylinder(offsetDistancePx, sampleVelocityMagPx) * cylinder(offsetDistancePx, centerVelocityMagPx) * 2.0;
+
+        accumulatedColor += weight * sampleColor;
+        accumulatedWeight += weight;
+    }
+
+    vec3 blurredColor = accumulatedColor / max(accumulatedWeight, 1e-5);
+
+    imageStore(resultImage, pixelCoord, vec4(blurredColor, 1.0));
+}

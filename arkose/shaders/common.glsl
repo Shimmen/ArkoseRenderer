@@ -111,6 +111,13 @@ vec2 hammersley(uint i, uint n)
     return vec2(xi0, xi1);
 }
 
+float interleavedGradientNoise(vec2 pixelCoord, uint frameIndex)
+{
+    vec3 magic = vec3(0.06711056, 0.00583715, 52.9829189);
+    vec2 p = pixelCoord + vec2(frameIndex, frameIndex);
+    return fract(magic.z * fract(dot(p, magic.xy)));
+}
+
 vec3 sphericalFibonacciSample(uint i, uint n)
 {
 	// Refer to sphericalFibonacci(..) in c++ source for more info

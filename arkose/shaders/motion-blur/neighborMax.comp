@@ -1,0 +1,41 @@
+#version 460
+
+#include <common.glsl>
+#include <common/namedUniforms.glsl>
+
+layout(set = 0, binding = 0, rg16f) uniform writeonly image2D neighborMaxImg;
+layout(set = 0, binding = 1) uniform sampler2D tileTex;
+
+NAMED_UNIFORMS(constants,
+    uvec2 tileTexSize;
+)
+
+layout(local_size_x = 8, local_size_y = 8) in;
+void main()
+{
+    uvec2 tileCoord = gl_GlobalInvocationID.xy;
+    if (any(greaterThanEqual(tileCoord, constants.tileTexSize))) {
+        return;
+    }
+
+    ivec2 centerTileCoord = ivec2(tileCoord);
+    ivec2 maxTileCoord = ivec2(constants.tileTexSize) - ivec2(1);
+
+    vec2 neighborMaxVelocity = vec2(0.0);
+    float neighborBestMagnitudeSq = -1.0;
+
+    for (int dy = -1; dy <= 1; ++dy) {
+        for (int dx = -1; dx <= 1; ++dx) {
+            ivec2 tileCoord = clamp(centerTileCoord + ivec2(dx, dy), ivec2(0), maxTileCoord);
+
+            vec2 tileVelocity = texelFetch(tileTex, tileCoord, 0).xy;
+            float tileMagnitudeSq = lengthSquared(tileVelocity);
+            if (tileMagnitudeSq > neighborBestMagnitudeSq) {
+                neighborBestMagnitudeSq = tileMagnitudeSq;
+                neighborMaxVelocity = tileVelocity;
+            }
+        }
+    }
+
+    imageStore(neighborMaxImg, ivec2(tileCoord), vec4(neighborMaxVelocity, 0.0, 0.0));
+}

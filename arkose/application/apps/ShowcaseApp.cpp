@@ -24,6 +24,7 @@
 #include "rendering/nodes/VisibilityBufferShadingNode.h"
 #include "rendering/output/OutputNode.h"
 #include "rendering/postprocess/FogNode.h"
+#include "rendering/postprocess/MotionBlurNode.h"
 #include "rendering/shadow/DirectionalShadowDrawNode.h"
 #include "rendering/shadow/DirectionalShadowProjectNode.h"
 #include "rendering/shadow/LocalShadowDrawNode.h"
@@ -175,6 +176,8 @@ void ShowcaseApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend
                                         ForwardClearMode::DontClear);
 
     pipeline.addNode<FogNode>();
+
+    pipeline.addNode<MotionBlurNode>();
 
     auto& dofNode = pipeline.addNode<DepthOfFieldNode>();
     dofNode.setEnabled(false);

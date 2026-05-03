@@ -1,0 +1,45 @@
+#version 460
+
+#include <common.glsl>
+#include <common/namedUniforms.glsl>
+
+layout(set = 0, binding = 0, rg16f) uniform writeonly image2D tileMaxImg;
+layout(set = 0, binding = 1) uniform sampler2D sceneNormalVelocityTex;
+
+NAMED_UNIFORMS(constants,
+    uvec2 velocityTexSize;
+    uvec2 tileTexSize;
+)
+
+layout(local_size_x = 8, local_size_y = 8) in;
+void main()
+{
+    uvec2 tileCoord = gl_GlobalInvocationID.xy;
+    if (any(greaterThanEqual(tileCoord, constants.tileTexSize))) {
+        return;
+    }
+
+    ivec2 basePixelCoord = ivec2(tileCoord) * ivec2(TILE_SIZE);
+
+    vec2 tileMaxVelocity = vec2(0.0);
+    float tileMaxMagnitudeSq = -1.0;
+
+    for (uint y = 0u; y < TILE_SIZE; ++y) {
+        for (uint x = 0u; x < TILE_SIZE; ++x) {
+            ivec2 pixelCoord = basePixelCoord + ivec2(x, y);
+            if (any(lessThan(pixelCoord, ivec2(0))) || any(greaterThanEqual(pixelCoord, ivec2(constants.velocityTexSize)))) {
+                continue;
+            }
+
+            vec2 pixelVelocity = texelFetch(sceneNormalVelocityTex, pixelCoord, 0).zw;
+
+            float magnitudeSq = lengthSquared(pixelVelocity);
+            if (magnitudeSq > tileMaxMagnitudeSq) {
+                tileMaxMagnitudeSq = magnitudeSq;
+                tileMaxVelocity = pixelVelocity;
+            }
+        }
+    }
+
+    imageStore(tileMaxImg, ivec2(tileCoord), vec4(tileMaxVelocity, 0.0, 0.0));
+}
