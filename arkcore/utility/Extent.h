@@ -62,6 +62,14 @@ struct Extent2D {
         return { m_width - (2 * x), m_height - (2 * x) };
     }
 
+    static Extent2D divideAndRoundDownClampTo1(Extent2D extent, u32 numerator)
+    {
+        ARKOSE_ASSERT(numerator > 0);
+        u32 w = std::max(1u, extent.width() / numerator);
+        u32 h = std::max(1u, extent.height() / numerator);
+        return Extent2D(w, h);
+    }
+
     ark::vec2 inverse() const { return ark::vec2(1.0f / m_width, 1.0f / m_height); }
 
     ark::uvec2 asUIntVector() const { return ark::uvec2(m_width, m_height); }
@@ -116,9 +124,9 @@ struct Extent3D {
     static Extent3D divideAndRoundDownClampTo1(Extent3D extent, u32 numerator)
     {
         ARKOSE_ASSERT(numerator > 0);
-        u32 w = std::max(1u, extent.width() / 2);
-        u32 h = std::max(1u, extent.height() / 2);
-        u32 d = std::max(1u, extent.depth() / 2);
+        u32 w = std::max(1u, extent.width() / numerator);
+        u32 h = std::max(1u, extent.height() / numerator);
+        u32 d = std::max(1u, extent.depth() / numerator);
         return Extent3D(w, h, d);
     }
 
