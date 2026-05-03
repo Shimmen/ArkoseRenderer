@@ -57,6 +57,9 @@ struct SkinningVertexMapping {
     VertexAllocation underlyingMesh {};
     // Allocation for the target instance (still segment), where skinned vertices will be placed.
     VertexAllocation skinnedTarget {};
+    // Has the skinning compute dispatch run at least once for this mapping? Used to gate the
+    // per-vertex temporal velocity computation so we don't read uninitialized data on the first frame.
+    bool hasBeenSkinnedOnce { false };
 };
 
 struct SkeletalMeshInstance : public IEditorObject {
@@ -91,6 +94,7 @@ struct SkeletalMeshInstance : public IEditorObject {
 
     bool hasSkinningVertexMappingForSegmentIndex(size_t segmentIdx) const;
     SkinningVertexMapping const& skinningVertexMappingForSegmentIndex(size_t segmentIdx) const;
+    SkinningVertexMapping& skinningVertexMappingForSegmentIndex(size_t segmentIdx);
     std::vector<SkinningVertexMapping> const& skinningVertexMappings() const { return m_skinningVertexMappings; }
 
     void resetSkinningVertexMappings();

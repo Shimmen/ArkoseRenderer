@@ -611,7 +611,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 size_t numSegments = skeletalMeshInstance->skinningVertexMappings().size();
                 for (size_t segmentIdx = 0; segmentIdx < numSegments; ++segmentIdx) {
 
-                    SkinningVertexMapping const& skinningVertexMapping = skeletalMeshInstance->skinningVertexMappingForSegmentIndex(segmentIdx);
+                    SkinningVertexMapping& skinningVertexMapping = skeletalMeshInstance->skinningVertexMappingForSegmentIndex(segmentIdx);
 
                     //ARKOSE_ASSERT(skinningVertexMapping.underlyingMesh.hasSkinningData());
                     ARKOSE_ASSERT(skinningVertexMapping.skinnedTarget.hasVelocityData());
@@ -641,9 +641,12 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                     cmdList.setNamedUniform<u32>("firstVelocityVertexIdx", static_cast<u32>(skinningVertexMapping.skinnedTarget.firstVelocityVertex));
                     cmdList.setNamedUniform<u32>("vertexCount", skinningVertexMapping.underlyingMesh.vertexCount);
                     cmdList.setNamedUniform<u32>("morphTargetCount", morphTargetCount);
+                    cmdList.setNamedUniform<u32>("isFirstSkinning", skinningVertexMapping.hasBeenSkinnedOnce ? 0u : 1u);
 
                     constexpr u32 localSize = 64;
                     cmdList.dispatch({ vertexCount, 1, 1 }, { localSize, 1, 1 });
+
+                    skinningVertexMapping.hasBeenSkinnedOnce = true;
                 }
 
                 if (m_maintainRayTracingScene) {

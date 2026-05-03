@@ -118,6 +118,11 @@ SkinningVertexMapping const& SkeletalMeshInstance::skinningVertexMappingForSegme
     return m_skinningVertexMappings[segmentIdx];
 }
 
+SkinningVertexMapping& SkeletalMeshInstance::skinningVertexMappingForSegmentIndex(size_t segmentIdx)
+{
+    return m_skinningVertexMappings[segmentIdx];
+}
+
 void SkeletalMeshInstance::resetSkinningVertexMappings()
 {
     m_skinningVertexMappings.clear();

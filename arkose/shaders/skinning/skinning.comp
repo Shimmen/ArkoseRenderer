@@ -21,6 +21,7 @@ NAMED_UNIFORMS(constants,
     uint firstVelocityVertexIdx;
     uint vertexCount;
     uint morphTargetCount;
+    uint isFirstSkinning;
 )
 
 layout(local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
@@ -87,9 +88,12 @@ void main()
 
     uint dstVertexIdx = constants.firstDstVertexIdx + localVertexIdx;
 
+    // Read previous-frame skinned position before overwriting, so we can compute a temporal delta.
+    vec3 previousSkinnedPosition = positions[dstVertexIdx];
+
     positions[dstVertexIdx] = position;
     nonPositionVertexData[dstVertexIdx] = vertex;
 
     uint dstVelocityVertexIdx = constants.firstVelocityVertexIdx + localVertexIdx;
-    velocities[dstVelocityVertexIdx] = position - originalPosition;
+    velocities[dstVelocityVertexIdx] = (constants.isFirstSkinning != 0) ? vec3(0.0) : (position - previousSkinnedPosition);
 }
