@@ -102,7 +102,7 @@ void Animation::reset()
 
 Animation::SampledInputTrack Animation::evaluateInputTrack(size_t inputTrackIdx, std::vector<float> const& inputTrack)
 {
-    ARKOSE_ASSERT(inputTrack.size() >= 1);
+    ARKOSE_ASSERT(inputTrack.size() >= 2);
 
     float inputTrackStart = inputTrack.front();
     float inputTrackEnd = inputTrack.back();
@@ -126,15 +126,12 @@ Animation::SampledInputTrack Animation::evaluateInputTrack(size_t inputTrackIdx,
 
     // Find the first input track index
     // TODO: Binary search and/or cache last value
-    i32 startIdx = 0;
-    while (inputTrack[startIdx] < inputTrackTime) {
-        startIdx += 1;
+    i32 firstGeq = 0;
+    while (inputTrack[firstGeq] < inputTrackTime) {
+        firstGeq += 1;
     }
-    // We overshoot by one..
-    startIdx = startIdx - 1;
-
-    // TODO: Handle out-of-bounds case! Or wait, should we even need to handle it here after the previous precautions?!
-    i32 endIdx = startIdx + 1;
+    i32 const startIdx = firstGeq > 0 ? firstGeq - 1 : 0;
+    i32 const endIdx = startIdx + 1;
 
     float startTime = inputTrack[startIdx];
     float endTime = inputTrack[endIdx];
