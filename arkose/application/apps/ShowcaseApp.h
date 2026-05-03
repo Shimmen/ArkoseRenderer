@@ -18,6 +18,7 @@ public:
     enum class AntiAliasing {
         None,
         TAA,
+        DLSS,
     };
 
     bool m_guiEnabled { true };

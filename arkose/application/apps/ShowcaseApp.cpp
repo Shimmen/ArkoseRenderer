@@ -75,6 +75,7 @@ void ShowcaseApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend
     //description.path = "assets/PicaPica/PicaPicaMiniDiorama.arklvl";
     //description.path = "assets/bistro/bistro.arklvl";
     description.path = "assets/sample/levels/Sponza.arklvl";
+    //description.path = "assets/sample/levels/IntelSponza.arklvl";
     scene.setupFromDescription(description);
 
     if (description.path.empty()) {
@@ -189,7 +190,7 @@ void ShowcaseApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend
     }
 
     std::string sceneTexture = "SceneColor";
-    AntiAliasing antiAliasingMode = AntiAliasing::TAA;
+    AntiAliasing antiAliasingMode = AntiAliasing::DLSS;
 
     // Uncomment for meshlet visualisation
     //pipeline.addNode<MeshletDebugNode>(); sceneTexture = "MeshletDebugVis";
@@ -205,13 +206,15 @@ void ShowcaseApp::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend
     }
 
 #if WITH_DLSS
-    if (DLSSNode::isSupported()) {
+    if (antiAliasingMode == AntiAliasing::DLSS && DLSSNode::isSupported()) {
         UpscalingQuality quality = pipeline.outputResolution() < Extent2D(2560, 1440)
             ? UpscalingQuality::GoodQuality
             : UpscalingQuality::Balanced;
         pipeline.addNode<DLSSNode>(quality);
-        antiAliasingMode = AntiAliasing::None;
         sceneTexture = "SceneColorUpscaled";
+    } else if (antiAliasingMode == AntiAliasing::DLSS) {
+        // Fallback to TAA if DLSS is selected but not supported
+        pipeline.addNode<TAANode>(scene.camera());
     }
 #endif
 
