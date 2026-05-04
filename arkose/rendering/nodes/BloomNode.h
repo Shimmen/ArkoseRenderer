@@ -20,5 +20,6 @@ private:
 
     bool m_enabled { true };
     float m_upsampleBlurRadius { 0.0036f };
-    float m_bloomBlend { 0.04f };
+    float m_upsampleMipBlend { 0.5f };
+    float m_bloomBlend { 0.28f };
 };

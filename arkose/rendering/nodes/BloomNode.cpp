@@ -7,7 +7,8 @@ void BloomNode::drawGui()
 {
     ImGui::Checkbox("Enabled##bloom", &m_enabled);
     ImGui::SliderFloat("Upsample blur radius", &m_upsampleBlurRadius, 0.0f, 0.01f, "%.4f");
-    ImGui::SliderFloat("Bloom blend", &m_bloomBlend, 0.0f, 1.0f, "%.6f", ImGuiSliderFlags_Logarithmic);
+    ImGui::SliderFloat("Upsample mip blend", &m_upsampleMipBlend, 0.0f, 1.0f, "%.3f");
+    ImGui::SliderFloat("Bloom blend", &m_bloomBlend, 0.0f, 1.0f, "%.3f");
 }
 
 RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Registry& reg)
@@ -88,6 +89,7 @@ RenderPipelineNode::ExecuteCallback BloomNode::construct(GpuScene& scene, Regist
             cmdList.setComputeState(*m_upsampleStates[stateIdx]);
 
             cmdList.setNamedUniform("blurRadius", m_upsampleBlurRadius);
+            cmdList.setNamedUniform("mipBlend", m_upsampleMipBlend);
 
             cmdList.dispatch(upsampleTex.extentAtMip(targetMip), localSizeForComp);
             cmdList.textureMipWriteBarrier(downsampleTex, targetMip);

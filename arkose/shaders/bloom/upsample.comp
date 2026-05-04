@@ -9,6 +9,7 @@ layout(set = 0, binding = 2, rgba16f) restrict readonly uniform image2D sameLeve
 
 NAMED_UNIFORMS(constants,
     float blurRadius;
+    float mipBlend;
 )
 
 vec4 sampleNextLevelUpsampledBilinear(vec2 uv)
@@ -61,7 +62,9 @@ void main()
 
     vec4 original = imageLoad(sameLevelDownsampledImg, pixelCoord);
 
-    // A' = A + blur(B')
-    vec4 target = original + blurred;
+    // A' = mix(A, blur(B'), w)
+    // Weighted lerp keeps each upsample step a convex combination so the final bloom preserves the scene's average luminance.
+    // This isn't what the presentation does, as far as I can tell, but seems like a better idea to me, and makes it easier to control for a scene.
+    vec4 target = mix(original, blurred, constants.mipBlend);
     imageStore(targetImg, pixelCoord, target);
 }
