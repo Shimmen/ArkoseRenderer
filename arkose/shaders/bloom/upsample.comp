@@ -57,7 +57,7 @@ void main()
         return;
 
     vec2 uv = (vec2(pixelCoord) + 0.5) / vec2(targetSize);
-    vec2 offset = vec2(1.0, targetSize.x / targetSize.y) * vec2(constants.blurRadius);
+    vec2 offset = vec2(1.0, float(targetSize.x) / float(targetSize.y)) * vec2(constants.blurRadius);
     vec4 blurred = tent3x3Upsample(uv, offset);
 
     vec4 original = imageLoad(sameLevelDownsampledImg, pixelCoord);
