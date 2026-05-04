@@ -4,6 +4,8 @@ set(ARKCORE_SOURCES
   # asset
   arkcore/asset/AnimationAsset.cpp
   arkcore/asset/AnimationAsset.h
+  arkcore/asset/AssetCache.h
+  arkcore/asset/Asset.h
   arkcore/asset/ImageAsset.cpp
   arkcore/asset/ImageAsset.h
   arkcore/asset/LevelAsset.cpp
