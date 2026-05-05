@@ -20,6 +20,15 @@ DepFile = { Path = '{ Repo:Temp }{ Path }.dep', Format = 'AssetCooker' }
 Priority = 0
 
 [[Rule]]
+Name = "Import .hair"
+InputFilters = [ 
+    { Repo = "Assets", PathPattern = "*.hair" },
+]
+CommandLine = '{ Repo:Tools }HairImportTool.exe "{ Repo:Assets }{ Path }" "{ Repo:Imported }{ Dir }{ File }.arkhair"'
+OutputPaths = [ '{ Repo:Imported }{ Dir }{ File }.arkhair' ]
+Priority = 0
+
+[[Rule]]
 Name = "Bake imgspec"
 InputFilters = [ 
     { Repo = "Temp", PathPattern = "*.imgspec" },

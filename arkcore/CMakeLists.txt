@@ -6,6 +6,8 @@ set(ARKCORE_SOURCES
   arkcore/asset/AnimationAsset.h
   arkcore/asset/AssetCache.h
   arkcore/asset/Asset.h
+  arkcore/asset/HairAsset.cpp
+  arkcore/asset/HairAsset.h
   arkcore/asset/ImageAsset.cpp
   arkcore/asset/ImageAsset.h
   arkcore/asset/LevelAsset.cpp
@@ -26,6 +28,8 @@ set(ARKCORE_SOURCES
     arkcore/asset/external/CubeLUT.h
     arkcore/asset/external/DDSImage.cpp
     arkcore/asset/external/DDSImage.h
+    arkcore/asset/external/HairFile.cpp
+    arkcore/asset/external/HairFile.h
     arkcore/asset/external/IESProfile.cpp
     arkcore/asset/external/IESProfile.h
     # import
