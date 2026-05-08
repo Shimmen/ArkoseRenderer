@@ -271,17 +271,24 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
 
     psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
     
+    switch (rasterState.primitiveType) {
+    case PrimitiveType::Triangles:
+        psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
+        break;
+    case PrimitiveType::LineSegments:
+        psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
+        break;
+    case PrimitiveType::Points:
+        psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
+        break;
+    }
+
     switch (rasterState.polygonMode) {
     case PolygonMode::Filled:
-        psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_SOLID;
         break;
     case PolygonMode::Lines:
-        psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-        psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
-        break;
     case PolygonMode::Points:
-        psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_POINT;
         psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
         break;
     }
