@@ -248,6 +248,9 @@ void D3D12CommandList::beginRendering(const RenderState& genRenderState, ClearVa
     case PrimitiveType::LineSegments:
         m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINELIST);
         break;
+    case PrimitiveType::LineStrip:
+        m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_LINESTRIP);
+        break;
     case PrimitiveType::Points:
         m_commandList->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_POINTLIST);
         break;

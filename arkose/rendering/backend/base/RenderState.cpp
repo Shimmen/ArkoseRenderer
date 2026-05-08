@@ -31,7 +31,8 @@ RasterState RenderStateBuilder::rasterState() const
         .frontFace = frontFace,
         .primitiveType = primitiveType,
         .polygonMode = polygonMode,
-        .lineWidth = lineWidth
+        .lineWidth = lineWidth,
+        .enablePrimitiveRestart = enablePrimitiveRestart,
     };
     return state;
 }

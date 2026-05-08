@@ -48,6 +48,7 @@ enum class TriangleWindingOrder {
 enum class PrimitiveType {
     Triangles,
     LineSegments,
+    LineStrip,
     Points,
 };
 
@@ -64,6 +65,7 @@ struct RasterState {
     PrimitiveType primitiveType { PrimitiveType::Triangles };
     PolygonMode polygonMode { PolygonMode::Filled };
     float lineWidth { 1.0f };
+    bool enablePrimitiveRestart { false };
 };
 
 class RenderState : public Resource {
@@ -139,6 +141,7 @@ public:
     PrimitiveType primitiveType { PrimitiveType::Triangles };
     PolygonMode polygonMode { PolygonMode::Filled };
     float lineWidth { 1.0f };
+    bool enablePrimitiveRestart { false };
 
     bool enableDepthBias { false };
 

@@ -148,11 +148,14 @@ VulkanRenderState::VulkanRenderState(Backend& backend, RenderTarget const& rende
     case PrimitiveType::LineSegments:
         inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
         break;
+    case PrimitiveType::LineStrip:
+        inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+        break;
     case PrimitiveType::Points:
         inputAssemblyState.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
         break;
     }
-    inputAssemblyState.primitiveRestartEnable = VK_FALSE;
+    inputAssemblyState.primitiveRestartEnable = rasterState.enablePrimitiveRestart;
 
     std::vector<VkDynamicState> activeDynamicStates {};
     activeDynamicStates.push_back(VK_DYNAMIC_STATE_VIEWPORT);

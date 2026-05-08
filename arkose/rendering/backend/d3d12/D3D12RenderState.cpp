@@ -276,6 +276,7 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
         psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
         break;
     case PrimitiveType::LineSegments:
+    case PrimitiveType::LineStrip:
         psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_LINE;
         break;
     case PrimitiveType::Points:
@@ -292,6 +293,11 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
         psoDesc.RasterizerState.FillMode = D3D12_FILL_MODE_WIREFRAME;
         break;
     }
+
+    // TODO: Support primitive restart with 16-bit index buffers as well!
+    psoDesc.IBStripCutValue = rasterState.enablePrimitiveRestart
+        ? D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_0xFFFFFFFF
+        : D3D12_INDEX_BUFFER_STRIP_CUT_VALUE_DISABLED;
 
     if (rasterState.backfaceCullingEnabled) {
         psoDesc.RasterizerState.CullMode = D3D12_CULL_MODE_BACK;
