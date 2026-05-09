@@ -19,6 +19,7 @@
 #include "rendering/postprocess/SSSSNode.h"
 #include "rendering/shadow/DirectionalShadowDrawNode.h"
 #include "rendering/shadow/DirectionalShadowProjectNode.h"
+#include "rendering/shadow/HairShadowNode.h"
 #include "rendering/shadow/LocalShadowDrawNode.h"
 #include "scene/Scene.h"
 #include "scene/camera/Camera.h"
@@ -113,6 +114,7 @@ void SSSDemo::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend)
     pipeline.addNode<DirectionalShadowDrawNode>();
     pipeline.addNode<DirectionalShadowProjectNode>();
     pipeline.addNode<LocalShadowDrawNode>();
+    pipeline.addNode<HairShadowNode>();
 
     pipeline.addNode<VisibilityBufferShadingNode>();
 

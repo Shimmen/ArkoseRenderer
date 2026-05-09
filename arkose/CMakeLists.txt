@@ -207,6 +207,8 @@ set(ARKOSE_SOURCES
     arkose/rendering/shadow/DirectionalShadowDrawNode.h
     arkose/rendering/shadow/DirectionalShadowProjectNode.cpp
     arkose/rendering/shadow/DirectionalShadowProjectNode.h
+    arkose/rendering/shadow/HairShadowNode.cpp
+    arkose/rendering/shadow/HairShadowNode.h
     arkose/rendering/shadow/LocalShadowDrawNode.cpp
     arkose/rendering/shadow/LocalShadowDrawNode.h
     arkose/rendering/shadow/RTLocalShadowNode.cpp
