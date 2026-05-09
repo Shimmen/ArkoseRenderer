@@ -111,15 +111,15 @@ bool HairAsset::writeToFile(std::filesystem::path const& filePath, AssetStorage 
 u32 HairAsset::segmentCountForStrand(u32 strandIdx) const
 {
     ARKOSE_ASSERT(strandIdx < strandCount);
-    if (segments.empty()) {
+    if (segmentCounts.empty()) {
         return defaultSegmentCount;
     }
-    return static_cast<u32>(segments[strandIdx]);
+    return static_cast<u32>(segmentCounts[strandIdx]);
 }
 
 float HairAsset::thicknessForPoint(u32 pointIdx) const
 {
-    ARKOSE_ASSERT(pointIdx < pointCount);
+    ARKOSE_ASSERT(pointIdx < positions.size());
     if (thickness.empty()) {
         return defaultThickness;
     }
@@ -128,7 +128,7 @@ float HairAsset::thicknessForPoint(u32 pointIdx) const
 
 float HairAsset::transparencyForPoint(u32 pointIdx) const
 {
-    ARKOSE_ASSERT(pointIdx < pointCount);
+    ARKOSE_ASSERT(pointIdx < positions.size());
     if (transparency.empty()) {
         return defaultTransparency;
     }
@@ -137,9 +137,27 @@ float HairAsset::transparencyForPoint(u32 pointIdx) const
 
 vec3 HairAsset::colorForPoint(u32 pointIdx) const
 {
-    ARKOSE_ASSERT(pointIdx < pointCount);
+    ARKOSE_ASSERT(pointIdx < positions.size());
     if (colors.empty()) {
         return defaultColor;
     }
     return colors[pointIdx];
+}
+
+std::span<u32 const> HairAsset::indicesForStrand(u32 strandIdx) const
+{
+    ARKOSE_ASSERT(strandIdx < strandCount);
+
+    // Number of indices is number of segments +1, since segments are between points
+    u32 count = segmentCountForStrand(strandIdx) + 1;
+
+    // When calculating offset, consider both the +1 for points like above, but also the +1 for the primitive restart index
+    u32 offset = 0;
+    for (u32 idx = 0; idx < strandIdx; ++idx) {
+        offset += segmentCountForStrand(idx) + 1 + 1;
+    }
+
+    ARKOSE_ASSERT(static_cast<size_t>(offset + count) <= indices.size());
+
+    return { indices.data() + offset, count };
 }

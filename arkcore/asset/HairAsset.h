@@ -6,6 +6,7 @@
 #include <ark/aabb.h>
 #include <array>
 #include <memory>
+#include <span>
 #include <vector>
 
 class HairAsset final : public Asset<HairAsset> {
@@ -26,7 +27,12 @@ public:
     void serialize(Archive&, u32 version);
 
     u32 strandCount {};
-    u32 pointCount {};
+
+    // Positions of all points in the hair
+    std::vector<vec3> positions {};
+
+    // Line-strip indices with 0xFFFFFFFF primitive-reset between strands
+    std::vector<u32> indices {};
 
     u32 defaultSegmentCount { 0 };
     float defaultThickness { 1.0f };
@@ -34,8 +40,7 @@ public:
     vec3 defaultColor { 1.0f, 1.0f, 1.0f };
 
     // For empty arrays, assume defaults for all N points/strands
-    std::vector<u16> segments {};
-    std::vector<vec3> points {};
+    std::vector<u16> segmentCounts {};
     std::vector<float> thickness {};
     std::vector<float> transparency {};
     std::vector<vec3> colors {};
@@ -46,6 +51,7 @@ public:
     float thicknessForPoint(u32 pointIdx) const;
     float transparencyForPoint(u32 pointIdx) const;
     vec3 colorForPoint(u32 pointIdx) const;
+    std::span<u32 const> indicesForStrand(u32 strandIdx) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -72,15 +78,16 @@ void HairAsset::serialize(Archive& archive, u32 version)
     archive(CEREAL_NVP(name));
 
     archive(CEREAL_NVP(strandCount));
-    archive(CEREAL_NVP(pointCount));
+
+    archive(CEREAL_NVP(positions));
+    archive(CEREAL_NVP(indices));
 
     archive(CEREAL_NVP(defaultSegmentCount));
     archive(CEREAL_NVP(defaultThickness));
     archive(CEREAL_NVP(defaultTransparency));
     archive(CEREAL_NVP(defaultColor));
 
-    archive(CEREAL_NVP(segments));
-    archive(CEREAL_NVP(points));
+    archive(CEREAL_NVP(segmentCounts));
     archive(CEREAL_NVP(thickness));
     archive(CEREAL_NVP(transparency));
     archive(CEREAL_NVP(colors));

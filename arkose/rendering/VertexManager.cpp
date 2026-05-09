@@ -313,17 +313,6 @@ void VertexManager::processHairStreaming(CommandList&, UploadBuffer&)
 {
     SCOPED_PROFILE_ZONE();
 
-    // For a strand with N segments we have (N + 1) points and emit (N + 1) line-strip indices
-    // followed by one primitive-reset index, for a total of (N + 2) indices per strand.
-    auto computeStrandIndexCount = [](HairAsset const& asset) -> u32 {
-        // TODO: This should be accessible directly in HairAsset, not something we have to compute at runtime.
-        u32 count = 0;
-        for (u32 strandIdx = 0; strandIdx < asset.strandCount; strandIdx++) {
-            count += asset.segmentCountForStrand(strandIdx) + 1 + 1;
-        }
-        return count;
-    };
-
     for (size_t activeIdx = 0; activeIdx < m_streamingHairMeshes.size(); ++activeIdx) {
         StreamingHairMesh& streamingHairMesh = m_streamingHairMeshes[activeIdx];
 
@@ -333,15 +322,15 @@ void VertexManager::processHairStreaming(CommandList&, UploadBuffer&)
         switch (streamingHairMesh.state) {
         case HairStreamingState::PendingAllocation: {
 
-            if (hairAsset->strandCount == 0 || hairAsset->pointCount == 0) {
-                // Nothing to upload; treat as already loaded.
+            u32 pointCount = narrow_cast<u32>(hairAsset->positions.size());
+            u32 indexCount = narrow_cast<u32>(hairAsset->indices.size());
+
+            if (pointCount == 0 || indexCount == 0) {
                 streamingHairMesh.setNextState(HairStreamingState::Loaded);
                 break;
             }
 
-            u32 indexCount = computeStrandIndexCount(*hairAsset);
-
-            OffsetAllocator::Allocation hairVertAlloc = m_hairVertexAllocator.allocate(hairAsset->pointCount);
+            OffsetAllocator::Allocation hairVertAlloc = m_hairVertexAllocator.allocate(pointCount);
             OffsetAllocator::Allocation hairIndexAlloc = m_indexAllocator.allocate(indexCount);
 
             if (hairVertAlloc.isValid() && hairIndexAlloc.isValid()) {
@@ -361,54 +350,37 @@ void VertexManager::processHairStreaming(CommandList&, UploadBuffer&)
 
         case HairStreamingState::StreamingVertexData: {
 
-            size_t vertexByteSize = hairAsset->pointCount * hairVertexLayout().packedVertexSize();
+            u32 pointCount = narrow_cast<u32>(hairAsset->positions.size());
+
+            size_t vertexByteSize = pointCount * hairVertexLayout().packedVertexSize();
             size_t vertexByteOffset = hairMesh->hairVertexAlloc.offset * hairVertexLayout().packedVertexSize();
 
             // HACK: For now, just assume ReBAR support and copy data directly
-            m_hairVertexBuffer->mapData(Buffer::MapMode::Write, vertexByteSize, vertexByteOffset, [&](std::byte* mappedData) {
-                std::memcpy(mappedData, hairAsset->points.data(), vertexByteSize);
+            bool success = m_hairVertexBuffer->mapData(Buffer::MapMode::Write, vertexByteSize, vertexByteOffset, [&](std::byte* mappedData) {
+                std::memcpy(mappedData, hairAsset->positions.data(), vertexByteSize);
             });
 
-            streamingHairMesh.setNextState(HairStreamingState::StreamingIndexData);
+            if (success) {
+                streamingHairMesh.setNextState(HairStreamingState::StreamingIndexData);
+            }
 
         } break;
 
         case HairStreamingState::StreamingIndexData: {
 
             ARKOSE_ASSERT(indexType() == IndexType::UInt32);
-            constexpr u32 primitiveResetIndex = 0xffffffffu;
 
-            u32 indexCount = computeStrandIndexCount(*hairAsset);
-            size_t indexByteSize = indexCount * sizeofIndexType(indexType());
+            size_t indexByteSize = hairAsset->indices.size() * sizeofIndexType(indexType());
             size_t indexByteOffset = hairMesh->indexAlloc.offset * sizeofIndexType(indexType());
 
-            u32 baseVertex = hairMesh->hairVertexAlloc.offset;
-
             // HACK: For now, just assume ReBAR support and copy data directly
-            m_indexBuffer->mapData(Buffer::MapMode::Write, indexByteSize, indexByteOffset, [&](std::byte* mappedData) {
-                u32* mappedIndices = reinterpret_cast<u32*>(mappedData);
-
-                u32 indexIdx = 0;
-                u32 pointOffset = 0;
-                for (u32 strandIdx = 0; strandIdx < hairAsset->strandCount; strandIdx++) {
-                    u32 segmentCount = hairAsset->segmentCountForStrand(strandIdx);
-                    u32 pointsInStrand = segmentCount + 1;
-
-                    // Emit the line strip for this strand...
-                    for (u32 i = 0; i < pointsInStrand; i++) {
-                        mappedIndices[indexIdx++] = baseVertex + pointOffset + i;
-                    }
-                    // then terminate it with a primitive reset
-                    mappedIndices[indexIdx++] = primitiveResetIndex;
-
-                    pointOffset += pointsInStrand;
-                }
-
-                ARKOSE_ASSERT(indexIdx == indexCount);
-                ARKOSE_ASSERT(pointOffset == hairAsset->pointCount);
+            bool success = m_indexBuffer->mapData(Buffer::MapMode::Write, indexByteSize, indexByteOffset, [&](std::byte* mappedData) {
+                std::memcpy(mappedData, hairAsset->indices.data(), indexByteSize);
             });
 
-            streamingHairMesh.setNextState(HairStreamingState::Loaded);
+            if (success) {
+                streamingHairMesh.setNextState(HairStreamingState::Loaded);
+            }
 
         } break;
 
@@ -471,7 +443,7 @@ void VertexManager::drawUI() const
                     ImGui::Text("%u", hairAsset->strandCount);
 
                     ImGui::TableNextColumn();
-                    ImGui::Text("%u", hairAsset->pointCount);
+                    ImGui::Text("%u", static_cast<u32>(hairAsset->positions.size()));
                 }
 
                 ImGui::EndTable();

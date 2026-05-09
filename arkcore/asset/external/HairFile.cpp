@@ -194,33 +194,56 @@ std::unique_ptr<HairAsset> HairFile::createHairAsset() const
     auto hairAsset = std::make_unique<HairAsset>();
     hairAsset->name = m_name;
     hairAsset->strandCount = m_strandCount;
-    hairAsset->pointCount = m_pointCount;
+    hairAsset->positions = m_points;
+    hairAsset->indices = {}; // build list below
     hairAsset->defaultSegmentCount = m_defaultSegments;
     hairAsset->defaultThickness = m_defaultThickness;
     hairAsset->defaultTransparency = m_defaultTransparency;
     hairAsset->defaultColor = m_defaultColor;
-    hairAsset->segments = m_segments;
-    hairAsset->points = m_points;
+    hairAsset->segmentCounts = m_segments;
     hairAsset->thickness = m_thickness;
     hairAsset->transparency = m_transparency;
     hairAsset->colors = m_colors;
 
     // The .hair spec doesn't say, but I all files I've come across are in centimeters,
     // so convert to meters here, as it's the canonical unit in Arkose.
-    for (vec3& point : hairAsset->points) {
-        point *= 0.01f;
+    for (vec3& position : hairAsset->positions) {
+        position *= 0.01f;
     }
 
     // Calculate bounding box
-    if (hairAsset->points.empty()) {
+    if (hairAsset->positions.empty()) {
         hairAsset->boundingBox = ark::aabb3(vec3(0.0f), vec3(0.0f));
     } else {
         ark::aabb3 bounds {};
-        for (vec3 const& p : hairAsset->points) {
+        for (vec3 const& p : hairAsset->positions) {
             bounds.expandWithPoint(p);
         }
         hairAsset->boundingBox = bounds;
     }
+
+    constexpr u32 PrimitiveRestartIndex = 0xFFFFFFFFu;
+
+    u32 totalIndices = 0;
+    for (u32 s = 0; s < hairAsset->strandCount; ++s) {
+        // Each strand is represented as a line strip with a primitive restart index between strands,
+        // so the number of indices for each strand is the number of segments + 1 (for the last point) + 1 (for the primitive restart)
+        totalIndices += hairAsset->segmentCountForStrand(s) + 1 + 1;
+    }
+    hairAsset->indices.reserve(totalIndices);
+
+    u32 pointOffset = 0;
+    for (u32 strandIdx = 0; strandIdx < hairAsset->strandCount; ++strandIdx) {
+        u32 pointsInStrand = hairAsset->segmentCountForStrand(strandIdx) + 1;
+        for (u32 pointIdx = 0; pointIdx < pointsInStrand; ++pointIdx) {
+            hairAsset->indices.push_back(pointOffset + pointIdx);
+        }
+        hairAsset->indices.push_back(PrimitiveRestartIndex);
+        pointOffset += pointsInStrand;
+    }
+
+    ARKOSE_ASSERT(pointOffset == hairAsset->positions.size());
+    ARKOSE_ASSERT(hairAsset->indices.size() == totalIndices);
 
     return hairAsset;
 }
