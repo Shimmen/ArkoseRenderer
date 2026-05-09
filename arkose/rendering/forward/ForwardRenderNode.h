@@ -28,10 +28,17 @@ private:
     ForwardClearMode m_clearMode;
     bool m_hasPreviousPrepass { false };
 
+    struct BufferStates {
+        std::vector<std::pair<Buffer const*, VertexLayout>> vertexBuffers {};
+        std::pair<Buffer const*, IndexType> indexBuffer {};
+        bool operator<=>(BufferStates const& other) const = default;
+    };
+
     struct MeshSegmentInstance {
-        MeshSegmentInstance(DrawCallDescription, DrawKey, Transform const&);
+        MeshSegmentInstance(DrawCallDescription, DrawKey, BufferStates, Transform const&);
         DrawCallDescription drawCall {};
         DrawKey drawKey {};
+        BufferStates bufferStates {};
         Transform const* transform {};
     };
 

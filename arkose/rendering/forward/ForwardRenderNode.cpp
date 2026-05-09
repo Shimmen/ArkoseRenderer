@@ -63,10 +63,6 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
 
     return [&](const AppState& appState, CommandList& cmdList, UploadBuffer& uploadBuffer) {
 
-        cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), scene.vertexManager().positionVertexLayout().packedVertexSize(), 0);
-        cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), scene.vertexManager().nonPositionVertexLayout().packedVertexSize(), 1);
-        cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
-
         if (m_clearMode == ForwardClearMode::ClearBeforeFirstDraw) {
             for (RenderTarget::Attachment const& attachment : renderTarget.colorAttachments()) {
                 cmdList.clearTexture(*attachment.texture, ClearValue::blackAtMaxDepth());
@@ -84,6 +80,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
         bool firstDraw = true;
 
         DrawKey const* currentStateDrawKey = nullptr;
+        BufferStates const* currentBufferStates = nullptr;
         for (MeshSegmentInstance const& instance : instances) {
 
             if (currentStateDrawKey == nullptr || instance.drawKey != *currentStateDrawKey) {
@@ -107,6 +104,15 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
                 currentStateDrawKey = &instance.drawKey;
             }
 
+            if (currentBufferStates == nullptr || instance.bufferStates != *currentBufferStates) {
+                for (u32 idx = 0; idx < instance.bufferStates.vertexBuffers.size(); ++idx) {
+                    auto const& [vertexBuffer, layout] = instance.bufferStates.vertexBuffers[idx];
+                    cmdList.bindVertexBuffer(*vertexBuffer, layout.packedVertexSize(), idx);
+                }
+                cmdList.bindIndexBuffer(*instance.bufferStates.indexBuffer.first, instance.bufferStates.indexBuffer.second);
+                currentBufferStates = &instance.bufferStates;
+            }
+
             cmdList.issueDrawCall(instance.drawCall);
 
             firstDraw = false;
@@ -117,9 +123,11 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
     };
 }
 
-ForwardRenderNode::MeshSegmentInstance::MeshSegmentInstance(DrawCallDescription inDrawCall, DrawKey inDrawKey, Transform const& inTransform)
+ForwardRenderNode::MeshSegmentInstance::MeshSegmentInstance(DrawCallDescription inDrawCall, DrawKey inDrawKey,
+    BufferStates inBufferStates, Transform const& inTransform)
     : drawCall(inDrawCall)
     , drawKey(inDrawKey)
+    , bufferStates(inBufferStates)
     , transform(&inTransform)
 {
 }
@@ -170,10 +178,15 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
 
     Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", shaderDefines);
 
-    VertexLayout vertexLayoutPos = scene.vertexManager().positionVertexLayout();
-    VertexLayout vertexLayoutOther = scene.vertexManager().nonPositionVertexLayout();
+    std::vector<VertexLayout> vertexLayouts;
+    if (drawKey.brdf().value() == Brdf::Hair) {
+        vertexLayouts.push_back(scene.vertexManager().hairVertexLayout());
+    } else {
+        vertexLayouts.push_back(scene.vertexManager().positionVertexLayout());
+        vertexLayouts.push_back(scene.vertexManager().nonPositionVertexLayout());
+    }
 
-    RenderStateBuilder renderStateBuilder { renderTarget, shader, { vertexLayoutPos, vertexLayoutOther } };
+    RenderStateBuilder renderStateBuilder { renderTarget, shader, std::move(vertexLayouts) };
 
     renderStateBuilder.testDepth = true;
     renderStateBuilder.depthCompare = DepthCompareOp::LessThanEqual;
@@ -260,6 +273,13 @@ std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateS
         //    return;
         //}
 
+        VertexManager const& vm = scene.vertexManager();
+
+        BufferStates bufferStates;
+        bufferStates.indexBuffer = { &vm.indexBuffer(), IndexType::UInt32 };
+        bufferStates.vertexBuffers = { { &vm.positionVertexBuffer(), vm.positionVertexLayout() },
+                                       { &vm.nonPositionVertexBuffer(), vm.nonPositionVertexLayout() } };
+
         for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
             StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
 
@@ -278,12 +298,12 @@ std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateS
                         SkinningVertexMapping const& skinningVertexMapping = instance.skinningVertexMappingForSegmentIndex(segmentIdx);
                         DrawCallDescription drawCall = DrawCallDescription::fromVertexAllocation(skinningVertexMapping.skinnedTarget);
                         drawCall.firstInstance = drawableIdx;
-                        meshSegmentInstances.emplace_back(drawCall, drawKey, instance.transform());
+                        meshSegmentInstances.emplace_back(drawCall, drawKey, bufferStates, instance.transform());
                     }
                 } else {
                     DrawCallDescription drawCall = DrawCallDescription::fromVertexAllocation(meshSegment.vertexAllocation);
                     drawCall.firstInstance = drawableIdx;
-                    meshSegmentInstances.emplace_back(drawCall, drawKey, instance.transform());
+                    meshSegmentInstances.emplace_back(drawCall, drawKey, bufferStates, instance.transform());
                 }
             }
         }
