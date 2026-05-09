@@ -205,11 +205,18 @@ std::unique_ptr<HairAsset> HairFile::createHairAsset() const
     hairAsset->transparency = m_transparency;
     hairAsset->colors = m_colors;
 
-    if (m_points.empty()) {
+    // The .hair spec doesn't say, but I all files I've come across are in centimeters,
+    // so convert to meters here, as it's the canonical unit in Arkose.
+    for (vec3& point : hairAsset->points) {
+        point *= 0.01f;
+    }
+
+    // Calculate bounding box
+    if (hairAsset->points.empty()) {
         hairAsset->boundingBox = ark::aabb3(vec3(0.0f), vec3(0.0f));
     } else {
         ark::aabb3 bounds {};
-        for (vec3 const& p : m_points) {
+        for (vec3 const& p : hairAsset->points) {
             bounds.expandWithPoint(p);
         }
         hairAsset->boundingBox = bounds;
