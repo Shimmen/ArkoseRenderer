@@ -199,9 +199,17 @@ void VulkanBuffer::createInternal(size_t size, VkBuffer& outBuffer, VmaAllocatio
     switch (usage()) {
     case Buffer::Usage::Vertex:
         usageFlags |= VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        if (vulkanBackend.supportsResizableBAR()) {
+            allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+            allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+        }
         break;
     case Buffer::Usage::Index:
         usageFlags |= VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        if (vulkanBackend.supportsResizableBAR()) {
+            allocCreateInfo.usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE;
+            allocCreateInfo.flags = VMA_ALLOCATION_CREATE_MAPPED_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+        }
         break;
     case Buffer::Usage::RTInstanceBuffer:
         usageFlags |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR;
