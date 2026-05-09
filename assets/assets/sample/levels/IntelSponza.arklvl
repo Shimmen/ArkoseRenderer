@@ -26,6 +26,7 @@
                     "index": 0,
                     "data": ""
                 },
+                "hair": "",
                 "set": "assets/sample/models/IntelSponza/main_sponza/NewSponza_Main_glTF_002.arkset"
             },
             {
@@ -52,6 +53,7 @@
                     "index": 0,
                     "data": ""
                 },
+                "hair": "",
                 "set": "assets/sample/models/IntelSponza/PKG_A_Curtains/NewSponza_Curtains_glTF.arkset"
             },
             {
@@ -78,6 +80,7 @@
                     "index": 0,
                     "data": ""
                 },
+                "hair": "",
                 "set": "assets/sample/models/IntelSponza/PKG_B_Ivy/NewSponza_IvyGrowth_glTF.arkset"
             },
             {
@@ -104,6 +107,7 @@
                     "index": 0,
                     "data": ""
                 },
+                "hair": "",
                 "set": "assets/sample/models/IntelSponza/PKG_C.1_Trees/NewSponza_CypressTree_glTF.arkset"
             }
         ],

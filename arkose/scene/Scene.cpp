@@ -256,6 +256,14 @@ void Scene::addLevel(LevelAsset* levelAsset)
             instance.name = sceneObjectAsset.name;
         }
 
+        if (!sceneObjectAsset.hair.empty()) {
+
+            HairAsset* hairAsset = HairAsset::load(sceneObjectAsset.hair);
+
+            HairInstance& instance = addHair(hairAsset, sceneObjectAsset.transform);
+            instance.name = fmt::format("{}_{}", sceneObjectAsset.name, hairAsset->name);
+        }
+
     }
 
     for (LightAsset const& lightAsset : levelAsset->lights) {

@@ -32,6 +32,9 @@ public:
     // std::variant<std::string, std::weak_ptr<MeshAsset>> mesh;
     std::variant<std::string, int> mesh;
 
+    // Path to a hair asset
+    std::string hair;
+
     std::string set;
 };
 
@@ -239,6 +242,7 @@ void SceneObjectAsset::serialize(Archive& archive)
     archive(cereal::make_nvp("transform", transform));
     archive(cereal::make_nvp("mesh", mesh));
     archive(cereal::make_nvp("set", set));
+    archive(cereal::make_nvp("hair", hair));
 }
 
 template<class Archive>
