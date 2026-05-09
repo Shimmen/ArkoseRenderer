@@ -107,9 +107,7 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
                 currentStateDrawKey = &instance.drawKey;
             }
 
-            DrawCallDescription drawCall = DrawCallDescription::fromVertexAllocation(instance.vertexAllocation);
-            drawCall.firstInstance = instance.drawableIdx;
-            cmdList.issueDrawCall(drawCall);
+            cmdList.issueDrawCall(instance.drawCall);
 
             firstDraw = false;
         }
@@ -119,10 +117,9 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
     };
 }
 
-ForwardRenderNode::MeshSegmentInstance::MeshSegmentInstance(VertexAllocation inVertexAllocation, DrawKey inDrawKey, Transform const& inTransform, u32 inDrawableIdx)
-    : vertexAllocation(inVertexAllocation)
+ForwardRenderNode::MeshSegmentInstance::MeshSegmentInstance(DrawCallDescription inDrawCall, DrawKey inDrawKey, Transform const& inTransform)
+    : drawCall(inDrawCall)
     , drawKey(inDrawKey)
-    , drawableIdx(inDrawableIdx)
     , transform(&inTransform)
 {
 }
@@ -269,7 +266,6 @@ std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateS
             if ((mode == Mode::Translucent && meshSegment.blendMode == BlendMode::Translucent)
                 || (mode == Mode::Opaque && meshSegment.blendMode != BlendMode::Translucent)) {
 
-                VertexAllocation vertexAllocation = meshSegment.vertexAllocation;
                 DrawKey drawKey = meshSegment.drawKey;
 
                 u32 drawableIdx = instance.drawableHandleForSegmentIndex(segmentIdx).template indexOfType<u32>();
@@ -280,10 +276,14 @@ std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateS
                         drawKey.setHasExplicityVelocity(true);
 
                         SkinningVertexMapping const& skinningVertexMapping = instance.skinningVertexMappingForSegmentIndex(segmentIdx);
-                        meshSegmentInstances.emplace_back(skinningVertexMapping.skinnedTarget, drawKey, instance.transform(), drawableIdx);
+                        DrawCallDescription drawCall = DrawCallDescription::fromVertexAllocation(skinningVertexMapping.skinnedTarget);
+                        drawCall.firstInstance = drawableIdx;
+                        meshSegmentInstances.emplace_back(drawCall, drawKey, instance.transform());
                     }
                 } else {
-                    meshSegmentInstances.emplace_back(meshSegment.vertexAllocation, drawKey, instance.transform(), drawableIdx);
+                    DrawCallDescription drawCall = DrawCallDescription::fromVertexAllocation(meshSegment.vertexAllocation);
+                    drawCall.firstInstance = drawableIdx;
+                    meshSegmentInstances.emplace_back(drawCall, drawKey, instance.transform());
                 }
             }
         }

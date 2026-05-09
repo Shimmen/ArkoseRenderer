@@ -29,10 +29,9 @@ private:
     bool m_hasPreviousPrepass { false };
 
     struct MeshSegmentInstance {
-        MeshSegmentInstance(VertexAllocation, DrawKey, Transform const&, u32 drawableIdx);
-        VertexAllocation vertexAllocation {};
+        MeshSegmentInstance(DrawCallDescription, DrawKey, Transform const&);
+        DrawCallDescription drawCall {};
         DrawKey drawKey {};
-        u32 drawableIdx { 0 };
         Transform const* transform {};
     };
 
