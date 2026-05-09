@@ -5,6 +5,7 @@
 #include "rendering/backend/base/Buffer.h"
 #include "rendering/backend/util/DrawCall.h"
 #include "rendering/backend/util/IndexType.h"
+#include "rendering/HairMesh.h"
 #include "rendering/StaticMesh.h"
 #include "rendering/Vertex.h"
 #include <ark/copying.h>
@@ -36,7 +37,10 @@ public:
     bool allocateSkeletalMeshInstance(SkeletalMeshInstance&, CommandList&);
     //void deallocateSkeletalMeshInstance(SkeletalMeshInstance&); // TODO!
 
+    void registerForStreaming(HairMesh&);
+
     void processMeshStreaming(CommandList&, UploadBuffer&, std::unordered_set<StaticMeshHandle>& updatedMeshes);
+    void processHairStreaming(CommandList&, UploadBuffer&);
 
     void drawUI() const;
 
@@ -62,6 +66,10 @@ public:
     Buffer const& morphTargetVertexBuffer() const { return *m_morphTargetVertexBuffer; }
     Buffer& morphTargetVertexBuffer() { return *m_morphTargetVertexBuffer; }
 
+    VertexLayout const& hairVertexLayout() const { return m_hairVertexLayout; }
+    Buffer const& hairVertexBuffer() const { return *m_hairVertexBuffer; }
+    Buffer& hairVertexBuffer() { return *m_hairVertexBuffer; }
+
     std::vector<ShaderMeshlet> const& meshlets() const { return m_meshlets; }
     Buffer const& meshletBuffer() const { return *m_meshletBuffer; }
     Buffer& meshletBuffer() { return *m_meshletBuffer; }
@@ -78,6 +86,7 @@ public:
     static constexpr size_t MaxLoadedSkinningVertices = 10'000;
     static constexpr size_t MaxLoadedVelocityVertices = 10'000;
     static constexpr size_t MaxLoadedMorphTargetVertices = 10'000;
+    static constexpr size_t MaxLoadedHairVertices     = 4'000'000;
     static constexpr size_t MaxLoadedTriangles        = 16'000'000;
     static constexpr size_t MaxLoadedIndices          = 3 * MaxLoadedTriangles;
 
@@ -115,6 +124,12 @@ public:
         return MaxLoadedMorphTargetVertices - report.totalFreeSpace;
     }
 
+    u32 numAllocatedHairVertices() const
+    {
+        OffsetAllocator::StorageReport report = m_hairVertexAllocator.storageReport();
+        return MaxLoadedHairVertices - report.totalFreeSpace;
+    }
+
 private:
     Backend* m_backend { nullptr };
     GpuScene* m_scene { nullptr };
@@ -129,6 +144,7 @@ private:
     VertexLayout const m_morphTargetVertexLayout { VertexComponent::Position3F,
                                                    VertexComponent::Normal3F,
                                                    VertexComponent::Tangent3F };
+    VertexLayout const m_hairVertexLayout { VertexComponent::Position3F };
 
     std::unique_ptr<Buffer> m_indexBuffer { nullptr };
     OffsetAllocator::Allocator m_indexAllocator { MaxLoadedIndices };
@@ -145,6 +161,9 @@ private:
 
     std::unique_ptr<Buffer> m_morphTargetVertexBuffer {};
     OffsetAllocator::Allocator m_morphTargetVertexAllocator { MaxLoadedMorphTargetVertices };
+
+    std::unique_ptr<Buffer> m_hairVertexBuffer {};
+    OffsetAllocator::Allocator m_hairVertexAllocator { MaxLoadedHairVertices };
 
     std::unique_ptr<Buffer> m_meshletVertexIndirectionBuffer {};
     u32 m_nextFreeMeshletIndirIndex { 0 };
@@ -205,11 +224,35 @@ private:
         std::vector<VertexAllocation::Internal> owningAllocations;
     };
 
+    enum class HairStreamingState {
+        PendingAllocation = 0,
+        StreamingVertexData,
+        StreamingIndexData,
+        Loaded,
+    };
+
+    struct StreamingHairMesh {
+        HairMesh* hairMesh {};
+        HairStreamingState state { HairStreamingState::PendingAllocation };
+
+        u32 nextStrand { 0 };
+        u32 nextVertex { 0 };
+
+        void setNextState(HairStreamingState nextState)
+        {
+            state = nextState;
+
+            nextStrand = 0;
+            nextVertex = 0;
+        }
+    };
+
     template<typename F>
     bool processStreamingMeshState(VertexManager::StreamingMesh& streamingMesh, F&& processSegmentCallback);
 
     std::vector<StreamingMesh> m_streamingMeshes {};
     std::vector<StreamingSkeletalMesh> m_streamingSkeletalMeshes {};
+    std::vector<StreamingHairMesh> m_streamingHairMeshes {};
 
     VertexAllocation allocateMeshDataForSegment(MeshSegmentAsset const&, bool includeIndices, bool includeSkinningData, bool includeMorphData, bool includeVelocityData);
     bool streamVertexData(StreamingMesh&, StaticMeshSegment const&, UploadBuffer&);

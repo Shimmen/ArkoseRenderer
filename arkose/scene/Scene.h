@@ -3,12 +3,14 @@
 #include "asset/LevelAsset.h"
 #include "animation/Animation.h"
 #include "rendering/ResourceList.h"
+#include "rendering/HairMesh.h"
 #include "rendering/StaticMesh.h"
 #include "scene/camera/Camera.h"
 #include "scene/EnvironmentMap.h"
 #include "scene/ProbeGrid.h"
 #include "scene/lights/DirectionalLight.h"
 #include "scene/lights/SpotLight.h"
+#include "scene/HairInstance.h"
 #include "scene/MeshInstance.h"
 #include "scene/SceneNode.h"
 #include <memory>
@@ -21,6 +23,7 @@ class CubeLUT;
 class EditorScene;
 class GpuScene;
 class LevelAsset;
+class HairAsset;
 class MeshAsset;
 class SetAsset;
 class NodeAsset;
@@ -89,6 +92,9 @@ public:
 
     StaticMeshInstance& addMesh(MeshAsset*, Transform = Transform());
     StaticMeshInstance& createStaticMeshInstance(StaticMeshHandle, Transform);
+
+    HairInstance& addHair(HairAsset*, Transform = Transform());
+    HairInstance& createHairInstance(HairHandle, Transform);
 
     // NOTE: This is more of a utility for now to clear out the current level
     void clearAllMeshInstances();

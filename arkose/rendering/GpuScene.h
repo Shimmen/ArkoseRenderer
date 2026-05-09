@@ -65,6 +65,10 @@ public:
     StaticMesh const* staticMeshForInstance(StaticMeshInstance const&) const;
     StaticMesh* staticMeshForHandle(StaticMeshHandle handle);
     const StaticMesh* staticMeshForHandle(StaticMeshHandle handle) const;
+
+    HairMesh* hairMeshForHandle(HairHandle handle);
+    HairMesh const* hairMeshForHandle(HairHandle handle) const;
+
     const ShaderMaterial* materialForHandle(MaterialHandle handle) const;
     ShaderDrawable const* drawableForHandle(DrawableObjectHandle handle) const;
     Texture const* textureForHandle(TextureHandle handle) const;
@@ -96,11 +100,17 @@ public:
     StaticMeshInstance& createStaticMeshInstance(StaticMeshHandle, Transform);
     void initializeStaticMeshInstance(StaticMeshInstance&);
 
+    HairInstance& createHairInstance(HairHandle, Transform);
+    void initializeHairInstance(HairInstance&);
+
     std::vector<std::unique_ptr<StaticMeshInstance>>& staticMeshInstances() { return m_staticMeshInstances; }
     const std::vector<std::unique_ptr<StaticMeshInstance>>& staticMeshInstances() const { return m_staticMeshInstances; }
 
     std::vector<std::unique_ptr<SkeletalMeshInstance>>& skeletalMeshInstances() { return m_skeletalMeshInstances; }
     const std::vector<std::unique_ptr<SkeletalMeshInstance>>& skeletalMeshInstances() const { return m_skeletalMeshInstances; }
+
+    std::vector<std::unique_ptr<HairInstance>>& hairInstances() { return m_hairInstances; }
+    const std::vector<std::unique_ptr<HairInstance>>& hairInstances() const { return m_hairInstances; }
 
     // NOTE: This is more of a utility for now to clear out the current level
     void clearAllMeshInstances();
@@ -114,6 +124,9 @@ public:
     StaticMeshHandle registerStaticMesh(MeshAsset const*);
     void unregisterStaticMesh(StaticMeshHandle);
     void notifyStaticMeshHasChanged(StaticMeshHandle);
+
+    HairHandle registerHair(HairAsset const*);
+    void unregisterHair(HairHandle);
 
     [[nodiscard]] MaterialHandle registerMaterial(MaterialAsset const*);
     void unregisterMaterial(MaterialHandle);
@@ -188,6 +201,11 @@ public:
         std::unique_ptr<SkeletalMesh> skeletalMesh {};
     };
 
+    struct ManagedHair {
+        HairAsset const* hairAsset {};
+        std::unique_ptr<HairMesh> hair {};
+    };
+
 private:
     Scene& m_scene;
     Backend& m_backend;
@@ -209,8 +227,12 @@ private:
     std::unordered_map<MeshAsset const*, StaticMeshHandle> m_staticMeshAssetCache {};
     std::unordered_set<StaticMeshHandle> m_changedStaticMeshes {};
 
+    ResourceList<ManagedHair, HairHandle> m_managedHairs { "HairMesh", 16 };
+    std::unordered_map<HairAsset const*, HairHandle> m_hairAssetCache {};
+
     std::vector<std::unique_ptr<SkeletalMeshInstance>> m_skeletalMeshInstances {};
     std::vector<std::unique_ptr<StaticMeshInstance>> m_staticMeshInstances {};
+    std::vector<std::unique_ptr<HairInstance>> m_hairInstances {};
     ResourceList<ShaderDrawable, DrawableObjectHandle> m_drawables { "Drawables", 65'536 };
 
     std::unique_ptr<VertexManager> m_vertexManager {};

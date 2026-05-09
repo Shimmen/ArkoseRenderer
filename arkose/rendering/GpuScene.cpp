@@ -163,6 +163,16 @@ const StaticMesh* GpuScene::staticMeshForHandle(StaticMeshHandle handle) const
     return handle.valid() ? m_managedStaticMeshes.get(handle).staticMesh.get() : nullptr;
 }
 
+HairMesh* GpuScene::hairMeshForHandle(HairHandle handle)
+{
+    return handle.valid() ? m_managedHairs.get(handle).hair.get() : nullptr;
+}
+
+HairMesh const* GpuScene::hairMeshForHandle(HairHandle handle) const
+{
+    return handle.valid() ? m_managedHairs.get(handle).hair.get() : nullptr;
+}
+
 const ShaderMaterial* GpuScene::materialForHandle(MaterialHandle handle) const
 {
     return handle.valid() ? &m_managedMaterials.get(handle) : nullptr;
@@ -528,9 +538,10 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             m_pendingMaterialUpdates.clear();
         }
 
-        // Do mesh streaming
+        // Do streaming
         {
             m_vertexManager->processMeshStreaming(cmdList, uploadBuffer, m_changedStaticMeshes);
+            m_vertexManager->processHairStreaming(cmdList, uploadBuffer);
         }
 
         // Update camera data
@@ -726,6 +737,16 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 }
 
                 drawableCount += skeletalMeshInstance->drawableHandles().size();
+            }
+
+            for (auto& hairInstance : m_hairInstances) {
+                if (DrawableObjectHandle drawableHandle = hairInstance->drawableHandle()) {
+                    ShaderDrawable& drawable = m_drawables.get(drawableHandle);
+                    drawable.worldFromLocal = hairInstance->transform().worldMatrix();
+                    drawable.worldFromTangent = mat4(hairInstance->transform().worldNormalMatrix());
+                    drawable.previousFrameWorldFromLocal = hairInstance->transform().previousFrameWorldMatrix();
+                    drawableCount += 1;
+                }
             }
 
             m_drawableCountForFrame = drawableCount;
@@ -1214,6 +1235,40 @@ void GpuScene::initializeStaticMeshInstance(StaticMeshInstance& instance)
     }
 }
 
+HairInstance& GpuScene::createHairInstance(HairHandle hairHandle, Transform transform)
+{
+    m_hairInstances.push_back(std::make_unique<HairInstance>(hairHandle, transform));
+    HairInstance& instance = *m_hairInstances.back();
+
+    initializeHairInstance(instance);
+
+    return instance;
+}
+
+void GpuScene::initializeHairInstance(HairInstance& instance)
+{
+    HairMesh* hairMesh = hairMeshForHandle(instance.hair());
+    ARKOSE_ASSERT(hairMesh != nullptr);
+
+    ShaderDrawable drawable;
+    drawable.worldFromLocal = instance.transform().worldMatrix();
+    drawable.worldFromTangent = mat4(instance.transform().worldNormalMatrix());
+    drawable.previousFrameWorldFromLocal = instance.transform().previousFrameWorldMatrix();
+
+    drawable.localBoundingSphere = vec4(0.0f, 0.0f, 0.0f, 1e9f); // TODO!
+
+    drawable.materialIndex = -1;
+    drawable.drawKey = DrawKey({}, BlendMode::Translucent, false, false).asUint32();
+
+    drawable.firstMeshlet = 0;
+    drawable.meshletCount = 0;
+
+    drawable.relativeVelocityVertex = 0;
+
+    DrawableObjectHandle handle = m_drawables.add(std::move(drawable));
+    instance.setDrawableHandle(handle);
+}
+
 SkeletalMeshHandle GpuScene::registerSkeletalMesh(MeshAsset const* meshAsset, SkeletonAsset const* skeletonAsset)
 {
     SCOPED_PROFILE_ZONE();
@@ -1326,6 +1381,38 @@ void GpuScene::unregisterStaticMesh(StaticMeshHandle handle)
 void GpuScene::notifyStaticMeshHasChanged(StaticMeshHandle handle)
 {
     m_changedStaticMeshes.insert(handle);
+}
+
+HairHandle GpuScene::registerHair(HairAsset const* hairAsset)
+{
+    SCOPED_PROFILE_ZONE();
+
+    if (hairAsset == nullptr) {
+        return HairHandle();
+    }
+
+    auto entry = m_hairAssetCache.find(hairAsset);
+    if (entry != m_hairAssetCache.end()) {
+        return entry->second;
+    }
+
+    auto hair = std::make_unique<HairMesh>(hairAsset);
+
+    if (m_vertexManager != nullptr) {
+        m_vertexManager->registerForStreaming(*hair);
+    }
+
+    HairHandle handle = m_managedHairs.add(ManagedHair { .hairAsset = hairAsset,
+                                                         .hair = std::move(hair) });
+
+    m_hairAssetCache[hairAsset] = handle;
+
+    return handle;
+}
+
+void GpuScene::unregisterHair(HairHandle handle)
+{
+    m_managedHairs.removeReference(handle, m_currentFrameIdx);
 }
 
 MaterialHandle GpuScene::registerMaterial(MaterialAsset const* materialAsset)

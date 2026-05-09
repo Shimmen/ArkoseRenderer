@@ -48,6 +48,8 @@ set(ARKOSE_SOURCES
   arkose/rendering/DrawKey.h
   arkose/rendering/GpuScene.cpp
   arkose/rendering/GpuScene.h
+  arkose/rendering/HairMesh.cpp
+  arkose/rendering/HairMesh.h
   arkose/rendering/Icon.cpp
   arkose/rendering/Icon.h
   arkose/rendering/IconManager.cpp
@@ -217,6 +219,8 @@ set(ARKOSE_SOURCES
     arkose/rendering/util/ScopedDebugZone.h
 
   # scene
+  arkose/scene/HairInstance.cpp
+  arkose/scene/HairInstance.h
   arkose/scene/MeshInstance.cpp
   arkose/scene/MeshInstance.h
   arkose/scene/Scene.cpp

@@ -10,6 +10,7 @@
 #include "rendering/backend/base/CommandList.h"
 #include "rendering/backend/util/UploadBuffer.h"
 #include "rendering/meshlet/MeshletView.h"
+#include "asset/HairAsset.h"
 #include "scene/MeshInstance.h"
 #include <ark/conversion.h>
 
@@ -23,12 +24,15 @@ VertexManager::VertexManager(Backend& backend, GpuScene& scene)
     const size_t skinningDataVertexBufferSize = MaxLoadedSkinningVertices * skinningDataVertexLayout().packedVertexSize();
     const size_t velocityDataVertexBufferSize = MaxLoadedVelocityVertices * velocityDataVertexLayout().packedVertexSize();
     const size_t morphTargetVertexBufferSize = MaxLoadedMorphTargetVertices * morphTargetVertexLayout().packedVertexSize();
+    const size_t hairVertexBufferSize = MaxLoadedHairVertices * hairVertexLayout().packedVertexSize();
 
     float totalMemoryUseMb = ark::conversion::to::MB(indexBufferSize
                                                      + postionVertexBufferSize
                                                      + nonPostionVertexBufferSize
                                                      + skinningDataVertexBufferSize
-                                                     + velocityDataVertexBufferSize);
+                                                     + velocityDataVertexBufferSize
+                                                     + morphTargetVertexBufferSize
+                                                     + hairVertexBufferSize);
     ARKOSE_LOG(Info, "VertexManager: allocating a total of {:.1f} MB of VRAM for vertex data", totalMemoryUseMb);
 
     m_indexBuffer = backend.createBuffer(indexBufferSize, Buffer::Usage::Index);
@@ -54,6 +58,10 @@ VertexManager::VertexManager(Backend& backend, GpuScene& scene)
     m_morphTargetVertexBuffer = backend.createBuffer(morphTargetVertexBufferSize, Buffer::Usage::Vertex);
     m_morphTargetVertexBuffer->setStride(morphTargetVertexLayout().packedVertexSize());
     m_morphTargetVertexBuffer->setName("SceneMorphTargetVertexBuffer");
+
+    m_hairVertexBuffer = backend.createBuffer(hairVertexBufferSize, Buffer::Usage::Vertex);
+    m_hairVertexBuffer->setStride(hairVertexLayout().packedVertexSize());
+    m_hairVertexBuffer->setName("SceneHairVertexBuffer");
 
     if (m_scene->maintainMeshShadingScene()) {
 
@@ -93,6 +101,11 @@ void VertexManager::registerForStreaming(StaticMesh& mesh, bool includeIndices, 
                                                 .includeSkinningData = includeSkinningData,
                                                 .includeMorphTargetData = includeMorphTargetData,
                                                 .includeVelocityData = includeVelocityData });
+}
+
+void VertexManager::registerForStreaming(HairMesh& hairMesh)
+{
+    m_streamingHairMeshes.push_back(StreamingHairMesh { .hairMesh = &hairMesh });
 }
 
 template<typename F>
@@ -296,6 +309,118 @@ void VertexManager::processMeshStreaming(CommandList& cmdList, UploadBuffer& upl
     }
 }
 
+void VertexManager::processHairStreaming(CommandList&, UploadBuffer&)
+{
+    SCOPED_PROFILE_ZONE();
+
+    // For a strand with N segments we have (N + 1) points and emit (N + 1) line-strip indices
+    // followed by one primitive-reset index, for a total of (N + 2) indices per strand.
+    auto computeStrandIndexCount = [](HairAsset const& asset) -> u32 {
+        // TODO: This should be accessible directly in HairAsset, not something we have to compute at runtime.
+        u32 count = 0;
+        for (u32 strandIdx = 0; strandIdx < asset.strandCount; strandIdx++) {
+            count += asset.segmentCountForStrand(strandIdx) + 1 + 1;
+        }
+        return count;
+    };
+
+    for (size_t activeIdx = 0; activeIdx < m_streamingHairMeshes.size(); ++activeIdx) {
+        StreamingHairMesh& streamingHairMesh = m_streamingHairMeshes[activeIdx];
+
+        HairMesh* hairMesh = streamingHairMesh.hairMesh;
+        HairAsset const* hairAsset = hairMesh->hairAsset();
+
+        switch (streamingHairMesh.state) {
+        case HairStreamingState::PendingAllocation: {
+
+            if (hairAsset->strandCount == 0 || hairAsset->pointCount == 0) {
+                // Nothing to upload; treat as already loaded.
+                streamingHairMesh.setNextState(HairStreamingState::Loaded);
+                break;
+            }
+
+            u32 indexCount = computeStrandIndexCount(*hairAsset);
+
+            OffsetAllocator::Allocation hairVertAlloc = m_hairVertexAllocator.allocate(hairAsset->pointCount);
+            OffsetAllocator::Allocation hairIndexAlloc = m_indexAllocator.allocate(indexCount);
+
+            if (hairVertAlloc.isValid() && hairIndexAlloc.isValid()) {
+                hairMesh->hairVertexAlloc = hairVertAlloc;
+                hairMesh->indexAlloc = hairIndexAlloc;
+                streamingHairMesh.setNextState(HairStreamingState::StreamingVertexData);
+            } else {
+                if (hairVertAlloc.isValid()) {
+                    m_hairVertexAllocator.free(hairVertAlloc);
+                }
+                if (hairIndexAlloc.isValid()) {
+                    m_indexAllocator.free(hairIndexAlloc);
+                }
+            }
+
+        } break;
+
+        case HairStreamingState::StreamingVertexData: {
+
+            size_t vertexByteSize = hairAsset->pointCount * hairVertexLayout().packedVertexSize();
+            size_t vertexByteOffset = hairMesh->hairVertexAlloc.offset * hairVertexLayout().packedVertexSize();
+
+            // HACK: For now, just assume ReBAR support and copy data directly
+            m_hairVertexBuffer->mapData(Buffer::MapMode::Write, vertexByteSize, vertexByteOffset, [&](std::byte* mappedData) {
+                std::memcpy(mappedData, hairAsset->points.data(), vertexByteSize);
+            });
+
+            streamingHairMesh.setNextState(HairStreamingState::StreamingIndexData);
+
+        } break;
+
+        case HairStreamingState::StreamingIndexData: {
+
+            ARKOSE_ASSERT(indexType() == IndexType::UInt32);
+            constexpr u32 primitiveResetIndex = 0xffffffffu;
+
+            u32 indexCount = computeStrandIndexCount(*hairAsset);
+            size_t indexByteSize = indexCount * sizeofIndexType(indexType());
+            size_t indexByteOffset = hairMesh->indexAlloc.offset * sizeofIndexType(indexType());
+
+            u32 baseVertex = hairMesh->hairVertexAlloc.offset;
+
+            // HACK: For now, just assume ReBAR support and copy data directly
+            m_indexBuffer->mapData(Buffer::MapMode::Write, indexByteSize, indexByteOffset, [&](std::byte* mappedData) {
+                u32* mappedIndices = reinterpret_cast<u32*>(mappedData);
+
+                u32 indexIdx = 0;
+                u32 pointOffset = 0;
+                for (u32 strandIdx = 0; strandIdx < hairAsset->strandCount; strandIdx++) {
+                    u32 segmentCount = hairAsset->segmentCountForStrand(strandIdx);
+                    u32 pointsInStrand = segmentCount + 1;
+
+                    // Emit the line strip for this strand...
+                    for (u32 i = 0; i < pointsInStrand; i++) {
+                        mappedIndices[indexIdx++] = baseVertex + pointOffset + i;
+                    }
+                    // then terminate it with a primitive reset
+                    mappedIndices[indexIdx++] = primitiveResetIndex;
+
+                    pointOffset += pointsInStrand;
+                }
+
+                ARKOSE_ASSERT(indexIdx == indexCount);
+                ARKOSE_ASSERT(pointOffset == hairAsset->pointCount);
+            });
+
+            streamingHairMesh.setNextState(HairStreamingState::Loaded);
+
+        } break;
+
+        case HairStreamingState::Loaded: {
+
+            // Nothing to do here...
+
+        } break;
+        }
+    }
+}
+
 void VertexManager::drawUI() const
 {
     if (ImGui::BeginTabBar("VertexManagerTabBar")) {
@@ -315,6 +440,43 @@ void VertexManager::drawUI() const
                 }
                 ImGui::EndTable();
             }
+            ImGui::EndChild();
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Streaming hair")) {
+            ImGui::BeginChild("StreamingHairChild");
+
+            if (m_streamingHairMeshes.empty()) {
+                ImGui::TextUnformatted("No hair meshes registered for streaming.");
+            } else if (ImGui::BeginTable("StreamingHairMeshesTable", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+
+                ImGui::TableSetupColumn("Hair asset", ImGuiTableColumnFlags_WidthStretch);
+                ImGui::TableSetupColumn("State", ImGuiTableColumnFlags_WidthFixed, 128.0f);
+                ImGui::TableSetupColumn("Strands", ImGuiTableColumnFlags_WidthFixed, 72.0f);
+                ImGui::TableSetupColumn("Points", ImGuiTableColumnFlags_WidthFixed, 72.0f);
+                ImGui::TableHeadersRow();
+
+                for (StreamingHairMesh const& streamingHair : m_streamingHairMeshes) {
+                    HairAsset const* hairAsset = streamingHair.hairMesh->hairAsset();
+
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::TextUnformatted(hairAsset->name.c_str());
+
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%s", magic_enum::enum_name(streamingHair.state).data());
+
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%u", hairAsset->strandCount);
+
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%u", hairAsset->pointCount);
+                }
+
+                ImGui::EndTable();
+            }
+
             ImGui::EndChild();
             ImGui::EndTabItem();
         }
@@ -383,12 +545,16 @@ void VertexManager::drawUI() const
 
                 ImGui::TableHeadersRow();
 
-                auto doTableRow = [&](Buffer const& vertexBuffer, VertexLayout const& vertexLayout, u32 numUsedVertices) {
+                auto doTableRow = [&](Buffer const& vertexBuffer, VertexLayout const& vertexLayout, u32 numUsedVertices, char const* comment = nullptr) {
                     ImGui::TableNextRow();
 
                     ImGui::TableSetColumnIndex(0);
                     std::string layoutDescription = vertexLayout.toString(false);
-                    ImGui::Text("%s", layoutDescription.c_str());
+                    if (comment) {
+                        ImGui::Text("%s (%s)", layoutDescription.c_str(), comment);
+                    } else {
+                        ImGui::Text("%s", layoutDescription.c_str());
+                    }
 
                     ImGui::TableSetColumnIndex(1);
                     ImGui::Text("%u", numUsedVertices);
@@ -417,7 +583,8 @@ void VertexManager::drawUI() const
                 doTableRow(nonPositionVertexBuffer(), nonPositionVertexLayout(), numAllocatedVertices());
                 doTableRow(skinningDataVertexBuffer(), skinningDataVertexLayout(), numAllocatedSkinningVertices());
                 doTableRow(velocityDataVertexBuffer(), velocityDataVertexLayout(), numAllocatedVelocityVertices());
-                doTableRow(morphTargetVertexBuffer(), morphTargetVertexLayout(), numAllocatedMorphTargetVertices());
+                doTableRow(morphTargetVertexBuffer(), morphTargetVertexLayout(), numAllocatedMorphTargetVertices(), "morph target");
+                doTableRow(hairVertexBuffer(), hairVertexLayout(), numAllocatedHairVertices(), "hair");
 
                 ImGui::EndTable();
             }

@@ -1,5 +1,6 @@
 #include "Scene.h"
 
+#include "asset/HairAsset.h"
 #include "asset/LevelAsset.h"
 #include "asset/MeshAsset.h"
 #include "asset/SetAsset.h"
@@ -243,9 +244,11 @@ void Scene::addLevel(LevelAsset* levelAsset)
             SceneNodeHandle setHandle = addSet(setAsset);
             (void)setHandle;
 
-        } else {
+        }
 
-            // TODO: Handle non-path indirection
+        // TODO: Handle non-path indirection
+        if (sceneObjectAsset.hasPathToMesh() && sceneObjectAsset.pathToMesh().length() > 0) {
+
             std::string const& meshAssetPath = std::string(sceneObjectAsset.pathToMesh());
             MeshAsset* meshAsset = MeshAsset::load(meshAssetPath);
 
@@ -397,6 +400,21 @@ StaticMeshInstance& Scene::createStaticMeshInstance(StaticMeshHandle staticMeshH
     }
 
     return instance;
+}
+
+HairInstance& Scene::addHair(HairAsset* hairAsset, Transform transform)
+{
+    ARKOSE_ASSERT(hairAsset != nullptr);
+
+    HairHandle hairHandle = gpuScene().registerHair(hairAsset);
+    HairInstance& instance = createHairInstance(hairHandle, transform);
+
+    return instance;
+}
+
+HairInstance& Scene::createHairInstance(HairHandle hairHandle, Transform transform)
+{
+    return gpuScene().createHairInstance(hairHandle, transform);
 }
 
 void Scene::playAnimation(AnimationAsset* animationAsset, SkeletalMeshInstance& skeletalMeshInstance, Animation::PlaybackMode playbackMode)
