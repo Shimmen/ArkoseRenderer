@@ -62,8 +62,8 @@ RenderPipelineNode::ExecuteCallback DDGIProbeDebug::construct(GpuScene& scene, R
         DrawCallDescription probesDrawCall = m_sphereDrawCall;
         probesDrawCall.instanceCount = scene.scene().probeGrid().probeCount();
 
-        cmdList.bindVertexBuffer(*probesDrawCall.vertexBuffer, renderState.vertexLayout().packedVertexSize(), 0);
-        cmdList.bindIndexBuffer(*probesDrawCall.indexBuffer, probesDrawCall.indexType);
+        cmdList.bindVertexBuffer(*m_sphereVertexBuffer, renderState.vertexLayout().packedVertexSize(), 0);
+        cmdList.bindIndexBuffer(*m_sphereIndexBuffer, IndexType::UInt16);
         cmdList.issueDrawCall(probesDrawCall);
 
         cmdList.endRendering();
@@ -114,8 +114,9 @@ DrawCallDescription DDGIProbeDebug::createSphereRenderData(GpuScene& scene, Regi
     }
 
     auto indexCount = static_cast<uint32_t>(indices.size());
-    Buffer& vertexBuffer = reg.createBuffer(std::move(positions), Buffer::Usage::Vertex);
-    Buffer& indexBuffer = reg.createBuffer(std::move(indices), Buffer::Usage::Index);
+    m_sphereVertexBuffer = &reg.createBuffer(std::move(positions), Buffer::Usage::Vertex);
+    m_sphereIndexBuffer = &reg.createBuffer(std::move(indices), Buffer::Usage::Index);
 
-    return DrawCallDescription::makeSimpleIndexed(vertexBuffer, indexBuffer, indexCount, IndexType::UInt16);
+    return DrawCallDescription { .type = DrawCallDescription::Type::Indexed,
+                                 .indexCount = indexCount };
 }

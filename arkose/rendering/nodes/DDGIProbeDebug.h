@@ -13,6 +13,8 @@ public:
 private:
     DrawCallDescription createSphereRenderData(GpuScene&, Registry&);
 
+    Buffer* m_sphereVertexBuffer { nullptr };
+    Buffer* m_sphereIndexBuffer { nullptr };
     DrawCallDescription m_sphereDrawCall {};
 
     // 0 => disabled

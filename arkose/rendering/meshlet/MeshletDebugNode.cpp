@@ -136,8 +136,7 @@ void MeshletDebugNode::executeVertexShaderPath(PassParams const& params, GpuScen
                         cmdList.setNamedUniform("meshletColor", color);
                         cmdList.issueDrawCall(DrawCallDescription { .type = DrawCallDescription::Type::Indexed,
                                                                     .firstIndex = meshlet.firstIndex,
-                                                                    .indexCount = 3 * meshlet.triangleCount,
-                                                                    .indexType = IndexType::UInt32 });
+                                                                    .indexCount = 3 * meshlet.triangleCount });
                     }
                 }
             }
