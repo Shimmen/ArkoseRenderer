@@ -3,7 +3,7 @@
 #include "application/apps/AppBase.h"
 #include "scene/camera/FpsCameraController.h"
 
-class SSSDemo : public AppBase {
+class HumanDemo : public AppBase {
 public:
     std::vector<Backend::Capability> requiredCapabilities() override;
 

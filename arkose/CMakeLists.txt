@@ -14,12 +14,12 @@ set(ARKOSE_SOURCES
     arkose/application/apps/AppBase.h
     arkose/application/apps/BootstrappingApp.cpp
     arkose/application/apps/BootstrappingApp.h
+    arkose/application/apps/HumanDemo.cpp
+    arkose/application/apps/HumanDemo.h
     arkose/application/apps/MeshViewerApp.cpp
     arkose/application/apps/MeshViewerApp.h
     arkose/application/apps/ShowcaseApp.cpp
     arkose/application/apps/ShowcaseApp.h
-    arkose/application/apps/SSSDemo.cpp
-    arkose/application/apps/SSSDemo.h
       # geodata
       arkose/application/apps/geodata/GeodataApp.cpp
       arkose/application/apps/geodata/GeodataApp.h

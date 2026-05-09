@@ -19,17 +19,17 @@
 #include "application/apps/geodata/GeodataApp.h"
 #include "application/apps/pathtracer/PathTracerApp.h"
 #include "application/apps/BootstrappingApp.h"
+#include "application/apps/HumanDemo.h"
 #include "application/apps/MeshViewerApp.h"
 #include "application/apps/ShowcaseApp.h"
-#include "application/apps/SSSDemo.h"
 
 static std::unique_ptr<App> createApp()
 {
     if (CommandLine::hasArgument("-meshviewer")) {
         return std::make_unique<MeshViewerApp>();
     }
-    if (CommandLine::hasArgument("-sssdemo")) {
-        return std::make_unique<SSSDemo>();
+    if (CommandLine::hasArgument("-humandemo")) {
+        return std::make_unique<HumanDemo>();
     }
     if (CommandLine::hasArgument("-geodata")) {
         return std::make_unique<GeodataApp>();

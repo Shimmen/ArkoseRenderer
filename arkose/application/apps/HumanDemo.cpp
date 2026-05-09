@@ -1,4 +1,4 @@
-#include "SSSDemo.h"
+#include "HumanDemo.h"
 
 #include "system/Input.h"
 #include "rendering/forward/ForwardRenderNode.h"
@@ -29,19 +29,19 @@
 #include <ark/random.h>
 #include <imgui.h>
 
-std::vector<Backend::Capability> SSSDemo::requiredCapabilities()
+std::vector<Backend::Capability> HumanDemo::requiredCapabilities()
 {
     return { Backend::Capability::RayTracing, Backend::Capability::MeshShading };
 }
 
-void SSSDemo::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend)
+void HumanDemo::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend)
 {
     SCOPED_PROFILE_ZONE();
 
     AppBase::setup(graphicsBackend, physicsBackend);
     Scene& scene = mainScene();
 
-    scene.setupFromDescription({ .path = "assets/sample/levels/SSSDemo/SSSDemo.arklvl",
+    scene.setupFromDescription({ .path = "assets/sample/levels/HumanDemo/HumanDemo.arklvl",
                                  .withRayTracing = true,
                                  .withMeshShading = true });
 
@@ -79,18 +79,18 @@ void SSSDemo::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend)
             return scene.addMesh(meshAsset);
         };
 
-        StaticMeshInstance& panelM = generateQuadMesh("light-panel", "assets/sample/levels/SSSDemo/light-panel.arkmat");
+        StaticMeshInstance& panelM = generateQuadMesh("light-panel", "assets/sample/levels/HumanDemo/light-panel.arkmat");
         panelM.transform().setScale({ 0.65f, 2.5f, 1.0f });
         //panelM.transform().setPositionInWorld({ -0.5f, 0.0f, -1.5f });
         //panelM.transform().setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(40.0f)));
         panelM.transform().setPositionInWorld({ 0.0f, 0.0f, -1.3f });
 
-        StaticMeshInstance& panelL = generateQuadMesh("green-panel", "assets/sample/levels/SSSDemo/color-panel-g.arkmat");
+        StaticMeshInstance& panelL = generateQuadMesh("green-panel", "assets/sample/levels/HumanDemo/color-panel-g.arkmat");
         panelL.transform().setScale({ 1.0f, 2.5f, 1.0f });
         panelL.transform().setPositionInWorld({ -0.6f, 0.0f, -0.5f });
         panelL.transform().setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(+75.0f)));
 
-        StaticMeshInstance& panelR = generateQuadMesh("red-panel", "assets/sample/levels/SSSDemo/color-panel-r.arkmat");
+        StaticMeshInstance& panelR = generateQuadMesh("red-panel", "assets/sample/levels/HumanDemo/color-panel-r.arkmat");
         panelR.transform().setScale({ 1.0f, 2.5f, 1.0f });
         panelR.transform().setPositionInWorld({ +0.6f, 0.0f, -0.5f });
         panelR.transform().setOrientation(ark::axisAngle(ark::globalUp, ark::toRadians(-75.0f)));
@@ -146,7 +146,7 @@ void SSSDemo::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend)
     pipeline.addNode<DebugDrawNode>();
 }
 
-bool SSSDemo::update(float elapsedTime, float deltaTime)
+bool HumanDemo::update(float elapsedTime, float deltaTime)
 {
     SCOPED_PROFILE_ZONE();
 
@@ -179,7 +179,7 @@ bool SSSDemo::update(float elapsedTime, float deltaTime)
     return true;
 }
 
-void SSSDemo::render(Backend& backend, float elapsedTime, float deltaTime)
+void HumanDemo::render(Backend& backend, float elapsedTime, float deltaTime)
 {
     AppBase::render(backend, elapsedTime, deltaTime);
 }
