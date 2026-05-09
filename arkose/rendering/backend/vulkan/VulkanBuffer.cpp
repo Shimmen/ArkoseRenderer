@@ -43,6 +43,8 @@ bool VulkanBuffer::mapData(MapMode mapMode, size_t size, size_t offset, std::fun
     ARKOSE_ASSERT(size > 0);
     ARKOSE_ASSERT(offset + size <= m_size);
 
+    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
+
     switch (usage()) {
     case Buffer::Usage::Upload:
         if (mapMode == MapMode::Read) {
@@ -55,13 +57,15 @@ bool VulkanBuffer::mapData(MapMode mapMode, size_t size, size_t offset, std::fun
         }
         break;
     default:
-        ARKOSE_LOG(Error, "Can only mapData from an Upload or Readback buffer, ignoring.");
-        return false;
+        if (!vulkanBackend.supportsResizableBAR()) {
+            ARKOSE_LOG(Error, "Unless ReBAR is supported, can only mapData from an Upload or Readback buffer, ignoring.");
+            return false;
+        }
+        if (allocationInfo.pMappedData == nullptr) {
+            ARKOSE_LOG(Error, "Can only mapData from a buffer with persistently mapped memory, ignoring.");
+            return false;
+        }
     }
-
-    auto& vulkanBackend = static_cast<VulkanBackend&>(backend());
-
-    ARKOSE_ASSERT(allocationInfo.pMappedData != nullptr); // should be persistently mapped!
 
     std::byte* baseAddress = reinterpret_cast<std::byte*>(allocationInfo.pMappedData);
     std::byte* requestedAddress = baseAddress + offset;

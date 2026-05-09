@@ -169,6 +169,7 @@ public:
 
     bool issueSingleTimeCommand(const std::function<void(VkCommandBuffer)>& callback) const;
 
+    bool supportsResizableBAR() const { return m_supportsResizableBAR; }
     bool copyBuffer(VkBuffer source, VkBuffer destination, size_t size, size_t dstOffset = 0, VkCommandBuffer* = nullptr) const;
     bool setBufferMemoryUsingMapping(VmaAllocation, const uint8_t* data, size_t size, size_t offset = 0);
     bool setBufferDataUsingStagingBuffer(VkBuffer, const uint8_t* data, size_t size, size_t offset = 0, VkCommandBuffer* = nullptr);
