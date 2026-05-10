@@ -202,7 +202,7 @@ constexpr tvec3<T> quatToEulerAngles(const tquat<T>& q)
 
     // Roll (x-axis rotation)
     T sinRollCosPitch = static_cast<T>(2) * (q.w * q.vec.x + q.vec.y * q.vec.z);
-    T cosRollCosPitch = static_cast<T>(1) - static_cast<T>(2) * square(q.vec.x) + square(q.vec.y);
+    T cosRollCosPitch = static_cast<T>(1) - static_cast<T>(2) * (square(q.vec.x) + square(q.vec.y));
     euler.x = std::atan2(sinRollCosPitch, cosRollCosPitch);
 
     // Pitch (y-axis rotation)
@@ -215,7 +215,7 @@ constexpr tvec3<T> quatToEulerAngles(const tquat<T>& q)
 
     // Yaw (z-axis rotation)
     T sinYawCosPitch = static_cast<T>(2) * (q.w * q.vec.z + q.vec.x * q.vec.y);
-    T cosYawCosPitch = static_cast<T>(1) - static_cast<T>(2) * square(q.vec.y) + square(q.vec.z);
+    T cosYawCosPitch = static_cast<T>(1) - static_cast<T>(2) * (square(q.vec.y) + square(q.vec.z));
     euler.z = std::atan2(sinYawCosPitch, cosYawCosPitch);
 
     return euler;
