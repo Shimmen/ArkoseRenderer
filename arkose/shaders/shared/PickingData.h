@@ -2,7 +2,7 @@
 #define PICKING_DATA_GLSL
 
 struct PickingData {
-    int meshIdx;
+    uint drawableIdx;
     float depth;
 };
 

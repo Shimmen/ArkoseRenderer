@@ -10,6 +10,9 @@
 #include "rendering/RenderPipeline.h"
 #include "rendering/backend/Resources.h"
 #include "rendering/util/ScopedDebugZone.h"
+#include "scene/HairInstance.h"
+#include "scene/MeshInstance.h"
+#include "scene/editor/EditorObject.h"
 #include "core/Logging.h"
 #include "core/Types.h"
 #include "core/parallel/TaskGraph.h"
@@ -186,6 +189,37 @@ ShaderDrawable const* GpuScene::drawableForHandle(DrawableObjectHandle handle) c
 Texture const* GpuScene::textureForHandle(TextureHandle handle) const
 {
     return handle.valid() ? m_managedTextures.get(handle).get() : nullptr;
+}
+
+IEditorObject* GpuScene::editorObjectForDrawableHandle(DrawableObjectHandle handle)
+{
+    if (!handle.valid() || !m_drawables.isValidHandle(handle)) {
+        return nullptr;
+    }
+
+    for (auto& instance : m_staticMeshInstances) {
+        for (DrawableObjectHandle const& instanceHandle : instance->drawableHandles()) {
+            if (instanceHandle == handle) {
+                return instance.get();
+            }
+        }
+    }
+
+    for (auto& instance : m_skeletalMeshInstances) {
+        for (DrawableObjectHandle const& instanceHandle : instance->drawableHandles()) {
+            if (instanceHandle == handle) {
+                return instance.get();
+            }
+        }
+    }
+
+    for (auto& instance : m_hairInstances) {
+        if (instance->drawableHandle() == handle) {
+            return instance.get();
+        }
+    }
+
+    return nullptr;
 }
 
 size_t GpuScene::lightCount() const

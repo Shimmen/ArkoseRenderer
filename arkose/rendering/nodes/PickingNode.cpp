@@ -2,12 +2,13 @@
 
 #include "system/Input.h"
 #include "rendering/GpuScene.h"
+#include "rendering/HairMesh.h"
 #include "rendering/RenderPipeline.h"
 #include "rendering/StaticMesh.h"
+#include "scene/HairInstance.h"
+#include "scene/MeshInstance.h"
 #include "scene/editor/EditorScene.h"
 #include "scene/camera/CameraController.h"
-#include "utility/Profiling.h"
-#include <imgui.h>
 #include <ark/vector.h>
 
 // Shader headers
@@ -20,15 +21,23 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 
     Texture& indexTexture = reg.createTexture2D(pipeline().outputResolution(), Texture::Format::R32Uint);
     Texture& depthTexture = reg.createTexture2D(pipeline().outputResolution(), Texture::Format::Depth32F);
-    RenderTarget& indexMapRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &indexTexture },
-                                                                  { RenderTarget::AttachmentType::Depth, &depthTexture } });
+
+    RenderTarget& indexMapRenderTarget = reg.createRenderTarget({ { RenderTarget::AttachmentType::Color0, &indexTexture, LoadOp::Load, StoreOp::Store },
+                                                                  { RenderTarget::AttachmentType::Depth, &depthTexture, LoadOp::Load, StoreOp::Store } });
 
     Shader drawIndexShader = Shader::createBasicRasterize("picking/drawIndices.vert", "picking/drawIndices.frag");
-    RenderStateBuilder renderStateBuilder(indexMapRenderTarget, drawIndexShader, VertexLayout { VertexComponent::Position3F });
-    renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneObjectSet"));
-    RenderState& drawIndicesState = reg.createRenderState(renderStateBuilder);
+    VertexLayout positionOnlyLayout { VertexComponent::Position3F };
 
-    
+    RenderStateBuilder meshStateBuilder { indexMapRenderTarget, drawIndexShader, positionOnlyLayout };
+    meshStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneObjectSet"));
+    RenderState& meshDrawState = reg.createRenderState(meshStateBuilder);
+
+    RenderStateBuilder hairStateBuilder { indexMapRenderTarget, drawIndexShader, positionOnlyLayout };
+    hairStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneObjectSet"));
+    hairStateBuilder.primitiveType = PrimitiveType::LineStrip;
+    hairStateBuilder.enablePrimitiveRestart = true;
+    RenderState& hairDrawState = reg.createRenderState(hairStateBuilder);
+
     Shader collectorShader = Shader::createCompute("picking/collectData.comp");
     BindingSet& collectIndexBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(resultBuffer, ShaderStage::Compute),
                                                                 ShaderBinding::storageTexture(indexTexture, ShaderStage::Compute),
@@ -52,68 +61,105 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 
         auto& input = Input::instance();
         vec2 pickLocation = input.mousePosition();
-        bool meshSelectPick = not input.isGuiUsingMouse() && input.didClickButton(Button::Left);
-        bool focusDepthPick = not input.isGuiUsingMouse() && input.didClickButton(Button::Middle);
+        bool meshSelectPick = !input.isGuiUsingMouse() && input.didClickButton(Button::Left);
+        bool focusDepthPick = !input.isGuiUsingMouse() && input.didClickButton(Button::Middle);
 
-        if (meshSelectPick || focusDepthPick) {
+        if (!meshSelectPick && !focusDepthPick) {
+            return;
+        }
 
-            EditorScene& editorScene = scene.scene().editorScene();
+        EditorScene& editorScene = scene.scene().editorScene();
 
-            if (EditorGizmo* gizmo = editorScene.raycastScreenPointAgainstEditorGizmos(pickLocation)) {
-                if (meshSelectPick) {
-                    editorScene.setSelectedObject(gizmo->editorObject());
-                } else if (focusDepthPick) {
-                    setFocusDepth(scene, gizmo->distanceFromCamera());
-                }
-                return;
+        if (EditorGizmo* gizmo = editorScene.raycastScreenPointAgainstEditorGizmos(pickLocation)) {
+            if (meshSelectPick) {
+                editorScene.setSelectedObject(gizmo->editorObject());
+            } else if (focusDepthPick) {
+                setFocusDepth(scene, gizmo->distanceFromCamera());
+            }
+            return;
+        }
+
+        cmdList.clearTexture(indexTexture, ClearValue { .color = ClearColor::dataValues(-1.0f, 0.0f, 0.0f, 0.0f) });
+        cmdList.clearTexture(depthTexture, ClearValue { .depth = 1.0f });
+
+        cmdList.beginRendering(meshDrawState);
+        cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
+
+        cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), scene.vertexManager().positionVertexLayout().packedVertexSize(), 0);
+        cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
+
+        for (auto& instance : scene.staticMeshInstances()) {
+            StaticMesh const* staticMesh = scene.staticMeshForHandle(instance->mesh());
+            if (staticMesh == nullptr) {
+                continue;
             }
 
-            ClearValue clearValue { .color = ClearColor::srgbColor(1, 0, 1),
-                                    .depth = 1.0f };
+            // TODO: Pick LOD properly (i.e. the same as drawn in the main passes)
+            StaticMeshLOD const& lod = staticMesh->lodAtIndex(0);
 
-            cmdList.beginRendering(drawIndicesState, clearValue);
+            for (size_t segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
+                if (!instance->hasDrawableHandleForSegmentIndex(segmentIdx)) {
+                    continue;
+                }
+
+                StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
+                DrawCallDescription drawCall = DrawCallDescription::fromVertexAllocation(meshSegment.vertexAllocation);
+                drawCall.firstInstance = instance->drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>();
+                cmdList.issueDrawCall(drawCall);
+            }
+        }
+
+        for (auto& instance : scene.skeletalMeshInstances()) {
+            size_t segmentCount = instance->skinningVertexMappings().size();
+            for (size_t segmentIdx = 0; segmentIdx < segmentCount; ++segmentIdx) {
+                if (!instance->hasDrawableHandleForSegmentIndex(segmentIdx)) {
+                    continue;
+                }
+
+                SkinningVertexMapping const& mapping = instance->skinningVertexMappingForSegmentIndex(segmentIdx);
+                DrawCallDescription drawCall = DrawCallDescription::fromVertexAllocation(mapping.skinnedTarget);
+                drawCall.firstInstance = instance->drawableHandleForSegmentIndex(segmentIdx).indexOfType<u32>();
+                cmdList.issueDrawCall(drawCall);
+            }
+        }
+
+        cmdList.endRendering();
+
+        if (!scene.hairInstances().empty()) {
+            cmdList.beginRendering(hairDrawState);
             cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
 
-            cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), drawIndicesState.vertexLayout().packedVertexSize(), 0);
+            cmdList.bindVertexBuffer(scene.vertexManager().hairVertexBuffer(), scene.vertexManager().hairVertexLayout().packedVertexSize(), 0);
             cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
-            u32 drawIdx = 0;
-
-            for (auto& instance : scene.staticMeshInstances()) {
-                if (StaticMesh const* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
-
-                    // TODO: Pick LOD properly (i.e. the same as drawn in the main passes)
-                    StaticMeshLOD const& lod = staticMesh->lodAtIndex(0);
-
-                    for (StaticMeshSegment const& meshSegment : lod.meshSegments) {
-                        DrawCallDescription drawCall = DrawCallDescription::fromVertexAllocation(meshSegment.vertexAllocation);
-                        drawCall.firstInstance = drawIdx++;
-                        cmdList.issueDrawCall(drawCall);
-                    }
+            for (auto& hairInstance : scene.hairInstances()) {
+                if (!hairInstance->drawableHandle()) {
+                    continue;
                 }
-            }
 
-            for (auto& instance : scene.skeletalMeshInstances()) {
-                for (SkinningVertexMapping const& skinningVertexMapping : instance->skinningVertexMappings()) {
-                    DrawCallDescription drawCall = DrawCallDescription::fromVertexAllocation(skinningVertexMapping.skinnedTarget);
-                    drawCall.firstInstance = drawIdx++;
-                    cmdList.issueDrawCall(drawCall);
+                HairMesh const* hairMesh = scene.hairMeshForHandle(hairInstance->hair());
+                if (hairMesh == nullptr || !hairMesh->valid()) {
+                    continue;
                 }
+
+                DrawCallDescription drawCall = hairMesh->drawCallDescription();
+                drawCall.firstInstance = hairInstance->drawableHandle().indexOfType<u32>();
+                cmdList.issueDrawCall(drawCall);
             }
 
             cmdList.endRendering();
-            
-            cmdList.textureWriteBarrier(indexTexture);
-            cmdList.textureWriteBarrier(depthTexture);
-
-            cmdList.setComputeState(collectState);
-            cmdList.setNamedUniform("mousePosition", pickLocation);
-            cmdList.dispatch(indexTexture.extent(), { 16, 16, 1 });
-
-            m_pendingDeferredResult = DeferredResult { .resultBuffer = &resultBuffer,
-                                                       .selectMesh = meshSelectPick,
-                                                       .specifyFocusDepth = focusDepthPick };
         }
+
+        cmdList.textureWriteBarrier(indexTexture);
+        cmdList.textureWriteBarrier(depthTexture);
+
+        cmdList.setComputeState(collectState);
+        cmdList.setNamedUniform("mousePosition", pickLocation);
+        cmdList.dispatch(indexTexture.extent(), { 16, 16, 1 });
+
+        m_pendingDeferredResult = DeferredResult { .resultBuffer = &resultBuffer,
+                                                   .selectMesh = meshSelectPick,
+                                                   .specifyFocusDepth = focusDepthPick };
     };
 }
 
@@ -121,53 +167,20 @@ void PickingNode::processDeferredResult(CommandList& cmdList, GpuScene& scene, c
 {
     // At least one must be specified
     ARKOSE_ASSERT(deferredResult.selectMesh || deferredResult.specifyFocusDepth);
-    
+
     PickingData pickingData;
     cmdList.slowBlockingReadFromBuffer(*deferredResult.resultBuffer, 0, sizeof(pickingData), &pickingData);
 
     if (deferredResult.selectMesh) {
-        int selectedIdx = pickingData.meshIdx;
-
-        i32 drawIdx = 0;
-        
         EditorScene& editorScene = scene.scene().editorScene();
 
-        for (auto& instance : scene.staticMeshInstances()) {
-            if (const StaticMesh* staticMesh = scene.staticMeshForHandle(instance->mesh())) {
-
-                // TODO: Pick LOD properly (i.e. the same as drawn in the main passes)
-                const StaticMeshLOD& lod = staticMesh->lodAtIndex(0);
-
-                for (StaticMeshSegment const& meshSegment : lod.meshSegments) {
-                    (void)meshSegment;
-
-                    if (drawIdx == selectedIdx) {
-                        // TODO: This will break if/when we resize the instance vector
-                        editorScene.setSelectedObject(*instance);
-                        return;
-                    }
-
-                    drawIdx += 1;
-                }
-            }
+        DrawableObjectHandle pickedHandle = DrawableObjectHandle(pickingData.drawableIdx);
+        if (IEditorObject* pickedObject = scene.editorObjectForDrawableHandle(pickedHandle)) {
+            editorScene.setSelectedObject(*pickedObject);
+        } else {
+            // If no drawable object was found, we must have clicked on the background, so deselect current.
+            editorScene.clearSelectedObject();
         }
-
-         for (auto& instance : scene.skeletalMeshInstances()) {
-            for (SkinningVertexMapping const& skinningVertexMapping : instance->skinningVertexMappings()) {
-                 (void)skinningVertexMapping;
-
-                 if (drawIdx == selectedIdx) {
-                     // TODO: This will break if/when we resize the instance vector
-                     editorScene.setSelectedObject(*instance);
-                     return;
-                 }
-
-                 drawIdx += 1;
-            }
-        }
-
-        // If no mesh was found, we must have clicked on the background so deselect current
-        editorScene.clearSelectedObject();
     }
 
     if (deferredResult.specifyFocusDepth) {

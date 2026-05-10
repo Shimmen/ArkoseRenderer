@@ -25,6 +25,7 @@
 
 class CubeLUT;
 class DirectionalLight;
+class IEditorObject;
 class Light;
 class MaterialAsset;
 class Mesh;
@@ -72,6 +73,10 @@ public:
     const ShaderMaterial* materialForHandle(MaterialHandle handle) const;
     ShaderDrawable const* drawableForHandle(DrawableObjectHandle handle) const;
     Texture const* textureForHandle(TextureHandle handle) const;
+
+    // Find the editor object (e.g. mesh instance) that owns the given drawable handle, or nullptr if none.
+    // Useful for mapping an index read back from a draw-time pass (e.g. picking) back to a scene object.
+    IEditorObject* editorObjectForDrawableHandle(DrawableObjectHandle handle);
 
     size_t lightCount() const;
     size_t shadowCastingLightCount() const;

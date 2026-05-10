@@ -1,7 +1,6 @@
 #version 460
 
 #include <common/namedUniforms.glsl>
-#include <shared/CameraState.h>
 #include <shared/SceneData.h>
 
 layout(location = 0) in vec3 aPosition;
@@ -12,13 +11,13 @@ NAMED_UNIFORMS(constants,
     mat4 projectionFromWorld;
 )
 
-layout(location = 0) flat out uint vIndex;
+layout(location = 0) flat out uint vDrawableIdx;
 
 void main()
 {
-    uint objectIndex = gl_InstanceIndex;
-    vIndex = objectIndex;
+    uint drawableIdx = gl_InstanceIndex;
+    vDrawableIdx = drawableIdx;
 
-    ShaderDrawable drawable = drawables[objectIndex];
+    ShaderDrawable drawable = drawables[drawableIdx];
     gl_Position = constants.projectionFromWorld * drawable.worldFromLocal * vec4(aPosition, 1.0);
 }
