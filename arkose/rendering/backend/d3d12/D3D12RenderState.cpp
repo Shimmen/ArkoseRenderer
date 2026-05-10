@@ -73,6 +73,10 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
                 NOT_YET_IMPLEMENTED();
                 //inputElementDesc.Format = DXGI_FORMAT_R32G32B32_FLOAT;
                 break;
+            case VertexComponent::Color4U8:
+                inputElementDesc.SemanticName = "COLOR";
+                inputElementDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+                break;
             }
 
             // NOTE: If we're getting HLSL source transpiled from GLSL all input attributes will have

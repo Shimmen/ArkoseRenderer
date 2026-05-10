@@ -63,6 +63,9 @@ VulkanRenderState::VulkanRenderState(Backend& backend, RenderTarget const& rende
                 case VertexComponent::Tangent4F:
                     description.format = VK_FORMAT_R32G32B32A32_SFLOAT;
                     break;
+                case VertexComponent::Color4U8:
+                    description.format = VK_FORMAT_R8G8B8A8_UNORM;
+                    break;
                 default:
                     ASSERT_NOT_REACHED();
                 }

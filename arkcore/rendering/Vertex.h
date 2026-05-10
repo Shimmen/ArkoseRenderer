@@ -16,6 +16,7 @@ enum class VertexComponent : int {
     JointIdx4U32,
     JointWeight4F,
     Velocity3F,
+    Color4U8,
 
     Padding2F,
     Padding3F,
@@ -43,6 +44,8 @@ static constexpr size_t vertexComponentSize(VertexComponent component)
     case VertexComponent::JointIdx4U32:
         static_assert(sizeof(uvec4) == 4 * sizeof(u32));
         return sizeof(uvec4);
+    case VertexComponent::Color4U8:
+        return sizeof(u32);
 
     case VertexComponent::Padding2F:
         static_assert(sizeof(vec2) == 2 * sizeof(float));
@@ -82,6 +85,8 @@ static constexpr const char* vertexComponentToString(VertexComponent component)
         return "JointWeight4F";
     case VertexComponent::Velocity3F:
         return "Velocity3F";
+    case VertexComponent::Color4U8:
+        return "Color4U8";
 
     case VertexComponent::Padding2F:
         return "Padding2F";
