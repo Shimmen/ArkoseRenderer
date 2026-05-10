@@ -811,6 +811,12 @@ VkInstance VulkanBackend::createInstance(const std::vector<const char*>& request
         ARKOSE_ASSERT(hasSupportForInstanceExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME));
         addInstanceExtension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
+        // Required for using non-sRGB swapchain formats. It's probably fine to assume it exists. I'm sure it's going to be supporterd
+        // if you're currently using a screen where we want to use non-sRGB formats (e.g. HDR screens), and we only utilize it in that case.
+        if (hasSupportForInstanceExtension(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME)) {
+            addInstanceExtension(VK_EXT_SWAPCHAIN_COLOR_SPACE_EXTENSION_NAME);
+        }
+
         // For debug messages etc.
         if constexpr (vulkanDebugMode) {
             ARKOSE_ASSERT(hasSupportForInstanceExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME));
