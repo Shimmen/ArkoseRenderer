@@ -1,6 +1,9 @@
 #include "Transform.h"
 
+#include "core/Logging.h"
 #include <imgui.h>
+#include <cereal/cereal.hpp>
+#include <cereal/archives/json.hpp>
 
 void Transform::drawGui()
 {
@@ -19,6 +22,14 @@ void Transform::drawGui()
     if (changed) {
         m_matrix = {};
         m_normalMatrix = {};
+    }
+
+    if (ImGui::Button("Log transform as json")) {
+        std::stringstream stringStream;
+        cereal::JSONOutputArchive jsonArchive(stringStream);
+        jsonArchive(*this);
+
+        ARKOSE_LOG(Info, "Transform: {}", stringStream.str());
     }
 }
 
