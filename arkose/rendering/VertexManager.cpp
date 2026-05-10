@@ -24,7 +24,8 @@ VertexManager::VertexManager(Backend& backend, GpuScene& scene)
     const size_t skinningDataVertexBufferSize = MaxLoadedSkinningVertices * skinningDataVertexLayout().packedVertexSize();
     const size_t velocityDataVertexBufferSize = MaxLoadedVelocityVertices * velocityDataVertexLayout().packedVertexSize();
     const size_t morphTargetVertexBufferSize = MaxLoadedMorphTargetVertices * morphTargetVertexLayout().packedVertexSize();
-    const size_t hairVertexBufferSize = MaxLoadedHairVertices * hairVertexLayout().packedVertexSize();
+    const size_t hairPositionVertexBufferSize = MaxLoadedHairVertices * hairPositionVertexLayout().packedVertexSize();
+    const size_t hairAttributeVertexBufferSize = MaxLoadedHairVertices * hairAttributeVertexLayout().packedVertexSize();
 
     float totalMemoryUseMb = ark::conversion::to::MB(indexBufferSize
                                                      + postionVertexBufferSize
@@ -32,7 +33,8 @@ VertexManager::VertexManager(Backend& backend, GpuScene& scene)
                                                      + skinningDataVertexBufferSize
                                                      + velocityDataVertexBufferSize
                                                      + morphTargetVertexBufferSize
-                                                     + hairVertexBufferSize);
+                                                     + hairPositionVertexBufferSize
+                                                     + hairAttributeVertexBufferSize);
     ARKOSE_LOG(Info, "VertexManager: allocating a total of {:.1f} MB of VRAM for vertex data", totalMemoryUseMb);
 
     m_indexBuffer = backend.createBuffer(indexBufferSize, Buffer::Usage::Index);
@@ -59,9 +61,13 @@ VertexManager::VertexManager(Backend& backend, GpuScene& scene)
     m_morphTargetVertexBuffer->setStride(morphTargetVertexLayout().packedVertexSize());
     m_morphTargetVertexBuffer->setName("SceneMorphTargetVertexBuffer");
 
-    m_hairVertexBuffer = backend.createBuffer(hairVertexBufferSize, Buffer::Usage::Vertex);
-    m_hairVertexBuffer->setStride(hairVertexLayout().packedVertexSize());
-    m_hairVertexBuffer->setName("SceneHairVertexBuffer");
+    m_hairPositionVertexBuffer = backend.createBuffer(hairPositionVertexBufferSize, Buffer::Usage::Vertex);
+    m_hairPositionVertexBuffer->setStride(hairPositionVertexLayout().packedVertexSize());
+    m_hairPositionVertexBuffer->setName("SceneHairPositionVertexBuffer");
+
+    m_hairAttributeVertexBuffer = backend.createBuffer(hairAttributeVertexBufferSize, Buffer::Usage::Vertex);
+    m_hairAttributeVertexBuffer->setStride(hairAttributeVertexLayout().packedVertexSize());
+    m_hairAttributeVertexBuffer->setName("SceneHairAttributeVertexBuffer");
 
     if (m_scene->maintainMeshShadingScene()) {
 
@@ -336,7 +342,7 @@ void VertexManager::processHairStreaming(CommandList&, UploadBuffer&)
             if (hairVertAlloc.isValid() && hairIndexAlloc.isValid()) {
                 hairMesh->hairVertexAlloc = hairVertAlloc;
                 hairMesh->indexAlloc = hairIndexAlloc;
-                streamingHairMesh.setNextState(HairStreamingState::StreamingVertexData);
+                streamingHairMesh.setNextState(HairStreamingState::StreamingPositionData);
             } else {
                 if (hairVertAlloc.isValid()) {
                     m_hairVertexAllocator.free(hairVertAlloc);
@@ -348,16 +354,43 @@ void VertexManager::processHairStreaming(CommandList&, UploadBuffer&)
 
         } break;
 
-        case HairStreamingState::StreamingVertexData: {
+        case HairStreamingState::StreamingPositionData: {
 
             u32 pointCount = narrow_cast<u32>(hairAsset->positions.size());
 
-            size_t vertexByteSize = pointCount * hairVertexLayout().packedVertexSize();
-            size_t vertexByteOffset = hairMesh->hairVertexAlloc.offset * hairVertexLayout().packedVertexSize();
+            size_t vertexByteSize = pointCount * hairPositionVertexLayout().packedVertexSize();
+            size_t vertexByteOffset = hairMesh->hairVertexAlloc.offset * hairPositionVertexLayout().packedVertexSize();
 
             // HACK: For now, just assume ReBAR support and copy data directly
-            bool success = m_hairVertexBuffer->mapData(Buffer::MapMode::Write, vertexByteSize, vertexByteOffset, [&](std::byte* mappedData) {
+            bool success = m_hairPositionVertexBuffer->mapData(Buffer::MapMode::Write, vertexByteSize, vertexByteOffset, [&](std::byte* mappedData) {
                 std::memcpy(mappedData, hairAsset->positions.data(), vertexByteSize);
+            });
+
+            if (success) {
+                streamingHairMesh.setNextState(HairStreamingState::StreamingAttributeData);
+            }
+
+        } break;
+
+        case HairStreamingState::StreamingAttributeData: {
+
+            u32 pointCount = narrow_cast<u32>(hairAsset->positions.size());
+
+            size_t vertexByteSize = pointCount * hairAttributeVertexLayout().packedVertexSize();
+            size_t vertexByteOffset = hairMesh->hairVertexAlloc.offset * hairAttributeVertexLayout().packedVertexSize();
+
+            // HACK: For now, just assume ReBAR support and copy data directly
+            bool success = m_hairAttributeVertexBuffer->mapData(Buffer::MapMode::Write, vertexByteSize, vertexByteOffset, [&](std::byte* mappedData) {
+                std::vector<u32> attributeData(pointCount);
+                for (u32 pointIdx = 0; pointIdx < pointCount; ++pointIdx) {
+                    vec4 c = { hairAsset->colorForPoint(pointIdx), 1.0f - hairAsset->transparencyForPoint(pointIdx) };
+                    attributeData[pointIdx] = 0
+                        | static_cast<u32>(c.x * 255.99f)
+                        | static_cast<u32>(c.y * 255.99f) << 8
+                        | static_cast<u32>(c.z * 255.99f) << 16
+                        | static_cast<u32>(c.w * 255.99f) << 24;
+                }
+                std::memcpy(mappedData, attributeData.data(), vertexByteSize);
             });
 
             if (success) {
@@ -556,7 +589,8 @@ void VertexManager::drawUI() const
                 doTableRow(skinningDataVertexBuffer(), skinningDataVertexLayout(), numAllocatedSkinningVertices());
                 doTableRow(velocityDataVertexBuffer(), velocityDataVertexLayout(), numAllocatedVelocityVertices());
                 doTableRow(morphTargetVertexBuffer(), morphTargetVertexLayout(), numAllocatedMorphTargetVertices(), "morph target");
-                doTableRow(hairVertexBuffer(), hairVertexLayout(), numAllocatedHairVertices(), "hair");
+                doTableRow(hairPositionVertexBuffer(), hairPositionVertexLayout(), numAllocatedHairVertices(), "hair pos.");
+                doTableRow(hairAttributeVertexBuffer(), hairAttributeVertexLayout(), numAllocatedHairVertices(), "hair attr.");
 
                 ImGui::EndTable();
             }

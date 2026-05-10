@@ -129,7 +129,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
             cmdList.beginRendering(hairDrawState);
             cmdList.setNamedUniform("projectionFromWorld", scene.camera().viewProjectionMatrix());
 
-            cmdList.bindVertexBuffer(scene.vertexManager().hairVertexBuffer(), scene.vertexManager().hairVertexLayout().packedVertexSize(), 0);
+            cmdList.bindVertexBuffer(scene.vertexManager().hairPositionVertexBuffer(), scene.vertexManager().hairPositionVertexLayout().packedVertexSize(), 0);
             cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
             for (auto& hairInstance : scene.hairInstances()) {

@@ -41,7 +41,7 @@ RenderPipelineNode::ExecuteCallback HairShadowNode::construct(GpuScene& scene, R
             cmdList.beginRendering(depthRenderState, ClearValue::blackAtMaxDepth());
             cmdList.setNamedUniform("projectionFromWorld", projectionFromWorld);
 
-            cmdList.bindVertexBuffer(scene.vertexManager().hairVertexBuffer(), scene.vertexManager().hairVertexLayout().packedVertexSize(), 0);
+            cmdList.bindVertexBuffer(scene.vertexManager().hairPositionVertexBuffer(), scene.vertexManager().hairPositionVertexLayout().packedVertexSize(), 0);
             cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
             for (std::unique_ptr<HairInstance>& hairInstance : scene.hairInstances()) {

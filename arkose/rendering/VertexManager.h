@@ -66,9 +66,13 @@ public:
     Buffer const& morphTargetVertexBuffer() const { return *m_morphTargetVertexBuffer; }
     Buffer& morphTargetVertexBuffer() { return *m_morphTargetVertexBuffer; }
 
-    VertexLayout const& hairVertexLayout() const { return m_hairVertexLayout; }
-    Buffer const& hairVertexBuffer() const { return *m_hairVertexBuffer; }
-    Buffer& hairVertexBuffer() { return *m_hairVertexBuffer; }
+    VertexLayout const& hairPositionVertexLayout() const { return m_hairPositionVertexLayout; }
+    Buffer const& hairPositionVertexBuffer() const { return *m_hairPositionVertexBuffer; }
+    Buffer& hairPositionVertexBuffer() { return *m_hairPositionVertexBuffer; }
+
+    VertexLayout const& hairAttributeVertexLayout() const { return m_hairAttributeVertexLayout; }
+    Buffer const& hairAttributeVertexBuffer() const { return *m_hairAttributeVertexBuffer; }
+    Buffer& hairAttributeVertexBuffer() { return *m_hairAttributeVertexBuffer; }
 
     std::vector<ShaderMeshlet> const& meshlets() const { return m_meshlets; }
     Buffer const& meshletBuffer() const { return *m_meshletBuffer; }
@@ -144,7 +148,8 @@ private:
     VertexLayout const m_morphTargetVertexLayout { VertexComponent::Position3F,
                                                    VertexComponent::Normal3F,
                                                    VertexComponent::Tangent3F };
-    VertexLayout const m_hairVertexLayout { VertexComponent::Position3F };
+    VertexLayout const m_hairPositionVertexLayout { VertexComponent::Position3F };
+    VertexLayout const m_hairAttributeVertexLayout { VertexComponent::Color4U8 };
 
     std::unique_ptr<Buffer> m_indexBuffer { nullptr };
     OffsetAllocator::Allocator m_indexAllocator { MaxLoadedIndices };
@@ -162,7 +167,8 @@ private:
     std::unique_ptr<Buffer> m_morphTargetVertexBuffer {};
     OffsetAllocator::Allocator m_morphTargetVertexAllocator { MaxLoadedMorphTargetVertices };
 
-    std::unique_ptr<Buffer> m_hairVertexBuffer {};
+    std::unique_ptr<Buffer> m_hairPositionVertexBuffer {};
+    std::unique_ptr<Buffer> m_hairAttributeVertexBuffer {};
     OffsetAllocator::Allocator m_hairVertexAllocator { MaxLoadedHairVertices };
 
     std::unique_ptr<Buffer> m_meshletVertexIndirectionBuffer {};
@@ -226,7 +232,8 @@ private:
 
     enum class HairStreamingState {
         PendingAllocation = 0,
-        StreamingVertexData,
+        StreamingPositionData,
+        StreamingAttributeData,
         StreamingIndexData,
         Loaded,
     };
