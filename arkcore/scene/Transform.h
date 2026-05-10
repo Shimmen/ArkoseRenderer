@@ -176,6 +176,10 @@ private:
     mutable std::optional<mat3> m_normalMatrix {};
 
     std::optional<mat4> m_previousFrameWorldMatrix{ std::nullopt };
+
+    // Euler angles in degrees, cached as the source of truth for the inspector.
+    // Only resynced from m_orientation when it no longer represents the same rotation as the cached angles.
+    vec3 m_eulerDegreesGui {};
 };
 
 class ITransformable {

@@ -11,9 +11,14 @@ void Transform::drawGui()
 
     changed |= ImGui::DragFloat3("Translation", value_ptr(m_translation), 0.01f);
 
-    vec3 eulerAnglesDegrees = toDegrees(quatToEulerAngles(m_orientation));
-    if (ImGui::DragFloat3("Orientation", value_ptr(eulerAnglesDegrees), 1.0f)) {
-        m_orientation = normalize(quatFromEulerAngles(toRadians(eulerAnglesDegrees)));
+    quat cachedAsQuat = normalize(quatFromEulerAngles(toRadians(m_eulerDegreesGui)));
+    float sameRotationDot = std::abs(cachedAsQuat.w * m_orientation.w + dot(cachedAsQuat.vec, m_orientation.vec));
+    if (sameRotationDot < 0.9999f) {
+        m_eulerDegreesGui = toDegrees(quatToEulerAngles(m_orientation));
+    }
+
+    if (ImGui::DragFloat3("Orientation", value_ptr(m_eulerDegreesGui), 0.5f)) {
+        m_orientation = normalize(quatFromEulerAngles(toRadians(m_eulerDegreesGui)));
         changed |= true;
     }
 
