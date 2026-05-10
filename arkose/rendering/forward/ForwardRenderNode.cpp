@@ -179,12 +179,8 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
     Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", shaderDefines);
 
     std::vector<VertexLayout> vertexLayouts;
-    if (drawKey.brdf().value() == Brdf::Hair) {
-        vertexLayouts.push_back(scene.vertexManager().hairVertexLayout());
-    } else {
-        vertexLayouts.push_back(scene.vertexManager().positionVertexLayout());
-        vertexLayouts.push_back(scene.vertexManager().nonPositionVertexLayout());
-    }
+    vertexLayouts.push_back(scene.vertexManager().positionVertexLayout());
+    vertexLayouts.push_back(scene.vertexManager().nonPositionVertexLayout());
 
     RenderStateBuilder renderStateBuilder { renderTarget, shader, std::move(vertexLayouts) };
 
