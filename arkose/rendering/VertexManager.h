@@ -119,7 +119,7 @@ public:
     u32 numAllocatedVelocityVertices() const
     {
         OffsetAllocator::StorageReport report = m_velocityVertexAllocator.storageReport();
-        return MaxLoadedSkinningVertices - report.totalFreeSpace;
+        return MaxLoadedVelocityVertices - report.totalFreeSpace;
     }
 
     u32 numAllocatedMorphTargetVertices() const
