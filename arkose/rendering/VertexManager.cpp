@@ -383,12 +383,15 @@ void VertexManager::processHairStreaming(CommandList&, UploadBuffer&)
             bool success = m_hairAttributeVertexBuffer->mapData(Buffer::MapMode::Write, vertexByteSize, vertexByteOffset, [&](std::byte* mappedData) {
                 std::vector<u32> attributeData(pointCount);
                 for (u32 pointIdx = 0; pointIdx < pointCount; ++pointIdx) {
-                    vec4 c = { hairAsset->colorForPoint(pointIdx), 1.0f - hairAsset->transparencyForPoint(pointIdx) };
+                    // TODO: Figure out if the colors from .hair files are already in linear space or if we need to gamma-decode them before uploading..?
+                    vec3 linearColor = /*ark::colorspace::sRGB::gammaDecode*/(hairAsset->colorForPoint(pointIdx));
+                    float opacity = 1.0f - hairAsset->transparencyForPoint(pointIdx);
+
                     attributeData[pointIdx] = 0
-                        | static_cast<u32>(c.x * 255.99f)
-                        | static_cast<u32>(c.y * 255.99f) << 8
-                        | static_cast<u32>(c.z * 255.99f) << 16
-                        | static_cast<u32>(c.w * 255.99f) << 24;
+                        | static_cast<u32>(linearColor.x * 255.99f)
+                        | static_cast<u32>(linearColor.y * 255.99f) << 8
+                        | static_cast<u32>(linearColor.z * 255.99f) << 16
+                        | static_cast<u32>(opacity * 255.99f) << 24;
                 }
                 std::memcpy(mappedData, attributeData.data(), vertexByteSize);
             });
