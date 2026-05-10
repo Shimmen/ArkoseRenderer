@@ -196,27 +196,37 @@ constexpr tvec3<T> rotateVector(const tquat<T>& q, const tvec3<T>& v)
 template<typename T, ENABLE_IF_FLOATING_POINT(T)>
 constexpr tvec3<T> quatToEulerAngles(const tquat<T>& q)
 {
-    // Rewritten version of https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#Quaternion_to_Euler_Angles_Conversion
+    // Inverse of `quatFromEulerAngles` below, but extended with explicit handling of the pitch = +-90 deg gimbal lock,
+    // so that the round-trip quatFromEulerAngles(quatToEulerAngles(q)) preserves the rotation. At the singularity,
+    // roll and yaw rotate around the same world axis. We pin roll = 0 and put all remaining freedom into yaw.
 
     tvec3<T> euler;
 
-    // Roll (x-axis rotation)
-    T sinRollCosPitch = static_cast<T>(2) * (q.w * q.vec.x + q.vec.y * q.vec.z);
-    T cosRollCosPitch = static_cast<T>(1) - static_cast<T>(2) * (square(q.vec.x) + square(q.vec.y));
-    euler.x = std::atan2(sinRollCosPitch, cosRollCosPitch);
-
-    // Pitch (y-axis rotation)
     T sinPitch = static_cast<T>(2) * (q.w * q.vec.y - q.vec.z * q.vec.x);
-    if (std::abs(sinPitch) >= static_cast<T>(1)) {
-        euler.y = std::copysign(HALF_PI, sinPitch); // (clamp to +-90 degrees)
-    } else {
-        euler.y = std::asin(sinPitch);
-    }
+    constexpr T gimbalEps = static_cast<T>(1e-6);
 
-    // Yaw (z-axis rotation)
-    T sinYawCosPitch = static_cast<T>(2) * (q.w * q.vec.z + q.vec.x * q.vec.y);
-    T cosYawCosPitch = static_cast<T>(1) - static_cast<T>(2) * (square(q.vec.y) + square(q.vec.z));
-    euler.z = std::atan2(sinYawCosPitch, cosYawCosPitch);
+    if (sinPitch >= static_cast<T>(1) - gimbalEps) {
+        euler.x = static_cast<T>(0);
+        euler.y = HALF_PI;
+        euler.z = static_cast<T>(-2) * std::atan2(q.vec.x - q.vec.z, q.w + q.vec.y);
+    } else if (sinPitch <= static_cast<T>(-1) + gimbalEps) {
+        euler.x = static_cast<T>(0);
+        euler.y = -HALF_PI;
+        euler.z = static_cast<T>(2) * std::atan2(q.vec.x + q.vec.z, q.w - q.vec.y);
+    } else {
+        // Roll (x-axis rotation)
+        T sinRollCosPitch = static_cast<T>(2) * (q.w * q.vec.x + q.vec.y * q.vec.z);
+        T cosRollCosPitch = static_cast<T>(1) - static_cast<T>(2) * (square(q.vec.x) + square(q.vec.y));
+        euler.x = std::atan2(sinRollCosPitch, cosRollCosPitch);
+
+        // Pitch (y-axis rotation)
+        euler.y = std::asin(sinPitch);
+
+        // Yaw (z-axis rotation)
+        T sinYawCosPitch = static_cast<T>(2) * (q.w * q.vec.z + q.vec.x * q.vec.y);
+        T cosYawCosPitch = static_cast<T>(1) - static_cast<T>(2) * (square(q.vec.y) + square(q.vec.z));
+        euler.z = std::atan2(sinYawCosPitch, cosYawCosPitch);
+    }
 
     return euler;
 }
