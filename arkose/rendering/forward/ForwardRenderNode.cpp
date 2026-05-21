@@ -14,6 +14,7 @@ ForwardRenderNode::ForwardRenderNode(Mode mode, ForwardMeshFilter meshFilter, Fo
     , m_meshFilter(meshFilter)
     , m_clearMode(clearMode)
 {
+    ARKOSE_ASSERTM(meshFilter != ForwardMeshFilter::OnlyHairMeshes || m_mode == Mode::Translucent, "Hair meshes can only be rendered in translucent mode");
 }
 
 std::string ForwardRenderNode::name() const
@@ -26,7 +27,11 @@ std::string ForwardRenderNode::name() const
             return "Forward opaque";
         }
     case ForwardRenderNode::Mode::Translucent:
-        return "Translucency";
+        if (m_meshFilter == ForwardMeshFilter::OnlyHairMeshes) {
+            return "Translucency (hair meshes)";
+        } else {
+            return "Translucency";
+        }
     }
 
     ASSERT_NOT_REACHED();
@@ -95,11 +100,13 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
                 cmdList.beginDebugLabel(renderState->name());
                 cmdList.beginRendering(*renderState);
 
-                cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
-                cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
-                cmdList.setNamedUniform("invTargetSize", renderTarget.extent().inverse());
-                cmdList.setNamedUniform("mipBias", scene.globalMipBias());
-                cmdList.setNamedUniform("withMaterialColor", scene.shouldIncludeMaterialColor());
+                if (instance.drawKey.brdf().value() != Brdf::Hair) {
+                    cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
+                    cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
+                    cmdList.setNamedUniform("invTargetSize", renderTarget.extent().inverse());
+                    cmdList.setNamedUniform("mipBias", scene.globalMipBias());
+                    cmdList.setNamedUniform("withMaterialColor", scene.shouldIncludeMaterialColor());
+                }
 
                 currentStateDrawKey = &instance.drawKey;
             }
@@ -176,11 +183,17 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
     bool hasExplicitVelocity = drawKey.hasExplicityVelocity().value();
     shaderDefines.push_back(ShaderDefine::makeBool("HAS_EXPLICIT_VELOCITY", hasExplicitVelocity));
 
-    Shader shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", shaderDefines);
-
+    Shader shader;
     std::vector<VertexLayout> vertexLayouts;
-    vertexLayouts.push_back(scene.vertexManager().positionVertexLayout());
-    vertexLayouts.push_back(scene.vertexManager().nonPositionVertexLayout());
+    if (drawKey.brdf().value() == Brdf::Hair) {
+        shader = Shader::createBasicRasterize("hair/hair.vert", "hair/hair.frag", shaderDefines);
+        vertexLayouts.push_back(scene.vertexManager().hairPositionVertexLayout());
+        vertexLayouts.push_back(scene.vertexManager().hairAttributeVertexLayout());
+    } else {
+        shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", shaderDefines);
+        vertexLayouts.push_back(scene.vertexManager().positionVertexLayout());
+        vertexLayouts.push_back(scene.vertexManager().nonPositionVertexLayout());
+    }
 
     RenderStateBuilder renderStateBuilder { renderTarget, shader, std::move(vertexLayouts) };
 
@@ -200,6 +213,11 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
         if (drawKey.brdf().has_value() && drawKey.brdf().value() == Brdf::Skin) {
             renderStateBuilder.stencilValue |= 0x02;
         }
+    }
+
+    if (drawKey.brdf().value() == Brdf::Hair) {
+        renderStateBuilder.primitiveType = PrimitiveType::LineStrip;
+        renderStateBuilder.enablePrimitiveRestart = true;
     }
 
     Texture* dirLightShadowMap = reg.getTexture("DirectionalLightShadowMap");
@@ -305,8 +323,28 @@ std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateS
         }
     };
 
-    bool includeStaticMeshes = meshFilter != ForwardMeshFilter::OnlySkeletalMeshes;
-    bool includeSkeletalMeshes = meshFilter != ForwardMeshFilter::OnlyStaticMeshes;
+    auto conditionallyAppendHairInstance = [&](HairInstance const& instance, HairMesh const& hairMesh) -> void {
+        // TODO: Implement hair frustum culling!
+        //if (!cameraFrustum.includesAABB(hairMesh.boundingBox().transformedBy(instance.transform()))) {
+        //    return;
+        //}
+
+        VertexManager const& vm = scene.vertexManager();
+
+        BufferStates bufferStates;
+        bufferStates.indexBuffer = { &vm.indexBuffer(), IndexType::UInt32 };
+        bufferStates.vertexBuffers = { { &vm.hairPositionVertexBuffer(), vm.hairPositionVertexLayout() },
+                                       { &vm.hairAttributeVertexBuffer(), vm.hairAttributeVertexLayout() } };
+
+        DrawCallDescription drawCall = hairMesh.drawCallDescription();
+        drawCall.firstInstance = instance.drawableHandle().indexOfType<u32>();
+
+        meshSegmentInstances.emplace_back(drawCall, hairMesh.drawKey(), bufferStates, instance.transform());
+    };
+
+    bool includeStaticMeshes = meshFilter != ForwardMeshFilter::OnlySkeletalMeshes && meshFilter != ForwardMeshFilter::OnlyHairMeshes;
+    bool includeSkeletalMeshes = meshFilter != ForwardMeshFilter::OnlyStaticMeshes && meshFilter != ForwardMeshFilter::OnlyHairMeshes;
+    bool includeHairMeshes = meshFilter != ForwardMeshFilter::OnlyStaticMeshes && meshFilter != ForwardMeshFilter::OnlySkeletalMeshes;
 
     if (includeStaticMeshes) {
         for (auto const& instance : scene.staticMeshInstances()) {
@@ -321,6 +359,14 @@ std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateS
             if (SkeletalMesh const* skeletalMesh = scene.skeletalMeshForInstance(*instance)) {
                 StaticMesh const& underlyingMesh = skeletalMesh->underlyingMesh();
                 conditionallyAppendInstance(*instance, underlyingMesh);
+            }
+        }
+    }
+
+    if (includeHairMeshes) {
+        for (auto const& instance : scene.hairInstances()) {
+            if (HairMesh const* hairMesh = scene.hairMeshForInstance(*instance)) {
+                conditionallyAppendHairInstance(*instance, *hairMesh);
             }
         }
     }

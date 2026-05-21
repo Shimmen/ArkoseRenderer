@@ -67,6 +67,8 @@ public:
     StaticMesh* staticMeshForHandle(StaticMeshHandle handle);
     const StaticMesh* staticMeshForHandle(StaticMeshHandle handle) const;
 
+    HairMesh* hairMeshForInstance(HairInstance const&);
+    HairMesh const* hairMeshForInstance(HairInstance const&) const;
     HairMesh* hairMeshForHandle(HairHandle handle);
     HairMesh const* hairMeshForHandle(HairHandle handle) const;
 

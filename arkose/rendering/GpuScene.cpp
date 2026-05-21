@@ -166,6 +166,16 @@ const StaticMesh* GpuScene::staticMeshForHandle(StaticMeshHandle handle) const
     return handle.valid() ? m_managedStaticMeshes.get(handle).staticMesh.get() : nullptr;
 }
 
+HairMesh* GpuScene::hairMeshForInstance(HairInstance const& instance)
+{
+    return hairMeshForHandle(instance.hair());
+}
+
+HairMesh const* GpuScene::hairMeshForInstance(HairInstance const& instance) const
+{
+    return hairMeshForHandle(instance.hair());
+}
+
 HairMesh* GpuScene::hairMeshForHandle(HairHandle handle)
 {
     return handle.valid() ? m_managedHairs.get(handle).hair.get() : nullptr;

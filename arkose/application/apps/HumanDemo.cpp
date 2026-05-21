@@ -127,6 +127,10 @@ void HumanDemo::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend)
     pipeline.addNode<SkyViewNode>();
     scene.setEnvironmentMap({ .assetPath = "", .brightnessFactor = 500.0f });
 
+    pipeline.addNode<ForwardRenderNode>(ForwardRenderNode::Mode::Translucent,
+                                        ForwardMeshFilter::OnlyHairMeshes,
+                                        ForwardClearMode::DontClear);
+
     auto& dofNode = pipeline.addNode<DepthOfFieldNode>();
     dofNode.setEnabled(true);
 

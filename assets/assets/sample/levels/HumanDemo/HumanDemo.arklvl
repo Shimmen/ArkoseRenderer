@@ -26,6 +26,33 @@
                     "index": 0,
                     "data": "assets/sample/models/Head/head.arkmsh"
                 },
+                "hair": "",
+                "set": ""
+            },
+            {
+                "name": "hair",
+                "transform": {
+                    "translation": {
+                        "x": 0.0,
+                        "y": -0.059,
+                        "z": -0.047
+                    },
+                    "orientation": {
+                        "x": -0.5,
+                        "y": -0.5,
+                        "z": -0.5,
+                        "w": 0.5
+                    },
+                    "scale": {
+                        "x": 0.297,
+                        "y": 0.297,
+                        "z": 0.297
+                    }
+                },
+                "mesh": {
+                    "index": 0,
+                    "data": ""
+                },
                 "hair": "assets/sample/models/Hair/wCurly.arkhair",
                 "set": ""
             }

@@ -4,6 +4,7 @@
 #include <offsetAllocator/offsetAllocator.hpp>
 #include "asset/HairAsset.h"
 #include "core/Types.h"
+#include "rendering/DrawKey.h"
 #include "rendering/backend/util/DrawCall.h"
 
 class HairAsset;
@@ -16,7 +17,9 @@ public:
     ~HairMesh();
 
     bool valid() const { return hairVertexAlloc.isValid() && indexAlloc.isValid(); }
+
     DrawCallDescription drawCallDescription() const;
+    DrawKey drawKey() const { return m_drawKey; }
 
     HairAsset const* hairAsset() const { return m_hairAsset; }
 
@@ -25,4 +28,5 @@ public:
 
 private:
     HairAsset const* m_hairAsset { nullptr };
+    DrawKey m_drawKey {};
 };

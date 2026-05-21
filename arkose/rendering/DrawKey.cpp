@@ -71,7 +71,7 @@ std::vector<DrawKey> DrawKey::createCompletePermutationSet()
 {
     std::vector<DrawKey> permutations;
 
-    for (Brdf brdf : { Brdf::Default, Brdf::Skin }) {
+    for (Brdf brdf : { Brdf::Default, Brdf::Skin, Brdf::Hair }) {
         for (BlendMode blendMode : { BlendMode::Opaque, BlendMode::Masked, BlendMode::Translucent }) {
             for (bool doubleSided : { false, true }) {
                 for (bool explicitVelocity : { false, true }) {
