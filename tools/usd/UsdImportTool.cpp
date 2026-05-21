@@ -397,8 +397,8 @@ void triangulateMesh(pxr::UsdGeomMesh const& usdMesh, UnindexedTriangleMesh& tri
             pxr::VtValue triangulatedNormalsVal;
 
             // NOTE: This function is only for **face varying** primvars!
-            bool success = meshUtil.ComputeTriangulatedFaceVaryingPrimvar(buffer.GetData(), static_cast<int>(buffer.GetNumElements()), buffer.GetTupleType().type, &triangulatedNormalsVal);
-            ARKOSE_ASSERT(success);
+            pxr::HdMeshComputationResult result = meshUtil.ComputeTriangulatedFaceVaryingPrimvar(buffer.GetData(), static_cast<int>(buffer.GetNumElements()), buffer.GetTupleType().type, &triangulatedNormalsVal);
+            ARKOSE_ASSERT(result == pxr::HdMeshComputationResult::Success);
 
             pxr::VtArray<pxr::GfVec3f> triangulatedNormals = triangulatedNormalsVal.Get<pxr::VtArray<pxr::GfVec3f>>();
 
@@ -435,8 +435,8 @@ void triangulateMesh(pxr::UsdGeomMesh const& usdMesh, UnindexedTriangleMesh& tri
             // Specify a value for storing the triangulated STs
             pxr::VtValue triangulatedSTsVal;
 
-            bool success = meshUtil.ComputeTriangulatedFaceVaryingPrimvar(buffer.GetData(), static_cast<int>(buffer.GetNumElements()), buffer.GetTupleType().type, &triangulatedSTsVal);
-            ARKOSE_ASSERT(success);
+            pxr::HdMeshComputationResult result = meshUtil.ComputeTriangulatedFaceVaryingPrimvar(buffer.GetData(), static_cast<int>(buffer.GetNumElements()), buffer.GetTupleType().type, &triangulatedSTsVal);
+            ARKOSE_ASSERT(result == pxr::HdMeshComputationResult::Success);
 
             pxr::VtArray<pxr::GfVec2f> triangulatedSTs = triangulatedSTsVal.Get<pxr::VtArray<pxr::GfVec2f>>();
 
