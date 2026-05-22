@@ -31,7 +31,7 @@ private:
     struct BufferStates {
         std::vector<std::pair<Buffer const*, VertexLayout>> vertexBuffers {};
         std::pair<Buffer const*, IndexType> indexBuffer {};
-        bool operator<=>(BufferStates const& other) const = default;
+        bool operator==(BufferStates const& other) const = default;
     };
 
     struct MeshSegmentInstance {
