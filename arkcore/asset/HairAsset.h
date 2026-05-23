@@ -20,6 +20,9 @@ public:
     static HairAsset* load(std::filesystem::path const& filePath);
     static HairAsset* manage(std::unique_ptr<HairAsset>&& hairAsset);
 
+    // Single straight strand along +Y, with alternating red/blue vertex colors and tapered thickness.
+    static std::unique_ptr<HairAsset> createDebugStrand(u32 segmentCount = 10, float length = 0.3f, float thickness = 0.01f);
+
     bool readFromFile(std::filesystem::path const& filePath) override;
     bool writeToFile(std::filesystem::path const& filePath, AssetStorage assetStorage) const override;
 

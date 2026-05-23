@@ -39,6 +39,44 @@ HairAsset* HairAsset::manage(std::unique_ptr<HairAsset>&& hairAsset)
     return s_hairAssetCache.put(hairAsset->assetFilePath(), std::move(hairAsset));
 }
 
+std::unique_ptr<HairAsset> HairAsset::createDebugStrand(u32 segmentCount, float length, float thickness)
+{
+    ARKOSE_ASSERT(segmentCount > 0);
+    ARKOSE_ASSERT(length > 0.0f);
+    ARKOSE_ASSERT(thickness > 0.0f);
+
+    u32 const vertexCount = segmentCount + 1;
+
+    auto hairAsset = std::make_unique<HairAsset>();
+    hairAsset->setAssetFilePath("DebugSingleStrand");
+    hairAsset->name = "DebugSingleStrand";
+
+    hairAsset->strandCount = 1;
+    hairAsset->defaultSegmentCount = segmentCount;
+    hairAsset->defaultTransparency = 0.2f;
+
+    hairAsset->positions.resize(vertexCount);
+    hairAsset->colors.resize(vertexCount);
+    hairAsset->thickness.resize(vertexCount);
+    for (u32 vertexIdx = 0; vertexIdx < vertexCount; ++vertexIdx) {
+        float const t = static_cast<float>(vertexIdx) / static_cast<float>(segmentCount);
+        hairAsset->positions[vertexIdx] = vec3(0.0f, t * length, 0.0f);
+        hairAsset->colors[vertexIdx] = (vertexIdx % 2u == 0u) ? vec3(1.0f, 0.1f, 0.1f) : vec3(0.1f, 0.1f, 1.0f);
+        hairAsset->thickness[vertexIdx] = ark::lerp(thickness, 0.2f * thickness, t);
+    }
+
+    hairAsset->indices.reserve(vertexCount + 1);
+    for (u32 vertexIdx = 0; vertexIdx < vertexCount; ++vertexIdx) {
+        hairAsset->indices.push_back(vertexIdx);
+    }
+    hairAsset->indices.push_back(0xFFFFFFFFu);
+
+    hairAsset->boundingBox.min = vec3(-thickness, 0.0f, -thickness);
+    hairAsset->boundingBox.max = vec3(+thickness, length, +thickness);
+
+    return hairAsset;
+}
+
 bool HairAsset::readFromFile(std::filesystem::path const& filePath)
 {
     std::ifstream fileStream(filePath, std::ios::binary);
