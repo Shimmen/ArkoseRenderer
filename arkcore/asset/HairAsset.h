@@ -51,6 +51,8 @@ public:
     ark::aabb3 boundingBox {};
 
     u32 segmentCountForStrand(u32 strandIdx) const;
+    u32 vertexCountForStrand(u32 strandIdx) const;
+
     float thicknessForPoint(u32 pointIdx) const;
     float transparencyForPoint(u32 pointIdx) const;
     vec3 colorForPoint(u32 pointIdx) const;

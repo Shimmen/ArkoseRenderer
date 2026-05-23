@@ -16,7 +16,7 @@ public:
     HairMesh(HairAsset const*);
     ~HairMesh();
 
-    bool valid() const { return hairVertexAlloc.isValid() && indexAlloc.isValid(); }
+    bool valid() const { return hairVertexAlloc.isValid() && indexAlloc.isValid() && strandAlloc.isValid(); }
 
     DrawCallDescription drawCallDescriptionAsLineStrip() const;
     DrawKey drawKey() const { return m_drawKey; }
@@ -25,6 +25,7 @@ public:
 
     OffsetAllocator::Allocation hairVertexAlloc {};
     OffsetAllocator::Allocation indexAlloc {};
+    OffsetAllocator::Allocation strandAlloc {};
 
 private:
     HairAsset const* m_hairAsset { nullptr };

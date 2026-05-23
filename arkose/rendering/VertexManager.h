@@ -74,6 +74,9 @@ public:
     Buffer const& hairAttributeVertexBuffer() const { return *m_hairAttributeVertexBuffer; }
     Buffer& hairAttributeVertexBuffer() { return *m_hairAttributeVertexBuffer; }
 
+    Buffer const& hairStrandBuffer() const { return *m_hairStrandBuffer; }
+    Buffer& hairStrandBuffer() { return *m_hairStrandBuffer; }
+
     std::vector<ShaderMeshlet> const& meshlets() const { return m_meshlets; }
     Buffer const& meshletBuffer() const { return *m_meshletBuffer; }
     Buffer& meshletBuffer() { return *m_meshletBuffer; }
@@ -97,6 +100,8 @@ public:
     // If there were exactly 124 triangles per meshlet it'd be trivial, but not every meshlet will be filled.
     // Here we add a factor of 2 to allow for a worst case where every meshlet is only half-full.
     static constexpr size_t MaxLoadedMeshlets         = MaxLoadedTriangles / 124 * 2;
+
+    static constexpr size_t MaxLoadedHairStrands      = 100'000;
 
     u32 numAllocatedIndices() const
     {
@@ -181,6 +186,9 @@ private:
     std::unique_ptr<Buffer> m_meshletBuffer {};
     u32 m_nextFreeMeshletIndex { 0 };
 
+    std::unique_ptr<Buffer> m_hairStrandBuffer {};
+    OffsetAllocator::Allocator m_hairStrandAllocator { MaxLoadedHairStrands };
+
     // TODO: Remove me / rewrite for streaming
     void uploadMeshDataForAllocation(MeshSegmentAsset const&, VertexAllocation const&);
 
@@ -235,6 +243,7 @@ private:
         StreamingPositionData,
         StreamingAttributeData,
         StreamingLineStripIndexData,
+        StreamingStrandData,
         Loaded,
     };
 

@@ -155,6 +155,11 @@ u32 HairAsset::segmentCountForStrand(u32 strandIdx) const
     return static_cast<u32>(segmentCounts[strandIdx]);
 }
 
+u32 HairAsset::vertexCountForStrand(u32 strandIdx) const
+{
+    return segmentCountForStrand(strandIdx) + 1; // #vertices = #segments + 1
+}
+
 float HairAsset::thicknessForPoint(u32 pointIdx) const
 {
     ARKOSE_ASSERT(pointIdx < positions.size());

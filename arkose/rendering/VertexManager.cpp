@@ -69,6 +69,11 @@ VertexManager::VertexManager(Backend& backend, GpuScene& scene)
     m_hairAttributeVertexBuffer->setStride(hairAttributeVertexLayout().packedVertexSize());
     m_hairAttributeVertexBuffer->setName("SceneHairAttributeVertexBuffer");
 
+    size_t hairStrandBufferSize = MaxLoadedHairStrands * sizeof(HairStrand);
+    m_hairStrandBuffer = backend.createBuffer(hairStrandBufferSize, Buffer::Usage::Vertex);
+    m_hairStrandBuffer->setStride(sizeof(HairStrand));
+    m_hairStrandBuffer->setName("SceneHairStrandBuffer");
+
     if (m_scene->maintainMeshShadingScene()) {
 
         size_t vertexIndirectionBufferSize = sizeof(u32) * VertexManager::MaxLoadedVertices;
@@ -319,6 +324,8 @@ void VertexManager::processHairStreaming(CommandList&, UploadBuffer&)
 {
     SCOPED_PROFILE_ZONE();
 
+    // TODO: Time slice! Limit number of strands we stream per call.
+
     for (size_t activeIdx = 0; activeIdx < m_streamingHairMeshes.size(); ++activeIdx) {
         StreamingHairMesh& streamingHairMesh = m_streamingHairMeshes[activeIdx];
 
@@ -331,17 +338,19 @@ void VertexManager::processHairStreaming(CommandList&, UploadBuffer&)
             u32 pointCount = narrow_cast<u32>(hairAsset->positions.size());
             u32 indexCount = narrow_cast<u32>(hairAsset->lineStripIndices.size());
 
-            if (pointCount == 0 || indexCount == 0) {
+            if (pointCount == 0 || indexCount == 0 || hairAsset->strandCount == 0) {
                 streamingHairMesh.setNextState(HairStreamingState::Loaded);
                 break;
             }
 
             OffsetAllocator::Allocation hairVertAlloc = m_hairVertexAllocator.allocate(pointCount);
             OffsetAllocator::Allocation hairIndexAlloc = m_indexAllocator.allocate(indexCount);
+            OffsetAllocator::Allocation hairStrandAlloc = m_hairStrandAllocator.allocate(hairAsset->strandCount);
 
-            if (hairVertAlloc.isValid() && hairIndexAlloc.isValid()) {
+            if (hairVertAlloc.isValid() && hairIndexAlloc.isValid() && hairStrandAlloc.isValid()) {
                 hairMesh->hairVertexAlloc = hairVertAlloc;
                 hairMesh->indexAlloc = hairIndexAlloc;
+                hairMesh->strandAlloc = hairStrandAlloc;
                 streamingHairMesh.setNextState(HairStreamingState::StreamingPositionData);
             } else {
                 if (hairVertAlloc.isValid()) {
@@ -349,6 +358,9 @@ void VertexManager::processHairStreaming(CommandList&, UploadBuffer&)
                 }
                 if (hairIndexAlloc.isValid()) {
                     m_indexAllocator.free(hairIndexAlloc);
+                }
+                if (hairStrandAlloc.isValid()) {
+                    m_hairStrandAllocator.free(hairStrandAlloc);
                 }
             }
 
@@ -412,6 +424,37 @@ void VertexManager::processHairStreaming(CommandList&, UploadBuffer&)
             // HACK: For now, just assume ReBAR support and copy data directly
             bool success = m_indexBuffer->mapData(Buffer::MapMode::Write, indexByteSize, indexByteOffset, [&](std::byte* mappedData) {
                 std::memcpy(mappedData, hairAsset->lineStripIndices.data(), indexByteSize);
+            });
+
+            if (success) {
+                streamingHairMesh.setNextState(HairStreamingState::StreamingStrandData);
+            }
+
+        } break;
+
+        case HairStreamingState::StreamingStrandData: {
+
+            std::vector<HairStrand> strandData(hairAsset->strandCount);
+
+            u32 vertexOffset = 0;
+            for (u32 strandIdx = 0; strandIdx < hairAsset->strandCount; ++strandIdx) {
+                u32 vertexCount = hairAsset->vertexCountForStrand(strandIdx);
+
+                strandData[strandIdx].firstVertex = hairMesh->hairVertexAlloc.offset + vertexOffset;
+                strandData[strandIdx].vertexCount = vertexCount;
+
+                strandData[strandIdx].widthRoot = hairAsset->thicknessForPoint(vertexOffset);
+                strandData[strandIdx].widthTip = hairAsset->thicknessForPoint(vertexOffset + vertexCount - 1);
+
+                vertexOffset += vertexCount;
+            }
+
+            size_t strandsByteSize = hairAsset->strandCount * sizeof(HairStrand);
+            size_t strandsByteOffset = hairMesh->strandAlloc.offset * sizeof(HairStrand);
+
+            // HACK: For now, just assume ReBAR support and copy data directly
+            bool success = m_hairStrandBuffer->mapData(Buffer::MapMode::Write, strandsByteSize, strandsByteOffset, [&](std::byte* mappedData) {
+                std::memcpy(mappedData, strandData.data(), strandsByteSize);
             });
 
             if (success) {
