@@ -9,6 +9,7 @@ struct DrawCallDescription {
     enum class Type {
         Indexed,
         NonIndexed,
+        MeshTasks,
     };
 
     Type type;
@@ -25,6 +26,11 @@ struct DrawCallDescription {
     // for instancing
     uint32_t instanceCount { 1 };
     uint32_t firstInstance { 0 };
+
+    // for mesh tasks
+    uint32_t groupCountX { 0 };
+    uint32_t groupCountY { 0 };
+    uint32_t groupCountZ { 0 };
 
     static DrawCallDescription fromVertexAllocation(VertexAllocation const& vertexAllocation)
     {

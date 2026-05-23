@@ -1337,6 +1337,9 @@ void VulkanCommandList::issueDrawCall(const DrawCallDescription& drawCall)
     case DrawCallDescription::Type::Indexed:
         vkCmdDrawIndexed(m_commandBuffer, drawCall.indexCount, drawCall.instanceCount, drawCall.firstIndex, drawCall.vertexOffset, drawCall.firstInstance);
         break;
+    case DrawCallDescription::Type::MeshTasks:
+        drawMeshTasks(drawCall.groupCountX, drawCall.groupCountY, drawCall.groupCountZ);
+        break;
     }
 }
 
