@@ -211,6 +211,12 @@ std::unique_ptr<HairAsset> HairFile::createHairAsset() const
         position *= 0.01f;
     }
 
+    // The .hair spec likely(?) defines thickness in millimeters, so convert to meters here.
+    hairAsset->defaultThickness *= 0.001f;
+    for (float& thickness : hairAsset->thickness) {
+        thickness *= 0.001f;
+    }
+
     // Calculate bounding box
     if (hairAsset->positions.empty()) {
         hairAsset->boundingBox = ark::aabb3(vec3(0.0f), vec3(0.0f));
