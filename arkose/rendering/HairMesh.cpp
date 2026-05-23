@@ -10,14 +10,14 @@ HairMesh::HairMesh(HairAsset const* hairAsset)
 
 HairMesh::~HairMesh() = default;
 
-DrawCallDescription HairMesh::drawCallDescription() const
+DrawCallDescription HairMesh::drawCallDescriptionAsLineStrip() const
 {
     DrawCallDescription drawCall {};
     drawCall.type = DrawCallDescription::Type::Indexed;
     drawCall.vertexOffset = hairVertexAlloc.offset;
     drawCall.vertexCount = static_cast<u32>(hairAsset()->positions.size());
     drawCall.firstIndex = indexAlloc.offset;
-    drawCall.indexCount = static_cast<u32>(hairAsset()->indices.size());
+    drawCall.indexCount = static_cast<u32>(hairAsset()->lineStripIndices.size());
 
     return drawCall;
 }

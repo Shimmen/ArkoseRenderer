@@ -35,7 +35,7 @@ public:
     std::vector<vec3> positions {};
 
     // Line-strip indices with 0xFFFFFFFF primitive-reset between strands
-    std::vector<u32> indices {};
+    std::vector<u32> lineStripIndices {};
 
     u32 defaultSegmentCount { 0 };
     float defaultThickness { 1.0f };
@@ -54,7 +54,8 @@ public:
     float thicknessForPoint(u32 pointIdx) const;
     float transparencyForPoint(u32 pointIdx) const;
     vec3 colorForPoint(u32 pointIdx) const;
-    std::span<u32 const> indicesForStrand(u32 strandIdx) const;
+
+    std::span<u32 const> lineStripIndicesForStrand(u32 strandIdx) const;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -83,7 +84,7 @@ void HairAsset::serialize(Archive& archive, u32 version)
     archive(CEREAL_NVP(strandCount));
 
     archive(CEREAL_NVP(positions));
-    archive(CEREAL_NVP(indices));
+    archive(CEREAL_NVP(lineStripIndices));
 
     archive(CEREAL_NVP(defaultSegmentCount));
     archive(CEREAL_NVP(defaultThickness));

@@ -195,7 +195,7 @@ std::unique_ptr<HairAsset> HairFile::createHairAsset() const
     hairAsset->name = m_name;
     hairAsset->strandCount = m_strandCount;
     hairAsset->positions = m_points;
-    hairAsset->indices = {}; // build list below
+    hairAsset->lineStripIndices = {}; // build list below
     hairAsset->defaultSegmentCount = m_defaultSegments;
     hairAsset->defaultThickness = m_defaultThickness;
     hairAsset->defaultTransparency = m_defaultTransparency;
@@ -236,20 +236,20 @@ std::unique_ptr<HairAsset> HairFile::createHairAsset() const
         // so the number of indices for each strand is the number of segments + 1 (for the last point) + 1 (for the primitive restart)
         totalIndices += hairAsset->segmentCountForStrand(s) + 1 + 1;
     }
-    hairAsset->indices.reserve(totalIndices);
+    hairAsset->lineStripIndices.reserve(totalIndices);
 
     u32 pointOffset = 0;
     for (u32 strandIdx = 0; strandIdx < hairAsset->strandCount; ++strandIdx) {
         u32 pointsInStrand = hairAsset->segmentCountForStrand(strandIdx) + 1;
         for (u32 pointIdx = 0; pointIdx < pointsInStrand; ++pointIdx) {
-            hairAsset->indices.push_back(pointOffset + pointIdx);
+            hairAsset->lineStripIndices.push_back(pointOffset + pointIdx);
         }
-        hairAsset->indices.push_back(PrimitiveRestartIndex);
+        hairAsset->lineStripIndices.push_back(PrimitiveRestartIndex);
         pointOffset += pointsInStrand;
     }
 
     ARKOSE_ASSERT(pointOffset == hairAsset->positions.size());
-    ARKOSE_ASSERT(hairAsset->indices.size() == totalIndices);
+    ARKOSE_ASSERT(hairAsset->lineStripIndices.size() == totalIndices);
 
     return hairAsset;
 }

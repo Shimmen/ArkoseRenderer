@@ -58,7 +58,7 @@ RenderPipelineNode::ExecuteCallback HairShadowNode::construct(GpuScene& scene, R
                 std::string zoneName = fmt::format("HairMesh [{}]", hairInstance->name);
                 ScopedDebugZone zone { cmdList, zoneName };
 
-                DrawCallDescription drawCallDesc = hairMesh->drawCallDescription();
+                DrawCallDescription drawCallDesc = hairMesh->drawCallDescriptionAsLineStrip();
                 drawCallDesc.firstInstance = hairInstance->drawableHandle().indexOfType<u32>();
                 cmdList.issueDrawCall(drawCallDesc);
             }

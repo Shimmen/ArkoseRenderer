@@ -142,7 +142,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
                     continue;
                 }
 
-                DrawCallDescription drawCall = hairMesh->drawCallDescription();
+                DrawCallDescription drawCall = hairMesh->drawCallDescriptionAsLineStrip();
                 drawCall.firstInstance = hairInstance->drawableHandle().indexOfType<u32>();
                 cmdList.issueDrawCall(drawCall);
             }

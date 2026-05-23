@@ -65,11 +65,11 @@ std::unique_ptr<HairAsset> HairAsset::createDebugStrand(u32 segmentCount, float 
         hairAsset->thickness[vertexIdx] = ark::lerp(thickness, 0.2f * thickness, t);
     }
 
-    hairAsset->indices.reserve(vertexCount + 1);
+    hairAsset->lineStripIndices.reserve(vertexCount + 1);
     for (u32 vertexIdx = 0; vertexIdx < vertexCount; ++vertexIdx) {
-        hairAsset->indices.push_back(vertexIdx);
+        hairAsset->lineStripIndices.push_back(vertexIdx);
     }
-    hairAsset->indices.push_back(0xFFFFFFFFu);
+    hairAsset->lineStripIndices.push_back(0xFFFFFFFFu);
 
     hairAsset->boundingBox.min = vec3(-thickness, 0.0f, -thickness);
     hairAsset->boundingBox.max = vec3(+thickness, length, +thickness);
@@ -182,7 +182,7 @@ vec3 HairAsset::colorForPoint(u32 pointIdx) const
     return colors[pointIdx];
 }
 
-std::span<u32 const> HairAsset::indicesForStrand(u32 strandIdx) const
+std::span<u32 const> HairAsset::lineStripIndicesForStrand(u32 strandIdx) const
 {
     ARKOSE_ASSERT(strandIdx < strandCount);
 
@@ -195,7 +195,7 @@ std::span<u32 const> HairAsset::indicesForStrand(u32 strandIdx) const
         offset += segmentCountForStrand(idx) + 1 + 1;
     }
 
-    ARKOSE_ASSERT(static_cast<size_t>(offset + count) <= indices.size());
+    ARKOSE_ASSERT(static_cast<size_t>(offset + count) <= lineStripIndices.size());
 
-    return { indices.data() + offset, count };
+    return { lineStripIndices.data() + offset, count };
 }

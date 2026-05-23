@@ -329,7 +329,7 @@ void VertexManager::processHairStreaming(CommandList&, UploadBuffer&)
         case HairStreamingState::PendingAllocation: {
 
             u32 pointCount = narrow_cast<u32>(hairAsset->positions.size());
-            u32 indexCount = narrow_cast<u32>(hairAsset->indices.size());
+            u32 indexCount = narrow_cast<u32>(hairAsset->lineStripIndices.size());
 
             if (pointCount == 0 || indexCount == 0) {
                 streamingHairMesh.setNextState(HairStreamingState::Loaded);
@@ -397,21 +397,21 @@ void VertexManager::processHairStreaming(CommandList&, UploadBuffer&)
             });
 
             if (success) {
-                streamingHairMesh.setNextState(HairStreamingState::StreamingIndexData);
+                streamingHairMesh.setNextState(HairStreamingState::StreamingLineStripIndexData);
             }
 
         } break;
 
-        case HairStreamingState::StreamingIndexData: {
+        case HairStreamingState::StreamingLineStripIndexData: {
 
             ARKOSE_ASSERT(indexType() == IndexType::UInt32);
 
-            size_t indexByteSize = hairAsset->indices.size() * sizeofIndexType(indexType());
+            size_t indexByteSize = hairAsset->lineStripIndices.size() * sizeofIndexType(indexType());
             size_t indexByteOffset = hairMesh->indexAlloc.offset * sizeofIndexType(indexType());
 
             // HACK: For now, just assume ReBAR support and copy data directly
             bool success = m_indexBuffer->mapData(Buffer::MapMode::Write, indexByteSize, indexByteOffset, [&](std::byte* mappedData) {
-                std::memcpy(mappedData, hairAsset->indices.data(), indexByteSize);
+                std::memcpy(mappedData, hairAsset->lineStripIndices.data(), indexByteSize);
             });
 
             if (success) {

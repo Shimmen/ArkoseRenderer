@@ -234,7 +234,7 @@ private:
         PendingAllocation = 0,
         StreamingPositionData,
         StreamingAttributeData,
-        StreamingIndexData,
+        StreamingLineStripIndexData,
         Loaded,
     };
 
