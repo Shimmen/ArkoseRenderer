@@ -133,7 +133,13 @@ std::vector<PrepassNode::MeshSegmentInstance> PrepassNode::generateSortedDrawLis
 
     //geometry::Frustum const& cameraFrustum = scene.camera().frustum();
 
+    VertexManager const& vertexManager = scene.vertexManager();
+
     auto conditionallyAppendInstance = [&]<typename InstanceType>(InstanceType const& instance, StaticMesh const& mesh) -> void {
+        if (!vertexManager.isStaticMeshLoaded(mesh)) {
+            return;
+        }
+
         constexpr u32 lodIdx = 0;
         StaticMeshLOD const& lod = mesh.lodAtIndex(lodIdx);
 

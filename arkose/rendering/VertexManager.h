@@ -7,6 +7,7 @@
 #include "rendering/backend/util/IndexType.h"
 #include "rendering/HairMesh.h"
 #include "rendering/StaticMesh.h"
+#include "rendering/SkeletalMesh.h"
 #include "rendering/Vertex.h"
 #include <ark/copying.h>
 #include <memory>
@@ -38,6 +39,10 @@ public:
     //void deallocateSkeletalMeshInstance(SkeletalMeshInstance&); // TODO!
 
     void registerForStreaming(HairMesh&);
+
+    bool isStaticMeshLoaded(StaticMesh const&) const;
+    bool isSkeletalMeshLoaded(SkeletalMesh const&) const;
+    bool isHairMeshLoaded(HairMesh const&) const;
 
     void processMeshStreaming(CommandList&, UploadBuffer&, std::unordered_set<StaticMeshHandle>& updatedMeshes);
     void processHairStreaming(CommandList&, UploadBuffer&);
@@ -145,8 +150,8 @@ private:
 
     VertexLayout const m_positionOnlyVertexLayout { VertexComponent::Position3F };
     VertexLayout const m_attributesVertexLayout { VertexComponent::TexCoord2F,
-                                                   VertexComponent::Normal3F,
-                                                   VertexComponent::Tangent4F };
+                                                  VertexComponent::Normal3F,
+                                                  VertexComponent::Tangent4F };
     VertexLayout const m_skinningDataVertexLayout { VertexComponent::JointIdx4U32,
                                                     VertexComponent::JointWeight4F };
     VertexLayout const m_velocityDataVertexLayout { VertexComponent::Velocity3F };

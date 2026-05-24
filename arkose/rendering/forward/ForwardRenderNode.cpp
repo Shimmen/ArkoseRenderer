@@ -2,9 +2,11 @@
 
 #include "core/Types.h"
 #include "rendering/GpuScene.h"
+#include "rendering/HairMesh.h"
 #include "rendering/VertexManager.h"
 #include "rendering/util/BlendModeUtil.h"
 #include "rendering/util/ScopedDebugZone.h"
+#include "scene/HairInstance.h"
 #include "scene/MeshInstance.h"
 #include "utility/Profiling.h"
 #include <imgui.h>
@@ -269,8 +271,13 @@ std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateS
 
     vec3 cameraPosition = scene.camera().position();
     //geometry::Frustum const& cameraFrustum = scene.camera().frustum();
+
+    VertexManager const& vertexManager = scene.vertexManager();
     
     auto conditionallyAppendInstance = [&]<typename InstanceType>(InstanceType const& instance, StaticMesh const& mesh) -> void {
+        if (!vertexManager.isStaticMeshLoaded(mesh)) {
+            return;
+        }
 
         constexpr u32 lodIdx = 0;
         StaticMeshLOD const& lod = mesh.lodAtIndex(lodIdx);
@@ -324,6 +331,15 @@ std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateS
     };
 
     auto conditionallyAppendHairInstance = [&](HairInstance const& instance, HairMesh const& hairMesh) -> void {
+        if (!hairMesh.valid() || !vertexManager.isHairMeshLoaded(hairMesh)) {
+            return;
+        }
+
+        DrawableObjectHandle drawableHandle = instance.drawableHandle();
+        if (!drawableHandle) {
+            return;
+        }
+
         // TODO: Implement hair frustum culling!
         //if (!cameraFrustum.includesAABB(hairMesh.boundingBox().transformedBy(instance.transform()))) {
         //    return;

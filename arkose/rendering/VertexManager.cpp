@@ -119,6 +119,39 @@ void VertexManager::registerForStreaming(HairMesh& hairMesh)
     m_streamingHairMeshes.push_back(StreamingHairMesh { .hairMesh = &hairMesh });
 }
 
+bool VertexManager::isStaticMeshLoaded(StaticMesh const& mesh) const
+{
+    SCOPED_PROFILE_ZONE();
+
+    // TODO: Consider caching these so lookup can be constant time
+    for (StreamingMesh const& streamingMesh : m_streamingMeshes) {
+        if (streamingMesh.mesh == &mesh) {
+            return streamingMesh.state == MeshStreamingState::Loaded;
+        }
+    }
+    return false;
+}
+
+bool VertexManager::isSkeletalMeshLoaded(SkeletalMesh const& mesh) const
+{
+    SCOPED_PROFILE_ZONE();
+
+    // Skeletal meshes are streamed in immediately - just need to ensure the underlying static mesh is loaded
+    return isStaticMeshLoaded(mesh.underlyingMesh());
+}
+
+bool VertexManager::isHairMeshLoaded(HairMesh const& hairMesh) const
+{
+    SCOPED_PROFILE_ZONE();
+
+    for (StreamingHairMesh const& streamingHairMesh : m_streamingHairMeshes) {
+        if (streamingHairMesh.hairMesh == &hairMesh) {
+            return streamingHairMesh.state == HairStreamingState::Loaded;
+        }
+    }
+    return false;
+}
+
 template<typename F>
 bool VertexManager::processStreamingMeshState(StreamingMesh& streamingMesh, F&& processSegmentCallback)
 {

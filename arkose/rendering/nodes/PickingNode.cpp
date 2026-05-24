@@ -90,7 +90,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
 
         for (auto& instance : scene.staticMeshInstances()) {
             StaticMesh const* staticMesh = scene.staticMeshForHandle(instance->mesh());
-            if (staticMesh == nullptr) {
+            if (staticMesh == nullptr || !scene.vertexManager().isStaticMeshLoaded(*staticMesh)) {
                 continue;
             }
 
@@ -110,6 +110,11 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
         }
 
         for (auto& instance : scene.skeletalMeshInstances()) {
+            SkeletalMesh const* skeletalMesh = scene.skeletalMeshForHandle(instance->mesh());
+            if (skeletalMesh == nullptr || !scene.vertexManager().isSkeletalMeshLoaded(*skeletalMesh)) {
+                continue;
+            }
+
             size_t segmentCount = instance->skinningVertexMappings().size();
             for (size_t segmentIdx = 0; segmentIdx < segmentCount; ++segmentIdx) {
                 if (!instance->hasDrawableHandleForSegmentIndex(segmentIdx)) {
