@@ -387,6 +387,22 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     BindingSet& objectBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(objectDataBuffer, ShaderStage::Vertex) });
     reg.publish("SceneObjectSet", objectBindingSet);
 
+    VertexManager const& vm = vertexManager();
+    ShaderStage geometryStages = ShaderStage::Vertex | ShaderStage::Task | ShaderStage::Mesh | ShaderStage::Compute;
+    BindingSet& geometryBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(objectDataBuffer, geometryStages),
+                                                            ShaderBinding::storageBufferReadonly(vm.indexBuffer(), geometryStages),
+                                                            ShaderBinding::storageBufferReadonly(vm.positionVertexBuffer(), geometryStages),
+                                                            ShaderBinding::storageBufferReadonly(vm.nonPositionVertexBuffer(), geometryStages),
+                                                            ShaderBinding::storageBufferReadonly(vm.meshletBuffer(), geometryStages),
+                                                            ShaderBinding::storageBufferReadonly(vm.meshletIndexBuffer(), geometryStages),
+                                                            ShaderBinding::storageBufferReadonly(vm.meshletVertexIndirectionBuffer(), geometryStages),
+                                                            ShaderBinding::storageBufferReadonly(vm.positionVertexBuffer(), geometryStages),
+                                                            ShaderBinding::storageBufferReadonly(vm.nonPositionVertexBuffer(), geometryStages),
+                                                            ShaderBinding::storageBufferReadonly(vm.hairStrandBuffer(), geometryStages),
+                                                            ShaderBinding::storageBufferReadonly(vm.hairPositionVertexBuffer(), geometryStages),
+                                                            ShaderBinding::storageBufferReadonly(vm.hairAttributeVertexBuffer(), geometryStages) });
+    reg.publish("SceneGeometrySet", geometryBindingSet);
+
     // Visibility buffer textures & data
     if (m_meshShadingCapable) {
         Texture::Description visibilityDataTexDesc { .extent = pipeline().renderResolution(),
