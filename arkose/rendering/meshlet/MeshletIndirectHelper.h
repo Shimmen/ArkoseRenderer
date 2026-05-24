@@ -21,7 +21,6 @@ struct MeshletIndirectBuffer {
 struct MeshletIndirectSetupDispatch {
     DrawKey drawKeyMask {};
     ComputeState* taskSetupComputeState { nullptr };
-    BindingSet* indirectDataBindingSet { nullptr };
 };
 
 struct MeshletIndirectSetupState {

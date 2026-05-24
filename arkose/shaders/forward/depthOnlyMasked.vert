@@ -1,14 +1,14 @@
 #version 460
 
+#include <common/geometry.glsl>
 #include <common/namedUniforms.glsl>
-#include <shared/SceneData.h>
 
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec2 aTexCoord;
 layout(location = 2) in vec3 aNormal;
 layout(location = 3) in vec4 aTangent;
 
-layout(set = 0, binding = 0) buffer readonly PerObjectBlock { ShaderDrawable drawables[]; };
+DeclareCommonBindingSet_Geometry(0)
 
 layout(location = 0) flat out int vMaterialIndex;
 layout(location = 1) out vec2 vTexCoord;
@@ -20,7 +20,7 @@ NAMED_UNIFORMS(pushConstants,
 
 void main()
 {
-    ShaderDrawable drawable = drawables[gl_InstanceIndex];
+    ShaderDrawable drawable = geom_getDrawable(gl_InstanceIndex);
     vMaterialIndex = drawable.materialIndex;
 
     vTexCoord = aTexCoord;

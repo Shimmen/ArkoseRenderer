@@ -48,14 +48,11 @@ RenderPipelineNode::ExecuteCallback MeshletDebugNode::construct(GpuScene& scene,
 
 MeshletDebugNode::PassParams const& MeshletDebugNode::createVertexShaderPath(GpuScene& scene, Registry& reg, RenderTarget& renderTarget)
 {
-    BindingSet& meshletDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(scene.vertexManager().meshletVertexIndirectionBuffer()),
-                                                               ShaderBinding::storageBufferReadonly(scene.vertexManager().positionVertexBuffer()) });
-
     Shader drawIndexShader = Shader::createBasicRasterize("meshlet/meshletVisualize.vert", "meshlet/meshletVisualize.frag");
     RenderStateBuilder renderStateBuilder(renderTarget, drawIndexShader, VertexLayout {});
     renderStateBuilder.cullBackfaces = false;
     renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneCameraSet"));
-    renderStateBuilder.stateBindings().at(1, meshletDataBindingSet);
+    renderStateBuilder.stateBindings().at(1, *reg.getBindingSet("SceneGeometrySet"));
 
     auto& params = reg.allocate<PassParams>();
     params.renderState = &reg.createRenderState(renderStateBuilder);
@@ -79,18 +76,14 @@ MeshletDebugNode::PassParams const& MeshletDebugNode::createMeshShaderPath(GpuSc
                             
     Shader meshletShader = Shader::createMeshShading("meshlet/meshletVisualize.task", "meshlet/meshletVisualize.mesh", "meshlet/meshletVisualize.frag", meshletDefines);
 
-    VertexManager const& vertexManager = scene.vertexManager();
-    BindingSet& meshShaderBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(*indirectDataBuffer.buffer),
-                                                              ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
-                                                              ShaderBinding::storageBufferReadonly(vertexManager.meshletBuffer()),
-                                                              ShaderBinding::storageBufferReadonly(vertexManager.meshletIndexBuffer()),
-                                                              ShaderBinding::storageBufferReadonly(vertexManager.meshletVertexIndirectionBuffer()),
-                                                              ShaderBinding::storageBufferReadonly(vertexManager.positionVertexBuffer()) });
-
     RenderStateBuilder renderStateBuilder(renderTarget, meshletShader, VertexLayout { VertexComponent::Position3F });
     renderStateBuilder.cullBackfaces = false;
     renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneCameraSet"));
-    renderStateBuilder.stateBindings().at(1, meshShaderBindingSet);
+    renderStateBuilder.stateBindings().at(1, *reg.getBindingSet("SceneGeometrySet"));
+    if (indirect) {
+        BindingSet& indirectBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(*indirectDataBuffer.buffer, ShaderStage::Task | ShaderStage::Mesh) });
+        renderStateBuilder.stateBindings().at(2, indirectBindingSet);
+    }
     params.renderState = &reg.createRenderState(renderStateBuilder);
 
     return params;

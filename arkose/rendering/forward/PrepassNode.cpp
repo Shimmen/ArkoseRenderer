@@ -114,7 +114,7 @@ RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, 
     renderStateBuilder.stencilMode = StencilMode::AlwaysWrite;
     renderStateBuilder.stencilValue = 0x01;
 
-    renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneObjectSet"));
+    renderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneGeometrySet"));
     if (blendMode == BlendMode::Masked) {
         renderStateBuilder.stateBindings().at(1, scene.globalMaterialBindingSet());
     }

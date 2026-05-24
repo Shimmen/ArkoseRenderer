@@ -1,11 +1,11 @@
 #version 460
 
+#include <common/geometry.glsl>
 #include <common/namedUniforms.glsl>
-#include <shared/SceneData.h>
 
 layout(location = 0) in vec3 aPosition;
 
-layout(set = 0, binding = 0) buffer readonly PerObjectBlock { ShaderDrawable drawables[]; };
+DeclareCommonBindingSet_Geometry(0)
 
 NAMED_UNIFORMS(constants,
     mat4 projectionFromWorld;
@@ -13,6 +13,6 @@ NAMED_UNIFORMS(constants,
 
 void main()
 {
-    ShaderDrawable drawable = drawables[gl_InstanceIndex];
+    ShaderDrawable drawable = geom_getDrawable(gl_InstanceIndex);
     gl_Position = constants.projectionFromWorld * drawable.worldFromLocal * vec4(aPosition, 1.0);
 }

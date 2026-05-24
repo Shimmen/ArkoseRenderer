@@ -27,7 +27,7 @@ RenderPipelineNode::ExecuteCallback HairShadowNode::construct(GpuScene& scene, R
 
     Shader depthOnlyShader = Shader::createVertexOnly("hair/shadowMap.vert");
     RenderStateBuilder depthRenderStateBuilder { depthRenderTarget, depthOnlyShader, { VertexComponent::Position3F } };
-    depthRenderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneObjectSet"));
+    depthRenderStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneGeometrySet"));
     depthRenderStateBuilder.primitiveType = PrimitiveType::LineStrip;
     depthRenderStateBuilder.enablePrimitiveRestart = true;
     RenderState& depthRenderState = reg.createRenderState(depthRenderStateBuilder);

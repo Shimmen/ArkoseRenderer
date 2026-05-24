@@ -20,7 +20,7 @@ layout(location = 4) in vec2 vTexCoord;
 #endif
 
 #if VISBUF_BLEND_MODE == BLEND_MODE_MASKED
-DeclareCommonBindingSet_Material(3)
+DeclareCommonBindingSet_Material(2)
 #endif
 
 #ifndef VISBUF_DEPTH_ONLY

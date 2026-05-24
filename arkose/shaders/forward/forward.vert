@@ -3,8 +3,8 @@
 #extension GL_EXT_scalar_block_layout : require
 
 #include <forward/forwardCommon.glsl>
+#include <common/geometry.glsl>
 #include <shared/CameraState.h>
-#include <shared/SceneData.h>
 
 layout(location = 0) in vec3 aPosition;
 layout(location = 1) in vec2 aTexCoord;
@@ -13,10 +13,10 @@ layout(location = 3) in vec4 aTangent;
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 
-layout(set = 2, binding = 0) buffer readonly PerObjectBlock { ShaderDrawable perObject[]; };
+DeclareCommonBindingSet_Geometry(1)
 
 #if HAS_EXPLICIT_VELOCITY
-layout(set = 6, binding = 0, scalar) buffer readonly VelocityVertexBlock { vec3 velocities[]; };
+layout(set = 5, binding = 0, scalar) buffer readonly VelocityVertexBlock { vec3 velocities[]; };
 #endif
 
 layout(location = 0) flat out int vMaterialIndex;
@@ -30,7 +30,7 @@ layout(location = 7) out vec4 vPrevFrameProjectedPos;
 
 void main()
 {
-    ShaderDrawable object = perObject[gl_InstanceIndex];
+    ShaderDrawable object = geom_getDrawable(gl_InstanceIndex);
     vMaterialIndex = object.materialIndex;
 
     vTexCoord = aTexCoord;

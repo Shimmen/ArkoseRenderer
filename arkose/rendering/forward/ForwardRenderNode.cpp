@@ -245,11 +245,11 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
 
     StateBindings& bindings = renderStateBuilder.stateBindings();
     bindings.at(0, *reg.getBindingSet("SceneCameraSet"));
-    bindings.at(2, *reg.getBindingSet("SceneObjectSet"));
-    bindings.at(3, scene.globalMaterialBindingSet());
-    bindings.at(4, *reg.getBindingSet("SceneLightSet"));
-    bindings.at(5, shadowBindingSet);
-    bindings.at(6, velocityBindingSet);
+    bindings.at(1, *reg.getBindingSet("SceneGeometrySet"));
+    bindings.at(2, scene.globalMaterialBindingSet());
+    bindings.at(3, *reg.getBindingSet("SceneLightSet"));
+    bindings.at(4, shadowBindingSet);
+    bindings.at(5, velocityBindingSet);
 
     RenderState& renderState = reg.createRenderState(renderStateBuilder);
     renderState.setName(fmt::format("Forward{}{}[doublesided={}][explicitvelocity={}]",

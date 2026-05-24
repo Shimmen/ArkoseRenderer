@@ -29,11 +29,11 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
     VertexLayout positionOnlyLayout { VertexComponent::Position3F };
 
     RenderStateBuilder meshStateBuilder { indexMapRenderTarget, drawIndexShader, positionOnlyLayout };
-    meshStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneObjectSet"));
+    meshStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneGeometrySet"));
     RenderState& meshDrawState = reg.createRenderState(meshStateBuilder);
 
     RenderStateBuilder hairStateBuilder { indexMapRenderTarget, drawIndexShader, positionOnlyLayout };
-    hairStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneObjectSet"));
+    hairStateBuilder.stateBindings().at(0, *reg.getBindingSet("SceneGeometrySet"));
     hairStateBuilder.primitiveType = PrimitiveType::LineStrip;
     hairStateBuilder.enablePrimitiveRestart = true;
     RenderState& hairDrawState = reg.createRenderState(hairStateBuilder);
@@ -138,7 +138,7 @@ RenderPipelineNode::ExecuteCallback PickingNode::construct(GpuScene& scene, Regi
                 }
 
                 HairMesh const* hairMesh = scene.hairMeshForHandle(hairInstance->hair());
-                if (hairMesh == nullptr || !hairMesh->valid()) {
+                if (hairMesh == nullptr || !hairMesh->valid() || !scene.vertexManager().isHairMeshLoaded(*hairMesh)) {
                     continue;
                 }
 

@@ -111,25 +111,15 @@ MeshletVisibilityBufferRenderNode::RenderStateWithIndirectData& MeshletVisibilit
 
     MeshletIndirectBuffer& indirectBuffer = m_meshletIndirectHelper.createIndirectBuffer(reg, passSettings.drawKeyMask, passSettings.maxMeshlets);
 
-    VertexManager const& vertexManager = scene.vertexManager();
-
-    BindingSet& taskShaderBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(*indirectBuffer.buffer),
-                                                              ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
-                                                              ShaderBinding::storageBufferReadonly(vertexManager.meshletBuffer()) });
-
-    BindingSet& meshShaderBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(vertexManager.meshletIndexBuffer()),
-                                                              ShaderBinding::storageBufferReadonly(vertexManager.meshletVertexIndirectionBuffer()),
-                                                              ShaderBinding::storageBufferReadonly(vertexManager.positionVertexBuffer()),
-                                                              ShaderBinding::storageBufferReadonly(vertexManager.nonPositionVertexBuffer()) });
+    BindingSet& indirectBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(*indirectBuffer.buffer, ShaderStage::Task | ShaderStage::Mesh) });
 
     StateBindings& bindings = renderStateBuilder.stateBindings();
-    //bindings.at(0, *reg.getBindingSet("SceneCameraSet"));
-    bindings.at(1, taskShaderBindingSet);
-    bindings.at(2, meshShaderBindingSet);
+    bindings.at(0, *reg.getBindingSet("SceneGeometrySet"));
+    bindings.at(1, indirectBindingSet);
 
     // For masked, need to read the mask texture to determine if pixel should be masked or not
     if (blendMode == BlendMode::Masked) {
-        bindings.at(3, scene.globalMaterialBindingSet());
+        bindings.at(2, scene.globalMaterialBindingSet());
     }
 
     RenderState& renderState = reg.createRenderState(renderStateBuilder);

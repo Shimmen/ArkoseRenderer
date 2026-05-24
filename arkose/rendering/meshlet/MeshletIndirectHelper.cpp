@@ -36,11 +36,11 @@ MeshletIndirectSetupState const& MeshletIndirectHelper::createMeshletIndirectSet
 
         MeshletIndirectSetupDispatch& dispatch = state.dispatches.emplace_back();
         dispatch.drawKeyMask = indirectBuffer->drawKeyMask;
-        dispatch.indirectDataBindingSet = &reg.createBindingSet({ ShaderBinding::storageBuffer(*reg.getBuffer("SceneObjectData")),
-                                                                  ShaderBinding::storageBuffer(*indirectBuffer->buffer) });
+        BindingSet& indirectBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(*indirectBuffer->buffer, ShaderStage::Compute) });
 
         StateBindings stateBindings;
-        stateBindings.at(0, *dispatch.indirectDataBindingSet);
+        stateBindings.at(0, *reg.getBindingSet("SceneGeometrySet"));
+        stateBindings.at(1, indirectBindingSet);
 
         dispatch.taskSetupComputeState = &reg.createComputeState(meshletTaskSetupShader, stateBindings);
     }

@@ -4,12 +4,12 @@
 #include <common/lighting.glsl>
 #include <shared/LightData.h>
 
-DeclareCommonBindingSet_Light(4)
+DeclareCommonBindingSet_Light(3)
 
-layout(set = 5, binding = 0) uniform sampler2D directionalLightShadowMapTex;
-layout(set = 5, binding = 1) uniform sampler2D directionalLightProjectedShadowTex;
-layout(set = 5, binding = 2) uniform sampler2D localLightShadowMapAtlasTex;
-layout(set = 5, binding = 3) buffer readonly ShadowMapViewportBlock { vec4 localLightShadowMapViewports[]; };
+layout(set = 4, binding = 0) uniform sampler2D directionalLightShadowMapTex;
+layout(set = 4, binding = 1) uniform sampler2D directionalLightProjectedShadowTex;
+layout(set = 4, binding = 2) uniform sampler2D localLightShadowMapAtlasTex;
+layout(set = 4, binding = 3) buffer readonly ShadowMapViewportBlock { vec4 localLightShadowMapViewports[]; };
 
 layout(location = 0) in vec3 vPosition;
 layout(location = 1) in vec4 vColor;

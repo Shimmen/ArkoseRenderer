@@ -5,15 +5,14 @@
 
 #include <common.glsl>
 #include <common/camera.glsl>
+#include <common/geometry.glsl>
 #include <common/namedUniforms.glsl>
 #include <meshlet/meshletCommon.glsl>
-#include <shared/SceneData.h>
 
 layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
 
-layout(set = 1, binding = 0) buffer restrict readonly IndirectDataBlock { uvec4 indirectData[]; };
-layout(set = 1, binding = 1) buffer restrict readonly InstanceBlock { ShaderDrawable instances[]; };
-layout(set = 1, binding = 2) buffer restrict readonly MeshletBlock { ShaderMeshlet meshlets[]; };
+DeclareCommonBindingSet_Geometry(1)
+layout(set = 2, binding = 0) buffer restrict readonly IndirectDataBlock { uvec4 indirectData[]; };
 
 struct ShaderConstants {
     bool frustumCull;
@@ -40,14 +39,14 @@ uint extractDrawableIdx()
 void main()
 {
     uint drawableIdx = extractDrawableIdx();
-    ShaderDrawable drawable = instances[drawableIdx];
+    ShaderDrawable drawable = geom_getDrawable(drawableIdx);
 
     uint meshletIdx = gl_GlobalInvocationID.x;
     if (meshletIdx >= drawable.meshletCount) {
         return;
     }
 
-    ShaderMeshlet meshlet = meshlets[drawable.firstMeshlet + meshletIdx];
+    ShaderMeshlet meshlet = geom_getMeshlet(drawable.firstMeshlet + meshletIdx);
 
     bool shouldDraw = true;
 
