@@ -41,4 +41,11 @@ struct MorphTargetVertex {
     vec3 tangent;
 };
 
+struct HairStrand {
+    uint firstVertex;
+    uint vertexCount;
+    float widthRoot;
+    float widthTip;
+};
+
 #endif // SCENE_DATA_H
