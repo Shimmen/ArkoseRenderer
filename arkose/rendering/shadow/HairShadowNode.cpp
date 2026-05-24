@@ -51,7 +51,7 @@ RenderPipelineNode::ExecuteCallback HairShadowNode::construct(GpuScene& scene, R
                 }
 
                 HairMesh* hairMesh = scene.hairMeshForHandle(hairInstance->hair());
-                if (hairMesh == nullptr || !hairMesh->valid()) {
+                if (hairMesh == nullptr || !hairMesh->valid() || !scene.vertexManager().isHairMeshLoaded(*hairMesh)) {
                     continue;
                 }
 

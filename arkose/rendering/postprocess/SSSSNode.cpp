@@ -65,7 +65,8 @@ RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registr
     Texture& sceneNormals = *reg.getTexture("SceneNormalVelocity");
     Buffer& sceneCameraBuffer = *reg.getBuffer("SceneCameraData");
 
-    BindingSet& visibilityBufferSampleSet = *reg.getBindingSet("VisibilityBufferData");
+    BindingSet& visibilityBufferBindingSet = *reg.getBindingSet("VisibilityBufferData");
+    BindingSet& sceneGeometryBindingSet = *reg.getBindingSet("SceneGeometrySet");
 
     Texture& ssssTex = reg.createTexture2D(pipeline().renderResolution(), diffuseIrradiance.format());
 
@@ -79,7 +80,8 @@ RenderPipelineNode::ExecuteCallback SSSSNode::construct(GpuScene& scene, Registr
 
     StateBindings ssssStateBindings;
     ssssStateBindings.at(0, ssssBindingSet);
-    ssssStateBindings.at(1, visibilityBufferSampleSet);
+    ssssStateBindings.at(1, visibilityBufferBindingSet);
+    ssssStateBindings.at(2, sceneGeometryBindingSet);
 
     Shader ssssShader = Shader::createCompute("subsurface/ssss.comp", { ShaderDefine::makeInt("MAX_SAMPLE_COUNT", MaxSampleCount) });
     ComputeState& ssssState = reg.createComputeState(ssssShader, ssssStateBindings);

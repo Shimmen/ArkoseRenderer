@@ -414,15 +414,9 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         Texture& triangleVisibilityTexture = reg.createTexture(visibilityDataTexDesc);
         reg.publish("TriangleVisibilityTexture", triangleVisibilityTexture);
 
-        // Binding set for all data required to interpret the visibility buffer - just get this binding set when you need to read it!
-        BindingSet& visBufferDataBindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(instanceVisibilityTexture),
-                                                                     ShaderBinding::sampledTexture(triangleVisibilityTexture),
-                                                                     ShaderBinding::storageBufferReadonly(*reg.getBuffer("SceneObjectData")),
-                                                                     ShaderBinding::storageBufferReadonly(vertexManager().meshletBuffer()),
-                                                                     ShaderBinding::storageBufferReadonly(vertexManager().meshletIndexBuffer()),
-                                                                     ShaderBinding::storageBufferReadonly(vertexManager().meshletVertexIndirectionBuffer()),
-                                                                     ShaderBinding::storageBufferReadonly(vertexManager().positionVertexBuffer()),
-                                                                     ShaderBinding::storageBufferReadonly(vertexManager().nonPositionVertexBuffer()) });
+        // Binding set for visibility buffer textures - geometry comes from SceneGeometrySet
+        BindingSet& visBufferDataBindingSet = reg.createBindingSet({ ShaderBinding::sampledTexture(instanceVisibilityTexture, ShaderStage::Compute),
+                                                                     ShaderBinding::sampledTexture(triangleVisibilityTexture, ShaderStage::Compute) });
         reg.publish("VisibilityBufferData", visBufferDataBindingSet);
     }
 

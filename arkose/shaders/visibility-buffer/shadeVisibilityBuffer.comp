@@ -23,12 +23,13 @@ layout(set = 1, binding = 4, rgba8) uniform restrict writeonly image2D materialP
 layout(set = 1, binding = 5, rgba8) uniform restrict writeonly image2D baseColorImg;
 
 DeclareCommonBindingSet_VisibilityBuffer(2)
-DeclareCommonBindingSet_Material(3)
-DeclareCommonBindingSet_Light(4)
+DeclareCommonBindingSet_Geometry(3)
+DeclareCommonBindingSet_Material(4)
+DeclareCommonBindingSet_Light(5)
 
-layout(set = 5, binding = 0) uniform sampler2D directionalLightProjectedShadowTex;
-layout(set = 5, binding = 1) uniform sampler2D localLightShadowMapAtlasTex;
-layout(set = 5, binding = 2) buffer readonly ShadowMapViewportBlock { vec4 localLightShadowMapViewports[]; };
+layout(set = 6, binding = 0) uniform sampler2D directionalLightProjectedShadowTex;
+layout(set = 6, binding = 1) uniform sampler2D localLightShadowMapAtlasTex;
+layout(set = 6, binding = 2) buffer readonly ShadowMapViewportBlock { vec4 localLightShadowMapViewports[]; };
 
 NAMED_UNIFORMS_STRUCT(ForwardPassConstants, constants)
 

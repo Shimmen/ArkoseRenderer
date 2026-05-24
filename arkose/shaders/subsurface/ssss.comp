@@ -19,6 +19,7 @@ layout(set = 0, binding = 5) uniform SamplesBlock { vec4 samples[MAX_SAMPLE_COUN
 layout(set = 0, binding = 6) uniform CameraStateBlock { CameraState camera; };
 
 DeclareCommonBindingSet_VisibilityBuffer(1)
+DeclareCommonBindingSet_Geometry(2)
 DeclareVisibilityBufferSamplingFunctions
 
 NAMED_UNIFORMS(constants,

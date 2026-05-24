@@ -29,7 +29,8 @@ RenderPipelineNode::ExecuteCallback VisibilityBufferShadingNode::construct(GpuSc
                                                           ShaderBinding::storageTexture(materialPropertyTexture),
                                                           ShaderBinding::storageTexture(baseColorTexture) });
 
-    BindingSet& geometryDataBindingSet = *reg.getBindingSet("VisibilityBufferData");
+    BindingSet& visibilityBufferBindingSet = *reg.getBindingSet("VisibilityBufferData");
+    BindingSet& sceneGeometryBindingSet = *reg.getBindingSet("SceneGeometrySet");
 
     BindingSet& materialBindingSet = scene.globalMaterialBindingSet();
     BindingSet& lightBindingSet = *reg.getBindingSet("SceneLightSet");
@@ -51,10 +52,11 @@ RenderPipelineNode::ExecuteCallback VisibilityBufferShadingNode::construct(GpuSc
     StateBindings stateBindings;
     stateBindings.at(0, cameraBindingSet);
     stateBindings.at(1, targetBindingSet);
-    stateBindings.at(2, geometryDataBindingSet);
-    stateBindings.at(3, materialBindingSet);
-    stateBindings.at(4, lightBindingSet);
-    stateBindings.at(5, shadowBindingSet);
+    stateBindings.at(2, visibilityBufferBindingSet);
+    stateBindings.at(3, sceneGeometryBindingSet);
+    stateBindings.at(4, materialBindingSet);
+    stateBindings.at(5, lightBindingSet);
+    stateBindings.at(6, shadowBindingSet);
 
     Shader shader = Shader::createCompute("visibility-buffer/shadeVisibilityBuffer.comp");
     ComputeState& computeState = reg.createComputeState(shader, stateBindings);
