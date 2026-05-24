@@ -1,0 +1,127 @@
+#version 460
+
+#extension GL_EXT_mesh_shader : require
+
+#include <common.glsl>
+#include <common/geometry.glsl>
+#include <common/camera.glsl>
+#include <common/namedUniforms.glsl>
+#include <hair/hairCommon.glsl>
+
+layout(set = 0, binding = 0) uniform CameraStateBlock { CameraState camera; };
+
+DeclareCommonBindingSet_Geometry(1)
+
+NAMED_UNIFORMS_STRUCT(HairConstants, constants)
+
+taskPayloadSharedEXT HairInterpolants fromTaskShader;
+
+layout(location = 0) out vec3 vPosition[];
+layout(location = 1) out vec4 vColor[];
+
+// One mesh workgroup expands one hair segment into a camera-facing quad (4 verts, 2 tris).
+layout(triangles) out;
+layout(max_vertices = 4) out;
+layout(max_primitives = 2) out;
+layout(local_size_x = 1) in;
+
+vec4 hairUnpackColor4U8(uint packedColor)
+{
+    return vec4(unpackUnorm4x8(packedColor));
+}
+
+float hairStrandWidthAt(HairStrand strand, uint vertexIdxInStrand)
+{
+    float t = float(vertexIdxInStrand) / float(max(strand.vertexCount - 1u, 1u));
+    return mix(strand.widthRoot, strand.widthTip, t) * 0.5;
+}
+
+vec3 hairRibbonSide(vec3 tangent, vec3 viewDir)
+{
+    vec3 side = cross(tangent, viewDir);
+    if (dot(side, side) < 1e-8) {
+        side = cross(tangent, vec3(0.0, 1.0, 0.0));
+        if (dot(side, side) < 1e-8) {
+            side = cross(tangent, vec3(1.0, 0.0, 0.0));
+        }
+    }
+    return normalize(side);
+}
+
+// Fetch four consecutive strand control points for segment [segmentIdx, segmentIdx + 1].
+// v0 and v3 are reference points for tangent continuity - at strand ends they collapse to end caps.
+void hairFetchSegmentControlPoints(HairStrand strand, uint segmentIdx, out vec3 v0, out vec3 v1, out vec3 v2, out vec3 v3)
+{
+    uint baseVertex = strand.firstVertex;
+    uint v1Idx = baseVertex + segmentIdx;
+    uint v2Idx = baseVertex + segmentIdx + 1;
+
+    v1 = geom_getHairPosition(v1Idx);
+    v2 = geom_getHairPosition(v2Idx);
+
+    if (segmentIdx > 0) {
+        v0 = geom_getHairPosition(baseVertex + segmentIdx - 1);
+    } else {
+        v0 = v1;
+    }
+
+    if (segmentIdx + 2 < strand.vertexCount) {
+        v3 = geom_getHairPosition(baseVertex + segmentIdx + 2);
+    } else {
+        v3 = v2;
+    }
+}
+
+void main()
+{
+    HairStrand strand = geom_getHairStrand(fromTaskShader.strandIndex);
+    uint segmentIdx = gl_WorkGroupID.x;
+
+    if (strand.vertexCount <= 1 || segmentIdx >= strand.vertexCount - 1) {
+        SetMeshOutputsEXT(0, 0);
+        return;
+    }
+
+    ShaderDrawable drawable = geom_getDrawable(constants.drawableIdx);
+    mat4 worldFromLocal = drawable.worldFromLocal;
+
+    vec3 v0, v1, v2, v3;
+    hairFetchSegmentControlPoints(strand, segmentIdx, v0, v1, v2, v3);
+
+    vec3 w0 = (worldFromLocal * vec4(v0, 1.0)).xyz;
+    vec3 w1 = (worldFromLocal * vec4(v1, 1.0)).xyz;
+    vec3 w2 = (worldFromLocal * vec4(v2, 1.0)).xyz;
+    vec3 w3 = (worldFromLocal * vec4(v3, 1.0)).xyz;
+
+    vec3 cameraWorldPos = (camera.worldFromView * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+
+    vec3 tangentAt1 = normalize(w2 - w0);
+    vec3 tangentAt2 = normalize(w3 - w1);
+    vec3 sideAt1 = hairRibbonSide(tangentAt1, normalize(cameraWorldPos - w1));
+    vec3 sideAt2 = hairRibbonSide(tangentAt2, normalize(cameraWorldPos - w2));
+
+    float widthAt1 = hairStrandWidthAt(strand, segmentIdx);
+    float widthAt2 = hairStrandWidthAt(strand, segmentIdx + 1u);
+
+    vec3 cornerPositions[4];
+    cornerPositions[0] = w1 + sideAt1 * widthAt1;
+    cornerPositions[1] = w1 - sideAt1 * widthAt1;
+    cornerPositions[2] = w2 + sideAt2 * widthAt2;
+    cornerPositions[3] = w2 - sideAt2 * widthAt2;
+
+    uint baseVertex = strand.firstVertex;
+    vec4 colorAt1 = hairUnpackColor4U8(geom_getHairAttribute(baseVertex + segmentIdx));
+    vec4 colorAt2 = hairUnpackColor4U8(geom_getHairAttribute(baseVertex + segmentIdx + 1));
+
+    SetMeshOutputsEXT(4, 2);
+
+    for (uint cornerIdx = 0; cornerIdx < 4; ++cornerIdx) {
+        vec4 viewSpacePos = camera.viewFromWorld * vec4(cornerPositions[cornerIdx], 1.0);
+        gl_MeshVerticesEXT[cornerIdx].gl_Position = camera.projectionFromView * viewSpacePos;
+        vPosition[cornerIdx] = viewSpacePos.xyz;
+        vColor[cornerIdx] = (cornerIdx < 2) ? colorAt1 : colorAt2;
+    }
+
+    gl_PrimitiveTriangleIndicesEXT[0] = uvec3(0, 2, 1);
+    gl_PrimitiveTriangleIndicesEXT[1] = uvec3(1, 2, 3);
+}

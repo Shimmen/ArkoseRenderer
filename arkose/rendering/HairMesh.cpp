@@ -21,3 +21,14 @@ DrawCallDescription HairMesh::drawCallDescriptionAsLineStrip() const
 
     return drawCall;
 }
+
+DrawCallDescription HairMesh::drawCallDescriptionAsMeshTasks() const
+{
+    DrawCallDescription drawCall {};
+    drawCall.type = DrawCallDescription::Type::MeshTasks;
+    drawCall.groupCountX = hairAsset()->strandCount;
+    drawCall.groupCountY = 1;
+    drawCall.groupCountZ = 1;
+
+    return drawCall;
+}

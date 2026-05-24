@@ -2,6 +2,8 @@
 
 #include <common/brdf.glsl>
 #include <common/lighting.glsl>
+#include <common/namedUniforms.glsl>
+#include <hair/hairCommon.glsl>
 #include <shared/LightData.h>
 
 DeclareCommonBindingSet_Light(3)
@@ -10,6 +12,8 @@ layout(set = 4, binding = 0) uniform sampler2D directionalLightShadowMapTex;
 layout(set = 4, binding = 1) uniform sampler2D directionalLightProjectedShadowTex;
 layout(set = 4, binding = 2) uniform sampler2D localLightShadowMapAtlasTex;
 layout(set = 4, binding = 3) buffer readonly ShadowMapViewportBlock { vec4 localLightShadowMapViewports[]; };
+
+NAMED_UNIFORMS_STRUCT(HairConstants, constants)
 
 layout(location = 0) in vec3 vPosition;
 layout(location = 1) in vec4 vColor;
@@ -42,7 +46,7 @@ vec3 evaluateDirectionalLight(DirectionalLightData light, vec3 V, vec3 hairColor
 
 void main() 
 {
-    vec3 hairColor = vColor.rgb;
+    vec3 hairColor = constants.withMaterialColor ? vColor.rgb : vec3(1.0);
     float opacity = vColor.a;
 
     vec3 color = vec3(0.0); // TODO: Ambient light

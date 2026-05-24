@@ -32,14 +32,22 @@ private:
         std::vector<std::pair<Buffer const*, VertexLayout>> vertexBuffers {};
         std::pair<Buffer const*, IndexType> indexBuffer {};
         bool operator==(BufferStates const& other) const = default;
+        bool hasAnyBuffers() const { return !vertexBuffers.empty() && indexBuffer.first != nullptr; }
+    };
+
+    struct HairDrawData {
+        u32 drawableIdx {};
+        u32 firstStrand {};
+        u32 strandCount {};
     };
 
     struct MeshSegmentInstance {
-        MeshSegmentInstance(DrawCallDescription, DrawKey, BufferStates, Transform const&);
+        MeshSegmentInstance(DrawCallDescription, DrawKey, BufferStates, Transform const&, std::optional<HairDrawData> = std::nullopt);
         DrawCallDescription drawCall {};
         DrawKey drawKey {};
         BufferStates bufferStates {};
         Transform const* transform {};
+        std::optional<HairDrawData> hairDrawData {};
     };
 
     RenderTarget& makeRenderTarget(Registry&, Mode) const;

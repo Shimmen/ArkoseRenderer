@@ -6,6 +6,7 @@ struct HairInterpolants {
 };
 
 struct HairConstants {
+    bool withMaterialColor;
     uint drawableIdx;
     uint firstStrand;
     uint strandCount;

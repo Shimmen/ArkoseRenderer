@@ -1,0 +1,35 @@
+#version 460
+
+#extension GL_EXT_mesh_shader : require
+
+#include <common.glsl>
+#include <common/geometry.glsl>
+#include <hair/hairCommon.glsl>
+#include <common/namedUniforms.glsl>
+
+DeclareCommonBindingSet_Geometry(1)
+
+layout(local_size_x = 1) in;
+
+NAMED_UNIFORMS_STRUCT(HairConstants, constants)
+
+taskPayloadSharedEXT HairInterpolants toMeshShader;
+
+void main()
+{
+    uint localStrandIdx = gl_GlobalInvocationID.x;
+    if (localStrandIdx >= constants.strandCount) {
+        return;
+    }
+
+    uint strandIdx = constants.firstStrand + localStrandIdx;
+    toMeshShader.strandIndex = strandIdx;
+
+    // TODO: Consider culling individual strands..?
+    HairStrand strand = geom_getHairStrand(strandIdx);
+    if (strand.vertexCount <= 1) {
+        return;
+    }
+
+    EmitMeshTasksEXT(strand.vertexCount - 1, 1, 1);
+}

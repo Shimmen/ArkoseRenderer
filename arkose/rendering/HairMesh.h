@@ -19,6 +19,7 @@ public:
     bool valid() const { return hairVertexAlloc.isValid() && indexAlloc.isValid() && strandAlloc.isValid(); }
 
     DrawCallDescription drawCallDescriptionAsLineStrip() const;
+    DrawCallDescription drawCallDescriptionAsMeshTasks() const;
     DrawKey drawKey() const { return m_drawKey; }
 
     HairAsset const* hairAsset() const { return m_hairAsset; }

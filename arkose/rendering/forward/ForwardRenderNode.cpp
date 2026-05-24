@@ -102,18 +102,25 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
                 cmdList.beginDebugLabel(renderState->name());
                 cmdList.beginRendering(*renderState);
 
-                if (instance.drawKey.brdf().value() != Brdf::Hair) {
+                cmdList.setNamedUniform("withMaterialColor", scene.shouldIncludeMaterialColor());
+
+                // TODO: Make this a little more generic, so we don't have to special case hair here..
+                if (instance.hairDrawData.has_value()) {
+                    HairDrawData const& hairDrawData = *instance.hairDrawData;
+                    cmdList.setNamedUniform("drawableIdx", hairDrawData.drawableIdx);
+                    cmdList.setNamedUniform("firstStrand", hairDrawData.firstStrand);
+                    cmdList.setNamedUniform("strandCount", hairDrawData.strandCount);
+                } else {
                     cmdList.setNamedUniform("ambientAmount", scene.preExposedAmbient());
                     cmdList.setNamedUniform("frustumJitterCorrection", scene.camera().frustumJitterUVCorrection());
                     cmdList.setNamedUniform("invTargetSize", renderTarget.extent().inverse());
                     cmdList.setNamedUniform("mipBias", scene.globalMipBias());
-                    cmdList.setNamedUniform("withMaterialColor", scene.shouldIncludeMaterialColor());
                 }
 
                 currentStateDrawKey = &instance.drawKey;
             }
 
-            if (currentBufferStates == nullptr || instance.bufferStates != *currentBufferStates) {
+            if (instance.bufferStates.hasAnyBuffers() && (currentBufferStates == nullptr || instance.bufferStates != *currentBufferStates)) {
                 for (u32 idx = 0; idx < instance.bufferStates.vertexBuffers.size(); ++idx) {
                     auto const& [vertexBuffer, layout] = instance.bufferStates.vertexBuffers[idx];
                     cmdList.bindVertexBuffer(*vertexBuffer, layout.packedVertexSize(), idx);
@@ -133,11 +140,12 @@ RenderPipelineNode::ExecuteCallback ForwardRenderNode::construct(GpuScene& scene
 }
 
 ForwardRenderNode::MeshSegmentInstance::MeshSegmentInstance(DrawCallDescription inDrawCall, DrawKey inDrawKey,
-    BufferStates inBufferStates, Transform const& inTransform)
+    BufferStates inBufferStates, Transform const& inTransform, std::optional<HairDrawData> inHairDrawData)
     : drawCall(inDrawCall)
     , drawKey(inDrawKey)
     , bufferStates(inBufferStates)
     , transform(&inTransform)
+    , hairDrawData(std::move(inHairDrawData))
 {
 }
 
@@ -188,9 +196,7 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
     Shader shader;
     std::vector<VertexLayout> vertexLayouts;
     if (drawKey.brdf().value() == Brdf::Hair) {
-        shader = Shader::createBasicRasterize("hair/hair.vert", "hair/hair.frag", shaderDefines);
-        vertexLayouts.push_back(scene.vertexManager().hairPositionVertexLayout());
-        vertexLayouts.push_back(scene.vertexManager().hairAttributeVertexLayout());
+        shader = Shader::createMeshShading("hair/hair.task", "hair/hair.mesh", "hair/hair.frag", shaderDefines);
     } else {
         shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", shaderDefines);
         vertexLayouts.push_back(scene.vertexManager().positionVertexLayout());
@@ -215,11 +221,6 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
         if (drawKey.brdf().has_value() && drawKey.brdf().value() == Brdf::Skin) {
             renderStateBuilder.stencilValue |= 0x02;
         }
-    }
-
-    if (drawKey.brdf().value() == Brdf::Hair) {
-        renderStateBuilder.primitiveType = PrimitiveType::LineStrip;
-        renderStateBuilder.enablePrimitiveRestart = true;
     }
 
     Texture* dirLightShadowMap = reg.getTexture("DirectionalLightShadowMap");
@@ -273,7 +274,7 @@ std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateS
     //geometry::Frustum const& cameraFrustum = scene.camera().frustum();
 
     VertexManager const& vertexManager = scene.vertexManager();
-    
+
     auto conditionallyAppendInstance = [&]<typename InstanceType>(InstanceType const& instance, StaticMesh const& mesh) -> void {
         if (!vertexManager.isStaticMeshLoaded(mesh)) {
             return;
@@ -299,7 +300,7 @@ std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateS
         BufferStates bufferStates;
         bufferStates.indexBuffer = { &vm.indexBuffer(), IndexType::UInt32 };
         bufferStates.vertexBuffers = { { &vm.positionVertexBuffer(), vm.positionVertexLayout() },
-                                       { &vm.nonPositionVertexBuffer(), vm.nonPositionVertexLayout() } };
+                                       { &vm.attributesVertexBuffer(), vm.attributesVertexLayout() } };
 
         for (u32 segmentIdx = 0; segmentIdx < lod.meshSegments.size(); ++segmentIdx) {
             StaticMeshSegment const& meshSegment = lod.meshSegments[segmentIdx];
@@ -345,17 +346,14 @@ std::vector<ForwardRenderNode::MeshSegmentInstance> ForwardRenderNode::generateS
         //    return;
         //}
 
-        VertexManager const& vm = scene.vertexManager();
+        DrawCallDescription drawCall = hairMesh.drawCallDescriptionAsMeshTasks();
+        HairDrawData hairDrawData {
+            .drawableIdx = drawableHandle.indexOfType<u32>(),
+            .firstStrand = hairMesh.strandAlloc.offset,
+            .strandCount = hairMesh.hairAsset()->strandCount,
+        };
 
-        BufferStates bufferStates;
-        bufferStates.indexBuffer = { &vm.indexBuffer(), IndexType::UInt32 };
-        bufferStates.vertexBuffers = { { &vm.hairPositionVertexBuffer(), vm.hairPositionVertexLayout() },
-                                       { &vm.hairAttributeVertexBuffer(), vm.hairAttributeVertexLayout() } };
-
-        DrawCallDescription drawCall = hairMesh.drawCallDescription();
-        drawCall.firstInstance = instance.drawableHandle().indexOfType<u32>();
-
-        meshSegmentInstances.emplace_back(drawCall, hairMesh.drawKey(), bufferStates, instance.transform());
+        meshSegmentInstances.emplace_back(drawCall, hairMesh.drawKey(), BufferStates {}, instance.transform(), hairDrawData);
     };
 
     bool includeStaticMeshes = meshFilter != ForwardMeshFilter::OnlySkeletalMeshes && meshFilter != ForwardMeshFilter::OnlyHairMeshes;
