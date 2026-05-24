@@ -54,7 +54,7 @@ RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene
 
     // Ensure we don't try to load the unused components from the vertex buffer
     VertexLayout& bakeParamsVertexLayout = reg.allocate<VertexLayout>();
-    bakeParamsVertexLayout = scene.vertexManager().nonPositionVertexLayout().replaceAllWithPaddingBut(VertexComponent::TexCoord2F);
+    bakeParamsVertexLayout = scene.vertexManager().attributesVertexLayout().replaceAllWithPaddingBut(VertexComponent::TexCoord2F);
 
     RenderStateBuilder bakeParamsStateBuilder { renderTarget, bakeParamsParamsShader, bakeParamsVertexLayout };
     bakeParamsStateBuilder.primitiveType = PrimitiveType::Triangles;
@@ -114,7 +114,7 @@ RenderPipelineNode::ExecuteCallback BakeAmbientOcclusionNode::construct(GpuScene
 
             // Bake the parameterization down so we can refer back to the triangles given a pixel
             cmdList.beginRendering(bakeParamsRenderState, ClearValue::blackAtMaxDepth(), true);
-            cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), bakeParamsVertexLayout.packedVertexSize(), 0);
+            cmdList.bindVertexBuffer(scene.vertexManager().attributesVertexBuffer(), bakeParamsVertexLayout.packedVertexSize(), 0);
             cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
             cmdList.issueDrawCall(drawCall);
             cmdList.endRendering();

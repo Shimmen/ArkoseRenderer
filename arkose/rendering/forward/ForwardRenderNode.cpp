@@ -192,7 +192,7 @@ RenderState& ForwardRenderNode::makeForwardRenderState(Registry& reg, GpuScene c
     } else {
         shader = Shader::createBasicRasterize("forward/forward.vert", "forward/forward.frag", shaderDefines);
         vertexLayouts.push_back(scene.vertexManager().positionVertexLayout());
-        vertexLayouts.push_back(scene.vertexManager().nonPositionVertexLayout());
+        vertexLayouts.push_back(scene.vertexManager().attributesVertexLayout());
     }
 
     RenderStateBuilder renderStateBuilder { renderTarget, shader, std::move(vertexLayouts) };

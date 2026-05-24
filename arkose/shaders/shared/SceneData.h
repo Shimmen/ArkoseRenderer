@@ -24,7 +24,7 @@ struct ShaderMeshlet {
     float radius;
 };
 
-struct NonPositionVertex {
+struct VertexAttributes {
     vec2 texcoord0;
     vec3 normal;
     vec4 tangent;

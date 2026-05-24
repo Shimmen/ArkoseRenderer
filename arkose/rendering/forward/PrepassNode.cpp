@@ -41,7 +41,7 @@ RenderPipelineNode::ExecuteCallback PrepassNode::construct(GpuScene& scene, Regi
         }
 
         cmdList.bindVertexBuffer(scene.vertexManager().positionVertexBuffer(), scene.vertexManager().positionVertexLayout().packedVertexSize(), 0);
-        cmdList.bindVertexBuffer(scene.vertexManager().nonPositionVertexBuffer(), scene.vertexManager().nonPositionVertexLayout().packedVertexSize(), 1);
+        cmdList.bindVertexBuffer(scene.vertexManager().attributesVertexBuffer(), scene.vertexManager().attributesVertexLayout().packedVertexSize(), 1);
         cmdList.bindIndexBuffer(scene.vertexManager().indexBuffer(), scene.vertexManager().indexType());
 
         bool firstDraw = true;
@@ -101,7 +101,7 @@ RenderState& PrepassNode::makeRenderState(Registry& reg, GpuScene const& scene, 
         break;
     case BlendMode::Masked:
         shader = Shader::createBasicRasterize("forward/depthOnlyMasked.vert", "forward/depthOnlyMasked.frag");
-        vertexLayout = { scene.vertexManager().positionVertexLayout(), scene.vertexManager().nonPositionVertexLayout() };
+        vertexLayout = { scene.vertexManager().positionVertexLayout(), scene.vertexManager().attributesVertexLayout() };
         break;
     default:
         ASSERT_NOT_REACHED();

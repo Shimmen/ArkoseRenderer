@@ -8,7 +8,7 @@
 
 layout(set = 0, binding = 0, scalar) buffer restrict PositionVertexBlock { vec3 positions[]; };
 layout(set = 0, binding = 1, scalar) buffer restrict VelocityVertexBlock { vec3 velocities[]; };
-layout(set = 0, binding = 2, scalar) buffer restrict NonPositionVertexBlock { NonPositionVertex nonPositionVertexData[]; };
+layout(set = 0, binding = 2, scalar) buffer restrict VertexAttributesBlock { VertexAttributes vertexAttributeData[]; };
 layout(set = 0, binding = 3, scalar) buffer restrict readonly SkinningVertexBlock { SkinningVertex skinningVertexData[]; };
 layout(set = 0, binding = 4, scalar) buffer restrict readonly MorphTargetVertexBlock { MorphTargetVertex morphTargetVertexData[]; };
 layout(set = 0, binding = 5) buffer restrict readonly JointMatricesBlock { mat4 jointMatrices[]; };
@@ -39,7 +39,7 @@ void main()
     vec3 originalPosition = positions[srcVertexIdx];
     vec3 position = originalPosition;
 
-    NonPositionVertex vertex = nonPositionVertexData[srcVertexIdx];
+    VertexAttributes vertex = vertexAttributeData[srcVertexIdx];
 
     // Do morph target blending
 
@@ -92,7 +92,7 @@ void main()
     vec3 previousSkinnedPosition = positions[dstVertexIdx];
 
     positions[dstVertexIdx] = position;
-    nonPositionVertexData[dstVertexIdx] = vertex;
+    vertexAttributeData[dstVertexIdx] = vertex;
 
     uint dstVelocityVertexIdx = constants.firstVelocityVertexIdx + localVertexIdx;
     velocities[dstVelocityVertexIdx] = (constants.isFirstSkinning != 0) ? vec3(0.0) : (position - previousSkinnedPosition);

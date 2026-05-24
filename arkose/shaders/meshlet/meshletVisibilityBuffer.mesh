@@ -54,7 +54,7 @@ void main()
         gl_MeshVerticesEXT[localVertexIdx].gl_Position = constants.projectionFromWorld * worldSpacePos;
 
 #if VISBUF_BLEND_MODE == BLEND_MODE_MASKED
-        NonPositionVertex vertexData = geom_getMeshletNonPositionVertex(vertexIdx);
+        VertexAttributes vertexData = geom_getMeshletVertexAttributes(vertexIdx);
         vTexCoord[localVertexIdx] = vertexData.texcoord0;
 #endif
     }

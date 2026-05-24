@@ -143,10 +143,10 @@ void main()
     ShaderMaterial material = material_getMaterial(drawable.materialIndex);
 
     vec3 p0, p1, p2;
-    NonPositionVertex v0, v1, v2;
+    VertexAttributes v0, v1, v2;
     uvec3 triangle = visbuf_calculateTriangle(pixelCoord);
     visbuf_getTriangleVertexPositions(triangle, p0, p1, p2);
-    visbuf_getTriangleVertexNonPositionData(triangle, v0, v1, v2);
+    visbuf_getTriangleVertexAttributes(triangle, v0, v1, v2);
 
     mat4 viewFromLocal = camera.viewFromWorld * drawable.worldFromLocal;
     vec4 viewSpacePos0 = viewFromLocal * vec4(p0, 1.0);

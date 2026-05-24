@@ -43,13 +43,13 @@
         p2 = geom_getMeshletPosition(triangle[2]);                                                \
     }                                                                                             \
                                                                                                   \
-    void visbuf_getTriangleVertexNonPositionData(uvec3 triangle, out NonPositionVertex v0,        \
-                                                                 out NonPositionVertex v1,        \
-                                                                 out NonPositionVertex v2)        \
+    void visbuf_getTriangleVertexAttributes(uvec3 triangle, out VertexAttributes v0,              \
+                                                            out VertexAttributes v1,              \
+                                                            out VertexAttributes v2)              \
     {                                                                                             \
-        v0 = geom_getMeshletNonPositionVertex(triangle[0]);                                       \
-        v1 = geom_getMeshletNonPositionVertex(triangle[1]);                                       \
-        v2 = geom_getMeshletNonPositionVertex(triangle[2]);                                       \
+        v0 = geom_getMeshletVertexAttributes(triangle[0]);                                        \
+        v1 = geom_getMeshletVertexAttributes(triangle[1]);                                        \
+        v2 = geom_getMeshletVertexAttributes(triangle[2]);                                        \
     }
 
 #endif // VISIBILITY_BUFFER_GLSL

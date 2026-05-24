@@ -51,9 +51,9 @@ public:
     Buffer const& positionVertexBuffer() const { return *m_positionOnlyVertexBuffer; }
     Buffer& positionVertexBuffer() { return *m_positionOnlyVertexBuffer; }
 
-    VertexLayout const& nonPositionVertexLayout() const { return m_nonPositionVertexLayout; }
-    Buffer const& nonPositionVertexBuffer() const { return *m_nonPositionVertexBuffer; }
-    Buffer& nonPositionVertexBuffer() { return *m_nonPositionVertexBuffer; }
+    VertexLayout const& attributesVertexLayout() const { return m_attributesVertexLayout; }
+    Buffer const& attributesVertexBuffer() const { return *m_attributesVertexBuffer; }
+    Buffer& attributesVertexBuffer() { return *m_attributesVertexBuffer; }
 
     VertexLayout const& skinningDataVertexLayout() const { return m_skinningDataVertexLayout; }
     Buffer const& skinningDataVertexBuffer() const { return *m_skinningDataVertexBuffer; }
@@ -144,7 +144,7 @@ private:
     GpuScene* m_scene { nullptr };
 
     VertexLayout const m_positionOnlyVertexLayout { VertexComponent::Position3F };
-    VertexLayout const m_nonPositionVertexLayout { VertexComponent::TexCoord2F,
+    VertexLayout const m_attributesVertexLayout { VertexComponent::TexCoord2F,
                                                    VertexComponent::Normal3F,
                                                    VertexComponent::Tangent4F };
     VertexLayout const m_skinningDataVertexLayout { VertexComponent::JointIdx4U32,
@@ -160,7 +160,7 @@ private:
     OffsetAllocator::Allocator m_indexAllocator { MaxLoadedIndices };
 
     std::unique_ptr<Buffer> m_positionOnlyVertexBuffer {};
-    std::unique_ptr<Buffer> m_nonPositionVertexBuffer {};
+    std::unique_ptr<Buffer> m_attributesVertexBuffer {};
     OffsetAllocator::Allocator m_vertexAllocator { MaxLoadedVertices };
 
     std::unique_ptr<Buffer> m_skinningDataVertexBuffer {};

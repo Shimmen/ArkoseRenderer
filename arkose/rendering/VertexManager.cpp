@@ -20,7 +20,7 @@ VertexManager::VertexManager(Backend& backend, GpuScene& scene)
 {
     const size_t indexBufferSize = MaxLoadedIndices * sizeofIndexType(indexType());
     const size_t postionVertexBufferSize = MaxLoadedVertices * positionVertexLayout().packedVertexSize();
-    const size_t nonPostionVertexBufferSize = MaxLoadedVertices * nonPositionVertexLayout().packedVertexSize();
+    const size_t attributesVertexBufferSize = MaxLoadedVertices * attributesVertexLayout().packedVertexSize();
     const size_t skinningDataVertexBufferSize = MaxLoadedSkinningVertices * skinningDataVertexLayout().packedVertexSize();
     const size_t velocityDataVertexBufferSize = MaxLoadedVelocityVertices * velocityDataVertexLayout().packedVertexSize();
     const size_t morphTargetVertexBufferSize = MaxLoadedMorphTargetVertices * morphTargetVertexLayout().packedVertexSize();
@@ -29,7 +29,7 @@ VertexManager::VertexManager(Backend& backend, GpuScene& scene)
 
     float totalMemoryUseMb = ark::conversion::to::MB(indexBufferSize
                                                      + postionVertexBufferSize
-                                                     + nonPostionVertexBufferSize
+                                                     + attributesVertexBufferSize
                                                      + skinningDataVertexBufferSize
                                                      + velocityDataVertexBufferSize
                                                      + morphTargetVertexBufferSize
@@ -45,9 +45,9 @@ VertexManager::VertexManager(Backend& backend, GpuScene& scene)
     m_positionOnlyVertexBuffer->setStride(positionVertexLayout().packedVertexSize());
     m_positionOnlyVertexBuffer->setName("ScenePositionOnlyVertexBuffer");
 
-    m_nonPositionVertexBuffer = backend.createBuffer(nonPostionVertexBufferSize, Buffer::Usage::Vertex);
-    m_nonPositionVertexBuffer->setStride(nonPositionVertexLayout().packedVertexSize());
-    m_nonPositionVertexBuffer->setName("SceneNonPositionVertexBuffer");
+    m_attributesVertexBuffer = backend.createBuffer(attributesVertexBufferSize, Buffer::Usage::Vertex);
+    m_attributesVertexBuffer->setStride(attributesVertexLayout().packedVertexSize());
+    m_attributesVertexBuffer->setName("SceneVertexAttributesBuffer");
 
     m_skinningDataVertexBuffer = backend.createBuffer(skinningDataVertexBufferSize, Buffer::Usage::Vertex);
     m_skinningDataVertexBuffer->setStride(skinningDataVertexLayout().packedVertexSize());
@@ -631,7 +631,7 @@ void VertexManager::drawUI() const
                 };
 
                 doTableRow(positionVertexBuffer(), positionVertexLayout(), numAllocatedVertices());
-                doTableRow(nonPositionVertexBuffer(), nonPositionVertexLayout(), numAllocatedVertices());
+                doTableRow(attributesVertexBuffer(), attributesVertexLayout(), numAllocatedVertices());
                 doTableRow(skinningDataVertexBuffer(), skinningDataVertexLayout(), numAllocatedSkinningVertices());
                 doTableRow(velocityDataVertexBuffer(), velocityDataVertexLayout(), numAllocatedVelocityVertices());
                 doTableRow(morphTargetVertexBuffer(), morphTargetVertexLayout(), numAllocatedMorphTargetVertices(), "morph target");
@@ -988,11 +988,11 @@ void VertexManager::uploadMeshDataForAllocation(MeshSegmentAsset const& segmentA
         m_positionOnlyVertexBuffer->updateData(positionOnlyVertexData.data(), positionOnlyVertexData.size(), positionOnlyVertexOffset);
     }
 
-    // Upload non-position vertex data
+    // Upload vertex attribute data
     {
-        std::vector<u8> nonPositionVertexData = segmentAsset.assembleVertexData(m_nonPositionVertexLayout);
-        size_t nonPositionVertexOffset = allocation.firstVertex * m_nonPositionVertexLayout.packedVertexSize();
-        m_nonPositionVertexBuffer->updateData(nonPositionVertexData.data(), nonPositionVertexData.size(), nonPositionVertexOffset);
+        std::vector<u8> vertexAttributeData = segmentAsset.assembleVertexData(m_attributesVertexLayout);
+        size_t attributesVertexOffset = allocation.firstVertex * m_attributesVertexLayout.packedVertexSize();
+        m_attributesVertexBuffer->updateData(vertexAttributeData.data(), vertexAttributeData.size(), attributesVertexOffset);
     }
 
     // Upload skinning data if relevant
@@ -1056,7 +1056,7 @@ bool VertexManager::streamVertexData(StreamingMesh& streamingMesh, StaticMeshSeg
     ARKOSE_ASSERT(allocation.vertexCount == segmentAsset.vertexCount());
     ARKOSE_ASSERT(streamingMesh.nextVertex < allocation.vertexCount);
 
-    u32 sizePerVert = narrow_cast<u32>(m_positionOnlyVertexLayout.packedVertexSize() + m_nonPositionVertexLayout.packedVertexSize());
+    u32 sizePerVert = narrow_cast<u32>(m_positionOnlyVertexLayout.packedVertexSize() + m_attributesVertexLayout.packedVertexSize());
     if (allocation.hasSkinningData()) {
         sizePerVert += narrow_cast<u32>(m_skinningDataVertexLayout.packedVertexSize());
     }
@@ -1090,11 +1090,11 @@ bool VertexManager::streamVertexData(StreamingMesh& streamingMesh, StaticMeshSeg
         }
     }
 
-    // Non-position data
+    // Vertex attribute data
     {
-        std::vector<u8> nonPositionVertexData = segmentAsset.assembleVertexData(m_nonPositionVertexLayout, firstVertToUpload, numVertsToUpload);
-        size_t nonPositionVertexOffset = (allocation.firstVertex + firstVertToUpload) * m_nonPositionVertexLayout.packedVertexSize();
-        bool success = uploadBuffer.upload(nonPositionVertexData.data(), nonPositionVertexData.size(), *m_nonPositionVertexBuffer, nonPositionVertexOffset);
+        std::vector<u8> vertexAttributeData = segmentAsset.assembleVertexData(m_attributesVertexLayout, firstVertToUpload, numVertsToUpload);
+        size_t attributesVertexOffset = (allocation.firstVertex + firstVertToUpload) * m_attributesVertexLayout.packedVertexSize();
+        bool success = uploadBuffer.upload(vertexAttributeData.data(), vertexAttributeData.size(), *m_attributesVertexBuffer, attributesVertexOffset);
 
         if (!success) {
             ARKOSE_ERROR("VertexManager: non-position upload failed, which should be impossible as we've checked the remaining size beforehand! Something is wrong");

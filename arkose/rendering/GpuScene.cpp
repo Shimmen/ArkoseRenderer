@@ -392,12 +392,12 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     BindingSet& geometryBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(objectDataBuffer, geometryStages),
                                                             ShaderBinding::storageBufferReadonly(vm.indexBuffer(), geometryStages),
                                                             ShaderBinding::storageBufferReadonly(vm.positionVertexBuffer(), geometryStages),
-                                                            ShaderBinding::storageBufferReadonly(vm.nonPositionVertexBuffer(), geometryStages),
+                                                            ShaderBinding::storageBufferReadonly(vm.attributesVertexBuffer(), geometryStages),
                                                             ShaderBinding::storageBufferReadonly(vm.meshletBuffer(), geometryStages),
                                                             ShaderBinding::storageBufferReadonly(vm.meshletIndexBuffer(), geometryStages),
                                                             ShaderBinding::storageBufferReadonly(vm.meshletVertexIndirectionBuffer(), geometryStages),
                                                             ShaderBinding::storageBufferReadonly(vm.positionVertexBuffer(), geometryStages),
-                                                            ShaderBinding::storageBufferReadonly(vm.nonPositionVertexBuffer(), geometryStages),
+                                                            ShaderBinding::storageBufferReadonly(vm.attributesVertexBuffer(), geometryStages),
                                                             ShaderBinding::storageBufferReadonly(vm.hairStrandBuffer(), geometryStages),
                                                             ShaderBinding::storageBufferReadonly(vm.hairPositionVertexBuffer(), geometryStages),
                                                             ShaderBinding::storageBufferReadonly(vm.hairAttributeVertexBuffer(), geometryStages) });
@@ -436,7 +436,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
         BindingSet& rtMeshDataBindingSet = reg.createBindingSet({ ShaderBinding::storageBufferReadonly(rtTriangleMeshBuffer, ShaderStage::AnyRayTrace),
                                                                   ShaderBinding::storageBufferReadonly(vertexManager().indexBuffer(), ShaderStage::AnyRayTrace),
                                                                   ShaderBinding::storageBufferReadonly(vertexManager().positionVertexBuffer(), ShaderStage::AnyRayTrace),
-                                                                  ShaderBinding::storageBufferReadonly(vertexManager().nonPositionVertexBuffer(), ShaderStage::AnyRayTrace) });
+                                                                  ShaderBinding::storageBufferReadonly(vertexManager().attributesVertexBuffer(), ShaderStage::AnyRayTrace) });
         reg.publish("SceneRTMeshDataSet", rtMeshDataBindingSet);
     }
 
@@ -484,7 +484,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
     Shader skinningShader = Shader::createCompute("skinning/skinning.comp");
     BindingSet& skinningBindingSet = reg.createBindingSet({ ShaderBinding::storageBuffer(m_vertexManager->positionVertexBuffer()),
                                                             ShaderBinding::storageBuffer(m_vertexManager->velocityDataVertexBuffer()),
-                                                            ShaderBinding::storageBuffer(m_vertexManager->nonPositionVertexBuffer()),
+                                                            ShaderBinding::storageBuffer(m_vertexManager->attributesVertexBuffer()),
                                                             ShaderBinding::storageBufferReadonly(m_vertexManager->skinningDataVertexBuffer()),
                                                             ShaderBinding::storageBufferReadonly(m_vertexManager->morphTargetVertexBuffer()),
                                                             ShaderBinding::storageBufferReadonly(*m_jointMatricesBuffer),
@@ -717,7 +717,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
                 if (m_maintainRayTracingScene) {
 
                     // TODO/OPTIMIZATION: We can do away with just one of these barriers if we process all skeletal mesh instances as one (see above)
-                    cmdList.bufferWriteBarrier({ &vertexManager().positionVertexBuffer(), &vertexManager().nonPositionVertexBuffer() });
+                    cmdList.bufferWriteBarrier({ &vertexManager().positionVertexBuffer(), &vertexManager().attributesVertexBuffer() });
 
                     for (auto& blas : skeletalMeshInstance->BLASes()) {
                         cmdList.buildBottomLevelAcceratationStructure(*blas, AccelerationStructureBuildType::Update);
@@ -726,7 +726,7 @@ RenderPipelineNode::ExecuteCallback GpuScene::construct(GpuScene&, Registry& reg
             }
 
             cmdList.bufferWriteBarrier({ &vertexManager().positionVertexBuffer(),
-                                         &vertexManager().nonPositionVertexBuffer(),
+                                         &vertexManager().attributesVertexBuffer(),
                                          &vertexManager().velocityDataVertexBuffer() });
         }
 
