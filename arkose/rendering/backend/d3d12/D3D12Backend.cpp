@@ -292,6 +292,9 @@ void D3D12Backend::renderPipelineDidChange(RenderPipeline& renderPipeline)
     Registry* previousRegistry = m_pipelineRegistry.get();
     Registry* registry = new Registry(*this, m_placeholderSwapchainTexture.get(), previousRegistry);
 
+    Extent2D framebufferExtent = System::get().windowFramebufferSize();
+    renderPipeline.setOutputResolution(framebufferExtent);
+
     renderPipeline.constructAll(*registry);
 
     m_pipelineRegistry.reset(registry);

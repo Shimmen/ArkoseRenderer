@@ -122,7 +122,6 @@ int Arkose::runArkoseApplication(int argc, char** argv)
     // Initialize the main/output render pipeline
     RenderPipeline& appMainRenderPipeline = app->mainRenderPipeline();
     appMainRenderPipeline.setOutputResolution(system.windowFramebufferSize());
-    appMainRenderPipeline.setRenderResolution(system.windowFramebufferSize());
     graphicsBackend.renderPipelineDidChange(appMainRenderPipeline);
 
     // TODO: Replace with a more generic asset file watching system
@@ -141,12 +140,7 @@ int Arkose::runArkoseApplication(int argc, char** argv)
 
         graphicsBackend.waitForFrameReady();
 
-        bool windowSizeDidChange = system.newFrame();
-
-        if (windowSizeDidChange) {
-            Extent2D viewportSize = system.windowFramebufferSize();
-            appMainRenderPipeline.setOutputResolution(viewportSize);
-        }
+        system.newFrame();
 
         // Update & render the frame
 
