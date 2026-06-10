@@ -48,6 +48,27 @@ vec3 hairRibbonSide(vec3 tangent, vec3 viewDir)
     return normalize(side);
 }
 
+// Ensure a minimum ribbon width in screen pixels. Strands thinner than this are expanded in world
+// space and alpha is scaled down so artificially widened regions do not over-contribute.
+void clampWidthToMinScreenPixels(vec3 worldCenter, vec3 worldSide, inout float worldHalfWidth, out float alphaScale)
+{
+    vec3 viewCenter = (camera.viewFromWorld * vec4(worldCenter, 1.0)).xyz;
+    vec3 viewEdge = (camera.viewFromWorld * vec4(worldCenter + worldSide * worldHalfWidth, 1.0)).xyz;
+
+    vec4 pixelCenter = camera.pixelFromView * vec4(viewCenter, 1.0);
+    vec4 pixelEdge = camera.pixelFromView * vec4(viewEdge, 1.0);
+    float halfWidthPx = length((pixelEdge.xy / pixelEdge.w) - (pixelCenter.xy / pixelCenter.w));
+
+    const float hairMinScreenWidthPx = 1.0;
+    float minHalfWidthPx = hairMinScreenWidthPx * 0.5;
+
+    if (halfWidthPx < minHalfWidthPx) {
+        float scale = minHalfWidthPx / max(halfWidthPx, 1e-4);
+        worldHalfWidth *= scale;
+        alphaScale = 1.0 / scale;
+    }
+}
+
 // Fetch four consecutive strand control points for segment [segmentIdx, segmentIdx + 1].
 // v0 and v3 are reference points for tangent continuity - at strand ends they collapse to end caps.
 void hairFetchSegmentControlPoints(HairStrand strand, uint segmentIdx, out vec3 v0, out vec3 v1, out vec3 v2, out vec3 v3)
@@ -103,6 +124,11 @@ void main()
     float widthAt1 = hairStrandWidthAt(strand, segmentIdx);
     float widthAt2 = hairStrandWidthAt(strand, segmentIdx + 1u);
 
+    float alphaScaleAt1 = 1.0;
+    float alphaScaleAt2 = 1.0;
+    clampWidthToMinScreenPixels(w1, sideAt1, widthAt1, alphaScaleAt1);
+    clampWidthToMinScreenPixels(w2, sideAt2, widthAt2, alphaScaleAt2);
+
     vec3 cornerPositions[4];
     cornerPositions[0] = w1 + sideAt1 * widthAt1;
     cornerPositions[1] = w1 - sideAt1 * widthAt1;
@@ -112,6 +138,8 @@ void main()
     uint baseVertex = strand.firstVertex;
     vec4 colorAt1 = hairUnpackColor4U8(geom_getHairAttribute(baseVertex + segmentIdx));
     vec4 colorAt2 = hairUnpackColor4U8(geom_getHairAttribute(baseVertex + segmentIdx + 1));
+    colorAt1.a *= alphaScaleAt1;
+    colorAt2.a *= alphaScaleAt2;
 
     SetMeshOutputsEXT(4, 2);
 
