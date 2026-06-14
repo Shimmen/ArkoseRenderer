@@ -18,7 +18,8 @@ enum class StoreOp {
 
 enum class RenderTargetBlendMode {
     None,
-    Additive,
+    Additive, // Additive blending for color, replace alpha with new value (traditional additive blending)
+    AdditiveIncludingAlpha, // Additive blending for color and alpha, where you actually just want to add RGBA values
     AlphaBlending,
     PremultipliedAlphaBlending,
 };

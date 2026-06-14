@@ -232,6 +232,15 @@ VulkanRenderState::VulkanRenderState(Backend& backend, RenderTarget const& rende
             colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE; // replace alpha with new value
             colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
             break;
+        case RenderTargetBlendMode::AdditiveIncludingAlpha:
+            colorBlendAttachment.blendEnable = VK_TRUE;
+            colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
+            colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+            colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            break;
         case RenderTargetBlendMode::AlphaBlending:
             colorBlendAttachment.blendEnable = VK_TRUE;
             colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;

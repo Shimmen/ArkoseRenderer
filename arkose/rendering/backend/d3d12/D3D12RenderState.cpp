@@ -235,6 +235,16 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
                 renderTargetBlendState.BlendOpAlpha = D3D12_BLEND_OP_ADD;
                 renderTargetBlendState.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
                 break;
+            case RenderTargetBlendMode::AdditiveIncludingAlpha:
+                renderTargetBlendState.BlendEnable = true;
+                renderTargetBlendState.SrcBlend = D3D12_BLEND_SRC_COLOR;
+                renderTargetBlendState.DestBlend = D3D12_BLEND_DEST_COLOR;
+                renderTargetBlendState.BlendOp = D3D12_BLEND_OP_ADD;
+                renderTargetBlendState.SrcBlendAlpha = D3D12_BLEND_ONE;
+                renderTargetBlendState.DestBlendAlpha = D3D12_BLEND_ONE;
+                renderTargetBlendState.BlendOpAlpha = D3D12_BLEND_OP_ADD;
+                renderTargetBlendState.RenderTargetWriteMask = D3D12_COLOR_WRITE_ENABLE_ALL;
+                break;
             case RenderTargetBlendMode::AlphaBlending:
                 renderTargetBlendState.BlendEnable = true;
                 renderTargetBlendState.SrcBlend = D3D12_BLEND_SRC_ALPHA;
