@@ -51,7 +51,7 @@ vec3 hairRibbonSide(vec3 tangent, vec3 viewDir)
 
 // Ensure a minimum ribbon width in screen pixels. Strands thinner than this are expanded in world
 // space and alpha is scaled down so artificially widened regions do not over-contribute.
-void clampWidthToMinScreenPixels(vec3 worldCenter, vec3 worldSide, inout float worldHalfWidth, out float alphaScale)
+void clampWidthToMinScreenPixels(vec3 worldCenter, vec3 worldSide, inout float worldHalfWidth, inout float alphaScale)
 {
     vec3 viewCenter = (camera.viewFromWorld * vec4(worldCenter, 1.0)).xyz;
     vec3 viewEdge = (camera.viewFromWorld * vec4(worldCenter + worldSide * worldHalfWidth, 1.0)).xyz;
