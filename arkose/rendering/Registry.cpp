@@ -324,6 +324,33 @@ Texture* Registry::getTexture(const std::string& name)
     return getResource(name, m_publishedTextures);
 }
 
+Texture* Registry::cachedDefaultTexture(DefaultTexture defaultTexture)
+{
+    switch (defaultTexture) {
+    case DefaultTexture::White:
+        if (!m_cachedDefaultWhiteTexture) {
+            m_cachedDefaultWhiteTexture = &createPixelTexture(vec4(1.0f), false);
+        }
+        return m_cachedDefaultWhiteTexture;
+    case DefaultTexture::Black:
+        if (!m_cachedDefaultBlackTexture) {
+            m_cachedDefaultBlackTexture = &createPixelTexture(vec4(0.0f), false);
+        }
+        return m_cachedDefaultBlackTexture;
+    default:
+        ARKOSE_LOG(Fatal, "Registry: Unknown default texture type requested.");
+    }
+}
+
+Texture* Registry::getTextureOrDefault(const std::string& name, DefaultTexture defaultTexture)
+{
+    if (Texture* texture = getTexture(name)) {
+        return texture;
+    } else {
+        return cachedDefaultTexture(defaultTexture);
+    }
+}
+
 Buffer* Registry::getBuffer(const std::string& name)
 {
     return getResource(name, m_publishedBuffers);

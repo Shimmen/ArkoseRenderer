@@ -62,13 +62,8 @@ RenderPipelineNode::ExecuteCallback LightingComposeNode::construct(GpuScene& sce
         m_withScreenSpaceOcclusion = false;
     }
 
-    Texture* reflectionsTex = reg.getTexture("DenoisedReflections");
-    Texture* reflectionDirectionTex = reg.getTexture("ReflectionDirection");
-    if (!reflectionsTex || !reflectionDirectionTex) {
-        Texture& blackTex = reg.createPixelTexture(vec4(0.0f), true);
-        reflectionsTex = &blackTex;
-        reflectionDirectionTex = &blackTex;
-    }
+    Texture* reflectionsTex = reg.getTextureOrDefault("DenoisedReflections", Registry::DefaultTexture::Black);
+    Texture* reflectionDirectionTex = reg.getTextureOrDefault("ReflectionDirection", Registry::DefaultTexture::Black);
 
     m_ddgiBindingSet = reg.getBindingSet("DDGISamplingSet");
 

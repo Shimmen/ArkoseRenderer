@@ -70,8 +70,14 @@ public:
     void publish(const std::string& name, BindingSet&);
     void publish(const std::string& name, TopLevelAS&);
 
+    enum class DefaultTexture {
+        White,
+        Black,
+    };
+
     [[nodiscard]] Buffer*     getBuffer(const std::string& name);
     [[nodiscard]] Texture*    getTexture(const std::string& name);
+    [[nodiscard]] Texture*    getTextureOrDefault(const std::string& name, DefaultTexture defaultTexture);
     [[nodiscard]] BindingSet* getBindingSet(const std::string& name);
     [[nodiscard]] TopLevelAS* getTopLevelAccelerationStructure(const std::string& name);
 
@@ -108,6 +114,10 @@ private:
 
     template<typename T>
     T* getResource(const std::string& name, const PublishedResourceMap<T>& map);
+
+    Texture* cachedDefaultTexture(DefaultTexture defaultTexture);
+    Texture* m_cachedDefaultWhiteTexture { nullptr };
+    Texture* m_cachedDefaultBlackTexture { nullptr };
 
     std::vector<std::unique_ptr<Buffer>> m_buffers;
     std::vector<std::unique_ptr<Texture>> m_textures;

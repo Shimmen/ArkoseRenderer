@@ -19,10 +19,7 @@ RenderPipelineNode::ExecuteCallback FogNode::construct(GpuScene& scene, Registry
 {
     BindingSet& sceneLightSet = *reg.getBindingSet("SceneLightSet");
 
-    // Collect shadow maps to use
-    Texture const& directionalLightShadowMap = reg.getTexture("DirectionalLightShadowMap")
-        ? *reg.getTexture("DirectionalLightShadowMap")
-        : scene.whiteTexture();
+    Texture const& directionalLightShadowMap = *reg.getTextureOrDefault("DirectionalLightShadowMap", Registry::DefaultTexture::White);
 
     BindingSet& fogBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(*reg.getTexture("SceneColor"), ShaderStage::Compute),
                                                        ShaderBinding::sampledTexture(*reg.getTexture("SceneDepth"), ShaderStage::Compute),

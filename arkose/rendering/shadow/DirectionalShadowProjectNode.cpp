@@ -29,14 +29,8 @@ RenderPipelineNode::ExecuteCallback DirectionalShadowProjectNode::construct(GpuS
     Buffer& cameraDataBuffer = *reg.getBuffer("SceneCameraData");
     Texture& blueNoiseTexArray = *reg.getTexture("BlueNoise");
 
-    Texture* hairShadowMap = reg.getTexture("HairShadowMap");
-    Texture* hairDeepOpacityMap = reg.getTexture("HairDeepOpacityMap");
-    if (!hairShadowMap || !hairDeepOpacityMap) {
-        Texture& depthPlaceholder = reg.createPixelTexture(vec4(1.0f), false);
-        Texture& domPlaceholder = reg.createPixelTexture(vec4(0.0f), false);
-        hairShadowMap = hairShadowMap ? hairShadowMap : &depthPlaceholder;
-        hairDeepOpacityMap = hairDeepOpacityMap ? hairDeepOpacityMap : &domPlaceholder;
-    }
+    Texture* hairShadowMap = reg.getTextureOrDefault("HairShadowMap", Registry::DefaultTexture::White);
+    Texture* hairDeepOpacityMap = reg.getTextureOrDefault("HairDeepOpacityMap", Registry::DefaultTexture::Black);
 
     Shader shadowProjectionShader = Shader::createCompute("shadow/projectShadow.comp");
     BindingSet& shadowProjectionBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(*m_shadowMask, ShaderStage::Compute),
