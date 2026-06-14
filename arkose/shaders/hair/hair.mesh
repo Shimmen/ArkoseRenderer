@@ -18,6 +18,7 @@ taskPayloadSharedEXT HairInterpolants fromTaskShader;
 
 layout(location = 0) out vec3 vPosition[];
 layout(location = 1) out vec4 vColor[];
+layout(location = 2) out vec3 vTangent[];
 
 // One mesh workgroup expands one hair segment into a camera-facing quad (4 verts, 2 tris).
 layout(triangles) out;
@@ -141,6 +142,10 @@ void main()
     colorAt1.a *= alphaScaleAt1;
     colorAt2.a *= alphaScaleAt2;
 
+    mat3 viewFromWorld3 = mat3(camera.viewFromWorld);
+    vec3 viewTangentAt1 = normalize(viewFromWorld3 * tangentAt1);
+    vec3 viewTangentAt2 = normalize(viewFromWorld3 * tangentAt2);
+
     SetMeshOutputsEXT(4, 2);
 
     for (uint cornerIdx = 0; cornerIdx < 4; ++cornerIdx) {
@@ -148,6 +153,7 @@ void main()
         gl_MeshVerticesEXT[cornerIdx].gl_Position = camera.projectionFromView * viewSpacePos;
         vPosition[cornerIdx] = viewSpacePos.xyz;
         vColor[cornerIdx] = (cornerIdx < 2) ? colorAt1 : colorAt2;
+        vTangent[cornerIdx] = (cornerIdx < 2) ? viewTangentAt1 : viewTangentAt2;
     }
 
     gl_PrimitiveTriangleIndicesEXT[0] = uvec3(0, 2, 1);
