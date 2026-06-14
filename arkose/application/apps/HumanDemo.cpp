@@ -111,10 +111,10 @@ void HumanDemo::setup(Backend& graphicsBackend, PhysicsBackend* physicsBackend)
 
     pipeline.addNode<MeshletVisibilityBufferRenderNode>();
 
+    pipeline.addNode<HairShadowNode>();
     pipeline.addNode<DirectionalShadowDrawNode>();
     pipeline.addNode<DirectionalShadowProjectNode>();
     pipeline.addNode<LocalShadowDrawNode>();
-    pipeline.addNode<HairShadowNode>();
 
     pipeline.addNode<VisibilityBufferShadingNode>();
 

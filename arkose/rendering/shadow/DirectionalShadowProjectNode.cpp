@@ -29,12 +29,23 @@ RenderPipelineNode::ExecuteCallback DirectionalShadowProjectNode::construct(GpuS
     Buffer& cameraDataBuffer = *reg.getBuffer("SceneCameraData");
     Texture& blueNoiseTexArray = *reg.getTexture("BlueNoise");
 
+    Texture* hairShadowMap = reg.getTexture("HairShadowMap");
+    Texture* hairDeepOpacityMap = reg.getTexture("HairDeepOpacityMap");
+    if (!hairShadowMap || !hairDeepOpacityMap) {
+        Texture& depthPlaceholder = reg.createPixelTexture(vec4(1.0f), false);
+        Texture& domPlaceholder = reg.createPixelTexture(vec4(0.0f), false);
+        hairShadowMap = hairShadowMap ? hairShadowMap : &depthPlaceholder;
+        hairDeepOpacityMap = hairDeepOpacityMap ? hairDeepOpacityMap : &domPlaceholder;
+    }
+
     Shader shadowProjectionShader = Shader::createCompute("shadow/projectShadow.comp");
     BindingSet& shadowProjectionBindingSet = reg.createBindingSet({ ShaderBinding::storageTexture(*m_shadowMask, ShaderStage::Compute),
                                                                     ShaderBinding::sampledTexture(shadowMap, ShaderStage::Compute),
                                                                     ShaderBinding::sampledTexture(sceneDepth, ShaderStage::Compute),
                                                                     ShaderBinding::constantBuffer(cameraDataBuffer, ShaderStage::Compute),
-                                                                    ShaderBinding::sampledTexture(blueNoiseTexArray, ShaderStage::Compute) });
+                                                                    ShaderBinding::sampledTexture(blueNoiseTexArray, ShaderStage::Compute),
+                                                                    ShaderBinding::sampledTexture(*hairShadowMap, ShaderStage::Compute),
+                                                                    ShaderBinding::sampledTexture(*hairDeepOpacityMap, ShaderStage::Compute) });
     StateBindings projectionStateBindings;
     projectionStateBindings.at(0, shadowProjectionBindingSet);
     ComputeState& shadowProjectionState = reg.createComputeState(shadowProjectionShader, projectionStateBindings);
@@ -54,6 +65,7 @@ RenderPipelineNode::ExecuteCallback DirectionalShadowProjectNode::construct(GpuS
         cmdList.setNamedUniform<mat4>("lightProjectionFromView", lightProjectionFromView);
         cmdList.setNamedUniform<vec2>("lightDiscRadiusInShadowMapUVs", radiusInShadowMapUVs);
         cmdList.setNamedUniform<int>("frameIndexMod8", appState.frameIndex() % 8);
+        cmdList.setNamedUniform<float>("shadowMapDepthRange", light->shadowMapWorldExtent);
         cmdList.dispatch(m_shadowMask->extent3D(), { 16, 16, 1 });
     };
 }
