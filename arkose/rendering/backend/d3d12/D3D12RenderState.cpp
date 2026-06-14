@@ -208,6 +208,7 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
     }
 
     psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
+    psoDesc.BlendState.IndependentBlendEnable = true;
     psoDesc.SampleMask = 0xFFFFFFFF; // ??
 
     psoDesc.NumRenderTargets = narrow_cast<UINT>(renderTarget.colorAttachmentCount());
@@ -227,8 +228,8 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
                 break;
             case RenderTargetBlendMode::Additive:
                 renderTargetBlendState.BlendEnable = true;
-                renderTargetBlendState.SrcBlend = D3D12_BLEND_SRC_COLOR;
-                renderTargetBlendState.DestBlend = D3D12_BLEND_DEST_COLOR;
+                renderTargetBlendState.SrcBlend = D3D12_BLEND_ONE;
+                renderTargetBlendState.DestBlend = D3D12_BLEND_ONE;
                 renderTargetBlendState.BlendOp = D3D12_BLEND_OP_ADD;
                 renderTargetBlendState.SrcBlendAlpha = D3D12_BLEND_ONE; // replace alpha with new value
                 renderTargetBlendState.DestBlendAlpha = D3D12_BLEND_ZERO;
@@ -237,8 +238,8 @@ D3D12RenderState::D3D12RenderState(Backend& backend, RenderTarget const& renderT
                 break;
             case RenderTargetBlendMode::AdditiveIncludingAlpha:
                 renderTargetBlendState.BlendEnable = true;
-                renderTargetBlendState.SrcBlend = D3D12_BLEND_SRC_COLOR;
-                renderTargetBlendState.DestBlend = D3D12_BLEND_DEST_COLOR;
+                renderTargetBlendState.SrcBlend = D3D12_BLEND_ONE;
+                renderTargetBlendState.DestBlend = D3D12_BLEND_ONE;
                 renderTargetBlendState.BlendOp = D3D12_BLEND_OP_ADD;
                 renderTargetBlendState.SrcBlendAlpha = D3D12_BLEND_ONE;
                 renderTargetBlendState.DestBlendAlpha = D3D12_BLEND_ONE;
