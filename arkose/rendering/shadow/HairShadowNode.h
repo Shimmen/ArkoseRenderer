@@ -11,4 +11,6 @@ public:
 
 private:
     Texture* m_depthMap { nullptr };
+    Texture* m_shadowMap { nullptr };
+    Texture* m_deepOpacityMap { nullptr };
 };
